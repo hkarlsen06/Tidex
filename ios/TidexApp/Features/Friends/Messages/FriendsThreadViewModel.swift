@@ -43,6 +43,7 @@ final class FriendsThreadViewModel: ObservableObject {
     static let refreshInterval: TimeInterval = 2.5
     static let idleStopDelay: Duration = .seconds(4)
     static let remoteTimeout: Duration = .seconds(5)
+    static let remoteStopGraceDelay: Duration = .seconds(2)
     static let pushEscalationDelay: Duration = .milliseconds(700)
     static let pushCooldown: TimeInterval = 120
   }
@@ -188,11 +189,13 @@ final class FriendsThreadViewModel: ObservableObject {
   private var lastTypingPushQueuedAt: Date?
   private var activeThreadCatchUpTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
+  private var counterpartTypingStopGraceTask: Task<Void, Never>?
   private var threadStatesRefreshTask: Task<Void, Never>?
   private var latestVisibleMessageReadTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
   private var suspendedComposerSnapshot: ComposerSnapshot?
   private var latestVisibleMessageId: String?
+  private var latestCounterpartMessageId: String?
 
   var composerMode: FriendsThreadComposerMode {
     composerState.mode
@@ -204,6 +207,12 @@ final class FriendsThreadViewModel: ObservableObject {
 
   var draftEditTarget: FriendMessage? {
     composerState.editTarget
+  }
+
+  private var effectiveCounterpartUserId: String {
+    Self.normalizedUserId(thread.counterpartUserId)
+      ?? Self.normalizedUserId(route.counterpartUserId)
+      ?? ""
   }
 
   var draftCharacterLimit: Int {
@@ -281,6 +290,7 @@ final class FriendsThreadViewModel: ObservableObject {
     localTypingPushTask?.cancel()
     activeThreadCatchUpTask?.cancel()
     counterpartTypingTimeoutTask?.cancel()
+    counterpartTypingStopGraceTask?.cancel()
     threadStatesRefreshTask?.cancel()
     latestVisibleMessageReadTask?.cancel()
   }
@@ -530,8 +540,8 @@ final class FriendsThreadViewModel: ObservableObject {
     activeThreadCatchUpTask?.cancel()
     activeThreadCatchUpTask = nil
     counterpartTypingTimeoutTask?.cancel()
-    counterpartTypingTimeoutTask = nil
-    counterpartIsTyping = false
+    counterpartTypingStopGraceTask?.cancel()
+    resetCounterpartTypingState()
     threadStatesRefreshTask?.cancel()
     threadStatesRefreshTask = nil
     await realtimeCoordinator.stopThreadSubscription(threadId: route.threadId)
@@ -550,22 +560,18 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func handleAppDidBecomeActive() async {
-    counterpartTypingTimeoutTask?.cancel()
-    counterpartTypingTimeoutTask = nil
-    counterpartIsTyping = false
+    resetCounterpartTypingState()
     await startRealtime()
     await refreshFromServer()
   }
 
   func handleDraftChanged(to draft: String) async {
     guard await resolveViewerUserIdIfNeeded(forceReloadCache: false) else { return }
-    guard !isThreadReadOnly, !route.counterpartUserId.isEmpty else { return }
+    guard !isThreadReadOnly else { return }
     guard composerMode != .edit else {
       await stopTypingIfNeeded()
       return
     }
-
-    await persistPendingComposerDraft()
 
     let hasText = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     if hasText {
@@ -575,12 +581,25 @@ final class FriendsThreadViewModel: ObservableObject {
     } else {
       await stopTypingIfNeeded()
     }
+
+    await persistPendingComposerDraft()
   }
 
   func handleCounterpartTypingChange(userId: String, isTyping: Bool) {
-    guard userId == route.counterpartUserId, !userId.isEmpty else { return }
+    guard
+      let normalizedUserId = Self.normalizedUserId(userId),
+      normalizedUserId != viewerUserId
+    else {
+      return
+    }
+
+    let counterpartUserId = effectiveCounterpartUserId
+    if !counterpartUserId.isEmpty, normalizedUserId != counterpartUserId {
+      return
+    }
 
     counterpartTypingTimeoutTask?.cancel()
+    counterpartTypingStopGraceTask?.cancel()
 
     if isTyping {
       counterpartIsTyping = true
@@ -588,11 +607,15 @@ final class FriendsThreadViewModel: ObservableObject {
         guard let self else { return }
         try? await Task.sleep(for: Typing.remoteTimeout)
         guard !Task.isCancelled else { return }
-        self.counterpartIsTyping = false
+        self.resetCounterpartTypingState()
       }
     } else {
-      counterpartIsTyping = false
-      counterpartTypingTimeoutTask = nil
+      counterpartTypingStopGraceTask = Task { @MainActor [weak self] in
+        guard let self else { return }
+        try? await Task.sleep(for: Typing.remoteStopGraceDelay)
+        guard !Task.isCancelled else { return }
+        self.resetCounterpartTypingState()
+      }
     }
   }
 
@@ -942,6 +965,8 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private func loadFromCache() {
+    let previousCounterpartMessageId = latestCounterpartMessageId
+
     if let cachedThread = repository.getThread(id: route.threadId, viewerUserId: viewerUserId) {
       thread = cachedThread
     }
@@ -954,6 +979,11 @@ final class FriendsThreadViewModel: ObservableObject {
       )
     }
     messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
+    latestCounterpartMessageId = latestIncomingCounterpartMessageId(in: thread)
+    if latestCounterpartMessageId != nil, latestCounterpartMessageId != previousCounterpartMessageId
+    {
+      resetCounterpartTypingState()
+    }
     syncCounterpartShiftPreviewFromCache()
     syncComposerStateWithCachedMessages()
     prefetchQuotedMessagesIfNeeded()
@@ -1448,6 +1478,27 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private func messageBodyLengthForBackendValidation(_ normalizedBody: String) -> Int {
     normalizedBody.unicodeScalars.count
+  }
+
+  private func latestIncomingCounterpartMessageId(in thread: FriendThread) -> String? {
+    guard
+      let counterpartUserId = Self.normalizedUserId(thread.counterpartUserId)
+        ?? Self.normalizedUserId(route.counterpartUserId),
+      let lastMessageSenderId = Self.normalizedUserId(thread.lastMessageSenderId),
+      counterpartUserId == lastMessageSenderId
+    else {
+      return nil
+    }
+
+    return normalizedMessageId(thread.lastMessageId)
+  }
+
+  private func resetCounterpartTypingState() {
+    counterpartTypingTimeoutTask?.cancel()
+    counterpartTypingTimeoutTask = nil
+    counterpartTypingStopGraceTask?.cancel()
+    counterpartTypingStopGraceTask = nil
+    counterpartIsTyping = false
   }
 
   private static func normalizedUserId(_ userId: String?) -> String? {

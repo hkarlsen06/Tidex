@@ -673,6 +673,50 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testVisibleMessageResolverIgnoresSyntheticTypingIndicatorRow() {
+    XCTAssertNil(
+      FriendsThreadVisibleMessageResolver.messageID(
+        for: FriendsThreadExyteMessageFactory.typingIndicatorMessageID,
+        messages: [
+          makeMessage(
+            id: "message-1",
+            senderUserId: "other",
+            createdAt: Date(timeIntervalSince1970: 1_731_000_000)
+          )
+        ],
+        viewerUserId: "viewer"
+      )
+    )
+  }
+
+  func testVisibleMessageResolverMapsPresentedOutgoingMessageIDBackToMessageID() {
+    let outgoingMessage = FriendMessage(
+      id: "message-1",
+      threadId: "thread-1",
+      senderUserId: "viewer",
+      messageType: .user,
+      body: "Hello",
+      clientId: " Client-1 ",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_731_000_000),
+      editedAt: nil,
+      deletedAt: nil,
+      attachments: [],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+
+    XCTAssertEqual(
+      FriendsThreadVisibleMessageResolver.messageID(
+        for: "client:client-1",
+        messages: [outgoingMessage],
+        viewerUserId: "viewer"
+      ),
+      outgoingMessage.id
+    )
+  }
+
   func testHighlightRedrawResolverMarksOnlyTheHighlightedPresentedMessage() {
     let messages = [
       Message(

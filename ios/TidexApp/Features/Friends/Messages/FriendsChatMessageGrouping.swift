@@ -11,6 +11,23 @@ struct FriendsChatMessageGroupContext: Equatable {
   let position: FriendsChatMessageGroupPosition
   let isCurrentUser: Bool
 
+  func joiningNext() -> FriendsChatMessageGroupContext {
+    let updatedPosition: FriendsChatMessageGroupPosition
+    switch position {
+    case .standalone:
+      updatedPosition = .leading
+    case .trailing:
+      updatedPosition = .middle
+    case .leading, .middle:
+      updatedPosition = position
+    }
+
+    return FriendsChatMessageGroupContext(
+      position: updatedPosition,
+      isCurrentUser: isCurrentUser
+    )
+  }
+
   var joinsPrevious: Bool {
     switch position {
     case .middle, .trailing:

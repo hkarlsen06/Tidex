@@ -24,6 +24,12 @@ struct FriendsThreadView: View {
     let snapshot: FriendShiftSnapshot
   }
 
+  private static func normalizedIdentifier(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    return normalized.isEmpty ? nil : normalized
+  }
+
   @Environment(\.openURL) private var openURL
 
   @StateObject private var viewModel: FriendsThreadViewModel
@@ -48,6 +54,7 @@ struct FriendsThreadView: View {
   @State private var isAttachmentDrawerOpen = false
   @State private var lastHandledNavigationRequestId: UUID?
   @State private var pendingFocusScrollTask: Task<Void, Never>?
+  @State private var liveEdgeTargetPresentedMessageID: String?
   @State private var selectedImageGallery: SelectedImageGallery?
   @State private var pendingForwardAttachment: PendingForwardAttachment?
 
@@ -155,7 +162,9 @@ struct FriendsThreadView: View {
           counterpartAvatarUrl: counterpartAvatarUrl,
           quotedMessagesById: viewModel.quotedMessagesById,
           counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
-          counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt
+          counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
+          showsTypingIndicator: viewModel.counterpartIsTyping,
+          typingIndicatorCreatedAt: viewModel.thread.lastMessageAt ?? viewModel.thread.createdAt
         )
       ),
       highlightedPresentedMessageID: highlightedPresentedMessageID
@@ -166,7 +175,7 @@ struct FriendsThreadView: View {
     FriendsThreadChatViewportRequestResolver.request(
       replyTargetMessageId: viewModel.replyScrollTargetMessageId,
       restoreTargetMessageId: viewModel.restoreScrollTargetMessageId,
-      liveEdgeTargetPresentedMessageID: nil,
+      liveEdgeTargetPresentedMessageID: liveEdgeTargetPresentedMessageID,
       messages: viewModel.messages,
       viewerUserId: viewModel.viewerUserId
     )
@@ -210,19 +219,12 @@ struct FriendsThreadView: View {
     FriendsThreadImageGalleryResolver.imageAttachments(messages: viewModel.messages)
   }
 
-  private func messageID(for presentedMessageID: String) -> String {
-    if let messageId = presentedMessageLookup[presentedMessageID]?.id {
-      return messageId
-    }
-
-    if let message = viewModel.messages.first(where: {
-      FriendsThreadMessagePresentationID.make(for: $0, viewerUserId: viewModel.viewerUserId)
-        == presentedMessageID
-    }) {
-      return message.id
-    }
-
-    return presentedMessageID.replacingOccurrences(of: "message:", with: "")
+  private func messageID(for presentedMessageID: String) -> String? {
+    FriendsThreadVisibleMessageResolver.messageID(
+      for: presentedMessageID,
+      messages: viewModel.messages,
+      viewerUserId: viewModel.viewerUserId
+    )
   }
 
   var body: some View {
@@ -276,8 +278,9 @@ struct FriendsThreadView: View {
       }
       .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) {
         notification in
-        guard let threadId = notification.userInfo?["threadId"] as? String,
-          threadId == viewModel.route.threadId
+        guard
+          let threadId = Self.normalizedIdentifier(notification.userInfo?["threadId"] as? String),
+          threadId == Self.normalizedIdentifier(viewModel.route.threadId)
         else {
           return
         }
@@ -300,8 +303,9 @@ struct FriendsThreadView: View {
       .onReceive(
         NotificationCenter.default.publisher(for: .friendsThreadTypingDidChange)
       ) { notification in
-        guard let threadId = notification.userInfo?["threadId"] as? String,
-          threadId == viewModel.route.threadId,
+        guard
+          let threadId = Self.normalizedIdentifier(notification.userInfo?["threadId"] as? String),
+          threadId == Self.normalizedIdentifier(viewModel.route.threadId),
           let userId = notification.userInfo?["userId"] as? String,
           let isTyping = notification.userInfo?["isTyping"] as? Bool
         else {
@@ -594,11 +598,12 @@ struct FriendsThreadView: View {
     .scrollToMessageID(packageReplyScrollRequest?.presentedMessageID)
     .enableLoadMore(offset: 50) {
       guard
-        let lastWillDisplayPresentedMessageID = chatListRuntime.lastWillDisplayPresentedMessageID
+        let lastWillDisplayPresentedMessageID = chatListRuntime.lastWillDisplayPresentedMessageID,
+        let currentFirstMessageId = messageID(for: lastWillDisplayPresentedMessageID)
       else { return }
       Task {
         await viewModel.loadOlderMessagesIfNeeded(
-          currentFirstMessageId: messageID(for: lastWillDisplayPresentedMessageID)
+          currentFirstMessageId: currentFirstMessageId
         )
       }
     }
@@ -630,11 +635,17 @@ struct FriendsThreadView: View {
           isPinnedToBottom = $0
         },
         onLatestVisiblePresentedMessageIDChanged: { presentedMessageID in
-          guard let presentedMessageID else { return }
-          Task {
-            await viewModel.updateLatestVisibleMessage(
-              messageId: messageID(for: presentedMessageID)
+          guard
+            let messageId = FriendsThreadVisibleMessageResolver.messageID(
+              for: presentedMessageID,
+              messages: viewModel.messages,
+              viewerUserId: viewModel.viewerUserId
             )
+          else {
+            return
+          }
+          Task {
+            await viewModel.updateLatestVisibleMessage(messageId: messageId)
           }
         },
         onObservedPresentedMessageVisible: handlePackageReplyPresentedMessageVisible,
@@ -646,7 +657,7 @@ struct FriendsThreadView: View {
 
   @ViewBuilder
   private var chatFooterAccessory: some View {
-    if showsNewMessagesPill || viewModel.counterpartIsTyping {
+    if showsNewMessagesPill {
       VStack(spacing: 0) {
         if showsNewMessagesPill, !viewModel.messages.isEmpty {
           HStack {
@@ -655,15 +666,8 @@ struct FriendsThreadView: View {
             Spacer(minLength: 0)
           }
           .padding(.top, Spacing.xs)
-          .padding(.bottom, viewModel.counterpartIsTyping ? 0 : Spacing.xs)
+          .padding(.bottom, Spacing.xs)
           .transition(.move(edge: .bottom).combined(with: .opacity))
-        }
-
-        if viewModel.counterpartIsTyping {
-          FriendsChatTypingAccessory(
-            counterpartAvatarUrl: counterpartAvatarUrl,
-            counterpartInitials: FriendsChatMessageGrouping.initials(from: counterpartDisplayName)
-          )
         }
       }
     }
@@ -673,19 +677,32 @@ struct FriendsThreadView: View {
   private func chatRow(for exyteMessage: ExyteChat.Message, messageFrame: Binding<CGRect>?)
     -> some View
   {
-    if let message = presentedMessageLookup[exyteMessage.id] {
+    if exyteMessage.id == FriendsThreadExyteMessageFactory.typingIndicatorMessageID {
+      FriendsChatTypingRow(
+        counterpartAvatarUrl: counterpartAvatarUrl,
+        counterpartInitials: FriendsChatMessageGrouping.initials(from: counterpartDisplayName),
+        joinsPrevious: shouldTypingIndicatorJoinPrevious
+      )
+      .id(exyteMessage.id)
+    } else if let message = presentedMessageLookup[exyteMessage.id] {
       let isCurrentUser = message.senderUserId == viewModel.viewerUserId
       let index = presentedMessageIndexLookup[exyteMessage.id]
       let previousMessage = index.flatMap { $0 > 0 ? viewModel.messages[$0 - 1] : nil }
       let nextMessage = index.flatMap {
         $0 < (viewModel.messages.count - 1) ? viewModel.messages[$0 + 1] : nil
       }
-      let groupContext = FriendsChatMessageGrouping.context(
+      let baseGroupContext = FriendsChatMessageGrouping.context(
         for: message,
         previous: previousMessage,
         next: nextMessage,
         viewerUserId: viewModel.viewerUserId
       )
+      let groupContext =
+        if shouldJoinTypingIndicator(message: message, index: index) {
+          baseGroupContext.joiningNext()
+        } else {
+          baseGroupContext
+        }
       let messageStatus = FriendsThreadMessageStatusResolver.status(
         for: message,
         viewerUserId: viewModel.viewerUserId,
@@ -741,6 +758,25 @@ struct FriendsThreadView: View {
     } else {
       EmptyView()
     }
+  }
+
+  private func shouldJoinTypingIndicator(message: FriendMessage, index: Int?) -> Bool {
+    guard viewModel.counterpartIsTyping else { return false }
+    guard message.senderUserId != viewModel.viewerUserId else { return false }
+    guard message.messageType == .user, message.deletedAt == nil else { return false }
+    guard index == viewModel.messages.indices.last else { return false }
+    guard Date().timeIntervalSince(message.createdAt) <= FriendsChatMessageGrouping.maximumGap
+    else {
+      return false
+    }
+    return true
+  }
+
+  private var shouldTypingIndicatorJoinPrevious: Bool {
+    guard viewModel.counterpartIsTyping, let lastMessage = viewModel.messages.last else {
+      return false
+    }
+    return shouldJoinTypingIndicator(message: lastMessage, index: viewModel.messages.indices.last)
   }
 
   @ViewBuilder
@@ -1004,6 +1040,7 @@ struct FriendsThreadView: View {
       await MainActor.run {
         unreadIncomingCount = 0
         showsNewMessagesPill = false
+        requestScrollToBottom()
       }
       return true
     }
@@ -1103,7 +1140,7 @@ struct FriendsThreadView: View {
   }
 
   private func requestScrollToBottom() {
-    NotificationCenter.default.post(name: .onScrollToBottom, object: nil)
+    liveEdgeTargetPresentedMessageID = presentedMessageIDs.last
   }
 
   private func scheduleScrollToBottomAfterKeyboardSettles() {
@@ -1176,7 +1213,7 @@ struct FriendsThreadView: View {
         viewModel.consumeRestoreScrollTarget()
       }
     case .liveEdge:
-      break
+      liveEdgeTargetPresentedMessageID = nil
     }
   }
 
@@ -1393,36 +1430,73 @@ struct FriendsThreadView: View {
   }
 }
 
-private struct FriendsChatTypingAccessory: View {
+private struct FriendsChatTypingRow: View {
+  private static let avatarSize = AvatarView.Size.small
+  @State private var dotScales: [Bool] = [false, false, false]
+
   let counterpartAvatarUrl: String?
   let counterpartInitials: String
+  let joinsPrevious: Bool
 
   var body: some View {
-    HStack(spacing: Spacing.xs) {
-      AvatarView(
-        url: counterpartAvatarUrl,
-        initials: counterpartInitials,
-        size: AvatarView.Size.small,
-        cornerRadius: CornerRadius.md
-      )
+    let groupContext = FriendsChatMessageGroupContext(
+      position: joinsPrevious ? .trailing : .standalone,
+      isCurrentUser: false
+    )
 
-      TypingIndicatorView()
+    return ChatMessageRow(
+      isCurrentUser: false,
+      minSpacer: Spacing.xxxl,
+      spacing: Spacing.xxs,
+      horizontalInset: Spacing.sm
+    ) {
+      HStack(alignment: .top, spacing: Spacing.xs) {
+        if groupContext.showsAvatar {
+          AvatarView(
+            url: counterpartAvatarUrl,
+            initials: counterpartInitials,
+            size: Self.avatarSize,
+            cornerRadius: CornerRadius.md
+          )
+          .padding(.top, 2)
+        } else {
+          Color.clear
+            .frame(width: Self.avatarSize, height: Self.avatarSize)
+        }
 
-      Spacer(minLength: 0)
+        FriendsChatReactionAnchoredBubbleCard(
+          isCurrentUser: false,
+          groupContext: groupContext,
+          messageFrame: nil
+        ) {
+          HStack(spacing: 5) {
+            ForEach(0..<3, id: \.self) { index in
+              Circle()
+                .fill(Color.tidexTextMuted)
+                .frame(width: 7, height: 7)
+                .scaleEffect(dotScales[index] ? 1.0 : 0.5)
+                .opacity(dotScales[index] ? 1.0 : 0.4)
+            }
+          }
+          .padding(.vertical, Spacing.xxxs)
+          .onAppear {
+            for index in 0..<3 {
+              withAnimation(
+                .easeInOut(duration: 0.5)
+                  .repeatForever(autoreverses: true)
+                  .delay(Double(index) * 0.15)
+              ) {
+                dotScales[index] = true
+              }
+            }
+          }
+        } reaction: {
+          EmptyView()
+        }
+      }
     }
-    .padding(.horizontal, Spacing.md)
     .padding(.top, Spacing.xxs)
     .padding(.bottom, Spacing.xs)
-    .background(Color.tidexBackground)
-    .contentShape(Rectangle())
-    .onTapGesture {
-      UIApplication.shared.sendAction(
-        #selector(UIResponder.resignFirstResponder),
-        to: nil,
-        from: nil,
-        for: nil
-      )
-    }
   }
 }
 

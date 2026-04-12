@@ -484,6 +484,28 @@ enum FriendsThreadChatViewportRequestResolver {
   }
 }
 
+enum FriendsThreadVisibleMessageResolver {
+  static func messageID(
+    for presentedMessageID: String?,
+    messages: [FriendMessage],
+    viewerUserId: String
+  ) -> String? {
+    guard let presentedMessageID else { return nil }
+    guard presentedMessageID != FriendsThreadExyteMessageFactory.typingIndicatorMessageID else {
+      return nil
+    }
+
+    if let message = messages.first(where: {
+      FriendsThreadMessagePresentationID.make(for: $0, viewerUserId: viewerUserId)
+        == presentedMessageID
+    }) {
+      return message.id
+    }
+
+    return presentedMessageID.replacingOccurrences(of: "message:", with: "")
+  }
+}
+
 enum FriendsThreadExyteHighlightRedrawResolver {
   private static let redrawMarker = "\u{2060}"
 
@@ -827,6 +849,8 @@ enum FriendsThreadMessagePresentationID {
 }
 
 enum FriendsThreadExyteMessageFactory {
+  static let typingIndicatorMessageID = "typing-indicator"
+
   struct ConversationContext {
     let viewerUserId: String
     let currentUserDisplayName: String
@@ -835,6 +859,8 @@ enum FriendsThreadExyteMessageFactory {
     let quotedMessagesById: [String: FriendMessage]
     let counterpartLastReadMessageId: String?
     let counterpartLastReadAt: Date?
+    let showsTypingIndicator: Bool
+    let typingIndicatorCreatedAt: Date
   }
 
   struct Context {
@@ -871,9 +897,17 @@ enum FriendsThreadExyteMessageFactory {
       readReceiptMessageId: readReceiptMessageId
     )
 
-    return messages.map { message in
+    var exyteMessages = messages.map { message in
       makeMessage(message, context: context)
     }
+
+    if conversation.showsTypingIndicator {
+      exyteMessages.append(
+        makeTypingIndicatorMessage(
+          context: context, createdAt: conversation.typingIndicatorCreatedAt))
+    }
+
+    return exyteMessages
   }
 
   static func makeMessage(_ message: FriendMessage, context: Context) -> ExyteChat.Message {
@@ -912,6 +946,25 @@ enum FriendsThreadExyteMessageFactory {
       giphyMediaId: exyteMenuMarker(for: message),
       reactions: exyteReactions(for: message, viewerUserId: context.viewerUserId),
       replyMessage: replyMessage
+    )
+  }
+
+  static func makeTypingIndicatorMessage(context: Context, createdAt: Date) -> ExyteChat.Message {
+    ExyteChat.Message(
+      id: typingIndicatorMessageID,
+      user: ExyteChat.User(
+        id: "typing-indicator-user",
+        name: context.counterpartDisplayName,
+        avatarURL: URL(string: context.counterpartAvatarUrl ?? ""),
+        isCurrentUser: false
+      ),
+      status: nil,
+      createdAt: createdAt,
+      text: "",
+      attachments: [],
+      giphyMediaId: nil,
+      reactions: [],
+      replyMessage: nil
     )
   }
 
