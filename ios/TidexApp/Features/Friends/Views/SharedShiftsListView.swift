@@ -191,15 +191,19 @@ struct SharedShiftsListView: View {
           Section {
             ForEach(weekGroup.shifts) { shift in
               let shiftJob = shift.shift.job_id.flatMap { jobsById[$0] }
+              let rowCurrency = shiftJob?.currency ?? currency
               ShiftRowCard(
                 shift: shift,
                 isToday: shift.shiftDate == todayISO(),
                 showJobIndicator: showJobIndicator,
                 jobName: shiftJob?.name,
                 jobColorHex: shiftJob?.color,
+                amountTextOverride: sharer.showEarnings
+                  ? nil
+                  : CurrencyConfig.formatEmpty(currency: rowCurrency),
                 onTap: { selectedShift = shift }
               )
-              .userCurrency(shiftJob?.currency ?? currency)
+              .userCurrency(rowCurrency)
               .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
               .listRowBackground(Color.clear)
               .listRowSeparator(.hidden)
@@ -207,7 +211,10 @@ struct SharedShiftsListView: View {
           } header: {
             WeekHeaderView(
               weekNumber: weekGroup.weekNumber,
-              totalGross: sharer.showEarnings ? weekGroup.totalGross : 0
+              totalGross: weekGroup.totalGross,
+              totalGrossTextOverride: sharer.showEarnings
+                ? nil
+                : CurrencyConfig.formatEmpty(currency: currency)
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
             .listRowBackground(Color.clear)

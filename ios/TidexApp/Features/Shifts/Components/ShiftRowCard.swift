@@ -10,6 +10,7 @@ struct ShiftRowCard: View {
   let showJobIndicator: Bool
   let jobName: String?
   let jobColorHex: String?
+  let amountTextOverride: String?
   let onTap: (() -> Void)?
 
   @Environment(\.userCurrency) private var currency
@@ -25,6 +26,7 @@ struct ShiftRowCard: View {
     showJobIndicator: Bool = false,
     jobName: String? = nil,
     jobColorHex: String? = nil,
+    amountTextOverride: String? = nil,
     onTap: (() -> Void)? = nil
   ) {
     self.shift = shift
@@ -34,6 +36,7 @@ struct ShiftRowCard: View {
     self.showJobIndicator = showJobIndicator
     self.jobName = jobName
     self.jobColorHex = jobColorHex
+    self.amountTextOverride = amountTextOverride
     self.onTap = onTap
   }
 
@@ -110,7 +113,7 @@ struct ShiftRowCard: View {
     } trailingTop: {
       // Net/gross amount
       let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
-      Text(formatCurrency(displayAmount))
+      Text(amountTextOverride ?? formatCurrency(displayAmount))
         .font(.tidexTitle)
         .tracking(-0.5)
         .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
