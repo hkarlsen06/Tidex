@@ -410,7 +410,7 @@ extension FriendMessageAttachment {
   }
 }
 
-private struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: View {
+struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: View {
   let isCurrentUser: Bool
   let groupContext: FriendsChatMessageGroupContext
   var minWidth: CGFloat? = nil

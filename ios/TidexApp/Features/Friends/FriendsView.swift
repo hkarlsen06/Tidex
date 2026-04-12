@@ -53,15 +53,23 @@ struct SharingView: View {
   @State private var chatPreviewsByUserId: [String: FriendCardMessagePreview] = [:]
   @State private var typingUserIds: Set<String> = []
   @State private var typingResetTasks: [String: Task<Void, Never>] = [:]
+  @State private var latestIncomingMessageIdsByUserId: [String: String] = [:]
   @State private var unreadRefreshTask: Task<Void, Never>?
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
   private static let typingIndicatorTimeout: Duration = .seconds(5)
+  private static let typingStopGraceDelay: Duration = .seconds(2)
 
   private let friendsMessagingService = FriendsMessagingService.shared
   private let friendsMessagesRepository = FriendsMessagesRepository.shared
   private let friendsRealtimeCoordinator = FriendsMessagingRealtimeCoordinator.shared
+
+  private static func normalizedIdentifier(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    return normalized.isEmpty ? nil : normalized
+  }
 
   var body: some View {
     NavigationStack(path: $navigationPath) {
@@ -213,12 +221,19 @@ struct SharingView: View {
         let threadId = notification.userInfo?["threadId"] as? String,
         let userId = notification.userInfo?["userId"] as? String,
         let isTyping = notification.userInfo?["isTyping"] as? Bool,
-        userId != coordinator.getCurrentUserId()
+        let normalizedUserId = Self.normalizedIdentifier(userId)
       else {
         return
       }
 
-      handleTypingIndicatorChange(threadId: threadId, userId: userId, isTyping: isTyping)
+      let normalizedViewerUserId = Self.normalizedIdentifier(coordinator.getCurrentUserId())
+      guard normalizedUserId != normalizedViewerUserId else { return }
+
+      handleTypingIndicatorChange(
+        threadId: threadId,
+        userId: normalizedUserId,
+        isTyping: isTyping
+      )
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) {
       _ in
@@ -637,9 +652,11 @@ struct SharingView: View {
 
     var nextUnreadChatCountsByUserId: [String: Int] = [:]
     var nextChatPreviewsByUserId: [String: FriendCardMessagePreview] = [:]
+    var nextLatestIncomingMessageIdsByUserId: [String: String] = [:]
+    var usersWithNewIncomingMessages: Set<String> = []
 
     for thread in directThreads {
-      guard let counterpartUserId = thread.counterpartUserId, !counterpartUserId.isEmpty else {
+      guard let counterpartUserId = Self.normalizedIdentifier(thread.counterpartUserId) else {
         continue
       }
 
@@ -652,15 +669,32 @@ struct SharingView: View {
       {
         nextChatPreviewsByUserId[counterpartUserId] = preview
       }
+
+      if let latestIncomingMessageId = latestIncomingMessageId(
+        in: thread, counterpartUserId: counterpartUserId)
+      {
+        nextLatestIncomingMessageIdsByUserId[counterpartUserId] = latestIncomingMessageId
+        if latestIncomingMessageIdsByUserId[counterpartUserId] != latestIncomingMessageId {
+          usersWithNewIncomingMessages.insert(counterpartUserId)
+        }
+      }
+    }
+
+    for userId in usersWithNewIncomingMessages {
+      typingResetTasks[userId]?.cancel()
+      typingResetTasks[userId] = nil
     }
 
     withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
       unreadChatCountsByUserId = nextUnreadChatCountsByUserId
       unreadChatUserIds = Set(nextUnreadChatCountsByUserId.keys)
       chatPreviewsByUserId = nextChatPreviewsByUserId
-      typingUserIds = typingUserIds.intersection(
-        Set(directThreads.compactMap(\.counterpartUserId))
-      )
+      latestIncomingMessageIdsByUserId = nextLatestIncomingMessageIdsByUserId
+      typingUserIds =
+        typingUserIds
+        .subtracting(usersWithNewIncomingMessages)
+        .intersection(
+          Set(directThreads.compactMap { Self.normalizedIdentifier($0.counterpartUserId) }))
     }
   }
 
@@ -715,35 +749,60 @@ struct SharingView: View {
 
   private func handleTypingIndicatorChange(threadId: String, userId: String, isTyping: Bool) {
     guard
-      let viewerUserId = coordinator.getCurrentUserId(),
+      let viewerUserId = Self.normalizedIdentifier(coordinator.getCurrentUserId()),
+      let normalizedUserId = Self.normalizedIdentifier(userId),
+      normalizedUserId != viewerUserId,
       let thread = friendsMessagesRepository.getThread(id: threadId, viewerUserId: viewerUserId),
-      thread.kind == .direct,
-      thread.counterpartUserId == userId
+      thread.kind == .direct
     else {
       return
     }
 
-    typingResetTasks[userId]?.cancel()
+    if let counterpartUserId = Self.normalizedIdentifier(thread.counterpartUserId),
+      counterpartUserId != normalizedUserId
+    {
+      return
+    }
+
+    typingResetTasks[normalizedUserId]?.cancel()
 
     if isTyping {
       _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
-        typingUserIds.insert(userId)
+        typingUserIds.insert(normalizedUserId)
       }
 
-      typingResetTasks[userId] = Task { @MainActor in
+      typingResetTasks[normalizedUserId] = Task { @MainActor in
         try? await Task.sleep(for: Self.typingIndicatorTimeout)
         guard !Task.isCancelled else { return }
         _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
-          typingUserIds.remove(userId)
+          typingUserIds.remove(normalizedUserId)
         }
-        typingResetTasks[userId] = nil
+        typingResetTasks[normalizedUserId] = nil
       }
     } else {
-      _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
-        typingUserIds.remove(userId)
+      typingResetTasks[normalizedUserId] = Task { @MainActor in
+        try? await Task.sleep(for: Self.typingStopGraceDelay)
+        guard !Task.isCancelled else { return }
+        _ = withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+          typingUserIds.remove(normalizedUserId)
+        }
+        typingResetTasks[normalizedUserId] = nil
       }
-      typingResetTasks[userId] = nil
     }
+  }
+
+  private func latestIncomingMessageId(in thread: FriendThread, counterpartUserId: String)
+    -> String?
+  {
+    guard
+      let lastMessageId = thread.lastMessageId,
+      let lastMessageSenderId = Self.normalizedIdentifier(thread.lastMessageSenderId),
+      lastMessageSenderId == counterpartUserId
+    else {
+      return nil
+    }
+
+    return lastMessageId.trimmingCharacters(in: .whitespacesAndNewlines)
   }
 
   private func makeChatPreview(from thread: FriendThread, viewerUserId: String)

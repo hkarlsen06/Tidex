@@ -36,6 +36,12 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     static let stop = "typing_stop"
   }
 
+  private enum TypingTopic {
+    static func name(threadId: String) -> String {
+      "friends-thread-typing:\(threadId)"
+    }
+  }
+
   static let shared = FriendsMessagingRealtimeCoordinator()
 
   private let service: any FriendsMessagingServiceProviding
@@ -44,8 +50,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private var threadListChannel: RealtimeChannelV2?
   private var threadListTasks: [Task<Void, Never>] = []
   private var listTypingThreadIds: Set<String> = []
-  private var listTypingChannels: [String: RealtimeChannelV2] = [:]
-  private var listTypingTasks: [String: [Task<Void, Never>]] = [:]
+  private var detailTypingThreadIds: Set<String> = []
+  private var typingChannels: [String: RealtimeChannelV2] = [:]
+  private var typingTasks: [String: [Task<Void, Never>]] = [:]
+  private var typingSubscriptionTasks: [String: Task<Bool, Never>] = [:]
   private var threadChannels: [String: RealtimeChannelV2] = [:]
   private var threadTasks: [String: [Task<Void, Never>]] = [:]
 
@@ -130,20 +138,12 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   func syncThreadListTypingSubscriptions(threadIds: [String]) async {
+    let previousThreadIds = listTypingThreadIds
     let desiredThreadIds = Set(threadIds)
-    let threadIdsToRemove = listTypingThreadIds.subtracting(desiredThreadIds)
     listTypingThreadIds = desiredThreadIds
 
-    for threadId in threadIdsToRemove {
-      await teardownListTypingChannel(threadId: threadId)
-    }
-
-    for threadId in desiredThreadIds {
-      if threadChannels[threadId] != nil {
-        await teardownListTypingChannel(threadId: threadId)
-      } else {
-        _ = await ensureListTypingChannel(threadId: threadId)
-      }
+    for threadId in previousThreadIds.union(desiredThreadIds) {
+      await syncTypingChannel(threadId: threadId)
     }
   }
 
@@ -152,13 +152,14 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     listTypingThreadIds.removeAll()
 
     for threadId in trackedThreadIds {
-      await teardownListTypingChannel(threadId: threadId)
+      await syncTypingChannel(threadId: threadId)
     }
   }
 
   func startThreadSubscription(threadId: String, viewerUserId: String) async {
     await stopThreadSubscription(threadId: threadId)
-    await teardownListTypingChannel(threadId: threadId)
+    detailTypingThreadIds.insert(threadId)
+    _ = await ensureTypingChannel(threadId: threadId)
 
     let channel = supabase.channel("friends-thread-detail:\(threadId)") { config in
       config.broadcast.receiveOwnBroadcasts = true
@@ -193,18 +194,6 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       threadChannels[threadId] = channel
 
       threadTasks[threadId] = [
-        makeTypingBroadcastTask(
-          for: channel,
-          threadId: threadId,
-          event: TypingEvent.start,
-          isTyping: true
-        ),
-        makeTypingBroadcastTask(
-          for: channel,
-          threadId: threadId,
-          event: TypingEvent.stop,
-          isTyping: false
-        ),
         makeThreadStatusTask(
           for: channel,
           threadId: threadId,
@@ -248,6 +237,9 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   func stopThreadSubscription(threadId: String) async {
+    detailTypingThreadIds.remove(threadId)
+    await syncTypingChannel(threadId: threadId)
+
     threadTasks[threadId]?.forEach { $0.cancel() }
     threadTasks[threadId] = nil
 
@@ -256,9 +248,6 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       threadChannels[threadId] = nil
     }
 
-    if listTypingThreadIds.contains(threadId) {
-      _ = await ensureListTypingChannel(threadId: threadId)
-    }
   }
 
   func stopAll() async {
@@ -325,6 +314,24 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     )
     await refreshThreadStates(threadId: threadId, shouldNotify: false)
     notifyThreadUpdated(threadId: threadId)
+  }
+
+  private func refreshThreadSummary(
+    threadId: String,
+    viewerUserId: String,
+    shouldNotify: Bool = true
+  ) async {
+    do {
+      let thread = try await service.fetchThreadSummary(threadId: threadId)
+      await repository.saveThread(thread, for: viewerUserId)
+      if shouldNotify {
+        notifyThreadUpdated(threadId: threadId)
+      }
+    } catch {
+      realtimeLogger.error(
+        "Failed to refresh thread summary for \(threadId, privacy: .private): \(error.localizedDescription)"
+      )
+    }
   }
 
   private func refreshThreadSnapshot(
@@ -406,18 +413,15 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       let message = try await service.fetchMessageSyncPayloadV2(messageId: messageId)
       if message.deletedAt != nil {
         await repository.deleteMessage(id: messageId, viewerUserId: viewerUserId)
-        await refreshThreadSnapshot(
+        await refreshThreadSummary(
           threadId: message.threadId,
-          viewerUserId: viewerUserId
+          viewerUserId: viewerUserId,
+          shouldNotify: false
         )
         notifyThreadUpdated(threadId: message.threadId)
         return
       }
       await repository.saveMessages([message], in: message.threadId, for: viewerUserId)
-      await refreshThreadSnapshot(
-        threadId: message.threadId,
-        viewerUserId: viewerUserId
-      )
       notifyThreadUpdated(threadId: message.threadId)
     } catch {
       realtimeLogger.error(
@@ -458,7 +462,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   ) async {
     guard let changedThreadId = Self.extractThreadId(from: action), changedThreadId == threadId
     else { return }
-    await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
+    await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
   }
 
   private func handleThreadDetailMessageAction(
@@ -529,7 +533,9 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func broadcastTypingEvent(event: String, threadId: String, userId: String) async -> Bool {
-    guard let channel = threadChannels[threadId] else { return false }
+    guard let channel = typingChannels[threadId], channel.status == .subscribed else {
+      return false
+    }
 
     let payload = ThreadTypingPayload(
       threadId: threadId,
@@ -593,14 +599,14 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func makeTypingBroadcastTask(
-    for channel: RealtimeChannelV2,
+    stream: AsyncStream<JSONObject>,
     threadId: String,
     event: String,
     isTyping: Bool
   ) -> Task<Void, Never> {
     Task { [weak self] in
       guard let self else { return }
-      for await payload in channel.broadcastStream(event: event) {
+      for await payload in stream {
         self.handleTypingBroadcast(
           payload,
           threadId: threadId,
@@ -610,19 +616,21 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
-  private func makeListTypingBroadcastTasks(
+  private func makeTypingChannelTasks(
     for channel: RealtimeChannelV2,
     threadId: String
   ) -> [Task<Void, Never>] {
-    [
+    let typingStartBroadcast = channel.broadcastStream(event: TypingEvent.start)
+    let typingStopBroadcast = channel.broadcastStream(event: TypingEvent.stop)
+    return [
       makeTypingBroadcastTask(
-        for: channel,
+        stream: typingStartBroadcast,
         threadId: threadId,
         event: TypingEvent.start,
         isTyping: true
       ),
       makeTypingBroadcastTask(
-        for: channel,
+        stream: typingStopBroadcast,
         threadId: threadId,
         event: TypingEvent.stop,
         isTyping: false
@@ -647,35 +655,66 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
-  private func ensureListTypingChannel(threadId: String) async -> Bool {
-    guard threadChannels[threadId] == nil else { return true }
-    if listTypingChannels[threadId] != nil { return true }
-
-    let channel = supabase.channel("friends-thread-detail:\(threadId)") { config in
-      config.broadcast.receiveOwnBroadcasts = true
+  private func ensureTypingChannel(threadId: String) async -> Bool {
+    if let channel = typingChannels[threadId], channel.status == .subscribed {
+      return true
     }
 
-    do {
-      try await channel.subscribeWithError()
-      listTypingChannels[threadId] = channel
-      listTypingTasks[threadId] = makeListTypingBroadcastTasks(for: channel, threadId: threadId)
-      return true
-    } catch {
-      realtimeLogger.error(
-        "Failed to subscribe list typing realtime for \(threadId, privacy: .private): \(error.localizedDescription)"
-      )
+    if let task = typingSubscriptionTasks[threadId] {
+      return await task.value
+    }
+
+    let task = Task { @MainActor [weak self] in
+      guard let self else { return false }
+      defer { self.typingSubscriptionTasks[threadId] = nil }
+
+      if let channel = self.typingChannels[threadId], channel.status == .subscribed {
+        return true
+      }
+
+      let channel = supabase.channel(TypingTopic.name(threadId: threadId)) { config in
+        config.broadcast.receiveOwnBroadcasts = true
+      }
+      let typingTasks = self.makeTypingChannelTasks(for: channel, threadId: threadId)
+
+      do {
+        try await channel.subscribeWithError()
+        self.typingChannels[threadId] = channel
+        self.typingTasks[threadId] = typingTasks
+        return true
+      } catch {
+        realtimeLogger.error(
+          "Failed to subscribe typing realtime for \(threadId, privacy: .private): \(error.localizedDescription)"
+        )
+        await supabase.removeChannel(channel)
+        return false
+      }
+    }
+
+    typingSubscriptionTasks[threadId] = task
+    return await task.value
+  }
+
+  private func teardownTypingChannel(threadId: String) async {
+    typingSubscriptionTasks[threadId]?.cancel()
+    typingSubscriptionTasks[threadId] = nil
+    typingTasks[threadId]?.forEach { $0.cancel() }
+    typingTasks[threadId] = nil
+
+    if let channel = typingChannels[threadId] {
       await supabase.removeChannel(channel)
-      return false
+      typingChannels[threadId] = nil
     }
   }
 
-  private func teardownListTypingChannel(threadId: String) async {
-    listTypingTasks[threadId]?.forEach { $0.cancel() }
-    listTypingTasks[threadId] = nil
+  private func syncTypingChannel(threadId: String) async {
+    let shouldTrackTyping =
+      listTypingThreadIds.contains(threadId) || detailTypingThreadIds.contains(threadId)
 
-    if let channel = listTypingChannels[threadId] {
-      await supabase.removeChannel(channel)
-      listTypingChannels[threadId] = nil
+    if shouldTrackTyping {
+      _ = await ensureTypingChannel(threadId: threadId)
+    } else {
+      await teardownTypingChannel(threadId: threadId)
     }
   }
 
