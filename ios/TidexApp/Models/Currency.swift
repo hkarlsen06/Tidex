@@ -163,6 +163,18 @@ enum CurrencyConfig {
     }
   }
 
+  /// Format an empty/placeholder amount while preserving currency placement.
+  static func formatEmpty(currency: String) -> String {
+    let config = get(currency)
+
+    switch config.display {
+    case .prefix:
+      return "\(config.value)---"
+    case .suffix:
+      return "--- \(config.value)"
+    }
+  }
+
   /// Format an amount without the currency symbol (for breakdown displays)
   static func formatPlain(_ amount: Double, includeDecimals: Bool = false) -> String {
     let formatter = FormatterCache.numberFormatter(

@@ -5,8 +5,15 @@ import SwiftUI
 struct WeekHeaderView: View {
   let weekNumber: Int
   let totalGross: Double
+  let totalGrossTextOverride: String?
 
   @Environment(\.userCurrency) private var currency
+
+  init(weekNumber: Int, totalGross: Double, totalGrossTextOverride: String? = nil) {
+    self.weekNumber = weekNumber
+    self.totalGross = totalGross
+    self.totalGrossTextOverride = totalGrossTextOverride
+  }
 
   // MARK: - Computed Properties
 
@@ -32,7 +39,7 @@ struct WeekHeaderView: View {
       Spacer()
 
       // Total earnings for the week
-      Text(formatCurrency(totalGross))
+      Text(totalGrossTextOverride ?? formatCurrency(totalGross))
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextPrimary)
     }
