@@ -122,13 +122,11 @@ final class FriendNotificationMessagePrefetcher {
       return .skipped(.missingUserId)
     }
 
-    if repository.getMessage(id: normalizedMessageId, viewerUserId: viewerUserId) != nil {
-      return .skipped(.alreadyCached)
-    }
-
+    let cachedMessage = repository.getMessage(id: normalizedMessageId, viewerUserId: viewerUserId)
     let cachedThread = repository.getThread(id: normalizedThreadId, viewerUserId: viewerUserId)
     let shouldFetchThread =
       cachedThread == nil || cachedThread?.lastMessageId != normalizedMessageId
+    let shouldRefreshCachedMessage = cachedMessage != nil && !shouldFetchThread
 
     do {
       if shouldFetchThread {
@@ -142,7 +140,10 @@ final class FriendNotificationMessagePrefetcher {
       }
 
       let fetchedMessage: FriendMessage
-      if let cachedMessage = repository.getMessage(
+      if shouldRefreshCachedMessage {
+        // Re-fetch existing messages so reaction/edit notifications can update cached payloads.
+        fetchedMessage = try await service.fetchMessageSyncPayloadV2(messageId: normalizedMessageId)
+      } else if let cachedMessage = repository.getMessage(
         id: normalizedMessageId, viewerUserId: viewerUserId)
       {
         fetchedMessage = cachedMessage

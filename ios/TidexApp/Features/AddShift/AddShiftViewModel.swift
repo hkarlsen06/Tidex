@@ -42,7 +42,7 @@ struct CalendarDisplayData {
 }
 
 /// ViewModel for the Add Shift screen
-/// Manages state for both single and recurring shift modes
+/// Manages state for single, event, and recurring add modes
 @MainActor
 final class AddShiftViewModel: ObservableObject {
 
@@ -289,6 +289,9 @@ final class AddShiftViewModel: ObservableObject {
   /// Subscription to tab bar add action trigger
   private var addActionCancellable: AnyCancellable?
 
+  /// Subscription to add tab mode-cycle requests
+  private var modeCycleCancellable: AnyCancellable?
+
   /// Track the last observed month to detect changes
   private var lastObservedYear: Int = 0
   private var lastObservedMonth: Int = 0
@@ -428,11 +431,13 @@ final class AddShiftViewModel: ObservableObject {
 
     // Subscribe to tab bar add action trigger
     setupAddActionSubscription()
+    setupModeCycleSubscription()
   }
 
   deinit {
     monthContextCancellable?.cancel()
     addActionCancellable?.cancel()
+    modeCycleCancellable?.cancel()
     previewUpdateTask?.cancel()
     draftSaveTask?.cancel()
   }
@@ -471,6 +476,14 @@ final class AddShiftViewModel: ObservableObject {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] in
         self?.handleTabBarAddTrigger()
+      }
+  }
+
+  private func setupModeCycleSubscription() {
+    modeCycleCancellable = addShiftCoordinator.cycleModeAction
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] in
+        self?.mode = self?.mode.nextMode ?? .single
       }
   }
 

@@ -750,7 +750,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 extension AppDelegate: UNUserNotificationCenterDelegate {
   private func shouldSuppressForegroundPresentation(for userInfo: [AnyHashable: Any]) -> Bool {
     let type = userInfo["type"] as? String ?? ""
-    guard type == "thread_message" || type == "thread_screenshot" || type == "thread_typing",
+    guard
+      type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
+        || type == "thread_reaction",
       let threadId = userInfo["thread_id"] as? String
     else {
       return false
@@ -911,7 +913,8 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
       }
     }
     // Handle friend chat message notifications
-    else if type == "thread_message" || type == "thread_screenshot" || type == "thread_typing",
+    else if type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
+      || type == "thread_reaction",
       let threadId = userInfo["thread_id"] as? String
     {
       let messageId = userInfo["message_id"] as? String

@@ -218,7 +218,8 @@ final class NotificationService {
           let userInfo = notification.request.content.userInfo
           let type = userInfo["type"] as? String ?? ""
           guard
-            type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
+            type == "thread_message" || type == "thread_screenshot"
+              || type == "thread_typing" || type == "thread_reaction"
           else {
             return nil
           }

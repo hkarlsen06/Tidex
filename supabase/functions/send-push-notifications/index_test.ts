@@ -40,13 +40,16 @@ function makeNotification(
 Deno.test("rich-formatting helper only matches supported notification types", () => {
   assert(usesRichFormatting("thread_message"));
   assert(usesRichFormatting("thread_typing"));
+  assert(usesRichFormatting("thread_reaction"));
   assert(usesRichFormatting("thread_screenshot"));
   assert(usesRichFormatting("shifts_screenshotted"));
   assertFalse(usesRichFormatting("share_started"));
   assert(usesThreadActions("thread_message"));
   assertFalse(usesThreadActions("thread_typing"));
+  assertFalse(usesThreadActions("thread_reaction"));
   assertFalse(usesThreadActions("thread_screenshot"));
   assert(usesMessagePrefetch("thread_message"));
+  assert(usesMessagePrefetch("thread_reaction"));
   assert(usesMessagePrefetch("thread_screenshot"));
   assertFalse(usesMessagePrefetch("thread_typing"));
   assertFalse(usesMessagePrefetch("share_started"));
@@ -99,6 +102,20 @@ Deno.test("thread typing notifications route to the same thread without actions"
   assertEquals(aps["target-content-id"], "friend-chat:thread-1");
 });
 
+Deno.test("thread reaction notifications route to the same thread without actions", () => {
+  const aps = buildApsPayload(
+    makeNotification("thread_reaction", {
+      data_payload: { thread_id: "thread-1" },
+    }),
+    0,
+  );
+
+  assertEquals(aps["mutable-content"], 1);
+  assertFalse("category" in aps);
+  assertEquals(aps["thread-id"], "thread-1");
+  assertEquals(aps["target-content-id"], "friend-chat:thread-1");
+});
+
 Deno.test("thread typing notifications use collapse and short expiration headers", () => {
   const headers = buildApnsHeaders(
     makeNotification("thread_typing", {
@@ -115,6 +132,19 @@ Deno.test("thread typing notifications use collapse and short expiration headers
   assert(Number.isFinite(expiration));
   assert(expiration >= Math.floor(Date.now() / 1000));
   assert(expiration <= Math.floor(Date.now() / 1000) + 60);
+});
+
+Deno.test("thread reaction notifications use per-thread collapse headers", () => {
+  const headers = buildApnsHeaders(
+    makeNotification("thread_reaction", {
+      data_payload: { thread_id: "thread-1" },
+    }),
+  );
+
+  assertEquals(headers["apns-push-type"], "alert");
+  assertEquals(headers["apns-priority"], "10");
+  assertEquals(headers["apns-collapse-id"], "thread-reaction:thread-1");
+  assertFalse("apns-expiration" in headers);
 });
 
 Deno.test("prefetch payload uses background headers and includes message metadata", () => {
@@ -139,6 +169,35 @@ Deno.test("prefetch payload uses background headers and includes message metadat
     aps: { "content-available": 1 },
     delivery_mode: "prefetch",
     type: "thread_message",
+    thread_id: "thread-1",
+    message_id: "message-1",
+    message_created_at: "2026-03-17T09:00:00.000Z",
+    sender_user_id: "sender-1",
+  });
+});
+
+Deno.test("reaction prefetch payload uses the same background channel", () => {
+  const notification = makeNotification("thread_reaction", {
+    data_payload: {
+      thread_id: "thread-1",
+      message_id: "message-1",
+      message_created_at: "2026-03-17T09:00:00.000Z",
+      sender_user_id: "sender-1",
+    },
+  });
+
+  const headers = buildPrefetchApnsHeaders(notification);
+  const payload = buildPrefetchPayload(notification);
+
+  assertEquals(headers, {
+    "apns-push-type": "background",
+    "apns-priority": "5",
+    "apns-collapse-id": "friend-prefetch:thread-1",
+  });
+  assertEquals(payload, {
+    aps: { "content-available": 1 },
+    delivery_mode: "prefetch",
+    type: "thread_reaction",
     thread_id: "thread-1",
     message_id: "message-1",
     message_created_at: "2026-03-17T09:00:00.000Z",
@@ -195,6 +254,30 @@ Deno.test("coalescing keeps latest typing notification per recipient thread", ()
       recipient_id: "recipient-1",
       created_at: "2026-03-17T09:01:00.000Z",
       data_payload: { thread_id: "thread-1" },
+    }),
+  ]);
+
+  assertEquals(jobs.length, 1);
+  assertEquals(jobs[0].notifications.map((notification) => notification.id), [
+    "older",
+    "newer",
+  ]);
+  assertEquals(jobs[0].notification.id, "newer");
+});
+
+Deno.test("coalescing keeps latest reaction notification per recipient thread", () => {
+  const jobs = coalesceNotifications([
+    makeNotification("thread_reaction", {
+      id: "older",
+      recipient_id: "recipient-1",
+      created_at: "2026-03-17T09:00:00.000Z",
+      data_payload: { thread_id: "thread-1", message_id: "message-1" },
+    }),
+    makeNotification("thread_reaction", {
+      id: "newer",
+      recipient_id: "recipient-1",
+      created_at: "2026-03-17T09:01:00.000Z",
+      data_payload: { thread_id: "thread-1", message_id: "message-2" },
     }),
   ]);
 
