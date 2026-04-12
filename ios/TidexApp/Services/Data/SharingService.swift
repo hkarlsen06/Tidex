@@ -157,7 +157,9 @@ final class SharingService: ObservableObject {
             sharedAt: sharer.sharedAt,
             showEarnings: sharer.showEarnings,
             hidden: sharer.hidden,
-            hasSharedCalendarContent: sharer.hasSharedCalendarContent
+            hasSharedCalendarContent: sharer.hasSharedCalendarContent,
+            latestSharedShiftDate: sharer.latestSharedShiftDate,
+            hasRecurringSharedShifts: sharer.hasRecurringSharedShifts
           )
         }
 

@@ -5,6 +5,38 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharingViewModel")
 
+enum FriendInitialMonthResolver {
+  static func targetYearMonth(
+    sharer: SharedUser,
+    preview: SharerShiftPreview?,
+    current: (year: Int, month: Int)
+  ) -> (year: Int, month: Int)? {
+    if let previewShift = preview?.shift,
+      let previewDate = Date.fromISODateString(previewShift.shift_date)
+    {
+      let components = Calendar.current.dateComponents([.year, .month], from: previewDate)
+      if let year = components.year, let month = components.month,
+        year != current.year || month != current.month
+      {
+        return (year, month)
+      }
+      return nil
+    }
+
+    guard !sharer.hasRecurringSharedShifts,
+      let latestSharedShiftDate = sharer.latestSharedShiftDate,
+      let latestShiftDate = Date.fromISODateString(latestSharedShiftDate)
+    else {
+      return nil
+    }
+
+    let components = Calendar.current.dateComponents([.year, .month], from: latestShiftDate)
+    guard let year = components.year, let month = components.month else { return nil }
+    guard year != current.year || month != current.month else { return nil }
+    return (year, month)
+  }
+}
+
 // MARK: - Sharing Error
 
 enum SharingError: Error, LocalizedError {
@@ -630,6 +662,17 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     sharedShifts = []
     sharedJobs = []
     sharedCurrency = nil
+
+    let currentMonth = (year: displayYear, month: displayMonth)
+    if let targetMonth = FriendInitialMonthResolver.targetYearMonth(
+      sharer: sharer,
+      preview: shiftPreviews[sharer.id],
+      current: currentMonth
+    ) {
+      monthContext.navigateTo(year: targetMonth.year, month: targetMonth.month)
+      return
+    }
+
     startSelectedSharerLoadTask()
   }
 

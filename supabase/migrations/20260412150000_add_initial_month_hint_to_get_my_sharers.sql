@@ -1,9 +1,7 @@
--- Function: get_my_sharers
--- Description: Returns users who share their shifts with the authenticated viewer, including hidden rows.
--- Security:
---   - Uses auth.uid() server-side (viewer cannot be spoofed).
---   - Includes the share hidden state so clients can separate visible and hidden users.
---   - SECURITY DEFINER is required to read auth.users metadata safely.
+-- Add initial-month hints for shared shift navigation so the iOS app can open
+-- old shared history directly instead of always landing on the current month.
+
+DROP FUNCTION IF EXISTS public.get_my_sharers();
 
 CREATE OR REPLACE FUNCTION public.get_my_sharers()
 RETURNS TABLE (

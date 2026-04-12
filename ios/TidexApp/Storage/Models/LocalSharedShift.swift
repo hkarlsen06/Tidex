@@ -289,6 +289,12 @@ final class LocalSharer {
   /// Whether this sharer has any shared shift history or recurring shifts at all.
   var hasSharedCalendarContent: Bool = false
 
+  /// Most recent shared shift date, when one exists.
+  var latestSharedShiftDate: String?
+
+  /// Whether this sharer has recurring shifts that can generate future months.
+  var hasRecurringSharedShifts: Bool = false
+
   // MARK: - Cache Metadata
 
   var cachedAt: Date
@@ -338,6 +344,8 @@ final class LocalSharer {
     hidden: Bool,
     canViewSharedShifts: Bool = true,
     hasSharedCalendarContent: Bool = false,
+    latestSharedShiftDate: String? = nil,
+    hasRecurringSharedShifts: Bool = false,
     cachedAt: Date = Date()
   ) {
     self.compositeKey = "\(viewerId):\(sharerId)"
@@ -353,6 +361,8 @@ final class LocalSharer {
     self.hidden = hidden
     self.canViewSharedShifts = canViewSharedShifts
     self.hasSharedCalendarContent = hasSharedCalendarContent
+    self.latestSharedShiftDate = latestSharedShiftDate
+    self.hasRecurringSharedShifts = hasRecurringSharedShifts
     self.cachedAt = cachedAt
   }
 
@@ -374,7 +384,9 @@ final class LocalSharer {
       showEarnings: sharedUser.showEarnings,
       hidden: sharedUser.hidden,
       canViewSharedShifts: canViewSharedShifts,
-      hasSharedCalendarContent: sharedUser.hasSharedCalendarContent
+      hasSharedCalendarContent: sharedUser.hasSharedCalendarContent,
+      latestSharedShiftDate: sharedUser.latestSharedShiftDate,
+      hasRecurringSharedShifts: sharedUser.hasRecurringSharedShifts
     )
   }
 
@@ -390,7 +402,9 @@ final class LocalSharer {
       sharedAt: sharedAt,
       showEarnings: showEarnings,
       hidden: hidden,
-      hasSharedCalendarContent: hasSharedCalendarContent
+      hasSharedCalendarContent: hasSharedCalendarContent,
+      latestSharedShiftDate: latestSharedShiftDate,
+      hasRecurringSharedShifts: hasRecurringSharedShifts
     )
   }
 }
