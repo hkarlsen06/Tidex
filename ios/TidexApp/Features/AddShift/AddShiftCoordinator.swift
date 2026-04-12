@@ -23,7 +23,7 @@ final class AddShiftCoordinator: ObservableObject {
   /// Whether a shift can currently be submitted (dates/days selected + valid times)
   @Published private(set) var canSubmit: Bool = false
 
-  /// Current mode (single or recurring) - determines which action to trigger
+  /// Current add mode - determines which action to trigger
   @Published private(set) var currentMode: AddShiftMode = .single
 
   /// Whether the view is currently loading (submitting)
@@ -40,6 +40,9 @@ final class AddShiftCoordinator: ObservableObject {
 
   /// Publisher for triggering the add action from outside (tab bar tap)
   let triggerAddAction = PassthroughSubject<Void, Never>()
+
+  /// Publisher for cycling add modes when the Add tab is reselected.
+  let cycleModeAction = PassthroughSubject<Void, Never>()
 
   private init() {}
 
@@ -73,5 +76,9 @@ final class AddShiftCoordinator: ObservableObject {
   func triggerAdd() {
     guard canSubmit && !isLoading else { return }
     triggerAddAction.send()
+  }
+
+  func triggerModeCycle() {
+    cycleModeAction.send()
   }
 }

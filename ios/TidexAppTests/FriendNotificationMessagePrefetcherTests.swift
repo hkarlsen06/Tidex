@@ -24,12 +24,27 @@ final class FriendNotificationMessagePrefetcherTests: XCTestCase {
     XCTAssertEqual(service.fetchMessagePayloadCallCount, 0)
   }
 
-  func testBackgroundPrefetchSkipsAlreadyCachedMessage() async {
+  func testBackgroundPrefetchRefreshesAlreadyCachedMessage() async {
     let context = MockPrefetchContext()
     let repository = MockFriendsMessagesRepository()
     let service = MockFriendsMessagingService()
     let cachedMessage = makeMessage(id: "message-1", threadId: "thread-1")
+    let refreshedMessage = FriendMessage(
+      id: cachedMessage.id,
+      threadId: cachedMessage.threadId,
+      senderUserId: cachedMessage.senderUserId,
+      messageType: cachedMessage.messageType,
+      body: "Updated body",
+      clientId: cachedMessage.clientId,
+      replyToMessageId: cachedMessage.replyToMessageId,
+      createdAt: cachedMessage.createdAt,
+      editedAt: Date(timeIntervalSince1970: 1_700_000_100),
+      deletedAt: nil
+    )
+    let cachedThread = makeThread(id: "thread-1", lastMessageId: cachedMessage.id)
     repository.messages[cachedMessage.id] = cachedMessage
+    repository.threads[cachedThread.id] = cachedThread
+    service.messageToReturn = refreshedMessage
     let prefetcher = FriendNotificationMessagePrefetcher(
       context: context,
       repository: repository,
@@ -41,8 +56,11 @@ final class FriendNotificationMessagePrefetcherTests: XCTestCase {
       messageId: cachedMessage.id
     )
 
-    XCTAssertEqual(outcome, .skipped(.alreadyCached))
-    XCTAssertEqual(service.fetchMessagePayloadCallCount, 0)
+    XCTAssertEqual(outcome, .newData)
+    XCTAssertEqual(repository.savedMessages, [refreshedMessage])
+    XCTAssertEqual(repository.messages[cachedMessage.id]?.body, "Updated body")
+    XCTAssertEqual(service.fetchThreadSummaryCallCount, 0)
+    XCTAssertEqual(service.fetchMessagePayloadCallCount, 1)
   }
 
   func testBackgroundPrefetchStoresMissingMessageAndThread() async {

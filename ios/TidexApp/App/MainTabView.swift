@@ -119,10 +119,8 @@ struct MainTabView: View {
             showHomeStats = false
             pendingCurrentMonthTab = nil
           } else if newTab == .add {
-            // Add tab - re-tap should return to current month when needed
-            if !monthContext.isCurrentMonth {
-              monthContext.goToCurrentMonth()
-            }
+            addShiftCoordinator.triggerModeCycle()
+            pendingCurrentMonthTab = nil
           } else if newTab == .wagey {
             pendingCurrentMonthTab = nil
           } else if newTab == .sharing {

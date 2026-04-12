@@ -6,10 +6,12 @@ import Foundation
 /// - events: Add a private calendar event
 enum AddShiftMode: String, CaseIterable, Identifiable, Codable {
   case single
-  case recurring
   case events
+  case recurring
 
   var id: String { rawValue }
+
+  static let displayOrder: [AddShiftMode] = [.single, .events, .recurring]
 
   /// Localization key for the mode title
   var titleKey: LocalizedStringResource {
@@ -21,5 +23,18 @@ enum AddShiftMode: String, CaseIterable, Identifiable, Codable {
     case .events:
       return .addShiftModeEvents
     }
+  }
+
+  var nextMode: AddShiftMode {
+    guard let currentIndex = Self.displayOrder.firstIndex(of: self) else {
+      return .single
+    }
+
+    let nextIndex = Self.displayOrder.index(after: currentIndex)
+    if nextIndex == Self.displayOrder.endIndex {
+      return Self.displayOrder[Self.displayOrder.startIndex]
+    }
+
+    return Self.displayOrder[nextIndex]
   }
 }

@@ -30,7 +30,7 @@ struct ShiftModeToggle: View {
     let shadowOpacity: Double = style == .toolbar ? 0 : 0.18
 
     HStack(spacing: buttonSpacing) {
-      ForEach(AddShiftMode.allCases) { modeOption in
+      ForEach(AddShiftMode.displayOrder) { modeOption in
         let isSelected = mode == modeOption
         Button {
           select(modeOption)

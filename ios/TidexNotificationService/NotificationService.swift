@@ -377,6 +377,7 @@ private struct CommunicationNotificationPayload {
   private static let supportedTypes: Set<String> = [
     "thread_message",
     "thread_typing",
+    "thread_reaction",
     "thread_screenshot",
     "shifts_screenshotted",
   ]

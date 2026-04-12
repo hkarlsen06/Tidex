@@ -94,11 +94,13 @@ interface DeviceSendAttemptResult {
 const richFormattingTypes = new Set([
   "thread_message",
   "thread_typing",
+  "thread_reaction",
   "thread_screenshot",
   "shifts_screenshotted",
 ]);
 const messagePrefetchTypes = new Set([
   "thread_message",
+  "thread_reaction",
   "thread_screenshot",
 ]);
 
@@ -155,7 +157,8 @@ function notificationMessageCount(notification: OutboxNotification): number {
 
 function notificationThreadId(notification: OutboxNotification): string | null {
   return notification.notification_type === "thread_message" ||
-      notification.notification_type === "thread_typing"
+      notification.notification_type === "thread_typing" ||
+      notification.notification_type === "thread_reaction"
     ? notificationDataString(notification, "thread_id")
     : null;
 }
@@ -168,6 +171,10 @@ function notificationCollapseId(
 
   if (notification.notification_type === "thread_typing") {
     return `thread-typing:${threadId}`;
+  }
+
+  if (notification.notification_type === "thread_reaction") {
+    return `thread-reaction:${threadId}`;
   }
 
   if (notification.notification_type !== "thread_message") return null;
@@ -278,6 +285,8 @@ export function buildApsPayload(
     aps["interruption-level"] = "active";
     aps["relevance-score"] = notification.notification_type === "thread_typing"
       ? 0.8
+      : notification.notification_type === "thread_reaction"
+      ? 0.85
       : notificationMessageCount(notification) > 1
       ? 0.95
       : 0.9;
