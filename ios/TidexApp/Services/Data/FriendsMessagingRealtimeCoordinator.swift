@@ -157,9 +157,14 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   func startThreadSubscription(threadId: String, viewerUserId: String) async {
-    await stopThreadSubscription(threadId: threadId)
     detailTypingThreadIds.insert(threadId)
     _ = await ensureTypingChannel(threadId: threadId)
+
+    if let existingChannel = threadChannels[threadId], existingChannel.status == .subscribed {
+      return
+    }
+
+    await teardownThreadDetailChannel(threadId: threadId)
 
     let channel = supabase.channel("friends-thread-detail:\(threadId)") { config in
       config.broadcast.receiveOwnBroadcasts = true
@@ -239,15 +244,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   func stopThreadSubscription(threadId: String) async {
     detailTypingThreadIds.remove(threadId)
     await syncTypingChannel(threadId: threadId)
-
-    threadTasks[threadId]?.forEach { $0.cancel() }
-    threadTasks[threadId] = nil
-
-    if let channel = threadChannels[threadId] {
-      await supabase.removeChannel(channel)
-      threadChannels[threadId] = nil
-    }
-
+    await teardownThreadDetailChannel(threadId: threadId)
   }
 
   func stopAll() async {
@@ -533,7 +530,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func broadcastTypingEvent(event: String, threadId: String, userId: String) async -> Bool {
-    guard let channel = typingChannels[threadId], channel.status == .subscribed else {
+    guard await ensureTypingChannel(threadId: threadId),
+      let channel = typingChannels[threadId],
+      channel.status == .subscribed
+    else {
       return false
     }
 
@@ -704,6 +704,16 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     if let channel = typingChannels[threadId] {
       await supabase.removeChannel(channel)
       typingChannels[threadId] = nil
+    }
+  }
+
+  private func teardownThreadDetailChannel(threadId: String) async {
+    threadTasks[threadId]?.forEach { $0.cancel() }
+    threadTasks[threadId] = nil
+
+    if let channel = threadChannels[threadId] {
+      await supabase.removeChannel(channel)
+      threadChannels[threadId] = nil
     }
   }
 

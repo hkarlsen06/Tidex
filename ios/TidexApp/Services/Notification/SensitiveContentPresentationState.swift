@@ -3,7 +3,7 @@ import Foundation
 @MainActor
 final class SensitiveContentPresentationState {
   enum VisibleContext: Equatable {
-    case friendThread(threadId: String)
+    case friendThread(threadId: String, ownerId: UUID)
   }
 
   static let shared = SensitiveContentPresentationState()
@@ -15,7 +15,7 @@ final class SensitiveContentPresentationState {
   }
 
   var activeFriendThreadId: String? {
-    guard case .friendThread(let threadId) = visibleContext else { return nil }
+    guard case .friendThread(let threadId, _) = visibleContext else { return nil }
     return threadId
   }
 
@@ -23,5 +23,15 @@ final class SensitiveContentPresentationState {
 
   func setVisibleContext(_ context: VisibleContext?) {
     visibleContext = context
+  }
+
+  func clearVisibleContextIfOwnedByFriendThread(_ ownerId: UUID) {
+    guard case .friendThread(_, let activeOwnerId) = visibleContext,
+      activeOwnerId == ownerId
+    else {
+      return
+    }
+
+    visibleContext = nil
   }
 }
