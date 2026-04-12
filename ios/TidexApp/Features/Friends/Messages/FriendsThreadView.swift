@@ -853,16 +853,10 @@ struct FriendsThreadView: View {
   }
 
   private var chatReplySwipeActionLabel: some View {
-    VStack(spacing: 4) {
-      Image(systemName: "arrowshape.turn.up.left")
-        .imageScale(.large)
-        .foregroundStyle(.white)
-        .frame(height: 30)
-
-      Text(String(localized: .friendsChatActionReply))
-        .foregroundStyle(.white)
-        .font(.tidexFootnote)
-    }
+    Image(systemName: "arrowshape.turn.up.left")
+      .imageScale(.large)
+      .foregroundStyle(.white)
+      .frame(width: 32, height: 32)
   }
 
   private var actionsMenu: some View {
