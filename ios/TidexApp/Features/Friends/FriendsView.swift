@@ -43,9 +43,12 @@ struct SharingView: View {
   /// Shift IDs to highlight in the calendar (from changes array in notification)
   @State private var highlightShiftIds: Set<String> = []
   @State private var deepLinkNavigationTask: Task<Void, Never>?
+  @State private var pendingChatNavigationTask: Task<Void, Never>?
   @State private var highlightClearTask: Task<Void, Never>?
   @State private var openingThreadUserId: String?
   @State private var openingThreadId: String?
+  @State private var pendingChatRoute: FriendChatRoute?
+  @State private var pendingChatHighlightUserId: String?
   @State private var activeChatHighlightUserId: String?
   @State private var chatOpenErrorMessage: String?
   @State private var unreadChatUserIds: Set<String> = []
@@ -118,6 +121,7 @@ struct SharingView: View {
           route: route,
           viewerUserId: coordinator.getCurrentUserId() ?? ""
         )
+        .id(route.threadId)
         .onAppear {
           hasSelectedSharer = false
         }
@@ -181,6 +185,7 @@ struct SharingView: View {
           viewModel.deselectSharer()
         }
         hasSelectedSharer = false
+        schedulePendingChatNavigationIfNeeded()
       }
     }
     .onChange(of: coordinator.userId) { _, _ in
@@ -245,6 +250,8 @@ struct SharingView: View {
     .onDisappear {
       deepLinkNavigationTask?.cancel()
       deepLinkNavigationTask = nil
+      pendingChatNavigationTask?.cancel()
+      pendingChatNavigationTask = nil
       highlightClearTask?.cancel()
       highlightClearTask = nil
       unreadRefreshTask?.cancel()
@@ -531,14 +538,15 @@ struct SharingView: View {
           navigationRequestId: navigationRequestId
         )
 
-        activeChatHighlightUserId =
+        let highlightedUserId =
           route.counterpartUserId.isEmpty
           ? notificationSenderUserId
           : route.counterpartUserId
-        navigationPath = NavigationPath()
-        viewModel.deselectSharer()
-        navigationPath.append(route)
-        hasSelectedSharer = false
+        navigateToChatRoute(
+          route,
+          highlightedUserId: highlightedUserId,
+          resetNavigationFirst: true
+        )
         return
       }
 
@@ -569,11 +577,11 @@ struct SharingView: View {
         navigationRequestId: navigationRequestId
       )
 
-      activeChatHighlightUserId = snapshot.thread.counterpartUserId
-      navigationPath = NavigationPath()
-      viewModel.deselectSharer()
-      navigationPath.append(route)
-      hasSelectedSharer = false
+      navigateToChatRoute(
+        route,
+        highlightedUserId: snapshot.thread.counterpartUserId,
+        resetNavigationFirst: true
+      )
     } catch is CancellationError {
       return
     } catch {
@@ -624,6 +632,52 @@ struct SharingView: View {
       notificationSenderUserId: notificationSenderUserId,
       navigationRequestId: navigationRequestId
     )
+  }
+
+  private func navigateToChatRoute(
+    _ route: FriendChatRoute,
+    highlightedUserId: String?,
+    resetNavigationFirst: Bool
+  ) {
+    pendingChatNavigationTask?.cancel()
+
+    let normalizedHighlightUserId = Self.normalizedIdentifier(highlightedUserId)
+    viewModel.deselectSharer()
+    hasSelectedSharer = false
+
+    guard resetNavigationFirst else {
+      pendingChatRoute = nil
+      pendingChatHighlightUserId = nil
+      activeChatHighlightUserId = normalizedHighlightUserId
+      navigationPath.append(route)
+      return
+    }
+
+    pendingChatRoute = route
+    pendingChatHighlightUserId = normalizedHighlightUserId
+
+    if navigationPath.isEmpty {
+      schedulePendingChatNavigationIfNeeded()
+    } else {
+      navigationPath = NavigationPath()
+    }
+  }
+
+  private func schedulePendingChatNavigationIfNeeded() {
+    guard navigationPath.isEmpty, pendingChatRoute != nil else { return }
+
+    pendingChatNavigationTask?.cancel()
+    pendingChatNavigationTask = Task { @MainActor in
+      await Task.yield()
+      guard !Task.isCancelled, navigationPath.isEmpty, let route = pendingChatRoute else { return }
+
+      let highlightUserId = pendingChatHighlightUserId
+      pendingChatRoute = nil
+      pendingChatHighlightUserId = nil
+      activeChatHighlightUserId = highlightUserId
+      navigationPath.append(route)
+      pendingChatNavigationTask = nil
+    }
   }
 
   private func isBlockedDirectThreadCreationError(_ error: FriendsMessagingServiceError) -> Bool {

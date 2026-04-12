@@ -32,6 +32,7 @@ struct FriendsThreadView: View {
 
   @Environment(\.openURL) private var openURL
 
+  private let route: FriendChatRoute
   @StateObject private var viewModel: FriendsThreadViewModel
   @StateObject private var composerBridge = FriendsThreadComposerBridge()
   @StateObject private var reactionPaletteStore = FriendsChatReactionPaletteStore()
@@ -57,14 +58,17 @@ struct FriendsThreadView: View {
   @State private var liveEdgeTargetPresentedMessageID: String?
   @State private var selectedImageGallery: SelectedImageGallery?
   @State private var pendingForwardAttachment: PendingForwardAttachment?
+  @State private var visibilityOwnerId = UUID()
 
   init(route: FriendChatRoute, viewerUserId: String) {
+    self.route = route
     _viewModel = StateObject(
       wrappedValue: FriendsThreadViewModel(route: route, viewerUserId: viewerUserId)
     )
   }
 
   init(viewModel: FriendsThreadViewModel) {
+    self.route = viewModel.route
     _viewModel = StateObject(wrappedValue: viewModel)
   }
 
@@ -232,17 +236,17 @@ struct FriendsThreadView: View {
       .task {
         await viewModel.loadIfNeeded()
       }
-      .task(id: viewModel.route.navigationRequestId) {
+      .task(id: route.navigationRequestId) {
         await handleRouteNavigationIfNeeded()
       }
       .onAppear {
         syncComposerBridge()
         SensitiveContentPresentationState.shared.setVisibleContext(
-          .friendThread(threadId: viewModel.route.threadId)
+          .friendThread(threadId: route.threadId, ownerId: visibilityOwnerId)
         )
         Task {
           await NotificationService.shared.clearDeliveredFriendChatNotifications(
-            for: viewModel.route.threadId
+            for: route.threadId
           )
         }
       }
@@ -271,7 +275,9 @@ struct FriendsThreadView: View {
       }
       .onDisappear {
         pendingFocusScrollTask?.cancel()
-        SensitiveContentPresentationState.shared.setVisibleContext(nil)
+        SensitiveContentPresentationState.shared.clearVisibleContextIfOwnedByFriendThread(
+          visibilityOwnerId
+        )
         Task {
           await viewModel.stopRealtime()
         }
@@ -1416,7 +1422,7 @@ struct FriendsThreadView: View {
   }
 
   private func handleRouteNavigationIfNeeded() async {
-    guard let navigationRequestId = viewModel.route.navigationRequestId,
+    guard let navigationRequestId = route.navigationRequestId,
       lastHandledNavigationRequestId != navigationRequestId
     else {
       return
@@ -1424,7 +1430,7 @@ struct FriendsThreadView: View {
 
     lastHandledNavigationRequestId = navigationRequestId
     await viewModel.handleNotificationOpen(
-      targetMessageId: viewModel.route.initialMessageId,
+      targetMessageId: route.initialMessageId,
       forceRefresh: false
     )
   }
