@@ -928,6 +928,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
           threadId: threadId,
           messageId: messageId,
           senderUserId: senderUserId,
+          typingUserId: type == "thread_typing" ? senderUserId : nil,
           navigationRequestId: UUID()
         )
       }

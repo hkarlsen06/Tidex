@@ -371,13 +371,20 @@ struct SharingView: View {
       showManageSheet = true
       coordinator.clearPendingDeepLink()
 
-    case .friendChat(let threadId, let messageId, let senderUserId, let navigationRequestId):
+    case .friendChat(
+      let threadId,
+      let messageId,
+      let senderUserId,
+      let typingUserId,
+      let navigationRequestId
+    ):
       deepLinkNavigationTask?.cancel()
       deepLinkNavigationTask = Task { @MainActor in
         await openChat(
           threadId: threadId,
           initialMessageId: messageId,
           notificationSenderUserId: senderUserId,
+          notificationTypingUserId: typingUserId,
           navigationRequestId: navigationRequestId
         )
       }
@@ -542,6 +549,7 @@ struct SharingView: View {
     threadId: String,
     initialMessageId: String? = nil,
     notificationSenderUserId: String? = nil,
+    notificationTypingUserId: String? = nil,
     navigationRequestId: UUID? = nil
   ) async {
     guard openingThreadId == nil else { return }
@@ -560,6 +568,7 @@ struct SharingView: View {
           threadId: threadId,
           initialMessageId: initialMessageId,
           notificationSenderUserId: notificationSenderUserId,
+          notificationTypingUserId: notificationTypingUserId,
           navigationRequestId: navigationRequestId
         )
 
@@ -599,6 +608,7 @@ struct SharingView: View {
         fallbackAvatarUrl: snapshot.thread.counterpartAvatarUrl,
         initialMessageId: initialMessageId,
         notificationSenderUserId: notificationSenderUserId,
+        notificationTypingUserId: notificationTypingUserId,
         navigationRequestId: navigationRequestId
       )
 
@@ -622,6 +632,7 @@ struct SharingView: View {
     threadId: String,
     initialMessageId: String?,
     notificationSenderUserId: String?,
+    notificationTypingUserId: String?,
     navigationRequestId: UUID?
   ) -> FriendChatRoute {
     let cachedThread =
@@ -655,6 +666,7 @@ struct SharingView: View {
       fallbackAvatarUrl: cachedThread.counterpartAvatarUrl,
       initialMessageId: initialMessageId,
       notificationSenderUserId: notificationSenderUserId,
+      notificationTypingUserId: notificationTypingUserId,
       navigationRequestId: navigationRequestId
     )
   }

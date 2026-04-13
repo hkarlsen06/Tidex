@@ -190,6 +190,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private var activeThreadCatchUpTask: Task<Void, Never>?
   private var counterpartTypingTimeoutTask: Task<Void, Never>?
   private var counterpartTypingStopGraceTask: Task<Void, Never>?
+  private var pendingNotificationTypingUserId: String?
   private var threadStatesRefreshTask: Task<Void, Never>?
   private var latestVisibleMessageReadTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
@@ -520,7 +521,13 @@ final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
-  func handleNotificationOpen(targetMessageId: String?, forceRefresh: Bool) async {
+  func handleNotificationOpen(
+    targetMessageId: String?,
+    notificationTypingUserId: String?,
+    forceRefresh: Bool
+  ) async {
+    primeNotificationTypingIndicator(userId: notificationTypingUserId)
+
     if forceRefresh {
       await refresh()
     }
@@ -560,9 +567,12 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func handleAppDidBecomeActive() async {
-    resetCounterpartTypingState()
+    if pendingNotificationTypingUserId == nil {
+      resetCounterpartTypingState()
+    }
     await startRealtime()
     await refreshFromServer()
+    reapplyPendingNotificationTypingIndicatorIfNeeded()
   }
 
   func handleDraftChanged(to draft: String) async {
@@ -610,6 +620,9 @@ final class FriendsThreadViewModel: ObservableObject {
         self.resetCounterpartTypingState()
       }
     } else {
+      if pendingNotificationTypingUserId == normalizedUserId {
+        pendingNotificationTypingUserId = nil
+      }
       counterpartTypingStopGraceTask = Task { @MainActor [weak self] in
         guard let self else { return }
         try? await Task.sleep(for: Typing.remoteStopGraceDelay)
@@ -982,7 +995,9 @@ final class FriendsThreadViewModel: ObservableObject {
     latestCounterpartMessageId = latestIncomingCounterpartMessageId(in: thread)
     if latestCounterpartMessageId != nil, latestCounterpartMessageId != previousCounterpartMessageId
     {
-      resetCounterpartTypingState()
+      if pendingNotificationTypingUserId == nil {
+        resetCounterpartTypingState()
+      }
     }
     syncCounterpartShiftPreviewFromCache()
     syncComposerStateWithCachedMessages()
@@ -1499,6 +1514,18 @@ final class FriendsThreadViewModel: ObservableObject {
     counterpartTypingStopGraceTask?.cancel()
     counterpartTypingStopGraceTask = nil
     counterpartIsTyping = false
+  }
+
+  private func primeNotificationTypingIndicator(userId: String?) {
+    guard let normalizedUserId = Self.normalizedUserId(userId) else { return }
+    pendingNotificationTypingUserId = normalizedUserId
+    handleCounterpartTypingChange(userId: normalizedUserId, isTyping: true)
+  }
+
+  private func reapplyPendingNotificationTypingIndicatorIfNeeded() {
+    guard let pendingNotificationTypingUserId else { return }
+    handleCounterpartTypingChange(userId: pendingNotificationTypingUserId, isTyping: true)
+    self.pendingNotificationTypingUserId = nil
   }
 
   private static func normalizedUserId(_ userId: String?) -> String? {

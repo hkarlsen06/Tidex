@@ -173,6 +173,7 @@ final class AppLifecycleHandler {
         threadId: threadId,
         messageId: nil,
         senderUserId: senderUserId,
+        typingUserId: nil,
         navigationRequestId: UUID()
       )
     }

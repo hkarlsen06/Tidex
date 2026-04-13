@@ -842,6 +842,36 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testHighlightRefreshResolverIgnoresVisibilityOnlyScrollChurn() {
+    XCTAssertFalse(
+      FriendsThreadHighlightRefreshResolver.shouldRefreshRows(
+        force: false,
+        highlightedPresentedMessageID: "message-2",
+        lastHighlightedPresentedMessageID: "message-2"
+      )
+    )
+  }
+
+  func testHighlightRefreshResolverRefreshesWhenHighlightedMessageChanges() {
+    XCTAssertTrue(
+      FriendsThreadHighlightRefreshResolver.shouldRefreshRows(
+        force: false,
+        highlightedPresentedMessageID: "message-2",
+        lastHighlightedPresentedMessageID: "message-1"
+      )
+    )
+  }
+
+  func testHighlightRefreshResolverHonorsForcedRefreshes() {
+    XCTAssertTrue(
+      FriendsThreadHighlightRefreshResolver.shouldRefreshRows(
+        force: true,
+        highlightedPresentedMessageID: "message-2",
+        lastHighlightedPresentedMessageID: "message-2"
+      )
+    )
+  }
+
   func testImageGalleryResolverCollectsImageAttachmentsInChatOrder() {
     let baseDate = Date(timeIntervalSince1970: 1_731_000_000)
     let olderMessage = FriendMessage(

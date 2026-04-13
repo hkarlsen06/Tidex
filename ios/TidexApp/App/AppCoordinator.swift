@@ -81,6 +81,7 @@ final class AppCoordinator: ObservableObject {
       threadId: String,
       messageId: String?,
       senderUserId: String?,
+      typingUserId: String?,
       navigationRequestId: UUID?
     )  // Navigate to a direct friend chat thread
     case addShift  // Navigate to Add Shift tab (preselected date set via SharedMonthContext)

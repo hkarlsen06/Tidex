@@ -6,6 +6,7 @@ struct FriendChatRoute: Hashable {
   let displayName: String
   let avatarUrl: String?
   let initialMessageId: String?
+  let notificationTypingUserId: String?
   let navigationRequestId: UUID?
 
   init(
@@ -14,6 +15,7 @@ struct FriendChatRoute: Hashable {
     fallbackAvatarUrl: String?,
     initialMessageId: String? = nil,
     notificationSenderUserId: String? = nil,
+    notificationTypingUserId: String? = nil,
     navigationRequestId: UUID? = nil
   ) {
     self.threadId = thread.id
@@ -28,8 +30,20 @@ struct FriendChatRoute: Hashable {
         nil
       }
     self.initialMessageId = effectiveMessageId
+    let normalizedTypingUserId = notificationTypingUserId?.trimmingCharacters(
+      in: .whitespacesAndNewlines
+    )
+    self.notificationTypingUserId =
+      if let normalizedTypingUserId, !normalizedTypingUserId.isEmpty {
+        normalizedTypingUserId
+      } else {
+        nil
+      }
     self.navigationRequestId =
       navigationRequestId
-      ?? (effectiveMessageId != nil || notificationSenderUserId != nil ? UUID() : nil)
+      ?? (effectiveMessageId != nil
+        || notificationSenderUserId != nil
+        || self.notificationTypingUserId != nil
+        ? UUID() : nil)
   }
 }

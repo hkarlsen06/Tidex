@@ -1884,6 +1884,145 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
   }
 
+  func testHandleNotificationOpenPrimesCounterpartTypingFromTypingNotification() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: MockFriendsMessagingService(),
+      repository: repository,
+      realtimeCoordinator: MockFriendsRealtimeCoordinator()
+    )
+
+    await viewModel.handleNotificationOpen(
+      targetMessageId: nil,
+      notificationTypingUserId: route.counterpartUserId,
+      forceRefresh: false
+    )
+
+    XCTAssertTrue(viewModel.counterpartIsTyping)
+  }
+
+  func testReloadFromCachePreservesPrimedTypingIndicatorDuringNotificationHandoff() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let message = FriendMessage(
+      id: "message-handoff-1",
+      threadId: route.threadId,
+      senderUserId: route.counterpartUserId,
+      messageType: .user,
+      body: "Still typing",
+      clientId: "client-handoff-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_100),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: route.counterpartUserId,
+      counterpartDisplayName: route.displayName,
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: message.id,
+      lastMessageSenderId: message.senderUserId,
+      lastMessageAt: message.createdAt,
+      lastMessageBody: message.body,
+      lastMessageHasImage: false,
+      unreadCount: 1,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: MockFriendsMessagingService(),
+      repository: repository,
+      realtimeCoordinator: MockFriendsRealtimeCoordinator()
+    )
+
+    await viewModel.handleNotificationOpen(
+      targetMessageId: nil,
+      notificationTypingUserId: route.counterpartUserId,
+      forceRefresh: false
+    )
+    await repository.saveThread(thread, for: "viewer-1")
+    await repository.saveMessages([message], in: route.threadId, for: "viewer-1")
+
+    viewModel.reloadFromCache()
+
+    XCTAssertTrue(viewModel.counterpartIsTyping)
+  }
+
+  func testHandleAppDidBecomeActiveReappliesPrimedNotificationTypingIndicator() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let message = FriendMessage(
+      id: "message-active-1",
+      threadId: route.threadId,
+      senderUserId: route.counterpartUserId,
+      messageType: .user,
+      body: "Latest",
+      clientId: "client-active-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_100),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: route.counterpartUserId,
+      counterpartDisplayName: route.displayName,
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: message.id,
+      lastMessageSenderId: message.senderUserId,
+      lastMessageAt: message.createdAt,
+      lastMessageBody: message.body,
+      lastMessageHasImage: false,
+      unreadCount: 1,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    mockService.threadMessages = [message]
+
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.handleNotificationOpen(
+      targetMessageId: nil,
+      notificationTypingUserId: route.counterpartUserId,
+      forceRefresh: false
+    )
+    await viewModel.handleAppDidBecomeActive()
+
+    XCTAssertEqual(realtimeCoordinator.startThreadSubscriptionCallCount, 1)
+    XCTAssertTrue(viewModel.counterpartIsTyping)
+  }
+
   func testHandleAppDidBecomeActiveRefreshesCounterpartReadState() async throws {
     let repository = try makeRepository()
     let route = makeRoute()
