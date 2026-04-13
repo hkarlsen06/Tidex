@@ -58,6 +58,7 @@ struct SharingView: View {
   @State private var typingResetTasks: [String: Task<Void, Never>] = [:]
   @State private var latestIncomingMessageIdsByUserId: [String: String] = [:]
   @State private var unreadRefreshTask: Task<Void, Never>?
+  @State private var isChatTabBarHidden = false
 
   /// Duration to show highlight before auto-clearing (3 seconds)
   private static let highlightDuration: TimeInterval = 3.0
@@ -74,6 +75,25 @@ struct SharingView: View {
     return normalized.isEmpty ? nil : normalized
   }
 
+  @MainActor
+  private func pushChatRoute(
+    _ route: FriendChatRoute,
+    highlightedUserId: String?
+  ) {
+    pendingChatNavigationTask?.cancel()
+    isChatTabBarHidden = true
+
+    let normalizedHighlightUserId = Self.normalizedIdentifier(highlightedUserId)
+    pendingChatNavigationTask = Task { @MainActor in
+      await Task.yield()
+      guard !Task.isCancelled else { return }
+
+      activeChatHighlightUserId = normalizedHighlightUserId
+      navigationPath.append(route)
+      pendingChatNavigationTask = nil
+    }
+  }
+
   var body: some View {
     NavigationStack(path: $navigationPath) {
       ZStack {
@@ -85,6 +105,7 @@ struct SharingView: View {
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
       .navigationBarTitleDisplayMode(.inline)
+      .toolbar(isChatTabBarHidden ? .hidden : .visible, for: .tabBar)
       .iPadToolbarBackground()
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
@@ -126,6 +147,7 @@ struct SharingView: View {
           hasSelectedSharer = false
         }
         .onDisappear {
+          isChatTabBarHidden = false
           activeChatHighlightUserId = nil
           hasSelectedSharer = viewModel.selectedSharer != nil
         }
@@ -180,6 +202,7 @@ struct SharingView: View {
     .onChange(of: navigationPath) { _, path in
       // When user navigates back (automatic back button or swipe), deselect sharer
       if path.isEmpty {
+        isChatTabBarHidden = pendingChatRoute != nil
         activeChatHighlightUserId = nil
         if viewModel.selectedSharer != nil {
           viewModel.deselectSharer()
@@ -496,8 +519,7 @@ struct SharingView: View {
         fallbackDisplayName: sharedUser.displayName,
         fallbackAvatarUrl: sharedUser.avatarUrl
       )
-      activeChatHighlightUserId = sharedUser.id
-      navigationPath.append(route)
+      pushChatRoute(route, highlightedUserId: sharedUser.id)
     } catch let error as FriendsMessagingServiceError
       where isBlockedDirectThreadCreationError(error)
     {
@@ -651,8 +673,7 @@ struct SharingView: View {
     guard resetNavigationFirst else {
       pendingChatRoute = nil
       pendingChatHighlightUserId = nil
-      activeChatHighlightUserId = normalizedHighlightUserId
-      navigationPath.append(route)
+      pushChatRoute(route, highlightedUserId: normalizedHighlightUserId)
       return
     }
 
@@ -677,6 +698,7 @@ struct SharingView: View {
       let highlightUserId = pendingChatHighlightUserId
       pendingChatRoute = nil
       pendingChatHighlightUserId = nil
+      isChatTabBarHidden = true
       activeChatHighlightUserId = highlightUserId
       navigationPath.append(route)
       pendingChatNavigationTask = nil

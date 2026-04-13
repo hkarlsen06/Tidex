@@ -1,4 +1,5 @@
 import ExyteChat
+import ImageIO
 import SwiftUI
 import UIKit
 
@@ -31,6 +32,8 @@ struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
   private static let reactionHorizontalOffset: CGFloat = 12
   private static let reactionVerticalOffset: CGFloat = 8
+  private static let statusHorizontalOffset: CGFloat = 5
+  private static let statusVerticalOffset: CGFloat = 5
   private static let avatarSize = AvatarView.Size.small
 
   let message: FriendMessage
@@ -61,7 +64,7 @@ struct FriendsChatMessageRowContent: View {
     let showsFallbackBubble =
       !hasMessageText && imageAttachments.isEmpty && shiftSnapshot == nil
       && fallbackPreviewText != nil
-    let showsMetadataRow = showsTimestamp || messageStatus != nil || message.editedAt != nil
+    let showsMetadataRow = inlineMetadataStatus != nil || message.editedAt != nil
     let topPadding = groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
     let bottomPadding =
       if showsMetadataRow {
@@ -125,6 +128,9 @@ struct FriendsChatMessageRowContent: View {
                       reactionStrip
                     }
                   }
+                  .overlay(alignment: bubbleStatusAlignment) {
+                    bubbleEdgeStatusBadge
+                  }
                 }
               }
 
@@ -144,6 +150,9 @@ struct FriendsChatMessageRowContent: View {
                     reactionStrip
                   }
                 }
+                .overlay(alignment: bubbleStatusAlignment) {
+                  bubbleEdgeStatusBadge
+                }
               }
 
               if showsFallbackBubble, let fallbackPreviewText {
@@ -161,6 +170,8 @@ struct FriendsChatMessageRowContent: View {
                     .fixedSize(horizontal: false, vertical: true)
                 } reaction: {
                   reactionStrip
+                } status: {
+                  bubbleEdgeStatusBadge
                 }
               }
 
@@ -190,6 +201,8 @@ struct FriendsChatMessageRowContent: View {
                   }
                 } reaction: {
                   reactionStrip
+                } status: {
+                  bubbleEdgeStatusBadge
                 }
               }
             }
@@ -197,8 +210,8 @@ struct FriendsChatMessageRowContent: View {
             if showsMetadataRow {
               HStack(spacing: Spacing.xxs) {
                 if isCurrentUser {
-                  if let messageStatus {
-                    statusView(messageStatus)
+                  if let inlineMetadataStatus {
+                    statusView(inlineMetadataStatus)
                   }
 
                   if message.editedAt != nil {
@@ -207,11 +220,6 @@ struct FriendsChatMessageRowContent: View {
                       .fixedSize(horizontal: true, vertical: false)
                   }
 
-                  if showsTimestamp {
-                    Text(message.createdAt.formatted(.dateTime.hour().minute()))
-                      .lineLimit(1)
-                      .fixedSize(horizontal: true, vertical: false)
-                  }
                 } else {
                   if message.editedAt != nil {
                     Text(String(localized: "friends.chat.edited", table: "Localizable"))
@@ -219,14 +227,8 @@ struct FriendsChatMessageRowContent: View {
                       .fixedSize(horizontal: true, vertical: false)
                   }
 
-                  if showsTimestamp {
-                    Text(message.createdAt.formatted(.dateTime.hour().minute()))
-                      .lineLimit(1)
-                      .fixedSize(horizontal: true, vertical: false)
-                  }
-
-                  if let messageStatus {
-                    statusView(messageStatus)
+                  if let inlineMetadataStatus {
+                    statusView(inlineMetadataStatus)
                   }
                 }
               }
@@ -296,6 +298,68 @@ struct FriendsChatMessageRowContent: View {
         .buttonStyle(.plain)
       }
     }
+  }
+
+  private var inlineMetadataStatus: FriendsChatMessageStatus? {
+    guard let messageStatus else { return nil }
+    switch messageStatus {
+    case .failed:
+      return .failed
+    case .sending, .delivered, .read:
+      return nil
+    }
+  }
+
+  @ViewBuilder
+  private var bubbleEdgeStatusBadge: some View {
+    if isCurrentUser, let messageStatus {
+      switch messageStatus {
+      case .sending:
+        ProgressView()
+          .controlSize(.mini)
+          .padding(6)
+          .background(.ultraThinMaterial, in: Circle())
+          .overlay(
+            Circle()
+              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+          )
+          .offset(x: -Self.statusHorizontalOffset, y: Self.statusVerticalOffset)
+          .zIndex(2)
+
+      case .delivered:
+        Image(systemName: "checkmark")
+          .font(.system(size: 10, weight: .bold))
+          .foregroundColor(.tidexTextMuted)
+          .padding(6)
+          .background(.ultraThinMaterial, in: Circle())
+          .overlay(
+            Circle()
+              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+          )
+          .offset(x: -Self.statusHorizontalOffset, y: Self.statusVerticalOffset)
+          .zIndex(2)
+
+      case .read:
+        Image(systemName: "eye.fill")
+          .font(.system(size: 10, weight: .bold))
+          .foregroundColor(.tidexBlue)
+          .padding(6)
+          .background(.ultraThinMaterial, in: Circle())
+          .overlay(
+            Circle()
+              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+          )
+          .offset(x: -Self.statusHorizontalOffset, y: Self.statusVerticalOffset)
+          .zIndex(2)
+
+      case .failed:
+        EmptyView()
+      }
+    }
+  }
+
+  private var bubbleStatusAlignment: Alignment {
+    isCurrentUser ? .bottomLeading : .bottomTrailing
   }
 
   @ViewBuilder
@@ -407,7 +471,7 @@ extension FriendMessageAttachment {
   }
 }
 
-struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: View {
+struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View, Status: View>: View {
   let isCurrentUser: Bool
   let groupContext: FriendsChatMessageGroupContext
   var minWidth: CGFloat? = nil
@@ -415,6 +479,7 @@ struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: Vie
   let messageFrame: Binding<CGRect>?
   @ViewBuilder let content: () -> Content
   @ViewBuilder let reaction: () -> Reaction
+  @ViewBuilder let status: () -> Status
 
   var body: some View {
     Group {
@@ -454,6 +519,9 @@ struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: Vie
       )
       .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
         reaction()
+      }
+      .overlay(alignment: isCurrentUser ? .bottomLeading : .bottomTrailing) {
+        status()
       }
       .friendsChatMessageFrame(messageFrame)
   }
@@ -496,6 +564,27 @@ struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View>: Vie
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
+  }
+}
+
+extension FriendsChatReactionAnchoredBubbleCard where Status == EmptyView {
+  init(
+    isCurrentUser: Bool,
+    groupContext: FriendsChatMessageGroupContext,
+    minWidth: CGFloat? = nil,
+    maxWidth: CGFloat? = nil,
+    messageFrame: Binding<CGRect>?,
+    @ViewBuilder content: @escaping () -> Content,
+    @ViewBuilder reaction: @escaping () -> Reaction
+  ) {
+    self.isCurrentUser = isCurrentUser
+    self.groupContext = groupContext
+    self.minWidth = minWidth
+    self.maxWidth = maxWidth
+    self.messageFrame = messageFrame
+    self.content = content
+    self.reaction = reaction
+    self.status = { EmptyView() }
   }
 }
 
@@ -853,11 +942,19 @@ private struct FriendsChatImageView: View {
 
 @MainActor
 final class FriendsChatImageLoader: ObservableObject {
+  enum Variant {
+    case original
+    case display(pixelSize: CGSize)
+  }
+
   @Published private(set) var image: UIImage?
   @Published private(set) var isLoading = false
 
-  init(initialImage: UIImage? = nil) {
+  private let variant: Variant
+
+  init(initialImage: UIImage? = nil, variant: Variant = .original) {
     image = initialImage
+    self.variant = variant
   }
 
   func loadIfNeeded(attachment: FriendMessageAttachment) async {
@@ -866,7 +963,7 @@ final class FriendsChatImageLoader: ObservableObject {
       return
     }
 
-    let cacheURL = Self.cacheURL(for: attachment.storagePath)
+    let cacheURL = Self.cacheURL(for: attachment.storagePath, variant: variant)
 
     if let cached = ImageCache.shared.get(for: cacheURL) {
       image = cached
@@ -886,7 +983,7 @@ final class FriendsChatImageLoader: ObservableObject {
       let data = try await FriendsMessagingService.shared.downloadAttachmentData(
         path: attachment.storagePath
       )
-      guard let loadedImage = await Self.decodeImage(from: data) else { return }
+      guard let loadedImage = await Self.decodeImage(from: data, variant: variant) else { return }
       ImageCache.shared.set(loadedImage, for: cacheURL)
       image = loadedImage
     } catch {
@@ -894,20 +991,59 @@ final class FriendsChatImageLoader: ObservableObject {
     }
   }
 
-  nonisolated static func cacheURL(for storagePath: String) -> URL {
+  nonisolated static func cacheURL(for storagePath: String, variant: Variant = .original) -> URL {
     var components = URLComponents()
     components.scheme = "https"
     components.host = "friends-message-cache.local"
     components.path = "/\(storagePath)"
+    switch variant {
+    case .original:
+      break
+    case .display(let pixelSize):
+      let width = Int(pixelSize.width.rounded())
+      let height = Int(pixelSize.height.rounded())
+      components.queryItems = [
+        URLQueryItem(name: "variant", value: "display"),
+        URLQueryItem(name: "w", value: "\(width)"),
+        URLQueryItem(name: "h", value: "\(height)"),
+      ]
+    }
     return components.url ?? URL(filePath: "/tmp/friends-message-cache-fallback")
   }
 
-  nonisolated private static func decodeImage(from data: Data) async -> UIImage? {
+  nonisolated private static func decodeImage(from data: Data, variant: Variant) async -> UIImage? {
     await Task.detached(priority: .utility) {
       autoreleasepool {
-        UIImage(data: data)
+        switch variant {
+        case .original:
+          UIImage(data: data)
+        case .display(let pixelSize):
+          downsampleImage(from: data, pixelSize: pixelSize)
+        }
       }
     }.value
+  }
+
+  nonisolated private static func downsampleImage(from data: Data, pixelSize: CGSize) -> UIImage? {
+    let maxPixelSize = max(pixelSize.width, pixelSize.height)
+    guard maxPixelSize > 0 else { return UIImage(data: data) }
+    guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
+      return UIImage(data: data)
+    }
+
+    let options: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+    ]
+
+    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary)
+    else {
+      return UIImage(data: data)
+    }
+
+    return UIImage(cgImage: cgImage)
   }
 }
 
@@ -935,10 +1071,17 @@ struct FriendsChatImageAttachmentCard: View {
     self.cornerRadius = cornerRadius
     self.placeholderSymbolSize = placeholderSymbolSize
     self.onTap = onTap
-    let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
+    let resolvedDisplaySize = displaySize ?? attachment.friendsChatImageFrameSize()
+    let displayScale = UITraitCollection.current.displayScale
+    let pixelSize = CGSize(
+      width: resolvedDisplaySize.width * displayScale,
+      height: resolvedDisplaySize.height * displayScale
+    )
+    let variant = FriendsChatImageLoader.Variant.display(pixelSize: pixelSize)
+    let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath, variant: variant)
     let initialImage = ImageCache.shared.get(for: cacheURL)
     _loader = StateObject(
-      wrappedValue: FriendsChatImageLoader(initialImage: initialImage)
+      wrappedValue: FriendsChatImageLoader(initialImage: initialImage, variant: variant)
     )
   }
 
@@ -1220,7 +1363,7 @@ private struct FriendsChatImageGalleryPage: View {
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
     let initialImage = ImageCache.shared.get(for: cacheURL)
     _loader = StateObject(
-      wrappedValue: FriendsChatImageLoader(initialImage: initialImage)
+      wrappedValue: FriendsChatImageLoader(initialImage: initialImage, variant: .original)
     )
   }
 

@@ -345,66 +345,120 @@ struct FriendsThreadChatViewportScrollRequest: Equatable {
 enum FriendsThreadChatViewportResolver {
   private static let pinnedToBottomThreshold: CGFloat = 1
 
+  struct LayoutSnapshot {
+    private let messageIDsSignature: [String]
+    private let presentedMessageIDsByIndexPath: [IndexPath: String]
+    private let indexPathsByPresentedMessageID: [String: IndexPath]
+    private let orderByPresentedMessageID: [String: Int]
+
+    init(messages: [ExyteChat.Message]) {
+      messageIDsSignature = messages.map(\.id)
+
+      let calendar = Calendar.current
+      var messagesByDay: [Date: [ExyteChat.Message]] = [:]
+      var orderByPresentedMessageID: [String: Int] = [:]
+
+      for (order, message) in messages.enumerated() {
+        let day = calendar.startOfDay(for: message.createdAt)
+        messagesByDay[day, default: []].append(message)
+        orderByPresentedMessageID[message.id] = order
+      }
+
+      var presentedMessageIDsByIndexPath: [IndexPath: String] = [:]
+      var indexPathsByPresentedMessageID: [String: IndexPath] = [:]
+      let sectionDates = messagesByDay.keys.sorted(by: >)
+
+      for (sectionIndex, sectionDate) in sectionDates.enumerated() {
+        let sectionMessages = Array(messagesByDay[sectionDate, default: []].reversed())
+        for (rowIndex, message) in sectionMessages.enumerated() {
+          let indexPath = IndexPath(row: rowIndex, section: sectionIndex)
+          presentedMessageIDsByIndexPath[indexPath] = message.id
+          indexPathsByPresentedMessageID[message.id] = indexPath
+        }
+      }
+
+      self.presentedMessageIDsByIndexPath = presentedMessageIDsByIndexPath
+      self.indexPathsByPresentedMessageID = indexPathsByPresentedMessageID
+      self.orderByPresentedMessageID = orderByPresentedMessageID
+    }
+
+    func matches(messages: [ExyteChat.Message]) -> Bool {
+      messageIDsSignature == messages.map(\.id)
+    }
+
+    func indexPath(for presentedMessageID: String) -> IndexPath? {
+      indexPathsByPresentedMessageID[presentedMessageID]
+    }
+
+    func presentedMessageID(for indexPath: IndexPath) -> String? {
+      presentedMessageIDsByIndexPath[indexPath]
+    }
+
+    func latestVisiblePresentedMessageID(in tableView: UITableView) -> String? {
+      let visibleIndexPaths = (tableView.indexPathsForVisibleRows ?? []).filter { indexPath in
+        tableView.numberOfSections > indexPath.section
+          && tableView.numberOfRows(inSection: indexPath.section) > indexPath.row
+      }
+
+      var latestVisiblePresentedMessageID: String?
+      var latestVisibleOrder = Int.min
+
+      for indexPath in visibleIndexPaths {
+        guard
+          let presentedMessageID = presentedMessageID(for: indexPath),
+          let order = orderByPresentedMessageID[presentedMessageID]
+        else {
+          continue
+        }
+
+        if order >= latestVisibleOrder {
+          latestVisibleOrder = order
+          latestVisiblePresentedMessageID = presentedMessageID
+        }
+      }
+
+      return latestVisiblePresentedMessageID
+    }
+  }
+
   static func isPinnedToBottom(contentOffsetY: CGFloat) -> Bool {
     contentOffsetY <= pinnedToBottomThreshold
+  }
+
+  static func layoutSnapshot(messages: [ExyteChat.Message]) -> LayoutSnapshot {
+    LayoutSnapshot(messages: messages)
   }
 
   static func indexPath(for presentedMessageID: String, in messages: [ExyteChat.Message])
     -> IndexPath?
   {
-    let calendar = Calendar.current
-    let sectionDates = Set(messages.map { calendar.startOfDay(for: $0.createdAt) }).sorted(by: >)
+    layoutSnapshot(messages: messages).indexPath(for: presentedMessageID)
+  }
 
-    for (sectionIndex, sectionDate) in sectionDates.enumerated() {
-      let sectionMessages = Array(
-        messages.filter {
-          calendar.isDate($0.createdAt, inSameDayAs: sectionDate)
-        }.reversed())
-
-      if let rowIndex = sectionMessages.firstIndex(where: { $0.id == presentedMessageID }) {
-        return IndexPath(row: rowIndex, section: sectionIndex)
-      }
-    }
-
-    return nil
+  static func indexPath(for presentedMessageID: String, in layoutSnapshot: LayoutSnapshot)
+    -> IndexPath?
+  {
+    layoutSnapshot.indexPath(for: presentedMessageID)
   }
 
   static func latestVisiblePresentedMessageID(
     in tableView: UITableView,
     messages: [ExyteChat.Message]
   ) -> String? {
-    let visibleIndexPaths = (tableView.indexPathsForVisibleRows ?? []).filter { indexPath in
-      tableView.numberOfSections > indexPath.section
-        && tableView.numberOfRows(inSection: indexPath.section) > indexPath.row
-    }
+    layoutSnapshot(messages: messages).latestVisiblePresentedMessageID(in: tableView)
+  }
 
-    guard !visibleIndexPaths.isEmpty else { return nil }
-
-    let visiblePresentedMessageIDs = visibleIndexPaths.compactMap {
-      presentedMessageID(for: $0, in: messages)
-    }
-    guard !visiblePresentedMessageIDs.isEmpty else { return nil }
-
-    let visibleMessageIDSet = Set(visiblePresentedMessageIDs)
-    return messages.last(where: { visibleMessageIDSet.contains($0.id) })?.id
+  static func latestVisiblePresentedMessageID(
+    in tableView: UITableView,
+    layoutSnapshot: LayoutSnapshot
+  ) -> String? {
+    layoutSnapshot.latestVisiblePresentedMessageID(in: tableView)
   }
 
   private static func presentedMessageID(for indexPath: IndexPath, in messages: [ExyteChat.Message])
     -> String?
   {
-    let calendar = Calendar.current
-    let sectionDates = Set(messages.map { calendar.startOfDay(for: $0.createdAt) }).sorted(by: >)
-    guard sectionDates.indices.contains(indexPath.section) else { return nil }
-
-    let sectionDate = sectionDates[indexPath.section]
-    let sectionMessages = Array(
-      messages.filter {
-        calendar.isDate($0.createdAt, inSameDayAs: sectionDate)
-      }.reversed()
-    )
-    guard sectionMessages.indices.contains(indexPath.row) else { return nil }
-
-    return sectionMessages[indexPath.row].id
+    layoutSnapshot(messages: messages).presentedMessageID(for: indexPath)
   }
 }
 
@@ -585,6 +639,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var contentOffsetObservation: NSKeyValueObservation?
     private var contentSizeObservation: NSKeyValueObservation?
     private var messages: [ExyteChat.Message] = []
+    private var layoutSnapshot: FriendsThreadChatViewportResolver.LayoutSnapshot?
     private var scrollRequest: FriendsThreadChatViewportScrollRequest?
     private var observedPresentedMessageID: String?
     private var highlightedPresentedMessageID: String?
@@ -603,6 +658,9 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       from view: UIView,
       input: UpdateInput
     ) {
+      if layoutSnapshot?.matches(messages: input.messages) != true {
+        layoutSnapshot = FriendsThreadChatViewportResolver.layoutSnapshot(messages: input.messages)
+      }
       messages = input.messages
       scrollRequest = input.scrollRequest
       if observedPresentedMessageID != input.observedPresentedMessageID {
@@ -688,11 +746,12 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
     private func reportLatestVisiblePresentedMessageIDIfNeeded() {
       guard let tableView else { return }
+      guard let layoutSnapshot = resolvedLayoutSnapshot() else { return }
 
       let visiblePresentedMessageID =
         FriendsThreadChatViewportResolver.latestVisiblePresentedMessageID(
           in: tableView,
-          messages: messages
+          layoutSnapshot: layoutSnapshot
         )
 
       guard lastVisiblePresentedMessageID != visiblePresentedMessageID else { return }
@@ -705,10 +764,11 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private func reportObservedPresentedMessageVisibleIfNeeded() {
       guard let tableView, let observedPresentedMessageID else { return }
       guard lastReportedObservedPresentedMessageID != observedPresentedMessageID else { return }
+      guard let layoutSnapshot = resolvedLayoutSnapshot() else { return }
       guard
         let indexPath = FriendsThreadChatViewportResolver.indexPath(
           for: observedPresentedMessageID,
-          in: messages
+          in: layoutSnapshot
         )
       else {
         return
@@ -726,10 +786,11 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private func attemptPendingScroll() {
       guard let tableView, let scrollRequest else { return }
       guard handledScrollRequest != scrollRequest else { return }
+      guard let layoutSnapshot = resolvedLayoutSnapshot() else { return }
       guard
         let indexPath = FriendsThreadChatViewportResolver.indexPath(
           for: scrollRequest.presentedMessageID,
-          in: messages
+          in: layoutSnapshot
         )
       else {
         return
@@ -768,13 +829,14 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
     private func refreshHighlightedRowsIfNeeded(force: Bool) {
       guard let tableView else { return }
+      guard let layoutSnapshot = resolvedLayoutSnapshot() else { return }
       let currentIndexPath =
         highlightedPresentedMessageID.flatMap {
-          FriendsThreadChatViewportResolver.indexPath(for: $0, in: messages)
+          FriendsThreadChatViewportResolver.indexPath(for: $0, in: layoutSnapshot)
         }
       let previousIndexPath =
         lastHighlightedPresentedMessageID.flatMap {
-          FriendsThreadChatViewportResolver.indexPath(for: $0, in: messages)
+          FriendsThreadChatViewportResolver.indexPath(for: $0, in: layoutSnapshot)
         }
       let currentVisibleIndexPath =
         currentIndexPath.flatMap { tableView.cellForRow(at: $0) == nil ? nil : $0 }
@@ -801,6 +863,18 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
       lastHighlightedPresentedMessageID = highlightedPresentedMessageID
       lastVisibleHighlightedIndexPath = currentVisibleIndexPath
+    }
+
+    private func resolvedLayoutSnapshot() -> FriendsThreadChatViewportResolver.LayoutSnapshot? {
+      if let layoutSnapshot, layoutSnapshot.matches(messages: messages) {
+        return layoutSnapshot
+      }
+      guard !messages.isEmpty else { return nil }
+
+      let rebuiltLayoutSnapshot = FriendsThreadChatViewportResolver.layoutSnapshot(
+        messages: messages)
+      layoutSnapshot = rebuiltLayoutSnapshot
+      return rebuiltLayoutSnapshot
     }
 
     private func findChatTableView(from view: UIView) -> UITableView? {

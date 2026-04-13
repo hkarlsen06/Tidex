@@ -4,6 +4,8 @@ import SwiftUI
 import UIKit
 
 struct FriendsThreadView: View {
+  private static let bottomMessageComposerClearance: CGFloat = 14
+
   @MainActor
   private final class ChatListRuntime: ObservableObject {
     var lastWillDisplayPresentedMessageID: String?
@@ -224,11 +226,11 @@ struct FriendsThreadView: View {
   }
 
   private func messageID(for presentedMessageID: String) -> String? {
-    FriendsThreadVisibleMessageResolver.messageID(
-      for: presentedMessageID,
-      messages: viewModel.messages,
-      viewerUserId: viewModel.viewerUserId
-    )
+    if let messageId = presentedMessageLookup[presentedMessageID]?.id {
+      return messageId
+    }
+
+    return presentedMessageID.replacingOccurrences(of: "message:", with: "")
   }
 
   var body: some View {
@@ -567,6 +569,7 @@ struct FriendsThreadView: View {
     .showMessageMenuOnLongPress(true)
     .setAvailableInputs([.text])
     .keyboardDismissMode(.interactive)
+    .contentInsets(bottom: Self.bottomMessageComposerClearance)
     .swipeActions(
       edge: .leading, performsFirstActionWithFullSwipe: true,
       items: [
@@ -642,18 +645,9 @@ struct FriendsThreadView: View {
           isPinnedToBottom = $0
         },
         onLatestVisiblePresentedMessageIDChanged: { presentedMessageID in
-          guard
-            let messageId = FriendsThreadVisibleMessageResolver.messageID(
-              for: presentedMessageID,
-              messages: viewModel.messages,
-              viewerUserId: viewModel.viewerUserId
-            )
-          else {
-            return
-          }
-          Task {
-            await viewModel.updateLatestVisibleMessage(messageId: messageId)
-          }
+          viewModel.updateLatestVisibleMessage(
+            messageId: presentedMessageID.flatMap(messageID(for:))
+          )
         },
         onObservedPresentedMessageVisible: handlePackageReplyPresentedMessageVisible,
         onDidHandleScrollRequest: handleViewportScrollRequest
