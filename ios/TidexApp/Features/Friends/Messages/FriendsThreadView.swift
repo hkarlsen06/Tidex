@@ -737,6 +737,7 @@ struct FriendsThreadView: View {
         showsSenderLabel: false,
         showsTimestamp: shouldShowTimestamp,
         messageStatus: messageStatus,
+        stackingOrder: Double(viewModel.messages.count - (index ?? 0)),
         onRetry: {
           Task {
             await viewModel.retryMessage(messageId: message.id)
