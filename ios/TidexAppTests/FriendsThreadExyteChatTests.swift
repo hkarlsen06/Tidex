@@ -588,6 +588,56 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     XCTAssertFalse(FriendsThreadChatViewportResolver.isPinnedToBottom(contentOffsetY: 4))
   }
 
+  func testViewportLayoutSnapshotPreservesPresentedMessageIndexPaths() {
+    let calendar = Calendar(identifier: .gregorian)
+    let firstDay = calendar.startOfDay(for: Date(timeIntervalSince1970: 1_731_000_000))
+    let secondDay = calendar.date(byAdding: .day, value: 1, to: firstDay) ?? firstDay
+    let messages = [
+      Message(
+        id: "day-1-message-1",
+        user: User(id: "viewer", name: "Viewer", avatarURL: nil, isCurrentUser: true),
+        createdAt: firstDay,
+        text: "Day 1"
+      ),
+      Message(
+        id: "day-2-message-1",
+        user: User(id: "viewer", name: "Viewer", avatarURL: nil, isCurrentUser: true),
+        createdAt: secondDay,
+        text: "Day 2"
+      ),
+      Message(
+        id: "day-2-message-2",
+        user: User(id: "other", name: "Other", avatarURL: nil, isCurrentUser: false),
+        createdAt: secondDay.addingTimeInterval(60),
+        text: "Later"
+      ),
+    ]
+
+    let snapshot = FriendsThreadChatViewportResolver.layoutSnapshot(messages: messages)
+
+    XCTAssertEqual(
+      FriendsThreadChatViewportResolver.indexPath(
+        for: "day-1-message-1",
+        in: snapshot
+      ),
+      IndexPath(row: 0, section: 1)
+    )
+    XCTAssertEqual(
+      FriendsThreadChatViewportResolver.indexPath(
+        for: "day-2-message-2",
+        in: snapshot
+      ),
+      IndexPath(row: 0, section: 0)
+    )
+    XCTAssertEqual(
+      FriendsThreadChatViewportResolver.indexPath(
+        for: "day-2-message-1",
+        in: snapshot
+      ),
+      IndexPath(row: 1, section: 0)
+    )
+  }
+
   func testViewportRequestResolverPrefersReplyTargetOverRestoreTarget() {
     let restoreTarget = makeMessage(
       id: "older-message",

@@ -358,7 +358,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
-  func updateLatestVisibleMessage(messageId: String?) async {
+  func updateLatestVisibleMessage(messageId: String?) {
     latestVisibleMessageReadTask?.cancel()
 
     guard let normalizedMessageId = normalizedMessageId(messageId) else {
