@@ -49,6 +49,7 @@ struct FriendsChatMessageRowContent: View {
   let showsSenderLabel: Bool
   let showsTimestamp: Bool
   let messageStatus: FriendsChatMessageStatus?
+  let stackingOrder: Double
   let onRetry: () -> Void
   let onToggleReaction: (String) -> Void
   let onTapQuotedMessage: () -> Void
@@ -129,7 +130,11 @@ struct FriendsChatMessageRowContent: View {
                     }
                   }
                   .overlay(alignment: bubbleStatusAlignment) {
-                    bubbleEdgeStatusBadge
+                    if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
+                      index == imageAttachments.count - 1
+                    {
+                      bubbleEdgeStatusBadge
+                    }
                   }
                 }
               }
@@ -151,7 +156,9 @@ struct FriendsChatMessageRowContent: View {
                   }
                 }
                 .overlay(alignment: bubbleStatusAlignment) {
-                  bubbleEdgeStatusBadge
+                  if !hasMessageText, imageAttachments.isEmpty {
+                    bubbleEdgeStatusBadge
+                  }
                 }
               }
 
@@ -239,6 +246,7 @@ struct FriendsChatMessageRowContent: View {
           }
         }
       }
+      .zIndex(bubbleEdgeBadgeStackingOrder)
       .padding(.top, topPadding)
       .padding(.bottom, bottomPadding)
       .background(
@@ -308,6 +316,20 @@ struct FriendsChatMessageRowContent: View {
     case .sending, .delivered, .read:
       return nil
     }
+  }
+
+  private var showsBubbleEdgeStatusBadge: Bool {
+    guard isCurrentUser, let messageStatus else { return false }
+    switch messageStatus {
+    case .sending, .delivered, .read:
+      return true
+    case .failed:
+      return false
+    }
+  }
+
+  private var bubbleEdgeBadgeStackingOrder: Double {
+    showsBubbleEdgeStatusBadge ? stackingOrder : 0
   }
 
   @ViewBuilder
