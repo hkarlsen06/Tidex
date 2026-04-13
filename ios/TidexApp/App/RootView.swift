@@ -158,6 +158,7 @@ private struct RootContent: View {
                         threadId: activeChatToast.threadId,
                         messageId: activeChatToast.messageId,
                         senderUserId: activeChatToast.senderUserId,
+                        typingUserId: nil,
                         navigationRequestId: UUID()
                       )
                     },

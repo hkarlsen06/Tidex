@@ -585,6 +585,16 @@ enum FriendsThreadExyteHighlightRedrawResolver {
   }
 }
 
+enum FriendsThreadHighlightRefreshResolver {
+  static func shouldRefreshRows(
+    force: Bool,
+    highlightedPresentedMessageID: String?,
+    lastHighlightedPresentedMessageID: String?
+  ) -> Bool {
+    force || highlightedPresentedMessageID != lastHighlightedPresentedMessageID
+  }
+}
+
 struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   let messages: [ExyteChat.Message]
   let scrollRequest: FriendsThreadChatViewportScrollRequest?
@@ -644,7 +654,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var observedPresentedMessageID: String?
     private var highlightedPresentedMessageID: String?
     private var lastHighlightedPresentedMessageID: String?
-    private var lastVisibleHighlightedIndexPath: IndexPath?
     private var handledScrollRequest: FriendsThreadChatViewportScrollRequest?
     private var lastPinnedToBottomState: Bool?
     private var lastVisiblePresentedMessageID: String?
@@ -729,7 +738,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       reportPinnedToBottomIfNeeded()
       reportLatestVisiblePresentedMessageIDIfNeeded()
       reportObservedPresentedMessageVisibleIfNeeded()
-      refreshHighlightedRowsIfNeeded(force: false)
     }
 
     private func reportPinnedToBottomIfNeeded() {
@@ -838,15 +846,14 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         lastHighlightedPresentedMessageID.flatMap {
           FriendsThreadChatViewportResolver.indexPath(for: $0, in: layoutSnapshot)
         }
-      let currentVisibleIndexPath =
-        currentIndexPath.flatMap { tableView.cellForRow(at: $0) == nil ? nil : $0 }
 
-      let shouldRefresh =
-        force
-        || highlightedPresentedMessageID != lastHighlightedPresentedMessageID
-        || currentVisibleIndexPath != lastVisibleHighlightedIndexPath
-
-      guard shouldRefresh else { return }
+      guard
+        FriendsThreadHighlightRefreshResolver.shouldRefreshRows(
+          force: force,
+          highlightedPresentedMessageID: highlightedPresentedMessageID,
+          lastHighlightedPresentedMessageID: lastHighlightedPresentedMessageID
+        )
+      else { return }
 
       let candidateIndexPaths = Set([previousIndexPath, currentIndexPath].compactMap { $0 })
       let validIndexPaths = candidateIndexPaths.filter { indexPath in
@@ -862,7 +869,6 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       }
 
       lastHighlightedPresentedMessageID = highlightedPresentedMessageID
-      lastVisibleHighlightedIndexPath = currentVisibleIndexPath
     }
 
     private func resolvedLayoutSnapshot() -> FriendsThreadChatViewportResolver.LayoutSnapshot? {

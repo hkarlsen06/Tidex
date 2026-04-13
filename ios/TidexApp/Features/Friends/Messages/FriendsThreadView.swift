@@ -519,6 +519,7 @@ struct FriendsThreadView: View {
             threadId: result.threadId,
             messageId: nil,
             senderUserId: nil,
+            typingUserId: nil,
             navigationRequestId: UUID()
           )
         }
@@ -1426,6 +1427,7 @@ struct FriendsThreadView: View {
     lastHandledNavigationRequestId = navigationRequestId
     await viewModel.handleNotificationOpen(
       targetMessageId: route.initialMessageId,
+      notificationTypingUserId: route.notificationTypingUserId,
       forceRefresh: false
     )
   }
