@@ -37,39 +37,24 @@ export const marketingEn = {
         ],
       },
       {
-        question: 'Do you have an iPhone app?',
+        question: 'How do I set up shifts and get accurate pay?',
         answers: [
-          'Yes. Tidex is available as an iPhone app in the App Store.',
-          'Your shifts, settings and subscription are tied to your account, so everything stays in sync in the app.',
+          'Add your base hourly rate, relevant supplements and break preference once in settings.',
+          'After that, enter a new shift and Tidex calculates the payout with the same rules every time, so numbers stay consistent.',
         ],
       },
       {
-        question: 'Can I still use the website?',
+        question: 'How are breaks, overtime, and extra pay handled?',
         answers: [
-          'No. The old website has been retired because almost everyone used the iPhone app instead.',
-          'Tidex is built by a solo developer, so the time goes where it helps the most. Right now that means the iPhone app, which is where the active users are.',
-          'If you have an old website account or billing question, contact support and we will help manually.',
+          'The app applies your configured rules for overtime, supplements, and breaks before showing totals.',
+          'Most users can rely on defaults for a first setup, then tune details if their employer has specific contracts.',
         ],
       },
       {
-        question: 'How do breaks work?',
+        question: 'Can I export a pay report from my app?',
         answers: [
-          'If you work more than 5.5 hours, the app automatically deducts a 30-minute break using the default rules most people need.',
-          'If your workplace uses different rules, you can override break behavior in settings, including shifts that cross midnight.',
-        ],
-      },
-      {
-        question: 'How do overtime and extra pay work?',
-        answers: [
-          'Tell us which extra pay rules apply to you and Tidex handles the rest automatically. Evening pay from 18:00? Weekend pay? Set it up once in settings.',
-          'When you log a shift, the calculator checks the date and time and adds the right extra pay on top of your base pay.',
-        ],
-      },
-      {
-        question: 'Can I download a pay report?',
-        answers: [
-          'Absolutely. Export every shift as PDF or Excel (CSV) any time, e.g. for payroll and timesheet reporting.',
-          'Reports include working hours, breaks, supplements and total pay for each shift.',
+          'Yes. You can export all shifts as PDF or CSV from the app whenever you need a clean record.',
+          'Those reports are easy to share with your workplace or use for your own bookkeeping.',
         ],
       },
       {
@@ -88,8 +73,27 @@ export const marketingEn = {
       },
     ],
   },
+  socialProof: {
+    eyebrow: 'Built for real shifts',
+    heading: 'Why people keep using it',
+    description: 'People use Tidex for predictable pay planning, clearer overtime calculations, and fast follow-up reports.',
+    items: [
+      {
+        title: 'Clear math',
+        description: 'Every line in the total is visible, so you can understand exactly what changed in your pay.',
+      },
+      {
+        title: 'Report-ready exports',
+        description: 'Export clean reports quickly when you want to check payroll or share shift details.',
+      },
+      {
+        title: 'Fast to start',
+        description: 'Set up your rules once and get useful estimates for each shift without complex steps.',
+      },
+    ],
+  },
   ctaPrimary: {
-    heading: 'Ready to try your shifts?',
+    heading: 'Ready to try with your own shifts?',
     description: 'Create a free account and get control over supplements, overtime and reports before the next payday.',
     button: 'Get started — free',
   },

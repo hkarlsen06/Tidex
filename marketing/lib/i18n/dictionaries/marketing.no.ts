@@ -37,39 +37,24 @@ export const marketingNo = {
         ],
       },
       {
-        question: 'Har dere en iPhone-app?',
+        question: 'Hvordan registrerer jeg vakter og får riktig utbetaling?',
         answers: [
-          'Ja, Tidex finnes som app for iPhone, og du laster den ned i App Store.',
-          'Vakter, innstillinger og abonnement er knyttet til kontoen din, så alt holder seg oppdatert i appen.',
+          'Legg inn grunnlønn, relevante tillegg og pausevalg én gang i innstillingene.',
+          'Deretter legger du inn vakter, og Tidex regner ut utbetaling med samme regler hver gang, slik at tallene blir forutsigbare.',
         ],
       },
       {
-        question: 'Kan jeg fortsatt bruke nettsiden?',
+        question: 'Hvordan blir pauser, overtid og tillegg beregnet?',
         answers: [
-          'Nei. Den gamle nettsiden er avviklet fordi nesten alle brukte iPhone-appen.',
-          'Tidex bygges av én utvikler, så tiden brukes der den hjelper flest. Akkurat nå betyr det iPhone-appen, som er der de aktive brukerne er.',
-          'Hvis du har en gammel nettkonto eller spørsmål om tidligere webbetalinger, hjelper support deg manuelt.',
+          'Appen bruker reglene du har satt opp for overtid, pauser og tillegg før den viser totalen.',
+          'De fleste starter med standardregler, og justerer deretter hvis arbeidsgiveren har egne bestemmelser.',
         ],
       },
       {
-        question: 'Hvordan fungerer pauser?',
+        question: 'Kan jeg laste ned lønnsrapport fra appen?',
         answers: [
-          'Jobber du over 5,5 timer, trekker appen automatisk 30 minutter pause med standardregler som passer for de fleste.',
-          'Hvis arbeidsgiveren din har andre regler, kan du overstyre pausereglene i innstillingene, også for vakter som går over midnatt.',
-        ],
-      },
-      {
-        question: 'Hvordan fungerer overtid og tillegg?',
-        answers: [
-          'Du registrerer først hvilke tillegg som gjelder hos deg, så regner vi resten ut automatisk. Kveldstillegg fra 18:00? Helgetillegg? Ett oppsett i innstillingene.',
-          'Når du legger inn en vakt, ser kalkulatoren på tid og dag og legger til riktige tillegg på toppen av grunnlønna.',
-        ],
-      },
-      {
-        question: 'Kan jeg laste ned en lønnsrapport?',
-        answers: [
-          'Ja. Du kan laste ned alle vaktene dine som PDF eller Excel (CSV) når som helst, for eksempel til lønnsslipp og timeseddel.',
-          'Rapporten viser arbeidstimer, pauser, tillegg og total utbetaling for hver vakt.',
+          'Ja. Du kan eksportere alle vaktene som PDF eller CSV når du trenger et ryddig utgangspunkt.',
+          'Rapportene kan brukes ved lønnsoppfølging og eget økonomisk admin.',
         ],
       },
       {
@@ -88,8 +73,27 @@ export const marketingNo = {
       },
     ],
   },
+  socialProof: {
+    eyebrow: 'Bygget for ekte vakter',
+    heading: 'Slik gir det verdi',
+    description: 'Brukere velger Tidex for forutsigbar beregning, tydeligere overtidsregler og enkle rapporter.',
+    items: [
+      {
+        title: 'Åpen beregning',
+        description: 'Hver linje i totalen er synlig, så du ser hvorfor lønnen blir som den blir.',
+      },
+      {
+        title: 'Rapporter som brukes',
+        description: 'Eksporter rene rapporter raskt når du trenger tall for lønnsoppfølging.',
+      },
+      {
+        title: 'Rask i bruk',
+        description: 'Sett opp reglene én gang, og få relevante estimater for hver vakt uten tung innsats.',
+      },
+    ],
+  },
   ctaPrimary: {
-    heading: 'Klar for å teste vaktene dine?',
+    heading: 'Klar til å teste med dine egne vakter?',
     description: 'Opprett en konto gratis og få kontroll på tillegg, overtid og rapporter før neste lønning går ut.',
     button: 'Start nå – gratis',
   },
