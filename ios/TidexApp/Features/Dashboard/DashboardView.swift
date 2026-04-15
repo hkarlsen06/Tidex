@@ -1,5 +1,12 @@
 import SwiftUI
 
+private struct EventSheetSelection: Identifiable {
+  let event: EventRow
+  let startInEditMode: Bool
+
+  var id: String { event.id }
+}
+
 /// Dashboard view showing the main financial overview
 /// Displays payroll, total earnings, and featured shift cards
 struct DashboardView: View {
@@ -27,6 +34,7 @@ struct DashboardView: View {
 
   /// Selected shift for showing details sheet
   @State private var selectedShift: ShiftWithComputations?
+  @State private var selectedEvent: EventSheetSelection?
 
   /// Active featured shift target for action sheet actions
   @State private var featuredShiftActionTarget: ShiftWithComputations?
@@ -35,6 +43,8 @@ struct DashboardView: View {
   /// State for delete confirmation
   @State private var showDeleteConfirmation = false
   @State private var shiftToDelete: ShiftWithComputations?
+  @State private var showEventDeleteConfirmation = false
+  @State private var eventToDelete: EventRow?
 
   /// State for recurring shift editing
   @State private var recurringShiftToEdit: RecurringShiftRow?
@@ -363,6 +373,28 @@ struct DashboardView: View {
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
     }
+    .sheet(item: $selectedEvent) { selection in
+      EventDetailsSheet(
+        event: selection.event,
+        onDelete: {
+          selectedEvent = nil
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            eventToDelete = selection.event
+            showEventDeleteConfirmation = true
+          }
+        },
+        onUpdate: { editResult in
+          try await viewModel.updateEvent(editResult)
+          selectedEvent = nil
+        },
+        onInlineReminderUpdate: { editResult in
+          try await viewModel.updateEvent(editResult)
+        },
+        startInEditMode: selection.startInEditMode
+      )
+      .presentationDetents([.medium, .large])
+      .presentationDragIndicator(.visible)
+    }
     // Delete confirmation dialog
     .confirmationDialog(
       shiftToDelete?.isVirtual == true
@@ -391,6 +423,22 @@ struct DashboardView: View {
         shiftToDelete?.isVirtual == true
           ? .shiftsExcludeConfirmMessage
           : .shiftsDeleteConfirmMessage)
+    }
+    .alert(
+      String(localized: .eventsDeleteConfirmTitle),
+      isPresented: $showEventDeleteConfirmation,
+      presenting: eventToDelete
+    ) { event in
+      Button(String(localized: .commonCancel), role: .cancel) {
+        eventToDelete = nil
+      }
+      Button(String(localized: .eventsDeleteButton), role: .destructive) {
+        Task {
+          await deleteEvent(event)
+        }
+      }
+    } message: { _ in
+      Text(.eventsDeleteConfirmMessage)
     }
     // Recurring shift editor sheet
     .sheet(item: $recurringShiftToEdit) { recurring in
@@ -446,6 +494,18 @@ struct DashboardView: View {
     shiftToDelete = nil
   }
 
+  private func deleteEvent(_ event: EventRow) async {
+    impactHaptic.impactOccurred()
+
+    do {
+      try await viewModel.deleteEvent(id: event.id)
+      eventToDelete = nil
+    } catch {
+      operationErrorMessage = ErrorTranslations.translate(error)
+      eventToDelete = nil
+    }
+  }
+
   /// Update a recurring shift pattern
   private func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {
     do {
@@ -488,16 +548,22 @@ struct DashboardView: View {
       return
     }
 
-    // Only show shift countdown for current month with a next shift
     let shiftDate: String?
     let startTime: String?
     let endTime: String?
 
-    if data.isViewingCurrentMonth, let shift = data.featuredShift, !data.featuredShiftIsBestShift {
+    switch data.featuredItem {
+    case .shift(let shift)
+    where data.isViewingCurrentMonth && !data.featuredShiftIsBestShift:
       shiftDate = shift.shiftDate
       startTime = shift.startTime
       endTime = shift.endTime
-    } else {
+    case .event(let event, _)
+    where data.isViewingCurrentMonth && !data.featuredShiftIsBestShift && !event.is_all_day:
+      shiftDate = event.start_date
+      startTime = event.start_time
+      endTime = event.end_time
+    default:
       shiftDate = nil
       startTime = nil
       endTime = nil
@@ -526,6 +592,53 @@ struct DashboardView: View {
     let safePayrollVariantIndex = max(
       0, min(selectedPayrollVariantIndex, payrollVariants.count - 1))
     return payrollVariants[safePayrollVariantIndex].payoutDate
+  }
+
+  private func featuredEventCountdownStatus(_ event: EventRow, now: Date = Date())
+    -> ShiftPreviewStatus
+  {
+    guard
+      !event.is_all_day,
+      let startTime = event.start_time,
+      let endTime = event.end_time,
+      let startDate = Date.fromDateAndTime(event.start_date, time: startTime),
+      let endDate = Date.fromDateAndTime(event.end_date, time: endTime)
+    else {
+      return .upcoming
+    }
+
+    if now >= startDate && now < endDate {
+      return .active
+    }
+
+    return now >= endDate ? .past : .upcoming
+  }
+
+  @ViewBuilder
+  private func featuredEventFooter(_ event: EventRow) -> some View {
+    if event.is_all_day {
+      HStack(spacing: Spacing.xxxs) {
+        Image(systemName: "calendar")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexBlue)
+        Text(.addShiftEventAllDay)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+      }
+      .frame(height: 20)
+    } else if let countdownText = countdownManager.shiftCountdownText {
+      ShiftCountdownBadge(
+        text: countdownText,
+        status: featuredEventCountdownStatus(event),
+        finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
+      )
+      .frame(height: 20)
+    } else {
+      RoundedRectangle(cornerRadius: CornerRadius.xxs)
+        .fill(Color.tidexTextMuted.opacity(0.3))
+        .frame(width: 80, height: 14)
+        .frame(height: 20)
+    }
   }
 
   // MARK: - Card Content
@@ -972,35 +1085,52 @@ struct DashboardView: View {
             await presentTemporaryClockReview(session)
           }
         }
-      } else if let featuredShift = data.featuredShift {
-        // Only show progress bar for active shifts (matching Next.js behavior)
-        let shiftProgress: Double? =
-          countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
-        let displayedFeaturedShift: ShiftWithComputations =
-          countdownManager.isShiftActive
-          ? viewModel.liveFeaturedShiftWhileOngoing(from: featuredShift, at: Date())
-          : featuredShift
-        let shiftJob = viewModel.jobForShift(featuredShift)
-        FeaturedShiftCard(
-          shift: displayedFeaturedShift,
-          isToday: data.isFeaturedShiftToday,
-          isBestShift: data.featuredShiftIsBestShift,
-          countdownText: countdownManager.shiftCountdownText,
-          showJobIndicator: viewModel.shouldShowJobIndicators,
-          jobName: shiftJob?.name,
-          jobColorHex: shiftJob?.color,
-          progress: shiftProgress,
-          finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
-        )
-        .userCurrency(shiftJob?.currency ?? data.currency)
-        .contentShape(Rectangle())
-        .onTapGesture {
-          impactHaptic.impactOccurred()
-          if countdownManager.isShiftActive {
-            featuredShiftActionTarget = featuredShift
-            showFeaturedShiftActions = true
-          } else {
-            selectedShift = featuredShift
+      } else if let featuredItem = data.featuredItem {
+        switch featuredItem {
+        case .shift(let featuredShift):
+          // Only show progress bar for active shifts (matching Next.js behavior)
+          let shiftProgress: Double? =
+            countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
+          let displayedFeaturedShift: ShiftWithComputations =
+            countdownManager.isShiftActive
+            ? viewModel.liveFeaturedShiftWhileOngoing(from: featuredShift, at: Date())
+            : featuredShift
+          let shiftJob = viewModel.jobForShift(featuredShift)
+          FeaturedShiftCard(
+            shift: displayedFeaturedShift,
+            isToday: data.isFeaturedItemToday,
+            isBestShift: data.featuredShiftIsBestShift,
+            countdownText: countdownManager.shiftCountdownText,
+            showJobIndicator: viewModel.shouldShowJobIndicators,
+            jobName: shiftJob?.name,
+            jobColorHex: shiftJob?.color,
+            progress: shiftProgress,
+            finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
+          )
+          .userCurrency(shiftJob?.currency ?? data.currency)
+          .contentShape(Rectangle())
+          .onTapGesture {
+            impactHaptic.impactOccurred()
+            if countdownManager.isShiftActive {
+              featuredShiftActionTarget = featuredShift
+              showFeaturedShiftActions = true
+            } else {
+              selectedShift = featuredShift
+            }
+          }
+        case .event(let event, let coveredDateISO):
+          VStack(spacing: Spacing.sm) {
+            EventRowCard(
+              event: event,
+              coveredDateISO: coveredDateISO,
+              onTap: {
+                impactHaptic.impactOccurred()
+                selectedEvent = EventSheetSelection(event: event, startInEditMode: false)
+              },
+              showTodayHighlight: false
+            )
+
+            featuredEventFooter(event)
           }
         }
       } else {

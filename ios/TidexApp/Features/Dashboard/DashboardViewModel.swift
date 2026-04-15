@@ -18,6 +18,214 @@ extension Notification.Name {
 
 // MARK: - Dashboard Data
 
+enum DashboardFeaturedItem: Equatable {
+  case shift(ShiftWithComputations)
+  case event(EventRow, coveredDateISO: String)
+
+  var shift: ShiftWithComputations? {
+    guard case .shift(let shift) = self else { return nil }
+    return shift
+  }
+}
+
+struct DashboardFeaturedSelection: Equatable {
+  let item: DashboardFeaturedItem?
+  let isToday: Bool
+  let isBestShift: Bool
+}
+
+enum DashboardFeaturedItemSelector {
+  static func select(
+    shifts: [ShiftWithComputations],
+    events: [EventRow],
+    isViewingCurrentMonth: Bool,
+    todayISO: String = todayISO(),
+    now: Date = Date()
+  ) -> DashboardFeaturedSelection {
+    if isViewingCurrentMonth {
+      return selectCurrentMonth(shifts: shifts, events: events, todayISO: todayISO, now: now)
+    }
+
+    guard let bestShift = findBestShift(in: shifts) else {
+      return DashboardFeaturedSelection(item: nil, isToday: false, isBestShift: true)
+    }
+
+    return DashboardFeaturedSelection(
+      item: .shift(bestShift),
+      isToday: false,
+      isBestShift: true
+    )
+  }
+
+  private struct ShiftCandidate {
+    let shift: ShiftWithComputations
+    let startDate: Date
+  }
+
+  private struct EventCandidate {
+    let event: EventRow
+    let coveredDateISO: String
+    let sortDate: Date
+  }
+
+  private static func selectCurrentMonth(
+    shifts: [ShiftWithComputations],
+    events: [EventRow],
+    todayISO: String,
+    now: Date
+  ) -> DashboardFeaturedSelection {
+    let nextShift = nextUpcomingShift(in: shifts, now: now)
+    let nextEvent = nextUpcomingEvent(in: events, todayISO: todayISO, now: now)
+
+    switch (nextShift, nextEvent) {
+    case (.none, .none):
+      return DashboardFeaturedSelection(item: nil, isToday: false, isBestShift: false)
+    case (.some(let shiftCandidate), .none):
+      return DashboardFeaturedSelection(
+        item: .shift(shiftCandidate.shift),
+        isToday: shiftCandidate.shift.shiftDate == todayISO,
+        isBestShift: false
+      )
+    case (.none, .some(let eventCandidate)):
+      return DashboardFeaturedSelection(
+        item: .event(eventCandidate.event, coveredDateISO: eventCandidate.coveredDateISO),
+        isToday: eventCandidate.coveredDateISO == todayISO,
+        isBestShift: false
+      )
+    case (.some(let shiftCandidate), .some(let eventCandidate)):
+      if shouldPrioritizeShift(shiftCandidate.shift, over: eventCandidate.event) {
+        return DashboardFeaturedSelection(
+          item: .shift(shiftCandidate.shift),
+          isToday: shiftCandidate.shift.shiftDate == todayISO,
+          isBestShift: false
+        )
+      }
+
+      if shiftCandidate.startDate <= eventCandidate.sortDate {
+        return DashboardFeaturedSelection(
+          item: .shift(shiftCandidate.shift),
+          isToday: shiftCandidate.shift.shiftDate == todayISO,
+          isBestShift: false
+        )
+      }
+
+      return DashboardFeaturedSelection(
+        item: .event(eventCandidate.event, coveredDateISO: eventCandidate.coveredDateISO),
+        isToday: eventCandidate.coveredDateISO == todayISO,
+        isBestShift: false
+      )
+    }
+  }
+
+  private static func nextUpcomingShift(
+    in shifts: [ShiftWithComputations],
+    now: Date
+  ) -> ShiftCandidate? {
+    shifts
+      .compactMap { shift -> ShiftCandidate? in
+        guard
+          let startDate = Date.fromDateAndTime(shift.shiftDate, time: shift.startTime),
+          let endDate = shiftEndDate(for: shift)
+        else {
+          return nil
+        }
+
+        guard endDate > now else { return nil }
+        return ShiftCandidate(shift: shift, startDate: startDate)
+      }
+      .min { lhs, rhs in
+        if lhs.startDate == rhs.startDate {
+          return lhs.shift.id < rhs.shift.id
+        }
+        return lhs.startDate < rhs.startDate
+      }
+  }
+
+  private static func nextUpcomingEvent(
+    in events: [EventRow],
+    todayISO: String,
+    now: Date
+  ) -> EventCandidate? {
+    events
+      .compactMap { event -> EventCandidate? in
+        guard let endDate = eventEndDate(for: event), endDate > now else { return nil }
+        let coveredDateISO = coveredDateISO(for: event, todayISO: todayISO) ?? event.start_date
+        guard let sortDate = eventSortDate(for: event, coveredDateISO: coveredDateISO) else {
+          return nil
+        }
+
+        return EventCandidate(event: event, coveredDateISO: coveredDateISO, sortDate: sortDate)
+      }
+      .min { lhs, rhs in
+        if lhs.sortDate == rhs.sortDate {
+          return lhs.event.id < rhs.event.id
+        }
+        return lhs.sortDate < rhs.sortDate
+      }
+  }
+
+  private static func shouldPrioritizeShift(_ shift: ShiftWithComputations, over event: EventRow)
+    -> Bool
+  {
+    event.is_all_day && eventCovers(event, dateISO: shift.shiftDate)
+  }
+
+  private static func shiftEndDate(for shift: ShiftWithComputations) -> Date? {
+    guard var endDate = Date.fromDateAndTime(shift.shiftDate, time: shift.endTime) else {
+      return nil
+    }
+
+    if shift.endTime <= shift.startTime {
+      endDate = Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+    }
+
+    return endDate
+  }
+
+  private static func eventSortDate(for event: EventRow, coveredDateISO: String) -> Date? {
+    if event.is_all_day {
+      return Date.fromISODateString(coveredDateISO)
+    }
+
+    guard let startTime = event.start_time else { return nil }
+    return Date.fromDateAndTime(event.start_date, time: startTime)
+  }
+
+  private static func eventEndDate(for event: EventRow) -> Date? {
+    if event.is_all_day {
+      guard let endDate = Date.fromISODateString(event.end_date) else { return nil }
+      return Calendar.current.date(byAdding: .day, value: 1, to: endDate)
+    }
+
+    guard let endTime = event.end_time else { return nil }
+    return Date.fromDateAndTime(event.end_date, time: endTime)
+  }
+
+  private static func coveredDateISO(for event: EventRow, todayISO: String) -> String? {
+    if eventCovers(event, dateISO: todayISO) {
+      return todayISO
+    }
+
+    return event.start_date
+  }
+
+  private static func eventCovers(_ event: EventRow, dateISO: String) -> Bool {
+    guard
+      let date = Date.fromISODateString(dateISO),
+      let startDate = Date.fromISODateString(event.start_date),
+      let endDate = Date.fromISODateString(event.end_date)
+    else {
+      return false
+    }
+
+    return date >= startDate && date <= endDate
+  }
+
+  private static func findBestShift(in shifts: [ShiftWithComputations]) -> ShiftWithComputations? {
+    shifts.max { a, b in a.grossPay < b.grossPay }
+  }
+}
+
 /// Computed dashboard data ready for display
 struct DashboardData: Equatable {
   // Month Context
@@ -44,11 +252,12 @@ struct DashboardData: Equatable {
   let currentMonthTaxEnabled: Bool
   let currentMonthGoal: Double?  // nil when no monthly goal is configured
 
-  // Featured Shift Card
-  // For current month: next upcoming shift (or nil if none)
+  // Featured Home Card
+  // For current month: next upcoming shift or calendar event
   // For other months: best shift (highest earnings) in that month
+  let featuredItem: DashboardFeaturedItem?
   let featuredShift: ShiftWithComputations?
-  let isFeaturedShiftToday: Bool
+  let isFeaturedItemToday: Bool
   let featuredShiftIsBestShift: Bool  // true = showing best shift, false = showing next shift
 
   // Metadata
@@ -346,6 +555,7 @@ private struct MonthCacheEntry {
   let year: Int
   let month: Int
   let shifts: [ShiftWithComputations]
+  let events: [EventRow]
   let timestamp: Date
   /// Last access time for LRU eviction
   var lastAccessed: Date
@@ -359,10 +569,17 @@ private struct MonthCacheEntry {
     true
   }
 
-  init(year: Int, month: Int, shifts: [ShiftWithComputations], timestamp: Date) {
+  init(
+    year: Int,
+    month: Int,
+    shifts: [ShiftWithComputations],
+    events: [EventRow],
+    timestamp: Date
+  ) {
     self.year = year
     self.month = month
     self.shifts = shifts
+    self.events = events
     self.timestamp = timestamp
     self.lastAccessed = timestamp
   }
@@ -376,6 +593,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   // MARK: - Dependencies (Local-First Repositories)
 
   private let shiftsRepository: ShiftsRepository
+  private let eventsRepository: EventsRepository
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
@@ -388,6 +606,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   private struct DashboardDataBuildInput {
     let displayedMonthShifts: [ShiftWithComputations]
+    let displayedMonthEvents: [EventRow]
     let previousMonthShifts: [ShiftWithComputations]
     let settings: UserSettings
     let displayYM: (year: Int, month: Int)
@@ -619,6 +838,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   // MARK: - Private State
 
   private var displayedMonthShifts: [ShiftWithComputations] = []
+  private var displayedMonthEvents: [EventRow] = []
   private var previousMonthShifts: [ShiftWithComputations] = []
   private var settings: UserSettings?
   private var snapshots: [WageSnapshot] = []
@@ -654,6 +874,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   init(
     shiftsRepository: ShiftsRepository? = nil,
+    eventsRepository: EventsRepository? = nil,
     jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
@@ -666,6 +887,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     // Use provided repositories or default to shared instances
     // Using optional parameters avoids Swift 6 MainActor isolation errors
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
+    self.eventsRepository = eventsRepository ?? EventsRepository.shared
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
@@ -855,6 +1077,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       // Use cached data - instant navigation!
       logger.info("📦 Using cached data for \(displayKey)")
       self.displayedMonthShifts = displayCache.shifts
+      self.displayedMonthEvents = displayCache.events
       self.previousMonthShifts = previousCache.shifts
 
       // Update last accessed time for LRU tracking
@@ -877,6 +1100,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           let data = Self.buildDashboardDataOffMain(
             .init(
               displayedMonthShifts: capturedDisplay,
+              displayedMonthEvents: displayCache.events,
               previousMonthShifts: capturedPrevious,
               settings: currentSettings,
               displayYM: displayYM,
@@ -1088,6 +1312,30 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     return (displayRows, previousRows)
   }
 
+  private func fetchMonthEvents(
+    for userId: String,
+    displayYM: (year: Int, month: Int),
+    previousYM: (year: Int, month: Int)
+  ) async -> (display: [EventRow], previous: [EventRow]) {
+    let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+    let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
+    let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+    let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+
+    async let displayEvents = eventsRepository.getEventsOffMain(
+      for: userId,
+      startDate: displayStartDate,
+      endDate: displayEndDate
+    )
+    async let previousEvents = eventsRepository.getEventsOffMain(
+      for: userId,
+      startDate: previousStartDate,
+      endDate: previousEndDate
+    )
+
+    return await (displayEvents, previousEvents)
+  }
+
   /// Prepare for reload by setting loading state synchronously
   /// Call this BEFORE starting a Task to reload, to prevent empty state flash
   /// This ensures the loading indicator shows immediately when sync completes
@@ -1161,6 +1409,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
     displayJobs = []
+    displayedMonthEvents = []
     settings = nil  // Force re-read settings from repository
     snapshots = []  // Force re-read snapshots from repository
     recurringShifts = []  // Force re-read recurring shifts from repository
@@ -1256,10 +1505,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         displayYM: displayYM,
         previousYM: previousYM
       )
+      let fetchedEvents = await fetchMonthEvents(
+        for: userId,
+        displayYM: displayYM,
+        previousYM: previousYM
+      )
       let displayShifts = fetchedShiftRows.display
       logger.info(
         "📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
       let fetchedPreviousShifts = fetchedShiftRows.previous
+      let displayEvents = fetchedEvents.display
+      let previousEvents = fetchedEvents.previous
 
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
@@ -1294,6 +1550,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let dashboardData = Self.buildDashboardDataOffMain(
           .init(
             displayedMonthShifts: displayComputed,
+            displayedMonthEvents: displayEvents,
             previousMonthShifts: previousComputed,
             settings: currentSettings,
             displayYM: displayYM,
@@ -1302,10 +1559,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             jobs: capturedJobs
           ))
 
-        return (display: displayComputed, previous: previousComputed, dashboardData: dashboardData)
+        return (
+          display: displayComputed,
+          displayEvents: displayEvents,
+          previous: previousComputed,
+          previousEvents: previousEvents,
+          dashboardData: dashboardData
+        )
       }.value
 
       self.displayedMonthShifts = result.display
+      self.displayedMonthEvents = result.displayEvents
       self.previousMonthShifts = result.previous
 
       // Cache the computed results
@@ -1315,12 +1579,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         year: displayYM.year,
         month: displayYM.month,
         shifts: result.display,
+        events: result.displayEvents,
         timestamp: Date()
       )
       monthCache[previousKey] = MonthCacheEntry(
         year: previousYM.year,
         month: previousYM.month,
         shifts: result.previous,
+        events: result.previousEvents,
         timestamp: Date()
       )
 
@@ -1389,8 +1655,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         displayYM: displayYM,
         previousYM: previousYM
       )
+      let fetchedEvents = await fetchMonthEvents(
+        for: userId,
+        displayYM: displayYM,
+        previousYM: previousYM
+      )
       let displayShifts = fetchedShiftRows.display
       let fetchedPreviousShifts = fetchedShiftRows.previous
+      let displayEvents = fetchedEvents.display
+      let previousEvents = fetchedEvents.previous
 
       // Ensure settings are available before computing payroll
       guard let currentSettings = self.settings else {
@@ -1433,6 +1706,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         let dashboardData = Self.buildDashboardDataOffMain(
           .init(
             displayedMonthShifts: displayComputed,
+            displayedMonthEvents: displayEvents,
             previousMonthShifts: previousComputed,
             settings: currentSettings,
             displayYM: displayYM,
@@ -1441,10 +1715,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             jobs: capturedJobs
           ))
 
-        return (display: displayComputed, previous: previousComputed, dashboardData: dashboardData)
+        return (
+          display: displayComputed,
+          displayEvents: displayEvents,
+          previous: previousComputed,
+          previousEvents: previousEvents,
+          dashboardData: dashboardData
+        )
       }.value
 
       self.displayedMonthShifts = result.display
+      self.displayedMonthEvents = result.displayEvents
       self.previousMonthShifts = result.previous
 
       // Cache the computed results
@@ -1454,12 +1735,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         year: displayYM.year,
         month: displayYM.month,
         shifts: result.display,
+        events: result.displayEvents,
         timestamp: Date()
       )
       monthCache[previousKey] = MonthCacheEntry(
         year: previousYM.year,
         month: previousYM.month,
         shifts: result.previous,
+        events: result.previousEvents,
         timestamp: Date()
       )
 
@@ -1530,7 +1813,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let endDate = Date.lastDayOfMonthDate(year: year, month: month)
 
       // Read from the repository/DAL path off the main actor
-      let fetchedShifts = await shiftsRepository.getShiftsOffMain(
+      async let fetchedShifts = shiftsRepository.getShiftsOffMain(
+        for: userId,
+        startDate: startDate,
+        endDate: endDate
+      )
+      async let fetchedEvents = eventsRepository.getEventsOffMain(
         for: userId,
         startDate: startDate,
         endDate: endDate
@@ -1542,6 +1830,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         return
       }
 
+      let monthShifts = await fetchedShifts
+      let monthEvents = await fetchedEvents
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
       let capturedJobs = displayJobs
@@ -1551,7 +1841,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           .init(
             year: year,
             month: month,
-            shifts: fetchedShifts,
+            shifts: monthShifts,
             recurring: capturedRecurring,
             snapshots: capturedSnapshots,
             settings: settings,
@@ -1565,6 +1855,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         year: year,
         month: month,
         shifts: computedShifts,
+        events: monthEvents,
         timestamp: Date()
       )
       self.monthCache[key] = entry
@@ -1728,21 +2019,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let current = Date.currentYearMonth()
     let isViewingCurrentMonth = displayYM.year == current.year && displayYM.month == current.month
 
-    let featuredShift: ShiftWithComputations?
-    let isFeaturedShiftToday: Bool
-    let featuredShiftIsBestShift: Bool
-
-    if isViewingCurrentMonth {
-      // Current month: show next upcoming shift
-      featuredShift = displayedMonthShifts.first { $0.shiftDate >= today }
-      isFeaturedShiftToday = featuredShift?.shiftDate == today
-      featuredShiftIsBestShift = false
-    } else {
-      // Non-current month: show best shift (highest earnings)
-      featuredShift = findBestShift(in: displayedMonthShifts)
-      isFeaturedShiftToday = false
-      featuredShiftIsBestShift = true
-    }
+    let featuredSelection = DashboardFeaturedItemSelector.select(
+      shifts: displayedMonthShifts,
+      events: displayedMonthEvents,
+      isViewingCurrentMonth: isViewingCurrentMonth,
+      todayISO: today,
+      now: now
+    )
 
     // Month names for display
     let displayMonthName = monthName(year: displayYM.year, month: displayYM.month)
@@ -1767,9 +2050,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
       currentMonthGoal: monthlyGoal,
-      featuredShift: featuredShift,
-      isFeaturedShiftToday: isFeaturedShiftToday,
-      featuredShiftIsBestShift: featuredShiftIsBestShift,
+      featuredItem: featuredSelection.item,
+      featuredShift: featuredSelection.item?.shift,
+      isFeaturedItemToday: featuredSelection.isToday,
+      featuredShiftIsBestShift: featuredSelection.isBestShift,
       currentMonthName: displayMonthName,
       previousMonthName: previousMonthName,
       currency: currentMonthAggregate.primary.currency,
@@ -1782,6 +2066,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     _ input: DashboardDataBuildInput
   ) -> DashboardData {
     let displayedMonthShifts = input.displayedMonthShifts
+    let displayedMonthEvents = input.displayedMonthEvents
     let previousMonthShifts = input.previousMonthShifts
     let settings = input.settings
     let displayYM = input.displayYM
@@ -1863,19 +2148,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let current = Date.currentYearMonth()
     let isViewingCurrentMonth = displayYM.year == current.year && displayYM.month == current.month
 
-    let featuredShift: ShiftWithComputations?
-    let isFeaturedShiftToday: Bool
-    let featuredShiftIsBestShift: Bool
-
-    if isViewingCurrentMonth {
-      featuredShift = displayedMonthShifts.first { $0.shiftDate >= today }
-      isFeaturedShiftToday = featuredShift?.shiftDate == today
-      featuredShiftIsBestShift = false
-    } else {
-      featuredShift = findBestShiftStatic(in: displayedMonthShifts)
-      isFeaturedShiftToday = false
-      featuredShiftIsBestShift = true
-    }
+    let featuredSelection = DashboardFeaturedItemSelector.select(
+      shifts: displayedMonthShifts,
+      events: displayedMonthEvents,
+      isViewingCurrentMonth: isViewingCurrentMonth,
+      todayISO: today,
+      now: now
+    )
 
     let displayMonthName = monthNameStatic(year: displayYM.year, month: displayYM.month)
     let previousMonthName = monthNameStatic(year: previousYM.year, month: previousYM.month)
@@ -1899,9 +2178,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
       currentMonthGoal: monthlyGoal,
-      featuredShift: featuredShift,
-      isFeaturedShiftToday: isFeaturedShiftToday,
-      featuredShiftIsBestShift: featuredShiftIsBestShift,
+      featuredItem: featuredSelection.item,
+      featuredShift: featuredSelection.item?.shift,
+      isFeaturedItemToday: featuredSelection.isToday,
+      featuredShiftIsBestShift: featuredSelection.isBestShift,
       currentMonthName: displayMonthName,
       previousMonthName: previousMonthName,
       currency: currentMonthAggregate.primary.currency,
@@ -1938,6 +2218,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Whether a shift update is in progress
   @Published private(set) var isUpdatingShift = false
+  private var isUpdatingEvent = false
+  private var isDeletingEvent = false
 
   // MARK: - Clock Operations
 
@@ -2223,6 +2505,52 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// - Returns: The recurring shift if found
   func getRecurringShift(id: String) -> RecurringShiftRow? {
     recurringShiftsRepository.getRecurringShift(id: id)
+  }
+
+  // MARK: - Event Operations
+
+  func updateEvent(_ editResult: EventEditResult) async throws {
+    guard !isUpdatingEvent else { return }
+
+    isUpdatingEvent = true
+    defer { isUpdatingEvent = false }
+
+    guard
+      let startDate = Date.fromISODateString(editResult.startDate),
+      let endDate = Date.fromISODateString(editResult.endDate)
+    else {
+      throw ShiftsError.invalidEventDateRange
+    }
+
+    guard
+      try await eventsRepository.updateEvent(
+        id: editResult.eventId,
+        startDate: startDate,
+        endDate: endDate,
+        isAllDay: editResult.isAllDay,
+        startTime: editResult.startTime,
+        endTime: editResult.endTime,
+        note: editResult.note,
+        notificationMinutesArray: editResult.notificationMinutesArray,
+        notificationAnchorTime: editResult.notificationAnchorTime
+      ) != nil
+    else {
+      throw ShiftsError.eventNotFound
+    }
+
+    await reloadFromLocal()
+    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+  }
+
+  func deleteEvent(id: String) async throws {
+    guard !isDeletingEvent else { return }
+
+    isDeletingEvent = true
+    defer { isDeletingEvent = false }
+
+    try await eventsRepository.deleteEvent(id: id)
+    await reloadFromLocal()
+    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
   }
 
   /// End an active shift immediately using the current local device time.

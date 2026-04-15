@@ -123,4 +123,25 @@ enum TestFixtures {
       taxPercentage: taxPercentage
     )
   }
+
+  static func event(
+    id: String = UUID().uuidString,
+    startDate: String,
+    endDate: String,
+    isAllDay: Bool,
+    startTime: String? = nil,
+    endTime: String? = nil,
+    note: String = "Event"
+  ) -> EventRow {
+    EventRow(
+      id: id,
+      user_id: "user-1",
+      start_date: startDate,
+      end_date: endDate,
+      is_all_day: isAllDay,
+      start_time: startTime,
+      end_time: endTime,
+      note: note
+    )
+  }
 }
