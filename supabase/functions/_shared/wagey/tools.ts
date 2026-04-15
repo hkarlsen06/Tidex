@@ -59,6 +59,60 @@ export const queryShiftsSchema = z.object({
 export type QueryShiftsInput = z.infer<typeof queryShiftsSchema>;
 
 /**
+ * Query Events Tool Schema
+ */
+export const queryEventsSchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  limit: z.number().int().min(1).max(100).optional().default(30),
+  kind: z.enum(["all", "timed", "all_day"]).optional().default("all"),
+  sortBy: z.enum(["start_earliest", "start_latest"]).optional().default("start_earliest"),
+});
+
+export type QueryEventsInput = z.infer<typeof queryEventsSchema>;
+
+/**
+ * Manage Event Tool Schema
+ */
+const eventTimeSchema = z.string().regex(/^\d{2}:\d{2}$|^24:00$/);
+const reminderAnchorTimeSchema = z.string().regex(/^\d{2}:\d{2}$/);
+
+export const manageEventSchema = z.object({
+  action: z.enum(["create", "update", "delete"]),
+  eventId: shortOrFullId.optional(),
+  note: z.string().min(1).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  isAllDay: z.boolean().optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  endTime: eventTimeSchema.optional(),
+  notificationMinutesArray: z.array(z.number().int().min(0)).max(10).optional(),
+  notificationAnchorTime: reminderAnchorTimeSchema.nullable().optional(),
+});
+
+export type ManageEventInput = z.infer<typeof manageEventSchema>;
+
+/**
+ * Plan Schedule Tool Schema
+ */
+export const planScheduleSchema = z.object({
+  action: z.enum(["agenda", "conflicts", "free_slots"]),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  includeShifts: z.boolean().optional().default(true),
+  includeEvents: z.boolean().optional().default(true),
+  isAllDay: z.boolean().optional(),
+  startTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  endTime: eventTimeSchema.optional(),
+  excludeEventId: shortOrFullId.optional(),
+  durationMinutes: z.number().int().min(1).max(1440).optional(),
+  windowStart: z.string().regex(/^\d{2}:\d{2}$/).optional().default("00:00"),
+  windowEnd: eventTimeSchema.optional().default("24:00"),
+});
+
+export type PlanScheduleInput = z.infer<typeof planScheduleSchema>;
+
+/**
  * Calculate Wages Tool Schema
  */
 export const calculateWagesSchema = z.object({
@@ -660,6 +714,257 @@ Use cases:
         endDate: "2025-12-31",
         limit: 10,
         sortBy: "earnings",
+      },
+    ],
+  },
+
+  {
+    name: "query_events",
+    description:
+      `Get private calendar events with optional filters.
+
+Default behavior: Without parameters, returns events overlapping the current week.
+
+Response rows include:
+- id (short ID)
+- note
+- startDate / endDate
+- isAllDay
+- startTime / endTime
+- reminderMinutes
+- reminderAnchorTime
+
+Filters:
+- Date range overlap: startDate/endDate (YYYY-MM-DD)
+- kind: all (default), timed, or all_day
+- sortBy: start_earliest (default) or start_latest
+
+Use this for event lookup, agenda questions, and to get event IDs before update/delete.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        startDate: {
+          type: "string",
+          description: "Start of date range (YYYY-MM-DD)",
+        },
+        endDate: {
+          type: "string",
+          description: "End of date range (YYYY-MM-DD)",
+        },
+        limit: {
+          type: "integer",
+          description: "Max events to return (default 30, max 100)",
+        },
+        kind: {
+          type: "string",
+          enum: ["all", "timed", "all_day"],
+          description: "Filter to all events, only timed events, or only all-day events",
+        },
+        sortBy: {
+          type: "string",
+          enum: ["start_earliest", "start_latest"],
+          description: "Sort order (default: start_earliest)",
+        },
+      },
+    },
+    input_examples: [
+      {},
+      {
+        startDate: "2026-04-15",
+        endDate: "2026-04-21",
+      },
+      {
+        startDate: "2026-04-15",
+        endDate: "2026-04-30",
+        kind: "all_day",
+      },
+    ],
+  },
+
+  {
+    name: "manage_event",
+    description:
+      `Create, update, or delete private calendar events.
+
+Actions:
+- CREATE: action="create", note, startDate, endDate, isAllDay, plus startTime/endTime for timed events
+- UPDATE: action="update", eventId, and any fields to change
+- DELETE: action="delete", eventId
+
+Rules:
+- Timed events must stay on one date and require startTime/endTime
+- All-day events can span multiple days and must not include startTime/endTime
+- All-day reminders use notificationAnchorTime; timed reminders use the event start time automatically
+- Update/delete requires eventId. Query events first if you need the ID.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["create", "update", "delete"],
+          description: "The operation to perform",
+        },
+        eventId: {
+          type: "string",
+          description: "Event ID for update/delete",
+        },
+        note: {
+          type: "string",
+          description: "Event note/title",
+        },
+        startDate: {
+          type: "string",
+          description: "Start date (YYYY-MM-DD)",
+        },
+        endDate: {
+          type: "string",
+          description: "End date (YYYY-MM-DD)",
+        },
+        isAllDay: {
+          type: "boolean",
+          description: "Whether the event is all day",
+        },
+        startTime: {
+          type: "string",
+          description: "Start time (HH:mm). Timed events only.",
+        },
+        endTime: {
+          type: "string",
+          description: "End time (HH:mm or 24:00). Timed events only.",
+        },
+        notificationMinutesArray: {
+          type: "array",
+          items: { type: "integer" },
+          description: "Reminder offsets in minutes before the event",
+        },
+        notificationAnchorTime: {
+          type: ["string", "null"],
+          description: "Reminder anchor time (HH:mm) for all-day events",
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [
+      {
+        action: "create",
+        note: "Doctor appointment",
+        startDate: "2026-04-18",
+        endDate: "2026-04-18",
+        isAllDay: false,
+        startTime: "14:00",
+        endTime: "15:00",
+      },
+      {
+        action: "create",
+        note: "Easter holiday",
+        startDate: "2026-04-17",
+        endDate: "2026-04-20",
+        isAllDay: true,
+        notificationMinutesArray: [120],
+        notificationAnchorTime: "09:00",
+      },
+      {
+        action: "update",
+        eventId: "a1b2c",
+        notificationMinutesArray: [60, 15],
+      },
+      {
+        action: "delete",
+        eventId: "a1b2c",
+      },
+    ],
+  },
+
+  {
+    name: "plan_schedule",
+    description:
+      `Plan around shifts and private calendar events.
+
+Actions:
+- agenda: Return a merged chronological agenda of shifts and events for a date range
+- conflicts: Check whether a candidate event overlaps any existing shifts or events
+- free_slots: Find free time windows in a date range after subtracting shifts and events
+
+Notes:
+- This is read-only planning help. It does not create or block events.
+- conflicts can use excludeEventId to ignore one existing event while editing it.
+- free_slots requires durationMinutes and can be limited to a daily window with windowStart/windowEnd.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["agenda", "conflicts", "free_slots"],
+          description: "Planning action to perform",
+        },
+        startDate: {
+          type: "string",
+          description: "Start date (YYYY-MM-DD)",
+        },
+        endDate: {
+          type: "string",
+          description: "End date (YYYY-MM-DD)",
+        },
+        includeShifts: {
+          type: "boolean",
+          description: "Include shifts in agenda/conflict/free-slot calculations (default true)",
+        },
+        includeEvents: {
+          type: "boolean",
+          description: "Include private events in agenda/conflict/free-slot calculations (default true)",
+        },
+        isAllDay: {
+          type: "boolean",
+          description: "Candidate event shape for conflicts",
+        },
+        startTime: {
+          type: "string",
+          description: "Candidate start time (HH:mm) for conflicts",
+        },
+        endTime: {
+          type: "string",
+          description: "Candidate end time (HH:mm or 24:00) for conflicts",
+        },
+        excludeEventId: {
+          type: "string",
+          description: "Existing event ID to ignore during conflict checks",
+        },
+        durationMinutes: {
+          type: "integer",
+          description: "Required for free_slots. Minimum free-slot length in minutes.",
+        },
+        windowStart: {
+          type: "string",
+          description: "Daily search window start for free_slots (default 00:00)",
+        },
+        windowEnd: {
+          type: "string",
+          description: "Daily search window end for free_slots (default 24:00)",
+        },
+      },
+      required: ["action", "startDate", "endDate"],
+    },
+    input_examples: [
+      {
+        action: "agenda",
+        startDate: "2026-04-15",
+        endDate: "2026-04-21",
+      },
+      {
+        action: "conflicts",
+        startDate: "2026-04-18",
+        endDate: "2026-04-18",
+        isAllDay: false,
+        startTime: "14:00",
+        endTime: "15:00",
+      },
+      {
+        action: "free_slots",
+        startDate: "2026-04-15",
+        endDate: "2026-04-17",
+        durationMinutes: 90,
+        windowStart: "08:00",
+        windowEnd: "20:00",
       },
     ],
   },
@@ -2172,6 +2477,9 @@ Actions:
 export type ToolName =
   | "manage_shift"
   | "query_shifts"
+  | "query_events"
+  | "manage_event"
+  | "plan_schedule"
   | "calculate_wages"
   | "draft_recurring_shift"
   | "confirm_recurring_shift"

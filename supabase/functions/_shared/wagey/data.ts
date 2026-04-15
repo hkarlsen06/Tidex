@@ -25,12 +25,34 @@ export type ShiftLoadOptions = {
   jobId?: string;
 };
 
+export type EventLoadOptions = {
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+};
+
 export type ShiftIdentityRow = {
   id: string;
   shift_date: string;
   start_time: string;
   end_time: string;
   job_id: string | null;
+};
+
+export type EventRecord = {
+  id: string;
+  user_id: string;
+  start_date: string;
+  end_date: string;
+  is_all_day: boolean;
+  start_time: string | null;
+  end_time: string | null;
+  note: string;
+  notification_minutes_array: number[] | null;
+  notification_anchor_time: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
 };
 
 type SubscriptionRow = {
@@ -146,6 +168,8 @@ const COMPUTED_SNAPSHOT_SELECT =
   "id, user_id, job_id, from_date, hourly_wage, wage_level, tariff_type_id, supplements, tax_enabled, tax_percentage, break_enabled, break_method, break_threshold_hours, break_deduction_minutes, created_at";
 const COMPUTED_SHIFT_SELECT =
   "id, user_id, job_id, shift_date, start_time, end_time, custom_supplements";
+const COMPUTED_EVENT_SELECT =
+  "id, user_id, start_date, end_date, is_all_day, start_time, end_time, note, notification_minutes_array, notification_anchor_time, created_at, updated_at, deleted_at";
 const COMPUTED_RECURRING_SELECT =
   "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_supplements, created_at, deleted_at";
 const FAR_FUTURE_DATE = "2100-12-31";
@@ -478,6 +502,63 @@ async function getRawUserShifts(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as ShiftIdentityRow[];
+}
+
+async function getRawUserEvents(
+  ctx: WageyRequestContext,
+  userId: string,
+  options: EventLoadOptions = {},
+): Promise<EventRecord[]> {
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("user_events", {
+      userId,
+      startDate: options.startDate ?? null,
+      endDate: options.endDate ?? null,
+      limit: options.limit ?? null,
+    }),
+    async () => {
+      let query = ctx.supabase
+        .from("events")
+        .select(COMPUTED_EVENT_SELECT)
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("start_date", { ascending: true })
+        .order("end_date", { ascending: true })
+        .order("start_time", { ascending: true, nullsFirst: true });
+
+      if (options.startDate) {
+        query = query.gte("end_date", options.startDate);
+      }
+      if (options.endDate) {
+        query = query.lte("start_date", options.endDate);
+      }
+      if (options.limit) {
+        query = query.limit(options.limit);
+      }
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as EventRecord[];
+    },
+  );
+}
+
+export async function getUserEventById(
+  ctx: WageyRequestContext,
+  eventId: string,
+  userId = ctx.user.id,
+): Promise<EventRecord | null> {
+  const { data, error } = await ctx.supabase
+    .from("events")
+    .select(COMPUTED_EVENT_SELECT)
+    .eq("id", eventId)
+    .eq("user_id", userId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return (data as EventRecord | null) ?? null;
 }
 
 async function getRawRecurringShifts(
@@ -892,6 +973,14 @@ export async function getShiftIdentityRowsForApi(
   return await getRawUserShifts(ctx, userId, options);
 }
 
+export async function getUserEventsForApi(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+  options: EventLoadOptions = {},
+): Promise<EventRecord[]> {
+  return await getRawUserEvents(ctx, userId, options);
+}
+
 export async function createShifts(
   ctx: WageyRequestContext,
   input: { dates: string[]; start: string; end: string; jobId?: string },
@@ -984,6 +1073,85 @@ export async function deleteShift(
     .is("deleted_at", null);
   if (error) throw new Error(error.message);
 
+  return { deleted: 1 };
+}
+
+export async function createEvent(
+  ctx: WageyRequestContext,
+  input: {
+    startDate: string;
+    endDate: string;
+    isAllDay: boolean;
+    startTime?: string | null;
+    endTime?: string | null;
+    note: string;
+    notificationMinutesArray?: number[] | null;
+    notificationAnchorTime?: string | null;
+  },
+): Promise<EventRecord> {
+  const { data, error } = await ctx.supabase
+    .from("events")
+    .insert({
+      user_id: ctx.user.id,
+      start_date: input.startDate,
+      end_date: input.endDate,
+      is_all_day: input.isAllDay,
+      start_time: input.startTime ?? null,
+      end_time: input.endTime ?? null,
+      note: input.note,
+      notification_minutes_array: input.notificationMinutesArray ?? null,
+      notification_anchor_time: input.notificationAnchorTime ?? null,
+    })
+    .select(COMPUTED_EVENT_SELECT)
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Failed to create event");
+  return data as EventRecord;
+}
+
+export async function updateEvent(
+  ctx: WageyRequestContext,
+  input: {
+    id: string;
+    startDate: string;
+    endDate: string;
+    isAllDay: boolean;
+    startTime?: string | null;
+    endTime?: string | null;
+    note: string;
+    notificationMinutesArray?: number[] | null;
+    notificationAnchorTime?: string | null;
+  },
+): Promise<EventRecord | null> {
+  const { error } = await ctx.supabase
+    .from("events")
+    .update({
+      start_date: input.startDate,
+      end_date: input.endDate,
+      is_all_day: input.isAllDay,
+      start_time: input.startTime ?? null,
+      end_time: input.endTime ?? null,
+      note: input.note,
+      notification_minutes_array: input.notificationMinutesArray ?? null,
+      notification_anchor_time: input.notificationAnchorTime ?? null,
+    })
+    .eq("id", input.id)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+  return await getUserEventById(ctx, input.id);
+}
+
+export async function deleteEvent(
+  ctx: WageyRequestContext,
+  eventId: string,
+): Promise<{ deleted: number }> {
+  const { error } = await ctx.supabase
+    .from("events")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", eventId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
   return { deleted: 1 };
 }
 

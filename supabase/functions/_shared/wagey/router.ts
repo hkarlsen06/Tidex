@@ -150,6 +150,8 @@ const BUILT_IN_TOOLS: Tool[] = [
 
 const READ_ONLY_TOOL_NAMES = new Set<ToolName>([
   "query_shifts",
+  "query_events",
+  "plan_schedule",
   "calculate_wages",
   "draft_recurring_shift",
   "get_statistics",
@@ -291,7 +293,7 @@ export function convertToClaudeMessages(
   return { system: systemPrompt, messages: claudeMessages };
 }
 
-function isReadOnlyToolUse(toolUse: PendingToolUse): boolean {
+export function isReadOnlyToolUse(toolUse: PendingToolUse): boolean {
   const toolName = toolUse.name as ToolName;
   if (READ_ONLY_TOOL_NAMES.has(toolName)) return true;
   if (toolName === "manage_settings") {
@@ -732,9 +734,6 @@ export async function handleWageyRequest(
             const toolUses: PendingToolUse[] = [];
             const startedToolUseIds = new Set<string>();
             const assistantContent: ContentBlock[] = [];
-            const bufferedTextChunks: string[] = [];
-            let sawTextStart = false;
-
             let shouldStartNewAssistantTextBlock = true;
 
             const appendAssistantText = (content: string) => {
@@ -766,7 +765,7 @@ export async function handleWageyRequest(
 
               if (chunk.type === "text_start") {
                 shouldStartNewAssistantTextBlock = true;
-                sawTextStart = true;
+                sendChunk({ type: "text_start" });
               } else if (chunk.type === "text") {
                 if (!chunk.content) {
                   continue;
@@ -775,7 +774,8 @@ export async function handleWageyRequest(
                   return;
                 }
                 appendAssistantText(chunk.content);
-                bufferedTextChunks.push(chunk.content);
+                sendChunk({ type: "text", content: chunk.content });
+                hasUserVisibleAssistantOutput = true;
               } else if (chunk.type === "built_in_tool_start") {
                 if (!(await ensureInvocationConsumed())) {
                   return;
@@ -914,16 +914,6 @@ export async function handleWageyRequest(
                 }],
               });
               continue;
-            }
-
-            if (bufferedTextChunks.length > 0) {
-              if (sawTextStart) {
-                sendChunk({ type: "text_start" });
-              }
-              for (const textChunk of bufferedTextChunks) {
-                sendChunk({ type: "text", content: textChunk });
-              }
-              hasUserVisibleAssistantOutput = true;
             }
 
             if (req.signal.aborted || toolUses.length === 0) {

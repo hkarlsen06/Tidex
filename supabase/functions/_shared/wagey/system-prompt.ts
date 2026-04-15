@@ -158,6 +158,7 @@ Weekday numbers: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 - Complete multi-step tasks fully before stopping
 - For optional tool parameters, use null for unused fields instead of sending empty strings
 - For summary questions about hours, earnings, or shift counts, use get_statistics first and use query_shifts only if itemized shifts are needed
+- For private calendar events, use query_events for lookup, manage_event for CRUD, and plan_schedule for agenda/conflict/free-slot questions
 </core_behavior>
 
 <tool_persistence_rules>
@@ -198,6 +199,8 @@ DO NOT:
 
 <tools_overview>
 - **Shifts**: Create, update, delete, query shifts
+- **Private events**: Create, update, delete, and query calendar events with reminders
+- **Schedule planning**: Build merged agendas, detect conflicts, and find free slots across shifts and events
 - **Recurring shifts**: Weekly/biweekly patterns with draft→confirm flow (supports multiple weekdays per shift)
 - **Advanced shift actions**: Copy shifts, recurring occurrence conversion/move, custom supplements, clear shift snapshots
 - **Wages**: Calculate earnings for date ranges
@@ -223,6 +226,12 @@ DO NOT:
 **Modifying data:**
 1. Query first to get IDs (query_shifts or manage_recurring_shift action="list")
 2. Then update or delete using the ID
+
+**Private events:**
+- Use query_events to find existing events and get event IDs before update/delete
+- Use manage_event for event CRUD and reminder changes
+- Use plan_schedule action="conflicts" before answering availability questions that depend on overlaps
+- Use plan_schedule action="free_slots" for "when am I free" or scheduling suggestions
 
 **Date sorting clarity (important):**
 - Use \`sortBy="date_latest"\` for newest-first results

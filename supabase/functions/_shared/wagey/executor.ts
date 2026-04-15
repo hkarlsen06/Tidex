@@ -4,17 +4,21 @@ import {
   blockSharer,
   countShiftsAffectedBySnapshot,
   convertRecurringShiftToStandalone,
+  createEvent,
   copyShifts,
   createJob,
   createRecurringShift,
   createShare,
   createShifts,
+  deleteEvent,
   deleteJob,
   deleteRecurringShift,
   deleteShift,
   draftRecurringShift,
   getAllFriends,
   getComputedShiftsForApi,
+  getUserEventById,
+  getUserEventsForApi,
   getSharedUserShifts,
   getSharerShiftPreviews,
   getStatistics,
@@ -36,6 +40,7 @@ import {
   unblockSharer,
   updateCustomSupplements,
   updateDisplaySettings,
+  updateEvent,
   updateJob,
   updatePaySettings,
   updatePreferencesSettings,
@@ -55,6 +60,7 @@ import type {
   ListWorkplacesInput,
   ManageFeedbackInput,
   ManageFriendSharingInput,
+  ManageEventInput,
   ManageProfileInput,
   ManageRecurringExclusionInput,
   ManageRecurringShiftInput,
@@ -63,8 +69,10 @@ import type {
   ManageShiftInput,
   ManageWageSnapshotsInput,
   ManageWorkplaceInput,
+  PlanScheduleInput,
   QueryFriendFeaturedShiftInput,
   QueryFriendShiftsInput,
+  QueryEventsInput,
   QueryShiftsInput,
   ToolName,
   ToolResult,
@@ -80,6 +88,7 @@ import {
   listWorkplacesSchema,
   manageFeedbackSchema,
   manageFriendSharingSchema,
+  manageEventSchema,
   manageProfileSchema,
   manageRecurringExclusionSchema,
   manageRecurringShiftSchema,
@@ -88,8 +97,10 @@ import {
   manageShiftSchema,
   manageWageSnapshotsSchema,
   manageWorkplaceSchema,
+  planScheduleSchema,
   queryFriendFeaturedShiftSchema,
   queryFriendShiftsSchema,
+  queryEventsSchema,
   queryShiftsSchema,
   tools as toolDefinitions,
 } from "./tools.ts";
@@ -157,9 +168,37 @@ type ShiftReference = {
   job_id?: string | null;
 };
 
+type EventReference = {
+  id: string;
+  start_date: string;
+  end_date: string;
+  is_all_day: boolean;
+  start_time: string | null;
+  end_time: string | null;
+  note: string;
+  notification_minutes_array: number[] | null;
+  notification_anchor_time: string | null;
+};
+
+type TimeRange = {
+  start: Date;
+  end: Date;
+};
+
+type AgendaItem = {
+  type: "event" | "shift";
+  sortStart: Date;
+  isAllDay: boolean;
+  payload: Record<string, unknown>;
+};
+
 async function resolveShortIdViaRpc(
   ctx: WageyRequestContext,
-  functionName: "resolve_user_shift_id" | "resolve_recurring_shift_id" | "resolve_wage_snapshot_id",
+  functionName:
+    | "resolve_user_shift_id"
+    | "resolve_recurring_shift_id"
+    | "resolve_wage_snapshot_id"
+    | "resolve_user_event_id",
   shortOrFullId: string,
 ): Promise<string | null> {
   if (!isShortId(shortOrFullId)) {
@@ -186,6 +225,10 @@ async function resolveSnapshotId(ctx: WageyRequestContext, shortOrFullId: string
 
 async function resolveStoredShiftId(ctx: WageyRequestContext, shortOrFullId: string): Promise<string | null> {
   return await resolveShortIdViaRpc(ctx, "resolve_user_shift_id", shortOrFullId);
+}
+
+async function resolveEventId(ctx: WageyRequestContext, shortOrFullId: string): Promise<string | null> {
+  return await resolveShortIdViaRpc(ctx, "resolve_user_event_id", shortOrFullId);
 }
 
 async function getStoredShiftReference(ctx: WageyRequestContext, shortOrFullId: string): Promise<ShiftReference | null> {
@@ -253,6 +296,166 @@ async function getComputedShiftReference(ctx: WageyRequestContext, shortOrFullId
     recurring_id: data.id,
     job_id: data.job_id ?? null,
   };
+}
+
+async function getStoredEventReference(
+  ctx: WageyRequestContext,
+  shortOrFullId: string,
+): Promise<EventReference | null> {
+  const fullEventId = await resolveEventId(ctx, shortOrFullId);
+  if (!fullEventId) return null;
+  const event = await getUserEventById(ctx, fullEventId);
+  return (event as EventReference | null) ?? null;
+}
+
+function timeToMinutes(time: string): number {
+  if (time === "24:00") return 24 * 60;
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function startOfDay(date: string): Date {
+  return new Date(`${date}T00:00:00Z`);
+}
+
+function endOfDayExclusive(date: string): Date {
+  const value = startOfDay(date);
+  value.setUTCDate(value.getUTCDate() + 1);
+  return value;
+}
+
+function dateAtTime(date: string, time: string): Date {
+  if (time === "24:00") {
+    return endOfDayExclusive(date);
+  }
+  return new Date(`${date}T${time}:00Z`);
+}
+
+function addDays(date: string, days: number): string {
+  const value = startOfDay(date);
+  value.setUTCDate(value.getUTCDate() + days);
+  return value.toISOString().slice(0, 10);
+}
+
+function rangesOverlap(a: TimeRange, b: TimeRange): boolean {
+  return a.start < b.end && b.start < a.end;
+}
+
+function intersectRanges(a: TimeRange, b: TimeRange): TimeRange | null {
+  const start = a.start > b.start ? a.start : b.start;
+  const end = a.end < b.end ? a.end : b.end;
+  return start < end ? { start, end } : null;
+}
+
+function formatTimeRange(range: TimeRange): { start: string; end: string; durationMinutes: number } {
+  const toTimeString = (value: Date): string => {
+    const hours = value.getUTCHours();
+    const minutes = value.getUTCMinutes();
+    if (hours === 0 && minutes === 0) {
+      const previous = new Date(value);
+      previous.setUTCDate(previous.getUTCDate() - 1);
+      if (previous.toISOString().slice(0, 10) < value.toISOString().slice(0, 10)) {
+        return "24:00";
+      }
+    }
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+
+  return {
+    start: `${String(range.start.getUTCHours()).padStart(2, "0")}:${String(range.start.getUTCMinutes()).padStart(2, "0")}`,
+    end: toTimeString(range.end),
+    durationMinutes: Math.round((range.end.getTime() - range.start.getTime()) / 60000),
+  };
+}
+
+function buildEventRange(event: EventReference): TimeRange {
+  if (event.is_all_day) {
+    return {
+      start: startOfDay(event.start_date),
+      end: endOfDayExclusive(event.end_date),
+    };
+  }
+
+  return {
+    start: dateAtTime(event.start_date, event.start_time ?? "00:00"),
+    end: dateAtTime(event.end_date, event.end_time ?? "00:00"),
+  };
+}
+
+function buildShiftRange(shift: ShiftReference): TimeRange {
+  const start = dateAtTime(shift.shift_date, shift.start_time);
+  const endMinutes = timeToMinutes(shift.end_time);
+  const startMinutes = timeToMinutes(shift.start_time);
+  const endDate = endMinutes <= startMinutes && shift.end_time != "24:00"
+    ? addDays(shift.shift_date, 1)
+    : shift.shift_date;
+
+  return {
+    start,
+    end: dateAtTime(endDate, shift.end_time),
+  };
+}
+
+function normalizeReminderMinutes(minutes: number[] | null | undefined): number[] | null {
+  const normalized = Array.from(new Set((minutes ?? []).filter((value) => value >= 0))).sort((a, b) => b - a);
+  return normalized.length > 0 ? normalized : null;
+}
+
+function normalizeReminderAnchorTime(time: string | null | undefined): string | null {
+  if (time == null) return null;
+  const trimmed = time.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function formatEventForTool(event: EventReference): Record<string, unknown> {
+  return {
+    id: toShortId(event.id),
+    note: event.note,
+    startDate: event.start_date,
+    endDate: event.end_date,
+    isAllDay: event.is_all_day,
+    startTime: event.start_time,
+    endTime: event.end_time,
+    reminderMinutes: normalizeReminderMinutes(event.notification_minutes_array),
+    reminderAnchorTime: normalizeReminderAnchorTime(event.notification_anchor_time),
+  };
+}
+
+function validateEventFields(input: {
+  note: string;
+  startDate: string;
+  endDate: string;
+  isAllDay: boolean;
+  startTime: string | null;
+  endTime: string | null;
+  notificationMinutesArray: number[] | null;
+  notificationAnchorTime: string | null;
+}): string | null {
+  if (!input.note.trim()) return "Event note cannot be empty";
+
+  if (input.isAllDay) {
+    if (input.endDate < input.startDate) {
+      return "All-day events must end on or after the start date";
+    }
+    if (input.startTime !== null || input.endTime !== null) {
+      return "All-day events cannot include startTime or endTime";
+    }
+    if ((input.notificationMinutesArray?.length ?? 0) > 0 && !input.notificationAnchorTime) {
+      return "All-day event reminders require notificationAnchorTime";
+    }
+    return null;
+  }
+
+  if (input.startDate !== input.endDate) {
+    return "Timed events must start and end on the same date";
+  }
+  if (!input.startTime || !input.endTime) {
+    return "Timed events require startTime and endTime";
+  }
+  if (timeToMinutes(input.endTime) <= timeToMinutes(input.startTime)) {
+    return "Timed events must end after they start";
+  }
+  return null;
 }
 
 function getCurrentWeekRange(): { startDate: string; endDate: string } {
@@ -435,6 +638,12 @@ export async function executeTool(
         return await executeManageShift(ctx, args);
       case "query_shifts":
         return await executeQueryShifts(ctx, args);
+      case "query_events":
+        return await executeQueryEvents(ctx, args);
+      case "manage_event":
+        return await executeManageEvent(ctx, args);
+      case "plan_schedule":
+        return await executePlanSchedule(ctx, args);
       case "calculate_wages":
         return await executeCalculateWages(ctx, args);
       case "draft_recurring_shift":
@@ -605,6 +814,394 @@ async function executeQueryShifts(ctx: WageyRequestContext, args: unknown): Prom
       avgGrossPerShift: shiftCount > 0 ? Number((totalGross / shiftCount).toFixed(2)) : 0,
     },
     currency,
+  };
+}
+
+async function executeQueryEvents(ctx: WageyRequestContext, args: unknown): Promise<ToolResult> {
+  const parsed = queryEventsSchema.safeParse(args);
+  if (!parsed.success) {
+    return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
+  }
+
+  const input = parsed.data as QueryEventsInput;
+  const weekRange = getCurrentWeekRange();
+  const startDate = input.startDate ?? (input.endDate === undefined ? weekRange.startDate : undefined);
+  const endDate = input.endDate ?? (input.startDate === undefined ? weekRange.endDate : undefined);
+  const loaded = await getUserEventsForApi(ctx, ctx.user.id, {
+    startDate,
+    endDate,
+  });
+
+  let filtered = loaded;
+  if (input.kind === "timed") {
+    filtered = filtered.filter((event) => !event.is_all_day);
+  } else if (input.kind === "all_day") {
+    filtered = filtered.filter((event) => event.is_all_day);
+  }
+
+  filtered = [...filtered].sort((a, b) => {
+    const dateCompare = a.start_date.localeCompare(b.start_date);
+    if (dateCompare !== 0) return input.sortBy === "start_latest" ? -dateCompare : dateCompare;
+    if (a.is_all_day !== b.is_all_day) return a.is_all_day ? -1 : 1;
+    const timeCompare = (a.start_time ?? "").localeCompare(b.start_time ?? "");
+    return input.sortBy === "start_latest" ? -timeCompare : timeCompare;
+  });
+
+  const events = filtered.slice(0, input.limit ?? 30).map(formatEventForTool);
+  return {
+    success: true,
+    message: events.length === 1 ? "Found 1 event" : `Found ${events.length} events`,
+    data: events,
+  };
+}
+
+async function executeManageEvent(ctx: WageyRequestContext, args: unknown): Promise<ToolResult> {
+  const parsed = manageEventSchema.safeParse(args);
+  if (!parsed.success) {
+    return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
+  }
+
+  const input = parsed.data as ManageEventInput;
+
+  switch (input.action) {
+    case "create": {
+      if (
+        input.note === undefined || input.startDate === undefined || input.endDate === undefined
+        || input.isAllDay === undefined
+      ) {
+        return { success: false, message: t(tr.missingFields, { fields: "note, startDate, endDate, isAllDay" }) };
+      }
+
+      const normalizedReminderMinutes = normalizeReminderMinutes(input.notificationMinutesArray);
+      const normalizedAnchorTime = input.isAllDay
+        ? normalizeReminderAnchorTime(input.notificationAnchorTime ?? null)
+        : null;
+      const validationError = validateEventFields({
+        note: input.note,
+        startDate: input.startDate,
+        endDate: input.endDate,
+        isAllDay: input.isAllDay,
+        startTime: input.isAllDay ? null : input.startTime ?? null,
+        endTime: input.isAllDay ? null : input.endTime ?? null,
+        notificationMinutesArray: normalizedReminderMinutes,
+        notificationAnchorTime: normalizedAnchorTime,
+      });
+      if (validationError) {
+        return { success: false, message: validationError };
+      }
+
+      const created = await createEvent(ctx, {
+        startDate: input.startDate,
+        endDate: input.endDate,
+        isAllDay: input.isAllDay,
+        startTime: input.isAllDay ? null : input.startTime ?? null,
+        endTime: input.isAllDay ? null : input.endTime ?? null,
+        note: input.note.trim(),
+        notificationMinutesArray: normalizedReminderMinutes,
+        notificationAnchorTime: normalizedAnchorTime,
+      });
+
+      return {
+        success: true,
+        message: `Created event "${created.note}"`,
+        data: formatEventForTool(created),
+      };
+    }
+    case "update": {
+      if (!input.eventId) return { success: false, message: "Missing eventId" };
+      const existing = await getStoredEventReference(ctx, input.eventId);
+      if (!existing) return { success: false, message: `Event not found: ${input.eventId}` };
+
+      const targetIsAllDay = input.isAllDay ?? existing.is_all_day;
+      const isChangingShape = input.isAllDay !== undefined && input.isAllDay !== existing.is_all_day;
+      if (isChangingShape) {
+        const requiredFields = targetIsAllDay
+          ? ["startDate", "endDate"]
+          : ["startDate", "endDate", "startTime", "endTime"];
+        const missingFields = requiredFields.filter((field) => (input as Record<string, unknown>)[field] === undefined);
+        if (missingFields.length > 0) {
+          return {
+            success: false,
+            message: `Changing event type requires full compatible fields: ${missingFields.join(", ")}`,
+          };
+        }
+      }
+
+      const normalizedReminderMinutes = input.notificationMinutesArray !== undefined
+        ? normalizeReminderMinutes(input.notificationMinutesArray)
+        : normalizeReminderMinutes(existing.notification_minutes_array);
+      const normalizedAnchorTime = targetIsAllDay
+        ? normalizeReminderAnchorTime(
+          input.notificationAnchorTime !== undefined
+            ? input.notificationAnchorTime
+            : existing.notification_anchor_time,
+        )
+        : null;
+      const merged = {
+        note: (input.note ?? existing.note).trim(),
+        startDate: input.startDate ?? existing.start_date,
+        endDate: input.endDate ?? existing.end_date,
+        isAllDay: targetIsAllDay,
+        startTime: targetIsAllDay ? null : input.startTime ?? existing.start_time,
+        endTime: targetIsAllDay ? null : input.endTime ?? existing.end_time,
+        notificationMinutesArray: normalizedReminderMinutes,
+        notificationAnchorTime: normalizedAnchorTime,
+      };
+      const validationError = validateEventFields(merged);
+      if (validationError) {
+        return { success: false, message: validationError };
+      }
+
+      const updated = await updateEvent(ctx, {
+        id: existing.id,
+        startDate: merged.startDate,
+        endDate: merged.endDate,
+        isAllDay: merged.isAllDay,
+        startTime: merged.startTime,
+        endTime: merged.endTime,
+        note: merged.note,
+        notificationMinutesArray: merged.notificationMinutesArray,
+        notificationAnchorTime: merged.notificationAnchorTime,
+      });
+      if (!updated) return { success: false, message: `Event not found: ${input.eventId}` };
+
+      return {
+        success: true,
+        message: `Updated event "${updated.note}"`,
+        data: formatEventForTool(updated),
+      };
+    }
+    case "delete": {
+      if (!input.eventId) return { success: false, message: "Missing eventId" };
+      const event = await getStoredEventReference(ctx, input.eventId);
+      if (!event) return { success: false, message: `Event not found: ${input.eventId}` };
+      await deleteEvent(ctx, event.id);
+      return {
+        success: true,
+        message: `Deleted event "${event.note}"`,
+        data: formatEventForTool(event),
+      };
+    }
+    default:
+      return { success: false, message: t(tr.unknownAction, { action: input.action }) };
+  }
+}
+
+async function executePlanSchedule(ctx: WageyRequestContext, args: unknown): Promise<ToolResult> {
+  const parsed = planScheduleSchema.safeParse(args);
+  if (!parsed.success) {
+    return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
+  }
+
+  const input = parsed.data as PlanScheduleInput;
+  const requestRange: TimeRange = {
+    start: startOfDay(input.startDate),
+    end: endOfDayExclusive(input.endDate),
+  };
+  const eventRows = input.includeEvents
+    ? await getUserEventsForApi(ctx, ctx.user.id, {
+      startDate: input.startDate,
+      endDate: input.endDate,
+    })
+    : [];
+  const shiftRows = input.includeShifts
+    ? (await getComputedShiftsForApi(ctx, ctx.user.id, {
+      startDate: addDays(input.startDate, -1),
+      endDate: input.endDate,
+    })).shifts
+    : [];
+
+  if (input.action === "agenda") {
+    const items: AgendaItem[] = [];
+
+    for (const event of eventRows) {
+      const range = buildEventRange(event);
+      if (!rangesOverlap(range, requestRange)) continue;
+      items.push({
+        type: "event",
+        sortStart: range.start,
+        isAllDay: event.is_all_day,
+        payload: formatEventForTool(event),
+      });
+    }
+
+    for (const shift of shiftRows) {
+      const range = buildShiftRange(shift);
+      if (!rangesOverlap(range, requestRange)) continue;
+      items.push({
+        type: "shift",
+        sortStart: range.start,
+        isAllDay: false,
+        payload: {
+          id: toDisplayShiftId(shift.id),
+          date: shift.shift_date,
+          startTime: shift.start_time,
+          endTime: shift.end_time,
+          hours: Number(shift.computed.paidHours.toFixed(2)),
+          gross: Number(shift.computed.gross.toFixed(2)),
+        },
+      });
+    }
+
+    items.sort((a, b) => {
+      const startDiff = a.sortStart.getTime() - b.sortStart.getTime();
+      if (startDiff !== 0) return startDiff;
+      if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1;
+      return a.type.localeCompare(b.type);
+    });
+
+    return {
+      success: true,
+      message: `Built agenda with ${items.length} item${items.length === 1 ? "" : "s"}`,
+      data: { items: items.map((item) => ({ type: item.type, ...item.payload })) },
+    };
+  }
+
+  if (input.action === "conflicts") {
+    if (input.isAllDay === undefined) {
+      return { success: false, message: "conflicts requires isAllDay" };
+    }
+
+    const excludeEventId = input.excludeEventId
+      ? await resolveEventId(ctx, input.excludeEventId)
+      : null;
+    const normalizedCandidateReminderMinutes = normalizeReminderMinutes(null);
+    const validationError = validateEventFields({
+      note: "candidate",
+      startDate: input.startDate,
+      endDate: input.endDate,
+      isAllDay: input.isAllDay,
+      startTime: input.isAllDay ? null : input.startTime ?? null,
+      endTime: input.isAllDay ? null : input.endTime ?? null,
+      notificationMinutesArray: normalizedCandidateReminderMinutes,
+      notificationAnchorTime: null,
+    });
+    if (validationError) {
+      return { success: false, message: validationError };
+    }
+
+    const candidateRange = buildEventRange({
+      id: "candidate",
+      start_date: input.startDate,
+      end_date: input.endDate,
+      is_all_day: input.isAllDay,
+      start_time: input.isAllDay ? null : input.startTime ?? null,
+      end_time: input.isAllDay ? null : input.endTime ?? null,
+      note: "candidate",
+      notification_minutes_array: null,
+      notification_anchor_time: null,
+    });
+    const conflicts: Record<string, unknown>[] = [];
+
+    for (const event of eventRows) {
+      if (excludeEventId && event.id === excludeEventId) continue;
+      const range = buildEventRange(event);
+      if (!rangesOverlap(candidateRange, range)) continue;
+      conflicts.push({
+        type: "event",
+        id: toShortId(event.id),
+        note: event.note,
+        startDate: event.start_date,
+        endDate: event.end_date,
+        isAllDay: event.is_all_day,
+        startTime: event.start_time,
+        endTime: event.end_time,
+      });
+    }
+
+    for (const shift of shiftRows) {
+      const range = buildShiftRange(shift);
+      if (!rangesOverlap(candidateRange, range)) continue;
+      conflicts.push({
+        type: "shift",
+        id: toDisplayShiftId(shift.id),
+        date: shift.shift_date,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+        hours: Number(shift.computed.paidHours.toFixed(2)),
+      });
+    }
+
+    return {
+      success: true,
+      message: conflicts.length === 0 ? "No schedule conflicts found" : `Found ${conflicts.length} conflict${conflicts.length === 1 ? "" : "s"}`,
+      data: { hasConflicts: conflicts.length > 0, conflicts },
+    };
+  }
+
+  if (input.durationMinutes === undefined) {
+    return { success: false, message: "free_slots requires durationMinutes" };
+  }
+  if (timeToMinutes(input.windowEnd) <= timeToMinutes(input.windowStart)) {
+    return { success: false, message: "windowEnd must be after windowStart" };
+  }
+
+  const occupiedRanges = [
+    ...eventRows.map((event) => ({ type: "event" as const, id: event.id, range: buildEventRange(event) })),
+    ...shiftRows.map((shift) => ({ type: "shift" as const, id: shift.id, range: buildShiftRange(shift) })),
+  ];
+  const slots: Record<string, unknown>[] = [];
+  let currentDate = input.startDate;
+
+  while (currentDate <= input.endDate) {
+    const dayWindow: TimeRange = {
+      start: dateAtTime(currentDate, input.windowStart),
+      end: dateAtTime(currentDate, input.windowEnd),
+    };
+    const dayOccupancy = occupiedRanges
+      .map((item) => intersectRanges(item.range, dayWindow))
+      .filter((item): item is TimeRange => item !== null)
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    const merged: TimeRange[] = [];
+    for (const range of dayOccupancy) {
+      const previous = merged[merged.length - 1];
+      if (!previous || range.start > previous.end) {
+        merged.push({ ...range });
+      } else if (range.end > previous.end) {
+        previous.end = range.end;
+      }
+    }
+
+    let pointer = dayWindow.start;
+    for (const range of merged) {
+      if (range.start > pointer) {
+        const freeRange = { start: pointer, end: range.start };
+        const formatted = formatTimeRange(freeRange);
+        if (formatted.durationMinutes >= input.durationMinutes) {
+          slots.push({
+            date: currentDate,
+            startTime: formatted.start,
+            endTime: formatted.end,
+            durationMinutes: formatted.durationMinutes,
+          });
+        }
+      }
+      if (range.end > pointer) {
+        pointer = range.end;
+      }
+    }
+
+    if (pointer < dayWindow.end) {
+      const freeRange = { start: pointer, end: dayWindow.end };
+      const formatted = formatTimeRange(freeRange);
+      if (formatted.durationMinutes >= input.durationMinutes) {
+        slots.push({
+          date: currentDate,
+          startTime: formatted.start,
+          endTime: formatted.end,
+          durationMinutes: formatted.durationMinutes,
+        });
+      }
+    }
+
+    currentDate = addDays(currentDate, 1);
+  }
+
+  return {
+    success: true,
+    message: slots.length === 0 ? "No free slots found" : `Found ${slots.length} free slot${slots.length === 1 ? "" : "s"}`,
+    data: { slots },
   };
 }
 
