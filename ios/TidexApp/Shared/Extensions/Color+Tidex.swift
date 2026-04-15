@@ -10,72 +10,11 @@ import SwiftUI
 // rather than hardcoded values. This ensures consistent theming across the app.
 
 extension Color {
-  // MARK: - Background Colors
-
-  /// Main app background - adapts to light/dark mode
-  /// Light: HSlocalized(220, 40%, 98%) - soft off-white
-  /// Dark: HSlocalized(222.2, 84%, 4.9%) - deep navy
-  static var tidexBackground: Color {
-    Color("TidexBackground")
-  }
-
-  /// Secondary background for nested containers
-  /// Light: HSlocalized(220, 35%, 95%)
-  /// Dark: HSlocalized(222.2, 84%, 4.9%)
-  static var tidexBackgroundSecondary: Color {
-    Color("TidexBackgroundSecondary")
-  }
-
   /// Launch screen background - adapts to light/dark mode
   /// Light: HSlocalized(220, 40%, 98%) - soft off-white (matches tidexBackground)
   /// Dark: HSlocalized(222.2, 84%, 4.9%) - deep navy (matches tidexBackground)
   static var tidexLaunchBackground: Color {
     Color("LaunchBackground")
-  }
-
-  /// Surface primary for cards and elevated containers
-  /// Light: Pure white (#FFFFFF) - maximum contrast against blue-tinted background
-  /// Dark: #16243A - cooler navy surface tuned for the gradient app background
-  static var tidexSurfacePrimary: Color {
-    Color("TidexSurfacePrimary")
-  }
-
-  /// Surface secondary for nested elements within cards
-  /// Light: Very light gray (#F7F8F8) - subtle distinction from primary
-  /// Dark: #1B2C45 - slightly lighter cool navy for nested controls
-  static var tidexSurfaceSecondary: Color {
-    Color("TidexSurfaceSecondary")
-  }
-
-  // MARK: - Text Colors
-
-  /// Primary text color for headings and important content
-  /// Light: HSlocalized(222, 84%, 8%) - near black
-  /// Dark: HSlocalized(210, 40%, 98%) - near white
-  static var tidexTextPrimary: Color {
-    Color("TidexTextPrimary")
-  }
-
-  /// Secondary text color for body text and descriptions
-  /// Light: HSlocalized(214, 28%, 35%)
-  /// Dark: HSlocalized(214, 32%, 85%)
-  static var tidexTextSecondary: Color {
-    Color("TidexTextSecondary")
-  }
-
-  /// Muted text color for hints, placeholders, and disabled content
-  /// Light: #596B80 - darker for better contrast (WCAG AA compliant)
-  /// Dark: HSlocalized(215, 20%, 70%)
-  static var tidexTextMuted: Color {
-    Color("TidexTextMuted")
-  }
-
-  /// Theme-reversed text color (light in light mode, dark in dark mode).
-  /// This is NOT role-based. Prefer `tidexTextOn*` tokens for filled controls.
-  /// Light: HSlocalized(210, 40%, 98%)
-  /// Dark: HSlocalized(222, 47%, 11%)
-  static var tidexTextReversedByTheme: Color {
-    Color("TidexTextReversedByTheme")
   }
 
   /// Legacy alias retained only to provide compiler guidance.
@@ -86,85 +25,6 @@ extension Color {
   )
   static var tidexTextInverse: Color {
     tidexTextReversedByTheme
-  }
-
-  /// Text color for filled brand controls (buttons, chips)
-  /// Uses white in both modes to maintain consistent readability on brand surfaces
-  static var tidexTextOnBrand: Color {
-    Color("TidexTextOnBrand")
-  }
-
-  /// Text color for warning-filled controls
-  /// Uses black in both modes to maintain accessible contrast on amber backgrounds
-  static var tidexTextOnWarning: Color {
-    Color("TidexTextOnWarning")
-  }
-
-  /// Text color for success-filled controls
-  /// Light: near-white for dark green surfaces
-  /// Dark: deep navy for bright green surfaces
-  static var tidexTextOnSuccess: Color {
-    Color("TidexTextOnSuccess")
-  }
-
-  /// Text color for destructive/danger-filled controls
-  /// Uses white in both modes to maintain accessible contrast on red surfaces
-  static var tidexTextOnDanger: Color {
-    Color("TidexTextOnDanger")
-  }
-
-  // MARK: - Brand Colors
-
-  /// Tidex brand highlight color - accent blue
-  /// Light: HSlocalized(221, 83%, 53%) - vibrant blue
-  /// Dark: HSlocalized(217, 91%, 65%) - bright blue
-  static var tidexBlue: Color {
-    Color("TidexBlue")
-  }
-
-  /// Brand primary for buttons and primary actions
-  /// Slightly desaturated version of brand blue for better contrast
-  static var tidexBrandPrimary: Color {
-    Color("TidexBrandPrimary")
-  }
-
-  // MARK: - Border Colors
-
-  /// Border color for inputs, cards, and dividers
-  /// Light: #C7D1DB - darker for better visibility
-  /// Dark: #384761 - lighter for better visibility
-  static var tidexBorder: Color {
-    Color("TidexBorder")
-  }
-
-  /// Subtle border for light dividers
-  /// Light: #D9E0E8 - darker for better visibility
-  /// Dark: #303D52 - lighter for better visibility
-  static var tidexBorderSubtle: Color {
-    Color("TidexBorderSubtle")
-  }
-
-  // MARK: - Status Colors
-
-  /// Error/destructive color - red
-  /// Light: HSlocalized(0, 84%, 44%)
-  /// Dark: HSlocalized(0, 91%, 60%)
-  static var tidexError: Color {
-    Color("TidexError")
-  }
-
-  /// Success color - green
-  /// Light: HSlocalized(142, 76%, 28%)
-  /// Dark: HSlocalized(142, 71%, 50%)
-  static var tidexSuccess: Color {
-    Color("TidexSuccess")
-  }
-
-  /// Warning color - amber/orange
-  /// Light: HSlocalized(30, 100%, 35%)
-  /// Dark: HSlocalized(38, 100%, 55%)
-  static var tidexWarning: Color {
-    Color("TidexWarning")
   }
 
   /// Info color - blue (matches brand)
