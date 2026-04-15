@@ -3,6 +3,7 @@ import { assert, assertEquals } from "jsr:@std/assert";
 import {
   assistantLikelyClaimsWriteAction,
   handleWageyRequest,
+  isReadOnlyToolUse,
   userLikelyRequestedWriteAction,
 } from "./router.ts";
 import type { WageyRequestContext } from "./context.ts";
@@ -15,6 +16,29 @@ function createSseResponse(events: Record<string, unknown>[]): Response {
         controller.enqueue(
           encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
         );
+      }
+      controller.close();
+    },
+  });
+
+  return new Response(body, { status: 200 });
+}
+
+function createDelayedSseResponse(
+  events: Record<string, unknown>[],
+  delayMs: number,
+): Response {
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      for (const [index, event] of events.entries()) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify(event)}\n\n`),
+        );
+
+        if (delayMs > 0 && index < events.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        }
       }
       controller.close();
     },
@@ -91,6 +115,86 @@ async function readChunkStream(
   return chunks;
 }
 
+async function readChunksUntil(
+  response: Response,
+  predicate: (chunk: Record<string, unknown>) => boolean,
+  timeoutMs: number,
+): Promise<Array<Record<string, unknown>>> {
+  assert(response.body, "Expected streaming response body");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const chunks: Array<Record<string, unknown>> = [];
+  let buffer = "";
+  let didMatch = false;
+
+  try {
+    const deadline = Date.now() + timeoutMs;
+
+    while (!didMatch && Date.now() < deadline) {
+      const remainingMs = Math.max(1, deadline - Date.now());
+      let timeoutId: number | undefined;
+      const next = await Promise.race([
+        reader.read(),
+        new Promise<"timeout">((resolve) => {
+          timeoutId = setTimeout(() => resolve("timeout"), remainingMs);
+        }),
+      ]);
+      if (timeoutId !== undefined) {
+        clearTimeout(timeoutId);
+      }
+
+      if (next === "timeout") {
+        break;
+      }
+
+      const { done, value } = next;
+      if (done) {
+        break;
+      }
+
+      buffer += decoder.decode(value, { stream: true });
+
+      let boundaryIndex = buffer.indexOf("\n\n");
+      while (boundaryIndex != -1) {
+        const block = buffer.slice(0, boundaryIndex);
+        buffer = buffer.slice(boundaryIndex + 2);
+
+        const line = block
+          .split("\n")
+          .find((entry) => entry.startsWith("data: "));
+        if (line) {
+          const payload = JSON.parse(line.slice(6)) as {
+            type?: string;
+            chunk?: Record<string, unknown>;
+          };
+          if (payload.type === "chunk" && payload.chunk) {
+            chunks.push(payload.chunk);
+            if (predicate(payload.chunk)) {
+              didMatch = true;
+              break;
+            }
+          }
+        }
+
+        boundaryIndex = buffer.indexOf("\n\n");
+      }
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+      buffer += decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  return chunks;
+}
+
 function buildRequestBody(userId: string, capabilities: string[]): string {
   return JSON.stringify({
     routerStreamKey: "wagey",
@@ -156,6 +260,26 @@ function buildResearchEvents(): Record<string, unknown>[] {
           url: "https://example.com/tariff",
         },
       },
+    },
+    { type: "content_block_stop" },
+    { type: "message_delta", delta: { stop_reason: "end_turn" } },
+    { type: "message_stop" },
+  ];
+}
+
+function buildSlowTextOnlyEvents(): Record<string, unknown>[] {
+  return [
+    {
+      type: "content_block_start",
+      content_block: { type: "text" },
+    },
+    {
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: "Dette er første del." },
+    },
+    {
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: " Dette er andre del." },
     },
     { type: "content_block_stop" },
     { type: "message_delta", delta: { stop_reason: "end_turn" } },
@@ -288,6 +412,62 @@ Deno.test("handleWageyRequest suppresses built-in tool events and sources for le
   }
 });
 
+Deno.test("handleWageyRequest streams text chunks before the upstream turn fully completes", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
+  const originalModel = Deno.env.get("CLAUDE_MODEL");
+
+  Deno.env.set("CLAUDE_API_KEY", "test-key");
+  Deno.env.set("CLAUDE_MODEL", "claude-opus-4-6");
+  globalThis.fetch = async () =>
+    createDelayedSseResponse(buildSlowTextOnlyEvents(), 60);
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(userId, []),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    const earlyChunks = await readChunksUntil(
+      response,
+      (chunk) => chunk.type === "text",
+      180,
+    );
+
+    assert(
+      earlyChunks.some((chunk) => chunk.type === "text_start"),
+      "Expected text_start to arrive before stream completion",
+    );
+    assert(
+      earlyChunks.some((chunk) => chunk.type === "text"),
+      "Expected text chunk to arrive before stream completion",
+    );
+    assert(
+      !earlyChunks.some((chunk) => chunk.type === "done"),
+      "Expected stream to still be in progress when first text arrives",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      Deno.env.delete("CLAUDE_API_KEY");
+    } else {
+      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("CLAUDE_MODEL");
+    } else {
+      Deno.env.set("CLAUDE_MODEL", originalModel);
+    }
+  }
+});
+
 Deno.test("userLikelyRequestedWriteAction detects direct mutation requests", () => {
   assertEquals(
     userLikelyRequestedWriteAction("Can you set my tax to 10%?"),
@@ -313,6 +493,29 @@ Deno.test("assistantLikelyClaimsWriteAction detects promise/complete mutation la
   );
   assertEquals(
     assistantLikelyClaimsWriteAction("Jeg sjekker lønnsinnstillingene dine."),
+    false,
+  );
+});
+
+Deno.test("isReadOnlyToolUse treats event planning tools as read-only", () => {
+  assertEquals(
+    isReadOnlyToolUse({ id: "tool_1", name: "query_events", input: {} }),
+    true,
+  );
+  assertEquals(
+    isReadOnlyToolUse({
+      id: "tool_2",
+      name: "plan_schedule",
+      input: { action: "agenda" },
+    }),
+    true,
+  );
+  assertEquals(
+    isReadOnlyToolUse({
+      id: "tool_3",
+      name: "manage_event",
+      input: { action: "create" },
+    }),
     false,
   );
 });

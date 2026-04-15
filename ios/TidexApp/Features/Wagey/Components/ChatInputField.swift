@@ -210,6 +210,10 @@ struct ChatInputField: View {
     UIImagePickerController.isSourceTypeAvailable(.camera)
   }
 
+  private var shouldShowAttachmentSourcePicker: Bool {
+    showsCameraShortcut && cameraAvailable
+  }
+
   private var effectiveHorizontalPadding: CGFloat {
     guard isComposerFocused, let focusedHorizontalPadding else { return horizontalPadding }
     return focusedHorizontalPadding
@@ -293,7 +297,7 @@ struct ChatInputField: View {
       isPresented: $showAttachmentSourcePicker,
       titleVisibility: .visible
     ) {
-      if showsCameraShortcut && cameraAvailable {
+      if shouldShowAttachmentSourcePicker {
         Button(String(localized: "profile.personalInfo.takePhoto")) {
           showCamera = true
         }
@@ -312,7 +316,11 @@ struct ChatInputField: View {
   private var attachmentPickerButton: some View {
     Button {
       guard !attachmentControlsDisabled, !isProcessingImage else { return }
-      showAttachmentSourcePicker = true
+      if shouldShowAttachmentSourcePicker {
+        showAttachmentSourcePicker = true
+      } else {
+        showLibrary = true
+      }
     } label: {
       ZStack {
         if isProcessingImage {
