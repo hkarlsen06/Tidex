@@ -12,6 +12,96 @@ struct EventEditResult {
   let notificationAnchorTime: String?
 }
 
+struct EventDetailsSummaryRow: Equatable {
+  let title: String
+  let value: String
+}
+
+struct EventDetailsScheduleSummary: Equatable {
+  let rows: [EventDetailsSummaryRow]
+  let footerText: String
+  let footerIcon: String
+}
+
+enum EventDetailsSummaryBuilder {
+  static func scheduleSummary(for event: EventRow) -> EventDetailsScheduleSummary {
+    let formattedStartDate = EventSheetFormatter.longDate(event.start_date)
+    let formattedEndDate = EventSheetFormatter.longDate(event.end_date)
+    let spansMultipleDays = event.start_date != event.end_date
+
+    if event.is_all_day {
+      if spansMultipleDays {
+        return EventDetailsScheduleSummary(
+          rows: [
+            EventDetailsSummaryRow(
+              title: String(localized: .addShiftEventStartDate),
+              value: formattedStartDate
+            ),
+            EventDetailsSummaryRow(
+              title: String(localized: .addShiftEventEndDate),
+              value: formattedEndDate
+            ),
+          ],
+          footerText: String(localized: .addShiftEventAllDay),
+          footerIcon: "calendar"
+        )
+      }
+
+      return EventDetailsScheduleSummary(
+        rows: [
+          EventDetailsSummaryRow(
+            title: String(localized: .addShiftEventDate),
+            value: formattedStartDate
+          )
+        ],
+        footerText: String(localized: .addShiftEventAllDay),
+        footerIcon: "calendar"
+      )
+    }
+
+    let footerText: String = {
+      guard let start = event.start_time, let end = event.end_time else {
+        return String(localized: .addShiftEventAllDay)
+      }
+
+      return ShiftCardFormatter.localizedTimeRange(
+        start: start,
+        end: end,
+        locale: Locale.appLocale,
+        separator: " – "
+      )
+    }()
+
+    if spansMultipleDays {
+      return EventDetailsScheduleSummary(
+        rows: [
+          EventDetailsSummaryRow(
+            title: String(localized: .addShiftEventStartDate),
+            value: formattedStartDate
+          ),
+          EventDetailsSummaryRow(
+            title: String(localized: .addShiftEventEndDate),
+            value: formattedEndDate
+          ),
+        ],
+        footerText: footerText,
+        footerIcon: "clock"
+      )
+    }
+
+    return EventDetailsScheduleSummary(
+      rows: [
+        EventDetailsSummaryRow(
+          title: String(localized: .addShiftEventDate),
+          value: formattedStartDate
+        )
+      ],
+      footerText: footerText,
+      footerIcon: "clock"
+    )
+  }
+}
+
 struct EventDetailsSheet: View {
   let event: EventRow
   let onDelete: (() -> Void)?
@@ -37,6 +127,7 @@ struct EventDetailsSheet: View {
   @State private var isResettingDraft = false
   @State private var lastSavedReminderTimes: [Int] = []
   @State private var lastSavedReminderAnchorTime: Date?
+  @State private var shouldFocusTitleWhenEditing = false
   @FocusState private var isTitleFieldFocused: Bool
 
   private let inlineReminderSaveDelayNanoseconds: UInt64 = 300_000_000
@@ -95,33 +186,8 @@ struct EventDetailsSheet: View {
     return reminderAnchorTime != nil
   }
 
-  private var formattedDate: String {
-    EventSheetFormatter.longDate(event.start_date)
-  }
-
-  private var formattedStartDate: String {
-    EventSheetFormatter.longDate(event.start_date)
-  }
-
-  private var formattedEndDate: String {
-    EventSheetFormatter.longDate(event.end_date)
-  }
-
-  private var spansMultipleDays: Bool {
-    event.start_date != event.end_date
-  }
-
-  private var formattedTimeRange: String {
-    guard let start = event.start_time, let end = event.end_time else {
-      return String(localized: .addShiftEventAllDay)
-    }
-
-    return ShiftCardFormatter.localizedTimeRange(
-      start: start,
-      end: end,
-      locale: Locale.appLocale,
-      separator: " – "
-    )
+  private var scheduleSummary: EventDetailsScheduleSummary {
+    EventDetailsSummaryBuilder.scheduleSummary(for: event)
   }
 
   var body: some View {
@@ -177,6 +243,7 @@ struct EventDetailsSheet: View {
       }
       .onAppear {
         resetDraft()
+        shouldFocusTitleWhenEditing = startInEditMode
         isEditing = startInEditMode
       }
       .onDisappear {
@@ -188,11 +255,14 @@ struct EventDetailsSheet: View {
         }
         guard newValue else {
           isTitleFieldFocused = false
+          shouldFocusTitleWhenEditing = false
           return
         }
 
-        DispatchQueue.main.async {
-          isTitleFieldFocused = true
+        if shouldFocusTitleWhenEditing {
+          DispatchQueue.main.async {
+            isTitleFieldFocused = true
+          }
         }
       }
       .onChange(of: isAllDay) { _, newValue in
@@ -240,9 +310,10 @@ struct EventDetailsSheet: View {
 
   private var detailsContent: some View {
     VStack(spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        scheduleBadge
-
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        Text(.addShiftEventNoteTitle)
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextMuted)
         Text(event.note)
           .font(.tidexTitle2)
           .foregroundColor(.tidexTextPrimary)
@@ -253,24 +324,35 @@ struct EventDetailsSheet: View {
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+      .onTapGesture {
+        beginEditing(focusTitle: true)
+      }
 
       VStack(spacing: Spacing.sm) {
-        if event.is_all_day {
-          if spansMultipleDays {
-            detailRow(title: String(localized: .addShiftEventStartDate), value: formattedStartDate)
-            detailRow(title: String(localized: .addShiftEventEndDate), value: formattedEndDate)
-          } else {
-            detailRow(title: String(localized: .addShiftEventDate), value: formattedStartDate)
+        ForEach(Array(scheduleSummary.rows.enumerated()), id: \.offset) { index, row in
+          detailRow(title: row.title, value: row.value)
+
+          if index < scheduleSummary.rows.count - 1 {
+            Divider()
+              .background(Color.tidexBorder)
           }
-        } else {
-          detailRow(title: String(localized: .addShiftEventDate), value: formattedDate)
         }
+
+        Divider()
+          .background(Color.tidexBorder)
+
+        scheduleFooter
       }
       .padding(Spacing.lg)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+      .onTapGesture {
+        beginEditing(focusTitle: false)
+      }
 
       remindersCard(isEditable: canEditReminderSettings, showsPastHint: !canEditReminderSettings)
     }
@@ -384,9 +466,7 @@ struct EventDetailsSheet: View {
     VStack(spacing: Spacing.sm) {
       if !isEditing {
         Button {
-          withAnimation(.easeInOut(duration: 0.2)) {
-            isEditing = true
-          }
+          beginEditing(focusTitle: true)
         } label: {
           Text(.shiftsActionsEdit)
             .font(.tidexButton)
@@ -418,12 +498,14 @@ struct EventDetailsSheet: View {
     }
   }
 
-  private var scheduleBadge: some View {
-    HStack(spacing: Spacing.xxs) {
-      Image(systemName: event.is_all_day ? "calendar" : "clock")
+  private var scheduleFooter: some View {
+    HStack(spacing: Spacing.xs) {
+      Image(systemName: scheduleSummary.footerIcon)
         .font(.tidexFootnote)
-      Text(event.is_all_day ? String(localized: .addShiftEventAllDay) : formattedTimeRange)
+      Text(scheduleSummary.footerText)
         .font(.tidexSubheadline)
+        .fixedSize(horizontal: false, vertical: true)
+      Spacer(minLength: 0)
     }
     .foregroundColor(.tidexBlue)
   }
@@ -507,6 +589,19 @@ struct EventDetailsSheet: View {
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.red.opacity(0.08))
       )
+  }
+
+  private func beginEditing(focusTitle: Bool) {
+    shouldFocusTitleWhenEditing = focusTitle
+    focusedTimeField = nil
+
+    if !focusTitle {
+      isTitleFieldFocused = false
+    }
+
+    withAnimation(.easeInOut(duration: 0.2)) {
+      isEditing = true
+    }
   }
 
   private func resetDraft() {

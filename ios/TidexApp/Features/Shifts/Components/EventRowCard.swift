@@ -4,8 +4,10 @@ struct EventRowCard: View {
   let event: EventRow
   let coveredDateISO: String
   let onTap: (() -> Void)?
+  var showTodayHighlight: Bool = true
 
   @Environment(\.layoutDirection) private var layoutDirection
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   private var isToday: Bool {
     coveredDateISO == todayISO()
@@ -25,6 +27,10 @@ struct EventRowCard: View {
 
   private var isRTL: Bool {
     layoutDirection == .rightToLeft
+  }
+
+  private var usesFixedCardHeight: Bool {
+    !dynamicTypeSize.isAccessibilitySize
   }
 
   private var dateRangeText: String {
@@ -110,13 +116,17 @@ struct EventRowCard: View {
     }
     .padding(.horizontal, Spacing.mlg)
     .padding(.vertical, ShiftCardMetrics.verticalPadding)
+    .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card)
         .fill(Color.tidexSurfacePrimary)
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.card)
-        .strokeBorder(isToday ? Color.tidexBlue : Color.clear, lineWidth: isToday ? 2 : 0)
+        .strokeBorder(
+          showTodayHighlight && isToday ? Color.tidexBlue : Color.clear,
+          lineWidth: showTodayHighlight && isToday ? 2 : 0
+        )
     )
     .tidexCardShadow()
   }

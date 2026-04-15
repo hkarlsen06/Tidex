@@ -1806,6 +1806,7 @@ struct ShiftsView: View {
       // Show countdown text below next upcoming shift
       if isNextUpcoming {
         NextShiftCountdownText(shift: shift)
+          .padding(.bottom, Spacing.sm)
       }
     }
   }
