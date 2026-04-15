@@ -21,6 +21,7 @@ BEGIN
 END;
 $$;
 
--- Revoke execute from public, only authenticated users can call
-REVOKE EXECUTE ON FUNCTION admin_execute_sql(text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION admin_execute_sql(text) TO authenticated;
+-- Restrict execution to service_role only. Admin checks happen in trusted server code.
+REVOKE EXECUTE ON FUNCTION public.admin_execute_sql(text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.admin_execute_sql(text) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_execute_sql(text) TO service_role;
