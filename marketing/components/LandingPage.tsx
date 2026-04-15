@@ -237,7 +237,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
 
       <section
         id="faq"
-        className="relative overflow-hidden px-6 pb-24 pt-6 sm:pb-32 lg:pb-36"
+        className="relative overflow-hidden px-6 pt-14 pb-14 sm:pt-16 sm:pb-16 lg:pb-20"
       >
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_130%_80%_at_50%_-15%,hsl(199_89%_48%_/_0.24),transparent_60%)]" />
@@ -283,9 +283,41 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
         </div>
       </section>
 
-      <section className="px-6 pb-20 sm:pb-28">
+      <section className="border-y border-white/10 px-6 py-14 sm:py-16">
+        <div className="mx-auto w-full max-w-5xl">
+          <div className="mb-6 max-w-2xl space-y-2 sm:mb-8">
+            <p className="text-xs font-medium uppercase tracking-[0.22em] text-text-muted">
+              {marketing.socialProof.eyebrow}
+            </p>
+            <h2 className="text-balance text-2xl font-semibold tracking-[-0.03em] sm:text-3xl">
+              {marketing.socialProof.heading}
+            </h2>
+            <p className="text-sm leading-7 text-text-secondary sm:text-base">
+              {marketing.socialProof.description}
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3">
+            {marketing.socialProof.items.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-[1.15rem] border border-white/8 bg-background/55 p-5"
+              >
+                <h3 className="text-base font-semibold tracking-[-0.02em]">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-text-secondary">
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="px-6 pt-14 pb-20 sm:pt-16 sm:pb-28">
         <div className="mx-auto grid w-full max-w-5xl gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="rounded-4xl border border-white/8 bg-[linear-gradient(135deg,rgba(56,189,248,0.16),rgba(255,255,255,0.05))] p-10 shadow-[0_24px_70px_rgba(0,0,0,0.24)] backdrop-blur-xl sm:p-12">
+          <div className="rounded-[1.75rem] border border-white/12 bg-background/50 p-8 backdrop-blur-xl sm:p-10">
             <h2 className="max-w-lg text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
               {marketing.ctaPrimary.heading}
             </h2>
@@ -294,7 +326,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             </p>
             <Button
               asChild
-              className="mt-10 h-12 rounded-full bg-white px-6 text-sm font-semibold text-text-inverse hover:bg-white"
+              className="mt-8 h-11 rounded-full border border-white/20 bg-white/10 px-5 text-sm font-semibold text-text-primary hover:bg-white/14"
             >
               <a href={appStoreHref} target="_blank" rel="noopener noreferrer">
                 <span>{marketing.ctaPrimary.button}</span>
@@ -303,7 +335,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             </Button>
           </div>
 
-          <div className="rounded-4xl border border-white/8 bg-white/4 p-10 backdrop-blur-xl">
+          <div className="rounded-[1.75rem] border border-white/12 bg-background/45 p-8 backdrop-blur-xl sm:p-10">
             <h2 className="text-2xl font-semibold tracking-[-0.03em] sm:text-[1.75rem]">
               {marketing.contact.heading}
             </h2>
@@ -313,7 +345,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             <Button
               asChild
               variant="outline"
-              className="mt-8 h-11 rounded-full border-white/12 bg-white/4 px-5 text-sm font-semibold text-text-primary hover:bg-white/8"
+              className="mt-7 h-10 rounded-full border-white/18 bg-white/8 px-5 text-sm font-semibold text-text-primary hover:bg-white/12"
             >
               <a href={mailtoHref}>{marketing.contact.button}</a>
             </Button>
