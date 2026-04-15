@@ -42,6 +42,12 @@ struct ShiftDraft: Codable {
   /// All-day event end date (ISO format YYYY-MM-DD).
   var eventEndDate: String?
 
+  /// Event reminder offsets in minutes before the event.
+  var eventReminderMinutes: [Int]
+
+  /// All-day event reminder anchor time (HH:mm).
+  var eventReminderAnchorTime: String?
+
   /// When the draft was last modified
   var lastModified: Date
 
@@ -71,6 +77,52 @@ struct ShiftDraft: Codable {
         || eventEndDate != defaultEventDate
         || isEventAllDay
         || startTime != nil || endTime != nil
+        || !eventReminderMinutes.isEmpty
+        || eventReminderAnchorTime != nil
     }
+  }
+}
+
+extension ShiftDraft {
+  private enum CodingKeys: String, CodingKey {
+    case mode
+    case startTime
+    case endTime
+    case jobId
+    case selectedDates
+    case selectedDays
+    case repeatInterval
+    case endCondition
+    case eventNote
+    case isEventAllDay
+    case eventDate
+    case eventStartDate
+    case eventEndDate
+    case eventReminderMinutes
+    case eventReminderAnchorTime
+    case lastModified
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    mode = try container.decode(AddShiftMode.self, forKey: .mode)
+    startTime = try container.decodeIfPresent(String.self, forKey: .startTime)
+    endTime = try container.decodeIfPresent(String.self, forKey: .endTime)
+    jobId = try container.decodeIfPresent(String.self, forKey: .jobId)
+    selectedDates = try container.decodeIfPresent([String].self, forKey: .selectedDates) ?? []
+    selectedDays =
+      try container.decodeIfPresent([String: String].self, forKey: .selectedDays) ?? [:]
+    repeatInterval = try container.decodeIfPresent(Int.self, forKey: .repeatInterval) ?? 1
+    endCondition = try container.decodeIfPresent(EndCondition.self, forKey: .endCondition)
+    eventNote = try container.decodeIfPresent(String.self, forKey: .eventNote) ?? ""
+    isEventAllDay = try container.decodeIfPresent(Bool.self, forKey: .isEventAllDay) ?? false
+    eventDate = try container.decodeIfPresent(String.self, forKey: .eventDate)
+    eventStartDate = try container.decodeIfPresent(String.self, forKey: .eventStartDate)
+    eventEndDate = try container.decodeIfPresent(String.self, forKey: .eventEndDate)
+    eventReminderMinutes =
+      try container.decodeIfPresent([Int].self, forKey: .eventReminderMinutes) ?? []
+    eventReminderAnchorTime =
+      try container.decodeIfPresent(String.self, forKey: .eventReminderAnchorTime)
+    lastModified = try container.decode(Date.self, forKey: .lastModified)
   }
 }

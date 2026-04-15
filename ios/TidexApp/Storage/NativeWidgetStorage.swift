@@ -295,6 +295,7 @@ enum NativeWidgetStorage {
     else { return }
     Task { @MainActor in
       await ShiftReminderScheduler.shared.scheduleAllReminders(for: userId, shifts: storedShifts)
+      await EventReminderScheduler.shared.scheduleAllReminders(for: userId)
       await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
     }
 
@@ -346,6 +347,7 @@ enum NativeWidgetStorage {
     // Cancel all scheduled shift reminders
     Task {
       await ShiftReminderScheduler.shared.cancelAllReminders()
+      await EventReminderScheduler.shared.cancelAllReminders()
       await SmartNotificationScheduler.shared.cancelAllSmartNotifications()
     }
 

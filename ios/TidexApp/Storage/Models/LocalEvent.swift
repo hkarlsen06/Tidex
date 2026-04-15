@@ -16,6 +16,9 @@ final class LocalEvent {
   var startTime: String?
   var endTime: String?
   var note: String
+  /// Must have a persisted default for lightweight migration from older stores.
+  var notificationMinutesArray: [Int] = []
+  var notificationAnchorTime: String?
 
   var serverUpdatedAt: Date
   var serverRevision: Int64
@@ -70,6 +73,8 @@ final class LocalEvent {
     startTime: String?,
     endTime: String?,
     note: String,
+    notificationMinutesArray: [Int] = [],
+    notificationAnchorTime: String? = nil,
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date? = nil,
@@ -87,6 +92,8 @@ final class LocalEvent {
     self.startTime = startTime
     self.endTime = endTime
     self.note = note
+    self.notificationMinutesArray = Self.normalizedReminderMinutes(notificationMinutesArray)
+    self.notificationAnchorTime = Self.normalizedAnchorTime(notificationAnchorTime)
     self.serverUpdatedAt = serverUpdatedAt
     self.serverRevision = serverRevision
     self.serverDeletedAt = serverDeletedAt
@@ -100,6 +107,21 @@ final class LocalEvent {
   static func emptyDirtyFields() -> Data {
     (try? canonicalJSONEncoder.encode([String]())) ?? Data()
   }
+
+  static func normalizedReminderMinutes(_ minutes: [Int]?) -> [Int] {
+    Array(Set((minutes ?? []).filter { $0 >= 0 })).sorted(by: >)
+  }
+
+  static func normalizedReminderMinutesOptional(_ minutes: [Int]?) -> [Int]? {
+    let normalized = normalizedReminderMinutes(minutes)
+    return normalized.isEmpty ? nil : normalized
+  }
+
+  static func normalizedAnchorTime(_ time: String?) -> String? {
+    guard let time else { return nil }
+    let trimmed = time.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
+  }
 }
 
 // MARK: - Server Snapshot
@@ -111,6 +133,8 @@ struct EventServerSnapshot: Codable, Equatable {
   let startTime: String?
   let endTime: String?
   let note: String
+  let notificationMinutesArray: [Int]?
+  let notificationAnchorTime: String?
   let updatedAt: Date
   let revision: Int64
   let deletedAt: Date?
@@ -125,6 +149,9 @@ struct EventServerSnapshot: Codable, Equatable {
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
       note: serverRow.note,
+      notificationMinutesArray: LocalEvent.normalizedReminderMinutesOptional(
+        serverRow.notification_minutes_array),
+      notificationAnchorTime: LocalEvent.normalizedAnchorTime(serverRow.notification_anchor_time),
       updatedAt: updatedAt,
       revision: serverRow.revision,
       deletedAt: deletedAt
@@ -144,6 +171,9 @@ struct EventServerSnapshot: Codable, Equatable {
       startTime: eventRow.start_time,
       endTime: eventRow.end_time,
       note: eventRow.note,
+      notificationMinutesArray: LocalEvent.normalizedReminderMinutesOptional(
+        eventRow.notification_minutes_array),
+      notificationAnchorTime: LocalEvent.normalizedAnchorTime(eventRow.notification_anchor_time),
       updatedAt: updatedAt,
       revision: revision,
       deletedAt: deletedAt
@@ -183,6 +213,12 @@ struct EventServerSnapshot: Codable, Equatable {
     if note != other.note {
       changed.insert(.note)
     }
+    if notificationMinutesArray != other.notificationMinutesArray {
+      changed.insert(.notificationMinutesArray)
+    }
+    if notificationAnchorTime != other.notificationAnchorTime {
+      changed.insert(.notificationAnchorTime)
+    }
 
     return changed
   }
@@ -201,6 +237,9 @@ extension LocalEvent {
       start_time: startTime,
       end_time: endTime,
       note: note,
+      notification_minutes_array: LocalEvent.normalizedReminderMinutesOptional(
+        notificationMinutesArray),
+      notification_anchor_time: LocalEvent.normalizedAnchorTime(notificationAnchorTime),
       created_at: nil,
       updated_at: serverUpdatedAt
     )
@@ -233,6 +272,8 @@ extension LocalEvent {
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
       note: serverRow.note,
+      notificationMinutesArray: serverRow.notification_minutes_array ?? [],
+      notificationAnchorTime: serverRow.notification_anchor_time,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
       serverDeletedAt: serverDeletedAt,

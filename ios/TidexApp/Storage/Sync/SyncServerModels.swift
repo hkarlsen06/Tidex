@@ -42,6 +42,8 @@ struct SyncEventRow: Codable {
   let start_time: String?
   let end_time: String?
   let note: String
+  let notification_minutes_array: [Int]?
+  let notification_anchor_time: String?
   let created_at: String?
   let updated_at: String
   let revision: Int64
@@ -57,6 +59,8 @@ struct SyncEventRow: Codable {
       start_time: start_time,
       end_time: end_time,
       note: note,
+      notification_minutes_array: notification_minutes_array,
+      notification_anchor_time: notification_anchor_time,
       created_at: created_at
     )
   }

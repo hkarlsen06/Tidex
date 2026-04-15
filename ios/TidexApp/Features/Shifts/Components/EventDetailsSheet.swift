@@ -8,12 +8,15 @@ struct EventEditResult {
   let startTime: String?
   let endTime: String?
   let note: String
+  let notificationMinutesArray: [Int]?
+  let notificationAnchorTime: String?
 }
 
 struct EventDetailsSheet: View {
   let event: EventRow
   let onDelete: (() -> Void)?
   let onUpdate: ((EventEditResult) async throws -> Void)?
+  let onInlineReminderUpdate: ((EventEditResult) async throws -> Void)?
   var startInEditMode: Bool = false
 
   @Environment(\.dismiss) private var dismiss
@@ -26,10 +29,31 @@ struct EventDetailsSheet: View {
   @State private var eventEndDate = Date()
   @State private var editedStartTime: Date?
   @State private var editedEndTime: Date?
+  @State private var reminderTimes: [Int] = []
+  @State private var reminderAnchorTime: Date?
   @State private var focusedTimeField: TimeInputField?
   @State private var errorMessage: String?
   @State private var isSaving = false
+  @State private var isResettingDraft = false
+  @State private var lastSavedReminderTimes: [Int] = []
+  @State private var lastSavedReminderAnchorTime: Date?
   @FocusState private var isTitleFieldFocused: Bool
+
+  private let inlineReminderSaveDelayNanoseconds: UInt64 = 300_000_000
+
+  init(
+    event: EventRow,
+    onDelete: (() -> Void)?,
+    onUpdate: ((EventEditResult) async throws -> Void)?,
+    onInlineReminderUpdate: ((EventEditResult) async throws -> Void)? = nil,
+    startInEditMode: Bool = false
+  ) {
+    self.event = event
+    self.onDelete = onDelete
+    self.onUpdate = onUpdate
+    self.onInlineReminderUpdate = onInlineReminderUpdate
+    self.startInEditMode = startInEditMode
+  }
 
   private var trimmedNote: String {
     editedNote.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -57,9 +81,18 @@ struct EventDetailsSheet: View {
   private var canSave: Bool {
     guard !trimmedNote.isEmpty else { return false }
     if isAllDay {
-      return eventEndDate >= eventStartDate
+      return eventEndDate >= eventStartDate && hasValidReminderConfiguration
     }
-    return isTimeRangeValid
+    return isTimeRangeValid && hasValidReminderConfiguration
+  }
+
+  private var canEditReminderSettings: Bool {
+    !EventReminderPlanner.hasEventPassed(event)
+  }
+
+  private var hasValidReminderConfiguration: Bool {
+    guard isAllDay, !reminderTimes.isEmpty else { return true }
+    return reminderAnchorTime != nil
   }
 
   private var formattedDate: String {
@@ -146,7 +179,13 @@ struct EventDetailsSheet: View {
         resetDraft()
         isEditing = startInEditMode
       }
+      .onDisappear {
+        reminderAutosaveTask?.cancel()
+      }
       .onChange(of: isEditing) { _, newValue in
+        if newValue {
+          reminderAutosaveTask?.cancel()
+        }
         guard newValue else {
           isTitleFieldFocused = false
           return
@@ -164,9 +203,13 @@ struct EventDetailsSheet: View {
           }
           editedStartTime = nil
           editedEndTime = nil
+          if !reminderTimes.isEmpty, reminderAnchorTime == nil {
+            reminderAnchorTime = EventSheetFormatter.date(from: "09:00")
+          }
         } else {
           eventDate = eventStartDate
           eventEndDate = eventStartDate
+          reminderAnchorTime = nil
         }
       }
       .onChange(of: eventStartDate) { _, newValue in
@@ -184,8 +227,16 @@ struct EventDetailsSheet: View {
           eventEndDate = newValue
         }
       }
+      .onChange(of: reminderTimes) { _, _ in
+        scheduleInlineReminderSaveIfNeeded()
+      }
+      .onChange(of: reminderAnchorTime) { _, _ in
+        scheduleInlineReminderSaveIfNeeded()
+      }
     }
   }
+
+  @State private var reminderAutosaveTask: Task<Void, Never>?
 
   private var detailsContent: some View {
     VStack(spacing: Spacing.md) {
@@ -220,6 +271,8 @@ struct EventDetailsSheet: View {
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(Color.tidexSurfacePrimary)
       )
+
+      remindersCard(isEditable: canEditReminderSettings, showsPastHint: !canEditReminderSettings)
     }
   }
 
@@ -228,6 +281,8 @@ struct EventDetailsSheet: View {
       titleEditorSection
 
       scheduleEditorSection
+
+      remindersCard(isEditable: canEditReminderSettings, showsPastHint: !canEditReminderSettings)
     }
   }
 
@@ -418,6 +473,21 @@ struct EventDetailsSheet: View {
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
+  private func remindersCard(isEditable: Bool, showsPastHint: Bool) -> some View {
+    EventReminderEditorSection(
+      reminderTimes: $reminderTimes,
+      anchorTime: $reminderAnchorTime,
+      isAllDay: isAllDay,
+      isEditable: isEditable,
+      showsPastEventHint: showsPastHint
+    )
+    .padding(Spacing.lg)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xxl)
+        .fill(Color.tidexSurfacePrimary)
+    )
+  }
+
   private var editorRangeSummaryText: String {
     if Calendar.current.isDate(eventStartDate, inSameDayAs: eventEndDate) {
       return eventStartDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
@@ -440,6 +510,8 @@ struct EventDetailsSheet: View {
   }
 
   private func resetDraft() {
+    isResettingDraft = true
+    reminderAutosaveTask?.cancel()
     editedNote = event.note
     isAllDay = event.is_all_day
     eventDate = Date.fromISODateString(event.start_date) ?? Date()
@@ -447,22 +519,28 @@ struct EventDetailsSheet: View {
     eventEndDate = Date.fromISODateString(event.end_date) ?? eventStartDate
     editedStartTime = EventSheetFormatter.date(from: event.start_time)
     editedEndTime = EventSheetFormatter.date(from: event.end_time)
+    reminderTimes = LocalEvent.normalizedReminderMinutes(event.notification_minutes_array)
+    reminderAnchorTime = EventSheetFormatter.date(from: event.notification_anchor_time)
+    lastSavedReminderTimes = reminderTimes
+    lastSavedReminderAnchorTime = reminderAnchorTime
     errorMessage = nil
+    isResettingDraft = false
   }
 
   private func triggerSave() {
     Task {
-      await saveChanges()
+      await saveChanges(dismissOnSuccess: true, usesInlineHandler: false)
     }
   }
 
-  private func saveChanges() async {
+  private func saveChanges(dismissOnSuccess: Bool, usesInlineHandler: Bool) async {
     guard canSave else {
       errorMessage = String(localized: .eventsValidationMessage)
       return
     }
 
-    guard let onUpdate else { return }
+    let updateHandler = usesInlineHandler ? onInlineReminderUpdate : onUpdate
+    guard let updateHandler else { return }
 
     let result = EventEditResult(
       eventId: event.id,
@@ -471,19 +549,55 @@ struct EventDetailsSheet: View {
       isAllDay: isAllDay,
       startTime: isAllDay ? nil : normalizedStartTimeString,
       endTime: isAllDay ? nil : normalizedEndTimeString,
-      note: trimmedNote
+      note: trimmedNote,
+      notificationMinutesArray: reminderTimes.isEmpty ? nil : reminderTimes,
+      notificationAnchorTime: isAllDay && !reminderTimes.isEmpty
+        ? reminderAnchorTime?.toHourMinuteString()
+        : nil
     )
 
     isSaving = true
     errorMessage = nil
 
     do {
-      try await onUpdate(result)
+      try await updateHandler(result)
+      lastSavedReminderTimes = reminderTimes
+      lastSavedReminderAnchorTime = reminderAnchorTime
+      if dismissOnSuccess {
+        dismiss()
+      }
     } catch {
       errorMessage = ErrorTranslations.translate(error)
     }
 
     isSaving = false
+  }
+
+  private func scheduleInlineReminderSaveIfNeeded() {
+    guard !isEditing else { return }
+    guard !isResettingDraft else { return }
+    guard canEditReminderSettings else { return }
+    guard onInlineReminderUpdate != nil else { return }
+
+    let normalizedTimes = LocalEvent.normalizedReminderMinutes(reminderTimes)
+    if reminderTimes != normalizedTimes {
+      reminderTimes = normalizedTimes
+      return
+    }
+
+    guard
+      normalizedTimes != lastSavedReminderTimes || reminderAnchorTime != lastSavedReminderAnchorTime
+    else { return }
+
+    reminderAutosaveTask?.cancel()
+    reminderAutosaveTask = Task {
+      do {
+        try await Task.sleep(nanoseconds: inlineReminderSaveDelayNanoseconds)
+        guard !Task.isCancelled else { return }
+        await saveChanges(dismissOnSuccess: false, usesInlineHandler: true)
+      } catch {
+      }
+    }
   }
 }
 

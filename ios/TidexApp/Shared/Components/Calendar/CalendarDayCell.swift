@@ -94,6 +94,7 @@ struct CalendarDayCell<Content: View>: View {
   private let eventIndicatorHorizontalInset: CGFloat = Spacing.sm
   private let eventIndicatorBottomInset: CGFloat = 3
   private let eventIndicatorHeight: CGFloat = 2
+  private let eventIndicatorSegmentSpacing: CGFloat = 3
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
   var showOverlapIndicator: Bool = false
@@ -103,6 +104,8 @@ struct CalendarDayCell<Content: View>: View {
   var singleUserIndicatorColor: Color = .tidexSuccess
   /// Shows a small event-presence indicator in the cell.
   var showEventIndicator: Bool = false
+  /// Number of events on this day. Controls how many segments the bottom indicator shows.
+  var eventIndicatorCount: Int = 0
 
   /// Optional custom content view (used when content == .custom)
   let customContent: (() -> Content)?
@@ -115,6 +118,7 @@ struct CalendarDayCell<Content: View>: View {
     showSingleUserIndicator: Bool = false,
     singleUserIndicatorColor: Color = .tidexSuccess,
     showEventIndicator: Bool = false,
+    eventIndicatorCount: Int = 0,
     @ViewBuilder customContent: @escaping () -> Content
   ) {
     self.dayInfo = dayInfo
@@ -124,6 +128,7 @@ struct CalendarDayCell<Content: View>: View {
     self.showSingleUserIndicator = showSingleUserIndicator
     self.singleUserIndicatorColor = singleUserIndicatorColor
     self.showEventIndicator = showEventIndicator
+    self.eventIndicatorCount = eventIndicatorCount
     self.customContent = customContent
   }
 
@@ -163,12 +168,17 @@ struct CalendarDayCell<Content: View>: View {
       }
     }
     .overlay(alignment: .bottom) {
-      if showEventIndicator {
-        RoundedRectangle(cornerRadius: eventIndicatorHeight / 2, style: .continuous)
-          .fill(Color.tidexBlue)
-          .frame(height: eventIndicatorHeight)
-          .padding(.horizontal, eventIndicatorHorizontalInset)
-          .padding(.bottom, eventIndicatorBottomInset)
+      if displayedEventIndicatorSegmentCount > 0 {
+        HStack(spacing: eventIndicatorSegmentSpacing) {
+          ForEach(0..<displayedEventIndicatorSegmentCount, id: \.self) { _ in
+            RoundedRectangle(cornerRadius: eventIndicatorHeight / 2, style: .continuous)
+              .fill(Color.tidexBlue)
+              .frame(maxWidth: .infinity)
+          }
+        }
+        .frame(height: eventIndicatorHeight)
+        .padding(.horizontal, eventIndicatorHorizontalInset)
+        .padding(.bottom, eventIndicatorBottomInset)
       }
     }
     .tidexCardShadow(cornerRadius: CornerRadius.sm)
@@ -404,6 +414,22 @@ struct CalendarDayCell<Content: View>: View {
       .monospacedDigit()
       .frame(maxWidth: .infinity, alignment: .center)
   }
+
+  private var displayedEventIndicatorSegmentCount: Int {
+    Self.eventIndicatorSegmentCount(for: resolvedEventIndicatorCount)
+  }
+
+  private var resolvedEventIndicatorCount: Int {
+    if eventIndicatorCount > 0 {
+      return eventIndicatorCount
+    }
+    return showEventIndicator ? 1 : 0
+  }
+
+  static func eventIndicatorSegmentCount(for eventCount: Int) -> Int {
+    guard eventCount > 0 else { return 0 }
+    return min(eventCount, 3)
+  }
 }
 
 // MARK: - Convenience Init (No Custom Content)
@@ -416,7 +442,8 @@ extension CalendarDayCell where Content == EmptyView {
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
     singleUserIndicatorColor: Color = .tidexSuccess,
-    showEventIndicator: Bool = false
+    showEventIndicator: Bool = false,
+    eventIndicatorCount: Int = 0
   ) {
     self.dayInfo = dayInfo
     self.style = style
@@ -425,6 +452,7 @@ extension CalendarDayCell where Content == EmptyView {
     self.showSingleUserIndicator = showSingleUserIndicator
     self.singleUserIndicatorColor = singleUserIndicatorColor
     self.showEventIndicator = showEventIndicator
+    self.eventIndicatorCount = eventIndicatorCount
     self.customContent = nil
   }
 }

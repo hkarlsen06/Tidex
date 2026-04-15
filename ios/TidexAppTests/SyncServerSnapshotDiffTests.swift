@@ -74,6 +74,51 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     )
   }
 
+  func testEventServerSnapshotChangedFields() {
+    let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
+
+    let original = EventServerSnapshot(
+      startDate: "2026-03-10",
+      endDate: "2026-03-10",
+      isAllDay: false,
+      startTime: "09:00",
+      endTime: "11:00",
+      note: "Doctor",
+      notificationMinutesArray: [120],
+      notificationAnchorTime: nil,
+      updatedAt: timestamp,
+      revision: 1,
+      deletedAt: nil
+    )
+
+    let updated = EventServerSnapshot(
+      startDate: "2026-03-10",
+      endDate: "2026-03-12",
+      isAllDay: true,
+      startTime: nil,
+      endTime: nil,
+      note: "Conference",
+      notificationMinutesArray: [180, 15],
+      notificationAnchorTime: "09:30",
+      updatedAt: timestamp,
+      revision: 2,
+      deletedAt: nil
+    )
+
+    XCTAssertEqual(
+      updated.changedFields(from: original),
+      Set([
+        .endDate,
+        .isAllDay,
+        .startTime,
+        .endTime,
+        .note,
+        .notificationMinutesArray,
+        .notificationAnchorTime,
+      ])
+    )
+  }
+
   func testWageSnapshotServerSnapshotChangedFields() throws {
     let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
     let originalSupplements = try canonicalJSONEncoder.encode(SupplementRulesSnapshot(rules: []))

@@ -489,7 +489,7 @@ struct ShiftsCalendarView: View {
         && !isDeepLinkHighlighted
         && !shiftsOnDay.isEmpty
         && dayJobTimeColors != nil
-      let showEventIndicator = !eventsOnDay.isEmpty
+      let eventIndicatorCount = eventsOnDay.count
 
       CalendarDayCell(
         dayInfo: dayInfo,
@@ -506,7 +506,7 @@ struct ShiftsCalendarView: View {
           dayJobTimeColors: dayJobTimeColors,
           shouldColorJobMetrics: shouldColorJobMetrics
         ),
-        showEventIndicator: showEventIndicator
+        eventIndicatorCount: eventIndicatorCount
       )
     }
     .coordinateSpace(name: "calendar")

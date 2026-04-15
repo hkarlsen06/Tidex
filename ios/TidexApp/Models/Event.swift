@@ -12,6 +12,8 @@ struct EventRow: Codable, Identifiable, Equatable {
   let start_time: String?
   let end_time: String?
   let note: String
+  let notification_minutes_array: [Int]?
+  let notification_anchor_time: String?
   let created_at: String?
   let updated_at: Date?
 
@@ -24,6 +26,8 @@ struct EventRow: Codable, Identifiable, Equatable {
     start_time: String?,
     end_time: String?,
     note: String,
+    notification_minutes_array: [Int]? = nil,
+    notification_anchor_time: String? = nil,
     created_at: String? = nil,
     updated_at: Date? = nil
   ) {
@@ -35,6 +39,8 @@ struct EventRow: Codable, Identifiable, Equatable {
     self.start_time = start_time
     self.end_time = end_time
     self.note = note
+    self.notification_minutes_array = notification_minutes_array
+    self.notification_anchor_time = notification_anchor_time
     self.created_at = created_at
     self.updated_at = updated_at
   }

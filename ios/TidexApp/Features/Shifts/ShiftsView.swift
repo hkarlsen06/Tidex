@@ -396,6 +396,9 @@ struct ShiftsView: View {
               try await viewModel.updateEvent(editResult)
               selectedEvent = nil
             },
+            onInlineReminderUpdate: { editResult in
+              try await viewModel.updateEvent(editResult)
+            },
             startInEditMode: selection.startInEditMode
           )
           .presentationDetents([.medium, .large])
