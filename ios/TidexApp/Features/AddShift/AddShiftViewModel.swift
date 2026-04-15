@@ -57,11 +57,15 @@ final class AddShiftViewModel: ObservableObject {
   private let monthContext: SharedMonthContext
   private let addShiftCoordinator: AddShiftCoordinator
   private var eventRangeAnchorDate: Date?
+  private var didEditEventCalendarSelectionSinceEnteringEventMode = false
+  private var isSyncingCalendarSelectionAcrossModes = false
 
   // MARK: - Mode State
 
   @Published var mode: AddShiftMode = .single {
     didSet {
+      guard oldValue != mode else { return }
+      syncCalendarSelectionForModeTransition(from: oldValue, to: mode)
       if mode == .events {
         selectedDays.removeAll()
       }
@@ -105,6 +109,7 @@ final class AddShiftViewModel: ObservableObject {
   @Published var isEventAllDay = false {
     didSet {
       guard oldValue != isEventAllDay else { return }
+      markEventCalendarSelectionEdited()
       if isEventAllDay {
         if eventStartDate != eventDate {
           eventStartDate = eventDate
@@ -115,6 +120,9 @@ final class AddShiftViewModel: ObservableObject {
         startTime = nil
         endTime = nil
         eventRangeAnchorDate = eventStartDate
+        if !eventReminderTimes.isEmpty, eventReminderAnchorTime == nil {
+          eventReminderAnchorTime = Self.defaultEventReminderAnchorTime()
+        }
       } else {
         if eventDate != eventStartDate {
           eventDate = eventStartDate
@@ -122,6 +130,7 @@ final class AddShiftViewModel: ObservableObject {
         if eventEndDate != eventStartDate {
           eventEndDate = eventStartDate
         }
+        eventReminderAnchorTime = nil
         eventRangeAnchorDate = eventDate
       }
       publishStateToCoordinator()
@@ -163,6 +172,30 @@ final class AddShiftViewModel: ObservableObject {
   @Published var eventEndDate: Date = Calendar.current.startOfDay(for: Date()) {
     didSet {
       guard oldValue != eventEndDate else { return }
+      publishStateToCoordinator()
+      scheduleDraftSave()
+    }
+  }
+
+  @Published var eventReminderTimes: [Int] = [] {
+    didSet {
+      let normalized = LocalEvent.normalizedReminderMinutes(eventReminderTimes)
+      guard oldValue != normalized else { return }
+      if eventReminderTimes != normalized {
+        eventReminderTimes = normalized
+        return
+      }
+      if isEventAllDay, !normalized.isEmpty, eventReminderAnchorTime == nil {
+        eventReminderAnchorTime = Self.defaultEventReminderAnchorTime()
+      }
+      publishStateToCoordinator()
+      scheduleDraftSave()
+    }
+  }
+
+  @Published var eventReminderAnchorTime: Date? {
+    didSet {
+      guard oldValue != eventReminderAnchorTime else { return }
       publishStateToCoordinator()
       scheduleDraftSave()
     }
@@ -569,6 +602,7 @@ final class AddShiftViewModel: ObservableObject {
   var canSubmitEvent: Bool {
     hasEventNote
       && (isEventAllDay ? isEventDateRangeValid : hasValidEventTimes)
+      && hasValidEventReminderConfiguration
   }
 
   var eventCalendarSelectedDates: Set<String> {
@@ -631,6 +665,11 @@ final class AddShiftViewModel: ObservableObject {
 
   private var isEventDateRangeValid: Bool {
     eventEndDate >= eventStartDate
+  }
+
+  private var hasValidEventReminderConfiguration: Bool {
+    guard isEventAllDay, !eventReminderTimes.isEmpty else { return true }
+    return eventReminderAnchorTime != nil
   }
 
   private var submitBlockers: [AddShiftSubmitBlocker] {
@@ -697,6 +736,8 @@ final class AddShiftViewModel: ObservableObject {
         || eventStartDate != Calendar.current.startOfDay(for: Date())
         || eventEndDate != Calendar.current.startOfDay(for: Date())
         || isEventAllDay
+        || !eventReminderTimes.isEmpty
+        || eventReminderAnchorTime != nil
     }
   }
 
@@ -720,6 +761,11 @@ final class AddShiftViewModel: ObservableObject {
       return "24:00"
     }
     return formatted
+  }
+
+  var eventReminderAnchorTimeString: String? {
+    guard let eventReminderAnchorTime else { return nil }
+    return formatTimeAsHHmm(eventReminderAnchorTime)
   }
 
   /// Set of dates that have existing shifts - uses cached data for performance
@@ -1017,6 +1063,7 @@ final class AddShiftViewModel: ObservableObject {
     guard let tappedDate = Date.fromISODateString(dateISO) else { return }
     let calendar = Calendar.current
     let normalizedDate = calendar.startOfDay(for: tappedDate)
+    markEventCalendarSelectionEdited()
 
     if isEventAllDay {
       let currentStart = calendar.startOfDay(for: min(eventStartDate, eventEndDate))
@@ -1157,6 +1204,9 @@ final class AddShiftViewModel: ObservableObject {
       let endDate = isEventAllDay ? eventEndDate : eventDate
       let startTime = isEventAllDay ? nil : startTimeString
       let endTime = isEventAllDay ? nil : endTimeString
+      let notificationMinutesArray = eventReminderTimes.isEmpty ? nil : eventReminderTimes
+      let notificationAnchorTime =
+        isEventAllDay && !eventReminderTimes.isEmpty ? eventReminderAnchorTimeString : nil
 
       _ = try await eventsRepository.createEvent(
         userId: userId,
@@ -1165,7 +1215,9 @@ final class AddShiftViewModel: ObservableObject {
         isAllDay: isEventAllDay,
         startTime: startTime,
         endTime: endTime,
-        note: trimmedNote
+        note: trimmedNote,
+        notificationMinutesArray: notificationMinutesArray,
+        notificationAnchorTime: notificationAnchorTime
       )
 
       logger.info("Created private event")
@@ -1940,6 +1992,8 @@ final class AddShiftViewModel: ObservableObject {
     eventDate = defaultEventDate
     eventStartDate = defaultEventDate
     eventEndDate = defaultEventDate
+    eventReminderTimes = []
+    eventReminderAnchorTime = nil
     eventRangeAnchorDate = defaultEventDate
 
     // NOTE: Do NOT reset the month context here!
@@ -1970,6 +2024,12 @@ final class AddShiftViewModel: ObservableObject {
 
   private static func defaultEventDate() -> Date {
     Calendar.current.startOfDay(for: Date())
+  }
+
+  private static func defaultEventReminderAnchorTime() -> Date {
+    let calendar = Calendar.current
+    let baseDate = Date()
+    return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: baseDate) ?? baseDate
   }
 
   // MARK: - Draft Persistence Methods
@@ -2012,6 +2072,8 @@ final class AddShiftViewModel: ObservableObject {
       eventDate: eventDate.toISODateString(),
       eventStartDate: eventStartDate.toISODateString(),
       eventEndDate: eventEndDate.toISODateString(),
+      eventReminderMinutes: eventReminderTimes,
+      eventReminderAnchorTime: eventReminderAnchorTimeString,
       lastModified: Date()
     )
 
@@ -2069,6 +2131,10 @@ final class AddShiftViewModel: ObservableObject {
       if let eventEndDate = draft.eventEndDate.flatMap({ Date.fromISODateString($0) }) {
         self.eventEndDate = eventEndDate
       }
+      eventReminderTimes = draft.eventReminderMinutes
+      if let eventReminderAnchorTime = draft.eventReminderAnchorTime {
+        self.eventReminderAnchorTime = parseTimeFromHHmm(eventReminderAnchorTime)
+      }
       eventRangeAnchorDate = isEventAllDay ? self.eventStartDate : self.eventDate
     }
 
@@ -2100,6 +2166,8 @@ final class AddShiftViewModel: ObservableObject {
     eventDate = defaultEventDate
     eventStartDate = defaultEventDate
     eventEndDate = defaultEventDate
+    eventReminderTimes = []
+    eventReminderAnchorTime = nil
     eventRangeAnchorDate = defaultEventDate
     error = nil
 
@@ -2126,6 +2194,68 @@ final class AddShiftViewModel: ObservableObject {
     components.minute = timeComponents.minute
 
     return calendar.date(from: components)
+  }
+
+  private func syncCalendarSelectionForModeTransition(
+    from previousMode: AddShiftMode,
+    to newMode: AddShiftMode
+  ) {
+    switch (previousMode, newMode) {
+    case (.single, .events):
+      syncSingleSelectionIntoEvent()
+      didEditEventCalendarSelectionSinceEnteringEventMode = false
+    case (.events, .single):
+      if didEditEventCalendarSelectionSinceEnteringEventMode || selectedDates.isEmpty {
+        syncEventSelectionIntoSingle()
+      }
+      didEditEventCalendarSelectionSinceEnteringEventMode = false
+    default:
+      if newMode != .events {
+        didEditEventCalendarSelectionSinceEnteringEventMode = false
+      }
+    }
+  }
+
+  private func syncSingleSelectionIntoEvent() {
+    guard
+      let earliestDate =
+        selectedDates
+        .compactMap({ Date.fromISODateString($0) })
+        .map({ Calendar.current.startOfDay(for: $0) })
+        .min()
+    else { return }
+
+    withCalendarSelectionModeSync {
+      if isEventAllDay {
+        eventStartDate = earliestDate
+        eventEndDate = earliestDate
+      }
+      eventDate = earliestDate
+      eventRangeAnchorDate = earliestDate
+    }
+  }
+
+  private func syncEventSelectionIntoSingle() {
+    let carriedDates: Set<String>
+    if isEventAllDay {
+      carriedDates = contiguousDateSelection(from: eventStartDate, to: eventEndDate)
+    } else {
+      carriedDates = [eventDate.toISODateString()]
+    }
+
+    guard !carriedDates.isEmpty else { return }
+    selectedDates = carriedDates
+  }
+
+  private func withCalendarSelectionModeSync(_ updates: () -> Void) {
+    isSyncingCalendarSelectionAcrossModes = true
+    updates()
+    isSyncingCalendarSelectionAcrossModes = false
+  }
+
+  private func markEventCalendarSelectionEdited() {
+    guard mode == .events, !isSyncingCalendarSelectionAcrossModes else { return }
+    didEditEventCalendarSelectionSinceEnteringEventMode = true
   }
 
   private func contiguousDateSelection(from start: Date, to end: Date) -> Set<String> {

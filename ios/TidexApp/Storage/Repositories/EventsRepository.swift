@@ -11,10 +11,16 @@ final class EventsRepository: ObservableObject {
 
   private let localStore: LocalStore
   private let syncCoordinator: SyncCoordinator
+  private let eventReminderScheduler: EventReminderScheduler
 
-  private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
+  private init(
+    localStore: LocalStore? = nil,
+    syncCoordinator: SyncCoordinator? = nil,
+    eventReminderScheduler: EventReminderScheduler? = nil
+  ) {
     self.localStore = localStore ?? LocalStore.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    self.eventReminderScheduler = eventReminderScheduler ?? .shared
   }
 
   private func triggerSync(userId: String) {
@@ -58,6 +64,10 @@ final class EventsRepository: ObservableObject {
     await localStore.storeActor.fetchEvents(userId: userId, startDate: startDate, endDate: endDate)
   }
 
+  func getAllEventsOffMain(for userId: String) async -> [EventRow] {
+    await localStore.storeActor.fetchAllEvents(userId: userId)
+  }
+
   func getEvent(id: String) -> EventRow? {
     let context = localStore.mainContext
     let descriptor = FetchDescriptor<LocalEvent>(
@@ -96,7 +106,9 @@ final class EventsRepository: ObservableObject {
     isAllDay: Bool,
     startTime: String?,
     endTime: String?,
-    note: String
+    note: String,
+    notificationMinutesArray: [Int]? = nil,
+    notificationAnchorTime: String? = nil
   ) async throws -> EventRow {
     let createdEvent = try await localStore.storeActor.createEvent(
       id: eventId,
@@ -106,10 +118,15 @@ final class EventsRepository: ObservableObject {
       isAllDay: isAllDay,
       startTime: startTime,
       endTime: endTime,
-      note: note
+      note: note,
+      notificationMinutesArray: notificationMinutesArray,
+      notificationAnchorTime: notificationAnchorTime
     )
 
     logger.info("Created new local event: \(createdEvent.id)")
+    Task {
+      await eventReminderScheduler.scheduleReminder(for: createdEvent)
+    }
     triggerSync(userId: userId)
     return createdEvent
   }
@@ -121,7 +138,9 @@ final class EventsRepository: ObservableObject {
     isAllDay: Bool? = nil,
     startTime: String? = nil,
     endTime: String? = nil,
-    note: String? = nil
+    note: String? = nil,
+    notificationMinutesArray: [Int]? = nil,
+    notificationAnchorTime: String? = nil
   ) async throws -> EventRow? {
     do {
       let updatedEvent = try await localStore.storeActor.updateEvent(
@@ -131,10 +150,15 @@ final class EventsRepository: ObservableObject {
         isAllDay: isAllDay,
         startTime: startTime,
         endTime: endTime,
-        note: note
+        note: note,
+        notificationMinutesArray: notificationMinutesArray,
+        notificationAnchorTime: notificationAnchorTime
       )
 
       logger.info("Updated local event: \(id)")
+      Task {
+        await eventReminderScheduler.scheduleReminder(for: updatedEvent)
+      }
       if let userId = updatedEvent.user_id {
         triggerSync(userId: userId)
       }
@@ -150,6 +174,9 @@ final class EventsRepository: ObservableObject {
   func deleteEvent(id: String) async throws {
     let userId = try await localStore.storeActor.markEventPendingDelete(id: id)
     logger.info("Marked local event pending delete: \(id)")
+    Task {
+      await eventReminderScheduler.scheduleAllReminders(for: userId)
+    }
     triggerSync(userId: userId)
   }
 
@@ -169,6 +196,15 @@ final class EventsRepository: ObservableObject {
   func resolveConflictKeepServer(id: String) async throws {
     do {
       try await localStore.storeActor.resolveStoredEventConflictKeepServer(id: id)
+      if let localEvent = try await localStore.storeActor.getEvent(id: id) {
+        Task {
+          await eventReminderScheduler.scheduleAllReminders(for: localEvent.userId)
+        }
+      } else {
+        Task {
+          await eventReminderScheduler.cancelReminders(forEventId: id)
+        }
+      }
     } catch LocalStoreWriteError.notFound {
       logger.warning("Event not found for server conflict resolution: \(id)")
     } catch {

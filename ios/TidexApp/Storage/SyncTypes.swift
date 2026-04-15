@@ -34,6 +34,8 @@ enum EventField: String, Codable, CaseIterable {
   case startTime = "start_time"
   case endTime = "end_time"
   case note = "note"
+  case notificationMinutesArray = "notification_minutes_array"
+  case notificationAnchorTime = "notification_anchor_time"
 }
 
 /// Field keys for tracking dirty fields on LocalRecurringShift

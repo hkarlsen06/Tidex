@@ -4,6 +4,27 @@ import XCTest
 @testable import Tidex
 
 final class CalendarDayCellIndicatorPlacementTests: XCTestCase {
+  func testEventIndicatorUsesOneSegmentForSingleEvent() {
+    XCTAssertEqual(
+      CalendarDayCell<EmptyView>.eventIndicatorSegmentCount(for: 1),
+      1
+    )
+  }
+
+  func testEventIndicatorUsesTwoSegmentsForTwoEvents() {
+    XCTAssertEqual(
+      CalendarDayCell<EmptyView>.eventIndicatorSegmentCount(for: 2),
+      2
+    )
+  }
+
+  func testEventIndicatorCapsAtThreeSegments() {
+    XCTAssertEqual(
+      CalendarDayCell<EmptyView>.eventIndicatorSegmentCount(for: 4),
+      3
+    )
+  }
+
   func testTodayBadgePromotesOverlapIndicatorIntoBadge() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.indicatorPlacement(

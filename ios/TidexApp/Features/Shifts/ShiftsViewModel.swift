@@ -1005,7 +1005,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           isAllDay: editResult.isAllDay,
           startTime: editResult.startTime,
           endTime: editResult.endTime,
-          note: editResult.note
+          note: editResult.note,
+          notificationMinutesArray: editResult.notificationMinutesArray,
+          notificationAnchorTime: editResult.notificationAnchorTime
         ) != nil
       else {
         logger.error("❌ Event missing during update: \(editResult.eventId)")

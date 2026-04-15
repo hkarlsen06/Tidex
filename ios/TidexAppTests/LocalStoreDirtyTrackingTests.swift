@@ -231,7 +231,8 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       isAllDay: false,
       startTime: "09:00",
       endTime: "11:00",
-      note: "Doctor"
+      note: "Doctor",
+      notificationMinutesArray: [60, 300]
     )
 
     let localRecord = try await store.getEvent(id: "event-1")
@@ -239,6 +240,8 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
     XCTAssertEqual(local.dirtyFieldKeys, Set(EventField.allCases))
+    XCTAssertEqual(local.notificationMinutesArray, [300, 60])
+    XCTAssertNil(local.notificationAnchorTime)
   }
 
   func testUpdateEventTracksOnlyChangedFieldsAfterClean() async throws {
@@ -276,6 +279,46 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.endTime, "12:00")
     XCTAssertEqual(local.note, "Dentist")
     XCTAssertEqual(local.dirtyFieldKeys, Set([.startTime, .endTime, .note]))
+  }
+
+  func testUpdateEventTracksReminderFieldsAfterClean() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createEvent(
+      id: "event-2b",
+      userId: userId,
+      startDate: makeDate("2026-03-02"),
+      endDate: makeDate("2026-03-04"),
+      isAllDay: true,
+      startTime: nil,
+      endTime: nil,
+      note: "Trip"
+    )
+
+    await store.markEventClean(id: "event-2b")
+    try await store.save()
+
+    _ = try await store.updateEvent(
+      id: "event-2b",
+      startDate: nil,
+      endDate: nil,
+      isAllDay: true,
+      startTime: nil,
+      endTime: nil,
+      note: nil,
+      notificationMinutesArray: [15, 120],
+      notificationAnchorTime: "09:30"
+    )
+
+    let localRecord = try await store.getEvent(id: "event-2b")
+    let local = try XCTUnwrap(localRecord)
+
+    XCTAssertEqual(local.notificationMinutesArray, [120, 15])
+    XCTAssertEqual(local.notificationAnchorTime, "09:30")
+    XCTAssertEqual(
+      local.dirtyFieldKeys,
+      Set([.notificationMinutesArray, .notificationAnchorTime])
+    )
   }
 
   func testMarkEventPendingDeleteSetsPendingDeleteStatus() async throws {
@@ -324,7 +367,9 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
         is_all_day: true,
         start_time: nil,
         end_time: nil,
-        note: "Conference"
+        note: "Conference",
+        notification_minutes_array: [120],
+        notification_anchor_time: "08:30"
       ),
       updatedAt: serverUpdatedAt,
       revision: 7,
@@ -346,6 +391,8 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertNil(local.startTime)
     XCTAssertNil(local.endTime)
     XCTAssertEqual(local.note, "Conference")
+    XCTAssertEqual(local.notificationMinutesArray, [120])
+    XCTAssertEqual(local.notificationAnchorTime, "08:30")
     XCTAssertEqual(local.serverRevision, 7)
     XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
     XCTAssertNil(local.conflictServerSnapshot)
@@ -394,7 +441,9 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
         is_all_day: false,
         start_time: "08:00",
         end_time: "10:00",
-        note: "Server note"
+        note: "Server note",
+        notification_minutes_array: [30],
+        notification_anchor_time: nil
       ),
       updatedAt: serverUpdatedAt,
       revision: 9,

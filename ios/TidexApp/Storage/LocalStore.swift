@@ -294,6 +294,25 @@ actor LocalStoreActor {
     }
   }
 
+  func fetchAllEvents(userId: String) -> [EventRow] {
+    let descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { event in
+        event.userId == userId && event.serverDeletedAt == nil
+          && event.syncStatusRaw != "pendingDelete"
+      },
+      sortBy: [
+        SortDescriptor(\LocalEvent.startDate, order: .forward),
+        SortDescriptor(\LocalEvent.endDate, order: .forward),
+      ]
+    )
+
+    do {
+      return try modelContext.fetch(descriptor).map { $0.toEventRow() }
+    } catch {
+      return []
+    }
+  }
+
   // MARK: - Sync State Operations
 
   /// Get or create sync state for a user
@@ -1136,7 +1155,9 @@ actor LocalStoreActor {
     isAllDay: Bool,
     startTime: String?,
     endTime: String?,
-    note: String
+    note: String,
+    notificationMinutesArray: [Int]? = nil,
+    notificationAnchorTime: String? = nil
   ) throws -> EventRow {
     let resolvedId = id ?? UUID().lowercasedString
 
@@ -1147,6 +1168,10 @@ actor LocalStoreActor {
     let now = Date()
     let dateFormatter = isoDateFormatter
     let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+    let normalizedReminderMinutes = LocalEvent.normalizedReminderMinutesOptional(
+      notificationMinutesArray)
+    let normalizedAnchorTime =
+      isAllDay ? LocalEvent.normalizedAnchorTime(notificationAnchorTime) : nil
 
     let snapshot = EventServerSnapshot(
       startDate: dateFormatter.string(from: startDate),
@@ -1155,6 +1180,8 @@ actor LocalStoreActor {
       startTime: startTime,
       endTime: endTime,
       note: trimmedNote,
+      notificationMinutesArray: normalizedReminderMinutes,
+      notificationAnchorTime: normalizedAnchorTime,
       updatedAt: now,
       revision: 0,
       deletedAt: nil
@@ -1172,6 +1199,8 @@ actor LocalStoreActor {
       startTime: startTime,
       endTime: endTime,
       note: trimmedNote,
+      notificationMinutesArray: normalizedReminderMinutes ?? [],
+      notificationAnchorTime: normalizedAnchorTime,
       serverUpdatedAt: now,
       serverRevision: 0,
       serverDeletedAt: nil,
@@ -1194,7 +1223,9 @@ actor LocalStoreActor {
     isAllDay: Bool?,
     startTime: String?,
     endTime: String?,
-    note: String?
+    note: String?,
+    notificationMinutesArray: [Int]? = nil,
+    notificationAnchorTime: String? = nil
   ) throws -> EventRow {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
@@ -1238,6 +1269,20 @@ actor LocalStoreActor {
         localEvent.note = trimmedNote
         newDirtyFields.insert(.note)
       }
+    }
+
+    let resolvedIsAllDay = isAllDay ?? localEvent.isAllDay
+    let normalizedReminderMinutes = LocalEvent.normalizedReminderMinutes(notificationMinutesArray)
+    if normalizedReminderMinutes != localEvent.notificationMinutesArray {
+      localEvent.notificationMinutesArray = normalizedReminderMinutes
+      newDirtyFields.insert(.notificationMinutesArray)
+    }
+
+    let normalizedAnchorTime =
+      resolvedIsAllDay ? LocalEvent.normalizedAnchorTime(notificationAnchorTime) : nil
+    if normalizedAnchorTime != localEvent.notificationAnchorTime {
+      localEvent.notificationAnchorTime = normalizedAnchorTime
+      newDirtyFields.insert(.notificationAnchorTime)
     }
 
     localEvent.dirtyFieldKeys = newDirtyFields
@@ -1325,6 +1370,10 @@ actor LocalStoreActor {
     localEvent.startTime = serverSnapshot.startTime
     localEvent.endTime = serverSnapshot.endTime
     localEvent.note = serverSnapshot.note
+    localEvent.notificationMinutesArray =
+      LocalEvent.normalizedReminderMinutes(serverSnapshot.notificationMinutesArray)
+    localEvent.notificationAnchorTime =
+      LocalEvent.normalizedAnchorTime(serverSnapshot.notificationAnchorTime)
     localEvent.serverRevision = serverSnapshot.revision
     localEvent.serverUpdatedAt = serverSnapshot.updatedAt
     localEvent.serverDeletedAt = serverSnapshot.deletedAt
@@ -2713,6 +2762,10 @@ actor LocalStoreActor {
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
     existing.note = serverRow.note
+    existing.notificationMinutesArray =
+      LocalEvent.normalizedReminderMinutes(serverRow.notification_minutes_array)
+    existing.notificationAnchorTime =
+      LocalEvent.normalizedAnchorTime(serverRow.notification_anchor_time)
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
@@ -2775,6 +2828,14 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.note) {
       existing.note = serverRow.note
+    }
+    if !localDirtyFields.contains(.notificationMinutesArray) {
+      existing.notificationMinutesArray =
+        LocalEvent.normalizedReminderMinutes(serverRow.notification_minutes_array)
+    }
+    if !localDirtyFields.contains(.notificationAnchorTime) {
+      existing.notificationAnchorTime =
+        LocalEvent.normalizedAnchorTime(serverRow.notification_anchor_time)
     }
 
     existing.serverUpdatedAt = serverUpdatedAt
@@ -3416,6 +3477,10 @@ actor LocalStoreActor {
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
     existing.note = serverRow.note
+    existing.notificationMinutesArray =
+      LocalEvent.normalizedReminderMinutes(serverRow.notification_minutes_array)
+    existing.notificationAnchorTime =
+      LocalEvent.normalizedAnchorTime(serverRow.notification_anchor_time)
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.syncStatus = .clean
@@ -3492,6 +3557,10 @@ actor LocalStoreActor {
     existing.startTime = serverSnapshot.startTime
     existing.endTime = serverSnapshot.endTime
     existing.note = serverSnapshot.note
+    existing.notificationMinutesArray =
+      LocalEvent.normalizedReminderMinutes(serverSnapshot.notificationMinutesArray)
+    existing.notificationAnchorTime =
+      LocalEvent.normalizedAnchorTime(serverSnapshot.notificationAnchorTime)
     existing.serverUpdatedAt = serverSnapshot.updatedAt
     existing.serverRevision = serverSnapshot.revision
     existing.serverDeletedAt = serverSnapshot.deletedAt

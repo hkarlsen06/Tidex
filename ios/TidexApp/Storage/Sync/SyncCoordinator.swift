@@ -1261,6 +1261,8 @@ final class SyncCoordinator: ObservableObject {
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
       note: serverRow.note,
+      notificationMinutesArray: serverRow.notification_minutes_array ?? [],
+      notificationAnchorTime: serverRow.notification_anchor_time,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
       serverDeletedAt: serverDeletedAt,
@@ -3041,6 +3043,19 @@ final class SyncCoordinator: ObservableObject {
     if dirtyFields.contains(.note) {
       updateData["note"] = .string(event.note)
     }
+    if dirtyFields.contains(.notificationMinutesArray) {
+      updateData["notification_minutes_array"] =
+        event.notificationMinutesArray.isEmpty
+        ? .array([])
+        : .array(event.notificationMinutesArray.map { .integer($0) })
+    }
+    if dirtyFields.contains(.notificationAnchorTime) {
+      if let notificationAnchorTime = event.notificationAnchorTime {
+        updateData["notification_anchor_time"] = .string(notificationAnchorTime)
+      } else {
+        updateData["notification_anchor_time"] = .null
+      }
+    }
 
     try requireNonEmptyUpdate(updateData, table: .events, id: eventId)
 
@@ -3202,6 +3217,14 @@ final class SyncCoordinator: ObservableObject {
     }
     if let endTime = event.endTime {
       insertData["end_time"] = .string(endTime)
+    }
+    if !event.notificationMinutesArray.isEmpty {
+      insertData["notification_minutes_array"] = .array(
+        event.notificationMinutesArray.map { .integer($0) }
+      )
+    }
+    if let notificationAnchorTime = event.notificationAnchorTime {
+      insertData["notification_anchor_time"] = .string(notificationAnchorTime)
     }
 
     do {

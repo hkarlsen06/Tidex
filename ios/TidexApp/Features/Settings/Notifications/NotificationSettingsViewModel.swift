@@ -270,26 +270,8 @@ final class NotificationSettingsViewModel: ObservableObject {
   }
 
   /// Format minutes as localized human-readable string
-  func formatReminderTime(_ minutes: Int, locale: Locale) -> String {
-    let hours = minutes / 60
-    let mins = minutes % 60
-
-    if hours == 0 {
-      // Minutes only
-      return String(localized: .notificationReminderMinutesBefore(Int(mins)))
-    } else if mins == 0 {
-      // Hours only
-      if hours == 24 {
-        return String(localized: .notificationReminderOneDayBefore)
-      } else if hours == 48 {
-        return String(localized: .notificationReminderTwoDaysBefore)
-      }
-      return String(localized: .notificationReminderHoursBefore(Int(hours)))
-    } else {
-      // Mixed hours and minutes
-      return
-        "\(hours) \(String(localized: .commonHoursShort)) \(mins) \(String(localized: .commonMinutesShort)) \(String(localized: .commonBefore))"
-    }
+  func formatReminderTime(_ minutes: Int, locale _: Locale) -> String {
+    ReminderOffsetFormatter.localizedString(for: minutes)
   }
 
   // MARK: - Private Methods

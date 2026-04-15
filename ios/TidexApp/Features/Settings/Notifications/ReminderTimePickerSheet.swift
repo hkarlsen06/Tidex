@@ -1,10 +1,16 @@
 import SwiftUI
 
+enum ReminderTimePickerContext {
+  case shift
+  case event
+}
+
 /// Sheet for selecting a notification reminder time using hours and minutes pickers
 struct ReminderTimePickerSheet: View {
   @Binding var hours: Int
   @Binding var minutes: Int
   let isEditing: Bool
+  let context: ReminderTimePickerContext
   let onSave: () -> Void
   let onDelete: (() -> Void)?
   let onCancel: () -> Void
@@ -17,13 +23,31 @@ struct ReminderTimePickerSheet: View {
     totalMinutes >= 1
   }
 
+  init(
+    hours: Binding<Int>,
+    minutes: Binding<Int>,
+    isEditing: Bool,
+    context: ReminderTimePickerContext = .shift,
+    onSave: @escaping () -> Void,
+    onDelete: (() -> Void)?,
+    onCancel: @escaping () -> Void
+  ) {
+    self._hours = hours
+    self._minutes = minutes
+    self.isEditing = isEditing
+    self.context = context
+    self.onSave = onSave
+    self.onDelete = onDelete
+    self.onCancel = onCancel
+  }
+
   var body: some View {
     NavigationStack {
       VStack(spacing: Spacing.md) {
         // Picker section with description
         VStack(spacing: Spacing.sm) {
           // Description label
-          Text(.notificationsTimePickerDescription)
+          Text(descriptionText)
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
@@ -113,28 +137,20 @@ struct ReminderTimePickerSheet: View {
   }
 
   private func formatPreview() -> String {
-    guard totalMinutes >= 1 else {
-      return String(localized: .notificationsTimePickerSelectTime)
+    switch context {
+    case .shift:
+      return ReminderOffsetFormatter.localizedShiftPickerPreview(hours: hours, minutes: minutes)
+    case .event:
+      return ReminderOffsetFormatter.localizedEventPickerPreview(hours: hours, minutes: minutes)
     }
+  }
 
-    let h = hours
-    let m = minutes
-
-    if h == 0 {
-      // Minutes only
-      return String(localized: .notificationReminderMinutesBeforeShift(Int(m)))
-    } else if m == 0 {
-      // Hours only
-      if h == 24 {
-        return String(localized: .notificationReminderOneDayBeforeShift)
-      } else if h == 48 {
-        return String(localized: .notificationReminderTwoDaysBeforeShift)
-      }
-      return String(localized: .notificationReminderHoursBeforeShift(Int(h)))
-    } else {
-      // Mixed hours and minutes
-      return
-        "\(h) \(String(localized: .commonHoursShort)) \(m) min \(String(localized: .commonBeforeShift))"
+  private var descriptionText: String {
+    switch context {
+    case .shift:
+      return String(localized: .notificationsTimePickerDescription)
+    case .event:
+      return String(localized: "events.notifications.timed_picker.description")
     }
   }
 
@@ -168,6 +184,7 @@ struct ReminderTimePickerSheet: View {
     hours: .constant(1),
     minutes: .constant(0),
     isEditing: false,
+    context: .shift,
     onSave: {},
     onDelete: nil,
     onCancel: {}
@@ -179,6 +196,7 @@ struct ReminderTimePickerSheet: View {
     hours: .constant(5),
     minutes: .constant(30),
     isEditing: true,
+    context: .shift,
     onSave: {},
     onDelete: {},
     onCancel: {}

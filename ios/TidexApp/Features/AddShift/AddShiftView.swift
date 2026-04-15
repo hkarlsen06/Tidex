@@ -299,6 +299,10 @@ struct AddShiftView: View {
         }
       }
 
+      if newTab == .add, oldTab != .add {
+        viewModel.checkPreselectedDate()
+      }
+
       if oldTab == .add, newTab != .add {
         focusedTimeField = nil
         isKeyboardVisible = false
@@ -527,7 +531,9 @@ private struct RecurringShiftContent: View {
   }
 
   var body: some View {
-    VStack(spacing: Spacing.mlg) {
+    VStack(alignment: .leading, spacing: Spacing.mlg) {
+      titleSection
+
       RecurringCalendarView(viewModel: viewModel)
 
       // Chip bar showing selected anchor days
@@ -560,6 +566,13 @@ private struct RecurringShiftContent: View {
     // Extra bottom padding to clear the month picker
     .padding(.bottom, Spacing.bottomScrollMargin)
   }
+
+  private var titleSection: some View {
+    Text(.addShiftRecurringHeader)
+      .font(.tidexScreenTitle)
+      .foregroundColor(.tidexTextPrimary)
+      .frame(maxWidth: .infinity, alignment: .leading)
+  }
 }
 
 // MARK: - Event Content
@@ -574,6 +587,8 @@ private struct EventContent: View {
       titleSection
 
       scheduleSection
+
+      remindersSection
     }
   }
 
@@ -690,6 +705,21 @@ private struct EventContent: View {
 
     return
       "\(viewModel.eventStartDate.formatted(.dateTime.day().month(.abbreviated))) - \(viewModel.eventEndDate.formatted(.dateTime.day().month(.abbreviated)))"
+  }
+
+  private var remindersSection: some View {
+    EventReminderEditorSection(
+      reminderTimes: $viewModel.eventReminderTimes,
+      anchorTime: $viewModel.eventReminderAnchorTime,
+      isAllDay: viewModel.isEventAllDay,
+      isEditable: true,
+      showsPastEventHint: false
+    )
+    .padding(Spacing.lg)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xxl)
+        .fill(Color.tidexSurfacePrimary)
+    )
   }
 }
 
