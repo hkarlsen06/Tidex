@@ -1,6 +1,7 @@
 import Foundation
 import PDFKit
 import Supabase
+import UIKit
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "DataSettingsViewModel")
@@ -11,6 +12,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "DataSettingsV
 enum ExportPeriodPreset: String, CaseIterable, Identifiable {
   case lastMonth = "last_month"
   case currentMonth = "current_month"
+  case lastYear = "last_year"
   case currentYear = "current_year"
   case custom = "custom"
 
@@ -42,6 +44,15 @@ enum ExportPeriodPreset: String, CaseIterable, Identifiable {
 
     case .currentYear:
       let year = calendar.component(.year, from: now)
+      guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+        let end = calendar.date(from: DateComponents(year: year, month: 12, day: 31))
+      else {
+        return nil
+      }
+      return (toISODate(start), toISODate(end))
+
+    case .lastYear:
+      let year = calendar.component(.year, from: now) - 1
       guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
         let end = calendar.date(from: DateComponents(year: year, month: 12, day: 31))
       else {
@@ -214,10 +225,19 @@ final class DataSettingsViewModel: ObservableObject {
       // Handle export based on format
       switch format {
       case .pdf:
+        let userName = AppCoordinator.shared.userDisplayName.trimmingCharacters(
+          in: .whitespacesAndNewlines
+        )
+        let session = try? await AuthSessionManager.shared.getSession()
+        let userContact = (session?.user.email ?? session?.user.phone ?? "").trimmingCharacters(
+          in: .whitespacesAndNewlines
+        )
         let fileURL = try await Self.generatePDFOffMain(
           from: exportData,
           range: range,
-          localeIdentifier: locale.identifier
+          localeIdentifier: locale.identifier,
+          userName: userName,
+          userContact: userContact
         )
         shareURL = fileURL
 
@@ -508,10 +528,18 @@ final class DataSettingsViewModel: ObservableObject {
   private static func generatePDFOffMain(
     from data: ExportResponse,
     range: (from: String, to: String),
-    localeIdentifier: String
+    localeIdentifier: String,
+    userName: String,
+    userContact: String
   ) async throws -> URL {
     try await Task.detached(priority: .userInitiated) {
-      try generatePDF(from: data, range: range, localeIdentifier: localeIdentifier)
+      try generatePDF(
+        from: data,
+        range: range,
+        localeIdentifier: localeIdentifier,
+        userName: userName,
+        userContact: userContact
+      )
     }.value
   }
 
@@ -530,7 +558,9 @@ final class DataSettingsViewModel: ObservableObject {
   private nonisolated static func generatePDF(
     from data: ExportResponse,
     range: (from: String, to: String),
-    localeIdentifier: String
+    localeIdentifier: String,
+    userName: String,
+    userContact: String
   ) throws -> URL {
     let locale = Locale(identifier: localeIdentifier)
     let pdfMetaData = [
@@ -546,170 +576,358 @@ final class DataSettingsViewModel: ObservableObject {
     let pageWidth: CGFloat = 595.0
     let pageHeight: CGFloat = 842.0
     let pageRect = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
+    let margin: CGFloat = 40
+    let contentWidth = pageWidth - (margin * 2)
+    let footerHeight: CGFloat = 22
+    let bottomLimit = pageHeight - margin - footerHeight
 
     let renderer = UIGraphicsPDFRenderer(bounds: pageRect, format: format)
+    let totalHours = data.shifts.reduce(0.0) { $0 + $1.calc.hours }
+    let totalBaseWage = data.shifts.reduce(0.0) { $0 + $1.calc.baseWage }
+    let totalSupplement = data.shifts.reduce(0.0) { $0 + $1.calc.supplement }
+    let totalWage = data.shifts.reduce(0.0) { $0 + $1.calc.total }
+
+    let weekdayCount = data.shifts.filter { $0.type == 0 }.count
+    let saturdayCount = data.shifts.filter { $0.type == 1 }.count
+    let sundayCount = data.shifts.filter { $0.type == 2 }.count
+
+    let title = String(localized: .dataExportPdfDocumentTitle)
+    let logoImage = UIImage(named: "TidexLogo")
+    let exportedLabel = String(localized: .dataExportPdfExportedLabel)
+    let summaryTitle = String(localized: .dataExportPdfSummary)
+    let currencySymbol = "kr"
+    let hoursUnit = String(localized: .commonHours)
+
+    let detailDateFormatter = DateFormatter()
+    detailDateFormatter.dateStyle = .medium
+    detailDateFormatter.timeStyle = .none
+    detailDateFormatter.locale = locale
+
+    let tableDateFormatter = DateFormatter()
+    tableDateFormatter.dateStyle = .short
+    tableDateFormatter.timeStyle = .none
+    tableDateFormatter.locale = locale
+
+    let generatedAtFormatter = DateFormatter()
+    generatedAtFormatter.dateStyle = .medium
+    generatedAtFormatter.timeStyle = .short
+    generatedAtFormatter.locale = locale
+
+    let monthFormatter = DateFormatter()
+    monthFormatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
+    monthFormatter.locale = locale
+
+    let weekdayFormatter = DateFormatter()
+    weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE")
+    weekdayFormatter.locale = locale
+
+    let generatedAtText =
+      "\(exportedLabel) \(Self.formatExportTimestamp(data.generatedAt, formatter: generatedAtFormatter))"
+    let fromDate =
+      parseISODate(range.from).map { detailDateFormatter.string(from: $0) } ?? range.from
+    let toDate = parseISODate(range.to).map { detailDateFormatter.string(from: $0) } ?? range.to
+    let periodText = "\(fromDate) - \(toDate)"
+
+    let summaryRows: [(String, String)] = [
+      (String(localized: .dataExportPdfTotalShifts), "\(data.shifts.count)"),
+      (
+        String(localized: .dataExportPdfTotalHours),
+        "\(Self.formatNumber(totalHours, decimals: 2, locale: locale)) \(hoursUnit)"
+      ),
+      (
+        String(localized: .dataExportPdfTotalBasePay),
+        "\(Self.formatNumber(totalBaseWage, decimals: 0, locale: locale)) \(currencySymbol)"
+      ),
+      (
+        String(localized: .dataExportPdfTotalSupplements),
+        "\(Self.formatNumber(totalSupplement, decimals: 0, locale: locale)) \(currencySymbol)"
+      ),
+      (
+        String(localized: .dataExportPdfTotalPay),
+        "\(Self.formatNumber(totalWage, decimals: 0, locale: locale)) \(currencySymbol)"
+      ),
+    ]
+
+    let shiftTypeRows: [(String, String)] = [
+      (String(localized: .dataExportPdfWeekdays), "\(weekdayCount)"),
+      (String(localized: .dataExportPdfSaturdays), "\(saturdayCount)"),
+      (String(localized: .dataExportPdfSundaysHolidays), "\(sundayCount)"),
+    ]
+
+    let columns: [PDFColumn] = [
+      .init(title: String(localized: .dataExportTableDate), width: 84, alignment: .left),
+      .init(title: String(localized: .dataExportTableDay), width: 40, alignment: .left),
+      .init(title: String(localized: .dataExportTableStart), width: 48, alignment: .center),
+      .init(title: String(localized: .dataExportTableEnd), width: 48, alignment: .center),
+      .init(title: String(localized: .dataExportTableHours), width: 60, alignment: .right),
+      .init(title: String(localized: .dataExportTableBase), width: 75, alignment: .right),
+      .init(title: String(localized: .dataExportTableSupplement), width: 80, alignment: .right),
+      .init(title: String(localized: .dataExportTableTotal), width: 80, alignment: .right),
+    ]
 
     let pdfData = renderer.pdfData { context in
-      context.beginPage()
+      let titleFont = UIFont.systemFont(ofSize: 18, weight: .bold)
+      let headerNameFont = UIFont.systemFont(ofSize: 12, weight: .semibold)
+      let metaFont = UIFont.systemFont(ofSize: 10, weight: .regular)
+      let sectionFont = UIFont.systemFont(ofSize: 11, weight: .semibold)
+      let bodyFont = UIFont.systemFont(ofSize: 10, weight: .regular)
+      let tableHeaderFont = UIFont.systemFont(ofSize: 9, weight: .semibold)
+      let tableRowFont = UIFont.monospacedDigitSystemFont(ofSize: 9, weight: .regular)
+      let totalFont = UIFont.monospacedDigitSystemFont(ofSize: 9, weight: .semibold)
 
-      // Margins
-      let margin: CGFloat = 40
-      var yPosition: CGFloat = margin
+      let textColor = UIColor.black
+      let secondaryTextColor = UIColor(white: 0.18, alpha: 1)
+      let lineColor = UIColor(white: 0.68, alpha: 1)
+      let tableHeaderLineColor = UIColor(white: 0.42, alpha: 1)
 
-      // Title
-      let titleFont = UIFont.boldSystemFont(ofSize: 18)
-      let titleAttributes: [NSAttributedString.Key: Any] = [
-        .font: titleFont,
-        .foregroundColor: UIColor.black,
-      ]
+      let headerHeight: CGFloat = 70
+      let summaryRowHeight: CGFloat = 16
+      let tableHeaderHeight: CGFloat = 22
+      let firstMonthHeaderHeight: CGFloat = 14
+      let monthHeaderHeight: CGFloat = 24
+      let tableRowHeight: CGFloat = 18
+      let totalsHeight: CGFloat = 24
+      let footerY = pageHeight - margin - 2
+      let pageNumberWidth: CGFloat = 30
+      let cellPadding: CGFloat = 6
+      let headerColumnGap: CGFloat = 16
+      let headerRightColumnWidth: CGFloat = 210
+      let logoMaxWidth: CGFloat = 132
+      let logoHeight: CGFloat = 30
+      let summaryRowStyle = PDFLabelValueRowStyle(
+        labelFont: bodyFont,
+        valueFont: bodyFont,
+        color: textColor
+      )
 
-      let title = "Tidex · " + String(localized: .dataExportPdfDocumentTitle)
-      title.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: titleAttributes)
-      yPosition += 30
+      var pageNumber = 0
+      var yPosition: CGFloat = 0
+      var lastRenderedMonthKey: String?
 
-      // Metadata
-      let metaFont = UIFont.systemFont(ofSize: 10)
-      let metaAttributes: [NSAttributedString.Key: Any] = [
-        .font: metaFont,
-        .foregroundColor: UIColor.darkGray,
-      ]
-
-      let exportedLabel = String(localized: .dataExportPdfExportedLabel)
-      let periodLabel = String(localized: .dataExportPdfPeriodLabel)
-
-      let dateFormatter = DateFormatter()
-      dateFormatter.dateStyle = .short
-      dateFormatter.locale = locale
-
-      let exportDate = dateFormatter.string(from: Date())
-      "\(exportedLabel) \(exportDate)".draw(
-        at: CGPoint(x: margin, y: yPosition), withAttributes: metaAttributes)
-      yPosition += 15
-
-      let fromDate = parseISODate(range.from).map { dateFormatter.string(from: $0) } ?? range.from
-      let toDate = parseISODate(range.to).map { dateFormatter.string(from: $0) } ?? range.to
-      "\(periodLabel) \(fromDate) - \(toDate)".draw(
-        at: CGPoint(x: margin, y: yPosition), withAttributes: metaAttributes)
-      yPosition += 30
-
-      // Summary
-      let summaryTitleFont = UIFont.boldSystemFont(ofSize: 14)
-      let summaryTitleAttributes: [NSAttributedString.Key: Any] = [
-        .font: summaryTitleFont,
-        .foregroundColor: UIColor.black,
-      ]
-
-      let summaryTitle = String(localized: .dataExportPdfSummary)
-      summaryTitle.draw(
-        at: CGPoint(x: margin, y: yPosition), withAttributes: summaryTitleAttributes)
-      yPosition += 20
-
-      let summaryFont = UIFont.systemFont(ofSize: 10)
-      let summaryAttributes: [NSAttributedString.Key: Any] = [
-        .font: summaryFont,
-        .foregroundColor: UIColor.black,
-      ]
-
-      // Calculate totals
-      let totalHours = data.shifts.reduce(0.0) { $0 + $1.calc.hours }
-      let totalBaseWage = data.shifts.reduce(0.0) { $0 + $1.calc.baseWage }
-      let totalSupplement = data.shifts.reduce(0.0) { $0 + $1.calc.supplement }
-      let totalWage = data.shifts.reduce(0.0) { $0 + $1.calc.total }
-
-      let weekdayCount = data.shifts.filter { $0.type == 0 }.count
-      let saturdayCount = data.shifts.filter { $0.type == 1 }.count
-      let sundayCount = data.shifts.filter { $0.type == 2 }.count
-
-      let currencySymbol = "kr"
-      let hoursUnit = String(localized: .commonHours)
-
-      let summaryLines = [
-        String(localized: .dataExportPdfTotalShifts) + " \(data.shifts.count)",
-        String(localized: .dataExportPdfTotalHours)
-          + " \(Self.formatNumber(totalHours, decimals: 2, locale: locale)) \(hoursUnit)",
-        String(localized: .dataExportPdfTotalBasePay)
-          + " \(Self.formatNumber(totalBaseWage, decimals: 0, locale: locale)) \(currencySymbol)",
-        String(localized: .dataExportPdfTotalSupplements)
-          + " \(Self.formatNumber(totalSupplement, decimals: 0, locale: locale)) \(currencySymbol)",
-        String(localized: .dataExportPdfTotalPay)
-          + " \(Self.formatNumber(totalWage, decimals: 0, locale: locale)) \(currencySymbol)",
-        "",
-        String(localized: .dataExportPdfShiftsByType),
-        "  " + String(localized: .dataExportPdfWeekdays) + " \(weekdayCount)",
-        "  " + String(localized: .dataExportPdfSaturdays) + " \(saturdayCount)",
-        "  " + String(localized: .dataExportPdfSundaysHolidays) + " \(sundayCount)",
-      ]
-
-      for line in summaryLines {
-        line.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: summaryAttributes)
-        yPosition += line.isEmpty ? 10 : 15
+      func drawPageFooter() {
+        Self.drawPDFText(
+          "\(pageNumber)",
+          in: CGRect(
+            x: pageWidth - margin - pageNumberWidth,
+            y: footerY,
+            width: pageNumberWidth,
+            height: 12
+          ),
+          font: metaFont,
+          color: secondaryTextColor,
+          alignment: .right
+        )
       }
 
-      yPosition += 20
+      func drawDocumentHeader() {
+        let leftColumnWidth = contentWidth - headerRightColumnWidth - headerColumnGap
+        let rightColumnX = margin + leftColumnWidth + headerColumnGap
 
-      // Table header
-      let tableHeaderFont = UIFont.boldSystemFont(ofSize: 9)
-      let tableHeaderAttributes: [NSAttributedString.Key: Any] = [
-        .font: tableHeaderFont,
-        .foregroundColor: UIColor.black,
-      ]
-
-      let headers = [
-        String(localized: .dataExportTableDate),
-        String(localized: .dataExportTableDay),
-        String(localized: .dataExportTableStart),
-        String(localized: .dataExportTableEnd),
-        String(localized: .dataExportTableHours),
-        String(localized: .dataExportTableBase),
-        String(localized: .dataExportTableSupplement),
-        String(localized: .dataExportTableTotal),
-      ]
-
-      let columnWidths: [CGFloat] = [70, 35, 45, 45, 45, 55, 55, 55]
-      var xPosition = margin
-
-      for (index, header) in headers.enumerated() {
-        header.draw(at: CGPoint(x: xPosition, y: yPosition), withAttributes: tableHeaderAttributes)
-        xPosition += columnWidths[index]
-      }
-
-      yPosition += 15
-
-      // Draw header line
-      let linePath = UIBezierPath()
-      linePath.move(to: CGPoint(x: margin, y: yPosition))
-      linePath.addLine(to: CGPoint(x: pageWidth - margin, y: yPosition))
-      UIColor.gray.setStroke()
-      linePath.lineWidth = 0.5
-      linePath.stroke()
-
-      yPosition += 5
-
-      // Table rows
-      let rowFont = UIFont.systemFont(ofSize: 9)
-      let rowAttributes: [NSAttributedString.Key: Any] = [
-        .font: rowFont,
-        .foregroundColor: UIColor.black,
-      ]
-
-      let weekdayFormatter = DateFormatter()
-      weekdayFormatter.dateFormat = "EEE"
-      weekdayFormatter.locale = locale
-
-      for shift in data.shifts {
-        // Check if we need a new page
-        if yPosition > pageHeight - 60 {
-          context.beginPage()
-          yPosition = margin
+        Self.drawPDFText(
+          title,
+          in: CGRect(x: margin, y: margin, width: contentWidth - logoMaxWidth - 12, height: 20),
+          font: titleFont,
+          color: textColor
+        )
+        if let logoImage {
+          let aspectRatio = logoImage.size.width / max(logoImage.size.height, 1)
+          let logoWidth = min(logoMaxWidth, logoHeight * aspectRatio)
+          logoImage.draw(
+            in: CGRect(
+              x: pageWidth - margin - logoWidth,
+              y: margin - 1,
+              width: logoWidth,
+              height: logoHeight
+            )
+          )
         }
 
+        if !userName.isEmpty {
+          let nameLine = NSMutableAttributedString(
+            string: "for ",
+            attributes: [
+              .font: metaFont,
+              .foregroundColor: secondaryTextColor,
+            ]
+          )
+          nameLine.append(
+            NSAttributedString(
+              string: userName,
+              attributes: [
+                .font: headerNameFont,
+                .foregroundColor: textColor,
+              ]
+            )
+          )
+          Self.drawPDFAttributedText(
+            nameLine,
+            in: CGRect(x: margin, y: margin + 26, width: leftColumnWidth, height: 14)
+          )
+        }
+        if !userContact.isEmpty {
+          Self.drawPDFText(
+            userContact,
+            in: CGRect(x: margin, y: margin + 44, width: leftColumnWidth, height: 12),
+            font: metaFont,
+            color: secondaryTextColor
+          )
+        }
+        Self.drawPDFText(
+          periodText,
+          in: CGRect(x: rightColumnX, y: margin + 26, width: headerRightColumnWidth, height: 12),
+          font: headerNameFont,
+          color: textColor,
+          alignment: .right
+        )
+        Self.drawPDFText(
+          generatedAtText,
+          in: CGRect(x: rightColumnX, y: margin + 44, width: headerRightColumnWidth, height: 12),
+          font: metaFont,
+          color: secondaryTextColor,
+          alignment: .right
+        )
+        yPosition = margin + headerHeight + 14
+      }
+
+      func drawSummarySection() {
+        Self.drawPDFText(
+          summaryTitle,
+          in: CGRect(x: margin, y: yPosition, width: contentWidth, height: 14),
+          font: sectionFont,
+          color: textColor
+        )
+        yPosition += 18
+
+        for (label, value) in summaryRows {
+          Self.drawLabelValueRow(
+            label: label,
+            value: value,
+            in: CGRect(x: margin, y: yPosition, width: contentWidth, height: summaryRowHeight),
+            style: summaryRowStyle
+          )
+          yPosition += summaryRowHeight
+        }
+
+        yPosition += 4
+        Self.drawPDFText(
+          String(localized: .dataExportPdfShiftsByType),
+          in: CGRect(x: margin, y: yPosition, width: contentWidth, height: 14),
+          font: sectionFont,
+          color: textColor
+        )
+        yPosition += summaryRowHeight
+
+        for (label, value) in shiftTypeRows {
+          Self.drawLabelValueRow(
+            label: label,
+            value: value,
+            in: CGRect(x: margin, y: yPosition, width: contentWidth, height: summaryRowHeight),
+            style: summaryRowStyle
+          )
+          yPosition += summaryRowHeight
+        }
+
+        yPosition += 18
+      }
+
+      func drawTableHeader() {
+        var xPosition = margin
+        for column in columns {
+          Self.drawPDFText(
+            column.title,
+            in: CGRect(
+              x: xPosition + cellPadding,
+              y: yPosition,
+              width: column.width - (cellPadding * 2),
+              height: tableHeaderHeight
+            ),
+            font: tableHeaderFont,
+            color: textColor,
+            alignment: column.alignment
+          )
+          xPosition += column.width
+        }
+
+        let dividerY = yPosition + tableHeaderHeight
+        Self.drawLine(
+          from: CGPoint(x: margin, y: dividerY),
+          to: CGPoint(x: pageWidth - margin, y: dividerY),
+          color: tableHeaderLineColor,
+          width: 0.8
+        )
+        yPosition = dividerY + 4
+      }
+
+      func drawMonthSeparator(title: String, height: CGFloat) {
+        let titleY = yPosition + height - tableHeaderFont.lineHeight - 2
+        Self.drawPDFText(
+          title,
+          in: CGRect(
+            x: margin,
+            y: titleY,
+            width: contentWidth,
+            height: tableHeaderFont.lineHeight
+          ),
+          font: tableHeaderFont,
+          color: textColor
+        )
+
+        let dividerY = yPosition + height
+        Self.drawLine(
+          from: CGPoint(x: margin, y: dividerY),
+          to: CGPoint(x: pageWidth - margin, y: dividerY),
+          color: lineColor,
+          width: 0.6
+        )
+        yPosition += height
+      }
+
+      func beginPage(includeSummary: Bool) {
+        context.beginPage()
+        pageNumber += 1
+        drawDocumentHeader()
+        if includeSummary {
+          drawSummarySection()
+        }
+        drawTableHeader()
+        drawPageFooter()
+      }
+
+      beginPage(includeSummary: true)
+
+      for shift in data.shifts {
         let shiftDate = parseISODate(shift.date)
-        let dateStr = shiftDate.map { dateFormatter.string(from: $0) } ?? shift.date
-        let dayStr = shiftDate.map { weekdayFormatter.string(from: $0) } ?? ""
+        let monthKey: String
+        let monthTitle: String
+
+        if let shiftDate {
+          let components = Calendar.current.dateComponents([.year, .month], from: shiftDate)
+          monthKey = "\(components.year ?? 0)-\(components.month ?? 0)"
+          monthTitle = monthFormatter.string(from: shiftDate)
+        } else {
+          monthKey = String(shift.date.prefix(7))
+          monthTitle = shift.date
+        }
+
+        let shouldDrawMonthSeparator = monthKey != lastRenderedMonthKey
+        let separatorHeight =
+          lastRenderedMonthKey == nil ? firstMonthHeaderHeight : monthHeaderHeight
+        let requiredHeight = tableRowHeight + (shouldDrawMonthSeparator ? separatorHeight : 0)
+
+        if yPosition + requiredHeight > bottomLimit {
+          beginPage(includeSummary: false)
+        }
+
+        if shouldDrawMonthSeparator {
+          let separatorHeight =
+            lastRenderedMonthKey == nil ? firstMonthHeaderHeight : monthHeaderHeight
+          drawMonthSeparator(title: monthTitle, height: separatorHeight)
+          lastRenderedMonthKey = monthKey
+        }
 
         let rowValues = [
-          dateStr,
-          dayStr,
+          shiftDate.map { tableDateFormatter.string(from: $0) } ?? shift.date,
+          shiftDate.map { weekdayFormatter.string(from: $0) } ?? "",
           shift.startTime,
           shift.endTime,
           Self.formatNumber(shift.calc.hours, decimals: 2, locale: locale),
@@ -718,47 +936,78 @@ final class DataSettingsViewModel: ObservableObject {
           Self.formatNumber(shift.calc.total, decimals: 0, locale: locale),
         ]
 
-        xPosition = margin
-        for (index, value) in rowValues.enumerated() {
-          value.draw(at: CGPoint(x: xPosition, y: yPosition), withAttributes: rowAttributes)
-          xPosition += columnWidths[index]
+        var xPosition = margin
+        for (column, value) in zip(columns, rowValues) {
+          Self.drawPDFText(
+            value,
+            in: CGRect(
+              x: xPosition + cellPadding,
+              y: yPosition,
+              width: column.width - (cellPadding * 2),
+              height: tableRowHeight
+            ),
+            font: tableRowFont,
+            color: textColor,
+            alignment: column.alignment
+          )
+          xPosition += column.width
         }
 
-        yPosition += 12
+        Self.drawLine(
+          from: CGPoint(x: margin, y: yPosition + tableRowHeight),
+          to: CGPoint(x: pageWidth - margin, y: yPosition + tableRowHeight),
+          color: lineColor,
+          width: 0.45
+        )
+        yPosition += tableRowHeight
       }
 
-      // Footer
-      yPosition += 10
-      let footerPath = UIBezierPath()
-      footerPath.move(to: CGPoint(x: margin, y: yPosition))
-      footerPath.addLine(to: CGPoint(x: pageWidth - margin, y: yPosition))
-      UIColor.gray.setStroke()
-      footerPath.lineWidth = 0.5
-      footerPath.stroke()
+      if yPosition + totalsHeight > bottomLimit {
+        beginPage(includeSummary: false)
+      }
 
-      yPosition += 5
+      let totalsTop = yPosition
+      Self.drawLine(
+        from: CGPoint(x: margin, y: totalsTop),
+        to: CGPoint(x: pageWidth - margin, y: totalsTop),
+        color: tableHeaderLineColor,
+        width: 0.8
+      )
 
-      // Totals row
-      let totalAttributes: [NSAttributedString.Key: Any] = [
-        .font: tableHeaderFont,
-        .foregroundColor: UIColor.black,
+      let totalValues = [
+        String(localized: .dataExportPdfSumLabel),
+        "",
+        "",
+        "",
+        Self.formatNumber(totalHours, decimals: 2, locale: locale),
+        Self.formatNumber(totalBaseWage, decimals: 0, locale: locale),
+        Self.formatNumber(totalSupplement, decimals: 0, locale: locale),
+        Self.formatNumber(totalWage, decimals: 0, locale: locale),
       ]
 
-      let sumLabel = String(localized: .dataExportPdfSumLabel)
-      sumLabel.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: totalAttributes)
+      var xPosition = margin
+      for (index, column) in columns.enumerated() {
+        let text = totalValues[index]
+        let drawWidth = index == 0 ? columns.prefix(4).reduce(0) { $0 + $1.width } : column.width
+        let alignment: NSTextAlignment = index == 0 ? .left : column.alignment
 
-      xPosition = margin + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3]
-      Self.formatNumber(totalHours, decimals: 2, locale: locale).draw(
-        at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
-      xPosition += columnWidths[4]
-      Self.formatNumber(totalBaseWage, decimals: 0, locale: locale).draw(
-        at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
-      xPosition += columnWidths[5]
-      Self.formatNumber(totalSupplement, decimals: 0, locale: locale).draw(
-        at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
-      xPosition += columnWidths[6]
-      Self.formatNumber(totalWage, decimals: 0, locale: locale).draw(
-        at: CGPoint(x: xPosition, y: yPosition), withAttributes: totalAttributes)
+        if index == 0 || index >= 4 {
+          Self.drawPDFTextTopAligned(
+            text,
+            in: CGRect(
+              x: xPosition + cellPadding,
+              y: totalsTop + 2,
+              width: drawWidth - (cellPadding * 2),
+              height: totalsHeight
+            ),
+            font: totalFont,
+            color: textColor,
+            alignment: alignment
+          )
+        }
+
+        xPosition += column.width
+      }
     }
 
     // Save to temp file
@@ -916,6 +1165,164 @@ final class DataSettingsViewModel: ObservableObject {
     formatter.locale = locale
     return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.\(decimals)f", value)
   }
+
+  private nonisolated static func formatExportTimestamp(_ value: String, formatter: DateFormatter)
+    -> String
+  {
+    if let date = Self.parseISO8601Date(value) {
+      return formatter.string(from: date)
+    }
+    return formatter.string(from: Date())
+  }
+
+  private nonisolated static func parseISO8601Date(_ value: String) -> Date? {
+    let preciseFormatter = ISO8601DateFormatter()
+    preciseFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+    if let date = preciseFormatter.date(from: value) {
+      return date
+    }
+
+    let formatter = ISO8601DateFormatter()
+    formatter.formatOptions = [.withInternetDateTime]
+    return formatter.date(from: value)
+  }
+
+  private nonisolated static func drawPDFText(
+    _ text: String,
+    in rect: CGRect,
+    font: UIFont,
+    color: UIColor,
+    alignment: NSTextAlignment = .left
+  ) {
+    let paragraphStyle = NSMutableParagraphStyle()
+    paragraphStyle.alignment = alignment
+    paragraphStyle.lineBreakMode = .byTruncatingTail
+    let verticalInset = max(0, floor((rect.height - font.lineHeight) / 2))
+    let centeredRect = CGRect(
+      x: rect.minX,
+      y: rect.minY + verticalInset,
+      width: rect.width,
+      height: max(font.lineHeight, rect.height - verticalInset)
+    )
+
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: font,
+      .foregroundColor: color,
+      .paragraphStyle: paragraphStyle,
+    ]
+
+    (text as NSString).draw(
+      with: centeredRect,
+      options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+      attributes: attributes,
+      context: nil
+    )
+  }
+
+  private nonisolated static func drawPDFAttributedText(
+    _ text: NSAttributedString,
+    in rect: CGRect
+  ) {
+    let measuredRect = text.boundingRect(
+      with: CGSize(width: rect.width, height: .greatestFiniteMagnitude),
+      options: [.usesLineFragmentOrigin, .usesFontLeading],
+      context: nil
+    )
+    let verticalInset = max(0, floor((rect.height - ceil(measuredRect.height)) / 2))
+    let centeredRect = CGRect(
+      x: rect.minX,
+      y: rect.minY + verticalInset,
+      width: rect.width,
+      height: max(ceil(measuredRect.height), rect.height - verticalInset)
+    )
+    text.draw(
+      with: centeredRect,
+      options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+      context: nil
+    )
+  }
+
+  private nonisolated static func drawPDFTextTopAligned(
+    _ text: String,
+    in rect: CGRect,
+    font: UIFont,
+    color: UIColor,
+    alignment: NSTextAlignment = .left
+  ) {
+    let paragraphStyle = NSMutableParagraphStyle()
+    paragraphStyle.alignment = alignment
+    paragraphStyle.lineBreakMode = .byTruncatingTail
+
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: font,
+      .foregroundColor: color,
+      .paragraphStyle: paragraphStyle,
+    ]
+
+    (text as NSString).draw(
+      with: rect,
+      options: [.usesLineFragmentOrigin, .truncatesLastVisibleLine],
+      attributes: attributes,
+      context: nil
+    )
+  }
+
+  private nonisolated static func drawLine(
+    from start: CGPoint,
+    to end: CGPoint,
+    color: UIColor,
+    width: CGFloat
+  ) {
+    let path = UIBezierPath()
+    path.move(to: start)
+    path.addLine(to: end)
+    path.lineWidth = width
+    color.setStroke()
+    path.stroke()
+  }
+
+  private nonisolated static func drawLabelValueRow(
+    label: String,
+    value: String,
+    in rect: CGRect,
+    style: PDFLabelValueRowStyle
+  ) {
+    let totalWidth = rect.width
+    let valueWidth = min(max(totalWidth * 0.42, 150), 220)
+    let labelWidth = totalWidth - valueWidth - 12
+
+    Self.drawPDFText(
+      label,
+      in: CGRect(x: rect.minX, y: rect.minY, width: labelWidth, height: rect.height),
+      font: style.labelFont,
+      color: style.color
+    )
+    Self.drawPDFText(
+      value,
+      in: CGRect(
+        x: rect.maxX - valueWidth,
+        y: rect.minY,
+        width: valueWidth,
+        height: rect.height
+      ),
+      font: style.valueFont,
+      color: style.color,
+      alignment: .right
+    )
+  }
+}
+
+private struct PDFColumn {
+  let title: String
+  let width: CGFloat
+  let alignment: NSTextAlignment
+}
+
+private struct PDFLabelValueRowStyle {
+  let labelFont: UIFont
+  let valueFont: UIFont
+  let color: UIColor
 }
 
 // MARK: - Export Errors

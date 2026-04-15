@@ -9,6 +9,7 @@ struct SettingsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.dismiss) private var dismiss
   @Environment(\.layoutDirection) private var layoutDirection
+  private let initialDestination: SettingsDestination?
 
   /// Whether the current user can access admin settings
   /// Requires both admin role and AAL2 assurance level.
@@ -47,6 +48,7 @@ struct SettingsView: View {
   @State private var isOpeningPaySettings = false
   /// Navigation path for settings subviews
   @State private var navigationPath = NavigationPath()
+  @State private var didApplyInitialDestination = false
 
   private let jobsRepository = JobsRepository.shared
   private let settingsRepository = SettingsRepository.shared
@@ -81,6 +83,10 @@ struct SettingsView: View {
       return String(components[0].prefix(1) + components[1].prefix(1)).uppercased()
     }
     return String(coordinator.userDisplayName.prefix(1)).uppercased()
+  }
+
+  init(initialDestination: SettingsDestination? = nil) {
+    self.initialDestination = initialDestination
   }
 
   var body: some View {
@@ -311,6 +317,11 @@ struct SettingsView: View {
       }
     } message: {
       Text(.userMenuLogoutEverywhereConfirmDescription)
+    }
+    .onAppear {
+      guard !didApplyInitialDestination, let initialDestination else { return }
+      navigationPath.append(initialDestination)
+      didApplyInitialDestination = true
     }
   }
 
