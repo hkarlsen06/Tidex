@@ -3,6 +3,11 @@ import SwiftUI
 /// Data export settings view
 /// Allows users to export their shift data as PDF or CSV
 struct DataSettingsView: View {
+  private let presetColumns = [
+    GridItem(.flexible(), spacing: Spacing.xs),
+    GridItem(.flexible(), spacing: Spacing.xs),
+  ]
+
   @StateObject private var viewModel = DataSettingsViewModel()
 
   var body: some View {
@@ -105,8 +110,9 @@ struct DataSettingsView: View {
         .foregroundColor(.tidexTextSecondary)
 
       // Preset buttons
-      HStack(spacing: Spacing.xs) {
-        ForEach([ExportPeriodPreset.lastMonth, .currentMonth, .currentYear], id: \.self) { preset in
+      LazyVGrid(columns: presetColumns, spacing: Spacing.xs) {
+        ForEach([ExportPeriodPreset.lastMonth, .currentMonth, .lastYear, .currentYear], id: \.self)
+        { preset in
           presetButton(preset)
         }
       }
@@ -163,6 +169,8 @@ struct DataSettingsView: View {
     case .currentMonth:
       dateFormatter.dateFormat = "MMMM"
       return dateFormatter.string(from: now).sentenceCased()
+    case .lastYear:
+      return String(calendar.component(.year, from: now) - 1)
     case .currentYear:
       return String(calendar.component(.year, from: now))
     case .custom:

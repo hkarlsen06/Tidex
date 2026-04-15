@@ -16,6 +16,7 @@ struct StatsView: View {
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
   @State private var isJobFilterDialogPresented = false
   @State private var showMixedCurrencyBreakdownPopover = false
+  @State private var showExportSettings = false
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
@@ -100,6 +101,11 @@ struct StatsView: View {
       }
       .presentationDetents([.fraction(0.35), .medium])
       .presentationDragIndicator(.visible)
+    }
+    .sheet(isPresented: $showExportSettings) {
+      SettingsView(initialDestination: .data)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
     .task {
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }
@@ -204,6 +210,11 @@ struct StatsView: View {
             }
           }
           .frame(minHeight: 280, alignment: .top)
+
+          PrimaryButton(title: String(localized: .dataExportPdfButton)) {
+            showExportSettings = true
+          }
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
 
           // Bottom spacing for floating month picker
           Spacer()
