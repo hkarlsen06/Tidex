@@ -9,8 +9,8 @@ struct MixedDaySheet: View {
   let jobForShift: (ShiftWithComputations) -> Job?
   let onShiftTapped: (ShiftWithComputations) -> Void
   let onEventTapped: (EventRow) -> Void
+  @Binding var measuredContentHeight: CGFloat
 
-  @Environment(\.userCurrency) private var currency
   @Environment(\.dismiss) private var dismiss
 
   private var sortedItems: [DayPresentationItem] {
@@ -25,41 +25,10 @@ struct MixedDaySheet: View {
     }
   }
 
-  private var shifts: [ShiftWithComputations] {
-    sortedItems.compactMap {
-      if case .shift(let shift) = $0 { return shift }
-      return nil
-    }
-  }
-
-  private var formattedDate: String {
-    EventSheetFormatter.longDate(dateISO)
-  }
-
-  private var totalEarnings: Double {
-    shifts.reduce(0) { total, shift in
-      guard !excludedFromTotalIds.contains(shift.id) else { return total }
-      return total + (shift.taxEnabled ? shift.netPay : shift.grossPay)
-    }
-  }
-
-  private var totalHours: Double {
-    shifts.reduce(0) { total, shift in
-      guard !excludedFromTotalIds.contains(shift.id) else { return total }
-      return total + shift.paidHours
-    }
-  }
-
   var body: some View {
     NavigationStack {
       ScrollView {
         VStack(spacing: Spacing.md) {
-          if shifts.isEmpty {
-            eventOnlySummaryHeader
-          } else {
-            payrollSummaryHeader
-          }
-
           VStack(spacing: Spacing.sm) {
             ForEach(sortedItems) { item in
               switch item {
@@ -76,10 +45,9 @@ struct MixedDaySheet: View {
           }
         }
         .padding(Spacing.mlg)
+        .measureSheetContentHeight { measuredContentHeight = $0 }
       }
       .background(Color.tidexBackground)
-      .navigationTitle(formattedDate)
-      .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarTrailing) {
           Button(String(localized: .commonDone)) {
@@ -92,78 +60,8 @@ struct MixedDaySheet: View {
     }
   }
 
-  private var payrollSummaryHeader: some View {
-    HStack(spacing: Spacing.lg) {
-      VStack(spacing: Spacing.xxs) {
-        Text(formattedHours(totalHours))
-          .font(.tidexLargeTitle)
-          .foregroundColor(.tidexTextPrimary)
-        Text(.shiftsDaySheetHours)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      Rectangle()
-        .fill(Color.tidexBorder)
-        .frame(width: 1, height: 40)
-
-      VStack(spacing: Spacing.xxs) {
-        Text(CurrencyConfig.format(totalEarnings, currency: currency))
-          .font(.tidexLargeTitle)
-          .foregroundColor(.tidexTextPrimary)
-        Text(.shiftsDaySheetEarnings)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      Spacer()
-
-      countBadge
-    }
-    .padding(Spacing.md)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl)
-        .fill(Color.tidexSurfaceSecondary)
-    )
-  }
-
-  private var eventOnlySummaryHeader: some View {
-    HStack(spacing: Spacing.md) {
-      VStack(alignment: .leading, spacing: Spacing.xxs) {
-        Text(formattedDate)
-          .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
-        Text(.eventsMixedDayItems)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      Spacer()
-
-      countBadge
-    }
-    .padding(Spacing.md)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl)
-        .fill(Color.tidexSurfaceSecondary)
-    )
-  }
-
-  private var countBadge: some View {
-    Text("\(sortedItems.count)")
-      .font(.tidexLabelStrong)
-      .foregroundColor(.tidexBlue)
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xxxs)
-      .background(
-        Capsule()
-          .fill(Color.tidexBlue.opacity(0.1))
-      )
-  }
-
   private func shiftCard(_ shift: ShiftWithComputations) -> some View {
     let shiftJob = jobForShift(shift)
-
     return ShiftRowCard(
       shift: shift,
       isToday: shift.shiftDate == todayISO(),
@@ -174,10 +72,5 @@ struct MixedDaySheet: View {
       jobColorHex: shiftJob?.color,
       onTap: { onShiftTapped(shift) }
     )
-  }
-
-  private func formattedHours(_ hours: Double) -> String {
-    let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
-    return formatter.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours)
   }
 }

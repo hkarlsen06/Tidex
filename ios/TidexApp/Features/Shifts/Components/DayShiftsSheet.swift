@@ -6,6 +6,7 @@ struct DayShiftsSheet: View {
   let dateISO: String
   let shifts: [ShiftWithComputations]
   let onShiftTapped: (ShiftWithComputations) -> Void
+  @Binding var measuredContentHeight: CGFloat
   var excludedFromTotalIds: Set<String> = []
 
   @Environment(\.userCurrency) private var currency
@@ -58,6 +59,7 @@ struct DayShiftsSheet: View {
           }
         }
         .padding(Spacing.mlg)
+        .measureSheetContentHeight { measuredContentHeight = $0 }
       }
       .background(Color.tidexBackground)
       .navigationTitle(formattedDate)
@@ -251,6 +253,12 @@ struct DayShiftsSheet: View {
     ],
     onShiftTapped: { shift in
       print("Tapped shift: \(shift.id)")
-    }
+    },
+    measuredContentHeight: .constant(
+      ContentSizedSheetMetrics.estimatedCardListContentHeight(
+        cardCount: 2,
+        includesSummaryHeader: true
+      )
+    )
   )
 }

@@ -14,6 +14,8 @@ struct FriendsComposerShiftCalendarPicker: View {
   @State private var selectedDates: Set<String> = []
   @State private var isSelectionModeEnabled = false
   @State private var selectedDayForSheet: FriendsComposerShiftDaySelection?
+  @State private var selectedDaySheetContentHeight: CGFloat =
+    ContentSizedSheetMetrics.defaultContentHeight
   @State private var isSelectingShift = false
 
   private var transitionPhase: MonthTransitionPhase {
@@ -140,9 +142,12 @@ struct FriendsComposerShiftCalendarPicker: View {
         onShiftTapped: { shift in
           selectShift(shift, dismissDaySheet: true)
         },
+        measuredContentHeight: $selectedDaySheetContentHeight,
         excludedFromTotalIds: viewModel.excludedFromTotalIds
       )
-      .presentationDetents([.medium])
+      .presentationDetents([
+        .height(ContentSizedSheetMetrics.detentHeight(for: selectedDaySheetContentHeight))
+      ])
       .presentationDragIndicator(.visible)
       .interactiveDismissDisabled(isSelectingShift)
     }
@@ -154,6 +159,10 @@ struct FriendsComposerShiftCalendarPicker: View {
     if shiftsOnDay.count == 1, let shift = shiftsOnDay.first {
       selectShift(shift, dismissDaySheet: false)
     } else if !shiftsOnDay.isEmpty {
+      selectedDaySheetContentHeight = ContentSizedSheetMetrics.estimatedCardListContentHeight(
+        cardCount: shiftsOnDay.count,
+        includesSummaryHeader: true
+      )
       selectedDayForSheet = FriendsComposerShiftDaySelection(
         dateISO: dateISO,
         shifts: shiftsOnDay

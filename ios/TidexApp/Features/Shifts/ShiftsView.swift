@@ -89,6 +89,7 @@ struct ShiftsView: View {
 
   @StateObject private var viewModel = ShiftsViewModel()
   @ObservedObject private var celebrationManager = CelebrationManager.shared
+  @ObservedObject private var syncStatusManager = SyncStatusManager.shared
   @State private var operationErrorMessage: String?
 
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
@@ -104,6 +105,8 @@ struct ShiftsView: View {
 
   // State for day shifts sheet (when tapping a calendar day)
   @State private var selectedDayForSheet: DayItemSelection?
+  @State private var selectedDaySheetContentHeight: CGFloat =
+    ContentSizedSheetMetrics.defaultContentHeight
 
   // Recurring shift editor state
   @State private var recurringShiftToEdit: RecurringShiftRow?
@@ -258,6 +261,21 @@ struct ShiftsView: View {
         .task {
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           await viewModel.loadShifts()
+        }
+        .onChange(of: coordinator.initialSyncComplete) { _, completed in
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard completed else { return }
+          Task {
+            await viewModel.reloadFromLocal()
+          }
+        }
+        .onChange(of: syncStatusManager.lastSuccessfulSync) { oldValue, newValue in
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard oldValue != nil, newValue != nil else { return }
+          guard selectedTab == .shifts else { return }
+          Task {
+            await viewModel.reloadFromLocal()
+          }
         }
         .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
@@ -557,9 +575,12 @@ struct ShiftsView: View {
               DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 selectedEvent = EventSheetSelection(event: event, startInEditMode: false)
               }
-            }
+            },
+            measuredContentHeight: $selectedDaySheetContentHeight
           )
-          .presentationDetents([.medium])
+          .presentationDetents([
+            .height(ContentSizedSheetMetrics.detentHeight(for: selectedDaySheetContentHeight))
+          ])
           .presentationDragIndicator(.visible)
         }
         // Recurring shift editor sheet
@@ -868,7 +889,7 @@ struct ShiftsView: View {
         selectedShift = shift
       } else {
         // Multiple shifts - open day sheet
-        selectedDayForSheet = DayItemSelection(
+        presentDaySheet(
           dateISO: dateISO,
           items: shiftsOnDate.map { DayPresentationItem.shift($0) }
         )
@@ -944,13 +965,21 @@ struct ShiftsView: View {
         handleEventTapped(event.event)
       }
     } else if !items.isEmpty {
-      selectedDayForSheet = DayItemSelection(dateISO: dateISO, items: items)
+      presentDaySheet(dateISO: dateISO, items: items)
     } else if !shifts.isEmpty {
-      selectedDayForSheet = DayItemSelection(
+      presentDaySheet(
         dateISO: dateISO,
         items: shifts.map { DayPresentationItem.shift($0) }
       )
     }
+  }
+
+  private func presentDaySheet(dateISO: String, items: [DayPresentationItem]) {
+    selectedDaySheetContentHeight = ContentSizedSheetMetrics.estimatedCardListContentHeight(
+      cardCount: items.count,
+      includesSummaryHeader: false
+    )
+    selectedDayForSheet = DayItemSelection(dateISO: dateISO, items: items)
   }
 
   /// Open the selected day's details from the calendar action bar.
