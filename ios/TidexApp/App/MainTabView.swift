@@ -28,6 +28,7 @@ struct MainTabView: View {
   private let friendsRealtimeCoordinator = FriendsMessagingRealtimeCoordinator.shared
 
   @State private var selectedTab: Tab = .home
+  @State private var loadedTabs: Set<Tab> = [.home]
 
   // Tracks whether the first re-tap on a scrollable tab already triggered scroll-to-top.
   // On the next re-tap, we navigate to the current month instead.
@@ -74,7 +75,7 @@ struct MainTabView: View {
     reduceMotion || disableHeavyCompositingForHangInvestigation
   }
 
-  enum Tab: String, CaseIterable {
+  enum Tab: String, CaseIterable, Hashable {
     case home
     case shifts
     case add
@@ -115,7 +116,9 @@ struct MainTabView: View {
 
   init() {
     let cachedStartupTabRawValue = UserDefaults.standard.string(forKey: Self.startupTabCacheKey)
-    _selectedTab = State(initialValue: Tab(rawValue: cachedStartupTabRawValue ?? "home") ?? .home)
+    let startupTab = Tab(rawValue: cachedStartupTabRawValue ?? "home") ?? .home
+    _selectedTab = State(initialValue: startupTab)
+    _loadedTabs = State(initialValue: [startupTab])
   }
 
   /// Custom binding that detects tab reselection
@@ -130,7 +133,7 @@ struct MainTabView: View {
         if newTab == selectedTab {
           handleTabReselection(newTab)
         } else {
-          selectedTab = newTab
+          activateTab(newTab)
           pendingCurrentMonthTab = nil
         }
       }
@@ -159,35 +162,46 @@ struct MainTabView: View {
           TidexAppBackground()
 
           TabView(selection: tabSelection) {
-            DashboardView(selectedTab: $selectedTab, showStatsView: $showHomeStats)
-              .tabItem {
-                Label(String(localized: Tab.home.localizationKey), systemImage: Tab.home.icon)
-              }
-              .tag(Tab.home)
+            tabHost(for: .home) {
+              DashboardView(selectedTab: $selectedTab, showStatsView: $showHomeStats)
+            }
+            .tabItem {
+              Label(String(localized: Tab.home.localizationKey), systemImage: Tab.home.icon)
+            }
+            .tag(Tab.home)
 
-            ShiftsView(selectedTab: $selectedTab)
-              .tabItem {
-                Label(String(localized: Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
-              }
-              .tag(Tab.shifts)
+            tabHost(for: .shifts) {
+              ShiftsView(selectedTab: $selectedTab)
+            }
+            .tabItem {
+              Label(String(localized: Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
+            }
+            .tag(Tab.shifts)
 
-            AddShiftView(selectedTab: $selectedTab, isKeyboardVisible: $isKeyboardVisible)
-              .tabItem {
-                Label(String(localized: Tab.add.localizationKey), systemImage: Tab.add.icon)
-              }
-              .tag(Tab.add)
+            tabHost(for: .add) {
+              AddShiftView(selectedTab: $selectedTab, isKeyboardVisible: $isKeyboardVisible)
+            }
+            .tabItem {
+              Label(String(localized: Tab.add.localizationKey), systemImage: Tab.add.icon)
+            }
+            .tag(Tab.add)
 
-            WageyView(selectedTab: $selectedTab)
-              .tabItem {
-                Label(String(localized: Tab.wagey.localizationKey), systemImage: Tab.wagey.icon)
-              }
-              .tag(Tab.wagey)
+            tabHost(for: .wagey) {
+              WageyView(selectedTab: $selectedTab)
+            }
+            .tabItem {
+              Label(String(localized: Tab.wagey.localizationKey), systemImage: Tab.wagey.icon)
+            }
+            .tag(Tab.wagey)
 
-            SharingView(selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
-              .tabItem {
-                Label(String(localized: Tab.sharing.localizationKey), systemImage: friendsTabIcon)
-              }
-              .tag(Tab.sharing)
+            tabHost(for: .sharing) {
+              SharingView(
+                selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
+            }
+            .tabItem {
+              Label(String(localized: Tab.sharing.localizationKey), systemImage: friendsTabIcon)
+            }
+            .tag(Tab.sharing)
           }
           .background(
             TabBarTapObserver(selectedIndex: selectedTab.index) { tappedIndex in
@@ -279,6 +293,7 @@ struct MainTabView: View {
     }
     .onAppear {
       // Handle any pending deep link on initial appearance
+      loadedTabs.insert(selectedTab)
       handlePendingDeepLink(coordinator.pendingDeepLink)
       selectionHaptic.prepare()
     }
@@ -609,17 +624,17 @@ struct MainTabView: View {
     case .sharing, .sharingManage, .friendChat:
       // Switch to sharing tab - SharingView will handle the specific navigation
       if selectedTab != .sharing {
-        selectedTab = .sharing
+        activateTab(.sharing)
       }
     case .shifts:
       // Switch to shifts tab - ShiftsView will handle the specific navigation
       if selectedTab != .shifts {
-        selectedTab = .shifts
+        activateTab(.shifts)
       }
     case .addShift:
       // Switch to add tab - AddShiftView will handle preselected date
       if selectedTab != .add {
-        selectedTab = .add
+        activateTab(.add)
       }
     case .feedback:
       // Open feedback sheet for users viewing their feedback responses
@@ -638,6 +653,23 @@ struct MainTabView: View {
       coordinator.clearPendingDeepLink()
     }
     // Note: We don't clear the deep link here for tab-based navigation - the destination view will consume and clear it
+  }
+
+  private func activateTab(_ tab: Tab) {
+    loadedTabs.insert(tab)
+    selectedTab = tab
+  }
+
+  @ViewBuilder
+  private func tabHost<Content: View>(
+    for tab: Tab,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    if loadedTabs.contains(tab) {
+      content()
+    } else {
+      Color.clear
+    }
   }
 }
 

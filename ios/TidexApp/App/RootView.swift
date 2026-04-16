@@ -292,25 +292,21 @@ struct LoadingView: View {
   }
 
   var body: some View {
-    GeometryReader { geometry in
-      ZStack {
-        // Use the cached app theme so the first SwiftUI frame matches the
-        // user's last-selected appearance as early as possible.
-        launchBackgroundColor
+    ZStack {
+      // Use the cached app theme so the first SwiftUI frame matches the
+      // user's last-selected appearance as early as possible.
+      launchBackgroundColor
 
-        // Logo centered in full screen (ignoring safe areas) - matches storyboard centerX/centerY
-        Image("SplashLaunch")
-          .resizable()
-          .aspectRatio(contentMode: .fit)
-          .frame(width: 150, height: 150)
-          .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+      // Center the logo without reading container geometry during launch.
+      Image("SplashLaunch")
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .frame(width: 150, height: 150)
 
-        // Spinner positioned below the logo
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-          .scaleEffect(1.2)
-          .position(x: geometry.size.width / 2, y: geometry.size.height / 2 + 105)
-      }
+      ProgressView()
+        .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+        .scaleEffect(1.2)
+        .offset(y: 105)
     }
     .ignoresSafeArea()
     .onAppear {
