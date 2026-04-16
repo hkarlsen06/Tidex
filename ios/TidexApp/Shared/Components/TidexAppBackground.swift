@@ -22,59 +22,64 @@ struct TidexAppBackground: View {
     colorScheme == .dark ? 0.07 : 0.025
   }
 
+  private var primaryGlowRadius: CGFloat {
+    UIDevice.current.userInterfaceIdiom == .pad ? 1120 : 780
+  }
+
+  private var secondaryGlowRadius: CGFloat {
+    UIDevice.current.userInterfaceIdiom == .pad ? 980 : 680
+  }
+
   var body: some View {
-    GeometryReader { geometry in
-      let maxDimension = max(geometry.size.width, geometry.size.height)
+    ZStack {
+      Color.tidexBackground
 
-      ZStack {
-        Color.tidexBackground
+      LinearGradient(
+        colors: [
+          Color.tidexBlue.opacity(verticalTopOpacity),
+          Color.tidexBrandPrimary.opacity(verticalMidOpacity),
+          Color.clear,
+        ],
+        startPoint: .top,
+        endPoint: UnitPoint(x: 0.5, y: 0.8)
+      )
+      .ignoresSafeArea()
 
-        LinearGradient(
-          colors: [
-            Color.tidexBlue.opacity(verticalTopOpacity),
-            Color.tidexBrandPrimary.opacity(verticalMidOpacity),
-            Color.clear,
-          ],
-          startPoint: .top,
-          endPoint: UnitPoint(x: 0.5, y: 0.8)
-        )
-        .ignoresSafeArea()
+      // A large fixed radius avoids per-layout geometry reads in the shared root background.
+      RadialGradient(
+        colors: [
+          Color.tidexBlue.opacity(glowOpacityPrimary),
+          Color.tidexBrandPrimary.opacity(glowOpacitySecondary),
+          Color.clear,
+        ],
+        center: UnitPoint(x: 0.5, y: 0.0),
+        startRadius: 0,
+        endRadius: primaryGlowRadius
+      )
+      .ignoresSafeArea()
 
-        RadialGradient(
-          colors: [
-            Color.tidexBlue.opacity(glowOpacityPrimary),
-            Color.tidexBrandPrimary.opacity(glowOpacitySecondary),
-            Color.clear,
-          ],
-          center: UnitPoint(x: 0.5, y: 0.0),
-          startRadius: 0,
-          endRadius: maxDimension * 0.82
-        )
-        .ignoresSafeArea()
+      RadialGradient(
+        colors: [
+          Color.tidexBlue.opacity(colorScheme == .dark ? 0.055 : 0.02),
+          Color.clear,
+        ],
+        center: UnitPoint(x: 0.5, y: 0.46),
+        startRadius: 0,
+        endRadius: secondaryGlowRadius
+      )
+      .ignoresSafeArea()
 
-        RadialGradient(
-          colors: [
-            Color.tidexBlue.opacity(colorScheme == .dark ? 0.055 : 0.02),
-            Color.clear,
-          ],
-          center: UnitPoint(x: 0.5, y: 0.46),
-          startRadius: 0,
-          endRadius: maxDimension * 0.72
-        )
-        .ignoresSafeArea()
-
-        LinearGradient(
-          colors: [
-            Color.clear,
-            Color.tidexBackground.opacity(colorScheme == .dark ? 0.10 : 0.05),
-          ],
-          startPoint: UnitPoint(x: 0.5, y: 0.55),
-          endPoint: .bottom
-        )
-        .ignoresSafeArea()
-      }
+      LinearGradient(
+        colors: [
+          Color.clear,
+          Color.tidexBackground.opacity(colorScheme == .dark ? 0.10 : 0.05),
+        ],
+        startPoint: UnitPoint(x: 0.5, y: 0.55),
+        endPoint: .bottom
+      )
       .ignoresSafeArea()
     }
+    .ignoresSafeArea()
     .allowsHitTesting(false)
   }
 }
