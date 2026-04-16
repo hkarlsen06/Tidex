@@ -201,8 +201,9 @@ struct DashboardView: View {
     .onDisappear {
       countdownManager.stop()
     }
-    .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+    .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { notification in
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+      guard (notification.object as AnyObject?) !== viewModel else { return }
       // Reload dashboard when shifts change (e.g., after adding a shift)
       Task {
         await viewModel.reloadFromLocal()

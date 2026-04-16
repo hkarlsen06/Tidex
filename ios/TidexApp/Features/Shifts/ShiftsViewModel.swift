@@ -721,7 +721,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       clearSelection()
       await reloadFromLocal()
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
 
       // Play deletion feedback
       Haptics.playShiftDeleted()
@@ -833,7 +833,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Reload to show the new shift
       await reloadFromLocal()
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
 
     } catch {
       logger.error("Failed to copy shift: \(error.localizedDescription)")
@@ -891,7 +891,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Reload to show the moved shift
       await reloadFromLocal()
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
 
     } catch {
       logger.error("Failed to move shift: \(error.localizedDescription)")
@@ -931,7 +931,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
 
     } catch {
       logger.error("❌ Failed to update recurring shift: \(error.localizedDescription)")
@@ -961,7 +961,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
 
     } catch {
       logger.error("❌ Failed to delete recurring shift: \(error.localizedDescription)")
@@ -1015,7 +1015,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       }
 
       await reloadFromLocal()
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
     } catch {
       logger.error("❌ Failed to update event: \(error.localizedDescription)")
       throw error
@@ -1031,7 +1031,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     logger.info("🗑️ Deleting event \(id)")
     try await eventsRepository.deleteEvent(id: id)
     await reloadFromLocal()
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    notifyShiftsDidChange()
   }
 
   // MARK: - Shift Editing
@@ -1108,7 +1108,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
 
     } catch {
       logger.error("❌ Failed to update shift: \(error.localizedDescription)")
@@ -1133,6 +1133,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     self.weekGroups = self.groupShiftsByWeek(computedShifts)
     self.committedYear = year
     self.committedMonth = month
+  }
+
+  private func notifyShiftsDidChange() {
+    NotificationCenter.default.post(name: .shiftsDidChange, object: self)
   }
 
   private func loadShiftsForDisplayedMonthNonBlocking() {
@@ -1237,7 +1241,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil
     activeJobs = []
-    events = []
     lastLoadedVisibleRange = nil
 
     await loadShiftsFromLocal()
@@ -1296,7 +1299,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       snapshots = []
       recurringShifts = []
       activeJobs = []
-      events = []
       lastLoadedVisibleRange = nil
 
       // Reload from local repositories
@@ -1330,7 +1332,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
     activeJobs = []
-    events = []
     lastLoadedVisibleRange = nil
 
     // Also clear in-memory recurring shifts cache so exclusions are picked up

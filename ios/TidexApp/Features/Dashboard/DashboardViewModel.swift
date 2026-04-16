@@ -399,6 +399,10 @@ final class ClockSessionReconciler {
   private let shiftsRepository: ShiftsRepository
   private var isReconciling = false
 
+  private func notifyShiftsDidChange() {
+    NotificationCenter.default.post(name: .shiftsDidChange, object: self)
+  }
+
   init(
     clockSessionStore: TemporaryClockSessionStore? = nil,
     shiftsRepository: ShiftsRepository? = nil
@@ -421,7 +425,7 @@ final class ClockSessionReconciler {
 
     if Self.hasExceededEndOfDayLimit(temporarySession, at: referenceDate) {
       cancelTemporarySession(temporarySession)
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
       ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
         .checkAndStartLiveActivityIfNeeded()
       return
@@ -456,7 +460,7 @@ final class ClockSessionReconciler {
 
     cancelTemporarySession(temporarySession)
 
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    notifyShiftsDidChange()
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
       .checkAndStartLiveActivityIfNeeded()
   }
@@ -613,6 +617,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let previousYM: (year: Int, month: Int)
     let currency: String
     let jobs: [Job]
+  }
+
+  private func notifyShiftsDidChange() {
+    NotificationCenter.default.post(name: .shiftsDidChange, object: self)
   }
 
   // MARK: - Published State
@@ -1409,7 +1417,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
     displayJobs = []
-    displayedMonthEvents = []
     settings = nil  // Force re-read settings from repository
     snapshots = []  // Force re-read snapshots from repository
     recurringShifts = []  // Force re-read recurring shifts from repository
@@ -2450,7 +2457,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     cancelTemporarySession(session)
 
     await reloadFromLocal()
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    notifyShiftsDidChange()
     await refreshClockActiveState(referenceDate: Date())
   }
 
@@ -2461,7 +2468,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     guard case .temporary(let session) = activeClockState else { return }
 
     cancelTemporarySession(session)
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    notifyShiftsDidChange()
     await refreshClockActiveState(referenceDate: Date())
   }
 
@@ -2539,7 +2546,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     await reloadFromLocal()
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    notifyShiftsDidChange()
   }
 
   func deleteEvent(id: String) async throws {
@@ -2550,7 +2557,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     try await eventsRepository.deleteEvent(id: id)
     await reloadFromLocal()
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    notifyShiftsDidChange()
   }
 
   /// End an active shift immediately using the current local device time.
@@ -2665,7 +2672,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      notifyShiftsDidChange()
 
     } catch {
       logger.error("❌ Failed to update shift: \(error.localizedDescription)")
