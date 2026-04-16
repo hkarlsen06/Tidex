@@ -308,7 +308,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     Dictionary(uniqueKeysWithValues: activeJobs.map { ($0.id, $0) })
   }
 
-  private var lastLoadedVisibleRange: (start: Date, end: Date)?
+  private var committedVisibleRange: (start: Date, end: Date) {
+    Date.visibleCalendarRange(year: committedYear, month: committedMonth)
+  }
 
   func jobForShift(_ shift: ShiftWithComputations) -> Job? {
     guard let jobId = shift.shift.job_id else { return nil }
@@ -316,13 +318,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   }
 
   private func visibleRangeContains(_ dateISO: String) -> Bool {
-    guard
-      let range = lastLoadedVisibleRange,
-      let date = Date.fromISODateString(dateISO)
-    else {
+    guard let date = Date.fromISODateString(dateISO) else {
       return false
     }
 
+    let range = committedVisibleRange
     return date >= range.start && date <= range.end
   }
 
@@ -1123,13 +1123,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   private func applyCommittedMonthSnapshot(
     shifts computedShifts: [ShiftWithComputations],
     events displayEvents: [EventRow],
-    visibleRange: (start: Date, end: Date),
     year: Int,
     month: Int
   ) {
     self.shifts = computedShifts
     self.events = displayEvents
-    self.lastLoadedVisibleRange = visibleRange
     self.weekGroups = self.groupShiftsByWeek(computedShifts)
     self.committedYear = year
     self.committedMonth = month
@@ -1157,7 +1155,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       applyCommittedMonthSnapshot(
         shifts: displayCache.shifts,
         events: displayCache.events,
-        visibleRange: displayCache.visibleRange,
         year: targetYear,
         month: targetMonth
       )
@@ -1241,7 +1238,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil
     activeJobs = []
-    lastLoadedVisibleRange = nil
 
     await loadShiftsFromLocal()
 
@@ -1299,7 +1295,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       snapshots = []
       recurringShifts = []
       activeJobs = []
-      lastLoadedVisibleRange = nil
 
       // Reload from local repositories
       await loadShiftsFromLocal()
@@ -1332,7 +1327,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     prefetchTasks.removeAll()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
     activeJobs = []
-    lastLoadedVisibleRange = nil
 
     // Also clear in-memory recurring shifts cache so exclusions are picked up
     recurringShifts = []
@@ -1454,7 +1448,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       applyCommittedMonthSnapshot(
         shifts: computedShifts,
         events: displayEvents,
-        visibleRange: visibleRange,
         year: displayYM.year,
         month: displayYM.month
       )
@@ -1588,7 +1581,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       applyCommittedMonthSnapshot(
         shifts: computedShifts,
         events: displayEvents,
-        visibleRange: visibleRange,
         year: loadYear,
         month: loadMonth
       )
