@@ -109,7 +109,24 @@ final class LocalRecurringShift {
   /// Decoded selected days
   var decodedSelectedDays: SelectedDays {
     get {
-      (try? syncJSONDecoder.decode(SelectedDays.self, from: selectedDays)) ?? [:]
+      if let decoded = try? syncJSONDecoder.decode(SelectedDays.self, from: selectedDays),
+        !decoded.isEmpty
+      {
+        return decoded
+      }
+
+      if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
+        let fallback = try? syncJSONDecoder.decode(SelectedDays.self, from: snapshot.selectedDays),
+        !fallback.isEmpty
+      {
+        SyncLogger.shared.log(
+          "Recovered corrupt selectedDays for recurring shift \(id) from last synced snapshot",
+          level: .warning
+        )
+        return fallback
+      }
+
+      return [:]
     }
     set {
       selectedDays = (try? canonicalJSONEncoder.encode(newValue)) ?? Data()
@@ -120,7 +137,23 @@ final class LocalRecurringShift {
   var decodedEndCondition: EndCondition? {
     get {
       guard let data = endCondition else { return nil }
-      return try? syncJSONDecoder.decode(EndCondition.self, from: data)
+      if let decoded = try? syncJSONDecoder.decode(EndCondition.self, from: data) {
+        return decoded
+      }
+
+      if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
+        let fallback = snapshot.endCondition.flatMap({
+          try? syncJSONDecoder.decode(EndCondition.self, from: $0)
+        })
+      {
+        SyncLogger.shared.log(
+          "Recovered corrupt endCondition for recurring shift \(id) from last synced snapshot",
+          level: .warning
+        )
+        return fallback
+      }
+
+      return nil
     }
     set {
       endCondition = newValue.flatMap { try? canonicalJSONEncoder.encode($0) }
@@ -131,7 +164,23 @@ final class LocalRecurringShift {
   var decodedExclusions: [String] {
     get {
       guard let data = exclusions else { return [] }
-      return (try? syncJSONDecoder.decode([String].self, from: data)) ?? []
+      if let decoded = try? syncJSONDecoder.decode([String].self, from: data) {
+        return decoded
+      }
+
+      if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
+        let fallback = snapshot.exclusions.flatMap({
+          try? syncJSONDecoder.decode([String].self, from: $0)
+        })
+      {
+        SyncLogger.shared.log(
+          "Recovered corrupt exclusions for recurring shift \(id) from last synced snapshot",
+          level: .warning
+        )
+        return fallback
+      }
+
+      return []
     }
     set {
       exclusions = newValue.isEmpty ? nil : (try? canonicalJSONEncoder.encode(newValue))
@@ -142,7 +191,26 @@ final class LocalRecurringShift {
   var decodedDateSpecificSupplements: [String: CustomSupplementsData] {
     get {
       guard let data = dateSpecificSupplements else { return [:] }
-      return (try? syncJSONDecoder.decode([String: CustomSupplementsData].self, from: data)) ?? [:]
+      if let decoded = try? syncJSONDecoder.decode([String: CustomSupplementsData].self, from: data)
+      {
+        return decoded
+      }
+
+      if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
+        let fallback = snapshot.dateSpecificSupplements.flatMap({
+          try? syncJSONDecoder.decode([String: CustomSupplementsData].self, from: $0)
+        })
+      {
+        SyncLogger.shared.log(
+          """
+          Recovered corrupt dateSpecificSupplements for recurring shift \(id) from last synced snapshot
+          """,
+          level: .warning
+        )
+        return fallback
+      }
+
+      return [:]
     }
     set {
       dateSpecificSupplements =
