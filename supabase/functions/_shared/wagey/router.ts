@@ -14,6 +14,7 @@ import type {
 import {
   ClaudeProviderError,
   DEFAULT_CLAUDE_MODEL,
+  resolveClaudeModel,
   streamClaudeChat,
 } from "./claude.ts";
 import { invalidateWageyCache, type WageyRequestContext } from "./context.ts";
@@ -494,15 +495,13 @@ function getClaudeConfig(): { apiKey: string; model: string } {
     throw new Error("Missing CLAUDE_API_KEY");
   }
 
-  const model = configuredModel.startsWith("claude-opus-4-6")
-    ? configuredModel
-    : DEFAULT_CLAUDE_MODEL;
+  const model = resolveClaudeModel(configuredModel);
 
   if (configuredModel && configuredModel !== model) {
     console.warn(JSON.stringify({
       scope: "wagey-router",
       message:
-        "Ignoring unsupported CLAUDE_MODEL for Wagey; falling back to default Opus 4.6",
+        "Ignoring unsupported CLAUDE_MODEL for Wagey; falling back to default Opus 4.7",
       configuredModel,
       fallbackModel: model,
     }));

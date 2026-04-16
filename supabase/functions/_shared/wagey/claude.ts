@@ -18,9 +18,12 @@ import type {
 const CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
 const COMPACTION_BETA = "compact-2026-01-12";
 const CODE_EXECUTION_WEB_TOOLS_BETA = "code-execution-web-tools-2026-02-09";
-const OPUS_46_MODEL_PREFIX = "claude-opus-4-6";
-export const DEFAULT_CLAUDE_MODEL = "claude-opus-4-6";
-const DEFAULT_REASONING_EFFORT = "low";
+export const SUPPORTED_CLAUDE_MODEL_PREFIXES = [
+  "claude-opus-4-7",
+  "claude-opus-4-6",
+] as const;
+export const DEFAULT_CLAUDE_MODEL = "claude-opus-4-7";
+const DEFAULT_REASONING_EFFORT = "high";
 const CLAUDE_STREAM_IDLE_TIMEOUT_MS = 30_000;
 const GENERIC_PROVIDER_ERROR_MESSAGE =
   "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.";
@@ -31,7 +34,6 @@ export type StreamOptions = {
   messages: Message[];
   system?: string;
   tools?: ClaudeTool[];
-  temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
   idleTimeoutMs?: number;
@@ -86,8 +88,17 @@ export class ClaudeProviderError extends Error {
   }
 }
 
-function isOpus46Model(model: string): boolean {
-  return model.startsWith(OPUS_46_MODEL_PREFIX);
+export function isSupportedClaudeModel(model: string): boolean {
+  return SUPPORTED_CLAUDE_MODEL_PREFIXES.some((prefix) =>
+    model.startsWith(prefix)
+  );
+}
+
+export function resolveClaudeModel(configuredModel?: string | null): string {
+  const trimmedModel = configuredModel?.trim() ?? "";
+  return isSupportedClaudeModel(trimmedModel)
+    ? trimmedModel
+    : DEFAULT_CLAUDE_MODEL;
 }
 
 function parseClaudeEvent(line: string): Record<string, unknown> | null {
@@ -391,7 +402,6 @@ export async function* streamClaudeChat(options: {
   messages: Message[];
   system?: string;
   tools?: ClaudeTool[];
-  temperature?: number;
   maxTokens?: number;
   signal?: AbortSignal;
   idleTimeoutMs?: number;
@@ -415,9 +425,9 @@ export async function* streamClaudeChat(options: {
     throw new Error("Missing CLAUDE_MODEL");
   }
 
-  if (!isOpus46Model(model)) {
+  if (!isSupportedClaudeModel(model)) {
     throw new Error(
-      `CLAUDE_MODEL must be an Opus 4.6 model for Wagey. Received: ${model}`,
+      `CLAUDE_MODEL must be a supported Wagey Opus model. Received: ${model}`,
     );
   }
 

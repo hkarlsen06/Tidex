@@ -1,5 +1,6 @@
 import { assert, assertEquals } from "jsr:@std/assert";
 
+import { DEFAULT_CLAUDE_MODEL } from "./claude.ts";
 import {
   assistantLikelyClaimsWriteAction,
   handleWageyRequest,
@@ -294,7 +295,7 @@ Deno.test("handleWageyRequest emits built-in tool events and deduped sources for
   const originalModel = Deno.env.get("CLAUDE_MODEL");
 
   Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", "claude-opus-4-6");
+  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
   globalThis.fetch = async () => createSseResponse(buildResearchEvents());
 
   try {
@@ -375,7 +376,7 @@ Deno.test("handleWageyRequest suppresses built-in tool events and sources for le
   const originalModel = Deno.env.get("CLAUDE_MODEL");
 
   Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", "claude-opus-4-6");
+  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
   globalThis.fetch = async () => createSseResponse(buildResearchEvents());
 
   try {
@@ -419,7 +420,7 @@ Deno.test("handleWageyRequest streams text chunks before the upstream turn fully
   const originalModel = Deno.env.get("CLAUDE_MODEL");
 
   Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", "claude-opus-4-6");
+  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
   globalThis.fetch = async () =>
     createDelayedSseResponse(buildSlowTextOnlyEvents(), 60);
 
@@ -455,6 +456,104 @@ Deno.test("handleWageyRequest streams text chunks before the upstream turn fully
     );
   } finally {
     globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      Deno.env.delete("CLAUDE_API_KEY");
+    } else {
+      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("CLAUDE_MODEL");
+    } else {
+      Deno.env.set("CLAUDE_MODEL", originalModel);
+    }
+  }
+});
+
+Deno.test("handleWageyRequest sends the explicit Opus 4.6 rollback model when configured", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
+  const originalModel = Deno.env.get("CLAUDE_MODEL");
+  let capturedModel: string | null = null;
+
+  Deno.env.set("CLAUDE_API_KEY", "test-key");
+  Deno.env.set("CLAUDE_MODEL", "claude-opus-4-6");
+  globalThis.fetch = async (_input, init) => {
+    const request = init as { body?: string } | undefined;
+    const body = JSON.parse(request?.body ?? "{}") as { model?: string };
+    capturedModel = body.model ?? null;
+    return createSseResponse(buildSlowTextOnlyEvents());
+  };
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(userId, []),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    await readChunkStream(response);
+    assertEquals(capturedModel, "claude-opus-4-6");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      Deno.env.delete("CLAUDE_API_KEY");
+    } else {
+      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("CLAUDE_MODEL");
+    } else {
+      Deno.env.set("CLAUDE_MODEL", originalModel);
+    }
+  }
+});
+
+Deno.test("handleWageyRequest falls back to default Opus 4.7 for unsupported CLAUDE_MODEL", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalWarn = console.warn;
+  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
+  const originalModel = Deno.env.get("CLAUDE_MODEL");
+  let capturedModel: string | null = null;
+  const warnings: string[] = [];
+
+  Deno.env.set("CLAUDE_API_KEY", "test-key");
+  Deno.env.set("CLAUDE_MODEL", "claude-sonnet-4-6");
+  console.warn = (message?: unknown, ...optionalParams: unknown[]) => {
+    warnings.push([message, ...optionalParams].map(String).join(" "));
+  };
+  globalThis.fetch = async (_input, init) => {
+    const request = init as { body?: string } | undefined;
+    const body = JSON.parse(request?.body ?? "{}") as { model?: string };
+    capturedModel = body.model ?? null;
+    return createSseResponse(buildSlowTextOnlyEvents());
+  };
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(userId, []),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    await readChunkStream(response);
+
+    assertEquals(capturedModel, DEFAULT_CLAUDE_MODEL);
+    assert(warnings.some((warning) => warning.includes("default Opus 4.7")));
+  } finally {
+    globalThis.fetch = originalFetch;
+    console.warn = originalWarn;
     if (originalApiKey === undefined) {
       Deno.env.delete("CLAUDE_API_KEY");
     } else {
@@ -527,7 +626,7 @@ Deno.test("handleWageyRequest returns a safe generic error for Anthropic billing
   const originalModel = Deno.env.get("CLAUDE_MODEL");
 
   Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", "claude-opus-4-6");
+  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
   globalThis.fetch = async () =>
     new Response(
       JSON.stringify({
