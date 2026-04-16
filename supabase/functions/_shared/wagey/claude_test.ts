@@ -1,6 +1,10 @@
 import { assertEquals } from "jsr:@std/assert";
 
-import { streamClaudeChat } from "./claude.ts";
+import {
+  DEFAULT_CLAUDE_MODEL,
+  resolveClaudeModel,
+  streamClaudeChat,
+} from "./claude.ts";
 import type { StreamChunk } from "./ai-types.ts";
 
 function createSseResponse(events: Record<string, unknown>[]): Response {
@@ -97,7 +101,7 @@ Deno.test("streamClaudeChat parses Anthropic built-in tools, citations, and func
     for await (
       const chunk of streamClaudeChat({
         apiKey: "test-key",
-        model: "claude-opus-4-6",
+        model: DEFAULT_CLAUDE_MODEL,
         messages: [{ role: "user", content: "Matcher lønna?" }],
         tools: [
           {
@@ -211,7 +215,14 @@ Deno.test("streamClaudeChat parses Anthropic built-in tools, citations, and func
   }
 });
 
-Deno.test("streamClaudeChat enables extended thinking with low effort", async () => {
+Deno.test("resolveClaudeModel keeps supported rollback models and falls back for unsupported ones", () => {
+  assertEquals(resolveClaudeModel("claude-opus-4-7"), "claude-opus-4-7");
+  assertEquals(resolveClaudeModel("claude-opus-4-6"), "claude-opus-4-6");
+  assertEquals(resolveClaudeModel("claude-sonnet-4-6"), DEFAULT_CLAUDE_MODEL);
+  assertEquals(resolveClaudeModel(""), DEFAULT_CLAUDE_MODEL);
+});
+
+Deno.test("streamClaudeChat enables adaptive thinking with high effort on Opus 4.7", async () => {
   const originalFetch = globalThis.fetch;
   let capturedBody: { thinking?: unknown; output_config?: unknown } | null =
     null;
@@ -235,7 +246,7 @@ Deno.test("streamClaudeChat enables extended thinking with low effort", async ()
     for await (
       const _chunk of streamClaudeChat({
         apiKey: "test-key",
-        model: "claude-opus-4-6",
+        model: DEFAULT_CLAUDE_MODEL,
         messages: [{ role: "user", content: "Hei" }],
       })
     ) {
@@ -248,7 +259,7 @@ Deno.test("streamClaudeChat enables extended thinking with low effort", async ()
 
     const requestBody = capturedBody as Record<string, unknown>;
     assertEquals(requestBody["thinking"], { type: "adaptive" });
-    assertEquals(requestBody["output_config"], { effort: "low" });
+    assertEquals(requestBody["output_config"], { effort: "high" });
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -274,7 +285,7 @@ Deno.test("streamClaudeChat fails fast when the Claude stream goes idle", async 
       for await (
         const _chunk of streamClaudeChat({
           apiKey: "test-key",
-          model: "claude-opus-4-6",
+          model: DEFAULT_CLAUDE_MODEL,
           messages: [{ role: "user", content: "Hei" }],
           idleTimeoutMs: 10,
         })
@@ -322,7 +333,7 @@ Deno.test("streamClaudeChat emits thinking_start when Anthropic opens a thinking
     for await (
       const chunk of streamClaudeChat({
         apiKey: "test-key",
-        model: "claude-opus-4-6",
+        model: DEFAULT_CLAUDE_MODEL,
         messages: [{ role: "user", content: "Hei" }],
       })
     ) {
@@ -367,7 +378,7 @@ Deno.test("streamClaudeChat sanitizes Anthropic billing errors into provider err
       for await (
         const _chunk of streamClaudeChat({
           apiKey: "test-key",
-          model: "claude-opus-4-6",
+          model: DEFAULT_CLAUDE_MODEL,
           messages: [{ role: "user", content: "Hei" }],
         })
       ) {
