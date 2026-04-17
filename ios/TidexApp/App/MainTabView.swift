@@ -163,7 +163,7 @@ struct MainTabView: View {
 
           TabView(selection: tabSelection) {
             tabHost(for: .home) {
-              DashboardView(selectedTab: $selectedTab, showStatsView: $showHomeStats)
+              DashboardView(selectedTab: tabSelection, showStatsView: $showHomeStats)
             }
             .tabItem {
               Label(String(localized: Tab.home.localizationKey), systemImage: Tab.home.icon)
@@ -171,7 +171,7 @@ struct MainTabView: View {
             .tag(Tab.home)
 
             tabHost(for: .shifts) {
-              ShiftsView(selectedTab: $selectedTab)
+              ShiftsView(selectedTab: tabSelection)
             }
             .tabItem {
               Label(String(localized: Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
@@ -179,7 +179,7 @@ struct MainTabView: View {
             .tag(Tab.shifts)
 
             tabHost(for: .add) {
-              AddShiftView(selectedTab: $selectedTab, isKeyboardVisible: $isKeyboardVisible)
+              AddShiftView(selectedTab: tabSelection, isKeyboardVisible: $isKeyboardVisible)
             }
             .tabItem {
               Label(String(localized: Tab.add.localizationKey), systemImage: Tab.add.icon)
@@ -187,7 +187,7 @@ struct MainTabView: View {
             .tag(Tab.add)
 
             tabHost(for: .wagey) {
-              WageyView(selectedTab: $selectedTab)
+              WageyView(selectedTab: tabSelection)
             }
             .tabItem {
               Label(String(localized: Tab.wagey.localizationKey), systemImage: Tab.wagey.icon)
@@ -196,7 +196,7 @@ struct MainTabView: View {
 
             tabHost(for: .sharing) {
               SharingView(
-                selectedTab: $selectedTab, hasSelectedSharer: $sharingHasSelectedSharer)
+                selectedTab: tabSelection, hasSelectedSharer: $sharingHasSelectedSharer)
             }
             .tabItem {
               Label(String(localized: Tab.sharing.localizationKey), systemImage: friendsTabIcon)

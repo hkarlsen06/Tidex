@@ -1151,8 +1151,7 @@ struct ShiftsView: View {
                   return
                 }
                 if let dateISO = dateISO {
-                  SharedMonthContext.shared.preselectedDate = dateISO
-                  selectedTab = .add
+                  navigateToAddTab(preselectedDate: dateISO)
                 }
               },
               isCopyMode: viewModel.isCopyMode,
@@ -1214,7 +1213,7 @@ struct ShiftsView: View {
           monthPeriod: viewModel.monthPeriod,
           monthName: viewModel.displayMonthName,
           onAddShift: {
-            selectedTab = .add
+            navigateToAddTab()
           }
         )
         .padding(.horizontal, Spacing.md)
@@ -1368,8 +1367,7 @@ struct ShiftsView: View {
 
                 // No selection active - navigate to Add tab with date pre-selected
                 if let dateISO = dateISO {
-                  SharedMonthContext.shared.preselectedDate = dateISO
-                  selectedTab = .add
+                  navigateToAddTab(preselectedDate: dateISO)
                 }
               },
               isCopyMode: viewModel.isCopyMode,
@@ -1435,7 +1433,7 @@ struct ShiftsView: View {
           monthPeriod: viewModel.monthPeriod,
           monthName: viewModel.displayMonthName,
           onAddShift: {
-            selectedTab = .add
+            navigateToAddTab()
           }
         )
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -1715,13 +1713,17 @@ struct ShiftsView: View {
       TodayPlaceholderCard(onTap: {
         selectionHaptic.selectionChanged()
         // Navigate to add shift with today's date pre-selected
-        SharedMonthContext.shared.preselectedDate = todayISO()
-        selectedTab = .add
+        navigateToAddTab(preselectedDate: todayISO())
       })
       .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
       .listRowBackground(Color.clear)
       .listRowSeparator(.hidden)
     }
+  }
+
+  private func navigateToAddTab(preselectedDate dateISO: String? = nil) {
+    SharedMonthContext.shared.preselectedDate = dateISO
+    selectedTab = .add
   }
 
   private func listCoveredDateISO(for event: EventRow) -> String {

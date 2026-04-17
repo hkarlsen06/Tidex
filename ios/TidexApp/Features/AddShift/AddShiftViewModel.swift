@@ -429,6 +429,9 @@ final class AddShiftViewModel: ObservableObject {
   /// Cached conflict dates for preview sheet
   @Published private(set) var cachedConflictDates: Set<String> = []
 
+  /// Prevents reloading the saved draft over live add-state on later tab appearances.
+  private var hasLoadedInitialData = false
+
   // MARK: - Navigation Callback
 
   /// Called when shifts are successfully created.
@@ -890,6 +893,8 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Load initial data from repositories
   func loadData() async {  // swiftlint:disable:this async_without_await
+    guard !hasLoadedInitialData else { return }
+
     guard let userId = AppCoordinator.shared.getCurrentUserId() else {
       logger.warning("Cannot load data: no user ID")
       return
@@ -922,6 +927,7 @@ final class AddShiftViewModel: ObservableObject {
 
     // Check for pre-selected date from SharedMonthContext (e.g., tapping empty day in Shifts tab)
     applyPreselectedDate()
+    hasLoadedInitialData = true
 
     // Trigger view update now that cached data is loaded
     cacheVersion += 1
@@ -960,6 +966,9 @@ final class AddShiftViewModel: ObservableObject {
   /// Check and apply any pre-selected date from SharedMonthContext
   /// Called from onAppear when tab becomes visible
   func checkPreselectedDate() {
+    // On first add-tab load, loadData() must restore the draft before consuming the
+    // preselected date. Otherwise the restored draft can overwrite the tapped date.
+    guard hasLoadedInitialData else { return }
     applyPreselectedDate()
   }
 
@@ -974,8 +983,12 @@ final class AddShiftViewModel: ObservableObject {
     // Ensure we're in single mode for date selection
     mode = .single
 
-    // Add the date to selection
-    selectedDates.insert(dateISO)
+    // External navigation to Add should focus the tapped date, not merge it into any
+    // previous manual selection left in the form.
+    cachedPreviewEarnings.removeAll()
+    cachedConflictDatesForCalendar.removeAll()
+    selectedDates = [dateISO]
+    scheduleConflictsAndPreviewsRecompute()
 
     // Navigate to the month containing the pre-selected date
     if let date = Date.fromISODateString(dateISO) {
