@@ -288,6 +288,26 @@ function buildSlowTextOnlyEvents(): Record<string, unknown>[] {
   ];
 }
 
+function buildMessageBreakEvents(): Record<string, unknown>[] {
+  return [
+    {
+      type: "content_block_start",
+      content_block: { type: "text" },
+    },
+    {
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: "Første del.\n<wagey_mess" },
+    },
+    {
+      type: "content_block_delta",
+      delta: { type: "text_delta", text: "age_break/>\nAndre del." },
+    },
+    { type: "content_block_stop" },
+    { type: "message_delta", delta: { stop_reason: "end_turn" } },
+    { type: "message_stop" },
+  ];
+}
+
 Deno.test("handleWageyRequest emits built-in tool events and deduped sources for capable clients", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
@@ -453,6 +473,107 @@ Deno.test("handleWageyRequest streams text chunks before the upstream turn fully
     assert(
       !earlyChunks.some((chunk) => chunk.type === "done"),
       "Expected stream to still be in progress when first text arrives",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      Deno.env.delete("CLAUDE_API_KEY");
+    } else {
+      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("CLAUDE_MODEL");
+    } else {
+      Deno.env.set("CLAUDE_MODEL", originalModel);
+    }
+  }
+});
+
+Deno.test("handleWageyRequest emits explicit message_break chunks only for capable clients", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
+  const originalModel = Deno.env.get("CLAUDE_MODEL");
+
+  Deno.env.set("CLAUDE_API_KEY", "test-key");
+  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
+  globalThis.fetch = async () => createSseResponse(buildMessageBreakEvents());
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(userId, ["message_break_v1"]),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    const chunks = await readChunkStream(response);
+
+    assertEquals(
+      chunks.filter((chunk) => chunk.type === "message_break").length,
+      1,
+    );
+    assertEquals(
+      chunks.filter((chunk) => chunk.type === "text").map((chunk) =>
+        chunk.content
+      ),
+      ["Første del.", "Andre del."],
+    );
+    assert(
+      !chunks.some((chunk) =>
+        typeof chunk.content === "string" &&
+        chunk.content.includes("<wagey_message_break/>")
+      ),
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      Deno.env.delete("CLAUDE_API_KEY");
+    } else {
+      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("CLAUDE_MODEL");
+    } else {
+      Deno.env.set("CLAUDE_MODEL", originalModel);
+    }
+  }
+});
+
+Deno.test("handleWageyRequest does not emit message_break chunks for legacy clients", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
+  const originalModel = Deno.env.get("CLAUDE_MODEL");
+
+  Deno.env.set("CLAUDE_API_KEY", "test-key");
+  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
+  globalThis.fetch = async () => createSseResponse(buildMessageBreakEvents());
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(userId, []),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    const chunks = await readChunkStream(response);
+
+    assert(!chunks.some((chunk) => chunk.type === "message_break"));
+    assert(
+      !chunks.some((chunk) =>
+        typeof chunk.content === "string" &&
+        chunk.content.includes("<wagey_message_break/>")
+      ),
     );
   } finally {
     globalThis.fetch = originalFetch;

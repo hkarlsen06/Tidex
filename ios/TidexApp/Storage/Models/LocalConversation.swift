@@ -90,18 +90,21 @@ enum StoredContentBlock: Codable, Equatable {
   case text(String)
   case toolCall(StoredToolCall)
   case image(StoredImageAttachment)
+  case thoughtStatus(ThoughtStatus)
 
   private enum CodingKeys: String, CodingKey {
     case type
     case content
     case toolCall
     case image
+    case thoughtStatus
   }
 
   private enum BlockType: String, Codable {
     case text
     case toolCall
     case image
+    case thoughtStatus
   }
 
   init(from decoder: Decoder) throws {
@@ -118,6 +121,9 @@ enum StoredContentBlock: Codable, Equatable {
     case .image:
       let image = try container.decode(StoredImageAttachment.self, forKey: .image)
       self = .image(image)
+    case .thoughtStatus:
+      let thoughtStatus = try container.decode(ThoughtStatus.self, forKey: .thoughtStatus)
+      self = .thoughtStatus(thoughtStatus)
     }
   }
 
@@ -134,6 +140,9 @@ enum StoredContentBlock: Codable, Equatable {
     case .image(let image):
       try container.encode(BlockType.image, forKey: .type)
       try container.encode(image, forKey: .image)
+    case .thoughtStatus(let thoughtStatus):
+      try container.encode(BlockType.thoughtStatus, forKey: .type)
+      try container.encode(thoughtStatus, forKey: .thoughtStatus)
     }
   }
 }
@@ -250,6 +259,8 @@ extension StoredChatMessage {
         return .toolCall(StoredToolCall(from: toolCall))
       case .image(let attachment):
         return .image(StoredImageAttachment(from: attachment))
+      case .thoughtStatus(let thoughtStatus):
+        return .thoughtStatus(thoughtStatus)
       }
     }
 
@@ -272,6 +283,8 @@ extension StoredChatMessage {
           return .toolCall(storedToolCall.toToolCall())
         case .image(let storedImage):
           return .image(storedImage.toImageAttachment())
+        case .thoughtStatus(let thoughtStatus):
+          return .thoughtStatus(thoughtStatus)
         }
       }
       return ChatMessage(

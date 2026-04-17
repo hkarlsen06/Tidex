@@ -143,6 +143,7 @@ final class WageyService: ObservableObject {
   private static let clientCapabilities = [
     "rich_sources_v1",
     "rich_built_in_tool_events_v1",
+    "message_break_v1",
   ]
 
   @Published private(set) var isStreaming = false
@@ -406,6 +407,8 @@ private actor WageyStreamWorker {
       return .status(thinking: raw.status == "thinking")
     case "text_start":
       return .textStart
+    case "message_break":
+      return .messageBreak
     case "text":
       guard let content = raw.content else { return nil }
       return .text(content: content)

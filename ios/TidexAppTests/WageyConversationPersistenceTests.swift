@@ -137,6 +137,36 @@ final class WageyConversationPersistenceTests: XCTestCase {
     XCTAssertEqual(message.content, "Jeg sjekker dette.\n\nFerdig.")
   }
 
+  func testStoredChatMessageRoundTripsThoughtStatusWithoutAffectingTextContent() throws {
+    let message = ChatMessage(
+      id: "assistant-thought-status",
+      role: .assistant,
+      contentBlocks: [
+        .thoughtStatus(ThoughtStatus(id: "thought-1", durationSeconds: 2)),
+        .text("Her er svaret mitt."),
+      ],
+      timestamp: Date(timeIntervalSince1970: 1_700_000_302)
+    )
+
+    let stored = StoredChatMessage(from: message)
+    let data = try JSONEncoder().encode(stored)
+    let decoded = try JSONDecoder().decode(StoredChatMessage.self, from: data)
+    let roundTrip = decoded.toChatMessage()
+
+    XCTAssertEqual(roundTrip.content, "Her er svaret mitt.")
+    XCTAssertEqual(roundTrip.contentBlocks.count, 2)
+    XCTAssertEqual(
+      roundTrip.contentBlocks.first,
+      .thoughtStatus(ThoughtStatus(id: "thought-1", durationSeconds: 2))
+    )
+  }
+
+  func testThoughtStatusUsesShortLabelForOneSecond() {
+    let status = ThoughtStatus(durationSeconds: 1)
+
+    XCTAssertEqual(status.localizedLabel, String(localized: "wagey.streaming.thought_short"))
+  }
+
   func testLocalConversationStoresCompactionSummary() {
     let conversation = LocalConversation(
       userId: "USER",

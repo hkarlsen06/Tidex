@@ -30,6 +30,8 @@ struct ChatMessageBubble: View {
           ToolStatusView(toolCall: toolCall)
         case .image(let attachment):
           imageContent(attachment: attachment, isUser: message.role == .user)
+        case .thoughtStatus(let status):
+          thoughtStatusContent(status)
         }
       }
 
@@ -101,6 +103,20 @@ struct ChatMessageBubble: View {
           }
       }
     }
+  }
+
+  private func thoughtStatusContent(_ status: ThoughtStatus) -> some View {
+    HStack(spacing: Spacing.xxs) {
+      Image(systemName: "brain.head.profile")
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexTextMuted)
+
+      Text(status.localizedLabel)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextMuted)
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xxs)
   }
 }
 
@@ -382,6 +398,8 @@ struct StreamingMessageBubble: View {
               ToolStatusView(toolCall: toolCall)
             case .image:
               EmptyView()
+            case .thoughtStatus(let status):
+              ThinkingDurationInlineView(status: status)
             }
           }
 
@@ -415,6 +433,24 @@ struct StreamingMessageBubble: View {
     .padding(.vertical, Spacing.sm)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
+  }
+}
+
+private struct ThinkingDurationInlineView: View {
+  let status: ThoughtStatus
+
+  var body: some View {
+    HStack(spacing: Spacing.xxs) {
+      Image(systemName: "brain.head.profile")
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexTextMuted)
+
+      Text(status.localizedLabel)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextMuted)
+    }
+    .padding(.horizontal, Spacing.sm)
+    .padding(.vertical, Spacing.xxs)
   }
 }
 

@@ -198,6 +198,7 @@ struct WageyView: View {
         // Message list
         ChatMessageList(
           messages: viewModel.messages,
+          streamingMessages: viewModel.streamingMessages,
           streamingContentBlocks: viewModel.activeContentBlocks,
           isStreaming: viewModel.isStreaming,
           isThinking: viewModel.isModelThinking,
