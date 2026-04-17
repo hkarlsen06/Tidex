@@ -3,6 +3,7 @@ import SwiftUI
 /// Scrollable list of chat messages with auto-scroll to bottom
 struct ChatMessageList: View {
   let messages: [ChatMessage]
+  let streamingMessages: [ChatMessage]
   let streamingContentBlocks: [ContentBlock]
   let isStreaming: Bool
   let isThinking: Bool
@@ -24,6 +25,7 @@ struct ChatMessageList: View {
 
   init(
     messages: [ChatMessage],
+    streamingMessages: [ChatMessage],
     streamingContentBlocks: [ContentBlock],
     isStreaming: Bool,
     isThinking: Bool,
@@ -38,6 +40,7 @@ struct ChatMessageList: View {
     onHistoryTapped: (() -> Void)? = nil
   ) {
     self.messages = messages
+    self.streamingMessages = streamingMessages
     self.streamingContentBlocks = streamingContentBlocks
     self.isStreaming = isStreaming
     self.isThinking = isThinking
@@ -60,9 +63,10 @@ struct ChatMessageList: View {
   }
 
   private var scrollState: ScrollState {
-    ScrollState(
-      messageCount: messages.count,
-      lastMessageID: messages.last?.id,
+    let renderedMessages = messages + streamingMessages
+    return ScrollState(
+      messageCount: renderedMessages.count,
+      lastMessageID: renderedMessages.last?.id,
       streamingSignature: streamingContentSignature,
       isStreaming: isStreaming || isThinking
     )
@@ -78,6 +82,8 @@ struct ChatMessageList: View {
         result = result &* 31 &+ (toolCall.result?.count ?? 0)
       case .image:
         result = result &* 31 &+ 1
+      case .thoughtStatus(let status):
+        result = result &* 31 &+ status.durationSeconds
       }
     }
   }
@@ -100,6 +106,11 @@ struct ChatMessageList: View {
       } else {
         // Message bubbles
         ForEach(messages) { message in
+          ChatMessageBubble(message: message)
+            .id(message.id)
+        }
+
+        ForEach(streamingMessages) { message in
           ChatMessageBubble(message: message)
             .id(message.id)
         }
@@ -367,6 +378,8 @@ struct ChatMessageList: View {
       return formatToolCallForCopy(toolCall)
     case .image:
       return nil
+    case .thoughtStatus(let status):
+      return status.localizedLabel
     }
   }
 
@@ -441,6 +454,7 @@ struct ChatMessageList: View {
 #Preview("Empty State") {
   ChatMessageList(
     messages: [],
+    streamingMessages: [],
     streamingContentBlocks: [],
     isStreaming: false,
     isThinking: false,
@@ -472,6 +486,7 @@ struct ChatMessageList: View {
         timestamp: Date()
       ),
     ],
+    streamingMessages: [],
     streamingContentBlocks: [],
     isStreaming: false,
     isThinking: false,
@@ -493,6 +508,7 @@ struct ChatMessageList: View {
         timestamp: Date()
       )
     ],
+    streamingMessages: [],
     streamingContentBlocks: [
       .text("I'll add that shift for you..."),
       .toolCall(

@@ -33,7 +33,11 @@ export type SystemPromptContext = {
   bonus: number;
   /** User's name for personalization */
   userName?: string;
+  /** Whether the client supports explicit visual assistant bubble breaks */
+  allowMessageBreaks?: boolean;
 };
+
+export const WAGEY_MESSAGE_BREAK_TOKEN = "<wagey_message_break/>";
 
 export function getSystemPrompt(context?: SystemPromptContext): string {
   // Current local date details (Europe/Oslo)
@@ -112,6 +116,16 @@ Use their name naturally when appropriate (greetings, confirmations) but don't o
 </user>`
     : "";
 
+  const messageBreakSection = context?.allowMessageBreaks
+    ? `
+<message_bubbles>
+- When you want the NEXT visible assistant text to appear in a new message bubble, output exactly ${WAGEY_MESSAGE_BREAK_TOKEN} on its own line.
+- Use it only between user-visible message segments, never at the very start or very end of a reply, and never twice in a row.
+- Never mention or explain the token to the user.
+- Do not fake thinking with stage directions or italicized lines like *thinking*, *tenker*, or similar. Real thinking/status UI is handled separately.
+</message_bubbles>`
+    : "";
+
   return `You are Wagey, a friendly and knowledgeable assistant for Tidex, helping users manage work shifts and track wages.
 
 <language>
@@ -132,6 +146,7 @@ Weekday numbers: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 - Complete the requested task before offering optional follow-up help.
 - If the request is blocked by missing required details, ask only for the minimum missing detail.
 </output_contract>
+${messageBreakSection}
 
 <core_behavior>
 **Communication:**

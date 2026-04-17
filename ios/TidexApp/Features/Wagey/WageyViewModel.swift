@@ -90,6 +90,9 @@ final class WageyViewModel {
   /// Content blocks being streamed from the assistant (in chronological order)
   private(set) var activeContentBlocks: [ContentBlock] = []
 
+  /// Assistant message segments already completed during the current stream.
+  private(set) var streamingMessages: [ChatMessage] = []
+
   /// Whether the next incoming text chunk should begin a new text block.
   private var shouldStartNewStreamingTextBlock = true
 
@@ -101,6 +104,9 @@ final class WageyViewModel {
 
   /// Whether the backend has reported that the model is currently thinking
   private(set) var isModelThinking: Bool = false
+
+  /// Start time for the current visible thinking phase.
+  private var currentThinkingStartedAt: Date?
 
   /// Latest server-authored compaction summary for the active conversation.
   private(set) var currentCompaction: String?
@@ -189,6 +195,8 @@ final class WageyViewModel {
           case .toolCall(let toolCall):
             return blockTotal + (toolCall.arguments?.count ?? 0) + (toolCall.result?.count ?? 0)
           case .image:
+            return blockTotal
+          case .thoughtStatus:
             return blockTotal
           }
         }
@@ -419,10 +427,13 @@ final class WageyViewModel {
     streamTask?.cancel()
     streamTask = nil
     isStreaming = false
+    isModelThinking = false
+    currentThinkingStartedAt = nil
 
     conversations = []
     currentConversationId = nil
     messages = []
+    streamingMessages = []
     activeContentBlocks = []
     shouldStartNewStreamingTextBlock = true
     activeSources = []
@@ -524,6 +535,7 @@ final class WageyViewModel {
     // Load the conversation
     currentConversationId = id
     messages = conversation.messages.map { $0.toChatMessage() }
+    streamingMessages = []
     currentCompaction = conversation.compaction
     error = nil
   }
@@ -539,6 +551,7 @@ final class WageyViewModel {
     // Reset state for new conversation
     currentConversationId = nil
     messages = []
+    streamingMessages = []
     activeContentBlocks = []
     shouldStartNewStreamingTextBlock = true
     activeSources = []
@@ -621,6 +634,8 @@ final class WageyViewModel {
     // Start streaming
     isStreaming = true
     isModelThinking = true
+    currentThinkingStartedAt = nil
+    streamingMessages = []
     activeContentBlocks = []
     shouldStartNewStreamingTextBlock = true
     activeSources = []
@@ -768,6 +783,8 @@ final class WageyViewModel {
           + toolCall.name.count
       case .image:
         return blockTotal + 64
+      case .thoughtStatus:
+        return blockTotal
       }
     }
   }
@@ -796,6 +813,13 @@ final class WageyViewModel {
         let detail = truncateSummaryText(toolCall.result ?? toolCall.arguments ?? "")
         let detailSuffix = detail.isEmpty ? "" : ": \(detail)"
         lines.append("- Tool \(toolCall.name) \(outcome)\(detailSuffix)")
+      }
+
+      for thoughtStatus in message.contentBlocks.compactMap({ block -> ThoughtStatus? in
+        if case .thoughtStatus(let status) = block { return status }
+        return nil
+      }) {
+        lines.append("- \(speaker): \(thoughtStatus.localizedLabel)")
       }
 
       return lines
@@ -907,21 +931,51 @@ final class WageyViewModel {
   private func processChunk(_ chunk: ChatChunk) {
     switch chunk {
     case .status(let thinking):
+      if Self.shouldFlushStreamingAssistantSegment(
+        onThinkingStatus: thinking,
+        activeContentBlocks: activeContentBlocks
+      ) {
+        flushStreamingAssistantSegmentIfNeeded()
+      }
+      if thinking {
+        startThinkingPhaseIfNeeded()
+      } else {
+        currentThinkingStartedAt = nil
+      }
       isModelThinking = thinking
 
     case .textStart:
+      completeThinkingPhaseIfNeeded()
       shouldStartNewStreamingTextBlock = true
 
-    case .text(let content):
+    case .messageBreak:
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
+      shouldStartNewStreamingTextBlock = true
+      if Self.shouldFlushStreamingAssistantSegment(
+        onMessageBreak: activeContentBlocks
+      ) {
+        flushStreamingAssistantSegmentIfNeeded()
+      }
+
+    case .text(let content):
+      completeThinkingPhaseIfNeeded()
+      isModelThinking = false
+      let normalizedContent =
+        if shouldStartNewStreamingTextBlock {
+          WageyTextContent.trimLeadingBubbleWhitespace(from: content)
+        } else {
+          content
+        }
+      guard !normalizedContent.isEmpty else { break }
       // Preserve provider text-block boundaries instead of flattening all text into one run.
       if !shouldStartNewStreamingTextBlock,
         let lastIndex = activeContentBlocks.indices.last,
         case .text(let existingText) = activeContentBlocks[lastIndex]
       {
-        activeContentBlocks[lastIndex] = .text(existingText + content)
+        activeContentBlocks[lastIndex] = .text(existingText + normalizedContent)
       } else {
-        activeContentBlocks.append(.text(content))
+        activeContentBlocks.append(.text(normalizedContent))
       }
       shouldStartNewStreamingTextBlock = false
 
@@ -929,6 +983,7 @@ final class WageyViewModel {
       Haptics.playStreamingToken()
 
     case .toolStart(let toolName, let toolCallId, let toolArguments):
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       // Add a new tool call in progress
@@ -942,6 +997,7 @@ final class WageyViewModel {
       activeContentBlocks.append(.toolCall(toolCall))
 
     case .toolResult(let toolName, let toolCallId, let result, let success):
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       // Update the tool call with its result (find by id in content blocks)
@@ -965,6 +1021,7 @@ final class WageyViewModel {
       }
 
     case .builtInToolStart(let toolName, let toolCallId):
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       let toolCall = ToolCall(
@@ -975,6 +1032,7 @@ final class WageyViewModel {
       activeContentBlocks.append(.toolCall(toolCall))
 
     case .builtInToolResult(let toolName, let toolCallId, let result, let success):
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       if let index = activeContentBlocks.firstIndex(where: { block in
@@ -993,6 +1051,7 @@ final class WageyViewModel {
       }
 
     case .wageyLimit(let remaining, let days, let exceeded, let bonus):
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       // Update wagey invocations from API response to stay in sync
@@ -1026,6 +1085,7 @@ final class WageyViewModel {
       }
 
     case .wageyNoAccess:
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       // User doesn't have access to Wagey
@@ -1047,6 +1107,7 @@ final class WageyViewModel {
     // Stream completed - finalize handled after loop
 
     case .error(let message):
+      completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       // Server-side error
@@ -1066,31 +1127,31 @@ final class WageyViewModel {
       hasAssistantContent: !finalizedBlocks.isEmpty
     )
 
-    // Only create a message if we have content blocks
-    if !finalizedBlocks.isEmpty {
-      let assistantMessage = ChatMessage(
-        id: currentAssistantMessageId ?? UUID().uuidString,
-        role: .assistant,
-        contentBlocks: finalizedBlocks,
-        sources: activeSources.isEmpty ? nil : activeSources,
-        timestamp: Date()
-      )
-      messages.append(assistantMessage)
-      applyPendingCompaction(keepingMessageId: assistantMessage.id)
+    var finalizedMessages = streamingMessages
 
-      // Save after assistant responds
-      saveCurrentConversation()
+    if !finalizedBlocks.isEmpty {
+      finalizedMessages.append(
+        ChatMessage(
+          id: currentAssistantMessageId ?? UUID().uuidString,
+          role: .assistant,
+          contentBlocks: finalizedBlocks,
+          sources: activeSources.isEmpty ? nil : activeSources,
+          timestamp: Date()
+        ))
     } else if let fallbackMessage {
-      messages.append(
+      finalizedMessages.append(
         ChatMessage(
           id: currentAssistantMessageId ?? UUID().uuidString,
           role: .assistant,
           contentBlocks: [.text(fallbackMessage)],
           timestamp: Date()
         ))
+    }
 
-      // Surface stream failures inline instead of silently dismissing the typing indicator.
-      applyPendingCompaction(keepingMessageId: messages.last?.id)
+    if !finalizedMessages.isEmpty {
+      let keepingMessageId = finalizedMessages.first?.id
+      messages.append(contentsOf: finalizedMessages)
+      applyPendingCompaction(keepingMessageId: keepingMessageId)
       saveCurrentConversation()
     } else if let pendingCompactionContent {
       currentCompaction = pendingCompactionContent
@@ -1106,6 +1167,7 @@ final class WageyViewModel {
     }
 
     // Reset streaming state
+    streamingMessages = []
     activeContentBlocks = []
     shouldStartNewStreamingTextBlock = true
     activeSources = []
@@ -1114,11 +1176,53 @@ final class WageyViewModel {
     pendingSyncTables = []
     isStreaming = false
     isModelThinking = false
+    currentThinkingStartedAt = nil
     currentAssistantMessageId = nil
     streamTask = nil
     if !shouldPresentAlert(for: error) {
       error = nil
     }
+  }
+
+  private func flushStreamingAssistantSegmentIfNeeded() {
+    let sanitizedBlocks = sanitizeAssistantBubbleBoundaryBlocks(activeContentBlocks)
+    guard !sanitizedBlocks.isEmpty else {
+      activeContentBlocks = []
+      activeSources = []
+      shouldStartNewStreamingTextBlock = true
+      return
+    }
+
+    let assistantMessage = ChatMessage(
+      id: currentAssistantMessageId ?? UUID().uuidString,
+      role: .assistant,
+      contentBlocks: sanitizedBlocks,
+      sources: activeSources.isEmpty ? nil : activeSources,
+      timestamp: Date()
+    )
+    streamingMessages.append(assistantMessage)
+    currentAssistantMessageId = UUID().uuidString
+    activeContentBlocks = []
+    activeSources = []
+    shouldStartNewStreamingTextBlock = true
+  }
+
+  private func startThinkingPhaseIfNeeded() {
+    guard currentThinkingStartedAt == nil else { return }
+    currentThinkingStartedAt = Date()
+  }
+
+  private func completeThinkingPhaseIfNeeded() {
+    guard let startedAt = currentThinkingStartedAt else { return }
+
+    let elapsedSeconds = max(1, Int(Date().timeIntervalSince(startedAt).rounded()))
+    streamingMessages.append(
+      ChatMessage(
+        role: .assistant,
+        contentBlocks: [.thoughtStatus(ThoughtStatus(durationSeconds: elapsedSeconds))],
+        timestamp: Date()
+      ))
+    currentThinkingStartedAt = nil
   }
 
   /// Ensures Wagey-created shift changes are pulled locally before notifying UI observers.
@@ -1229,9 +1333,10 @@ final class WageyViewModel {
   }
 
   private func finalizedContentBlocks(finalizeIncompleteToolCalls: Bool) -> [ContentBlock] {
-    guard finalizeIncompleteToolCalls else { return activeContentBlocks }
+    let sanitizedBlocks = sanitizeAssistantBubbleBoundaryBlocks(activeContentBlocks)
+    guard finalizeIncompleteToolCalls else { return sanitizedBlocks }
 
-    return activeContentBlocks.compactMap { block in
+    return sanitizedBlocks.compactMap { block in
       switch block {
       case .text(let text):
         return text.isEmpty ? nil : .text(text)
@@ -1243,6 +1348,39 @@ final class WageyViewModel {
         return .toolCall(interruptedToolCall(from: toolCall))
       case .image(let attachment):
         return .image(attachment)
+      case .thoughtStatus(let status):
+        return .thoughtStatus(status)
+      }
+    }
+  }
+
+  private func sanitizeAssistantBubbleBoundaryBlocks(_ blocks: [ContentBlock]) -> [ContentBlock] {
+    var sanitizedBlocks = blocks
+
+    if let firstTextIndex = sanitizedBlocks.firstIndex(where: { block in
+      if case .text = block { return true }
+      return false
+    }), case .text(let text) = sanitizedBlocks[firstTextIndex] {
+      sanitizedBlocks[firstTextIndex] = .text(
+        WageyTextContent.trimLeadingBubbleWhitespace(from: text)
+      )
+    }
+
+    if let lastTextIndex = sanitizedBlocks.lastIndex(where: { block in
+      if case .text = block { return true }
+      return false
+    }), case .text(let text) = sanitizedBlocks[lastTextIndex] {
+      sanitizedBlocks[lastTextIndex] = .text(
+        WageyTextContent.trimTrailingBubbleWhitespace(from: text)
+      )
+    }
+
+    return sanitizedBlocks.compactMap { block in
+      switch block {
+      case .text(let text):
+        return text.isEmpty ? nil : .text(text)
+      case .toolCall, .image, .thoughtStatus:
+        return block
       }
     }
   }
@@ -1309,6 +1447,19 @@ final class WageyViewModel {
 
     return String(localized: .wageyErrorUnknown)
   }
+
+  static func shouldFlushStreamingAssistantSegment(
+    onThinkingStatus thinking: Bool,
+    activeContentBlocks: [ContentBlock]
+  ) -> Bool {
+    thinking && !activeContentBlocks.isEmpty
+  }
+
+  static func shouldFlushStreamingAssistantSegment(
+    onMessageBreak activeContentBlocks: [ContentBlock]
+  ) -> Bool {
+    !activeContentBlocks.isEmpty
+  }
 }
 
 extension ChatChunk {
@@ -1316,7 +1467,8 @@ extension ChatChunk {
     switch self {
     case .status:
       return true
-    case .textStart, .toolStart, .toolResult, .builtInToolStart, .builtInToolResult, .done, .error,
+    case .textStart, .messageBreak, .toolStart, .toolResult, .builtInToolStart, .builtInToolResult,
+      .done, .error,
       .wageyLimit, .wageyNoAccess, .sources, .compaction, .unknown, .text:
       return false
     }

@@ -135,6 +135,7 @@ enum ContentBlock: Identifiable, Equatable {
   case text(String)
   case toolCall(ToolCall)
   case image(ImageAttachment)
+  case thoughtStatus(ThoughtStatus)
 
   var id: String {
     switch self {
@@ -146,6 +147,8 @@ enum ContentBlock: Identifiable, Equatable {
       return toolCall.id
     case .image(let attachment):
       return attachment.id
+    case .thoughtStatus(let status):
+      return status.id
     }
   }
 
@@ -167,7 +170,7 @@ enum ContentBlock: Identifiable, Equatable {
           normalizedBlocks.append(.text(text))
         }
 
-      case .toolCall, .image:
+      case .toolCall, .image, .thoughtStatus:
         normalizedBlocks.append(block)
       }
     }
@@ -183,6 +186,69 @@ enum WageyTextContent {
     blocks
       .filter { !$0.isEmpty }
       .joined(separator: blockSeparator)
+  }
+
+  static func trimLeadingBubbleWhitespace(from text: String) -> String {
+    trimBubbleWhitespace(
+      from: text,
+      direction: .leading
+    )
+  }
+
+  static func trimTrailingBubbleWhitespace(from text: String) -> String {
+    trimBubbleWhitespace(
+      from: text,
+      direction: .trailing
+    )
+  }
+
+  private enum BoundaryDirection {
+    case leading
+    case trailing
+  }
+
+  private static func trimBubbleWhitespace(
+    from text: String,
+    direction: BoundaryDirection
+  ) -> String {
+    switch direction {
+    case .leading:
+      var trimmed = text[...]
+
+      while true {
+        let whitespacePrefix = trimmed.prefix { $0 == " " || $0 == "\t" }
+        let prefixEnd = trimmed.index(trimmed.startIndex, offsetBy: whitespacePrefix.count)
+        let remainder = trimmed[prefixEnd...]
+
+        if remainder.hasPrefix("\r\n") {
+          trimmed = remainder.dropFirst(2)
+        } else if remainder.first == "\n" || remainder.first == "\r" {
+          trimmed = remainder.dropFirst()
+        } else {
+          return String(trimmed)
+        }
+      }
+
+    case .trailing:
+      var trimmed = text[...]
+
+      while true {
+        let whitespaceSuffix = trimmed.reversed().prefix { $0 == " " || $0 == "\t" }
+        let suffixStart = trimmed.index(
+          trimmed.endIndex,
+          offsetBy: -whitespaceSuffix.count
+        )
+        let candidate = trimmed[..<suffixStart]
+
+        if candidate.hasSuffix("\r\n") {
+          trimmed = candidate.dropLast(2)
+        } else if candidate.last == "\n" || candidate.last == "\r" {
+          trimmed = candidate.dropLast()
+        } else {
+          return String(trimmed)
+        }
+      }
+    }
   }
 }
 
@@ -210,6 +276,28 @@ struct ImageAttachment: Identifiable, Equatable {
 
   func hasSamePayload(as other: ImageAttachment) -> Bool {
     mediaType == other.mediaType && data == other.data
+  }
+}
+
+struct ThoughtStatus: Identifiable, Codable, Equatable {
+  let id: String
+  let durationSeconds: Int
+
+  init(id: String = UUID().uuidString, durationSeconds: Int) {
+    self.id = id
+    self.durationSeconds = durationSeconds
+  }
+
+  var localizedLabel: String {
+    guard durationSeconds > 1 else {
+      return String(localized: "wagey.streaming.thought_short")
+    }
+
+    return String(
+      format: String(localized: "wagey.streaming.thought_duration"),
+      locale: Locale.current,
+      Int64(durationSeconds)
+    )
   }
 }
 
@@ -299,6 +387,9 @@ enum ChatChunk: Equatable {
   /// Start of a new visible text block from the provider stream
   case textStart
 
+  /// Explicit boundary telling the client to start the next visible text in a new bubble
+  case messageBreak
+
   /// Text content to append to the current message
   case text(content: String)
 
@@ -367,6 +458,9 @@ extension ChatChunk: Decodable {
 
     case "text_start":
       self = .textStart
+
+    case "message_break":
+      self = .messageBreak
 
     case "text":
       let content = try container.decode(String.self, forKey: .content)

@@ -222,7 +222,7 @@ Deno.test("resolveClaudeModel keeps supported rollback models and falls back for
   assertEquals(resolveClaudeModel(""), DEFAULT_CLAUDE_MODEL);
 });
 
-Deno.test("streamClaudeChat enables adaptive thinking with high effort on Opus 4.7", async () => {
+Deno.test("streamClaudeChat enables adaptive thinking with xhigh effort on Opus 4.7", async () => {
   const originalFetch = globalThis.fetch;
   let capturedBody: { thinking?: unknown; output_config?: unknown } | null =
     null;
@@ -259,7 +259,7 @@ Deno.test("streamClaudeChat enables adaptive thinking with high effort on Opus 4
 
     const requestBody = capturedBody as Record<string, unknown>;
     assertEquals(requestBody["thinking"], { type: "adaptive" });
-    assertEquals(requestBody["output_config"], { effort: "high" });
+    assertEquals(requestBody["output_config"], { effort: "xhigh" });
   } finally {
     globalThis.fetch = originalFetch;
   }

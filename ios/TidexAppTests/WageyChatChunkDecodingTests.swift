@@ -17,6 +17,20 @@ final class WageyChatChunkDecodingTests: XCTestCase {
     XCTAssertEqual(chunk, .textStart)
   }
 
+  func testDecodesMessageBreakChunk() throws {
+    let data = Data(
+      """
+      {
+        "type": "message_break"
+      }
+      """.utf8
+    )
+
+    let chunk = try JSONDecoder().decode(ChatChunk.self, from: data)
+
+    XCTAssertEqual(chunk, .messageBreak)
+  }
+
   func testDecodesThinkingStatusChunk() throws {
     let data = Data(
       """

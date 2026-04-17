@@ -23,7 +23,7 @@ export const SUPPORTED_CLAUDE_MODEL_PREFIXES = [
   "claude-opus-4-6",
 ] as const;
 export const DEFAULT_CLAUDE_MODEL = "claude-opus-4-7";
-const DEFAULT_REASONING_EFFORT = "high";
+const DEFAULT_REASONING_EFFORT = "xhigh";
 const CLAUDE_STREAM_IDLE_TIMEOUT_MS = 30_000;
 const GENERIC_PROVIDER_ERROR_MESSAGE =
   "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.";

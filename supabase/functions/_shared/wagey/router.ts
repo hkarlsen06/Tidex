@@ -21,15 +21,21 @@ import { invalidateWageyCache, type WageyRequestContext } from "./context.ts";
 import { consumeWageyInvocation, getWageyAccess } from "./data.ts";
 import { executeTool } from "./executor.ts";
 import { maxIterationsReached } from "./i18n.ts";
-import { getSystemPrompt, type SystemPromptContext } from "./system-prompt.ts";
+import {
+  getSystemPrompt,
+  type SystemPromptContext,
+  WAGEY_MESSAGE_BREAK_TOKEN,
+} from "./system-prompt.ts";
 import { type ToolName, tools } from "./tools.ts";
 
 const REQUEST_ID_HEADER = "x-wagey-request-id";
 const SSE_HEARTBEAT_MS = 15_000;
 const SSE_FLUSH_PADDING = ": " + " ".repeat(2048) + "\n\n";
+const DEFAULT_WAGEY_MAX_TOKENS = 8_192;
 
 export type ChatChunk =
   | { type: "text_start" }
+  | { type: "message_break" }
   | { type: "text"; content: string }
   | { type: "status"; status: "thinking" }
   | {
@@ -88,6 +94,7 @@ const contentSchema = z.union([
 const clientCapabilitySchema = z.enum([
   "rich_sources_v1",
   "rich_built_in_tool_events_v1",
+  "message_break_v1",
 ]);
 
 const chatInputSchema = z.object({
@@ -668,6 +675,10 @@ export async function handleWageyRequest(
           remaining: projectedRemaining,
           bonus: projectedBonus,
           userName: input.userName,
+          allowMessageBreaks: hasClientCapability(
+            input.client,
+            "message_break_v1",
+          ),
         };
 
         let { system, messages } = convertToClaudeMessages(
@@ -690,6 +701,10 @@ export async function handleWageyRequest(
         let invocationConsumed = false;
         let finalRemaining = projectedRemaining;
         let finalBonus = projectedBonus;
+        const supportsMessageBreaks = hasClientCapability(
+          input.client,
+          "message_break_v1",
+        );
 
         const ensureInvocationConsumed = async (): Promise<boolean> => {
           if (invocationConsumed) {
@@ -734,6 +749,7 @@ export async function handleWageyRequest(
             const startedToolUseIds = new Set<string>();
             const assistantContent: ContentBlock[] = [];
             let shouldStartNewAssistantTextBlock = true;
+            let pendingAssistantText = "";
 
             const appendAssistantText = (content: string) => {
               if (!content) return;
@@ -749,6 +765,114 @@ export async function handleWageyRequest(
               shouldStartNewAssistantTextBlock = false;
             };
 
+            const emitAssistantText = async (
+              content: string,
+            ): Promise<boolean> => {
+              if (!content) return true;
+              if (!(await ensureInvocationConsumed())) {
+                return false;
+              }
+              appendAssistantText(content);
+              sendChunk({ type: "text", content });
+              hasUserVisibleAssistantOutput = true;
+              return true;
+            };
+
+            const emitAssistantMessageBreak = () => {
+              shouldStartNewAssistantTextBlock = true;
+              if (supportsMessageBreaks) {
+                sendChunk({ type: "message_break" });
+              }
+            };
+
+            const markerOverlapLength = (text: string): number => {
+              const maxOverlap = Math.min(
+                text.length,
+                WAGEY_MESSAGE_BREAK_TOKEN.length + 1,
+              );
+              const markerPrefixes = [
+                WAGEY_MESSAGE_BREAK_TOKEN,
+                `\n${WAGEY_MESSAGE_BREAK_TOKEN}`,
+                `\r${WAGEY_MESSAGE_BREAK_TOKEN}`,
+                `\r\n${WAGEY_MESSAGE_BREAK_TOKEN}`,
+              ];
+
+              for (let length = maxOverlap; length > 0; length -= 1) {
+                const suffix = text.slice(-length);
+                if (
+                  markerPrefixes.some((prefix) => prefix.startsWith(suffix))
+                ) {
+                  return length;
+                }
+              }
+
+              return 0;
+            };
+
+            const flushPendingAssistantText = async (
+              force: boolean,
+            ): Promise<boolean> => {
+              while (true) {
+                const markerIndex = pendingAssistantText.indexOf(
+                  WAGEY_MESSAGE_BREAK_TOKEN,
+                );
+                if (markerIndex === -1) {
+                  break;
+                }
+
+                let textBeforeMarker = pendingAssistantText.slice(
+                  0,
+                  markerIndex,
+                );
+                if (textBeforeMarker.endsWith("\r\n")) {
+                  textBeforeMarker = textBeforeMarker.slice(0, -2);
+                } else if (
+                  textBeforeMarker.endsWith("\n") ||
+                  textBeforeMarker.endsWith("\r")
+                ) {
+                  textBeforeMarker = textBeforeMarker.slice(0, -1);
+                }
+                if (!(await emitAssistantText(textBeforeMarker))) {
+                  return false;
+                }
+                emitAssistantMessageBreak();
+                pendingAssistantText = pendingAssistantText.slice(
+                  markerIndex + WAGEY_MESSAGE_BREAK_TOKEN.length,
+                );
+                if (pendingAssistantText.startsWith("\r\n")) {
+                  pendingAssistantText = pendingAssistantText.slice(2);
+                } else if (
+                  pendingAssistantText.startsWith("\n") ||
+                  pendingAssistantText.startsWith("\r")
+                ) {
+                  pendingAssistantText = pendingAssistantText.slice(1);
+                }
+              }
+
+              if (force) {
+                const remainingText = pendingAssistantText;
+                pendingAssistantText = "";
+                return await emitAssistantText(remainingText);
+              }
+
+              const overlapLength = markerOverlapLength(pendingAssistantText);
+              const flushableLength = pendingAssistantText.length -
+                overlapLength;
+
+              if (flushableLength <= 0) {
+                return true;
+              }
+
+              const flushableText = pendingAssistantText.slice(
+                0,
+                flushableLength,
+              );
+              pendingAssistantText = pendingAssistantText.slice(
+                flushableLength,
+              );
+              return await emitAssistantText(flushableText);
+            };
+
             for await (
               const chunk of streamClaudeChat({
                 apiKey: claude.apiKey,
@@ -756,11 +880,17 @@ export async function handleWageyRequest(
                 system,
                 messages: conversationMessages,
                 tools: [...tools, ...BUILT_IN_TOOLS],
-                maxTokens: 2048,
+                maxTokens: DEFAULT_WAGEY_MAX_TOKENS,
                 signal: req.signal,
               })
             ) {
               if (req.signal.aborted) break;
+
+              if (chunk.type !== "text") {
+                if (!(await flushPendingAssistantText(true))) {
+                  return;
+                }
+              }
 
               if (chunk.type === "text_start") {
                 shouldStartNewAssistantTextBlock = true;
@@ -769,12 +899,10 @@ export async function handleWageyRequest(
                 if (!chunk.content) {
                   continue;
                 }
-                if (!(await ensureInvocationConsumed())) {
+                pendingAssistantText += chunk.content;
+                if (!(await flushPendingAssistantText(false))) {
                   return;
                 }
-                appendAssistantText(chunk.content);
-                sendChunk({ type: "text", content: chunk.content });
-                hasUserVisibleAssistantOutput = true;
               } else if (chunk.type === "built_in_tool_start") {
                 if (!(await ensureInvocationConsumed())) {
                   return;
@@ -880,6 +1008,10 @@ export async function handleWageyRequest(
                   data: chunk.data,
                 });
               }
+            }
+
+            if (!(await flushPendingAssistantText(true))) {
+              return;
             }
 
             conversationMessages.push({

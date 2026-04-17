@@ -57,4 +57,42 @@ final class WageyViewModelStreamFallbackTests: XCTestCase {
 
     XCTAssertNil(message)
   }
+
+  func testFlushesStreamingAssistantSegmentWhenThinkingResumesAfterContent() {
+    XCTAssertTrue(
+      WageyViewModel.shouldFlushStreamingAssistantSegment(
+        onThinkingStatus: true,
+        activeContentBlocks: [.text("Første melding før ny tenking.")]
+      ))
+  }
+
+  func testDoesNotFlushStreamingAssistantSegmentForInitialThinkingWithoutContent() {
+    XCTAssertFalse(
+      WageyViewModel.shouldFlushStreamingAssistantSegment(
+        onThinkingStatus: true,
+        activeContentBlocks: []
+      ))
+  }
+
+  func testDoesNotFlushStreamingAssistantSegmentWhenThinkingTurnsOff() {
+    XCTAssertFalse(
+      WageyViewModel.shouldFlushStreamingAssistantSegment(
+        onThinkingStatus: false,
+        activeContentBlocks: [.text("Eksisterende innhold")]
+      ))
+  }
+
+  func testFlushesStreamingAssistantSegmentOnExplicitMessageBreakWhenContentExists() {
+    XCTAssertTrue(
+      WageyViewModel.shouldFlushStreamingAssistantSegment(
+        onMessageBreak: [.text("Første melding.")]
+      ))
+  }
+
+  func testDoesNotFlushStreamingAssistantSegmentOnExplicitMessageBreakWithoutContent() {
+    XCTAssertFalse(
+      WageyViewModel.shouldFlushStreamingAssistantSegment(
+        onMessageBreak: []
+      ))
+  }
 }
