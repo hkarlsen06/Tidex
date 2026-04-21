@@ -204,13 +204,14 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
   /// Fetch user's feedback history
   private func fetchFeedbackHistory() async {
-    guard userId != nil else { return }
+    guard let userId else { return }
 
     do {
       let items: [FeedbackItem] =
         try await supabase
         .from("feedback")
         .select()
+        .eq("user_id", value: userId)
         .order("created_at", ascending: false)
         .execute()
         .value
