@@ -177,15 +177,9 @@ struct WorkPatternAnalyzer {
           else {
             continue
           }
-          let virtualRow = ShiftRow(
-            id: "virtual-\(recurring.id)-\(virtual.date)",
-            user_id: recurring.user_id,
-            shift_date: virtual.date,
-            start_time: recurring.cleanStartTime,
-            end_time: recurring.cleanEndTime,
-            custom_pause_windows: recurring.date_specific_pause_windows?[virtual.date],
-            custom_supplements: recurring.date_specific_supplements?[virtual.date],
-            created_at: nil
+          let virtualRow = recurring.makeVirtualShift(
+            date: virtual.date,
+            weekday: virtual.weekday
           )
           virtualShifts.append(virtualRow)
         }

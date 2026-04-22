@@ -94,6 +94,8 @@ struct RecurringShiftRow: Codable, Identifiable, Equatable {
   let date_specific_pause_windows: DateSpecificPauseWindows?
   /// Custom supplements for specific dates
   let date_specific_supplements: [String: CustomSupplementsData]?
+  /// Private notes for specific virtual occurrence dates
+  let date_specific_notes: [String: String]?
 
   /// Effective exclusions (empty array if nil)
   var effectiveExclusions: [String] {
@@ -108,6 +110,29 @@ struct RecurringShiftRow: Codable, Identifiable, Equatable {
   /// Clean end time (removes timezone suffix from timetz)
   var cleanEndTime: String {
     cleanTime(end_time)
+  }
+
+  func makeVirtualShift(
+    date: String,
+    weekday: Int,
+    id: String? = nil,
+    userId: String? = nil
+  ) -> ShiftRow {
+    ShiftRow(
+      id: id ?? "virtual-\(self.id)-\(date)",
+      user_id: userId ?? user_id,
+      job_id: job_id,
+      shift_date: date,
+      start_time: cleanStartTime,
+      end_time: cleanEndTime,
+      note: date_specific_notes?[date],
+      custom_pause_windows: date_specific_pause_windows?[date],
+      custom_supplements: date_specific_supplements?[date],
+      created_at: nil,
+      updated_at: nil,
+      recurring_id: self.id,
+      recurring_anchor_weekday: weekday
+    )
   }
 
   /// Remove timezone suffix from timetz (e.g., "08:00:00+01:00" -> "08:00")
@@ -128,6 +153,73 @@ struct RecurringShiftRow: Codable, Identifiable, Equatable {
 
     // Keep only HH:mm
     return String(cleaned.prefix(5))
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case user_id
+    case job_id
+    case start_time
+    case end_time
+    case repeat_interval_weeks
+    case selected_days
+    case end_condition
+    case exclusions
+    case date_specific_pause_windows
+    case date_specific_supplements
+    case date_specific_notes
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    user_id = try container.decode(String.self, forKey: .user_id)
+    job_id = try container.decodeIfPresent(String.self, forKey: .job_id)
+    start_time = try container.decode(String.self, forKey: .start_time)
+    end_time = try container.decode(String.self, forKey: .end_time)
+    repeat_interval_weeks = try container.decode(Int.self, forKey: .repeat_interval_weeks)
+    selected_days = try container.decode(SelectedDays.self, forKey: .selected_days)
+    end_condition = try container.decodeIfPresent(EndCondition.self, forKey: .end_condition)
+    exclusions = try container.decodeIfPresent([String].self, forKey: .exclusions)
+    date_specific_pause_windows = PauseWindowSupport.normalize(
+      try container.decodeIfPresent(
+        DateSpecificPauseWindows.self, forKey: .date_specific_pause_windows)
+    )
+    date_specific_supplements = try container.decodeIfPresent(
+      [String: CustomSupplementsData].self,
+      forKey: .date_specific_supplements
+    )
+    date_specific_notes = ShiftNoteSupport.normalizeDateSpecificNotes(
+      try container.decodeIfPresent([String: String].self, forKey: .date_specific_notes)
+    )
+  }
+
+  init(
+    id: String,
+    user_id: String,
+    job_id: String? = nil,
+    start_time: String,
+    end_time: String,
+    repeat_interval_weeks: Int,
+    selected_days: SelectedDays,
+    end_condition: EndCondition?,
+    exclusions: [String]?,
+    date_specific_pause_windows: DateSpecificPauseWindows? = nil,
+    date_specific_supplements: [String: CustomSupplementsData]? = nil,
+    date_specific_notes: [String: String]? = nil
+  ) {
+    self.id = id
+    self.user_id = user_id
+    self.job_id = job_id
+    self.start_time = start_time
+    self.end_time = end_time
+    self.repeat_interval_weeks = repeat_interval_weeks
+    self.selected_days = selected_days
+    self.end_condition = end_condition
+    self.exclusions = exclusions
+    self.date_specific_pause_windows = PauseWindowSupport.normalize(date_specific_pause_windows)
+    self.date_specific_supplements = date_specific_supplements
+    self.date_specific_notes = ShiftNoteSupport.normalizeDateSpecificNotes(date_specific_notes)
   }
 }
 

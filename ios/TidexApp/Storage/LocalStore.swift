@@ -868,6 +868,7 @@ actor LocalStoreActor {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    note: String? = nil,
     customPauseWindows: CustomPauseWindows? = nil,
     customSupplements: CustomSupplementsData?
   ) throws -> ShiftRow {
@@ -885,6 +886,7 @@ actor LocalStoreActor {
       try? canonicalJSONEncoder.encode($0)
     }
     let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let normalizedNote = ShiftNoteSupport.normalize(note)
 
     let dateFormatter = isoDateFormatter
     let shiftDateString = dateFormatter.string(from: shiftDate)
@@ -894,6 +896,7 @@ actor LocalStoreActor {
       shiftDate: shiftDateString,
       startTime: startTime,
       endTime: endTime,
+      note: normalizedNote,
       customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       updatedAt: now,
@@ -911,6 +914,7 @@ actor LocalStoreActor {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
+      note: normalizedNote,
       customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       serverUpdatedAt: now,
@@ -965,6 +969,8 @@ actor LocalStoreActor {
     shiftDate: Date?,
     startTime: String?,
     endTime: String?,
+    note: String? = nil,
+    noteWasEdited: Bool = false,
     customSupplements: CustomSupplementsData?
   ) throws -> ShiftRow {
     let descriptor = FetchDescriptor<LocalUserShift>(
@@ -996,6 +1002,14 @@ actor LocalStoreActor {
     if let newEnd = endTime, newEnd != localShift.endTime {
       localShift.endTime = newEnd
       newDirtyFields.insert(.endTime)
+    }
+
+    if noteWasEdited {
+      let normalizedNote = ShiftNoteSupport.normalize(note)
+      if normalizedNote != localShift.note {
+        localShift.note = normalizedNote
+        newDirtyFields.insert(.note)
+      }
     }
 
     if let newSupplements = customSupplements {
@@ -1119,6 +1133,8 @@ actor LocalStoreActor {
     localShift.jobId = serverSnapshot.jobId
     localShift.startTime = serverSnapshot.startTime
     localShift.endTime = serverSnapshot.endTime
+    localShift.note = serverSnapshot.note
+    localShift.customPauseWindows = serverSnapshot.customPauseWindows
     localShift.customSupplements = serverSnapshot.customSupplements
     localShift.serverRevision = serverSnapshot.revision
     localShift.serverUpdatedAt = serverSnapshot.updatedAt
@@ -1501,7 +1517,8 @@ actor LocalStoreActor {
     endCondition: EndCondition?,
     exclusions: [String]?,
     dateSpecificPauseWindows: DateSpecificPauseWindows? = nil,
-    dateSpecificSupplements: [String: CustomSupplementsData]?
+    dateSpecificSupplements: [String: CustomSupplementsData]?,
+    dateSpecificNotes: [String: String]? = nil
   ) throws -> RecurringShiftRow {
     let id = UUID().lowercasedString
     let now = Date()
@@ -1513,6 +1530,9 @@ actor LocalStoreActor {
       try? canonicalJSONEncoder.encode($0)
     }
     let supplementsData = dateSpecificSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let notesData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
 
     let serverSnapshot = RecurringShiftServerSnapshot(
       jobId: jobId,
@@ -1524,6 +1544,7 @@ actor LocalStoreActor {
       exclusions: exclusionsData,
       dateSpecificPauseWindows: pauseWindowsData,
       dateSpecificSupplements: supplementsData,
+      dateSpecificNotes: notesData,
       updatedAt: now,
       revision: 0,
       deletedAt: nil
@@ -1544,6 +1565,7 @@ actor LocalStoreActor {
       exclusions: exclusionsData,
       dateSpecificPauseWindows: pauseWindowsData,
       dateSpecificSupplements: supplementsData,
+      dateSpecificNotes: notesData,
       serverUpdatedAt: now,
       serverRevision: 0,
       serverDeletedAt: nil,
@@ -1569,7 +1591,8 @@ actor LocalStoreActor {
     selectedDays: SelectedDays?,
     endCondition: EndCondition?,
     exclusions: [String]?,
-    dateSpecificSupplements: [String: CustomSupplementsData]?
+    dateSpecificSupplements: [String: CustomSupplementsData]?,
+    dateSpecificNotes: [String: String]? = nil
   ) throws -> RecurringShiftRow {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
@@ -1634,6 +1657,14 @@ actor LocalStoreActor {
       }
     }
 
+    if let newNotes = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes) {
+      let newData = try? canonicalJSONEncoder.encode(newNotes)
+      if newData != localShift.dateSpecificNotes {
+        localShift.dateSpecificNotes = newData
+        newDirtyFields.insert(.dateSpecificNotes)
+      }
+    }
+
     localShift.dirtyFieldKeys = newDirtyFields
     localShift.localUpdatedAt = now
 
@@ -1665,6 +1696,37 @@ actor LocalStoreActor {
     if normalizedData != localShift.dateSpecificPauseWindows {
       localShift.dateSpecificPauseWindows = normalizedData
       dirtyFields.insert(.dateSpecificPauseWindows)
+      localShift.dirtyFieldKeys = dirtyFields
+      localShift.localUpdatedAt = Date()
+      if localShift.syncStatus == .clean {
+        localShift.syncStatus = .dirty
+      }
+      try modelContext.save()
+    }
+
+    return localShift.toRecurringShiftRow()
+  }
+
+  func updateRecurringShiftDateSpecificNotes(
+    id: String,
+    dateSpecificNotes: [String: String]?
+  ) throws -> RecurringShiftRow {
+    let descriptor = FetchDescriptor<LocalRecurringShift>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localShift = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    let normalizedData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
+
+    var dirtyFields = localShift.dirtyFieldKeys
+    if normalizedData != localShift.dateSpecificNotes {
+      localShift.dateSpecificNotes = normalizedData
+      dirtyFields.insert(.dateSpecificNotes)
       localShift.dirtyFieldKeys = dirtyFields
       localShift.localUpdatedAt = Date()
       if localShift.syncStatus == .clean {
@@ -2736,6 +2798,7 @@ actor LocalStoreActor {
     existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
+    existing.note = ShiftNoteSupport.normalize(serverRow.note)
     existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
       .flatMap {
         try? canonicalJSONEncoder.encode($0)
@@ -2803,6 +2866,9 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.endTime) {
       existing.endTime = serverRow.end_time
+    }
+    if !localDirtyFields.contains(.note) {
+      existing.note = ShiftNoteSupport.normalize(serverRow.note)
     }
     if !localDirtyFields.contains(.customPauseWindows) {
       existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
@@ -2957,6 +3023,10 @@ actor LocalStoreActor {
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
+    existing.dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(
+      serverRow.date_specific_notes
+    )
+    .flatMap { try? canonicalJSONEncoder.encode($0) }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
@@ -3035,6 +3105,11 @@ actor LocalStoreActor {
       existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
         try? canonicalJSONEncoder.encode($0)
       }
+    }
+    if !localDirtyFields.contains(.dateSpecificNotes) {
+      existing.dateSpecificNotes =
+        ShiftNoteSupport.normalizeDateSpecificNotes(serverRow.date_specific_notes)
+        .flatMap { try? canonicalJSONEncoder.encode($0) }
     }
 
     existing.serverUpdatedAt = serverUpdatedAt
@@ -3437,6 +3512,7 @@ actor LocalStoreActor {
     existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
+    existing.note = ShiftNoteSupport.normalize(serverRow.note)
     existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
       .flatMap {
         try? canonicalJSONEncoder.encode($0)
@@ -3524,6 +3600,7 @@ actor LocalStoreActor {
     existing.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? existing.shiftDate
     existing.startTime = serverSnapshot.startTime
     existing.endTime = serverSnapshot.endTime
+    existing.note = serverSnapshot.note
     existing.customPauseWindows = serverSnapshot.customPauseWindows
     existing.customSupplements = serverSnapshot.customSupplements
     existing.serverUpdatedAt = serverSnapshot.updatedAt
@@ -3708,6 +3785,10 @@ actor LocalStoreActor {
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
+    existing.dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(
+      serverRow.date_specific_notes
+    )
+    .flatMap { try? canonicalJSONEncoder.encode($0) }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.syncStatus = .clean
@@ -3788,6 +3869,7 @@ actor LocalStoreActor {
     existing.exclusions = serverSnapshot.exclusions
     existing.dateSpecificPauseWindows = serverSnapshot.dateSpecificPauseWindows
     existing.dateSpecificSupplements = serverSnapshot.dateSpecificSupplements
+    existing.dateSpecificNotes = serverSnapshot.dateSpecificNotes
     existing.serverUpdatedAt = serverSnapshot.updatedAt
     existing.serverRevision = serverSnapshot.revision
     existing.serverDeletedAt = serverSnapshot.deletedAt

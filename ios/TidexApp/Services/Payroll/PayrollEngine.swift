@@ -156,18 +156,10 @@ struct PayrollEngine {
           if result.contains(where: { $0.id == virtualId }) { continue }
 
           // Create virtual shift row
-          let virtualRow = ShiftRow(
-            id: virtualId,
-            user_id: recurringShift.user_id,
-            job_id: recurringShift.job_id,
-            shift_date: virtual.date,
-            start_time: recurringShift.cleanStartTime,
-            end_time: recurringShift.cleanEndTime,
-            custom_pause_windows: recurringShift.date_specific_pause_windows?[virtual.date],
-            custom_supplements: recurringShift.date_specific_supplements?[virtual.date],
-            created_at: nil,
-            recurring_id: recurringShift.id,
-            recurring_anchor_weekday: virtual.weekday
+          let virtualRow = recurringShift.makeVirtualShift(
+            date: virtual.date,
+            weekday: virtual.weekday,
+            id: virtualId
           )
 
           let computed = computeShiftWithTax(

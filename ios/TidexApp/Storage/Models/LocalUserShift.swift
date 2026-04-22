@@ -30,6 +30,9 @@ final class LocalUserShift {
   /// End time in HH:mm format (can be less than startTime for cross-midnight)
   var endTime: String
 
+  /// Private note for this shift
+  var note: String?
+
   /// Custom pause windows JSON blob (nullable)
   /// Stored as canonical JSON Data for reliable diffing
   var customPauseWindows: Data?
@@ -159,6 +162,7 @@ final class LocalUserShift {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    note: String? = nil,
     customPauseWindows: Data? = nil,
     customSupplements: Data? = nil,
     serverUpdatedAt: Date,
@@ -176,6 +180,7 @@ final class LocalUserShift {
     self.shiftDate = shiftDate
     self.startTime = startTime
     self.endTime = endTime
+    self.note = ShiftNoteSupport.normalize(note)
     self.customPauseWindows = customPauseWindows
     self.customSupplements = customSupplements
     self.serverUpdatedAt = serverUpdatedAt
@@ -203,6 +208,7 @@ struct UserShiftServerSnapshot: Codable, Equatable {
   let shiftDate: String
   let startTime: String
   let endTime: String
+  let note: String?
   let customPauseWindows: Data?
   let customSupplements: Data?
   let updatedAt: Date
@@ -215,6 +221,7 @@ struct UserShiftServerSnapshot: Codable, Equatable {
     shiftDate: String,
     startTime: String,
     endTime: String,
+    note: String?,
     customPauseWindows: CustomPauseWindows?,
     customSupplements: CustomSupplementsData?,
     updatedAt: Date,
@@ -230,6 +237,7 @@ struct UserShiftServerSnapshot: Codable, Equatable {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
+      note: ShiftNoteSupport.normalize(note),
       customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       updatedAt: updatedAt,
@@ -271,6 +279,9 @@ struct UserShiftServerSnapshot: Codable, Equatable {
     if endTime != other.endTime {
       changed.insert(.endTime)
     }
+    if note != other.note {
+      changed.insert(.note)
+    }
     if customPauseWindows != other.customPauseWindows {
       changed.insert(.customPauseWindows)
     }
@@ -294,6 +305,7 @@ extension LocalUserShift {
       shift_date: shiftDateString,
       start_time: startTime,
       end_time: endTime,
+      note: note,
       custom_pause_windows: decodedCustomPauseWindows,
       custom_supplements: decodedCustomSupplements,
       created_at: nil,
@@ -328,6 +340,7 @@ extension LocalUserShift {
       shiftDate: serverRow.shift_date,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      note: serverRow.note,
       customPauseWindows: serverRow.custom_pause_windows,
       customSupplements: serverRow.custom_supplements,
       updatedAt: serverUpdatedAt,
@@ -342,6 +355,7 @@ extension LocalUserShift {
       shiftDate: shiftDate,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      note: serverRow.note,
       customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       serverUpdatedAt: serverUpdatedAt,
