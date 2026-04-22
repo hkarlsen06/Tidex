@@ -91,6 +91,9 @@ struct ShiftDetailsSheet: View {
   /// Which time input field is focused (for TimeRangePicker)
   @State private var focusedTimeField: TimeInputField?
 
+  /// Whether the note editor is focused
+  @FocusState private var isNoteFieldFocused: Bool
+
   /// Edited custom supplements (nil = unchanged, set to clear or modify)
   @State private var editedSupplements: CustomSupplementsData?
 
@@ -211,10 +214,6 @@ struct ShiftDetailsSheet: View {
   /// Check if shift has custom supplements (including explicitly empty rules)
   private var hasCustomSupplements: Bool {
     return shift.shift.custom_supplements != nil
-  }
-
-  private var hasNote: Bool {
-    shift.note != nil
   }
 
   private var noteBinding: Binding<String> {
@@ -358,8 +357,8 @@ struct ShiftDetailsSheet: View {
 
           if isEditing {
             noteEditorSection
-          } else if let note = shift.note {
-            noteSection(note)
+          } else {
+            noteSection
           }
 
           if !isEditing, shouldShowBreakSection {
@@ -633,8 +632,24 @@ struct ShiftDetailsSheet: View {
   private func cancelEditing() {
     initializeEditState()
     errorMessage = nil
+    isNoteFieldFocused = false
     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
       isEditing = false
+    }
+  }
+
+  private func beginNoteEditing() {
+    editedNote = shift.note ?? ""
+    noteWasEdited = false
+    errorMessage = nil
+    focusedTimeField = nil
+
+    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+      isEditing = true
+    }
+
+    DispatchQueue.main.async {
+      isNoteFieldFocused = true
     }
   }
 
@@ -809,22 +824,52 @@ struct ShiftDetailsSheet: View {
     }
   }
 
-  private func noteSection(_ note: String) -> some View {
+  private var noteSection: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.addShiftEventNoteTitle)
-        .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextMuted)
+      HStack(alignment: .center, spacing: Spacing.sm) {
+        Image(systemName: "note.text")
+          .foregroundColor(.tidexBlue)
 
-      Text(note)
-        .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        Text(.shiftsDetailsNoteTitle)
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexTextSecondary)
+
+        Spacer()
+
+        if onUpdate != nil {
+          Button(
+            shift.note == nil
+              ? String(localized: .shiftsDetailsNoteAdd) : String(localized: .shiftsDetailsNoteEdit)
+          ) {
+            beginNoteEditing()
+          }
+          .font(.tidexFootnoteStrong)
+          .foregroundColor(.tidexBlue)
+        }
+      }
+
+      if let note = shift.note {
+        Text(note)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        Text(.shiftsDetailsNotePlaceholder)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextMuted)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
     }
     .padding(Spacing.md)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexSurfacePrimary)
     )
+    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+    .onTapGesture {
+      guard onUpdate != nil else { return }
+      beginNoteEditing()
+    }
   }
 
   // MARK: - Editable Time Section
@@ -892,15 +937,16 @@ struct ShiftDetailsSheet: View {
 
   private var noteEditorSection: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.addShiftEventNoteTitle)
+      Text(.shiftsDetailsNoteTitle)
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextSecondary)
 
       TextField(
-        String(localized: "addShift.submitRequirements.eventNote", table: "Localizable"),
+        String(localized: .shiftsDetailsNotePlaceholder),
         text: noteBinding,
         axis: .vertical
       )
+      .focused($isNoteFieldFocused)
       .textFieldStyle(.plain)
       .font(.tidexBodyMedium)
       .foregroundColor(.tidexTextPrimary)
