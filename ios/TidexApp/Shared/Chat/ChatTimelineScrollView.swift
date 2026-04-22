@@ -37,6 +37,7 @@ struct ChatTimelineScrollContext {
 struct ChatTimelineScrollView<ScrollState: Equatable, Content: View>: View {
   let scrollState: ScrollState
   let bottomContentInset: CGFloat
+  var contentSpacing: CGFloat = Spacing.sm
   @Binding var isPinnedToBottom: Bool
   var scrollToBottomTrigger: Int = 0
   var explicitScrollCommand: Binding<ChatTimelineScrollCommand?> = .constant(nil)
@@ -50,7 +51,7 @@ struct ChatTimelineScrollView<ScrollState: Equatable, Content: View>: View {
   var body: some View {
     ScrollViewReader { proxy in
       ScrollView {
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: contentSpacing) {
           content()
 
           Color.clear

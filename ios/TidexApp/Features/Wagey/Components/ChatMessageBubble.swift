@@ -5,12 +5,25 @@ import SwiftUI
 /// Assistant messages are left-aligned with surface background
 struct ChatMessageBubble: View {
   let message: ChatMessage
+  var groupContext: ChatMessageGroupContext? = nil
 
   /// State for full-screen image viewer
   @State private var selectedImageViewer: SelectedImageViewer?
 
   private var renderBlocks: [ContentBlock] {
     ContentBlock.normalized(message.contentBlocks)
+  }
+
+  private var effectiveGroupContext: ChatMessageGroupContext {
+    groupContext ?? .standalone(isCurrentUser: message.role == .user)
+  }
+
+  private var topPadding: CGFloat {
+    effectiveGroupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
+  }
+
+  private var bottomPadding: CGFloat {
+    effectiveGroupContext.joinsNext ? Spacing.micro : Spacing.xxs
   }
 
   var body: some View {
@@ -39,6 +52,8 @@ struct ChatMessageBubble: View {
         MessageSourcesView(sources: sources)
       }
     }
+    .padding(.top, topPadding)
+    .padding(.bottom, bottomPadding)
     .fullScreenCover(item: $selectedImageViewer) { viewer in
       ImageViewerOverlay(image: viewer.image) {
         selectedImageViewer = nil
@@ -49,7 +64,7 @@ struct ChatMessageBubble: View {
   // MARK: - Message Content Views
 
   private func userMessageContent(text: String) -> some View {
-    ChatBubbleCard(isCurrentUser: true) {
+    ChatBubbleCard(isCurrentUser: true, groupContext: effectiveGroupContext) {
       Text(text)
         .font(.tidexBody)
         .foregroundColor(.tidexTextOnBrand)
@@ -64,7 +79,7 @@ struct ChatMessageBubble: View {
   }
 
   private func assistantMessageContent(text: String) -> some View {
-    ChatBubbleCard(isCurrentUser: false) {
+    ChatBubbleCard(isCurrentUser: false, groupContext: effectiveGroupContext) {
       FormattedMessageContent(content: text)
     }
     .contextMenu {
@@ -365,6 +380,7 @@ struct ImageViewerOverlay: View {
 struct StreamingMessageBubble: View {
   let contentBlocks: [ContentBlock]
   let isThinking: Bool
+  var groupContext: ChatMessageGroupContext? = nil
 
   private var renderBlocks: [ContentBlock] {
     ContentBlock.normalized(contentBlocks)
@@ -376,6 +392,18 @@ struct StreamingMessageBubble: View {
       if case .text(let text) = block, !text.isEmpty { return true }
       return false
     }
+  }
+
+  private var effectiveGroupContext: ChatMessageGroupContext {
+    groupContext ?? .standalone(isCurrentUser: false)
+  }
+
+  private var topPadding: CGFloat {
+    effectiveGroupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
+  }
+
+  private var bottomPadding: CGFloat {
+    effectiveGroupContext.joinsNext ? Spacing.micro : Spacing.xxs
   }
 
   var body: some View {
@@ -413,6 +441,8 @@ struct StreamingMessageBubble: View {
 
       Spacer(minLength: 40)
     }
+    .padding(.top, topPadding)
+    .padding(.bottom, bottomPadding)
   }
 
   private func streamingTextView(text: String) -> some View {
@@ -420,19 +450,19 @@ struct StreamingMessageBubble: View {
       if let attributedString = try? AttributedString(
         markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
       {
-        Text(attributedString)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+        ChatBubbleCard(isCurrentUser: false, groupContext: effectiveGroupContext) {
+          Text(attributedString)
+            .font(.tidexBody)
+            .foregroundColor(.tidexTextPrimary)
+        }
       } else {
-        Text(text)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
+        ChatBubbleCard(isCurrentUser: false, groupContext: effectiveGroupContext) {
+          Text(text)
+            .font(.tidexBody)
+            .foregroundColor(.tidexTextPrimary)
+        }
       }
     }
-    .padding(.horizontal, Spacing.md)
-    .padding(.vertical, Spacing.sm)
-    .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
   }
 }
 

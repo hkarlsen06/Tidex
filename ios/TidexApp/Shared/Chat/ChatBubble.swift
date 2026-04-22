@@ -1,5 +1,39 @@
 import SwiftUI
 
+enum ChatMessageGroupPosition: Equatable {
+  case standalone
+  case leading
+  case middle
+  case trailing
+}
+
+struct ChatMessageGroupContext: Equatable {
+  let position: ChatMessageGroupPosition
+  let isCurrentUser: Bool
+
+  static func standalone(isCurrentUser: Bool) -> ChatMessageGroupContext {
+    ChatMessageGroupContext(position: .standalone, isCurrentUser: isCurrentUser)
+  }
+
+  var joinsPrevious: Bool {
+    switch position {
+    case .middle, .trailing:
+      return true
+    case .standalone, .leading:
+      return false
+    }
+  }
+
+  var joinsNext: Bool {
+    switch position {
+    case .leading, .middle:
+      return true
+    case .standalone, .trailing:
+      return false
+    }
+  }
+}
+
 struct ChatMessageRow<Content: View>: View {
   let isCurrentUser: Bool
   var minSpacer: CGFloat = Spacing.xxl
@@ -28,9 +62,14 @@ struct ChatMessageRow<Content: View>: View {
 
 struct ChatBubbleCard<Content: View>: View {
   let isCurrentUser: Bool
+  var groupContext: ChatMessageGroupContext? = nil
   var minWidth: CGFloat? = nil
   var maxWidth: CGFloat? = nil
   @ViewBuilder let content: () -> Content
+
+  private var effectiveGroupContext: ChatMessageGroupContext {
+    groupContext ?? .standalone(isCurrentUser: isCurrentUser)
+  }
 
   var body: some View {
     Group {
@@ -58,15 +97,55 @@ struct ChatBubbleCard<Content: View>: View {
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
       .background(
-        RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous)
+        bubbleShape
           .fill(isCurrentUser ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous)
+        bubbleShape
           .stroke(
             isCurrentUser ? Color.clear : Color.tidexBorderSubtle,
             lineWidth: 1
           )
       )
+  }
+
+  private var bubbleShape: some InsettableShape {
+    UnevenRoundedRectangle(
+      cornerRadii: RectangleCornerRadii(
+        topLeading: topLeadingRadius,
+        bottomLeading: bottomLeadingRadius,
+        bottomTrailing: bottomTrailingRadius,
+        topTrailing: topTrailingRadius
+      ),
+      style: .continuous
+    )
+  }
+
+  private var topLeadingRadius: CGFloat {
+    if !isCurrentUser && effectiveGroupContext.joinsPrevious {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
+  }
+
+  private var bottomLeadingRadius: CGFloat {
+    if !isCurrentUser && effectiveGroupContext.joinsNext {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
+  }
+
+  private var bottomTrailingRadius: CGFloat {
+    if isCurrentUser && effectiveGroupContext.joinsNext {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
+  }
+
+  private var topTrailingRadius: CGFloat {
+    if isCurrentUser && effectiveGroupContext.joinsPrevious {
+      return CornerRadius.xxs
+    }
+    return CornerRadius.bubble
   }
 }

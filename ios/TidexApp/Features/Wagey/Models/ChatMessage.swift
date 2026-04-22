@@ -116,6 +116,20 @@ struct ChatMessage: Identifiable, Equatable {
     }
   }
 
+  /// Whether the message has a visible bubble that should participate in grouped styling.
+  var hasGroupedBubbleContent: Bool {
+    contentBlocks.contains { block in
+      switch block {
+      case .text(let text):
+        return !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      case .image:
+        return true
+      case .toolCall, .thoughtStatus:
+        return false
+      }
+    }
+  }
+
   /// Create an assistant message (typically starts empty for streaming)
   static func assistant(id: String = UUID().uuidString, content: String = "") -> ChatMessage {
     ChatMessage(
