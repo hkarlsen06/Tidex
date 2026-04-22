@@ -40,6 +40,9 @@ final class LocalRecurringShift {
   /// Excluded dates (JSON array of ISO date strings)
   var exclusions: Data?
 
+  /// Date-specific pause windows (JSON)
+  var dateSpecificPauseWindows: Data?
+
   /// Date-specific supplements (JSON)
   var dateSpecificSupplements: Data?
 
@@ -218,6 +221,40 @@ final class LocalRecurringShift {
     }
   }
 
+  /// Decoded date-specific pause windows
+  var decodedDateSpecificPauseWindows: DateSpecificPauseWindows {
+    get {
+      guard let data = dateSpecificPauseWindows else { return [:] }
+      if let decoded = try? syncJSONDecoder.decode(DateSpecificPauseWindows.self, from: data),
+        let normalized = PauseWindowSupport.normalize(decoded)
+      {
+        return normalized
+      }
+
+      if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
+        let fallback = snapshot.dateSpecificPauseWindows.flatMap({
+          try? syncJSONDecoder.decode(DateSpecificPauseWindows.self, from: $0)
+        }),
+        let normalized = PauseWindowSupport.normalize(fallback)
+      {
+        SyncLogger.shared.log(
+          """
+          Recovered corrupt dateSpecificPauseWindows for recurring shift \(id) from last synced snapshot
+          """,
+          level: .warning
+        )
+        return normalized
+      }
+
+      return [:]
+    }
+    set {
+      dateSpecificPauseWindows = PauseWindowSupport.normalize(newValue).flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      }
+    }
+  }
+
   /// Whether this recurring shift is soft-deleted
   var isDeleted: Bool {
     serverDeletedAt != nil
@@ -235,6 +272,7 @@ final class LocalRecurringShift {
     selectedDays: Data,
     endCondition: Data? = nil,
     exclusions: Data? = nil,
+    dateSpecificPauseWindows: Data? = nil,
     dateSpecificSupplements: Data? = nil,
     serverUpdatedAt: Date,
     serverRevision: Int64,
@@ -254,6 +292,7 @@ final class LocalRecurringShift {
     self.selectedDays = selectedDays
     self.endCondition = endCondition
     self.exclusions = exclusions
+    self.dateSpecificPauseWindows = dateSpecificPauseWindows
     self.dateSpecificSupplements = dateSpecificSupplements
     self.serverUpdatedAt = serverUpdatedAt
     self.serverRevision = serverRevision
@@ -282,6 +321,7 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
   let selectedDays: Data
   let endCondition: Data?
   let exclusions: Data?
+  let dateSpecificPauseWindows: Data?
   let dateSpecificSupplements: Data?
   let updatedAt: Date
   let revision: Int64
@@ -302,6 +342,10 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
       selectedDays: (try? canonicalJSONEncoder.encode(row.selected_days)) ?? Data(),
       endCondition: row.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) },
       exclusions: row.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) },
+      dateSpecificPauseWindows: PauseWindowSupport.normalize(row.date_specific_pause_windows)
+        .flatMap {
+          try? canonicalJSONEncoder.encode($0)
+        },
       dateSpecificSupplements: row.date_specific_supplements.flatMap {
         try? canonicalJSONEncoder.encode($0)
       },
@@ -353,6 +397,9 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
     if exclusions != other.exclusions {
       changed.insert(.exclusions)
     }
+    if dateSpecificPauseWindows != other.dateSpecificPauseWindows {
+      changed.insert(.dateSpecificPauseWindows)
+    }
     if dateSpecificSupplements != other.dateSpecificSupplements {
       changed.insert(.dateSpecificSupplements)
     }
@@ -376,6 +423,8 @@ extension LocalRecurringShift {
       selected_days: decodedSelectedDays,
       end_condition: decodedEndCondition,
       exclusions: decodedExclusions.isEmpty ? nil : decodedExclusions,
+      date_specific_pause_windows: decodedDateSpecificPauseWindows.isEmpty
+        ? nil : decodedDateSpecificPauseWindows,
       date_specific_supplements: decodedDateSpecificSupplements.isEmpty
         ? nil : decodedDateSpecificSupplements
     )
@@ -406,6 +455,8 @@ extension LocalRecurringShift {
       selectedDays: (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data(),
       endCondition: serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) },
       exclusions: serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) },
+      dateSpecificPauseWindows: PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
+        .flatMap { try? canonicalJSONEncoder.encode($0) },
       dateSpecificSupplements: serverRow.date_specific_supplements.flatMap {
         try? canonicalJSONEncoder.encode($0)
       },

@@ -79,11 +79,13 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 | `shift_date` | `date` | No | The date of the shift (ISO: `YYYY-MM-DD`) |
 | `start_time` | `text` | No | Start time in `HH:MM` format |
 | `end_time` | `text` | No | End time in `HH:MM` format (supports cross-midnight) |
+| `custom_pause_windows` | `jsonb` | Yes | Exact per-shift pause windows: `{ windows: [{ start, end }] }` |
 | `custom_supplements` | `jsonb` | Yes | Shift-specific supplement overrides |
 | `created_at` | `timestamptz` | Yes | Creation timestamp (default: `now()`) |
 
 **Behavior notes:**
 - When `end_time <= start_time`, shift crosses midnight (e.g., 22:00 to 06:00)
+- `custom_pause_windows` is normalized before persistence; empty or fully invalid payloads become `NULL`
 - `custom_supplements` when present completely replaces snapshot supplements for this shift
 - Legacy clients that do not send `job_id` are automatically assigned the user's default job by a DB trigger
 
@@ -100,6 +102,7 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 | `selected_days` | `jsonb` | No | Anchor dates by weekday: `{ "1": "2025-01-27" }` |
 | `end_condition` | `jsonb` | Yes | End rule: `{ type: "never" }`, `{ type: "months", value: N }`, `{ type: "years", value: N }`, `{ type: "end_date", date: "YYYY-MM-DD" }` |
 | `exclusions` | `jsonb` | Yes | Array of ISO dates to skip |
+| `date_specific_pause_windows` | `jsonb` | Yes | Per-date pause overrides: `{ "2025-01-15": { windows: [...] } }` |
 | `date_specific_supplements` | `jsonb` | Yes | Per-date custom supplements: `{ "2025-01-15": { rules: [...] } }` |
 
 **Behavior notes:**
@@ -377,6 +380,7 @@ type ShiftRow = {
   end_time: string;
   hourly_wage_snapshot?: number | null;
   supplement_rules_snapshot?: { rules: SupplementRule[] } | null;
+  custom_pause_windows?: { windows: PauseWindow[] } | null;
   custom_supplements?: CustomSupplementsData | null;
   recurring_id?: string;
   recurring_anchor_weekday?: number;
@@ -1151,7 +1155,16 @@ FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
   totalMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
   durationHours = ROUND(totalMinutes / 60, 2)
 
-  // 7. Apply break deduction
+  // 7. Apply pause handling
+  IF shift.custom_pause_windows EXISTS THEN
+    periods = clipPeriodsByPauseWindows(periods, shift.custom_pause_windows)
+    breakAudit = {
+      source: "custom_pause_windows",
+      deductedHours: clippedPauseHours,
+      appliedPauseWindows: clippedPauseWindows
+    }
+  ELSE
+    // Automatic break deduction
   breakEnabled = snapshot.break_enabled OR true
   breakMethod = snapshot.break_method OR "proportional"
   threshold = snapshot.break_threshold_hours OR 5.5
@@ -1159,6 +1172,8 @@ FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
 
   IF durationHours > threshold AND breakEnabled THEN
     periods = applyBreakDeduction(periods, breakMethod, threshold, breakMinutes/60)
+    breakAudit.source = "automatic_break"
+  ENDIF
 
   // 8. Calculate paid hours
   paidMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)

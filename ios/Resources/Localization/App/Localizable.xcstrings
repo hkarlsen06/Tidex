@@ -350540,6 +350540,305 @@
         }
       }
     },
+    "shifts.pause.editor.addWindow" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausenfenster hinzufügen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add pause window"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til pausetid"
+          }
+        }
+      }
+    },
+    "shifts.pause.editor.durationLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dauer"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Duration"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Varighet"
+          }
+        }
+      }
+    },
+    "shifts.pause.editor.emptyState" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge genaue Pausenfenster hinzu, um die automatische Pausenregel für diese Schicht zu überschreiben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add exact pause windows to override the automatic break rule for this shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til eksakte pausetider for å overstyre det automatiske pausetrekket for denne vakten."
+          }
+        }
+      }
+    },
+    "shifts.pause.editor.validation.differentTime" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jedes Pausenfenster braucht eine andere Start- und Endzeit."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Each pause window needs a different start and end time."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hver pausetid må ha ulik start- og sluttid."
+          }
+        }
+      }
+    },
+    "shifts.pause.editor.validation.uniqueWindows" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausenfenster müssen eindeutig sein, bevor du speichern kannst."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause windows must be unique before you can save."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausetider må være unike før du kan lagre."
+          }
+        }
+      }
+    },
+    "shifts.pause.section.addExactWindows" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genaue Pausenfenster hinzufügen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add exact pause windows"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til eksakte pausetider"
+          }
+        }
+      }
+    },
+    "shifts.pause.section.deductedLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abgezogen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deducted"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trukket"
+          }
+        }
+      }
+    },
+    "shifts.pause.section.editWindows" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausenfenster bearbeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit pause windows"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rediger pausetider"
+          }
+        }
+      }
+    },
+    "shifts.pause.section.summary.addHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Füge genaue Pausenfenster hinzu, wenn diese Schicht gespeicherte Pausen statt der automatischen Pausenregel verwenden soll."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add exact pause windows if you want this shift to use saved pauses instead of the automatic break rule."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til eksakte pausetider hvis du vil at denne vakten skal bruke lagrede pauser i stedet for den automatiske pauseregelen."
+          }
+        }
+      }
+    },
+    "shifts.pause.section.summary.automaticApplied" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der automatische Pausenabzug wird aus deinen Lohneinstellungen angewendet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic break deduction is applied from your pay settings."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisk pausetrekk brukes fra lønnsinnstillingene dine."
+          }
+        }
+      }
+    },
+    "shifts.pause.section.summary.customOverride" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Benutzerdefinierte Pausenfenster überschreiben die automatische Pausenregel für diese Schicht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Custom pause windows override the automatic break rule for this shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Egendefinerte pausetider overstyrer den automatiske pauseregelen for denne vakten."
+          }
+        }
+      }
+    },
+    "shifts.pause.section.summary.savedOnShift" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Pausenfenster sind in der Schicht gespeichert."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "These pause windows are saved on the shift."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disse pausetidene er lagret på vakten."
+          }
+        }
+      }
+    },
+    "shifts.pause.section.windowsLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausenfenster"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause windows"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausetider"
+          }
+        }
+      }
+    },
     "shifts.recurringShift" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -428368,6 +428667,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "👋"
+          }
+        }
+      }
+    },
+    "shifts.pause.editor.validation.withinShift" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause times must be within the shift time."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausetidene må være innenfor vakttiden."
           }
         }
       }

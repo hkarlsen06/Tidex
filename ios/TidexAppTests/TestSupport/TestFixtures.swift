@@ -41,6 +41,7 @@ enum TestFixtures {
     startTime: String,
     endTime: String,
     jobId: String? = nil,
+    customPauseWindows: CustomPauseWindows? = nil,
     customSupplements: CustomSupplementsData? = nil
   ) -> ShiftRow {
     ShiftRow(
@@ -50,6 +51,7 @@ enum TestFixtures {
       shift_date: shiftDate,
       start_time: startTime,
       end_time: endTime,
+      custom_pause_windows: customPauseWindows,
       custom_supplements: customSupplements,
       created_at: nil,
       updated_at: nil,
@@ -100,6 +102,7 @@ enum TestFixtures {
       startTime: startTime,
       endTime: endTime,
       jobId: jobId,
+      customPauseWindows: nil,
       customSupplements: nil
     )
 

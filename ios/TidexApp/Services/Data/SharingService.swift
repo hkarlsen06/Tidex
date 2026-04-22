@@ -465,10 +465,19 @@ final class SharingService: ObservableObject {
         paidHours: shift.computed.paidHours,
         basePay: shift.computed.basePay,
         supplementPay: shift.computed.supplementPay,
-        gross: shift.computed.gross
+        gross: shift.computed.gross,
+        breakAudit: SharedBreakAudit(
+          method: BreakMethod(rawValue: shift.computed.breakAudit.method.rawValue) ?? .none,
+          thresholdHours: shift.computed.breakAudit.thresholdHours,
+          deductedHours: shift.computed.breakAudit.deductedHours,
+          source: shift.computed.breakAudit.source,
+          appliedPauseWindows: shift.computed.breakAudit.appliedPauseWindows,
+          notes: shift.computed.breakAudit.notes
+        )
       ),
       tax_enabled: shift.taxEnabled,
       tax_percentage: shift.taxPercentage,
+      custom_pause_windows: shift.customPauseWindows,
       custom_supplements: shift.customSupplements.map(mapCustomSupplements),
       recurring_id: shift.recurringId,
       recurring_anchor_weekday: shift.recurringAnchorWeekday

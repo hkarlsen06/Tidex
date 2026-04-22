@@ -163,6 +163,7 @@ struct PayrollEngine {
             shift_date: virtual.date,
             start_time: recurringShift.cleanStartTime,
             end_time: recurringShift.cleanEndTime,
+            custom_pause_windows: recurringShift.date_specific_pause_windows?[virtual.date],
             custom_supplements: recurringShift.date_specific_supplements?[virtual.date],
             created_at: nil,
             recurring_id: recurringShift.id,

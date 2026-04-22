@@ -30,6 +30,10 @@ final class LocalUserShift {
   /// End time in HH:mm format (can be less than startTime for cross-midnight)
   var endTime: String
 
+  /// Custom pause windows JSON blob (nullable)
+  /// Stored as canonical JSON Data for reliable diffing
+  var customPauseWindows: Data?
+
   /// Custom supplements JSON blob (nullable)
   /// Stored as canonical JSON Data for reliable diffing
   var customSupplements: Data?
@@ -110,6 +114,20 @@ final class LocalUserShift {
     }
   }
 
+  /// Decoded custom pause windows
+  var decodedCustomPauseWindows: CustomPauseWindows? {
+    get {
+      guard let data = customPauseWindows else { return nil }
+      return PauseWindowSupport.normalize(
+        try? syncJSONDecoder.decode(CustomPauseWindows.self, from: data))
+    }
+    set {
+      customPauseWindows = PauseWindowSupport.normalize(newValue).flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      }
+    }
+  }
+
   /// Shift date as ISO string (YYYY-MM-DD)
   var shiftDateString: String {
     FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: shiftDate)
@@ -141,6 +159,7 @@ final class LocalUserShift {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    customPauseWindows: Data? = nil,
     customSupplements: Data? = nil,
     serverUpdatedAt: Date,
     serverRevision: Int64,
@@ -157,6 +176,7 @@ final class LocalUserShift {
     self.shiftDate = shiftDate
     self.startTime = startTime
     self.endTime = endTime
+    self.customPauseWindows = customPauseWindows
     self.customSupplements = customSupplements
     self.serverUpdatedAt = serverUpdatedAt
     self.serverRevision = serverRevision
@@ -183,6 +203,7 @@ struct UserShiftServerSnapshot: Codable, Equatable {
   let shiftDate: String
   let startTime: String
   let endTime: String
+  let customPauseWindows: Data?
   let customSupplements: Data?
   let updatedAt: Date
   let revision: Int64
@@ -194,17 +215,22 @@ struct UserShiftServerSnapshot: Codable, Equatable {
     shiftDate: String,
     startTime: String,
     endTime: String,
+    customPauseWindows: CustomPauseWindows?,
     customSupplements: CustomSupplementsData?,
     updatedAt: Date,
     revision: Int64,
     deletedAt: Date?
   ) -> UserShiftServerSnapshot {
+    let pauseWindowsData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
     let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
     return UserShiftServerSnapshot(
       jobId: jobId,
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
+      customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       updatedAt: updatedAt,
       revision: revision,
@@ -245,6 +271,9 @@ struct UserShiftServerSnapshot: Codable, Equatable {
     if endTime != other.endTime {
       changed.insert(.endTime)
     }
+    if customPauseWindows != other.customPauseWindows {
+      changed.insert(.customPauseWindows)
+    }
     if customSupplements != other.customSupplements {
       changed.insert(.customSupplements)
     }
@@ -265,6 +294,7 @@ extension LocalUserShift {
       shift_date: shiftDateString,
       start_time: startTime,
       end_time: endTime,
+      custom_pause_windows: decodedCustomPauseWindows,
       custom_supplements: decodedCustomSupplements,
       created_at: nil,
       updated_at: serverUpdatedAt,
@@ -289,12 +319,16 @@ extension LocalUserShift {
     let supplementsData = serverRow.custom_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
+    let pauseWindowsData = PauseWindowSupport.normalize(serverRow.custom_pause_windows).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
 
     let snapshot = UserShiftServerSnapshot.from(
       jobId: serverRow.job_id,
       shiftDate: serverRow.shift_date,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      customPauseWindows: serverRow.custom_pause_windows,
       customSupplements: serverRow.custom_supplements,
       updatedAt: serverUpdatedAt,
       revision: serverRevision,
@@ -308,6 +342,7 @@ extension LocalUserShift {
       shiftDate: shiftDate,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,

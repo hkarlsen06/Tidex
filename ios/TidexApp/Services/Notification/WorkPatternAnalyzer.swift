@@ -183,6 +183,7 @@ struct WorkPatternAnalyzer {
             shift_date: virtual.date,
             start_time: recurring.cleanStartTime,
             end_time: recurring.cleanEndTime,
+            custom_pause_windows: recurring.date_specific_pause_windows?[virtual.date],
             custom_supplements: recurring.date_specific_supplements?[virtual.date],
             created_at: nil
           )

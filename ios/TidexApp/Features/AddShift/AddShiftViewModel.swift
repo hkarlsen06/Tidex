@@ -1601,6 +1601,7 @@ final class AddShiftViewModel: ObservableObject {
           shift_date: virtualShift.date,
           start_time: recurring.start_time,
           end_time: recurring.end_time,
+          custom_pause_windows: recurring.date_specific_pause_windows?[virtualShift.date],
           custom_supplements: nil
         )
 
@@ -1937,6 +1938,7 @@ final class AddShiftViewModel: ObservableObject {
           shift_date: virtualShift.date,
           start_time: recurring.start_time,
           end_time: recurring.end_time,
+          custom_pause_windows: recurring.date_specific_pause_windows?[virtualShift.date],
           custom_supplements: nil
         )
 

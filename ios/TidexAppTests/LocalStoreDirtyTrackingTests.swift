@@ -93,6 +93,40 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.startTime]))
   }
 
+  func testUpdateUserShiftCustomPauseWindowsMarksOnlyPauseFieldDirty() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createUserShift(
+      id: "shift-pause-1",
+      userId: userId,
+      jobId: "job-1",
+      shiftDate: makeDate("2026-03-02"),
+      startTime: "09:00",
+      endTime: "17:00",
+      customSupplements: nil
+    )
+
+    await store.markShiftClean(id: "shift-pause-1")
+    try await store.save()
+
+    _ = try await store.updateUserShiftCustomPauseWindows(
+      id: "shift-pause-1",
+      customPauseWindows: CustomPauseWindows(windows: [
+        PauseWindow(start: "12:00", end: "12:30")
+      ])
+    )
+
+    let localRecord = try await store.getUserShift(id: "shift-pause-1")
+    let local = try XCTUnwrap(localRecord)
+
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.customPauseWindows]))
+    XCTAssertEqual(
+      local.decodedCustomPauseWindows,
+      CustomPauseWindows(windows: [PauseWindow(start: "12:00", end: "12:30")])
+    )
+  }
+
   func testMarkShiftPendingDeleteSetsPendingDeleteStatus() async throws {
     let store = try makeStoreActor()
 
@@ -133,6 +167,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       shiftDate: "2026-03-10",
       startTime: "12:00",
       endTime: "20:00",
+      customPauseWindows: nil,
       customSupplements: CustomSupplementsData(
         rules: [
           CustomSupplementRule(from: "18:00", to: "20:00", rate: 40, percent: nil, isCustom: true)
@@ -199,6 +234,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "07:00",
       endTime: "15:00",
+      customPauseWindows: nil,
       customSupplements: nil,
       updatedAt: serverUpdatedAt,
       revision: 9,

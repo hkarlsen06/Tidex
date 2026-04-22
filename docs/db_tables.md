@@ -210,6 +210,7 @@ Each user can have many of these records.
 | shift_date | `date` | NOT NULL |
 | start_time | `text` | NOT NULL |
 | end_time | `text` | NOT NULL |
+| custom_pause_windows | `jsonb` | structure: `{ windows: [{ start: "HH:mm", end: "HH:mm" }] }`; normalized to `NULL` when empty/invalid |
 | custom_supplements | `jsonb` | structure: `{ mode: "replace" | "merge", rules: SupplementRule[] }` |
 | deleted_at | `timestamptz` | soft delete |
 | revision | `bigint` | default: 1 |
@@ -231,6 +232,7 @@ Each user can have many of these records.
 | selected_days | `jsonb` | NOT NULL |
 | end_condition | `jsonb` | |
 | exclusions | `jsonb` | |
+| date_specific_pause_windows | `jsonb` | structure: `{ [isoDate]: { windows: [{ start, end }] } }`; invalid/empty entries normalize away |
 | date_specific_supplements | `jsonb` | structure: `{ [isoDate]: { mode, rules } }` |
 | deleted_at | `timestamptz` | soft delete |
 | revision | `bigint` | default: 1 |

@@ -514,10 +514,19 @@ final class FriendsListOrderingTests: XCTestCase {
           paidHours: 8,
           basePay: 0,
           supplementPay: 0,
-          gross: 0
+          gross: 0,
+          breakAudit: SharedBreakAudit(
+            method: .none,
+            thresholdHours: 0,
+            deductedHours: 0,
+            source: .none,
+            appliedPauseWindows: nil,
+            notes: []
+          )
         ),
         tax_enabled: nil,
         tax_percentage: nil,
+        custom_pause_windows: nil,
         custom_supplements: nil,
         recurring_id: nil,
         recurring_anchor_weekday: nil

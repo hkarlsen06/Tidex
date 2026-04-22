@@ -12,6 +12,289 @@ enum SharingRPCMode: Sendable {
   case hidden
 }
 
+struct PauseWindow: Codable, Equatable, Hashable, Sendable {
+  let start: String
+  let end: String
+}
+
+struct CustomPauseWindows: Codable, Equatable, Hashable, Sendable {
+  let windows: [PauseWindow]
+}
+
+typealias DateSpecificPauseWindows = [String: CustomPauseWindows]
+
+enum BreakAuditSource: String, Codable, Equatable, Sendable {
+  case none
+  case automaticBreak = "automatic_break"
+  case customPauseWindows = "custom_pause_windows"
+}
+
+struct PauseClipPeriod: Equatable, Sendable {
+  let fromMin: Double
+  let toMin: Double
+  let baseRate: Double
+  let supplementRate: Double
+}
+
+struct PauseWindowClipResult: Equatable, Sendable {
+  let periods: [PauseClipPeriod]
+  let deductedHours: Double
+  let appliedPauseWindows: [PauseWindow]?
+}
+
+enum PauseWindowSupport {
+  static func normalize(_ value: CustomPauseWindows?) -> CustomPauseWindows? {
+    guard let value else { return nil }
+
+    let normalized = value.windows.compactMap { window -> PauseWindow? in
+      guard let start = normalizedTime(window.start), let end = normalizedTime(window.end) else {
+        return nil
+      }
+      guard start != end else { return nil }
+      return PauseWindow(start: start, end: end)
+    }
+
+    guard !normalized.isEmpty else { return nil }
+
+    let uniqueSorted = Array(Set(normalized)).sorted {
+      if $0.start == $1.start {
+        return $0.end < $1.end
+      }
+      return $0.start < $1.start
+    }
+
+    return CustomPauseWindows(windows: uniqueSorted)
+  }
+
+  static func normalize(_ value: DateSpecificPauseWindows?) -> DateSpecificPauseWindows? {
+    guard let value else { return nil }
+
+    let normalized = value.reduce(into: DateSpecificPauseWindows()) { result, entry in
+      guard isValidISODate(entry.key) else { return }
+      guard let windows = normalize(entry.value) else { return }
+      result[entry.key] = windows
+    }
+
+    return normalized.isEmpty ? nil : normalized
+  }
+
+  static func apply(
+    customPauseWindows: CustomPauseWindows,
+    startTime: String,
+    endTime: String,
+    periods: [PauseClipPeriod]
+  ) -> PauseWindowClipResult {
+    guard let normalized = normalize(customPauseWindows), !periods.isEmpty else {
+      return PauseWindowClipResult(periods: periods, deductedHours: 0, appliedPauseWindows: nil)
+    }
+
+    let pauseIntervals = clippedIntervals(
+      windows: normalized.windows,
+      shiftStartTime: startTime,
+      shiftEndTime: endTime
+    )
+
+    guard !pauseIntervals.isEmpty else {
+      return PauseWindowClipResult(periods: periods, deductedHours: 0, appliedPauseWindows: nil)
+    }
+
+    var clipped: [PauseClipPeriod] = []
+
+    for period in periods {
+      var cursor = period.fromMin
+
+      for interval in pauseIntervals {
+        if interval.end <= cursor || interval.start >= period.toMin {
+          continue
+        }
+
+        let overlapStart = max(cursor, interval.start)
+        let overlapEnd = min(period.toMin, interval.end)
+
+        if overlapStart > cursor {
+          clipped.append(
+            PauseClipPeriod(
+              fromMin: cursor,
+              toMin: overlapStart,
+              baseRate: period.baseRate,
+              supplementRate: period.supplementRate
+            ))
+        }
+
+        cursor = max(cursor, overlapEnd)
+        if cursor >= period.toMin {
+          break
+        }
+      }
+
+      if cursor < period.toMin {
+        clipped.append(
+          PauseClipPeriod(
+            fromMin: cursor,
+            toMin: period.toMin,
+            baseRate: period.baseRate,
+            supplementRate: period.supplementRate
+          ))
+      }
+    }
+
+    let deductedMinutes = pauseIntervals.reduce(0.0) { $0 + ($1.end - $1.start) }
+    let appliedWindows = pauseIntervals.map { interval in
+      PauseWindow(
+        start: minutesToTimeString(interval.start),
+        end: minutesToTimeString(interval.end)
+      )
+    }
+
+    return PauseWindowClipResult(
+      periods: clipped.filter { $0.toMin > $0.fromMin },
+      deductedHours: deductedMinutes / 60.0,
+      appliedPauseWindows: appliedWindows.isEmpty ? nil : appliedWindows
+    )
+  }
+
+  static func isWithinShift(
+    _ window: PauseWindow,
+    shiftStartTime: String,
+    shiftEndTime: String
+  ) -> Bool {
+    guard let normalized = normalize(CustomPauseWindows(windows: [window]))?.windows.first else {
+      return false
+    }
+
+    let shiftStart = Double(timeToMinutes(shiftStartTime))
+    var shiftEnd = Double(timeToMinutes(shiftEndTime))
+    if shiftEnd <= shiftStart {
+      shiftEnd += 24 * 60
+    }
+
+    let windowStart = Double(timeToMinutes(normalized.start))
+    var windowEnd = Double(timeToMinutes(normalized.end))
+    if windowEnd <= windowStart {
+      windowEnd += 24 * 60
+    }
+
+    for base in [0.0, 24.0 * 60.0] {
+      let start = windowStart + base
+      let end = windowEnd + base
+      if start >= shiftStart && end <= shiftEnd {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  private static func clippedIntervals(
+    windows: [PauseWindow],
+    shiftStartTime: String,
+    shiftEndTime: String
+  ) -> [(start: Double, end: Double)] {
+    let shiftStart = Double(timeToMinutes(shiftStartTime))
+    var shiftEnd = Double(timeToMinutes(shiftEndTime))
+    if shiftEnd <= shiftStart {
+      shiftEnd += 24 * 60
+    }
+
+    var intervals: [(start: Double, end: Double)] = []
+
+    for window in windows {
+      let windowStart = Double(timeToMinutes(window.start))
+      var windowEnd = Double(timeToMinutes(window.end))
+      if windowEnd <= windowStart {
+        windowEnd += 24 * 60
+      }
+
+      for base in [0.0, 24.0 * 60.0] {
+        let start = windowStart + base
+        let end = windowEnd + base
+        let clippedStart = max(start, shiftStart)
+        let clippedEnd = min(end, shiftEnd)
+
+        if clippedEnd > clippedStart {
+          intervals.append((start: clippedStart, end: clippedEnd))
+        }
+      }
+    }
+
+    let sorted = intervals.sorted {
+      if $0.start == $1.start {
+        return $0.end < $1.end
+      }
+      return $0.start < $1.start
+    }
+
+    guard var current = sorted.first else { return [] }
+    var merged: [(start: Double, end: Double)] = []
+
+    for interval in sorted.dropFirst() {
+      if interval.start <= current.end {
+        current.end = max(current.end, interval.end)
+      } else {
+        merged.append(current)
+        current = interval
+      }
+    }
+
+    merged.append(current)
+    return merged
+  }
+
+  private static func normalizedTime(_ value: String) -> String? {
+    let parts = value.split(separator: ":")
+    guard parts.count == 2,
+      let hours = Int(parts[0]),
+      let minutes = Int(parts[1]),
+      minutes >= 0,
+      minutes < 60,
+      hours >= 0,
+      hours <= 24
+    else {
+      return nil
+    }
+
+    guard hours < 24 || minutes == 0 else { return nil }
+    return String(format: "%02d:%02d", hours, minutes)
+  }
+
+  private static func timeToMinutes(_ hhmm: String) -> Int {
+    let normalized = normalizedTime(hhmm) ?? "00:00"
+    let parts = normalized.split(separator: ":").compactMap { Int($0) }
+    guard parts.count == 2 else { return 0 }
+    return (parts[0] * 60) + parts[1]
+  }
+
+  private static func minutesToTimeString(_ minutes: Double) -> String {
+    let rounded = Int(minutes.rounded())
+    let normalized = ((rounded % (24 * 60)) + (24 * 60)) % (24 * 60)
+    if rounded > 0 && normalized == 0 {
+      return "24:00"
+    }
+    let hours = normalized / 60
+    let mins = normalized % 60
+    return String(format: "%02d:%02d", hours, mins)
+  }
+
+  private static func isValidISODate(_ value: String) -> Bool {
+    let parts = value.split(separator: "-")
+    guard parts.count == 3,
+      let year = Int(parts[0]),
+      let month = Int(parts[1]),
+      let day = Int(parts[2])
+    else {
+      return false
+    }
+
+    var components = DateComponents()
+    components.calendar = Calendar(identifier: .gregorian)
+    components.timeZone = TimeZone(secondsFromGMT: 0)
+    components.year = year
+    components.month = month
+    components.day = day
+    return components.date != nil
+  }
+}
+
 struct SharingRPCSharerRow: Decodable, Sendable {
   let id: String
   let email: String?
@@ -228,6 +511,7 @@ struct SharingRPCShiftRow: Codable, Sendable {
   let shiftDate: String
   let startTime: String
   let endTime: String
+  let customPauseWindows: CustomPauseWindows?
   let customSupplements: SharingRPCCustomSupplements?
   let recurringId: String?
   let recurringAnchorWeekday: Int?
@@ -239,6 +523,7 @@ struct SharingRPCShiftRow: Codable, Sendable {
     case shiftDate = "shift_date"
     case startTime = "start_time"
     case endTime = "end_time"
+    case customPauseWindows = "custom_pause_windows"
     case customSupplements = "custom_supplements"
     case recurringId = "recurring_id"
     case recurringAnchorWeekday = "recurring_anchor_weekday"
@@ -255,6 +540,7 @@ struct SharingRPCRecurringShiftRow: Codable, Sendable {
   let selectedDays: [String: String]
   let endCondition: SharingRPCEndCondition?
   let exclusions: [String]?
+  let dateSpecificPauseWindows: DateSpecificPauseWindows?
   let dateSpecificSupplements: [String: SharingRPCCustomSupplements]?
 
   var cleanStartTime: String {
@@ -291,6 +577,7 @@ struct SharingRPCRecurringShiftRow: Codable, Sendable {
     case selectedDays = "selected_days"
     case endCondition = "end_condition"
     case exclusions
+    case dateSpecificPauseWindows = "date_specific_pause_windows"
     case dateSpecificSupplements = "date_specific_supplements"
   }
 }
@@ -497,6 +784,7 @@ struct SharingComputedShiftComputed: Equatable, Sendable {
   let basePay: Double
   let supplementPay: Double
   let gross: Double
+  let breakAudit: SharingRPCBreakAudit
 }
 
 struct SharingComputedShift: Identifiable, Equatable, Sendable {
@@ -508,6 +796,7 @@ struct SharingComputedShift: Identifiable, Equatable, Sendable {
   let shiftDate: String
   let startTime: String
   let endTime: String
+  let customPauseWindows: CustomPauseWindows?
   let customSupplements: SharingRPCCustomSupplements?
   let recurringId: String?
   let recurringAnchorWeekday: Int?
@@ -529,7 +818,7 @@ struct SharingComputedPreview: Sendable {
   let showEarnings: Bool
 }
 
-private enum SharingRPCBreakMethod: String, Codable, Equatable, Sendable {
+enum SharingRPCBreakMethod: String, Codable, Equatable, Sendable {
   case proportional = "proportional"
   case baseOnly = "base_only"
   case endOfShift = "end_of_shift"
@@ -546,10 +835,12 @@ private struct SharingRPCWagePeriod: Equatable, Sendable {
   var durationHours: Double { durationMinutes / 60.0 }
 }
 
-private struct SharingRPCBreakAudit: Equatable, Sendable {
+struct SharingRPCBreakAudit: Equatable, Sendable {
   let method: SharingRPCBreakMethod
   let thresholdHours: Double
   let deductedHours: Double
+  let source: BreakAuditSource
+  let appliedPauseWindows: [PauseWindow]?
   let notes: [String]
 }
 
@@ -666,6 +957,7 @@ enum SharingComputeCore {
             shiftDate: virtual.date,
             startTime: recurring.cleanStartTime,
             endTime: recurring.cleanEndTime,
+            customPauseWindows: recurring.dateSpecificPauseWindows?[virtual.date],
             customSupplements: recurring.dateSpecificSupplements?[virtual.date],
             recurringId: recurring.id,
             recurringAnchorWeekday: virtual.weekday
@@ -754,6 +1046,7 @@ enum SharingComputeCore {
         shiftDate: shift.shiftDate,
         startTime: shift.startTime,
         endTime: shift.endTime,
+        customPauseWindows: shift.customPauseWindows,
         customSupplements: nil,
         recurringId: shift.recurringId,
         recurringAnchorWeekday: shift.recurringAnchorWeekday,
@@ -762,7 +1055,8 @@ enum SharingComputeCore {
           paidHours: shift.computed.paidHours,
           basePay: 0,
           supplementPay: 0,
-          gross: 0
+          gross: 0,
+          breakAudit: shift.computed.breakAudit
         ),
         taxEnabled: false,
         taxPercentage: 0
@@ -893,7 +1187,8 @@ enum SharingComputeCore {
         paidHours: computed.paidHours,
         basePay: 0,
         supplementPay: 0,
-        gross: 0
+        gross: 0,
+        breakAudit: computed.breakAudit
       )
     }
 
@@ -906,6 +1201,7 @@ enum SharingComputeCore {
       shiftDate: shift.shiftDate,
       startTime: shift.startTime,
       endTime: shift.endTime,
+      customPauseWindows: shift.customPauseWindows,
       customSupplements: mode == .hidden ? nil : shift.customSupplements,
       recurringId: shift.recurringId,
       recurringAnchorWeekday: shift.recurringAnchorWeekday,
@@ -970,6 +1266,7 @@ enum SharingComputeCore {
     mode: SharingRPCMode
   ) -> SharingComputedShiftComputed {
     let weekday = weekdayFromISO(shift.shiftDate)
+    let normalizedPauseWindows = PauseWindowSupport.normalize(shift.customPauseWindows)
 
     let baseRate = resolveBaseRate(snapshot: snapshot, mode: mode)
     let rules = resolveSupplementRules(
@@ -989,21 +1286,57 @@ enum SharingComputeCore {
 
     let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
     let durationHours = roundTo(totalMinutes / 60.0, decimals: 2)
+    let breakAudit: SharingRPCBreakAudit
 
-    let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
-    let breakMethod = snapshot?.effectiveBreakMethod ?? .proportional
-    let breakThreshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
-    let breakMinutes =
-      breakEnabled ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes) : 0
+    if let normalizedPauseWindows {
+      let clipped = PauseWindowSupport.apply(
+        customPauseWindows: normalizedPauseWindows,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        periods: periods.map {
+          PauseClipPeriod(
+            fromMin: $0.fromMin,
+            toMin: $0.toMin,
+            baseRate: $0.baseRate,
+            supplementRate: $0.supplementRate
+          )
+        }
+      )
+      periods = clipped.periods.map {
+        SharingRPCWagePeriod(
+          fromMin: $0.fromMin,
+          toMin: $0.toMin,
+          baseRate: $0.baseRate,
+          supplementRate: $0.supplementRate
+        )
+      }
+      breakAudit = SharingRPCBreakAudit(
+        method: .none,
+        thresholdHours: 0,
+        deductedHours: clipped.deductedHours,
+        source: .customPauseWindows,
+        appliedPauseWindows: clipped.appliedPauseWindows,
+        notes: clipped.appliedPauseWindows?.isEmpty == false
+          ? ["Deducted using custom pause windows"] : []
+      )
+    } else {
+      let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
+      let breakMethod = snapshot?.effectiveBreakMethod ?? .proportional
+      let breakThreshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
+      let breakMinutes =
+        breakEnabled
+        ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes) : 0
 
-    let breakResult = applyBreakDeduction(
-      periods: periods,
-      method: breakMethod,
-      thresholdHours: breakThreshold,
-      deductionHours: Double(breakMinutes) / 60.0
-    )
+      let breakResult = applyBreakDeduction(
+        periods: periods,
+        method: breakMethod,
+        thresholdHours: breakThreshold,
+        deductionHours: Double(breakMinutes) / 60.0
+      )
 
-    periods = breakResult.periods
+      periods = breakResult.periods
+      breakAudit = breakResult.audit
+    }
 
     let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
     let paidHours = roundTo(paidMinutes / 60.0, decimals: 2)
@@ -1026,7 +1359,8 @@ enum SharingComputeCore {
       paidHours: paidHours,
       basePay: basePay,
       supplementPay: supplementPay,
-      gross: gross
+      gross: gross,
+      breakAudit: breakAudit
     )
   }
 
@@ -1256,6 +1590,8 @@ enum SharingComputeCore {
         method: method,
         thresholdHours: thresholdHours,
         deductedHours: toDeduct,
+        source: .automaticBreak,
+        appliedPauseWindows: nil,
         notes: notes
       )
     )

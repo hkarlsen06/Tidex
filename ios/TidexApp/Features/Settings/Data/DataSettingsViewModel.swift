@@ -467,6 +467,7 @@ final class DataSettingsViewModel: ObservableObject {
             shift_date: virtualShift.date,
             start_time: recurring.cleanStartTime,
             end_time: recurring.cleanEndTime,
+            custom_pause_windows: recurring.date_specific_pause_windows?[virtualShift.date],
             custom_supplements: recurring.date_specific_supplements?[virtualShift.date],
             recurring_id: recurring.id,
             recurring_anchor_weekday: virtualShift.weekday

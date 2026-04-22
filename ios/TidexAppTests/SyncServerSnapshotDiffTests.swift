@@ -11,6 +11,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "09:00",
       endTime: "17:00",
+      customPauseWindows: nil,
       customSupplements: nil,
       updatedAt: timestamp,
       revision: 1,
@@ -22,6 +23,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "09:00",
       endTime: "18:00",
+      customPauseWindows: nil,
       customSupplements: CustomSupplementsData(rules: []),
       updatedAt: timestamp,
       revision: 2,
@@ -30,7 +32,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
     XCTAssertEqual(
       updated.changedFields(from: original),
-      Set([.jobId, .endTime, .customSupplements])
+      Set<UserShiftField>([.jobId, .endTime, .customSupplements])
     )
   }
 
@@ -48,6 +50,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       selectedDays: selectedDaysOriginal,
       endCondition: nil,
       exclusions: nil,
+      dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
       updatedAt: timestamp,
       revision: 1,
@@ -62,6 +65,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       selectedDays: selectedDaysUpdated,
       endCondition: nil,
       exclusions: nil,
+      dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
       updatedAt: timestamp,
       revision: 2,
@@ -70,7 +74,84 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
     XCTAssertEqual(
       updated.changedFields(from: original),
-      Set([.startTime, .repeatIntervalWeeks, .selectedDays])
+      Set<RecurringShiftField>([.startTime, .repeatIntervalWeeks, .selectedDays])
+    )
+  }
+
+  func testUserShiftServerSnapshotTracksCustomPauseWindowChanges() {
+    let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
+
+    let original = UserShiftServerSnapshot.from(
+      jobId: "job-1",
+      shiftDate: "2026-03-02",
+      startTime: "09:00",
+      endTime: "17:00",
+      customPauseWindows: nil,
+      customSupplements: nil,
+      updatedAt: timestamp,
+      revision: 1,
+      deletedAt: nil
+    )
+
+    let updated = UserShiftServerSnapshot.from(
+      jobId: "job-1",
+      shiftDate: "2026-03-02",
+      startTime: "09:00",
+      endTime: "17:00",
+      customPauseWindows: CustomPauseWindows(windows: [
+        PauseWindow(start: "12:00", end: "12:30")
+      ]),
+      customSupplements: nil,
+      updatedAt: timestamp,
+      revision: 2,
+      deletedAt: nil
+    )
+
+    XCTAssertEqual(
+      updated.changedFields(from: original), Set<UserShiftField>([.customPauseWindows]))
+  }
+
+  func testRecurringShiftServerSnapshotTracksDateSpecificPauseWindowChanges() throws {
+    let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
+    let selectedDays = try canonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays)
+    let pauseWindows = try canonicalJSONEncoder.encode(
+      [
+        "2026-03-09": CustomPauseWindows(windows: [PauseWindow(start: "12:00", end: "12:30")])
+      ] as DateSpecificPauseWindows)
+
+    let original = RecurringShiftServerSnapshot(
+      jobId: "job-1",
+      startTime: "09:00",
+      endTime: "17:00",
+      repeatIntervalWeeks: 1,
+      selectedDays: selectedDays,
+      endCondition: nil,
+      exclusions: nil,
+      dateSpecificPauseWindows: nil,
+      dateSpecificSupplements: nil,
+      updatedAt: timestamp,
+      revision: 1,
+      deletedAt: nil
+    )
+
+    let updated = RecurringShiftServerSnapshot(
+      jobId: "job-1",
+      startTime: "09:00",
+      endTime: "17:00",
+      repeatIntervalWeeks: 1,
+      selectedDays: selectedDays,
+      endCondition: nil,
+      exclusions: nil,
+      dateSpecificPauseWindows: pauseWindows,
+      dateSpecificSupplements: nil,
+      updatedAt: timestamp,
+      revision: 2,
+      deletedAt: nil
+    )
+
+    XCTAssertEqual(
+      updated.changedFields(from: original),
+      Set<RecurringShiftField>([.dateSpecificPauseWindows])
     )
   }
 

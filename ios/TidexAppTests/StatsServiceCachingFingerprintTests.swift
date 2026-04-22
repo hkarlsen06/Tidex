@@ -43,6 +43,65 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {
     XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
   }
 
+  func testShiftFingerprintChangesWhenCustomPauseWindowsChange() {
+    let original = TestFixtures.shift(
+      id: "same-id",
+      shiftDate: "2026-02-05",
+      startTime: "08:00",
+      endTime: "16:00"
+    )
+    let updated = TestFixtures.shift(
+      id: "same-id",
+      shiftDate: "2026-02-05",
+      startTime: "08:00",
+      endTime: "16:00",
+      customPauseWindows: CustomPauseWindows(windows: [
+        PauseWindow(start: "12:00", end: "12:30")
+      ])
+    )
+
+    let originalFingerprint = StatsService.fingerprintShiftsForCaching([original])
+    let updatedFingerprint = StatsService.fingerprintShiftsForCaching([updated])
+
+    XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
+  }
+
+  func testRecurringShiftFingerprintChangesWhenDateSpecificPauseWindowsChange() {
+    let original = RecurringShiftRow(
+      id: "recurring-1",
+      user_id: "user-1",
+      job_id: "job-1",
+      start_time: "08:00",
+      end_time: "16:00",
+      repeat_interval_weeks: 0,
+      selected_days: ["1": "2026-02-02"],
+      end_condition: nil,
+      exclusions: nil,
+      date_specific_pause_windows: nil,
+      date_specific_supplements: nil
+    )
+    let updated = RecurringShiftRow(
+      id: "recurring-1",
+      user_id: "user-1",
+      job_id: "job-1",
+      start_time: "08:00",
+      end_time: "16:00",
+      repeat_interval_weeks: 0,
+      selected_days: ["1": "2026-02-02"],
+      end_condition: nil,
+      exclusions: nil,
+      date_specific_pause_windows: [
+        "2026-02-09": CustomPauseWindows(windows: [PauseWindow(start: "12:00", end: "12:30")])
+      ],
+      date_specific_supplements: nil
+    )
+
+    let originalFingerprint = StatsService.fingerprintRecurringShiftsForCaching([original])
+    let updatedFingerprint = StatsService.fingerprintRecurringShiftsForCaching([updated])
+
+    XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
+  }
+
   func testSettingsFingerprintChangesWhenMonthlyGoalOverridesChange() {
     let original = UserSettings(
       user_id: "user-1",

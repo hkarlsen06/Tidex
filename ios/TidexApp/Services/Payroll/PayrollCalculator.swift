@@ -52,6 +52,8 @@ struct PayrollCalculator {
     _ shift: ShiftRow,
     snapshot: WageSnapshot?
   ) -> ShiftComputed {
+    let normalizedPauseWindows = PauseWindowSupport.normalize(shift.custom_pause_windows)
+
     // Get weekday (1-7 where 1=Mon, 7=Sun)
     let weekday = Date.weekdayFromISO(shift.shift_date)
 
@@ -81,29 +83,63 @@ struct PayrollCalculator {
     // Store original periods before break deduction (for display)
     let originalPeriods = periods
 
-    // Resolve break settings from snapshot (with defaults for backward compatibility)
-    let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
-    let method = snapshot?.breakMethod ?? defaultBreakMethod
-    let threshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
-    let breakMinutes =
-      breakEnabled
-      ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes)
-      : 0
-    let breakHours = Double(breakMinutes) / 60.0
+    let breakAudit: BreakAudit
+    if let normalizedPauseWindows {
+      let clipped = PauseWindowSupport.apply(
+        customPauseWindows: normalizedPauseWindows,
+        startTime: shift.start_time,
+        endTime: shift.end_time,
+        periods: periods.map {
+          PauseClipPeriod(
+            fromMin: $0.fromMin,
+            toMin: $0.toMin,
+            baseRate: $0.baseRate,
+            supplementRate: $0.supplementRate
+          )
+        }
+      )
+      periods = clipped.periods.map {
+        WagePeriod(
+          fromMin: $0.fromMin,
+          toMin: $0.toMin,
+          baseRate: $0.baseRate,
+          supplementRate: $0.supplementRate
+        )
+      }
+      breakAudit = BreakAudit(
+        method: .none,
+        thresholdHours: 0,
+        deductedHours: clipped.deductedHours,
+        source: .customPauseWindows,
+        appliedPauseWindows: clipped.appliedPauseWindows,
+        notes: clipped.appliedPauseWindows?.isEmpty == false
+          ? ["Deducted using custom pause windows"] : []
+      )
+    } else {
+      // Resolve break settings from snapshot (with defaults for backward compatibility)
+      let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
+      let method = snapshot?.breakMethod ?? defaultBreakMethod
+      let threshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
+      let breakMinutes =
+        breakEnabled
+        ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes)
+        : 0
+      let breakHours = Double(breakMinutes) / 60.0
 
-    // Log when using default break settings
-    if snapshot == nil {
-      logger.warning("Using default break settings - no snapshot available for shift \(shift.id)")
+      // Log when using default break settings
+      if snapshot == nil {
+        logger.warning("Using default break settings - no snapshot available for shift \(shift.id)")
+      }
+
+      let afterBreak = BreakDeduction.applyBreakDeduction(
+        periods: periods,
+        method: method,
+        thresholdHours: threshold,
+        deductionHours: breakHours
+      )
+      periods = afterBreak.periods
+      breakAudit = afterBreak.audit
     }
-
-    // Apply automatic break deduction
-    let afterBreak = BreakDeduction.applyBreakDeduction(
-      periods: periods,
-      method: method,
-      thresholdHours: threshold,
-      deductionHours: breakHours
-    )
-    periods = afterBreak.periods
 
     // Calculate paid hours (after break deduction, with fractional precision)
     let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
@@ -134,7 +170,7 @@ struct PayrollCalculator {
       gross: gross,
       wagePeriods: periods,
       originalWagePeriods: originalPeriods,
-      breakAudit: afterBreak.audit
+      breakAudit: breakAudit
     )
   }
 

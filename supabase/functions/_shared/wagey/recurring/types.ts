@@ -8,7 +8,7 @@
  * - Exclusions (individual dates to skip)
  */
 
-import type { CustomSupplementsData } from "../payroll/types.ts";
+import type { CustomPauseWindows, CustomSupplementsData } from "../payroll/types.ts";
 
 /**
  * End condition for a recurring shift
@@ -90,6 +90,8 @@ export type RecurringShiftRow = {
   end_condition: EndCondition;
   /** Excluded dates (JSONB array) */
   exclusions: string[];
+  /** Date-specific pause overrides (JSONB, nullable) */
+  date_specific_pause_windows?: DateSpecificPauseWindows | null;
   /** Date-specific supplement overrides (JSONB, nullable) */
   date_specific_supplements?: DateSpecificSupplements | null;
   created_at?: string;
@@ -106,6 +108,10 @@ export type RecurringShiftRow = {
  */
 export type DateSpecificSupplements = {
   [isoDate: string]: CustomSupplementsData;
+};
+
+export type DateSpecificPauseWindows = {
+  [isoDate: string]: CustomPauseWindows;
 };
 
 /**

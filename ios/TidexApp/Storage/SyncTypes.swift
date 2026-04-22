@@ -23,6 +23,7 @@ enum UserShiftField: String, Codable, CaseIterable {
   case shiftDate = "shift_date"
   case startTime = "start_time"
   case endTime = "end_time"
+  case customPauseWindows = "custom_pause_windows"
   case customSupplements = "custom_supplements"
 }
 
@@ -47,6 +48,7 @@ enum RecurringShiftField: String, Codable, CaseIterable {
   case selectedDays = "selected_days"
   case endCondition = "end_condition"
   case exclusions = "exclusions"
+  case dateSpecificPauseWindows = "date_specific_pause_windows"
   case dateSpecificSupplements = "date_specific_supplements"
 }
 

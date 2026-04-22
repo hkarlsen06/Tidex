@@ -519,6 +519,10 @@ final class StatsService: ObservableObject {
       for exclusion in (shift.exclusions ?? []).sorted() {
         hasher.combine(exclusion)
       }
+      for entry in (shift.date_specific_pause_windows ?? [:]).sorted(by: { $0.key < $1.key }) {
+        hasher.combine(entry.key)
+        hasher.combine(String(describing: entry.value))
+      }
       for entry in (shift.date_specific_supplements ?? [:]).sorted(by: { $0.key < $1.key }) {
         hasher.combine(entry.key)
         hasher.combine(String(describing: entry.value))
@@ -555,6 +559,7 @@ final class StatsService: ObservableObject {
       hasher.combine(shift.start_time)
       hasher.combine(shift.end_time)
       hasher.combine(shift.updated_at?.timeIntervalSince1970 ?? -1)
+      hasher.combine(String(describing: shift.custom_pause_windows))
       hasher.combine(String(describing: shift.custom_supplements))
     }
     return hasher.finalize()

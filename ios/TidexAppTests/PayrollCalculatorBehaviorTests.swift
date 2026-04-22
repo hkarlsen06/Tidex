@@ -47,4 +47,35 @@ final class PayrollCalculatorBehaviorTests: XCTestCase {
     XCTAssertEqual(computed.paidHours, 8, accuracy: 0.01)
     XCTAssertEqual(computed.breakAudit.deductedHours, 0, accuracy: 0.001)
   }
+
+  func testComputeShiftWithCustomPauseWindowsUsesExactClippingInsteadOfAutomaticBreaks() {
+    let shift = TestFixtures.shift(
+      shiftDate: "2026-02-04",
+      startTime: "08:00",
+      endTime: "16:00",
+      customPauseWindows: CustomPauseWindows(windows: [
+        PauseWindow(start: "12:00", end: "12:30")
+      ]),
+      customSupplements: CustomSupplementsData(rules: [])
+    )
+
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      breakEnabled: true,
+      breakMethod: BreakMethod.endOfShift.rawValue,
+      breakThresholdHours: 5.5,
+      breakDeductionMinutes: 45
+    )
+
+    let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
+
+    XCTAssertEqual(computed.durationHours, 8, accuracy: 0.01)
+    XCTAssertEqual(computed.paidHours, 7.5, accuracy: 0.01)
+    XCTAssertEqual(computed.breakAudit.source, .customPauseWindows)
+    XCTAssertEqual(computed.breakAudit.deductedHours, 0.5, accuracy: 0.001)
+    XCTAssertEqual(
+      computed.breakAudit.appliedPauseWindows,
+      [PauseWindow(start: "12:00", end: "12:30")]
+    )
+  }
 }

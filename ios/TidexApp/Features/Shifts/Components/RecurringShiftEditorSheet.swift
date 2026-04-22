@@ -521,6 +521,7 @@ struct RecurringShiftEditResult {
       selected_days: ["1": "2025-01-20", "3": "2025-01-22", "5": "2025-01-24"],
       end_condition: .months(value: 6),
       exclusions: nil,
+      date_specific_pause_windows: nil,
       date_specific_supplements: nil
     ),
     onSave: { result in

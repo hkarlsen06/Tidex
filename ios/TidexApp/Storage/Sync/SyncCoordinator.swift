@@ -915,6 +915,7 @@ final class SyncCoordinator: ObservableObject {
       shiftDate: serverRow.shift_date,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      customPauseWindows: serverRow.custom_pause_windows,
       customSupplements: serverRow.custom_supplements,
       updatedAt: serverUpdatedAt,
       revision: serverRow.revision,
@@ -1001,12 +1002,16 @@ final class SyncCoordinator: ObservableObject {
     let supplementsData = serverRow.custom_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
+    let pauseWindowsData = PauseWindowSupport.normalize(serverRow.custom_pause_windows).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
 
     let snapshot = UserShiftServerSnapshot.from(
       jobId: serverRow.job_id,
       shiftDate: serverRow.shift_date,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      customPauseWindows: serverRow.custom_pause_windows,
       customSupplements: serverRow.custom_supplements,
       updatedAt: serverUpdatedAt,
       revision: serverRow.revision,
@@ -1020,6 +1025,7 @@ final class SyncCoordinator: ObservableObject {
       shiftDate: shiftDate,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
@@ -2573,6 +2579,19 @@ final class SyncCoordinator: ObservableObject {
     if dirtyFields.contains(.endTime) {
       updateData["end_time"] = .string(shift.endTime)
     }
+    if dirtyFields.contains(.customPauseWindows) {
+      if let data = shift.customPauseWindows {
+        let decoded = try requireAnyJSON(
+          data,
+          table: .userShifts,
+          id: shiftId,
+          field: "custom_pause_windows"
+        )
+        updateData["custom_pause_windows"] = decoded
+      } else {
+        updateData["custom_pause_windows"] = .null
+      }
+    }
     if dirtyFields.contains(.customSupplements) {
       if let data = shift.customSupplements {
         let decoded = try requireAnyJSON(
@@ -2616,6 +2635,7 @@ final class SyncCoordinator: ObservableObject {
           shiftDate: returnedRow.shift_date,
           startTime: returnedRow.start_time,
           endTime: returnedRow.end_time,
+          customPauseWindows: returnedRow.custom_pause_windows,
           customSupplements: returnedRow.custom_supplements,
           updatedAt: serverUpdatedAt,
           revision: returnedRow.revision,
@@ -2724,6 +2744,7 @@ final class SyncCoordinator: ObservableObject {
           shiftDate: serverRow.shift_date,
           startTime: serverRow.start_time,
           endTime: serverRow.end_time,
+          customPauseWindows: serverRow.custom_pause_windows,
           customSupplements: serverRow.custom_supplements,
           updatedAt: serverUpdatedAt,
           revision: serverRow.revision,
@@ -2755,6 +2776,16 @@ final class SyncCoordinator: ObservableObject {
       insertData["job_id"] = .string(jobId)
     }
 
+    if let data = shift.customPauseWindows {
+      let decoded = try requireAnyJSON(
+        data,
+        table: .userShifts,
+        id: shiftId,
+        field: "custom_pause_windows"
+      )
+      insertData["custom_pause_windows"] = decoded
+    }
+
     if let data = shift.customSupplements {
       let decoded = try requireAnyJSON(
         data,
@@ -2782,6 +2813,7 @@ final class SyncCoordinator: ObservableObject {
           shiftDate: returnedRow.shift_date,
           startTime: returnedRow.start_time,
           endTime: returnedRow.end_time,
+          customPauseWindows: returnedRow.custom_pause_windows,
           customSupplements: returnedRow.custom_supplements,
           updatedAt: serverUpdatedAt,
           revision: returnedRow.revision,
@@ -2825,6 +2857,7 @@ final class SyncCoordinator: ObservableObject {
             shiftDate: serverRow.shift_date,
             startTime: serverRow.start_time,
             endTime: serverRow.end_time,
+            customPauseWindows: serverRow.custom_pause_windows,
             customSupplements: serverRow.custom_supplements,
             updatedAt: serverUpdatedAt,
             revision: serverRow.revision,
@@ -2884,6 +2917,7 @@ final class SyncCoordinator: ObservableObject {
         shiftDate: serverRow.shift_date,
         startTime: serverRow.start_time,
         endTime: serverRow.end_time,
+        customPauseWindows: serverRow.custom_pause_windows,
         customSupplements: serverRow.custom_supplements,
         updatedAt: serverUpdatedAt,
         revision: serverRow.revision,
@@ -2901,6 +2935,7 @@ final class SyncCoordinator: ObservableObject {
         shiftDate: serverRow.shift_date,
         startTime: serverRow.start_time,
         endTime: serverRow.end_time,
+        customPauseWindows: serverRow.custom_pause_windows,
         customSupplements: serverRow.custom_supplements,
         updatedAt: serverUpdatedAt,
         revision: serverRow.revision,
@@ -2915,6 +2950,7 @@ final class SyncCoordinator: ObservableObject {
       shiftDate: serverRow.shift_date,
       startTime: serverRow.start_time,
       endTime: serverRow.end_time,
+      customPauseWindows: serverRow.custom_pause_windows,
       customSupplements: serverRow.custom_supplements,
       updatedAt: serverUpdatedAt,
       revision: serverRow.revision,
@@ -3489,6 +3525,19 @@ final class SyncCoordinator: ObservableObject {
         updateData["exclusions"] = .null
       }
     }
+    if dirtyFields.contains(.dateSpecificPauseWindows) {
+      if let data = shift.dateSpecificPauseWindows {
+        let decoded = try requireAnyJSON(
+          data,
+          table: .recurringShifts,
+          id: shiftId,
+          field: "date_specific_pause_windows"
+        )
+        updateData["date_specific_pause_windows"] = decoded
+      } else {
+        updateData["date_specific_pause_windows"] = .null
+      }
+    }
     if dirtyFields.contains(.dateSpecificSupplements) {
       if let data = shift.dateSpecificSupplements {
         let decoded = try requireAnyJSON(
@@ -3675,6 +3724,12 @@ final class SyncCoordinator: ObservableObject {
       let decoded = try requireAnyJSON(
         data, table: .recurringShifts, id: shiftId, field: "exclusions")
       insertData["exclusions"] = decoded
+    }
+
+    if let data = shift.dateSpecificPauseWindows {
+      let decoded = try requireAnyJSON(
+        data, table: .recurringShifts, id: shiftId, field: "date_specific_pause_windows")
+      insertData["date_specific_pause_windows"] = decoded
     }
 
     if let data = shift.dateSpecificSupplements {
@@ -5268,6 +5323,7 @@ enum SyncError: LocalizedError {
         shiftDate: "2025-01-15",
         startTime: "09:00",
         endTime: "17:00",
+        customPauseWindows: nil,
         customSupplements: nil,
         updatedAt: Date(),
         revision: 1,

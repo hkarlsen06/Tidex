@@ -1117,6 +1117,50 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     isUpdatingShift = false
   }
 
+  func updateShiftPause(_ editResult: ShiftPauseEditResult) async {
+    guard !isUpdatingShift else { return }
+
+    isUpdatingShift = true
+    defer { isUpdatingShift = false }
+
+    logger.info("⏸️ Updating shift pause windows")
+
+    do {
+      switch editResult.target {
+      case .standalone(let shiftId):
+        _ = try await shiftsRepository.updateCustomPauseWindows(
+          id: shiftId,
+          customPauseWindows: editResult.customPauseWindows
+        )
+      case .recurringOccurrence(let recurringId, let date):
+        guard
+          let recurringShift = recurringShifts.first(where: { $0.id == recurringId })
+            ?? recurringShiftsRepository.getRecurringShift(id: recurringId)
+        else {
+          logger.error("Recurring shift not found for pause update: \(recurringId)")
+          return
+        }
+
+        var updatedPauseWindows = recurringShift.date_specific_pause_windows ?? [:]
+        if let normalized = PauseWindowSupport.normalize(editResult.customPauseWindows) {
+          updatedPauseWindows[date] = normalized
+        } else {
+          updatedPauseWindows.removeValue(forKey: date)
+        }
+
+        _ = try await recurringShiftsRepository.updateDateSpecificPauseWindows(
+          id: recurringId,
+          dateSpecificPauseWindows: PauseWindowSupport.normalize(updatedPauseWindows)
+        )
+      }
+
+      await reloadFromLocal()
+      notifyShiftsDidChange()
+    } catch {
+      logger.error("❌ Failed to update shift pause windows: \(error.localizedDescription)")
+    }
+  }
+
   /// Non-blocking month data loader
   /// Uses cache for instant display, fetches in background if needed
   /// IMPORTANT: Commits display state (year/month) atomically with shift data

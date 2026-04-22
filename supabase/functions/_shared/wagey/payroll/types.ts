@@ -9,9 +9,19 @@ export type ShiftRow = {
   end_time: string;             // "HH:mm"
   hourly_wage_snapshot?: number | null; // Snapshot of hourly wage at creation time
   supplement_rules_snapshot?: { rules: SupplementRule[] } | null; // Snapshot of supplement rules at creation time
+  custom_pause_windows?: CustomPauseWindows | null; // Shift-specific pause overrides
   custom_supplements?: CustomSupplementsData | null; // Shift-specific supplement overrides
   recurring_id?: string;           // Links to recurring_shifts if this is a virtual shift
   recurring_anchor_weekday?: number; // Which weekday anchor (0-6) generated this virtual shift
+};
+
+export type PauseWindow = {
+  start: HHMM;
+  end: HHMM;
+};
+
+export type CustomPauseWindows = {
+  windows: PauseWindow[];
 };
 
 /**
@@ -96,6 +106,8 @@ export type BreakAudit = {
   method: BreakMethod;
   thresholdHours: number;
   deductedHours: number;
+  source: "none" | "automatic_break" | "custom_pause_windows";
+  appliedPauseWindows?: PauseWindow[];
   notes?: string[];
 };
 

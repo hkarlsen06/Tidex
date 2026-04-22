@@ -126,6 +126,7 @@ private func makeShift() -> ShiftWithComputations {
       shift_date: "2026-03-11",
       start_time: "09:00",
       end_time: "17:00",
+      custom_pause_windows: nil,
       custom_supplements: nil
     ),
     computed: ShiftComputed(
@@ -153,6 +154,7 @@ private func makeVirtualShift() -> ShiftWithComputations {
       shift_date: "2026-03-11",
       start_time: "16:00",
       end_time: "23:15",
+      custom_pause_windows: nil,
       custom_supplements: nil,
       recurring_id: "12345678-1234-4234-8234-1234567890ab",
       recurring_anchor_weekday: 3

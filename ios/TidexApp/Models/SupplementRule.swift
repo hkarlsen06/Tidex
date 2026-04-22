@@ -98,5 +98,23 @@ struct BreakAudit: Equatable {
   let method: BreakMethod
   let thresholdHours: Double
   let deductedHours: Double
+  let source: BreakAuditSource
+  let appliedPauseWindows: [PauseWindow]?
   let notes: [String]
+
+  init(
+    method: BreakMethod,
+    thresholdHours: Double,
+    deductedHours: Double,
+    source: BreakAuditSource = .none,
+    appliedPauseWindows: [PauseWindow]? = nil,
+    notes: [String]
+  ) {
+    self.method = method
+    self.thresholdHours = thresholdHours
+    self.deductedHours = deductedHours
+    self.source = source
+    self.appliedPauseWindows = appliedPauseWindows
+    self.notes = notes
+  }
 }
