@@ -57,6 +57,9 @@ struct AuthNavigationView: View {
       }
     }
     .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
+    .onReceive(NotificationCenter.default.publisher(for: .tidexNavigateToLoginRequested)) { _ in
+      navigateTo(.login)
+    }
   }
 
   private func navigateTo(_ screen: AuthScreen) {

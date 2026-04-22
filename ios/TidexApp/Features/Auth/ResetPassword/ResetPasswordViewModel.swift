@@ -38,6 +38,11 @@ final class ResetPasswordViewModel: ObservableObject {
     case success  // Password reset complete
   }
 
+  enum PresentationMode {
+    case standard
+    case recovery
+  }
+
   typealias InputType = AuthIdentityInputType
 
   struct FieldErrors {
@@ -56,6 +61,7 @@ final class ResetPasswordViewModel: ObservableObject {
 
   // MARK: - Private State
 
+  private let presentationMode: PresentationMode
   private var authTask: Task<Void, Never>?
 
   // MARK: - Computed Properties
@@ -70,12 +76,22 @@ final class ResetPasswordViewModel: ObservableObject {
     AuthIdentityInput.normalizedPhone(emailOrPhone)
   }
 
+  var isRecoveryMode: Bool {
+    presentationMode == .recovery
+  }
+
   // MARK: - Initialization
 
   init(
     authService: AuthService? = nil,
+    presentationMode: PresentationMode = .standard
   ) {
     self.authService = authService ?? AuthService.shared
+    self.presentationMode = presentationMode
+
+    if presentationMode == .recovery {
+      currentStep = .newPassword
+    }
   }
 
   deinit {
@@ -99,8 +115,7 @@ final class ResetPasswordViewModel: ObservableObject {
       case .email:
         try await authService.sendPasswordResetEmail(email: emailOrPhone)
         successMessage = String(localized: .resetPasswordSuccessEmailSent)
-        // For email, they'll receive a link - show success state
-        currentStep = .success
+        currentStep = .otp
 
       case .phone:
         try await authService.sendPasswordResetOTP(phone: normalizedPhone)
@@ -126,10 +141,17 @@ final class ResetPasswordViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
-      // Verify OTP and get session
-      _ = try await authService.verifyPasswordResetOTP(phone: normalizedPhone, token: otpCode)
-      // Move to new password step
-      currentStep = .newPassword
+      switch inputType {
+      case .email:
+        _ = try await authService.verifyPasswordResetOTP(email: emailOrPhone, token: otpCode)
+      case .phone:
+        _ = try await authService.verifyPasswordResetOTP(phone: normalizedPhone, token: otpCode)
+      case .unknown:
+        fieldErrors.otp = String(localized: .otpErrorsCodeInvalid)
+        return
+      }
+
+      NotificationCenter.default.post(name: .tidexPasswordRecoveryRequested, object: nil)
     } catch {
       handleError(error)
     }
@@ -159,6 +181,10 @@ final class ResetPasswordViewModel: ObservableObject {
     clearMessages()
     fieldErrors.clear()
 
+    if presentationMode == .recovery {
+      return
+    }
+
     switch currentStep {
     case .input, .success:
       // Already at start or end
@@ -186,8 +212,16 @@ final class ResetPasswordViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
-      try await authService.sendPasswordResetOTP(phone: normalizedPhone)
-      successMessage = String(localized: .resetPasswordSuccessOtpResent)
+      switch inputType {
+      case .email:
+        try await authService.sendPasswordResetEmail(email: emailOrPhone)
+        successMessage = String(localized: .resetPasswordSuccessEmailSent)
+      case .phone:
+        try await authService.sendPasswordResetOTP(phone: normalizedPhone)
+        successMessage = String(localized: .resetPasswordSuccessOtpResent)
+      case .unknown:
+        fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsInvalidEmailOrPhone)
+      }
     } catch {
       handleError(error)
     }
@@ -196,6 +230,14 @@ final class ResetPasswordViewModel: ObservableObject {
   /// Navigate to login screen
   func navigateToLogin() {
     onNavigateToLogin?()
+  }
+
+  func handleSuccessAction() async {
+    if presentationMode == .recovery {
+      await AppCoordinator.shared.signOut()
+    }
+
+    navigateToLogin()
   }
 
   // MARK: - Validation
