@@ -63,12 +63,29 @@ struct ChatMessageList: View {
   }
 
   private var scrollState: ScrollState {
-    let renderedMessages = messages + streamingMessages
+    let allMessages = renderedMessages
     return ScrollState(
-      messageCount: renderedMessages.count,
-      lastMessageID: renderedMessages.last?.id,
+      messageCount: allMessages.count,
+      lastMessageID: allMessages.last?.id,
       streamingSignature: streamingContentSignature,
       isStreaming: isStreaming || isThinking
+    )
+  }
+
+  private var renderedMessages: [ChatMessage] {
+    messages + streamingMessages
+  }
+
+  private var streamingGroupContext: ChatMessageGroupContext {
+    let placeholder = ChatMessage(
+      role: .assistant,
+      contentBlocks: streamingContentBlocks,
+      timestamp: Date()
+    )
+    return WageyChatMessageGrouping.context(
+      for: placeholder,
+      previous: renderedMessages.last,
+      next: nil
     )
   }
 
@@ -92,6 +109,7 @@ struct ChatMessageList: View {
     ChatTimelineScrollView(
       scrollState: scrollState,
       bottomContentInset: bottomContentInset,
+      contentSpacing: 0,
       isPinnedToBottom: $isScrolledToBottom,
       scrollToBottomTrigger: scrollToBottomTrigger,
       dismissKeyboardOnTap: true,
@@ -105,21 +123,20 @@ struct ChatMessageList: View {
           .padding(.top, Spacing.xxl)
       } else {
         // Message bubbles
-        ForEach(messages) { message in
-          ChatMessageBubble(message: message)
-            .id(message.id)
-        }
-
-        ForEach(streamingMessages) { message in
-          ChatMessageBubble(message: message)
-            .id(message.id)
+        ForEach(Array(renderedMessages.enumerated()), id: \.element.id) { index, message in
+          ChatMessageBubble(
+            message: message,
+            groupContext: groupContext(for: index, in: renderedMessages)
+          )
+          .id(message.id)
         }
 
         // Streaming message
         if isStreaming {
           StreamingMessageBubble(
             contentBlocks: streamingContentBlocks,
-            isThinking: isThinking
+            isThinking: isThinking,
+            groupContext: streamingGroupContext
           )
           .id("streaming")
         }
@@ -135,6 +152,14 @@ struct ChatMessageList: View {
         }
       }
     }
+  }
+
+  private func groupContext(for index: Int, in messages: [ChatMessage]) -> ChatMessageGroupContext {
+    WageyChatMessageGrouping.context(
+      for: messages[index],
+      previous: index > 0 ? messages[index - 1] : nil,
+      next: index < (messages.count - 1) ? messages[index + 1] : nil
+    )
   }
 
   // MARK: - Empty State
