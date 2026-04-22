@@ -22,6 +22,12 @@ enum AuthError: Error, LocalizedError {
 @MainActor
 final class AuthService: ObservableObject {
   static let shared = AuthService()
+  static let passwordRecoveryRedirectURL: URL = {
+    guard let url = URL(string: "tidex://login-callback/recovery") else {
+      preconditionFailure("Invalid password recovery redirect URL")
+    }
+    return url
+  }()
 
   // MARK: - Published State
 
@@ -155,7 +161,10 @@ final class AuthService: ObservableObject {
     isLoading = true
     defer { isLoading = false }
 
-    try await supabase.auth.resetPasswordForEmail(email)
+    try await supabase.auth.resetPasswordForEmail(
+      email,
+      redirectTo: Self.passwordRecoveryRedirectURL
+    )
   }
 
   /// Send password reset OTP to phone
@@ -182,6 +191,27 @@ final class AuthService: ObservableObject {
       phone: phone,
       token: token,
       type: .sms
+    )
+    guard let session = response.session else {
+      throw AuthError.sessionMissing
+    }
+    return session
+  }
+
+  /// Verify password reset OTP sent by email and sign in.
+  /// - Parameters:
+  ///   - email: User's email address
+  ///   - token: The OTP code received by email
+  /// - Returns: The authenticated session (user can then update password)
+  func verifyPasswordResetOTP(email: String, token: String) async throws -> Session {
+    isLoading = true
+    defer { isLoading = false }
+
+    let response = try await supabase.auth.verifyOTP(
+      email: email,
+      token: token,
+      type: .recovery,
+      redirectTo: Self.passwordRecoveryRedirectURL
     )
     guard let session = response.session else {
       throw AuthError.sessionMissing

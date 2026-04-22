@@ -385,7 +385,13 @@ final class AppCoordinator: ObservableObject {
           self.appState = .authenticated
           self.pendingMFAFactor = nil
 
-        case .userUpdated, .userDeleted, .passwordRecovery:
+        case .passwordRecovery:
+          if let session {
+            self.userId = session.user.normalizedId
+          }
+          NotificationCenter.default.post(name: .tidexPasswordRecoveryRequested, object: nil)
+
+        case .userUpdated, .userDeleted:
           // Handle other events as needed
           break
         }

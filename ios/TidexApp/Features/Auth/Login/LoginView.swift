@@ -172,21 +172,6 @@ struct LoginView: View {
           .padding(.horizontal, Spacing.xxs)
       }
 
-      // Forgot password link (only for email login)
-      if viewModel.inputType == .email {
-        HStack {
-          Spacer()
-          Button(action: {
-            onNavigateToResetPassword?()
-          }) {
-            Text(.loginForgotPassword)
-              .font(.tidexLabelStrong)
-              .foregroundColor(.tidexBlue)
-          }
-          .buttonStyle(.plain)
-        }
-      }
-
       // Phone hint - password is optional for OTP flow
       if viewModel.inputType == .phone {
         Text(.loginPhonePasswordHint)
@@ -308,6 +293,15 @@ struct LoginView: View {
         }
         .buttonStyle(.plain)
       }
+
+      Button(action: {
+        onNavigateToResetPassword?()
+      }) {
+        Text(.loginForgotPassword)
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexBlue)
+      }
+      .buttonStyle(.plain)
 
       #if DEBUG
         Button {

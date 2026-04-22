@@ -3,8 +3,18 @@ import SwiftUI
 /// Reset password screen with native iOS styling
 /// Step 1: Enter email/phone -> Step 2: OTP verification (phone only) -> Step 3: New password
 struct ResetPasswordView: View {
-  @StateObject private var viewModel = ResetPasswordViewModel()
+  @StateObject private var viewModel: ResetPasswordViewModel
   var onNavigateToLogin: (() -> Void)?
+
+  init(
+    presentationMode: ResetPasswordViewModel.PresentationMode = .standard,
+    onNavigateToLogin: (() -> Void)? = nil
+  ) {
+    _viewModel = StateObject(
+      wrappedValue: ResetPasswordViewModel(presentationMode: presentationMode)
+    )
+    self.onNavigateToLogin = onNavigateToLogin
+  }
 
   var body: some View {
     GeometryReader { geometry in
@@ -158,7 +168,7 @@ struct ResetPasswordView: View {
           .font(.tidexTitle)
           .foregroundColor(.tidexTextPrimary)
 
-        Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
+        Text(otpSubtitle)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.center)
@@ -270,8 +280,9 @@ struct ResetPasswordView: View {
           isLoading: viewModel.isLoading
         )
 
-        // Back link
-        backButton
+        if !viewModel.isRecoveryMode {
+          backButton
+        }
       }
     }
   }
@@ -306,7 +317,9 @@ struct ResetPasswordView: View {
       // Back to login button
       PrimaryButton(
         title: String(localized: .resetPasswordBackToLogin),
-        action: { onNavigateToLogin?() }
+        action: {
+          Task { await viewModel.handleSuccessAction() }
+        }
       )
     }
   }
@@ -351,6 +364,14 @@ struct ResetPasswordView: View {
       .foregroundColor(.tidexTextSecondary)
     }
     .buttonStyle(.plain)
+  }
+
+  private var otpSubtitle: String {
+    if viewModel.inputType == .email {
+      return viewModel.successMessage ?? String(localized: .resetPasswordSuccessEmailSent)
+    }
+
+    return String(localized: .otpSubtitle(viewModel.normalizedPhone))
   }
 }
 

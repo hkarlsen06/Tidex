@@ -46,6 +46,10 @@ enum ErrorTranslations {
       "Denne e-postadressen er allerede registrert p\u{00E5} en annen konto",
     "Unable to send SMS": "Kunne ikke sende SMS",
     "SMS rate limit exceeded": "For mange SMS-foresp\u{00F8}rsler. Pr\u{00F8}v igjen senere.",
+    "Error sending confirmation OTP to provider":
+      "Kunne ikke sende bekreftelseskode akkurat n\u{00E5}. Pr\u{00F8}v igjen senere.",
+    "Authenticate More information: https://www.twilio.com/docs/errors/20003":
+      "SMS-leverand\u{00F8}ren avviste foresp\u{00F8}rselen. Pr\u{00F8}v igjen senere.",
     "Signups not allowed for otp": "Du m\u{00E5} registrere deg f\u{00F8}r du kan logge inn",
     "Signups not allowed": "Du m\u{00E5} registrere deg f\u{00F8}r du kan logge inn",
 
@@ -68,6 +72,13 @@ enum ErrorTranslations {
   /// - Parameter message: The error message to translate
   /// - Returns: The translated message, or the original if no translation exists
   static func translate(_ message: String) -> String {
+    if message.contains("Error sending confirmation OTP to provider")
+      || message.contains("twilio.com/docs/errors/20003")
+      || message.contains("sms_send_failed")
+    {
+      return "Kunne ikke sende bekreftelseskode akkurat n\u{00E5}. Pr\u{00F8}v igjen senere."
+    }
+
     // Check for exact match
     if let translated = translations[message] {
       return translated

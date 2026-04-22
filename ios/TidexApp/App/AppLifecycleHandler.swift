@@ -8,6 +8,8 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "AppLifecycleH
 
 extension Notification.Name {
   static let tidexDidBecomeActive = Notification.Name("tidexDidBecomeActive")
+  static let tidexPasswordRecoveryRequested = Notification.Name("tidexPasswordRecoveryRequested")
+  static let tidexNavigateToLoginRequested = Notification.Name("tidexNavigateToLoginRequested")
 }
 
 @MainActor
@@ -130,9 +132,13 @@ final class AppLifecycleHandler {
   }
 
   private func handleSupabaseCallback(_ url: URL) async {
+    let callbackParameters = authCallbackParameters(from: url)
     do {
       _ = try await supabase.auth.session(from: url)
       print("[AppLifecycleHandler] Auth callback handled: \(url)")
+      if callbackParameters["type"] == "recovery" {
+        NotificationCenter.default.post(name: .tidexPasswordRecoveryRequested, object: nil)
+      }
     } catch {
       print("[AppLifecycleHandler] Auth callback failed: \(error)")
     }
@@ -203,5 +209,34 @@ final class AppLifecycleHandler {
     }
 
     return value
+  }
+
+  private func authCallbackParameters(from url: URL) -> [String: String] {
+    var parameters: [String: String] = [:]
+
+    if let fragment = url.fragment {
+      parameters.merge(parseQueryString(fragment)) { _, new in new }
+    }
+
+    if let query = url.query {
+      parameters.merge(parseQueryString(query)) { _, new in new }
+    }
+
+    return parameters
+  }
+
+  private func parseQueryString(_ queryString: String) -> [String: String] {
+    var parameters: [String: String] = [:]
+
+    for pair in queryString.split(separator: "&") {
+      let parts = pair.split(separator: "=", maxSplits: 1)
+      guard parts.count == 2 else { continue }
+
+      let key = String(parts[0])
+      let value = String(parts[1]).removingPercentEncoding ?? String(parts[1])
+      parameters[key] = value
+    }
+
+    return parameters
   }
 }
