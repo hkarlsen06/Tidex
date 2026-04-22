@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 // Comprehensive payroll documentation based on PAYROLL_ENGINE_SPEC.md
 const payrollDocs = {
-  badge: 'PAYROLL ENGINE SPECIFICATION V3.0',
+  badge: 'PAYROLL ENGINE SPECIFICATION V3.1',
   title: 'How Tidex calculates your pay',
   subtitle:
     'A transparent, auditable reference for every payroll rule we apply. This specification enables re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results.',
@@ -31,7 +31,7 @@ const payrollDocs = {
     { id: 'pipeline', label: 'Shift Pipeline' },
     { id: 'snapshots', label: 'Snapshots & Payout' },
     { id: 'calculation', label: 'Calculation Engine' },
-    { id: 'breaks', label: 'Break Deductions' },
+    { id: 'breaks', label: 'Pauses & Breaks' },
     { id: 'aggregations', label: 'Aggregations' },
     { id: 'test-vectors', label: 'Test Vectors' },
   ],
@@ -59,7 +59,7 @@ const payrollDocs = {
         {
           heading: 'Inputs',
           list: [
-            'Shift data: shift_date (ISO), start_time (HH:MM), end_time (HH:MM), optional custom supplements, job_id',
+            'Shift data: shift_date (ISO), start_time (HH:MM), end_time (HH:MM), optional custom pause windows, optional custom supplements, job_id',
             'Wage snapshot: Hourly wage, supplement rules, tax settings, break deduction settings — scoped to a job',
             'Job: Name, color, payroll_day, half_tax_month, monthly_goal — primary source for payroll configuration',
             'User settings: Global preferences; payroll_day/half_tax_month/monthly_goal kept as legacy fallback during compatibility window',
@@ -69,6 +69,7 @@ const payrollDocs = {
           heading: 'Outputs',
           list: [
             'computeShift output: durationHours, paidHours, basePay, supplementPay, gross, wagePeriods, originalWagePeriods, breakAudit',
+            'breakAudit output: method, thresholdHours, deductedHours, source, appliedPauseWindows, notes',
             'Downstream totals output: taxAmount and net (calculated outside computeShift)',
           ],
         },
@@ -95,6 +96,7 @@ const payrollDocs = {
               ['Wage snapshot', 'Point-in-time capture of wage, supplement, tax, and break settings — scoped to a job'],
               ['Baseline snapshot', 'Snapshot with from_date = NULL, serves as fallback within its job bucket'],
               ['Supplement window', 'Time-of-day range when a supplement rate applies'],
+              ['Pause window', 'An exact unpaid interval clipped out of a shift before automatic break rules are considered'],
               ['Payout date', 'Date when wages are paid (typically month after work + payroll day)'],
               ['Payroll period', 'The calendar month whose earnings are grouped for a payout'],
               ['Month grouping', 'Shifts worked in month M are paid in month M+1'],
@@ -106,14 +108,23 @@ const payrollDocs = {
         },
         {
           heading: 'Entry points',
-          paragraphs: ['The payroll engine can be called in two ways. The optional job parameter is reserved for future use — payroll day resolution is performed upstream in ShiftsService before calling computeShift.'],
+          paragraphs: [
+            'The active payroll stack is split between the iOS app and the shared Supabase TypeScript module. The legacy Effect wrapper and ShiftsService wording no longer describe the live product.',
+            'The Swift iOS layer orchestrates month-level loading and tax/snapshot selection, while the shared TypeScript calculator is still used by Wagey and server-side tooling. In the TypeScript compatibility signature, settings and job are retained for compatibility but are not required for the current core calculation path.',
+          ],
           code: {
-            language: 'typescript',
-            content: `// Pure function (core calculation)
-computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll/calc.ts
+            language: 'text',
+            content: `// iOS month orchestration (active app)
+PayrollEngine.computeShiftsForMonth(request)
+// ios/TidexApp/Services/Payroll/PayrollEngine.swift
 
-// Effect-wrapped (with validation)
-computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll/effect.ts`,
+// iOS per-shift calculator (active app)
+PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+// ios/TidexApp/Services/Payroll/PayrollCalculator.swift
+
+// Shared TypeScript calculator (Wagey / server-side tools)
+computeShift(shift, settings, presetRules, snapshot, job?)
+// supabase/functions/_shared/wagey/payroll/calc.ts`,
           },
         },
       ],
@@ -135,10 +146,11 @@ computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll
               ['shift_date', 'date', 'The date of the shift (ISO: YYYY-MM-DD)'],
               ['start_time', 'text', 'Start time in HH:MM format'],
               ['end_time', 'text', 'End time in HH:MM format (supports cross-midnight)'],
+              ['custom_pause_windows', 'jsonb', 'Exact per-shift pause windows: { windows: [{ start, end }] }'],
               ['custom_supplements', 'jsonb', 'Shift-specific supplement overrides'],
             ],
           },
-          note: 'When end_time <= start_time, shift crosses midnight (e.g., 22:00 to 06:00). Custom supplements when present completely replace snapshot supplements for this shift. Legacy clients that do not send job_id are automatically assigned the user\'s default job by a DB trigger.',
+          note: 'When end_time <= start_time, shift crosses midnight (e.g., 22:00 to 06:00). custom_pause_windows is normalized before persistence; empty or fully invalid payloads become NULL. Custom supplements when present completely replace snapshot supplements for this shift. Legacy clients that do not send job_id are automatically assigned the user\'s default job by a DB trigger.',
         },
         {
           heading: 'recurring_shifts - Recurring shift templates',
@@ -156,10 +168,11 @@ computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll
               ['selected_days', 'jsonb', 'Anchor dates by weekday: { "1": "2025-01-27" }'],
               ['end_condition', 'jsonb', 'End rule: { type: "never" | "months" | "years" | "end_date" }'],
               ['exclusions', 'jsonb', 'Array of ISO dates to skip'],
+              ['date_specific_pause_windows', 'jsonb', 'Per-date exact pause overrides: { "2025-01-15": { windows: [...] } }'],
               ['date_specific_supplements', 'jsonb', 'Per-date custom supplements'],
             ],
           },
-          note: 'Virtual shifts are generated at runtime, never persisted. selected_days keys are weekday numbers (0=Sunday to 6=Saturday). A recurring pattern and all its virtual shifts belong to one job — there is no per-occurrence job override.',
+          note: 'Virtual shifts are generated at runtime, never persisted. selected_days keys are weekday numbers (0=Sunday to 6=Saturday). A recurring pattern and all its virtual shifts belong to one job — there is no per-occurrence job override. Generated virtual shifts inherit any date-specific pause windows and date-specific supplements for their occurrence date.',
         },
         {
           heading: 'wage_snapshots - Point-in-time wage settings',
@@ -292,7 +305,7 @@ computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll
         {
           heading: 'Backward compatibility',
           paragraphs: [
-            'Older iOS and web clients that do not send job_id continue to work unchanged. Database triggers automatically:',
+            'Older clients that do not send job_id continue to work unchanged. Database triggers automatically:',
           ],
           list: [
             'Assign the user\'s default job to any shift, recurring shift, or wage snapshot written without job_id',
@@ -342,7 +355,7 @@ for (const key of preferredKeys) {
           paragraphs: ['Every shift flows through the pipeline and emerges with computed values:'],
           code: {
             language: 'typescript',
-            content: `// ShiftRow now includes job_id
+            content: `// ShiftRow now includes job_id and optional pause overrides
 type ShiftRow = {
   id: string;
   user_id: string;
@@ -350,6 +363,7 @@ type ShiftRow = {
   shift_date: string;
   start_time: string;
   end_time: string;
+  custom_pause_windows?: CustomPauseWindows | null;
   custom_supplements?: CustomSupplementsData | null;
 };
 
@@ -442,7 +456,7 @@ for (const bucket of buckets.values()) {
                 'Check if date is in phase with anchor (isInPhase)',
                 'Check if within end window (if end condition exists)',
                 'Check if not in exclusions list',
-                'If all pass, add to virtual shifts (inheriting recurring shift\'s job_id)',
+                'If all pass, add to virtual shifts (inheriting the recurring shift\'s job_id plus any date-specific pause windows and supplements)',
               ],
             },
             {
@@ -466,16 +480,26 @@ for (const bucket of buckets.values()) {
                 language: 'typescript',
                 content: `for (const shift of shifts) {
   const shiftJobId = shift.job_id ?? defaultJobId;
+  const payrollDay =
+    jobsById.get(shiftJobId)?.payroll_day
+    ?? userSettings?.payroll_day
+    ?? 1;
+
+  const scopedSnapshots = snapshotsForJob(
+    shiftJobId,
+    snapshotsByJobId,
+    legacyNilJobSnapshots,
+    defaultJobId
+  );
 
   // Wage/supplement/break snapshot: use shift date, job-scoped
-  const snapshot = resolveSnapshotForDate(buckets, snapshots, shift.shift_date, shiftJobId);
+  const wageSnapshot = snapshotForDate(shift.shift_date, scopedSnapshots);
 
   // Tax snapshot: use payout date for THIS shift's job
-  const payrollDay = jobsById.get(shiftJobId)?.payroll_day ?? defaultJob?.payroll_day ?? userSettings?.payroll_day ?? 1;
-  const payoutDate = calculatePayoutDate(year, month, payrollDay);
-  const taxSnapshot = resolveSnapshotForDate(buckets, snapshots, payoutDate, shiftJobId);
+  const payoutDate = calculatePayoutDate(shift.shift_date, payrollDay);
+  const taxSnapshot = snapshotForDate(payoutDate, scopedSnapshots);
 
-  const computed = computeShift(shift, userSettings, PRESET_RULES, snapshot, jobsById.get(shiftJobId) ?? null);
+  const computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot);
 
   result.push({
     ...shift, job_id: shiftJobId, computed,
@@ -515,7 +539,7 @@ if (end <= start) {
         },
         {
           heading: 'Virtual shift identity',
-          paragraphs: ['Virtual shifts have synthetic IDs for stable React keys and conflict detection:'],
+          paragraphs: ['Virtual shifts have synthetic IDs for stable UI identity and conflict detection:'],
           code: {
             language: 'typescript',
             content: `const id = \`virtual-\${recurringId}-\${shiftDate}\`;
@@ -846,7 +870,10 @@ const gross = +(basePay + supplementPay).toFixed(2);`,
         },
         {
           heading: 'Tax calculation',
-          paragraphs: ['Tax is applied client-side or in aggregations, not in computeShift:'],
+          paragraphs: [
+            'Tax is applied downstream from computeShift, not inside the pure shift calculator.',
+            'In the iOS app this happens when ShiftWithComputations values and monthly totals are assembled; Wagey and other server-side tools expose the same tax-derived values in their response payloads.',
+          ],
           code: {
             language: 'typescript',
             content: `const taxEnabled = snapshot.tax_enabled;
@@ -866,7 +893,7 @@ const net = gross - taxAmount;`,
           heading: 'Complete computation flow (pseudocode)',
           code: {
             language: 'text',
-            content: `FUNCTION computeShift(shift, settings, presetRules, snapshot):
+            content: `FUNCTION computeShift(shift, snapshot, presetRules):
   // 1. Parse times
   start_minutes = toMinutes(shift.start_time)
   end_minutes = toMinutes(shift.end_time)
@@ -885,19 +912,31 @@ const net = gross - taxAmount;`,
 
   // 5. Build wage periods
   periods = buildWagePeriods(start, end, weekday, baseRate, rules)
+  originalPeriods = copy(periods)
 
   // 6. Calculate raw duration
   totalMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
   durationHours = ROUND(totalMinutes / 60, 2)
 
-  // 7. Apply break deduction
-  breakEnabled = snapshot.break_enabled OR true
-  breakMethod = snapshot.break_method OR "proportional"
-  threshold = snapshot.break_threshold_hours OR 5.5
-  breakMinutes = breakEnabled ? (snapshot.break_deduction_minutes OR 30) : 0
-
-  IF durationHours > threshold AND breakEnabled THEN
-    periods = applyBreakDeduction(periods, breakMethod, threshold, breakMinutes/60)
+  // 7. Apply pause handling
+  IF shift.custom_pause_windows EXISTS THEN
+    periods, deductedHours, appliedPauseWindows =
+      clipPeriodsByPauseWindows(periods, shift.custom_pause_windows, shift.start_time, shift.end_time)
+    breakAudit = {
+      method: "none",
+      thresholdHours: 0,
+      deductedHours,
+      source: "custom_pause_windows",
+      appliedPauseWindows,
+      notes: appliedPauseWindows.length ? ["Deducted using custom pause windows"] : []
+    }
+  ELSE
+    breakEnabled = snapshot.break_enabled OR true
+    breakMethod = snapshot.break_method OR "proportional"
+    threshold = snapshot.break_threshold_hours OR 5.5
+    breakMinutes = breakEnabled ? (snapshot.break_deduction_minutes OR 30) : 0
+    periods, breakAudit = applyBreakDeduction(periods, breakMethod, threshold, breakMinutes/60)
+  ENDIF
 
   // 8. Calculate paid hours
   paidMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
@@ -922,7 +961,7 @@ const net = gross - taxAmount;`,
     gross,
     wagePeriods: periods,
     originalWagePeriods: originalPeriods,
-    breakAudit: { method, threshold, deducted }
+    breakAudit
   }`,
           },
         },
@@ -930,13 +969,48 @@ const net = gross - taxAmount;`,
     },
     {
       id: 'breaks',
-      title: 'Break Deductions',
+      title: 'Pause Windows & Break Deductions',
       subsections: [
         {
           heading: 'Automatic break deductions',
           paragraphs: [
-            'Tidex deducts unpaid breaks automatically based on your configuration. Four deduction strategies are available.',
+            'Tidex deducts unpaid breaks automatically based on your configuration when a shift does not carry exact pause windows. Four deduction strategies are available.',
           ],
+        },
+        {
+          heading: 'Exact pause windows',
+          paragraphs: [
+            'A shift can now store exact unpaid intervals in custom_pause_windows. Recurring templates can also attach date-specific pause windows that are copied onto generated virtual shifts for the matching date.',
+            'When custom pause windows are present, the engine clips those intervals out of the computed wage periods before pay is calculated. This overrides the automatic break rule for that shift and records the deduction source as custom_pause_windows.',
+          ],
+          code: {
+            language: 'typescript',
+            content: `if (normalizedPauseWindows) {
+  const afterPause = applyCustomPauseWindowClipping(
+    periods,
+    normalizedPauseWindows,
+    shift.start_time,
+    shift.end_time
+  );
+
+  periods = afterPause.periods;
+  breakAudit = {
+    method: "none",
+    thresholdHours: 0,
+    deductedHours: afterPause.deductedHours,
+    source: "custom_pause_windows",
+    appliedPauseWindows: afterPause.appliedPauseWindows,
+    notes: afterPause.appliedPauseWindows?.length
+      ? ["Deducted using custom pause windows"]
+      : [],
+  };
+} else {
+  const afterBreak = applyBreakDeduction(periods, method, threshold, breakHours);
+  periods = afterBreak.periods;
+  breakAudit = afterBreak.audit;
+}`,
+          },
+          note: 'Pause windows are normalized, deduplicated, and merged when they overlap. Cross-midnight pause windows are supported using the same extended timeline model as cross-midnight shifts.',
         },
         {
           heading: 'Default settings',
@@ -1042,9 +1116,18 @@ let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
   method: BreakMethod;
   thresholdHours: number;
   deductedHours: number;
+  source: "none" | "automatic_break" | "custom_pause_windows";
+  appliedPauseWindows?: PauseWindow[];
   notes?: string[];
 };`,
           },
+        },
+        {
+          heading: 'Shared and previewed shifts',
+          paragraphs: [
+            'Shared month payloads, sharer previews, and Wagey what-if calculations now carry custom pause windows and the richer break-audit metadata as part of the current rollout.',
+            'That means paid-hours recomputation stays accurate even when earnings are hidden, because pause overrides are still available to the consumer.',
+          ],
         },
       ],
     },

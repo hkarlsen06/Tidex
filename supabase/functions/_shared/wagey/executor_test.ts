@@ -656,3 +656,106 @@ Deno.test("plan_schedule free_slots finds gaps after subtracting events and shif
     { date: "2026-04-19", startTime: "17:00", endTime: "20:00", durationMinutes: 180 },
   ]);
 });
+
+Deno.test("manage_shift_advanced updates recurring custom pause windows without materializing a shift", async () => {
+  const recurringId = makeUuid(1);
+  const ctx = createContext({
+    recurring_shifts: [{
+      id: recurringId,
+      user_id: USER_ID,
+      start_time: "08:00",
+      end_time: "16:00",
+      repeat_interval_weeks: 0,
+      selected_days: { "1": "2026-04-20" },
+      end_condition: null,
+      exclusions: [],
+      date_specific_pause_windows: null,
+      deleted_at: null,
+    }],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift_advanced",
+    JSON.stringify({
+      action: "update_custom_pause_windows",
+      shiftId: `virtual-${recurringId}-2026-04-20`,
+      customPauseWindows: {
+        windows: [{ start: "12:00", end: "12:30" }],
+      },
+    }),
+  );
+
+  assert(result.success);
+
+  const recurring = (
+    await ctx.supabase
+      .from("recurring_shifts")
+      .select("date_specific_pause_windows")
+      .eq("id", recurringId)
+      .single()
+  ).data as { date_specific_pause_windows: Record<string, unknown> | null };
+
+  assertEquals(recurring.date_specific_pause_windows, {
+    "2026-04-20": {
+      windows: [{ start: "12:00", end: "12:30" }],
+    },
+  });
+});
+
+Deno.test("manage_shift_advanced rejects invalid custom pause window payloads", async () => {
+  const ctx = createContext();
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift_advanced",
+    JSON.stringify({
+      action: "update_custom_pause_windows",
+      shiftId: "shift-1",
+      customPauseWindows: {
+        windows: [{ start: "12:00", end: "12:00" }],
+      },
+    }),
+  );
+
+  assertEquals(result.success, false);
+  assert(String(result.message).includes("Pause windows require different start and end times"));
+});
+
+Deno.test("calculate_earnings hypothetical_change preserves custom pause windows on the source shift", async () => {
+  const shiftId = "cccccccc-1111-1111-1111-111111111111";
+  const ctx = createContext({
+    user_shifts: [{
+      id: shiftId,
+      user_id: USER_ID,
+      job_id: null,
+      shift_date: "2026-04-21",
+      start_time: "08:00",
+      end_time: "16:00",
+      custom_pause_windows: {
+        windows: [{ start: "12:00", end: "12:30" }],
+      },
+      deleted_at: null,
+    }],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "calculate_earnings",
+    JSON.stringify({
+      hypothetical_change: {
+        shift_id: "cccccccc",
+        changes: {},
+      },
+    }),
+  );
+
+  assert(result.success);
+
+  const original = (result.data as { original: { breakdown: Record<string, unknown> } }).original;
+  assertEquals(original.breakdown.break_deducted_minutes, 30);
+  assertEquals(original.breakdown.break_source, "custom_pause_windows");
+  assertEquals(original.breakdown.applied_pause_windows, [
+    { start: "12:00", end: "12:30" },
+  ]);
+});

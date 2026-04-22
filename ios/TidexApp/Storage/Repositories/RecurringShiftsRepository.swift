@@ -191,6 +191,7 @@ final class RecurringShiftsRepository: ObservableObject {
     selectedDays: SelectedDays,
     endCondition: EndCondition? = nil,
     exclusions: [String]? = nil,
+    dateSpecificPauseWindows: DateSpecificPauseWindows? = nil,
     dateSpecificSupplements: [String: CustomSupplementsData]? = nil
   ) async throws -> RecurringShiftRow {
     let createdShift = try await localStore.storeActor.createRecurringShift(
@@ -202,6 +203,7 @@ final class RecurringShiftsRepository: ObservableObject {
       selectedDays: selectedDays,
       endCondition: endCondition,
       exclusions: exclusions,
+      dateSpecificPauseWindows: dateSpecificPauseWindows,
       dateSpecificSupplements: dateSpecificSupplements
     )
 
@@ -256,6 +258,28 @@ final class RecurringShiftsRepository: ObservableObject {
       return updatedShift
     } catch LocalStoreWriteError.notFound {
       logger.warning("Recurring shift not found for update: \(id)")
+      return nil
+    } catch {
+      throw error
+    }
+  }
+
+  func updateDateSpecificPauseWindows(
+    id: String,
+    dateSpecificPauseWindows: DateSpecificPauseWindows?
+  ) async throws -> RecurringShiftRow? {
+    do {
+      let updatedShift = try await localStore.storeActor
+        .updateRecurringShiftDateSpecificPauseWindows(
+          id: id,
+          dateSpecificPauseWindows: dateSpecificPauseWindows
+        )
+
+      logger.info("Updated local recurring shift pause windows: \(id)")
+      triggerSync(userId: updatedShift.user_id)
+      return updatedShift
+    } catch LocalStoreWriteError.notFound {
+      logger.warning("Recurring shift not found for pause update: \(id)")
       return nil
     } catch {
       throw error

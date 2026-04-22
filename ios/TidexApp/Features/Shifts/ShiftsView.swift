@@ -353,6 +353,12 @@ struct ShiftsView: View {
                 await viewModel.updateShift(editResult)
               }
             },
+            onUpdatePause: { pauseResult in
+              selectedShift = nil
+              Task {
+                await viewModel.updateShiftPause(pauseResult)
+              }
+            },
             onEditRecurring: { recurringId in
               selectedShift = nil
               // Small delay to allow sheet to dismiss
@@ -385,6 +391,12 @@ struct ShiftsView: View {
               shiftToEditDirectly = nil
               Task {
                 await viewModel.updateShift(editResult)
+              }
+            },
+            onUpdatePause: { pauseResult in
+              shiftToEditDirectly = nil
+              Task {
+                await viewModel.updateShiftPause(pauseResult)
               }
             },
             onEditRecurring: { recurringId in

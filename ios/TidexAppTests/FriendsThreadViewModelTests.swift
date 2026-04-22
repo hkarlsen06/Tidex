@@ -2756,10 +2756,19 @@ final class FriendsThreadViewModelTests: XCTestCase {
           paidHours: 7.5,
           basePay: 1000,
           supplementPay: 200,
-          gross: 1200
+          gross: 1200,
+          breakAudit: SharedBreakAudit(
+            method: .none,
+            thresholdHours: 0,
+            deductedHours: 0,
+            source: .none,
+            appliedPauseWindows: nil,
+            notes: []
+          )
         ),
         tax_enabled: true,
         tax_percentage: 12.5,
+        custom_pause_windows: nil,
         custom_supplements: nil,
         recurring_id: nil,
         recurring_anchor_weekday: nil
@@ -2879,10 +2888,19 @@ final class FriendsThreadViewModelTests: XCTestCase {
           paidHours: 7.5,
           basePay: 1000,
           supplementPay: 200,
-          gross: 1200
+          gross: 1200,
+          breakAudit: SharedBreakAudit(
+            method: .none,
+            thresholdHours: 0,
+            deductedHours: 0,
+            source: .none,
+            appliedPauseWindows: nil,
+            notes: []
+          )
         ),
         tax_enabled: true,
         tax_percentage: 12.5,
+        custom_pause_windows: nil,
         custom_supplements: nil,
         recurring_id: nil,
         recurring_anchor_weekday: nil
@@ -2940,10 +2958,19 @@ final class FriendsThreadViewModelTests: XCTestCase {
           paidHours: 7.5,
           basePay: 1000,
           supplementPay: 200,
-          gross: 1200
+          gross: 1200,
+          breakAudit: SharedBreakAudit(
+            method: .none,
+            thresholdHours: 0,
+            deductedHours: 0,
+            source: .none,
+            appliedPauseWindows: nil,
+            notes: []
+          )
         ),
         tax_enabled: true,
         tax_percentage: 12.5,
+        custom_pause_windows: nil,
         custom_supplements: nil,
         recurring_id: nil,
         recurring_anchor_weekday: nil

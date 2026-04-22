@@ -109,6 +109,7 @@ struct BreakDeduction {
         method: method,
         thresholdHours: thresholdHours,
         deductedHours: toDeduct,
+        source: .automaticBreak,
         notes: notes
       )
     )

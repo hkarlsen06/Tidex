@@ -21,6 +21,7 @@ struct SharedShiftData: Codable, Identifiable, Equatable {
   let computed: SharedShiftComputed
   let tax_enabled: Bool?
   let tax_percentage: Double?
+  let custom_pause_windows: CustomPauseWindows?
 
   /// Custom supplements (may be null or present)
   let custom_supplements: CustomSupplementsData?
@@ -42,6 +43,16 @@ struct SharedShiftComputed: Codable, Equatable {
   let basePay: Double
   let supplementPay: Double
   let gross: Double
+  let breakAudit: SharedBreakAudit
+}
+
+struct SharedBreakAudit: Codable, Equatable {
+  let method: BreakMethod
+  let thresholdHours: Double
+  let deductedHours: Double
+  let source: BreakAuditSource
+  let appliedPauseWindows: [PauseWindow]?
+  let notes: [String]
 }
 
 /// User settings from the API response
@@ -85,6 +96,7 @@ extension SharedShiftData {
       shift_date: shift_date,
       start_time: start_time,
       end_time: end_time,
+      custom_pause_windows: custom_pause_windows,
       custom_supplements: custom_supplements,
       created_at: nil,
       recurring_id: recurring_id,
@@ -100,7 +112,14 @@ extension SharedShiftData {
       gross: computed.gross,
       wagePeriods: [],  // Not provided by API
       originalWagePeriods: [],  // Not provided by API
-      breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
+      breakAudit: BreakAudit(
+        method: computed.breakAudit.method,
+        thresholdHours: computed.breakAudit.thresholdHours,
+        deductedHours: computed.breakAudit.deductedHours,
+        source: computed.breakAudit.source,
+        appliedPauseWindows: computed.breakAudit.appliedPauseWindows,
+        notes: computed.breakAudit.notes
+      )
     )
 
     return ShiftWithComputations(

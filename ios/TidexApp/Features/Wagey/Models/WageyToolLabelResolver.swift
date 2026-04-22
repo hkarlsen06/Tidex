@@ -87,6 +87,8 @@ enum WageyToolLabelResolver {
       "manage_friend_sharing.remove_sharer": String(localized: .wageyToolFriendSharingRemoveSharer),
 
       "manage_shift_advanced.copy_shifts": String(localized: .wageyToolShiftAdvancedCopyShifts),
+      "manage_shift_advanced.update_custom_pause_windows": String(
+        localized: .settingsPayEditorBreakTitle),
       "manage_shift_advanced.update_custom_supplements": String(
         localized: .wageyToolShiftAdvancedUpdateCustomSupplements),
       "manage_shift_advanced.convert_recurring_to_standalone": String(

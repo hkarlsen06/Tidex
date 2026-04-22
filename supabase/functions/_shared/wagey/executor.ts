@@ -38,6 +38,7 @@ import {
   toggleSharerMuted,
   toggleShareEarnings,
   unblockSharer,
+  updateCustomPauseWindows,
   updateCustomSupplements,
   updateDisplaySettings,
   updateEvent,
@@ -104,7 +105,7 @@ import {
   queryShiftsSchema,
   tools as toolDefinitions,
 } from "./tools.ts";
-import { computeShift, PRESET_SUPPLEMENT_RULES } from "./payroll/index.ts";
+import { computeShift, PRESET_SUPPLEMENT_RULES, type CustomPauseWindows } from "./payroll/index.ts";
 import { generateVirtualShiftsForMonth } from "./recurring/utils.ts";
 
 type TariffVersion = {
@@ -164,6 +165,7 @@ type ShiftReference = {
   shift_date: string;
   start_time: string;
   end_time: string;
+  custom_pause_windows?: CustomPauseWindows | null;
   recurring_id?: string | null;
   job_id?: string | null;
 };
@@ -237,7 +239,7 @@ async function getStoredShiftReference(ctx: WageyRequestContext, shortOrFullId: 
 
   const { data, error } = await ctx.supabase
     .from("user_shifts")
-    .select("id, shift_date, start_time, end_time, job_id")
+    .select("id, shift_date, start_time, end_time, custom_pause_windows, job_id")
     .eq("id", fullShiftId)
     .eq("user_id", ctx.user.id)
     .is("deleted_at", null)
@@ -264,7 +266,7 @@ async function getComputedShiftReference(ctx: WageyRequestContext, shortOrFullId
   const targetDate = match[2];
   const { data, error } = await ctx.supabase
     .from("recurring_shifts")
-    .select("id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions")
+    .select("id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_pause_windows")
     .eq("id", recurringId)
     .eq("user_id", ctx.user.id)
     .is("deleted_at", null)
@@ -293,6 +295,7 @@ async function getComputedShiftReference(ctx: WageyRequestContext, shortOrFullId
     shift_date: targetDate,
     start_time: String(data.start_time).slice(0, 5),
     end_time: String(data.end_time).slice(0, 5),
+    custom_pause_windows: (data.date_specific_pause_windows as Record<string, CustomPauseWindows> | null | undefined)?.[targetDate] ?? null,
     recurring_id: data.id,
     job_id: data.job_id ?? null,
   };
@@ -1597,6 +1600,18 @@ async function executeManageShiftAdvanced(ctx: WageyRequestContext, args: unknow
       });
       return { success: true, message: tr.updatedCustomSupplements, data: result };
     }
+    case "update_custom_pause_windows": {
+      if (!input.shiftId) return { success: false, message: tr.missingShiftId };
+      const shift = await getComputedShiftReference(ctx, input.shiftId);
+      if (!shift) return { success: false, message: t(tr.shiftNotFound, { id: input.shiftId }) };
+      const result = await updateCustomPauseWindows(ctx, {
+        shiftId: shift.id,
+        customPauseWindows: input.customPauseWindows ?? null,
+        recurringId: shift.recurring_id ?? undefined,
+        shiftDate: shift.shift_date,
+      });
+      return { success: true, message: "Updated custom pause windows.", data: result };
+    }
     case "convert_recurring_to_standalone": {
       if (!input.shiftId) return { success: false, message: tr.missingShiftId };
       const shift = await getComputedShiftReference(ctx, input.shiftId);
@@ -2172,7 +2187,13 @@ async function executeCalculateEarnings(ctx: WageyRequestContext, args: unknown)
   const snapshotList = snapshots.data ?? [];
   const currency = settings.currency || "NOK";
 
-  const computeHypotheticalShift = async (date: string, startTime: string, endTime: string, label?: string) => {
+  const computeHypotheticalShift = async (
+    date: string,
+    startTime: string,
+    endTime: string,
+    label?: string,
+    customPauseWindows?: CustomPauseWindows | null,
+  ) => {
     const currentSnapshot =
       snapshotList.find((snapshot) => snapshot.from_date !== null && snapshot.from_date <= date) ??
       snapshotList.find((snapshot) => snapshot.from_date === null) ??
@@ -2200,6 +2221,7 @@ async function executeCalculateEarnings(ctx: WageyRequestContext, args: unknown)
         shift_date: date,
         start_time: startTime,
         end_time: endTime,
+        custom_pause_windows: customPauseWindows ?? null,
       },
       settings,
       PRESET_SUPPLEMENT_RULES,
@@ -2220,17 +2242,28 @@ async function executeCalculateEarnings(ctx: WageyRequestContext, args: unknown)
         base_pay: Number(computed.basePay.toFixed(2)),
         supplement_pay: Number(computed.supplementPay.toFixed(2)),
         break_deducted_minutes: Number((computed.breakAudit.deductedHours * 60).toFixed(0)),
+        break_source: computed.breakAudit.source,
+        applied_pause_windows: computed.breakAudit.appliedPauseWindows ?? [],
+        break_notes: computed.breakAudit.notes ?? [],
       },
     };
   };
 
   if (input.hypothetical) {
-    const result = await computeHypotheticalShift(input.hypothetical.date, input.hypothetical.start_time, input.hypothetical.end_time, input.hypothetical.label);
+    const result = await computeHypotheticalShift(
+      input.hypothetical.date,
+      input.hypothetical.start_time,
+      input.hypothetical.end_time,
+      input.hypothetical.label,
+    );
     return { success: true, message: t(tr.calculatedHypothetical, { label: result.label }), data: { scenarios: [result] }, currency };
   }
 
   if (input.compare) {
-    const scenarios = await Promise.all(input.compare.map((scenario) => computeHypotheticalShift(scenario.date, scenario.start_time, scenario.end_time, scenario.label)));
+    const scenarios = await Promise.all(
+      input.compare.map((scenario) =>
+        computeHypotheticalShift(scenario.date, scenario.start_time, scenario.end_time, scenario.label))
+    );
     const sorted = [...scenarios].sort((a, b) => b.gross - a.gross);
     return {
       success: true,
@@ -2251,8 +2284,20 @@ async function executeCalculateEarnings(ctx: WageyRequestContext, args: unknown)
   if (input.hypothetical_change) {
     const originalShift = await getComputedShiftReference(ctx, input.hypothetical_change.shift_id);
     if (!originalShift) return { success: false, message: t(tr.shiftNotFound, { id: input.hypothetical_change.shift_id }) };
-    const original = await computeHypotheticalShift(originalShift.shift_date, originalShift.start_time, originalShift.end_time, "Original");
-    const modified = await computeHypotheticalShift(input.hypothetical_change.changes.date || originalShift.shift_date, input.hypothetical_change.changes.start_time || originalShift.start_time, input.hypothetical_change.changes.end_time || originalShift.end_time, "Modified");
+    const original = await computeHypotheticalShift(
+      originalShift.shift_date,
+      originalShift.start_time,
+      originalShift.end_time,
+      "Original",
+      originalShift.custom_pause_windows ?? null,
+    );
+    const modified = await computeHypotheticalShift(
+      input.hypothetical_change.changes.date || originalShift.shift_date,
+      input.hypothetical_change.changes.start_time || originalShift.start_time,
+      input.hypothetical_change.changes.end_time || originalShift.end_time,
+      "Modified",
+      originalShift.custom_pause_windows ?? null,
+    );
     const difference = Number((modified.gross - original.gross).toFixed(2));
     return { success: true, message: t(tr.calculatedChange, { difference }), data: { original, modified, difference, difference_net: Number((modified.net - original.net).toFixed(2)) }, currency };
   }

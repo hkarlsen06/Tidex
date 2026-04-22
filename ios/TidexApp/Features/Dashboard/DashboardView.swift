@@ -360,6 +360,12 @@ struct DashboardView: View {
             await viewModel.updateShift(editResult)
           }
         },
+        onUpdatePause: { pauseResult in
+          selectedShift = nil
+          Task {
+            await viewModel.updateShiftPause(pauseResult)
+          }
+        },
         onEditRecurring: { recurringId in
           selectedShift = nil
           // Small delay to allow sheet to dismiss

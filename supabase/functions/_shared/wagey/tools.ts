@@ -7,6 +7,7 @@
 
 import { z } from "npm:zod";
 import type { FunctionTool } from "./ai-types.ts";
+import type { HHMM } from "./payroll/types.ts";
 
 // =============================================================================
 // ZOD SCHEMAS (for validation in executor)
@@ -76,6 +77,18 @@ export type QueryEventsInput = z.infer<typeof queryEventsSchema>;
  */
 const eventTimeSchema = z.string().regex(/^\d{2}:\d{2}$|^24:00$/);
 const reminderAnchorTimeSchema = z.string().regex(/^\d{2}:\d{2}$/);
+const hhmmSchema = eventTimeSchema.transform((value) => value as HHMM);
+const pauseWindowSchema = z.object({
+  start: hhmmSchema,
+  end: hhmmSchema,
+})
+  .strict()
+  .refine((window) => window.start !== window.end, {
+    message: "Pause windows require different start and end times",
+  });
+const customPauseWindowsSchema = z.object({
+  windows: z.array(pauseWindowSchema).min(1),
+}).strict();
 
 export const manageEventSchema = z.object({
   action: z.enum(["create", "update", "delete"]),
@@ -350,6 +363,7 @@ export type QueryFriendFeaturedShiftInput = z.infer<
 export const manageShiftAdvancedSchema = z.object({
   action: z.enum([
     "copy_shifts",
+    "update_custom_pause_windows",
     "update_custom_supplements",
     "convert_recurring_to_standalone",
     "move_recurring_occurrence",
@@ -358,6 +372,7 @@ export const manageShiftAdvancedSchema = z.object({
   shiftIds: z.array(z.string().min(1)).min(1).optional(),
   targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   shiftId: z.string().min(1).optional(),
+  customPauseWindows: z.union([customPauseWindowsSchema, z.null()]).optional(),
   customSupplements: z.any().optional(),
   recurringId: shortOrFullId.optional(),
   shiftDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -1857,7 +1872,7 @@ Returns for each scenario:
 - gross: Total earnings before tax
 - net: Earnings after tax (if tax settings configured)
 - paid_hours: Hours after break deduction
-- breakdown: base_pay, supplement_pay, break_deducted_minutes
+- breakdown: base_pay, supplement_pay, break_deducted_minutes, break_source, applied_pause_windows, break_notes
 
 The date matters for supplements (weekend/evening rates vary by day).
 
@@ -2346,6 +2361,7 @@ Returns:
 
 Actions:
 - copy_shifts: shiftIds[], targetDate
+- update_custom_pause_windows: shiftId, customPauseWindows, optional recurringId+shiftDate
 - update_custom_supplements: shiftId, customSupplements, optional recurringId+shiftDate
 - convert_recurring_to_standalone: recurringId, shiftDate, startTime, endTime
 - move_recurring_occurrence: recurringId, sourceDate, targetDate, startTime, endTime
@@ -2357,6 +2373,7 @@ Actions:
           type: "string",
           enum: [
             "copy_shifts",
+            "update_custom_pause_windows",
             "update_custom_supplements",
             "convert_recurring_to_standalone",
             "move_recurring_occurrence",
@@ -2376,7 +2393,11 @@ Actions:
         shiftId: {
           type: "string",
           description:
-            "Shift ID for update_custom_supplements or clear_shift_snapshots",
+            "Shift ID for update_custom_pause_windows, update_custom_supplements, or clear_shift_snapshots",
+        },
+        customPauseWindows: {
+          type: ["object", "null"],
+          description: "Custom pause windows payload or null to clear",
         },
         customSupplements: {
           type: ["object", "null"],

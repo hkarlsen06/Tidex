@@ -12,8 +12,20 @@ struct ShiftEditResult {
   let isVirtualShiftConversion: Bool  // If true, exclude from recurring and create new shift
   let recurringId: String?  // The recurring shift ID if converting virtual shift
   let originalDate: String  // Original date (for exclusion when converting virtual)
+  let note: String? = nil
+  let noteWasEdited: Bool = false
   /// Custom supplements for this shift. nil = no change, empty rules = clear supplements
   let customSupplements: CustomSupplementsData?
+}
+
+enum ShiftPauseEditTarget: Equatable {
+  case standalone(shiftId: String)
+  case recurringOccurrence(recurringId: String, date: String)
+}
+
+struct ShiftPauseEditResult: Equatable {
+  let target: ShiftPauseEditTarget
+  let customPauseWindows: CustomPauseWindows?
 }
 
 struct ShiftDetailsSheet: View {
@@ -24,6 +36,7 @@ struct ShiftDetailsSheet: View {
   let jobColorHex: String?
   let onDelete: (() -> Void)?
   let onUpdate: ((ShiftEditResult) -> Void)?
+  let onUpdatePause: ((ShiftPauseEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
   let snapshotShareContext: ShiftSnapshotShareContext
   /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
@@ -60,6 +73,12 @@ struct ShiftDetailsSheet: View {
   /// Whether supplements were edited (to track changes)
   @State private var supplementsWereEdited = false
 
+  /// Edited note text
+  @State private var editedNote = ""
+
+  /// Whether note was edited (to support explicit clear)
+  @State private var noteWasEdited = false
+
   /// Whether currently saving
   @State private var isSaving = false
 
@@ -68,6 +87,9 @@ struct ShiftDetailsSheet: View {
 
   /// Whether showing the supplements editor sheet
   @State private var showingSupplementsEditor = false
+
+  /// Whether showing the pause editor sheet
+  @State private var showingPauseEditor = false
 
   /// Whether showing the share destination picker
   @State private var showingShareDestinationPicker = false
@@ -106,6 +128,7 @@ struct ShiftDetailsSheet: View {
     jobColorHex: String? = nil,
     onDelete: (() -> Void)? = nil,
     onUpdate: ((ShiftEditResult) -> Void)? = nil,
+    onUpdatePause: ((ShiftPauseEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
     snapshotShareContext: ShiftSnapshotShareContext = .own,
     startInEditMode: Bool = false,
@@ -116,6 +139,7 @@ struct ShiftDetailsSheet: View {
     self.jobColorHex = jobColorHex
     self.onDelete = onDelete
     self.onUpdate = onUpdate
+    self.onUpdatePause = onUpdatePause
     self.onEditRecurring = onEditRecurring
     self.snapshotShareContext = snapshotShareContext
     self.startInEditMode = startInEditMode
@@ -163,6 +187,73 @@ struct ShiftDetailsSheet: View {
   /// Check if shift has custom supplements (including explicitly empty rules)
   private var hasCustomSupplements: Bool {
     return shift.shift.custom_supplements != nil
+  }
+
+  private var hasNote: Bool {
+    shift.note != nil
+  }
+
+  private var noteBinding: Binding<String> {
+    Binding(
+      get: { editedNote },
+      set: {
+        editedNote = $0
+        noteWasEdited = true
+      }
+    )
+  }
+
+  private var normalizedCustomPauseWindows: CustomPauseWindows? {
+    PauseWindowSupport.normalize(shift.shift.custom_pause_windows)
+  }
+
+  private var hasCustomPauseWindows: Bool {
+    normalizedCustomPauseWindows != nil
+  }
+
+  private var shouldShowBreakSection: Bool {
+    onUpdatePause != nil || hasCustomPauseWindows || shift.computed.breakAudit.deductedHours > 0
+  }
+
+  private var displayedPauseWindows: [PauseWindow] {
+    if shift.computed.breakAudit.source == .customPauseWindows,
+      let appliedPauseWindows = shift.computed.breakAudit.appliedPauseWindows,
+      !appliedPauseWindows.isEmpty
+    {
+      return appliedPauseWindows
+    }
+
+    return normalizedCustomPauseWindows?.windows ?? []
+  }
+
+  private var deductedPauseMinutes: Int {
+    Int((shift.computed.breakAudit.deductedHours * 60).rounded())
+  }
+
+  private var pauseEditorButtonTitle: String {
+    hasCustomPauseWindows
+      ? String(localized: .shiftsPauseSectionEditWindows)
+      : String(localized: .shiftsPauseSectionAddExactWindows)
+  }
+
+  private var breakSummaryText: String {
+    switch shift.computed.breakAudit.source {
+    case .customPauseWindows:
+      return String(localized: .shiftsPauseSectionSummaryCustomOverride)
+    case .automaticBreak:
+      return String(localized: .shiftsPauseSectionSummaryAutomaticApplied)
+    case .none:
+      return hasCustomPauseWindows
+        ? String(localized: .shiftsPauseSectionSummarySavedOnShift)
+        : String(localized: .shiftsPauseSectionSummaryAddHint)
+    }
+  }
+
+  private func pauseEditTarget() -> ShiftPauseEditTarget? {
+    if let recurringId = shift.shift.recurring_id {
+      return .recurringOccurrence(recurringId: recurringId, date: shift.shiftDate)
+    }
+    return .standalone(shiftId: shift.id)
   }
 
   /// Base wage rate per hour (for showing in supplement rows)
@@ -239,6 +330,16 @@ struct ShiftDetailsSheet: View {
             editableTimeSection
           } else {
             timeSection
+          }
+
+          if isEditing {
+            noteEditorSection
+          } else if let note = shift.note {
+            noteSection(note)
+          }
+
+          if !isEditing, shouldShowBreakSection {
+            breakSection
           }
 
           // Error message
@@ -388,6 +489,8 @@ struct ShiftDetailsSheet: View {
               isVirtualShiftConversion: isVirtualShift,
               recurringId: shift.shift.recurring_id,
               originalDate: shift.shiftDate,
+              note: noteWasEdited ? trimmedEditedNote : nil,
+              noteWasEdited: noteWasEdited,
               customSupplements: customSupplements
             )
             onUpdate?(editResult)
@@ -396,6 +499,21 @@ struct ShiftDetailsSheet: View {
         },
         onCancel: {
           showingSupplementsEditor = false
+        }
+      )
+    }
+    .sheet(isPresented: $showingPauseEditor) {
+      CustomPauseWindowsEditorSheet(
+        shift: shift,
+        onSave: { customPauseWindows in
+          showingPauseEditor = false
+          guard let target = pauseEditTarget() else { return }
+          onUpdatePause?(
+            ShiftPauseEditResult(target: target, customPauseWindows: customPauseWindows))
+          dismiss()
+        },
+        onCancel: {
+          showingPauseEditor = false
         }
       )
     }
@@ -438,6 +556,9 @@ struct ShiftDetailsSheet: View {
     if let endTime = parseTimeToDate(shift.endTime) {
       editedEndTime = endTime
     }
+
+    editedNote = shift.note ?? ""
+    noteWasEdited = false
   }
 
   /// Parse HH:mm string to Date (using today as base)
@@ -477,7 +598,11 @@ struct ShiftDetailsSheet: View {
     let newEndTime = formatTimeToString(end)
 
     return newDate != shift.shiftDate || newStartTime != String(shift.startTime.prefix(5))
-      || newEndTime != String(shift.endTime.prefix(5)) || supplementsWereEdited
+      || newEndTime != String(shift.endTime.prefix(5)) || supplementsWereEdited || noteWasEdited
+  }
+
+  private var trimmedEditedNote: String? {
+    ShiftNoteSupport.normalize(editedNote)
   }
 
   /// Cancel editing and reset state
@@ -578,6 +703,8 @@ struct ShiftDetailsSheet: View {
         isVirtualShiftConversion: isVirtualShift,
         recurringId: shift.shift.recurring_id,
         originalDate: shift.shiftDate,
+        note: noteWasEdited ? trimmedEditedNote : nil,
+        noteWasEdited: noteWasEdited,
         customSupplements: supplementsWereEdited ? editedSupplements : nil
       )
       onUpdate(editResult)
@@ -658,6 +785,24 @@ struct ShiftDetailsSheet: View {
     }
   }
 
+  private func noteSection(_ note: String) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(.addShiftEventNoteTitle)
+        .font(.tidexCaptionStrong)
+        .foregroundColor(.tidexTextMuted)
+
+      Text(note)
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .padding(Spacing.md)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xxl)
+        .fill(Color.tidexSurfacePrimary)
+    )
+  }
+
   // MARK: - Editable Time Section
 
   private var editableTimeSection: some View {
@@ -719,6 +864,122 @@ struct ShiftDetailsSheet: View {
       RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexSurfacePrimary)
     )
+  }
+
+  private var noteEditorSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(.addShiftEventNoteTitle)
+        .font(.tidexLabelStrong)
+        .foregroundColor(.tidexTextSecondary)
+
+      TextField(
+        String(localized: "addShift.submitRequirements.eventNote", table: "Localizable"),
+        text: noteBinding,
+        axis: .vertical
+      )
+      .textFieldStyle(.plain)
+      .font(.tidexBodyMedium)
+      .foregroundColor(.tidexTextPrimary)
+      .lineLimit(3...8)
+      .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.md)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
+          .fill(Color.tidexSurfacePrimary)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
+          .stroke(Color.tidexBorder, lineWidth: 1)
+      )
+    }
+  }
+
+  private var breakSection: some View {
+    VStack(spacing: Spacing.md) {
+      HStack {
+        Image(systemName: "pause.circle")
+          .foregroundColor(.tidexBlue)
+        Text(.settingsPayEditorBreakTitle)
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexTextSecondary)
+        Spacer()
+      }
+
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        Text(breakSummaryText)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+
+        if deductedPauseMinutes > 0 {
+          Divider()
+
+          HStack {
+            Text(.shiftsPauseSectionDeductedLabel)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextMuted)
+
+            Spacer()
+
+            Text("\(deductedPauseMinutes) \(String(localized: .commonMinutesShort))")
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextPrimary)
+          }
+        }
+
+        if !displayedPauseWindows.isEmpty {
+          Divider()
+
+          VStack(alignment: .leading, spacing: Spacing.xs) {
+            Text(.shiftsPauseSectionWindowsLabel)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextMuted)
+
+            ForEach(Array(displayedPauseWindows.enumerated()), id: \.offset) { _, window in
+              HStack {
+                Text(formatPauseWindow(window))
+                  .font(.tidexBodyMedium)
+                  .foregroundColor(.tidexTextPrimary)
+                  .environment(\.layoutDirection, .leftToRight)
+
+                Spacer()
+
+                Text("\(durationMinutes(for: window)) \(String(localized: .commonMinutesShort))")
+                  .font(.tidexFootnote)
+                  .foregroundColor(.tidexTextMuted)
+              }
+            }
+          }
+        }
+
+        if onUpdatePause != nil {
+          Divider()
+
+          Button {
+            impactHaptic.impactOccurred()
+            showingPauseEditor = true
+          } label: {
+            HStack(spacing: Spacing.xxxs) {
+              Image(systemName: hasCustomPauseWindows ? "pencil.circle" : "plus.circle")
+                .font(.tidexFootnote)
+              Text(pauseEditorButtonTitle)
+                .font(.tidexLabel)
+            }
+            .foregroundColor(.tidexBlue)
+            .padding(.vertical, Spacing.xs)
+            .frame(maxWidth: .infinity)
+            .background(Color.tidexBlue.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+          }
+          .buttonStyle(.plain)
+        }
+      }
+      .padding(Spacing.md)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
+          .fill(Color.tidexSurfacePrimary)
+      )
+    }
   }
 
   /// Whether the edited times represent a cross-midnight shift
@@ -906,10 +1167,8 @@ struct ShiftDetailsSheet: View {
           )
         }
 
-        // Edit supplements button (always show if tariff rules are available)
         if onUpdate != nil && !tariffRules.isEmpty {
           Divider()
-
           Button {
             impactHaptic.impactOccurred()
             showingSupplementsEditor = true
@@ -1018,6 +1277,25 @@ struct ShiftDetailsSheet: View {
   /// Format hours value (e.g., "2.50 t")
   private func formatHoursValue(_ hours: Double) -> String {
     return String(format: "%.2f t", hours)
+  }
+
+  private func formatPauseWindow(_ window: PauseWindow) -> String {
+    "\(window.start) – \(window.end)"
+  }
+
+  private func durationMinutes(for window: PauseWindow) -> Int {
+    let start = minutes(for: window.start)
+    var end = minutes(for: window.end)
+    if end <= start {
+      end += 24 * 60
+    }
+    return end - start
+  }
+
+  private func minutes(for hhmm: String) -> Int {
+    let parts = hhmm.split(separator: ":").compactMap { Int($0) }
+    guard parts.count == 2 else { return 0 }
+    return (parts[0] * 60) + parts[1]
   }
 
   private func segmentTimeRange(_ segment: SupplementSegment) -> String {

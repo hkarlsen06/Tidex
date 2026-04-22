@@ -11,6 +11,7 @@ struct SyncShiftRow: Codable {
   let shift_date: String
   let start_time: String
   let end_time: String
+  let custom_pause_windows: CustomPauseWindows?
   let custom_supplements: CustomSupplementsData?
   let created_at: String?
   let updated_at: String
@@ -26,6 +27,7 @@ struct SyncShiftRow: Codable {
       shift_date: shift_date,
       start_time: start_time,
       end_time: end_time,
+      custom_pause_windows: custom_pause_windows,
       custom_supplements: custom_supplements,
       created_at: created_at
     )
@@ -77,6 +79,7 @@ struct SyncRecurringShiftRow: Codable {
   let selected_days: SelectedDays
   let end_condition: EndCondition?
   let exclusions: [String]?
+  let date_specific_pause_windows: DateSpecificPauseWindows?
   let date_specific_supplements: [String: CustomSupplementsData]?
   let updated_at: String
   let revision: Int64
@@ -120,6 +123,7 @@ struct SyncRecurringShiftRow: Codable {
       selected_days: selected_days,
       end_condition: end_condition,
       exclusions: exclusions,
+      date_specific_pause_windows: date_specific_pause_windows,
       date_specific_supplements: date_specific_supplements
     )
   }

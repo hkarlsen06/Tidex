@@ -12,6 +12,7 @@
 --       * wage/tax inputs are redacted in snapshots.
 --       * shift custom supplements are redacted.
 --       * recurring date_specific_supplements are redacted.
+--       * pause overrides are still included so paid hours stay accurate.
 
 CREATE OR REPLACE FUNCTION public.get_my_sharer_preview_payloads(
   p_sharer_ids uuid[] DEFAULT NULL,
@@ -80,6 +81,7 @@ AS $function$
             'shift_date', s.shift_date,
             'start_time', s.start_time,
             'end_time', s.end_time,
+            'custom_pause_windows', s.custom_pause_windows,
             'custom_supplements', CASE WHEN a.show_earnings THEN s.custom_supplements ELSE NULL END,
             'recurring_id', NULL,
             'recurring_anchor_weekday', NULL
@@ -107,6 +109,7 @@ AS $function$
             'selected_days', r.selected_days,
             'end_condition', r.end_condition,
             'exclusions', r.exclusions,
+            'date_specific_pause_windows', r.date_specific_pause_windows,
             'date_specific_supplements',
               CASE WHEN a.show_earnings THEN r.date_specific_supplements ELSE NULL END
           )

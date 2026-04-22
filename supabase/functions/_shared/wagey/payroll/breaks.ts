@@ -59,6 +59,7 @@ export function applyBreakDeduction(
     method,
     thresholdHours,
     deductedHours: toDeduct,
+    source: "automatic_break",
     notes,
   };
   return { periods: adjusted, audit };

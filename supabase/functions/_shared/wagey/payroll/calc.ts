@@ -1,4 +1,5 @@
 import { applyBreakDeduction } from "./breaks.ts";
+import { applyCustomPauseWindowClipping, normalizeCustomPauseWindows } from "./pause-windows.ts";
 import { buildWagePeriods } from "./periods.ts";
 import {
   SupplementRule, ShiftComputed, ShiftRow, UserSettings, WagePeriod, BreakMethod, WageSnapshot, CustomSupplementsData, Job
@@ -103,6 +104,7 @@ export function computeShift(
   const s = { ...shift };
   const st = s.start_time;
   const et = s.end_time;
+  const normalizedPauseWindows = normalizeCustomPauseWindows(s.custom_pause_windows);
 
   const date = new Date(s.shift_date + "T00:00:00Z");
   const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7
@@ -141,8 +143,23 @@ export function computeShift(
   const breakHours = breakMinutes / 60;
 
   // Apply automatic break deduction
-  const afterBreak = applyBreakDeduction(periods, method, threshold, breakHours);
-  periods = afterBreak.periods;
+  let breakAudit;
+  if (normalizedPauseWindows) {
+    const afterPause = applyCustomPauseWindowClipping(periods, normalizedPauseWindows, st, et);
+    periods = afterPause.periods;
+    breakAudit = {
+      method: "none" as BreakMethod,
+      thresholdHours: 0,
+      deductedHours: afterPause.deductedHours,
+      source: "custom_pause_windows" as const,
+      appliedPauseWindows: afterPause.appliedPauseWindows,
+      notes: afterPause.appliedPauseWindows?.length ? ["Deducted using custom pause windows"] : [],
+    };
+  } else {
+    const afterBreak = applyBreakDeduction(periods, method, threshold, breakHours);
+    periods = afterBreak.periods;
+    breakAudit = afterBreak.audit;
+  }
 
   const paidMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);
   const paidHours = +(paidMinutes / 60).toFixed(2);
@@ -169,6 +186,6 @@ export function computeShift(
     gross,
     wagePeriods: periods,
     originalWagePeriods,
-    breakAudit: afterBreak.audit
+    breakAudit
   };
 }

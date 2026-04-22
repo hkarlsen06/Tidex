@@ -90,6 +90,8 @@ struct RecurringShiftRow: Codable, Identifiable, Equatable {
   let end_condition: EndCondition?
   /// Excluded dates (ISO format)
   let exclusions: [String]?
+  /// Custom pause windows for specific dates
+  let date_specific_pause_windows: DateSpecificPauseWindows?
   /// Custom supplements for specific dates
   let date_specific_supplements: [String: CustomSupplementsData]?
 

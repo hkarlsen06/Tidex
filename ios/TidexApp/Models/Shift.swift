@@ -14,6 +14,8 @@ struct ShiftRow: Codable, Identifiable, Equatable {
   let start_time: String
   /// End time (HH:mm) - can be less than start_time for cross-midnight shifts
   let end_time: String
+  /// Shift-specific custom pause windows
+  let custom_pause_windows: CustomPauseWindows?
   /// Shift-specific custom supplements
   let custom_supplements: CustomSupplementsData?
   /// When the shift was created
@@ -39,6 +41,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     case shift_date
     case start_time
     case end_time
+    case custom_pause_windows
     case custom_supplements
     case created_at
     case updated_at
@@ -52,6 +55,8 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     shift_date = try container.decode(String.self, forKey: .shift_date)
     start_time = try container.decode(String.self, forKey: .start_time)
     end_time = try container.decode(String.self, forKey: .end_time)
+    custom_pause_windows = PauseWindowSupport.normalize(
+      try container.decodeIfPresent(CustomPauseWindows.self, forKey: .custom_pause_windows))
     custom_supplements = try container.decodeIfPresent(
       CustomSupplementsData.self, forKey: .custom_supplements)
     created_at = try container.decodeIfPresent(String.self, forKey: .created_at)
@@ -67,6 +72,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     shift_date: String,
     start_time: String,
     end_time: String,
+    custom_pause_windows: CustomPauseWindows? = nil,
     custom_supplements: CustomSupplementsData?,
     created_at: String? = nil,
     updated_at: Date? = nil,
@@ -79,6 +85,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     self.shift_date = shift_date
     self.start_time = start_time
     self.end_time = end_time
+    self.custom_pause_windows = PauseWindowSupport.normalize(custom_pause_windows)
     self.custom_supplements = custom_supplements
     self.created_at = created_at
     self.updated_at = updated_at

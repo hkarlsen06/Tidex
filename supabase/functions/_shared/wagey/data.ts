@@ -5,7 +5,9 @@ import { getCurrentYearMonth, getMonthEnd, getMonthStart, parseDateAsUTC } from 
 import { getUserTier } from "./get-user-tier.ts";
 import {
   computeShift,
+  normalizeCustomPauseWindows,
   PRESET_SUPPLEMENT_RULES,
+  type CustomPauseWindows,
   type CustomSupplementsData,
   type Job,
   type ShiftRow,
@@ -81,6 +83,7 @@ type DbRecurringShift = {
   selected_days: Record<"0" | "1" | "2" | "3" | "4" | "5" | "6", string>;
   end_condition: unknown;
   exclusions: string[];
+  date_specific_pause_windows?: Record<string, CustomPauseWindows> | null;
   date_specific_supplements?: Record<string, CustomSupplementsData> | null;
   created_at?: string;
   deleted_at?: string | null;
@@ -167,11 +170,11 @@ const COMPUTED_JOB_SELECT =
 const COMPUTED_SNAPSHOT_SELECT =
   "id, user_id, job_id, from_date, hourly_wage, wage_level, tariff_type_id, supplements, tax_enabled, tax_percentage, break_enabled, break_method, break_threshold_hours, break_deduction_minutes, created_at";
 const COMPUTED_SHIFT_SELECT =
-  "id, user_id, job_id, shift_date, start_time, end_time, custom_supplements";
+  "id, user_id, job_id, shift_date, start_time, end_time, custom_pause_windows, custom_supplements";
 const COMPUTED_EVENT_SELECT =
   "id, user_id, start_date, end_date, is_all_day, start_time, end_time, note, notification_minutes_array, notification_anchor_time, created_at, updated_at, deleted_at";
 const COMPUTED_RECURRING_SELECT =
-  "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_supplements, created_at, deleted_at";
+  "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_pause_windows, date_specific_supplements, created_at, deleted_at";
 const FAR_FUTURE_DATE = "2100-12-31";
 
 function buildCacheKey(scope: string, payload: Record<string, unknown>): string {
@@ -779,6 +782,7 @@ function buildComputedShiftData(params: {
           shift_date: generatedShift.date,
           start_time: cleanTime(recurring.start_time),
           end_time: cleanTime(recurring.end_time),
+          custom_pause_windows: recurring.date_specific_pause_windows?.[generatedShift.date] ?? null,
           custom_supplements: recurring.date_specific_supplements?.[generatedShift.date] ?? null,
           recurring_id: recurring.id,
           recurring_anchor_weekday: generatedShift.weekday,
@@ -1449,6 +1453,57 @@ export async function updateCustomSupplements(
   const { error } = await ctx.supabase
     .from("user_shifts")
     .update({ custom_supplements: input.customSupplements })
+    .eq("id", input.shiftId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+  return { updated: 1 };
+}
+
+export async function updateCustomPauseWindows(
+  ctx: WageyRequestContext,
+  input: {
+    shiftId: string;
+    customPauseWindows: CustomPauseWindows | null;
+    recurringId?: string;
+    shiftDate?: string;
+  },
+): Promise<{ updated: number }> {
+  const normalizedPauseWindows = normalizeCustomPauseWindows(input.customPauseWindows);
+
+  if (input.recurringId && input.shiftDate) {
+    const { data: recurring, error } = await ctx.supabase
+      .from("recurring_shifts")
+      .select("date_specific_pause_windows")
+      .eq("id", input.recurringId)
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null)
+      .single();
+    if (error || !recurring) throw new Error(error?.message ?? "Recurring shift not found");
+
+    const updatedDateSpecific = { ...(recurring.date_specific_pause_windows ?? {}) };
+    if (normalizedPauseWindows) {
+      updatedDateSpecific[input.shiftDate] = normalizedPauseWindows;
+    } else {
+      delete updatedDateSpecific[input.shiftDate];
+    }
+
+    const { error: updateError } = await ctx.supabase
+      .from("recurring_shifts")
+      .update({
+        date_specific_pause_windows: Object.keys(updatedDateSpecific).length > 0 ? updatedDateSpecific : null,
+      })
+      .eq("id", input.recurringId)
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null);
+
+    if (updateError) throw new Error(updateError.message);
+    return { updated: 1 };
+  }
+
+  const { error } = await ctx.supabase
+    .from("user_shifts")
+    .update({ custom_pause_windows: normalizedPauseWindows })
     .eq("id", input.shiftId)
     .eq("user_id", ctx.user.id)
     .is("deleted_at", null);

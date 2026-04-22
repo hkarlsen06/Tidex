@@ -256,6 +256,7 @@ final class ShiftsRepository: ObservableObject {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    customPauseWindows: CustomPauseWindows? = nil,
     customSupplements: CustomSupplementsData? = nil
   ) async throws -> ShiftRow {
     let createdShift = try await localStore.storeActor.createUserShift(
@@ -265,6 +266,7 @@ final class ShiftsRepository: ObservableObject {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
+      customPauseWindows: customPauseWindows,
       customSupplements: customSupplements
     )
 
@@ -322,6 +324,33 @@ final class ShiftsRepository: ObservableObject {
       return updatedShift
     } catch LocalStoreWriteError.notFound {
       logger.warning("Shift not found for update: \(id)")
+      return nil
+    } catch {
+      throw error
+    }
+  }
+
+  func updateCustomPauseWindows(
+    id: String,
+    customPauseWindows: CustomPauseWindows?
+  ) async throws -> ShiftRow? {
+    do {
+      let updatedShift = try await localStore.storeActor.updateUserShiftCustomPauseWindows(
+        id: id,
+        customPauseWindows: customPauseWindows
+      )
+
+      logger.info("Updated local shift pause windows: \(id)")
+
+      if let userId = updatedShift.user_id {
+        NativeWidgetStorage.updateWidgetStorage(for: userId)
+        WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+        triggerSync(userId: userId)
+      }
+
+      return updatedShift
+    } catch LocalStoreWriteError.notFound {
+      logger.warning("Shift not found for pause update: \(id)")
       return nil
     } catch {
       throw error
@@ -501,6 +530,7 @@ final class ShiftsRepository: ObservableObject {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    customPauseWindows: CustomPauseWindows? = nil,
     customSupplements: CustomSupplementsData? = nil,
     tier: SubscriptionTier
   ) async throws -> ShiftRow {
@@ -515,6 +545,7 @@ final class ShiftsRepository: ObservableObject {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
+      customPauseWindows: customPauseWindows,
       customSupplements: customSupplements
     )
   }

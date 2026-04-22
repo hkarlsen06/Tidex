@@ -813,6 +813,7 @@ actor LocalStoreActor {
       existing.shiftDate = shift.shiftDate
       existing.startTime = shift.startTime
       existing.endTime = shift.endTime
+      existing.customPauseWindows = shift.customPauseWindows
       existing.customSupplements = shift.customSupplements
       existing.serverUpdatedAt = shift.serverUpdatedAt
       existing.serverRevision = shift.serverRevision
@@ -867,6 +868,7 @@ actor LocalStoreActor {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    customPauseWindows: CustomPauseWindows? = nil,
     customSupplements: CustomSupplementsData?
   ) throws -> ShiftRow {
     let resolvedId = id ?? UUID().lowercasedString
@@ -879,6 +881,9 @@ actor LocalStoreActor {
 
     let now = Date()
 
+    let pauseWindowsData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
     let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
 
     let dateFormatter = isoDateFormatter
@@ -889,6 +894,7 @@ actor LocalStoreActor {
       shiftDate: shiftDateString,
       startTime: startTime,
       endTime: endTime,
+      customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       updatedAt: now,
       revision: 0,
@@ -905,6 +911,7 @@ actor LocalStoreActor {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
+      customPauseWindows: pauseWindowsData,
       customSupplements: supplementsData,
       serverUpdatedAt: now,
       serverRevision: 0,
@@ -918,6 +925,37 @@ actor LocalStoreActor {
 
     modelContext.insert(localShift)
     try modelContext.save()
+    return localShift.toShiftRow()
+  }
+
+  func updateUserShiftCustomPauseWindows(
+    id: String,
+    customPauseWindows: CustomPauseWindows?
+  ) throws -> ShiftRow {
+    let descriptor = FetchDescriptor<LocalUserShift>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localShift = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    let normalizedData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
+
+    var dirtyFields = localShift.dirtyFieldKeys
+    if normalizedData != localShift.customPauseWindows {
+      localShift.customPauseWindows = normalizedData
+      dirtyFields.insert(.customPauseWindows)
+      localShift.dirtyFieldKeys = dirtyFields
+      localShift.localUpdatedAt = Date()
+      if localShift.syncStatus == .clean {
+        localShift.syncStatus = .dirty
+      }
+      try modelContext.save()
+    }
+
     return localShift.toShiftRow()
   }
 
@@ -1404,6 +1442,7 @@ actor LocalStoreActor {
       existing.selectedDays = shift.selectedDays
       existing.endCondition = shift.endCondition
       existing.exclusions = shift.exclusions
+      existing.dateSpecificPauseWindows = shift.dateSpecificPauseWindows
       existing.dateSpecificSupplements = shift.dateSpecificSupplements
       existing.serverUpdatedAt = shift.serverUpdatedAt
       existing.serverRevision = shift.serverRevision
@@ -1461,6 +1500,7 @@ actor LocalStoreActor {
     selectedDays: SelectedDays,
     endCondition: EndCondition?,
     exclusions: [String]?,
+    dateSpecificPauseWindows: DateSpecificPauseWindows? = nil,
     dateSpecificSupplements: [String: CustomSupplementsData]?
   ) throws -> RecurringShiftRow {
     let id = UUID().lowercasedString
@@ -1469,6 +1509,9 @@ actor LocalStoreActor {
     let selectedDaysData = (try? canonicalJSONEncoder.encode(selectedDays)) ?? Data()
     let endConditionData = endCondition.flatMap { try? canonicalJSONEncoder.encode($0) }
     let exclusionsData = exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let pauseWindowsData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
     let supplementsData = dateSpecificSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
 
     let serverSnapshot = RecurringShiftServerSnapshot(
@@ -1479,6 +1522,7 @@ actor LocalStoreActor {
       selectedDays: selectedDaysData,
       endCondition: endConditionData,
       exclusions: exclusionsData,
+      dateSpecificPauseWindows: pauseWindowsData,
       dateSpecificSupplements: supplementsData,
       updatedAt: now,
       revision: 0,
@@ -1498,6 +1542,7 @@ actor LocalStoreActor {
       selectedDays: selectedDaysData,
       endCondition: endConditionData,
       exclusions: exclusionsData,
+      dateSpecificPauseWindows: pauseWindowsData,
       dateSpecificSupplements: supplementsData,
       serverUpdatedAt: now,
       serverRevision: 0,
@@ -1597,6 +1642,37 @@ actor LocalStoreActor {
     }
 
     try modelContext.save()
+    return localShift.toRecurringShiftRow()
+  }
+
+  func updateRecurringShiftDateSpecificPauseWindows(
+    id: String,
+    dateSpecificPauseWindows: DateSpecificPauseWindows?
+  ) throws -> RecurringShiftRow {
+    let descriptor = FetchDescriptor<LocalRecurringShift>(
+      predicate: #Predicate { $0.id == id }
+    )
+
+    guard let localShift = try modelContext.fetch(descriptor).first else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    let normalizedData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap {
+      try? canonicalJSONEncoder.encode($0)
+    }
+
+    var dirtyFields = localShift.dirtyFieldKeys
+    if normalizedData != localShift.dateSpecificPauseWindows {
+      localShift.dateSpecificPauseWindows = normalizedData
+      dirtyFields.insert(.dateSpecificPauseWindows)
+      localShift.dirtyFieldKeys = dirtyFields
+      localShift.localUpdatedAt = Date()
+      if localShift.syncStatus == .clean {
+        localShift.syncStatus = .dirty
+      }
+      try modelContext.save()
+    }
+
     return localShift.toRecurringShiftRow()
   }
 
@@ -2660,6 +2736,10 @@ actor LocalStoreActor {
     existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
+    existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
+      .flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      }
     existing.customSupplements = serverRow.custom_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
@@ -2723,6 +2803,10 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.endTime) {
       existing.endTime = serverRow.end_time
+    }
+    if !localDirtyFields.contains(.customPauseWindows) {
+      existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
+        .flatMap { try? canonicalJSONEncoder.encode($0) }
     }
     if !localDirtyFields.contains(.customSupplements) {
       existing.customSupplements = serverRow.custom_supplements.flatMap {
@@ -2867,6 +2951,9 @@ actor LocalStoreActor {
     existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
     existing.endCondition = serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) }
     existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+    existing.dateSpecificPauseWindows =
+      PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
+      .flatMap { try? canonicalJSONEncoder.encode($0) }
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
@@ -2938,6 +3025,11 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.exclusions) {
       existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+    }
+    if !localDirtyFields.contains(.dateSpecificPauseWindows) {
+      existing.dateSpecificPauseWindows =
+        PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
+        .flatMap { try? canonicalJSONEncoder.encode($0) }
     }
     if !localDirtyFields.contains(.dateSpecificSupplements) {
       existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
@@ -3345,6 +3437,10 @@ actor LocalStoreActor {
     existing.shiftDate = dateFormatter.date(from: serverRow.shift_date) ?? existing.shiftDate
     existing.startTime = serverRow.start_time
     existing.endTime = serverRow.end_time
+    existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
+      .flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      }
     existing.customSupplements = serverRow.custom_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
@@ -3428,6 +3524,7 @@ actor LocalStoreActor {
     existing.shiftDate = dateFormatter.date(from: serverSnapshot.shiftDate) ?? existing.shiftDate
     existing.startTime = serverSnapshot.startTime
     existing.endTime = serverSnapshot.endTime
+    existing.customPauseWindows = serverSnapshot.customPauseWindows
     existing.customSupplements = serverSnapshot.customSupplements
     existing.serverUpdatedAt = serverSnapshot.updatedAt
     existing.serverRevision = serverSnapshot.revision
@@ -3605,6 +3702,9 @@ actor LocalStoreActor {
     existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
     existing.endCondition = serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) }
     existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+    existing.dateSpecificPauseWindows =
+      PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
+      .flatMap { try? canonicalJSONEncoder.encode($0) }
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
@@ -3686,6 +3786,7 @@ actor LocalStoreActor {
     existing.selectedDays = serverSnapshot.selectedDays
     existing.endCondition = serverSnapshot.endCondition
     existing.exclusions = serverSnapshot.exclusions
+    existing.dateSpecificPauseWindows = serverSnapshot.dateSpecificPauseWindows
     existing.dateSpecificSupplements = serverSnapshot.dateSpecificSupplements
     existing.serverUpdatedAt = serverSnapshot.updatedAt
     existing.serverRevision = serverSnapshot.revision

@@ -39,6 +39,12 @@ final class LocalSharedShift {
   /// End time in HH:mm format
   var endTime: String
 
+  /// Custom pause windows JSON blob (nullable)
+  var customPauseWindows: Data?
+
+  /// Custom supplements JSON blob (nullable)
+  var customSupplements: Data?
+
   // MARK: - Computed Payroll (from API)
 
   /// Duration in hours (raw, before breaks)
@@ -55,6 +61,24 @@ final class LocalSharedShift {
 
   /// Gross pay in NOK
   var gross: Double
+
+  /// Break method raw value
+  var breakMethodRaw: String?
+
+  /// Break threshold in hours
+  var breakThresholdHours: Double?
+
+  /// Deducted hours from break/pause handling
+  var breakDeductedHours: Double?
+
+  /// Break source raw value
+  var breakSourceRaw: String?
+
+  /// Applied pause windows JSON blob (nullable)
+  var appliedPauseWindows: Data?
+
+  /// Break notes JSON blob (nullable)
+  var breakNotes: Data?
 
   // MARK: - Tax Settings
 
@@ -127,11 +151,19 @@ final class LocalSharedShift {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    customPauseWindows: Data? = nil,
+    customSupplements: Data? = nil,
     durationHours: Double,
     paidHours: Double,
     basePay: Double,
     supplementPay: Double,
     gross: Double,
+    breakMethodRaw: String? = nil,
+    breakThresholdHours: Double? = nil,
+    breakDeductedHours: Double? = nil,
+    breakSourceRaw: String? = nil,
+    appliedPauseWindows: Data? = nil,
+    breakNotes: Data? = nil,
     taxEnabled: Bool,
     taxPercentage: Double,
     showEarnings: Bool,
@@ -147,11 +179,19 @@ final class LocalSharedShift {
     self.shiftDate = shiftDate
     self.startTime = startTime
     self.endTime = endTime
+    self.customPauseWindows = customPauseWindows
+    self.customSupplements = customSupplements
     self.durationHours = durationHours
     self.paidHours = paidHours
     self.basePay = basePay
     self.supplementPay = supplementPay
     self.gross = gross
+    self.breakMethodRaw = breakMethodRaw
+    self.breakThresholdHours = breakThresholdHours
+    self.breakDeductedHours = breakDeductedHours
+    self.breakSourceRaw = breakSourceRaw
+    self.appliedPauseWindows = appliedPauseWindows
+    self.breakNotes = breakNotes
     self.taxEnabled = taxEnabled
     self.taxPercentage = taxPercentage
     self.showEarnings = showEarnings
@@ -188,11 +228,25 @@ final class LocalSharedShift {
       shiftDate: shiftDate,
       startTime: apiShift.start_time,
       endTime: apiShift.end_time,
+      customPauseWindows: apiShift.custom_pause_windows.flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      },
+      customSupplements: apiShift.custom_supplements.flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      },
       durationHours: apiShift.computed.durationHours,
       paidHours: apiShift.computed.paidHours,
       basePay: apiShift.computed.basePay,
       supplementPay: apiShift.computed.supplementPay,
       gross: apiShift.computed.gross,
+      breakMethodRaw: apiShift.computed.breakAudit.method.rawValue,
+      breakThresholdHours: apiShift.computed.breakAudit.thresholdHours,
+      breakDeductedHours: apiShift.computed.breakAudit.deductedHours,
+      breakSourceRaw: apiShift.computed.breakAudit.source.rawValue,
+      appliedPauseWindows: apiShift.computed.breakAudit.appliedPauseWindows.flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      },
+      breakNotes: try? canonicalJSONEncoder.encode(apiShift.computed.breakAudit.notes),
       taxEnabled: apiShift.tax_enabled ?? false,
       taxPercentage: apiShift.tax_percentage ?? 0,
       showEarnings: showEarnings,
@@ -205,6 +259,25 @@ final class LocalSharedShift {
 // MARK: - Conversion to ShiftWithComputations
 
 extension LocalSharedShift {
+  private var storedBreakAudit: BreakAudit {
+    let decodedPauseWindows = appliedPauseWindows.flatMap {
+      try? syncJSONDecoder.decode([PauseWindow].self, from: $0)
+    }
+    let decodedNotes =
+      breakNotes.flatMap {
+        try? syncJSONDecoder.decode([String].self, from: $0)
+      } ?? []
+
+    return BreakAudit(
+      method: breakMethodRaw.flatMap(BreakMethod.init(rawValue:)) ?? .none,
+      thresholdHours: breakThresholdHours ?? 0,
+      deductedHours: breakDeductedHours ?? 0,
+      source: breakSourceRaw.flatMap(BreakAuditSource.init(rawValue:)) ?? .none,
+      appliedPauseWindows: decodedPauseWindows,
+      notes: decodedNotes
+    )
+  }
+
   /// Convert to ShiftWithComputations for use with existing UI components
   func toShiftWithComputations() -> ShiftWithComputations {
     let shiftRow = ShiftRow(
@@ -214,7 +287,12 @@ extension LocalSharedShift {
       shift_date: shiftDateString,
       start_time: startTime,
       end_time: endTime,
-      custom_supplements: nil,
+      custom_pause_windows: customPauseWindows.flatMap {
+        try? syncJSONDecoder.decode(CustomPauseWindows.self, from: $0)
+      },
+      custom_supplements: customSupplements.flatMap {
+        try? syncJSONDecoder.decode(CustomSupplementsData.self, from: $0)
+      },
       created_at: nil,
       recurring_id: recurringId,
       recurring_anchor_weekday: recurringAnchorWeekday
@@ -229,7 +307,7 @@ extension LocalSharedShift {
       gross: gross,
       wagePeriods: [],
       originalWagePeriods: [],
-      breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
+      breakAudit: storedBreakAudit
     )
 
     return ShiftWithComputations(
@@ -443,11 +521,19 @@ final class LocalShiftPreview {
   var shiftDate: String?
   var startTime: String?
   var endTime: String?
+  var customPauseWindows: Data?
+  var customSupplements: Data?
   var durationHours: Double?
   var paidHours: Double?
   var basePay: Double?
   var supplementPay: Double?
   var gross: Double?
+  var breakMethodRaw: String?
+  var breakThresholdHours: Double?
+  var breakDeductedHours: Double?
+  var breakSourceRaw: String?
+  var appliedPauseWindows: Data?
+  var breakNotes: Data?
   var currency: String?
   var taxEnabled: Bool?
   var taxPercentage: Double?
@@ -469,11 +555,19 @@ final class LocalShiftPreview {
     shiftDate: String? = nil,
     startTime: String? = nil,
     endTime: String? = nil,
+    customPauseWindows: Data? = nil,
+    customSupplements: Data? = nil,
     durationHours: Double? = nil,
     paidHours: Double? = nil,
     basePay: Double? = nil,
     supplementPay: Double? = nil,
     gross: Double? = nil,
+    breakMethodRaw: String? = nil,
+    breakThresholdHours: Double? = nil,
+    breakDeductedHours: Double? = nil,
+    breakSourceRaw: String? = nil,
+    appliedPauseWindows: Data? = nil,
+    breakNotes: Data? = nil,
     currency: String? = nil,
     taxEnabled: Bool? = nil,
     taxPercentage: Double? = nil,
@@ -490,11 +584,19 @@ final class LocalShiftPreview {
     self.shiftDate = shiftDate
     self.startTime = startTime
     self.endTime = endTime
+    self.customPauseWindows = customPauseWindows
+    self.customSupplements = customSupplements
     self.durationHours = durationHours
     self.paidHours = paidHours
     self.basePay = basePay
     self.supplementPay = supplementPay
     self.gross = gross
+    self.breakMethodRaw = breakMethodRaw
+    self.breakThresholdHours = breakThresholdHours
+    self.breakDeductedHours = breakDeductedHours
+    self.breakSourceRaw = breakSourceRaw
+    self.appliedPauseWindows = appliedPauseWindows
+    self.breakNotes = breakNotes
     self.currency = currency
     self.taxEnabled = taxEnabled
     self.taxPercentage = taxPercentage
@@ -517,11 +619,27 @@ final class LocalShiftPreview {
       shiftDate: preview.shift?.shift_date,
       startTime: preview.shift?.start_time,
       endTime: preview.shift?.end_time,
+      customPauseWindows: preview.shift?.custom_pause_windows.flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      },
+      customSupplements: preview.shift?.custom_supplements.flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      },
       durationHours: preview.shift?.computed.durationHours,
       paidHours: preview.shift?.computed.paidHours,
       basePay: preview.shift?.computed.basePay,
       supplementPay: preview.shift?.computed.supplementPay,
       gross: preview.shift?.computed.gross,
+      breakMethodRaw: preview.shift?.computed.breakAudit.method.rawValue,
+      breakThresholdHours: preview.shift?.computed.breakAudit.thresholdHours,
+      breakDeductedHours: preview.shift?.computed.breakAudit.deductedHours,
+      breakSourceRaw: preview.shift?.computed.breakAudit.source.rawValue,
+      appliedPauseWindows: preview.shift.flatMap {
+        $0.computed.breakAudit.appliedPauseWindows.flatMap { try? canonicalJSONEncoder.encode($0) }
+      },
+      breakNotes: preview.shift.flatMap {
+        try? canonicalJSONEncoder.encode($0.computed.breakAudit.notes)
+      },
       currency: preview.currency,
       taxEnabled: preview.shift?.tax_enabled,
       taxPercentage: preview.shift?.tax_percentage,
@@ -560,7 +678,19 @@ final class LocalShiftPreview {
       paidHours: paidHours ?? 0,
       basePay: basePay ?? 0,
       supplementPay: supplementPay ?? 0,
-      gross: gross ?? 0
+      gross: gross ?? 0,
+      breakAudit: SharedBreakAudit(
+        method: breakMethodRaw.flatMap(BreakMethod.init(rawValue:)) ?? .none,
+        thresholdHours: breakThresholdHours ?? 0,
+        deductedHours: breakDeductedHours ?? 0,
+        source: breakSourceRaw.flatMap(BreakAuditSource.init(rawValue:)) ?? .none,
+        appliedPauseWindows: appliedPauseWindows.flatMap {
+          try? syncJSONDecoder.decode([PauseWindow].self, from: $0)
+        },
+        notes: breakNotes.flatMap {
+          try? syncJSONDecoder.decode([String].self, from: $0)
+        } ?? []
+      )
     )
 
     return SharedShiftData(
@@ -575,7 +705,12 @@ final class LocalShiftPreview {
       computed: computedPayroll,
       tax_enabled: taxEnabled,
       tax_percentage: taxPercentage,
-      custom_supplements: nil,
+      custom_pause_windows: customPauseWindows.flatMap {
+        try? syncJSONDecoder.decode(CustomPauseWindows.self, from: $0)
+      },
+      custom_supplements: customSupplements.flatMap {
+        try? syncJSONDecoder.decode(CustomSupplementsData.self, from: $0)
+      },
       recurring_id: recurringId,
       recurring_anchor_weekday: recurringAnchorWeekday
     )
