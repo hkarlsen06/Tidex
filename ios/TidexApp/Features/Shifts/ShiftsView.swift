@@ -141,6 +141,17 @@ struct ShiftsView: View {
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
   private let workSetupStatusService = WorkSetupStatusService.shared
 
+  private func shouldKeepShiftDetailsOpen(
+    after editResult: ShiftEditResult,
+    originalShift: ShiftWithComputations
+  ) -> Bool {
+    editResult.noteWasEdited
+      && editResult.customSupplements == nil
+      && editResult.shiftDate == originalShift.shiftDate
+      && editResult.startTime == String(originalShift.startTime.prefix(5))
+      && editResult.endTime == String(originalShift.endTime.prefix(5))
+  }
+
   // Orientation tracking for iPad landscape layout
   @ObservedObject private var orientationTracker = OrientationTracker.shared
 
@@ -348,9 +359,17 @@ struct ShiftsView: View {
               }
             },
             onUpdate: { editResult in
-              selectedShift = nil
+              let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
+                after: editResult, originalShift: shift)
               Task {
                 await viewModel.updateShift(editResult)
+                if shouldKeepSheetOpen {
+                  if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+                    selectedShift = refreshedShift
+                  }
+                } else {
+                  selectedShift = nil
+                }
               }
             },
             onUpdatePause: { pauseResult in
@@ -388,9 +407,17 @@ struct ShiftsView: View {
               }
             },
             onUpdate: { editResult in
-              shiftToEditDirectly = nil
+              let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
+                after: editResult, originalShift: shift)
               Task {
                 await viewModel.updateShift(editResult)
+                if shouldKeepSheetOpen {
+                  if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+                    shiftToEditDirectly = refreshedShift
+                  }
+                } else {
+                  shiftToEditDirectly = nil
+                }
               }
             },
             onUpdatePause: { pauseResult in
