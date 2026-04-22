@@ -1053,6 +1053,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         return
       }
 
+      let currentShift = shifts.first(where: { $0.id == editResult.shiftId })?.shift
+      let hasTimeOrDateChanges =
+        editResult.shiftDate != currentShift?.shift_date
+        || editResult.startTime != currentShift.map { String($0.start_time.prefix(5)) }
+        || editResult.endTime != currentShift.map { String($0.end_time.prefix(5)) }
+      let resolvedNote = editResult.noteWasEdited ? editResult.note : currentShift?.note
+
       if editResult.isVirtualShiftConversion {
         // Virtual shift conversion:
         // 1. Add exclusion to the recurring shift for the original date
@@ -1070,27 +1077,63 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           return
         }
 
-        // Step 1: Add exclusion for the original date
-        try await RecurringShiftsRepository.shared.addExclusion(
-          id: recurringId,
-          date: editResult.originalDate
-        )
-        logger.info("✅ Added exclusion for \(editResult.originalDate)")
+        let recurringShift =
+          recurringShifts.first(where: { $0.id == recurringId })
+          ?? recurringShiftsRepository.getRecurringShift(id: recurringId)
 
-        let sourceJobId =
-          shifts.first(where: { $0.id == editResult.shiftId })?.shift.job_id
-          ?? recurringShifts.first(where: { $0.id == recurringId })?.job_id
+        if !hasTimeOrDateChanges, editResult.customSupplements == nil, editResult.noteWasEdited {
+          var updatedNotes = recurringShift?.date_specific_notes ?? [:]
+          if let resolvedNote {
+            updatedNotes[editResult.originalDate] = resolvedNote
+          } else {
+            updatedNotes.removeValue(forKey: editResult.originalDate)
+          }
 
-        // Step 2: Create a new regular shift with the edited values
-        _ = try await shiftsRepository.createShift(
-          userId: userId,
-          jobId: sourceJobId,
-          shiftDate: newDate,
-          startTime: editResult.startTime,
-          endTime: editResult.endTime,
-          customSupplements: editResult.customSupplements
-        )
-        logger.info("✅ Created new shift on \(editResult.shiftDate)")
+          _ = try await recurringShiftsRepository.updateDateSpecificNotes(
+            id: recurringId,
+            dateSpecificNotes: updatedNotes
+          )
+          logger.info("✅ Updated recurring note for \(editResult.originalDate)")
+        } else {
+          if var updatedNotes = recurringShift?.date_specific_notes {
+            updatedNotes.removeValue(forKey: editResult.originalDate)
+            _ = try await recurringShiftsRepository.updateDateSpecificNotes(
+              id: recurringId,
+              dateSpecificNotes: updatedNotes
+            )
+          }
+
+          // Step 1: Add exclusion for the original date
+          try await RecurringShiftsRepository.shared.addExclusion(
+            id: recurringId,
+            date: editResult.originalDate
+          )
+          logger.info("✅ Added exclusion for \(editResult.originalDate)")
+
+          let sourceJobId =
+            shifts.first(where: { $0.id == editResult.shiftId })?.shift.job_id
+            ?? recurringShifts.first(where: { $0.id == recurringId })?.job_id
+
+          // Step 2: Create a new regular shift with the edited values
+          _ = try await shiftsRepository.createShift(
+            userId: userId,
+            jobId: sourceJobId,
+            shiftDate: newDate,
+            startTime: editResult.startTime,
+            endTime: editResult.endTime,
+            note: resolvedNote,
+            customSupplements: editResult.customSupplements
+          )
+          logger.info("✅ Created new shift on \(editResult.shiftDate)")
+
+          if var updatedNotes = recurringShift?.date_specific_notes {
+            updatedNotes.removeValue(forKey: editResult.originalDate)
+            _ = try await recurringShiftsRepository.updateDateSpecificNotes(
+              id: recurringId,
+              dateSpecificNotes: updatedNotes
+            )
+          }
+        }
 
       } else {
         // Regular shift update - just update the existing shift
@@ -1099,6 +1142,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           shiftDate: newDate,
           startTime: editResult.startTime,
           endTime: editResult.endTime,
+          note: editResult.note,
+          noteWasEdited: editResult.noteWasEdited,
           customSupplements: editResult.customSupplements
         )
         logger.info("✅ Updated shift \(editResult.shiftId)")

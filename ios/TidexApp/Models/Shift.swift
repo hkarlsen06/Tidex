@@ -14,6 +14,8 @@ struct ShiftRow: Codable, Identifiable, Equatable {
   let start_time: String
   /// End time (HH:mm) - can be less than start_time for cross-midnight shifts
   let end_time: String
+  /// Private note for this shift
+  let note: String?
   /// Shift-specific custom pause windows
   let custom_pause_windows: CustomPauseWindows?
   /// Shift-specific custom supplements
@@ -41,6 +43,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     case shift_date
     case start_time
     case end_time
+    case note
     case custom_pause_windows
     case custom_supplements
     case created_at
@@ -55,6 +58,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     shift_date = try container.decode(String.self, forKey: .shift_date)
     start_time = try container.decode(String.self, forKey: .start_time)
     end_time = try container.decode(String.self, forKey: .end_time)
+    note = ShiftNoteSupport.normalize(try container.decodeIfPresent(String.self, forKey: .note))
     custom_pause_windows = PauseWindowSupport.normalize(
       try container.decodeIfPresent(CustomPauseWindows.self, forKey: .custom_pause_windows))
     custom_supplements = try container.decodeIfPresent(
@@ -72,6 +76,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     shift_date: String,
     start_time: String,
     end_time: String,
+    note: String? = nil,
     custom_pause_windows: CustomPauseWindows? = nil,
     custom_supplements: CustomSupplementsData?,
     created_at: String? = nil,
@@ -85,6 +90,7 @@ struct ShiftRow: Codable, Identifiable, Equatable {
     self.shift_date = shift_date
     self.start_time = start_time
     self.end_time = end_time
+    self.note = ShiftNoteSupport.normalize(note)
     self.custom_pause_windows = PauseWindowSupport.normalize(custom_pause_windows)
     self.custom_supplements = custom_supplements
     self.created_at = created_at
@@ -146,6 +152,7 @@ struct ShiftWithComputations: Identifiable, Equatable {
   var endTime: String { shift.end_time }
   var isVirtual: Bool { shift.isVirtual }
   var updatedAt: Date? { shift.updated_at }
+  var note: String? { shift.note }
 
   /// Net pay after tax
   var netPay: Double {
@@ -165,6 +172,23 @@ struct ShiftWithComputations: Identifiable, Equatable {
   /// Paid hours
   var paidHours: Double {
     computed.paidHours
+  }
+}
+
+enum ShiftNoteSupport {
+  static func normalize(_ note: String?) -> String? {
+    guard let note else { return nil }
+    let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
+  }
+
+  static func normalizeDateSpecificNotes(_ notes: [String: String]?) -> [String: String]? {
+    guard let notes else { return nil }
+    let normalized = notes.reduce(into: [String: String]()) { result, entry in
+      guard let note = normalize(entry.value) else { return }
+      result[entry.key] = note
+    }
+    return normalized.isEmpty ? nil : normalized
   }
 }
 

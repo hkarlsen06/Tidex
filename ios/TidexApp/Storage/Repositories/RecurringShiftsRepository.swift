@@ -192,7 +192,8 @@ final class RecurringShiftsRepository: ObservableObject {
     endCondition: EndCondition? = nil,
     exclusions: [String]? = nil,
     dateSpecificPauseWindows: DateSpecificPauseWindows? = nil,
-    dateSpecificSupplements: [String: CustomSupplementsData]? = nil
+    dateSpecificSupplements: [String: CustomSupplementsData]? = nil,
+    dateSpecificNotes: [String: String]? = nil
   ) async throws -> RecurringShiftRow {
     let createdShift = try await localStore.storeActor.createRecurringShift(
       userId: userId,
@@ -204,7 +205,8 @@ final class RecurringShiftsRepository: ObservableObject {
       endCondition: endCondition,
       exclusions: exclusions,
       dateSpecificPauseWindows: dateSpecificPauseWindows,
-      dateSpecificSupplements: dateSpecificSupplements
+      dateSpecificSupplements: dateSpecificSupplements,
+      dateSpecificNotes: dateSpecificNotes
     )
 
     logger.info("Created new local recurring shift: \(createdShift.id)")
@@ -235,7 +237,8 @@ final class RecurringShiftsRepository: ObservableObject {
     selectedDays: SelectedDays? = nil,
     endCondition: EndCondition? = nil,
     exclusions: [String]? = nil,
-    dateSpecificSupplements: [String: CustomSupplementsData]? = nil
+    dateSpecificSupplements: [String: CustomSupplementsData]? = nil,
+    dateSpecificNotes: [String: String]? = nil
   ) async throws -> RecurringShiftRow? {
     do {
       let updatedShift = try await localStore.storeActor.updateRecurringShift(
@@ -247,7 +250,8 @@ final class RecurringShiftsRepository: ObservableObject {
         selectedDays: selectedDays,
         endCondition: endCondition,
         exclusions: exclusions,
-        dateSpecificSupplements: dateSpecificSupplements
+        dateSpecificSupplements: dateSpecificSupplements,
+        dateSpecificNotes: dateSpecificNotes
       )
 
       logger.info("Updated local recurring shift: \(id)")
@@ -280,6 +284,28 @@ final class RecurringShiftsRepository: ObservableObject {
       return updatedShift
     } catch LocalStoreWriteError.notFound {
       logger.warning("Recurring shift not found for pause update: \(id)")
+      return nil
+    } catch {
+      throw error
+    }
+  }
+
+  func updateDateSpecificNotes(
+    id: String,
+    dateSpecificNotes: [String: String]?
+  ) async throws -> RecurringShiftRow? {
+    do {
+      let updatedShift = try await localStore.storeActor
+        .updateRecurringShiftDateSpecificNotes(
+          id: id,
+          dateSpecificNotes: dateSpecificNotes
+        )
+
+      logger.info("Updated local recurring shift notes: \(id)")
+      triggerSync(userId: updatedShift.user_id)
+      return updatedShift
+    } catch LocalStoreWriteError.notFound {
+      logger.warning("Recurring shift not found for note update: \(id)")
       return nil
     } catch {
       throw error

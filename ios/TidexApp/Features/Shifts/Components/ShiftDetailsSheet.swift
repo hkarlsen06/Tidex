@@ -12,10 +12,34 @@ struct ShiftEditResult {
   let isVirtualShiftConversion: Bool  // If true, exclude from recurring and create new shift
   let recurringId: String?  // The recurring shift ID if converting virtual shift
   let originalDate: String  // Original date (for exclusion when converting virtual)
-  let note: String? = nil
-  let noteWasEdited: Bool = false
+  let note: String?
+  let noteWasEdited: Bool
   /// Custom supplements for this shift. nil = no change, empty rules = clear supplements
   let customSupplements: CustomSupplementsData?
+
+  init(
+    shiftId: String,
+    shiftDate: String,
+    startTime: String,
+    endTime: String,
+    isVirtualShiftConversion: Bool,
+    recurringId: String?,
+    originalDate: String,
+    note: String? = nil,
+    noteWasEdited: Bool = false,
+    customSupplements: CustomSupplementsData? = nil
+  ) {
+    self.shiftId = shiftId
+    self.shiftDate = shiftDate
+    self.startTime = startTime
+    self.endTime = endTime
+    self.isVirtualShiftConversion = isVirtualShiftConversion
+    self.recurringId = recurringId
+    self.originalDate = originalDate
+    self.note = note
+    self.noteWasEdited = noteWasEdited
+    self.customSupplements = customSupplements
+  }
 }
 
 enum ShiftPauseEditTarget: Equatable {

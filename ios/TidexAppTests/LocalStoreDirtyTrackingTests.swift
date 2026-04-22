@@ -167,6 +167,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       shiftDate: "2026-03-10",
       startTime: "12:00",
       endTime: "20:00",
+      note: "Server note",
       customPauseWindows: nil,
       customSupplements: CustomSupplementsData(
         rules: [
@@ -191,6 +192,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.shiftDateString, "2026-03-10")
     XCTAssertEqual(local.startTime, "12:00")
     XCTAssertEqual(local.endTime, "20:00")
+    XCTAssertEqual(local.note, "Server note")
     XCTAssertEqual(local.serverRevision, 7)
     XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
     XCTAssertNil(local.conflictServerSnapshot)
@@ -234,6 +236,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "07:00",
       endTime: "15:00",
+      note: "Server note",
       customPauseWindows: nil,
       customSupplements: nil,
       updatedAt: serverUpdatedAt,
@@ -251,9 +254,143 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .dirty)
     XCTAssertEqual(local.startTime, "09:30")
+    XCTAssertEqual(local.note, nil)
     XCTAssertEqual(local.serverRevision, 9)
     XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
     XCTAssertNil(local.conflictServerSnapshot)
+  }
+
+  func testUpdateUserShiftNoteMarksOnlyNoteDirty() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createUserShift(
+      id: "shift-note-1",
+      userId: userId,
+      jobId: "job-1",
+      shiftDate: makeDate("2026-03-02"),
+      startTime: "09:00",
+      endTime: "17:00",
+      note: nil,
+      customSupplements: nil
+    )
+
+    await store.markShiftClean(id: "shift-note-1")
+    try await store.save()
+
+    _ = try await store.updateUserShift(
+      id: "shift-note-1",
+      jobId: nil,
+      shiftDate: nil,
+      startTime: nil,
+      endTime: nil,
+      note: " Dentist ",
+      noteWasEdited: true,
+      customSupplements: nil
+    )
+
+    let localRecord = try await store.getUserShift(id: "shift-note-1")
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.note, "Dentist")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.note]))
+  }
+
+  func testUpdateUserShiftNoteCanBeClearedExplicitly() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createUserShift(
+      id: "shift-note-2",
+      userId: userId,
+      jobId: "job-1",
+      shiftDate: makeDate("2026-03-02"),
+      startTime: "09:00",
+      endTime: "17:00",
+      note: "Trip",
+      customSupplements: nil
+    )
+
+    await store.markShiftClean(id: "shift-note-2")
+    try await store.save()
+
+    _ = try await store.updateUserShift(
+      id: "shift-note-2",
+      jobId: nil,
+      shiftDate: nil,
+      startTime: nil,
+      endTime: nil,
+      note: "   ",
+      noteWasEdited: true,
+      customSupplements: nil
+    )
+
+    let localRecord = try await store.getUserShift(id: "shift-note-2")
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertNil(local.note)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.note]))
+  }
+
+  func testUpdateRecurringShiftDateSpecificNotesMarksOnlyNoteFieldDirty() async throws {
+    let store = try makeStoreActor()
+
+    let created = try await store.createRecurringShift(
+      userId: userId,
+      jobId: "job-1",
+      startTime: "09:00",
+      endTime: "17:00",
+      repeatIntervalWeeks: 1,
+      selectedDays: ["1": "2026-03-02"],
+      endCondition: nil,
+      exclusions: nil,
+      dateSpecificPauseWindows: nil,
+      dateSpecificSupplements: nil,
+      dateSpecificNotes: nil
+    )
+
+    await store.markRecurringShiftClean(id: created.id)
+    try await store.save()
+
+    _ = try await store.updateRecurringShiftDateSpecificNotes(
+      id: created.id,
+      dateSpecificNotes: ["2026-03-09": " Swap shift "]
+    )
+
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.decodedDateSpecificNotes, ["2026-03-09": "Swap shift"])
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.dateSpecificNotes]))
+  }
+
+  func testUpdateRecurringShiftDateSpecificNotesCanRemoveOnlyTargetedDate() async throws {
+    let store = try makeStoreActor()
+
+    let created = try await store.createRecurringShift(
+      userId: userId,
+      jobId: "job-1",
+      startTime: "09:00",
+      endTime: "17:00",
+      repeatIntervalWeeks: 1,
+      selectedDays: ["1": "2026-03-02"],
+      endCondition: nil,
+      exclusions: nil,
+      dateSpecificPauseWindows: nil,
+      dateSpecificSupplements: nil,
+      dateSpecificNotes: [
+        "2026-03-09": "Swap shift",
+        "2026-03-16": "Leave early",
+      ]
+    )
+
+    await store.markRecurringShiftClean(id: created.id)
+    try await store.save()
+
+    _ = try await store.updateRecurringShiftDateSpecificNotes(
+      id: created.id,
+      dateSpecificNotes: ["2026-03-16": "Leave early"]
+    )
+
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.decodedDateSpecificNotes, ["2026-03-16": "Leave early"])
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.dateSpecificNotes]))
   }
 
   func testCreateEventMarksAllFieldsDirty() async throws {

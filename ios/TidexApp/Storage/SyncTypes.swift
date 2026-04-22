@@ -23,6 +23,7 @@ enum UserShiftField: String, Codable, CaseIterable {
   case shiftDate = "shift_date"
   case startTime = "start_time"
   case endTime = "end_time"
+  case note = "note"
   case customPauseWindows = "custom_pause_windows"
   case customSupplements = "custom_supplements"
 }
@@ -50,6 +51,7 @@ enum RecurringShiftField: String, Codable, CaseIterable {
   case exclusions = "exclusions"
   case dateSpecificPauseWindows = "date_specific_pause_windows"
   case dateSpecificSupplements = "date_specific_supplements"
+  case dateSpecificNotes = "date_specific_notes"
 }
 
 /// Field keys for tracking dirty fields on LocalWageSnapshot

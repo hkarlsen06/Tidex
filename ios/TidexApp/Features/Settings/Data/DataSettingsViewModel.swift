@@ -460,17 +460,10 @@ final class DataSettingsViewModel: ObservableObject {
           let key = "\(virtualShift.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
           guard !realShiftKeys.contains(key) else { continue }
 
-          let virtualRow = ShiftRow(
-            id: "virtual-\(recurring.id)-\(virtualShift.date)",
-            user_id: userId,
-            job_id: recurring.job_id,
-            shift_date: virtualShift.date,
-            start_time: recurring.cleanStartTime,
-            end_time: recurring.cleanEndTime,
-            custom_pause_windows: recurring.date_specific_pause_windows?[virtualShift.date],
-            custom_supplements: recurring.date_specific_supplements?[virtualShift.date],
-            recurring_id: recurring.id,
-            recurring_anchor_weekday: virtualShift.weekday
+          let virtualRow = recurring.makeVirtualShift(
+            date: virtualShift.date,
+            weekday: virtualShift.weekday,
+            userId: userId
           )
 
           exportedShifts.append(

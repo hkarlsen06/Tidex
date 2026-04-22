@@ -1594,15 +1594,11 @@ final class AddShiftViewModel: ObservableObject {
       for virtualShift in virtualShifts {
         existingDates.insert(virtualShift.date)
 
-        let shift = ShiftRow(
+        let shift = recurring.makeVirtualShift(
+          date: virtualShift.date,
+          weekday: virtualShift.weekday,
           id: "virtual-\(virtualShift.date)",
-          user_id: nil,
-          job_id: recurring.job_id,
-          shift_date: virtualShift.date,
-          start_time: recurring.start_time,
-          end_time: recurring.end_time,
-          custom_pause_windows: recurring.date_specific_pause_windows?[virtualShift.date],
-          custom_supplements: nil
+          userId: nil
         )
 
         let wageSnapshot = Self.snapshotForDate(
@@ -1931,15 +1927,11 @@ final class AddShiftViewModel: ObservableObject {
 
       for virtualShift in virtualShifts {
         // Create a temporary shift to compute earnings
-        let shift = ShiftRow(
+        let shift = recurring.makeVirtualShift(
+          date: virtualShift.date,
+          weekday: virtualShift.weekday,
           id: "virtual-\(virtualShift.date)",
-          user_id: nil,
-          job_id: recurring.job_id,
-          shift_date: virtualShift.date,
-          start_time: recurring.start_time,
-          end_time: recurring.end_time,
-          custom_pause_windows: recurring.date_specific_pause_windows?[virtualShift.date],
-          custom_supplements: nil
+          userId: nil
         )
 
         // Wage/supplements from shift date

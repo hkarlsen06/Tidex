@@ -46,6 +46,9 @@ final class LocalRecurringShift {
   /// Date-specific supplements (JSON)
   var dateSpecificSupplements: Data?
 
+  /// Date-specific private notes (JSON)
+  var dateSpecificNotes: Data?
+
   // MARK: - Server Metadata
 
   /// Server's updated_at timestamp
@@ -255,6 +258,40 @@ final class LocalRecurringShift {
     }
   }
 
+  /// Decoded date-specific notes
+  var decodedDateSpecificNotes: [String: String] {
+    get {
+      guard let data = dateSpecificNotes else { return [:] }
+      if let decoded = try? syncJSONDecoder.decode([String: String].self, from: data),
+        let normalized = ShiftNoteSupport.normalizeDateSpecificNotes(decoded)
+      {
+        return normalized
+      }
+
+      if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
+        let fallback = snapshot.dateSpecificNotes.flatMap({
+          try? syncJSONDecoder.decode([String: String].self, from: $0)
+        }),
+        let normalized = ShiftNoteSupport.normalizeDateSpecificNotes(fallback)
+      {
+        SyncLogger.shared.log(
+          """
+          Recovered corrupt dateSpecificNotes for recurring shift \(id) from last synced snapshot
+          """,
+          level: .warning
+        )
+        return normalized
+      }
+
+      return [:]
+    }
+    set {
+      dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(newValue).flatMap {
+        try? canonicalJSONEncoder.encode($0)
+      }
+    }
+  }
+
   /// Whether this recurring shift is soft-deleted
   var isDeleted: Bool {
     serverDeletedAt != nil
@@ -274,6 +311,7 @@ final class LocalRecurringShift {
     exclusions: Data? = nil,
     dateSpecificPauseWindows: Data? = nil,
     dateSpecificSupplements: Data? = nil,
+    dateSpecificNotes: Data? = nil,
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date? = nil,
@@ -294,6 +332,7 @@ final class LocalRecurringShift {
     self.exclusions = exclusions
     self.dateSpecificPauseWindows = dateSpecificPauseWindows
     self.dateSpecificSupplements = dateSpecificSupplements
+    self.dateSpecificNotes = dateSpecificNotes
     self.serverUpdatedAt = serverUpdatedAt
     self.serverRevision = serverRevision
     self.serverDeletedAt = serverDeletedAt
@@ -323,6 +362,7 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
   let exclusions: Data?
   let dateSpecificPauseWindows: Data?
   let dateSpecificSupplements: Data?
+  let dateSpecificNotes: Data?
   let updatedAt: Date
   let revision: Int64
   let deletedAt: Date?
@@ -349,6 +389,8 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
       dateSpecificSupplements: row.date_specific_supplements.flatMap {
         try? canonicalJSONEncoder.encode($0)
       },
+      dateSpecificNotes: ShiftNoteSupport.normalizeDateSpecificNotes(row.date_specific_notes)
+        .flatMap { try? canonicalJSONEncoder.encode($0) },
       updatedAt: updatedAt,
       revision: revision,
       deletedAt: deletedAt
@@ -403,6 +445,9 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
     if dateSpecificSupplements != other.dateSpecificSupplements {
       changed.insert(.dateSpecificSupplements)
     }
+    if dateSpecificNotes != other.dateSpecificNotes {
+      changed.insert(.dateSpecificNotes)
+    }
 
     return changed
   }
@@ -426,7 +471,8 @@ extension LocalRecurringShift {
       date_specific_pause_windows: decodedDateSpecificPauseWindows.isEmpty
         ? nil : decodedDateSpecificPauseWindows,
       date_specific_supplements: decodedDateSpecificSupplements.isEmpty
-        ? nil : decodedDateSpecificSupplements
+        ? nil : decodedDateSpecificSupplements,
+      date_specific_notes: decodedDateSpecificNotes.isEmpty ? nil : decodedDateSpecificNotes
     )
   }
 
@@ -460,6 +506,8 @@ extension LocalRecurringShift {
       dateSpecificSupplements: serverRow.date_specific_supplements.flatMap {
         try? canonicalJSONEncoder.encode($0)
       },
+      dateSpecificNotes: ShiftNoteSupport.normalizeDateSpecificNotes(serverRow.date_specific_notes)
+        .flatMap { try? canonicalJSONEncoder.encode($0) },
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
       serverDeletedAt: serverDeletedAt,

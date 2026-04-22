@@ -11,6 +11,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "09:00",
       endTime: "17:00",
+      note: nil,
       customPauseWindows: nil,
       customSupplements: nil,
       updatedAt: timestamp,
@@ -23,6 +24,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "09:00",
       endTime: "18:00",
+      note: "Team dinner",
       customPauseWindows: nil,
       customSupplements: CustomSupplementsData(rules: []),
       updatedAt: timestamp,
@@ -32,7 +34,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
     XCTAssertEqual(
       updated.changedFields(from: original),
-      Set<UserShiftField>([.jobId, .endTime, .customSupplements])
+      Set<UserShiftField>([.jobId, .endTime, .note, .customSupplements])
     )
   }
 
@@ -52,6 +54,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       exclusions: nil,
       dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
+      dateSpecificNotes: nil,
       updatedAt: timestamp,
       revision: 1,
       deletedAt: nil
@@ -67,6 +70,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       exclusions: nil,
       dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
+      dateSpecificNotes: try canonicalJSONEncoder.encode(["2026-03-09": "Swap with Alex"]),
       updatedAt: timestamp,
       revision: 2,
       deletedAt: nil
@@ -74,7 +78,9 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
     XCTAssertEqual(
       updated.changedFields(from: original),
-      Set<RecurringShiftField>([.startTime, .repeatIntervalWeeks, .selectedDays])
+      Set<RecurringShiftField>([
+        .startTime, .repeatIntervalWeeks, .selectedDays, .dateSpecificNotes,
+      ])
     )
   }
 
@@ -86,6 +92,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "09:00",
       endTime: "17:00",
+      note: nil,
       customPauseWindows: nil,
       customSupplements: nil,
       updatedAt: timestamp,
@@ -98,6 +105,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       shiftDate: "2026-03-02",
       startTime: "09:00",
       endTime: "17:00",
+      note: nil,
       customPauseWindows: CustomPauseWindows(windows: [
         PauseWindow(start: "12:00", end: "12:30")
       ]),
@@ -129,6 +137,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       exclusions: nil,
       dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
+      dateSpecificNotes: nil,
       updatedAt: timestamp,
       revision: 1,
       deletedAt: nil
@@ -144,6 +153,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       exclusions: nil,
       dateSpecificPauseWindows: pauseWindows,
       dateSpecificSupplements: nil,
+      dateSpecificNotes: nil,
       updatedAt: timestamp,
       revision: 2,
       deletedAt: nil

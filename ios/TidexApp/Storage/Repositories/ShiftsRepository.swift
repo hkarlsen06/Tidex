@@ -256,6 +256,7 @@ final class ShiftsRepository: ObservableObject {
     shiftDate: Date,
     startTime: String,
     endTime: String,
+    note: String? = nil,
     customPauseWindows: CustomPauseWindows? = nil,
     customSupplements: CustomSupplementsData? = nil
   ) async throws -> ShiftRow {
@@ -266,6 +267,7 @@ final class ShiftsRepository: ObservableObject {
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
+      note: note,
       customPauseWindows: customPauseWindows,
       customSupplements: customSupplements
     )
@@ -299,6 +301,8 @@ final class ShiftsRepository: ObservableObject {
     shiftDate: Date? = nil,
     startTime: String? = nil,
     endTime: String? = nil,
+    note: String? = nil,
+    noteWasEdited: Bool = false,
     customSupplements: CustomSupplementsData? = nil
   ) async throws -> ShiftRow? {
     do {
@@ -308,6 +312,8 @@ final class ShiftsRepository: ObservableObject {
         shiftDate: shiftDate,
         startTime: startTime,
         endTime: endTime,
+        note: note,
+        noteWasEdited: noteWasEdited,
         customSupplements: customSupplements
       )
 

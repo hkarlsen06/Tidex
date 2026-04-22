@@ -18,6 +18,7 @@ final class LocalRecurringShiftRecoveryTests: XCTestCase {
       exclusions: nil,
       dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
+      dateSpecificNotes: nil,
       updatedAt: timestamp,
       revision: 7,
       deletedAt: nil
@@ -64,6 +65,7 @@ final class LocalRecurringShiftRecoveryTests: XCTestCase {
       exclusions: exclusionsData,
       dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
+      dateSpecificNotes: nil,
       updatedAt: timestamp,
       revision: 7,
       deletedAt: nil
