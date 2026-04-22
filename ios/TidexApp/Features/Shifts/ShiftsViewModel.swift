@@ -977,6 +977,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     recurringShiftsRepository.getRecurringShift(id: id)
   }
 
+  func getDisplayedShift(id: String) -> ShiftWithComputations? {
+    shifts.first(where: { $0.id == id })
+  }
+
   // MARK: - Event Editing
 
   func updateEvent(_ editResult: EventEditResult) async throws {

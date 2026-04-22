@@ -60,6 +60,17 @@ struct DashboardView: View {
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
   private let workSetupStatusService = WorkSetupStatusService.shared
 
+  private func shouldKeepShiftDetailsOpen(
+    after editResult: ShiftEditResult,
+    originalShift: ShiftWithComputations
+  ) -> Bool {
+    editResult.noteWasEdited
+      && editResult.customSupplements == nil
+      && editResult.shiftDate == originalShift.shiftDate
+      && editResult.startTime == String(originalShift.startTime.prefix(5))
+      && editResult.endTime == String(originalShift.endTime.prefix(5))
+  }
+
   /// Use fixed minimum card heights for regular Dynamic Type sizes so loading
   /// placeholders and real content occupy the same vertical space.
   private var usesFixedCardHeights: Bool {
@@ -355,9 +366,17 @@ struct DashboardView: View {
           }
         },
         onUpdate: { editResult in
-          selectedShift = nil
+          let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
+            after: editResult, originalShift: shift)
           Task {
             await viewModel.updateShift(editResult)
+            if shouldKeepSheetOpen {
+              if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+                selectedShift = refreshedShift
+              }
+            } else {
+              selectedShift = nil
+            }
           }
         },
         onUpdatePause: { pauseResult in

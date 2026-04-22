@@ -106,6 +106,12 @@ struct ShiftDetailsSheet: View {
   /// Whether note was edited (to support explicit clear)
   @State private var noteWasEdited = false
 
+  /// Optimistic note value used when a note-only save keeps the sheet open
+  @State private var optimisticNoteOverride: String?
+
+  /// Whether the optimistic note override should be used
+  @State private var hasOptimisticNoteOverride = false
+
   /// Whether currently saving
   @State private var isSaving = false
 
@@ -224,6 +230,10 @@ struct ShiftDetailsSheet: View {
         noteWasEdited = true
       }
     )
+  }
+
+  private var displayedNote: String? {
+    hasOptimisticNoteOverride ? optimisticNoteOverride : shift.note
   }
 
   private var normalizedCustomPauseWindows: CustomPauseWindows? {
@@ -449,6 +459,12 @@ struct ShiftDetailsSheet: View {
         isEditing = true
       }
     }
+    .onChange(of: shift.note) { _, newValue in
+      if hasOptimisticNoteOverride, newValue == optimisticNoteOverride {
+        hasOptimisticNoteOverride = false
+        optimisticNoteOverride = nil
+      }
+    }
     .interactiveDismissDisabled(isEditing && hasChanges)
     .sheet(isPresented: $showingShareDestinationPicker) {
       ShareDestinationSheet(
@@ -580,7 +596,7 @@ struct ShiftDetailsSheet: View {
       editedEndTime = endTime
     }
 
-    editedNote = shift.note ?? ""
+    editedNote = displayedNote ?? ""
     noteWasEdited = false
   }
 
@@ -639,7 +655,7 @@ struct ShiftDetailsSheet: View {
   }
 
   private func beginNoteEditing() {
-    editedNote = shift.note ?? ""
+    editedNote = displayedNote ?? ""
     noteWasEdited = false
     errorMessage = nil
     focusedTimeField = nil
@@ -733,6 +749,13 @@ struct ShiftDetailsSheet: View {
     impactHaptic.impactOccurred()
 
     if let onUpdate = onUpdate {
+      let isNoteOnlySave =
+        newDate == shift.shiftDate
+        && newStartTime == String(shift.startTime.prefix(5))
+        && newEndTime == String(shift.endTime.prefix(5))
+        && !supplementsWereEdited
+        && noteWasEdited
+
       // Create the edit result with all necessary information
       let editResult = ShiftEditResult(
         shiftId: shift.id,
@@ -747,8 +770,21 @@ struct ShiftDetailsSheet: View {
         customSupplements: supplementsWereEdited ? editedSupplements : nil
       )
       onUpdate(editResult)
-      // The parent will handle dismissing or showing errors
-      dismiss()
+
+      if isNoteOnlySave {
+        optimisticNoteOverride = trimmedEditedNote
+        hasOptimisticNoteOverride = true
+        editedNote = trimmedEditedNote ?? ""
+        noteWasEdited = false
+        isSaving = false
+        isNoteFieldFocused = false
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+          isEditing = false
+        }
+      } else {
+        // The parent will handle dismissing or showing errors
+        dismiss()
+      }
     } else {
       isSaving = false
       errorMessage = "Update not available"
@@ -848,7 +884,7 @@ struct ShiftDetailsSheet: View {
         }
       }
 
-      if let note = shift.note {
+      if let note = displayedNote {
         Text(note)
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
