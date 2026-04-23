@@ -1,5 +1,6 @@
 import Foundation
 import StoreKit
+import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "StoreKitManager")
@@ -116,9 +117,10 @@ final class StoreKitManager: ObservableObject {
 
     logger.info("Starting purchase for product: \(product.id)")
 
+    let appAccountToken = try await appAccountToken(for: userId)
     let result: Product.PurchaseResult
     do {
-      result = try await product.purchase()
+      result = try await product.purchase(options: [.appAccountToken(appAccountToken)])
     } catch {
       logger.error("Purchase failed: \(error.localizedDescription)")
       throw PurchaseError.networkError(underlying: error)
@@ -197,9 +199,10 @@ final class StoreKitManager: ObservableObject {
 
     logger.info("Starting consumable purchase for product: \(product.id)")
 
+    let appAccountToken = try await appAccountToken(for: userId)
     let result: Product.PurchaseResult
     do {
-      result = try await product.purchase()
+      result = try await product.purchase(options: [.appAccountToken(appAccountToken)])
     } catch {
       logger.error("Consumable purchase failed: \(error.localizedDescription)")
       throw PurchaseError.networkError(underlying: error)
@@ -439,6 +442,38 @@ final class StoreKitManager: ObservableObject {
       JWSUploadWorker.shared.processQueue()
     } catch {
       logger.error("Failed to queue JWS upload: \(error.localizedDescription)")
+    }
+  }
+
+  private func appAccountToken(for userId: String) async throws -> UUID {
+    guard UUID(uuidString: userId) != nil else {
+      throw PurchaseError.networkError(
+        underlying: NSError(
+          domain: "StoreKitManager",
+          code: -1,
+          userInfo: [NSLocalizedDescriptionKey: "Invalid user ID"]
+        ))
+    }
+
+    do {
+      let token: String =
+        try await supabase
+        .rpc("get_or_create_app_account_token", params: ["p_user_id": userId])
+        .execute()
+        .value
+
+      guard let uuid = UUID(uuidString: token) else {
+        throw NSError(
+          domain: "StoreKitManager",
+          code: -2,
+          userInfo: [NSLocalizedDescriptionKey: "Invalid app account token"]
+        )
+      }
+
+      return uuid
+    } catch {
+      logger.error("Failed to get app account token: \(error.localizedDescription)")
+      throw PurchaseError.networkError(underlying: error)
     }
   }
 }

@@ -13,6 +13,10 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   "";
+const SEND_PUSH_NOTIFICATIONS_SECRET =
+  Deno.env.get("SEND_PUSH_NOTIFICATIONS_SECRET") ??
+    Deno.env.get("CRON_SECRET") ??
+    "";
 
 // FCM HTTP v1 credentials (from Google service account JSON)
 const FCM_PROJECT_ID = Deno.env.get("FCM_PROJECT_ID") ?? "";
@@ -119,6 +123,27 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function bearerToken(req: Request): string | null {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  return authHeader.slice("Bearer ".length).trim() || null;
+}
+
+function hasTrustedCaller(req: Request): boolean {
+  const token = bearerToken(req);
+  if (token && token === SUPABASE_SERVICE_ROLE_KEY) {
+    return true;
+  }
+
+  if (!SEND_PUSH_NOTIFICATIONS_SECRET) {
+    return false;
+  }
+
+  const sharedSecret = req.headers.get("x-send-push-secret") ??
+    req.headers.get("x-cron-secret");
+  return sharedSecret === SEND_PUSH_NOTIFICATIONS_SECRET;
+}
+
 function asNonEmptyString(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -182,7 +207,9 @@ function notificationCollapseId(
   return `thread-message:${threadId}`;
 }
 
-function notificationMessageId(notification: OutboxNotification): string | null {
+function notificationMessageId(
+  notification: OutboxNotification,
+): string | null {
   return notificationDataString(notification, "message_id");
 }
 
@@ -507,7 +534,9 @@ async function getUnreadBadgeCounts(
   return counts;
 }
 
-function groupPushDevicesByRecipient(devices: PushDevice[]): Map<string, PushDevice[]> {
+function groupPushDevicesByRecipient(
+  devices: PushDevice[],
+): Map<string, PushDevice[]> {
   const grouped = new Map<string, PushDevice[]>();
 
   for (const device of devices) {
@@ -1249,9 +1278,17 @@ async function handleRequest(req: Request) {
       return res("Method Not Allowed", 405);
     }
 
+    if (req.method === "GET") {
+      return json({ ok: true, service: "send-push-notifications" });
+    }
+
     // Check configuration
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return res("Supabase not configured", 503);
+    }
+
+    if (!hasTrustedCaller(req)) {
+      return json({ error: "Unauthorized" }, 401);
     }
 
     // Check if at least one push provider is configured
@@ -1306,7 +1343,9 @@ async function handleRequest(req: Request) {
       `[Push] Coalesced ${notifications.length} claimed notifications into ${deliveryJobs.length} delivery jobs`,
     );
 
-    const recipientIds = deliveryJobs.map((job) => job.notification.recipient_id);
+    const recipientIds = deliveryJobs.map((job) =>
+      job.notification.recipient_id
+    );
     const deviceFetchStartedAt = performance.now();
     const devicesByRecipient = await fetchPushDevicesByRecipient(
       supabase,
@@ -1329,139 +1368,163 @@ async function handleRequest(req: Request) {
       } ms`,
     );
 
-    await runWithConcurrencyLimit(deliveryJobs, MAX_DELIVERY_CONCURRENCY, async (job) => {
-      const notification = job.notification;
-      const notificationIds = job.notifications.map((entry) => entry.id);
-      const sendStartedAt = performance.now();
-      const enqueueToClaimMs = notification.claimed_at
-        ? Math.max(
-          0,
-          Math.round(
-            Date.parse(notification.claimed_at) - Date.parse(notification.created_at),
-          ),
-        )
-        : undefined;
-      const claimToSendMs = notification.claimed_at
-        ? Math.max(
-          0,
-          Math.round(Date.now() - Date.parse(notification.claimed_at)),
-        )
-        : undefined;
+    await runWithConcurrencyLimit(
+      deliveryJobs,
+      MAX_DELIVERY_CONCURRENCY,
+      async (job) => {
+        const notification = job.notification;
+        const notificationIds = job.notifications.map((entry) => entry.id);
+        const sendStartedAt = performance.now();
+        const enqueueToClaimMs = notification.claimed_at
+          ? Math.max(
+            0,
+            Math.round(
+              Date.parse(notification.claimed_at) -
+                Date.parse(notification.created_at),
+            ),
+          )
+          : undefined;
+        const claimToSendMs = notification.claimed_at
+          ? Math.max(
+            0,
+            Math.round(Date.now() - Date.parse(notification.claimed_at)),
+          )
+          : undefined;
 
-      try {
-        const deliverableNotificationIds = await filterSendingNotificationIds(
-          supabase,
-          notificationIds,
-        );
-        if (deliverableNotificationIds.length === 0) {
-          console.log(
-            `[Push] Skipped notification ${notification.id} because it was superseded before delivery`,
+        try {
+          const deliverableNotificationIds = await filterSendingNotificationIds(
+            supabase,
+            notificationIds,
           );
-          return;
-        }
+          if (deliverableNotificationIds.length === 0) {
+            console.log(
+              `[Push] Skipped notification ${notification.id} because it was superseded before delivery`,
+            );
+            return;
+          }
 
-        const devices = devicesByRecipient.get(notification.recipient_id) ?? [];
+          const devices = devicesByRecipient.get(notification.recipient_id) ??
+            [];
 
-        if (devices.length === 0) {
-          // No devices registered, mark as skipped
+          if (devices.length === 0) {
+            // No devices registered, mark as skipped
+            await markOutboxNotifications(
+              supabase,
+              deliverableNotificationIds,
+              {
+                status: "skipped",
+                processed_at: new Date().toISOString(),
+              },
+            );
+            console.log(
+              `[Push] Skipped notification ${notification.id} with no devices in ${
+                Math.round(performance.now() - sendStartedAt)
+              } ms`,
+            );
+            return;
+          }
+
+          const badgeCount =
+            unreadBadgeCountByRecipient.get(notification.recipient_id) ?? 0;
+          const results = await Promise.all(
+            devices.map((device) =>
+              sendToDevice(
+                device,
+                notification,
+                badgeCount,
+                apnsConfigured,
+                fcmAccessToken,
+              )
+            ),
+          );
+
+          const invalidApnsTokenDeviceIds = results
+            .map((result) => result.clearApnsTokenDeviceId)
+            .filter((deviceId): deviceId is string => Boolean(deviceId));
+          const invalidFcmTokenDeviceIds = results
+            .map((result) => result.deleteDeviceId)
+            .filter((deviceId): deviceId is string => Boolean(deviceId));
+
+          await clearInvalidApnsTokens(supabase, invalidApnsTokenDeviceIds);
+          invalidTokens.push(...invalidFcmTokenDeviceIds);
+          prefetchEligibleCount += results.filter((result) =>
+            result.prefetchEligible
+          ).length;
+          prefetchAttemptedCount += results.filter((result) =>
+            result.prefetchAttempted
+          ).length;
+          prefetchSuccessCount += results.filter((result) =>
+            result.prefetchSucceeded
+          ).length;
+          for (let index = 0; index < results.length; index += 1) {
+            const result = results[index];
+            if (!result.confirmedApnsEnvironment) continue;
+            const deviceId = devices[index]?.id;
+            if (!deviceId) continue;
+            if (result.confirmedApnsEnvironment === "production") {
+              confirmedProductionDeviceIds.push(deviceId);
+            } else {
+              confirmedSandboxDeviceIds.push(deviceId);
+            }
+          }
+
+          const anySuccess = didAnyDeliverySucceed(results);
+
+          // Mark notification status
           await markOutboxNotifications(supabase, deliverableNotificationIds, {
-            status: "skipped",
+            status: anySuccess ? "sent" : "failed",
+            error_message: anySuccess ? null : "All devices failed",
             processed_at: new Date().toISOString(),
           });
+
+          if (anySuccess) processed += deliverableNotificationIds.length;
+          else failed += deliverableNotificationIds.length;
+          const alertLatencyValues = results
+            .map((result) => result.alertLatencyMs)
+            .filter((value): value is number => value !== undefined);
+          const prefetchLatencyValues = results
+            .map((result) => result.prefetchLatencyMs)
+            .filter((value): value is number => value !== undefined);
           console.log(
-            `[Push] Skipped notification ${notification.id} with no devices in ${
+            `[Push] Processed notification ${notification.id} across ${devices.length} devices in ${
               Math.round(performance.now() - sendStartedAt)
-            } ms`,
+            } ms (success=${anySuccess}, enqueue_to_claim_ms=${
+              enqueueToClaimMs ?? "n/a"
+            }, claim_to_send_ms=${claimToSendMs ?? "n/a"}, alert_envs=${
+              results
+                .map((result) => result.confirmedApnsEnvironment)
+                .filter((environment): environment is ApnsEnvironment =>
+                  Boolean(environment)
+                )
+                .join(",") || "n/a"
+            }, alert_latency_ms=${
+              alertLatencyValues.length > 0
+                ? alertLatencyValues.join(",")
+                : "n/a"
+            }, prefetch_latency_ms=${
+              prefetchLatencyValues.length > 0
+                ? prefetchLatencyValues.join(",")
+                : "n/a"
+            })`,
           );
-          return;
+        } catch (error) {
+          console.error(
+            `Error processing notification ${notification.id}:`,
+            error,
+          );
+
+          await markOutboxNotifications(supabase, notificationIds, {
+            status: "failed",
+            error_message: error instanceof Error
+              ? error.message
+              : "Unknown error",
+            processed_at: new Date().toISOString(),
+          });
+
+          failed += notificationIds.length;
         }
-
-        const badgeCount =
-          unreadBadgeCountByRecipient.get(notification.recipient_id) ?? 0;
-        const results = await Promise.all(
-          devices.map((device) =>
-            sendToDevice(
-              device,
-              notification,
-              badgeCount,
-              apnsConfigured,
-              fcmAccessToken,
-            )
-          ),
-        );
-
-        const invalidApnsTokenDeviceIds = results
-          .map((result) => result.clearApnsTokenDeviceId)
-          .filter((deviceId): deviceId is string => Boolean(deviceId));
-        const invalidFcmTokenDeviceIds = results
-          .map((result) => result.deleteDeviceId)
-          .filter((deviceId): deviceId is string => Boolean(deviceId));
-
-        await clearInvalidApnsTokens(supabase, invalidApnsTokenDeviceIds);
-        invalidTokens.push(...invalidFcmTokenDeviceIds);
-        prefetchEligibleCount += results.filter((result) => result.prefetchEligible).length;
-        prefetchAttemptedCount += results.filter((result) => result.prefetchAttempted).length;
-        prefetchSuccessCount += results.filter((result) => result.prefetchSucceeded).length;
-        for (let index = 0; index < results.length; index += 1) {
-          const result = results[index];
-          if (!result.confirmedApnsEnvironment) continue;
-          const deviceId = devices[index]?.id;
-          if (!deviceId) continue;
-          if (result.confirmedApnsEnvironment === "production") {
-            confirmedProductionDeviceIds.push(deviceId);
-          } else {
-            confirmedSandboxDeviceIds.push(deviceId);
-          }
-        }
-
-        const anySuccess = didAnyDeliverySucceed(results);
-
-        // Mark notification status
-        await markOutboxNotifications(supabase, deliverableNotificationIds, {
-          status: anySuccess ? "sent" : "failed",
-          error_message: anySuccess ? null : "All devices failed",
-          processed_at: new Date().toISOString(),
-        });
-
-        if (anySuccess) processed += deliverableNotificationIds.length;
-        else failed += deliverableNotificationIds.length;
-        const alertLatencyValues = results
-          .map((result) => result.alertLatencyMs)
-          .filter((value): value is number => value !== undefined);
-        const prefetchLatencyValues = results
-          .map((result) => result.prefetchLatencyMs)
-          .filter((value): value is number => value !== undefined);
-        console.log(
-          `[Push] Processed notification ${notification.id} across ${devices.length} devices in ${
-            Math.round(performance.now() - sendStartedAt)
-          } ms (success=${anySuccess}, enqueue_to_claim_ms=${enqueueToClaimMs ?? "n/a"}, claim_to_send_ms=${claimToSendMs ?? "n/a"}, alert_envs=${
-            results
-              .map((result) => result.confirmedApnsEnvironment)
-              .filter((environment): environment is ApnsEnvironment => Boolean(environment))
-              .join(",") || "n/a"
-          }, alert_latency_ms=${
-            alertLatencyValues.length > 0 ? alertLatencyValues.join(",") : "n/a"
-          }, prefetch_latency_ms=${
-            prefetchLatencyValues.length > 0 ? prefetchLatencyValues.join(",") : "n/a"
-          })`,
-        );
-      } catch (error) {
-        console.error(
-          `Error processing notification ${notification.id}:`,
-          error,
-        );
-
-        await markOutboxNotifications(supabase, notificationIds, {
-          status: "failed",
-          error_message: error instanceof Error
-            ? error.message
-            : "Unknown error",
-          processed_at: new Date().toISOString(),
-        });
-
-        failed += notificationIds.length;
-      }
-    });
+      },
+    );
 
     await persistApnsEnvironment(
       supabase,
@@ -1476,10 +1539,11 @@ async function handleRequest(req: Request) {
 
     // Clean up invalid tokens
     if (invalidTokens.length > 0) {
-      const { error } = await supabase.schema("internal").from("push_devices").delete().in(
-        "id",
-        invalidTokens,
-      );
+      const { error } = await supabase.schema("internal").from("push_devices")
+        .delete().in(
+          "id",
+          invalidTokens,
+        );
       if (error) {
         throw error;
       }
@@ -1516,7 +1580,9 @@ async function handleRequest(req: Request) {
     }
 
     console.log(
-      `[Push] Batch complete: processed=${processed}, failed=${failed}, claimed=${notifications.length}, prefetch_eligible=${prefetchEligibleCount}, prefetch_attempted=${prefetchAttemptedCount}, prefetch_succeeded=${prefetchSuccessCount}, prefetch_failed=${prefetchAttemptedCount - prefetchSuccessCount}`,
+      `[Push] Batch complete: processed=${processed}, failed=${failed}, claimed=${notifications.length}, prefetch_eligible=${prefetchEligibleCount}, prefetch_attempted=${prefetchAttemptedCount}, prefetch_succeeded=${prefetchSuccessCount}, prefetch_failed=${
+        prefetchAttemptedCount - prefetchSuccessCount
+      }`,
     );
 
     return json({

@@ -5,16 +5,30 @@
 // - Does NOT require Supabase auth (Apple sends notifications directly)
 // - Verifies notification signature using Apple's public keys
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { Buffer } from "node:buffer";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
-import * as jose from "https://deno.land/x/jose@v5.2.2/index.ts";
+import {
+  Environment,
+  SignedDataVerifier,
+} from "npm:@apple/app-store-server-library";
 
 // ---------- Environment ----------
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const APPLE_APP_BUNDLE_ID = Deno.env.get("APPLE_APP_BUNDLE_ID") ?? "no.tidex.app";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  "";
+const APPLE_APP_BUNDLE_ID = Deno.env.get("APPLE_APP_BUNDLE_ID") ??
+  "no.tidex.app";
+const APPLE_APP_APPLE_ID_RAW = Deno.env.get("APPLE_APP_APPLE_ID") ??
+  Deno.env.get("APPLE_APP_ID") ??
+  "6757129790";
+const APPLE_APP_APPLE_ID = Number(APPLE_APP_APPLE_ID_RAW);
 
 // Apple's public key URLs for verification
-const APPLE_ROOT_CA_G3_URL = "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer";
+const APPLE_ROOT_CA_G2_URL =
+  "https://www.apple.com/certificateauthority/AppleRootCA-G2.cer";
+const APPLE_ROOT_CA_G3_URL =
+  "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer";
+const APPLE_ROOT_CA_URLS = [APPLE_ROOT_CA_G2_URL, APPLE_ROOT_CA_G3_URL];
 
 // ---------- Apple Product ID Mapping ----------
 // Matches existing tiers: Pro and Max, each with monthly/yearly
@@ -32,8 +46,8 @@ function mapAppleProductToInternal(appleProductId: string): string {
 // ---------- Supabase Client ----------
 const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false }
-    })
+    auth: { persistSession: false },
+  })
   : null;
 
 // ---------- Apple Notification Types ----------
@@ -116,42 +130,141 @@ interface AppleRenewalInfo {
   isInBillingRetryPeriod?: boolean;
 }
 
-// ---------- JWS Decoding ----------
-function decodeAppleJWS(jws: string): Record<string, any> {
-  const parts = jws.split(".");
-  if (parts.length !== 3) {
-    throw new Error("Invalid JWS format");
+type AppleVerificationResult = {
+  notification: AppleNotificationPayload;
+  verifier: SignedDataVerifier;
+};
+
+let appleRootCertificatesPromise: Promise<Buffer[]> | null = null;
+
+async function appleRootCertificates(): Promise<Buffer[]> {
+  appleRootCertificatesPromise ??= Promise.all(
+    APPLE_ROOT_CA_URLS.map(async (url) => {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch Apple root certificate: ${url}`);
+      }
+      return Buffer.from(await response.arrayBuffer());
+    }),
+  ).catch((error) => {
+    appleRootCertificatesPromise = null;
+    throw error;
+  });
+
+  return appleRootCertificatesPromise;
+}
+
+function decodeAppleJWSPayload(jws: string): Record<string, any> | null {
+  try {
+    const parts = jws.split(".");
+    if (parts.length !== 3) return null;
+    return JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
   }
-  const payload = parts[1];
-  // Handle URL-safe base64
-  const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-  return JSON.parse(decoded);
+}
+
+function appleNotificationEnvironmentHint(
+  signedPayload: string,
+): "Production" | "Sandbox" | null {
+  const payload = decodeAppleJWSPayload(signedPayload);
+  const environment = payload?.data?.environment ??
+    payload?.summary?.environment ??
+    payload?.appData?.environment;
+  return environment === "Production" || environment === "Sandbox"
+    ? environment
+    : null;
+}
+
+function productionAppleAppId(): number {
+  if (!Number.isFinite(APPLE_APP_APPLE_ID) || APPLE_APP_APPLE_ID <= 0) {
+    throw new Error(
+      "APPLE_APP_APPLE_ID or APPLE_APP_ID must be set for Production Apple notifications",
+    );
+  }
+  return APPLE_APP_APPLE_ID;
+}
+
+function appleVerifiers(
+  rootCertificates: Buffer[],
+  signedPayload: string,
+): SignedDataVerifier[] {
+  const environment = appleNotificationEnvironmentHint(signedPayload);
+  if (environment === "Sandbox") {
+    return [
+      new SignedDataVerifier(
+        rootCertificates,
+        false,
+        Environment.SANDBOX,
+        APPLE_APP_BUNDLE_ID,
+      ),
+    ];
+  }
+
+  if (environment === "Production") {
+    return [
+      new SignedDataVerifier(
+        rootCertificates,
+        false,
+        Environment.PRODUCTION,
+        APPLE_APP_BUNDLE_ID,
+        productionAppleAppId(),
+      ),
+    ];
+  }
+
+  const verifiers = [
+    new SignedDataVerifier(
+      rootCertificates,
+      false,
+      Environment.SANDBOX,
+      APPLE_APP_BUNDLE_ID,
+    ),
+  ];
+
+  if (APPLE_APP_APPLE_ID_RAW) {
+    verifiers.unshift(
+      new SignedDataVerifier(
+        rootCertificates,
+        false,
+        Environment.PRODUCTION,
+        APPLE_APP_BUNDLE_ID,
+        productionAppleAppId(),
+      ),
+    );
+  }
+
+  return verifiers;
 }
 
 // ---------- Signature Verification ----------
-// Note: Full verification requires fetching Apple's certificate chain
-// For production, you should verify the certificate chain properly
-async function verifyAppleNotification(signedPayload: string): Promise<AppleNotificationPayload | null> {
+async function verifyAppleNotification(
+  signedPayload: string,
+): Promise<AppleVerificationResult | null> {
   try {
-    // Decode without full verification for now
-    // In production, implement full certificate chain verification
-    const decoded = decodeAppleJWS(signedPayload) as AppleNotificationPayload;
+    const rootCertificates = await appleRootCertificates();
 
-    // Basic validation
-    if (!decoded.notificationType || !decoded.notificationUUID) {
-      console.error("[apple-notifications] Invalid payload structure");
-      return null;
+    for (const verifier of appleVerifiers(rootCertificates, signedPayload)) {
+      try {
+        const notification = await verifier.verifyAndDecodeNotification(
+          signedPayload,
+        ) as AppleNotificationPayload;
+        return { notification, verifier };
+      } catch (e) {
+        console.warn(
+          "[apple-notifications] Signed payload verification attempt failed:",
+          e instanceof Error ? e.message : e,
+        );
+      }
     }
 
-    // Verify bundle ID matches
-    if (decoded.data?.bundleId && decoded.data.bundleId !== APPLE_APP_BUNDLE_ID) {
-      console.error(`[apple-notifications] Bundle ID mismatch: ${decoded.data.bundleId}`);
-      return null;
-    }
-
-    return decoded;
+    console.error("[apple-notifications] Signed payload verification failed");
+    return null;
   } catch (e) {
-    console.error("[apple-notifications] Verification failed:", e instanceof Error ? e.message : e);
+    console.error(
+      "[apple-notifications] Verification failed:",
+      e instanceof Error ? e.message : e,
+    );
     return null;
   }
 }
@@ -161,7 +274,7 @@ function determineStatusFromNotification(
   notificationType: NotificationType,
   subtype: NotificationSubtype,
   transactionInfo: AppleTransactionInfo | null,
-  renewalInfo: AppleRenewalInfo | null
+  renewalInfo: AppleRenewalInfo | null,
 ): { status: string; cancelAtPeriodEnd: boolean } {
   // Handle based on notification type
   switch (notificationType) {
@@ -190,7 +303,10 @@ function determineStatusFromNotification(
       if (subtype === "AUTO_RENEW_ENABLED") {
         return { status: "active", cancelAtPeriodEnd: false };
       }
-      return { status: "active", cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0 };
+      return {
+        status: "active",
+        cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0,
+      };
 
     case "EXPIRED":
       if (subtype === "VOLUNTARY") {
@@ -218,7 +334,10 @@ function determineStatusFromNotification(
 
     case "DID_CHANGE_RENEWAL_PREF":
       // User changed product (upgrade/downgrade) - still active
-      return { status: "active", cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0 };
+      return {
+        status: "active",
+        cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0,
+      };
 
     case "OFFER_REDEEMED":
       return { status: "active", cancelAtPeriodEnd: false };
@@ -232,10 +351,15 @@ function determineStatusFromNotification(
       if (transactionInfo?.revocationDate) {
         return { status: "refunded", cancelAtPeriodEnd: false };
       }
-      if (transactionInfo?.expiresDate && transactionInfo.expiresDate < Date.now()) {
+      if (
+        transactionInfo?.expiresDate && transactionInfo.expiresDate < Date.now()
+      ) {
         return { status: "expired", cancelAtPeriodEnd: true };
       }
-      return { status: "active", cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0 };
+      return {
+        status: "active",
+        cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0,
+      };
   }
 }
 
@@ -246,14 +370,16 @@ async function markNotificationSeen(
   subtype: string | null,
   originalTransactionId: string | null,
   transactionId: string | null,
-  rawPayload: any
+  rawPayload: any,
 ): Promise<{ ok: boolean; isDuplicate: boolean }> {
   if (!supabaseAdmin) {
     return { ok: false, isDuplicate: false };
   }
 
   try {
-    const { error } = await supabaseAdmin.schema("internal").from("apple_notifications").insert({
+    const { error } = await supabaseAdmin.schema("internal").from(
+      "apple_notifications",
+    ).insert({
       id: notificationUUID,
       notification_type: notificationType,
       subtype,
@@ -267,7 +393,10 @@ async function markNotificationSeen(
         // Duplicate notification
         return { ok: true, isDuplicate: true };
       }
-      console.error("[apple-notifications] markNotificationSeen failed:", error.message);
+      console.error(
+        "[apple-notifications] markNotificationSeen failed:",
+        error.message,
+      );
       return { ok: false, isDuplicate: false };
     }
 
@@ -278,7 +407,9 @@ async function markNotificationSeen(
   }
 }
 
-async function markNotificationProcessed(notificationUUID: string): Promise<void> {
+async function markNotificationProcessed(
+  notificationUUID: string,
+): Promise<void> {
   if (!supabaseAdmin) return;
 
   await supabaseAdmin
@@ -287,7 +418,10 @@ async function markNotificationProcessed(notificationUUID: string): Promise<void
     .eq("id", notificationUUID);
 }
 
-async function markNotificationError(notificationUUID: string, error: string): Promise<void> {
+async function markNotificationError(
+  notificationUUID: string,
+  error: string,
+): Promise<void> {
   if (!supabaseAdmin) return;
 
   const { data } = await supabaseAdmin
@@ -305,11 +439,35 @@ async function markNotificationError(notificationUUID: string, error: string): P
     .eq("id", notificationUUID);
 }
 
+async function lookupUserIdByAppAccountToken(
+  appAccountToken: string,
+): Promise<string | null> {
+  if (!supabaseAdmin) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .schema("internal").from("app_account_tokens")
+    .select("user_id")
+    .eq("token", appAccountToken)
+    .maybeSingle();
+
+  if (error) {
+    console.error(
+      "[apple-notifications] app_account_token lookup failed:",
+      error.message,
+    );
+    return null;
+  }
+
+  return data?.user_id ?? null;
+}
+
 async function upsertSubscriptionFromNotification(
   transactionInfo: AppleTransactionInfo,
   renewalInfo: AppleRenewalInfo | null,
   notificationType: NotificationType,
-  subtype: NotificationSubtype
+  subtype: NotificationSubtype,
 ): Promise<{ success: boolean; error?: string }> {
   if (!supabaseAdmin) {
     return { success: false, error: "Database not configured" };
@@ -320,10 +478,12 @@ async function upsertSubscriptionFromNotification(
     notificationType,
     subtype,
     transactionInfo,
-    renewalInfo
+    renewalInfo,
   );
 
-  const internalProductId = mapAppleProductToInternal(transactionInfo.productId);
+  const internalProductId = mapAppleProductToInternal(
+    transactionInfo.productId,
+  );
   const appAccountToken = transactionInfo.appAccountToken ?? null;
 
   // First, try to find existing subscription by original_transaction_id
@@ -333,28 +493,33 @@ async function upsertSubscriptionFromNotification(
     .eq("apple_original_transaction_id", originalTransactionId)
     .maybeSingle();
 
-  let userId: string | null = existing?.user_id ?? null;
+  const tokenUserId = appAccountToken
+    ? await lookupUserIdByAppAccountToken(appAccountToken)
+    : null;
 
-  // If no existing subscription, try to find user by app_account_token
-  if (!userId && appAccountToken) {
-    const { data: tokenData } = await supabaseAdmin
-      .schema("internal").from("app_account_tokens")
-      .select("user_id")
-      .eq("token", appAccountToken)
-      .maybeSingle();
-
-    userId = tokenData?.user_id ?? null;
+  if (existing?.user_id && tokenUserId && tokenUserId !== existing.user_id) {
+    console.warn(
+      `[apple-notifications] appAccountToken owner mismatch: existing=${existing.user_id}, tokenUser=${tokenUserId}`,
+    );
+    return {
+      success: false,
+      error: "Apple transaction belongs to a different user",
+    };
   }
+
+  let userId: string | null = existing?.user_id ?? tokenUserId;
 
   // If still no user, store as orphan notification
   if (!userId) {
-    console.warn(`[apple-notifications] Cannot find user for transaction ${originalTransactionId}`);
+    console.warn(
+      `[apple-notifications] Cannot find user for transaction ${originalTransactionId}`,
+    );
     await storeOrphanNotification(
       transactionInfo,
       renewalInfo,
       notificationType,
       subtype,
-      appAccountToken
+      appAccountToken,
     );
     return { success: true }; // Don't fail - orphan is expected for some cases
   }
@@ -414,7 +579,10 @@ async function upsertSubscriptionFromNotification(
           .eq("provider", "apple");
 
         if (updateError) {
-          console.error("[apple-notifications] Insert/Update fallback failed:", updateError.message);
+          console.error(
+            "[apple-notifications] Insert/Update fallback failed:",
+            updateError.message,
+          );
           return { success: false, error: updateError.message };
         }
       } else {
@@ -424,7 +592,9 @@ async function upsertSubscriptionFromNotification(
     }
   }
 
-  console.log(`[apple-notifications] Updated subscription: user=${userId}, status=${status}`);
+  console.log(
+    `[apple-notifications] Updated subscription: user=${userId}, status=${status}`,
+  );
   return { success: true };
 }
 
@@ -433,23 +603,24 @@ async function storeOrphanNotification(
   renewalInfo: AppleRenewalInfo | null,
   notificationType: NotificationType,
   subtype: NotificationSubtype,
-  appAccountToken: string | null
+  appAccountToken: string | null,
 ): Promise<void> {
   if (!supabaseAdmin) return;
 
   try {
-    await supabaseAdmin.schema("internal").from("apple_orphan_notifications").insert({
-      id: `${transactionInfo.transactionId}_${Date.now()}`,
-      notification_type: notificationType,
-      subtype,
-      original_transaction_id: transactionInfo.originalTransactionId,
-      app_account_token: appAccountToken,
-      raw_payload: {
-        transactionInfo,
-        renewalInfo,
-        receivedAt: new Date().toISOString(),
-      },
-    });
+    await supabaseAdmin.schema("internal").from("apple_orphan_notifications")
+      .insert({
+        id: `${transactionInfo.transactionId}_${Date.now()}`,
+        notification_type: notificationType,
+        subtype,
+        original_transaction_id: transactionInfo.originalTransactionId,
+        app_account_token: appAccountToken,
+        raw_payload: {
+          transactionInfo,
+          renewalInfo,
+          receivedAt: new Date().toISOString(),
+        },
+      });
   } catch (e) {
     console.error("[apple-notifications] Failed to store orphan:", e);
   }
@@ -481,14 +652,17 @@ serve(async (req) => {
     }
 
     // Verify and decode the notification
-    const notification = await verifyAppleNotification(signedPayload);
-    if (!notification) {
+    const verification = await verifyAppleNotification(signedPayload);
+    if (!verification) {
       return new Response("Invalid notification", { status: 400 });
     }
 
+    const { notification, verifier } = verification;
     const { notificationType, subtype, notificationUUID, data } = notification;
 
-    console.log(`[apple-notifications] Received: type=${notificationType}, subtype=${subtype}, uuid=${notificationUUID}`);
+    console.log(
+      `[apple-notifications] Received: type=${notificationType}, subtype=${subtype}, uuid=${notificationUUID}`,
+    );
 
     // Parse transaction and renewal info from notification data
     let transactionInfo: AppleTransactionInfo | null = null;
@@ -496,17 +670,27 @@ serve(async (req) => {
 
     if (data.signedTransactionInfo) {
       try {
-        transactionInfo = decodeAppleJWS(data.signedTransactionInfo) as AppleTransactionInfo;
+        transactionInfo = await verifier.verifyAndDecodeTransaction(
+          data.signedTransactionInfo,
+        ) as AppleTransactionInfo;
       } catch (e) {
-        console.error("[apple-notifications] Failed to decode signedTransactionInfo:", e);
+        console.error(
+          "[apple-notifications] Failed to decode signedTransactionInfo:",
+          e,
+        );
       }
     }
 
     if (data.signedRenewalInfo) {
       try {
-        renewalInfo = decodeAppleJWS(data.signedRenewalInfo) as AppleRenewalInfo;
+        renewalInfo = await verifier.verifyAndDecodeRenewalInfo(
+          data.signedRenewalInfo,
+        ) as AppleRenewalInfo;
       } catch (e) {
-        console.error("[apple-notifications] Failed to decode signedRenewalInfo:", e);
+        console.error(
+          "[apple-notifications] Failed to decode signedRenewalInfo:",
+          e,
+        );
       }
     }
 
@@ -517,11 +701,13 @@ serve(async (req) => {
       subtype,
       transactionInfo?.originalTransactionId ?? null,
       transactionInfo?.transactionId ?? null,
-      { notification, signedPayload: "[redacted]" }
+      { notification, signedPayload: "[redacted]" },
     );
 
     if (markResult.isDuplicate) {
-      console.log(`[apple-notifications] Duplicate notification ignored: ${notificationUUID}`);
+      console.log(
+        `[apple-notifications] Duplicate notification ignored: ${notificationUUID}`,
+      );
       return new Response(JSON.stringify({ received: true, duplicate: true }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
@@ -540,12 +726,17 @@ serve(async (req) => {
 
     // Process the notification
     if (!transactionInfo) {
-      console.warn(`[apple-notifications] No transaction info for ${notificationType}`);
+      console.warn(
+        `[apple-notifications] No transaction info for ${notificationType}`,
+      );
       await markNotificationError(notificationUUID, "No transaction info");
-      return new Response(JSON.stringify({ received: true, warning: "No transaction info" }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ received: true, warning: "No transaction info" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Update subscription
@@ -553,26 +744,38 @@ serve(async (req) => {
       transactionInfo,
       renewalInfo,
       notificationType,
-      subtype
+      subtype,
     );
 
     if (result.success) {
       await markNotificationProcessed(notificationUUID);
     } else {
-      await markNotificationError(notificationUUID, result.error ?? "Unknown error");
+      await markNotificationError(
+        notificationUUID,
+        result.error ?? "Unknown error",
+      );
     }
 
     // Always return 200 to Apple (they retry on non-200)
-    return new Response(JSON.stringify({ received: true, processed: result.success }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ received: true, processed: result.success }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   } catch (e) {
-    console.error("[apple-notifications] Exception:", e instanceof Error ? e.message : e);
+    console.error(
+      "[apple-notifications] Exception:",
+      e instanceof Error ? e.message : e,
+    );
     // Return 200 to prevent Apple from retrying indefinitely
-    return new Response(JSON.stringify({ received: true, error: "Processing error" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ received: true, error: "Processing error" }),
+      {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 });
