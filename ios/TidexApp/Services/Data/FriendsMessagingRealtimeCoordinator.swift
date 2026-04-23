@@ -46,23 +46,6 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     static let timeoutNanoseconds: UInt64 = 15_000_000_000
   }
 
-  private final class SubscriptionTimeoutState: @unchecked Sendable {
-    private let lock = NSLock()
-    private var didResume = false
-
-    func tryResume() -> Bool {
-      lock.lock()
-      defer { lock.unlock() }
-
-      if didResume {
-        return false
-      }
-
-      didResume = true
-      return true
-    }
-  }
-
   private enum TypingEvent {
     static let start = "typing_start"
     static let stop = "typing_stop"
@@ -270,6 +253,8 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       realtimeLogger.error(
         "Failed to subscribe thread detail realtime: \(error.localizedDescription)")
       await supabase.removeChannel(channel)
+      detailTypingThreadIds.remove(threadId)
+      await syncTypingChannel(threadId: threadId)
     }
   }
 
@@ -282,7 +267,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   func stopAll() async {
     await stopThreadListSubscription()
     await stopThreadListTypingSubscriptions()
-    for threadId in threadChannels.keys {
+    for threadId in Array(threadChannels.keys) {
       await stopThreadSubscription(threadId: threadId)
     }
   }
@@ -718,7 +703,12 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
         self.typingChannels[threadId] = channel
         self.typingTasks[threadId] = typingTasks
         return true
+      } catch is CancellationError {
+        typingTasks.forEach { $0.cancel() }
+        await supabase.removeChannel(channel)
+        return false
       } catch {
+        typingTasks.forEach { $0.cancel() }
         realtimeLogger.error(
           "Failed to subscribe typing realtime for \(threadId, privacy: .private): \(error.localizedDescription)"
         )
@@ -765,39 +755,28 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func subscribeWithTimeout(_ channel: RealtimeChannelV2) async throws {
-    let timeoutNanoseconds = Subscription.timeoutNanoseconds
     let operationTask = Task {
       try await channel.subscribeWithError()
     }
+    defer { operationTask.cancel() }
 
     try await withTaskCancellationHandler {
-      try await withCheckedThrowingContinuation { continuation in
-        let state = SubscriptionTimeoutState()
-
-        Task {
-          do {
-            try await operationTask.value
-            if state.tryResume() {
-              continuation.resume()
-            }
-          } catch {
-            if state.tryResume() {
-              continuation.resume(throwing: error)
-            }
-          }
+      try await withThrowingTaskGroup(of: Void.self) { group in
+        group.addTask {
+          try await operationTask.value
+        }
+        group.addTask {
+          try await Task.sleep(nanoseconds: Subscription.timeoutNanoseconds)
+          operationTask.cancel()
+          throw SubscriptionError.timedOut
         }
 
-        Task {
-          do {
-            try await Task.sleep(nanoseconds: timeoutNanoseconds)
-          } catch {
-            return
-          }
-
-          operationTask.cancel()
-          if state.tryResume() {
-            continuation.resume(throwing: SubscriptionError.timedOut)
-          }
+        do {
+          _ = try await group.next()
+          group.cancelAll()
+        } catch {
+          group.cancelAll()
+          throw error
         }
       }
     } onCancel: {

@@ -19,8 +19,11 @@ struct WagePeriodBuilder {
     baseRate: Double,
     rules: [SupplementRule]
   ) -> [WagePeriod] {
-    let start = toMinutes(startTime)
-    var end = toMinutes(endTime)
+    guard let start = toMinutes(startTime),
+      var end = toMinutes(endTime)
+    else {
+      return []
+    }
 
     // Handle cross-midnight: when end <= start, treat as next day
     if end <= start {
@@ -32,9 +35,11 @@ struct WagePeriodBuilder {
 
     for rule in rules {
       guard rule.days.contains(weekday) else { continue }
-
-      let ruleFrom = toMinutes(rule.from)
-      var ruleTo = toMinutes(rule.to)
+      guard let ruleFrom = toMinutes(rule.from),
+        var ruleTo = toMinutes(rule.to)
+      else {
+        continue
+      }
 
       // Handle cross-midnight rules
       if ruleTo < ruleFrom {
@@ -56,6 +61,9 @@ struct WagePeriodBuilder {
     }
 
     let sorted = points.sorted()
+    guard sorted.count >= 2 else {
+      return []
+    }
     var result: [WagePeriod] = []
 
     // Build periods between consecutive boundary points
@@ -68,13 +76,18 @@ struct WagePeriodBuilder {
 
       for rule in rules {
         guard rule.days.contains(weekday) else { continue }
+        guard let baseRuleFrom = toMinutes(rule.from),
+          let baseRuleTo = toMinutes(rule.to)
+        else {
+          continue
+        }
 
         for base in [0, 24 * 60] {
-          let ruleFrom = toMinutes(rule.from) + base
-          var ruleTo = toMinutes(rule.to) + base
+          let ruleFrom = baseRuleFrom + base
+          var ruleTo = baseRuleTo + base
 
           // Handle cross-midnight rules
-          if toMinutes(rule.to) < toMinutes(rule.from) {
+          if baseRuleTo < baseRuleFrom {
             ruleTo += 24 * 60
           }
 
@@ -105,23 +118,30 @@ struct WagePeriodBuilder {
   // MARK: - Private Helpers
 
   /// Convert HH:mm string to minutes since midnight
-  private static func toMinutes(_ hhmm: String) -> Int {
-    let parts = hhmm.split(separator: ":").compactMap { Int($0) }
-    guard parts.count >= 2 else { return 0 }
-    let hours = parts[0]
-    let minutes = parts[1]
-    // Normalize 24:00 to 1440 minutes (end of day)
+  private static func toMinutes(_ hhmm: String) -> Int? {
+    let parts = hhmm.split(separator: ":", omittingEmptySubsequences: false)
+    guard parts.count == 2,
+      let hours = Int(parts[0]),
+      let minutes = Int(parts[1]),
+      minutes >= 0,
+      minutes < 60,
+      hours >= 0,
+      hours <= 24,
+      hours < 24 || minutes == 0
+    else {
+      return nil
+    }
     return hours * 60 + minutes
   }
 
   /// Resolve supplement rate (fixed NOK or percentage of base)
   private static func resolveSupplementRate(rule: SupplementRule, baseRate: Double) -> Double {
     // If 'rate' is specified, use it as fixed NOK per hour
-    if let rate = rule.rate, !rate.isNaN {
+    if let rate = rule.rate, rate.isFinite, rate >= 0 {
       return rate
     }
     // If 'percent' is specified, calculate as percentage of base rate
-    if let percent = rule.percent, !percent.isNaN {
+    if let percent = rule.percent, percent.isFinite, percent >= 0 {
       return (baseRate * percent) / 100.0
     }
     return 0

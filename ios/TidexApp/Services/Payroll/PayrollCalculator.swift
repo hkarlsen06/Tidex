@@ -119,10 +119,13 @@ struct PayrollCalculator {
       // Resolve break settings from snapshot (with defaults for backward compatibility)
       let breakEnabled = snapshot?.effectiveBreakEnabled ?? defaultBreakEnabled
       let method = snapshot?.breakMethod ?? defaultBreakMethod
-      let threshold = snapshot?.effectiveBreakThresholdHours ?? defaultBreakThresholdHours
+      let threshold = sanitizedHours(
+        snapshot?.effectiveBreakThresholdHours,
+        fallback: defaultBreakThresholdHours
+      )
       let breakMinutes =
         breakEnabled
-        ? (snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes)
+        ? max(0, snapshot?.effectiveBreakDeductionMinutes ?? defaultBreakDeductionMinutes)
         : 0
       let breakHours = Double(breakMinutes) / 60.0
 
@@ -180,7 +183,7 @@ struct PayrollCalculator {
   /// Priority: 1. Snapshot system, 2. Fallback to preset
   private static func resolveBaseRate(shift: ShiftRow, snapshot: WageSnapshot?) -> Double {
     // Priority 1: Use snapshot system
-    if let rate = snapshot?.hourly_wage, rate > 0 {
+    if let rate = snapshot?.hourly_wage, rate.isFinite, rate > 0 {
       return rate
     }
 
@@ -224,5 +227,12 @@ struct PayrollCalculator {
 
     logger.warning("Using preset supplement rules - no snapshot available (offline fallback)")
     return presetSupplementRules
+  }
+
+  private static func sanitizedHours(_ value: Double?, fallback: Double) -> Double {
+    guard let value, value.isFinite, value >= 0 else {
+      return fallback
+    }
+    return value
   }
 }

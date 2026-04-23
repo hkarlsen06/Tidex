@@ -60,7 +60,8 @@ struct PayrollEngine {
     let components = shiftDate.split(separator: "-")
     guard components.count >= 2,
       let shiftYear = Int(components[0]),
-      let shiftMonth = Int(components[1])
+      let shiftMonth = Int(components[1]),
+      (1...12).contains(shiftMonth)
     else {
       // Fallback: return a default payout date
       return shiftDate
@@ -76,7 +77,7 @@ struct PayrollEngine {
 
     // Handle edge case: payroll_day exceeds days in payout month
     let daysInPayoutMonth = Date.daysInMonth(year: payoutYear, month: payoutMonth)
-    let effectivePayrollDay = min(payrollDay, daysInPayoutMonth)
+    let effectivePayrollDay = min(max(payrollDay, 1), daysInPayoutMonth)
 
     return String(format: "%04d-%02d-%02d", payoutYear, payoutMonth, effectivePayrollDay)
   }
@@ -86,7 +87,8 @@ struct PayrollEngine {
   static func payoutMonth(from shiftDate: String) -> Int {
     let components = shiftDate.split(separator: "-")
     guard components.count >= 2,
-      let shiftMonth = Int(components[1])
+      let shiftMonth = Int(components[1]),
+      (1...12).contains(shiftMonth)
     else {
       return 1
     }
@@ -377,7 +379,7 @@ struct PayrollEngine {
       return gross
     }
 
-    var effectiveTaxRate = shift.taxPercentage
+    var effectiveTaxRate = min(max(shift.taxPercentage, 0), 100)
 
     // Apply half-tax if payout month matches the configured half tax month
     if let halfTax = halfTaxMonth, payoutMonth == halfTax {
