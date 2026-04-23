@@ -16,6 +16,7 @@ extension Notification.Name {
 final class AppLifecycleHandler {
   static let shared = AppLifecycleHandler()
   private static let liveActivityRecoveryDelay: UInt64 = 1_000_000_000  // 1 second
+  private var foregroundMaintenanceTask: Task<Void, Never>?
   private var liveActivityRecoveryTask: Task<Void, Never>?
 
   private init() {}
@@ -27,12 +28,17 @@ final class AppLifecycleHandler {
     PrivacyBlurManager.hide()
     liveActivityRecoveryTask?.cancel()
     liveActivityRecoveryTask = nil
+    foregroundMaintenanceTask?.cancel()
     AppCoordinator.shared.handleAppForeground()
     NotificationCenter.default.post(name: .tidexDidBecomeActive, object: nil)
-    Task { @MainActor [weak self] in
+    foregroundMaintenanceTask = Task { @MainActor [weak self] in
+      guard let self else { return }
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
-      await self?.runForegroundLiveActivityMaintenance()
-      self?.scheduleForegroundLiveActivityRecovery()
+      guard !Task.isCancelled else { return }
+      await self.runForegroundLiveActivityMaintenance()
+      guard !Task.isCancelled else { return }
+      self.scheduleForegroundLiveActivityRecovery()
+      self.foregroundMaintenanceTask = nil
     }
     // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
     // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
@@ -41,6 +47,8 @@ final class AppLifecycleHandler {
   }
 
   func handleWillResignActive() {
+    foregroundMaintenanceTask?.cancel()
+    foregroundMaintenanceTask = nil
     liveActivityRecoveryTask?.cancel()
     liveActivityRecoveryTask = nil
     if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
@@ -49,6 +57,8 @@ final class AppLifecycleHandler {
   }
 
   func handleDidEnterBackground() {
+    foregroundMaintenanceTask?.cancel()
+    foregroundMaintenanceTask = nil
     liveActivityRecoveryTask?.cancel()
     liveActivityRecoveryTask = nil
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.startBackgroundTask()

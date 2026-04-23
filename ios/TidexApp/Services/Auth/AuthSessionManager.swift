@@ -285,9 +285,14 @@ final class AuthSessionManager: ObservableObject {
         return nil
       }
     } catch is CancellationError {
-      // Task was cancelled (likely due to timeout race), return nil to start fresh
+      if Task.isCancelled {
+        throw CancellationError()
+      }
+      // Task was cancelled by another waiter timing out, return nil to start fresh.
       logger.debug("Refresh task wait was cancelled")
       return nil
+    } catch {
+      throw error
     }
   }
 

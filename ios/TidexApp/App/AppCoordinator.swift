@@ -530,29 +530,23 @@ final class AppCoordinator: ObservableObject {
   /// Background check for terms version update
   /// Fetches latest version from API and transitions to termsRequired if needed
   private func checkTermsVersionInBackground(termsAcceptedAt: String?) {
-    var taskRef: Task<Void, Never>?
-    let task = Task { [weak self] in
-      defer {
-        // Remove this task from the array when it completes (success, failure, or cancellation)
-        if let self = self, let task = taskRef {
-          self.backgroundTasks.removeAll { $0 == task }
-        }
-      }
-
+    runTrackedTask { [weak self] in
       // Fetch latest terms version from API (this may take time on slow networks)
       let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceAsync(termsAcceptedAt)
 
       // Check cancellation after async operation to avoid stale state updates
-      guard let self = self, !Task.isCancelled else { return }
+      guard !Task.isCancelled else { return }
 
-      // Only transition if we're still authenticated and terms are actually needed
-      if needsReAcceptance && self.appState == .authenticated {
-        self.isTermsUpdate = termsAcceptedAt != nil
-        self.appState = .termsRequired
+      await MainActor.run { [weak self] in
+        guard let self = self, !Task.isCancelled else { return }
+
+        // Only transition if we're still authenticated and terms are actually needed
+        if needsReAcceptance && self.appState == .authenticated {
+          self.isTermsUpdate = termsAcceptedAt != nil
+          self.appState = .termsRequired
+        }
       }
     }
-    taskRef = task
-    backgroundTasks.append(task)
   }
 
   /// Cancel all tracked background tasks

@@ -21,6 +21,24 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(payoutDate, "2027-01-15")
   }
 
+  func testCalculatePayoutDateClampsInvalidLowPayrollDayToFirst() {
+    let payoutDate = PayrollEngine.calculatePayoutDate(
+      shiftDate: "2026-03-10",
+      payrollDay: 0
+    )
+
+    XCTAssertEqual(payoutDate, "2026-04-01")
+  }
+
+  func testCalculatePayoutDateLeavesMalformedShiftMonthUnchanged() {
+    let payoutDate = PayrollEngine.calculatePayoutDate(
+      shiftDate: "2026-99-10",
+      payrollDay: 15
+    )
+
+    XCTAssertEqual(payoutDate, "2026-99-10")
+  }
+
   func testPayoutMonthReturnsJanuaryForDecemberShifts() {
     XCTAssertEqual(PayrollEngine.payoutMonth(from: "2026-12-31"), 1)
   }

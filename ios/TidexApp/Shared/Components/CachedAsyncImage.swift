@@ -286,6 +286,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
   @State private var loadedImage: UIImage?
   @State private var isLoading = false
+  @State private var loadingTask: Task<Void, Never>?
 
   init(
     url: URL?,
@@ -312,13 +313,24 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     }
     .onChange(of: url) { _, newUrl in
       // Reset and reload if URL changes
+      loadingTask?.cancel()
+      isLoading = false
       loadedImage = nil
-      loadImage()
+      loadImage(for: newUrl)
+    }
+    .onDisappear {
+      loadingTask?.cancel()
+      loadingTask = nil
+      isLoading = false
     }
   }
 
   private func loadImage() {
-    guard let url = url else { return }
+    loadImage(for: url)
+  }
+
+  private func loadImage(for url: URL?) {
+    guard let url else { return }
     guard !isLoading else { return }
 
     // Check memory cache first (synchronous, fast)
@@ -332,15 +344,18 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
     isLoading = true
 
-    Task {
+    loadingTask = Task {
       // Check disk cache second (async but no network)
       if let diskCached = await ImageCache.shared.getFromDisk(for: url) {
+        guard !Task.isCancelled else { return }
         if syncToNotificationServiceCache {
           NotificationAvatarSharedCache.store(diskCached, for: url)
         }
         await MainActor.run {
+          guard self.url == url else { return }
           loadedImage = diskCached
           isLoading = false
+          loadingTask = nil
         }
         return
       }
@@ -348,6 +363,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
       // Fetch from network as last resort
       do {
         let (data, _) = try await URLSession.shared.data(from: url)
+        guard !Task.isCancelled else { return }
         if let image = UIImage(data: data) {
           // Cache the image (memory + disk)
           ImageCache.shared.set(image, for: url)
@@ -356,18 +372,30 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
           }
 
           await MainActor.run {
+            guard self.url == url else { return }
             loadedImage = image
             isLoading = false
+            loadingTask = nil
           }
         } else {
           await MainActor.run {
+            guard self.url == url else { return }
             isLoading = false
+            loadingTask = nil
           }
+        }
+      } catch is CancellationError {
+        await MainActor.run {
+          guard self.url == url else { return }
+          isLoading = false
+          loadingTask = nil
         }
       } catch {
         logger.error("Failed to load image: \(error.localizedDescription)")
         await MainActor.run {
+          guard self.url == url else { return }
           isLoading = false
+          loadingTask = nil
         }
       }
     }

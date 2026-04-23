@@ -22,16 +22,19 @@ struct BreakDeduction {
     thresholdHours: Double,
     deductionHours: Double
   ) -> BreakDeductionResult {
-    let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+    let totalMinutes = periods.reduce(0.0) { $0 + max(0, $1.durationMinutes) }
     let totalHours = totalMinutes / 60.0
+    let thresholdHours = thresholdHours.isFinite ? max(0, thresholdHours) : totalHours
 
     // Only deduct if shift exceeds threshold (strict >)
-    let toDeduct = totalHours > thresholdHours ? deductionHours : 0
+    let sanitizedDeductionHours =
+      deductionHours.isFinite ? min(max(deductionHours, 0), totalHours) : 0
+    let toDeduct = totalHours > thresholdHours ? sanitizedDeductionHours : 0
 
     var adjusted = periods
     var notes: [String] = []
 
-    if toDeduct > 0 && method != .none {
+    if totalMinutes > 0 && toDeduct > 0 && method != .none {
       // For end_of_shift and base_only, use rounded minutes like Next.js
       var remaining = (toDeduct * 60).rounded()
 

@@ -69,4 +69,37 @@ final class PayrollTotalsTests: XCTestCase {
     XCTAssertEqual(totals.gross, 1000, accuracy: 0.01)
     XCTAssertEqual(totals.net, 1000, accuracy: 0.01)
   }
+
+  func testSummarizeShiftTotalsClampsInvalidTaxPercentages() {
+    let overTaxed = TestFixtures.computedShift(
+      id: "over-taxed",
+      shiftDate: "2026-10-01",
+      startTime: "08:00",
+      endTime: "16:00",
+      gross: 1000,
+      taxEnabled: true,
+      taxPercentage: 150
+    )
+    let negativeTaxed = TestFixtures.computedShift(
+      id: "negative-taxed",
+      shiftDate: "2026-10-02",
+      startTime: "08:00",
+      endTime: "16:00",
+      gross: 1000,
+      taxEnabled: true,
+      taxPercentage: -20
+    )
+
+    let now = Date.fromDateAndTime("2026-10-31", time: "12:00") ?? Date()
+
+    let totals = PayrollEngine.summarizeShiftTotals(
+      shifts: [overTaxed, negativeTaxed],
+      halfTaxMonth: nil,
+      earningsMonth: 10,
+      now: now
+    )
+
+    XCTAssertEqual(totals.gross, 2000, accuracy: 0.01)
+    XCTAssertEqual(totals.net, 1000, accuracy: 0.01)
+  }
 }
