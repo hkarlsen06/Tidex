@@ -7,6 +7,7 @@ import UIKit
 @MainActor
 final class AppleAuthProvider: NSObject {
   static let shared = AppleAuthProvider()
+  private static let requestTimeout: UInt64 = 120_000_000_000
 
   struct SignInResult {
     let idToken: String
@@ -14,6 +15,9 @@ final class AppleAuthProvider: NSObject {
   }
 
   private var continuation: CheckedContinuation<ASAuthorization, Error>?
+  private var activeRequestID: UUID?
+  private var authorizationController: ASAuthorizationController?
+  private var timeoutTask: Task<Void, Never>?
   private var presentationAnchor: UIWindow?
 
   // MARK: - Sign In
@@ -22,6 +26,10 @@ final class AppleAuthProvider: NSObject {
   /// - Parameter anchor: The window to present the sign-in sheet
   /// - Returns: The identity token and optional name from Apple
   func signIn(from anchor: UIWindow? = nil) async throws -> SignInResult {
+    guard continuation == nil else {
+      throw AppleAuthError.requestInProgress
+    }
+
     guard let resolvedAnchor = resolvePresentationAnchor(preferredAnchor: anchor) else {
       throw AppleAuthError.presentationAnchorUnavailable
     }
@@ -44,15 +52,68 @@ final class AppleAuthProvider: NSObject {
     let provider = ASAuthorizationAppleIDProvider()
     let request = provider.createRequest()
     request.requestedScopes = [.email, .fullName]
+    let requestID = UUID()
 
-    return try await withCheckedThrowingContinuation { continuation in
-      self.continuation = continuation
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        guard self.continuation == nil else {
+          continuation.resume(throwing: AppleAuthError.requestInProgress)
+          return
+        }
 
-      let controller = ASAuthorizationController(authorizationRequests: [request])
-      controller.delegate = self
-      controller.presentationContextProvider = self
-      controller.performRequests()
+        self.continuation = continuation
+        self.activeRequestID = requestID
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+        controller.presentationContextProvider = self
+        self.authorizationController = controller
+
+        self.timeoutTask = Task { [weak self] in
+          do {
+            try await Task.sleep(nanoseconds: Self.requestTimeout)
+          } catch {
+            return
+          }
+
+          self?.completeRequest(id: requestID, result: .failure(AppleAuthError.timedOut))
+        }
+
+        controller.performRequests()
+      }
+    } onCancel: { [weak self] in
+      Task { @MainActor in
+        self?.completeRequest(id: requestID, result: .failure(AppleAuthError.userCancelled))
+      }
     }
+  }
+
+  private func completeRequest(id requestID: UUID, result: Result<ASAuthorization, Error>) {
+    guard activeRequestID == requestID else { return }
+    completeActiveRequest(result: result)
+  }
+
+  private func completeRequest(
+    controller: ASAuthorizationController,
+    result: Result<ASAuthorization, Error>
+  ) {
+    guard authorizationController === controller else { return }
+    completeActiveRequest(result: result)
+  }
+
+  private func completeActiveRequest(result: Result<ASAuthorization, Error>) {
+    guard let continuation else { return }
+
+    self.continuation = nil
+    activeRequestID = nil
+    authorizationController?.delegate = nil
+    authorizationController?.presentationContextProvider = nil
+    authorizationController = nil
+    timeoutTask?.cancel()
+    timeoutTask = nil
+    presentationAnchor = nil
+
+    continuation.resume(with: result)
   }
 
   private func resolvePresentationAnchor(preferredAnchor: UIWindow? = nil) -> UIWindow? {
@@ -86,9 +147,7 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
     didCompleteWithAuthorization authorization: ASAuthorization
   ) {
     Task { @MainActor in
-      continuation?.resume(returning: authorization)
-      continuation = nil
-      presentationAnchor = nil
+      completeRequest(controller: controller, result: .success(authorization))
     }
   }
 
@@ -120,12 +179,10 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
         @unknown default:
           appleError = .unknown
         }
-        continuation?.resume(throwing: appleError)
+        completeRequest(controller: controller, result: .failure(appleError))
       } else {
-        continuation?.resume(throwing: error)
+        completeRequest(controller: controller, result: .failure(error))
       }
-      continuation = nil
-      presentationAnchor = nil
     }
   }
 }
@@ -158,6 +215,8 @@ enum AppleAuthError: Error, LocalizedError {
   case notInteractive
   case matchedExcludedCredential
   case presentationAnchorUnavailable
+  case requestInProgress
+  case timedOut
   case unknown
 
   var errorDescription: String? {
@@ -178,6 +237,10 @@ enum AppleAuthError: Error, LocalizedError {
       return "Apple Sign-In credential was excluded"
     case .presentationAnchorUnavailable:
       return "Unable to present Apple Sign-In"
+    case .requestInProgress:
+      return "Apple Sign-In is already in progress"
+    case .timedOut:
+      return "Apple Sign-In timed out"
     case .unknown:
       return "An unknown error occurred during Apple Sign-In"
     }

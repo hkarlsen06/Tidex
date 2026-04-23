@@ -17,6 +17,15 @@ enum WatchDataConverter {
   /// JPEG compression quality (0.0-1.0)
   nonisolated private static let jpegQuality: CGFloat = 0.7
 
+  /// Avatar downloads should never hold Watch payload generation indefinitely.
+  nonisolated private static let avatarDownloadSession: URLSession = {
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.timeoutIntervalForRequest = 5
+    configuration.timeoutIntervalForResource = 8
+    configuration.waitsForConnectivity = false
+    return URLSession(configuration: configuration)
+  }()
+
   /// Build a complete payload for the Watch from current app state
   /// Downloads and converts avatar images to JPEG for Watch compatibility
   /// - Parameter userId: The current user's ID
@@ -299,7 +308,9 @@ enum WatchDataConverter {
     }
 
     do {
-      let (data, response) = try await URLSession.shared.data(from: url)
+      let request = URLRequest(url: url, timeoutInterval: 5)
+      let (data, response) = try await avatarDownloadSession.data(for: request)
+      guard !Task.isCancelled else { return nil }
 
       // Verify we got a valid response
       guard let httpResponse = response as? HTTPURLResponse,

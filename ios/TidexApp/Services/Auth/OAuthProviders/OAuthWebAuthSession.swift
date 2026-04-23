@@ -7,8 +7,13 @@ import UIKit
 @MainActor
 final class OAuthWebAuthSession: NSObject {
   static let shared = OAuthWebAuthSession()
+  private static let requestTimeout: UInt64 = 120_000_000_000
+  private static let redirectRequestTimeout: TimeInterval = 15
 
   private var webAuthSession: ASWebAuthenticationSession?
+  private var continuation: CheckedContinuation<URL, Error>?
+  private var activeSessionID: UUID?
+  private var timeoutTask: Task<Void, Never>?
   private var presentationAnchor: UIWindow?
 
   /// Current OAuth state parameter for CSRF protection
@@ -26,9 +31,12 @@ final class OAuthWebAuthSession: NSObject {
     provider: String,
     accessToken: String
   ) async throws -> URL {
+    guard currentState == nil, continuation == nil, webAuthSession == nil else {
+      throw OAuthWebAuthError.requestInProgress
+    }
+
     // Generate state parameter for CSRF protection
     let state = UUID().uuidString
-    currentState = state
 
     // Construct the identity linking URL
     // Supabase identity linking endpoint: /auth/v1/user/identities/authorize
@@ -48,13 +56,20 @@ final class OAuthWebAuthSession: NSObject {
       throw OAuthWebAuthError.invalidURL
     }
 
+    currentState = state
+
     // Create a URL session delegate that doesn't follow redirects
     // so we can capture the OAuth provider URL
     let delegate = RedirectCaptureDelegate()
-    let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.timeoutIntervalForRequest = Self.redirectRequestTimeout
+    configuration.timeoutIntervalForResource = Self.redirectRequestTimeout
+    configuration.waitsForConnectivity = false
+    let session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
+    defer { session.invalidateAndCancel() }
 
     // Create a URL request with the access token and API key
-    var request = URLRequest(url: authURL)
+    var request = URLRequest(url: authURL, timeoutInterval: Self.redirectRequestTimeout)
     request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
     request.setValue(APIConfiguration.supabaseAnonKey, forHTTPHeaderField: "apikey")
 
@@ -65,13 +80,19 @@ final class OAuthWebAuthSession: NSObject {
     guard let oauthURL = delegate.redirectURL else {
       // No redirect captured - Supabase didn't return the expected redirect
       // This means the identity linking request failed
+      currentState = nil
       throw OAuthWebAuthError.failed("Identity linking failed - no redirect received from server")
     }
 
     // Open the OAuth URL in ASWebAuthenticationSession
     // The access token was already sent securely via Authorization header
     // in the initial request - it should NOT be passed in the URL
-    return try await performWebAuth(url: oauthURL)
+    do {
+      return try await performWebAuth(url: oauthURL)
+    } catch {
+      currentState = nil
+      throw error
+    }
   }
 
   private func performWebAuth(url: URL) async throws -> URL {
@@ -79,52 +100,113 @@ final class OAuthWebAuthSession: NSObject {
       throw OAuthWebAuthError.presentationAnchorUnavailable
     }
     presentationAnchor = resolvedAnchor
-    defer { presentationAnchor = nil }
+    let sessionID = UUID()
 
-    return try await withCheckedThrowingContinuation { continuation in
-      // Guard against double resume if both completion handler and start() failure fire
-      var hasResumed = false
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        guard self.continuation == nil, self.webAuthSession == nil else {
+          continuation.resume(throwing: OAuthWebAuthError.requestInProgress)
+          return
+        }
 
-      // SECURITY: The access token is NEVER passed in the URL
-      // It was already sent securely via Authorization header in the initial request
-      let session = ASWebAuthenticationSession(
-        url: url,
-        callbackURLScheme: "tidex"
-      ) { callbackURL, error in
-        guard !hasResumed else { return }
-        hasResumed = true
+        self.continuation = continuation
+        self.activeSessionID = sessionID
 
-        if let error = error {
-          let nsError = error as NSError
-          if nsError.domain == ASWebAuthenticationSessionErrorDomain,
-            nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
-          {
-            continuation.resume(throwing: OAuthWebAuthError.userCancelled)
-          } else {
-            continuation.resume(throwing: OAuthWebAuthError.failed(error.localizedDescription))
+        self.timeoutTask = Task { [weak self] in
+          do {
+            try await Task.sleep(nanoseconds: Self.requestTimeout)
+          } catch {
+            return
           }
-          return
+
+          self?.completeWebAuthSession(
+            id: sessionID,
+            result: .failure(OAuthWebAuthError.timedOut),
+            cancelSession: true
+          )
         }
 
-        guard let callbackURL = callbackURL else {
-          continuation.resume(throwing: OAuthWebAuthError.noCallback)
-          return
-        }
+        let session = self.makeWebAuthSession(url: url, sessionID: sessionID)
+        self.webAuthSession = session
 
-        continuation.resume(returning: callbackURL)
+        if !session.start() {
+          self.completeWebAuthSession(
+            id: sessionID,
+            result: .failure(OAuthWebAuthError.sessionStartFailed)
+          )
+        }
       }
-
-      session.presentationContextProvider = self
-      session.prefersEphemeralWebBrowserSession = false
-
-      self.webAuthSession = session
-
-      if !session.start() {
-        guard !hasResumed else { return }
-        hasResumed = true
-        continuation.resume(throwing: OAuthWebAuthError.sessionStartFailed)
+    } onCancel: { [weak self] in
+      Task { @MainActor in
+        self?.completeWebAuthSession(
+          id: sessionID,
+          result: .failure(OAuthWebAuthError.userCancelled),
+          cancelSession: true
+        )
       }
     }
+  }
+
+  private func makeWebAuthSession(url: URL, sessionID: UUID) -> ASWebAuthenticationSession {
+    // SECURITY: The access token is NEVER passed in the URL
+    // It was already sent securely via Authorization header in the initial request
+    let session = ASWebAuthenticationSession(
+      url: url,
+      callbackURLScheme: "tidex"
+    ) { callbackURL, error in
+      Task { @MainActor [weak self] in
+        self?.completeWebAuthSession(
+          id: sessionID,
+          result: Self.webAuthResult(callbackURL: callbackURL, error: error)
+        )
+      }
+    }
+
+    session.presentationContextProvider = self
+    session.prefersEphemeralWebBrowserSession = false
+
+    return session
+  }
+
+  private static func webAuthResult(callbackURL: URL?, error: Error?) -> Result<URL, Error> {
+    if let error = error {
+      let nsError = error as NSError
+      if nsError.domain == ASWebAuthenticationSessionErrorDomain,
+        nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
+      {
+        return .failure(OAuthWebAuthError.userCancelled)
+      } else {
+        return .failure(OAuthWebAuthError.failed(error.localizedDescription))
+      }
+    }
+
+    guard let callbackURL = callbackURL else {
+      return .failure(OAuthWebAuthError.noCallback)
+    }
+
+    return .success(callbackURL)
+  }
+
+  private func completeWebAuthSession(
+    id sessionID: UUID,
+    result: Result<URL, Error>,
+    cancelSession: Bool = false
+  ) {
+    guard activeSessionID == sessionID, let continuation else { return }
+
+    let session = webAuthSession
+    self.continuation = nil
+    activeSessionID = nil
+    webAuthSession = nil
+    timeoutTask?.cancel()
+    timeoutTask = nil
+    presentationAnchor = nil
+
+    if cancelSession {
+      session?.cancel()
+    }
+
+    continuation.resume(with: result)
   }
 
   private func resolvePresentationAnchor() -> UIWindow? {
@@ -171,10 +253,18 @@ private final class RedirectCaptureDelegate: NSObject, URLSessionTaskDelegate {
 extension OAuthWebAuthSession {
   /// Cancel any active web auth session
   func cancel() {
-    webAuthSession?.cancel()
-    webAuthSession = nil
+    guard let activeSessionID else {
+      currentState = nil
+      presentationAnchor = nil
+      return
+    }
+
     currentState = nil
-    presentationAnchor = nil
+    completeWebAuthSession(
+      id: activeSessionID,
+      result: .failure(OAuthWebAuthError.userCancelled),
+      cancelSession: true
+    )
   }
 
   /// Validates the state parameter from an OAuth callback and clears the stored state
@@ -228,6 +318,8 @@ enum OAuthWebAuthError: Error, LocalizedError {
   case sessionStartFailed
   case stateMismatch
   case presentationAnchorUnavailable
+  case requestInProgress
+  case timedOut
   case failed(String)
 
   var errorDescription: String? {
@@ -244,6 +336,10 @@ enum OAuthWebAuthError: Error, LocalizedError {
       return "OAuth state validation failed - possible CSRF attack"
     case .presentationAnchorUnavailable:
       return "Unable to present OAuth"
+    case .requestInProgress:
+      return "OAuth is already in progress"
+    case .timedOut:
+      return "OAuth timed out"
     case .failed(let message):
       return "OAuth failed: \(message)"
     }

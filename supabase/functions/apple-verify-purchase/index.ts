@@ -51,6 +51,7 @@ console.log(
 // Apple App Store Server API endpoints
 const APPLE_PRODUCTION_URL = "https://api.storekit.itunes.apple.com";
 const APPLE_SANDBOX_URL = "https://api.storekit-sandbox.itunes.apple.com";
+const EXTERNAL_FETCH_TIMEOUT_MS = 15_000;
 
 // ---------- Apple Product ID Mapping ----------
 // Maps Apple product IDs to internal product IDs
@@ -192,6 +193,32 @@ function normalizeAppleEnvironment(value: unknown): "Production" | "Sandbox" {
   return value === "Production" ? "Production" : "Sandbox";
 }
 
+async function fetchWithTimeout(
+  input: string | URL | Request,
+  init: RequestInit = {},
+  timeoutMs = EXTERNAL_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const upstreamSignal = init.signal;
+  const abortFromUpstream = () => controller.abort();
+
+  if (upstreamSignal?.aborted) {
+    controller.abort();
+  } else {
+    upstreamSignal?.addEventListener("abort", abortFromUpstream, {
+      once: true,
+    });
+  }
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+    upstreamSignal?.removeEventListener("abort", abortFromUpstream);
+  }
+}
+
 async function verifyTransactionWithApple(
   transactionId: string,
   environment: "Production" | "Sandbox" = "Sandbox", // Default to Sandbox for testing
@@ -209,7 +236,7 @@ async function verifyTransactionWithApple(
   );
 
   // Get transaction info
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `${baseUrl}/inApps/v1/transactions/${transactionId}`,
     {
       headers: {
@@ -268,7 +295,7 @@ async function verifyTransactionWithApple(
   // For subscriptions, also get renewal info
   let renewalInfo: AppleRenewalInfo | undefined;
   if (transactionInfo.type === "Auto-Renewable Subscription") {
-    const subResponse = await fetch(
+    const subResponse = await fetchWithTimeout(
       `${baseUrl}/inApps/v1/subscriptions/${transactionInfo.originalTransactionId}`,
       {
         headers: {

@@ -56,6 +56,15 @@ final class FriendsMessagesRepository: ObservableObject {
     }
   }
 
+  func getThreadsOffMain(for viewerUserId: String) async -> [FriendThread] {
+    do {
+      return try await storeActor.fetchThreads(for: viewerUserId)
+    } catch {
+      logger.error("Failed to fetch threads off main: \(error.localizedDescription)")
+      return []
+    }
+  }
+
   func getThread(id: String, viewerUserId: String) -> FriendThread? {
     let context = ModelContext(container)
     let descriptor = FetchDescriptor<LocalThread>(

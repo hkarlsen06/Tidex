@@ -234,8 +234,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     self.lastObservedYear = self.monthContext.displayYear
     self.lastObservedMonth = self.monthContext.displayMonth
 
-    preloadSharersFromCacheIfAvailable()
-
     // Subscribe to month context changes
     setupMonthContextSubscription()
   }
@@ -272,31 +270,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     selectedSharerLoadTask = Task { [weak self] in
       await self?.loadShiftsForSelectedSharer()
     }
-  }
-
-  /// Preload sharers/previews synchronously before first render when user ID is already known.
-  /// This avoids a one-frame empty-state flash when Sharing is the startup tab.
-  private func preloadSharersFromCacheIfAvailable() {
-    guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
-    cachedUserId = userId
-
-    let cachedFriends = sharedShiftsRepository.getCachedFriends(for: userId, includeHidden: true)
-    guard !cachedFriends.sharers.isEmpty else { return }
-    let filteredCachedSharers = filteredBlockedUsers(from: cachedFriends.sharers)
-    let partitionedSharers = partitionSharers(filteredCachedSharers)
-
-    sharers = partitionedSharers.visible
-    hiddenSharers = partitionedSharers.hidden
-    chatOnlyUserIds = cachedFriends.chatOnlyUserIds.subtracting(locallyBlockedUserIds)
-    shiftPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
-    hasFinishedInitialSharersLoad = true
-
-    logger.info(
-      """
-      Preloaded \(self.sharers.count) visible sharers, \(self.hiddenSharers.count) hidden sharers,
-      and \(self.shiftPreviews.count) previews from cache at init
-      """
-    )
   }
 
   // MARK: - Month Navigation

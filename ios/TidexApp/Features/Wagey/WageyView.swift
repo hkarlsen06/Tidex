@@ -49,6 +49,10 @@ struct WageyView: View {
       && (!viewModel.messages.isEmpty || !viewModel.activeContentBlocks.isEmpty)
   }
 
+  private var startupTaskID: String {
+    "\(selectedTab.rawValue):\(coordinator.userId ?? "")"
+  }
+
   var body: some View {
     Group {
       if !viewModel.hasResolvedEntryState {
@@ -75,8 +79,10 @@ struct WageyView: View {
         chatInterface
       }
     }
-    .task(id: coordinator.userId) {
+    .task(id: startupTaskID) {
+      guard selectedTab == .wagey else { return }
       viewModel.loadConversations()
+      guard !Task.isCancelled else { return }
       await viewModel.fetchWageyUsage()
     }
   }

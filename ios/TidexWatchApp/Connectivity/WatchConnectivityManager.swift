@@ -6,6 +6,31 @@ import WidgetKit
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WatchConnectivity")
+private let iphoneRefreshReplyTimeout = Duration.seconds(8)
+
+private final class OneShotBoolContinuation: @unchecked Sendable {
+  private let lock = NSLock()
+  private var continuation: CheckedContinuation<Bool, Never>?
+
+  init(_ continuation: CheckedContinuation<Bool, Never>) {
+    self.continuation = continuation
+  }
+
+  @discardableResult
+  func resume(returning value: () -> Bool) -> Bool {
+    lock.lock()
+    let continuation = continuation
+    self.continuation = nil
+    lock.unlock()
+
+    guard let continuation else {
+      return false
+    }
+
+    continuation.resume(returning: value())
+    return true
+  }
+}
 
 /// Manages Watch Connectivity for the watchOS app
 /// Primary data source: Direct API fetch
@@ -179,54 +204,72 @@ final class WatchConnectivityManager: NSObject {
     }
 
     return await withCheckedContinuation { continuation in
+      let reply = OneShotBoolContinuation(continuation)
+      var timeoutTask: Task<Void, Never>?
+      timeoutTask = Task { [weak self] in
+        try? await Task.sleep(for: iphoneRefreshReplyTimeout)
+        guard !Task.isCancelled else { return }
+
+        if reply.resume(returning: { false }) {
+          await MainActor.run {
+            self?.isRefreshing = false
+          }
+          logger.warning("iPhone refresh timed out waiting for reply")
+        }
+      }
+
       WCSession.default.sendMessage(
         ["action": refreshAction],
         replyHandler: { [weak self] response in
           Task { @MainActor in
-            self?.isRefreshing = false
-            logger.info("iPhone refresh response received: \(response)")
+            timeoutTask?.cancel()
 
             guard let self else {
-              continuation.resume(returning: false)
+              reply.resume(returning: { false })
               return
             }
 
-            // Store token locally if iPhone sent it
-            // This enables direct API access on subsequent refreshes
-            if let tokenInfo = response["token"] as? [String: Any],
-              let accessToken = tokenInfo["accessToken"] as? String,
-              let expiresAt = tokenInfo["expiresAt"] as? Int
-            {
-              do {
-                try SharedKeychainStorage.storeAccessToken(accessToken, expiresAt: expiresAt)
-                logger.info("Stored access token from iPhone (expires: \(expiresAt))")
-              } catch {
-                logger.warning("Failed to store token from iPhone: \(error.localizedDescription)")
+            reply.resume {
+              self.isRefreshing = false
+              logger.info("iPhone refresh response received: \(response)")
+
+              // Store token locally if iPhone sent it
+              // This enables direct API access on subsequent refreshes
+              if let tokenInfo = response["token"] as? [String: Any],
+                let accessToken = tokenInfo["accessToken"] as? String,
+                let expiresAt = tokenInfo["expiresAt"] as? Int
+              {
+                do {
+                  try SharedKeychainStorage.storeAccessToken(accessToken, expiresAt: expiresAt)
+                  logger.info("Stored access token from iPhone (expires: \(expiresAt))")
+                } catch {
+                  logger.warning("Failed to store token from iPhone: \(error.localizedDescription)")
+                }
               }
-            }
 
-            guard response["success"] as? Bool == true else {
-              let errorMessage = response["error"] as? String ?? "Unknown iPhone refresh error"
-              logger.warning("iPhone refresh rejected: \(errorMessage)")
-              continuation.resume(returning: false)
-              return
-            }
+              guard response["success"] as? Bool == true else {
+                let errorMessage = response["error"] as? String ?? "Unknown iPhone refresh error"
+                logger.warning("iPhone refresh rejected: \(errorMessage)")
+                return false
+              }
 
-            guard let data = response[self.shiftDataKey] as? Data else {
-              logger.warning("iPhone refresh response missing payload")
-              continuation.resume(returning: false)
-              return
-            }
+              guard let data = response[self.shiftDataKey] as? Data else {
+                logger.warning("iPhone refresh response missing payload")
+                return false
+              }
 
-            let processed = self.processReceivedData(data, source: "reply")
-            continuation.resume(returning: processed)
+              return self.processReceivedData(data, source: "reply")
+            }
           }
         },
         errorHandler: { [weak self] error in
           Task { @MainActor in
-            self?.isRefreshing = false
-            logger.error("iPhone refresh failed: \(error.localizedDescription)")
-            continuation.resume(returning: false)
+            timeoutTask?.cancel()
+            reply.resume {
+              self?.isRefreshing = false
+              logger.error("iPhone refresh failed: \(error.localizedDescription)")
+              return false
+            }
           }
         }
       )
@@ -250,7 +293,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
         self?.isReachable = session.isReachable
 
         // Check for any existing application context
-        if let data = session.receivedApplicationContext[self?.shiftDataKey ?? "shiftData"] as? Data {
+        if let data = session.receivedApplicationContext[self?.shiftDataKey ?? "shiftData"] as? Data
+        {
           _ = self?.processReceivedData(data, source: "activation_context")
         }
       }
