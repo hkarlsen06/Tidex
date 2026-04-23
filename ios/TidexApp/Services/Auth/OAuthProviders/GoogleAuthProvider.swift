@@ -7,6 +7,11 @@ import UIKit
 @MainActor
 final class GoogleAuthProvider {
   static let shared = GoogleAuthProvider()
+  private static let requestTimeout: UInt64 = 120_000_000_000
+
+  private var activeRequestID: UUID?
+  private var continuation: CheckedContinuation<String?, Error>?
+  private var timeoutTask: Task<Void, Never>?
 
   private init() {
     // Configure Google Sign-In with iOS Client ID
@@ -27,34 +32,90 @@ final class GoogleAuthProvider {
       throw GoogleAuthError.noPresenter
     }
 
-    return try await withCheckedThrowingContinuation { continuation in
-      GIDSignIn.sharedInstance.signIn(withPresenting: viewController) { result, error in
-        if let error = error {
-          let nsError = error as NSError
+    guard
+      let idToken = try await performRequest(start: { requestID in
+        GIDSignIn.sharedInstance.signIn(withPresenting: viewController) { result, error in
+          Task { @MainActor [weak self] in
+            self?.completeRequest(
+              id: requestID,
+              result: Self.signInResult(result: result, error: error)
+            )
+          }
+        }
+      })
+    else {
+      throw GoogleAuthError.noIDToken
+    }
 
-          // Check for user cancellation
-          if nsError.domain == "com.google.GIDSignIn" && nsError.code == -5 {
-            continuation.resume(throwing: GoogleAuthError.userCancelled)
+    return idToken
+  }
+
+  private static func signInResult(
+    result: GIDSignInResult?,
+    error: Error?
+  ) -> Result<String?, Error> {
+    if let error = error {
+      let nsError = error as NSError
+
+      // Check for user cancellation
+      if nsError.domain == "com.google.GIDSignIn" && nsError.code == -5 {
+        return .failure(GoogleAuthError.userCancelled)
+      }
+
+      return .failure(GoogleAuthError.failed(error.localizedDescription))
+    }
+
+    guard let result = result else {
+      return .failure(GoogleAuthError.noResult)
+    }
+
+    guard let idToken = result.user.idToken?.tokenString else {
+      return .failure(GoogleAuthError.noIDToken)
+    }
+
+    return .success(idToken)
+  }
+
+  private func performRequest(start: (UUID) -> Void) async throws -> String? {
+    let requestID = UUID()
+
+    return try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        guard self.continuation == nil else {
+          continuation.resume(throwing: GoogleAuthError.requestInProgress)
+          return
+        }
+
+        self.continuation = continuation
+        self.activeRequestID = requestID
+        self.timeoutTask = Task { [weak self] in
+          do {
+            try await Task.sleep(nanoseconds: Self.requestTimeout)
+          } catch {
             return
           }
 
-          continuation.resume(throwing: GoogleAuthError.failed(error.localizedDescription))
-          return
+          self?.completeRequest(id: requestID, result: .failure(GoogleAuthError.timedOut))
         }
 
-        guard let result = result else {
-          continuation.resume(throwing: GoogleAuthError.noResult)
-          return
-        }
-
-        guard let idToken = result.user.idToken?.tokenString else {
-          continuation.resume(throwing: GoogleAuthError.noIDToken)
-          return
-        }
-
-        continuation.resume(returning: idToken)
+        start(requestID)
+      }
+    } onCancel: { [weak self] in
+      Task { @MainActor in
+        self?.completeRequest(id: requestID, result: .failure(GoogleAuthError.userCancelled))
       }
     }
+  }
+
+  private func completeRequest(id requestID: UUID, result: Result<String?, Error>) {
+    guard activeRequestID == requestID, let continuation else { return }
+
+    self.continuation = nil
+    activeRequestID = nil
+    timeoutTask?.cancel()
+    timeoutTask = nil
+
+    continuation.resume(with: result)
   }
 
   /// Check if user has previously signed in with Google
@@ -67,21 +128,21 @@ final class GoogleAuthProvider {
   func restorePreviousSignIn() async throws -> String? {
     guard hasPreviousSignIn() else { return nil }
 
-    return try await withCheckedThrowingContinuation { continuation in
+    return try await performRequest(start: { requestID in
       GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
-        if let error = error {
-          continuation.resume(throwing: GoogleAuthError.failed(error.localizedDescription))
-          return
-        }
+        Task { @MainActor [weak self] in
+          if let error = error {
+            self?.completeRequest(
+              id: requestID,
+              result: .failure(GoogleAuthError.failed(error.localizedDescription))
+            )
+            return
+          }
 
-        guard let idToken = user?.idToken?.tokenString else {
-          continuation.resume(returning: nil)
-          return
+          self?.completeRequest(id: requestID, result: .success(user?.idToken?.tokenString))
         }
-
-        continuation.resume(returning: idToken)
       }
-    }
+    })
   }
 
   /// Sign out from Google
@@ -130,6 +191,8 @@ enum GoogleAuthError: Error, LocalizedError {
   case noPresenter
   case noResult
   case noIDToken
+  case requestInProgress
+  case timedOut
   case failed(String)
 
   var errorDescription: String? {
@@ -142,6 +205,10 @@ enum GoogleAuthError: Error, LocalizedError {
       return "No result received from Google Sign-In"
     case .noIDToken:
       return "No ID token received from Google"
+    case .requestInProgress:
+      return "Google Sign-In is already in progress"
+    case .timedOut:
+      return "Google Sign-In timed out"
     case .failed(let message):
       return "Google Sign-In failed: \(message)"
     }

@@ -126,6 +126,18 @@ extension LocalStoreActor {
     }
   }
 
+  func fetchThreads(for viewerUserId: String) throws -> [FriendThread] {
+    let descriptor = FetchDescriptor<LocalThread>(
+      predicate: #Predicate { $0.viewerUserId == viewerUserId },
+      sortBy: [
+        SortDescriptor(\LocalThread.sortTimestamp, order: .reverse),
+        SortDescriptor(\LocalThread.id, order: .reverse),
+      ]
+    )
+
+    return try modelContext.fetch(descriptor).map { $0.toFriendThread() }
+  }
+
   func saveThreadSummaries(_ threads: [FriendThread], for viewerUserId: String) throws {
     try reconcileMissingThreads(keeping: threads.map(\.id), for: viewerUserId)
     for thread in threads {

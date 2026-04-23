@@ -54,6 +54,7 @@ struct MainTabView: View {
   @State private var showAddSubmitRequirementsAlert = false
   @State private var unreadFriendsCount = 0
   @State private var unreadRefreshTask: Task<Void, Never>?
+  @State private var friendsThreadListTrackingTask: Task<Void, Never>?
   @State private var lastHandledReselectionTab: Tab?
   @State private var lastHandledReselectionDate = Date.distantPast
 
@@ -261,8 +262,8 @@ struct MainTabView: View {
       }
     }
     .task {
-      await startFriendsThreadListTrackingIfPossible()
       scheduleUnreadFriendsCountRefresh()
+      scheduleFriendsThreadListTrackingIfNeeded()
     }
     .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { _ in
       scheduleUnreadFriendsCountRefresh()
@@ -285,9 +286,12 @@ struct MainTabView: View {
       handlePendingDeepLink(deepLink)
     }
     .onChange(of: coordinator.userId) { _, _ in
-      Task {
-        await startFriendsThreadListTrackingIfPossible()
+      Task { @MainActor in
+        friendsThreadListTrackingTask?.cancel()
+        friendsThreadListTrackingTask = nil
+        await friendsRealtimeCoordinator.stopThreadListSubscription()
         scheduleUnreadFriendsCountRefresh()
+        scheduleFriendsThreadListTrackingIfNeeded()
       }
       handlePendingDeepLink(coordinator.pendingDeepLink)
     }
@@ -298,14 +302,14 @@ struct MainTabView: View {
       selectionHaptic.prepare()
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) { _ in
-      Task {
-        await startFriendsThreadListTrackingIfPossible()
-        scheduleUnreadFriendsCountRefresh()
-      }
+      scheduleUnreadFriendsCountRefresh()
+      scheduleFriendsThreadListTrackingIfNeeded()
     }
     .onDisappear {
       unreadRefreshTask?.cancel()
       unreadRefreshTask = nil
+      friendsThreadListTrackingTask?.cancel()
+      friendsThreadListTrackingTask = nil
     }
     .sheet(isPresented: $showFeedbackSheet) {
       NavigationStack {
@@ -332,26 +336,33 @@ struct MainTabView: View {
     unreadFriendsCount > 0 ? "person.2.badge.fill" : Tab.sharing.icon
   }
 
-  private func startFriendsThreadListTrackingIfPossible() async {
+  private func scheduleFriendsThreadListTrackingIfNeeded() {
+    guard selectedTab == .sharing else { return }
     guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else { return }
-    await friendsRealtimeCoordinator.startThreadListSubscription(viewerUserId: viewerUserId)
+
+    friendsThreadListTrackingTask?.cancel()
+    friendsThreadListTrackingTask = Task { @MainActor in
+      await friendsRealtimeCoordinator.startThreadListSubscription(viewerUserId: viewerUserId)
+    }
   }
 
-  private func refreshUnreadFriendsCount() {
+  private func refreshUnreadFriendsCount() async {
     guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
       unreadFriendsCount = 0
       NotificationService.shared.setApplicationBadgeCount(0)
       return
     }
 
-    unreadFriendsCount =
-      friendsMessagesRepository
-      .getThreads(for: viewerUserId)
+    let directThreads =
+      await friendsMessagesRepository
+      .getThreadsOffMain(for: viewerUserId)
       .filter { $0.kind == .direct }
+    guard !Task.isCancelled else { return }
+
+    unreadFriendsCount =
+      directThreads
       .reduce(0) { $0 + $1.unreadCount }
-    Task { @MainActor in
-      await NotificationService.shared.refreshApplicationBadgeCount(viewerUserId: viewerUserId)
-    }
+    await NotificationService.shared.refreshApplicationBadgeCount(viewerUserId: viewerUserId)
   }
 
   private func scheduleUnreadFriendsCountRefresh() {
@@ -359,7 +370,7 @@ struct MainTabView: View {
     unreadRefreshTask = Task { @MainActor in
       try? await Task.sleep(for: .milliseconds(120))
       guard !Task.isCancelled else { return }
-      refreshUnreadFriendsCount()
+      await refreshUnreadFriendsCount()
     }
   }
 
@@ -658,6 +669,7 @@ struct MainTabView: View {
   private func activateTab(_ tab: Tab) {
     loadedTabs.insert(tab)
     selectedTab = tab
+    scheduleFriendsThreadListTrackingIfNeeded()
   }
 
   @ViewBuilder

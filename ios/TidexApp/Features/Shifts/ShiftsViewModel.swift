@@ -449,8 +449,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Maximum number of months to keep in cache (prevents unbounded memory growth)
   private static let maxCacheSize = 12
 
-  /// Background prefetch tasks (to avoid duplicate fetches)
-  private var prefetchTasks: Set<String> = []
+  /// Background prefetch tasks keyed by month (to avoid duplicates and cancel stale work).
+  private var prefetchTasks: [String: Task<Void, Never>] = [:]
 
   /// Memory warning observer
   private var memoryWarningObserver: NSObjectProtocol?
@@ -546,6 +546,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   deinit {
     // Cancel Combine subscriptions to prevent memory leaks
     monthContextCancellable?.cancel()
+    activeNavigationTask?.cancel()
+    for task in prefetchTasks.values {
+      task.cancel()
+    }
 
     if let observer = memoryWarningObserver {
       NotificationCenter.default.removeObserver(observer)
@@ -564,7 +568,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     )
     monthCache.removeAll()
     prefetchCache.removeAll()
-    prefetchTasks.removeAll()
+    cancelPrefetchTasks()
   }
 
   // MARK: - Deep Linking
@@ -1328,14 +1332,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // Clear all caches on full reload (including cachedUserId for impersonation support)
     monthCache.removeAll()
     prefetchCache.removeAll()
-    prefetchTasks.removeAll()
+    cancelPrefetchTasks()
     cachedUserId = nil
     activeJobs = []
 
     await loadShiftsFromLocal()
-
-    // Prefetch neighboring months in the background
-    prefetchNeighboringMonths()
   }
 
   /// Refresh shifts data via sync then local reload
@@ -1383,7 +1384,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Clear in-memory caches so we pick up synced data
       monthCache.removeAll()
       prefetchCache.removeAll()
-      prefetchTasks.removeAll()
+      cancelPrefetchTasks()
       settings = nil
       snapshots = []
       recurringShifts = []
@@ -1417,7 +1418,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // Also critical for impersonation: cachedUserId must be refreshed from current session
     monthCache.removeAll()
     prefetchCache.removeAll()
-    prefetchTasks.removeAll()
+    cancelPrefetchTasks()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
     activeJobs = []
 
@@ -1806,14 +1807,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     }
 
     // Skip if already prefetching
-    if prefetchTasks.contains(key) {
+    if prefetchTasks[key] != nil {
       return
     }
 
-    prefetchTasks.insert(key)
-
-    Task {
-      defer { prefetchTasks.remove(key) }
+    prefetchTasks[key] = Task { [weak self] in
+      guard let self else { return }
+      defer { self.prefetchTasks.removeValue(forKey: key) }
 
       guard let userId = cachedUserId,
         let currentSettings = self.settings
@@ -1841,6 +1841,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       let activeJobsSnapshot = self.activeJobs
 
       do {
+        try Task.checkCancellation()
         let computedShifts = try await Self.computeShiftsForMonthOffMain(
           MonthComputationInput(
             year: year,
@@ -1879,6 +1880,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         logger.error("❌ Prefetch failed for \(key): \(error.localizedDescription)")
       }
     }
+  }
+
+  private func cancelPrefetchTasks() {
+    for task in prefetchTasks.values {
+      task.cancel()
+    }
+    prefetchTasks.removeAll()
   }
 
   private nonisolated static func computeShiftsForMonthOffMain(

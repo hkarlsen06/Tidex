@@ -31,6 +31,38 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     case stalledPagination
   }
 
+  private enum SubscriptionError: LocalizedError {
+    case timedOut
+
+    var errorDescription: String? {
+      switch self {
+      case .timedOut:
+        return "Realtime subscription timed out"
+      }
+    }
+  }
+
+  private enum Subscription {
+    static let timeoutNanoseconds: UInt64 = 15_000_000_000
+  }
+
+  private final class SubscriptionTimeoutState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var didResume = false
+
+    func tryResume() -> Bool {
+      lock.lock()
+      defer { lock.unlock() }
+
+      if didResume {
+        return false
+      }
+
+      didResume = true
+      return true
+    }
+  }
+
   private enum TypingEvent {
     static let start = "typing_start"
     static let stop = "typing_stop"
@@ -90,7 +122,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     )
 
     do {
-      try await channel.subscribeWithError()
+      try await subscribeWithTimeout(channel)
       threadListChannel = channel
 
       threadListTasks = [
@@ -195,7 +227,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     )
 
     do {
-      try await channel.subscribeWithError()
+      try await subscribeWithTimeout(channel)
       threadChannels[threadId] = channel
 
       threadTasks[threadId] = [
@@ -562,7 +594,9 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     Task { [weak self] in
       guard let self else { return }
       var hasSkippedInitialSubscribedRefresh = false
-      for await status in channel.statusChange where status == .subscribed {
+      for await status in channel.statusChange {
+        guard !Task.isCancelled else { return }
+        guard status == .subscribed else { continue }
         if skipInitialSubscribedRefresh, !hasSkippedInitialSubscribedRefresh {
           hasSkippedInitialSubscribedRefresh = true
           continue
@@ -584,7 +618,9 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     Task { [weak self] in
       guard let self else { return }
       var hasSkippedInitialSubscribedRefresh = false
-      for await status in channel.statusChange where status == .subscribed {
+      for await status in channel.statusChange {
+        guard !Task.isCancelled else { return }
+        guard status == .subscribed else { continue }
         if skipInitialSubscribedRefresh, !hasSkippedInitialSubscribedRefresh {
           hasSkippedInitialSubscribedRefresh = true
           continue
@@ -678,7 +714,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       let typingTasks = self.makeTypingChannelTasks(for: channel, threadId: threadId)
 
       do {
-        try await channel.subscribeWithError()
+        try await self.subscribeWithTimeout(channel)
         self.typingChannels[threadId] = channel
         self.typingTasks[threadId] = typingTasks
         return true
@@ -725,6 +761,47 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       _ = await ensureTypingChannel(threadId: threadId)
     } else {
       await teardownTypingChannel(threadId: threadId)
+    }
+  }
+
+  private func subscribeWithTimeout(_ channel: RealtimeChannelV2) async throws {
+    let timeoutNanoseconds = Subscription.timeoutNanoseconds
+    let operationTask = Task {
+      try await channel.subscribeWithError()
+    }
+
+    try await withTaskCancellationHandler {
+      try await withCheckedThrowingContinuation { continuation in
+        let state = SubscriptionTimeoutState()
+
+        Task {
+          do {
+            try await operationTask.value
+            if state.tryResume() {
+              continuation.resume()
+            }
+          } catch {
+            if state.tryResume() {
+              continuation.resume(throwing: error)
+            }
+          }
+        }
+
+        Task {
+          do {
+            try await Task.sleep(nanoseconds: timeoutNanoseconds)
+          } catch {
+            return
+          }
+
+          operationTask.cancel()
+          if state.tryResume() {
+            continuation.resume(throwing: SubscriptionError.timedOut)
+          }
+        }
+      }
+    } onCancel: {
+      operationTask.cancel()
     }
   }
 

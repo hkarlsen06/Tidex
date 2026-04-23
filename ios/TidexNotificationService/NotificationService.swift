@@ -6,6 +6,7 @@ import os
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "NotificationServiceExtension")
 private let avatarFetchBudget = Duration.milliseconds(250)
+private let donationBudget = Duration.seconds(2)
 
 private enum SenderAvatarLoader {
   private static let appGroupId = "group.no.tidex.app"
@@ -294,29 +295,26 @@ final class NotificationService: UNNotificationServiceExtension {
   }
 
   private func donateBestEffort(_ interaction: INInteraction) {
-    Task.detached(priority: .utility) {
-      let donationStartedAt = Date()
-      do {
-        try await Self.donate(interaction)
-        logger.debug(
-          "Notification donation completed in \(Self.elapsedMilliseconds(since: donationStartedAt), privacy: .public) ms"
-        )
-      } catch {
+    let donationStartedAt = Date()
+    let timeoutTask = Task.detached(priority: .utility) {
+      try? await Task.sleep(for: donationBudget)
+      guard !Task.isCancelled else { return }
+      logger.warning(
+        "Notification donation timed out after \(Self.elapsedMilliseconds(since: donationStartedAt), privacy: .public) ms"
+      )
+    }
+
+    interaction.donate { error in
+      timeoutTask.cancel()
+
+      if let error {
         logger.error(
           "Notification donation failed after \(Self.elapsedMilliseconds(since: donationStartedAt), privacy: .public) ms: \(error.localizedDescription, privacy: .public)"
         )
-      }
-    }
-  }
-
-  private static func donate(_ interaction: INInteraction) async throws {
-    try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-      interaction.donate { error in
-        if let error {
-          continuation.resume(throwing: error)
-        } else {
-          continuation.resume()
-        }
+      } else {
+        logger.debug(
+          "Notification donation completed in \(Self.elapsedMilliseconds(since: donationStartedAt), privacy: .public) ms"
+        )
       }
     }
   }

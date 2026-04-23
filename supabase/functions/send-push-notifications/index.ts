@@ -45,6 +45,7 @@ let cachedFcmAccessToken: { token: string; expiresAt: number } | null = null;
 let cachedApnsTokenProd: { token: string; expiresAt: number } | null = null;
 let cachedApnsTokenSandbox: { token: string; expiresAt: number } | null = null;
 const MAX_DELIVERY_CONCURRENCY = 8;
+const EXTERNAL_FETCH_TIMEOUT_MS = 15_000;
 
 // ---------- Types ----------
 export interface OutboxNotification {
@@ -121,6 +122,32 @@ function json(data: unknown, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+async function fetchWithTimeout(
+  input: string | URL | Request,
+  init: RequestInit = {},
+  timeoutMs = EXTERNAL_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const upstreamSignal = init.signal;
+  const abortFromUpstream = () => controller.abort();
+
+  if (upstreamSignal?.aborted) {
+    controller.abort();
+  } else {
+    upstreamSignal?.addEventListener("abort", abortFromUpstream, {
+      once: true,
+    });
+  }
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+    upstreamSignal?.removeEventListener("abort", abortFromUpstream);
+  }
 }
 
 function bearerToken(req: Request): string | null {
@@ -768,14 +795,17 @@ async function getFcmAccessToken(): Promise<string> {
   const jwt = await createJwtRs256(payload, FCM_PRIVATE_KEY);
 
   // Exchange JWT for access token
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-      assertion: jwt,
-    }),
-  });
+  const response = await fetchWithTimeout(
+    "https://oauth2.googleapis.com/token",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwt,
+      }),
+    },
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to get FCM access token: ${await response.text()}`);
@@ -888,7 +918,7 @@ async function sendToFcm(
     },
   };
 
-  const response = await fetch(
+  const response = await fetchWithTimeout(
     `https://fcm.googleapis.com/v1/projects/${FCM_PROJECT_ID}/messages:send`,
     {
       method: "POST",
@@ -961,7 +991,7 @@ async function sendPayloadToApns(
 
     console.log(`[APNs] Trying ${env.host} for ${logLabel}...`);
 
-    const response = await fetch(apnsUrl, {
+    const response = await fetchWithTimeout(apnsUrl, {
       method: "POST",
       headers: {
         Authorization: `bearer ${jwtToken}`,

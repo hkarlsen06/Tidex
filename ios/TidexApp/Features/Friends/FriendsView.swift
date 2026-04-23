@@ -65,6 +65,10 @@ struct SharingView: View {
   private static let typingIndicatorTimeout: Duration = .seconds(5)
   private static let typingStopGraceDelay: Duration = .seconds(2)
 
+  private var startupTaskID: String {
+    "\(selectedTab.rawValue):\(coordinator.userId ?? "")"
+  }
+
   private let friendsMessagingService = FriendsMessagingService.shared
   private let friendsMessagesRepository = FriendsMessagesRepository.shared
   private let friendsRealtimeCoordinator = FriendsMessagingRealtimeCoordinator.shared
@@ -154,8 +158,10 @@ struct SharingView: View {
       }
       .iPadToolbarTransaction()
     }
-    .task {
+    .task(id: startupTaskID) {
+      guard selectedTab == .sharing else { return }
       await viewModel.loadSharers()
+      guard !Task.isCancelled, selectedTab == .sharing else { return }
       scheduleChatMetadataRefresh()
       await syncTypingSubscriptions()
     }
@@ -218,7 +224,12 @@ struct SharingView: View {
       }
     }
     .onChange(of: selectedTab) { _, newTab in
-      guard newTab == .sharing else { return }
+      guard newTab == .sharing else {
+        Task {
+          await stopTypingSubscriptions()
+        }
+        return
+      }
       Task {
         await resubscribeTypingSubscriptions()
       }
@@ -828,14 +839,18 @@ struct SharingView: View {
   }
 
   private func resubscribeTypingSubscriptions() async {
+    await stopTypingSubscriptions()
+    scheduleChatMetadataRefresh()
+    await syncTypingSubscriptions()
+  }
+
+  private func stopTypingSubscriptions() async {
     await friendsRealtimeCoordinator.stopThreadListTypingSubscriptions()
     await MainActor.run {
       typingResetTasks.values.forEach { $0.cancel() }
       typingResetTasks.removeAll()
       typingUserIds.removeAll()
     }
-    scheduleChatMetadataRefresh()
-    await syncTypingSubscriptions()
   }
 
   private func handleTypingIndicatorChange(threadId: String, userId: String, isTyping: Bool) {

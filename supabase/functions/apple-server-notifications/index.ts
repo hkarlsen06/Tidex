@@ -29,6 +29,7 @@ const APPLE_ROOT_CA_G2_URL =
 const APPLE_ROOT_CA_G3_URL =
   "https://www.apple.com/certificateauthority/AppleRootCA-G3.cer";
 const APPLE_ROOT_CA_URLS = [APPLE_ROOT_CA_G2_URL, APPLE_ROOT_CA_G3_URL];
+const EXTERNAL_FETCH_TIMEOUT_MS = 15_000;
 
 // ---------- Apple Product ID Mapping ----------
 // Matches existing tiers: Pro and Max, each with monthly/yearly
@@ -137,10 +138,36 @@ type AppleVerificationResult = {
 
 let appleRootCertificatesPromise: Promise<Buffer[]> | null = null;
 
+async function fetchWithTimeout(
+  input: string | URL | Request,
+  init: RequestInit = {},
+  timeoutMs = EXTERNAL_FETCH_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const upstreamSignal = init.signal;
+  const abortFromUpstream = () => controller.abort();
+
+  if (upstreamSignal?.aborted) {
+    controller.abort();
+  } else {
+    upstreamSignal?.addEventListener("abort", abortFromUpstream, {
+      once: true,
+    });
+  }
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+    upstreamSignal?.removeEventListener("abort", abortFromUpstream);
+  }
+}
+
 async function appleRootCertificates(): Promise<Buffer[]> {
   appleRootCertificatesPromise ??= Promise.all(
     APPLE_ROOT_CA_URLS.map(async (url) => {
-      const response = await fetch(url);
+      const response = await fetchWithTimeout(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch Apple root certificate: ${url}`);
       }

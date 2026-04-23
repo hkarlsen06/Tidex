@@ -55,6 +55,7 @@ struct DashboardView: View {
   @State private var selectedPayrollVariantIndex = 0
   @State private var temporarySessionReferenceDate = Date()
   @State private var showMixedCurrencyBreakdownPopover = false
+  @State private var activeDashboardRefreshTask: Task<Void, Never>?
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -94,6 +95,21 @@ struct DashboardView: View {
 
   private var shouldShowWorkSetupRequiredPlaceholder: Bool {
     workSetupPresentationState?.shouldShowPlaceholder == true
+  }
+
+  private func refreshActiveDashboardStateIfNeeded() {
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    guard selectedTab == .home else { return }
+    guard viewModel.dashboardData != nil else { return }
+
+    activeDashboardRefreshTask?.cancel()
+    activeDashboardRefreshTask = Task {
+      await viewModel.refreshAppearanceSettingsFromLocal()
+      guard !Task.isCancelled else { return }
+      await viewModel.refreshClockState()
+      guard !Task.isCancelled else { return }
+      await viewModel.preloadClockSelectableJobs()
+    }
   }
 
   var body: some View {
@@ -203,14 +219,22 @@ struct DashboardView: View {
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       // Reconfigure timers when returning to the dashboard after a disappear cycle.
       configureCountdown(with: viewModel.dashboardData)
-      Task {
-        await viewModel.refreshAppearanceSettingsFromLocal()
-        await viewModel.refreshClockState()
-        await viewModel.preloadClockSelectableJobs()
-      }
+      refreshActiveDashboardStateIfNeeded()
     }
     .onDisappear {
+      activeDashboardRefreshTask?.cancel()
+      activeDashboardRefreshTask = nil
       countdownManager.stop()
+    }
+    .onChange(of: selectedTab) { oldTab, newTab in
+      guard oldTab != newTab else { return }
+      if newTab == .home {
+        configureCountdown(with: viewModel.dashboardData)
+        refreshActiveDashboardStateIfNeeded()
+      } else {
+        activeDashboardRefreshTask?.cancel()
+        activeDashboardRefreshTask = nil
+      }
     }
     .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { notification in
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }

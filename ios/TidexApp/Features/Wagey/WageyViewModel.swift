@@ -271,7 +271,6 @@ final class WageyViewModel {
 
   /// Private initializer to enforce singleton pattern
   private init() {
-    loadConversations()
     observeTierChanges()
   }
 

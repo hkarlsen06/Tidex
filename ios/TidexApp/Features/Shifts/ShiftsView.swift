@@ -312,7 +312,7 @@ struct ShiftsView: View {
         }
         .onAppear {
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-          recomputeListDerivedDataIfNeeded(force: true)
+          recomputeListDerivedDataIfNeeded()
         }
         .onChange(of: selectedListJobId) { _, _ in
           recomputeListDerivedDataIfNeeded()
