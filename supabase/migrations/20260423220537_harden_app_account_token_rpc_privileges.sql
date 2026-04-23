@@ -1,6 +1,5 @@
--- Function: get_or_create_app_account_token
--- Description: Gets existing or creates new app account token for a user (used for native app auth)
--- Used by: Native app authentication flow
+-- Harden app account token RPCs so app clients can only create/read their own
+-- token and backend-only token lookup remains restricted to the service role.
 
 CREATE OR REPLACE FUNCTION public.get_or_create_app_account_token(p_user_id uuid)
  RETURNS uuid
@@ -37,3 +36,17 @@ REVOKE EXECUTE ON FUNCTION public.get_or_create_app_account_token(uuid) FROM PUB
 REVOKE EXECUTE ON FUNCTION public.get_or_create_app_account_token(uuid) FROM anon;
 REVOKE EXECUTE ON FUNCTION public.get_or_create_app_account_token(uuid) FROM service_role;
 GRANT EXECUTE ON FUNCTION public.get_or_create_app_account_token(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.get_user_id_by_app_account_token(p_token uuid)
+ RETURNS uuid
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+  SELECT user_id FROM internal.app_account_tokens WHERE token = p_token;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.get_user_id_by_app_account_token(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_user_id_by_app_account_token(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_user_id_by_app_account_token(uuid) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_id_by_app_account_token(uuid) TO service_role;

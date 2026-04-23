@@ -33,15 +33,13 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
 import { corsHeaders } from "../_shared/cors.ts";
-import {
-  createCipheriv,
-  createDecipheriv,
-  randomBytes,
-} from "node:crypto";
+import { Buffer } from "node:buffer";
+import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
 // ---------- Environment ----------
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  "";
 
 // Site URL for redirects (the actual app URL, not Supabase project URL)
 // Falls back to a placeholder since redirectTo is not actually used for impersonation
@@ -62,7 +60,9 @@ function getSupabaseAdmin(): ReturnType<typeof createClient> | null {
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!url || !key) {
-    console.error("[impersonation] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    console.error(
+      "[impersonation] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+    );
     return null;
   }
 
@@ -73,12 +73,16 @@ function getSupabaseAdmin(): ReturnType<typeof createClient> | null {
   return supabaseAdmin;
 }
 
-function createRequestScopedAdminClient(): ReturnType<typeof createClient> | null {
+function createRequestScopedAdminClient():
+  | ReturnType<typeof createClient>
+  | null {
   const url = Deno.env.get("SUPABASE_URL") ?? "";
   const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (!url || !key) {
-    console.error("[impersonation] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    console.error(
+      "[impersonation] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+    );
     return null;
   }
 
@@ -120,7 +124,9 @@ function encryptAndSerialize(plaintext: string): string {
   const authTag = cipher.getAuthTag();
 
   // Format: ver:kid:iv:ciphertext:authTag (base64url)
-  return `1:${CURRENT_KEY_ID}:${iv.toString("base64url")}:${encrypted.toString("base64url")}:${authTag.toString("base64url")}`;
+  return `1:${CURRENT_KEY_ID}:${iv.toString("base64url")}:${
+    encrypted.toString("base64url")
+  }:${authTag.toString("base64url")}`;
 }
 
 function parseAndDecrypt(serialized: string): string {
@@ -155,7 +161,8 @@ function parseAndDecrypt(serialized: string): string {
 }
 
 // ---------- Validation Utilities ----------
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function isValidUUID(str: string): boolean {
   return UUID_REGEX.test(str);
@@ -179,9 +186,12 @@ interface ImpersonationSession {
 async function checkRateLimit(adminUserId: string): Promise<boolean> {
   if (!supabaseAdmin) return false;
 
-  const { data, error } = await supabaseAdmin.rpc("check_impersonation_rate_limit", {
-    p_admin_user_id: adminUserId,
-  });
+  const { data, error } = await supabaseAdmin.rpc(
+    "check_impersonation_rate_limit",
+    {
+      p_admin_user_id: adminUserId,
+    },
+  );
 
   if (error) {
     console.error("[impersonation] Rate limit check failed:", error);
@@ -191,7 +201,10 @@ async function checkRateLimit(adminUserId: string): Promise<boolean> {
   return data === true;
 }
 
-async function recordAttempt(adminUserId: string, success: boolean): Promise<void> {
+async function recordAttempt(
+  adminUserId: string,
+  success: boolean,
+): Promise<void> {
   if (!supabaseAdmin) return;
 
   const { error } = await supabaseAdmin.rpc("record_impersonation_attempt", {
@@ -208,25 +221,36 @@ async function isUserBeingImpersonated(userId: string): Promise<boolean> {
   if (!supabaseAdmin) return false;
 
   // Use RPC function to check if user is being impersonated (SECURITY DEFINER)
-  const { data, error } = await supabaseAdmin.rpc("is_user_being_impersonated", {
-    p_user_id: userId,
-  });
+  const { data, error } = await supabaseAdmin.rpc(
+    "is_user_being_impersonated",
+    {
+      p_user_id: userId,
+    },
+  );
 
   if (error) {
-    console.error("[impersonation] Failed to check if user is being impersonated:", error);
+    console.error(
+      "[impersonation] Failed to check if user is being impersonated:",
+      error,
+    );
     return false;
   }
 
   return data === true;
 }
 
-async function getActiveSessionForAdmin(adminUserId: string): Promise<ImpersonationSession | null> {
+async function getActiveSessionForAdmin(
+  adminUserId: string,
+): Promise<ImpersonationSession | null> {
   if (!supabaseAdmin) return null;
 
   // Use RPC function to get active session (SECURITY DEFINER)
-  const { data, error } = await supabaseAdmin.rpc("get_active_impersonation_for_admin", {
-    p_admin_user_id: adminUserId,
-  });
+  const { data, error } = await supabaseAdmin.rpc(
+    "get_active_impersonation_for_admin",
+    {
+      p_admin_user_id: adminUserId,
+    },
+  );
 
   if (error) {
     console.error("[impersonation] Failed to get active session:", error);
@@ -238,24 +262,33 @@ async function getActiveSessionForAdmin(adminUserId: string): Promise<Impersonat
     return null;
   }
 
-  return Array.isArray(data) ? data[0] : data;
+  return (Array.isArray(data) ? data[0] : data) as ImpersonationSession;
 }
 
-async function endImpersonationSession(sessionId: string, endedByUserId: string): Promise<void> {
+async function endImpersonationSession(
+  sessionId: string,
+  endedByUserId: string,
+): Promise<void> {
   if (!supabaseAdmin) return;
 
   // Use RPC function to end session (SECURITY DEFINER)
   // Note: The column is named ended_by_admin_user_id but we store the actual caller's ID
   // This could be the admin OR the impersonated user (target) who ended the session
-  const { data, error } = await supabaseAdmin.rpc("mark_impersonation_session_ended", {
-    p_session_id: sessionId,
-    p_ended_by_user_id: endedByUserId,
-  });
+  const { data, error } = await supabaseAdmin.rpc(
+    "mark_impersonation_session_ended",
+    {
+      p_session_id: sessionId,
+      p_ended_by_user_id: endedByUserId,
+    },
+  );
 
   if (error) {
     console.error("[impersonation] Failed to end session:", error);
   } else if (!data) {
-    console.log("[impersonation] Session was already ended or not found:", sessionId);
+    console.log(
+      "[impersonation] Session was already ended or not found:",
+      sessionId,
+    );
   }
 }
 
@@ -275,23 +308,27 @@ async function createImpersonationSession(params: {
 
   // Only encrypt and store admin refresh token if provided (web flow)
   // iOS flow doesn't send this - they store admin session locally in Keychain
-  const encryptedToken = params.adminRefreshToken && params.adminRefreshToken.length > 0
-    ? encryptAndSerialize(params.adminRefreshToken)
-    : "";
+  const encryptedToken =
+    params.adminRefreshToken && params.adminRefreshToken.length > 0
+      ? encryptAndSerialize(params.adminRefreshToken)
+      : "";
 
   // Use RPC function to create session (SECURITY DEFINER)
   // The RPC function handles session creation, audit logging, and rate limit recording
   // Returns table with (session_id, expires_at) to avoid clock skew issues
-  const { data, error } = await supabaseAdmin.rpc("create_impersonation_session", {
-    p_admin_user_id: params.adminUserId,
-    p_target_user_id: params.targetUserId,
-    p_admin_refresh_token_enc: encryptedToken,
-    p_reason: params.reason,
-    p_admin_ip: params.adminIp,
-    p_admin_user_agent: params.adminUserAgent,
-    p_admin_email: params.adminEmail,
-    p_target_email: params.targetEmail,
-  });
+  const { data, error } = await supabaseAdmin.rpc(
+    "create_impersonation_session",
+    {
+      p_admin_user_id: params.adminUserId,
+      p_target_user_id: params.targetUserId,
+      p_admin_refresh_token_enc: encryptedToken,
+      p_reason: params.reason,
+      p_admin_ip: params.adminIp,
+      p_admin_user_agent: params.adminUserAgent,
+      p_admin_email: params.adminEmail,
+      p_target_email: params.targetEmail,
+    },
+  );
 
   if (error) {
     if (error.code === "23505") {
@@ -313,13 +350,18 @@ async function createImpersonationSession(params: {
   return { id: row.session_id, expiresAt };
 }
 
-async function getImpersonationSession(sessionId: string): Promise<ImpersonationSession | null> {
+async function getImpersonationSession(
+  sessionId: string,
+): Promise<ImpersonationSession | null> {
   if (!supabaseAdmin) return null;
 
   // Use RPC function to get session (SECURITY DEFINER)
-  const { data, error } = await supabaseAdmin.rpc("get_impersonation_session_full", {
-    p_session_id: sessionId,
-  });
+  const { data, error } = await supabaseAdmin.rpc(
+    "get_impersonation_session_full",
+    {
+      p_session_id: sessionId,
+    },
+  );
 
   if (error) {
     console.error("[impersonation] Failed to get session:", error);
@@ -331,7 +373,7 @@ async function getImpersonationSession(sessionId: string): Promise<Impersonation
     return null;
   }
 
-  return Array.isArray(data) ? data[0] : data;
+  return (Array.isArray(data) ? data[0] : data) as ImpersonationSession;
 }
 
 async function validateTargetUser(targetUserId: string): Promise<{
@@ -344,7 +386,9 @@ async function validateTargetUser(targetUserId: string): Promise<{
     return { exists: false, isAdmin: false, email: null, displayName: null };
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(
+    targetUserId,
+  );
 
   if (error || !data.user) {
     return { exists: false, isAdmin: false, email: null, displayName: null };
@@ -352,7 +396,8 @@ async function validateTargetUser(targetUserId: string): Promise<{
 
   const user = data.user;
   const isAdmin = user.app_metadata?.role === "admin";
-  const displayName = user.user_metadata?.full_name || user.user_metadata?.name || null;
+  const displayName = user.user_metadata?.full_name ||
+    user.user_metadata?.name || null;
 
   return {
     exists: true,
@@ -414,7 +459,8 @@ async function handleStart(req: Request): Promise<Response> {
   }
 
   const token = authHeader.replace("Bearer ", "");
-  const { data: { user: caller }, error: authError } = await authClient.auth.getUser(token);
+  const { data: { user: caller }, error: authError } = await authClient.auth
+    .getUser(token);
 
   if (authError || !caller) {
     return json({ ok: false, error: "Invalid or expired token" }, 401);
@@ -429,7 +475,10 @@ async function handleStart(req: Request): Promise<Response> {
   // 3. Check if caller is currently being impersonated (prevent nested impersonation)
   const isBeingImpersonated = await isUserBeingImpersonated(caller.id);
   if (isBeingImpersonated) {
-    return json({ ok: false, error: "Nested impersonation is not allowed" }, 400);
+    return json(
+      { ok: false, error: "Nested impersonation is not allowed" },
+      400,
+    );
   }
 
   // 4. Parse and validate request body
@@ -454,7 +503,10 @@ async function handleStart(req: Request): Promise<Response> {
   }
 
   if (!reason || typeof reason !== "string" || reason.trim().length < 5) {
-    return json({ ok: false, error: "reason is required (minimum 5 characters)" }, 400);
+    return json({
+      ok: false,
+      error: "reason is required (minimum 5 characters)",
+    }, 400);
   }
 
   // 5. Cannot impersonate self
@@ -466,13 +518,19 @@ async function handleStart(req: Request): Promise<Response> {
   const withinRateLimit = await checkRateLimit(caller.id);
   if (!withinRateLimit) {
     await recordAttempt(caller.id, false);
-    return json({ ok: false, error: "Rate limit exceeded. Maximum 10 impersonation attempts per hour." }, 429);
+    return json({
+      ok: false,
+      error: "Rate limit exceeded. Maximum 10 impersonation attempts per hour.",
+    }, 429);
   }
 
   // 7. Auto-end any existing active impersonation session
   const activeSession = await getActiveSessionForAdmin(caller.id);
   if (activeSession) {
-    console.log("[impersonation] Auto-ending previous session:", activeSession.id);
+    console.log(
+      "[impersonation] Auto-ending previous session:",
+      activeSession.id,
+    );
     await endImpersonationSession(activeSession.id, caller.id);
   }
 
@@ -491,37 +549,48 @@ async function handleStart(req: Request): Promise<Response> {
   // 9. Verify target user has an email (required for generateLink)
   if (!targetValidation.email) {
     await recordAttempt(caller.id, false);
-    return json({ ok: false, error: "Target user does not have an email address" }, 400);
+    return json({
+      ok: false,
+      error: "Target user does not have an email address",
+    }, 400);
   }
 
   // 10. Mint a session for the target user using Admin API
   // Generate a magic link (server-side only, email not sent)
-  const { data: linkData, error: linkError } = await authClient.auth.admin.generateLink({
-    type: "magiclink",
-    email: targetValidation.email,
-    options: {
-      // Use the actual site URL, not the Supabase project URL
-      // This must be in the allowed redirect URLs in Supabase Auth settings
-      redirectTo: `${SITE_URL}/dashboard`,
-    },
-  });
+  const { data: linkData, error: linkError } = await authClient.auth.admin
+    .generateLink({
+      type: "magiclink",
+      email: targetValidation.email,
+      options: {
+        // Use the actual site URL, not the Supabase project URL
+        // This must be in the allowed redirect URLs in Supabase Auth settings
+        redirectTo: `${SITE_URL}/dashboard`,
+      },
+    });
 
   if (linkError || !linkData?.properties?.hashed_token) {
     console.error("[impersonation] Failed to generate link:", linkError);
     await recordAttempt(caller.id, false);
-    return json({ ok: false, error: "Failed to create impersonation session" }, 500);
+    return json(
+      { ok: false, error: "Failed to create impersonation session" },
+      500,
+    );
   }
 
   // Verify the token to create a session (bypasses MFA)
-  const { data: verifyData, error: verifyError } = await authClient.auth.verifyOtp({
-    token_hash: linkData.properties.hashed_token,
-    type: "magiclink",
-  });
+  const { data: verifyData, error: verifyError } = await authClient.auth
+    .verifyOtp({
+      token_hash: linkData.properties.hashed_token,
+      type: "magiclink",
+    });
 
   if (verifyError || !verifyData.session) {
     console.error("[impersonation] Failed to verify OTP:", verifyError);
     await recordAttempt(caller.id, false);
-    return json({ ok: false, error: "Failed to create impersonation session" }, 500);
+    return json(
+      { ok: false, error: "Failed to create impersonation session" },
+      500,
+    );
   }
 
   // 11. Create impersonation session record in database
@@ -548,9 +617,13 @@ async function handleStart(req: Request): Promise<Response> {
   } catch (error) {
     console.error("[impersonation] Failed to create session record:", error);
     // Clean up the minted session
-    await authClient.auth.admin.signOut(verifyData.session.access_token).catch(() => {});
+    await authClient.auth.admin.signOut(verifyData.session.access_token).catch(
+      () => {},
+    );
 
-    const errorMessage = error instanceof Error ? error.message : "Failed to create session record";
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Failed to create session record";
     return json({ ok: false, error: errorMessage }, 500);
   }
 
@@ -600,7 +673,8 @@ async function handleStop(req: Request): Promise<Response> {
   }
 
   const token = authHeader.replace("Bearer ", "");
-  const { data: { user: caller }, error: authError } = await adminClient.auth.getUser(token);
+  const { data: { user: caller }, error: authError } = await adminClient.auth
+    .getUser(token);
 
   if (authError || !caller) {
     return json({ ok: false, error: "Invalid or expired token" }, 401);
@@ -630,8 +704,14 @@ async function handleStop(req: Request): Promise<Response> {
   // Note: caller could be the admin (using their restored session) or
   // the impersonated user (ending from their context)
   // We allow either the admin or the target user to end the session
-  if (dbSession.admin_user_id !== caller.id && dbSession.target_user_id !== caller.id) {
-    return json({ ok: false, error: "Not authorized to end this session" }, 403);
+  if (
+    dbSession.admin_user_id !== caller.id &&
+    dbSession.target_user_id !== caller.id
+  ) {
+    return json(
+      { ok: false, error: "Not authorized to end this session" },
+      403,
+    );
   }
 
   // 5. Check if already ended
@@ -657,7 +737,9 @@ async function handleStop(req: Request): Promise<Response> {
     adminUserAgent,
     metadata: {
       ended_by_user_id: caller.id,
-      ended_by_type: caller.id === dbSession.admin_user_id ? "admin" : "impersonated_user",
+      ended_by_type: caller.id === dbSession.admin_user_id
+        ? "admin"
+        : "impersonated_user",
     },
   });
 
@@ -668,13 +750,20 @@ async function handleStop(req: Request): Promise<Response> {
     endedBy: caller.id,
   });
 
-  // 8. Return admin refresh token if stored (for web to restore session)
+  // 8. Return admin refresh token only to the original admin context.
   let adminRefreshToken: string | null = null;
-  if (dbSession.admin_refresh_token_enc && dbSession.admin_refresh_token_enc.length > 0) {
+  if (
+    caller.id === dbSession.admin_user_id &&
+    dbSession.admin_refresh_token_enc &&
+    dbSession.admin_refresh_token_enc.length > 0
+  ) {
     try {
       adminRefreshToken = parseAndDecrypt(dbSession.admin_refresh_token_enc);
     } catch (error) {
-      console.error("[impersonation] Failed to decrypt admin refresh token:", error);
+      console.error(
+        "[impersonation] Failed to decrypt admin refresh token:",
+        error,
+      );
       // Non-fatal - iOS doesn't need this
     }
   }
@@ -727,7 +816,10 @@ serve(async (req) => {
         } catch {
           // Ignore parse errors
         }
-        return json({ ok: false, error: "Invalid action. Use /start or /stop" }, 400);
+        return json(
+          { ok: false, error: "Invalid action. Use /start or /stop" },
+          400,
+        );
     }
   } catch (error) {
     console.error("[impersonation] Unexpected error:", error);
