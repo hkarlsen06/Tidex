@@ -307,8 +307,9 @@ struct SyncCursor {
   /// Format the cursor for logging
   var description: String {
     if let updatedAt = updatedAt {
+      let formattedUpdatedAt = FormatterCache.iso8601Formatter().string(from: updatedAt)
       return
-        "updated_at: \(ISO8601DateFormatter().string(from: updatedAt)), tieId: \(tieId.prefix(8))..."
+        "updated_at: \(formattedUpdatedAt), tieId: \(tieId.prefix(8))..."
     } else {
       return "initial (no cursor)"
     }

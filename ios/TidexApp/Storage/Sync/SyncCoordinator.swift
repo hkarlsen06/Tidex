@@ -5,6 +5,40 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinator")
 
+private enum SyncDateFormatters {
+  private static func cached<T: AnyObject>(_ key: String, builder: () -> T) -> T {
+    let dictionary = Thread.current.threadDictionary
+    if let cached = dictionary[key] as? T {
+      return cached
+    }
+    let formatter = builder()
+    dictionary[key] = formatter
+    return formatter
+  }
+
+  static func iso8601DefaultFormatter() -> ISO8601DateFormatter {
+    cached("tidex.sync.iso8601.default") {
+      ISO8601DateFormatter()
+    }
+  }
+
+  static func iso8601FractionalFormatter() -> ISO8601DateFormatter {
+    cached("tidex.sync.iso8601.fractional") {
+      let formatter = ISO8601DateFormatter()
+      formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+      return formatter
+    }
+  }
+
+  static func iso8601InternetFormatter() -> ISO8601DateFormatter {
+    cached("tidex.sync.iso8601.internet") {
+      let formatter = ISO8601DateFormatter()
+      formatter.formatOptions = [.withInternetDateTime]
+      return formatter
+    }
+  }
+}
+
 /// Batch size for intermediate saves during pull operations.
 /// Rows are saved every N rows to ensure durability if a later row fails.
 /// Cursor is only persisted after full page success, so failed pages will re-pull.
@@ -546,7 +580,7 @@ final class SyncCoordinator: ObservableObject {
       await Task.yield()
     }
 
-    let finalCursor = cursor.updatedAt.map { ISO8601DateFormatter().string(from: $0) } ?? "initial"
+    let finalCursor = cursor.updatedAt.map { formatSupabaseTimestamp($0) } ?? "initial"
     logger.debug("Pulled \(table.displayName): \(totalRows) rows, cursor now at \(finalCursor)")
 
     return TablePullResult(
@@ -989,11 +1023,7 @@ final class SyncCoordinator: ObservableObject {
     serverDeletedAt: Date?,
     storeActor: LocalStoreActor
   ) async throws {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd"
-    dateFormatter.calendar = Calendar(identifier: .gregorian)
-    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-    dateFormatter.timeZone = Date.localTimeZone
+    let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 
     guard let shiftDate = dateFormatter.date(from: serverRow.shift_date) else {
       logger.error("Failed to parse shift_date '\(serverRow.shift_date)' for shift \(serverRow.id)")
@@ -1744,11 +1774,7 @@ final class SyncCoordinator: ObservableObject {
     serverDeletedAt: Date?,
     storeActor: LocalStoreActor
   ) async throws {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd"
-    dateFormatter.calendar = Calendar(identifier: .gregorian)
-    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-    dateFormatter.timeZone = Date.localTimeZone
+    let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 
     let fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
 
@@ -1990,7 +2016,7 @@ final class SyncCoordinator: ObservableObject {
     serverUpdatedAt: Date,
     storeActor: LocalStoreActor
   ) async throws {
-    let dateFormatter = ISO8601DateFormatter()
+    let dateFormatter = SyncDateFormatters.iso8601DefaultFormatter()
 
     let lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
     let createdAt = serverRow.created_at.flatMap { dateFormatter.date(from: $0) }
@@ -2184,14 +2210,14 @@ final class SyncCoordinator: ObservableObject {
     }
     if dirtyFields.contains(.archivedAt) {
       if let archivedAt = job.archivedAt {
-        updateData["archived_at"] = .string(ISO8601DateFormatter().string(from: archivedAt))
+        updateData["archived_at"] = .string(formatSupabaseTimestamp(archivedAt))
       } else {
         updateData["archived_at"] = .null
       }
     }
     if dirtyFields.contains(.deletedAt) {
       if let deletedAt = job.deletedAt {
-        updateData["deleted_at"] = .string(ISO8601DateFormatter().string(from: deletedAt))
+        updateData["deleted_at"] = .string(formatSupabaseTimestamp(deletedAt))
       } else {
         updateData["deleted_at"] = .null
       }
@@ -2276,7 +2302,7 @@ final class SyncCoordinator: ObservableObject {
       try await supabase
       .from("jobs")
       .update([
-        "deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date())),
+        "deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date())),
         "is_default": AnyJSON.bool(false),
       ])
       .eq("id", value: jobId)
@@ -2357,7 +2383,7 @@ final class SyncCoordinator: ObservableObject {
       insertData["monthly_goal"] = .integer(monthlyGoal)
     }
     if let archivedAt = job.archivedAt {
-      insertData["archived_at"] = .string(ISO8601DateFormatter().string(from: archivedAt))
+      insertData["archived_at"] = .string(formatSupabaseTimestamp(archivedAt))
     }
 
     do {
@@ -2704,7 +2730,7 @@ final class SyncCoordinator: ObservableObject {
     let returnedRows: [SyncShiftRow] =
       try await supabase
       .from("user_shifts")
-      .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
       .eq("id", value: shiftId)
       .eq("user_id", value: userId)
       .eq("revision", value: serverRevision)
@@ -3201,7 +3227,7 @@ final class SyncCoordinator: ObservableObject {
     let returnedRows: [SyncEventRow] =
       try await supabase
       .from("events")
-      .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
       .eq("id", value: eventId)
       .eq("user_id", value: userId)
       .eq("revision", value: serverRevision)
@@ -3662,7 +3688,7 @@ final class SyncCoordinator: ObservableObject {
     let returnedRows: [SyncRecurringShiftRow] =
       try await supabase
       .from("recurring_shifts")
-      .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
       .eq("id", value: shiftId)
       .eq("user_id", value: userId)
       .eq("revision", value: serverRevision)
@@ -4153,7 +4179,7 @@ final class SyncCoordinator: ObservableObject {
     let returnedRows: [SyncWageSnapshotRow] =
       try await supabase
       .from("wage_snapshots")
-      .update(["deleted_at": AnyJSON.string(ISO8601DateFormatter().string(from: Date()))])
+      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
       .eq("id", value: snapshotId)
       .eq("user_id", value: userId)
       .eq("revision", value: serverRevision)
@@ -4558,7 +4584,7 @@ final class SyncCoordinator: ObservableObject {
     }
     if dirtyFields.contains(.lastActive) {
       if let lastActive = settings.lastActive {
-        updateData["last_active"] = .string(ISO8601DateFormatter().string(from: lastActive))
+        updateData["last_active"] = .string(formatSupabaseTimestamp(lastActive))
       } else {
         updateData["last_active"] = .null
       }
@@ -4668,7 +4694,7 @@ final class SyncCoordinator: ObservableObject {
     }
     insertData["default_startup_tab"] = .string(settings.effectiveDefaultStartupTab)
     if let lastActive = settings.lastActive {
-      insertData["last_active"] = .string(ISO8601DateFormatter().string(from: lastActive))
+      insertData["last_active"] = .string(formatSupabaseTimestamp(lastActive))
     }
 
     do {
@@ -5198,16 +5224,12 @@ final class SyncCoordinator: ObservableObject {
 
   /// Parse ISO8601 date string to Date
   private func parseISO8601(_ string: String) -> Date? {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-    if let date = formatter.date(from: string) {
+    if let date = SyncDateFormatters.iso8601FractionalFormatter().date(from: string) {
       return date
     }
 
     // Try without fractional seconds
-    formatter.formatOptions = [.withInternetDateTime]
-    return formatter.date(from: string)
+    return SyncDateFormatters.iso8601InternetFormatter().date(from: string)
   }
 
   /// Parse ISO8601 updated_at with warning log on failure
@@ -5269,9 +5291,11 @@ final class SyncCoordinator: ObservableObject {
   /// Format Date to ISO8601 string for Supabase queries
   /// Uses fractional seconds for maximum precision
   private func formatISO8601(_ date: Date) -> String {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    return formatter.string(from: date)
+    SyncDateFormatters.iso8601FractionalFormatter().string(from: date)
+  }
+
+  private func formatSupabaseTimestamp(_ date: Date) -> String {
+    SyncDateFormatters.iso8601DefaultFormatter().string(from: date)
   }
 
   // MARK: - Shift Notification Helper

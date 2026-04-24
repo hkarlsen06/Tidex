@@ -469,6 +469,11 @@ struct ShiftsCalendarView: View {
   @ViewBuilder
   private var calendarGrid: some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: monthNumber)
+    let shiftsByDate = self.shiftsByDate
+    let earningsByDate = self.earningsByDate
+    let hoursByDate = self.hoursByDate
+    let dayJobTimeColorsByDate = self.dayJobTimeColorsByDate
+    let currentTodayISO = todayISO()
 
     CalendarMonthGrid(days: days) { dayInfo in
       let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
@@ -477,7 +482,7 @@ struct ShiftsCalendarView: View {
       let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
       let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
       let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
-      let isToday = dayInfo.dateISO == todayISO()
+      let isToday = dayInfo.dateISO == currentTodayISO
       let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
       let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
       let shouldColorJobMetrics =
@@ -504,7 +509,9 @@ struct ShiftsCalendarView: View {
         content: cellContent(
           for: dayInfo,
           dayJobTimeColors: dayJobTimeColors,
-          shouldColorJobMetrics: shouldColorJobMetrics
+          shouldColorJobMetrics: shouldColorJobMetrics,
+          earningsByDate: earningsByDate,
+          hoursByDate: hoursByDate
         ),
         eventIndicatorCount: eventIndicatorCount
       )
@@ -610,7 +617,9 @@ struct ShiftsCalendarView: View {
   private func cellContent(
     for dayInfo: CalendarDayInfo,
     dayJobTimeColors: DayJobTimeColors?,
-    shouldColorJobMetrics: Bool
+    shouldColorJobMetrics: Bool,
+    earningsByDate: [String: CalendarEarningsData],
+    hoursByDate: [String: HoursData]
   ) -> CalendarCellContent {
     guard let dateISO = dayInfo.dateISO else { return .empty }
 

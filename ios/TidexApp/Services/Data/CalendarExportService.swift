@@ -172,10 +172,7 @@ final class CalendarExportService {
 
   /// Parse ISO date string (YYYY-MM-DD) to Date
   private func parseISODate(_ string: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.timeZone = TimeZone.current
-    return formatter.date(from: string)
+    FormatterCache.isoDateFormatter(timeZone: TimeZone.current).date(from: string)
   }
 
   /// Combine a date and time string into a full Date

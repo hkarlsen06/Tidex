@@ -88,13 +88,8 @@ struct TotalCard: View {
   }
 
   private var formattedPercentage: String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .percent
-    formatter.locale = Locale.appLocale
-    formatter.minimumFractionDigits = 0
-    formatter.maximumFractionDigits = 0
     let value = displayPercentage / 100
-    return formatter.string(from: NSNumber(value: value)) ?? "\(Int(displayPercentage))%"
+    return value.formatted(.percent.precision(.fractionLength(0)).locale(Locale.appLocale))
   }
 
   /// Whether to show a dash instead of percentage (nil or zero means no meaningful comparison)

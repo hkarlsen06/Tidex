@@ -132,6 +132,16 @@ enum FormatterCache {
     }
   }
 
+  static func abbreviatedMonthDayFormatter(locale: Locale = .current) -> DateFormatter {
+    cached("tidex.abbreviatedMonthDayFormatter.\(locale.identifier)") {
+      let formatter = DateFormatter()
+      formatter.locale = locale
+      formatter.calendar = Calendar.autoupdatingCurrent
+      formatter.dateFormat = "MMM d"
+      return formatter
+    }
+  }
+
   static func compactCurrencyFormatter(locale: Locale = .current) -> NumberFormatter {
     cached("tidex.compactCurrencyFormatter.\(locale.identifier)") {
       let formatter = NumberFormatter()

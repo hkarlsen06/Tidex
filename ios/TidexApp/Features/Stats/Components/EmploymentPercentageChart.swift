@@ -187,22 +187,12 @@ struct EmploymentPercentageChart: View {
 
   /// Format hours for display (e.g., "37,50" or "40,00")
   private func formatHours(_ hours: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 2
-    formatter.maximumFractionDigits = 2
-    formatter.locale = Locale.appLocale
-    return formatter.string(from: NSNumber(value: hours)) ?? String(format: "%.2f", hours)
+    hours.formatted(.number.precision(.fractionLength(2)).locale(Locale.appLocale))
   }
 
   /// Format percentage for display (e.g., "85,5%")
   fileprivate static func formatPercent(_ value: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 1
-    formatter.maximumFractionDigits = 1
-    formatter.locale = Locale.appLocale
-    return (formatter.string(from: NSNumber(value: value)) ?? String(format: "%.1f", value)) + "%"
+    value.formatted(.number.precision(.fractionLength(1)).locale(Locale.appLocale)) + "%"
   }
 }
 

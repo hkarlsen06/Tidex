@@ -93,7 +93,7 @@ struct NotificationPreferencesRow: Codable {
 
   /// Parse updated_at string to Date
   var updatedAtDate: Date? {
-    ISO8601DateFormatter().date(from: updated_at)
+    FormatterCache.iso8601Formatter().date(from: updated_at)
   }
 }
 
