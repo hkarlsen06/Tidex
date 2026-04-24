@@ -8,7 +8,14 @@ struct FriendsListOrdering {
   let isLoadingShiftPreviews: Bool
 
   func sortedSharers(_ sharers: [SharedUser]) -> [SharedUser] {
-    sharers.sorted(by: compare)
+    let descriptors = Dictionary(
+      uniqueKeysWithValues: sharers.map { ($0.id, sortDescriptor(for: $0)) })
+    return sharers.sorted { lhs, rhs in
+      compare(
+        lhsDescriptor: descriptors[lhs.id] ?? sortDescriptor(for: lhs),
+        rhsDescriptor: descriptors[rhs.id] ?? sortDescriptor(for: rhs)
+      )
+    }
   }
 
   func visibleSharers(visible: [SharedUser], hidden: [SharedUser]) -> [SharedUser] {
@@ -23,9 +30,24 @@ struct FriendsListOrdering {
     sharer.hidden && hasMessageStatus(for: sharer.id)
   }
 
-  private func compare(_ lhs: SharedUser, _ rhs: SharedUser) -> Bool {
-    let messageStatusLhs = messageStatus(for: lhs.id)
-    let messageStatusRhs = messageStatus(for: rhs.id)
+  private func sortDescriptor(for sharer: SharedUser) -> FriendSortDescriptor {
+    let preview = shiftPreviews[sharer.id]
+
+    return FriendSortDescriptor(
+      displayName: sharer.displayName,
+      messageStatus: messageStatus(for: sharer.id),
+      shiftStatus: isLoadingShiftPreviews ? nil : preview?.status,
+      shiftPriority: isLoadingShiftPreviews ? 3 : shiftStatusPriority(for: preview?.status),
+      shiftTime: isLoadingShiftPreviews ? nil : preview?.shift.flatMap { shiftStartTime(for: $0) }
+    )
+  }
+
+  private func compare(
+    lhsDescriptor: FriendSortDescriptor,
+    rhsDescriptor: FriendSortDescriptor
+  ) -> Bool {
+    let messageStatusLhs = lhsDescriptor.messageStatus
+    let messageStatusRhs = rhsDescriptor.messageStatus
 
     if messageStatusLhs.isPresent != messageStatusRhs.isPresent {
       return messageStatusLhs.isPresent
@@ -54,7 +76,7 @@ struct FriendsListOrdering {
       }
     }
 
-    return compareShiftFallback(lhs, rhs)
+    return compareShiftFallback(lhsDescriptor, rhsDescriptor)
   }
 
   private func messageStatus(for sharerId: String) -> MessageStatusSortDescriptor {
@@ -106,33 +128,22 @@ struct FriendsListOrdering {
   }
 
   /// Falls back to the original shift-based ordering for users without message activity.
-  private func compareShiftFallback(_ lhs: SharedUser, _ rhs: SharedUser) -> Bool {
+  private func compareShiftFallback(_ lhs: FriendSortDescriptor, _ rhs: FriendSortDescriptor)
+    -> Bool
+  {
     guard !isLoadingShiftPreviews && !shiftPreviews.isEmpty else {
       return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
     }
 
-    let previewLhs = shiftPreviews[lhs.id]
-    let previewRhs = shiftPreviews[rhs.id]
-
-    let priorityLhs = shiftStatusPriority(for: previewLhs?.status)
-    let priorityRhs = shiftStatusPriority(for: previewRhs?.status)
-
-    if priorityLhs != priorityRhs {
-      return priorityLhs < priorityRhs
+    if lhs.shiftPriority != rhs.shiftPriority {
+      return lhs.shiftPriority < rhs.shiftPriority
     }
 
-    guard let shiftLhs = previewLhs?.shift, let shiftRhs = previewRhs?.shift else {
+    guard let timeLhs = lhs.shiftTime, let timeRhs = rhs.shiftTime else {
       return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
     }
 
-    let timeLhs = shiftStartTime(for: shiftLhs)
-    let timeRhs = shiftStartTime(for: shiftRhs)
-
-    guard let timeLhs, let timeRhs else {
-      return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
-    }
-
-    switch previewLhs?.status {
+    switch lhs.shiftStatus {
     case .upcoming:
       if timeLhs == timeRhs {
         return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
@@ -177,6 +188,14 @@ private struct MessageStatusSortDescriptor {
   let isTyping: Bool
   let priority: Int
   let timestamp: Date?
+}
+
+private struct FriendSortDescriptor {
+  let displayName: String
+  let messageStatus: MessageStatusSortDescriptor
+  let shiftStatus: ShiftPreviewStatus?
+  let shiftPriority: Int
+  let shiftTime: Date?
 }
 
 enum FriendCalendarAvailability {

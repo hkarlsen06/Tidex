@@ -3252,7 +3252,7 @@ actor LocalStoreActor {
 
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-    let dateFormatter = ISO8601DateFormatter()
+    let dateFormatter = FormatterCache.iso8601Formatter()
 
     existing.monthlyGoal = serverRow.monthly_goal
     existing.monthlyGoalsByMonth = serverRow.monthly_goals_by_month ?? [:]
@@ -3311,7 +3311,7 @@ actor LocalStoreActor {
 
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-    let dateFormatter = ISO8601DateFormatter()
+    let dateFormatter = FormatterCache.iso8601Formatter()
 
     if !localDirtyFields.contains(.monthlyGoal) {
       existing.monthlyGoal = serverRow.monthly_goal
@@ -4042,7 +4042,7 @@ actor LocalStoreActor {
 
     guard let existing = try? modelContext.fetch(descriptor).first else { return }
 
-    let dateFormatter = ISO8601DateFormatter()
+    let dateFormatter = FormatterCache.iso8601Formatter()
 
     existing.monthlyGoal = serverRow.monthly_goal
     existing.monthlyGoalsByMonth = serverRow.monthly_goals_by_month ?? [:]
@@ -4387,13 +4387,13 @@ actor LocalStoreActor {
   /// Save shift previews to cache, replacing existing entries for this viewer
   func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) throws {
     // Delete existing previews for this viewer (only for sharers in this batch)
-    let sharerIds = previews.map { $0.sharerId }
-    for sharerId in sharerIds {
-      let compositeKey = "\(viewerId):\(sharerId)"
+    let sharerIds = Set(previews.map(\.sharerId))
+    if !sharerIds.isEmpty {
       let descriptor = FetchDescriptor<LocalShiftPreview>(
-        predicate: #Predicate { $0.compositeKey == compositeKey }
+        predicate: #Predicate { $0.viewerId == viewerId }
       )
-      for existing in try modelContext.fetch(descriptor) {
+      for existing in try modelContext.fetch(descriptor)
+      where sharerIds.contains(existing.sharerId) {
         modelContext.delete(existing)
       }
     }

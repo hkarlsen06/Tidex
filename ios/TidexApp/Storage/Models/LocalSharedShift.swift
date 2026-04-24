@@ -133,12 +133,7 @@ final class LocalSharedShift {
 
   /// Shift date as ISO string (YYYY-MM-DD)
   var shiftDateString: String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = Date.localTimeZone
-    return formatter.string(from: shiftDate)
+    FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: shiftDate)
   }
 
   // MARK: - Initialization
@@ -212,11 +207,7 @@ final class LocalSharedShift {
     viewerId: String,
     showEarnings: Bool
   ) -> LocalSharedShift {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd"
-    dateFormatter.calendar = Calendar(identifier: .gregorian)
-    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-    dateFormatter.timeZone = Date.localTimeZone
+    let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 
     let shiftDate = dateFormatter.date(from: apiShift.shift_date) ?? Date()
 

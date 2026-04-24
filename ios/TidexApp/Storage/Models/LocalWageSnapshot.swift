@@ -131,12 +131,7 @@ final class LocalWageSnapshot {
   /// from_date as ISO string (YYYY-MM-DD) or nil for baseline
   var fromDateString: String? {
     guard let date = fromDate else { return nil }
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = Date.localTimeZone
-    return formatter.string(from: date)
+    return FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).string(from: date)
   }
 
   /// Whether this is a baseline (undated) snapshot
@@ -376,11 +371,7 @@ extension LocalWageSnapshot {
     serverDeletedAt: Date?,
     context: ModelContext
   ) -> LocalWageSnapshot {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd"
-    dateFormatter.calendar = Calendar(identifier: .gregorian)
-    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-    dateFormatter.timeZone = Date.localTimeZone
+    let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 
     let fromDate = serverRow.from_date.flatMap { dateFormatter.date(from: $0) }
 

@@ -278,7 +278,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     updatedAt: Date,
     revision: Int64
   ) -> UserSettingsServerSnapshot {
-    let dateFormatter = ISO8601DateFormatter()
+    let dateFormatter = FormatterCache.iso8601Formatter()
 
     return UserSettingsServerSnapshot(
       monthlyGoal: row.monthly_goal,

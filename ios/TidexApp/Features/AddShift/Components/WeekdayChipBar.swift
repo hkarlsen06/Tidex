@@ -68,10 +68,7 @@ private struct WeekdayChip: View {
   private var formattedDate: String {
     // Show abbreviated date like "Jan 15"
     guard let date = Date.fromISODateString(anchorDate) else { return anchorDate }
-    let formatter = DateFormatter()
-    formatter.dateFormat = "MMM d"
-    formatter.locale = Locale(identifier: Locale.current.identifier)
-    return formatter.string(from: date)
+    return FormatterCache.abbreviatedMonthDayFormatter(locale: .current).string(from: date)
   }
 
   var body: some View {

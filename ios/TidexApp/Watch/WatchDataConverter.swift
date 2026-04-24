@@ -75,9 +75,9 @@ enum WatchDataConverter {
     guard !shifts.isEmpty else { return nil }
 
     // Find the most relevant shift
-    var activeShift: ShiftRow?
-    var upcomingShift: ShiftRow?
-    var pastShift: ShiftRow?
+    var activeShift: (shift: ShiftRow, date: Date)?
+    var upcomingShift: (shift: ShiftRow, date: Date)?
+    var pastShift: (shift: ShiftRow, date: Date)?
 
     for shift in shifts {
       let shiftDateString = shift.shift_date
@@ -89,34 +89,29 @@ enum WatchDataConverter {
       switch status {
       case .active:
         if activeShift == nil {
-          activeShift = shift
+          activeShift = (shift, shiftDate)
         }
       case .upcoming:
         // Keep the earliest upcoming shift
-        if let existingDate = upcomingShift.flatMap({ parseDate($0.shift_date) }),
-          shiftDate < existingDate
-        {
-          upcomingShift = shift
+        if let existing = upcomingShift, shiftDate < existing.date {
+          upcomingShift = (shift, shiftDate)
         } else if upcomingShift == nil {
-          upcomingShift = shift
+          upcomingShift = (shift, shiftDate)
         }
       case .past:
         // Keep the most recent past shift
-        if let existingDate = pastShift.flatMap({ parseDate($0.shift_date) }),
-          shiftDate > existingDate
-        {
-          pastShift = shift
+        if let existing = pastShift, shiftDate > existing.date {
+          pastShift = (shift, shiftDate)
         } else if pastShift == nil {
-          pastShift = shift
+          pastShift = (shift, shiftDate)
         }
       }
     }
 
     // Priority: active > upcoming > past
-    let selectedShift = activeShift ?? upcomingShift ?? pastShift
-    guard let shift = selectedShift,
-      let shiftDate = parseDate(shift.shift_date)
-    else { return nil }
+    guard let selectedShift = activeShift ?? upcomingShift ?? pastShift else { return nil }
+    let shift = selectedShift.shift
+    let shiftDate = selectedShift.date
 
     let status = determineShiftStatus(
       shiftDate: shiftDate, startTime: shift.start_time, endTime: shift.end_time, now: now)
@@ -396,10 +391,7 @@ enum WatchDataConverter {
 
   /// Parse a date string in "YYYY-MM-DD" format
   private static func parseDate(_ dateString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    return formatter.date(from: dateString)
+    FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone).date(from: dateString)
   }
 
   /// Determine the status of a shift based on current time

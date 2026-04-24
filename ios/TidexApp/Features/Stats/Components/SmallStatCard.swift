@@ -50,12 +50,7 @@ struct HoursStatCard: View {
   }
 
   private func formatHours(_ hours: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 0
-    formatter.maximumFractionDigits = 1
-    formatter.locale = Locale.appLocale
-    return formatter.string(from: NSNumber(value: hours)) ?? "\(Int(hours))"
+    hours.formatted(.number.precision(.fractionLength(0...1)).locale(Locale.appLocale))
   }
 }
 

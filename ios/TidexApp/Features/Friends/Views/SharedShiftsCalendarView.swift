@@ -41,108 +41,97 @@ struct SharedShiftsCalendarView: View {
     let bottomColor: Color
   }
 
-  // MARK: - Computed Data
+  private struct CalendarMetrics {
+    let earningsByDate: [String: Double]
+    let hoursByDate: [String: HoursData]
+    let shiftsByDate: [String: [ShiftWithComputations]]
+    let dayJobTimeColorsByDate: [String: DayJobTimeColors]
+    let hasMultipleActiveJobs: Bool
+    let monthlyTotals: (net: Double, gross: Double)
+    let hasTaxEnabled: Bool
+    let todayISO: String
+  }
 
-  /// Earnings by ISO date string
-  private var earningsByDate: [String: Double] {
-    var result: [String: Double] = [:]
+  private var calendarMetrics: CalendarMetrics {
+    let jobsById = Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
+    let defaultJobId = jobs.first(where: { $0.is_default == true })?.id
+    let hasMultipleActiveJobs = jobs.count > 1
+    var earningsByDate: [String: Double] = [:]
+    var shiftsByDate: [String: [ShiftWithComputations]] = [:]
+    var monthlyGross = 0.0
+    var monthlyNet = 0.0
+    var hasTaxEnabled = false
+
     for shift in shifts {
       let net = shift.taxEnabled ? shift.netPay : shift.grossPay
-      result[shift.shiftDate, default: 0] += net
+      earningsByDate[shift.shiftDate, default: 0] += net
+      shiftsByDate[shift.shiftDate, default: []].append(shift)
+
+      guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
+      let components = calendar.dateComponents([.year, .month], from: date)
+      guard components.year == year && components.month == month else { continue }
+
+      monthlyGross += shift.grossPay
+      monthlyNet += net
+      hasTaxEnabled = hasTaxEnabled || shift.taxEnabled
     }
-    return result
-  }
 
-  /// Hours by ISO date string
-  private var hoursByDate: [String: HoursData] {
-    var shiftsByDateDict: [String: [ShiftWithComputations]] = [:]
-    for shift in shifts {
-      shiftsByDateDict[shift.shiftDate, default: []].append(shift)
-    }
+    var hoursByDate: [String: HoursData] = [:]
+    var dayJobTimeColorsByDate: [String: DayJobTimeColors] = [:]
 
-    var result: [String: HoursData] = [:]
-    for (date, shiftsOnDate) in shiftsByDateDict {
-      let sorted = shiftsOnDate.sorted { $0.startTime < $1.startTime }
-      let earliestStart = sorted.first?.startTime ?? ""
-      let latestEnd = sorted.map(\.endTime).max() ?? ""
+    for (date, shiftsOnDate) in shiftsByDate {
+      var earliestStart: String?
+      var latestEnd: String?
+      var earliestShift: ShiftWithComputations?
+      var earliestStartMinutes = Int.max
+      var crossesMidnight = false
 
-      let crossesMidnight = shiftsOnDate.contains { shift in
+      for shift in shiftsOnDate {
+        if earliestStart == nil || shift.startTime < (earliestStart ?? "") {
+          earliestStart = shift.startTime
+        }
+        if latestEnd == nil || shift.endTime > (latestEnd ?? "") {
+          latestEnd = shift.endTime
+        }
+
         let startMinutes = CalendarGridHelper.timeToMinutes(shift.startTime)
         let endMinutes = CalendarGridHelper.timeToMinutes(shift.endTime)
-        return endMinutes <= startMinutes
+        crossesMidnight = crossesMidnight || endMinutes <= startMinutes
+
+        if startMinutes < earliestStartMinutes {
+          earliestStartMinutes = startMinutes
+          earliestShift = shift
+        }
       }
 
-      result[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
+      hoursByDate[date] = HoursData(
+        start: CalendarGridHelper.formatTime(earliestStart ?? ""),
+        end: CalendarGridHelper.formatTime(latestEnd ?? ""),
         crossesMidnight: crossesMidnight
       )
-    }
-    return result
-  }
 
-  /// Shifts grouped by ISO date string
-  private var shiftsByDate: [String: [ShiftWithComputations]] {
-    var result: [String: [ShiftWithComputations]] = [:]
-    for shift in shifts {
-      result[shift.shiftDate, default: []].append(shift)
-    }
-    return result
-  }
-
-  private var jobsById: [String: SharedJob] {
-    Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
-  }
-
-  private var defaultJobId: String? {
-    jobs.first(where: { $0.is_default == true })?.id
-  }
-
-  private var hasMultipleActiveJobs: Bool {
-    jobs.count > 1
-  }
-
-  private var dayJobTimeColorsByDate: [String: DayJobTimeColors] {
-    guard hasMultipleActiveJobs else { return [:] }
-
-    var result: [String: DayJobTimeColors] = [:]
-
-    for (dateISO, shiftsOnDay) in shiftsByDate where !shiftsOnDay.isEmpty {
-      let sortedShifts = shiftsOnDay.sorted { lhs, rhs in
-        CalendarGridHelper.timeToMinutes(lhs.startTime)
-          < CalendarGridHelper.timeToMinutes(rhs.startTime)
+      if hasMultipleActiveJobs,
+        let earliestShift,
+        let topColor = resolvedJobColor(
+          for: earliestShift,
+          jobsById: jobsById,
+          defaultJobId: defaultJobId
+        )
+      {
+        dayJobTimeColorsByDate[date] = DayJobTimeColors(topColor: topColor, bottomColor: topColor)
       }
-
-      guard let earliestShift = sortedShifts.first else { continue }
-      guard let topColor = resolvedJobColor(for: earliestShift) else { continue }
-
-      result[dateISO] = DayJobTimeColors(topColor: topColor, bottomColor: topColor)
     }
 
-    return result
-  }
-
-  /// Shifts that belong to the committed month (excludes out-of-month padding days)
-  private var shiftsInDisplayedMonth: [ShiftWithComputations] {
-    shifts.filter { shift in
-      guard let date = Date.fromISODateString(shift.shiftDate) else { return false }
-      let components = calendar.dateComponents([.year, .month], from: date)
-      return components.year == year && components.month == month
-    }
-  }
-
-  /// Monthly totals (net and gross)
-  private var monthlyTotals: (net: Double, gross: Double) {
-    let gross = shiftsInDisplayedMonth.reduce(0) { $0 + $1.grossPay }
-    let net = shiftsInDisplayedMonth.reduce(0) {
-      $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay)
-    }
-    return (net: net, gross: gross)
-  }
-
-  /// Whether tax is enabled for any shift
-  private var hasTaxEnabled: Bool {
-    shiftsInDisplayedMonth.contains { $0.taxEnabled }
+    return CalendarMetrics(
+      earningsByDate: earningsByDate,
+      hoursByDate: hoursByDate,
+      shiftsByDate: shiftsByDate,
+      dayJobTimeColorsByDate: dayJobTimeColorsByDate,
+      hasMultipleActiveJobs: hasMultipleActiveJobs,
+      monthlyTotals: (net: monthlyNet, gross: monthlyGross),
+      hasTaxEnabled: hasTaxEnabled,
+      todayISO: todayISO()
+    )
   }
 
   /// Month name
@@ -157,6 +146,8 @@ struct SharedShiftsCalendarView: View {
   // MARK: - Body
 
   var body: some View {
+    let metrics = calendarMetrics
+
     VStack(spacing: 0) {
       if isSuperimposing {
         superimposeLegend
@@ -165,14 +156,14 @@ struct SharedShiftsCalendarView: View {
       }
 
       // Header: Month name + Year and Total
-      headerRow
+      headerRow(metrics: metrics)
 
       // Weekday headers
       CalendarWeekdayHeader()
         .padding(.bottom, Spacing.xs)
 
       // Calendar grid
-      calendarGrid
+      calendarGrid(metrics: metrics)
         .padding(.bottom, Spacing.sm)
 
       // View mode toggle (hours/money)
@@ -188,23 +179,23 @@ struct SharedShiftsCalendarView: View {
 
   // MARK: - Header Row
 
-  private var headerRow: some View {
+  private func headerRow(metrics: CalendarMetrics) -> some View {
     CalendarHeaderRow(
       monthName: monthName,
       year: year,
       selectionCount: nil,
       phase: phase,
-      totals: headerTotals,
+      totals: headerTotals(metrics: metrics),
       trailingAccessory: nil
     )
     .userCurrency(currency)
   }
 
-  private var headerTotals: CalendarHeaderTotals? {
+  private func headerTotals(metrics: CalendarMetrics) -> CalendarHeaderTotals? {
     guard showEarnings else { return nil }
 
-    let displayTotals = monthlyTotals
-    let showTax = hasTaxEnabled
+    let displayTotals = metrics.monthlyTotals
+    let showTax = metrics.hasTaxEnabled
     let displayAmount = showTax ? displayTotals.net : displayTotals.gross
     let primaryAmount = displayTotals.gross > 0 ? displayAmount : nil
     let secondaryAmount = (showTax && displayTotals.gross > 0) ? displayTotals.gross : nil
@@ -257,11 +248,11 @@ struct SharedShiftsCalendarView: View {
   // MARK: - Calendar Grid
 
   @ViewBuilder
-  private var calendarGrid: some View {
+  private func calendarGrid(metrics: CalendarMetrics) -> some View {
     let days = CalendarGridHelper.daysInMonth(year: year, month: month)
 
     let grid = CalendarMonthGrid(days: days) { dayInfo in
-      calendarDayView(for: dayInfo)
+      calendarDayView(for: dayInfo, metrics: metrics)
     }
 
     if let phase {
@@ -275,15 +266,18 @@ struct SharedShiftsCalendarView: View {
   /// Build the view for a single calendar day
   /// Extracted to help Swift's type inference
   @ViewBuilder
-  private func calendarDayView(for dayInfo: CalendarDayInfo) -> some View {
-    let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
-    let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
+  private func calendarDayView(
+    for dayInfo: CalendarDayInfo,
+    metrics: CalendarMetrics
+  ) -> some View {
+    let shiftsOnDay = dayInfo.dateISO.flatMap { metrics.shiftsByDate[$0] } ?? []
+    let dayJobTimeColors = dayInfo.dateISO.flatMap { metrics.dayJobTimeColorsByDate[$0] }
     let shouldColorJobMetrics =
-      hasMultipleActiveJobs
+      metrics.hasMultipleActiveJobs
       && !dayInfo.isOutsideMonth
       && !shiftsOnDay.isEmpty
       && dayJobTimeColors != nil
-    let isToday = dayInfo.dateISO == todayISO()
+    let isToday = dayInfo.dateISO == metrics.todayISO
     let isHighlighted = isDateHighlighted(dayInfo: dayInfo, shiftsOnDay: shiftsOnDay)
 
     // Show overlap indicator whenever both user and friend have shifts.
@@ -315,7 +309,8 @@ struct SharedShiftsCalendarView: View {
           content: cellContent(
             for: dayInfo,
             dayJobTimeColors: dayJobTimeColors,
-            shouldColorJobMetrics: shouldColorJobMetrics
+            shouldColorJobMetrics: shouldColorJobMetrics,
+            metrics: metrics
           ),
           showOverlapIndicator: showOverlap,
           showSingleUserIndicator: showSingleUserIndicator,
@@ -324,7 +319,7 @@ struct SharedShiftsCalendarView: View {
       }
     }
     .onTapGesture {
-      handleDayTap(dayInfo: dayInfo)
+      handleDayTap(dayInfo: dayInfo, metrics: metrics)
     }
   }
 
@@ -344,9 +339,9 @@ struct SharedShiftsCalendarView: View {
   }
 
   /// Handle tap on a calendar day
-  private func handleDayTap(dayInfo: CalendarDayInfo) {
+  private func handleDayTap(dayInfo: CalendarDayInfo, metrics: CalendarMetrics) {
     guard !dayInfo.isOutsideMonth, let dateISO = dayInfo.dateISO else { return }
-    let shiftsForDay = shiftsByDate[dateISO] ?? []
+    let shiftsForDay = metrics.shiftsByDate[dateISO] ?? []
     if let firstShift = shiftsForDay.first {
       onShiftTapped?(firstShift)
     }
@@ -376,7 +371,8 @@ struct SharedShiftsCalendarView: View {
   private func cellContent(
     for dayInfo: CalendarDayInfo,
     dayJobTimeColors: DayJobTimeColors?,
-    shouldColorJobMetrics: Bool
+    shouldColorJobMetrics: Bool,
+    metrics: CalendarMetrics
   ) -> CalendarCellContent {
     guard let dateISO = dayInfo.dateISO else { return .empty }
     let effectiveViewMode = showEarnings ? viewMode : .hours
@@ -393,12 +389,12 @@ struct SharedShiftsCalendarView: View {
     }
 
     // Otherwise show friend's shifts (normal behavior)
-    if effectiveViewMode == .money, let amount = earningsByDate[dateISO] {
+    if effectiveViewMode == .money, let amount = metrics.earningsByDate[dateISO] {
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .earnings(amount, color: dayJobTimeColors.topColor)
       }
       return .earnings(amount)
-    } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
+    } else if effectiveViewMode == .hours, let hoursData = metrics.hoursByDate[dateISO] {
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .hours(
           hoursData,
@@ -412,7 +408,11 @@ struct SharedShiftsCalendarView: View {
     return .empty
   }
 
-  private func resolvedJobColor(for shift: ShiftWithComputations) -> Color? {
+  private func resolvedJobColor(
+    for shift: ShiftWithComputations,
+    jobsById: [String: SharedJob],
+    defaultJobId: String?
+  ) -> Color? {
     let effectiveJobId = shift.shift.job_id ?? defaultJobId
     guard
       let effectiveJobId,

@@ -8,6 +8,7 @@ import WidgetKit
 struct ShiftCalculator {
   let shift: WatchShiftDTO
   let calendar: Calendar
+  private let cachedDateRange: (start: Date, end: Date)?
 
   /// Cached date formatter for parsing shift dates
   private static let dateFormatter: DateFormatter = {
@@ -21,6 +22,7 @@ struct ShiftCalculator {
   init(shift: WatchShiftDTO, calendar: Calendar = .current) {
     self.shift = shift
     self.calendar = calendar
+    self.cachedDateRange = Self.makeDateRange(for: shift, calendar: calendar)
   }
 
   // MARK: - Date Range Calculation
@@ -28,7 +30,18 @@ struct ShiftCalculator {
   /// Calculates the start and end dates for the shift
   /// - Returns: Tuple of (start, end) dates, or nil if parsing fails
   func dateRange() -> (start: Date, end: Date)? {
-    guard let shiftDate = Self.dateFormatter.date(from: shift.shiftDate) else {
+    cachedDateRange
+  }
+
+  fileprivate static func parseShiftDate(_ dateString: String) -> Date? {
+    dateFormatter.date(from: dateString)
+  }
+
+  private static func makeDateRange(
+    for shift: WatchShiftDTO,
+    calendar: Calendar
+  ) -> (start: Date, end: Date)? {
+    guard let shiftDate = parseShiftDate(shift.shiftDate) else {
       return nil
     }
 
@@ -112,13 +125,8 @@ struct ShiftCalculator {
       return shift.endTime
     }
 
-    // Future shift - calculate days remaining
-    guard let shiftDate = Self.dateFormatter.date(from: shift.shiftDate) else {
-      return shift.startTime
-    }
-
     let todayMidnight = calendar.startOfDay(for: date)
-    let shiftMidnight = calendar.startOfDay(for: shiftDate)
+    let shiftMidnight = calendar.startOfDay(for: range.start)
     let daysRemaining =
       calendar.dateComponents([.day], from: todayMidnight, to: shiftMidnight).day ?? 0
 
@@ -355,6 +363,13 @@ struct ShiftComplicationView: View {
   /// Use live wall-clock time during rendering to reduce stale UI when timeline refresh is delayed.
   private var renderDate: Date { Date() }
 
+  private static let weekdayFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.locale = Locale.current
+    formatter.setLocalizedDateFormatFromTemplate("EEE")
+    return formatter
+  }()
+
   /// Cached calculator for the current shift - computed once per render
   private var calculator: ShiftCalculator? {
     guard let shift = entry.shift else { return nil }
@@ -386,17 +401,19 @@ struct ShiftComplicationView: View {
 
   @ViewBuilder
   private var accessoryCornerView: some View {
+    let now = renderDate
+    let calculator = calculator
     if let shift = entry.shift,
       let calculator,
       let range = calculator.dateRange(),
-      renderDate < range.end
+      now < range.end
     {
-      Text(cornerTopCurvedText(shift: shift, range: range))
+      Text(cornerTopCurvedText(shift: shift, range: range, at: now))
         .widgetCurvesContent()  // <- this makes it follow the corner curve
         .font(.caption2)
         .monospacedDigit()
         .widgetLabel {
-          relativeCountdownText(range: range)
+          relativeCountdownText(range: range, at: now)
         }
     } else {
       Text("--")
@@ -408,22 +425,24 @@ struct ShiftComplicationView: View {
 
   @ViewBuilder
   private var accessoryCircularView: some View {
+    let now = renderDate
+    let calculator = calculator
     ZStack {
       AccessoryWidgetBackground()
 
-      if let calculator = calculator,
-        calculator.isActive(at: renderDate),
-        let progress = calculator.progress(at: renderDate)
+      if let calculator,
+        calculator.isActive(at: now),
+        let progress = calculator.progress(at: now)
       {
         activeShiftRing(progress: progress)
       }
 
-      if let shift = entry.shift, let calculator = calculator {
+      if let shift = entry.shift, let calculator {
         VStack(spacing: 2) {
           Text(shortWeekdayText(for: shift))
             .font(.caption2)
             .foregroundStyle(.secondary)
-          Text(calculator.highlightedText(at: renderDate))
+          Text(calculator.highlightedText(at: now))
             .font(.caption)
             .fontWeight(.semibold)
             .multilineTextAlignment(.center)
@@ -440,16 +459,18 @@ struct ShiftComplicationView: View {
 
   @ViewBuilder
   private var accessoryRectangularView: some View {
+    let now = renderDate
+    let calculator = calculator
     if let shift = entry.shift,
-      let calculator = calculator,
+      let calculator,
       let range = calculator.dateRange()
     {
-      let isActive = calculator.isActive(at: renderDate)
-      let progress = calculator.progress(at: renderDate) ?? 0
+      let isActive = calculator.isActive(at: now)
+      let progress = calculator.progress(at: now) ?? 0
 
       VStack(alignment: .leading, spacing: 3) {
         HStack(spacing: 6) {
-          let effectiveStatus = displayStatus(for: range)
+          let effectiveStatus = displayStatus(for: range, at: now)
           Label(
             effectiveStatus == .active ? activeTitle : nextShiftTitle,
             systemImage: statusIcon(for: effectiveStatus)
@@ -460,7 +481,7 @@ struct ShiftComplicationView: View {
 
           Spacer(minLength: 4)
 
-          Text(rectangularDayLabel(for: shift))
+          Text(rectangularDayLabel(for: shift, at: now))
             .font(.caption2)
             .foregroundStyle(.secondary)
             .lineLimit(1)
@@ -488,7 +509,7 @@ struct ShiftComplicationView: View {
             .font(.caption2)
             .foregroundStyle(.secondary)
 
-          relativeCountdownText(range: range)
+          relativeCountdownText(range: range, at: now)
             .font(.caption2)
             .lineLimit(1)
 
@@ -510,8 +531,10 @@ struct ShiftComplicationView: View {
 
   @ViewBuilder
   private var accessoryInlineView: some View {
-    if let calculator = calculator {
-      Text("\(shiftLabel) \(calculator.highlightedText(at: renderDate))")
+    let now = renderDate
+    let calculator = calculator
+    if let calculator {
+      Text("\(shiftLabel) \(calculator.highlightedText(at: now))")
     } else {
       Text(noShiftsTitle)
     }
@@ -531,19 +554,11 @@ struct ShiftComplicationView: View {
   }
 
   private func shortWeekdayText(for shift: WatchShiftDTO) -> String {
-    let parser = DateFormatter()
-    parser.dateFormat = "yyyy-MM-dd"
-    parser.locale = Locale(identifier: "en_US_POSIX")
-    parser.timeZone = TimeZone.current
-
-    guard let shiftDate = parser.date(from: shift.shiftDate) else {
+    guard let shiftDate = ShiftCalculator.parseShiftDate(shift.shiftDate) else {
       return "--"
     }
 
-    let formatter = DateFormatter()
-    formatter.locale = Locale.current
-    formatter.setLocalizedDateFormatFromTemplate("EEE")
-    return formatter.string(from: shiftDate).uppercased()
+    return Self.weekdayFormatter.string(from: shiftDate).uppercased()
   }
 
   private var nextShiftTitle: String {
@@ -562,18 +577,13 @@ struct ShiftComplicationView: View {
     String(localized: .watchShift)
   }
 
-  private func rectangularDayLabel(for shift: WatchShiftDTO) -> String {
-    let parser = DateFormatter()
-    parser.dateFormat = "yyyy-MM-dd"
-    parser.locale = Locale(identifier: "en_US_POSIX")
-    parser.timeZone = TimeZone.current
-
-    guard let shiftDate = parser.date(from: shift.shiftDate) else {
+  private func rectangularDayLabel(for shift: WatchShiftDTO, at date: Date) -> String {
+    guard let shiftDate = ShiftCalculator.parseShiftDate(shift.shiftDate) else {
       return shortWeekdayText(for: shift)
     }
 
     let calendar = Calendar.current
-    let nowStart = calendar.startOfDay(for: renderDate)
+    let nowStart = calendar.startOfDay(for: date)
     let shiftStart = calendar.startOfDay(for: shiftDate)
     let dayDiff = calendar.dateComponents([.day], from: nowStart, to: shiftStart).day ?? 0
 
@@ -587,8 +597,8 @@ struct ShiftComplicationView: View {
   }
 
   @ViewBuilder
-  private func relativeCountdownText(range: (start: Date, end: Date)) -> some View {
-    if let targetDate = countdownTargetDate(for: range) {
+  private func relativeCountdownText(range: (start: Date, end: Date), at date: Date) -> some View {
+    if let targetDate = countdownTargetDate(for: range, at: date) {
       // Match Live Activity timer rendering so the watch complication and mirrored
       // Live Activity advance on the same second boundary.
       Text(targetDate, style: .timer)
@@ -622,9 +632,12 @@ struct ShiftComplicationView: View {
     .offset(y: -1)
   }
 
-  private func cornerTopCurvedText(shift: WatchShiftDTO, range: (start: Date, end: Date)) -> String
-  {
-    switch displayState(for: range) {
+  private func cornerTopCurvedText(
+    shift: WatchShiftDTO,
+    range: (start: Date, end: Date),
+    at date: Date
+  ) -> String {
+    switch displayState(for: range, at: date) {
     case .upcoming:
       return shift.startTime
     case .active, .ended:
@@ -632,18 +645,21 @@ struct ShiftComplicationView: View {
     }
   }
 
-  private func displayState(for range: (start: Date, end: Date)) -> ShiftDisplayState {
-    if renderDate < range.start {
+  private func displayState(
+    for range: (start: Date, end: Date),
+    at date: Date
+  ) -> ShiftDisplayState {
+    if date < range.start {
       return .upcoming
     }
-    if renderDate < range.end {
+    if date < range.end {
       return .active
     }
     return .ended
   }
 
-  private func countdownTargetDate(for range: (start: Date, end: Date)) -> Date? {
-    switch displayState(for: range) {
+  private func countdownTargetDate(for range: (start: Date, end: Date), at date: Date) -> Date? {
+    switch displayState(for: range, at: date) {
     case .upcoming:
       return range.start
     case .active:
@@ -653,8 +669,11 @@ struct ShiftComplicationView: View {
     }
   }
 
-  private func displayStatus(for range: (start: Date, end: Date)) -> ShiftPreviewStatus {
-    switch displayState(for: range) {
+  private func displayStatus(
+    for range: (start: Date, end: Date),
+    at date: Date
+  ) -> ShiftPreviewStatus {
+    switch displayState(for: range, at: date) {
     case .upcoming:
       return .upcoming
     case .active:

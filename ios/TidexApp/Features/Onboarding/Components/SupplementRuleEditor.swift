@@ -602,8 +602,7 @@ private struct TimePickerField: View {
     self.onChange = onChange
 
     // Parse initial time
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
+    let formatter = FormatterCache.hourMinuteFormatter(timeZone: Date.localTimeZone)
     if let date = formatter.date(from: time.wrappedValue) {
       self._selectedDate = State(initialValue: date)
     }
@@ -623,8 +622,7 @@ private struct TimePickerField: View {
       .datePickerStyle(.compact)
       .labelsHidden()
       .onChange(of: selectedDate) { _, newValue in
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
+        let formatter = FormatterCache.hourMinuteFormatter(timeZone: Date.localTimeZone)
         time = formatter.string(from: newValue)
         onChange()
       }
