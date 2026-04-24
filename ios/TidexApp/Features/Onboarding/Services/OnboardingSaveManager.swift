@@ -29,6 +29,10 @@ final class OnboardingSaveManager: ObservableObject {
     case saving
     case success
     case error
+
+    var allowsCompletion: Bool {
+      self == .success
+    }
   }
 
   // MARK: - Dependencies
@@ -60,9 +64,7 @@ final class OnboardingSaveManager: ObservableObject {
     data: OnboardingData,
     completionMode: OnboardingCompletionMode = .fullSetup
   ) async {
-    status = .saving
-    errorMessage = nil
-    lastCompletionMode = completionMode
+    prepareForSave(completionMode: completionMode)
 
     logger.info(
       "Starting onboarding save for user: \(userId), mode: \(String(describing: completionMode))")
@@ -108,6 +110,13 @@ final class OnboardingSaveManager: ObservableObject {
       errorMessage = error.localizedDescription
       logger.error("Failed to save onboarding data: \(error.localizedDescription)")
     }
+  }
+
+  /// Move the state machine into the pending save state before the success screen is shown.
+  func prepareForSave(completionMode: OnboardingCompletionMode = .fullSetup) {
+    status = .saving
+    errorMessage = nil
+    lastCompletionMode = completionMode
   }
 
   /// Retry saving after an error

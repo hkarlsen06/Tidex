@@ -27,6 +27,52 @@ final class EventReminderPlannerTests: XCTestCase {
     )
   }
 
+  func testTimedEventAcceptsDatabaseTimeWithSeconds() {
+    let referenceDate = Date.fromDateAndTime("2026-03-10", time: "08:00") ?? Date()
+    let event = EventRow(
+      id: "event-seconds",
+      user_id: "user-1",
+      start_date: "2026-03-10",
+      end_date: "2026-03-10",
+      is_all_day: false,
+      start_time: "10:00:00",
+      end_time: "11:00:00",
+      note: "Doctor",
+      notification_minutes_array: [60]
+    )
+
+    let schedules = EventReminderPlanner.reminderSchedules(for: event, referenceDate: referenceDate)
+
+    XCTAssertEqual(schedules.count, 1)
+    XCTAssertEqual(
+      schedules.first?.fireDate,
+      Date.fromDateAndTime("2026-03-10", time: "09:00")
+    )
+  }
+
+  func testInvalidTimedEventDoesNotScheduleAtMidnight() {
+    let referenceDate = Date.fromDateAndTime("2026-03-10", time: "08:00") ?? Date()
+    let event = EventRow(
+      id: "event-invalid-time",
+      user_id: "user-1",
+      start_date: "2026-03-10",
+      end_date: "2026-03-10",
+      is_all_day: false,
+      start_time: "invalid",
+      end_time: "11:00",
+      note: "Doctor",
+      notification_minutes_array: [60]
+    )
+
+    let schedules = EventReminderPlanner.reminderSchedules(for: event, referenceDate: referenceDate)
+
+    XCTAssertTrue(schedules.isEmpty)
+  }
+
+  func testInvalidDateDoesNotNormalizeIntoDifferentDay() {
+    XCTAssertNil(Date.fromDateAndTime("2026-02-31", time: "09:00"))
+  }
+
   func testAllDayEventUsesAnchorTime() {
     let referenceDate = Date.fromDateAndTime("2026-03-10", time: "07:00") ?? Date()
     let event = EventRow(
@@ -97,7 +143,7 @@ final class EventReminderPlannerTests: XCTestCase {
   }
 
   func testPrioritizedSchedulesCapsToEarliestSixteenAcrossEvents() {
-    let referenceDate = Date.fromDateAndTime("2026-03-10", time: "08:00") ?? Date()
+    let referenceDate = Date.fromDateAndTime("2026-03-10", time: "07:00") ?? Date()
     let events = (0..<17).map { index in
       EventRow(
         id: "event-\(index)",
@@ -105,8 +151,8 @@ final class EventReminderPlannerTests: XCTestCase {
         start_date: "2026-03-10",
         end_date: "2026-03-10",
         is_all_day: false,
-        start_time: String(format: "%02d:00", 9 + index),
-        end_time: String(format: "%02d:00", 10 + index),
+        start_time: String(format: "09:%02d", index),
+        end_time: String(format: "10:%02d", index),
         note: "Event \(index)",
         notification_minutes_array: [60]
       )

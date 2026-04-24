@@ -20,6 +20,7 @@ struct RecurringShiftProjector {
     limit: Int? = nil
   ) -> [String] {
     guard !selectedDays.isEmpty else { return [] }
+    guard repeatInterval >= 0 else { return [] }
 
     let calendar = Calendar.current
     var dates: [String] = []
@@ -92,6 +93,7 @@ struct RecurringShiftProjector {
     endCondition: EndCondition?
   ) -> [String] {
     guard !selectedDays.isEmpty else { return [] }
+    guard repeatInterval >= 0 else { return [] }
 
     let calendar = Calendar.current
     var dates: [String] = []

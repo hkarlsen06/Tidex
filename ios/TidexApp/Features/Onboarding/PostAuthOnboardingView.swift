@@ -375,6 +375,7 @@ struct PostAuthOnboardingView: View {
     completionMode: OnboardingCompletionMode = .fullSetup
   ) {
     successCompletionMode = completionMode
+    saveManager.prepareForSave(completionMode: completionMode)
 
     // Navigate to success screen first
     navigateTo(.success)
