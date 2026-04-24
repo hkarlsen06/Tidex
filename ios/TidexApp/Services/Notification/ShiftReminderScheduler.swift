@@ -4,6 +4,112 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftReminderScheduler")
 
+struct ShiftReminderSchedule: Equatable {
+  let shiftId: String
+  let minutesBefore: Int
+  let fireDate: Date
+}
+
+struct PrioritizedShiftReminder: Equatable {
+  let shift: StoredShift
+  let schedule: ShiftReminderSchedule
+}
+
+enum ShiftReminderPlanner {
+  /// Maximum scheduled notifications (iOS limit is 64)
+  static let maxScheduledNotifications = 16
+
+  /// How many days ahead to schedule all reminders (full coverage)
+  private static let fullCoverageDays = 14
+
+  /// How many days ahead to schedule single reminders (reduced coverage)
+  private static let reducedCoverageDays = 30
+
+  static func normalizedReminderMinutes(_ minutes: [Int]) -> [Int] {
+    Array(Set(minutes.filter { $0 >= 0 })).sorted(by: >)
+  }
+
+  static func shiftStartDate(for shift: StoredShift) -> Date? {
+    Date.fromDateAndTime(shift.shiftDate, time: shift.startTime)
+  }
+
+  static func reminderSchedules(
+    for shift: StoredShift,
+    reminderMinutes: [Int],
+    referenceDate: Date = Date()
+  ) -> [ShiftReminderSchedule] {
+    guard let shiftStart = shiftStartDate(for: shift), shiftStart > referenceDate else {
+      return []
+    }
+
+    let calendar = Calendar.current
+    let daysUntil = calendar.dateComponents([.day], from: referenceDate, to: shiftStart).day ?? 0
+    let normalizedMinutes = normalizedReminderMinutes(reminderMinutes)
+
+    let reminderTimesToUse: [Int]
+    if daysUntil <= fullCoverageDays {
+      reminderTimesToUse = normalizedMinutes
+    } else if daysUntil <= reducedCoverageDays {
+      reminderTimesToUse = normalizedMinutes.last.map { [$0] } ?? []
+    } else {
+      reminderTimesToUse = []
+    }
+
+    return
+      reminderTimesToUse
+      .compactMap { minutesBefore in
+        guard
+          let fireDate = calendar.date(byAdding: .minute, value: -minutesBefore, to: shiftStart),
+          fireDate > referenceDate
+        else {
+          return nil
+        }
+
+        return ShiftReminderSchedule(
+          shiftId: shift.shiftId,
+          minutesBefore: minutesBefore,
+          fireDate: fireDate
+        )
+      }
+      .sorted { lhs, rhs in
+        if lhs.fireDate == rhs.fireDate {
+          return lhs.minutesBefore < rhs.minutesBefore
+        }
+        return lhs.fireDate < rhs.fireDate
+      }
+  }
+
+  static func prioritizedSchedules(
+    for shifts: [StoredShift],
+    reminderMinutes: [Int],
+    referenceDate: Date = Date(),
+    limit: Int = maxScheduledNotifications
+  ) -> [PrioritizedShiftReminder] {
+    Array(
+      shifts
+        .flatMap { shift in
+          reminderSchedules(
+            for: shift,
+            reminderMinutes: reminderMinutes,
+            referenceDate: referenceDate
+          ).map {
+            PrioritizedShiftReminder(shift: shift, schedule: $0)
+          }
+        }
+        .sorted { lhs, rhs in
+          if lhs.schedule.fireDate == rhs.schedule.fireDate {
+            if lhs.shift.shiftId == rhs.shift.shiftId {
+              return lhs.schedule.minutesBefore < rhs.schedule.minutesBefore
+            }
+            return lhs.shift.shiftId < rhs.shift.shiftId
+          }
+          return lhs.schedule.fireDate < rhs.schedule.fireDate
+        }
+        .prefix(limit)
+    )
+  }
+}
+
 // MARK: - Shift Reminder Scheduler
 
 /// Schedules local notifications for shift reminders
@@ -14,15 +120,6 @@ final class ShiftReminderScheduler {
 
   /// Notification identifier prefix
   private static let identifierPrefix = "shift-reminder-"
-
-  /// Maximum scheduled notifications (iOS limit is 64)
-  private static let maxScheduledNotifications = 16
-
-  /// How many days ahead to schedule all reminders (full coverage)
-  private static let fullCoverageDays = 14
-
-  /// How many days ahead to schedule single reminders (reduced coverage)
-  private static let reducedCoverageDays = 30
 
   private init() {}
 
@@ -40,6 +137,10 @@ final class ShiftReminderScheduler {
     let center = UNUserNotificationCenter.current()
     let settings = await center.notificationSettings()
 
+    // Always clear old requests before returning; permission can be revoked while stale
+    // notifications are still pending and may fire later if permission is re-enabled.
+    await cancelAllReminders()
+
     guard
       settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
         || settings.authorizationStatus == .ephemeral
@@ -55,19 +156,14 @@ final class ShiftReminderScheduler {
     // Check if reminders are enabled
     guard preferences.shiftRemindersEnabled else {
       logger.info("Shift reminders disabled, cancelling all existing reminders")
-      await cancelAllReminders()
       return
     }
 
     let reminderMinutes = preferences.shiftReminderMinutesArray
     guard !reminderMinutes.isEmpty else {
       logger.info("No reminder times configured, skipping scheduling")
-      await cancelAllReminders()
       return
     }
-
-    // Cancel existing reminders first
-    await cancelAllReminders()
 
     // Use provided shifts or read from widget storage
     let storedShifts: [StoredShift]
@@ -80,66 +176,27 @@ final class ShiftReminderScheduler {
       return
     }
 
-    // Filter to future shifts only
-    let now = Date()
-    let calendar = Calendar.current
-    let futureShifts = storedShifts.filter { shift in
-      guard let shiftStart = parseShiftStart(shift) else { return false }
-      return shiftStart > now
-    }
+    let schedules = ShiftReminderPlanner.prioritizedSchedules(
+      for: storedShifts,
+      reminderMinutes: reminderMinutes
+    )
 
-    if futureShifts.isEmpty {
+    if schedules.isEmpty {
       logger.info("No future shifts to schedule reminders for")
       return
     }
 
-    // Schedule reminders with iOS limit in mind
     var scheduledCount = 0
-    let maxNotifications = Self.maxScheduledNotifications
 
-    for shift in futureShifts {
-      guard let shiftStart = parseShiftStart(shift) else { continue }
+    for entry in schedules {
+      let scheduled = await scheduleNotification(
+        for: entry.shift,
+        fireDate: entry.schedule.fireDate,
+        minutesBefore: entry.schedule.minutesBefore
+      )
 
-      // Calculate days until shift
-      let daysUntil = calendar.dateComponents([.day], from: now, to: shiftStart).day ?? 0
-
-      // Determine which reminder times to use based on how far out the shift is
-      let reminderTimesToUse: [Int]
-      if daysUntil <= Self.fullCoverageDays {
-        // Full coverage: all configured reminder times
-        reminderTimesToUse = reminderMinutes
-      } else if daysUntil <= Self.reducedCoverageDays {
-        // Reduced coverage: only first (shortest) reminder time
-        reminderTimesToUse = Array(reminderMinutes.prefix(1))
-      } else {
-        // Skip shifts too far in the future
-        continue
-      }
-
-      for minutes in reminderTimesToUse {
-        // Check if we've hit the limit
-        guard scheduledCount < maxNotifications else {
-          logger.info("Reached max scheduled notifications (\(maxNotifications)), stopping")
-          return
-        }
-
-        // Calculate notification fire date
-        guard let fireDate = calendar.date(byAdding: .minute, value: -minutes, to: shiftStart),
-          fireDate > now
-        else {
-          continue
-        }
-
-        // Schedule the notification
-        let scheduled = await scheduleNotification(
-          for: shift,
-          fireDate: fireDate,
-          minutesBefore: minutes
-        )
-
-        if scheduled {
-          scheduledCount += 1
-        }
+      if scheduled {
+        scheduledCount += 1
       }
     }
 
@@ -326,15 +383,6 @@ final class ShiftReminderScheduler {
 
     // Mixed hours and minutes
     return "\(hours) \(String(localized: .commonHoursShort)) \(mins) min"
-  }
-
-  /// Parse shift start date from StoredShift
-  private func parseShiftStart(_ shift: StoredShift) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd HH:mm"
-    formatter.timeZone = TimeZone.current
-
-    return formatter.date(from: "\(shift.shiftDate) \(shift.startTime)")
   }
 
   /// Get stored shifts from App Group UserDefaults

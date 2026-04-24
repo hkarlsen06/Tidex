@@ -81,8 +81,8 @@ struct SuccessScreen: View {
               onComplete()
             }
           )
-          .disabled(saveStatus == .saving)
-          .opacity(saveStatus == .saving ? 0.5 : 1)
+          .disabled(!saveStatus.allowsCompletion)
+          .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
 
           // Retry button (only on error)
           if saveStatus == .error, let onRetry = onRetry {

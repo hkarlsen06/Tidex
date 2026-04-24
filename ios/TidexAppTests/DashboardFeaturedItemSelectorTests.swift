@@ -85,6 +85,28 @@ final class DashboardFeaturedItemSelectorTests: XCTestCase {
     XCTAssertFalse(selection.isBestShift)
   }
 
+  func testSelectCurrentMonthIgnoresShiftWithMalformedTime() throws {
+    let malformedShift = TestFixtures.computedShift(
+      id: "shift-invalid-time",
+      shiftDate: "2026-04-16",
+      startTime: "invalid",
+      endTime: "22:00",
+      gross: 1200
+    )
+
+    let selection = DashboardFeaturedItemSelector.select(
+      shifts: [malformedShift],
+      events: [],
+      isViewingCurrentMonth: true,
+      todayISO: "2026-04-15",
+      now: try XCTUnwrap(Date.fromDateAndTime("2026-04-15", time: "09:00"))
+    )
+
+    XCTAssertNil(selection.item)
+    XCTAssertFalse(selection.isToday)
+    XCTAssertFalse(selection.isBestShift)
+  }
+
   func testSelectNonCurrentMonthKeepsBestShiftBehavior() {
     let bestShift = TestFixtures.computedShift(
       id: "shift-best",

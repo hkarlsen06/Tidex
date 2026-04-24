@@ -214,16 +214,34 @@ extension Date {
   static func fromDateAndTime(_ dateString: String, time timeString: String) -> Date? {
     let parts = dateString.split(separator: "-")
     guard parts.count == 3,
+      parts[0].count == 4,
+      parts[1].count == 2,
+      parts[2].count == 2,
       let year = Int(parts[0]),
       let month = Int(parts[1]),
-      let day = Int(parts[2])
+      let day = Int(parts[2]),
+      (1...12).contains(month),
+      (1...31).contains(day)
     else {
       return nil
     }
 
     let timeParts = timeString.split(separator: ":")
-    let hours = !timeParts.isEmpty ? Int(timeParts[0]) ?? 0 : 0
-    let minutes = timeParts.count > 1 ? Int(timeParts[1]) ?? 0 : 0
+    guard
+      (2...3).contains(timeParts.count),
+      (1...2).contains(timeParts[0].count),
+      timeParts[1].count == 2,
+      timeParts.count == 2 || timeParts[2].count == 2,
+      let hours = Int(timeParts[0]),
+      let minutes = Int(timeParts[1]),
+      let seconds = timeParts.count == 3 ? Int(timeParts[2]) : 0,
+      (0...24).contains(hours),
+      (0...59).contains(minutes),
+      (0...59).contains(seconds),
+      !(hours == 24 && (minutes != 0 || seconds != 0))
+    else {
+      return nil
+    }
 
     var components = DateComponents()
     components.year = year
@@ -232,12 +250,21 @@ extension Date {
     // Handle 24:00 as midnight of the next day
     components.hour = hours == 24 ? 0 : hours
     components.minute = minutes
-    components.second = 0
+    components.second = seconds
     components.timeZone = localTimeZone
 
     var calendar = gregorianCalendar
     calendar.timeZone = localTimeZone
     guard let date = calendar.date(from: components) else { return nil }
+
+    let resolved = calendar.dateComponents([.year, .month, .day], from: date)
+    guard
+      resolved.year == year,
+      resolved.month == month,
+      resolved.day == day
+    else {
+      return nil
+    }
 
     if hours == 24 {
       return calendar.date(byAdding: .day, value: 1, to: date)
