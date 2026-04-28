@@ -9,7 +9,6 @@ struct OnboardingView: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentPage = 0
-  @State private var isSkipButtonVisible = false
   @State private var simulatorBaselineTotals: CalendarHeaderTotals?
   @State private var preAuthCurrency: String = {
     OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
@@ -27,18 +26,13 @@ struct OnboardingView: View {
   private let totalPages = 4
   private let simulatorPage = 1
   private let howItWorksPage = 2
-  private let skipButtonRevealDelayNanoseconds: UInt64 = 1_500_000_000
 
   private var isSimulatorPage: Bool {
     currentPage == simulatorPage
   }
 
-  private var isWelcomePage: Bool {
-    currentPage == 0
-  }
-
-  private var canShowWelcomeHeaderControls: Bool {
-    isWelcomePage
+  private var shouldShowTopHeader: Bool {
+    currentPage != simulatorPage && currentPage < totalPages - 1
   }
 
   private var fallbackHowItWorksTotals: CalendarHeaderTotals {
@@ -146,37 +140,13 @@ struct OnboardingView: View {
       }
     }
     .safeAreaInset(edge: .top, spacing: 0) {
-      if canShowWelcomeHeaderControls {
-        welcomeTopHeader
+      if shouldShowTopHeader {
+        topHeader
       }
     }
     .onAppear {
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(preAuthCurrency)
       preloadUpcomingScreen(after: currentPage)
-    }
-    .task(id: currentPage) {
-      if isSkipButtonVisible {
-        if reduceMotion {
-          isSkipButtonVisible = false
-        } else {
-          MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
-            isSkipButtonVisible = false
-          }
-        }
-      }
-
-      guard canShowWelcomeHeaderControls else { return }
-
-      try? await Task.sleep(nanoseconds: skipButtonRevealDelayNanoseconds)
-      guard canShowWelcomeHeaderControls else { return }
-
-      if reduceMotion {
-        isSkipButtonVisible = true
-      } else {
-        MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-          isSkipButtonVisible = true
-        }
-      }
     }
   }
 
@@ -215,29 +185,26 @@ struct OnboardingView: View {
   }
 
   @ViewBuilder
-  private var welcomeTopHeader: some View {
+  private var topHeader: some View {
     ZStack(alignment: .center) {
       HStack(spacing: Spacing.sm) {
-        if isSkipButtonVisible {
-          Button {
-            MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-              currentPage = totalPages - 1
-            }
-          } label: {
-            Text(.onboardingSkip)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextSecondary)
-              .lineLimit(1)
-              .minimumScaleFactor(0.9)
-              .allowsTightening(true)
-              .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, Spacing.xxxs)
+        Button {
+          MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
+            currentPage = totalPages - 1
           }
-          .fixedSize(horizontal: true, vertical: false)
-          .buttonStyle(.plain)
-          .tidexGlass(shape: .capsule, interactive: true)
-          .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        } label: {
+          Text(.onboardingSkip)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextSecondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.9)
+            .allowsTightening(true)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xxxs)
         }
+        .fixedSize(horizontal: true, vertical: false)
+        .buttonStyle(.plain)
+        .tidexGlass(shape: .capsule, interactive: true)
 
         Spacer(minLength: 0)
       }
@@ -260,7 +227,6 @@ struct OnboardingView: View {
     .padding(.top, Spacing.xxxs)
     .padding(.bottom, Spacing.sm)
     .background(Color.tidexBackground)
-    .motionAnimation(.emphasis, value: isSkipButtonVisible, reduceMotion: reduceMotion)
   }
 
   private func completeSimulatorAndAdvance(
