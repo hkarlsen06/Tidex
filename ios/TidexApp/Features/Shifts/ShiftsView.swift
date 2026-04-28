@@ -117,7 +117,8 @@ struct ShiftsView: View {
   // Deep link navigation state
   @State private var highlightedDateISO: String?
   @State private var deepLinkAction: AppCoordinator.ShiftDeepLinkAction = .open
-  @State private var deepLinkHighlightDate: String?  // Date to visually highlight (for widget deeplinks)
+  @State private var deepLinkHighlightDates: Set<String> = []
+  @State private var deepLinkHighlightClearTask: Task<Void, Never>?
 
   // Share functionality state
   @State private var showingShareDestinationPicker = false
@@ -815,7 +816,8 @@ struct ShiftsView: View {
   /// Handle pending deep link from widget or notification
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
     guard case .shifts(let dates, let action) = deepLink,
-      let dateISO = dates?.first
+      let sortedDates = dates?.sorted(),
+      let dateISO = sortedDates.first
     else { return }
 
     // Avoid processing the same deep link twice
@@ -828,6 +830,9 @@ struct ShiftsView: View {
 
     // Store the action to use when selecting the shift
     deepLinkAction = action
+    if action == .highlight {
+      showDeepLinkHighlights(for: Set(sortedDates))
+    }
 
     // Parse the date to extract year and month
     guard let date = Date.fromISODateString(dateISO) else {
@@ -913,13 +918,7 @@ struct ShiftsView: View {
       if action == .highlight {
         logger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
         MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
-          deepLinkHighlightDate = dateISO
-        }
-        // Auto-clear highlight after 3 seconds
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-          MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
-            deepLinkHighlightDate = nil
-          }
+          deepLinkHighlightDates.insert(dateISO)
         }
         return
       }
@@ -934,6 +933,28 @@ struct ShiftsView: View {
           items: shiftsOnDate.map { DayPresentationItem.shift($0) }
         )
       }
+    }
+  }
+
+  private func showDeepLinkHighlights(for dates: Set<String>) {
+    guard !dates.isEmpty else { return }
+    deepLinkHighlightClearTask?.cancel()
+
+    MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
+      deepLinkHighlightDates = dates
+    }
+
+    deepLinkHighlightClearTask = Task { @MainActor in
+      do {
+        try await Task.sleep(nanoseconds: 8_000_000_000)
+      } catch {
+        return
+      }
+
+      MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
+        deepLinkHighlightDates.subtract(dates)
+      }
+      deepLinkHighlightClearTask = nil
     }
   }
 
@@ -1212,7 +1233,7 @@ struct ShiftsView: View {
               },
               isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
               newlyAddedDates: celebrationManager.newlyAddedDates,
-              deepLinkHighlightDate: deepLinkHighlightDate,
+              deepLinkHighlightDates: deepLinkHighlightDates,
               conflictDates: viewModel.conflictDates,
               excludedFromTotalIds: viewModel.excludedFromTotalIds
             )
@@ -1428,7 +1449,7 @@ struct ShiftsView: View {
               },
               isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
               newlyAddedDates: celebrationManager.newlyAddedDates,
-              deepLinkHighlightDate: deepLinkHighlightDate,
+              deepLinkHighlightDates: deepLinkHighlightDates,
               conflictDates: viewModel.conflictDates,
               excludedFromTotalIds: viewModel.excludedFromTotalIds
             )

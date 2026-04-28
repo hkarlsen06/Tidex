@@ -84,7 +84,7 @@ struct FriendsComposerShiftCalendarPicker: View {
               onCancelCopyMove: nil,
               isSelectionModeEnabled: $isSelectionModeEnabled,
               newlyAddedDates: [],
-              deepLinkHighlightDate: nil,
+              deepLinkHighlightDates: [],
               conflictDates: viewModel.conflictDates,
               excludedFromTotalIds: viewModel.excludedFromTotalIds
             )
