@@ -560,7 +560,7 @@ struct FriendsThreadView: View {
     .showDateHeaders(true)
     .appliesFocusModifierToCustomInputView(false)
     .animateMessageUpdates(false)
-    .headerBuilder { date in
+    .dateHeaderBuilder { date in
       FriendsThreadDateSeparator(date: date)
     }
     .betweenListAndInputViewBuilder {

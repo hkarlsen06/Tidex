@@ -340143,6 +340143,1411 @@
         }
       }
     },
+    "shifts.breakDeduction.explanation.baseOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُخصم الاستراحة أولًا من الأجر الأساسي، ثم من أقل بدل عند الحاجة."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Почивката се удържа първо от основното заплащане, после при нужда от най-ниската добавка."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "বিরতি প্রথমে মূল বেতন থেকে, তারপর প্রয়োজন হলে সর্বনিম্ন ভাতা থেকে কাটা হয়।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa es dedueix primer del salari base i després del complement més baix, si cal."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se nejdřív odečte ze základní mzdy, pak podle potřeby z nejnižšího příplatku."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen trækkes først fra grundlønnen, derefter fra det laveste tillæg om nødvendigt."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Pause wird zuerst vom Grundlohn abgezogen, dann bei Bedarf vom niedrigsten Zuschlag."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το διάλειμμα αφαιρείται πρώτα από τη βασική αμοιβή και μετά, αν χρειάζεται, από το χαμηλότερο επίδομα."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The break is deducted from base pay first, then from the lowest supplement if needed."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa se descuenta primero del salario base y, si hace falta, del complemento más bajo."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paus arvatakse esmalt põhipalgast maha, seejärel vajadusel väikseimast lisatasust."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقفه ابتدا از حقوق پایه کسر می‌شود، سپس در صورت نیاز از کمترین مزایا."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tauko vähennetään ensin peruspalkasta, sitten tarvittaessa pienimmästä lisästä."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ang pahinga ay ibinabawas muna sa batayang sahod, saka sa pinakamababang dagdag kung kailangan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pause est d’abord déduite du salaire de base, puis du supplément le plus bas si nécessaire."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ההפסקה מנוכה תחילה משכר הבסיס, ואז מהתוספת הנמוכה ביותר אם צריך."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विराम पहले मूल वेतन से काटा जाता है, फिर ज़रूरत पड़ने पर सबसे कम भत्ते से।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se prvo odbija od osnovne plaće, a zatim po potrebi od najnižeg dodatka."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A szünetet először az alapbérből vonjuk le, majd szükség esetén a legalacsonyabb pótlékból."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeda dipotong dari gaji pokok dulu, lalu dari tunjangan terendah jika perlu."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pásan er fyrst dregin frá grunnlaunum, síðan frá lægsta álagi ef þarf."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa viene detratta prima dalla paga base, poi dall'indennità più bassa se necessario."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休憩はまず基本給から控除され、必要なら最も低い手当から差し引かれます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "휴게시간은 먼저 기본급에서, 필요 시 가장 낮은 수당에서 차감됩니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pertrauka pirmiausia išskaitoma iš bazinio atlygio, tada, jei reikia, iš mažiausio priedo."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pārtraukumu vispirms atskaita no pamatalgas, pēc tam, ja vajag, no mazākās piemaksas."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen trekkes først fra grunnlønn, deretter fra laveste tillegg ved behov."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De pauze wordt eerst van het basisloon afgetrokken, daarna zo nodig van de laagste toeslag."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen blir trekt frå grunnløn først, deretter frå det lågaste tillegget ved behov."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przerwa jest najpierw odliczana od stawki podstawowej, a w razie potrzeby od najniższego dodatku."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pausa é descontada primeiro do salário-base e, se preciso, do menor adicional."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se deduce mai întâi din plata de bază, apoi din cel mai mic spor, dacă este necesar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перерыв сначала вычитается из базовой оплаты, затем при необходимости — из самой низкой доплаты."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prestávka sa najprv odpočíta zo základnej mzdy, potom podľa potreby z najnižšieho príplatku."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odmor se najprej odbije od osnovne plače, nato po potrebi od najnižjega dodatka."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se prvo odbija od osnovne plate, pa po potrebi od najnižeg dodatka."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen dras först från grundlönen, sedan från det lägsta tillägget vid behov."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mapumziko hukatwa kwanza kutoka malipo ya msingi, kisha kutoka nyongeza ndogo zaidi ikihitajika."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இடைவேளை முதலில் அடிப்படை ஊதியத்தில் இருந்து, தேவைப்பட்டால் குறைந்த கூடுதலில் இருந்து கழிக்கப்படும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เวลาพักจะถูกหักจากค่าจ้างพื้นฐานก่อน แล้วจึงหักจากค่าตอบแทนเพิ่มที่ต่ำสุดหากจำเป็น"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mola önce taban ücretten, gerekirse sonra en düşük ek ödemeden düşülür."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пауза спочатку віднімається з базової оплати, потім — з найнижчої доплати, якщо потрібно."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقفہ پہلے بنیادی اجرت سے کاٹا جاتا ہے، پھر ضرورت ہو تو سب سے کم اضافے سے۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thời gian nghỉ được trừ từ lương cơ bản trước, rồi từ phụ cấp thấp nhất nếu cần."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息时间会先从基本工资中扣减，必要时再从最低补贴中扣减。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息時間會先從基本薪資扣除，必要時再從最低加給扣除。"
+          }
+        }
+      }
+    },
+    "shifts.breakDeduction.explanation.endOfShift" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُخصم الاستراحة من نهاية الوردية."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Почивката се удържа от края на смяната."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "বিরতি শিফটের শেষ থেকে কাটা হয়।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa es dedueix del final del torn."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se odečte od konce směny."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen trækkes fra slutningen af vagten."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Pause wird vom Ende der Schicht abgezogen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το διάλειμμα αφαιρείται από το τέλος της βάρδιας."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The break is deducted from the end of the shift."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa se descuenta del final del turno."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paus arvatakse vahetuse lõpust maha."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقفه از پایان شیفت کسر می‌شود."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tauko vähennetään vuoron lopusta."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ang pahinga ay ibinabawas mula sa dulo ng shift."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pause est déduite de la fin du service."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ההפסקה מנוכה מסוף המשמרת."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विराम शिफ्ट के अंत से काटा जाता है।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se odbija od kraja smjene."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A szünetet a műszak végéből vonjuk le."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeda dipotong dari akhir shift."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pásan er dregin frá lokum vaktarinnar."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa viene detratta dalla fine del turno."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休憩はシフトの終了時点から控除されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "휴게시간은 근무 종료 시점에서 차감됩니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pertrauka išskaitoma iš pamainos pabaigos."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pārtraukums tiek atskaitīts no maiņas beigām."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen trekkes fra slutten av vakten."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De pauze wordt afgetrokken van het einde van de dienst."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen blir trekt frå slutten av vakta."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przerwa jest odliczana od końca zmiany."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pausa é descontada do fim do turno."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se deduce de la sfârșitul turei."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перерыв вычитается из конца смены."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prestávka sa odpočíta od konca zmeny."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odmor se odbije od konca izmene."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se odbija od kraja smene."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen dras från slutet av passet."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mapumziko hukatwa kutoka mwisho wa zamu."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இடைவேளை ஷிப்டின் முடிவில் இருந்து கழிக்கப்படும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เวลาพักจะถูกหักจากท้ายกะ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mola, vardiyanın sonundan düşülür."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пауза віднімається з кінця зміни."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقفہ شفٹ کے اختتام سے کاٹا جاتا ہے۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thời gian nghỉ được trừ từ cuối ca."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息时间将从班次末尾扣减。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息時間會從班次結束時扣除。"
+          }
+        }
+      }
+    },
+    "shifts.breakDeduction.explanation.exactPause" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يُحتسب الخصم وفق فترة الاستراحة الدقيقة المحفوظة في هذه الوردية."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удръжката следва точното време за почивка, запазено в тази смяна."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "কর্তনটি এই শিফটে সংরক্ষিত সঠিক বিরতি সময় অনুসরণ করে।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La deducció segueix exactament la pausa desada en aquest torn."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpočet se řídí přesným intervalem pauzy uloženým u této směny."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fradraget følger det præcise pauseinterval, der er gemt på denne vagt."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Abzug folgt genau dem für diese Schicht gespeicherten Pausenfenster."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η αφαίρεση ακολουθεί ακριβώς το αποθηκευμένο διάστημα παύσης αυτής της βάρδιας."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The deduction follows the exact pause window saved on this shift."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La deducción sigue la pausa exacta guardada en este turno."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mahaarvamine järgib selle vahetuse salvestatud täpset pausiakent."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کسر بر اساس بازه دقیق وقفه ذخیره‌شده در این شیفت انجام می‌شود."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vähennys noudattaa tälle vuorolle tallennettua tarkkaa taukojaksoa."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sinusunod ng bawas ang eksaktong oras ng pahinga na naka-save sa shift na ito."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La déduction suit exactement la pause enregistrée sur ce service."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הניכוי מתבצע לפי חלון ההפסקה המדויק שנשמר במשמרת זו."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कटौती इस शिफ्ट में सहेजी गई सटीक विराम अवधि के अनुसार होती है।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odbitak prati točno vrijeme pauze spremljeno na ovoj smjeni."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A levonás az ezen a műszakon mentett pontos szünetidőt követi."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potongan mengikuti jendela jeda persis yang disimpan pada shift ini."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Frádrátturinn fylgir nákvæmlega pásunni sem er vistuð á þessari vakt."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La detrazione segue l'esatta pausa salvata in questo turno."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "控除は、このシフトに保存された正確な休憩時間帯に従います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공제는 이 근무에 저장된 정확한 휴게 시간대를 따릅니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Išskaita taikoma tiksliai šiai pamainai išsaugotam pertraukos laikui."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atskaitījums seko šai maiņai saglabātajam precīzajam pārtraukuma laikam."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trekket følger den nøyaktige pausen som er lagret på denne vakten."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De aftrek volgt exact de pauze die in deze dienst is opgeslagen."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Trekket følgjer den nøyaktige pausen som er lagra på denne vakta."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potrącenie uwzględnia dokładny czas przerwy zapisany na tej zmianie."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O desconto segue exatamente a pausa salva neste turno."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deducerea urmează exact intervalul de pauză salvat pentru această tură."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вычет следует точному периоду перерыва, сохранённому в этой смене."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpočet sa riadi presným časom prestávky uloženým pri tejto zmene."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odbitek sledi natančno shranjenemu odmoru v tej izmeni."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odbitak prati tačan period pauze sačuvan u ovoj smeni."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avdraget följer det exakta pausfönstret som sparats på det här passet."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makato hufuata muda halisi wa mapumziko uliohifadhiwa kwenye zamu hii."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இந்த ஷிப்டில் சேமிக்கப்பட்ட துல்லியமான இடைவேளை நேரமே கழிக்கப்படும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การหักจะอิงตามช่วงพักที่บันทึกไว้ในกะนี้อย่างตรงตามจริง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kesinti, bu vardiyada kaydedilen tam mola aralığını takip eder."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відрахування відповідає точному часу паузи, збереженому для цієї зміни."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کٹوتی اس شفٹ میں محفوظ عین وقفے کے دورانیے کے مطابق ہوگی۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoản trừ theo đúng khung thời gian nghỉ đã lưu của ca này."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扣减将按此班次中保存的准确休息时段执行。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "扣除會依此班次儲存的確切休息時段。"
+          }
+        }
+      }
+    },
+    "shifts.breakDeduction.explanation.generic" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خُصم وقت الاستراحة ضمن حساب الأجر."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удръжката за почивка е включена в изчисляването на заплатата."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "বিরতি কর্তন মজুরি হিসাবের মধ্যে অন্তর্ভুক্ত।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La deducció de la pausa s'inclou en el càlcul salarial."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpočet pauzy je zahrnutý do výpočtu mzdy."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausefradraget er medregnet i lønberegningen."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Pausenabzug ist in der Lohnberechnung enthalten."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η αφαίρεση του διαλείμματος περιλαμβάνεται στον υπολογισμό μισθού."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The break deduction is included in the wage calculation."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La deducción de la pausa está incluida en el cálculo salarial."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausi mahaarvamine on palgaarvestusse kaasatud."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کسر وقفه در محاسبه دستمزد لحاظ شده است."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taukovähennys sisältyy palkanlaskentaan."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kasama ang bawas sa pahinga sa pagkalkula ng sahod."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La déduction de pause est incluse dans le calcul du salaire."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ניכוי ההפסקה כלול בחישוב השכר."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विराम कटौती वेतन गणना में शामिल है।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odbitak pauze uključen je u izračun plaće."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A szünetlevonás benne van a bérszámításban."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potongan jeda disertakan dalam perhitungan gaji."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pásufrádráttur er innifalinn í launaútreikningnum."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La detrazione della pausa è inclusa nel calcolo della retribuzione."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休憩控除は賃金計算に含まれます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "휴게 공제는 임금 계산에 포함됩니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pertraukos išskaita įtraukta į darbo užmokesčio skaičiavimą."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pārtraukuma atskaitījums ir iekļauts algas aprēķinā."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausetrekket er tatt med i lønnsberegningen."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De pauzeaftrek is opgenomen in de loonberekening."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausetrekket er teke med i lønsutrekninga."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Potrącenie przerwy jest uwzględnione w wyliczeniu wynagrodzenia."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O desconto da pausa está incluído no cálculo salarial."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deducerea pauzei este inclusă în calculul salariului."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вычет за перерыв включён в расчёт зарплаты."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odpočet prestávky je zahrnutý do výpočtu mzdy."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odbitek odmora je vključen v izračun plače."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odbitak za pauzu je uključen u obračun zarade."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausavdraget ingår i löneberäkningen."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makato ya mapumziko yamejumuishwa kwenye hesabu ya mshahara."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இடைவேளை கழிப்பு ஊதிய கணக்கீட்டில் சேர்க்கப்பட்டுள்ளது."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การหักเวลาพักรวมอยู่ในการคำนวณค่าจ้าง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mola kesintisi ücret hesaplamasına dahildir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Відрахування за паузу включено в розрахунок зарплати."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقفے کی کٹوتی اجرت کے حساب میں شامل ہے۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoản trừ thời gian nghỉ đã được tính trong lương."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息扣减已计入工资计算。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息扣除已納入薪資計算。"
+          }
+        }
+      }
+    },
+    "shifts.breakDeduction.explanation.proportional" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تُوزَّع الاستراحة بالتناسب بين الأجر الأساسي والبدلات."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Почивката се разпределя пропорционално между основното заплащане и добавките."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "বিরতিটি মূল বেতন ও ভাতাগুলোর মধ্যে আনুপাতিকভাবে ভাগ করা হয়।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa es reparteix proporcionalment entre el salari base i els complements."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se rozdělí poměrně mezi základní mzdu a příplatky."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen fordeles forholdsmæssigt mellem grundløn og tillæg."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Pause wird proportional auf Grundlohn und Zuschläge verteilt."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το διάλειμμα κατανέμεται αναλογικά μεταξύ βασικής αμοιβής και επιδομάτων."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The break is spread proportionally across base pay and supplements."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa se reparte proporcionalmente entre salario base y complementos."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paus jaotatakse proportsionaalselt põhipalga ja lisatasude vahel."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقفه به‌صورت متناسب بین حقوق پایه و مزایا توزیع می‌شود."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tauko jaetaan suhteessa peruspalkan ja lisien kesken."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ang pahinga ay hinahati nang proporsyonal sa batayang sahod at mga dagdag."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pause est répartie proportionnellement entre le salaire de base et les suppléments."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ההפסקה מחולקת באופן יחסי בין שכר הבסיס לתוספות."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "विराम को मूल वेतन और भत्तों में आनुपातिक रूप से बाँटा जाता है।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se raspoređuje proporcionalno između osnovne plaće i dodataka."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A szünet arányosan oszlik meg az alapbér és a pótlékok között."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jeda dibagi proporsional antara gaji pokok dan tunjangan."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pásan skiptist hlutfallslega á grunnlaun og álag."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La pausa è ripartita proporzionalmente tra paga base e indennità."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休憩は基本給と手当に比例配分されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "휴게시간은 기본급과 수당에 비례해 배분됩니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pertrauka proporcingai paskirstoma tarp bazinio atlygio ir priedų."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pārtraukums tiek sadalīts proporcionāli starp pamatalgu un piemaksām."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen fordeles proporsjonalt mellom grunnlønn og tillegg."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De pauze wordt evenredig verdeeld over basisloon en toeslagen."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen blir fordelt proporsjonalt mellom grunnløn og tillegg."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przerwa jest rozliczana proporcjonalnie między stawką podstawową a dodatkami."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pausa é distribuída proporcionalmente entre o salário-base e os adicionais."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza este distribuită proporțional între plata de bază și sporuri."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перерыв распределяется пропорционально между базовой оплатой и доплатами."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prestávka sa rozdelí pomerne medzi základnú mzdu a príplatky."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odmor se sorazmerno porazdeli med osnovno plačo in dodatke."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pauza se proporcionalno raspoređuje između osnovne plate i dodataka."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pausen fördelas proportionellt mellan grundlön och tillägg."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mapumziko hugawanywa kwa uwiano kati ya malipo ya msingi na nyongeza."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இடைவேளை அடிப்படை ஊதியம் மற்றும் கூடுதல் கொடுப்பனவுகளில் விகிதாசாரமாக பகுக்கப்படும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เวลาพักจะถูกกระจายตามสัดส่วนระหว่างค่าจ้างพื้นฐานและค่าตอบแทนเพิ่ม"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mola, taban ücret ve ek ödemeler arasında orantılı dağıtılır."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пауза розподіляється пропорційно між базовою оплатою та доплатами."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "وقفہ بنیادی اجرت اور اضافوں میں متناسب طور پر تقسیم ہوتا ہے۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thời gian nghỉ được phân bổ theo tỷ lệ giữa lương cơ bản và phụ cấp."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息时间会按比例分摊到基本工资和补贴。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "休息時間會按比例分攤到基本薪資與加給。"
+          }
+        }
+      }
+    },
     "shifts.breakDeduction.part.basePay" : {
       "extractionState" : "manual",
       "localizations" : {
