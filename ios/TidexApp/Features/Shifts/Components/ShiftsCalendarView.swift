@@ -84,8 +84,8 @@ struct ShiftsCalendarView: View {
   // Newly added dates for celebration highlighting
   var newlyAddedDates: Set<String> = []
 
-  // Date to highlight from widget deeplink (temporary visual highlight)
-  var deepLinkHighlightDate: String?
+  // Dates to highlight from widget deeplinks or post-add navigation.
+  var deepLinkHighlightDates: Set<String>
 
   // Dates that have shift conflicts (overlapping shifts)
   var conflictDates: Set<String> = []
@@ -161,7 +161,7 @@ struct ShiftsCalendarView: View {
     onCancelCopyMove: (() -> Void)? = nil,
     isSelectionModeEnabled: Binding<Bool>,
     newlyAddedDates: Set<String> = [],
-    deepLinkHighlightDate: String? = nil,
+    deepLinkHighlightDates: Set<String> = [],
     conflictDates: Set<String> = [],
     excludedFromTotalIds: Set<String> = []
   ) {
@@ -201,7 +201,7 @@ struct ShiftsCalendarView: View {
     self.onCancelCopyMove = onCancelCopyMove
     _isSelectionModeEnabled = isSelectionModeEnabled
     self.newlyAddedDates = newlyAddedDates
-    self.deepLinkHighlightDate = deepLinkHighlightDate
+    self.deepLinkHighlightDates = deepLinkHighlightDates
     self.conflictDates = conflictDates
     self.excludedFromTotalIds = excludedFromTotalIds
   }
@@ -481,7 +481,8 @@ struct ShiftsCalendarView: View {
       let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
       let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
       let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
-      let isDeepLinkHighlighted = dayInfo.dateISO == deepLinkHighlightDate
+      let isDeepLinkHighlighted =
+        dayInfo.dateISO.map { deepLinkHighlightDates.contains($0) } ?? false
       let isToday = dayInfo.dateISO == currentTodayISO
       let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
       let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }

@@ -6,7 +6,7 @@ import os.log
 private let logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
 
 enum AddShiftCompletion {
-  case single
+  case single(dates: Set<String>)
   case recurring
   case event
 }
@@ -1170,7 +1170,7 @@ final class AddShiftViewModel: ObservableObject {
       NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
 
       // Notify completion
-      onShiftsCreated?(.single)
+      onShiftsCreated?(.single(dates: Set(sortedDates)))
 
     } catch ShiftCreationError.monthLimitReached(let months) {
       // Show month limit sheet instead of error

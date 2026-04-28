@@ -260,9 +260,9 @@ struct AddShiftView: View {
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       viewModel.onShiftsCreated = { completion in
         switch completion {
-        case .single:
-          showAddConfettiCelebration()
-          showSingleSaveSuccessBanner()
+        case .single(let dates):
+          coordinator.pendingDeepLink = .shifts(dates: dates.sorted(), action: .highlight)
+          selectedTab = .shifts
         case .recurring:
           selectedTab = .shifts
         case .event:
