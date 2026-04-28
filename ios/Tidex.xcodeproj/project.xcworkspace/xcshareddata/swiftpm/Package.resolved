@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/TidexHQ/GoogleSignIn-iOS.git",
       "state" : {
-        "revision" : "5dbc5fca14999c76b2b7ec0c380752761be4ae8b",
-        "version" : "9.1.1"
+        "revision" : "91e732c0137e2c7060deaa80964cfb630aa6c48c",
+        "version" : "9.1.2"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/exyte/MediaPicker.git",
       "state" : {
-        "revision" : "88ae0c290daa3adee55a53002f1b1a0e4f2ecad1",
-        "version" : "3.3.1"
+        "revision" : "ce2eda6300337d1478a78fc033bce8dd9bf4bb2c",
+        "version" : "3.3.2"
       }
     },
     {
@@ -105,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/getsentry/sentry-cocoa",
       "state" : {
-        "revision" : "3a22ecd00ad1398747bfd587e44df82716908dd3",
-        "version" : "9.10.0"
+        "revision" : "a49e7c2148ac9e38bd35ef4f13bc9d6ea3ff0b81",
+        "version" : "9.11.0"
       }
     },
     {
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/supabase/supabase-swift.git",
       "state" : {
-        "revision" : "17261e93c60aa721e3c17312bfeb2ae6de3d6f8a",
-        "version" : "2.43.1"
+        "revision" : "944dd5cbdbddcb565eb52056ea5a7fcbdc37519d",
+        "version" : "2.45.0"
       }
     },
     {
@@ -123,8 +123,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-asn1.git",
       "state" : {
-        "revision" : "9f542610331815e29cc3821d3b6f488db8715517",
-        "version" : "1.6.0"
+        "revision" : "eb50cbd14606a9161cbc5d452f18797c90ef0bab",
+        "version" : "1.7.0"
       }
     },
     {
@@ -150,8 +150,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-crypto.git",
       "state" : {
-        "revision" : "bb4ba815dab96d4edc1e0b86d7b9acf9ff973a84",
-        "version" : "4.3.1"
+        "revision" : "1b6b2e274e85105bfa155183145a1dcfd63331f1",
+        "version" : "4.5.0"
       }
     },
     {
