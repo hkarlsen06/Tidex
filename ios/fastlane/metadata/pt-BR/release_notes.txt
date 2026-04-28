@@ -1,7 +1,8 @@
-- Adicionamos nomes de usuário para facilitar na hora de encontrar e adicionar amigos
-- Melhoramos a aba Adicionar para você alternar mais rapidamente entre turnos, eventos privados e turnos recorrentes
-- Melhoramos calendários e turnos compartilhados com indicadores de disponibilidade mais úteis, o mês correto para turnos compartilhados antigos e placeholders mais claros para ganhos ocultos
-- Melhoramos os chats com amigos com indicadores de digitação mais confiáveis e abertura mais estável a partir das notificações
-- Melhoramos a confiabilidade e a qualidade das respostas do Wagey
-- Melhoramos as animações dos valores no painel
+- Adicionados lembretes de eventos e indicadores mais claros no calendário para eventos privados
+- Adicionadas janelas de pausa personalizadas para que o cálculo dos ganhos corresponda melhor aos seus intervalos reais
+- Adicionadas notas privadas para turnos, com salvamento mais rápido nas informações do turno
+- Melhoramos o painel com próximos eventos e detalhes de eventos mais completos
+- Melhoramos o Wagey com suporte a eventos privados, bolhas de chat mais claras e respostas em streaming melhores
+- Corrigimos a recuperação de senha, verificações de compra, lembretes, onboarding e a confiabilidade da sincronização
+- Melhoramos as configurações, interações no calendário, exportações e o desempenho geral
 - Correções de bugs e outras melhorias

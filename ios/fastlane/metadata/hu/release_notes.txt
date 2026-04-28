@@ -1,7 +1,8 @@
-- Felhasználónevekkel bővítettük az appot, így könnyebben megtalálhatod és hozzáadhatod a barátaidat
-- Fejlesztettük a Hozzáadás fület, így gyorsabban válthatsz a műszakok, a privát események és az ismétlődő műszakok között
-- Javítottuk a megosztott naptárakat és műszakokat jobb elérhetőségi jelzésekkel, a régebbi megosztott műszakoknál a megfelelő hónap megjelenítésével, valamint egyértelműbb helyőrzőkkel a rejtett keresetekhez
-- Fejlesztettük a baráti csevegéseket megbízhatóbb gépelési jelzőkkel és stabilabb megnyitással az értesítésekből
-- Javítottuk a Wagey megbízhatóságát és a válaszok minőségét
-- Fejlesztettük az összeganimációkat az áttekintő felületen
+- Eseményemlékeztetők és egyértelműbb naptárjelölések hozzáadva a privát eseményekhez
+- Egyéni szüneti időszakok hozzáadva, hogy a bérszámítás jobban igazodjon a tényleges szüneteidhez
+- Privát jegyzetek hozzáadva a műszakokhoz, gyorsabb jegyzetmentéssel a műszak részleteinél
+- Javítottuk az irányítópultot a közelgő eseményekkel és részletesebb eseményadatokkal
+- Továbbfejlesztettük a Wageyt privát eseménytámogatással, egyértelműbb chatbuborékokkal és jobb, folyamatos válaszokkal
+- Javítottuk a jelszó-helyreállítást, a vásárlásellenőrzéseket, az emlékeztetőket, az onboardingot és a szinkronizálás megbízhatóságát
+- Javítottuk a beállításokat, a naptárhasználatot, az exportálást és az általános teljesítményt
 - Hibajavítások és egyéb fejlesztések

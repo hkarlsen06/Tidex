@@ -1,7 +1,8 @@
-- Hemos añadido nombres de usuario para que puedas encontrar y añadir amigos más fácilmente
-- Hemos mejorado la pestaña Añadir para que puedas cambiar más rápido entre turnos, eventos privados y turnos recurrentes
-- Hemos mejorado los calendarios y turnos compartidos con mejores indicaciones de disponibilidad, el mes correcto para turnos compartidos antiguos y marcadores más claros para ingresos ocultos
-- Hemos mejorado los chats con amigos con indicadores de escritura más fiables y una apertura desde notificaciones más estable
-- Hemos mejorado la fiabilidad y la calidad de las respuestas de Wagey
-- Hemos mejorado las animaciones de las cantidades en el panel
+- Se han añadido recordatorios de eventos e indicadores más claros en el calendario para eventos privados
+- Se han añadido pausas personalizadas para que el cálculo del sueldo se ajuste mejor a tus descansos reales
+- Se han añadido notas privadas para los turnos, con un guardado más rápido desde los detalles del turno
+- Se ha mejorado el panel con próximos eventos y mejores detalles de los eventos
+- Se ha mejorado Wagey con compatibilidad con eventos privados, burbujas de chat más claras y mejores respuestas en tiempo real
+- Se han corregido la recuperación de contraseña, las comprobaciones de compra, los recordatorios, la incorporación y la fiabilidad de la sincronización
+- Se han mejorado los ajustes, las interacciones del calendario, las exportaciones y el rendimiento general
 - Corrección de errores y otras mejoras

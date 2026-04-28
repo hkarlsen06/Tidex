@@ -1,7 +1,8 @@
-- Tilføjet brugernavne, så du nemmere kan finde og tilføje venner
-- Forbedret fanen Tilføj, så du hurtigere kan skifte mellem vagter, private begivenheder og tilbagevendende vagter
-- Forbedret delte kalendere og vagter med bedre tilgængelighedshint, den rigtige måned for ældre delte vagter og tydeligere pladsholdere for skjult indtjening
-- Forbedret vennechats med mere pålidelige skriveindikatorer og mere stabil åbning fra notifikationer
-- Forbedret Wageys stabilitet og svarkvalitet
-- Forbedret animationer for beløb på oversigten
+- Tilføjet påmindelser om begivenheder og tydeligere kalenderindikatorer for private begivenheder
+- Tilføjet brugerdefinerede pausevinduer, så lønberegningen passer bedre til dine faktiske pauser
+- Tilføjet private noter til vagter med hurtigere lagring af noter fra vagtdetaljer
+- Forbedret oversigten med kommende begivenheder og bedre detaljer om begivenheder
+- Forbedret Wagey med understøttelse af private begivenheder, tydeligere chatbobler og bedre løbende svar
+- Rettet gendannelse af adgangskode, købskontroller, påmindelser, onboarding og synkroniseringsstabilitet
+- Forbedret indstillinger, kalenderinteraktioner, eksporter og den samlede ydeevne
 - Fejlrettelser og andre forbedringer

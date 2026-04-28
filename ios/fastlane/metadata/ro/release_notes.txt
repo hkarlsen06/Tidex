@@ -1,7 +1,8 @@
-- Am adăugat nume de utilizator ca să poți găsi și adăuga prieteni mai ușor
-- Am îmbunătățit fila Adaugă ca să poți trece mai rapid între ture, evenimente private și ture recurente
-- Am îmbunătățit calendarele și turele partajate cu indicii de disponibilitate mai bune, luna corectă pentru turele partajate mai vechi și substituenți mai clari pentru câștigurile ascunse
-- Am îmbunătățit chaturile cu prietenii cu indicatori de tastare mai fiabili și o deschidere mai stabilă din notificări
-- Am îmbunătățit fiabilitatea și calitatea răspunsurilor pentru Wagey
-- Am îmbunătățit animațiile sumelor din panoul principal
+- Am adăugat mementouri pentru evenimente și indicatori mai clari în calendar pentru evenimentele private
+- Am adăugat intervale de pauză personalizate, astfel încât calculele salariale să corespundă mai bine pauzelor tale reale
+- Am adăugat notițe private pentru ture, cu salvare mai rapidă a notițelor din detaliile turei
+- Am îmbunătățit tabloul de bord cu evenimente viitoare și detalii mai bune despre evenimente
+- Am îmbunătățit Wagey cu suport pentru evenimente private, bule de chat mai clare și răspunsuri generate mai bune
+- Am remediat recuperarea parolei, verificările achizițiilor, mementourile, onboardingul și fiabilitatea sincronizării
+- Am îmbunătățit setările, interacțiunile din calendar, exporturile și performanța generală
 - Corecturi de erori și alte îmbunătățiri

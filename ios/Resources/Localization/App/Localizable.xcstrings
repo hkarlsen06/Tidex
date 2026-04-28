@@ -435728,6 +435728,12 @@
             "value" : "−%@"
           }
         },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "−%@"
+          }
+        },
         "es" : {
           "stringUnit" : {
             "state" : "translated",

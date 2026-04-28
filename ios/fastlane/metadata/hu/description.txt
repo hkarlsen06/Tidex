@@ -3,9 +3,9 @@ Kövesd nyomon a műszakjaidat, és számold ki a béredet a Tidex segítségév
 Funkciók:
 • Egyszerű műszakrögzítés kezdési és befejezési idővel
 • Automatikus bérszámítás
-• Az összes műszak naptárnézete
-• Kereseti áttekintés és statisztikák
+• Az összes műszak naptárnézetben
+• Bevételi áttekintés és statisztikák
 • Widget a gyors eléréshez
-• Szinkronizálás az eszközök között
+• Szinkronizálás az eszközeid között
 
-Tökéletes azoknak a dolgozóknak, akik szeretnék nyomon követni a ledolgozott óráikat és a keresetüket.
+Tökéletes azoknak a dolgozóknak, akik szeretnék nyomon követni a munkaidejüket és a keresetüket.

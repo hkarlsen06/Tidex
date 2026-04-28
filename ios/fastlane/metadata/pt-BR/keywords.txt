@@ -1,1 +1,1 @@
-turno,plantão,salário,trabalho,horas,ponto,escala,ganhos,pagamento
+turno,horas,salário,trabalho,ponto,escala,ganhos,jornada,holerite,calendário

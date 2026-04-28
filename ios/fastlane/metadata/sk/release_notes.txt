@@ -1,7 +1,8 @@
-- Pridali sme používateľské mená, aby ste mohli jednoduchšie nájsť a pridať priateľov
-- Vylepšili sme kartu Pridať, aby ste mohli rýchlejšie prepínať medzi zmenami, súkromnými udalosťami a opakujúcimi sa zmenami
-- Vylepšili sme zdieľané kalendáre a zmeny lepšími indikátormi dostupnosti, správnym mesiacom pre staršie zdieľané zmeny a jasnejšími zástupnými textami pre skryté zárobky
-- Vylepšili sme chaty s priateľmi spoľahlivejšími indikátormi písania a stabilnejším otváraním z oznámení
-- Zlepšili sme spoľahlivosť a kvalitu odpovedí vo Wagey
-- Vylepšili sme animácie súm na hlavnom paneli
+- Pridané pripomienky udalostí a prehľadnejšie indikátory v kalendári pre súkromné udalosti
+- Pridané vlastné časové okná prestávok, aby výpočet mzdy lepšie zodpovedal vašim skutočným prestávkam
+- Pridané súkromné poznámky k zmenám s rýchlejším ukladaním poznámok z detailu zmeny
+- Vylepšený prehľad s nadchádzajúcimi udalosťami a lepšími detailmi udalostí
+- Vylepšený Wagey s podporou súkromných udalostí, prehľadnejšími chatovacími bublinami a lepšími priebežnými odpoveďami
+- Opravené obnovenie hesla, kontroly nákupov, pripomienky, onboarding a spoľahlivosť synchronizácie
+- Vylepšené nastavenia, interakcie s kalendárom, exporty a celkový výkon
 - Opravy chýb a ďalšie vylepšenia

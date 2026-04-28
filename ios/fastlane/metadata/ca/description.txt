@@ -1,7 +1,7 @@
 Controla els teus torns de feina i calcula el teu sou amb Tidex.
 
 Funcions:
-• Registre fàcil de torns amb hores d'inici i de finalització
+• Registre fàcil de torns amb hores d'inici i final
 • Càlcul automàtic del sou
 • Vista de calendari de tots els torns
 • Resum d'ingressos i estadístiques

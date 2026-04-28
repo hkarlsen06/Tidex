@@ -1,7 +1,8 @@
-- Ajout de noms d’utilisateur pour trouver et ajouter des amis plus facilement
-- Amélioration de l’onglet Ajouter pour passer plus rapidement d’un shift à un événement privé ou à un shift récurrent
-- Amélioration des calendriers et shifts partagés avec de meilleurs indicateurs de disponibilité, le bon mois pour les anciens shifts partagés et des espaces réservés plus clairs pour les revenus masqués
-- Amélioration des discussions entre amis avec des indicateurs de saisie plus fiables et une ouverture depuis les notifications plus stable
-- Amélioration de la fiabilité et de la qualité des réponses de Wagey
-- Amélioration des animations des montants sur le tableau de bord
+- Ajout de rappels d’événements et d’indicateurs de calendrier plus clairs pour les événements privés
+- Ajout de plages de pause personnalisées pour que le calcul du salaire corresponde mieux à vos pauses réelles
+- Ajout de notes privées pour les shifts, avec un enregistrement plus rapide depuis les détails du shift
+- Amélioration du tableau de bord avec les événements à venir et de meilleurs détails d’événements
+- Amélioration de Wagey avec la prise en charge des événements privés, des bulles de discussion plus claires et de meilleures réponses en continu
+- Correction de la récupération du mot de passe, des vérifications d’achat, des rappels, de l’onboarding et de la fiabilité de la synchronisation
+- Amélioration des réglages, des interactions du calendrier, des exportations et des performances globales
 - Corrections de bugs et autres améliorations

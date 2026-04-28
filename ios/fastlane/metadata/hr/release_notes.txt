@@ -1,7 +1,8 @@
-- Dodana su korisnička imena kako biste lakše pronašli i dodali prijatelje
-- Poboljšana je kartica Dodaj kako biste se brže mogli prebacivati između smjena, privatnih događaja i ponavljajućih smjena
-- Poboljšani su dijeljeni kalendari i smjene uz bolje naznake dostupnosti, ispravan mjesec za starije dijeljene smjene i jasnije oznake za skrivenu zaradu
-- Poboljšani su razgovori s prijateljima uz pouzdanije pokazatelje tipkanja i stabilnije otvaranje iz obavijesti
-- Poboljšani su pouzdanost i kvaliteta odgovora u Wageyju
-- Poboljšane su animacije iznosa na nadzornoj ploči
-- Ispravci pogrešaka i druga poboljšanja
+- Dodani su podsjetnici za događaje i jasniji kalendarski pokazatelji za privatne događaje
+- Dodani su prilagođeni vremenski okviri za pauze kako bi izračun plaće bolje odgovarao vašim stvarnim pauzama
+- Dodane su privatne bilješke za smjene, uz brže spremanje bilješki iz detalja smjene
+- Poboljšana je početna nadzorna ploča s nadolazećim događajima i boljim detaljima događaja
+- Poboljšan je Wagey uz podršku za privatne događaje, jasnije oblačiće chata i bolje odgovore tijekom generiranja
+- Ispravljeni su oporavak lozinke, provjere kupnji, podsjetnici, onboarding i pouzdanost sinkronizacije
+- Poboljšane su postavke, interakcije s kalendarom, izvozi i ukupne performanse
+- Ispravci grešaka i druga poboljšanja

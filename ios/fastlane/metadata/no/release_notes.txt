@@ -1,7 +1,8 @@
-- Lagt til brukernavn så det er enklere å finne og legge til venner
-- Forbedret Legg til-fanen så du raskere kan bytte mellom vakter, private hendelser og gjentakende vakter
-- Forbedret delte kalendere og vakter med bedre tilgjengelighetsvisning, riktig måned for eldre delte vakter og tydeligere plassholdere for skjult lønn
-- Forbedret vennesamtaler med mer pålitelige skriveindikatorer og mer stabil åpning fra varsler
-- Forbedret Wagey med bedre stabilitet og svar
-- Forbedret animasjoner for beløp i oversikten
+- Lagt til hendelsespåminnelser og tydeligere kalenderindikatorer for private hendelser
+- Lagt til egendefinerte pauser slik at lønnsberegningen passer bedre med de faktiske pausene dine
+- Lagt til private notater for vakter, med raskere lagring fra vaktdetaljer
+- Forbedret oversikten med kommende hendelser og bedre hendelsesdetaljer
+- Forbedret Wagey med støtte for private hendelser, tydeligere chatbobler og bedre svar underveis
+- Rettet passordgjenoppretting, kjøpssjekker, påminnelser, onboarding og synkronisering
+- Forbedret innstillinger, kalenderhandlinger, eksport og generell ytelse
 - Feilrettinger og andre forbedringer
