@@ -1163,6 +1163,10 @@ struct ShiftsView: View {
                   presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
                 }
               },
+              onDayLongPressed: { dateISO, shiftsOnDay in
+                selectionHaptic.selectionChanged()
+                presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
+              },
               selectedDates: $viewModel.selectedDates,
               confirmingDelete: viewModel.confirmingDelete,
               isDeleting: viewModel.isDeleting,
@@ -1372,6 +1376,10 @@ struct ShiftsView: View {
                 } else {
                   presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
                 }
+              },
+              onDayLongPressed: { dateISO, shiftsOnDay in
+                selectionHaptic.selectionChanged()
+                presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
               },
               selectedDates: $viewModel.selectedDates,
               confirmingDelete: viewModel.confirmingDelete,

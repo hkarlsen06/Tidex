@@ -164,6 +164,106 @@ struct CalendarTapGestureModifier: ViewModifier {
   }
 }
 
+// MARK: - Location-Aware Long Press Gesture Modifier
+
+/// A long-press recognizer that reports the press location without cancelling
+/// touches, so parent scroll/swipe gestures can continue to recognize.
+struct CalendarLongPressGestureModifier: ViewModifier {
+  let onTap: ((CGPoint) -> Void)?
+  let onLongPress: ((CGPoint) -> Void)?
+  let isEnabled: Bool
+
+  private let tapHaptic = UISelectionFeedbackGenerator()
+
+  func body(content: Content) -> some View {
+    content
+      .overlay {
+        if isEnabled {
+          CalendarPressOverlay(
+            onTap: { location in
+              tapHaptic.selectionChanged()
+              tapHaptic.prepare()
+              onTap?(location)
+            },
+            onLongPress: onLongPress
+          )
+          .allowsHitTesting(true)
+        }
+      }
+      .onAppear {
+        tapHaptic.prepare()
+      }
+  }
+}
+
+private struct CalendarPressOverlay: UIViewRepresentable {
+  let onTap: ((CGPoint) -> Void)?
+  let onLongPress: ((CGPoint) -> Void)?
+
+  func makeUIView(context: Context) -> UIView {
+    let view = UIView(frame: .zero)
+    view.backgroundColor = .clear
+
+    let tapRecognizer = UITapGestureRecognizer(
+      target: context.coordinator,
+      action: #selector(Coordinator.handleTap(_:))
+    )
+    tapRecognizer.cancelsTouchesInView = false
+    tapRecognizer.delegate = context.coordinator
+    view.addGestureRecognizer(tapRecognizer)
+
+    let recognizer = UILongPressGestureRecognizer(
+      target: context.coordinator,
+      action: #selector(Coordinator.handleLongPress(_:))
+    )
+    recognizer.minimumPressDuration = 0.5
+    recognizer.allowableMovement = 10
+    recognizer.cancelsTouchesInView = false
+    recognizer.delegate = context.coordinator
+    view.addGestureRecognizer(recognizer)
+
+    return view
+  }
+
+  func updateUIView(_ uiView: UIView, context: Context) {
+    context.coordinator.onTap = onTap
+    context.coordinator.onLongPress = onLongPress
+  }
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onTap: onTap, onLongPress: onLongPress)
+  }
+
+  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    var onTap: ((CGPoint) -> Void)?
+    var onLongPress: ((CGPoint) -> Void)?
+
+    init(onTap: ((CGPoint) -> Void)?, onLongPress: ((CGPoint) -> Void)?) {
+      self.onTap = onTap
+      self.onLongPress = onLongPress
+    }
+
+    @objc
+    func handleTap(_ recognizer: UITapGestureRecognizer) {
+      guard recognizer.state == .ended, let view = recognizer.view else { return }
+      onTap?(recognizer.location(in: view))
+    }
+
+    @objc
+    func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
+      guard recognizer.state == .began, let view = recognizer.view else { return }
+      onLongPress?(recognizer.location(in: view))
+    }
+
+    func gestureRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+      true
+    }
+  }
+}
+
 // MARK: - View Extensions
 
 extension View {
@@ -189,6 +289,20 @@ extension View {
     modifier(
       CalendarTapGestureModifier(
         onTap: onTap,
+        isEnabled: isEnabled
+      ))
+  }
+
+  /// Add location-aware long press handling without blocking parent gestures.
+  func calendarPressGestures(
+    onTap: ((CGPoint) -> Void)?,
+    onLongPress: ((CGPoint) -> Void)?,
+    isEnabled: Bool = true
+  ) -> some View {
+    modifier(
+      CalendarLongPressGestureModifier(
+        onTap: onTap,
+        onLongPress: onLongPress,
         isEnabled: isEnabled
       ))
   }

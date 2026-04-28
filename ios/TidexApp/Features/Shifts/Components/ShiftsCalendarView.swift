@@ -34,6 +34,8 @@ struct ShiftsCalendarView: View {
 
   // Day tap callback (single tap for selection toggle)
   var onDayTapped: ((String, [ShiftWithComputations]) -> Void)?
+  // Day long-press callback (normal mode details/picker presentation)
+  var onDayLongPressed: ((String, [ShiftWithComputations]) -> Void)?
 
   // Selection state bindings from ViewModel
   @Binding var selectedDates: Set<String>
@@ -136,6 +138,7 @@ struct ShiftsCalendarView: View {
     showsActionBar: Bool = true,
     phase: MonthTransitionPhase? = nil,
     onDayTapped: ((String, [ShiftWithComputations]) -> Void)? = nil,
+    onDayLongPressed: ((String, [ShiftWithComputations]) -> Void)? = nil,
     selectedDates: Binding<Set<String>>,
     confirmingDelete: Bool,
     isDeleting: Bool,
@@ -176,6 +179,7 @@ struct ShiftsCalendarView: View {
     self.showsActionBar = showsActionBar
     self.phase = phase
     self.onDayTapped = onDayTapped
+    self.onDayLongPressed = onDayLongPressed
     _selectedDates = selectedDates
     self.confirmingDelete = confirmingDelete
     self.isDeleting = isDeleting
@@ -522,9 +526,12 @@ struct ShiftsCalendarView: View {
       GeometryReader { geometry in
         Color.clear
           .contentShape(Rectangle())
-          .calendarTapGesture(
+          .calendarPressGestures(
             onTap: { location in
               handleTap(at: location, geometry: geometry, days: days)
+            },
+            onLongPress: { location in
+              handleLongPress(at: location, geometry: geometry, days: days)
             },
             isEnabled: !isSelectionModeEnabled
           )
@@ -697,6 +704,20 @@ struct ShiftsCalendarView: View {
     } else {
       onDayTapped?(dayISO, shiftsOnDay)
     }
+  }
+
+  private func handleLongPress(
+    at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]
+  ) {
+    guard !isCopyMode, !isMoveMode else { return }
+    guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
+      return
+    }
+
+    let shiftsOnDay = shiftsByDate[dayISO] ?? []
+    guard !shiftsOnDay.isEmpty else { return }
+
+    onDayLongPressed?(dayISO, shiftsOnDay)
   }
 
   private func handleDragStart(
