@@ -272,7 +272,7 @@ struct AddShiftView: View {
 
       // Check for pre-selected date when tab becomes visible
       // (e.g., when user taps empty day in Shifts calendar)
-      viewModel.checkPreselectedDate()
+      applyPendingPreselectedDateWithoutAnimation()
       handleDeepLink(coordinator.pendingDeepLink)
     }
     .onChange(of: viewModel.error) { _, newError in
@@ -291,6 +291,7 @@ struct AddShiftView: View {
     }
     .onChange(of: selectedTab) { oldTab, newTab in
       if newTab == .add, oldTab == .shifts {
+        applyPendingPreselectedDateWithoutAnimation()
         tabTransitionOffset = 28
         tabTransitionOpacity = 0.92
         MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
@@ -300,7 +301,7 @@ struct AddShiftView: View {
       }
 
       if newTab == .add, oldTab != .add {
-        viewModel.checkPreselectedDate()
+        applyPendingPreselectedDateWithoutAnimation()
       }
 
       if oldTab == .add, newTab != .add {
@@ -386,8 +387,16 @@ struct AddShiftView: View {
 
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
     guard case .addShift = deepLink else { return }
-    viewModel.checkPreselectedDate()
+    applyPendingPreselectedDateWithoutAnimation()
     coordinator.clearPendingDeepLink()
+  }
+
+  private func applyPendingPreselectedDateWithoutAnimation() {
+    var transaction = Transaction()
+    transaction.disablesAnimations = true
+    withTransaction(transaction) {
+      viewModel.checkPreselectedDate()
+    }
   }
 
   private func refreshAddContent() async {
