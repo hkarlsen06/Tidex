@@ -1442,7 +1442,7 @@ struct ShiftDetailsSheet: View {
   private func breakDeductionBasePayCard(_ part: BreakDeductionPart) -> some View {
     VStack(spacing: Spacing.xxxs) {
       HStack {
-        Text(.shiftsBreakDeduction)
+        Text(.shiftsBreakDeductionPartBasePay)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
 
@@ -1454,7 +1454,7 @@ struct ShiftDetailsSheet: View {
       }
 
       HStack {
-        Text(.shiftsBreakDeductionPartBasePay)
+        Text(.shiftsBreakDeduction)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
 
