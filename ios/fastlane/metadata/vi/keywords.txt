@@ -1,1 +1,1 @@
-calam,theodoi,luong,thuong,congviec,giolam,gio,chamcong,lichlam,thunhap
+calam,theodoi,luong,thunhap,congviec,giolam,chamcong,lichlam,vieclam,tien

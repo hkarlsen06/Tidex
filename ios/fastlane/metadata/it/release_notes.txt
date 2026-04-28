@@ -1,7 +1,8 @@
-- Aggiunti i nomi utente per trovare e aggiungere amici più facilmente
-- Migliorata la scheda Aggiungi per passare più rapidamente tra turni, eventi privati e turni ricorrenti
-- Migliorati i calendari e i turni condivisi con migliori indicatori di disponibilità, il mese corretto per i turni condivisi più vecchi e segnaposto più chiari per i guadagni nascosti
-- Migliorate le chat con gli amici con indicatori di digitazione più affidabili e un'apertura più stabile dalle notifiche
-- Migliorate l'affidabilità e la qualità delle risposte di Wagey
-- Migliorate le animazioni degli importi nella dashboard
+- Aggiunti promemoria per gli eventi e indicatori più chiari nel calendario per gli eventi privati
+- Aggiunte finestre di pausa personalizzate per far corrispondere meglio il calcolo dello stipendio alle tue pause effettive
+- Aggiunte note private per i turni, con salvataggio più rapido dalle informazioni del turno
+- Migliorata la dashboard con eventi imminenti e dettagli evento più chiari
+- Migliorato Wagey con supporto per eventi privati, fumetti della chat più chiari e risposte in streaming migliori
+- Risolti problemi con recupero password, verifica degli acquisti, promemoria, onboarding e affidabilità della sincronizzazione
+- Migliorati impostazioni, interazioni nel calendario, esportazioni e prestazioni generali
 - Correzioni di bug e altri miglioramenti

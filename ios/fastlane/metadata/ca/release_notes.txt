@@ -1,7 +1,8 @@
-- S'han afegit noms d'usuari perquè puguis trobar i afegir amics més fàcilment
-- S'ha millorat la pestanya Afegeix perquè puguis alternar més ràpidament entre torns, esdeveniments privats i torns recurrents
-- S'han millorat els calendaris i els torns compartits amb millors indicadors de disponibilitat, el mes correcte per als torns compartits antics i textos de marcador més clars per als ingressos ocults
-- S'han millorat els xats amb amics amb indicadors d'escriptura més fiables i una obertura més estable des de les notificacions
-- S'ha millorat la fiabilitat i la qualitat de les respostes de Wagey
-- S'han millorat les animacions dels imports al tauler
-- Correcció d'errors i altres millores
+- S'han afegit recordatoris d'esdeveniments i indicadors de calendari més clars per als esdeveniments privats
+- S'han afegit pauses personalitzades perquè el càlcul del sou s'ajusti millor a les teves pauses reals
+- S'han afegit notes privades per als torns, amb un desament més ràpid des dels detalls del torn
+- S'ha millorat el tauler amb esdeveniments pròxims i millors detalls dels esdeveniments
+- S'ha millorat Wagey amb compatibilitat amb esdeveniments privats, bombolles de xat més clares i millors respostes en temps real
+- S'han corregit la recuperació de contrasenya, les comprovacions de compra, els recordatoris, l'onboarding i la fiabilitat de la sincronització
+- S'han millorat els ajustos, les interaccions del calendari, les exportacions i el rendiment general
+- Correccions d'errors i altres millores

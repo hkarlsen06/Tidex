@@ -1,7 +1,8 @@
-- Dodano nazwy użytkownika, aby łatwiej było znajdować i dodawać znajomych
-- Ulepszono kartę Dodaj, aby można było szybciej przełączać się między zmianami, wydarzeniami prywatnymi i zmianami cyklicznymi
-- Ulepszono udostępnione kalendarze i zmiany dzięki lepszym wskazówkom dotyczącym dostępności, właściwemu miesiącowi dla starszych udostępnionych zmian oraz wyraźniejszym symbolom zastępczym dla ukrytych zarobków
-- Ulepszono czaty ze znajomymi dzięki bardziej niezawodnym wskaźnikom pisania i stabilniejszemu otwieraniu z powiadomień
-- Ulepszono niezawodność i jakość odpowiedzi Wagey
-- Ulepszono animacje kwot na pulpicie
+- Dodano przypomnienia o wydarzeniach i wyraźniejsze oznaczenia prywatnych wydarzeń w kalendarzu
+- Dodano własne okna przerw, aby obliczenia wynagrodzenia lepiej odpowiadały Twoim rzeczywistym przerwom
+- Dodano prywatne notatki do zmian oraz szybsze zapisywanie notatek ze szczegółów zmiany
+- Ulepszono panel główny o nadchodzące wydarzenia i lepsze szczegóły wydarzeń
+- Ulepszono Wagey o obsługę prywatnych wydarzeń, wyraźniejsze dymki czatu i lepsze odpowiedzi strumieniowe
+- Naprawiono odzyskiwanie hasła, sprawdzanie zakupów, przypomnienia, onboarding i niezawodność synchronizacji
+- Ulepszono ustawienia, interakcje z kalendarzem, eksport i ogólną wydajność
 - Poprawki błędów i inne ulepszenia

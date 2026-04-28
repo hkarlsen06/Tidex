@@ -1,7 +1,8 @@
-- Menambahkan nama pengguna agar Anda lebih mudah menemukan dan menambahkan teman
-- Meningkatkan tab Tambah agar Anda bisa lebih cepat berpindah antara shift, acara pribadi, dan shift berulang
-- Meningkatkan kalender dan shift bersama dengan petunjuk ketersediaan yang lebih baik, bulan yang tepat untuk shift bersama yang lama, dan placeholder yang lebih jelas untuk penghasilan yang disembunyikan
-- Meningkatkan obrolan teman dengan indikator mengetik yang lebih andal dan pembukaan dari notifikasi yang lebih stabil
-- Meningkatkan keandalan dan kualitas jawaban Wagey
-- Meningkatkan animasi jumlah di dasbor
+- Menambahkan pengingat acara dan indikator kalender yang lebih jelas untuk acara pribadi
+- Menambahkan jeda istirahat kustom agar perhitungan gaji bisa lebih sesuai dengan waktu istirahat Anda yang sebenarnya
+- Menambahkan catatan pribadi untuk shift, dengan penyimpanan catatan yang lebih cepat dari detail shift
+- Meningkatkan dasbor dengan acara mendatang dan detail acara yang lebih baik
+- Meningkatkan Wagey dengan dukungan acara pribadi, gelembung chat yang lebih jelas, dan jawaban streaming yang lebih baik
+- Memperbaiki pemulihan kata sandi, pemeriksaan pembelian, pengingat, onboarding, dan keandalan sinkronisasi
+- Meningkatkan pengaturan, interaksi kalender, ekspor, dan performa secara keseluruhan
 - Perbaikan bug dan peningkatan lainnya

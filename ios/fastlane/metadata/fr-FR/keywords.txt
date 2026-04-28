@@ -1,1 +1,1 @@
-shift,horaires,salaire,travail,heures,temps,pointeuse,planning,revenus,gains
+shift,suivi,salaire,travail,heures,temps,pointeuse,planning,gains,emploi

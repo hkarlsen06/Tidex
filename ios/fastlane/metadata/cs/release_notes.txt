@@ -1,7 +1,8 @@
-- Přidali jsme uživatelská jména, takže nyní můžete snáze najít a přidat přátele
-- Vylepšili jsme kartu Přidat, takže můžete rychleji přepínat mezi směnami, soukromými událostmi a opakujícími se směnami
-- Vylepšili jsme sdílené kalendáře a směny díky lepším indikátorům dostupnosti, správnému měsíci u starších sdílených směn a přehlednějším zástupným textům pro skryté výdělky
-- Vylepšili jsme chaty s přáteli díky spolehlivějším indikátorům psaní a stabilnějšímu otevírání z oznámení
-- Vylepšili jsme spolehlivost a kvalitu odpovědí Wagey
-- Vylepšili jsme animace částek na přehledu
+- Přidali jsme připomenutí událostí a přehlednější indikátory soukromých událostí v kalendáři
+- Přidali jsme vlastní pauzy, aby výpočet mzdy lépe odpovídal vašim skutečným přestávkám
+- Přidali jsme soukromé poznámky ke směnám a rychlejší ukládání poznámek z detailu směny
+- Vylepšili jsme přehled o nadcházející události a podrobnosti událostí
+- Vylepšili jsme Wagey o podporu soukromých událostí, přehlednější chatovací bubliny a lepší průběžné odpovědi
+- Opravili jsme obnovení hesla, kontrolu nákupů, připomenutí, onboarding a spolehlivost synchronizace
+- Vylepšili jsme nastavení, ovládání kalendáře, exporty a celkový výkon
 - Opravy chyb a další vylepšení

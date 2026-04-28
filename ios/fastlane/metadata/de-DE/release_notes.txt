@@ -1,7 +1,8 @@
-- Benutzernamen hinzugefügt, damit du Freunde leichter finden und hinzufügen kannst
-- Den Hinzufügen-Tab verbessert, damit du schneller zwischen Schichten, privaten Ereignissen und wiederkehrenden Schichten wechseln kannst
-- Geteilte Kalender und Schichten verbessert – mit besseren Verfügbarkeitshinweisen, dem richtigen Monat für ältere geteilte Schichten und klareren Platzhaltern für ausgeblendete Verdienste
-- Freundeschats verbessert – mit zuverlässigeren Tippindikatoren und stabilerem Öffnen aus Benachrichtigungen
-- Wagey in Zuverlässigkeit und Antwortqualität verbessert
-- Animationen von Beträgen im Dashboard verbessert
+- Ereigniserinnerungen und deutlichere Kalenderindikatoren für private Ereignisse hinzugefügt
+- Benutzerdefinierte Pausenzeiten hinzugefügt, damit die Lohnberechnung besser zu deinen tatsächlichen Pausen passt
+- Private Notizen für Schichten hinzugefügt, mit schnellerem Speichern aus den Schichtdetails
+- Das Dashboard mit bevorstehenden Ereignissen und besseren Ereignisdetails verbessert
+- Wagey mit Unterstützung für private Ereignisse, klareren Chatblasen und besseren gestreamten Antworten verbessert
+- Passwortwiederherstellung, Kaufprüfungen, Erinnerungen, Onboarding und Synchronisierungszuverlässigkeit behoben
+- Einstellungen, Kalenderinteraktionen, Exporte und die Gesamtleistung verbessert
 - Fehlerbehebungen und weitere Verbesserungen

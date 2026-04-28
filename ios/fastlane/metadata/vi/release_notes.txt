@@ -1,7 +1,8 @@
-- Đã thêm tên người dùng để bạn có thể tìm và thêm bạn bè dễ dàng hơn
-- Đã cải thiện tab Thêm để bạn có thể chuyển nhanh hơn giữa ca làm, sự kiện riêng tư và ca làm lặp lại
-- Đã cải thiện lịch và ca làm được chia sẻ với gợi ý về trạng thái sẵn sàng tốt hơn, hiển thị đúng tháng cho các ca làm được chia sẻ cũ hơn và phần giữ chỗ rõ ràng hơn cho thu nhập bị ẩn
-- Đã cải thiện trò chuyện với bạn bè với chỉ báo đang nhập đáng tin cậy hơn và mở từ thông báo ổn định hơn
-- Đã cải thiện độ ổn định và chất lượng trả lời của Wagey
-- Đã cải thiện hiệu ứng chuyển động của số tiền trên bảng điều khiển
+- Đã thêm nhắc nhở sự kiện và chỉ báo lịch rõ ràng hơn cho các sự kiện riêng tư
+- Đã thêm khung thời gian nghỉ tùy chỉnh để việc tính lương khớp hơn với thời gian nghỉ thực tế của bạn
+- Đã thêm ghi chú riêng tư cho ca làm, với khả năng lưu ghi chú từ chi tiết ca nhanh hơn
+- Đã cải thiện bảng điều khiển với các sự kiện sắp tới và chi tiết sự kiện đầy đủ hơn
+- Đã cải thiện Wagey với hỗ trợ sự kiện riêng tư, bong bóng chat rõ ràng hơn và câu trả lời trực tiếp tốt hơn
+- Đã sửa khôi phục mật khẩu, kiểm tra mua hàng, nhắc nhở, onboarding và độ tin cậy khi đồng bộ
+- Đã cải thiện cài đặt, tương tác lịch, xuất dữ liệu và hiệu suất tổng thể
 - Sửa lỗi và các cải tiến khác

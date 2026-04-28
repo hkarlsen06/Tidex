@@ -1,7 +1,8 @@
-- Gebruikersnamen toegevoegd, zodat je vrienden makkelijker kunt vinden en toevoegen
-- Het tabblad Toevoegen verbeterd, zodat je sneller kunt wisselen tussen diensten, privé-evenementen en terugkerende diensten
-- Gedeelde agenda's en diensten verbeterd met betere beschikbaarheidsaanduidingen, de juiste maand voor oudere gedeelde diensten en duidelijkere placeholders voor verborgen inkomsten
-- Vriendenchats verbeterd met betrouwbaardere typindicatoren en stabieler openen vanuit meldingen
-- Wagey verbeterd met betere betrouwbaarheid en antwoordkwaliteit
-- Animaties van bedragen in het dashboard verbeterd
+- Gebeurtenisherinneringen en duidelijkere agenda-aanduidingen voor privégebeurtenissen toegevoegd
+- Aangepaste pauzevensters toegevoegd zodat loonberekeningen beter aansluiten op je echte pauzes
+- Privénotities voor diensten toegevoegd, met sneller opslaan van notities vanuit dienstdetails
+- Het dashboard verbeterd met aankomende gebeurtenissen en betere gebeurtenisdetails
+- Wagey verbeterd met ondersteuning voor privégebeurtenissen, duidelijkere chatballonnen en betere gestreamde antwoorden
+- Problemen opgelost met wachtwoordherstel, aankoopcontroles, herinneringen, onboarding en synchronisatie
+- Instellingen, agenda-interacties, export en algemene prestaties verbeterd
 - Bugfixes en andere verbeteringen
