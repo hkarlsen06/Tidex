@@ -124,6 +124,12 @@ struct ShiftDetailsSheet: View {
   /// Whether showing the pause editor sheet
   @State private var showingPauseEditor = false
 
+  /// Whether the break deduction breakdown is expanded
+  @State private var isBreakDeductionExpanded = false
+
+  /// Whether the supplement breakdown is expanded
+  @State private var isSupplementBreakdownExpanded = false
+
   /// Whether showing the share destination picker
   @State private var showingShareDestinationPicker = false
 
@@ -214,7 +220,23 @@ struct ShiftDetailsSheet: View {
 
   /// Whether this shift has supplement pay to show breakdown
   private var hasSupplementBreakdown: Bool {
-    shift.computed.supplementPay > 0 && !supplementSegments.isEmpty
+    displayedSupplementPay > 0 && !supplementSegments.isEmpty
+  }
+
+  private var hasEarningsBreakdown: Bool {
+    hasSupplementBreakdown || shouldShowBreakDeductionRow
+  }
+
+  private var displayedBasePay: Double {
+    shouldShowBreakDeductionRow
+      ? BreakDeductionBreakdown.basePay(for: shift.computed.originalWagePeriods)
+      : shift.computed.basePay
+  }
+
+  private var displayedSupplementPay: Double {
+    shouldShowBreakDeductionRow
+      ? BreakDeductionBreakdown.supplementPay(for: shift.computed.originalWagePeriods)
+      : shift.computed.supplementPay
   }
 
   /// Check if shift has custom supplements (including explicitly empty rules)
@@ -263,6 +285,41 @@ struct ShiftDetailsSheet: View {
     Int((shift.computed.breakAudit.deductedHours * 60).rounded())
   }
 
+  private var breakDeductionBreakdown: BreakDeductionBreakdown? {
+    BreakDeductionBreakdown.make(
+      originalPeriods: shift.computed.originalWagePeriods,
+      adjustedPeriods: shift.computed.wagePeriods
+    )
+  }
+
+  private var shouldShowBreakDeductionRow: Bool {
+    shift.computed.breakAudit.deductedHours > 0 && breakDeductionBreakdown != nil
+  }
+
+  private var breakDeductionLabel: String {
+    String(localized: .shiftsBreakDeduction)
+  }
+
+  private var breakDeductionExplanation: LocalizedStringResource {
+    switch shift.computed.breakAudit.source {
+    case .customPauseWindows:
+      return .shiftsBreakDeductionExplanationExactPause
+    case .automaticBreak:
+      switch shift.computed.breakAudit.method {
+      case .proportional:
+        return .shiftsBreakDeductionExplanationProportional
+      case .baseOnly:
+        return .shiftsBreakDeductionExplanationBaseOnly
+      case .endOfShift:
+        return .shiftsBreakDeductionExplanationEndOfShift
+      case .none:
+        return .shiftsBreakDeductionExplanationGeneric
+      }
+    case .none:
+      return .shiftsBreakDeductionExplanationGeneric
+    }
+  }
+
   private var pauseEditorButtonTitle: String {
     hasCustomPauseWindows
       ? String(localized: .shiftsPauseSectionEditWindows)
@@ -299,7 +356,7 @@ struct ShiftDetailsSheet: View {
   /// Groups consecutive wage periods with the same supplement rate
   private var supplementSegments: [SupplementSegment] {
     let original = shift.computed.originalWagePeriods
-    let adjusted = shift.computed.wagePeriods
+    let adjusted = shouldShowBreakDeductionRow ? original : shift.computed.wagePeriods
 
     var segments: [SupplementSegment] = []
     var i = 0
@@ -1231,11 +1288,11 @@ struct ShiftDetailsSheet: View {
 
       // Earnings card
       VStack(spacing: Spacing.sm) {
-        // Base Pay (only show when there are supplements)
-        if hasSupplementBreakdown {
+        // Base Pay (show when there are supplements or a separate break deduction row)
+        if hasEarningsBreakdown {
           earningsRow(
             label: String(localized: .shiftsBasePay),
-            value: formatCurrency(shift.computed.basePay)
+            value: formatCurrency(displayedBasePay)
           )
 
           Divider()
@@ -1246,11 +1303,17 @@ struct ShiftDetailsSheet: View {
           supplementBreakdownSection
         }
 
+        if shouldShowBreakDeductionRow, let breakdown = breakDeductionBreakdown {
+          breakDeductionSection(breakdown)
+
+          Divider()
+        }
+
         // Gross
         earningsRow(
           label: String(localized: .shiftsGrossPay),
           value: formatCurrency(shift.grossPay),
-          isHighlighted: !showTaxBreakdown && !hasSupplementBreakdown
+          isHighlighted: !showTaxBreakdown && !hasEarningsBreakdown
         )
 
         if showTaxBreakdown {
@@ -1302,44 +1365,234 @@ struct ShiftDetailsSheet: View {
     }
   }
 
+  @ViewBuilder
+  private func breakDeductionSection(_ breakdown: BreakDeductionBreakdown) -> some View {
+    VStack(spacing: Spacing.xs) {
+      let canExpand = breakdown.parts.count > 1
+
+      if canExpand {
+        Button {
+          impactHaptic.impactOccurred()
+          withAnimation(.easeInOut(duration: 0.18)) {
+            isBreakDeductionExpanded.toggle()
+          }
+        } label: {
+          breakDeductionTotalRow(breakdown, showsChevron: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(breakDeductionLabel)
+        .accessibilityValue("−\(formatCurrency(breakdown.totalAmount))")
+        .accessibilityHint(Text(.shiftsBreakDeductionExpandAccessibilityHint))
+      } else {
+        breakDeductionTotalRow(breakdown, showsChevron: false)
+      }
+
+      if canExpand && isBreakDeductionExpanded {
+        VStack(spacing: Spacing.xs) {
+          ForEach(breakdown.parts) { part in
+            breakDeductionPartView(part)
+          }
+
+          Text(breakDeductionExplanation)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, Spacing.xxxs)
+        }
+        .padding(.top, Spacing.xxxs)
+      }
+    }
+  }
+
+  private func breakDeductionTotalRow(
+    _ breakdown: BreakDeductionBreakdown,
+    showsChevron: Bool
+  ) -> some View {
+    HStack(spacing: Spacing.xs) {
+      Text(breakDeductionLabel)
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextSecondary)
+
+      if showsChevron {
+        Image(systemName: "chevron.down")
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+          .rotationEffect(.degrees(isBreakDeductionExpanded ? 180 : 0))
+      }
+
+      Spacer()
+
+      Text("−\(formatCurrency(breakdown.totalAmount))")
+        .font(.tidexLabel)
+        .foregroundColor(.tidexError)
+    }
+    .contentShape(Rectangle())
+  }
+
+  @ViewBuilder
+  private func breakDeductionPartView(_ part: BreakDeductionPart) -> some View {
+    switch part.kind {
+    case .base:
+      breakDeductionBasePayCard(part)
+    case .supplement:
+      breakDeductionSupplementCard(part)
+    }
+  }
+
+  private func breakDeductionBasePayCard(_ part: BreakDeductionPart) -> some View {
+    VStack(spacing: Spacing.xxxs) {
+      HStack {
+        Text(.shiftsBreakDeduction)
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexTextPrimary)
+
+        Spacer()
+
+        Text("−\(formatCurrency(part.amount))")
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexError)
+      }
+
+      HStack {
+        Text(.shiftsBreakDeductionPartBasePay)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextSecondary)
+
+        Spacer()
+
+        if let rate = part.rate {
+          Text("\(formatHoursValue(part.hours)) × \(formatCurrency(rate))")
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+        } else {
+          Text(formatHoursValue(part.hours))
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+        }
+      }
+    }
+    .padding(Spacing.sm)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.lg)
+        .fill(Color.tidexSurfaceSecondary.opacity(0.4))
+    )
+  }
+
+  @ViewBuilder
+  private func breakDeductionSupplementCard(_ part: BreakDeductionPart) -> some View {
+    if let segment = part.supplementSegment {
+      VStack(spacing: Spacing.xxxs) {
+        HStack {
+          Text(.shiftsBreakDeductionPartSupplement)
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexTextPrimary)
+
+          Spacer()
+
+          Text("−\(formatCurrency(part.amount))")
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexError)
+        }
+
+        HStack {
+          Text(segmentTimeRange(segment))
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+            .environment(\.layoutDirection, .leftToRight)
+
+          Spacer()
+
+          Text("\(formatHoursValue(part.hours)) × \(formatCurrency(segment.rate))")
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+        }
+      }
+      .padding(Spacing.sm)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
+          .fill(Color.tidexSurfaceSecondary.opacity(0.4))
+      )
+    } else {
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+        Text(.shiftsBreakDeductionPartSupplement)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+
+        Spacer()
+
+        Text("\(formatHoursValue(part.hours)) / −\(formatCurrency(part.amount))")
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+      }
+    }
+  }
+
   /// Supplement breakdown showing each time period with supplements
   @ViewBuilder
   private var supplementBreakdownSection: some View {
     VStack(spacing: Spacing.sm) {
-      // Total supplement header with optional "Customized" badge
-      HStack {
-        HStack(spacing: Spacing.xs) {
-          Text(.shiftsTotalSupplement)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+      let canExpand = !supplementSegments.isEmpty
 
-          if hasCustomSupplements {
-            Text(.shiftsCustomized)
-              .font(.tidexMicro)
-              .foregroundColor(.tidexBlue)
-              .padding(.horizontal, Spacing.xs)
-              .padding(.vertical, 3)
-              .background(
-                Capsule()
-                  .fill(Color.tidexBlue.opacity(0.15))
-              )
+      if canExpand {
+        Button {
+          impactHaptic.impactOccurred()
+          withAnimation(.easeInOut(duration: 0.18)) {
+            isSupplementBreakdownExpanded.toggle()
           }
+        } label: {
+          supplementTotalRow(showsChevron: true)
         }
-
-        Spacer()
-
-        Text(formatCurrency(shift.computed.supplementPay))
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(.shiftsTotalSupplement))
+        .accessibilityValue(formatCurrency(displayedSupplementPay))
+      } else {
+        supplementTotalRow(showsChevron: false)
       }
 
-      // Individual supplement segments
-      ForEach(supplementSegments) { segment in
-        supplementSegmentRow(segment)
+      if canExpand && isSupplementBreakdownExpanded {
+        ForEach(supplementSegments) { segment in
+          supplementSegmentRow(segment)
+        }
       }
 
       Divider()
     }
+  }
+
+  private func supplementTotalRow(showsChevron: Bool) -> some View {
+    HStack(spacing: Spacing.xs) {
+      HStack(spacing: Spacing.xs) {
+        Text(.shiftsTotalSupplement)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextSecondary)
+
+        if showsChevron {
+          Image(systemName: "chevron.down")
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+            .rotationEffect(.degrees(isSupplementBreakdownExpanded ? 180 : 0))
+        }
+
+        if hasCustomSupplements {
+          Text(.shiftsCustomized)
+            .font(.tidexMicro)
+            .foregroundColor(.tidexBlue)
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, 3)
+            .background(
+              Capsule()
+                .fill(Color.tidexBlue.opacity(0.15))
+            )
+        }
+      }
+
+      Spacer()
+
+      Text(formatCurrency(displayedSupplementPay))
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextPrimary)
+    }
+    .contentShape(Rectangle())
   }
 
   /// A single supplement segment row showing time range, hours × rate, and amount
@@ -1729,6 +1982,195 @@ struct SupplementSegment: Identifiable {
   var amount: Double {
     actualHours * rate
   }
+}
+
+struct BreakDeductionBreakdown {
+  let parts: [BreakDeductionPart]
+
+  var totalAmount: Double {
+    parts.reduce(0) { $0 + $1.amount }
+  }
+
+  static func basePay(for periods: [WagePeriod]) -> Double {
+    roundedCurrency(
+      periods.reduce(0) {
+        $0 + payFor(hours: max(0, $1.durationHours), rate: $1.baseRate)
+      })
+  }
+
+  static func supplementPay(for periods: [WagePeriod]) -> Double {
+    roundedCurrency(
+      periods.reduce(0) {
+        $0 + payFor(hours: max(0, $1.durationHours), rate: $1.supplementRate)
+      })
+  }
+
+  static func make(
+    originalPeriods: [WagePeriod],
+    adjustedPeriods: [WagePeriod]
+  ) -> BreakDeductionBreakdown? {
+    var parts: [BreakDeductionPart] = []
+
+    let baseAmount = roundedCurrency(
+      payDelta(
+        originalPeriods: originalPeriods,
+        adjustedPeriods: adjustedPeriods,
+        pay: { payFor(hours: max(0, $0.durationHours), rate: $0.baseRate) }
+      ))
+    let baseHours = deductedBaseHours(
+      originalPeriods: originalPeriods,
+      adjustedPeriods: adjustedPeriods
+    )
+
+    if isDisplayable(baseAmount) {
+      parts.append(
+        BreakDeductionPart(
+          id: "base",
+          kind: .base,
+          supplementSegment: nil,
+          hours: baseHours,
+          rate: baseHours > 0 ? baseAmount / baseHours : nil,
+          amount: baseAmount
+        ))
+    }
+
+    parts.append(
+      contentsOf: supplementParts(
+        originalPeriods: originalPeriods,
+        adjustedPeriods: adjustedPeriods
+      ))
+
+    guard !parts.isEmpty else { return nil }
+    return BreakDeductionBreakdown(parts: parts)
+  }
+
+  private static func supplementParts(
+    originalPeriods: [WagePeriod],
+    adjustedPeriods: [WagePeriod]
+  ) -> [BreakDeductionPart] {
+    var parts: [BreakDeductionPart] = []
+    var i = 0
+
+    while i < originalPeriods.count {
+      let period = originalPeriods[i]
+      guard period.supplementRate > 0 else {
+        i += 1
+        continue
+      }
+
+      let groupStart = period.fromMin
+      var groupEnd = period.toMin
+      let rate = period.supplementRate
+      var j = i + 1
+
+      while j < originalPeriods.count && originalPeriods[j].supplementRate == rate {
+        groupEnd = originalPeriods[j].toMin
+        j += 1
+      }
+
+      let originalMetrics = overlappingMetrics(
+        periods: originalPeriods,
+        from: groupStart,
+        to: groupEnd,
+        supplementRate: rate
+      )
+      let adjustedMetrics = overlappingMetrics(
+        periods: adjustedPeriods,
+        from: groupStart,
+        to: groupEnd,
+        supplementRate: rate
+      )
+      let deductedHours = max(0, originalMetrics.hours - adjustedMetrics.hours)
+      let amount = roundedCurrency(max(0, originalMetrics.pay - adjustedMetrics.pay))
+
+      if isDisplayable(amount) {
+        parts.append(
+          BreakDeductionPart(
+            id: "supplement-\(groupStart)-\(groupEnd)-\(rate)",
+            kind: .supplement,
+            supplementSegment: SupplementSegment(
+              fromMin: groupStart,
+              toMin: groupEnd,
+              rate: rate,
+              actualHours: deductedHours
+            ),
+            hours: deductedHours,
+            rate: rate,
+            amount: amount
+          ))
+      }
+
+      i = j
+    }
+
+    return parts
+  }
+
+  private static func overlappingMetrics(
+    periods: [WagePeriod],
+    from: Double,
+    to: Double,
+    supplementRate: Double
+  ) -> (hours: Double, pay: Double) {
+    periods
+      .filter { $0.supplementRate == supplementRate }
+      .reduce((hours: 0, pay: 0)) { total, current in
+        let overlapStart = max(current.fromMin, from)
+        let overlapEnd = min(current.toMin, to)
+        guard overlapEnd > overlapStart else { return total }
+        let hours = (overlapEnd - overlapStart) / 60.0
+        return (
+          hours: total.hours + hours,
+          pay: total.pay + payFor(hours: hours, rate: supplementRate)
+        )
+      }
+  }
+
+  private static func deductedBaseHours(
+    originalPeriods: [WagePeriod],
+    adjustedPeriods: [WagePeriod]
+  ) -> Double {
+    let originalHours = originalPeriods.reduce(0) { $0 + max(0, $1.durationHours) }
+    let adjustedHours = adjustedPeriods.reduce(0) { $0 + max(0, $1.durationHours) }
+    return max(0, originalHours - adjustedHours)
+  }
+
+  private static func payDelta(
+    originalPeriods: [WagePeriod],
+    adjustedPeriods: [WagePeriod],
+    pay: (WagePeriod) -> Double
+  ) -> Double {
+    let originalPay = originalPeriods.reduce(0) { $0 + pay($1) }
+    let adjustedPay = adjustedPeriods.reduce(0) { $0 + pay($1) }
+    return max(0, originalPay - adjustedPay)
+  }
+
+  private static func roundedCurrency(_ amount: Double) -> Double {
+    (amount * 100).rounded() / 100
+  }
+
+  private static func payFor(hours: Double, rate: Double) -> Double {
+    let roundedHours = (hours * 1000).rounded() / 1000
+    return roundedCurrency(roundedHours * rate)
+  }
+
+  private static func isDisplayable(_ amount: Double) -> Bool {
+    roundedCurrency(amount) > 0
+  }
+}
+
+struct BreakDeductionPart: Identifiable {
+  enum Kind {
+    case base
+    case supplement
+  }
+
+  let id: String
+  let kind: Kind
+  let supplementSegment: SupplementSegment?
+  let hours: Double
+  let rate: Double?
+  let amount: Double
 }
 
 // MARK: - Preview
