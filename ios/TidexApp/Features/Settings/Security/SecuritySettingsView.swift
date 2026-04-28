@@ -13,10 +13,10 @@ struct SecuritySettingsView: View {
   @State private var showAIConsentSheet = false
 
   var body: some View {
-    List {
-      // Error message
-      if let error = viewModel.errorMessage {
-        Section {
+    ScrollView {
+      VStack(alignment: .leading, spacing: Spacing.lg) {
+        // Error message
+        if let error = viewModel.errorMessage {
           HStack(spacing: Spacing.xs) {
             Image(systemName: "exclamationmark.circle.fill")
               .foregroundColor(.tidexError)
@@ -35,25 +35,23 @@ struct SecuritySettingsView: View {
           .padding(Spacing.sm)
           .background(Color.tidexError.opacity(0.1))
           .cornerRadius(CornerRadius.sm)
-          .listRowBackground(Color.clear)
-          .listRowInsets(EdgeInsets())
         }
+
+        // AI data sharing section
+        aiDataSharingSection
+
+        // Password section
+        passwordSection
+
+        // Connected accounts section
+        connectedAccountsSection
+
+        // MFA section
+        mfaSection
       }
-
-      // AI data sharing section
-      aiDataSharingSection
-
-      // Password section
-      passwordSection
-
-      // Connected accounts section
-      connectedAccountsSection
-
-      // MFA section
-      mfaSection
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
-    .listStyle(.insetGrouped)
-    .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .securityTitle))
     .navigationBarTitleDisplayMode(.inline)
@@ -104,12 +102,48 @@ struct SecuritySettingsView: View {
     }
   }
 
+  @ViewBuilder
+  private func settingsSection<Content: View>(
+    title: String,
+    footer: String? = nil,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(title)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
+        .textCase(.uppercase)
+        .padding(.horizontal, Spacing.sm)
+
+      VStack(spacing: 0) {
+        content()
+      }
+      .padding(Spacing.md)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .tidexCardShadow(cornerRadius: CornerRadius.lg)
+
+      if let footer {
+        Text(footer)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .padding(.horizontal, Spacing.sm)
+      }
+    }
+  }
+
+  private var settingsDivider: some View {
+    Divider()
+      .background(Color.tidexBorderSubtle)
+      .padding(.vertical, Spacing.sm)
+  }
+
   // MARK: - AI Data Sharing Section
 
   private var aiDataSharingSection: some View {
-    Section(
-      header: Text(String(localized: .settingsWageyAiDataSharing)),
-      footer: Text(.settingsWageyAiDataSharingDescription)
+    settingsSection(
+      title: String(localized: .settingsWageyAiDataSharing),
+      footer: String(localized: .settingsWageyAiDataSharingDescription)
     ) {
       Toggle(
         isOn: Binding(
@@ -140,14 +174,13 @@ struct SecuritySettingsView: View {
         }
       }
       .tint(.tidexBlue)
-      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
   // MARK: - Password Section
 
   private var passwordSection: some View {
-    Section(header: Text(String(localized: .securityPasswordSectionTitle))) {
+    settingsSection(title: String(localized: .securityPasswordSectionTitle)) {
       HStack(spacing: Spacing.sm) {
         // Icon
         RoundedRectangle(cornerRadius: CornerRadius.xs)
@@ -193,16 +226,15 @@ struct SecuritySettingsView: View {
           .cornerRadius(CornerRadius.sm)
         }
       }
-      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
   // MARK: - Connected Accounts Section
 
   private var connectedAccountsSection: some View {
-    Section(
-      header: Text(String(localized: .securityConnectionsSectionTitle)),
-      footer: Text(.securityConnectionsSectionSubtitle)
+    settingsSection(
+      title: String(localized: .securityConnectionsSectionTitle),
+      footer: String(localized: .securityConnectionsSectionSubtitle)
     ) {
       // Phone connection
       connectionRow(
@@ -222,7 +254,8 @@ struct SecuritySettingsView: View {
         },
         connectDisabled: false
       )
-      .listRowBackground(Color.tidexSurfacePrimary)
+
+      settingsDivider
 
       // Google connection
       connectionRow(
@@ -241,7 +274,8 @@ struct SecuritySettingsView: View {
         },
         connectDisabled: false
       )
-      .listRowBackground(Color.tidexSurfacePrimary)
+
+      settingsDivider
 
       // Apple connection
       connectionRow(
@@ -260,7 +294,6 @@ struct SecuritySettingsView: View {
         },
         connectDisabled: false
       )
-      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
@@ -364,9 +397,9 @@ struct SecuritySettingsView: View {
   // MARK: - MFA Section
 
   private var mfaSection: some View {
-    Section(
-      header: Text(String(localized: .securityMfaSectionTitle)),
-      footer: Text(.securityMfaSectionSubtitle)
+    settingsSection(
+      title: String(localized: .securityMfaSectionTitle),
+      footer: String(localized: .securityMfaSectionSubtitle)
     ) {
       // Enrolled factors
       if viewModel.mfaFactors.isEmpty {
@@ -386,11 +419,12 @@ struct SecuritySettingsView: View {
 
           Spacer()
         }
-        .listRowBackground(Color.tidexSurfacePrimary)
+
+        settingsDivider
       } else {
         ForEach(viewModel.mfaFactors) { factor in
           mfaFactorRow(factor)
-            .listRowBackground(Color.tidexSurfacePrimary)
+          settingsDivider
         }
       }
 
@@ -417,7 +451,6 @@ struct SecuritySettingsView: View {
         .frame(maxWidth: .infinity)
       }
       .disabled(viewModel.isEnrollingMFA)
-      .listRowBackground(Color.tidexSurfacePrimary)
     }
   }
 
