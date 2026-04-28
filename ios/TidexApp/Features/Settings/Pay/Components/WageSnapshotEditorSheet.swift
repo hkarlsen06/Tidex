@@ -99,9 +99,9 @@ struct WageSnapshotEditorSheet: View {
       _supplements = State(
         initialValue: snapshot.supplements.rules.map { OnboardingSupplementRule(from: $0) })
       _breakEnabled = State(initialValue: snapshot.effectiveBreakEnabled)
-      _breakMethod = State(initialValue: snapshot.breakMethod)
-      _breakThresholdHours = State(initialValue: snapshot.effectiveBreakThresholdHours)
-      _breakDeductionMinutes = State(initialValue: snapshot.effectiveBreakDeductionMinutes)
+      _breakMethod = State(initialValue: .proportional)
+      _breakThresholdHours = State(initialValue: 5.5)
+      _breakDeductionMinutes = State(initialValue: 30)
       _taxEnabled = State(initialValue: snapshot.effectiveTaxEnabled)
       _taxPercentage = State(initialValue: snapshot.effectiveTaxPercentage)
       // Initialize tariff type ID from snapshot
@@ -116,9 +116,9 @@ struct WageSnapshotEditorSheet: View {
       _supplements = State(
         initialValue: mostRecent.supplements.rules.map { OnboardingSupplementRule(from: $0) })
       _breakEnabled = State(initialValue: mostRecent.effectiveBreakEnabled)
-      _breakMethod = State(initialValue: mostRecent.breakMethod)
-      _breakThresholdHours = State(initialValue: mostRecent.effectiveBreakThresholdHours)
-      _breakDeductionMinutes = State(initialValue: mostRecent.effectiveBreakDeductionMinutes)
+      _breakMethod = State(initialValue: .proportional)
+      _breakThresholdHours = State(initialValue: 5.5)
+      _breakDeductionMinutes = State(initialValue: 30)
       _taxEnabled = State(initialValue: mostRecent.effectiveTaxEnabled)
       _taxPercentage = State(initialValue: mostRecent.effectiveTaxPercentage)
       // Initialize tariff type ID from most recent snapshot
@@ -764,9 +764,9 @@ struct WageSnapshotEditorSheet: View {
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage,
       breakEnabled: breakEnabled,
-      breakMethod: breakMethod,
-      breakThresholdHours: breakThresholdHours,
-      breakDeductionMinutes: breakDeductionMinutes,
+      breakMethod: .proportional,
+      breakThresholdHours: 5.5,
+      breakDeductionMinutes: 30,
       tariffTypeId: resolvedTariffTypeId
     )
 
