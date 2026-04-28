@@ -7,21 +7,23 @@ struct NotificationSettingsView: View {
   @StateObject private var viewModel = NotificationSettingsViewModel()
 
   var body: some View {
-    List {
-      // System permission section
-      systemPermissionSection
+    ScrollView {
+      VStack(alignment: .leading, spacing: Spacing.lg) {
+        // System permission section
+        systemPermissionSection
 
-      // Shift reminders section
-      shiftRemindersSection
+        // Shift reminders section
+        shiftRemindersSection
 
-      // Smart notifications section
-      smartNotificationsSection
+        // Smart notifications section
+        smartNotificationsSection
 
-      // Shared shifts section
-      sharedShiftsSection
+        // Shared shifts section
+        sharedShiftsSection
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
-    .listStyle(.insetGrouped)
-    .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .notificationsTitle))
     .navigationBarTitleDisplayMode(.inline)
@@ -67,7 +69,10 @@ struct NotificationSettingsView: View {
   // MARK: - System Permission Section
 
   private var systemPermissionSection: some View {
-    Section {
+    settingsSection(
+      title: String(localized: .notificationsPermissionSectionTitle),
+      footer: notificationPermissionFooter
+    ) {
       HStack(spacing: Spacing.sm) {
         // Icon
         settingsIcon(systemName: permissionIcon, color: permissionIconColor)
@@ -88,13 +93,13 @@ struct NotificationSettingsView: View {
         // Action button
         permissionButton
       }
-      .listRowBackground(Color.tidexSurfacePrimary)
-    } header: {
-      Text(.notificationsPermissionSectionTitle)
-    } footer: {
-      if viewModel.notificationStatus == .denied {
-        Text(.notificationsPermissionDeniedHint)
-      }
+    }
+  }
+
+  @ViewBuilder
+  private var notificationPermissionFooter: some View {
+    if viewModel.notificationStatus == .denied {
+      Text(.notificationsPermissionDeniedHint)
     }
   }
 
@@ -190,7 +195,10 @@ struct NotificationSettingsView: View {
   // MARK: - Shift Reminders Section
 
   private var shiftRemindersSection: some View {
-    Section {
+    settingsSection(
+      title: String(localized: .notificationsRemindersSectionTitle),
+      footer: Text(.notificationsRemindersSectionSubtitle)
+    ) {
       // Enable toggle
       Toggle(isOn: $viewModel.shiftRemindersEnabled) {
         HStack(spacing: Spacing.sm) {
@@ -208,25 +216,21 @@ struct NotificationSettingsView: View {
         }
       }
       .tint(.tidexBlue)
-      .listRowBackground(Color.tidexSurfacePrimary)
 
       // Reminder times (shown when enabled)
       if viewModel.shiftRemindersEnabled && !viewModel.reminderTimes.isEmpty {
+        settingsDivider
+
         ForEach(Array(viewModel.reminderTimes.enumerated()), id: \.offset) { index, minutes in
           reminderTimeRow(minutes: minutes, index: index)
-            .listRowBackground(Color.tidexSurfacePrimary)
+          settingsDivider
         }
 
         // Add button (if under max)
         if viewModel.canAddReminder {
           addReminderButton
-            .listRowBackground(Color.tidexSurfacePrimary)
         }
       }
-    } header: {
-      Text(.notificationsRemindersSectionTitle)
-    } footer: {
-      Text(.notificationsRemindersSectionSubtitle)
     }
     .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
     .disabled(viewModel.notificationStatus == .denied)
@@ -256,6 +260,7 @@ struct NotificationSettingsView: View {
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
+      .padding(.vertical, Spacing.xs)
     }
     .buttonStyle(.plain)
   }
@@ -275,6 +280,7 @@ struct NotificationSettingsView: View {
           .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
       }
+      .padding(.vertical, Spacing.xs)
     }
     .buttonStyle(.plain)
   }
@@ -282,7 +288,10 @@ struct NotificationSettingsView: View {
   // MARK: - Shared Shifts Section
 
   private var smartNotificationsSection: some View {
-    Section {
+    settingsSection(
+      title: String(localized: .notificationsSmartSectionTitle),
+      footer: smartStatusFooter
+    ) {
       Toggle(isOn: $viewModel.smartNotificationsEnabled) {
         HStack(spacing: Spacing.sm) {
           settingsIcon(systemName: "brain.head.profile", color: .purple)
@@ -299,11 +308,6 @@ struct NotificationSettingsView: View {
         }
       }
       .tint(.tidexBlue)
-      .listRowBackground(Color.tidexSurfacePrimary)
-    } header: {
-      Text(.notificationsSmartSectionTitle)
-    } footer: {
-      smartStatusFooter
     }
     .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
     .disabled(viewModel.notificationStatus == .denied)
@@ -335,7 +339,10 @@ struct NotificationSettingsView: View {
   }
 
   private var sharedShiftsSection: some View {
-    Section {
+    settingsSection(
+      title: String(localized: .notificationsSharedSectionTitle),
+      footer: Text(.notificationsSharedSectionSubtitle)
+    ) {
       Toggle(isOn: $viewModel.sharedShiftsEnabled) {
         HStack(spacing: Spacing.sm) {
           settingsIcon(systemName: "person.2.fill", color: .green)
@@ -352,11 +359,6 @@ struct NotificationSettingsView: View {
         }
       }
       .tint(.tidexBlue)
-      .listRowBackground(Color.tidexSurfacePrimary)
-    } header: {
-      Text(.notificationsSharedSectionTitle)
-    } footer: {
-      Text(.notificationsSharedSectionSubtitle)
     }
     .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
     .disabled(viewModel.notificationStatus == .denied)
@@ -371,6 +373,40 @@ struct NotificationSettingsView: View {
       .frame(width: 29, height: 29)
       .background(color.opacity(0.75))
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
+  }
+
+  @ViewBuilder
+  private func settingsSection<Footer: View, Content: View>(
+    title: String,
+    footer: Footer,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(title)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
+        .textCase(.uppercase)
+        .padding(.horizontal, Spacing.sm)
+
+      VStack(spacing: 0) {
+        content()
+      }
+      .padding(Spacing.md)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .tidexCardShadow(cornerRadius: CornerRadius.lg)
+
+      footer
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .padding(.horizontal, Spacing.sm)
+    }
+  }
+
+  private var settingsDivider: some View {
+    Divider()
+      .background(Color.tidexBorderSubtle)
+      .padding(.vertical, Spacing.sm)
   }
 }
 
