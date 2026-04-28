@@ -7,29 +7,28 @@ struct AppearanceSettingsView: View {
   @StateObject private var viewModel = AppearanceSettingsViewModel()
 
   var body: some View {
-    List {
-      // Error message
-      if let error = viewModel.errorMessage {
-        Section {
+    ScrollView {
+      VStack(alignment: .leading, spacing: Spacing.lg) {
+        // Error message
+        if let error = viewModel.errorMessage {
           errorBanner(error)
         }
-        .listRowBackground(Color.tidexSurfacePrimary)
+
+        // Theme selection
+        themeSelectionSection
+
+        // Calendar animation selection
+        calendarAnimationSection
+
+        // Startup tab selection
+        startupTabSection
+
+        // Dashboard controls
+        dashboardControlsSection
       }
-
-      // Theme selection
-      themeSelectionSection
-
-      // Calendar animation selection
-      calendarAnimationSection
-
-      // Startup tab selection
-      startupTabSection
-
-      // Dashboard controls
-      dashboardControlsSection
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
-    .listStyle(.insetGrouped)
-    .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .appearanceTitle))
     .navigationBarTitleDisplayMode(.inline)
@@ -68,15 +67,16 @@ struct AppearanceSettingsView: View {
   // MARK: - Theme Selection Section
 
   private var themeSelectionSection: some View {
-    Section {
+    settingsSection(
+      title: String(localized: .appearanceThemeSectionTitle),
+      footer: currentThemeInfo
+    ) {
       ForEach(AppTheme.allCases, id: \.self) { theme in
         themeOptionRow(theme)
+        if theme != AppTheme.allCases.last {
+          settingsDivider
+        }
       }
-      .listRowBackground(Color.tidexSurfacePrimary)
-    } header: {
-      Text(String(localized: .appearanceThemeSectionTitle))
-    } footer: {
-      currentThemeInfo
     }
   }
 
@@ -108,7 +108,9 @@ struct AppearanceSettingsView: View {
           .font(.system(size: 24))
           .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
       }
+      .padding(.vertical, Spacing.xs)
     }
+    .buttonStyle(.plain)
   }
 
   private func themePreview(_ theme: AppTheme) -> some View {
@@ -178,13 +180,13 @@ struct AppearanceSettingsView: View {
   // MARK: - Calendar Animation Section
 
   private var calendarAnimationSection: some View {
-    Section {
+    settingsSection(title: String(localized: .appearanceCalendarAnimationSectionTitle)) {
       ForEach(CalendarAnimationStyle.allCases, id: \.self) { style in
         animationStyleOptionRow(style)
+        if style != CalendarAnimationStyle.allCases.last {
+          settingsDivider
+        }
       }
-      .listRowBackground(Color.tidexSurfacePrimary)
-    } header: {
-      Text(String(localized: .appearanceCalendarAnimationSectionTitle))
     }
   }
 
@@ -216,7 +218,9 @@ struct AppearanceSettingsView: View {
           .font(.system(size: 24))
           .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
       }
+      .padding(.vertical, Spacing.xs)
     }
+    .buttonStyle(.plain)
   }
 
   private func animationStylePreview(_ style: CalendarAnimationStyle) -> some View {
@@ -290,15 +294,16 @@ struct AppearanceSettingsView: View {
   // MARK: - Startup Tab
 
   private var startupTabSection: some View {
-    Section {
+    settingsSection(
+      title: String(localized: .appearanceStartupTabSectionTitle),
+      footer: Text(String(localized: .appearanceStartupTabSectionDescription))
+    ) {
       ForEach(StartupTabOption.allCases, id: \.self) { tab in
         startupTabRow(tab)
+        if tab != StartupTabOption.allCases.last {
+          settingsDivider
+        }
       }
-      .listRowBackground(Color.tidexSurfacePrimary)
-    } header: {
-      Text(String(localized: .appearanceStartupTabSectionTitle))
-    } footer: {
-      Text(String(localized: .appearanceStartupTabSectionDescription))
     }
   }
 
@@ -329,7 +334,9 @@ struct AppearanceSettingsView: View {
           .font(.system(size: 24))
           .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
       }
+      .padding(.vertical, Spacing.xs)
     }
+    .buttonStyle(.plain)
   }
 
   private func startupTabTitle(_ tab: StartupTabOption) -> String {
@@ -365,7 +372,7 @@ struct AppearanceSettingsView: View {
   // MARK: - Dashboard Controls
 
   private var dashboardControlsSection: some View {
-    Section {
+    settingsSection(title: String(localized: .appearanceDashboardSectionTitle)) {
       Toggle(isOn: $viewModel.showDashboardClockButtons) {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(String(localized: .appearanceDashboardClockButtonsTitle))
@@ -378,10 +385,49 @@ struct AppearanceSettingsView: View {
         }
       }
       .tint(.tidexBlue)
-      .listRowBackground(Color.tidexSurfacePrimary)
-    } header: {
-      Text(String(localized: .appearanceDashboardSectionTitle))
     }
+  }
+
+  @ViewBuilder
+  private func settingsSection<Footer: View, Content: View>(
+    title: String,
+    footer: Footer,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(title)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
+        .textCase(.uppercase)
+        .padding(.horizontal, Spacing.sm)
+
+      VStack(spacing: 0) {
+        content()
+      }
+      .padding(Spacing.md)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .tidexCardShadow(cornerRadius: CornerRadius.lg)
+
+      footer
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .padding(.horizontal, Spacing.sm)
+    }
+  }
+
+  @ViewBuilder
+  private func settingsSection<Content: View>(
+    title: String,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    settingsSection(title: title, footer: EmptyView(), content: content)
+  }
+
+  private var settingsDivider: some View {
+    Divider()
+      .background(Color.tidexBorderSubtle)
+      .padding(.vertical, Spacing.sm)
   }
 }
 

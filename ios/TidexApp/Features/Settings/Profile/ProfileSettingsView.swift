@@ -33,32 +33,33 @@ struct ProfileSettingsView: View {
   }
 
   var body: some View {
-    List {
-      // Error banner (for avatar upload, name save, etc.)
-      if let error = viewModel.errorMessage, !viewModel.showEmailChangeSheet {
-        Section {
+    ScrollView {
+      VStack(alignment: .leading, spacing: Spacing.lg) {
+        // Error banner (for avatar upload, name save, etc.)
+        if let error = viewModel.errorMessage, !viewModel.showEmailChangeSheet {
           ErrorBanner(
             message: error,
             onDismiss: { viewModel.errorMessage = nil }
           )
         }
-        .listRowBackground(Color.tidexSurfacePrimary)
-      }
 
-      // Personal Info Section
-      Section(header: Text(String(localized: .profilePersonalInfoTitle))) {
-        avatarSection
-        nameField
-        usernameField
-        emailField
-      }
-      .listRowBackground(Color.tidexSurfacePrimary)
+        // Personal Info Section
+        settingsSection(title: String(localized: .profilePersonalInfoTitle)) {
+          avatarSection
+          settingsDivider
+          nameField
+          settingsDivider
+          usernameField
+          settingsDivider
+          emailField
+        }
 
-      // Danger Zone Section
-      dangerZoneSection
+        // Danger Zone Section
+        dangerZoneSection
+      }
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.lg)
     }
-    .listStyle(.insetGrouped)
-    .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .profileTitle))
     .navigationBarTitleDisplayMode(.inline)
@@ -577,13 +578,15 @@ struct ProfileSettingsView: View {
   // MARK: - Danger Zone Section
 
   private var dangerZoneSection: some View {
-    Section(
-      header: Text(String(localized: .profileDangerZoneTitle))
-        .foregroundColor(.tidexError)
+    settingsSection(
+      title: String(localized: .profileDangerZoneTitle),
+      titleColor: .tidexError
     ) {
       Text(.profileDangerZoneSubtitle)
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
+
+      settingsDivider
 
       // Delete account row
       HStack(spacing: Spacing.md) {
@@ -613,7 +616,35 @@ struct ProfileSettingsView: View {
         .disabled(viewModel.isDeletingAccount)
       }
     }
-    .listRowBackground(Color.tidexSurfacePrimary)
+  }
+
+  @ViewBuilder
+  private func settingsSection<Content: View>(
+    title: String,
+    titleColor: Color = .tidexTextSecondary,
+    @ViewBuilder content: () -> Content
+  ) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(title)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(titleColor)
+        .textCase(.uppercase)
+        .padding(.horizontal, Spacing.sm)
+
+      VStack(alignment: .leading, spacing: 0) {
+        content()
+      }
+      .padding(Spacing.md)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .tidexCardShadow(cornerRadius: CornerRadius.lg)
+    }
+  }
+
+  private var settingsDivider: some View {
+    Divider()
+      .background(Color.tidexBorderSubtle)
+      .padding(.vertical, Spacing.sm)
   }
 
   // MARK: - Photo Selection Handler

@@ -333,7 +333,7 @@ struct SettingsView: View {
   private var settingsMenuDivider: some View {
     Divider()
       .background(Color.tidexBorderSubtle)
-      .padding(.leading, 38 + Spacing.sm)
+      .padding(.leading, Spacing.md + 38 + Spacing.sm)
   }
 
   // MARK: - Sign Out Rows
@@ -365,6 +365,7 @@ struct SettingsView: View {
 
         Spacer()
       }
+      .frame(minHeight: 52)
       .padding(.horizontal, Spacing.md)
     }
     .disabled(isSigningOut || isSigningOutGlobal)
@@ -378,23 +379,24 @@ struct SettingsView: View {
       HStack(spacing: Spacing.sm) {
         SettingsRowIcon(
           systemName: "rectangle.portrait.and.arrow.right.fill",
-          foregroundColor: .tidexTextSecondary,
-          backgroundColor: .tidexSurfaceSecondary,
-          borderColor: .tidexBorderSubtle
+          foregroundColor: .tidexError,
+          backgroundColor: .tidexError.opacity(0.12),
+          borderColor: .tidexError.opacity(0.18)
         )
 
         if isSigningOutGlobal {
           ProgressView()
-            .tint(.tidexTextSecondary)
+            .tint(.tidexError)
           Text(String(localized: .userMenuLogoutEverywhereLoading))
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundColor(.tidexError)
         } else {
           Text(String(localized: .userMenuLogoutEverywhere))
-            .foregroundColor(.tidexTextSecondary)
+            .foregroundColor(.tidexError)
         }
 
         Spacer()
       }
+      .frame(minHeight: 52)
       .padding(.horizontal, Spacing.md)
     }
     .disabled(isSigningOut || isSigningOutGlobal)
