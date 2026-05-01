@@ -130,7 +130,6 @@ private struct TabContent: View {
     case .subscribers: SubscribersTabView(viewModel: viewModel)
     case .shares: SharesTabView(viewModel: viewModel)
     case .auditLog: AuditLogTabView(viewModel: viewModel)
-    case .sql: SqlTabView(viewModel: viewModel)
     }
   }
 }
@@ -380,67 +379,6 @@ private struct AuditLogTabView: View {
         }
         .padding(Spacing.md)
       }
-    }
-  }
-}
-
-// MARK: - SQL Tab
-
-private struct SqlTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
-
-  var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: Spacing.md) {
-        Text("Execute SQL").font(.headline).foregroundColor(.tidexTextPrimary)
-
-        TextEditor(text: $viewModel.sqlQuery)
-          .font(.tidexMonoCaptionRegular)
-          .frame(minHeight: 120)
-          .padding(Spacing.xs)
-          .background(Color.tidexSurfacePrimary)
-          .cornerRadius(CornerRadius.sm)
-
-        Button(action: { Task { await viewModel.executeSql() } }) {
-          HStack {
-            if viewModel.sqlIsExecuting {
-              ProgressView().progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-            }
-            Text(viewModel.sqlIsExecuting ? "Executing..." : "Execute")
-          }
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexBlue)
-          .foregroundColor(.tidexTextOnBrand)
-          .cornerRadius(CornerRadius.sm)
-        }
-        .disabled(viewModel.sqlIsExecuting)
-
-        if let error = viewModel.sqlError {
-          Text(error).font(.tidexFootnote).foregroundColor(.tidexError)
-        }
-
-        if let result = viewModel.sqlResult {
-          VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text("\(viewModel.sqlRowCount) rows in \(viewModel.sqlExecutionTime)ms")
-              .font(.tidexCaptionRegular).foregroundColor(.tidexTextMuted)
-
-            ScrollView(.horizontal) {
-              VStack(alignment: .leading, spacing: Spacing.xxs) {
-                ForEach(Array(result.enumerated()), id: \.offset) { _, row in
-                  Text(row.map { "\($0.key): \($0.value.stringValue)" }.joined(separator: ", "))
-                    .font(.tidexMonoMicro)
-                    .foregroundColor(.tidexTextSecondary)
-                }
-              }
-            }
-            .padding(Spacing.xs)
-            .background(Color.tidexSurfacePrimary)
-            .cornerRadius(CornerRadius.sm)
-          }
-        }
-      }
-      .padding(Spacing.md)
     }
   }
 }

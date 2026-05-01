@@ -221,19 +221,6 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# Disables JWT authentication for the Stripe webhook (uses stripe-signature instead)
-[functions.stripe_webhook]
-verify_jwt = false
-
-[functions.stripe-setup]
-verify_jwt = false
-
-[functions.stripe-webhook]
-verify_jwt = false
-
-[functions.stripe-worker]
-verify_jwt = false
-
 # Disables JWT authentication for push notifications (invoked by cron job with service role key)
 [functions.send-push-notifications]
 verify_jwt = false
