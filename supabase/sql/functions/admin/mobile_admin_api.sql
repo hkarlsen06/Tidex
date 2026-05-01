@@ -649,42 +649,6 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.admin_execute_sql_api(
-  p_query text
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public', 'auth'
-AS $function$
-DECLARE
-  v_started_at timestamptz := clock_timestamp();
-  v_data jsonb;
-BEGIN
-  PERFORM public.assert_is_admin();
-
-  SELECT public.admin_execute_sql(btrim(p_query)) INTO v_data;
-
-  PERFORM public.admin_log_action_rpc(
-    'sql_executed',
-    NULL,
-    NULL,
-    jsonb_build_object(
-      'query', btrim(p_query),
-      'row_count', COALESCE(jsonb_array_length(v_data), 0),
-      'execution_time_ms', FLOOR(EXTRACT(EPOCH FROM (clock_timestamp() - v_started_at)) * 1000)
-    )
-  );
-
-  RETURN jsonb_build_object(
-    'success', true,
-    'data', COALESCE(v_data, '[]'::jsonb),
-    'rowCount', COALESCE(jsonb_array_length(v_data), 0),
-    'executionTimeMs', FLOOR(EXTRACT(EPOCH FROM (clock_timestamp() - v_started_at)) * 1000)::integer
-  );
-END;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.admin_get_shares_api(
   p_search text DEFAULT NULL,
   p_page integer DEFAULT 1,
@@ -1142,7 +1106,6 @@ GRANT EXECUTE ON FUNCTION public.admin_respond_feedback_api(uuid, text) TO authe
 GRANT EXECUTE ON FUNCTION public.admin_get_reports_api(integer, integer, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_report_status_api(uuid, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_audit_log_api(integer, text, uuid) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_execute_sql_api(text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_shares_api(text, integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_create_share_api(uuid, uuid, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_share_api(uuid, boolean, boolean, boolean) TO authenticated;

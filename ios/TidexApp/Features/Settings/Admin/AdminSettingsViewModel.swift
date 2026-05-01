@@ -19,7 +19,6 @@ enum AdminTab: String, CaseIterable, Identifiable {
   case subscribers
   case shares
   case auditLog
-  case sql
 
   var id: String { rawValue }
 
@@ -32,7 +31,6 @@ enum AdminTab: String, CaseIterable, Identifiable {
     case .subscribers: return "Subscribers"
     case .shares: return "Shares"
     case .auditLog: return "Audit Log"
-    case .sql: return "SQL"
     }
   }
 
@@ -45,7 +43,6 @@ enum AdminTab: String, CaseIterable, Identifiable {
     case .subscribers: return "creditcard"
     case .shares: return "square.and.arrow.up"
     case .auditLog: return "list.bullet.clipboard"
-    case .sql: return "terminal"
     }
   }
 }
@@ -212,15 +209,6 @@ struct AuditLogResponse: Codable {
   let message: String?
 }
 
-/// SQL result
-struct SqlResponse: Codable {
-  let success: Bool
-  let data: [[String: AnyCodable]]?
-  let rowCount: Int?
-  let executionTimeMs: Int?
-  let message: String?
-}
-
 /// Shift share item
 struct ShiftShareItem: Codable, Identifiable {
   let id: String
@@ -380,16 +368,6 @@ struct AuditLogTabState {
   var isLoading: Bool = false
 }
 
-/// Groups related SQL tab state
-struct SqlTabState {
-  var query: String = ""
-  var result: [[String: AnyCodable]]?
-  var rowCount: Int = 0
-  var executionTime: Int = 0
-  var isExecuting: Bool = false
-  var error: String?
-}
-
 /// Groups related shares tab state
 struct SharesTabState {
   var items: [ShiftShareItem] = []
@@ -465,7 +443,6 @@ final class AdminSettingsViewModel: ObservableObject {
   @Published var feedbackState = FeedbackTabState()
   @Published var reportsState = ReportsTabState()
   @Published var auditLogState = AuditLogTabState()
-  @Published var sqlState = SqlTabState()
   @Published var sharesState = SharesTabState()
   @Published var notificationsState = NotificationsTabState()
   @Published var impersonationState = ImpersonationTabState()
@@ -572,32 +549,6 @@ final class AdminSettingsViewModel: ObservableObject {
   var auditLogIsLoading: Bool {
     get { auditLogState.isLoading }
     set { auditLogState.isLoading = newValue }
-  }
-
-  // SQL
-  var sqlQuery: String {
-    get { sqlState.query }
-    set { sqlState.query = newValue }
-  }
-  var sqlResult: [[String: AnyCodable]]? {
-    get { sqlState.result }
-    set { sqlState.result = newValue }
-  }
-  var sqlRowCount: Int {
-    get { sqlState.rowCount }
-    set { sqlState.rowCount = newValue }
-  }
-  var sqlExecutionTime: Int {
-    get { sqlState.executionTime }
-    set { sqlState.executionTime = newValue }
-  }
-  var sqlIsExecuting: Bool {
-    get { sqlState.isExecuting }
-    set { sqlState.isExecuting = newValue }
-  }
-  var sqlError: String? {
-    get { sqlState.error }
-    set { sqlState.error = newValue }
   }
 
   // Shares
@@ -788,8 +739,6 @@ final class AdminSettingsViewModel: ObservableObject {
       await fetchReports()
     case .auditLog:
       await fetchAuditLog()
-    case .sql:
-      break  // No initial load needed
     case .shares:
       await fetchShares()
     case .notifications:
@@ -799,7 +748,6 @@ final class AdminSettingsViewModel: ObservableObject {
 
   func clearMessages() {
     errorMessage = nil
-    sqlError = nil
   }
 
   func setInitialReportSelection(_ reportId: String?) {
@@ -1116,39 +1064,6 @@ final class AdminSettingsViewModel: ObservableObject {
     }
 
     auditLogIsLoading = false
-  }
-
-  // MARK: - SQL Tab Methods
-
-  func executeSql() async {
-    guard !sqlQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-      sqlError = "Query cannot be empty"
-      return
-    }
-
-    sqlIsExecuting = true
-    sqlError = nil
-    sqlResult = nil
-
-    do {
-      let result: SqlResponse = try await makeRequest(
-        url: adminRouteBaseURL.appendingPathComponent("/api/admin/sql"),
-        method: "POST",
-        body: ["query": sqlQuery]
-      )
-
-      if result.success {
-        sqlResult = result.data
-        sqlRowCount = result.rowCount ?? 0
-        sqlExecutionTime = result.executionTimeMs ?? 0
-      } else {
-        sqlError = "Query failed"
-      }
-    } catch {
-      sqlError = "Failed to execute query"
-    }
-
-    sqlIsExecuting = false
   }
 
   // MARK: - Shares Tab Methods
@@ -1713,14 +1628,6 @@ final class AdminSettingsViewModel: ObservableObject {
 
     case ("GET", "/api/admin/audit-log"):
       return try await rpcRequest("admin_get_audit_log_api")
-
-    case ("POST", "/api/admin/sql"):
-      return try await rpcRequest(
-        "admin_execute_sql_api",
-        params: compactParams([
-          "p_query": stringBody(body, key: "query").map(AnyJSON.string)
-        ])
-      )
 
     case ("GET", "/api/admin/shares"):
       return try await rpcRequest(
