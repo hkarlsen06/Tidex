@@ -593,7 +593,10 @@ function formatRecurringForAI(recurring: any): any {
   };
 }
 
-const KNOWN_TOOL_NAMES: ToolName[] = toolDefinitions.map((tool) => tool.name as ToolName);
+const KNOWN_TOOL_NAMES: ToolName[] = [
+  ...toolDefinitions.map((tool) => tool.name as ToolName),
+  "web_fetch",
+];
 
 function normalizeToolName(toolName: string): ToolName | null {
   const trimmed = toolName.trim();
@@ -620,6 +623,63 @@ function sanitizeToolArgs(value: unknown): unknown {
     return sanitized;
   }
   return value;
+}
+
+async function executeWebFetch(args: Record<string, unknown>): Promise<ToolResult> {
+  const url = typeof args.url === "string" ? args.url.trim() : "";
+  if (!url) {
+    return { success: false, message: "web_fetch requires a url." };
+  }
+
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url);
+  } catch {
+    return { success: false, message: "web_fetch url must be absolute." };
+  }
+
+  if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+    return {
+      success: false,
+      message: "web_fetch only supports http and https URLs.",
+    };
+  }
+
+  try {
+    const response = await fetch(parsedUrl, {
+      method: "GET",
+      headers: {
+        "Accept": "text/html, text/plain, application/pdf, */*;q=0.8",
+        "User-Agent": "Tidex-Wagey/1.0",
+      },
+    });
+    const contentType = response.headers.get("content-type") ?? "";
+    const text = await response.text();
+    const maxContentLength = 24_000;
+    return {
+      success: response.ok,
+      message: response.ok ? "Fetched URL successfully." : `Fetch failed with HTTP ${response.status}.`,
+      data: {
+        url: parsedUrl.toString(),
+        status: response.status,
+        contentType,
+        title: extractHtmlTitle(text),
+        content: text.slice(0, maxContentLength),
+        truncated: text.length > maxContentLength,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "web_fetch failed.",
+      data: { url: parsedUrl.toString() },
+    };
+  }
+}
+
+function extractHtmlTitle(text: string): string | undefined {
+  const match = text.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return match?.[1]?.replace(/\s+/g, " ").trim() || undefined;
 }
 
 export async function executeTool(
@@ -685,6 +745,8 @@ export async function executeTool(
         return await executeManageFeedback(ctx, args);
       case "manage_profile":
         return await executeManageProfile(ctx, args);
+      case "web_fetch":
+        return await executeWebFetch(args as Record<string, unknown>);
       default:
         return { success: false, message: t(tr.unknownTool, { name: toolName }) };
     }

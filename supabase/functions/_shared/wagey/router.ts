@@ -22,6 +22,12 @@ import { consumeWageyInvocation, getWageyAccess } from "./data.ts";
 import { executeTool } from "./executor.ts";
 import { maxIterationsReached } from "./i18n.ts";
 import {
+  DEFAULT_OPENAI_MODEL,
+  OpenAIProviderError,
+  resolveOpenAIModel,
+  streamOpenAIChat,
+} from "./openai.ts";
+import {
   getSystemPrompt,
   type SystemPromptContext,
   WAGEY_MESSAGE_BREAK_TOKEN,
@@ -169,6 +175,7 @@ const READ_ONLY_TOOL_NAMES = new Set<ToolName>([
   "list_friends",
   "query_friend_shifts",
   "query_friend_featured_shift",
+  "web_fetch",
 ]);
 
 function extractTextContent(
@@ -474,6 +481,10 @@ function getPublicErrorMessage(error: unknown): string {
     return error.publicMessage;
   }
 
+  if (error instanceof OpenAIProviderError) {
+    return error.publicMessage;
+  }
+
   return error instanceof Error ? error.message : "Failed to initialize Wagey";
 }
 
@@ -489,9 +500,33 @@ function getLoggableErrorMetadata(error: unknown): Record<string, unknown> {
     };
   }
 
+  if (error instanceof OpenAIProviderError) {
+    return {
+      error: error.message,
+      status: error.status,
+      providerType: error.providerType,
+      providerMessage: error.providerMessage,
+      requestId: error.requestId,
+      publicMessage: error.publicMessage,
+    };
+  }
+
   return {
     error: error instanceof Error ? error.message : String(error),
   };
+}
+
+type WageyAIProvider = "claude" | "openai";
+
+type ProviderConfig =
+  | { provider: "claude"; apiKey: string; model: string }
+  | { provider: "openai"; apiKey: string; model: string };
+
+function resolveWageyAIProvider(
+  configuredProvider?: string | null,
+): WageyAIProvider {
+  const provider = configuredProvider?.trim().toLowerCase() ?? "";
+  return provider === "openai" ? "openai" : "claude";
 }
 
 function getClaudeConfig(): { apiKey: string; model: string } {
@@ -515,6 +550,37 @@ function getClaudeConfig(): { apiKey: string; model: string } {
   }
 
   return { apiKey, model };
+}
+
+function getOpenAIConfig(): { apiKey: string; model: string } {
+  const apiKey = Deno.env.get("OPENAI_API_KEY")?.trim() ?? "";
+  const configuredModel = Deno.env.get("OPENAI_MODEL")?.trim() ?? "";
+
+  if (!apiKey) {
+    throw new Error("Missing OPENAI_API_KEY");
+  }
+
+  const model = resolveOpenAIModel(configuredModel);
+
+  if (!configuredModel) {
+    console.warn(JSON.stringify({
+      scope: "wagey-router",
+      message:
+        "OPENAI_MODEL is not configured for Wagey; falling back to default GPT-5.5",
+      fallbackModel: DEFAULT_OPENAI_MODEL,
+    }));
+  }
+
+  return { apiKey, model };
+}
+
+function getProviderConfig(): ProviderConfig {
+  const provider = resolveWageyAIProvider(Deno.env.get("WAGEY_AI_PROVIDER"));
+  if (provider === "openai") {
+    return { provider, ...getOpenAIConfig() };
+  }
+
+  return { provider, ...getClaudeConfig() };
 }
 
 function getResetDays(resetDate: Date | null): number {
@@ -689,7 +755,7 @@ export async function handleWageyRequest(
           system = getSystemPrompt(systemContext);
         }
 
-        const claude = getClaudeConfig();
+        const providerConfig = getProviderConfig();
 
         let iterationCount = 0;
         const MAX_ITERATIONS = 10;
@@ -873,17 +939,27 @@ export async function handleWageyRequest(
               return await emitAssistantText(flushableText);
             };
 
-            for await (
-              const chunk of streamClaudeChat({
-                apiKey: claude.apiKey,
-                model: claude.model,
+            const providerStream = providerConfig.provider === "openai"
+              ? streamOpenAIChat({
+                apiKey: providerConfig.apiKey,
+                model: providerConfig.model,
                 system,
                 messages: conversationMessages,
                 tools: [...tools, ...BUILT_IN_TOOLS],
                 maxTokens: DEFAULT_WAGEY_MAX_TOKENS,
                 signal: req.signal,
               })
-            ) {
+              : streamClaudeChat({
+                apiKey: providerConfig.apiKey,
+                model: providerConfig.model,
+                system,
+                messages: conversationMessages,
+                tools: [...tools, ...BUILT_IN_TOOLS],
+                maxTokens: DEFAULT_WAGEY_MAX_TOKENS,
+                signal: req.signal,
+              });
+
+            for await (const chunk of providerStream) {
               if (req.signal.aborted) break;
 
               if (chunk.type !== "text") {
@@ -1091,7 +1167,7 @@ export async function handleWageyRequest(
           log(
             "error",
             requestId,
-            "Claude loop failed",
+            `${providerConfig.provider} loop failed`,
             getLoggableErrorMetadata(error),
           );
           sendChunk({
@@ -1106,7 +1182,7 @@ export async function handleWageyRequest(
           log("warn", requestId, "No user-visible assistant output");
           sendChunk({
             type: "error",
-            error: "No response from Claude provider",
+            error: `No response from ${providerConfig.provider} provider`,
           });
         }
 

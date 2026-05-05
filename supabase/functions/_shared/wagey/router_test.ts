@@ -1,6 +1,7 @@
 import { assert, assertEquals } from "jsr:@std/assert";
 
 import { DEFAULT_CLAUDE_MODEL } from "./claude.ts";
+import { DEFAULT_OPENAI_MODEL } from "./openai.ts";
 import {
   assistantLikelyClaimsWriteAction,
   handleWageyRequest,
@@ -305,6 +306,24 @@ function buildMessageBreakEvents(): Record<string, unknown>[] {
     { type: "content_block_stop" },
     { type: "message_delta", delta: { stop_reason: "end_turn" } },
     { type: "message_stop" },
+  ];
+}
+
+function buildOpenAITextOnlyEvents(): Record<string, unknown>[] {
+  return [
+    {
+      type: "response.output_item.added",
+      output_index: 0,
+      item: { type: "message", id: "msg_1" },
+    },
+    {
+      type: "response.output_text.delta",
+      delta: "Dette kommer fra GPT-5.5.",
+    },
+    {
+      type: "response.completed",
+      response: { status: "completed" },
+    },
   ];
 }
 
@@ -631,6 +650,68 @@ Deno.test("handleWageyRequest sends the explicit Opus 4.6 rollback model when co
       Deno.env.delete("CLAUDE_MODEL");
     } else {
       Deno.env.set("CLAUDE_MODEL", originalModel);
+    }
+  }
+});
+
+Deno.test("handleWageyRequest can route Wagey through OpenAI GPT-5.5", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalProvider = Deno.env.get("WAGEY_AI_PROVIDER");
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
+  let capturedUrl = "";
+  let capturedModel: string | null = null;
+
+  Deno.env.set("WAGEY_AI_PROVIDER", "openai");
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
+  globalThis.fetch = async (input, init) => {
+    capturedUrl = String(input);
+    const request = init as { body?: string } | undefined;
+    const body = JSON.parse(request?.body ?? "{}") as { model?: string };
+    capturedModel = body.model ?? null;
+    return createSseResponse(buildOpenAITextOnlyEvents());
+  };
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(userId, []),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    const chunks = await readChunkStream(response);
+
+    assertEquals(capturedUrl, "https://api.openai.com/v1/responses");
+    assertEquals(capturedModel, DEFAULT_OPENAI_MODEL);
+    assert(
+      chunks.some((chunk) =>
+        chunk.type === "text" &&
+        chunk.content === "Dette kommer fra GPT-5.5."
+      ),
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalProvider === undefined) {
+      Deno.env.delete("WAGEY_AI_PROVIDER");
+    } else {
+      Deno.env.set("WAGEY_AI_PROVIDER", originalProvider);
+    }
+    if (originalApiKey === undefined) {
+      Deno.env.delete("OPENAI_API_KEY");
+    } else {
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("OPENAI_MODEL");
+    } else {
+      Deno.env.set("OPENAI_MODEL", originalModel);
     }
   }
 });

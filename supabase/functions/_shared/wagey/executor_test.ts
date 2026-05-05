@@ -759,3 +759,28 @@ Deno.test("calculate_earnings hypothetical_change preserves custom pause windows
     { start: "12:00", end: "12:30" },
   ]);
 });
+
+Deno.test("web_fetch returns truncated public URL content", async () => {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () =>
+    new Response("<html><title>Tariff</title><body>Updated rates</body></html>", {
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+    });
+
+  try {
+    const result = await executeTool(
+      createContext(),
+      "web_fetch",
+      JSON.stringify({ url: "https://example.com/tariff" }),
+    );
+
+    assertEquals(result.success, true);
+    const data = result.data as Record<string, unknown>;
+    assertEquals(data.url, "https://example.com/tariff");
+    assertEquals(data.title, "Tariff");
+    assertEquals(data.truncated, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
