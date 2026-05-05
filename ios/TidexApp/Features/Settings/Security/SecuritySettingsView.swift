@@ -40,6 +40,13 @@ struct SecuritySettingsView: View {
         // AI data sharing section
         aiDataSharingSection
 
+        if viewModel.isOfflineLimited {
+          Text(.securityOfflineManageUnavailable)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+            .padding(.horizontal, Spacing.sm)
+        }
+
         // Password section
         passwordSection
 
@@ -225,6 +232,8 @@ struct SecuritySettingsView: View {
           .background(viewModel.hasPassword ? Color.tidexBlue.opacity(0.1) : Color.tidexBlue)
           .cornerRadius(CornerRadius.sm)
         }
+        .disabled(viewModel.isOfflineLimited)
+        .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
       }
     }
   }
@@ -252,7 +261,7 @@ struct SecuritySettingsView: View {
         onDisconnect: {
           Task { await viewModel.disconnectProvider("phone") }
         },
-        connectDisabled: false
+        connectDisabled: viewModel.isOfflineLimited
       )
 
       settingsDivider
@@ -272,7 +281,7 @@ struct SecuritySettingsView: View {
         onDisconnect: {
           Task { await viewModel.disconnectProvider("google") }
         },
-        connectDisabled: false
+        connectDisabled: viewModel.isOfflineLimited
       )
 
       settingsDivider
@@ -292,7 +301,7 @@ struct SecuritySettingsView: View {
         onDisconnect: {
           Task { await viewModel.disconnectProvider("apple") }
         },
-        connectDisabled: false
+        connectDisabled: viewModel.isOfflineLimited
       )
     }
   }
@@ -360,7 +369,7 @@ struct SecuritySettingsView: View {
                 .cornerRadius(CornerRadius.xs)
             }
           }
-          .disabled(viewModel.isConnectingProvider)
+          .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
         } else {
           // Connected indicator
           HStack(spacing: Spacing.xxs) {
@@ -389,7 +398,7 @@ struct SecuritySettingsView: View {
               .cornerRadius(CornerRadius.xs)
           }
         }
-        .disabled(viewModel.isConnectingProvider)
+        .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
       }
     }
   }
@@ -450,7 +459,8 @@ struct SecuritySettingsView: View {
         .foregroundColor(.tidexBlue)
         .frame(maxWidth: .infinity)
       }
-      .disabled(viewModel.isEnrollingMFA)
+      .disabled(viewModel.isEnrollingMFA || viewModel.isOfflineLimited)
+      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
     }
   }
 
@@ -490,7 +500,8 @@ struct SecuritySettingsView: View {
           .foregroundColor(.tidexError)
           .padding(Spacing.xs)
       }
-      .disabled(viewModel.isUnenrollingMFA)
+      .disabled(viewModel.isUnenrollingMFA || viewModel.isOfflineLimited)
+      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
     }
   }
 

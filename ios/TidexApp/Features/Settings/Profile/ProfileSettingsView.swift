@@ -327,7 +327,7 @@ struct ProfileSettingsView: View {
         } label: {
           uploadButtonLabel
         }
-        .disabled(isAvatarActionInProgress)
+        .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
         .buttonStyle(.plain)
         .confirmationDialog(
           String(localized: .profilePersonalInfoChooseImageSource),
@@ -379,7 +379,7 @@ struct ProfileSettingsView: View {
             .background(Color.tidexError.opacity(0.1))
             .cornerRadius(CornerRadius.sm)
           }
-          .disabled(isAvatarActionInProgress)
+          .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
           .buttonStyle(.plain)
           .confirmationDialog(
             String(localized: .profilePersonalInfoRemoveImageConfirm),
@@ -398,6 +398,7 @@ struct ProfileSettingsView: View {
 
       Spacer()
     }
+    .opacity(viewModel.isOfflineProfileFallback ? 0.65 : 1)
   }
 
   @ViewBuilder
@@ -464,13 +465,23 @@ struct ProfileSettingsView: View {
         String(localized: .profilePersonalInfoNamePlaceholder), text: $viewModel.displayName
       )
       .font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundColor(viewModel.isOfflineProfileFallback ? .tidexTextSecondary : .tidexTextPrimary)
+      .disabled(viewModel.isOfflineProfileFallback)
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
-      .background(Color.tidexSurfaceSecondary)
+      .background(
+        viewModel.isOfflineProfileFallback
+          ? Color.tidexSurfaceSecondary.opacity(0.5) : Color.tidexSurfaceSecondary
+      )
       .cornerRadius(CornerRadius.sm)
       .onChange(of: viewModel.displayName) { _, _ in
         viewModel.onNameChanged()
+      }
+
+      if viewModel.isOfflineProfileFallback {
+        Text(.profileOfflineEditingUnavailable)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
       }
     }
   }
@@ -503,20 +514,27 @@ struct ProfileSettingsView: View {
         text: $viewModel.username
       )
       .font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
+      .foregroundColor(viewModel.isOfflineProfileFallback ? .tidexTextSecondary : .tidexTextPrimary)
+      .disabled(viewModel.isOfflineProfileFallback)
       .textInputAutocapitalization(.never)
       .autocorrectionDisabled()
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
-      .background(Color.tidexSurfaceSecondary)
+      .background(
+        viewModel.isOfflineProfileFallback
+          ? Color.tidexSurfaceSecondary.opacity(0.5) : Color.tidexSurfaceSecondary
+      )
       .cornerRadius(CornerRadius.sm)
       .onChange(of: viewModel.username) { _, _ in
         viewModel.onUsernameChanged()
       }
 
-      Text(.profilePersonalInfoUsernameHint)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+      Text(
+        viewModel.isOfflineProfileFallback
+          ? .profileOfflineEditingUnavailable : .profilePersonalInfoUsernameHint
+      )
+      .font(.tidexCaptionRegular)
+      .foregroundColor(.tidexTextMuted)
     }
   }
 
