@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import SwiftData
 import UIKit
 import os.log
 
@@ -1986,8 +1987,28 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   /// Get current authenticated user ID
   private func getCurrentUserId() async throws -> String? {
-    // Use AuthSessionManager to prevent concurrent refresh race conditions
-    let session = try await AuthSessionManager.shared.getSession()
-    return session.normalizedUserId
+    do {
+      // Use AuthSessionManager to prevent concurrent refresh race conditions
+      let session = try await AuthSessionManager.shared.getSession()
+      return session.normalizedUserId
+    } catch {
+      guard AuthSessionManager.shared.isTransientNetworkError(error) else {
+        throw error
+      }
+
+      // Offline fallback: resolve user ID from persisted local settings so local-first
+      // repositories still work when session refresh cannot reach network.
+      let descriptor = FetchDescriptor<LocalUserSettings>(
+        sortBy: [SortDescriptor(\LocalUserSettings.localUpdatedAt, order: .reverse)]
+      )
+      if let offlineUserId = try? LocalStore.shared.mainContext.fetch(descriptor).first?.userId,
+        !offlineUserId.isEmpty
+      {
+        logger.info("Using offline user id fallback from local settings")
+        return offlineUserId
+      }
+
+      throw error
+    }
   }
 }

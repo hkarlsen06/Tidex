@@ -1,6 +1,7 @@
 import ActivityKit
 import Combine
 import Foundation
+import SwiftData
 import UIKit
 import os.log
 
@@ -1887,8 +1888,27 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Get current authenticated user ID and update user profile data
   private func getCurrentUserId() async throws -> String? {
-    // Use AuthSessionManager to prevent concurrent refresh race conditions
-    let session = try await AuthSessionManager.shared.getSession()
+    let session: Session
+    do {
+      // Use AuthSessionManager to prevent concurrent refresh race conditions
+      session = try await AuthSessionManager.shared.getSession()
+    } catch {
+      guard AuthSessionManager.shared.isTransientNetworkError(error) else {
+        throw error
+      }
+
+      let descriptor = FetchDescriptor<LocalUserSettings>(
+        sortBy: [SortDescriptor(\LocalUserSettings.localUpdatedAt, order: .reverse)]
+      )
+      if let offlineUserId = try? LocalStore.shared.mainContext.fetch(descriptor).first?.userId,
+        !offlineUserId.isEmpty
+      {
+        logger.info("Using offline user id fallback from local settings")
+        return offlineUserId
+      }
+
+      throw error
+    }
     let user = session.user
 
     // Extract display name from user metadata or fall back to email
