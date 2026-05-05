@@ -160,6 +160,7 @@ struct SharingView: View {
     }
     .task(id: startupTaskID) {
       guard selectedTab == .sharing else { return }
+      refreshChatMetadata()
       await viewModel.loadSharers()
       guard !Task.isCancelled, selectedTab == .sharing else { return }
       scheduleChatMetadataRefresh()
@@ -230,6 +231,7 @@ struct SharingView: View {
         }
         return
       }
+      refreshChatMetadata()
       Task {
         await resubscribeTypingSubscriptions()
       }
