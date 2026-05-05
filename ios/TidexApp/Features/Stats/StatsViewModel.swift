@@ -125,7 +125,10 @@ final class StatsViewModel: ObservableObject {
 
   /// Preload local metadata and last known stats snapshot so the first Stats frame is fully composed.
   private func preloadInitialStateFromLocalCache() {
-    guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
+    guard
+      let userId = AppCoordinator.shared.getCurrentUserId()
+        ?? AuthSessionManager.shared.offlineUserIdFallback()
+    else { return }
 
     let jobs = jobsRepository.getNonDeletedJobs(for: userId)
     activeJobs = jobs
@@ -252,8 +255,7 @@ final class StatsViewModel: ObservableObject {
 
     do {
       // Load user's currency from settings
-      let session = try await AuthSessionManager.shared.getSession()
-      let userId = session.normalizedUserId
+      let userId = try await resolveUserIdForLocalStats()
 
       let jobs = jobsRepository.getNonDeletedJobs(for: userId)
       activeJobs = jobs
@@ -264,7 +266,7 @@ final class StatsViewModel: ObservableObject {
         self.selectedJobId = nil
       }
 
-      if let loadedSettings = settingsRepository.getSettings(for: session.normalizedUserId) {
+      if let loadedSettings = settingsRepository.getSettings(for: userId) {
         settings = loadedSettings
         currency =
           jobs.first(where: { $0.id == selectedJobId })?.currency
@@ -302,6 +304,22 @@ final class StatsViewModel: ObservableObject {
 
     guard generation == loadGeneration else { return }
     isLoading = false
+  }
+
+  private func resolveUserIdForLocalStats() async throws -> String {
+    do {
+      let session = try await AuthSessionManager.shared.getSession()
+      return session.normalizedUserId
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
+      else {
+        throw error
+      }
+
+      logger.info("Using offline user id fallback for local stats")
+      return offlineUserId
+    }
   }
 
   /// Refresh stats by syncing first, then recomputing from local data

@@ -103,15 +103,7 @@ final class StatsService: ObservableObject {
     defer { isLoading = false }
 
     do {
-      // Get user ID (using AuthSessionManager to prevent concurrent refresh race conditions)
-      if cachedUserId == nil {
-        let session = try await AuthSessionManager.shared.getSession()
-        cachedUserId = session.normalizedUserId
-      }
-
-      guard let userId = cachedUserId else {
-        throw StatsServiceError.notAuthenticated
-      }
+      let userId = try await resolveUserIdForLocalStats()
 
       // Load shared payroll inputs through the DAL-backed read service
       let readContext = monthlyPayrollReadService.loadContext(for: userId, jobId: jobId)
@@ -464,6 +456,28 @@ final class StatsService: ObservableObject {
     stats = nil
     cachedUserId = nil
     fullYearCache.removeAll(keepingCapacity: true)
+  }
+
+  private func resolveUserIdForLocalStats() async throws -> String {
+    if let cachedUserId {
+      return cachedUserId
+    }
+
+    do {
+      let session = try await AuthSessionManager.shared.getSession()
+      cachedUserId = session.normalizedUserId
+      return session.normalizedUserId
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
+      else {
+        throw error
+      }
+
+      cachedUserId = offlineUserId
+      logger.info("Using offline user id fallback for local stats")
+      return offlineUserId
+    }
   }
 
   nonisolated static func fingerprintSettingsForCaching(_ settings: UserSettings) -> Int {

@@ -40,6 +40,16 @@ final class ManageSharingViewModel: ObservableObject {
   /// Error message to display
   @Published var errorMessage: String?
 
+  /// Whether server-backed sharing management actions are unavailable offline.
+  @Published private(set) var areServerActionsUnavailable = false
+
+  /// Inline offline message for server-backed sharing management controls.
+  var offlineActionsUnavailableMessage: String? {
+    areServerActionsUnavailable
+      ? String(localized: "sharing.offline.actionsUnavailable", table: "Localizable")
+      : nil
+  }
+
   // MARK: - Add Friend Form State
 
   @Published var isAddFormExpanded = false
@@ -99,6 +109,7 @@ final class ManageSharingViewModel: ObservableObject {
       friends = result.friends
       blockedFriends = result.blockedFriends
       capacity = result.capacity
+      areServerActionsUnavailable = false
       if let userId = await bestEffortCurrentUserId() {
         hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
       } else {
@@ -116,10 +127,18 @@ final class ManageSharingViewModel: ObservableObject {
         (underlying as? URLError)?.code == .cancelled
       {
         logger.info("loadFriends network request was cancelled")
+      } else if isOfflineFallbackEligible(error) {
+        logger.info("Using existing sharing management state while offline")
+        areServerActionsUnavailable = true
+        await loadLocalVisibilityPreferencesIfPossible()
       } else {
         logger.error("Failed to load friends (SharingServiceError): \(error)")
         errorMessage = error.localizedDescription
       }
+    } catch  where isOfflineFallbackEligible(error) {
+      logger.info("Using existing sharing management state while offline")
+      areServerActionsUnavailable = true
+      await loadLocalVisibilityPreferencesIfPossible()
     } catch {
       logger.error("Failed to load friends: \(error.localizedDescription)")
       errorMessage = String(localized: .sharingErrorLoadFriends)
@@ -163,10 +182,13 @@ final class ManageSharingViewModel: ObservableObject {
       logger.info("Added friend: \(identifier)")
     } catch let error as SharingServiceError {
       logger.error("Failed to add friend: \(error.localizedDescription)")
-      addError = error.localizedDescription
+      addError = userFacingActionError(for: error, fallback: error.localizedDescription)
     } catch {
       logger.error("Failed to add friend: \(error.localizedDescription)")
-      addError = String(localized: .sharingErrorAddFriend)
+      addError = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorAddFriend)
+      )
     }
 
     isAdding = false
@@ -202,7 +224,10 @@ final class ManageSharingViewModel: ObservableObject {
       // Revert on failure
       applyOptimisticEarningsUpdate(friendId: friend.id, showEarnings: !newValue)
       logger.error("Failed to toggle earnings: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorUpdateSettings)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorUpdateSettings)
+      )
       Haptics.play(.error)
     }
 
@@ -242,7 +267,10 @@ final class ManageSharingViewModel: ObservableObject {
       } catch {
         applyOptimisticHiddenUpdate(friendId: friend.id, hidden: !newValue)
         logger.error("Failed to toggle hidden: \(error.localizedDescription)")
-        errorMessage = String(localized: .sharingErrorUpdateSettings)
+        errorMessage = userFacingActionError(
+          for: error,
+          fallback: String(localized: .sharingErrorUpdateSettings)
+        )
         Haptics.play(.error)
       }
 
@@ -268,7 +296,10 @@ final class ManageSharingViewModel: ObservableObject {
     } catch {
       applyOptimisticOutgoingHiddenUpdate(friendId: friend.id, hidden: !newValue)
       logger.error("Failed to toggle outgoing-only hidden: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorUpdateSettings)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorUpdateSettings)
+      )
       Haptics.play(.error)
     }
 
@@ -313,7 +344,10 @@ final class ManageSharingViewModel: ObservableObject {
       // Revert on failure
       applyOptimisticMutedUpdate(friendId: friend.id, muted: !newValue)
       logger.error("Failed to toggle muted: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorUpdateNotifications)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorUpdateNotifications)
+      )
       Haptics.play(.error)
     }
 
@@ -351,7 +385,10 @@ final class ManageSharingViewModel: ObservableObject {
       // Revert on failure
       applyOptimisticOwnerMutedUpdate(friendId: friend.id, ownerMuted: !newValue)
       logger.error("Failed to toggle owner_muted: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorUpdateNotifications)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorUpdateNotifications)
+      )
       Haptics.play(.error)
     }
 
@@ -394,7 +431,10 @@ final class ManageSharingViewModel: ObservableObject {
       // Revert on failure
       revertOptimisticRemove(originalFriend: originalFriend)
       logger.error("Failed to remove share: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorRemoveShare)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorRemoveShare)
+      )
       Haptics.play(.error)
     }
 
@@ -436,7 +476,10 @@ final class ManageSharingViewModel: ObservableObject {
       // Revert on failure
       revertOptimisticRemove(originalFriend: originalFriend)
       logger.error("Failed to remove sharer: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorRemovePerson)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorRemovePerson)
+      )
       Haptics.play(.error)
     }
 
@@ -493,7 +536,10 @@ final class ManageSharingViewModel: ObservableObject {
       // Revert on failure
       revertOptimisticShareBack(originalFriend: originalFriend)
       logger.error("Failed to share back: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorShareBack)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorShareBack)
+      )
     }
 
     actionInProgress = nil
@@ -534,7 +580,10 @@ final class ManageSharingViewModel: ObservableObject {
       Haptics.play(.success)
     } catch {
       logger.error("Failed to block friend: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorUpdateSettings)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorUpdateSettings)
+      )
       Haptics.play(.error)
     }
 
@@ -560,7 +609,10 @@ final class ManageSharingViewModel: ObservableObject {
       Haptics.play(.success)
     } catch {
       logger.error("Failed to unblock friend: \(error.localizedDescription)")
-      errorMessage = String(localized: .sharingErrorUpdateSettings)
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorUpdateSettings)
+      )
       Haptics.play(.error)
     }
 
@@ -585,10 +637,23 @@ final class ManageSharingViewModel: ObservableObject {
       return cachedUserId
     }
 
-    let session = try await AuthSessionManager.shared.getSession()
-    let userId = session.normalizedUserId
-    cachedUserId = userId
-    return userId
+    do {
+      let session = try await AuthSessionManager.shared.getSession()
+      let userId = session.normalizedUserId
+      cachedUserId = userId
+      return userId
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
+      else {
+        throw error
+      }
+
+      cachedUserId = offlineUserId
+      areServerActionsUnavailable = true
+      logger.info("Using offline user id fallback for sharing management")
+      return offlineUserId
+    }
   }
 
   private func bestEffortCurrentUserId() async -> String? {
@@ -596,6 +661,37 @@ final class ManageSharingViewModel: ObservableObject {
       return try await getCurrentUserId()
     } catch {
       return nil
+    }
+  }
+
+  private func loadLocalVisibilityPreferencesIfPossible() async {
+    guard let userId = await bestEffortCurrentUserId() else { return }
+    hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
+  }
+
+  private func userFacingActionError(for error: Error, fallback: String) -> String {
+    if isOfflineFallbackEligible(error) {
+      areServerActionsUnavailable = true
+      return String(localized: "sharing.offline.actionFailed", table: "Localizable")
+    }
+
+    return fallback
+  }
+
+  private func isOfflineFallbackEligible(_ error: Error) -> Bool {
+    if AuthSessionManager.shared.isTransientSessionResolutionError(error) {
+      return true
+    }
+
+    guard let sharingError = error as? SharingServiceError else {
+      return false
+    }
+
+    switch sharingError {
+    case .networkError(let underlying), .decodingError(let underlying):
+      return AuthSessionManager.shared.isTransientSessionResolutionError(underlying)
+    case .notAuthenticated, .httpError, .noShareAccess:
+      return false
     }
   }
 }

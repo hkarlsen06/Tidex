@@ -1173,10 +1173,12 @@ struct FriendsChatImageGalleryOverlay: View {
   let attachments: [FriendMessageAttachment]
   let initialAttachmentID: String
   let onDismiss: () -> Void
-  let onSaveImage: (UIImage) -> Void
+  let onSaveImage: (UIImage) async -> Bool
 
   @State private var selectedAttachmentID: String
   @State private var loadedImagesByAttachmentID: [String: UIImage] = [:]
+  @State private var savedAttachmentIDs: Set<String> = []
+  @State private var savingAttachmentID: String?
   @State private var selectedPageIsZoomed = false
   @GestureState private var dismissTranslationY: CGFloat = 0
 
@@ -1186,7 +1188,7 @@ struct FriendsChatImageGalleryOverlay: View {
     attachments: [FriendMessageAttachment],
     initialAttachmentID: String,
     onDismiss: @escaping () -> Void,
-    onSaveImage: @escaping (UIImage) -> Void
+    onSaveImage: @escaping (UIImage) async -> Bool
   ) {
     self.attachments = attachments
     self.initialAttachmentID = initialAttachmentID
@@ -1239,9 +1241,9 @@ struct FriendsChatImageGalleryOverlay: View {
     HStack {
       if let selectedImage {
         Button {
-          onSaveImage(selectedImage)
+          saveSelectedImage(selectedImage)
         } label: {
-          Image(systemName: "arrow.down.circle.fill")
+          Image(systemName: saveButtonIconName)
             .font(.system(size: 30))
             .foregroundColor(.white.opacity(0.88))
             .frame(width: 44, height: 44)
@@ -1251,8 +1253,9 @@ struct FriendsChatImageGalleryOverlay: View {
             )
         }
         .buttonStyle(.plain)
+        .disabled(savingAttachmentID == selectedAttachmentID)
         .accessibilityLabel(
-          Text(String(localized: "friends.chat.action.save_image", table: "Localizable"))
+          Text(saveButtonAccessibilityLabel)
         )
       }
 
@@ -1296,6 +1299,21 @@ struct FriendsChatImageGalleryOverlay: View {
     loadedImagesByAttachmentID[selectedAttachmentID]
   }
 
+  private var selectedImageIsSaved: Bool {
+    savedAttachmentIDs.contains(selectedAttachmentID)
+  }
+
+  private var saveButtonIconName: String {
+    selectedImageIsSaved ? "checkmark.circle.fill" : "arrow.down.circle.fill"
+  }
+
+  private var saveButtonAccessibilityLabel: String {
+    if selectedImageIsSaved {
+      return String(localized: "friends.chat.image.saved", table: "Localizable")
+    }
+    return String(localized: "friends.chat.action.save_image", table: "Localizable")
+  }
+
   private var selectedIndex: Int? {
     attachments.firstIndex(where: { $0.id == selectedAttachmentID })
   }
@@ -1328,6 +1346,32 @@ struct FriendsChatImageGalleryOverlay: View {
           onDismiss()
         }
       }
+  }
+
+  private func saveSelectedImage(_ image: UIImage) {
+    let attachmentID = selectedAttachmentID
+
+    guard savingAttachmentID != attachmentID else {
+      return
+    }
+
+    savingAttachmentID = attachmentID
+
+    Task {
+      let didSave = await onSaveImage(image)
+
+      await MainActor.run {
+        if didSave {
+          withAnimation(.snappy(duration: 0.18)) {
+            _ = savedAttachmentIDs.insert(attachmentID)
+          }
+        }
+
+        if savingAttachmentID == attachmentID {
+          savingAttachmentID = nil
+        }
+      }
+    }
   }
 }
 

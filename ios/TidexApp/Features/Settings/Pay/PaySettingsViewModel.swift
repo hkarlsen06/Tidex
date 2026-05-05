@@ -119,12 +119,8 @@ final class PaySettingsViewModel: ObservableObject {
     errorMessage = nil
 
     do {
-      userId = try await AuthSessionManager.shared.getUserId()
-
-      guard let userId = userId else {
-        throw PaySettingsError.notAuthenticated
-      }
-
+      let userId = try await resolveUserIdForLocalData()
+      self.userId = userId
       let jobs = jobsRepository.getActiveJobs(for: userId)
       activeJobs = jobs
       hasArchivedJobs = jobsRepository.getNonDeletedJobs(for: userId).contains {
@@ -154,7 +150,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Refresh data after changes
   func refreshData() {
-    guard let userId = userId else { return }
+    guard let userId = currentLocalUserId() else { return }
 
     let jobs = jobsRepository.getActiveJobs(for: userId)
     activeJobs = jobs
@@ -219,6 +215,37 @@ final class PaySettingsViewModel: ObservableObject {
     return activeJobs.first(where: { $0.id == selectedJobId })
   }
 
+  private func currentLocalUserId() -> String? {
+    if let userId {
+      return userId
+    }
+
+    guard let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() else {
+      return nil
+    }
+
+    userId = offlineUserId
+    logger.info("Using offline user id fallback for pay settings")
+    return offlineUserId
+  }
+
+  private func resolveUserIdForLocalData() async throws -> String {
+    do {
+      return try await AuthSessionManager.shared.getUserId()
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error) else {
+        throw error
+      }
+
+      if let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() {
+        logger.info("Using offline user id fallback for pay settings")
+        return offlineUserId
+      }
+
+      throw error
+    }
+  }
+
   var jobNeedingSetupBeforeAddingSecond: Job? {
     guard activeJobs.count == 1 else { return nil }
     return activeJobs.first
@@ -251,7 +278,7 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   func createJob(input: AddJobSetupInput) async -> Bool {
-    guard let userId = userId else {
+    guard let userId = currentLocalUserId() else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
       return false
     }
@@ -295,7 +322,7 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   func updateSelectedJobMetadata(name: String, color: String?) async -> Bool {
-    guard let userId = userId else {
+    guard let userId = currentLocalUserId() else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
       return false
     }
@@ -329,7 +356,7 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   func updateCurrency(_ value: String) async {
-    guard let userId else {
+    guard let userId = currentLocalUserId() else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
       return
     }
@@ -401,7 +428,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Create a new wage snapshot
   func createSnapshot(input: WageSnapshotEditorInput) async -> Bool {
-    guard let userId = userId else {
+    guard let userId = currentLocalUserId() else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
       return false
     }
@@ -450,7 +477,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Update an existing wage snapshot
   func updateSnapshot(id: String, input: WageSnapshotEditorInput) async -> Bool {
-    guard userId != nil else {
+    guard currentLocalUserId() != nil else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
       return false
     }
@@ -515,7 +542,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Confirm and execute deletion
   func confirmDelete() async {
-    guard let snapshot = snapshotToDelete, userId != nil else {
+    guard let snapshot = snapshotToDelete, currentLocalUserId() != nil else {
       showingDeleteConfirmation = false
       snapshotToDelete = nil
       return
@@ -552,7 +579,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Count shifts that would be affected by deleting a snapshot
   private func countAffectedShifts(for snapshot: WageSnapshot) -> Int {
-    guard let userId = userId else { return 0 }
+    guard let userId = currentLocalUserId() else { return 0 }
 
     // Get all shifts
     let effectiveJobId = snapshot.job_id ?? selectedJobId
@@ -618,7 +645,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   private func saveMonthlyGoal(_ value: Int?) async {
     guard
-      let userId = userId,
+      let userId = currentLocalUserId(),
       let selectedJobId = selectedJobId,
       let selectedJob = selectedJob
     else { return }
@@ -659,7 +686,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   private func savePayrollDay(_ value: Int) async {
     guard
-      let userId = userId,
+      let userId = currentLocalUserId(),
       let selectedJobId = selectedJobId,
       let selectedJob = selectedJob
     else { return }
@@ -685,7 +712,7 @@ final class PaySettingsViewModel: ObservableObject {
   /// Update half tax month (immediate, no debounce needed for picker)
   func updateHalfTaxMonth(_ value: Int?) async {
     guard
-      let userId = userId,
+      let userId = currentLocalUserId(),
       let selectedJobId = selectedJobId,
       let selectedJob = selectedJob
     else { return }

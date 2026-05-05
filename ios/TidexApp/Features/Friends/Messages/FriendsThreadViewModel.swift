@@ -126,6 +126,7 @@ final class FriendsThreadViewModel: ObservableObject {
   enum ActionError: LocalizedError {
     case missingCounterpart
     case missingPendingAttachment
+    case offlineServerAction
 
     var errorDescription: String? {
       switch self {
@@ -133,6 +134,8 @@ final class FriendsThreadViewModel: ObservableObject {
         return "Missing counterpart user"
       case .missingPendingAttachment:
         return String(localized: .friendsChatSendFailed)
+      case .offlineServerAction:
+        return String(localized: "friends.chat.waitingForNetwork", table: "Localizable")
       }
     }
   }
@@ -194,6 +197,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private var threadStatesRefreshTask: Task<Void, Never>?
   private var latestVisibleMessageReadTask: Task<Void, Never>?
   private var togglingReactionKeys: Set<String> = []
+  private var backgroundSendingMessageIds: Set<String> = []
   private var suspendedComposerSnapshot: ComposerSnapshot?
   private var latestVisibleMessageId: String?
   private var latestCounterpartMessageId: String?
@@ -317,11 +321,13 @@ final class FriendsThreadViewModel: ObservableObject {
     async let realtimeSubscription: Void = startRealtime()
     async let counterpartPreviewRefresh: Void = loadCounterpartShiftPreview(forceRefresh: false)
     await refreshFromServer()
+    retryQueuedMessagesIfNeeded()
     _ = await (realtimeSubscription, counterpartPreviewRefresh)
   }
 
   func refresh() async {
     await refreshFromServer()
+    retryQueuedMessagesIfNeeded()
     await loadCounterpartShiftPreview(forceRefresh: true)
     await markVisibleMessagesReadIfNeeded()
   }
@@ -483,7 +489,10 @@ final class FriendsThreadViewModel: ObservableObject {
       sendErrorMessage = nil
       return .shiftSnapshot(draft)
     } catch {
-      sendErrorMessage = error.localizedDescription
+      sendErrorMessage =
+        isConnectivityError(error)
+        ? shiftSnapshotOfflineUnavailableMessage
+        : error.localizedDescription
       return nil
     }
   }
@@ -572,6 +581,7 @@ final class FriendsThreadViewModel: ObservableObject {
     }
     await startRealtime()
     await refreshFromServer()
+    retryQueuedMessagesIfNeeded()
     reapplyPendingNotificationTypingIndicatorIfNeeded()
   }
 
@@ -709,12 +719,22 @@ final class FriendsThreadViewModel: ObservableObject {
         loadFromCache()
         return true
       case .failure(let error):
-        await repository.deleteMessage(id: optimisticMessage.id, viewerUserId: viewerUserId)
-        await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
-        sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
+        if isConnectivityError(error) {
+          await repository.updateMessageSendState(
+            messageId: optimisticMessage.id,
+            viewerUserId: viewerUserId,
+            sendState: .sending,
+            failureMessage: waitingForNetworkMessage
+          )
+          sendErrorMessage = nil
+        } else {
+          await repository.deleteMessage(id: optimisticMessage.id, viewerUserId: viewerUserId)
+          await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
+          sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
+        }
         loadFromCache()
         threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
-        return false
+        return isConnectivityError(error)
       }
     }
 
@@ -764,7 +784,8 @@ final class FriendsThreadViewModel: ObservableObject {
       }
       await restoreComposerSnapshot(cancelledComposerSnapshot)
       loadFromCache()
-      sendErrorMessage = deleteMessageFailedMessage
+      sendErrorMessage =
+        isConnectivityError(error) ? serverActionOfflineMessage : deleteMessageFailedMessage
       Haptics.play(.error)
       threadLogger.error("Failed to delete message: \(error.localizedDescription)")
     }
@@ -825,7 +846,10 @@ final class FriendsThreadViewModel: ObservableObject {
       Haptics.play(.light)
     } catch {
       await repository.saveMessages([originalMessage], in: route.threadId, for: viewerUserId)
-      sendErrorMessage = String(localized: .friendsChatReactionFailed)
+      sendErrorMessage =
+        isConnectivityError(error)
+        ? serverActionOfflineMessage
+        : String(localized: .friendsChatReactionFailed)
       Haptics.play(.error)
       threadLogger.error("Failed to toggle reaction: \(error.localizedDescription)")
     }
@@ -837,18 +861,26 @@ final class FriendsThreadViewModel: ObservableObject {
   func submitReport(messageId: String?, reason: FriendAbuseReportReason) async throws {
     let counterpartUserId = route.counterpartUserId
 
-    try await service.createAbuseReport(
-      threadId: route.threadId,
-      reportedUserId: counterpartUserId,
-      messageId: messageId,
-      reason: reason
-    )
+    do {
+      try await service.createAbuseReport(
+        threadId: route.threadId,
+        reportedUserId: counterpartUserId,
+        messageId: messageId,
+        reason: reason
+      )
+    } catch {
+      throw offlineDisplayErrorIfNeeded(error)
+    }
   }
 
   func blockCounterpart() async throws {
     let counterpartUserId = route.counterpartUserId
 
-    try await service.blockUserPair(otherUserId: counterpartUserId)
+    do {
+      try await service.blockUserPair(otherUserId: counterpartUserId)
+    } catch {
+      throw offlineDisplayErrorIfNeeded(error)
+    }
     draft = ""
     composerState = .normal
     stagedComposerAttachments = []
@@ -1285,7 +1317,10 @@ final class FriendsThreadViewModel: ObservableObject {
       composerState = .edit(currentMessage)
       composerFocusRequestToken += 1
       loadFromCache()
-      sendErrorMessage = isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage
+      sendErrorMessage =
+        isConnectivityError(error)
+        ? serverActionOfflineMessage
+        : (isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage)
       Haptics.play(.error)
       threadLogger.error("Failed to edit message: \(error.localizedDescription)")
       return false
@@ -1441,8 +1476,14 @@ final class FriendsThreadViewModel: ObservableObject {
     _ message: FriendMessage,
     sendTask: SendTaskHandle? = nil
   ) {
+    guard !backgroundSendingMessageIds.contains(message.id) else { return }
+    backgroundSendingMessageIds.insert(message.id)
     let sendTask = sendTask ?? startSendTask(for: message)
     Task { @MainActor in
+      defer {
+        backgroundSendingMessageIds.remove(message.id)
+      }
+
       switch await sendTask.waitForResult() {
       case .success(let sentMessage):
         await repository.saveConfirmedMessage(
@@ -1453,11 +1494,16 @@ final class FriendsThreadViewModel: ObservableObject {
         )
         loadFromCache()
       case .failure(let error):
+        let sendState: FriendMessageSendState = isConnectivityError(error) ? .sending : .failed
+        let failureMessage =
+          isConnectivityError(error)
+          ? waitingForNetworkMessage
+          : error.localizedDescription
         await repository.updateMessageSendState(
           messageId: message.id,
           viewerUserId: viewerUserId,
-          sendState: .failed,
-          failureMessage: error.localizedDescription
+          sendState: sendState,
+          failureMessage: failureMessage
         )
         loadFromCache()
         threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
@@ -1478,6 +1524,19 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     return handle
+  }
+
+  private func retryQueuedMessagesIfNeeded() {
+    let queuedMessages = messages.filter { message in
+      message.threadId == route.threadId
+        && message.senderUserId == viewerUserId
+        && message.sendState == .sending
+        && !backgroundSendingMessageIds.contains(message.id)
+    }
+
+    for message in queuedMessages {
+      sendMessageInBackground(message)
+    }
   }
 
   private func updateDraftValidation(for draft: String) {
@@ -1538,6 +1597,36 @@ final class FriendsThreadViewModel: ObservableObject {
     guard let serviceError = error as? FriendsMessagingServiceError else { return false }
     guard case .httpError(_, let message) = serviceError else { return false }
     return (message ?? "").localizedCaseInsensitiveContains("2000 character limit")
+  }
+
+  private func isConnectivityError(_ error: Error) -> Bool {
+    if error is CancellationError {
+      return false
+    }
+
+    if let serviceError = error as? FriendsMessagingServiceError {
+      switch serviceError {
+      case .networkError:
+        return true
+      case .notAuthenticated, .decodingError, .httpError:
+        return false
+      }
+    }
+
+    let nsError = error as NSError
+    if nsError.domain == NSURLErrorDomain {
+      return true
+    }
+
+    if let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? Error {
+      return isConnectivityError(underlyingError)
+    }
+
+    return false
+  }
+
+  private func offlineDisplayErrorIfNeeded(_ error: Error) -> Error {
+    isConnectivityError(error) ? ActionError.offlineServerAction : error
   }
 
   private func sendMessageToService(_ message: FriendMessage) async throws -> FriendMessage {
@@ -1659,6 +1748,18 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private var shiftSnapshotSendUnavailableMessage: String {
     String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+  }
+
+  private var shiftSnapshotOfflineUnavailableMessage: String {
+    waitingForNetworkMessage
+  }
+
+  private var serverActionOfflineMessage: String {
+    waitingForNetworkMessage
+  }
+
+  private var waitingForNetworkMessage: String {
+    String(localized: "friends.chat.waitingForNetwork", table: "Localizable")
   }
 
   private var sendMessageFailedMessage: String {

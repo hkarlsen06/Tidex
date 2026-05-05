@@ -1109,9 +1109,8 @@ private struct RecurringShiftsSettingsView: View {
     errorMessage = nil
 
     do {
-      let session = try await AuthSessionManager.shared.getSession()
-      let shifts = RecurringShiftsRepository.shared.getRecurringShifts(
-        for: session.normalizedUserId)
+      let userId = try await resolveRecurringSettingsUserId()
+      let shifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
       recurringShifts = sortRecurringShifts(shifts)
     } catch {
       logger.error("Failed to load recurring shifts settings: \(error.localizedDescription)")
@@ -1119,6 +1118,21 @@ private struct RecurringShiftsSettingsView: View {
     }
 
     isLoading = false
+  }
+
+  private func resolveRecurringSettingsUserId() async throws -> String {
+    do {
+      let session = try await AuthSessionManager.shared.getSession()
+      return session.normalizedUserId
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
+      else {
+        throw error
+      }
+
+      return offlineUserId
+    }
   }
 
   private func updateRecurringShift(_ editResult: RecurringShiftEditResult) async {

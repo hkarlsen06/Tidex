@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Network
 import StoreKit
 import os.log
 
@@ -15,6 +16,8 @@ final class SubscriptionSettingsViewModel: ObservableObject {
   private let entitlementService: EntitlementService
   private let storeKitManager: StoreKitManager
   private let repository: EntitlementRepository
+  private let pathMonitor = NWPathMonitor()
+  private let pathMonitorQueue = DispatchQueue(label: "com.tidex.subscription-settings.network")
 
   /// Whether user has an active StoreKit subscription (independent of server cache)
   private var hasStoreKitSubscription: Bool {
@@ -55,6 +58,9 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
   /// Error message
   @Published var errorMessage: String?
+
+  /// Whether StoreKit-dependent actions are unavailable because the device is offline
+  @Published private(set) var isStoreKitOffline = false
 
   // MARK: - Computed Properties
 
@@ -123,6 +129,11 @@ final class SubscriptionSettingsViewModel: ObservableObject {
     self.entitlementService = entitlementService ?? EntitlementService.shared
     self.storeKitManager = storeKitManager ?? StoreKitManager.shared
     self.repository = repository ?? EntitlementRepository.shared
+    startPathMonitoring()
+  }
+
+  deinit {
+    pathMonitor.cancel()
   }
 
   // MARK: - Load Subscription Info
@@ -229,6 +240,11 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
   /// Open Apple's subscription management page
   func manageSubscription() {
+    guard !isStoreKitOffline else {
+      errorMessage = String(localized: .subscriptionOfflineStoreKitUnavailable)
+      return
+    }
+
     // iOS deep link to subscription management
     if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
       UIApplication.shared.open(url)
@@ -238,11 +254,21 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
   /// Show paywall for upgrade
   func showUpgradeOptions() {
+    guard !isStoreKitOffline else {
+      errorMessage = String(localized: .subscriptionOfflineStoreKitUnavailable)
+      return
+    }
+
     showPaywall = true
   }
 
   /// Restore purchases
   func restorePurchases() async {
+    guard !isStoreKitOffline else {
+      errorMessage = String(localized: .subscriptionOfflineStoreKitUnavailable)
+      return
+    }
+
     isLoading = true
     isRestoring = true
     errorMessage = nil
@@ -274,10 +300,35 @@ final class SubscriptionSettingsViewModel: ObservableObject {
       }
     } catch {
       logger.error("Failed to restore purchases: \(error.localizedDescription)")
-      errorMessage = String(localized: .subscriptionErrorsRestoreFailed)
+      if isTransientStoreKitNetworkError(error) {
+        isStoreKitOffline = true
+        errorMessage = String(localized: .subscriptionOfflineStoreKitUnavailable)
+      } else {
+        errorMessage = String(localized: .subscriptionErrorsRestoreFailed)
+      }
       isLoading = false
     }
 
     isRestoring = false
+  }
+
+  private func startPathMonitoring() {
+    pathMonitor.pathUpdateHandler = { [weak self] path in
+      Task { @MainActor [weak self] in
+        self?.isStoreKitOffline = path.status != .satisfied
+      }
+    }
+    pathMonitor.start(queue: pathMonitorQueue)
+  }
+
+  private func isTransientStoreKitNetworkError(_ error: Error) -> Bool {
+    if AuthSessionManager.shared.isTransientNetworkError(error) {
+      return true
+    }
+
+    let nsError = error as NSError
+    return AuthSessionManager.shared.isTransientNetworkError(nsError)
+      || nsError.localizedDescription.localizedCaseInsensitiveContains("network")
+      || nsError.localizedDescription.localizedCaseInsensitiveContains("internet")
   }
 }
