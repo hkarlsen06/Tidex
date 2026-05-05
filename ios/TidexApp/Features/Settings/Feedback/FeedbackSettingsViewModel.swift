@@ -67,6 +67,8 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
   /// Whether feedback was successfully submitted
   @Published var showSuccess: Bool = false
+  /// Whether feedback actions are unavailable because the session was resolved offline
+  @Published private(set) var isOfflineUnavailable = false
 
   /// History of user's feedback
   @Published var feedbackHistory: [FeedbackItem] = []
@@ -89,7 +91,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
   /// Whether the submit button should be enabled
   var canSubmit: Bool {
     !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit
-      && !isSubmitting
+      && !isSubmitting && !isOfflineUnavailable
   }
 
   /// Formatted character count string
@@ -112,6 +114,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
   func loadData() async {
     isLoading = true
     errorMessage = nil
+    isOfflineUnavailable = false
 
     do {
       // Get current user session
@@ -124,7 +127,16 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
     } catch {
       logger.error("Failed to get user session: \(error.localizedDescription)")
-      errorMessage = "Not authenticated"
+      if AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
+      {
+        userId = offlineUserId
+        userEmail = ""
+        feedbackHistory = []
+        isOfflineUnavailable = true
+      } else {
+        errorMessage = "Not authenticated"
+      }
     }
 
     isLoading = false
@@ -132,6 +144,11 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
   /// Submit new feedback
   func submitFeedback() async {
+    guard !isOfflineUnavailable else {
+      errorMessage = String(localized: .feedbackOfflineSubmitUnavailable)
+      return
+    }
+
     guard let userId = userId, let userEmail = userEmail else {
       errorMessage = "Not authenticated"
       return

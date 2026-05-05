@@ -46,6 +46,8 @@ final class ProfileSettingsViewModel: ObservableObject {
 
   /// Error message to display
   @Published var errorMessage: String?
+  /// Whether profile data was loaded from partial offline fallback state
+  @Published private(set) var isOfflineProfileFallback = false
 
   /// Email change state
   @Published var showEmailChangeSheet = false
@@ -82,6 +84,8 @@ final class ProfileSettingsViewModel: ObservableObject {
   func loadProfile() async {
     isLoading = true
     errorMessage = nil
+    isOfflineProfileFallback = false
+    hydrateCachedProfileForImmediateDisplay()
 
     do {
       // Fetch fresh user data to get identities (not available in JWT)
@@ -142,16 +146,57 @@ final class ProfileSettingsViewModel: ObservableObject {
       }
 
     } catch {
-      errorMessage = String(localized: .profileErrorsLoadFailed)
+      loadOfflineProfileFallback()
     }
 
     isLoading = false
+  }
+
+  private func applyCachedProfile(offlineUserId: String) {
+    userId = offlineUserId
+
+    let cachedDisplayName = AppCoordinator.shared.userDisplayName
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    if !cachedDisplayName.isEmpty, cachedDisplayName != "User" {
+      displayName = cachedDisplayName
+      originalDisplayName = displayName
+    }
+
+    email = ""
+    hasPassword = false
+    isOAuthOnly = false
+
+    if let settings = settingsRepository.getSettings(for: offlineUserId) {
+      profilePictureUrl = settings.profile_picture_url
+    } else {
+      profilePictureUrl = AppCoordinator.shared.userAvatarUrl
+    }
+  }
+
+  private func hydrateCachedProfileForImmediateDisplay() {
+    guard let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() else {
+      return
+    }
+
+    applyCachedProfile(offlineUserId: offlineUserId)
+  }
+
+  private func loadOfflineProfileFallback() {
+    guard let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() else {
+      errorMessage = String(localized: .profileErrorsLoadFailed)
+      return
+    }
+
+    applyCachedProfile(offlineUserId: offlineUserId)
+    isOfflineProfileFallback = true
   }
 
   // MARK: - Name Editing
 
   /// Called when name changes - debounces and auto-saves
   func onNameChanged() {
+    guard !isOfflineProfileFallback else { return }
+
     // Cancel any pending save
     nameSaveTask?.cancel()
 
@@ -206,6 +251,8 @@ final class ProfileSettingsViewModel: ObservableObject {
   // MARK: - Username Editing
 
   func onUsernameChanged() {
+    guard !isOfflineProfileFallback else { return }
+
     let normalizedUsername = Self.normalizeUsername(username)
     if username != normalizedUsername {
       username = normalizedUsername

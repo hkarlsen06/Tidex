@@ -43,6 +43,8 @@ final class SecuritySettingsViewModel: ObservableObject {
 
   /// Error message to display
   @Published var errorMessage: String?
+  /// Whether security settings were opened while account security data is unavailable offline
+  @Published private(set) var isOfflineLimited = false
 
   /// Password form state
   @Published var showPasswordForm = false
@@ -85,6 +87,7 @@ final class SecuritySettingsViewModel: ObservableObject {
   func loadSecurityInfo() async {
     isLoading = true
     errorMessage = nil
+    isOfflineLimited = false
 
     do {
       // Fetch fresh user data to get identities
@@ -130,7 +133,13 @@ final class SecuritySettingsViewModel: ObservableObject {
 
     } catch {
       logger.error("Failed to load security info: \(error)")
-      errorMessage = String(localized: .securityErrorsLoadFailed)
+      if AuthSessionManager.shared.isTransientSessionResolutionError(error)
+        || AuthSessionManager.shared.offlineUserIdFallback() != nil
+      {
+        isOfflineLimited = true
+      } else {
+        errorMessage = String(localized: .securityErrorsLoadFailed)
+      }
     }
 
     isLoading = false

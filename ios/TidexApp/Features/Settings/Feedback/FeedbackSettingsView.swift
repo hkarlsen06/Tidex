@@ -123,6 +123,12 @@ struct FeedbackSettingsView: View {
 
       // Character count and error
       HStack {
+        if viewModel.isOfflineUnavailable {
+          Text(.feedbackOfflineSubmitUnavailable)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextMuted)
+        }
+
         Spacer()
 
         Text(viewModel.characterCountText)
