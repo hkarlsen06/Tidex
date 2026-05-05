@@ -195,7 +195,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-04-12',
+    lastUpdatedDate: '2026-05-05',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -286,15 +286,15 @@ export const legalNo = {
             },
           },
           {
-            boldLabel: 'Anthropic:',
-            text: 'Wagey AI-assistenten drives av Claude fra Anthropic. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til Anthropic for behandling. I denne sammenhengen er Tidex behandlingsansvarlig for personopplysningene, og Anthropic opptrer som databehandler på vegne av Tidex. Ved behov kan Wagey også bruke Anthropics innebygde web search- og web fetch-verktøy for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. Anthropics nåværende kommersielle dokumentasjon sier at inndata og utdata som sendes til Anthropic API-et under kommersielle vilkår ikke brukes til å trene Anthropics generative modeller med mindre kunden uttrykkelig melder seg på modellforbedring. Anthropics {link} kan gi mer informasjon om Anthropics egne produkter og behandling, men det er Tidex sin personvernerklæring som regulerer hvordan Tidex behandler personopplysningene dine i Wagey.',
+            boldLabel: 'OpenAI:',
+            text: 'Wagey AI-assistenten drives av GPT-5.5 fra OpenAI. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til OpenAI for behandling. I denne sammenhengen er Tidex behandlingsansvarlig for personopplysningene, og OpenAI opptrer som databehandler på vegne av Tidex. Ved behov kan Wagey også bruke OpenAIs web search-verktøy for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. OpenAIs nåværende kommersielle dokumentasjon sier at API-inndata og -utdata ikke brukes til å trene OpenAIs modeller med mindre kunden uttrykkelig melder seg på modellforbedring. OpenAIs {link} kan gi mer informasjon om OpenAIs egne produkter og behandling, men det er Tidex sin personvernerklæring som regulerer hvordan Tidex behandler personopplysningene dine i Wagey.',
             link: {
-              href: 'https://www.anthropic.com/legal/privacy',
+              href: 'https://openai.com/policies/privacy-policy/',
               text: 'personvernerklæring',
             },
           },
         ],
-        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler, og med Anthropic når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler, og med OpenAI når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',

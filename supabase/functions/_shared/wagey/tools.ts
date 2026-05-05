@@ -2519,7 +2519,8 @@ export type ToolName =
   | "query_friend_featured_shift"
   | "manage_shift_advanced"
   | "manage_feedback"
-  | "manage_profile";
+  | "manage_profile"
+  | "web_fetch";
 
 /**
  * Tool result type

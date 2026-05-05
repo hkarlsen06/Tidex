@@ -195,7 +195,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-04-12',
+    lastUpdatedDate: '2026-05-05',
     dateLocale: 'en-US',
     sections: [
       {
@@ -286,15 +286,15 @@ export const legalEn = {
             },
           },
           {
-            boldLabel: 'Anthropic:',
-            text: "The Wagey AI assistant is powered by Claude from Anthropic. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to Anthropic for processing. In this context, Tidex is the controller of that personal data and Anthropic acts as a processor on Tidex's behalf. When needed, Wagey may also use Anthropic's built-in web search and web fetch tools to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. Anthropic's current commercial documentation says prompts and outputs submitted to the Anthropic API under commercial terms are not used to train Anthropic's generative models unless the customer opts in to model improvement. Anthropic's {link} can provide additional information about Anthropic's own processing and products, but Tidex's privacy policy governs how Tidex handles your personal data in Wagey.",
+            boldLabel: 'OpenAI:',
+            text: "The Wagey AI assistant is powered by GPT-5.5 from OpenAI. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to OpenAI for processing. In this context, Tidex is the controller of that personal data and OpenAI acts as a processor on Tidex's behalf. When needed, Wagey may also use OpenAI's web search tools to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. OpenAI's current commercial documentation says API inputs and outputs are not used to train OpenAI models unless the customer opts in to model improvement. OpenAI's {link} can provide additional information about OpenAI's own processing and products, but Tidex's privacy policy governs how Tidex handles your personal data in Wagey.",
             link: {
-              href: 'https://www.anthropic.com/legal/privacy',
+              href: 'https://openai.com/policies/privacy-policy/',
               text: 'privacy policy',
             },
           },
         ],
-        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in, purchases, or push notifications, and with Anthropic when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with third parties beyond those listed above.',
+        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in, purchases, or push notifications, and with OpenAI when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',

@@ -72,7 +72,7 @@ Create `.env.local` in the repository root when running the iOS localization scr
 
 ```env
 OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-5.4
+OPENAI_MODEL=gpt-5.5
 ```
 
 ## Documentation
