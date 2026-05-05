@@ -1,6 +1,7 @@
 import ActivityKit
 import Combine
 import Foundation
+import Supabase
 import UIKit
 import os.log
 
@@ -1887,8 +1888,26 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Get current authenticated user ID and update user profile data
   private func getCurrentUserId() async throws -> String? {
-    // Use AuthSessionManager to prevent concurrent refresh race conditions
-    let session = try await AuthSessionManager.shared.getSession()
+    let session: Session
+    do {
+      // Use AuthSessionManager to prevent concurrent refresh race conditions
+      session = try await AuthSessionManager.shared.getSession()
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error) else {
+        throw error
+      }
+
+      if let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() {
+        // Preserve usable dashboard header state during cold offline launches.
+        if self.userDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+          self.userDisplayName = "User"
+        }
+        logger.info("Using offline user id fallback")
+        return offlineUserId
+      }
+
+      throw error
+    }
     let user = session.user
 
     // Extract display name from user metadata or fall back to email

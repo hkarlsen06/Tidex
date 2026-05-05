@@ -1,6 +1,7 @@
 import Combine
 import Foundation
 import Supabase
+import SwiftData
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AuthSessionManager")
@@ -239,6 +240,41 @@ final class AuthSessionManager: ObservableObject {
     }
 
     return false
+  }
+
+  /// Returns true for transient session resolution failures where local/offline fallback is acceptable.
+  /// Includes network reachability errors as well as auth-session timeout wrappers.
+  func isTransientSessionResolutionError(_ error: Error) -> Bool {
+    if isTransientNetworkError(error) {
+      return true
+    }
+
+    if error is AuthSessionManagerError {
+      return true
+    }
+
+    return false
+  }
+
+  /// Best-effort offline fallback user ID from local persisted settings.
+  /// Returns the most recently updated settings row's userId.
+  func offlineUserIdFallback() -> String? {
+    let descriptor = FetchDescriptor<LocalUserSettings>(
+      sortBy: [SortDescriptor(\LocalUserSettings.localUpdatedAt, order: .reverse)]
+    )
+
+    do {
+      if let userId = try LocalStore.shared.mainContext.fetch(descriptor).first?.userId,
+        !userId.isEmpty
+      {
+        logger.info("Resolved offline user id fallback from local settings")
+        return userId
+      }
+    } catch {
+      logger.error("Failed reading offline user id fallback: \(error.localizedDescription)")
+    }
+
+    return nil
   }
   // MARK: - Private Methods
 
