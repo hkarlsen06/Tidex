@@ -1986,8 +1986,21 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   /// Get current authenticated user ID
   private func getCurrentUserId() async throws -> String? {
-    // Use AuthSessionManager to prevent concurrent refresh race conditions
-    let session = try await AuthSessionManager.shared.getSession()
-    return session.normalizedUserId
+    do {
+      // Use AuthSessionManager to prevent concurrent refresh race conditions
+      let session = try await AuthSessionManager.shared.getSession()
+      return session.normalizedUserId
+    } catch {
+      guard AuthSessionManager.shared.isTransientSessionResolutionError(error) else {
+        throw error
+      }
+
+      if let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() {
+        logger.info("Using offline user id fallback")
+        return offlineUserId
+      }
+
+      throw error
+    }
   }
 }
