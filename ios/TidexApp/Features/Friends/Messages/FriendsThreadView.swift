@@ -492,7 +492,7 @@ struct FriendsThreadView: View {
             selectedImageGallery = nil
           },
           onSaveImage: { image in
-            saveImageToPhotoLibrary(image)
+            await saveImageToPhotoLibrary(image)
           }
         )
       } else {
@@ -1319,24 +1319,26 @@ struct FriendsThreadView: View {
     }
   }
 
-  private func saveImageToPhotoLibrary(_ image: UIImage) {
-    Task { @MainActor in
-      do {
-        try await FriendsChatPhotoLibrarySaver.save(image: image)
-        Haptics.play(.success)
-      } catch let error as FriendsChatPhotoLibrarySaveError {
-        Haptics.play(.error)
-        alertState = AlertState(
-          title: String(localized: .commonError),
-          message: error.errorDescription
-        )
-      } catch {
-        Haptics.play(.error)
-        alertState = AlertState(
-          title: String(localized: .commonError),
-          message: String(localized: "friends.chat.image.save_failed", table: "Localizable")
-        )
-      }
+  @MainActor
+  private func saveImageToPhotoLibrary(_ image: UIImage) async -> Bool {
+    do {
+      try await FriendsChatPhotoLibrarySaver.save(image: image)
+      Haptics.play(.success)
+      return true
+    } catch let error as FriendsChatPhotoLibrarySaveError {
+      Haptics.play(.error)
+      alertState = AlertState(
+        title: String(localized: .commonError),
+        message: error.errorDescription
+      )
+      return false
+    } catch {
+      Haptics.play(.error)
+      alertState = AlertState(
+        title: String(localized: .commonError),
+        message: String(localized: "friends.chat.image.save_failed", table: "Localizable")
+      )
+      return false
     }
   }
 

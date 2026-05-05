@@ -21,6 +21,8 @@ struct FriendRow: View {
   let sectionType: FriendSectionType
   let isActionInProgress: Bool
   let isHiddenInFriendsTab: Bool
+  let areServerActionsUnavailable: Bool
+  let isHideActionDisabled: Bool
   var isHighlighted: Bool = false
   let onToggleEarnings: () -> Void
   let onShareBack: () -> Void
@@ -117,6 +119,10 @@ struct FriendRow: View {
   @ViewBuilder
   private var notificationSection: some View {
     Section(String(localized: .sharingNotificationsTitle)) {
+      if areServerActionsUnavailable {
+        Text(String(localized: "sharing.offline.actionsUnavailable", table: "Localizable"))
+      }
+
       if sectionType == .mutual || sectionType == .incoming {
         Toggle(
           String(localized: .sharingMenuNotifyMeOfTheirShifts(friend.firstNameOnly)),
@@ -125,6 +131,7 @@ struct FriendRow: View {
             set: { _ in onToggleMuted() }
           )
         )
+        .disabled(areServerActionsUnavailable)
       }
 
       if sectionType == .mutual || sectionType == .outgoing {
@@ -135,6 +142,7 @@ struct FriendRow: View {
             set: { _ in onToggleOwnerMuted() }
           )
         )
+        .disabled(areServerActionsUnavailable)
       }
     }
   }
@@ -153,6 +161,7 @@ struct FriendRow: View {
             set: { _ in onToggleEarnings() }
           )
         )
+        .disabled(areServerActionsUnavailable)
       }
     case .incoming:
       Section {
@@ -161,6 +170,7 @@ struct FriendRow: View {
         } label: {
           Label(String(localized: .sharingShareBack), systemImage: "arrowshape.turn.up.left")
         }
+        .disabled(areServerActionsUnavailable)
       }
     }
   }
@@ -180,6 +190,7 @@ struct FriendRow: View {
             systemImage: isHiddenInFriendsTab ? "eye" : "eye.slash"
           )
         }
+        .disabled(isHideActionDisabled)
       }
 
       Button(role: .destructive) {
@@ -187,12 +198,14 @@ struct FriendRow: View {
       } label: {
         Label(String(localized: .friendsChatBlockUser), systemImage: "hand.raised.fill")
       }
+      .disabled(areServerActionsUnavailable)
 
       Button(role: .destructive) {
         onRemove()
       } label: {
         Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
       }
+      .disabled(areServerActionsUnavailable)
     }
   }
 }
@@ -224,6 +237,8 @@ struct FriendRow: View {
         sectionType: .mutual,
         isActionInProgress: false,
         isHiddenInFriendsTab: false,
+        areServerActionsUnavailable: false,
+        isHideActionDisabled: false,
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},
@@ -252,6 +267,8 @@ struct FriendRow: View {
         sectionType: .outgoing,
         isActionInProgress: false,
         isHiddenInFriendsTab: false,
+        areServerActionsUnavailable: false,
+        isHideActionDisabled: false,
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},
@@ -282,6 +299,8 @@ struct FriendRow: View {
         sectionType: .incoming,
         isActionInProgress: false,
         isHiddenInFriendsTab: false,
+        areServerActionsUnavailable: true,
+        isHideActionDisabled: true,
         onToggleEarnings: {},
         onShareBack: {},
         onToggleMuted: {},

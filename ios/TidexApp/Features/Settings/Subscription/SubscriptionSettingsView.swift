@@ -34,6 +34,10 @@ struct SubscriptionSettingsView: View {
         // Action buttons
         actionButtonsSection
 
+        if viewModel.isStoreKitOffline {
+          offlineStoreKitNotice
+        }
+
         // Restore purchases
         restorePurchasesButton
 
@@ -342,6 +346,8 @@ struct SubscriptionSettingsView: View {
           .background(Color.tidexBlue.opacity(0.1))
           .cornerRadius(CornerRadius.lg)
         }
+        .disabled(viewModel.isStoreKitOffline)
+        .opacity(viewModel.isStoreKitOffline ? 0.55 : 1)
       }
 
       // Upgrade/Subscribe button (for free users or non-active subscriptions)
@@ -365,8 +371,25 @@ struct SubscriptionSettingsView: View {
           .background(Color.tidexBlue)
           .cornerRadius(CornerRadius.lg)
         }
+        .disabled(viewModel.isStoreKitOffline)
+        .opacity(viewModel.isStoreKitOffline ? 0.55 : 1)
       }
     }
+  }
+
+  private var offlineStoreKitNotice: some View {
+    HStack(spacing: Spacing.xs) {
+      Image(systemName: "wifi.slash")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextMuted)
+
+      Text(.subscriptionOfflineStoreKitUnavailable)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextMuted)
+
+      Spacer()
+    }
+    .padding(.horizontal, Spacing.sm)
   }
 
   // MARK: - Restore Purchases Button
@@ -379,9 +402,9 @@ struct SubscriptionSettingsView: View {
     } label: {
       Text(.paywallRestorePurchases)
         .font(.tidexLabel)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(viewModel.isStoreKitOffline ? .tidexTextMuted : .tidexBlue)
     }
-    .disabled(viewModel.isLoading)
+    .disabled(viewModel.isLoading || viewModel.isStoreKitOffline)
   }
 
   // MARK: - Legal Links

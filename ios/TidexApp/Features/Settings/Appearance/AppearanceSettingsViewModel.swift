@@ -78,14 +78,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
     isLoading = true
     errorMessage = nil
 
-    // Get current user
-    do {
-      userId = try await AuthSessionManager.shared.getUserId()
-    } catch {
-      logger.error("Failed to get user session: \(error.localizedDescription)")
-      isLoading = false
-      return
-    }
+    userId = await resolveUserIdForLocalSettings()
 
     guard let userId = userId else {
       isLoading = false
@@ -143,6 +136,22 @@ final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   // MARK: - Private Methods
+
+  private func resolveUserIdForLocalSettings() async -> String? {
+    do {
+      return try await AuthSessionManager.shared.getUserId()
+    } catch {
+      if AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
+      {
+        logger.info("Using offline user id fallback for appearance settings")
+        return offlineUserId
+      }
+
+      logger.error("Failed to get user session: \(error.localizedDescription)")
+      return nil
+    }
+  }
 
   /// Update theme in repository and apply to app
   private func updateTheme() {

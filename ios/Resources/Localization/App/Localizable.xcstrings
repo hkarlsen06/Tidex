@@ -125811,6 +125811,287 @@
         }
       }
     },
+    "friends.chat.image.saved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم الحفظ"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запазено"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "সংরক্ষিত"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desat"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uloženo"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gemt"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gespeichert"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Αποθηκεύτηκε"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardado"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvestatud"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ذخیره شد"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tallennettu"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na-save"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistré"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "נשמר"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "सहेजा गया"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spremljeno"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mentve"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tersimpan"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vistað"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvata"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存済み"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장됨"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Išsaugota"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saglabāts"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagret"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opgeslagen"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lagra"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zapisano"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvo"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Salvată"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранено"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uložené"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shranjeno"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sačuvano"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sparad"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imehifadhiwa"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "சேமிக்கப்பட்டது"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกแล้ว"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kaydedildi"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Збережено"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "محفوظ ہوا"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã lưu"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已保存"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已儲存"
+          }
+        }
+      }
+    },
     "friends.chat.loading" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -331714,6 +331995,849 @@
         }
       }
     },
+    "sharing.offline.actionFailed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يتطلب إجراء المشاركة هذا اتصالاً بالإنترنت. حاول مرة أخرى عند عودتك للاتصال."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Това действие за споделяне изисква интернет връзка. Опитайте отново, когато сте онлайн."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "এই শেয়ারিং কাজের জন্য ইন্টারনেট সংযোগ দরকার। আবার অনলাইনে এলে আবার চেষ্টা করুন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aquesta acció de compartició necessita connexió a internet. Torna-ho a provar quan estiguis en línia."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tato akce sdílení vyžaduje připojení k internetu. Zkuste to znovu, až budete online."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne delingshandling kræver internetforbindelse. Prøv igen, når du er online igen."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Teilen-Aktion erfordert eine Internetverbindung. Versuche es erneut, wenn du wieder online bist."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Αυτή η ενέργεια κοινοποίησης χρειάζεται σύνδεση στο διαδίκτυο. Δοκιμάστε ξανά όταν συνδεθείτε."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This sharing action needs an internet connection. Try again when you are back online."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta acción de compartir necesita conexión a internet. Inténtalo de nuevo cuando vuelvas a estar en línea."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See jagamistoiming vajab internetiühendust. Proovige uuesti, kui olete taas võrgus."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "این عمل اشتراک‌گذاری به اتصال اینترنت نیاز دارد. وقتی دوباره آنلاین شدید، دوباره تلاش کنید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tämä jakotoiminto vaatii internetyhteyden. Yritä uudelleen, kun olet taas verkossa."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kailangan ng internet ang pagbabahaging ito. Subukang muli kapag online ka na."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette action de partage nécessite une connexion Internet. Réessayez quand vous serez de nouveau en ligne."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פעולת השיתוף הזו דורשת חיבור לאינטרנט. נסו שוב כשתהיו מחוברים."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "इस शेयरिंग कार्रवाई के लिए इंटरनेट कनेक्शन चाहिए। ऑनलाइन होने पर फिर से कोशिश करें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ova radnja dijeljenja treba internetsku vezu. Pokušajte ponovno kad budete na mreži."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ehhez a megosztási művelethez internetkapcsolat kell. Próbáld újra, ha újra online leszel."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aksi berbagi ini memerlukan koneksi internet. Coba lagi saat Anda kembali online."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Þessi deilingaraðgerð krefst nettengingar. Reyndu aftur þegar þú ert komin/n á netið."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Questa azione di condivisione richiede una connessione a internet. Riprova quando torni online."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この共有操作にはインターネット接続が必要です。オンラインに戻ってからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 공유 작업에는 인터넷 연결이 필요합니다. 다시 온라인 상태가 되면 다시 시도하세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Šiam bendrinimo veiksmui reikia interneto ryšio. Bandykite dar kartą, kai vėl būsite prisijungę."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Šai kopīgošanas darbībai vajadzīgs interneta savienojums. Mēģiniet vēlreiz, kad atkal būsiet tiešsaistē."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne delingshandlingen krever internett. Prøv igjen når du er på nett."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voor deze deelactie is internet nodig. Probeer opnieuw als je weer online bent."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne delingshandlinga krev internett. Prøv igjen når du er på nett."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta akcja udostępniania wymaga połączenia z internetem. Spróbuj ponownie, gdy znów będziesz online."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esta ação de compartilhamento precisa de conexão com a internet. Tente novamente quando estiver online."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Această acțiune de partajare necesită conexiune la internet. Încercați din nou când sunteți din nou online."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для этого действия с доступом нужен интернет. Повторите попытку, когда будете онлайн."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Táto akcia zdieľania vyžaduje internetové pripojenie. Skúste to znova, keď budete opäť online."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To dejanje deljenja zahteva internetno povezavo. Poskusite znova, ko boste spet povezani."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ova radnja deljenja zahteva internet vezu. Pokušajte ponovo kada budete na mreži."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den här delningsåtgärden kräver internet. Försök igen när du är online."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hatua hii ya kushiriki inahitaji muunganisho wa intaneti. Jaribu tena utakaporejea mtandaoni."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இந்த பகிர்வு செயலுக்கு இணைய இணைப்பு தேவை. மீண்டும் ஆன்லைனில் வந்ததும் முயலுங்கள்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การแชร์นี้ต้องใช้การเชื่อมต่ออินเทอร์เน็ต ลองอีกครั้งเมื่อคุณกลับมาออนไลน์"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu paylaşım işlemi internet bağlantısı gerektirir. Yeniden çevrimiçi olduğunuzda tekrar deneyin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для цієї дії спільного доступу потрібне підключення до інтернету. Спробуйте ще раз, коли будете онлайн."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اس شیئرنگ کارروائی کے لیے انٹرنیٹ کنکشن درکار ہے۔ دوبارہ آن لائن آنے پر پھر کوشش کریں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thao tác chia sẻ này cần kết nối internet. Hãy thử lại khi bạn trực tuyến."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此共享操作需要网络连接。恢复联网后请重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此共享操作需要網路連線。恢復連線後再試。"
+          }
+        }
+      }
+    },
+    "sharing.offline.actionsUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصل بالإنترنت لإدارة المشاركة. سيظل أصدقاؤك المحفوظون ظاهرين."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Свържете се с интернет, за да управлявате споделянето. Запазените приятели остават видими."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "শেয়ারিং পরিচালনা করতে ইন্টারনেটে সংযুক্ত হন। সেভ করা বন্ধুরা দেখা যাবে।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecta't a internet per gestionar la compartició. Els amics desats continuen visibles."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro správu sdílení se připojte k internetu. Uložení přátelé zůstanou viditelní."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opret forbindelse til internettet for at administrere deling. Dine gemte venner er stadig synlige."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stelle eine Internetverbindung her, um Teilen zu verwalten. Gespeicherte Freunde bleiben sichtbar."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Συνδεθείτε στο διαδίκτυο για διαχείριση κοινοποίησης. Οι αποθηκευμένοι φίλοι παραμένουν ορατοί."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect to the internet to manage sharing. Your saved friends stay visible."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conéctate a internet para gestionar el uso compartido. Tus amigos guardados seguirán visibles."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ühenduge internetiga, et hallata jagamist. Salvestatud sõbrad jäävad nähtavaks."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای مدیریت اشتراک‌گذاری به اینترنت وصل شوید. دوستان ذخیره‌شده همچنان نمایش داده می‌شوند."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yhdistä internetiin hallitaksesi jakamista. Tallennetut ystävät näkyvät edelleen."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kumonekta sa internet para pamahalaan ang pagbabahagi. Makikita pa rin ang mga naka-save na kaibigan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connectez-vous à Internet pour gérer le partage. Vos amis enregistrés restent visibles."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחברו לאינטרנט כדי לנהל שיתוף. החברים השמורים יישארו גלויים."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "शेयरिंग प्रबंधित करने के लिए इंटरनेट से कनेक्ट करें। आपके सहेजे गए दोस्त दिखते रहेंगे।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povežite se s internetom za upravljanje dijeljenjem. Spremljeni prijatelji ostaju vidljivi."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Csatlakozz az internethez a megosztás kezeléséhez. A mentett ismerősök továbbra is láthatók."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan ke internet untuk mengelola berbagi. Teman tersimpan tetap terlihat."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tengstu internetinu til að stjórna deilingu. Vistaðir vinir haldast sýnilegir."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connettiti a internet per gestire la condivisione. I tuoi amici salvati restano visibili."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有の管理にはインターネット接続が必要です。保存済みの友達は表示されたままです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "공유를 관리하려면 인터넷에 연결하세요. 저장된 친구는 계속 표시됩니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prisijunkite prie interneto, kad galėtumėte tvarkyti bendrinimą. Išsaugoti draugai liks matomi."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pieslēdzieties internetam, lai pārvaldītu kopīgošanu. Saglabātie draugi joprojām būs redzami."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koble til internett for å administrere deling. Lagrede venner vises fortsatt."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maak verbinding met internet om delen te beheren. Opgeslagen vrienden blijven zichtbaar."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kople til internett for å administrere deling. Lagra vener er framleis synlege."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połącz z internetem, aby zarządzać udostępnianiem. Zapisani znajomi nadal będą widoczni."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conecte-se à internet para gerenciar o compartilhamento. Seus amigos salvos continuam visíveis."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectați-vă la internet pentru a gestiona partajarea. Prietenii salvați rămân vizibili."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключитесь к интернету, чтобы управлять доступом. Сохранённые друзья останутся видимыми."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojte sa na internet, aby ste mohli spravovať zdieľanie. Uložení priatelia zostanú viditeľní."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za upravljanje deljenja se povežite z internetom. Shranjeni prijatelji ostanejo vidni."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povežite se na internet da upravljate deljenjem. Sačuvani prijatelji ostaju vidljivi."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anslut till internet för att hantera delning. Sparade vänner visas fortfarande."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unganisha kwenye intaneti ili kudhibiti kushiriki. Marafiki uliohifadhiwa wataendelea kuonekana."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "பகிர்வை நிர்வகிக்க இணையத்தில் இணைக. சேமித்த நண்பர்கள் தொடர்ந்து தெரியும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่ออินเทอร์เน็ตเพื่อจัดการการแชร์ เพื่อนที่บันทึกไว้ยังคงแสดงอยู่"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paylaşımı yönetmek için internete bağlanın. Kayıtlı arkadaşlarınız görünür kalır."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Підключіться до інтернету, щоб керувати спільним доступом. Збережені друзі залишаться видимими."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شیئرنگ کا نظم کرنے کے لیے انٹرنیٹ سے جڑیں۔ آپ کے محفوظ دوست نظر آتے رہیں گے۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối internet để quản lý chia sẻ. Bạn bè đã lưu vẫn hiển thị."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接互联网以管理共享。已保存的朋友仍会显示。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請連上網路以管理共享。已儲存的好友仍會顯示。"
+          }
+        }
+      }
+    },
+    "sharing.offline.addFriendUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تتطلب إضافة الأصدقاء اتصالاً بالإنترنت."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "За добавяне на приятели е нужна интернет връзка."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "বন্ধু যোগ করতে ইন্টারনেট সংযোগ দরকার।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afegir amics necessita connexió a internet."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro přidávání přátel je potřeba připojení k internetu."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du skal have internetforbindelse for at tilføje venner."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zum Hinzufügen von Freunden ist eine Internetverbindung erforderlich."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η προσθήκη φίλων χρειάζεται σύνδεση στο διαδίκτυο."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adding friends needs an internet connection."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir amigos necesita conexión a internet."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sõprade lisamiseks on vaja internetiühendust."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "افزودن دوستان به اتصال اینترنت نیاز دارد."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ystävien lisääminen vaatii internetyhteyden."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kailangan ng internet para magdagdag ng mga kaibigan."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’ajout d’amis nécessite une connexion Internet."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הוספת חברים דורשת חיבור לאינטרנט."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दोस्त जोड़ने के लिए इंटरनेट कनेक्शन चाहिए।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za dodavanje prijatelja potrebna je internetska veza."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az ismerősök hozzáadásához internetkapcsolat kell."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Menambahkan teman memerlukan koneksi internet."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Til að bæta við vinum þarf nettengingu."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per aggiungere amici serve una connessione a internet."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友達の追加にはインターネット接続が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "친구를 추가하려면 인터넷 연결이 필요합니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Norint pridėti draugų, reikia interneto ryšio."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lai pievienotu draugus, vajadzīgs interneta savienojums."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du må være på nett for å legge til venner."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Internetverbinding nodig om vrienden toe te voegen."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du må vere på nett for å leggje til vener."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodawanie znajomych wymaga połączenia z internetem."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar amigos requer conexão com a internet."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adăugarea prietenilor necesită conexiune la internet."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Чтобы добавить друзей, нужен интернет."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pridanie priateľov vyžaduje internetové pripojenie."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za dodajanje prijateljev potrebujete internetno povezavo."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dodavanje prijatelja zahteva internet vezu."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du måste vara online för att lägga till vänner."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kuongeza marafiki kunahitaji muunganisho wa intaneti."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "நண்பர்களைச் சேர்க்க இணைய இணைப்பு தேவை."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การเพิ่มเพื่อนต้องใช้การเชื่อมต่ออินเทอร์เน็ต"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arkadaş eklemek için internet bağlantısı gerekir."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Щоб додати друзів, потрібне підключення до інтернету."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دوست شامل کرنے کے لیے انٹرنیٹ کنکشن درکار ہے۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cần kết nối internet để thêm bạn bè."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加朋友需要网络连接。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "新增好友需要網路連線。"
+          }
+        }
+      }
+    },
     "sharing.profile.hideFromList" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -382852,6 +383976,287 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "包含的功能"
+          }
+        }
+      }
+    },
+    "subscription.offline.storeKitUnavailable" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتصل بالإنترنت لإدارة الاشتراكات أو الاشتراك أو استعادة المشتريات."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Свържете се с интернет, за да управлявате, да се абонирате или да възстановите покупки."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "কেনাকাটা পরিচালনা, সদস্যতা নেওয়া বা পুনরুদ্ধার করতে ইন্টারনেটে সংযুক্ত হন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connecta't a internet per gestionar, subscriure't o restaurar compres."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pro správu, předplatné nebo obnovení nákupů se připojte k internetu."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opret forbindelse til internettet for at administrere, abonnere på eller gendanne køb."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stelle eine Internetverbindung her, um Käufe zu verwalten, zu abonnieren oder wiederherzustellen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Συνδεθείτε στο διαδίκτυο για διαχείριση, εγγραφή ή επαναφορά αγορών."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect to the internet to manage, subscribe, or restore purchases."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conéctate a internet para gestionar, suscribirte o restaurar compras."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ühenduge internetiga, et hallata, tellida või oste taastada."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای مدیریت، اشتراک یا بازیابی خریدها به اینترنت وصل شوید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yhdistä internetiin hallitaksesi, tilataksesi tai palauttaaksesi ostoksia."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kumonekta sa internet para pamahalaan, mag-subscribe, o ibalik ang mga binili."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connectez-vous à Internet pour gérer, vous abonner ou restaurer vos achats."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחברו לאינטרנט כדי לנהל, להירשם או לשחזר רכישות."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "खरीदारी प्रबंधित करने, सदस्यता लेने या खरीदारी बहाल करने के लिए इंटरनेट से कनेक्ट करें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povežite se s internetom za upravljanje, pretplatu ili vraćanje kupnji."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Csatlakozz az internethez az előfizetések kezeléséhez, indításához vagy a vásárlások visszaállításához."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hubungkan ke internet untuk mengelola, berlangganan, atau memulihkan pembelian."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tengstu internetinu til að stjórna, gerast áskrifandi eða endurheimta kaup."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connettiti a internet per gestire, abbonarti o ripristinare gli acquisti."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "購入の管理、登録、復元にはインターネット接続が必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "구매를 관리, 구독 또는 복원하려면 인터넷에 연결하세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prisijunkite prie interneto, kad galėtumėte tvarkyti, prenumeruoti arba atkurti pirkinius."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pieslēdzieties internetam, lai pārvaldītu, abonētu vai atjaunotu pirkumus."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Koble til internett for å administrere, abonnere eller gjenopprette kjøp."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maak verbinding met internet om aankopen te beheren, te abonneren of te herstellen."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kople til internett for å administrere, abonnere eller gjenopprette kjøp."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Połącz z internetem, aby zarządzać, subskrybować lub przywracać zakupy."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conecte-se à internet para gerenciar, assinar ou restaurar compras."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conectați-vă la internet pentru a gestiona, a vă abona sau a restaura achizițiile."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подключитесь к интернету, чтобы управлять, оформить или восстановить покупки."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pripojte sa na internet, aby ste mohli spravovať, predplatiť si alebo obnoviť nákupy."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za upravljanje, naročanje ali obnovitev nakupov se povežite z internetom."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Povežite se na internet da upravljate, pretplatite se ili vratite kupovine."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anslut till internet för att hantera, prenumerera eller återställa köp."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unganisha kwenye intaneti ili kudhibiti, kujisajili au kurejesha ununuzi."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "நிர்வகிக்க, சந்தா பெற அல்லது வாங்குதல்களை மீட்டெடுக்க இணையத்தில் இணைக."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เชื่อมต่ออินเทอร์เน็ตเพื่อจัดการ สมัครสมาชิก หรือกู้คืนการซื้อ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Satın alımları yönetmek, abone olmak veya geri yüklemek için internete bağlanın."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Підключіться до інтернету, щоб керувати, оформити або відновити покупки."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "خریداریوں کا نظم کرنے، سبسکرائب کرنے، یا بحال کرنے کے لیے انٹرنیٹ سے جڑیں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết nối internet để quản lý, đăng ký hoặc khôi phục giao dịch mua."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "连接互联网以管理、订阅或恢复购买。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請連上網路以管理、訂閱或恢復購買。"
           }
         }
       }

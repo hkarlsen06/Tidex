@@ -60,6 +60,14 @@ struct ManageSharingSheet: View {
             .listRowInsets(EdgeInsets())
           }
 
+          if let offlineMessage = viewModel.offlineActionsUnavailableMessage {
+            Section {
+              offlineNotice(message: offlineMessage)
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+          }
+
           // MARK: - Content
           if viewModel.isLoading {
             Section {
@@ -84,6 +92,7 @@ struct ManageSharingSheet: View {
               error: $viewModel.addError,
               isLoading: viewModel.isAdding,
               canAdd: viewModel.canAddMore,
+              isOfflineUnavailable: viewModel.areServerActionsUnavailable,
               capacityDisplay: viewModel.capacityDisplay,
               onAdd: {
                 Task {
@@ -265,6 +274,23 @@ struct ManageSharingSheet: View {
     .padding(.vertical, Spacing.xxl)
   }
 
+  private func offlineNotice(message: String) -> some View {
+    HStack(alignment: .top, spacing: Spacing.sm) {
+      Image(systemName: "wifi.slash")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexWarning)
+
+      Text(message)
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextMuted)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(Spacing.md)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.tidexSurfacePrimary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+  }
+
   // MARK: - Friend Sections
 
   @ViewBuilder
@@ -349,12 +375,16 @@ struct ManageSharingSheet: View {
   private func makeFriendRow(_ friend: Friend, sectionType: FriendSectionType) -> some View {
     let isHighlighted = highlightUserId == friend.id && isHighlightActive
     let isHiddenInFriendsTab = viewModel.isHiddenInFriendsTab(for: friend)
+    let areServerActionsUnavailable = viewModel.areServerActionsUnavailable
+    let isHideActionDisabled = areServerActionsUnavailable && friend.sharesWithMe != nil
 
     return FriendRow(
       friend: friend,
       sectionType: sectionType,
       isActionInProgress: viewModel.actionInProgress == friend.id,
       isHiddenInFriendsTab: isHiddenInFriendsTab,
+      areServerActionsUnavailable: areServerActionsUnavailable,
+      isHideActionDisabled: isHideActionDisabled,
       isHighlighted: isHighlighted,
       onToggleEarnings: {
         Task {
@@ -401,6 +431,7 @@ struct ManageSharingSheet: View {
       } label: {
         Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
       }
+      .disabled(areServerActionsUnavailable)
     }
     .swipeActions(edge: .leading, allowsFullSwipe: false) {
       if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
@@ -417,6 +448,7 @@ struct ManageSharingSheet: View {
             systemImage: isHiddenInFriendsTab ? "eye" : "eye.slash"
           )
         }
+        .disabled(isHideActionDisabled)
         .tint(isHiddenInFriendsTab ? .green : .orange)
       }
     }
@@ -464,8 +496,9 @@ struct ManageSharingSheet: View {
       .font(.tidexFootnoteMedium)
       .foregroundColor(.tidexBlue)
       .buttonStyle(.plain)
-      .disabled(viewModel.actionInProgress == friend.id)
-      .opacity(viewModel.actionInProgress == friend.id ? 0.6 : 1)
+      .disabled(viewModel.actionInProgress == friend.id || viewModel.areServerActionsUnavailable)
+      .opacity(
+        viewModel.actionInProgress == friend.id || viewModel.areServerActionsUnavailable ? 0.6 : 1)
     }
     .padding(.vertical, Spacing.xxs)
     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -477,6 +510,7 @@ struct ManageSharingSheet: View {
       } label: {
         Label(String(localized: .sharingUnblock), systemImage: "arrow.uturn.backward.circle")
       }
+      .disabled(viewModel.areServerActionsUnavailable)
       .tint(.green)
     }
   }

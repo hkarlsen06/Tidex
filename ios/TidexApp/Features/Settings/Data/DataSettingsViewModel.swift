@@ -167,11 +167,7 @@ final class DataSettingsViewModel: ObservableObject {
 
   /// Load initial state
   func loadSettings() async {
-    do {
-      userId = try await AuthSessionManager.shared.getUserId()
-    } catch {
-      logger.error("Failed to get user session: \(error.localizedDescription)")
-    }
+    userId = await resolveUserIdForLocalData()
   }
 
   /// Export shifts in the specified format
@@ -402,6 +398,22 @@ final class DataSettingsViewModel: ObservableObject {
   }
 
   // MARK: - Private Methods
+
+  private func resolveUserIdForLocalData() async -> String? {
+    do {
+      return try await AuthSessionManager.shared.getUserId()
+    } catch {
+      if AuthSessionManager.shared.isTransientSessionResolutionError(error),
+        let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
+      {
+        logger.info("Using offline user id fallback for data exports")
+        return offlineUserId
+      }
+
+      logger.error("Failed to get user session: \(error.localizedDescription)")
+      return nil
+    }
+  }
 
   /// Build export data from local storage.
   private func fetchExportData(from: String, to: String) async throws -> ExportResponse {

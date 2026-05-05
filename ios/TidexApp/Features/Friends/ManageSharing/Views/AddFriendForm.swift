@@ -13,6 +13,7 @@ struct AddFriendForm: View {
 
   let isLoading: Bool
   let canAdd: Bool
+  let isOfflineUnavailable: Bool
   let capacityDisplay: String
   let onAdd: () -> Void
   let onCancel: () -> Void
@@ -45,7 +46,7 @@ struct AddFriendForm: View {
               }
             }
 
-            if canAdd {
+            if canAdd && !isOfflineUnavailable {
               Button(action: {
                 if reduceMotion {
                   isExpanded = true
@@ -73,6 +74,13 @@ struct AddFriendForm: View {
         }
       }
 
+      if isOfflineUnavailable {
+        Text(String(localized: "sharing.offline.addFriendUnavailable", table: "Localizable"))
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
       // Expanded form
       if isExpanded {
         VStack(spacing: Spacing.sm) {
@@ -87,7 +95,7 @@ struct AddFriendForm: View {
             .autocapitalization(.none)
             .autocorrectionDisabled()
             .focused($isFocused)
-            .disabled(isLoading)
+            .disabled(isLoading || isOfflineUnavailable)
 
             // Error message
             if let error = error {
@@ -109,7 +117,7 @@ struct AddFriendForm: View {
               .toggleStyle(SwitchToggleStyle(tint: .tidexSuccess))
           }
           .padding(.horizontal, Spacing.xxs)
-          .disabled(isLoading)
+          .disabled(isLoading || isOfflineUnavailable)
 
           // Action buttons
           HStack(spacing: Spacing.sm) {
@@ -141,6 +149,7 @@ struct AddFriendForm: View {
               .frame(minHeight: 44)
               .background(
                 identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading
+                  || isOfflineUnavailable
                   ? Color.tidexBlue.opacity(0.5)
                   : Color.tidexBlue
               )
@@ -148,7 +157,8 @@ struct AddFriendForm: View {
             }
             .buttonStyle(PlainButtonStyle())
             .disabled(
-              identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
+              identifier.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading
+                || isOfflineUnavailable)
           }
         }
         .padding(.top, Spacing.xxs)
@@ -192,6 +202,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       error: .constant(nil),
       isLoading: false,
       canAdd: true,
+      isOfflineUnavailable: false,
       capacityDisplay: "2/5 delinger",
       onAdd: {},
       onCancel: {}
@@ -205,6 +216,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       error: .constant(nil),
       isLoading: false,
       canAdd: true,
+      isOfflineUnavailable: false,
       capacityDisplay: "2/5 delinger",
       onAdd: {},
       onCancel: {}
@@ -218,6 +230,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       error: .constant("Fant ingen bruker med denne e-posten"),
       isLoading: false,
       canAdd: true,
+      isOfflineUnavailable: false,
       capacityDisplay: "2/5 delinger",
       onAdd: {},
       onCancel: {}
@@ -231,6 +244,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       error: .constant(nil),
       isLoading: false,
       canAdd: false,
+      isOfflineUnavailable: false,
       capacityDisplay: "5/5 delinger",
       onAdd: {},
       onCancel: {}
