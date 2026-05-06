@@ -1739,6 +1739,10 @@ actor LocalStoreActor {
   }
 
   func addRecurringShiftExclusion(id: String, date: String) throws -> Bool {
+    try addRecurringShiftExclusions(id: id, dates: [date]) > 0
+  }
+
+  func addRecurringShiftExclusions(id: String, dates: [String]) throws -> Int {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1748,11 +1752,14 @@ actor LocalStoreActor {
     }
 
     var exclusions = localShift.decodedExclusions
-    if exclusions.contains(date) {
-      return false
+    var existingExclusions = Set(exclusions)
+    let datesToAdd = dates.filter { existingExclusions.insert($0).inserted }
+
+    guard !datesToAdd.isEmpty else {
+      return 0
     }
 
-    exclusions.append(date)
+    exclusions.append(contentsOf: datesToAdd)
     localShift.decodedExclusions = exclusions
 
     var dirtyFields = localShift.dirtyFieldKeys
@@ -1765,7 +1772,7 @@ actor LocalStoreActor {
     localShift.localUpdatedAt = Date()
 
     try modelContext.save()
-    return true
+    return datesToAdd.count
   }
 
   func markRecurringShiftPendingDelete(id: String) throws {

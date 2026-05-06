@@ -317,13 +317,24 @@ final class RecurringShiftsRepository: ObservableObject {
   ///   - id: Recurring shift ID
   ///   - date: Date to exclude (ISO string YYYY-MM-DD)
   func addExclusion(id: String, date: String) async throws {
+    try await addExclusions(id: id, dates: [date])
+  }
+
+  /// Add multiple exclusion dates to a recurring shift in a single local mutation.
+  /// - Parameters:
+  ///   - id: Recurring shift ID
+  ///   - dates: Dates to exclude (ISO strings YYYY-MM-DD)
+  func addExclusions(id: String, dates: [String]) async throws {
     // Get userId before mutation for sync
     let userId = getLocalRecurringShift(id: id)?.userId
 
     do {
-      let didAdd = try await localStore.storeActor.addRecurringShiftExclusion(id: id, date: date)
-      if didAdd {
-        logger.info("Added exclusion \(date) to recurring shift: \(id)")
+      let addedCount = try await localStore.storeActor.addRecurringShiftExclusions(
+        id: id,
+        dates: dates
+      )
+      if addedCount > 0 {
+        logger.info("Added \(addedCount) exclusion(s) to recurring shift: \(id)")
 
         // Trigger sync to upload immediately
         if let userId = userId {
