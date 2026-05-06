@@ -707,16 +707,23 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     isDeleting = true
 
     do {
-      let virtualShifts = shiftsToDelete.filter(\.isVirtual)
+      let virtualExclusions = shiftsToDelete.compactMap { shift -> (recurringId: String, date: String)? in
+        guard shift.isVirtual, let recurringId = shift.shift.recurring_id else { return nil }
+        return (recurringId, shift.shiftDate)
+      }
+      let virtualExclusionsByRecurringId = Dictionary(
+        grouping: virtualExclusions,
+        by: { $0.recurringId }
+      ).mapValues { exclusions in
+        exclusions.map { $0.date }
+      }
       let regularShiftIds = shiftsToDelete.filter { !$0.isVirtual }.map(\.id)
 
-      for shift in virtualShifts {
-        if let recurringId = shift.shift.recurring_id {
-          try await RecurringShiftsRepository.shared.addExclusion(
-            id: recurringId,
-            date: shift.shiftDate
-          )
-        }
+      for (recurringId, dates) in virtualExclusionsByRecurringId {
+        try await recurringShiftsRepository.addExclusions(
+          id: recurringId,
+          dates: dates
+        )
       }
 
       if !regularShiftIds.isEmpty {
