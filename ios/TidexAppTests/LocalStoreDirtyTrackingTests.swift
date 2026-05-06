@@ -328,6 +328,39 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.note]))
   }
 
+  func testAddRecurringShiftExclusionsAddsMultipleDatesInSingleMutation() async throws {
+    let store = try makeStoreActor()
+
+    let created = try await store.createRecurringShift(
+      userId: userId,
+      jobId: "job-1",
+      startTime: "09:00",
+      endTime: "17:00",
+      repeatIntervalWeeks: 1,
+      selectedDays: ["1": "2026-03-02"],
+      endCondition: nil,
+      exclusions: ["2026-03-09"],
+      dateSpecificPauseWindows: nil,
+      dateSpecificSupplements: nil,
+      dateSpecificNotes: nil
+    )
+
+    await store.markRecurringShiftClean(id: created.id)
+    try await store.save()
+
+    let addedCount = try await store.addRecurringShiftExclusions(
+      id: created.id,
+      dates: ["2026-03-16", "2026-03-23", "2026-03-16"]
+    )
+
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(addedCount, 2)
+    XCTAssertEqual(local.decodedExclusions, ["2026-03-09", "2026-03-16", "2026-03-23"])
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.exclusions]))
+  }
+
   func testUpdateRecurringShiftDateSpecificNotesMarksOnlyNoteFieldDirty() async throws {
     let store = try makeStoreActor()
 
