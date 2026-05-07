@@ -606,6 +606,31 @@ function normalizeToolName(toolName: string): ToolName | null {
   return KNOWN_TOOL_NAMES.find((name) => trimmed.replace(/\s+/g, "").includes(name)) ?? null;
 }
 
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function resolveFriendToolArgs(ctx: WageyRequestContext, args: unknown): Promise<unknown> {
+  if (!args || typeof args !== "object" || Array.isArray(args)) return args;
+
+  const record = { ...(args as Record<string, unknown>) };
+  const rawFriendId = record.friendId;
+  if (typeof rawFriendId !== "string" || uuidPattern.test(rawFriendId)) return record;
+
+  const lookup = rawFriendId.trim().toLowerCase();
+  if (!lookup) return record;
+
+  const friends = await getAllFriends(ctx);
+  const match = friends.find((friend) => {
+    const candidates = [friend.id, getFriendDisplayName(friend), friend.email, friend.phone]
+      .filter((candidate): candidate is string => typeof candidate === "string" && candidate.trim().length > 0)
+      .map((candidate) => candidate.trim().toLowerCase());
+    return candidates.some((candidate) => candidate === lookup) ||
+      candidates.some((candidate) => candidate.includes(lookup) || lookup.includes(candidate));
+  });
+
+  if (match) record.friendId = match.id;
+  return record;
+}
+
 function sanitizeToolArgs(value: unknown): unknown {
   if (typeof value === "string") {
     const trimmed = value.trim();
@@ -1450,7 +1475,8 @@ async function executeListFriends(ctx: WageyRequestContext, args: unknown): Prom
 }
 
 async function executeQueryFriendShifts(ctx: WageyRequestContext, args: unknown): Promise<ToolResult> {
-  const parsed = queryFriendShiftsSchema.safeParse(args);
+  const normalizedArgs = await resolveFriendToolArgs(ctx, args);
+  const parsed = queryFriendShiftsSchema.safeParse(normalizedArgs);
   if (!parsed.success) return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
   const input = parsed.data as QueryFriendShiftsInput;
   const weekRange = getCurrentWeekRange();
@@ -1520,7 +1546,8 @@ async function executeQueryFriendShifts(ctx: WageyRequestContext, args: unknown)
 }
 
 async function executeQueryFriendFeaturedShift(ctx: WageyRequestContext, args: unknown): Promise<ToolResult> {
-  const parsed = queryFriendFeaturedShiftSchema.safeParse(args);
+  const normalizedArgs = await resolveFriendToolArgs(ctx, args);
+  const parsed = queryFriendFeaturedShiftSchema.safeParse(normalizedArgs);
   if (!parsed.success) return { success: false, message: t(tr.invalidInput, { details: parsed.error.issues.map((i) => i.message).join(", ") }) };
   const input = parsed.data as QueryFriendFeaturedShiftInput;
   const [{ data: share, error: shareError }, preview, friend] = await Promise.all([

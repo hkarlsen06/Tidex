@@ -246,6 +246,77 @@ function currentWeekRange(): { startDate: string; endDate: string } {
   };
 }
 
+Deno.test("query_shifts ignores null and placeholder optional filters", async () => {
+  const ctx = createContext({
+    user_shifts: [{
+      id: "11111111-2222-3333-4444-555555555555",
+      user_id: USER_ID,
+      job_id: null,
+      shift_date: "2026-04-16",
+      start_time: "12:00",
+      end_time: "18:00",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "query_shifts",
+    JSON.stringify({
+      startDate: "2026-04-01",
+      endDate: "2026-04-30",
+      minTime: null,
+      maxTime: "none",
+      jobId: "all",
+      limit: 10,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const rows = result.data as Array<Record<string, unknown>>;
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0].date, "2026-04-16");
+});
+
+Deno.test("manage_workplace preserves explicit null clears", async () => {
+  const jobId = "11111111-2222-4333-8444-555555555555";
+  const db: Partial<MockDb> = {
+    jobs: [{
+      id: jobId,
+      user_id: USER_ID,
+      name: "Kafe",
+      color: "#112233",
+      payroll_day: 15,
+      half_tax_month: 12,
+      monthly_goal: 12000,
+      sort_order: 0,
+      is_default: true,
+      archived_at: null,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_workplace",
+    JSON.stringify({
+      action: "update",
+      jobId,
+      color: null,
+      halfTaxMonth: null,
+      monthlyGoal: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const [job] = db.jobs!;
+  assertEquals(job.color, null);
+  assertEquals(job.half_tax_month, null);
+  assertEquals(job.monthly_goal, null);
+});
+
 Deno.test("manage_event creates a timed event", async () => {
   const ctx = createContext();
 

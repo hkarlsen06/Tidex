@@ -249,7 +249,7 @@ Deno.test("streamOpenAIChat sends Responses API request shape", async () => {
     assertEquals(requestBody.model, DEFAULT_OPENAI_MODEL);
     assertEquals(requestBody.instructions, "You are Wagey.");
     assertEquals(requestBody.stream, true);
-    assertEquals(requestBody.reasoning, { effort: "xhigh" });
+    assertEquals(requestBody.reasoning, { effort: "low" });
   } finally {
     globalThis.fetch = originalFetch;
   }
