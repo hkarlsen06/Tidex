@@ -123,7 +123,9 @@ struct EventDetailsSheet: View {
   @State private var reminderAnchorTime: Date?
   @State private var focusedTimeField: TimeInputField?
   @State private var errorMessage: String?
+  @State private var successMessage: String?
   @State private var isSaving = false
+  @State private var isExportingToCalendar = false
   @State private var isResettingDraft = false
   @State private var lastSavedReminderTimes: [Int] = []
   @State private var lastSavedReminderAnchorTime: Date?
@@ -202,6 +204,10 @@ struct EventDetailsSheet: View {
 
           if let errorMessage {
             errorBanner(message: errorMessage)
+          }
+
+          if let successMessage {
+            successBanner(message: successMessage)
           }
 
           actionButtons
@@ -466,6 +472,31 @@ struct EventDetailsSheet: View {
     VStack(spacing: Spacing.sm) {
       if !isEditing {
         Button {
+          addToCalendar()
+        } label: {
+          HStack(spacing: Spacing.xs) {
+            if isExportingToCalendar {
+              ProgressView()
+                .tint(.tidexTextOnBrand)
+            } else {
+              Image(systemName: "calendar.badge.plus")
+            }
+
+            Text(.eventsCalendarAddButton)
+          }
+          .font(.tidexButton)
+          .foregroundColor(.tidexTextOnBrand)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.md)
+          .background(
+            RoundedRectangle(cornerRadius: CornerRadius.xxl)
+              .fill(Color.tidexBlue)
+          )
+        }
+        .buttonStyle(.plain)
+        .disabled(isExportingToCalendar)
+
+        Button {
           beginEditing(focusTitle: true)
         } label: {
           Text(.shiftsActionsEdit)
@@ -580,15 +611,44 @@ struct EventDetailsSheet: View {
   }
 
   private func errorBanner(message: String) -> some View {
+    statusBanner(message: message, color: .red)
+  }
+
+  private func successBanner(message: String) -> some View {
+    statusBanner(message: message, color: .tidexSuccess)
+  }
+
+  private func statusBanner(message: String, color: Color) -> some View {
     Text(message)
       .font(.tidexSubheadline)
-      .foregroundColor(.red)
+      .foregroundColor(color)
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.md)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.red.opacity(0.08))
+          .fill(color.opacity(0.08))
       )
+  }
+
+  private func addToCalendar() {
+    guard !isExportingToCalendar else { return }
+
+    isExportingToCalendar = true
+    errorMessage = nil
+    successMessage = nil
+
+    Task {
+      do {
+        let calendarName = String(localized: .dataExportCalendarCalendarName)
+        try await CalendarExportService.shared.exportEvent(event, calendarName: calendarName)
+        Haptics.play(.success)
+        successMessage = String(localized: .eventsCalendarAddSuccess)
+      } catch {
+        errorMessage = ErrorTranslations.translate(error)
+      }
+
+      isExportingToCalendar = false
+    }
   }
 
   private func beginEditing(focusTitle: Bool) {
@@ -619,6 +679,7 @@ struct EventDetailsSheet: View {
     lastSavedReminderTimes = reminderTimes
     lastSavedReminderAnchorTime = reminderAnchorTime
     errorMessage = nil
+    successMessage = nil
     isResettingDraft = false
   }
 

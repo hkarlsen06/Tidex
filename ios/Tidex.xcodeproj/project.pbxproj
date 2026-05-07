@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CA1E4D0130A1000000C0FFEE /* CalendarExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E4D0230A1000000C0FFEE /* CalendarExportServiceTests.swift */; };
 		11263D3C2F2FF22700233D63 /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3B2F2FF22700233D63 /* CropViewController */; };
 		11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3F2F2FF3F700233D63 /* TOCropViewController */; };
 		114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -139,6 +140,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA1E4D0230A1000000C0FFEE /* CalendarExportServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarExportServiceTests.swift; sourceTree = "<group>"; };
 		00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotsServiceSelectionTests.swift; sourceTree = "<group>"; };
 		0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineDateLogicTests.swift; sourceTree = "<group>"; };
 		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -374,6 +376,7 @@
 		490F8B0AF0BA025DA4C44BCF /* TidexAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				CA1E4D0230A1000000C0FFEE /* CalendarExportServiceTests.swift */,
 				130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */,
 				F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */,
 				0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */,
@@ -891,6 +894,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CA1E4D0130A1000000C0FFEE /* CalendarExportServiceTests.swift in Sources */,
 				33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */,
 				DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */,
 				614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */,

@@ -993,7 +993,7 @@ struct ShiftsView: View {
     impactHaptic.impactOccurred()
 
     do {
-      try await viewModel.deleteEvent(id: event.id)
+      try await viewModel.deleteEvent(event)
       eventToDelete = nil
     } catch {
       logger.error("Failed to delete event: \(error.localizedDescription)")
