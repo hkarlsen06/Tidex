@@ -19,6 +19,27 @@ import type { HHMM } from "./payroll/types.ts";
 const shortOrFullId = z.string().regex(
   /^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,
 );
+const optionalFilterPlaceholders = new Set(["", "null", "none", "undefined", "n/a", "all", "any"]);
+
+function normalizeOptionalFilter(value: unknown): unknown {
+  if (value === null) return undefined;
+  if (typeof value !== "string") return value;
+  const trimmed = value.trim();
+  return optionalFilterPlaceholders.has(trimmed.toLowerCase()) ? undefined : trimmed;
+}
+
+const optionalDateFilter = z.preprocess(
+  normalizeOptionalFilter,
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+);
+const optionalTimeFilter = z.preprocess(
+  normalizeOptionalFilter,
+  z.string().regex(/^\d{2}:\d{2}$/).optional(),
+);
+const optionalUuidFilter = z.preprocess(
+  normalizeOptionalFilter,
+  z.string().uuid().optional(),
+);
 
 /**
  * Manage Shift Tool Schema
@@ -43,18 +64,18 @@ export type ManageShiftInput = z.infer<typeof manageShiftSchema>;
  * Query Shifts Tool Schema
  */
 export const queryShiftsSchema = z.object({
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  startDate: optionalDateFilter,
+  endDate: optionalDateFilter,
   limit: z.number().int().min(1).max(100).optional().default(30),
-  minTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  maxTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  minTime: optionalTimeFilter,
+  maxTime: optionalTimeFilter,
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
   sortBy: z
     .enum(["date_latest", "date_earliest", "date", "earnings", "hours"])
     .optional()
     .default("date_latest"),
   // Optional workplace/job filter (full UUID from list_workplaces)
-  jobId: z.string().uuid().optional(),
+  jobId: optionalUuidFilter,
 });
 
 export type QueryShiftsInput = z.infer<typeof queryShiftsSchema>;
@@ -330,17 +351,17 @@ export type ManageFriendSharingInput = z.infer<
  */
 export const queryFriendShiftsSchema = z.object({
   friendId: z.string().uuid(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  startDate: optionalDateFilter,
+  endDate: optionalDateFilter,
   limit: z.number().int().min(1).max(100).optional().default(30),
-  minTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
-  maxTime: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  minTime: optionalTimeFilter,
+  maxTime: optionalTimeFilter,
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
   sortBy: z
     .enum(["date_latest", "date_earliest", "date", "earnings", "hours"])
     .optional()
     .default("date_latest"),
-  jobId: z.string().uuid().optional(),
+  jobId: optionalUuidFilter,
 });
 
 export type QueryFriendShiftsInput = z.infer<typeof queryFriendShiftsSchema>;

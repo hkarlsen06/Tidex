@@ -11,7 +11,7 @@ import type {
 
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
 export const DEFAULT_OPENAI_MODEL = "gpt-5.5";
-const DEFAULT_REASONING_EFFORT = "xhigh";
+const DEFAULT_REASONING_EFFORT = "low";
 const OPENAI_STREAM_IDLE_TIMEOUT_MS = 30_000;
 const GENERIC_PROVIDER_ERROR_MESSAGE =
   "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.";
