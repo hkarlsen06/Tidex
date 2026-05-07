@@ -11,7 +11,7 @@
     "lint": "pnpm --filter marketing exec tsc --noEmit && pnpm --filter dev-site exec tsc --noEmit",
     "test": "pnpm --filter marketing build && pnpm --filter dev-site build",
     "open-ios": "open ios/Tidex.xcodeproj",
-    "localize": "node ios/scripts/translate-xcstrings.mjs",
+    "localize": "node ios/Scripts/translate-xcstrings.mjs",
     "ios:l10n:add": "swift ios/Scripts/add-strings.swift",
     "ios:l10n:delete": "swift ios/Scripts/delete-strings.swift",
     "ios:l10n:search": "swift ios/Scripts/search-strings.swift",
