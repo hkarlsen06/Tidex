@@ -2572,13 +2572,20 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     notifyShiftsDidChange()
   }
 
-  func deleteEvent(id: String) async throws {
+  func deleteEvent(_ event: EventRow) async throws {
     guard !isDeletingEvent else { return }
 
     isDeletingEvent = true
     defer { isDeletingEvent = false }
 
-    try await eventsRepository.deleteEvent(id: id)
+    do {
+      try await CalendarExportService.shared.deleteExportedEvent(event)
+    } catch {
+      logger.error(
+        "Failed to delete exported calendar event \(event.id): \(error.localizedDescription)")
+    }
+
+    try await eventsRepository.deleteEvent(id: event.id)
     await reloadFromLocal()
     notifyShiftsDidChange()
   }

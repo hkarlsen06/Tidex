@@ -548,7 +548,7 @@ struct DashboardView: View {
     impactHaptic.impactOccurred()
 
     do {
-      try await viewModel.deleteEvent(id: event.id)
+      try await viewModel.deleteEvent(event)
       eventToDelete = nil
     } catch {
       operationErrorMessage = ErrorTranslations.translate(error)

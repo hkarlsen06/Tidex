@@ -707,7 +707,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     isDeleting = true
 
     do {
-      let virtualExclusions = shiftsToDelete.compactMap { shift -> (recurringId: String, date: String)? in
+      let virtualExclusions = shiftsToDelete.compactMap {
+        shift -> (recurringId: String, date: String)? in
         guard shift.isVirtual, let recurringId = shift.shift.recurring_id else { return nil }
         return (recurringId, shift.shiftDate)
       }
@@ -1037,14 +1038,21 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     }
   }
 
-  func deleteEvent(id: String) async throws {
+  func deleteEvent(_ event: EventRow) async throws {
     guard !isDeletingEvent else { return }
 
     isDeletingEvent = true
     defer { isDeletingEvent = false }
 
-    logger.info("🗑️ Deleting event \(id)")
-    try await eventsRepository.deleteEvent(id: id)
+    logger.info("🗑️ Deleting event \(event.id)")
+    do {
+      try await CalendarExportService.shared.deleteExportedEvent(event)
+    } catch {
+      logger.error(
+        "Failed to delete exported calendar event \(event.id): \(error.localizedDescription)")
+    }
+
+    try await eventsRepository.deleteEvent(id: event.id)
     await reloadFromLocal()
     notifyShiftsDidChange()
   }

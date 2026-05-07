@@ -4,7 +4,13 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "CalendarExportService")
 
-/// Service for exporting shifts to the device calendar
+struct CalendarEventSchedule: Equatable {
+  let startDate: Date
+  let endDate: Date
+  let isAllDay: Bool
+}
+
+/// Service for exporting shifts and events to the device calendar
 final class CalendarExportService {
   static let shared = CalendarExportService()
 
@@ -12,6 +18,7 @@ final class CalendarExportService {
 
   /// Calendar identifier key for UserDefaults
   private let calendarIdentifierKey = "tidex.calendar.identifier"
+  private let eventIdentifierMappingKey = "tidex.calendar.eventIdentifiers"
 
   private init() {}
 
@@ -75,14 +82,106 @@ final class CalendarExportService {
     return createdCount
   }
 
+  /// Export a single Tidex event to the iOS calendar.
+  /// - Returns: True when a new calendar event was created, false when a matching event already exists.
+  @discardableResult
+  func exportEvent(_ event: EventRow, calendarName: String) async throws -> Bool {
+    if !isAuthorized {
+      let granted = try await requestAccess()
+      if !granted {
+        throw CalendarExportError.permissionDenied
+      }
+    }
+
+    let calendar = try getOrCreateCalendar(name: calendarName)
+    return try createOrUpdateCalendarEvent(for: event, in: calendar)
+  }
+
+  /// Delete the iOS calendar event that was previously created for a Tidex event.
+  /// - Returns: True if an event was found and removed.
+  @discardableResult
+  func deleteExportedEvent(_ event: EventRow) async throws -> Bool {
+    guard isAuthorized else {
+      return false
+    }
+
+    if let storedIdentifier = storedEventIdentifier(for: event.id),
+      let storedEvent = eventStore.event(withIdentifier: storedIdentifier)
+    {
+      try eventStore.remove(storedEvent, span: .thisEvent, commit: true)
+      removeStoredEventIdentifier(for: event.id)
+      logger.info("Deleted calendar event for Tidex event \(event.id)")
+      return true
+    }
+
+    guard let schedule = Self.schedule(for: event) else {
+      removeStoredEventIdentifier(for: event.id)
+      return false
+    }
+
+    let calendars = storedCalendar().map { [$0] }
+    let predicate = eventStore.predicateForEvents(
+      withStart: schedule.startDate.addingTimeInterval(-60),
+      end: schedule.endDate.addingTimeInterval(60),
+      calendars: calendars
+    )
+
+    guard
+      let matchingEvent = eventStore.events(matching: predicate).first(where: { calendarEvent in
+        calendarEvent.url == Self.calendarURL(for: event.id)
+          || (calendars != nil
+            && calendarEvent.title == event.trimmedNote
+            && calendarEvent.startDate == schedule.startDate
+            && calendarEvent.endDate == schedule.endDate)
+      })
+    else {
+      removeStoredEventIdentifier(for: event.id)
+      return false
+    }
+
+    try eventStore.remove(matchingEvent, span: .thisEvent, commit: true)
+    removeStoredEventIdentifier(for: event.id)
+    logger.info("Deleted calendar event for Tidex event \(event.id) via lookup")
+    return true
+  }
+
+  static func schedule(for event: EventRow) -> CalendarEventSchedule? {
+    guard let startDay = parseISODate(event.start_date) else { return nil }
+
+    if event.is_all_day {
+      guard let inclusiveEndDay = parseISODate(event.end_date),
+        let exclusiveEndDay = Calendar.current.date(byAdding: .day, value: 1, to: inclusiveEndDay)
+      else {
+        return nil
+      }
+
+      return CalendarEventSchedule(
+        startDate: startDay,
+        endDate: exclusiveEndDay,
+        isAllDay: true
+      )
+    }
+
+    guard let startTime = event.start_time, let endTime = event.end_time,
+      let startDate = combineDateAndTime(date: startDay, time: startTime),
+      let endDay = parseISODate(event.end_date),
+      let endDate = combineDateAndTime(date: endDay, time: endTime)
+    else {
+      return nil
+    }
+
+    return CalendarEventSchedule(
+      startDate: startDate,
+      endDate: max(endDate, startDate.addingTimeInterval(60)),
+      isAllDay: false
+    )
+  }
+
   // MARK: - Private Methods
 
   /// Get or create the Tidex calendar
   private func getOrCreateCalendar(name: String) throws -> EKCalendar {
-    // Try to find existing Tidex calendar by stored identifier
-    if let identifier = UserDefaults.standard.string(forKey: calendarIdentifierKey),
-      let existingCalendar = eventStore.calendar(withIdentifier: identifier)
-    {
+    if let existingCalendar = storedCalendar() {
       logger.debug("Found existing Tidex calendar")
       return existingCalendar
     }
@@ -121,6 +220,14 @@ final class CalendarExportService {
 
     logger.info("Created new Tidex calendar")
     return calendar
+  }
+
+  private func storedCalendar() -> EKCalendar? {
+    guard let identifier = UserDefaults.standard.string(forKey: calendarIdentifierKey) else {
+      return nil
+    }
+
+    return eventStore.calendar(withIdentifier: identifier)
   }
 
   /// Create a calendar event for a shift
@@ -172,11 +279,19 @@ final class CalendarExportService {
 
   /// Parse ISO date string (YYYY-MM-DD) to Date
   private func parseISODate(_ string: String) -> Date? {
-    FormatterCache.isoDateFormatter(timeZone: TimeZone.current).date(from: string)
+    Self.parseISODate(string)
   }
 
   /// Combine a date and time string into a full Date
   private func combineDateAndTime(date: Date, time: String) -> Date? {
+    Self.combineDateAndTime(date: date, time: time)
+  }
+
+  private static func parseISODate(_ string: String) -> Date? {
+    FormatterCache.isoDateFormatter(timeZone: TimeZone.current).date(from: string)
+  }
+
+  private static func combineDateAndTime(date: Date, time: String) -> Date? {
     let components = time.split(separator: ":").compactMap { Int($0) }
     guard components.count >= 2 else { return nil }
 
@@ -184,10 +299,96 @@ final class CalendarExportService {
     calendar.timeZone = TimeZone.current
 
     var dateComponents = calendar.dateComponents([.year, .month, .day], from: date)
-    dateComponents.hour = components[0]
-    dateComponents.minute = components[1]
+    if components[0] == 24 && components[1] == 0 {
+      guard let nextDay = calendar.date(byAdding: .day, value: 1, to: date) else { return nil }
+      dateComponents = calendar.dateComponents([.year, .month, .day], from: nextDay)
+      dateComponents.hour = 0
+      dateComponents.minute = 0
+    } else {
+      guard (0...23).contains(components[0]), (0...59).contains(components[1]) else {
+        return nil
+      }
+      dateComponents.hour = components[0]
+      dateComponents.minute = components[1]
+    }
 
     return calendar.date(from: dateComponents)
+  }
+
+  @discardableResult
+  private func createOrUpdateCalendarEvent(for event: EventRow, in calendar: EKCalendar) throws
+    -> Bool
+  {
+    guard let schedule = Self.schedule(for: event) else {
+      throw CalendarExportError.invalidDate
+    }
+
+    let calendarEvent =
+      storedEventIdentifier(for: event.id)
+      .flatMap { eventStore.event(withIdentifier: $0) }
+      ?? existingCalendarEvent(for: event, schedule: schedule, in: calendar)
+      ?? EKEvent(eventStore: eventStore)
+
+    let isNewEvent = calendarEvent.eventIdentifier == nil
+    calendarEvent.title = event.trimmedNote
+    calendarEvent.startDate = schedule.startDate
+    calendarEvent.endDate = schedule.endDate
+    calendarEvent.isAllDay = schedule.isAllDay
+    calendarEvent.calendar = calendar
+    calendarEvent.notes = event.trimmedNote
+    calendarEvent.url = Self.calendarURL(for: event.id)
+
+    try eventStore.save(calendarEvent, span: .thisEvent, commit: true)
+
+    if let eventIdentifier = calendarEvent.eventIdentifier {
+      storeEventIdentifier(eventIdentifier, for: event.id)
+    }
+
+    logger.info("Saved calendar event for Tidex event \(event.id)")
+    return isNewEvent
+  }
+
+  private func existingCalendarEvent(
+    for event: EventRow,
+    schedule: CalendarEventSchedule,
+    in calendar: EKCalendar
+  ) -> EKEvent? {
+    let predicate = eventStore.predicateForEvents(
+      withStart: schedule.startDate.addingTimeInterval(-60),
+      end: schedule.endDate.addingTimeInterval(60),
+      calendars: [calendar]
+    )
+
+    return eventStore.events(matching: predicate).first { calendarEvent in
+      calendarEvent.url == Self.calendarURL(for: event.id)
+        || (calendarEvent.title == event.trimmedNote
+          && calendarEvent.startDate == schedule.startDate
+          && calendarEvent.endDate == schedule.endDate)
+    }
+  }
+
+  private static func calendarURL(for eventId: String) -> URL? {
+    URL(string: "tidex://event/\(eventId)")
+  }
+
+  private func storedEventIdentifier(for eventId: String) -> String? {
+    eventIdentifierMappings()[eventId]
+  }
+
+  private func storeEventIdentifier(_ eventIdentifier: String, for eventId: String) {
+    var mappings = eventIdentifierMappings()
+    mappings[eventId] = eventIdentifier
+    UserDefaults.standard.set(mappings, forKey: eventIdentifierMappingKey)
+  }
+
+  private func removeStoredEventIdentifier(for eventId: String) {
+    var mappings = eventIdentifierMappings()
+    mappings.removeValue(forKey: eventId)
+    UserDefaults.standard.set(mappings, forKey: eventIdentifierMappingKey)
+  }
+
+  private func eventIdentifierMappings() -> [String: String] {
+    UserDefaults.standard.dictionary(forKey: eventIdentifierMappingKey) as? [String: String] ?? [:]
   }
 
   /// Calculate end date, handling cross-midnight shifts
