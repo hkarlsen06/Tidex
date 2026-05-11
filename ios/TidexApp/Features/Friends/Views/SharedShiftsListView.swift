@@ -12,6 +12,7 @@ struct SharedShiftsListView: View {
   let month: Int
   let phase: MonthTransitionPhase?
   let isLoading: Bool
+  let isContentReady: Bool
 
   /// Dates to highlight from notification deeplink
   var highlightDates: Set<String> = []
@@ -56,7 +57,9 @@ struct SharedShiftsListView: View {
       ZStack {
         TidexAppBackground()
 
-        if isLoading && shifts.isEmpty {
+        if !isContentReady && shifts.isEmpty {
+          Color.clear
+        } else if isLoading && shifts.isEmpty {
           loadingState
         } else if showListView {
           shiftListContent
@@ -297,7 +300,8 @@ struct SharedShiftsListView: View {
     year: 2025,
     month: 1,
     phase: nil,
-    isLoading: false
+    isLoading: false,
+    isContentReady: true
   )
   .background(Color.tidexBackground)
   .environment(\.userCurrency, "kr")

@@ -208,6 +208,21 @@ final class NotificationService {
     center.removePendingNotificationRequests(withIdentifiers: identifiers)
   }
 
+  /// Remove delivered shared-shift notifications for a friend after their calendar is opened.
+  func clearDeliveredSharedShiftNotifications(for ownerId: String) async {
+    guard !ownerId.isEmpty else { return }
+
+    let center = UNUserNotificationCenter.current()
+    let identifiers = await deliveredSharedShiftNotificationIdentifiers(
+      for: ownerId,
+      center: center
+    )
+    guard !identifiers.isEmpty else { return }
+
+    center.removeDeliveredNotifications(withIdentifiers: identifiers)
+    center.removePendingNotificationRequests(withIdentifiers: identifiers)
+  }
+
   private func deliveredFriendChatNotificationIdentifiers(
     for threadId: String,
     center: UNUserNotificationCenter
@@ -226,6 +241,33 @@ final class NotificationService {
 
           guard let notificationThreadId = userInfo["thread_id"] as? String,
             notificationThreadId == threadId
+          else {
+            return nil
+          }
+
+          return notification.request.identifier
+        }
+
+        continuation.resume(returning: identifiers)
+      }
+    }
+  }
+
+  private func deliveredSharedShiftNotificationIdentifiers(
+    for ownerId: String,
+    center: UNUserNotificationCenter
+  ) async -> [String] {
+    await withCheckedContinuation { continuation in
+      center.getDeliveredNotifications { notifications in
+        let identifiers = notifications.compactMap { notification -> String? in
+          let userInfo = notification.request.content.userInfo
+          let type = userInfo["type"] as? String ?? ""
+          guard type.hasPrefix("shared_shift_") else {
+            return nil
+          }
+
+          guard let notificationOwnerId = userInfo["owner_id"] as? String,
+            notificationOwnerId == ownerId
           else {
             return nil
           }

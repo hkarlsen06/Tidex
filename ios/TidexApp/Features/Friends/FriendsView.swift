@@ -1002,6 +1002,7 @@ private struct SharedShiftsDetailView: View {
   @AppStorage("shiftsViewMode") private var showListView = false
   @State private var showProfile = false
   @State private var shouldNavigateBack = false
+  @State private var visibleContextOwnerToken = UUID()
 
   private var isIPhone: Bool {
     UIDevice.current.userInterfaceIdiom == .phone
@@ -1030,6 +1031,7 @@ private struct SharedShiftsDetailView: View {
           month: viewModel.committedMonth,
           phase: viewModel.transitionPhase,
           isLoading: viewModel.isLoadingShifts,
+          isContentReady: viewModel.hasResolvedSelectedSharerShifts,
           highlightDates: highlightDates,
           highlightShiftIds: highlightShiftIds,
           isSuperimposing: viewModel.isSuperimposing,
@@ -1045,6 +1047,14 @@ private struct SharedShiftsDetailView: View {
     }
     .onAppear {
       monthSwipeHaptic.prepare()
+      SensitiveContentPresentationState.shared.setVisibleContext(
+        .sharedCalendar(ownerId: sharer.id, ownerToken: visibleContextOwnerToken)
+      )
+    }
+    .onDisappear {
+      SensitiveContentPresentationState.shared.clearVisibleContextIfOwnedBySharedCalendar(
+        visibleContextOwnerToken
+      )
     }
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {

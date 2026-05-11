@@ -1,7 +1,7 @@
 import {
-  buildApsPayload,
-  buildApnsHeaders,
   buildApnsEnvironmentOrder,
+  buildApnsHeaders,
+  buildApsPayload,
   buildPrefetchApnsHeaders,
   buildPrefetchPayload,
   coalesceNotifications,
@@ -86,6 +86,45 @@ Deno.test("non-rich notifications omit mutable content", () => {
 
   assertFalse("mutable-content" in aps);
   assertEquals(aps["thread-id"], "sharing");
+});
+
+Deno.test("shared shift added notifications group by owner calendar", () => {
+  const aps = buildApsPayload(
+    makeNotification("shared_shift_added", {
+      owner_id: "owner-1",
+      data_payload: { owner_id: "owner-1" },
+    }),
+    0,
+  );
+
+  assertFalse("mutable-content" in aps);
+  assertFalse("sound" in aps);
+  assertEquals(aps["thread-id"], "shared-shifts:owner-1");
+  assertEquals(aps["target-content-id"], "shared-calendar:owner-1");
+  assertEquals(aps["interruption-level"], "active");
+  assertEquals(aps["relevance-score"], 0.7);
+});
+
+Deno.test("shared shift added notifications collapse per recipient and owner", () => {
+  const headers = buildApnsHeaders(
+    makeNotification("shared_shift_added", {
+      owner_id: "owner-1",
+      recipient_id: "recipient-1",
+    }),
+  );
+
+  assertEquals(headers["apns-push-type"], "alert");
+  assertEquals(headers["apns-priority"], "10");
+  assertEquals(
+    headers["apns-collapse-id"],
+    "shared-shift:owner-1",
+  );
+  assert("apns-expiration" in headers);
+
+  const expiration = Number(headers["apns-expiration"]);
+  assert(Number.isFinite(expiration));
+  assert(expiration >= Math.floor(Date.now() / 1000));
+  assert(expiration <= Math.floor(Date.now() / 1000) + 60 * 60 * 24);
 });
 
 Deno.test("thread typing notifications route to the same thread without actions", () => {
