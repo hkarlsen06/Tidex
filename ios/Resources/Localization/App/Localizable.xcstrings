@@ -37603,277 +37603,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تم تحديث شروطنا منذ آخر مرة قبلت فيها"
+            "value" : "راجع التغييرات قبل المتابعة"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нашите условия са были актуализирани, откакто последния път ги приехте"
+            "value" : "Прегледайте промените, преди да продължите"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "আপনি গত বার যখন গ্রহণ করেছিলেন তখন থেকে আমাদের শর্তাবলী আপডেট হয়েছে"
+            "value" : "চালিয়ে যাওয়ার আগে পরিবর্তনগুলো পর্যালোচনা করুন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Els nostres termes s'han actualitzat des de l'última vegada que els vas acceptar"
+            "value" : "Revisa els canvis abans de continuar"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Naše podmínky byly aktualizovány od vašeho posledního přijetí"
+            "value" : "Před pokračováním zkontrolujte změny"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vores vilkår er blevet opdateret siden du sidst accepterede dem"
+            "value" : "Gennemgå ændringerne, før du fortsætter"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unsere Bedingungen wurden aktualisiert, seit Sie diese zuletzt akzeptiert haben"
+            "value" : "Überprüfe die Änderungen, bevor du fortfährst"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Οι όροι μας έχουν ενημερωθεί από την τελευταία φορά που τους αποδεχθήκατε"
+            "value" : "Ελέγξτε τις αλλαγές πριν συνεχίσετε"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Our terms have been updated since you last accepted"
+            "value" : "Review the changes before continuing"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nuestros términos han sido actualizados desde que los aceptaste por última vez"
+            "value" : "Revisa los cambios antes de continuar"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Meie tingimused on viimase nõustumisega võrreldes uuendatud"
+            "value" : "Vaata muudatused enne jätkamist üle"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "شرایط ما از زمانی که آخرین بار آن‌ها را پذیرفتید به‌روز شده‌اند"
+            "value" : "پیش از ادامه، تغییرات را بررسی کنید"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ehdot on päivitetty viimeisen hyväksynnän jälkeen"
+            "value" : "Tarkista muutokset ennen jatkamista"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ang aming mga kondisyon ay na-update mula noong huli mong tinanggap"
+            "value" : "Suriin ang mga pagbabago bago magpatuloy"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nos conditions ont été mises à jour depuis votre dernière acceptation"
+            "value" : "Consultez les modifications avant de continuer"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "התנאים שלנו עודכנו מאז שקיבלת אותם לאחרונה"
+            "value" : "עיין בשינויים לפני ההמשך"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "हमारी शर्तें आपके द्वारा अंतिम स्वीकृति के बाद से अपडेट की गई हैं"
+            "value" : "जारी रखने से पहले बदलाव देखें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Naši uvjeti su ažurirani od kada ste ih zadnji put prihvatili"
+            "value" : "Pregledajte promjene prije nastavka"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A feltételeinket frissítettük az utolsó elfogadás óta"
+            "value" : "Tekintse át a módosításokat, mielőtt folytatja"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Syarat dan ketentuan kami telah diperbarui sejak Anda terakhir menerimanya"
+            "value" : "Tinjau perubahan sebelum melanjutkan"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skilmálarnir okkar hafa verið uppfærðir síðan þú samþykkir þá síðast"
+            "value" : "Farðu yfir breytingarnar áður en þú heldur áfram"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "I nostri termini sono stati aggiornati dall'ultima volta che li hai accettati"
+            "value" : "Controlla le modifiche prima di continuare"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "前回の同意以降、利用規約が更新されています"
+            "value" : "続行する前に変更内容を確認してください"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "마지막으로 동의한 이후 약관이 업데이트되었습니다"
+            "value" : "계속하기 전에 변경 사항을 검토하세요"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mūsų sąlygos buvo atnaujintos nuo to laiko, kai jas paskutinį kartą priėmėte"
+            "value" : "Prieš tęsdami peržiūrėkite pakeitimus"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mūsu noteikumi ir atjaunināti kopš jūs tos pēdējo reizi pieņēmāt"
+            "value" : "Pirms turpināt, pārskatiet izmaiņas"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vilkårene våre har blitt oppdatert siden du sist godtok dem"
+            "value" : "Les gjennom endringene før du fortsetter"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vilkårene våre har blitt oppdatert siden du sist godtok dem"
+            "value" : "Controleer de wijzigingen voordat je doorgaat"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vilkåra våre har blitt oppdaterte sidan du sist godtok dei"
+            "value" : "Gå gjennom endringane før du held fram"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nasze warunki zostały zaktualizowane od czasu ostatniej akceptacji"
+            "value" : "Przejrzyj zmiany przed kontynuacją"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nossos termos foram atualizados desde que você aceitou pela última vez"
+            "value" : "Revise as alterações antes de continuar"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Termenii noștri au fost actualizați de când i-ai acceptat ultima dată"
+            "value" : "Verifică modificările înainte de a continua"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Наши условия были обновлены с момента вашего последнего принятия"
+            "value" : "Просмотрите изменения перед продолжением"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Naše podmienky boli aktualizované od posledného vášho súhlasu"
+            "value" : "Pred pokračovaním skontrolujte zmeny"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Naši pogoji so bili posodobljeni od zadnje sprejetke"
+            "value" : "Preglejte spremembe, preden nadaljujete"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Naši uslovi su ažurirani od kada ste ih poslednji put prihvatili"
+            "value" : "Pregledajte izmene pre nego što nastavite"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Våra villkor har uppdaterats sedan du senast godkände dem"
+            "value" : "Granska ändringarna innan du fortsätter"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Masharti yetu yamebadilishwa tangu ulipokubali mwisho"
+            "value" : "Kagua mabadiliko kabla ya kuendelea"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "நீங்கள் கடைசியாக ஏற்றதிலிருந்து எங்கள் விதிமுறைகள் புதுப்பிக்கப்பட்டுள்ளன"
+            "value" : "தொடர்வதற்கு முன் மாற்றங்களைப் பரிசீலிக்கவும்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เงื่อนไขของเราได้รับการอัปเดตตั้งแต่ครั้งสุดท้ายที่คุณยอมรับ"
+            "value" : "ตรวจสอบการเปลี่ยนแปลงก่อนดำเนินการต่อ"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Şartlarımız son kabul ettiğinizden bu yana güncellendi"
+            "value" : "Devam etmeden önce değişiklikleri gözden geçirin"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Наші умови було оновлено з часу вашого останнього прийняття"
+            "value" : "Перегляньте зміни перед продовженням"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "آپ کے آخری قبول کے بعد سے ہماری شرائط میں تبدیلی کی گئی ہے"
+            "value" : "آگے بڑھنے سے پہلے تبدیلیاں دیکھ لیں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Các điều khoản của chúng tôi đã được cập nhật kể từ khi bạn lần cuối chấp nhận"
+            "value" : "Xem lại các thay đổi trước khi tiếp tục"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自您上次接受以来，我们的条款已更新"
+            "value" : "继续前请先查看更改"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自您上次接受後，我們的條款已更新"
+            "value" : "繼續前請先查看變更"
           }
         }
       }
@@ -37884,277 +37884,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "لقد قمنا بتحديث شروط الخدمة وسياسة الخصوصية الخاصة بنا. يرجى مراجعة التغييرات وقبول الشروط الجديدة للمتابعة باستخدام Tidex."
+            "value" : "لقد تغيّرت شروط الخدمة وسياسة الخصوصية. افتح المستندات أدناه، ثم وافق عندما تكون جاهزًا."
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Актуализирахме нашите условия за ползване и политика за личните данни. Моля, прегледайте промените и приемете новите условия, за да продължите да използвате Tidex."
+            "value" : "Условията за ползване и Политиката за поверителност са променени. Отворете документите по-долу и приемете, когато сте готови."
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "আমরা আমাদের সেবার শর্তাবলী এবং গোপনীয়তা নীতি আপডেট করেছি। দয়া করে পরিবর্তনগুলি পর্যালোচনা করুন এবং Tidex ব্যবহার চালিয়ে যেতে নতুন শর্তাবলী গ্রহণ করুন।"
+            "value" : "সেবার শর্তাবলি ও গোপনীয়তা নীতি পরিবর্তিত হয়েছে। নিচের নথিগুলো খুলুন, তারপর প্রস্তুত হলে গ্রহণ করুন।"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hem actualitzat els nostres Termes de servei i la Política de privacitat. Revisa els canvis i accepta els nous termes per continuar usant Tidex."
+            "value" : "Les Condicions del servei i la Política de privadesa han canviat. Obre els documents de sota i accepta quan estiguis a punt."
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktualizovali jsme naše Podmínky služby a Zásady ochrany osobních údajů. Přečtěte si prosím změny a přijměte nové podmínky, abyste mohli dále používat Tidex."
+            "value" : "Podmínky služby a zásady ochrany osobních údajů se změnily. Otevřete níže uvedené dokumenty a až budete připraveni, přijměte je."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vi har opdateret vores servicevilkår og privatlivspolitik. Gennemse ændringerne og accepter de nye vilkår for at fortsætte med at bruge Tidex."
+            "value" : "Servicevilkårene og privatlivspolitikken er ændret. Åbn dokumenterne nedenfor, og acceptér, når du er klar."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wir haben unsere Nutzungsbedingungen und Datenschutzrichtlinie aktualisiert. Bitte überprüfen Sie die Änderungen und akzeptieren Sie die neuen Bedingungen, um Tidex weiter zu nutzen."
+            "value" : "Die Nutzungsbedingungen und die Datenschutzerklärung wurden geändert. Öffne die Dokumente unten und akzeptiere, wenn du bereit bist."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Έχουμε ενημερώσει τους Όρους Υπηρεσίας και την Πολιτική Απορρήτου. Παρακαλώ ελέγξτε τις αλλαγές και αποδεχτείτε τους νέους όρους για να συνεχίσετε να χρησιμοποιείτε το Tidex."
+            "value" : "Οι Όροι Χρήσης και η Πολιτική Απορρήτου έχουν αλλάξει. Ανοίξτε τα παρακάτω έγγραφα και αποδεχτείτε όταν είστε έτοιμοι."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "We have updated our Terms of Service and Privacy Policy. Please review the changes and accept the new terms to continue using Tidex."
+            "value" : "The Terms of Service and Privacy Policy have changed. Open the documents below, then accept when you are ready."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hemos actualizado nuestros Términos de servicio y Política de privacidad. Por favor, revisa los cambios y acepta los nuevos términos para seguir usando Tidex."
+            "value" : "Los Términos de servicio y la Política de privacidad han cambiado. Abre los documentos abajo y acepta cuando estés listo."
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oleme uuendanud meie teenusetingimusi ja privaatsuseeskirja. Palun tutvu muudatustega ja nõustu uute tingimustega Tidexin kasutamise jätkamiseks."
+            "value" : "Kasutustingimused ja privaatsuspoliitika on muutunud. Ava allolevad dokumendid ja nõustu, kui oled valmis."
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ما شرایط خدمات و سیاست حریم خصوصی خود را به‌روز کرده‌ایم. لطفاً تغییرات را مرور کنید و شرایط جدید را بپذیرید تا بتوانید از Tidex استفاده کنید."
+            "value" : "شرایط استفاده و سیاست حریم خصوصی تغییر کرده‌اند. اسناد زیر را باز کنید، سپس هر زمان آماده بودید آن‌ها را بپذیرید."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Olemme päivittäneet palveluehtomme ja tietosuojakäytäntömme. Tarkista muutokset ja hyväksy uudet ehdot jatkaaksesi Tidexin käyttöä."
+            "value" : "Käyttöehdot ja tietosuojaseloste ovat muuttuneet. Avaa alla olevat asiakirjat ja hyväksy, kun olet valmis."
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kami ay nag-update ng aming Mga Kondisyon ng Serbisyo at Patakaran sa Privacy. Mangyaring suriin ang mga pagbabago at tanggapin ang mga bagong kondisyon upang magpatuloy na gumamit ng Tidex."
+            "value" : "Nagbago ang Mga Tuntunin ng Serbisyo at Patakaran sa Privacy. Buksan ang mga dokumento sa ibaba, pagkatapos ay tanggapin kapag handa ka na."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nous avons mis à jour nos conditions d'utilisation et notre politique de confidentialité. Veuillez examiner les modifications et accepter les nouvelles conditions pour continuer à utiliser Tidex."
+            "value" : "Les conditions d’utilisation et la politique de confidentialité ont changé. Ouvrez les documents ci-dessous, puis acceptez quand vous êtes prêt."
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "עדכנו את תנאי השירות ומדיניות הפרטיות שלנו. אנא בדוק את השינויים וקבל את התנאים החדשים כדי להמשיך להשתמש ב-Tidex."
+            "value" : "תנאי השימוש ומדיניות הפרטיות השתנו. פתח את המסמכים למטה ולאחר מכן אשר כשתהיה מוכן."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "हमने अपनी सेवा की शर्तें और गोपनीयता नीति को अपडेट किया है। कृपया परिवर्तनों की समीक्षा करें और Tidex का उपयोग जारी रखने के लिए नई शर्तें स्वीकार करें।"
+            "value" : "सेवा की शर्तें और गोपनीयता नीति बदल गई हैं। नीचे दिए गए दस्तावेज़ खोलें, फिर तैयार होने पर स्वीकार करें।"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ažurirali smo naše Uvjete korištenja i Politiku privatnosti. Molimo pregledajte promjene i prihvatite nove uvjete kako biste nastavili koristiti Tidex."
+            "value" : "Uvjeti korištenja i Pravila privatnosti su se promijenili. Otvorite dokumente u nastavku, zatim prihvatite kada budete spremni."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Frissítettük a Szolgáltatási Feltételeket és az Adatvédelmi Szabályzatot. Kérlek, tekintsd át a változásokat és fogadd el az új feltételeket a Tidex használatának folytatásához."
+            "value" : "A Szolgáltatási feltételek és az Adatvédelmi szabályzat megváltozott. Nyissa meg az alábbi dokumentumokat, majd fogadja el, amikor készen áll."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kami telah memperbarui Syarat Layanan dan Kebijakan Privasi kami. Silakan tinjau perubahan dan terima syarat baru untuk terus menggunakan Tidex."
+            "value" : "Ketentuan Layanan dan Kebijakan Privasi telah berubah. Buka dokumen di bawah ini, lalu terima saat Anda siap."
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Við höfum uppfært okkar skilmála fyrir notkun og persónuverndarstefnu. Lestu gögn breytingarnar og samþykktu nýju skilmálana til að halda áfram að nota Tidex."
+            "value" : "Þjónustuskilmálar og persónuverndarstefna hafa breyst. Opnaðu skjölin hér að neðan og samþykktu þegar þú ert tilbúin(n)."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abbiamo aggiornato i nostri Termini di servizio e l'Informativa sulla privacy. Esamina le modifiche e accetta i nuovi termini per continuare a usare Tidex."
+            "value" : "I Termini di servizio e l’Informativa sulla privacy sono cambiati. Apri i documenti qui sotto, poi accetta quando sei pronto."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "利用規約とプライバシーポリシーを更新しました。変更内容をご確認いただき、新しい利用規約に同意してTidexの使用を続けてください。"
+            "value" : "利用規約とプライバシーポリシーが変更されました。以下の文書を開き、準備ができたら同意してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "서비스 약관 및 개인정보 보호정책을 업데이트했습니다. 변경사항을 검토하고 새로운 약관에 동의하여 Tidex를 계속 사용하세요."
+            "value" : "서비스 약관과 개인정보 처리방침이 변경되었습니다. 아래 문서를 연 다음 준비되면 동의하세요."
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Atnaujinome mūsų naudojimosi sąlygas ir privatumo politiką. Peržiūrėkite pakeitimus ir priimkite naujas sąlygas, kad tęstumėte naudoti Tidex."
+            "value" : "Pasikeitė Paslaugų teikimo sąlygos ir Privatumo politika. Atidarykite toliau esančius dokumentus ir priimkite, kai būsite pasiruošę."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mēs esam atjauninājuši mūsu Pakalpojuma noteikumus un Privātuma politiku. Lūdzu pārskatiet izmaiņas un pieņemiet jaunos noteikumus, lai turpinātu izmantot Tidex."
+            "value" : "Lietošanas noteikumi un konfidencialitātes politika ir mainīti. Atveriet tālāk redzamos dokumentus un pieņemiet, kad esat gatavs."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vi har oppdatert våre vilkår for bruk og personvernerklæring. Vennligst les gjennom endringene og godta de nye vilkårene for å fortsette å bruke Tidex."
+            "value" : "Vilkår for bruk og personvernerklæringen er endret. Åpne dokumentene nedenfor, og godta når du er klar."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vi har oppdatert våre vilkår for bruk og personvernerklæring. Vennligst les gjennom endringene og godta de nye vilkårene for å fortsette å bruke Tidex."
+            "value" : "De servicevoorwaarden en het privacybeleid zijn gewijzigd. Open de documenten hieronder en accepteer wanneer je klaar bent."
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vi har oppdatert våre vilkår for bruk og personvernerklæring. Vennlegst les gjennom endringane og godta dei nye vilkåra for å fortsette å bruke Tidex."
+            "value" : "Vilkår for bruk og personvernerklæringa er endra. Opne dokumenta nedanfor, og godta når du er klar."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zaktualizowaliśmy nasze Warunki świadczenia usług i Politykę prywatności. Zapoznaj się ze zmianami i zaakceptuj nowe warunki, aby kontynuować korzystanie z Tidex."
+            "value" : "Warunki korzystania i Polityka prywatności uległy zmianie. Otwórz poniższe dokumenty i zaakceptuj je, gdy będziesz gotowy."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Atualizamos nossos Termos de Serviço e Política de Privacidade. Analise as alterações e aceite os novos termos para continuar usando o Tidex."
+            "value" : "Os Termos de Serviço e a Política de Privacidade mudaram. Abra os documentos abaixo e aceite quando estiver pronto."
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Am actualizat Termenii de utilizare și Politica de confidențialitate. Te rugăm să revizuiești modificările și să accepți noii termeni pentru a continua folosirea Tidex."
+            "value" : "Termenii de utilizare și Politica de confidențialitate s-au schimbat. Deschide documentele de mai jos, apoi acceptă când ești gata."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Мы обновили наши Условия обслуживания и Политику конфиденциальности. Пожалуйста, ознакомьтесь с изменениями и примите новые условия для продолжения использования Tidex."
+            "value" : "Условия использования и Политика конфиденциальности изменились. Откройте документы ниже и примите, когда будете готовы."
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aktualizovali sme naše Podmienky používania a Zásady ochrany osobných údajov. Skontrolujte zmeny a akceptujte nové podmienky, aby ste mohli pokračovať v používaní Tidex."
+            "value" : "Podmienky používania a zásady ochrany súkromia sa zmenili. Otvorte dokumenty nižšie a potom ich prijmite, keď budete pripravení."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Posodobili smo Pogoje uporabe in Politiko zasebnosti. Prosimo, preglejte spremembe in sprejmite nove pogoje za nadaljevanje uporabe Tidex."
+            "value" : "Pogoji uporabe in pravilnik o zasebnosti so se spremenili. Odprite spodnja dokumenta in sprejmite, ko boste pripravljeni."
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ažurirali smo naše Uslove korišćenja i Politiku privatnosti. Molimo pregledajte izmene i prihvatite nove uslove da biste nastavili sa korišćenjem Tidex-a."
+            "value" : "Uslovi korišćenja i Politika privatnosti su izmenjeni. Otvorite dokumente ispod, pa prihvatite kada budete spremni."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vi har uppdaterat våra användarvillkor och integritetspolicy. Granska ändringarna och godkänn de nya villkoren för att fortsätta använda Tidex."
+            "value" : "Användarvillkoren och integritetspolicyn har ändrats. Öppna dokumenten nedan och godkänn när du är redo."
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tumebadilisha Masharti yetu ya Huduma na Sera ya Faragha. Tafadhali pitia mabadiliko na ukubali masharti mapya ili kuendelea kutumia Tidex."
+            "value" : "Masharti ya Huduma na Sera ya Faragha zimebadilika. Fungua hati zilizo hapa chini, kisha ukubali ukiwa tayari."
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "எங்கள் சேவை விதிமுறைகள் மற்றும் தனியுரிமை கொள்கையை நாம் புதுப்பித்துள்ளோம். மாற்றங்களை மதிப்பாய்வு செய்து Tidex ஐ தொடர்ந்து பயன்படுத்த புதிய விதிமுறைகளை ஏற்கவும்."
+            "value" : "சேவை விதிமுறைகள் மற்றும் தனியுரிமைக் கொள்கை மாற்றப்பட்டுள்ளன. கீழே உள்ள ஆவணங்களைத் திறந்து, தயாரானதும் ஏற்கவும்."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "เราได้อัปเดตเงื่อนไขการใช้งานและนโยบายความเป็นส่วนตัวของเรา โปรดตรวจสอบการเปลี่ยนแปลงและยอมรับเงื่อนไขใหม่เพื่อใช้ Tidex ต่อไป"
+            "value" : "ข้อกำหนดการให้บริการและนโยบายความเป็นส่วนตัวมีการเปลี่ยนแปลง โปรดเปิดเอกสารด้านล่าง แล้วกดยอมรับเมื่อพร้อม"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hizmet Şartlarımızı ve Gizlilik Politikamızı güncelledik. Lütfen değişiklikleri inceleyin ve Tidex kullanmaya devam etmek için yeni şartları kabul edin."
+            "value" : "Hizmet Şartları ve Gizlilik Politikası değişti. Aşağıdaki belgeleri açın, ardından hazır olduğunuzda kabul edin."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ми оновили наші Умови використання та Політику конфіденційності. Будь ласка, перегляньте зміни й прийміть нові умови, щоб продовжити користування Tidex."
+            "value" : "Умови використання та Політика конфіденційності змінилися. Відкрийте документи нижче, а потім прийміть, коли будете готові."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ہم نے اپنی خدمات کی شرائط اور رازداری کی پالیسی میں تبدیلی کی ہے۔ براہ کرم تبدیلیوں کا جائزہ لیں اور Tidex استعمال کرتے رہنے کے لیے نئی شرائط قبول کریں۔"
+            "value" : "سروس کی شرائط اور رازداری کی پالیسی بدل گئی ہیں۔ نیچے دیے گئے دستاویزات کھولیں، پھر تیار ہونے پر قبول کریں۔"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chúng tôi đã cập nhật Điều khoản dịch vụ và Chính sách quyền riêng tư. Vui lòng xem xét các thay đổi và chấp nhận các điều khoản mới để tiếp tục sử dụng Tidex."
+            "value" : "Điều khoản Dịch vụ và Chính sách Quyền riêng tư đã thay đổi. Mở các tài liệu bên dưới rồi chấp nhận khi bạn sẵn sàng."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "我们已更新服务条款和隐私政策。请审查更改并接受新条款以继续使用 Tidex。"
+            "value" : "服务条款和隐私政策已更新。请先打开下方文档，准备好后再接受。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "我們已更新服務條款和隱私政策。請檢閱變更並接受新條款以繼續使用 Tidex。"
+            "value" : "服務條款和隱私政策已變更。請先開啟下方文件，準備好後再接受。"
           }
         }
       }

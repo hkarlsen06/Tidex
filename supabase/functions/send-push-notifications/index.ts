@@ -215,9 +215,20 @@ function notificationThreadId(notification: OutboxNotification): string | null {
     : null;
 }
 
+function notificationOwnerId(notification: OutboxNotification): string | null {
+  return asNonEmptyString(notification.owner_id) ??
+    notificationDataString(notification, "owner_id");
+}
+
 function notificationCollapseId(
   notification: OutboxNotification,
 ): string | null {
+  if (notification.notification_type === "shared_shift_added") {
+    const ownerId = notificationOwnerId(notification);
+    if (!ownerId) return null;
+    return `shared-shift:${ownerId}`;
+  }
+
   const threadId = notificationThreadId(notification);
   if (!threadId) return null;
 
@@ -321,9 +332,12 @@ export function buildApsPayload(
 ): Record<string, unknown> {
   const aps: Record<string, unknown> = {
     alert: { title: notification.title, body: notification.body },
-    sound: "tidex_notification.caf",
     badge: Math.max(0, badgeCount),
   };
+
+  if (notification.notification_type !== "shared_shift_added") {
+    aps.sound = "tidex_notification.caf";
+  }
 
   if (usesRichFormatting(notification.notification_type)) {
     aps["mutable-content"] = 1;
@@ -348,6 +362,16 @@ export function buildApsPayload(
   }
 
   switch (notification.notification_type) {
+    case "shared_shift_added": {
+      const ownerId = notificationOwnerId(notification);
+      aps["thread-id"] = ownerId ? `shared-shifts:${ownerId}` : "shared-shifts";
+      aps["target-content-id"] = ownerId
+        ? `shared-calendar:${ownerId}`
+        : "shared-calendar";
+      aps["interruption-level"] = "active";
+      aps["relevance-score"] = 0.7;
+      break;
+    }
     case "share_started":
       aps["thread-id"] = "sharing";
       aps["target-content-id"] = "sharing";
@@ -399,6 +423,12 @@ export function buildApnsHeaders(
   if (notification.notification_type === "thread_typing") {
     headers["apns-expiration"] = String(
       Math.floor(Date.now() / 1000) + 60,
+    );
+  }
+
+  if (notification.notification_type === "shared_shift_added") {
+    headers["apns-expiration"] = String(
+      Math.floor(Date.now() / 1000) + 60 * 60 * 24,
     );
   }
 
@@ -1042,8 +1072,8 @@ async function sendPayloadToApns(
     }
   }
 
-  // All attempts failed
-  return { success: false, invalidToken: true };
+  // All attempts failed for a delivery reason that does not prove the token is invalid.
+  return { success: false };
 }
 
 /**

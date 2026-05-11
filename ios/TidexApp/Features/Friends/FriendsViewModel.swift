@@ -102,6 +102,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Whether shifts are being loaded
   @Published private(set) var isLoadingShifts = false
 
+  /// Whether the selected sharer's shift content has resolved from cache or network.
+  @Published private(set) var hasResolvedSelectedSharerShifts = true
+
   /// Current error state
   @Published private(set) var error: Error?
 
@@ -632,9 +635,13 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Select a sharer to view their shifts
   func selectSharer(_ sharer: SharedUser) {
     selectedSharer = sharer
+    hasResolvedSelectedSharerShifts = false
     sharedShifts = []
     sharedJobs = []
     sharedCurrency = nil
+    Task {
+      await NotificationService.shared.clearDeliveredSharedShiftNotifications(for: sharer.id)
+    }
 
     let currentMonth = (year: displayYear, month: displayMonth)
     if let targetMonth = FriendInitialMonthResolver.targetYearMonth(
@@ -655,6 +662,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     selectedSharerLoadTask = nil
     inFlightRequestKey = nil
     selectedSharer = nil
+    hasResolvedSelectedSharerShifts = true
     sharedShifts = []
     sharedJobs = []
     sharedCurrency = nil
@@ -712,6 +720,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         // Cache hit - show cached data immediately, no loading flash
         // ATOMIC UPDATE: Set shifts and committed state together
         sharedShifts = cachedShifts
+        hasResolvedSelectedSharerShifts = true
         committedYear = year
         committedMonth = month
         lastCacheTime = sharedShiftsRepository.getLastCacheTime(
@@ -729,6 +738,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       ) {
         // Previously fetched but empty - show empty calendar instantly, no loading
         sharedShifts = []
+        hasResolvedSelectedSharerShifts = true
         committedYear = year
         committedMonth = month
       } else {
@@ -764,6 +774,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         sharedShifts = freshShifts
         sharedJobs = currentMonthResponse?.jobs ?? []
         sharedCurrency = currentMonthResponse?.settings.currency
+        hasResolvedSelectedSharerShifts = true
         committedYear = year
         committedMonth = month
         lastCacheTime = Date()
@@ -792,6 +803,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       } else {
         logger.error("Failed to load shared shifts: \(error.localizedDescription)")
         self.error = SharingError.loadFailed(underlying: error)
+        hasResolvedSelectedSharerShifts = true
       }
     }
 

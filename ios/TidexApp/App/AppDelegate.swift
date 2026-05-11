@@ -750,6 +750,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 extension AppDelegate: UNUserNotificationCenterDelegate {
   private func shouldSuppressForegroundPresentation(for userInfo: [AnyHashable: Any]) -> Bool {
     let type = userInfo["type"] as? String ?? ""
+    if type.hasPrefix("shared_shift_"),
+      let ownerId = userInfo["owner_id"] as? String
+    {
+      return MainActor.assumeIsolated {
+        SensitiveContentPresentationState.shared.activeSharedCalendarOwnerId == ownerId
+      }
+    }
+
     guard
       type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
         || type == "thread_reaction",
@@ -785,6 +793,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         object: chatToastPayload
       )
       completionHandler([])
+      return
+    }
+
+    let type = userInfo["type"] as? String ?? ""
+    if type.hasPrefix("shared_shift_") {
+      completionHandler([.banner])
       return
     }
 

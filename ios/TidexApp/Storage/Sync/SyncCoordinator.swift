@@ -154,13 +154,9 @@ final class SyncCoordinator: ObservableObject {
   // MARK: - App Locale Update
 
   /// Keeps `raw_user_meta_data.locale` aligned with the active iPhone/app language.
-  /// Stores language code as-is (e.g. `nb`, `en`) for server-side localization.
+  /// Stores the app localization identifier (e.g. `nb`, `pt-br`, `zh-hans`) for server-side localization.
   private func updateAppLocaleMetadataIfNeeded() async {
-    guard
-      let appLocaleCode = Locale.autoupdatingCurrent.language.languageCode?.identifier
-        .lowercased(),
-      !appLocaleCode.isEmpty
-    else {
+    guard let appLocaleCode = currentAppLocaleMetadataCode() else {
       logger.debug("Skipping locale metadata sync: app locale code is empty")
       return
     }
@@ -186,6 +182,15 @@ final class SyncCoordinator: ObservableObject {
       // Non-fatal - log but don't fail sync/foreground flow.
       logger.warning("Failed to update app locale metadata: \(error.localizedDescription)")
     }
+  }
+
+  private func currentAppLocaleMetadataCode() -> String? {
+    let identifier =
+      Bundle.main.preferredLocalizations.first
+      ?? Locale.autoupdatingCurrent.identifier
+    let normalized = identifier.replacingOccurrences(of: "_", with: "-").lowercased()
+    guard !normalized.isEmpty, normalized != "base" else { return nil }
+    return normalized
   }
 
   // MARK: - Public API
