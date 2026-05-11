@@ -1,8 +1,8 @@
-- Eseményemlékeztetők és egyértelműbb naptárjelölések hozzáadva a privát eseményekhez
-- Egyéni szüneti időszakok hozzáadva, hogy a bérszámítás jobban igazodjon a tényleges szüneteidhez
-- Privát jegyzetek hozzáadva a műszakokhoz, gyorsabb jegyzetmentéssel a műszak részleteinél
-- Javítottuk az irányítópultot a közelgő eseményekkel és részletesebb eseményadatokkal
-- Továbbfejlesztettük a Wageyt privát eseménytámogatással, egyértelműbb chatbuborékokkal és jobb, folyamatos válaszokkal
-- Javítottuk a jelszó-helyreállítást, a vásárlásellenőrzéseket, az emlékeztetőket, az onboardingot és a szinkronizálás megbízhatóságát
-- Javítottuk a beállításokat, a naptárhasználatot, az exportálást és az általános teljesítményt
+- Események naptárexportjának hozzáadása
+- Javított offline támogatás a beállítások, profil, biztonság, visszajelzés, barátok, statisztikák, irányítópult és műszakok részeken
+- Vizuálisan megújult a Barátok képernyő, ahol barátokat adhatsz hozzá és módosíthatod a jogosultságokat
+- Javult a barátokkal való megosztás és a csevegés szinkronizálása
+- Értesítések támogatása, amikor a barátok megosztott műszakokat adnak hozzá
+- Javítva több ismétlődő műszakelőfordulás egyidejű törlése
+- Javult a biztonság, a függőségek kezelése és az általános megbízhatóság
 - Hibajavítások és egyéb fejlesztések

@@ -1,8 +1,8 @@
-- Menambahkan pengingat acara dan indikator kalender yang lebih jelas untuk acara pribadi
-- Menambahkan jeda istirahat kustom agar perhitungan gaji bisa lebih sesuai dengan waktu istirahat Anda yang sebenarnya
-- Menambahkan catatan pribadi untuk shift, dengan penyimpanan catatan yang lebih cepat dari detail shift
-- Meningkatkan dasbor dengan acara mendatang dan detail acara yang lebih baik
-- Meningkatkan Wagey dengan dukungan acara pribadi, gelembung chat yang lebih jelas, dan jawaban streaming yang lebih baik
-- Memperbaiki pemulihan kata sandi, pemeriksaan pembelian, pengingat, onboarding, dan keandalan sinkronisasi
-- Meningkatkan pengaturan, interaksi kalender, ekspor, dan performa secara keseluruhan
+- Menambahkan ekspor kalender untuk acara
+- Meningkatkan dukungan offline di pengaturan, profil, keamanan, masukan, teman, statistik, dasbor, dan shift
+- Tampilan layar Teman diperbarui secara visual, tempat Anda menambahkan teman dan mengubah izin
+- Meningkatkan sinkronisasi berbagi dengan teman dan chat
+- Menambahkan dukungan notifikasi saat teman menambahkan shift bersama
+- Memperbaiki penghapusan beberapa kemunculan shift berulang sekaligus
+- Meningkatkan keamanan, dependensi, dan keandalan secara keseluruhan
 - Perbaikan bug dan peningkatan lainnya

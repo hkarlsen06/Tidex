@@ -3,9 +3,9 @@ Sledujte svoje pracovné zmeny a vypočítajte si mzdu s aplikáciou Tidex.
 Funkcie:
 • Jednoduché zaznamenávanie zmien s časom začiatku a konca
 • Automatický výpočet mzdy
-• Kalendárne zobrazenie všetkých zmien
+• Kalendárové zobrazenie všetkých zmien
 • Prehľad zárobkov a štatistiky
-• Widget na rýchly prístup
+• Widget pre rýchly prístup
 • Synchronizácia medzi zariadeniami
 
 Ideálne pre zamestnancov, ktorí si chcú udržať prehľad o odpracovaných hodinách a zárobkoch.

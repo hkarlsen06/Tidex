@@ -1,8 +1,8 @@
-- Přidali jsme připomenutí událostí a přehlednější indikátory soukromých událostí v kalendáři
-- Přidali jsme vlastní pauzy, aby výpočet mzdy lépe odpovídal vašim skutečným přestávkám
-- Přidali jsme soukromé poznámky ke směnám a rychlejší ukládání poznámek z detailu směny
-- Vylepšili jsme přehled o nadcházející události a podrobnosti událostí
-- Vylepšili jsme Wagey o podporu soukromých událostí, přehlednější chatovací bubliny a lepší průběžné odpovědi
-- Opravili jsme obnovení hesla, kontrolu nákupů, připomenutí, onboarding a spolehlivost synchronizace
-- Vylepšili jsme nastavení, ovládání kalendáře, exporty a celkový výkon
+- Přidán export událostí do kalendáře
+- Vylepšena podpora offline režimu v nastavení,profilu,zabezpečení,zpětné vazbě,přátelích,statistikách,přehledu a směnách
+- Vizuálně přepracována obrazovka Přátelé, kde přidáváte přátele a měníte oprávnění
+- Vylepšena synchronizace sdílení s přáteli a chatu
+- Přidána podpora oznámení, když přátelé přidají sdílené směny
+- Opravena možnost smazat více opakujících se výskytů směn najednou
+- Vylepšeno zabezpečení, závislosti a celková spolehlivost
 - Opravy chyb a další vylepšení

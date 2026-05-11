@@ -1,8 +1,8 @@
-- Lade till påminnelser för händelser och tydligare kalenderindikatorer för privata händelser
-- Lade till anpassade pausfönster så att löneberäkningen bättre kan matcha dina faktiska raster
-- Lade till privata anteckningar för arbetspass, med snabbare sparning av anteckningar från passdetaljer
-- Förbättrade översikten med kommande händelser och bättre händelsedetaljer
-- Förbättrade Wagey med stöd för privata händelser, tydligare chattbubblor och bättre strömmade svar
-- Åtgärdade lösenordsåterställning, köpkontroller, påminnelser, onboarding och synkroniseringens tillförlitlighet
-- Förbättrade inställningar, kalenderinteraktioner, export och övergripande prestanda
+- Lade till kalendereexport för händelser
+- Förbättrat stöd för offlineläge i inställningar, profil, säkerhet, feedback, vänner, statistik, översikt och pass
+- Vänskärmen där du lägger till vänner och ändrar behörigheter har fått en visuell uppdatering
+- Förbättrad synkronisering för vänsdelning och chatt
+- Lade till stöd för notiser när vänner lägger till delade pass
+- Fixade radering av flera återkommande pass vid ett och samma tillfälle
+- Förbättrad säkerhet, beroenden och övergripande tillförlitlighet
 - Buggfixar och andra förbättringar

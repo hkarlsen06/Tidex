@@ -1,8 +1,8 @@
-- Lagt til hendelsespåminnelser og tydeligere kalenderindikatorer for private hendelser
-- Lagt til egendefinerte pauser slik at lønnsberegningen passer bedre med de faktiske pausene dine
-- Lagt til private notater for vakter, med raskere lagring fra vaktdetaljer
-- Forbedret oversikten med kommende hendelser og bedre hendelsesdetaljer
-- Forbedret Wagey med støtte for private hendelser, tydeligere chatbobler og bedre svar underveis
-- Rettet passordgjenoppretting, kjøpssjekker, påminnelser, onboarding og synkronisering
-- Forbedret innstillinger, kalenderhandlinger, eksport og generell ytelse
+- Lagt til kalendereksport for hendelser
+- Forbedret støtte for bruk uten nett i innstillinger, profil, sikkerhet, tilbakemelding, venner, statistikk, oversikt og vakter
+- Visuelt overhalt vennevisningen der du legger til venner og endrer tillatelser
+- Forbedret synkronisering av vennedeling og chat
+- Lagt til støtte for varsler når venner legger til delte vakter
+- Rettet sletting av flere gjentakende vakter samtidig
+- Forbedret sikkerhet, avhengigheter og generell stabilitet
 - Feilrettinger og andre forbedringer

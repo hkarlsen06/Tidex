@@ -5,7 +5,7 @@ Funktionen:
 • Automatische Lohnberechnung
 • Kalenderansicht aller Schichten
 • Verdienstübersicht und Statistiken
-• Widget für den Schnellzugriff
+• Widget für schnellen Zugriff
 • Synchronisierung über mehrere Geräte
 
-Perfekt für Beschäftigte, die ihre Arbeitszeiten und Verdienste im Blick behalten möchten.
+Perfekt für Beschäftigte, die ihre Arbeitszeiten und Einnahmen im Blick behalten möchten.

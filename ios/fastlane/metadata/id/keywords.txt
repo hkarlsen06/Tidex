@@ -1,1 +1,1 @@
-shift,pelacak,gaji,upah,kerja,jam,waktu,jadwal,penghasilan,absen
+shift,pelacak,gaji,upah,kerja,jam,waktu,absen,jadwal,pendapatan

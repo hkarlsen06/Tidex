@@ -1,8 +1,8 @@
-- Đã thêm nhắc nhở sự kiện và chỉ báo lịch rõ ràng hơn cho các sự kiện riêng tư
-- Đã thêm khung thời gian nghỉ tùy chỉnh để việc tính lương khớp hơn với thời gian nghỉ thực tế của bạn
-- Đã thêm ghi chú riêng tư cho ca làm, với khả năng lưu ghi chú từ chi tiết ca nhanh hơn
-- Đã cải thiện bảng điều khiển với các sự kiện sắp tới và chi tiết sự kiện đầy đủ hơn
-- Đã cải thiện Wagey với hỗ trợ sự kiện riêng tư, bong bóng chat rõ ràng hơn và câu trả lời trực tiếp tốt hơn
-- Đã sửa khôi phục mật khẩu, kiểm tra mua hàng, nhắc nhở, onboarding và độ tin cậy khi đồng bộ
-- Đã cải thiện cài đặt, tương tác lịch, xuất dữ liệu và hiệu suất tổng thể
+- Đã thêm tính năng xuất lịch cho sự kiện
+- Cải thiện hỗ trợ ngoại tuyến trong phần cài đặt, hồ sơ, bảo mật, phản hồi, bạn bè, thống kê, bảng điều khiển và ca làm
+- Làm mới hoàn toàn giao diện màn hình Bạn bè, nơi bạn thêm bạn bè và thay đổi quyền
+- Cải thiện đồng bộ chia sẻ với bạn bè và trò chuyện
+- Đã thêm hỗ trợ thông báo khi bạn bè thêm ca làm được chia sẻ
+- Đã sửa lỗi xóa nhiều lần lặp của ca làm cùng lúc
+- Cải thiện bảo mật, các phần phụ thuộc và độ ổn định tổng thể
 - Sửa lỗi và các cải tiến khác

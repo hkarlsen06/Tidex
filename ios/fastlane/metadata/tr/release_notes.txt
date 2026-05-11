@@ -1,8 +1,8 @@
-- Özel etkinlikler için etkinlik hatırlatıcıları ve daha belirgin takvim göstergeleri eklendi
-- Ücret hesaplamalarının gerçek molalarınıza daha iyi uyması için özel mola aralıkları eklendi
-- Vardiyalar için özel notlar eklendi ve vardiya ayrıntılarından not kaydetme hızlandırıldı
-- Kontrol paneli, yaklaşan etkinlikler ve daha iyi etkinlik ayrıntılarıyla geliştirildi
-- Wagey; özel etkinlik desteği, daha net sohbet baloncukları ve daha iyi akış yanıtlarıyla geliştirildi
-- Parola kurtarma, satın alma kontrolleri, hatırlatıcılar, başlangıç süreci ve senkronizasyon güvenilirliği düzeltildi
-- Ayarlar, takvim etkileşimleri, dışa aktarma ve genel performans iyileştirildi
+- Etkinlikler için takvim dışa aktarma eklendi
+- Ayarlar, profil, güvenlik, geri bildirim, arkadaşlar, istatistikler, panel ve vardiyalar genelinde çevrimdışı destek iyileştirildi
+- Arkadaş eklediğiniz ve izinleri değiştirdiğiniz Arkadaşlar ekranı görsel olarak yenilendi
+- Arkadaş paylaşımı ve sohbet senkronizasyonu iyileştirildi
+- Arkadaşlar paylaşılan vardiya eklediğinde bildirim desteği eklendi
+- Birden fazla yinelenen vardiya tekrarını aynı anda silme sorunu düzeltildi
+- Güvenlik, bağımlılıklar ve genel güvenilirlik iyileştirildi
 - Hata düzeltmeleri ve diğer iyileştirmeler

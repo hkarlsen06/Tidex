@@ -1,8 +1,8 @@
-- Dodano przypomnienia o wydarzeniach i wyraźniejsze oznaczenia prywatnych wydarzeń w kalendarzu
-- Dodano własne okna przerw, aby obliczenia wynagrodzenia lepiej odpowiadały Twoim rzeczywistym przerwom
-- Dodano prywatne notatki do zmian oraz szybsze zapisywanie notatek ze szczegółów zmiany
-- Ulepszono panel główny o nadchodzące wydarzenia i lepsze szczegóły wydarzeń
-- Ulepszono Wagey o obsługę prywatnych wydarzeń, wyraźniejsze dymki czatu i lepsze odpowiedzi strumieniowe
-- Naprawiono odzyskiwanie hasła, sprawdzanie zakupów, przypomnienia, onboarding i niezawodność synchronizacji
-- Ulepszono ustawienia, interakcje z kalendarzem, eksport i ogólną wydajność
+- Dodano eksport wydarzeń do kalendarza
+- Ulepszono obsługę offline w ustawieniach, profilu, zabezpieczeniach, opinii, znajomych, statystykach, panelu i zmianach
+- Odświeżono wygląd ekranu Znajomi, na którym dodajesz znajomych i zmieniasz uprawnienia
+- Ulepszono udostępnianie znajomym i synchronizację czatu
+- Dodano obsługę powiadomień, gdy znajomi dodają współdzielone zmiany
+- Naprawiono usuwanie wielu wystąpień powtarzających się zmian jednocześnie
+- Ulepszono zabezpieczenia, zależności i ogólną niezawodność
 - Poprawki błędów i inne ulepszenia

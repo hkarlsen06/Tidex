@@ -1,8 +1,8 @@
-- Aggiunti promemoria per gli eventi e indicatori più chiari nel calendario per gli eventi privati
-- Aggiunte finestre di pausa personalizzate per far corrispondere meglio il calcolo dello stipendio alle tue pause effettive
-- Aggiunte note private per i turni, con salvataggio più rapido dalle informazioni del turno
-- Migliorata la dashboard con eventi imminenti e dettagli evento più chiari
-- Migliorato Wagey con supporto per eventi privati, fumetti della chat più chiari e risposte in streaming migliori
-- Risolti problemi con recupero password, verifica degli acquisti, promemoria, onboarding e affidabilità della sincronizzazione
-- Migliorati impostazioni, interazioni nel calendario, esportazioni e prestazioni generali
+- Aggiunta l'esportazione del calendario per gli eventi
+- Migliorato il supporto offline in impostazioni, profilo, sicurezza, feedback, amici, statistiche, dashboard e turni
+- Rinnovata graficamente la schermata Amici, dove puoi aggiungere amici e modificare i permessi
+- Migliorata la sincronizzazione della condivisione con gli amici e della chat
+- Aggiunto il supporto alle notifiche quando gli amici aggiungono turni condivisi
+- Risolto il problema dell'eliminazione simultanea di più occorrenze di turni ricorrenti
+- Migliorate la sicurezza, le dipendenze e l'affidabilità generale
 - Correzioni di bug e altri miglioramenti

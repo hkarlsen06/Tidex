@@ -1,8 +1,8 @@
-- Adicionados lembretes de eventos e indicadores mais claros no calendário para eventos privados
-- Adicionadas janelas de pausa personalizadas para que o cálculo dos ganhos corresponda melhor aos seus intervalos reais
-- Adicionadas notas privadas para turnos, com salvamento mais rápido nas informações do turno
-- Melhoramos o painel com próximos eventos e detalhes de eventos mais completos
-- Melhoramos o Wagey com suporte a eventos privados, bolhas de chat mais claras e respostas em streaming melhores
-- Corrigimos a recuperação de senha, verificações de compra, lembretes, onboarding e a confiabilidade da sincronização
-- Melhoramos as configurações, interações no calendário, exportações e o desempenho geral
+- Adicionada exportação de calendário para eventos
+- Melhorado o suporte offline em configurações, perfil, segurança, feedback, amigos, estatísticas, painel e turnos
+- Reformulação visual da tela de Amigos, onde você adiciona amigos e altera permissões
+- Melhorada a sincronização do compartilhamento com amigos e do chat
+- Adicionado suporte a notificações quando amigos adicionam turnos compartilhados
+- Corrigida a exclusão de várias ocorrências de turnos recorrentes de uma só vez
+- Melhoradas a segurança, as dependências e a confiabilidade geral
 - Correções de bugs e outras melhorias
