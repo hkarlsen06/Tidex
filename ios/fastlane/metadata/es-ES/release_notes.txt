@@ -1,8 +1,8 @@
-- Se han añadido recordatorios de eventos e indicadores más claros en el calendario para eventos privados
-- Se han añadido pausas personalizadas para que el cálculo del sueldo se ajuste mejor a tus descansos reales
-- Se han añadido notas privadas para los turnos, con un guardado más rápido desde los detalles del turno
-- Se ha mejorado el panel con próximos eventos y mejores detalles de los eventos
-- Se ha mejorado Wagey con compatibilidad con eventos privados, burbujas de chat más claras y mejores respuestas en tiempo real
-- Se han corregido la recuperación de contraseña, las comprobaciones de compra, los recordatorios, la incorporación y la fiabilidad de la sincronización
-- Se han mejorado los ajustes, las interacciones del calendario, las exportaciones y el rendimiento general
+- Se ha añadido la exportación de eventos al calendario
+- Se ha mejorado la compatibilidad sin conexión en ajustes, perfil, seguridad, comentarios, amigos, estadísticas, panel y turnos
+- Se ha renovado visualmente la pantalla de Amigos, donde puedes añadir amigos y cambiar permisos
+- Se ha mejorado la sincronización del contenido compartido con amigos y del chat
+- Se ha añadido compatibilidad con notificaciones cuando tus amigos añaden turnos compartidos
+- Se ha corregido la eliminación de varias repeticiones de turnos recurrentes a la vez
+- Se ha mejorado la seguridad, las dependencias y la fiabilidad general
 - Corrección de errores y otras mejoras

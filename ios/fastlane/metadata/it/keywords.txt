@@ -1,1 +1,1 @@
-turni,tracciamento,stipendio,salario,lavoro,ore,tempo,cartellino,calendario,guadagni
+turni,ore,stipendio,salario,lavoro,tempo,timbratura,calendario,guadagni,pianificazione

@@ -1,8 +1,8 @@
-- Dodani su podsjetnici za događaje i jasniji kalendarski pokazatelji za privatne događaje
-- Dodani su prilagođeni vremenski okviri za pauze kako bi izračun plaće bolje odgovarao vašim stvarnim pauzama
-- Dodane su privatne bilješke za smjene, uz brže spremanje bilješki iz detalja smjene
-- Poboljšana je početna nadzorna ploča s nadolazećim događajima i boljim detaljima događaja
-- Poboljšan je Wagey uz podršku za privatne događaje, jasnije oblačiće chata i bolje odgovore tijekom generiranja
-- Ispravljeni su oporavak lozinke, provjere kupnji, podsjetnici, onboarding i pouzdanost sinkronizacije
-- Poboljšane su postavke, interakcije s kalendarom, izvozi i ukupne performanse
+- Dodan izvoz događaja u kalendar
+- Poboljšana podrška za rad izvan mreže u postavkama, profilu, sigurnosti, povratnim informacijama, prijateljima, statistici, nadzornoj ploči i smjenama
+- Vizualno je preuređen zaslon Prijatelji na kojem dodajete prijatelje i mijenjate dopuštenja
+- Poboljšano dijeljenje s prijateljima i sinkronizacija chata
+- Dodana podrška za obavijesti kada prijatelji dodaju dijeljene smjene
+- Ispravljeno brisanje više ponavljajućih pojavljivanja smjena odjednom
+- Poboljšani su sigurnost, ovisnosti i ukupna pouzdanost
 - Ispravci grešaka i druga poboljšanja

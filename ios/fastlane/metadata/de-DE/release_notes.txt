@@ -1,8 +1,8 @@
-- Ereigniserinnerungen und deutlichere Kalenderindikatoren für private Ereignisse hinzugefügt
-- Benutzerdefinierte Pausenzeiten hinzugefügt, damit die Lohnberechnung besser zu deinen tatsächlichen Pausen passt
-- Private Notizen für Schichten hinzugefügt, mit schnellerem Speichern aus den Schichtdetails
-- Das Dashboard mit bevorstehenden Ereignissen und besseren Ereignisdetails verbessert
-- Wagey mit Unterstützung für private Ereignisse, klareren Chatblasen und besseren gestreamten Antworten verbessert
-- Passwortwiederherstellung, Kaufprüfungen, Erinnerungen, Onboarding und Synchronisierungszuverlässigkeit behoben
-- Einstellungen, Kalenderinteraktionen, Exporte und die Gesamtleistung verbessert
+- Kalenderexport für Ereignisse hinzugefügt
+- Offline-Unterstützung in Einstellungen, Profil, Sicherheit, Feedback, Freunde, Statistiken, Dashboard und Schichten verbessert
+- Die Freunde-Ansicht zum Hinzufügen von Freunden und Ändern von Berechtigungen visuell überarbeitet
+- Synchronisierung von Freundesfreigaben und Chat verbessert
+- Unterstützung für Benachrichtigungen hinzugefügt, wenn Freunde geteilte Schichten hinzufügen
+- Fehler beim gleichzeitigen Löschen mehrerer wiederkehrender Schichtvorkommen behoben
+- Sicherheit, Abhängigkeiten und allgemeine Zuverlässigkeit verbessert
 - Fehlerbehebungen und weitere Verbesserungen

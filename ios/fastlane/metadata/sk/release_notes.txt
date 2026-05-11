@@ -1,8 +1,8 @@
-- Pridané pripomienky udalostí a prehľadnejšie indikátory v kalendári pre súkromné udalosti
-- Pridané vlastné časové okná prestávok, aby výpočet mzdy lepšie zodpovedal vašim skutočným prestávkam
-- Pridané súkromné poznámky k zmenám s rýchlejším ukladaním poznámok z detailu zmeny
-- Vylepšený prehľad s nadchádzajúcimi udalosťami a lepšími detailmi udalostí
-- Vylepšený Wagey s podporou súkromných udalostí, prehľadnejšími chatovacími bublinami a lepšími priebežnými odpoveďami
-- Opravené obnovenie hesla, kontroly nákupov, pripomienky, onboarding a spoľahlivosť synchronizácie
-- Vylepšené nastavenia, interakcie s kalendárom, exporty a celkový výkon
+- Pridaný export udalostí do kalendára
+- Vylepšená podpora offline režimu v nastaveniach, profile, zabezpečení, spätnej väzbe, priateľoch, štatistikách, prehľade a zmenách
+- Vizuálne prepracovaná obrazovka Priatelia, kde pridávate priateľov a meníte oprávnenia
+- Vylepšené zdieľanie s priateľmi a synchronizácia chatu
+- Pridaná podpora upozornení, keď priatelia pridajú zdieľané zmeny
+- Opravené odstraňovanie viacerých opakujúcich sa výskytov zmien naraz
+- Vylepšené zabezpečenie, závislosti a celková spoľahlivosť
 - Opravy chýb a ďalšie vylepšenia

@@ -1,8 +1,8 @@
-- Lisätty tapahtumamuistutukset ja selkeämmät kalenterimerkinnät yksityisille tapahtumille
-- Lisätty mukautettavat taukojaksot, jotta palkanlaskenta vastaa paremmin todellisia taukojasi
-- Lisätty yksityiset muistiinpanot vuoroille sekä nopeampi muistiinpanojen tallennus vuoron tiedoista
-- Parannettu etusivua tulevilla tapahtumilla ja paremmilla tapahtumatiedoilla
-- Parannettu Wageyta yksityisten tapahtumien tuella, selkeämmillä keskustelukuplilla ja paremmilla vastauksilla
-- Korjattu salasanan palautus, ostotarkistukset, muistutukset, käyttöönotto ja synkronoinnin luotettavuus
-- Parannettu asetuksia, kalenterin käyttöä, vientiä ja yleistä suorituskykyä
+- Lisätty kalenterivienti tapahtumille
+- Parannettu offline-tukea asetuksissa, profiilissa, tietoturvassa, palautteessa, kavereissa, tilastoissa, koontinäytössä ja vuoroissa
+- Uudistettu visuaalisesti Kaverit-näkymä, jossa lisäät kavereita ja muutat käyttöoikeuksia
+- Parannettu kaverijaon ja chatin synkronointia
+- Lisätty tuki ilmoituksille, kun kaverit lisäävät jaettuja vuoroja
+- Korjattu useiden toistuvien vuorojen esiintymien poistaminen kerralla
+- Parannettu tietoturvaa, riippuvuuksia ja yleistä luotettavuutta
 - Virheenkorjauksia ja muita parannuksia

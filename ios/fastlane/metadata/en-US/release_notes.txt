@@ -1,8 +1,8 @@
-- Added event reminders and clearer calendar indicators for private events
-- Added custom pause windows so wage calculations can match your actual breaks more closely
-- Added private notes for shifts, with faster note saving from shift details
-- Improved the dashboard with upcoming events and better event details
-- Improved Wagey with private event support, clearer chat bubbles, and better streamed answers
-- Fixed password recovery, purchase checks, reminders, onboarding, and sync reliability
-- Improved settings, calendar interactions, exports, and overall performance
+- Added calendar export for events
+- Improved offline support across settings, profile, security, feedback, friends, stats, dashboard, and shifts
+- Visually overhauled the Friends screen where you add friends and change permissions
+- Improved friends sharing and chat synchronization
+- Added support for notifications when friends add shared shifts
+- Fixed deleting multiple recurring shift occurrences at once
+- Improved security, dependencies, and overall reliability
 - Bug fixes and other improvements

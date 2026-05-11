@@ -1,8 +1,8 @@
-- Gebeurtenisherinneringen en duidelijkere agenda-aanduidingen voor privégebeurtenissen toegevoegd
-- Aangepaste pauzevensters toegevoegd zodat loonberekeningen beter aansluiten op je echte pauzes
-- Privénotities voor diensten toegevoegd, met sneller opslaan van notities vanuit dienstdetails
-- Het dashboard verbeterd met aankomende gebeurtenissen en betere gebeurtenisdetails
-- Wagey verbeterd met ondersteuning voor privégebeurtenissen, duidelijkere chatballonnen en betere gestreamde antwoorden
-- Problemen opgelost met wachtwoordherstel, aankoopcontroles, herinneringen, onboarding en synchronisatie
-- Instellingen, agenda-interacties, export en algemene prestaties verbeterd
+- Kalenderexport voor gebeurtenissen toegevoegd
+- Offline ondersteuning verbeterd in instellingen, profiel, beveiliging, feedback, vrienden, statistieken, dashboard en diensten
+- Het Vrienden-scherm, waar je vrienden toevoegt en machtigingen wijzigt, visueel vernieuwd
+- Delen met vrienden en chatsynchronisatie verbeterd
+- Ondersteuning toegevoegd voor meldingen wanneer vrienden gedeelde diensten toevoegen
+- Een probleem opgelost bij het tegelijk verwijderen van meerdere terugkerende diensten
+- Beveiliging, afhankelijkheden en algehele betrouwbaarheid verbeterd
 - Bugfixes en andere verbeteringen

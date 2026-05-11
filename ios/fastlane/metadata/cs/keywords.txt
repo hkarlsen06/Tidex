@@ -1,1 +1,1 @@
-směny,evidence,mzda,plat,práce,hodiny,čas,píchačky,rozvrh,výdělek
+směny,docházka,mzda,plat,práce,hodiny,čas,rozvrh,výdělek,kalkulačka

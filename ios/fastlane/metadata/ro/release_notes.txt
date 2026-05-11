@@ -1,8 +1,8 @@
-- Am adăugat mementouri pentru evenimente și indicatori mai clari în calendar pentru evenimentele private
-- Am adăugat intervale de pauză personalizate, astfel încât calculele salariale să corespundă mai bine pauzelor tale reale
-- Am adăugat notițe private pentru ture, cu salvare mai rapidă a notițelor din detaliile turei
-- Am îmbunătățit tabloul de bord cu evenimente viitoare și detalii mai bune despre evenimente
-- Am îmbunătățit Wagey cu suport pentru evenimente private, bule de chat mai clare și răspunsuri generate mai bune
-- Am remediat recuperarea parolei, verificările achizițiilor, mementourile, onboardingul și fiabilitatea sincronizării
-- Am îmbunătățit setările, interacțiunile din calendar, exporturile și performanța generală
+- Am adăugat exportul în calendar pentru evenimente
+- Am îmbunătățit suportul offline în setări, profil, securitate, feedback, prieteni, statistici, panou și ture
+- Am refăcut vizual ecranul Prieteni, unde adaugi prieteni și modifici permisiunile
+- Am îmbunătățit partajarea cu prietenii și sincronizarea chatului
+- Am adăugat suport pentru notificări când prietenii adaugă ture partajate
+- Am remediat ștergerea simultană a mai multor ocurențe recurente ale turelor
+- Am îmbunătățit securitatea, dependențele și fiabilitatea generală
 - Corecturi de erori și alte îmbunătățiri
