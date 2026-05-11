@@ -279,9 +279,7 @@ struct SharingView: View {
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) {
       _ in
       guard selectedTab == .sharing else { return }
-      Task {
-        await resubscribeTypingSubscriptions()
-      }
+      scheduleChatMetadataRefresh()
     }
     .onDisappear {
       deepLinkNavigationTask?.cancel()
@@ -521,7 +519,8 @@ struct SharingView: View {
     _ = await refreshTask.result
 
     Task { @MainActor in
-      await reconnectFriendsRealtime()
+      await syncTypingSubscriptions()
+      scheduleChatMetadataRefresh()
     }
   }
 
@@ -809,15 +808,6 @@ struct SharingView: View {
       guard !Task.isCancelled else { return }
       refreshChatMetadata()
     }
-  }
-
-  private func reconnectFriendsRealtime() async {
-    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else { return }
-
-    await friendsRealtimeCoordinator.stopThreadListSubscription()
-    await friendsRealtimeCoordinator.startThreadListSubscription(viewerUserId: viewerUserId)
-    await resubscribeTypingSubscriptions()
-    scheduleChatMetadataRefresh()
   }
 
   private func syncTypingSubscriptions() async {

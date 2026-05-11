@@ -303,7 +303,6 @@ struct MainTabView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) { _ in
       scheduleUnreadFriendsCountRefresh()
-      scheduleFriendsThreadListTrackingIfNeeded()
     }
     .onDisappear {
       unreadRefreshTask?.cancel()
