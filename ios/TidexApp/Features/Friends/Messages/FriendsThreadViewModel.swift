@@ -579,7 +579,6 @@ final class FriendsThreadViewModel: ObservableObject {
     if pendingNotificationTypingUserId == nil {
       resetCounterpartTypingState()
     }
-    await startRealtime()
     await refreshFromServer()
     retryQueuedMessagesIfNeeded()
     reapplyPendingNotificationTypingIndicatorIfNeeded()
