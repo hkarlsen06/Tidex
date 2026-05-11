@@ -1,0 +1,1 @@
+- [ ] Refactor remaining authenticated `SECURITY DEFINER` Supabase RPCs out of the exposed `public` API surface, or convert safe candidates to `SECURITY INVOKER`, so the remaining `authenticated_security_definer_function_executable` advisor warnings can be resolved without breaking iOS/admin flows.
