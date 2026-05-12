@@ -299,6 +299,7 @@ struct SharingRPCSharerRow: Decodable, Sendable {
   let id: String
   let email: String?
   let phone: String?
+  let username: String?
   let firstName: String?
   let profilePictureUrl: String?
   let oauthAvatarUrl: String?
@@ -313,6 +314,7 @@ struct SharingRPCSharerRow: Decodable, Sendable {
     case id
     case email
     case phone
+    case username
     case firstName = "first_name"
     case profilePictureUrl = "profile_picture_url"
     case oauthAvatarUrl = "oauth_avatar_url"
@@ -330,6 +332,7 @@ struct SharingRPCSharerRow: Decodable, Sendable {
     id = try container.decode(String.self, forKey: .id)
     email = try container.decodeIfPresent(String.self, forKey: .email)
     phone = try container.decodeIfPresent(String.self, forKey: .phone)
+    username = try container.decodeIfPresent(String.self, forKey: .username)
     firstName = try container.decodeIfPresent(String.self, forKey: .firstName)
     profilePictureUrl = try container.decodeIfPresent(String.self, forKey: .profilePictureUrl)
     oauthAvatarUrl = try container.decodeIfPresent(String.self, forKey: .oauthAvatarUrl)
@@ -2126,10 +2129,13 @@ enum FriendsAPIClient {
 
       return FriendWithShift(
         id: sharer.id,
-        displayName: sharer.firstName ?? sharer.email?.components(separatedBy: "@").first
+        displayName: sharer.firstName ?? formattedUsername(sharer.username)
+          ?? sharer.email?.components(separatedBy: "@").first
           ?? "Unknown",
         initials: makeInitials(
-          from: sharer.firstName ?? sharer.email?.components(separatedBy: "@").first ?? "?"
+          from: sharer.firstName ?? sharer.username ?? sharer.email?.components(separatedBy: "@")
+            .first
+            ?? "?"
         ),
         profilePictureUrl: sharer.profilePictureUrl,
         oauthAvatarUrl: sharer.oauthAvatarUrl,
@@ -2274,6 +2280,16 @@ enum FriendsAPIClient {
       return first + second
     }
     return String(name.prefix(2).uppercased())
+  }
+
+  private static func formattedUsername(_ username: String?) -> String? {
+    guard let username = username?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !username.isEmpty
+    else {
+      return nil
+    }
+
+    return username.hasPrefix("@") ? username : "@\(username)"
   }
 
   private static func shiftDateTime(shiftDate: String?, time: String?) -> Date? {

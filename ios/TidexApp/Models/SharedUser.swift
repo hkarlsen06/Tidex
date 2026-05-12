@@ -7,6 +7,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
   let id: String
   let email: String?
   let phone: String?
+  let username: String?
   let firstName: String?
   let profilePictureUrl: String?
   let oauthAvatarUrl: String?
@@ -26,6 +27,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     case id
     case email
     case phone
+    case username
     case firstName
     case profilePictureUrl
     case oauthAvatarUrl
@@ -42,6 +44,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     id: String,
     email: String?,
     phone: String?,
+    username: String? = nil,
     firstName: String?,
     profilePictureUrl: String?,
     oauthAvatarUrl: String?,
@@ -55,6 +58,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     self.id = id
     self.email = email
     self.phone = phone
+    self.username = username
     self.firstName = firstName
     self.profilePictureUrl = profilePictureUrl
     self.oauthAvatarUrl = oauthAvatarUrl
@@ -71,6 +75,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     id = try container.decode(String.self, forKey: .id)
     email = try container.decodeIfPresent(String.self, forKey: .email)
     phone = try container.decodeIfPresent(String.self, forKey: .phone)
+    username = try container.decodeIfPresent(String.self, forKey: .username)
     firstName = try container.decodeIfPresent(String.self, forKey: .firstName)
     profilePictureUrl = try container.decodeIfPresent(String.self, forKey: .profilePictureUrl)
     oauthAvatarUrl = try container.decodeIfPresent(String.self, forKey: .oauthAvatarUrl)
@@ -95,6 +100,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     try container.encode(id, forKey: .id)
     try container.encodeIfPresent(email, forKey: .email)
     try container.encodeIfPresent(phone, forKey: .phone)
+    try container.encodeIfPresent(username, forKey: .username)
     try container.encodeIfPresent(firstName, forKey: .firstName)
     try container.encodeIfPresent(profilePictureUrl, forKey: .profilePictureUrl)
     try container.encodeIfPresent(oauthAvatarUrl, forKey: .oauthAvatarUrl)
@@ -106,10 +112,13 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     try container.encode(hasRecurringSharedShifts, forKey: .hasRecurringSharedShifts)
   }
 
-  /// Display name for the sharer (firstName > email > phone > "Unknown")
+  /// Display name for the sharer (firstName > username > email > phone > "Unknown")
   var displayName: String {
     if let firstName = firstName, !firstName.isEmpty {
       return firstName
+    }
+    if let username = formattedUsername {
+      return username
     }
     if let email = email, !email.isEmpty {
       return email.components(separatedBy: "@").first ?? email
@@ -133,7 +142,7 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
 
   /// Initials for avatar placeholder
   var initials: String {
-    let name = firstName ?? email ?? phone ?? "?"
+    let name = firstName ?? username ?? email ?? phone ?? "?"
     let components = name.components(separatedBy: " ")
     if components.count >= 2 {
       let first = components[0].prefix(1)
@@ -143,9 +152,13 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     return String(name.prefix(2)).uppercased()
   }
 
-  /// Contact info to display (email or phone, preferring email)
+  /// Contact info to display (username, email, or phone)
   /// Returns nil if the contact info would duplicate the display name
   var contactInfo: String? {
+    if let username = formattedUsername {
+      return firstName?.isEmpty == false ? username : nil
+    }
+
     // If we have email and it's not already used as displayName
     if let email = email, !email.isEmpty {
       if let firstName = firstName, !firstName.isEmpty {
@@ -165,5 +178,15 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
       return nil
     }
     return nil
+  }
+
+  var formattedUsername: String? {
+    guard let username = username?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !username.isEmpty
+    else {
+      return nil
+    }
+
+    return username.hasPrefix("@") ? username : "@\(username)"
   }
 }

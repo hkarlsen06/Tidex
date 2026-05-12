@@ -143,7 +143,7 @@ struct FriendRow: View {
       // Avatar
       avatarView
 
-      // Name and contact info
+      // Name, relationship, and contact info
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(friend.displayName)
           .font(.tidexBodyMedium)
@@ -154,6 +154,7 @@ struct FriendRow: View {
         subtitleView
       }
       .environment(\.layoutDirection, nameLayoutDirection)
+      .layoutPriority(1)
 
       Spacer(minLength: 8)
 
@@ -170,19 +171,20 @@ struct FriendRow: View {
 
   @ViewBuilder
   private var subtitleView: some View {
-    Text(subtitleText)
+    Text(sectionType.relationshipStatus)
       .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)
-      .lineLimit(2)
+      .lineLimit(1)
+      .minimumScaleFactor(0.88)
       .multilineTextAlignment(.leading)
-  }
 
-  private var subtitleText: String {
     if let contactInfo = friend.contactInfo {
-      return "\(sectionType.relationshipStatus) - \(contactInfo)"
+      Text(contactInfo)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextMuted)
+        .lineLimit(1)
+        .multilineTextAlignment(.leading)
     }
-
-    return sectionType.relationshipStatus
   }
 
   // MARK: - Avatar
@@ -191,7 +193,7 @@ struct FriendRow: View {
     AvatarView(
       url: friend.avatarUrl,
       initials: friend.initials,
-      size: AvatarView.Size.medium
+      size: 52
     )
     .overlay(alignment: .bottomTrailing) {
       if isHiddenInFriendsTab {
@@ -320,6 +322,7 @@ struct FriendRow: View {
           id: "1",
           email: "ole@example.com",
           phone: nil,
+          username: "ole",
           firstName: "Ole Hansen Kristensen-Karlsen",
           profilePictureUrl: nil,
           oauthAvatarUrl: nil,
@@ -355,6 +358,7 @@ struct FriendRow: View {
           id: "2",
           email: "kari@example.com",
           phone: nil,
+          username: "kari",
           firstName: "Kari Berg",
           profilePictureUrl: nil,
           oauthAvatarUrl: nil,
@@ -385,6 +389,7 @@ struct FriendRow: View {
           id: "3",
           email: "lisa@example.com",
           phone: nil,
+          username: nil,
           firstName: "Lisa Olsen",
           profilePictureUrl: nil,
           oauthAvatarUrl: nil,
