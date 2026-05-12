@@ -1,3 +1,5 @@
+DROP FUNCTION IF EXISTS public.get_my_sharers();
+
 -- Function: get_my_sharers
 -- Description: Returns users who share their shifts with the authenticated viewer, including hidden rows.
 -- Security:

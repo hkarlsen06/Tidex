@@ -195,7 +195,12 @@ struct SharingView: View {
           Task {
             await viewModel.loadSharers(forceRefreshPreviews: true)
           }
-        }
+        },
+        typingUserIds: typingUserIds,
+        unreadChatUserIds: unreadChatUserIds,
+        chatPreviewsByUserId: chatPreviewsByUserId,
+        shiftPreviews: viewModel.shiftPreviews,
+        isLoadingPreviews: viewModel.isLoadingPreviews
       )
     }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in

@@ -151,6 +151,7 @@ final class SharingService: ObservableObject {
             id: sharer.id,
             email: sharer.email,
             phone: sharer.phone,
+            username: sharer.username,
             firstName: sharer.firstName,
             profilePictureUrl: sharer.profilePictureUrl,
             oauthAvatarUrl: sharer.oauthAvatarUrl,

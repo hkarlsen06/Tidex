@@ -18,6 +18,7 @@ struct Friend: Codable, Identifiable, Equatable {
   let id: String
   let email: String?
   let phone: String?
+  let username: String?
   let firstName: String?
   let profilePictureUrl: String?
   let oauthAvatarUrl: String?
@@ -139,10 +140,13 @@ struct Friend: Codable, Identifiable, Equatable {
     return name.components(separatedBy: " ").first ?? name
   }
 
-  /// Display name for the friend (firstName > email username > phone > "Unknown")
+  /// Display name for the friend (firstName > username > email username > phone > "Unknown")
   var displayName: String {
     if let firstName = firstName, !firstName.isEmpty {
       return firstName
+    }
+    if let username = formattedUsername {
+      return username
     }
     if let email = email, !email.isEmpty {
       return email.components(separatedBy: "@").first ?? email
@@ -160,7 +164,7 @@ struct Friend: Codable, Identifiable, Equatable {
 
   /// Initials for avatar placeholder
   var initials: String {
-    let name = firstName ?? email ?? phone ?? "?"
+    let name = firstName ?? username ?? email ?? phone ?? "?"
     let components = name.components(separatedBy: " ")
     if components.count >= 2 {
       let first = components[0].prefix(1)
@@ -170,8 +174,12 @@ struct Friend: Codable, Identifiable, Equatable {
     return String(name.prefix(2)).uppercased()
   }
 
-  /// Contact info to display (email or phone), avoiding duplication with display name
+  /// Contact info to display (username, email, or phone), avoiding duplication with display name
   var contactInfo: String? {
+    if let username = formattedUsername {
+      return firstName?.isEmpty == false ? username : nil
+    }
+
     // If we have firstName, show email or phone as secondary info
     if let firstName = firstName, !firstName.isEmpty {
       if let email = email, !email.isEmpty {
@@ -188,6 +196,16 @@ struct Friend: Codable, Identifiable, Equatable {
       }
     }
     return nil
+  }
+
+  var formattedUsername: String? {
+    guard let username = username?.trimmingCharacters(in: .whitespacesAndNewlines),
+      !username.isEmpty
+    else {
+      return nil
+    }
+
+    return username.hasPrefix("@") ? username : "@\(username)"
   }
 
   // MARK: - Relationship Status
@@ -215,6 +233,7 @@ struct Friend: Codable, Identifiable, Equatable {
       id: id,
       email: email,
       phone: phone,
+      username: username,
       firstName: firstName,
       profilePictureUrl: profilePictureUrl,
       oauthAvatarUrl: oauthAvatarUrl,
@@ -229,6 +248,7 @@ struct Friend: Codable, Identifiable, Equatable {
       id: id,
       email: email,
       phone: phone,
+      username: username,
       firstName: firstName,
       profilePictureUrl: profilePictureUrl,
       oauthAvatarUrl: oauthAvatarUrl,

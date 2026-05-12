@@ -18,6 +18,12 @@ struct ManageSharingSheet: View {
   /// Callback when visibility changes (hide/show) to refresh the sharer list
   var onVisibilityChange: (() -> Void)?
 
+  var typingUserIds: Set<String> = []
+  var unreadChatUserIds: Set<String> = []
+  var chatPreviewsByUserId: [String: FriendCardMessagePreview] = [:]
+  var shiftPreviews: [String: SharerShiftPreview] = [:]
+  var isLoadingPreviews: Bool = false
+
   /// Confirmation dialog state
   @State private var friendToRemove: Friend?
   @State private var removeAction: FriendSharingRemovalAction?
@@ -303,32 +309,39 @@ struct ManageSharingSheet: View {
 
   @ViewBuilder
   private var friendSections: some View {
-    if !viewModel.mutualFriends.isEmpty {
-      Section(header: Text(String(localized: .sharingMutual))) {
-        ForEach(viewModel.mutualFriends) { friend in
-          makeFriendRow(friend, sectionType: .mutual)
-        }
+    Section {
+      ForEach(orderedFriends) { friend in
+        makeFriendRow(friend, sectionType: sectionType(for: friend))
+          .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .listRowBackground(Color.tidexSurfacePrimary)
     }
+  }
 
-    if !viewModel.outgoingOnlyFriends.isEmpty {
-      Section(header: Text(String(localized: .sharingIShareWith))) {
-        ForEach(viewModel.outgoingOnlyFriends) { friend in
-          makeFriendRow(friend, sectionType: .outgoing)
-        }
-      }
-      .listRowBackground(Color.tidexSurfacePrimary)
+  private var orderedFriends: [Friend] {
+    let friendsById = Dictionary(uniqueKeysWithValues: viewModel.friends.map { ($0.id, $0) })
+    let sharedUsers = viewModel.friends.map {
+      $0.asSharedUser(hidden: viewModel.isHiddenInFriendsTab(for: $0))
     }
+    let orderedIds = ordering.sortedSharers(sharedUsers).map(\.id)
+    let orderedFriends = orderedIds.compactMap { friendsById[$0] }
+    let orderedIdSet = Set(orderedIds)
+    let missingFriends = viewModel.friends
+      .filter { !orderedIdSet.contains($0.id) }
+      .sorted { lhs, rhs in
+        lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+      }
 
-    if !viewModel.incomingOnlyFriends.isEmpty {
-      Section(header: Text(String(localized: .sharingSharesWithMe))) {
-        ForEach(viewModel.incomingOnlyFriends) { friend in
-          makeFriendRow(friend, sectionType: .incoming)
-        }
-      }
-      .listRowBackground(Color.tidexSurfacePrimary)
-    }
+    return orderedFriends + missingFriends
+  }
+
+  private var ordering: FriendsListOrdering {
+    FriendsListOrdering(
+      typingUserIds: typingUserIds,
+      unreadChatUserIds: unreadChatUserIds,
+      chatPreviewsByUserId: chatPreviewsByUserId,
+      shiftPreviews: shiftPreviews,
+      isLoadingShiftPreviews: isLoadingPreviews
+    )
   }
 
   @ViewBuilder
@@ -512,6 +525,26 @@ struct ManageSharingSheet: View {
         }
       }
     }
+  }
+}
+
+extension Friend {
+  fileprivate func asSharedUser(hidden: Bool) -> SharedUser {
+    let incomingShare = sharesWithMe
+    let outgoingShare = iShareWith
+
+    return SharedUser(
+      id: id,
+      email: email,
+      phone: phone,
+      username: username,
+      firstName: firstName,
+      profilePictureUrl: profilePictureUrl,
+      oauthAvatarUrl: oauthAvatarUrl,
+      sharedAt: incomingShare?.sharedAt ?? outgoingShare?.sharedAt ?? "",
+      showEarnings: incomingShare?.showEarningsToMe ?? false,
+      hidden: hidden
+    )
   }
 }
 

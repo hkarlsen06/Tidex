@@ -338183,25 +338183,25 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يمكنك رؤية نوباته"
+            "value" : "ترى مناوباتهم"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Можеш да виждаш техните смени"
+            "value" : "Вие виждате техните смени"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "আপনি তাদের শিফট দেখতে পারেন"
+            "value" : "আপনি তাদের শিফট দেখেন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pots veure els seus torns"
+            "value" : "Veus els seus torns"
           }
         },
         "cs" : {
@@ -338213,49 +338213,49 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du kan se deres vagter"
+            "value" : "Du ser deres vagter"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du kannst ihre Schichten sehen"
+            "value" : "Du siehst ihre Schichten"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Μπορείτε να δείτε τις βάρδιές τους"
+            "value" : "Βλέπεις τις βάρδιές τους"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You can see their shifts"
+            "value" : "You see their shifts"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Puedes ver sus turnos"
+            "value" : "Ves sus turnos"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sa näed nende vahetusi"
+            "value" : "Näed nende vahetusi"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "می‌توانید شیفت‌های آن‌ها را ببینید"
+            "value" : "شما شیفت‌های آن‌ها را می‌بینید"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Voit nähdä heidän vuoronsa"
+            "value" : "Näet heidän vuoronsa"
           }
         },
         "fil" : {
@@ -338267,109 +338267,109 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vous pouvez voir leurs shifts"
+            "value" : "Vous voyez leurs shifts"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "אתה יכול לראות את המשמרות שלהם"
+            "value" : "אתה רואה את המשמרות שלהם"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आप उनकी शिफ्ट देख सकते हैं"
+            "value" : "आप उनकी शिफ्ट देखते हैं"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Možete vidjeti njihove smjene"
+            "value" : "Vidite njihove smjene"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Láthatod a műszakjaikat"
+            "value" : "Látod a műszakjaikat"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anda bisa melihat shift mereka"
+            "value" : "Anda melihat shift mereka"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Þú getur séð vaktirnar þeirra"
+            "value" : "Þú sérð vaktirnar þeirra"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Puoi vedere i loro turni"
+            "value" : "Vedi i loro turni"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "相手のシフトを見られます"
+            "value" : "あなたが相手のシフトを表示"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "상대 근무를 볼 수 있음"
+            "value" : "내가 상대 근무를 봄"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Galite matyti jų pamainas"
+            "value" : "Jūs matote jų pamainas"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jūs varat redzēt viņu maiņas"
+            "value" : "Jūs redzat viņu maiņas"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du kan se vaktene deres"
+            "value" : "Du ser deres vakter"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Je kunt hun diensten zien"
+            "value" : "Je ziet hun diensten"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du kan sjå vaktene deira"
+            "value" : "Du ser vaktene deira"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Możesz widzieć ich zmiany"
+            "value" : "Widzisz ich zmiany"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Você pode ver os turnos da pessoa"
+            "value" : "Você vê os turnos deles"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le poți vedea turele"
+            "value" : "Le vezi turele"
           }
         },
         "ru" : {
@@ -338381,49 +338381,49 @@
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Môžete vidieť ich zmeny"
+            "value" : "Vidíte ich zmeny"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vidite njihove izmene"
+            "value" : "Vidiš njihove izmene"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Možete da vidite njihove smene"
+            "value" : "Ti vidiš njihove smene"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Du kan se deras pass"
+            "value" : "Du ser deras skift"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Unaweza kuona zamu zao"
+            "value" : "Unaona zamu zao"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "நீங்கள் அவர்களின் பணிப்பகுதிகளைப் பார்க்கலாம்"
+            "value" : "நீங்கள் அவர்களின் ஷிப்ட்களை பார்க்கிறீர்கள்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "คุณเห็นกะของพวกเขาได้"
+            "value" : "คุณเห็นกะงานของพวกเขา"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Onların vardiyalarını görebilirsin"
+            "value" : "Onların vardiyalarını görüyorsunuz"
           }
         },
         "uk" : {
@@ -338435,25 +338435,25 @@
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "آپ ان کی شفٹیں دیکھ سکتے ہیں"
+            "value" : "آپ ان کی شفٹیں دیکھتے ہیں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bạn có thể xem ca làm của họ"
+            "value" : "Bạn thấy ca làm của họ"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你可以查看他们的班次"
+            "value" : "你能看见他们的班次"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你可以看見他們的班次"
+            "value" : "你可查看對方的班次"
           }
         }
       }
@@ -338464,25 +338464,25 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "أنتما تتشاركان النوبات"
+            "value" : "كلاهما يشارك المناوبات"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "И двамата споделяте смени"
+            "value" : "И двамата споделят смени"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "আপনারা দুজনেই শিফট শেয়ার করেন"
+            "value" : "উভয়েই শিফট শেয়ার করে"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tots dos compartiu torns"
+            "value" : "Tots dos comparteixen torns"
           }
         },
         "cs" : {
@@ -338494,25 +338494,25 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "I deler begge vagter"
+            "value" : "Begge deler vagter"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ihr teilt beide Schichten"
+            "value" : "Beide teilen Schichten"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Μοιράζεστε και οι δύο βάρδιες"
+            "value" : "Και οι δύο μοιράζονται βάρδιες"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "You both share shifts"
+            "value" : "Both share shifts"
           }
         },
         "es" : {
@@ -338524,31 +338524,31 @@
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Te jagate mõlemad vahetusi"
+            "value" : "Mõlemad jagavad vahetusi"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "هر دوی شما شیفت‌ها را با هم به اشتراک می‌گذارید"
+            "value" : "هر دو شیفت‌ها را به اشتراک می‌گذارند"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jaette molemmat vuoroja"
+            "value" : "Molemmat jakavat vuoroja"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pareho kayong nagbabahagi ng mga shift"
+            "value" : "Pareho kayong nakakakita ng shift"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vous partagez tous deux des shifts"
+            "value" : "Tous deux partagent les shifts"
           }
         },
         "he" : {
@@ -338560,7 +338560,7 @@
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "आप दोनों शिफ्ट साझा करते हैं"
+            "value" : "दोनों शिफ्ट साझा करते हैं"
           }
         },
         "hr" : {
@@ -338572,31 +338572,31 @@
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mindketten látjátok egymás műszakjait"
+            "value" : "Mindketten megosztjátok a műszakokat"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kalian saling berbagi shift"
+            "value" : "Keduanya saling berbagi shift"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Þið deilið vöktum"
+            "value" : "Bæði deila vöktum"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Condividete entrambi i turni"
+            "value" : "Entrambi condividono i turni"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "お互いのシフトを共有しています"
+            "value" : "お互いのシフトを共有"
           }
         },
         "ko" : {
@@ -338608,19 +338608,19 @@
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jūs abu dalijatės pamainomis"
+            "value" : "Abu dalijasi pamainomis"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jūs abi kopīgojat maiņas"
+            "value" : "Abi koplieto maiņas"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dere deler vakter med hverandre"
+            "value" : "Begge deler vakter"
           }
         },
         "nl" : {
@@ -338632,13 +338632,13 @@
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De deler vakter med kvarandre"
+            "value" : "Begge deler vakter"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oboje udostępniacie sobie zmiany"
+            "value" : "Oboje udostępniacie zmiany"
           }
         },
         "pt-BR" : {
@@ -338650,91 +338650,91 @@
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vă partajați turele reciproc"
+            "value" : "Amândoi partajează turele"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Вы оба делитесь сменами"
+            "value" : "Оба делятся сменами"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obaja si zdieľate zmeny"
+            "value" : "Obaja zdieľajú zmeny"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oba si delita izmene"
+            "value" : "Oba delita izmene"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Oboje delite smene"
+            "value" : "Oboje dele smene"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ni delar båda pass"
+            "value" : "Båda delar skift"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mnaonyeshana zamu"
+            "value" : "Wote wawili hushiriki zamu"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "நீங்கள் இருவரும் பணிப்பகுதிகளைப் பகிர்கிறீர்கள்"
+            "value" : "இருவரும் ஷிப்ட்களை பகிர்கிறார்கள்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "คุณทั้งคู่แชร์กะให้กัน"
+            "value" : "ทั้งคู่แชร์กะงาน"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "İkiniz de vardiya paylaşıyorsunuz"
+            "value" : "İkiniz de vardiyaları paylaşıyorsunuz"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ви обидва ділитеся змінами"
+            "value" : "Обидва діляться змінами"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "آپ دونوں شفٹیں شیئر کرتے ہیں"
+            "value" : "دونوں ایک دوسرے کی شفٹیں دیکھتے ہیں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hai bạn đều chia sẻ ca làm"
+            "value" : "Cả hai cùng chia sẻ ca làm"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你们互相共享班次"
+            "value" : "双方共享班次"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "你們彼此分享班次"
+            "value" : "雙方共享班次"
           }
         }
       }
@@ -338745,25 +338745,25 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يمكنه رؤية نوباتك"
+            "value" : "يرون مناوباتك"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Те могат да виждат смените ти"
+            "value" : "Те виждат вашите смени"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "তারা আপনার শিফট দেখতে পারে"
+            "value" : "তারা আপনার শিফট দেখে"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Poden veure els teus torns"
+            "value" : "Veuen els teus torns"
           }
         },
         "cs" : {
@@ -338775,31 +338775,31 @@
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De kan se dine vagter"
+            "value" : "De ser dine vagter"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sie können deine Schichten sehen"
+            "value" : "Sie sehen deine Schichten"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Μπορούν να δουν τις βάρδιές σας"
+            "value" : "Βλέπουν τις βάρδιές σου"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "They can see your shifts"
+            "value" : "They see your shifts"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pueden ver tus turnos"
+            "value" : "Ven tus turnos"
           }
         },
         "et" : {
@@ -338811,13 +338811,13 @@
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "آن‌ها می‌توانند شیفت‌های شما را ببینند"
+            "value" : "آن‌ها شیفت‌های شما را می‌بینند"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "He voivat nähdä vuorosi"
+            "value" : "He näkevät vuorosi"
           }
         },
         "fil" : {
@@ -338829,109 +338829,109 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ils peuvent voir vos shifts"
+            "value" : "Ils voient vos shifts"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "הם יכולים לראות את המשמרות שלך"
+            "value" : "הם רואים את המשמרות שלך"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "वे आपकी शिफ्ट देख सकते हैं"
+            "value" : "वे आपकी शिफ्ट देखते हैं"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mogu vidjeti vaše smjene"
+            "value" : "Vide vaše smjene"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Láthatják a műszakjaidat"
+            "value" : "Látják a műszakjaidat"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mereka bisa melihat shift Anda"
+            "value" : "Mereka melihat shift Anda"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Þau geta séð vaktirnar þínar"
+            "value" : "Þau sjá vaktirnar þínar"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Possono vedere i tuoi turni"
+            "value" : "Vedono i tuoi turni"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "相手はあなたのシフトを見られます"
+            "value" : "相手があなたのシフトを表示"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 근무를 볼 수 있음"
+            "value" : "상대가 내 근무를 봄"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jie gali matyti jūsų pamainas"
+            "value" : "Jie mato jūsų pamainas"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Viņi var redzēt jūsu maiņas"
+            "value" : "Viņi redz jūsu maiņas"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De kan se vaktene dine"
+            "value" : "De ser dine vakter"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zij kunnen je diensten zien"
+            "value" : "Zij zien je diensten"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dei kan sjå vaktene dine"
+            "value" : "Dei ser vaktene dine"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mogą widzieć Twoje zmiany"
+            "value" : "Widzą Twoje zmiany"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A pessoa pode ver seus turnos"
+            "value" : "Eles veem seus turnos"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Îți pot vedea turele"
+            "value" : "Îți văd turele"
           }
         },
         "ru" : {
@@ -338943,7 +338943,7 @@
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Môže vidieť vaše zmeny"
+            "value" : "Vidia vaše zmeny"
           }
         },
         "sl" : {
@@ -338955,37 +338955,37 @@
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mogu da vide vaše smene"
+            "value" : "Oni vide tvoje smene"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "De kan se dina pass"
+            "value" : "De ser dina skift"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wanaweza kuona zamu zako"
+            "value" : "Wanaona zamu zako"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "அவர்கள் உங்கள் பணிப்பகுதிகளைப் பார்க்கலாம்"
+            "value" : "அவர்கள் உங்கள் ஷிப்ட்களை பார்க்கிறார்கள்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "พวกเขาเห็นกะของคุณได้"
+            "value" : "พวกเขาเห็นกะงานของคุณ"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vardiyalarını görebilirler"
+            "value" : "Vardiyalarınızı görüyorlar"
           }
         },
         "uk" : {
@@ -338997,25 +338997,25 @@
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "وہ آپ کی شفٹیں دیکھ سکتے ہیں"
+            "value" : "وہ آپ کی شفٹیں دیکھتے ہیں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Họ có thể xem ca làm của bạn"
+            "value" : "Họ thấy ca làm của bạn"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "他们可以查看你的班次"
+            "value" : "他们能看见你的班次"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "他們可以看見你的班次"
+            "value" : "對方可查看你的班次"
           }
         }
       }
