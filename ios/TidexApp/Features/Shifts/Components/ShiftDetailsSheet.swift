@@ -62,6 +62,7 @@ struct ShiftDetailsSheet: View {
   let onUpdate: ((ShiftEditResult) -> Void)?
   let onUpdatePause: ((ShiftPauseEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
+  var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
   let snapshotShareContext: ShiftSnapshotShareContext
   /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
   let tariffRules: [SupplementRule]
@@ -169,6 +170,7 @@ struct ShiftDetailsSheet: View {
     onUpdate: ((ShiftEditResult) -> Void)? = nil,
     onUpdatePause: ((ShiftPauseEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
+    onSendToChatCompleted: ((SendShiftToChatResult) -> Void)? = nil,
     snapshotShareContext: ShiftSnapshotShareContext = .own,
     startInEditMode: Bool = false,
     tariffRules: [SupplementRule] = []
@@ -180,6 +182,7 @@ struct ShiftDetailsSheet: View {
     self.onUpdate = onUpdate
     self.onUpdatePause = onUpdatePause
     self.onEditRecurring = onEditRecurring
+    self.onSendToChatCompleted = onSendToChatCompleted
     self.snapshotShareContext = snapshotShareContext
     self.startInEditMode = startInEditMode
     self.tariffRules = tariffRules
@@ -619,13 +622,17 @@ struct ShiftDetailsSheet: View {
           viewerUserId: viewerUserId,
           buildDraft: makeShiftSnapshotDraft(for:),
           onCompleted: { result in
-            coordinator.pendingDeepLink = .friendChat(
-              threadId: result.threadId,
-              messageId: nil,
-              senderUserId: nil,
-              typingUserId: nil,
-              navigationRequestId: UUID()
-            )
+            if let onSendToChatCompleted {
+              onSendToChatCompleted(result)
+            } else {
+              coordinator.pendingDeepLink = .friendChat(
+                threadId: result.threadId,
+                messageId: nil,
+                senderUserId: nil,
+                typingUserId: nil,
+                navigationRequestId: UUID()
+              )
+            }
             showingSendToChatSheet = false
             dismiss()
           }
