@@ -134,6 +134,19 @@ struct SharingView: View {
             Task {
               await openChat(for: sharedUser)
             }
+          },
+          onSendToChatCompleted: { result in
+            let route = FriendChatRoute(
+              thread: result.thread,
+              fallbackDisplayName: result.thread.counterpartDisplayName
+                ?? String(localized: .sharingFriendsTitle),
+              fallbackAvatarUrl: result.thread.counterpartAvatarUrl
+            )
+            navigateToChatRoute(
+              route,
+              highlightedUserId: result.thread.counterpartUserId,
+              resetNavigationFirst: true
+            )
           }
         )
         .toolbarRole(.editor)
@@ -1000,6 +1013,7 @@ private struct SharedShiftsDetailView: View {
   @Binding var highlightDates: Set<String>
   @Binding var highlightShiftIds: Set<String>
   let onMessageTapped: (SharedUser) -> Void
+  let onSendToChatCompleted: (SendShiftToChatResult) -> Void
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.userCurrency) private var fallbackCurrency
@@ -1041,7 +1055,10 @@ private struct SharedShiftsDetailView: View {
           highlightShiftIds: highlightShiftIds,
           isSuperimposing: viewModel.isSuperimposing,
           userHoursByDate: viewModel.userHoursByDate,
-          userEarningsByDate: viewModel.userEarningsByDate
+          userEarningsByDate: viewModel.userEarningsByDate,
+          onSendToChatCompleted: { result in
+            onSendToChatCompleted(result)
+          }
         )
         .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
         .frame(maxWidth: .infinity)

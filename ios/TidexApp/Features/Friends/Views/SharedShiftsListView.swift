@@ -29,6 +29,8 @@ struct SharedShiftsListView: View {
   /// User's own earnings by date (for superimpose feature in earnings mode)
   var userEarningsByDate: [String: CalendarEarningsData]?
 
+  var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
+
   @Environment(\.userCurrency) private var currency
 
   // View mode toggle (synced with Shifts tab)
@@ -36,6 +38,7 @@ struct SharedShiftsListView: View {
 
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
   @State private var selectedShift: ShiftWithComputations?
+  @State private var pendingSendToChatResult: SendShiftToChatResult?
 
   // Screenshot bubble state
   @StateObject private var screenshotFeedback = ScreenshotNotificationFeedback()
@@ -115,13 +118,24 @@ struct SharedShiftsListView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .animation(.none, value: showListView)
     // Using .sheet(item:) guarantees data availability when sheet presents
-    .sheet(item: $selectedShift) { shift in
+    .sheet(
+      item: $selectedShift,
+      onDismiss: {
+        guard let pendingSendToChatResult else { return }
+        self.pendingSendToChatResult = nil
+        onSendToChatCompleted?(pendingSendToChatResult)
+      }
+    ) { shift in
       let shiftJob = showJobIndicator ? shift.shift.job_id.flatMap { jobsById[$0] } : nil
       ShiftDetailsSheet(
         shift: shift,
         jobName: shiftJob?.name,
         jobColorHex: shiftJob?.color,
         onDelete: nil,
+        onSendToChatCompleted: { result in
+          pendingSendToChatResult = result
+          selectedShift = nil
+        },
         snapshotShareContext: .shared(owner: sharer)
       )
       .userCurrency(shiftJob?.currency ?? currency)
