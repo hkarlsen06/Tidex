@@ -537,3 +537,35 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 }
+
+final class FriendSharingRemovalActionTests: XCTestCase {
+  func testAvailableActionsMatchRelationshipDirection() {
+    XCTAssertEqual(
+      FriendSharingRemovalAction.availableActions(for: .mutual),
+      [.stopSharingMyShifts, .stopSeeingTheirShifts]
+    )
+    XCTAssertEqual(
+      FriendSharingRemovalAction.availableActions(for: .outgoing),
+      [.stopSharingMyShifts]
+    )
+    XCTAssertEqual(
+      FriendSharingRemovalAction.availableActions(for: .incoming),
+      [.stopSeeingTheirShifts]
+    )
+  }
+
+  func testRelationshipStatusCopyMatchesDirection() {
+    XCTAssertEqual(
+      FriendSectionType.mutual.relationshipStatus,
+      String(localized: .sharingRelationshipMutual)
+    )
+    XCTAssertEqual(
+      FriendSectionType.outgoing.relationshipStatus,
+      String(localized: .sharingRelationshipOutgoingOnly)
+    )
+    XCTAssertEqual(
+      FriendSectionType.incoming.relationshipStatus,
+      String(localized: .sharingRelationshipIncomingOnly)
+    )
+  }
+}

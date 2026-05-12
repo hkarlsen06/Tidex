@@ -145,9 +145,9 @@ const WAGEY_LIMITS = {
   max: 90,
 } as const;
 const SHARE_LIMITS = {
-  free: 1,
-  pro: 10,
-  max: 20,
+  free: 5,
+  pro: 200,
+  max: 200,
 } as const;
 const FALLBACK_WAGEY_ACCESS: WageyAccessResult = {
   level: "free",
