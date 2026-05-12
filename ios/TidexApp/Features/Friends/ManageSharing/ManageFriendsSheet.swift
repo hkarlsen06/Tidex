@@ -20,17 +20,12 @@ struct ManageSharingSheet: View {
 
   /// Confirmation dialog state
   @State private var friendToRemove: Friend?
-  @State private var removeAction: RemoveAction?
+  @State private var removeAction: FriendSharingRemovalAction?
   @State private var friendToBlock: Friend?
 
   /// Whether the highlighted user is currently pulsing
   @State private var isHighlightActive = false
   @State private var isBlockedUsersExpanded = false
-
-  enum RemoveAction {
-    case removeShare  // Revoke their access to my shifts
-    case removeSharer  // Remove them from my friends list
-  }
 
   var body: some View {
     NavigationStack {
@@ -94,6 +89,7 @@ struct ManageSharingSheet: View {
               canAdd: viewModel.canAddMore,
               isOfflineUnavailable: viewModel.areServerActionsUnavailable,
               capacityDisplay: viewModel.capacityDisplay,
+              shouldShowCapacity: viewModel.shouldShowCapacity,
               onAdd: {
                 Task {
                   await viewModel.addFriend()
@@ -159,13 +155,13 @@ struct ManageSharingSheet: View {
       ),
       titleVisibility: .visible
     ) {
-      Button(String(localized: .sharingRemove), role: .destructive) {
+      Button(removeButtonTitle, role: .destructive) {
         if let friend = friendToRemove, let action = removeAction {
           Task {
             switch action {
-            case .removeShare:
+            case .stopSharingMyShifts:
               await viewModel.removeShare(for: friend)
-            case .removeSharer:
+            case .stopSeeingTheirShifts:
               await viewModel.removeSharer(for: friend)
               onVisibilityChange?()
             }
@@ -178,6 +174,8 @@ struct ManageSharingSheet: View {
         friendToRemove = nil
         removeAction = nil
       }
+    } message: {
+      Text(confirmationMessage)
     }
     .confirmationDialog(
       blockConfirmationTitle,
@@ -223,12 +221,22 @@ struct ManageSharingSheet: View {
       return ""
     }
 
-    switch action {
-    case .removeShare:
-      return String(localized: .sharingStopSharingWith(friend.displayName))
-    case .removeSharer:
-      return String(localized: .sharingRemoveFromList(friend.displayName))
+    return action.confirmationTitle(friendName: friend.displayName)
+  }
+
+  private var confirmationMessage: String {
+    guard let friend = friendToRemove, let action = removeAction else {
+      return ""
     }
+
+    return action.confirmationMessage(
+      friendName: friend.displayName,
+      sectionType: sectionType(for: friend)
+    )
+  }
+
+  private var removeButtonTitle: String {
+    removeAction?.title ?? ""
   }
 
   private var blockConfirmationTitle: String {
@@ -415,42 +423,14 @@ struct ManageSharingSheet: View {
       onBlock: {
         friendToBlock = friend
       },
-      onRemove: {
+      onRemove: { action in
         friendToRemove = friend
-        removeAction = sectionType == .incoming ? .removeSharer : .removeShare
+        removeAction = action
       }
     )
     .id(friend.id)
     .alignmentGuide(.listRowSeparatorLeading) { d in
       d[.leading] + 52
-    }
-    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-      Button(role: .destructive) {
-        friendToRemove = friend
-        removeAction = sectionType == .incoming ? .removeSharer : .removeShare
-      } label: {
-        Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
-      }
-      .disabled(areServerActionsUnavailable)
-    }
-    .swipeActions(edge: .leading, allowsFullSwipe: false) {
-      if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
-        Button {
-          Task {
-            await viewModel.toggleHidden(for: friend)
-            onVisibilityChange?()
-          }
-        } label: {
-          Label(
-            String(
-              localized: isHiddenInFriendsTab
-                ? .sharingSwipeShow : .sharingSwipeHide),
-            systemImage: isHiddenInFriendsTab ? "eye" : "eye.slash"
-          )
-        }
-        .disabled(isHideActionDisabled)
-        .tint(isHiddenInFriendsTab ? .green : .orange)
-      }
     }
   }
 
@@ -501,18 +481,12 @@ struct ManageSharingSheet: View {
         viewModel.actionInProgress == friend.id || viewModel.areServerActionsUnavailable ? 0.6 : 1)
     }
     .padding(.vertical, Spacing.xxs)
-    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-      Button {
-        Task {
-          await viewModel.unblockFriend(friend)
-          onVisibilityChange?()
-        }
-      } label: {
-        Label(String(localized: .sharingUnblock), systemImage: "arrow.uturn.backward.circle")
-      }
-      .disabled(viewModel.areServerActionsUnavailable)
-      .tint(.green)
-    }
+  }
+
+  private func sectionType(for friend: Friend) -> FriendSectionType {
+    if friend.isMutual { return .mutual }
+    if friend.isOutgoingOnly { return .outgoing }
+    return .incoming
   }
 
   // MARK: - Highlight Handling

@@ -7,13 +7,86 @@ enum FriendSectionType {
   case mutual  // Both share with each other
   case outgoing  // Only I share with them
   case incoming  // Only they share with me
+
+  var relationshipStatus: String {
+    switch self {
+    case .mutual:
+      return String(localized: .sharingRelationshipMutual)
+    case .outgoing:
+      return String(localized: .sharingRelationshipOutgoingOnly)
+    case .incoming:
+      return String(localized: .sharingRelationshipIncomingOnly)
+    }
+  }
+}
+
+enum FriendSharingRemovalAction: CaseIterable, Hashable {
+  case stopSharingMyShifts
+  case stopSeeingTheirShifts
+
+  static func availableActions(for sectionType: FriendSectionType) -> [FriendSharingRemovalAction] {
+    switch sectionType {
+    case .mutual:
+      return [.stopSharingMyShifts, .stopSeeingTheirShifts]
+    case .outgoing:
+      return [.stopSharingMyShifts]
+    case .incoming:
+      return [.stopSeeingTheirShifts]
+    }
+  }
+
+  var title: String {
+    switch self {
+    case .stopSharingMyShifts:
+      return String(localized: .sharingActionStopSharingMyShifts)
+    case .stopSeeingTheirShifts:
+      return String(localized: .sharingActionStopSeeingTheirShifts)
+    }
+  }
+
+  var systemImage: String {
+    switch self {
+    case .stopSharingMyShifts:
+      return "person.crop.circle.badge.minus"
+    case .stopSeeingTheirShifts:
+      return "eye.slash"
+    }
+  }
+
+  func confirmationTitle(friendName: String) -> String {
+    switch self {
+    case .stopSharingMyShifts:
+      return Self.localizedFormat("sharing.confirm.stopSharingMyShifts.title", friendName)
+    case .stopSeeingTheirShifts:
+      return Self.localizedFormat("sharing.confirm.stopSeeingTheirShifts.title", friendName)
+    }
+  }
+
+  func confirmationMessage(friendName: String, sectionType: FriendSectionType) -> String {
+    switch (self, sectionType) {
+    case (.stopSharingMyShifts, .mutual):
+      return Self.localizedFormat("sharing.confirm.stopSharingMyShifts.mutual", friendName)
+    case (.stopSharingMyShifts, .outgoing):
+      return Self.localizedFormat("sharing.confirm.stopSharingMyShifts.outgoingOnly", friendName)
+    case (.stopSeeingTheirShifts, .mutual):
+      return Self.localizedFormat("sharing.confirm.stopSeeingTheirShifts.mutual", friendName)
+    case (.stopSeeingTheirShifts, .incoming):
+      return Self.localizedFormat("sharing.confirm.stopSeeingTheirShifts.incomingOnly", friendName)
+    case (.stopSharingMyShifts, .incoming), (.stopSeeingTheirShifts, .outgoing):
+      return confirmationTitle(friendName: friendName)
+    }
+  }
+
+  static func localizedFormat(_ key: String, _ argument: String) -> String {
+    let format = String(localized: String.LocalizationValue(key), table: "Localizable")
+    return String.localizedStringWithFormat(format, argument)
+  }
 }
 
 // MARK: - Friend Row
 
 /// A row displaying a friend in the sharing management modal.
 /// Tapping anywhere on the row opens a menu with all available actions.
-/// Hide and remove actions are also accessible via swipe gestures on the List row.
 struct FriendRow: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -30,7 +103,7 @@ struct FriendRow: View {
   let onToggleOwnerMuted: () -> Void
   let onToggleHidden: () -> Void
   let onBlock: () -> Void
-  let onRemove: () -> Void
+  let onRemove: (FriendSharingRemovalAction) -> Void
 
   private var nameLayoutDirection: LayoutDirection {
     friend.displayName.isRightToLeft ? .rightToLeft : .leftToRight
@@ -38,15 +111,22 @@ struct FriendRow: View {
 
   var body: some View {
     Menu {
-      notificationSection
       sharingSection
-      actionsSection
+      notificationSection
+      visibilitySection
+      safetySection
     } label: {
       rowContent
     }
     .buttonStyle(.plain)
     .disabled(isActionInProgress)
     .opacity(isActionInProgress ? 0.6 : 1.0)
+    .accessibilityLabel(
+      FriendSharingRemovalAction.localizedFormat(
+        "sharing.accessibility.moreActions",
+        friend.displayName
+      )
+    )
     .background(
       Color.tidexBlue.opacity(isHighlighted ? 0.15 : 0)
         .animation(
@@ -76,6 +156,11 @@ struct FriendRow: View {
       .environment(\.layoutDirection, nameLayoutDirection)
 
       Spacer(minLength: 8)
+
+      Image(systemName: "ellipsis.circle")
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
     }
     .padding(.vertical, Spacing.xxs)
     .contentShape(Rectangle())
@@ -85,12 +170,19 @@ struct FriendRow: View {
 
   @ViewBuilder
   private var subtitleView: some View {
+    Text(subtitleText)
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexTextMuted)
+      .lineLimit(2)
+      .multilineTextAlignment(.leading)
+  }
+
+  private var subtitleText: String {
     if let contactInfo = friend.contactInfo {
-      Text(contactInfo)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
-        .lineLimit(1)
+      return "\(sectionType.relationshipStatus) - \(contactInfo)"
     }
+
+    return sectionType.relationshipStatus
   }
 
   // MARK: - Avatar
@@ -151,9 +243,8 @@ struct FriendRow: View {
 
   @ViewBuilder
   private var sharingSection: some View {
-    switch sectionType {
-    case .mutual, .outgoing:
-      Section {
+    Section(String(localized: .sharingMenuSectionSharing)) {
+      if sectionType == .mutual || sectionType == .outgoing {
         Toggle(
           String(localized: .sharingMenuShowThemMyEarnings(friend.firstNameOnly)),
           isOn: .init(
@@ -163,8 +254,8 @@ struct FriendRow: View {
         )
         .disabled(areServerActionsUnavailable)
       }
-    case .incoming:
-      Section {
+
+      if sectionType == .incoming {
         Button {
           onShareBack()
         } label: {
@@ -172,38 +263,47 @@ struct FriendRow: View {
         }
         .disabled(areServerActionsUnavailable)
       }
+
+      ForEach(FriendSharingRemovalAction.availableActions(for: sectionType), id: \.self) {
+        removalAction in
+        Button(role: .destructive) {
+          onRemove(removalAction)
+        } label: {
+          Label(removalAction.title, systemImage: removalAction.systemImage)
+        }
+        .disabled(areServerActionsUnavailable)
+      }
     }
   }
 
-  // MARK: - Actions Section
+  // MARK: - Visibility Section
 
   @ViewBuilder
-  private var actionsSection: some View {
-    Section {
-      if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
-        Button {
-          onToggleHidden()
-        } label: {
-          Label(
-            String(
-              localized: isHiddenInFriendsTab ? .sharingMenuShowShifts : .sharingMenuHideShifts),
-            systemImage: isHiddenInFriendsTab ? "eye" : "eye.slash"
-          )
-        }
-        .disabled(isHideActionDisabled)
+  private var visibilitySection: some View {
+    Section(String(localized: .sharingMenuSectionVisibility)) {
+      Button {
+        onToggleHidden()
+      } label: {
+        Label(
+          String(
+            localized: isHiddenInFriendsTab
+              ? .sharingActionShowInFriendsList : .sharingActionHideFromFriendsList),
+          systemImage: isHiddenInFriendsTab ? "eye" : "eye.slash"
+        )
       }
+      .disabled(isHideActionDisabled)
+    }
+  }
 
+  // MARK: - Safety Section
+
+  @ViewBuilder
+  private var safetySection: some View {
+    Section(String(localized: .sharingMenuSectionSafety)) {
       Button(role: .destructive) {
         onBlock()
       } label: {
         Label(String(localized: .friendsChatBlockUser), systemImage: "hand.raised.fill")
-      }
-      .disabled(areServerActionsUnavailable)
-
-      Button(role: .destructive) {
-        onRemove()
-      } label: {
-        Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
       }
       .disabled(areServerActionsUnavailable)
     }
@@ -245,7 +345,7 @@ struct FriendRow: View {
         onToggleOwnerMuted: {},
         onToggleHidden: {},
         onBlock: {},
-        onRemove: {}
+        onRemove: { _ in }
       )
     }
 
@@ -275,7 +375,7 @@ struct FriendRow: View {
         onToggleOwnerMuted: {},
         onToggleHidden: {},
         onBlock: {},
-        onRemove: {}
+        onRemove: { _ in }
       )
     }
 
@@ -307,7 +407,7 @@ struct FriendRow: View {
         onToggleOwnerMuted: {},
         onToggleHidden: {},
         onBlock: {},
-        onRemove: {}
+        onRemove: { _ in }
       )
     }
   }

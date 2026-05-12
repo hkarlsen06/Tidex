@@ -15,6 +15,7 @@ struct AddFriendForm: View {
   let canAdd: Bool
   let isOfflineUnavailable: Bool
   let capacityDisplay: String
+  let shouldShowCapacity: Bool
   let onAdd: () -> Void
   let onCancel: () -> Void
 
@@ -34,15 +35,17 @@ struct AddFriendForm: View {
         if !isExpanded {
           // Capacity count to the left of the plus button
           HStack(spacing: Spacing.xs) {
-            HStack(spacing: Spacing.xxs) {
-              Text(capacityDisplay)
-                .font(.tidexFootnoteMedium)
-                .foregroundColor(canAdd ? .tidexTextMuted : .tidexWarning)
+            if shouldShowCapacity {
+              HStack(spacing: Spacing.xxs) {
+                Text(capacityDisplay)
+                  .font(.tidexFootnoteMedium)
+                  .foregroundColor(canAdd ? .tidexTextMuted : .tidexWarning)
 
-              if !canAdd {
-                Image(systemName: "exclamationmark.circle.fill")
-                  .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexWarning)
+                if !canAdd {
+                  Image(systemName: "exclamationmark.circle.fill")
+                    .font(.tidexCaptionRegular)
+                    .foregroundColor(.tidexWarning)
+                }
               }
             }
 
@@ -204,6 +207,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       canAdd: true,
       isOfflineUnavailable: false,
       capacityDisplay: "2/5 delinger",
+      shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
     )
@@ -218,6 +222,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       canAdd: true,
       isOfflineUnavailable: false,
       capacityDisplay: "2/5 delinger",
+      shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
     )
@@ -232,6 +237,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       canAdd: true,
       isOfflineUnavailable: false,
       capacityDisplay: "2/5 delinger",
+      shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
     )
@@ -246,6 +252,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       canAdd: false,
       isOfflineUnavailable: false,
       capacityDisplay: "5/5 delinger",
+      shouldShowCapacity: true,
       onAdd: {},
       onCancel: {}
     )

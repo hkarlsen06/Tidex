@@ -87,6 +87,12 @@ final class ManageSharingViewModel: ObservableObject {
     "\(capacity.currentCount)/\(capacity.limit)"
   }
 
+  /// Avoid showing quota chrome until it is useful.
+  var shouldShowCapacity: Bool {
+    guard capacity.limit > 0 else { return !capacity.canAdd }
+    return !capacity.canAdd || Double(capacity.currentCount) / Double(capacity.limit) >= 0.8
+  }
+
   // MARK: - Initialization
 
   init(

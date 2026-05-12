@@ -14,12 +14,7 @@ struct FriendProfileView: View {
 
   @State private var showManageSheet = false
   @State private var friendToRemove: Friend?
-  @State private var removeAction: RemoveAction?
-
-  enum RemoveAction {
-    case removeShare
-    case removeSharer
-  }
+  @State private var removeAction: FriendSharingRemovalAction?
 
   private var friend: Friend? {
     viewModel.friends.first { $0.id == sharedUser.id }
@@ -74,13 +69,13 @@ struct FriendProfileView: View {
       ),
       titleVisibility: .visible
     ) {
-      Button(String(localized: .sharingRemove), role: .destructive) {
+      Button(removeButtonTitle, role: .destructive) {
         if let friend = friendToRemove, let action = removeAction {
           Task {
             switch action {
-            case .removeShare:
+            case .stopSharingMyShifts:
               await viewModel.removeShare(for: friend)
-            case .removeSharer:
+            case .stopSeeingTheirShifts:
               await viewModel.removeSharer(for: friend)
             }
             onFriendRemoved?()
@@ -94,6 +89,8 @@ struct FriendProfileView: View {
         friendToRemove = nil
         removeAction = nil
       }
+    } message: {
+      Text(confirmationMessage)
     }
   }
 
@@ -235,11 +232,14 @@ struct FriendProfileView: View {
         }
       }
 
-      Button(role: .destructive) {
-        friendToRemove = friend
-        removeAction = sectionType == .incoming ? .removeSharer : .removeShare
-      } label: {
-        Label(String(localized: .sharingSwipeRemove), systemImage: "trash")
+      ForEach(FriendSharingRemovalAction.availableActions(for: sectionType), id: \.self) {
+        removalAction in
+        Button(role: .destructive) {
+          friendToRemove = friend
+          removeAction = removalAction
+        } label: {
+          Label(removalAction.title, systemImage: removalAction.systemImage)
+        }
       }
     }
   }
@@ -267,12 +267,25 @@ struct FriendProfileView: View {
 
   private var confirmationTitle: String {
     guard let friend = friendToRemove, let action = removeAction else { return "" }
-    switch action {
-    case .removeShare:
-      return String(localized: .sharingStopSharingWith(friend.displayName))
-    case .removeSharer:
-      return String(localized: .sharingRemoveFromList(friend.displayName))
-    }
+    return action.confirmationTitle(friendName: friend.displayName)
+  }
+
+  private var confirmationMessage: String {
+    guard let friend = friendToRemove, let action = removeAction else { return "" }
+    return action.confirmationMessage(
+      friendName: friend.displayName,
+      sectionType: sectionType(for: friend)
+    )
+  }
+
+  private var removeButtonTitle: String {
+    removeAction?.title ?? ""
+  }
+
+  private func sectionType(for friend: Friend) -> FriendSectionType {
+    if friend.isMutual { return .mutual }
+    if friend.isOutgoingOnly { return .outgoing }
+    return .incoming
   }
 }
 
