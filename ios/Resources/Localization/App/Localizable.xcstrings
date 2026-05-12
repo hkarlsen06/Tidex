@@ -325290,6 +325290,12 @@
             "value" : "Du stopper med at se de vagter, %@ deler. De bliver fjernet fra denne liste."
           }
         },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du wirst %@'s geteilte Schichten nicht mehr sehen. Sie werden aus dieser Liste entfernt."
+          }
+        },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
@@ -325563,6 +325569,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du stopper med at se de vagter, %@ deler. De kan stadig se vagter, du deler med dem."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du wirst %@'s geteilte Schichten nicht mehr sehen. Deine mit ihnen geteilten Schichten können sie weiterhin sehen."
           }
         },
         "el" : {
@@ -326121,6 +326133,12 @@
             "value" : "Du stopper med at dele dine vagter med %@. Du kan stadig se vagter, de deler med dig."
           }
         },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du wirst deine Schichten nicht mehr mit %@ teilen. Ihre mit dir geteilten Schichten wirst du weiterhin sehen."
+          }
+        },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
@@ -326394,6 +326412,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Du stopper med at dele dine vagter med %@. De bliver fjernet fra denne liste."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Du wirst deine Schichten nicht mehr mit %@ teilen. Sie werden aus dieser Liste entfernt."
           }
         },
         "el" : {
