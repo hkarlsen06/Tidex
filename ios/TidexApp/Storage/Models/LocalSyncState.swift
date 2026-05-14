@@ -62,6 +62,12 @@ final class LocalSyncState {
   /// Tie-breaker ID at the last synced updated_at for wage_snapshots
   var lastWageSnapshotsUpdatedAtTieId: String?
 
+  /// Last synced updated_at for payroll_adjustments table
+  var lastPayrollAdjustmentsUpdatedAt: Date?
+
+  /// Tie-breaker ID at the last synced updated_at for payroll_adjustments
+  var lastPayrollAdjustmentsUpdatedAtTieId: String?
+
   /// Last synced updated_at for user_settings table
   var lastUserSettingsUpdatedAt: Date?
 
@@ -106,6 +112,8 @@ final class LocalSyncState {
     lastRecurringShiftsUpdatedAtTieId: String? = nil,
     lastWageSnapshotsUpdatedAt: Date? = nil,
     lastWageSnapshotsUpdatedAtTieId: String? = nil,
+    lastPayrollAdjustmentsUpdatedAt: Date? = nil,
+    lastPayrollAdjustmentsUpdatedAtTieId: String? = nil,
     lastUserSettingsUpdatedAt: Date? = nil,
     lastUserSettingsUpdatedAtTieId: String? = nil,
     lastNotificationPreferencesUpdatedAt: Date? = nil,
@@ -129,6 +137,8 @@ final class LocalSyncState {
     self.lastRecurringShiftsUpdatedAtTieId = lastRecurringShiftsUpdatedAtTieId
     self.lastWageSnapshotsUpdatedAt = lastWageSnapshotsUpdatedAt
     self.lastWageSnapshotsUpdatedAtTieId = lastWageSnapshotsUpdatedAtTieId
+    self.lastPayrollAdjustmentsUpdatedAt = lastPayrollAdjustmentsUpdatedAt
+    self.lastPayrollAdjustmentsUpdatedAtTieId = lastPayrollAdjustmentsUpdatedAtTieId
     self.lastUserSettingsUpdatedAt = lastUserSettingsUpdatedAt
     self.lastUserSettingsUpdatedAtTieId = lastUserSettingsUpdatedAtTieId
     self.lastNotificationPreferencesUpdatedAt = lastNotificationPreferencesUpdatedAt
@@ -167,6 +177,10 @@ final class LocalSyncState {
     case .wageSnapshots:
       return SyncCursor(
         updatedAt: lastWageSnapshotsUpdatedAt, tieId: lastWageSnapshotsUpdatedAtTieId ?? "")
+    case .payrollAdjustments:
+      return SyncCursor(
+        updatedAt: lastPayrollAdjustmentsUpdatedAt,
+        tieId: lastPayrollAdjustmentsUpdatedAtTieId ?? "")
     case .userSettings:
       return SyncCursor(
         updatedAt: lastUserSettingsUpdatedAt, tieId: lastUserSettingsUpdatedAtTieId ?? "")
@@ -195,6 +209,9 @@ final class LocalSyncState {
     case .wageSnapshots:
       lastWageSnapshotsUpdatedAt = updatedAt
       lastWageSnapshotsUpdatedAtTieId = tieId
+    case .payrollAdjustments:
+      lastPayrollAdjustmentsUpdatedAt = updatedAt
+      lastPayrollAdjustmentsUpdatedAtTieId = tieId
     case .userSettings:
       lastUserSettingsUpdatedAt = updatedAt
       lastUserSettingsUpdatedAtTieId = tieId
@@ -219,6 +236,8 @@ final class LocalSyncState {
       return lastRevisionRecurringShifts
     case .wageSnapshots:
       return lastRevisionWageSnapshots
+    case .payrollAdjustments:
+      return 0
     case .userSettings:
       return lastRevisionUserSettings
     case .notificationPreferences:
@@ -239,6 +258,8 @@ final class LocalSyncState {
       lastRevisionRecurringShifts = revision
     case .wageSnapshots:
       lastRevisionWageSnapshots = revision
+    case .payrollAdjustments:
+      break
     case .userSettings:
       lastRevisionUserSettings = revision
     case .notificationPreferences:
@@ -276,6 +297,8 @@ final class LocalSyncState {
     lastRecurringShiftsUpdatedAtTieId = nil
     lastWageSnapshotsUpdatedAt = nil
     lastWageSnapshotsUpdatedAtTieId = nil
+    lastPayrollAdjustmentsUpdatedAt = nil
+    lastPayrollAdjustmentsUpdatedAtTieId = nil
     lastUserSettingsUpdatedAt = nil
     lastUserSettingsUpdatedAtTieId = nil
     lastNotificationPreferencesUpdatedAt = nil
@@ -325,6 +348,7 @@ enum SyncTable: String, CaseIterable {
   case events = "events"
   case recurringShifts = "recurring_shifts"
   case wageSnapshots = "wage_snapshots"
+  case payrollAdjustments = "payroll_adjustments"
   case userSettings = "user_settings"
   case notificationPreferences = "notification_preferences"
 
@@ -341,6 +365,7 @@ enum SyncTable: String, CaseIterable {
     case .events: return "Events"
     case .recurringShifts: return "Recurring Shifts"
     case .wageSnapshots: return "Wage Snapshots"
+    case .payrollAdjustments: return "Payroll Adjustments"
     case .userSettings: return "User Settings"
     case .notificationPreferences: return "Notification Preferences"
     }

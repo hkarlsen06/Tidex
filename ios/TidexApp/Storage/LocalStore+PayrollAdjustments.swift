@@ -1,0 +1,215 @@
+import Foundation
+import SwiftData
+
+extension LocalStoreActor {
+  private var payrollAdjustmentDateFormatter: DateFormatter {
+    FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
+  }
+
+  func getPayrollAdjustment(id: String) throws -> LocalPayrollAdjustment? {
+    let descriptor = FetchDescriptor<LocalPayrollAdjustment>(
+      predicate: #Predicate { $0.id == id }
+    )
+    return try modelContext.fetch(descriptor).first
+  }
+
+  func getAllPayrollAdjustments(userId: String) throws -> [LocalPayrollAdjustment] {
+    let descriptor = FetchDescriptor<LocalPayrollAdjustment>(
+      predicate: #Predicate { $0.userId == userId },
+      sortBy: [SortDescriptor(\LocalPayrollAdjustment.payoutDate)]
+    )
+    return try modelContext.fetch(descriptor)
+  }
+
+  func getDirtyPayrollAdjustments(userId: String) throws -> [LocalPayrollAdjustment] {
+    let descriptor = FetchDescriptor<LocalPayrollAdjustment>(
+      predicate: #Predicate { adjustment in
+        adjustment.userId == userId
+          && (adjustment.syncStatusRaw == "dirty" || adjustment.syncStatusRaw == "pendingDelete")
+      }
+    )
+    return try modelContext.fetch(descriptor)
+  }
+
+  func upsertPayrollAdjustment(_ adjustment: LocalPayrollAdjustment) throws {
+    let adjustmentId = adjustment.id
+    let descriptor = FetchDescriptor<LocalPayrollAdjustment>(
+      predicate: #Predicate { $0.id == adjustmentId }
+    )
+
+    if let existing = try modelContext.fetch(descriptor).first {
+      existing.userId = adjustment.userId
+      existing.jobId = adjustment.jobId
+      existing.amount = adjustment.amount
+      existing.currency = adjustment.currency
+      existing.categoryRaw = adjustment.categoryRaw
+      existing.taxTreatmentRaw = adjustment.taxTreatmentRaw
+      existing.title = adjustment.title
+      existing.note = adjustment.note
+      existing.earnedFromDate = adjustment.earnedFromDate
+      existing.earnedToDate = adjustment.earnedToDate
+      existing.payoutDate = adjustment.payoutDate
+      existing.serverUpdatedAt = adjustment.serverUpdatedAt
+      existing.serverRevision = adjustment.serverRevision
+      existing.serverDeletedAt = adjustment.serverDeletedAt
+      existing.syncStatusRaw = adjustment.syncStatusRaw
+      existing.dirtyFields = adjustment.dirtyFields
+      existing.lastSyncedSnapshot = adjustment.lastSyncedSnapshot
+      existing.localUpdatedAt = adjustment.localUpdatedAt
+      existing.conflictServerSnapshot = adjustment.conflictServerSnapshot
+    } else {
+      modelContext.insert(adjustment)
+    }
+  }
+
+  // swiftlint:disable:next function_parameter_count
+  func createPayrollAdjustment(
+    userId: String,
+    jobId: String?,
+    amount: Double,
+    currency: String,
+    category: PayrollAdjustmentCategory,
+    taxTreatment: PayrollAdjustmentTaxTreatment,
+    title: String,
+    note: String?,
+    earnedFromDate: Date?,
+    earnedToDate: Date?,
+    payoutDate: Date
+  ) throws -> PayrollAdjustment {
+    let id = UUID().lowercasedString
+    let now = Date()
+    let snapshot = PayrollAdjustmentServerSnapshot(
+      jobId: jobId,
+      amount: amount,
+      currency: currency,
+      category: category,
+      taxTreatment: taxTreatment,
+      title: title,
+      note: note,
+      earnedFromDate: earnedFromDate.map { payrollAdjustmentDateFormatter.string(from: $0) },
+      earnedToDate: earnedToDate.map { payrollAdjustmentDateFormatter.string(from: $0) },
+      payoutDate: payrollAdjustmentDateFormatter.string(from: payoutDate),
+      updatedAt: now,
+      revision: 0,
+      deletedAt: nil
+    )
+    let dirtyFields =
+      (try? canonicalJSONEncoder.encode(PayrollAdjustmentField.allCases.map(\.rawValue)))
+      ?? Data()
+    let local = LocalPayrollAdjustment(
+      id: id,
+      userId: userId,
+      jobId: jobId,
+      amount: amount,
+      currency: currency,
+      category: category,
+      taxTreatment: taxTreatment,
+      title: title,
+      note: note,
+      earnedFromDate: earnedFromDate,
+      earnedToDate: earnedToDate,
+      payoutDate: payoutDate,
+      serverUpdatedAt: now,
+      serverRevision: 0,
+      syncStatus: .dirty,
+      dirtyFields: dirtyFields,
+      lastSyncedSnapshot: snapshot.encoded(),
+      localUpdatedAt: now
+    )
+
+    modelContext.insert(local)
+    try modelContext.save()
+    return local.toPayrollAdjustment()
+  }
+
+  func markPayrollAdjustmentPendingDelete(id: String) throws {
+    guard let existing = try getPayrollAdjustment(id: id) else {
+      throw LocalStoreWriteError.notFound
+    }
+    if existing.serverRevision == 0 {
+      modelContext.delete(existing)
+      try modelContext.save()
+      return
+    }
+    existing.syncStatus = .pendingDelete
+    existing.localUpdatedAt = Date()
+    try modelContext.save()
+  }
+
+  func updatePayrollAdjustmentFromServer(
+    id: String,
+    serverRow: SyncPayrollAdjustmentRow,
+    serverUpdatedAt: Date,
+    serverDeletedAt: Date?,
+    snapshot: PayrollAdjustmentServerSnapshot
+  ) {
+    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    let formatter = payrollAdjustmentDateFormatter
+    existing.jobId = serverRow.job_id
+    existing.amount = serverRow.amount
+    existing.currency = serverRow.currency
+    existing.category = serverRow.category
+    existing.taxTreatment = serverRow.tax_treatment
+    existing.title = serverRow.title
+    existing.note = serverRow.note
+    existing.earnedFromDate = serverRow.earned_from_date.flatMap { formatter.date(from: $0) }
+    existing.earnedToDate = serverRow.earned_to_date.flatMap { formatter.date(from: $0) }
+    existing.payoutDate = formatter.date(from: serverRow.payout_date) ?? existing.payoutDate
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRow.revision
+    existing.serverDeletedAt = serverDeletedAt
+    existing.lastSyncedSnapshot = snapshot.encoded()
+    existing.localUpdatedAt = Date()
+  }
+
+  func markPayrollAdjustmentPushed(
+    id: String,
+    serverRow: SyncPayrollAdjustmentRow,
+    serverUpdatedAt: Date,
+    serverDeletedAt: Date?,
+    snapshot: PayrollAdjustmentServerSnapshot
+  ) {
+    updatePayrollAdjustmentFromServer(
+      id: id,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      snapshot: snapshot
+    )
+    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.conflictServerSnapshot = nil
+  }
+
+  func markPayrollAdjustmentClean(id: String) {
+    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.conflictServerSnapshot = nil
+  }
+
+  func markPayrollAdjustmentDeleted(
+    id: String,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    serverDeletedAt: Date?
+  ) {
+    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    existing.serverUpdatedAt = serverUpdatedAt
+    existing.serverRevision = serverRevision
+    existing.serverDeletedAt = serverDeletedAt
+    existing.syncStatus = .clean
+    existing.dirtyFieldKeys = []
+    existing.conflictServerSnapshot = nil
+  }
+
+  func markPayrollAdjustmentConflict(
+    id: String,
+    serverSnapshot: PayrollAdjustmentServerSnapshot?
+  ) {
+    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    existing.syncStatus = .conflict
+    existing.conflictServerSnapshot = serverSnapshot?.encoded()
+  }
+}

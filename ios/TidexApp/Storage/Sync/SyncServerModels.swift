@@ -176,6 +176,47 @@ struct SyncWageSnapshotRow: Codable {
   }
 }
 
+/// Extended payroll adjustment row with sync metadata fields
+struct SyncPayrollAdjustmentRow: Codable {
+  let id: String
+  let user_id: String
+  let job_id: String?
+  let amount: Double
+  let currency: String
+  let category: PayrollAdjustmentCategory
+  let tax_treatment: PayrollAdjustmentTaxTreatment
+  let title: String
+  let note: String?
+  let earned_from_date: String?
+  let earned_to_date: String?
+  let payout_date: String
+  let created_at: String?
+  let updated_at: String
+  let revision: Int64
+  let deleted_at: String?
+
+  func toPayrollAdjustment() -> PayrollAdjustment {
+    PayrollAdjustment(
+      id: id,
+      user_id: user_id,
+      job_id: job_id,
+      amount: amount,
+      currency: currency,
+      category: category,
+      tax_treatment: tax_treatment,
+      title: title,
+      note: note,
+      earned_from_date: earned_from_date,
+      earned_to_date: earned_to_date,
+      payout_date: payout_date,
+      created_at: created_at,
+      updated_at: updated_at,
+      revision: revision,
+      deleted_at: deleted_at
+    )
+  }
+}
+
 /// Extended jobs row with sync metadata fields
 struct SyncJobRow: Codable {
   let id: String

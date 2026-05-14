@@ -549,6 +549,8 @@ final class SyncCoordinator: ObservableObject {
         result = try await pullRecurringShiftsPage(userId: userId, cursor: cursor)
       case .wageSnapshots:
         result = try await pullWageSnapshotsPage(userId: userId, cursor: cursor)
+      case .payrollAdjustments:
+        result = try await pullPayrollAdjustmentsPage(userId: userId, cursor: cursor)
       case .userSettings:
         result = try await pullUserSettingsPage(userId: userId, cursor: cursor)
       case .notificationPreferences:
@@ -1797,6 +1799,7 @@ final class SyncCoordinator: ObservableObject {
       fromDate: fromDate,
       hourlyWage: serverRow.hourly_wage,
       wageLevel: serverRow.wage_level,
+      tariffTypeId: serverRow.tariff_type_id,
       supplements: (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
       taxEnabled: serverRow.tax_enabled,
       taxPercentage: serverRow.tax_percentage,
@@ -1819,6 +1822,331 @@ final class SyncCoordinator: ObservableObject {
 
   private func convertToWageSnapshotField(_ field: WageSnapshotField) -> WageSnapshotField {
     field
+  }
+
+  // MARK: - Payroll Adjustments Push
+
+  private func pushPayrollAdjustments(userId: String) async throws -> TablePushResult {
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    let dirtyAdjustments = try await storeActor.getDirtyPayrollAdjustments(userId: userId)
+
+    if dirtyAdjustments.isEmpty {
+      return TablePushResult(
+        table: .payrollAdjustments,
+        rowsPushed: 0,
+        newConflicts: 0,
+        rebased: 0
+      )
+    }
+
+    var rowsPushed = 0
+    var newConflicts = 0
+
+    for adjustment in dirtyAdjustments {
+      let result = try await pushPayrollAdjustment(
+        adjustment,
+        userId: userId,
+        storeActor: storeActor
+      )
+      switch result {
+      case .success, .deleted:
+        rowsPushed += 1
+      case .conflict:
+        newConflicts += 1
+      case .rebased:
+        rowsPushed += 1
+      case .noChange:
+        break
+      }
+    }
+
+    try await storeActor.save()
+    return TablePushResult(
+      table: .payrollAdjustments,
+      rowsPushed: rowsPushed,
+      newConflicts: newConflicts,
+      rebased: 0
+    )
+  }
+
+  private func pushPayrollAdjustment(
+    _ adjustment: LocalPayrollAdjustment,
+    userId: String,
+    storeActor: LocalStoreActor
+  ) async throws -> PushResult {
+    if adjustment.syncStatus == .pendingDelete {
+      return try await pushPayrollAdjustmentDelete(
+        adjustment,
+        userId: userId,
+        storeActor: storeActor
+      )
+    }
+
+    if adjustment.dirtyFieldKeys.isEmpty {
+      await storeActor.markPayrollAdjustmentClean(id: adjustment.id)
+      return .noChange
+    }
+
+    if adjustment.serverRevision == 0 {
+      return try await insertPayrollAdjustment(adjustment, userId: userId, storeActor: storeActor)
+    }
+
+    let updateData = payrollAdjustmentPayload(adjustment, includeIdentity: false, userId: userId)
+    try requireNonEmptyUpdate(updateData, table: .payrollAdjustments, id: adjustment.id)
+
+    let returnedRows: [SyncPayrollAdjustmentRow] =
+      try await supabase
+      .from("payroll_adjustments")
+      .update(updateData)
+      .eq("id", value: adjustment.id)
+      .eq("user_id", value: userId)
+      .eq("revision", value: Int(adjustment.serverRevision))
+      .is("deleted_at", value: nil)
+      .select()
+      .execute()
+      .value
+
+    guard let returnedRow = returnedRows.first else {
+      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
+      return .conflict
+    }
+
+    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor)
+    return .success
+  }
+
+  private func insertPayrollAdjustment(
+    _ adjustment: LocalPayrollAdjustment,
+    userId: String,
+    storeActor: LocalStoreActor
+  ) async throws -> PushResult {
+    let insertData = payrollAdjustmentPayload(adjustment, includeIdentity: true, userId: userId)
+    let returnedRows: [SyncPayrollAdjustmentRow] =
+      try await supabase
+      .from("payroll_adjustments")
+      .insert(insertData)
+      .select()
+      .execute()
+      .value
+
+    guard let returnedRow = returnedRows.first else {
+      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
+      return .conflict
+    }
+
+    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor)
+    return .success
+  }
+
+  private func pushPayrollAdjustmentDelete(
+    _ adjustment: LocalPayrollAdjustment,
+    userId: String,
+    storeActor: LocalStoreActor
+  ) async throws -> PushResult {
+    let returnedRows: [SyncPayrollAdjustmentRow] =
+      try await supabase
+      .from("payroll_adjustments")
+      .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
+      .eq("id", value: adjustment.id)
+      .eq("user_id", value: userId)
+      .eq("revision", value: Int(adjustment.serverRevision))
+      .is("deleted_at", value: nil)
+      .select()
+      .execute()
+      .value
+
+    guard let returnedRow = returnedRows.first else {
+      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
+      return .conflict
+    }
+
+    let serverUpdatedAt = try requireISO8601(
+      returnedRow.updated_at, table: .payrollAdjustments, id: returnedRow.id)
+    let serverDeletedAt = returnedRow.deleted_at.flatMap { parseISO8601($0) }
+    await storeActor.markPayrollAdjustmentDeleted(
+      id: returnedRow.id,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: returnedRow.revision,
+      serverDeletedAt: serverDeletedAt
+    )
+    return .deleted
+  }
+
+  private func payrollAdjustmentPayload(
+    _ adjustment: LocalPayrollAdjustment,
+    includeIdentity: Bool,
+    userId: String
+  ) -> [String: AnyJSON] {
+    var payload: [String: AnyJSON] = [
+      "amount": .double(adjustment.amount),
+      "currency": .string(adjustment.currency),
+      "category": .string(adjustment.category.rawValue),
+      "tax_treatment": .string(adjustment.taxTreatment.rawValue),
+      "title": .string(adjustment.title),
+      "payout_date": .string(adjustment.payoutDateString),
+    ]
+
+    if includeIdentity {
+      payload["id"] = .string(adjustment.id)
+      payload["user_id"] = .string(userId)
+    }
+    payload["job_id"] = adjustment.jobId.map(AnyJSON.string) ?? .null
+    payload["note"] = adjustment.note.map(AnyJSON.string) ?? .null
+    payload["earned_from_date"] = adjustment.earnedFromDateString.map(AnyJSON.string) ?? .null
+    payload["earned_to_date"] = adjustment.earnedToDateString.map(AnyJSON.string) ?? .null
+
+    return payload
+  }
+
+  private func markPayrollAdjustmentPushed(
+    _ row: SyncPayrollAdjustmentRow,
+    storeActor: LocalStoreActor
+  ) async throws {
+    let serverUpdatedAt = try requireISO8601(
+      row.updated_at, table: .payrollAdjustments, id: row.id)
+    let serverDeletedAt = row.deleted_at.flatMap { parseISO8601($0) }
+    let snapshot = PayrollAdjustmentServerSnapshot.from(
+      row: row,
+      updatedAt: serverUpdatedAt,
+      deletedAt: serverDeletedAt
+    )
+    await storeActor.markPayrollAdjustmentPushed(
+      id: row.id,
+      serverRow: row,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      snapshot: snapshot
+    )
+  }
+
+  // MARK: - Payroll Adjustments Pull
+
+  private func pullPayrollAdjustmentsPage(userId: String, cursor: SyncCursor) async throws
+    -> PagePullResult
+  {
+    let rows: [SyncPayrollAdjustmentRow]
+
+    if let cursorUpdatedAt = cursor.updatedAt {
+      let cursorTimestamp = formatISO8601(cursorUpdatedAt)
+      let cursorTieId = cursor.tieId
+      rows =
+        try await supabase
+        .from("payroll_adjustments")
+        .select()
+        .eq("user_id", value: userId)
+        .or(
+          "updated_at.gt.\(cursorTimestamp),and(updated_at.eq.\(cursorTimestamp),id.gt.\(cursorTieId))"
+        )
+        .order("updated_at", ascending: true)
+        .order("id", ascending: true)
+        .limit(pageSize)
+        .execute()
+        .value
+    } else {
+      rows =
+        try await supabase
+        .from("payroll_adjustments")
+        .select()
+        .eq("user_id", value: userId)
+        .order("updated_at", ascending: true)
+        .order("id", ascending: true)
+        .limit(pageSize)
+        .execute()
+        .value
+    }
+
+    if rows.isEmpty {
+      return PagePullResult(
+        rowsProcessed: 0,
+        lastUpdatedAt: cursor.updatedAt,
+        lastTieId: cursor.tieId,
+        maxRevision: 0,
+        newConflicts: 0,
+        autoMerged: 0,
+        hasMore: false
+      )
+    }
+
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    var newConflicts = 0
+    var maxRevision: Int64 = 0
+
+    for row in rows {
+      let result = try await applyPayrollAdjustmentRow(row, storeActor: storeActor)
+      if result == .conflict { newConflicts += 1 }
+      if row.revision > maxRevision { maxRevision = row.revision }
+    }
+
+    try await storeActor.save()
+
+    guard let lastRow = rows.last else {
+      return PagePullResult(
+        rowsProcessed: 0,
+        lastUpdatedAt: Date(),
+        lastTieId: "",
+        maxRevision: maxRevision,
+        newConflicts: newConflicts,
+        autoMerged: 0,
+        hasMore: false
+      )
+    }
+    let lastUpdatedAt = try requireISO8601(
+      lastRow.updated_at, table: .payrollAdjustments, id: lastRow.id)
+
+    return PagePullResult(
+      rowsProcessed: rows.count,
+      lastUpdatedAt: lastUpdatedAt,
+      lastTieId: lastRow.id,
+      maxRevision: maxRevision,
+      newConflicts: newConflicts,
+      autoMerged: 0,
+      hasMore: rows.count == pageSize
+    )
+  }
+
+  private func applyPayrollAdjustmentRow(
+    _ serverRow: SyncPayrollAdjustmentRow,
+    storeActor: LocalStoreActor
+  ) async throws -> ApplyResult {
+    let serverUpdatedAt = try requireISO8601(
+      serverRow.updated_at, table: .payrollAdjustments, id: serverRow.id)
+    let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+    let serverSnapshot = PayrollAdjustmentServerSnapshot.from(
+      row: serverRow,
+      updatedAt: serverUpdatedAt,
+      deletedAt: serverDeletedAt
+    )
+
+    if let existing = try await storeActor.getPayrollAdjustment(id: serverRow.id) {
+      switch existing.syncStatus {
+      case .clean:
+        await storeActor.updatePayrollAdjustmentFromServer(
+          id: serverRow.id,
+          serverRow: serverRow,
+          serverUpdatedAt: serverUpdatedAt,
+          serverDeletedAt: serverDeletedAt,
+          snapshot: serverSnapshot
+        )
+        return .updated
+      case .dirty, .pendingDelete:
+        if serverRow.revision == existing.serverRevision { return .noChange }
+        await storeActor.markPayrollAdjustmentConflict(
+          id: serverRow.id,
+          serverSnapshot: serverSnapshot
+        )
+        return .conflict
+      case .conflict:
+        await storeActor.markPayrollAdjustmentConflict(
+          id: serverRow.id,
+          serverSnapshot: serverSnapshot
+        )
+        return .noChange
+      }
+    }
+
+    let local = LocalPayrollAdjustment.from(serverRow: serverRow, serverUpdatedAt: serverUpdatedAt)
+    try await storeActor.upsertPayrollAdjustment(local)
+    return .inserted
   }
 
   // MARK: - User Settings Pull
@@ -2083,6 +2411,8 @@ final class SyncCoordinator: ObservableObject {
       return try await pushRecurringShifts(userId: userId)
     case .wageSnapshots:
       return try await pushWageSnapshots(userId: userId)
+    case .payrollAdjustments:
+      return try await pushPayrollAdjustments(userId: userId)
     case .userSettings:
       return try await pushUserSettings(userId: userId)
     case .notificationPreferences:
@@ -4059,6 +4389,13 @@ final class SyncCoordinator: ObservableObject {
         updateData["wage_level"] = .null
       }
     }
+    if dirtyFields.contains(.tariffTypeId) {
+      if let tariffTypeId = snapshot.tariffTypeId {
+        updateData["tariff_type_id"] = .string(tariffTypeId)
+      } else {
+        updateData["tariff_type_id"] = .null
+      }
+    }
     if dirtyFields.contains(.supplements) {
       let decoded = try requireAnyJSON(
         snapshot.supplements,
@@ -4269,6 +4606,9 @@ final class SyncCoordinator: ObservableObject {
     // wage_level
     if let level = snapshot.wageLevel {
       insertData["wage_level"] = .integer(level)
+    }
+    if let tariffTypeId = snapshot.tariffTypeId {
+      insertData["tariff_type_id"] = .string(tariffTypeId)
     }
 
     // supplements (required)

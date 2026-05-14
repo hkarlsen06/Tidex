@@ -65,6 +65,7 @@ final class LocalStore {
       LocalEvent.self,
       LocalRecurringShift.self,
       LocalWageSnapshot.self,
+      LocalPayrollAdjustment.self,
       LocalUserSettings.self,
       LocalNotificationPreferences.self,
       LocalSyncState.self,
@@ -171,6 +172,7 @@ actor LocalStoreActor {
       try modelContext.delete(model: LocalJob.self)
       try modelContext.delete(model: LocalRecurringShift.self)
       try modelContext.delete(model: LocalWageSnapshot.self)
+      try modelContext.delete(model: LocalPayrollAdjustment.self)
       try modelContext.delete(model: LocalUserSettings.self)
       try modelContext.delete(model: LocalNotificationPreferences.self)
       try modelContext.delete(model: LocalSyncState.self)
@@ -2008,6 +2010,8 @@ actor LocalStoreActor {
     jobId: String? = nil,
     hourlyWage: Double?,
     wageLevel: Int?,
+    tariffTypeId: String?,
+    updateTariffTypeId: Bool = false,
     supplements: SupplementRulesSnapshot?,
     taxEnabled: Bool?,
     taxPercentage: Double?,
@@ -2040,6 +2044,11 @@ actor LocalStoreActor {
     if let newLevel = wageLevel, newLevel != localSnapshot.wageLevel {
       localSnapshot.wageLevel = newLevel
       newDirtyFields.insert(.wageLevel)
+    }
+
+    if updateTariffTypeId && tariffTypeId != localSnapshot.tariffTypeId {
+      localSnapshot.tariffTypeId = tariffTypeId
+      newDirtyFields.insert(.tariffTypeId)
     }
 
     if let newSupplements = supplements {
