@@ -11,3 +11,4 @@ MARKETING_VERSION = 2.5.0
 // Placeholder — overridden at build time by BuildNumber.xcconfig (git-ignored).
 CURRENT_PROJECT_VERSION = 00000000.0000
 #include? "BuildNumber.xcconfig"
+ 
