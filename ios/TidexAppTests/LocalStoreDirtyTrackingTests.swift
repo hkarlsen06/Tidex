@@ -983,6 +983,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       jobId: nil,
       hourlyWage: 230,
       wageLevel: nil,
+      tariffTypeId: nil,
       supplements: nil,
       taxEnabled: nil,
       taxPercentage: nil,

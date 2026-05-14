@@ -602,6 +602,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
+  private let payrollAdjustmentsRepository: PayrollAdjustmentsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
   private let monthlyPayrollReadService: MonthlyPayrollReadService
   private let syncCoordinator: SyncCoordinator
@@ -613,6 +614,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let displayedMonthShifts: [ShiftWithComputations]
     let displayedMonthEvents: [EventRow]
     let previousMonthShifts: [ShiftWithComputations]
+    let previousPayrollAdjustments: [PayrollAdjustment]
+    let snapshots: [WageSnapshot]
     let settings: UserSettings
     let displayYM: (year: Int, month: Int)
     let previousYM: (year: Int, month: Int)
@@ -781,8 +784,34 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         earningsMonth: previousYM.month,
         now: now
       )
-      let taxEnabled = jobShifts.contains { $0.taxEnabled }
-      let tax = taxEnabled ? totals.gross - totals.net : nil
+      let jobAdjustments = previousPayrollAdjustments.filter { adjustment in
+        guard let adjustmentJobId = adjustment.job_id else {
+          return job.id == defaultJobId
+        }
+        return adjustmentJobId == job.id
+      }
+      let fallbackTaxSettings = payrollTaxSettings(
+        from: jobShifts,
+        fallbackDate: payoutDate.toISODateString(),
+        jobId: job.id
+      )
+      let adjustmentTotals = PayrollAdjustmentCalculator.totals(
+        adjustments: jobAdjustments,
+        taxSettings: { adjustment in
+          payrollTaxSettings(
+            for: adjustment,
+            fallback: fallbackTaxSettings,
+            jobId: job.id,
+            defaultJobId: defaultJobId
+          )
+        },
+        halfTaxMonth: halfTaxMonth,
+        payoutMonth: displayYM.month
+      )
+      let taxEnabled = jobShifts.contains { $0.taxEnabled } || adjustmentTotals.taxEnabled
+      let gross = totals.gross + adjustmentTotals.gross
+      let net = totals.net + adjustmentTotals.net
+      let tax = taxEnabled ? gross - net : nil
 
       return PayrollCardVariant(
         id: job.id,
@@ -790,8 +819,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         colorHex: job.color,
         currency: job.currency,
         payoutDate: payoutDate,
-        gross: totals.gross,
-        net: taxEnabled ? totals.net : nil,
+        gross: gross,
+        net: taxEnabled ? net : nil,
         tax: tax,
         taxEnabled: taxEnabled
       )
@@ -849,6 +878,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private var displayedMonthShifts: [ShiftWithComputations] = []
   private var displayedMonthEvents: [EventRow] = []
   private var previousMonthShifts: [ShiftWithComputations] = []
+  private var previousPayrollAdjustments: [PayrollAdjustment] = []
   private var settings: UserSettings?
   private var snapshots: [WageSnapshot] = []
   private var recurringShifts: [RecurringShiftRow] = []
@@ -887,6 +917,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
+    payrollAdjustmentsRepository: PayrollAdjustmentsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
     monthlyPayrollReadService: MonthlyPayrollReadService? = nil,
     syncCoordinator: SyncCoordinator? = nil,
@@ -900,6 +931,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
+    self.payrollAdjustmentsRepository =
+      payrollAdjustmentsRepository ?? PayrollAdjustmentsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
     self.monthlyPayrollReadService =
       monthlyPayrollReadService
@@ -1088,6 +1121,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       self.displayedMonthShifts = displayCache.shifts
       self.displayedMonthEvents = displayCache.events
       self.previousMonthShifts = previousCache.shifts
+      if let userId = cachedUserId {
+        self.previousPayrollAdjustments = fetchPayrollAdjustmentsForPayoutMonth(
+          userId: userId,
+          year: targetYear,
+          month: targetMonth
+        )
+      }
 
       // Update last accessed time for LRU tracking
       displayCache.lastAccessed = Date()
@@ -1097,20 +1137,26 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       if let currentSettings = settings {
         let capturedDisplay = displayCache.shifts
+        let capturedDisplayEvents = displayCache.events
         let capturedPrevious = previousCache.shifts
         let capturedCurrency = currentSettings.currency ?? "kr"
         let capturedJobs = displayJobs
+        let capturedAdjustments = previousPayrollAdjustments
+        let capturedSnapshots = snapshots
 
         Task.detached(priority: .userInitiated) {
           [
             displayYM = (year: targetYear, month: targetMonth), previousYM, currentSettings,
-            capturedCurrency, capturedJobs, capturedDisplay, capturedPrevious
+            capturedCurrency, capturedJobs, capturedDisplay, capturedDisplayEvents,
+            capturedPrevious, capturedAdjustments, capturedSnapshots
           ] in
           let data = Self.buildDashboardDataOffMain(
             .init(
               displayedMonthShifts: capturedDisplay,
-              displayedMonthEvents: displayCache.events,
+              displayedMonthEvents: capturedDisplayEvents,
               previousMonthShifts: capturedPrevious,
+              previousPayrollAdjustments: capturedAdjustments,
+              snapshots: capturedSnapshots,
               settings: currentSettings,
               displayYM: displayYM,
               previousYM: previousYM,
@@ -1345,6 +1391,125 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     return await (displayEvents, previousEvents)
   }
 
+  private func fetchPayrollAdjustmentsForPayoutMonth(
+    userId: String,
+    year: Int,
+    month: Int
+  ) -> [PayrollAdjustment] {
+    let start = Date.firstDayOfMonthDate(year: year, month: month)
+    let end =
+      Calendar(identifier: .gregorian).date(byAdding: .month, value: 1, to: start)
+      ?? Date.lastDayOfMonthDate(year: year, month: month)
+
+    return payrollAdjustmentsRepository.getAdjustments(
+      for: userId,
+      payoutStart: start,
+      payoutEnd: end
+    )
+  }
+
+  private func payrollTaxSettings(
+    from shifts: [ShiftWithComputations],
+    fallbackDate: String,
+    jobId: String?
+  ) -> PayoutTaxSettings {
+    Self.payrollTaxSettings(
+      from: shifts,
+      fallbackDate: fallbackDate,
+      snapshots: snapshots,
+      jobs: displayJobs,
+      jobId: jobId
+    )
+  }
+
+  private func payrollTaxSettings(
+    for adjustment: PayrollAdjustment,
+    fallback: PayoutTaxSettings,
+    jobId: String?,
+    defaultJobId: String?
+  ) -> PayoutTaxSettings {
+    Self.payrollTaxSettings(
+      for: adjustment,
+      fallback: fallback,
+      snapshots: snapshots,
+      jobs: displayJobs,
+      jobId: jobId,
+      defaultJobId: defaultJobId
+    )
+  }
+
+  nonisolated private static func payrollTaxSettings(
+    from shifts: [ShiftWithComputations],
+    fallbackDate: String,
+    snapshots: [WageSnapshot],
+    jobs: [Job],
+    jobId: String?
+  ) -> PayoutTaxSettings {
+    if let firstTaxedShift = shifts.first(where: { $0.taxEnabled }) {
+      return PayoutTaxSettings(
+        enabled: true,
+        percentage: firstTaxedShift.taxPercentage
+      )
+    }
+
+    let scopedSnapshots = payrollSnapshotsForJob(jobId: jobId, snapshots: snapshots, jobs: jobs)
+    let snapshot = SnapshotsService.snapshotForDate(fallbackDate, from: scopedSnapshots)
+    return PayoutTaxSettings(
+      enabled: snapshot?.effectiveTaxEnabled ?? false,
+      percentage: snapshot?.effectiveTaxPercentage ?? 0
+    )
+  }
+
+  nonisolated private static func payrollTaxSettings(
+    for adjustment: PayrollAdjustment,
+    fallback: PayoutTaxSettings,
+    snapshots: [WageSnapshot],
+    jobs: [Job],
+    jobId: String?,
+    defaultJobId: String?
+  ) -> PayoutTaxSettings {
+    let effectiveJobId = jobId ?? adjustment.job_id ?? defaultJobId
+    let scopedSnapshots = payrollSnapshotsForJob(
+      jobId: effectiveJobId,
+      snapshots: snapshots,
+      jobs: jobs
+    )
+    guard
+      let snapshot = SnapshotsService.snapshotForDate(adjustment.payout_date, from: scopedSnapshots)
+    else {
+      return fallback
+    }
+    return PayoutTaxSettings(
+      enabled: snapshot.effectiveTaxEnabled,
+      percentage: snapshot.effectiveTaxPercentage
+    )
+  }
+
+  nonisolated private static func payrollSnapshotsForJob(
+    jobId: String?,
+    snapshots: [WageSnapshot],
+    jobs: [Job]
+  ) -> [WageSnapshot] {
+    let snapshotsByJobId = Dictionary(grouping: snapshots, by: { $0.job_id })
+    let legacyNilJobSnapshots = snapshotsByJobId[nil] ?? []
+
+    guard let jobId else {
+      return legacyNilJobSnapshots.isEmpty ? snapshots : legacyNilJobSnapshots
+    }
+
+    if let scoped = snapshotsByJobId[jobId], !scoped.isEmpty {
+      return scoped
+    }
+
+    let defaultJobId = jobs.first(where: { $0.is_default })?.id
+    if let defaultJobId, let defaultScoped = snapshotsByJobId[defaultJobId], !defaultScoped.isEmpty
+    {
+      return defaultScoped
+    }
+
+    return legacyNilJobSnapshots.isEmpty ? snapshots : legacyNilJobSnapshots
+  }
+
   /// Prepare for reload by setting loading state synchronously
   /// Call this BEFORE starting a Task to reload, to prevent empty state flash
   /// This ensures the loading indicator shows immediately when sync completes
@@ -1524,11 +1689,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let fetchedPreviousShifts = fetchedShiftRows.previous
       let displayEvents = fetchedEvents.display
       let previousEvents = fetchedEvents.previous
+      let fetchedPayrollAdjustments = fetchPayrollAdjustmentsForPayoutMonth(
+        userId: userId,
+        year: displayYM.year,
+        month: displayYM.month
+      )
 
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
       let capturedCurrency = currentSettings.currency ?? "kr"
       let capturedJobs = displayJobs
+      let capturedPayrollAdjustments = fetchedPayrollAdjustments
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
@@ -1560,6 +1731,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             displayedMonthShifts: displayComputed,
             displayedMonthEvents: displayEvents,
             previousMonthShifts: previousComputed,
+            previousPayrollAdjustments: capturedPayrollAdjustments,
+            snapshots: capturedSnapshots,
             settings: currentSettings,
             displayYM: displayYM,
             previousYM: previousYM,
@@ -1579,6 +1752,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       self.displayedMonthShifts = result.display
       self.displayedMonthEvents = result.displayEvents
       self.previousMonthShifts = result.previous
+      self.previousPayrollAdjustments = fetchedPayrollAdjustments
 
       // Cache the computed results
       let displayKey = "\(displayYM.year)-\(displayYM.month)"
@@ -1672,6 +1846,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let fetchedPreviousShifts = fetchedShiftRows.previous
       let displayEvents = fetchedEvents.display
       let previousEvents = fetchedEvents.previous
+      let fetchedPayrollAdjustments = fetchPayrollAdjustmentsForPayoutMonth(
+        userId: userId,
+        year: displayYM.year,
+        month: displayYM.month
+      )
 
       // Ensure settings are available before computing payroll
       guard let currentSettings = self.settings else {
@@ -1685,6 +1864,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let capturedSnapshots = snapshots
       let capturedCurrency = currentSettings.currency ?? "kr"
       let capturedJobs = displayJobs
+      let capturedPayrollAdjustments = fetchedPayrollAdjustments
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
@@ -1716,6 +1896,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             displayedMonthShifts: displayComputed,
             displayedMonthEvents: displayEvents,
             previousMonthShifts: previousComputed,
+            previousPayrollAdjustments: capturedPayrollAdjustments,
+            snapshots: capturedSnapshots,
             settings: currentSettings,
             displayYM: displayYM,
             previousYM: previousYM,
@@ -1735,6 +1917,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       self.displayedMonthShifts = result.display
       self.displayedMonthEvents = result.displayEvents
       self.previousMonthShifts = result.previous
+      self.previousPayrollAdjustments = fetchedPayrollAdjustments
 
       // Cache the computed results
       let displayKey = "\(displayYM.year)-\(displayYM.month)"
@@ -1969,6 +2152,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let halfTaxMonth = settings?.half_tax_month
     let displayYM = (year: displayYear, month: displayMonth)
     let previousYM = Date.previousYearMonth(from: displayYM)
+    let previousAdjustments = previousPayrollAdjustments
 
     // Calculate payroll date for displayed month
     let payrollDate = calculatePayrollDate(
@@ -1983,8 +2167,29 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       earningsMonth: previousYM.month,
       now: now
     )
-    let prevTaxEnabled = previousMonthShifts.first?.taxEnabled ?? false
-    let prevTax: Double? = prevTaxEnabled ? prevTotals.gross - prevTotals.net : nil
+    let fallbackTaxSettings = payrollTaxSettings(
+      from: previousMonthShifts,
+      fallbackDate: payrollDate.toISODateString(),
+      jobId: nil
+    )
+    let adjustmentTotals = PayrollAdjustmentCalculator.totals(
+      adjustments: previousAdjustments,
+      taxSettings: { adjustment in
+        payrollTaxSettings(
+          for: adjustment,
+          fallback: fallbackTaxSettings,
+          jobId: adjustment.job_id,
+          defaultJobId: displayJobs.first(where: { $0.is_default })?.id
+        )
+      },
+      halfTaxMonth: halfTaxMonth,
+      payoutMonth: displayYM.month
+    )
+    let prevTaxEnabled =
+      previousMonthShifts.contains { $0.taxEnabled } || adjustmentTotals.taxEnabled
+    let previousGross = prevTotals.gross + adjustmentTotals.gross
+    let previousNet = prevTotals.net + adjustmentTotals.net
+    let prevTax: Double? = prevTaxEnabled ? previousGross - previousNet : nil
 
     let fallbackCurrency = settings?.currency ?? "kr"
     let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(
@@ -2062,8 +2267,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       displayedMonth: displayYM.month,
       payrollDate: payrollDate,
       payrollHasPassed: payrollHasPassed,
-      previousMonthGross: prevTotals.gross,
-      previousMonthNet: prevTaxEnabled ? prevTotals.net : nil,
+      previousMonthGross: previousGross,
+      previousMonthNet: prevTaxEnabled ? previousNet : nil,
       previousMonthTax: prevTax,
       previousMonthTaxEnabled: prevTaxEnabled,
       currentMonthGross: displayTotals.gross,
@@ -2094,6 +2299,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let displayedMonthShifts = input.displayedMonthShifts
     let displayedMonthEvents = input.displayedMonthEvents
     let previousMonthShifts = input.previousMonthShifts
+    let previousPayrollAdjustments = input.previousPayrollAdjustments
+    let snapshots = input.snapshots
     let settings = input.settings
     let displayYM = input.displayYM
     let previousYM = input.previousYM
@@ -2118,8 +2325,33 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       earningsMonth: previousYM.month,
       now: now
     )
-    let prevTaxEnabled = previousMonthShifts.first?.taxEnabled ?? false
-    let prevTax: Double? = prevTaxEnabled ? prevTotals.gross - prevTotals.net : nil
+    let fallbackTaxSettings = payrollTaxSettings(
+      from: previousMonthShifts,
+      fallbackDate: payrollDate.toISODateString(),
+      snapshots: snapshots,
+      jobs: jobs,
+      jobId: nil
+    )
+    let adjustmentTotals = PayrollAdjustmentCalculator.totals(
+      adjustments: previousPayrollAdjustments,
+      taxSettings: { adjustment in
+        payrollTaxSettings(
+          for: adjustment,
+          fallback: fallbackTaxSettings,
+          snapshots: snapshots,
+          jobs: jobs,
+          jobId: adjustment.job_id,
+          defaultJobId: jobs.first(where: { $0.is_default })?.id
+        )
+      },
+      halfTaxMonth: halfTaxMonth,
+      payoutMonth: displayYM.month
+    )
+    let prevTaxEnabled =
+      previousMonthShifts.contains { $0.taxEnabled } || adjustmentTotals.taxEnabled
+    let previousGross = prevTotals.gross + adjustmentTotals.gross
+    let previousNet = prevTotals.net + adjustmentTotals.net
+    let prevTax: Double? = prevTaxEnabled ? previousGross - previousNet : nil
 
     let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(
       shifts: displayedMonthShifts,
@@ -2190,8 +2422,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       displayedMonth: displayYM.month,
       payrollDate: payrollDate,
       payrollHasPassed: payrollHasPassed,
-      previousMonthGross: prevTotals.gross,
-      previousMonthNet: prevTaxEnabled ? prevTotals.net : nil,
+      previousMonthGross: previousGross,
+      previousMonthNet: prevTaxEnabled ? previousNet : nil,
       previousMonthTax: prevTax,
       previousMonthTaxEnabled: prevTaxEnabled,
       currentMonthGross: displayTotals.gross,

@@ -70,6 +70,20 @@ enum WageSnapshotField: String, Codable, CaseIterable {
   case breakDeductionMinutes = "break_deduction_minutes"
 }
 
+/// Field keys for tracking dirty fields on LocalPayrollAdjustment
+enum PayrollAdjustmentField: String, Codable, CaseIterable {
+  case jobId = "job_id"
+  case amount = "amount"
+  case currency = "currency"
+  case category = "category"
+  case taxTreatment = "tax_treatment"
+  case title = "title"
+  case note = "note"
+  case earnedFromDate = "earned_from_date"
+  case earnedToDate = "earned_to_date"
+  case payoutDate = "payout_date"
+}
+
 /// Field keys for tracking dirty fields on LocalJob
 enum JobField: String, Codable, CaseIterable {
   case name = "name"

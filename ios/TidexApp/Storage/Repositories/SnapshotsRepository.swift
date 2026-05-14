@@ -308,6 +308,7 @@ final class SnapshotsRepository: ObservableObject {
   ///   - id: Snapshot ID
   ///   - hourlyWage: New hourly wage (optional)
   ///   - wageLevel: New wage level (optional)
+  ///   - updateTariffTypeId: Whether to apply `tariffTypeId`, including nil clears
   ///   - supplements: New supplements (optional)
   ///   - taxEnabled: New tax enabled flag (optional)
   ///   - taxPercentage: New tax percentage (optional)
@@ -321,6 +322,8 @@ final class SnapshotsRepository: ObservableObject {
     jobId: String? = nil,
     hourlyWage: Double? = nil,
     wageLevel: Int? = nil,
+    tariffTypeId: String? = nil,
+    updateTariffTypeId: Bool = false,
     supplements: SupplementRulesSnapshot? = nil,
     taxEnabled: Bool? = nil,
     taxPercentage: Double? = nil,
@@ -335,6 +338,8 @@ final class SnapshotsRepository: ObservableObject {
         jobId: jobId,
         hourlyWage: hourlyWage,
         wageLevel: wageLevel,
+        tariffTypeId: tariffTypeId,
+        updateTariffTypeId: updateTariffTypeId,
         supplements: supplements,
         taxEnabled: taxEnabled,
         taxPercentage: taxPercentage,
