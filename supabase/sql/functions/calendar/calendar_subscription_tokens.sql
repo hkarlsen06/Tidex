@@ -48,6 +48,45 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION internal.calendar_subscription_normalize_locale(
+  p_locale text
+)
+RETURNS text
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = ''
+AS $$
+DECLARE
+  v_normalized_locale text := pg_catalog.lower(pg_catalog.replace(NULLIF(pg_catalog.btrim(COALESCE(p_locale, '')), ''), '_', '-'));
+  v_language text;
+  v_supported_languages text[] := ARRAY[
+    'ar', 'bg', 'bn', 'ca', 'cs', 'da', 'de', 'el', 'en', 'es', 'et', 'fa',
+    'fi', 'fil', 'fr', 'he', 'hi', 'hr', 'hu', 'id', 'is', 'it', 'ja', 'ko',
+    'lt', 'lv', 'nb', 'nl', 'nn', 'pl', 'pt', 'pt-br', 'ro', 'ru', 'sk',
+    'sl', 'sr', 'sv', 'sw', 'ta', 'th', 'tr', 'uk', 'ur', 'vi', 'zh',
+    'zh-hans', 'zh-hant'
+  ];
+BEGIN
+  IF v_normalized_locale IS NULL THEN
+    RETURN 'en';
+  END IF;
+
+  v_language := CASE
+    WHEN v_normalized_locale LIKE 'pt-br%' THEN 'pt-br'
+    WHEN v_normalized_locale LIKE 'zh-hans%' THEN 'zh-hans'
+    WHEN v_normalized_locale LIKE 'zh-hant%' THEN 'zh-hant'
+    WHEN pg_catalog.split_part(v_normalized_locale, '-', 1) = 'no' THEN 'nb'
+    ELSE pg_catalog.split_part(v_normalized_locale, '-', 1)
+  END;
+
+  IF v_language = ANY(v_supported_languages) THEN
+    RETURN v_language;
+  END IF;
+
+  RETURN 'en';
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION internal.get_my_calendar_subscription()
 RETURNS TABLE (
   is_active boolean,
@@ -327,7 +366,8 @@ CREATE OR REPLACE FUNCTION internal.resolve_calendar_subscription_token(
 )
 RETURNS TABLE (
   user_id uuid,
-  content_mode text
+  content_mode text,
+  locale text
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -344,8 +384,15 @@ BEGIN
 
   RETURN QUERY
   WITH matched AS (
-    SELECT cst.id, cst.user_id, cst.content_mode, cst.last_used_at
+    SELECT
+      cst.id,
+      cst.user_id,
+      cst.content_mode,
+      cst.last_used_at,
+      internal.calendar_subscription_normalize_locale(au.raw_user_meta_data->>'locale') AS locale
     FROM internal.calendar_subscription_tokens cst
+    LEFT JOIN auth.users au
+      ON au.id = cst.user_id
     WHERE cst.token_hash = v_token_hash
       AND cst.revoked_at IS NULL
     LIMIT 1
@@ -361,7 +408,7 @@ BEGIN
       )
     RETURNING cst.id
   )
-  SELECT matched.user_id, matched.content_mode
+  SELECT matched.user_id, matched.content_mode, matched.locale
   FROM matched
   LEFT JOIN touched ON true;
 END;
@@ -457,7 +504,8 @@ CREATE OR REPLACE FUNCTION public.resolve_calendar_subscription_token(
 )
 RETURNS TABLE (
   user_id uuid,
-  content_mode text
+  content_mode text,
+  locale text
 )
 LANGUAGE sql
 SECURITY DEFINER
@@ -483,6 +531,7 @@ COMMENT ON FUNCTION public.resolve_calendar_subscription_token(text) IS
 REVOKE ALL ON FUNCTION internal.calendar_subscription_assert_content_mode(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION internal.calendar_subscription_hash_token(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION internal.calendar_subscription_generate_token() FROM PUBLIC;
+REVOKE ALL ON FUNCTION internal.calendar_subscription_normalize_locale(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION internal.get_my_calendar_subscription() FROM PUBLIC;
 REVOKE ALL ON FUNCTION internal.create_my_calendar_subscription(text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION internal.rotate_my_calendar_subscription(text) FROM PUBLIC;
