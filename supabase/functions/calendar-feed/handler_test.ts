@@ -57,7 +57,11 @@ Deno.test("handler calls resolver RPC with p_raw_token and returns calendar cont
     rpc(functionName: string, args: Record<string, unknown>) {
       rpcCalls.push({ functionName, args });
       return {
-        data: [{ user_id: "user-1", content_mode: "events_only" }],
+        data: [{
+          user_id: "user-1",
+          content_mode: "events_only",
+          locale: "nb",
+        }],
         error: null,
       };
     },
@@ -118,7 +122,11 @@ Deno.test("HEAD returns the same calendar headers without a body", async () => {
   const client: CalendarSupabaseClient = {
     rpc() {
       return {
-        data: [{ user_id: "user-1", content_mode: "events_only" }],
+        data: [{
+          user_id: "user-1",
+          content_mode: "events_only",
+          locale: "en",
+        }],
         error: null,
       };
     },

@@ -94,3 +94,29 @@ Deno.test("buildICalendarFeed applies cross-midnight handling only to shifts", a
   assertStringIncludes(feed, "DTSTART:20260514T220000");
   assertStringIncludes(feed, "DTEND:20260515T060000");
 });
+
+Deno.test("buildICalendarFeed localizes shift summaries", async () => {
+  const feed = await buildICalendarFeed(
+    {
+      jobs: [{ id: "job-1", name: "Extra" }],
+      shifts: [
+        {
+          id: "shift-1",
+          shift_date: "2026-05-14",
+          start_time: "09:00:00+02:00",
+          end_time: "17:00:00+02:00",
+          note: null,
+          job_id: "job-1",
+          updated_at: "2026-05-14T10:00:00Z",
+        },
+      ],
+      recurringShifts: [],
+      events: [],
+    },
+    [],
+    { startDate: "2026-05-01", endDate: "2026-06-01" },
+    "nb",
+  );
+
+  assertStringIncludes(feed, "SUMMARY:Vakt: Extra");
+});

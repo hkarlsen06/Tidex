@@ -1,8 +1,10 @@
 import { cleanTime } from "../_shared/wagey/time-utils.ts";
 import { addDays, addOneDayIfCrossesMidnight, compareISODate } from "./date.ts";
+import { calendarShiftLabel } from "./locale.ts";
 import type {
   CalendarData,
   CalendarEventRow,
+  CalendarFeedLocale,
   CalendarJobRow,
   CalendarShiftRow,
   FeedWindow,
@@ -132,17 +134,19 @@ function jobName(
 function shiftInput(
   shift: CalendarShiftRow,
   jobsById: ReadonlyMap<string, CalendarJobRow>,
+  locale: CalendarFeedLocale,
 ): CalendarEventInput {
   const startTime = cleanTime(shift.start_time);
   const endTime = cleanTime(shift.end_time);
   const name = jobName(jobsById, shift.job_id);
+  const shiftLabel = calendarShiftLabel(locale);
 
   return {
     kind: "shift",
     sourceId: shift.id,
     occurrenceDate: shift.shift_date,
     updatedAt: shift.updated_at,
-    summary: name ? `Shift: ${name}` : "Shift",
+    summary: name ? `${shiftLabel}: ${name}` : shiftLabel,
     description: shift.note,
     startDate: shift.shift_date,
     endDate: addOneDayIfCrossesMidnight(shift.shift_date, startTime, endTime),
@@ -154,17 +158,19 @@ function shiftInput(
 function recurringShiftInput(
   shift: ProjectedRecurringShift,
   jobsById: ReadonlyMap<string, CalendarJobRow>,
+  locale: CalendarFeedLocale,
 ): CalendarEventInput {
   const startTime = cleanTime(shift.start_time);
   const endTime = cleanTime(shift.end_time);
   const name = jobName(jobsById, shift.job_id);
+  const shiftLabel = calendarShiftLabel(locale);
 
   return {
     kind: "recurring_shift",
     sourceId: shift.id,
     occurrenceDate: shift.occurrenceDate,
     updatedAt: shift.updated_at,
-    summary: name ? `Shift: ${name}` : "Shift",
+    summary: name ? `${shiftLabel}: ${name}` : shiftLabel,
     description: shift.note,
     startDate: shift.occurrenceDate,
     endDate: addOneDayIfCrossesMidnight(
@@ -206,12 +212,13 @@ export async function buildICalendarFeed(
   data: CalendarData,
   projectedRecurringShifts: ProjectedRecurringShift[],
   _window: FeedWindow,
+  locale: CalendarFeedLocale = "en",
 ): Promise<string> {
   const jobsById = new Map(data.jobs.map((job) => [job.id, job]));
   const events = [
-    ...data.shifts.map((shift) => shiftInput(shift, jobsById)),
+    ...data.shifts.map((shift) => shiftInput(shift, jobsById, locale)),
     ...projectedRecurringShifts.map((shift) =>
-      recurringShiftInput(shift, jobsById)
+      recurringShiftInput(shift, jobsById, locale)
     ),
     ...data.events.map(eventInput),
   ].sort(sortEvents);

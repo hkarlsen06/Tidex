@@ -1,7 +1,9 @@
 import { buildICalendarFeed } from "./ics.ts";
 import { createFeedWindow } from "./date.ts";
 import { loadCalendarData, projectRecurringShifts } from "./data.ts";
+import { normalizeCalendarFeedLocale } from "./locale.ts";
 import type {
+  CalendarFeedLocale,
   CalendarSubscriptionContentMode,
   CalendarSupabaseClient,
 } from "./types.ts";
@@ -13,6 +15,7 @@ const TOKEN_PATTERN = /^tidex_cal_[0-9a-f]{64}$/;
 type ResolverRow = {
   user_id: string;
   content_mode: CalendarSubscriptionContentMode;
+  locale?: CalendarFeedLocale | string | null;
 };
 
 export type CalendarFeedHandlerOptions = {
@@ -112,9 +115,13 @@ export function createCalendarFeedHandler(
         data.recurringShifts,
         window,
       );
-      const body = req.method === "HEAD"
-        ? null
-        : await buildICalendarFeed(data, projectedRecurringShifts, window);
+      const locale = normalizeCalendarFeedLocale(subscription.locale);
+      const body = req.method === "HEAD" ? null : await buildICalendarFeed(
+        data,
+        projectedRecurringShifts,
+        window,
+        locale,
+      );
 
       return new Response(body, {
         status: 200,
