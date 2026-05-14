@@ -225,6 +225,10 @@ deno_version = 2
 [functions.send-push-notifications]
 verify_jwt = false
 
+# Public token-protected iCalendar feed for calendar app subscriptions
+[functions.calendar-feed]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327
