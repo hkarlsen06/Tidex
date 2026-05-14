@@ -22,58 +22,46 @@ struct LoginView: View {
 
   var body: some View {
     GeometryReader { geometry in
-      ScrollView {
-        VStack(spacing: 0) {
-          Spacer(minLength: 60)
+      ZStack {
+        Color.tidexBackground
+          .ignoresSafeArea()
 
-          // Header section
-          headerSection
-            .padding(.bottom, Spacing.xxl)
+        ScrollView {
+          VStack(spacing: 0) {
+            Spacer(minLength: Spacing.xxl)
 
-          // Main content
-          VStack(spacing: Spacing.lg) {
-            // Error/Success banners
-            if let prompt = viewModel.accountCreationPromptMessage {
-              accountCreationPromptCard(message: prompt)
-            }
-
-            if let error = viewModel.errorMessage {
-              ErrorBanner(
-                message: error,
-                onDismiss: { viewModel.errorMessage = nil }
+            VStack(spacing: Spacing.xl) {
+              AuthHeroVisual(
+                logoSize: 132,
+                onLogoTap: debugRestartOnboarding
               )
-            }
 
-            if let success = viewModel.successMessage {
-              SuccessBanner(
-                message: success,
-                onDismiss: { viewModel.successMessage = nil }
-              )
-            }
+              messageStack
 
-            // Step content
-            switch viewModel.currentStep {
-            case .input:
-              inputStepContent
-            case .otp:
-              PhoneOTPForm(viewModel: viewModel)
+              VStack(spacing: Spacing.lg) {
+                switch viewModel.currentStep {
+                case .input:
+                  inputStepContent
+                case .otp:
+                  PhoneOTPForm(viewModel: viewModel)
+                }
+              }
+
+              if viewModel.currentStep == .input {
+                footerView
+              }
             }
+            .frame(maxWidth: 420)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
+            .frame(maxWidth: .infinity)
           }
-          .padding(.horizontal, Spacing.lg)
-
-          Spacer(minLength: 60)
-
-          // Footer
-          if viewModel.currentStep == .input {
-            footerView
-              .padding(.bottom, Spacing.xxl)
-          }
+          .frame(maxWidth: .infinity)
+          .frame(minHeight: geometry.size.height)
         }
-        .frame(minHeight: geometry.size.height)
+        .scrollBounceBehavior(.basedOnSize)
       }
-      .scrollBounceBehavior(.basedOnSize)
     }
-    .background(Color.tidexBackground)
     .loading(viewModel.isLoading)
     .onTapGesture {
       UIApplication.shared.sendAction(
@@ -81,21 +69,36 @@ struct LoginView: View {
     }
   }
 
-  // MARK: - Header Section
+  private var debugRestartOnboarding: (() -> Void)? {
+    #if DEBUG
+      return {
+        NotificationCenter.default.post(name: .debugRestartPreAuthOnboarding, object: nil)
+      }
+    #else
+      return nil
+    #endif
+  }
 
-  private var headerSection: some View {
-    VStack(spacing: Spacing.md) {
-      // Full wordmark
-      Image("TidexWordmark")
-        .resizable()
-        .scaledToFit()
-        .frame(height: 48)
+  @ViewBuilder
+  private var messageStack: some View {
+    VStack(spacing: Spacing.sm) {
+      if let prompt = viewModel.accountCreationPromptMessage {
+        accountCreationPromptCard(message: prompt)
+      }
 
-      // Subtitle
-      Text(.loginSubtitle)
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(.center)
+      if let error = viewModel.errorMessage {
+        ErrorBanner(
+          message: error,
+          onDismiss: { viewModel.errorMessage = nil }
+        )
+      }
+
+      if let success = viewModel.successMessage {
+        SuccessBanner(
+          message: success,
+          onDismiss: { viewModel.successMessage = nil }
+        )
+      }
     }
   }
 
@@ -153,6 +156,10 @@ struct LoginView: View {
         )
       }
       .background(Color.tidexSurfacePrimary)
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+      )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
       // Error messages
@@ -251,7 +258,11 @@ struct LoginView: View {
       .foregroundColor(.tidexTextSecondary)
       .frame(maxWidth: .infinity)
       .frame(height: 50)
-      .background(Color.tidexSurfacePrimary)
+      .background(Color.tidexSurfaceSecondary)
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+      )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
@@ -262,7 +273,7 @@ struct LoginView: View {
   private var dividerView: some View {
     HStack(spacing: Spacing.md) {
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexBorderSubtle.opacity(0.9))
         .frame(height: 1)
 
       Text(.loginSeparator)
@@ -270,7 +281,7 @@ struct LoginView: View {
         .foregroundColor(.tidexTextMuted)
 
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexBorderSubtle.opacity(0.9))
         .frame(height: 1)
     }
   }
@@ -278,42 +289,166 @@ struct LoginView: View {
   // MARK: - Footer
 
   private var footerView: some View {
-    VStack(spacing: Spacing.sm) {
-      HStack(spacing: Spacing.xxs) {
-        Text(.loginNoAccount)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-
-        Button(action: {
-          onNavigateToSignup?()
-        }) {
-          Text(.loginCreateAccount)
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexBlue)
-        }
-        .buttonStyle(.plain)
+    HStack(spacing: 0) {
+      footerLink(title: Text(.loginCreateAccount)) {
+        onNavigateToSignup?()
       }
 
-      Button(action: {
+      Rectangle()
+        .fill(Color.tidexBorderSubtle.opacity(0.9))
+        .frame(width: 1, height: 18)
+
+      footerLink(title: Text(.loginForgotPassword)) {
         onNavigateToResetPassword?()
-      }) {
-        Text(.loginForgotPassword)
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexBlue)
       }
-      .buttonStyle(.plain)
-
-      #if DEBUG
-        Button {
-          NotificationCenter.default.post(name: .debugRestartPreAuthOnboarding, object: nil)
-        } label: {
-          Text(String(localized: "debug.auth.restart_pre_auth_onboarding", table: "Localizable"))
-            .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexBlue)
-        }
-        .buttonStyle(.plain)
-      #endif
     }
+    .frame(maxWidth: .infinity)
+  }
+
+  private func footerLink(title: Text, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      title
+        .font(.tidexLabelStrong)
+        .foregroundColor(.tidexBlue)
+        .lineLimit(1)
+        .minimumScaleFactor(0.86)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+  }
+}
+
+// MARK: - Shared Auth Hero Visual
+
+struct AuthHeroVisual: View {
+  let logoSize: CGFloat
+  var onLogoTap: (() -> Void)?
+
+  var body: some View {
+    VStack(spacing: Spacing.sm) {
+      logoSection
+
+      ghostedPaycheckPreview
+    }
+  }
+
+  @ViewBuilder
+  private var logoSection: some View {
+    let content = ZStack {
+      RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
+        .fill(
+          RadialGradient(
+            gradient: Gradient(colors: [
+              Color.tidexBlue.opacity(0.08),
+              Color.tidexBlue.opacity(0.02),
+              Color.clear,
+            ]),
+            center: .center,
+            startRadius: 20,
+            endRadius: 100
+          )
+        )
+        .frame(width: 180, height: 180)
+
+      Image("TidexLogo")
+        .resizable()
+        .scaledToFit()
+        .frame(width: logoSize, height: logoSize)
+    }
+
+    if let onLogoTap {
+      content
+        .onTapGesture(perform: onLogoTap)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(
+          Text(String(localized: "debug.auth.restart_pre_auth_onboarding", table: "Localizable")))
+    } else {
+      content
+        .accessibilityHidden(true)
+    }
+  }
+
+  private var ghostedAmountText: String {
+    let hourlyWage = OnboardingCurrencyResolver.defaultHourlyWage(for: "kr")
+    let estimatedMonthlyHours = 162.0
+    let estimatedNet = hourlyWage * estimatedMonthlyHours * 0.8
+    return CurrencyConfig.format(estimatedNet, currency: "kr")
+  }
+
+  @ViewBuilder
+  private var ghostedPaycheckPreview: some View {
+    ZStack {
+      VStack(spacing: Spacing.xs) {
+        RoundedRectangle(cornerRadius: CornerRadius.xxs)
+          .fill(Color.tidexTextSecondary)
+          .frame(width: 80, height: 8)
+
+        Spacer().frame(height: 4)
+
+        Text(ghostedAmountText)
+          .font(.tidexAmountLarge)
+          .foregroundColor(.tidexBlue)
+
+        Spacer().frame(height: 8)
+
+        HStack {
+          RoundedRectangle(cornerRadius: 3)
+            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .frame(width: 80, height: 6)
+          Spacer()
+          RoundedRectangle(cornerRadius: 3)
+            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .frame(width: 55, height: 6)
+        }
+
+        HStack {
+          RoundedRectangle(cornerRadius: 3)
+            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .frame(width: 65, height: 6)
+          Spacer()
+          RoundedRectangle(cornerRadius: 3)
+            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .frame(width: 50, height: 6)
+        }
+
+        HStack {
+          RoundedRectangle(cornerRadius: 3)
+            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .frame(width: 90, height: 6)
+          Spacer()
+          RoundedRectangle(cornerRadius: 3)
+            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .frame(width: 60, height: 6)
+        }
+      }
+      .padding(.horizontal, Spacing.lg)
+      .padding(.vertical, Spacing.mlg)
+      .frame(width: 280)
+      .background(Color.tidexSurfacePrimary)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+          .stroke(Color.tidexBorder, lineWidth: 1)
+      )
+
+      LinearGradient(
+        gradient: Gradient(stops: [
+          .init(color: Color.tidexBackground, location: 0.0),
+          .init(color: Color.tidexBackground.opacity(0.85), location: 0.3),
+          .init(color: Color.tidexBackground.opacity(0.4), location: 0.7),
+          .init(color: Color.clear, location: 1.0),
+        ]),
+        startPoint: .top,
+        endPoint: .bottom
+      )
+      .frame(width: 280, height: 180)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+      .accessibilityHidden(true)
+    }
+    .opacity(0.9)
+    .blur(radius: 0.5)
   }
 }
 

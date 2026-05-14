@@ -16,54 +16,43 @@ struct SignupView: View {
 
   var body: some View {
     GeometryReader { geometry in
-      ScrollView {
-        VStack(spacing: 0) {
-          Spacer(minLength: 60)
+      ZStack {
+        Color.tidexBackground
+          .ignoresSafeArea()
 
-          // Header section
-          headerSection
-            .padding(.bottom, Spacing.xxl)
+        ScrollView {
+          VStack(spacing: 0) {
+            Spacer(minLength: Spacing.xxl)
 
-          // Main content
-          VStack(spacing: Spacing.lg) {
-            // Error/Success banners
-            if let error = viewModel.errorMessage {
-              ErrorBanner(
-                message: error,
-                onDismiss: { viewModel.errorMessage = nil }
-              )
+            VStack(spacing: Spacing.xl) {
+              AuthHeroVisual(logoSize: 132)
+
+              messageStack
+
+              VStack(spacing: Spacing.lg) {
+                switch viewModel.currentStep {
+                case .input:
+                  inputStepContent
+                case .otp:
+                  SignupOTPForm(viewModel: viewModel)
+                }
+              }
+
+              if viewModel.currentStep == .input {
+                footerView
+              }
             }
-
-            if let success = viewModel.successMessage {
-              SuccessBanner(
-                message: success,
-                onDismiss: { viewModel.successMessage = nil }
-              )
-            }
-
-            // Step content
-            switch viewModel.currentStep {
-            case .input:
-              inputStepContent
-            case .otp:
-              SignupOTPForm(viewModel: viewModel)
-            }
+            .frame(maxWidth: 420)
+            .padding(.horizontal, Spacing.xl)
+            .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
+            .frame(maxWidth: .infinity)
           }
-          .padding(.horizontal, Spacing.lg)
-
-          Spacer(minLength: 60)
-
-          // Footer
-          if viewModel.currentStep == .input {
-            footerView
-              .padding(.bottom, Spacing.xxl)
-          }
+          .frame(maxWidth: .infinity)
+          .frame(minHeight: geometry.size.height)
         }
-        .frame(minHeight: geometry.size.height)
+        .scrollBounceBehavior(.basedOnSize)
       }
-      .scrollBounceBehavior(.basedOnSize)
     }
-    .background(Color.tidexBackground)
     .loading(viewModel.isLoading)
     .onTapGesture {
       UIApplication.shared.sendAction(
@@ -76,19 +65,22 @@ struct SignupView: View {
 
   // MARK: - Header Section
 
-  private var headerSection: some View {
-    VStack(spacing: Spacing.md) {
-      // Full wordmark
-      Image("TidexWordmark")
-        .resizable()
-        .scaledToFit()
-        .frame(height: 48)
+  @ViewBuilder
+  private var messageStack: some View {
+    VStack(spacing: Spacing.sm) {
+      if let error = viewModel.errorMessage {
+        ErrorBanner(
+          message: error,
+          onDismiss: { viewModel.errorMessage = nil }
+        )
+      }
 
-      // Subtitle
-      Text(.signupSubtitle)
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(.center)
+      if let success = viewModel.successMessage {
+        SuccessBanner(
+          message: success,
+          onDismiss: { viewModel.successMessage = nil }
+        )
+      }
     }
   }
 
@@ -134,7 +126,11 @@ struct SignupView: View {
       .foregroundColor(.tidexTextSecondary)
       .frame(maxWidth: .infinity)
       .frame(height: 50)
-      .background(Color.tidexSurfacePrimary)
+      .background(Color.tidexSurfaceSecondary)
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+      )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
@@ -145,7 +141,7 @@ struct SignupView: View {
   private var dividerView: some View {
     HStack(spacing: Spacing.md) {
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexBorderSubtle.opacity(0.9))
         .frame(height: 1)
 
       Text(.loginSeparator)
@@ -153,7 +149,7 @@ struct SignupView: View {
         .foregroundColor(.tidexTextMuted)
 
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexBorderSubtle.opacity(0.9))
         .frame(height: 1)
     }
   }
@@ -161,20 +157,19 @@ struct SignupView: View {
   // MARK: - Footer
 
   private var footerView: some View {
-    HStack(spacing: Spacing.xxs) {
-      Text(.signupHasAccount)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-
-      Button(action: {
-        onNavigateToLogin?()
-      }) {
-        Text(.signupLogin)
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexBlue)
-      }
-      .buttonStyle(.plain)
+    Button(action: {
+      onNavigateToLogin?()
+    }) {
+      Text(.signupLogin)
+        .font(.tidexLabelStrong)
+        .foregroundColor(.tidexBlue)
+        .lineLimit(1)
+        .minimumScaleFactor(0.86)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .contentShape(Rectangle())
     }
+    .buttonStyle(.plain)
   }
 }
 
@@ -200,6 +195,10 @@ struct SignupForm: View {
             .padding(.vertical, Spacing.msm)
         }
         .background(Color.tidexSurfacePrimary)
+        .overlay(
+          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+            .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
         // Last name
@@ -214,6 +213,10 @@ struct SignupForm: View {
             .padding(.vertical, Spacing.msm)
         }
         .background(Color.tidexSurfacePrimary)
+        .overlay(
+          RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+            .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+        )
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       }
 
@@ -257,6 +260,10 @@ struct SignupForm: View {
         )
       }
       .background(Color.tidexSurfacePrimary)
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+      )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
       // Error messages
