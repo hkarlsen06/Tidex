@@ -6,6 +6,7 @@ struct MonthlyGoalEditSheet: View {
   let monthDate: Date
   let baselineGoal: Int?
   let initialGoal: Int?
+  let showsAdjustmentPercentageFootnote: Bool
   let onSave: (Int?) async throws -> Void
 
   @Environment(\.dismiss) private var dismiss
@@ -18,11 +19,13 @@ struct MonthlyGoalEditSheet: View {
     monthDate: Date,
     baselineGoal: Int?,
     initialGoal: Int?,
+    showsAdjustmentPercentageFootnote: Bool = false,
     onSave: @escaping (Int?) async throws -> Void
   ) {
     self.monthDate = monthDate
     self.baselineGoal = baselineGoal
     self.initialGoal = initialGoal
+    self.showsAdjustmentPercentageFootnote = showsAdjustmentPercentageFootnote
     self.onSave = onSave
     _goalText = State(initialValue: initialGoal.map(String.init) ?? "")
   }
@@ -84,6 +87,14 @@ struct MonthlyGoalEditSheet: View {
         Text(.settingsPayGlobalMonthlyGoalHelper)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
+
+        if showsAdjustmentPercentageFootnote {
+          Text(.dashboardMonthlyGoalAdjustmentPercentageFootnote)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextMuted)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, Spacing.xxs)
+        }
 
         Spacer(minLength: 0)
       }

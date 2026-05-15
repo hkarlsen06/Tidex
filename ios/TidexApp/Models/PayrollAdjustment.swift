@@ -23,6 +23,8 @@ struct PayrollAdjustment: Codable, Identifiable, Equatable {
   let tax_treatment: PayrollAdjustmentTaxTreatment
   let title: String
   let note: String?
+  let curated_note: String?
+  let curated_link: String?
   let earned_from_date: String?
   let earned_to_date: String?
   let payout_date: String

@@ -18,6 +18,7 @@ struct ShiftCardContentLayout<
   private let leadingLayoutPriority: Double
   private let trailingLayoutPriority: Double
   private let trailingFixedHorizontal: Bool
+  private let topRowAlignment: VerticalAlignment
   private let leadingTop: LeadingTop
   private let leadingBottom: LeadingBottom
   private let trailingTop: TrailingTop
@@ -29,6 +30,7 @@ struct ShiftCardContentLayout<
     leadingLayoutPriority: Double = 0,
     trailingLayoutPriority: Double = 1,
     trailingFixedHorizontal: Bool = true,
+    topRowAlignment: VerticalAlignment = .lastTextBaseline,
     @ViewBuilder leadingTop: () -> LeadingTop,
     @ViewBuilder leadingBottom: () -> LeadingBottom,
     @ViewBuilder trailingTop: () -> TrailingTop,
@@ -39,6 +41,7 @@ struct ShiftCardContentLayout<
     self.leadingLayoutPriority = leadingLayoutPriority
     self.trailingLayoutPriority = trailingLayoutPriority
     self.trailingFixedHorizontal = trailingFixedHorizontal
+    self.topRowAlignment = topRowAlignment
     self.leadingTop = leadingTop()
     self.leadingBottom = leadingBottom()
     self.trailingTop = trailingTop()
@@ -68,7 +71,7 @@ struct ShiftCardContentLayout<
     } else {
       // Row-based: each row aligns left/right by baseline
       VStack(spacing: rowSpacing) {
-        HStack(alignment: .lastTextBaseline) {
+        HStack(alignment: topRowAlignment) {
           leadingTop
             .lineLimit(1)
             .layoutPriority(leadingLayoutPriority)

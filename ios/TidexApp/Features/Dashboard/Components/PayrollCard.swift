@@ -7,12 +7,12 @@ struct PayrollCard: View {
   let label: String
   var labelColorHex: String? = nil
   var labelIsWorkplace: Bool = false
-  var pageIndicatorCount: Int = 1
-  var pageIndicatorSelectedIndex: Int = 0
+  var workplaceBadges: [PayrollCardBadge] = []
   let gross: Double
   let net: Double?
   let tax: Double?
   let taxEnabled: Bool
+  var hasPayrollAdjustments: Bool = false
   /// Progress through the month until payroll (0-100), shows a subtle progress bar when provided
   var progress: Double?
   /// When true, shows skeleton state with shimmer animation (for loading)
@@ -48,10 +48,6 @@ struct PayrollCard: View {
     taxEnabled ? (net ?? gross) : gross
   }
 
-  private var showsPageIndicator: Bool {
-    pageIndicatorCount > 1
-  }
-
   private var usesFixedCardHeight: Bool {
     !dynamicTypeSize.isAccessibilitySize
   }
@@ -65,25 +61,10 @@ struct PayrollCard: View {
   }
 
   var body: some View {
-    ShiftCardContentLayout(centerTrailing: !showBreakdown) {
+    ShiftCardContentLayout(centerTrailing: !showBreakdown, topRowAlignment: .center) {
       // Row 1: Label (leads with purpose, matches shift card title size)
-      HStack(spacing: Spacing.xs) {
-        WorkplaceNameText(
-          name: label,
-          colorHex: labelColorHex,
-          font: labelIsWorkplace ? .tidexCaptionRegular : .tidexBodyMedium,
-          fallbackBadgeColor: labelIsWorkplace ? .tidexBlue : nil,
-          badgeHorizontalPadding: Spacing.xs,
-          badgeVerticalPadding: labelIsWorkplace ? 2 : Spacing.xxxs
-        )
-        .overlay(alignment: .topLeading) {
-          if showsPageIndicator {
-            payrollCardPageIndicator
-              .offset(x: Spacing.xxs, y: -Spacing.xsm)
-          }
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
+      payrollLabelContent
+        .frame(maxWidth: .infinity, alignment: .leading)
     } leadingBottom: {
       // Row 2: Banknote icon + payroll date (secondary)
       if isPayrollToday {
@@ -119,19 +100,28 @@ struct PayrollCard: View {
     } trailingTop: {
       // Right side: amount
       if showPayout {
-        CurrencyCountUpText(
-          amount: primaryAmount,
-          duration: 0.8,
-          animateOnAppear: false,
-          animateChanges: true,
-          animateFrom: ShiftCardAmountAnimationFallback.animateFrom(
-            previousAmount: previousPrimaryAmount,
-            previousHasTrailingBottomContent: previousHasTrailingBottomContent,
-            currentHasTrailingBottomContent: showBreakdown
+        HStack(alignment: .firstTextBaseline, spacing: 1) {
+          CurrencyCountUpText(
+            amount: primaryAmount,
+            duration: 0.8,
+            animateOnAppear: false,
+            animateChanges: true,
+            animateFrom: ShiftCardAmountAnimationFallback.animateFrom(
+              previousAmount: previousPrimaryAmount,
+              previousHasTrailingBottomContent: previousHasTrailingBottomContent,
+              currentHasTrailingBottomContent: showBreakdown
+            )
           )
-        )
-        .font(.tidexTitle)
-        .tracking(-0.5)
+          .font(.tidexTitle)
+          .tracking(-0.5)
+
+          if hasPayrollAdjustments {
+            adjustmentMarker
+              .font(.tidexSubheadline.weight(.semibold))
+              .offset(y: -6)
+              .accessibilityHidden(true)
+          }
+        }
         .foregroundColor(.tidexTextPrimary)
       } else {
         ZStack {
@@ -234,20 +224,40 @@ struct PayrollCard: View {
     CurrencyConfig.formatPlain(amount)
   }
 
+  private var adjustmentMarker: Text {
+    Text("*")
+  }
+
   @ViewBuilder
-  private var payrollCardPageIndicator: some View {
-    HStack(spacing: Spacing.xxxs) {
-      ForEach(0..<pageIndicatorCount, id: \.self) { index in
-        Circle()
-          .fill(
-            index == pageIndicatorSelectedIndex
-              ? Color.tidexBlue
-              : Color.tidexTextMuted.opacity(0.35)
+  private var payrollLabelContent: some View {
+    if workplaceBadges.isEmpty {
+      WorkplaceNameText(
+        name: label,
+        colorHex: labelColorHex,
+        font: labelIsWorkplace ? .tidexCaptionRegular : .tidexBodyMedium,
+        fallbackBadgeColor: labelIsWorkplace ? .tidexBlue : nil,
+        badgeHorizontalPadding: Spacing.xs,
+        badgeVerticalPadding: labelIsWorkplace ? 1 : Spacing.xxxs
+      )
+    } else {
+      HStack(spacing: Spacing.xxs) {
+        ForEach(workplaceBadges) { badge in
+          WorkplaceNameText(
+            name: badge.title,
+            colorHex: badge.colorHex,
+            font: .tidexBodyMedium,
+            fallbackBadgeColor: .tidexBlue,
+            badgeHorizontalPadding: Spacing.xs,
+            badgeVerticalPadding: 1
           )
-          .frame(width: 5, height: 5)
+          .frame(maxWidth: 112, alignment: .leading)
+          .fixedSize(horizontal: false, vertical: true)
+        }
       }
+      .lineLimit(1)
     }
   }
+
 }
 
 #Preview {

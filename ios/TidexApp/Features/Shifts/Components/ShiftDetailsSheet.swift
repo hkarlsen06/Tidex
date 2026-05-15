@@ -944,7 +944,7 @@ struct ShiftDetailsSheet: View {
   }
 
   private var noteSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
+    VStack(spacing: Spacing.md) {
       HStack(alignment: .center, spacing: Spacing.sm) {
         Image(systemName: "note.text")
           .foregroundColor(.tidexBlue)
@@ -967,27 +967,29 @@ struct ShiftDetailsSheet: View {
         }
       }
 
-      if let note = displayedNote {
-        Text(note)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-      } else {
-        Text(.shiftsDetailsNotePlaceholder)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextMuted)
-          .frame(maxWidth: .infinity, alignment: .leading)
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        if let note = displayedNote {
+          Text(note)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+          Text(.shiftsDetailsNotePlaceholder)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextMuted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
       }
-    }
-    .padding(Spacing.md)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl)
-        .fill(Color.tidexSurfacePrimary)
-    )
-    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
-    .onTapGesture {
-      guard onUpdate != nil else { return }
-      beginNoteEditing()
+      .padding(Spacing.md)
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.xxl)
+          .fill(Color.tidexSurfacePrimary)
+      )
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+      .onTapGesture {
+        guard onUpdate != nil else { return }
+        beginNoteEditing()
+      }
     }
   }
 
@@ -1055,10 +1057,17 @@ struct ShiftDetailsSheet: View {
   }
 
   private var noteEditorSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.shiftsDetailsNoteTitle)
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextSecondary)
+    VStack(spacing: Spacing.md) {
+      HStack(alignment: .center, spacing: Spacing.sm) {
+        Image(systemName: "note.text")
+          .foregroundColor(.tidexBlue)
+
+        Text(.shiftsDetailsNoteTitle)
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexTextSecondary)
+
+        Spacer()
+      }
 
       TextField(
         String(localized: .shiftsDetailsNotePlaceholder),
@@ -1249,17 +1258,7 @@ struct ShiftDetailsSheet: View {
   @ViewBuilder
   private var viewModeActionButtons: some View {
     VStack(spacing: Spacing.md) {
-      if showsCalendarSubscriptionCTA {
-        DetailSheetActionButton(
-          title: String(localized: "calendar.subscription.detail.cta"),
-          systemImage: "calendar.badge.clock",
-          style: .primary
-        ) {
-          showingCalendarSubscriptionConfirmation = true
-        }
-      }
-
-      VStack(spacing: Spacing.sm) {
+      EarningsBreakdownCard {
         // Edit button (only show if onUpdate callback is provided)
         if onUpdate != nil {
           DetailSheetActionButton(
@@ -1293,6 +1292,16 @@ struct ShiftDetailsSheet: View {
           deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
         }
       }
+
+      if showsCalendarSubscriptionCTA {
+        DetailSheetActionButton(
+          title: String(localized: "calendar.subscription.detail.cta"),
+          systemImage: "calendar.badge.clock",
+          style: .primary
+        ) {
+          showingCalendarSubscriptionConfirmation = true
+        }
+      }
     }
   }
 
@@ -1309,7 +1318,7 @@ struct ShiftDetailsSheet: View {
       }
 
       // Earnings card
-      VStack(spacing: Spacing.sm) {
+      EarningsBreakdownCard {
         // Base Pay (show when there are supplements or a separate break deduction row)
         if hasEarningsBreakdown {
           earningsRow(
@@ -1379,11 +1388,6 @@ struct ShiftDetailsSheet: View {
           .buttonStyle(.plain)
         }
       }
-      .padding(Spacing.md)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
-      )
     }
   }
 
@@ -1462,77 +1466,24 @@ struct ShiftDetailsSheet: View {
   }
 
   private func breakDeductionBasePayCard(_ part: BreakDeductionPart) -> some View {
-    VStack(spacing: Spacing.xxxs) {
-      HStack {
-        Text(.shiftsBreakDeductionPartBasePay)
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        Text("−\(formatCurrency(part.amount))")
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexError)
-      }
-
-      HStack {
-        Text(.shiftsBreakDeduction)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-
-        Spacer()
-
-        if let rate = part.rate {
-          Text("\(formatHoursValue(part.hours)) × \(formatCurrency(rate))")
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-        } else {
-          Text(formatHoursValue(part.hours))
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-        }
-      }
-    }
-    .padding(Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg)
-        .fill(Color.tidexSurfaceSecondary.opacity(0.4))
+    EarningsBreakDeductionDetailCard(
+      title: String(localized: .shiftsBreakDeductionPartBasePay),
+      amount: "−\(formatCurrency(part.amount))",
+      detailTitle: String(localized: .shiftsBreakDeduction),
+      detailValue: part.rate.map { "\(formatHoursValue(part.hours)) × \(formatCurrency($0))" }
+        ?? formatHoursValue(part.hours)
     )
   }
 
   @ViewBuilder
   private func breakDeductionSupplementCard(_ part: BreakDeductionPart) -> some View {
     if let segment = part.supplementSegment {
-      VStack(spacing: Spacing.xxxs) {
-        HStack {
-          Text(.shiftsBreakDeductionPartSupplement)
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextPrimary)
-
-          Spacer()
-
-          Text("−\(formatCurrency(part.amount))")
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexError)
-        }
-
-        HStack {
-          Text(segmentTimeRange(segment))
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-            .environment(\.layoutDirection, .leftToRight)
-
-          Spacer()
-
-          Text("\(formatHoursValue(part.hours)) × \(formatCurrency(segment.rate))")
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-        }
-      }
-      .padding(Spacing.sm)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg)
-          .fill(Color.tidexSurfaceSecondary.opacity(0.4))
+      EarningsBreakDeductionDetailCard(
+        title: String(localized: .shiftsBreakDeductionPartSupplement),
+        amount: "−\(formatCurrency(part.amount))",
+        detailTitle: segmentTimeRange(segment),
+        detailValue: "\(formatHoursValue(part.hours)) × \(formatCurrency(segment.rate))",
+        forcesLeftToRight: true
       )
     } else {
       HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
@@ -1620,38 +1571,10 @@ struct ShiftDetailsSheet: View {
   /// A single supplement segment row showing time range, hours × rate, and amount
   @ViewBuilder
   private func supplementSegmentRow(_ segment: SupplementSegment) -> some View {
-    VStack(spacing: Spacing.xxxs) {
-      // Time range and hours × rate
-      HStack {
-        Text(segmentTimeRange(segment))
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
-          .environment(\.layoutDirection, .leftToRight)
-
-        Spacer()
-
-        Text("\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))")
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-      }
-
-      // Supplement label and amount
-      HStack {
-        Text(.shiftsSupplementLabel)
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        Text(formatCurrency(segment.amount))
-          .font(.tidexLabelStrong)
-          .foregroundColor(.tidexTextPrimary)
-      }
-    }
-    .padding(Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg)
-        .fill(Color.tidexSurfaceSecondary.opacity(0.4))
+    EarningsSupplementBreakdownDetailCard(
+      timeRange: segmentTimeRange(segment),
+      hoursAndRate: "\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))",
+      amount: formatCurrency(segment.amount)
     )
   }
 
@@ -1696,17 +1619,12 @@ struct ShiftDetailsSheet: View {
     isHighlighted: Bool = false,
     valueColor: Color = .tidexTextPrimary
   ) -> some View {
-    HStack {
-      Text(label)
-        .font(isHighlighted ? .tidexLabel : .tidexSubheadline)
-        .foregroundColor(isHighlighted ? .tidexTextPrimary : .tidexTextSecondary)
-
-      Spacer()
-
-      Text(value)
-        .font(isHighlighted ? .tidexTitle2 : .tidexLabel)
-        .foregroundColor(valueColor)
-    }
+    EarningsBreakdownCard<EmptyView>.Row(
+      label: label,
+      value: value,
+      valueColor: valueColor,
+      isHighlighted: isHighlighted
+    )
   }
 
   private var virtualShiftBanner: some View {
@@ -1976,7 +1894,7 @@ struct ShareDestinationSheet: View {
 // MARK: - Supplement Segment
 
 /// A grouped supplement segment for display
-struct SupplementSegment: Identifiable {
+struct SupplementSegment: Identifiable, Equatable {
   let fromMin: Double
   let toMin: Double
   let rate: Double
@@ -2016,7 +1934,7 @@ struct SupplementSegment: Identifiable {
   }
 }
 
-struct BreakDeductionBreakdown {
+struct BreakDeductionBreakdown: Equatable {
   let parts: [BreakDeductionPart]
 
   var totalAmount: Double {
@@ -2191,8 +2109,8 @@ struct BreakDeductionBreakdown {
   }
 }
 
-struct BreakDeductionPart: Identifiable {
-  enum Kind {
+struct BreakDeductionPart: Identifiable, Equatable {
+  enum Kind: Equatable {
     case base
     case supplement
   }

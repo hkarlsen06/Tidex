@@ -65,6 +65,7 @@ private enum AddStringError: Error, CustomStringConvertible {
   case lockFileOpenFailed(String)
   case lockFailed(String)
   case invalidCatalogStructure(String)
+  case invalidKey(String)
 
   var description: String {
     switch self {
@@ -99,6 +100,8 @@ private enum AddStringError: Error, CustomStringConvertible {
       return "Failed to acquire lock for \(path)"
     case .invalidCatalogStructure(let reason):
       return "Invalid catalog structure: \(reason)"
+    case .invalidKey(let reason):
+      return "Invalid key: \(reason)"
     }
   }
 }
@@ -119,6 +122,7 @@ private func parseArgs() throws -> Config {
     guard let english = currentEn, let norwegian = currentNb else {
       throw AddStringError.incompleteEntry(key)
     }
+    try validateKey(key)
     entries.append(StringEntry(key: key, englishValue: english, norwegianValue: norwegian))
     currentKey = nil
     currentEn = nil
@@ -165,6 +169,14 @@ private func parseArgs() throws -> Config {
     entries: entries,
     catalogPath: catalogPath ?? defaultCatalog
   )
+}
+
+private func validateKey(_ key: String) throws {
+  if key.contains("_") {
+    throw AddStringError.invalidKey(
+      "'\(key)' contains an underscore. Use dot-separated camelCase segments instead, e.g. dashboard.payrollDetails.totalGross."
+    )
+  }
 }
 
 private enum EntryResult {
