@@ -356,6 +356,89 @@ export function assistantLikelyClaimsWriteAction(text: string): boolean {
     /\b(jeg skal (oppdatere|endre|sette|lage|slette))\b/.test(normalized);
 }
 
+function isLikelyNorwegian(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return /[æøå]/.test(normalized) ||
+    /\b(kan|jeg|du|meg|min|mi|mitt|mine|lønn|vak(t|ter|tene)|jobb|uke|måned|sjekk|endre|lag|slett)\b/
+      .test(normalized);
+}
+
+export function getToolNarration(
+  toolName: string,
+  latestUserText: string,
+): string {
+  const norwegian = isLikelyNorwegian(latestUserText);
+
+  switch (toolName) {
+    case "web_search":
+    case "web_fetch":
+      return norwegian
+        ? "Jeg sjekker en oppdatert kilde først."
+        : "I'll check an up-to-date source first.";
+    case "query_shifts":
+    case "query_events":
+    case "plan_schedule":
+    case "query_friend_shifts":
+    case "query_friend_featured_shift":
+      return norwegian
+        ? "Jeg sjekker kalenderen din først."
+        : "I'll check your calendar first.";
+    case "get_statistics":
+      return norwegian
+        ? "Jeg henter tallene dine først."
+        : "I'll pull your numbers first.";
+    case "calculate_wages":
+    case "calculate_earnings":
+    case "get_wage_info":
+      return norwegian
+        ? "Jeg sjekker lønnsoppsettet ditt først."
+        : "I'll check your wage setup first.";
+    case "list_workplaces":
+    case "manage_workplace":
+      return norwegian
+        ? "Jeg sjekker arbeidsplassene dine først."
+        : "I'll check your workplaces first.";
+    case "list_friends":
+    case "manage_friend_sharing":
+      return norwegian
+        ? "Jeg sjekker delingen din først."
+        : "I'll check your sharing setup first.";
+    case "manage_shift":
+    case "draft_recurring_shift":
+    case "confirm_recurring_shift":
+    case "manage_recurring_shift":
+    case "manage_recurring_exclusion":
+    case "manage_shift_advanced":
+      return norwegian
+        ? "Jeg sjekker vaktdetaljene først."
+        : "I'll check the shift details first.";
+    case "manage_event":
+      return norwegian
+        ? "Jeg sjekker hendelsesdetaljene først."
+        : "I'll check the event details first.";
+    case "manage_settings":
+      return norwegian
+        ? "Jeg sjekker innstillingene dine først."
+        : "I'll check your settings first.";
+    case "manage_wage_snapshots":
+      return norwegian
+        ? "Jeg sjekker lønnshistorikken din først."
+        : "I'll check your wage history first.";
+    case "manage_feedback":
+      return norwegian
+        ? "Jeg sjekker tilbakemeldingen først."
+        : "I'll check the feedback details first.";
+    case "manage_profile":
+      return norwegian
+        ? "Jeg sjekker profilen din først."
+        : "I'll check your profile first.";
+    default:
+      return norwegian
+        ? "Jeg sjekker det nødvendige først."
+        : "I'll check the details first.";
+  }
+}
+
 async function executeSingleToolUse(
   ctx: WageyRequestContext,
   toolUse: PendingToolUse,
@@ -771,6 +854,7 @@ export async function handleWageyRequest(
           input.client,
           "message_break_v1",
         );
+        const latestRequestUserText = getLatestUserText(conversationMessages);
 
         const ensureInvocationConsumed = async (): Promise<boolean> => {
           if (invocationConsumed) {
@@ -816,6 +900,7 @@ export async function handleWageyRequest(
             const assistantContent: ContentBlock[] = [];
             let shouldStartNewAssistantTextBlock = true;
             let pendingAssistantText = "";
+            let hasNarrationSinceLastToolStart = false;
 
             const appendAssistantText = (content: string) => {
               if (!content) return;
@@ -841,6 +926,9 @@ export async function handleWageyRequest(
               appendAssistantText(content);
               sendChunk({ type: "text", content });
               hasUserVisibleAssistantOutput = true;
+              if (content.trim()) {
+                hasNarrationSinceLastToolStart = true;
+              }
               return true;
             };
 
@@ -849,6 +937,23 @@ export async function handleWageyRequest(
               if (supportsMessageBreaks) {
                 sendChunk({ type: "message_break" });
               }
+            };
+
+            const ensureToolNarration = async (
+              toolName: string,
+            ): Promise<boolean> => {
+              if (hasNarrationSinceLastToolStart) {
+                hasNarrationSinceLastToolStart = false;
+                return true;
+              }
+
+              const narration = getToolNarration(
+                toolName,
+                latestRequestUserText,
+              );
+              const didEmit = await emitAssistantText(narration);
+              hasNarrationSinceLastToolStart = false;
+              return didEmit;
             };
 
             const markerOverlapLength = (text: string): number => {
@@ -983,6 +1088,9 @@ export async function handleWageyRequest(
                 if (!(await ensureInvocationConsumed())) {
                   return;
                 }
+                if (!(await ensureToolNarration(chunk.name))) {
+                  return;
+                }
                 hasUserVisibleAssistantOutput = true;
                 shouldStartNewAssistantTextBlock = true;
                 assistantContent.push({
@@ -1000,6 +1108,9 @@ export async function handleWageyRequest(
                 }
               } else if (chunk.type === "tool_use_start") {
                 if (!(await ensureInvocationConsumed())) {
+                  return;
+                }
+                if (!(await ensureToolNarration(chunk.name))) {
                   return;
                 }
                 hasUserVisibleAssistantOutput = true;
@@ -1042,6 +1153,11 @@ export async function handleWageyRequest(
                   });
                   hasUserVisibleAssistantOutput = true;
                   shouldStartNewAssistantTextBlock = true;
+                  if (!startedToolUseIds.has(chunk.id)) {
+                    if (!(await ensureToolNarration(chunk.name))) {
+                      return;
+                    }
+                  }
                   assistantContent.push({
                     type: "tool_use",
                     id: chunk.id,
