@@ -290,22 +290,6 @@ struct DataSettingsView: View {
         }
       }
 
-      // Calendar Export
-      exportCard(
-        icon: "calendar.badge.plus",
-        iconColor: .orange,
-        title: String(localized: .dataExportCalendarTitle),
-        description: String(localized: .dataExportCalendarDescription),
-        buttonLabel: viewModel.isExportingCalendar
-          ? String(localized: .dataExportCalendarExporting)
-          : String(localized: .dataExportCalendarButton),
-        isLoading: viewModel.isExportingCalendar,
-        buttonColor: .orange
-      ) {
-        Task {
-          await viewModel.exportShifts(format: .calendar, locale: Locale.current)
-        }
-      }
     }
   }
 

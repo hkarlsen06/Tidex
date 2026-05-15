@@ -107,6 +107,8 @@ struct EventDetailsSheet: View {
   let onDelete: (() -> Void)?
   let onUpdate: ((EventEditResult) async throws -> Void)?
   let onInlineReminderUpdate: ((EventEditResult) async throws -> Void)?
+  let showsCalendarSubscriptionCTA: Bool
+  let onShowInCalendarRequested: (() -> Void)?
   var startInEditMode: Bool = false
 
   @Environment(\.dismiss) private var dismiss
@@ -125,7 +127,7 @@ struct EventDetailsSheet: View {
   @State private var errorMessage: String?
   @State private var successMessage: String?
   @State private var isSaving = false
-  @State private var isExportingToCalendar = false
+  @State private var showingCalendarSubscriptionConfirmation = false
   @State private var isResettingDraft = false
   @State private var lastSavedReminderTimes: [Int] = []
   @State private var lastSavedReminderAnchorTime: Date?
@@ -139,12 +141,16 @@ struct EventDetailsSheet: View {
     onDelete: (() -> Void)?,
     onUpdate: ((EventEditResult) async throws -> Void)?,
     onInlineReminderUpdate: ((EventEditResult) async throws -> Void)? = nil,
+    showsCalendarSubscriptionCTA: Bool = false,
+    onShowInCalendarRequested: (() -> Void)? = nil,
     startInEditMode: Bool = false
   ) {
     self.event = event
     self.onDelete = onDelete
     self.onUpdate = onUpdate
     self.onInlineReminderUpdate = onInlineReminderUpdate
+    self.showsCalendarSubscriptionCTA = showsCalendarSubscriptionCTA
+    self.onShowInCalendarRequested = onShowInCalendarRequested
     self.startInEditMode = startInEditMode
   }
 
@@ -309,6 +315,18 @@ struct EventDetailsSheet: View {
       .onChange(of: reminderAnchorTime) { _, _ in
         scheduleInlineReminderSaveIfNeeded()
       }
+      .confirmationDialog(
+        String(localized: "calendar.subscription.detail.confirmation.title"),
+        isPresented: $showingCalendarSubscriptionConfirmation,
+        titleVisibility: .visible
+      ) {
+        Button(String(localized: .commonContinue)) {
+          onShowInCalendarRequested?()
+        }
+        Button(String(localized: .commonCancel), role: .cancel) {}
+      } message: {
+        Text("calendar.subscription.detail.confirmation.message")
+      }
     }
   }
 
@@ -469,63 +487,40 @@ struct EventDetailsSheet: View {
   }
 
   private var actionButtons: some View {
-    VStack(spacing: Spacing.sm) {
+    VStack(spacing: Spacing.md) {
       if !isEditing {
-        Button {
-          addToCalendar()
-        } label: {
-          HStack(spacing: Spacing.xs) {
-            if isExportingToCalendar {
-              ProgressView()
-                .tint(.tidexTextOnBrand)
-            } else {
-              Image(systemName: "calendar.badge.plus")
-            }
-
-            Text(.eventsCalendarAddButton)
+        if showsCalendarSubscriptionCTA {
+          DetailSheetActionButton(
+            title: String(localized: "calendar.subscription.detail.cta"),
+            systemImage: "calendar.badge.clock",
+            style: .primary
+          ) {
+            showingCalendarSubscriptionConfirmation = true
           }
-          .font(.tidexButton)
-          .foregroundColor(.tidexTextOnBrand)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.md)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xxl)
-              .fill(Color.tidexBlue)
-          )
         }
-        .buttonStyle(.plain)
-        .disabled(isExportingToCalendar)
 
-        Button {
-          beginEditing(focusTitle: true)
-        } label: {
-          Text(.shiftsActionsEdit)
-            .font(.tidexButton)
-            .foregroundColor(.tidexBlue)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
-            .background(
-              RoundedRectangle(cornerRadius: CornerRadius.xxl)
-                .fill(Color.tidexSurfacePrimary)
-            )
+        VStack(spacing: Spacing.sm) {
+          DetailSheetActionButton(
+            title: String(localized: .shiftsActionsEdit),
+            style: .secondary
+          ) {
+            beginEditing(focusTitle: true)
+          }
+
+          deleteActionButton
         }
-        .buttonStyle(.plain)
+      } else {
+        deleteActionButton
       }
+    }
+  }
 
-      Button(role: .destructive) {
-        onDelete?()
-      } label: {
-        Text(.eventsDeleteButton)
-          .font(.tidexButton)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.md)
-      }
-      .buttonStyle(.plain)
-      .foregroundColor(.red)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xxl)
-          .fill(Color.tidexSurfacePrimary)
-      )
+  private var deleteActionButton: some View {
+    DetailSheetActionButton(
+      title: String(localized: .eventsDeleteButton),
+      style: .destructive
+    ) {
+      onDelete?()
     }
   }
 
@@ -628,27 +623,6 @@ struct EventDetailsSheet: View {
         RoundedRectangle(cornerRadius: CornerRadius.xxl)
           .fill(color.opacity(0.08))
       )
-  }
-
-  private func addToCalendar() {
-    guard !isExportingToCalendar else { return }
-
-    isExportingToCalendar = true
-    errorMessage = nil
-    successMessage = nil
-
-    Task {
-      do {
-        let calendarName = String(localized: .dataExportCalendarCalendarName)
-        try await CalendarExportService.shared.exportEvent(event, calendarName: calendarName)
-        Haptics.play(.success)
-        successMessage = String(localized: .eventsCalendarAddSuccess)
-      } catch {
-        errorMessage = ErrorTranslations.translate(error)
-      }
-
-      isExportingToCalendar = false
-    }
   }
 
   private func beginEditing(focusTitle: Bool) {

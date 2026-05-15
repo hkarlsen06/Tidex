@@ -62,6 +62,8 @@ struct ShiftDetailsSheet: View {
   let onUpdate: ((ShiftEditResult) -> Void)?
   let onUpdatePause: ((ShiftPauseEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
+  let showsCalendarSubscriptionCTA: Bool
+  let onShowInCalendarRequested: (() -> Void)?
   var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
   let snapshotShareContext: ShiftSnapshotShareContext
   /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
@@ -139,6 +141,7 @@ struct ShiftDetailsSheet: View {
 
   /// Whether showing the send-to-chat recipient picker
   @State private var showingSendToChatSheet = false
+  @State private var showingCalendarSubscriptionConfirmation = false
 
   /// Image to share (rendered from ShareableShiftCard)
   @State private var shareImage: UIImage?
@@ -170,6 +173,8 @@ struct ShiftDetailsSheet: View {
     onUpdate: ((ShiftEditResult) -> Void)? = nil,
     onUpdatePause: ((ShiftPauseEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
+    showsCalendarSubscriptionCTA: Bool = false,
+    onShowInCalendarRequested: (() -> Void)? = nil,
     onSendToChatCompleted: ((SendShiftToChatResult) -> Void)? = nil,
     snapshotShareContext: ShiftSnapshotShareContext = .own,
     startInEditMode: Bool = false,
@@ -182,6 +187,8 @@ struct ShiftDetailsSheet: View {
     self.onUpdate = onUpdate
     self.onUpdatePause = onUpdatePause
     self.onEditRecurring = onEditRecurring
+    self.showsCalendarSubscriptionCTA = showsCalendarSubscriptionCTA
+    self.onShowInCalendarRequested = onShowInCalendarRequested
     self.onSendToChatCompleted = onSendToChatCompleted
     self.snapshotShareContext = snapshotShareContext
     self.startInEditMode = startInEditMode
@@ -457,9 +464,9 @@ struct ShiftDetailsSheet: View {
             viewModeActionButtons
           }
 
-          // Last edited timestamp (only in view mode, for non-virtual shifts)
-          if !isEditing, let updatedAt = shift.updatedAt, !isVirtualShift {
-            lastEditedFooter(date: updatedAt)
+          // Added/edited timestamps (only in view mode, for non-virtual shifts)
+          if !isEditing, !isVirtualShift {
+            shiftTimestampFooter(createdAt: shift.createdAt, updatedAt: shift.updatedAt)
           }
         }
         .padding(Spacing.mlg)
@@ -638,6 +645,18 @@ struct ShiftDetailsSheet: View {
           }
         )
       }
+    }
+    .confirmationDialog(
+      String(localized: "calendar.subscription.detail.confirmation.title"),
+      isPresented: $showingCalendarSubscriptionConfirmation,
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .commonContinue)) {
+        onShowInCalendarRequested?()
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {}
+    } message: {
+      Text("calendar.subscription.detail.confirmation.message")
     }
   }
 
@@ -1229,54 +1248,50 @@ struct ShiftDetailsSheet: View {
   /// Action buttons for view mode
   @ViewBuilder
   private var viewModeActionButtons: some View {
-    VStack(spacing: Spacing.sm) {
-      // Edit button (only show if onUpdate callback is provided)
-      if onUpdate != nil {
-        Button {
-          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            isEditing = true
-          }
-        } label: {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "pencil")
-              .font(.tidexLabel)
-            Text(.shiftsEditButton)
-              .font(.tidexLabelStrong)
-          }
-          .foregroundColor(.tidexTextOnBrand)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexBlue)
-          .cornerRadius(CornerRadius.lg)
+    VStack(spacing: Spacing.md) {
+      if showsCalendarSubscriptionCTA {
+        DetailSheetActionButton(
+          title: String(localized: "calendar.subscription.detail.cta"),
+          systemImage: "calendar.badge.clock",
+          style: .primary
+        ) {
+          showingCalendarSubscriptionConfirmation = true
         }
       }
 
-      // Edit recurring shift button (only for virtual shifts)
-      if isVirtualShift, let recurringId = shift.shift.recurring_id, onEditRecurring != nil {
-        Button {
-          dismiss()
-          // Small delay to allow sheet to dismiss before opening editor
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            onEditRecurring?(recurringId)
+      VStack(spacing: Spacing.sm) {
+        // Edit button (only show if onUpdate callback is provided)
+        if onUpdate != nil {
+          DetailSheetActionButton(
+            title: String(localized: .shiftsEditButton),
+            systemImage: "pencil",
+            style: .primary
+          ) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+              isEditing = true
+            }
           }
-        } label: {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "repeat")
-              .font(.tidexLabel)
-            Text(.shiftsEditRecurringButton)
-              .font(.tidexLabelStrong)
-          }
-          .foregroundColor(.tidexBlue)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(CornerRadius.lg)
         }
-      }
 
-      // Delete button
-      if let onDelete = onDelete {
-        deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
+        // Edit recurring shift button (only for virtual shifts)
+        if isVirtualShift, let recurringId = shift.shift.recurring_id, onEditRecurring != nil {
+          DetailSheetActionButton(
+            title: String(localized: .shiftsEditRecurringButton),
+            systemImage: "repeat",
+            style: .secondary
+          ) {
+            dismiss()
+            // Small delay to allow sheet to dismiss before opening editor
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+              onEditRecurring?(recurringId)
+            }
+          }
+        }
+
+        // Delete button
+        if let onDelete = onDelete {
+          deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
+        }
       }
     }
   }
@@ -1720,38 +1735,48 @@ struct ShiftDetailsSheet: View {
 
   @ViewBuilder
   private func deleteButton(onDelete: @escaping () -> Void, isVirtual: Bool) -> some View {
-    Button(action: onDelete) {
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: isVirtual ? "minus.circle" : "trash")
-          .font(.tidexLabel)
-        Text(
-          isVirtual
-            ? String(localized: .shiftsExcludeButton)
-            : String(localized: .shiftsDeleteButton)
-        )
-        .font(.tidexLabelStrong)
-      }
-      .foregroundColor(.tidexTextOnDanger)
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, Spacing.sm)
-      .background(Color.tidexError)
-      .cornerRadius(CornerRadius.lg)
+    DetailSheetActionButton(
+      title: isVirtual
+        ? String(localized: .shiftsExcludeButton)
+        : String(localized: .shiftsDeleteButton),
+      systemImage: isVirtual ? "minus.circle" : "trash",
+      style: .destructive
+    ) {
+      onDelete()
     }
     .padding(.top, Spacing.xs)
   }
 
-  /// Footer showing when the shift was last edited
+  /// Footer showing when the shift was added and, when applicable, last edited.
   @ViewBuilder
-  private func lastEditedFooter(date: Date) -> some View {
-    Text(String(localized: .shiftsLastEdited) + " " + formattedLastEdited(date))
+  private func shiftTimestampFooter(createdAt: Date?, updatedAt: Date?) -> some View {
+    if let createdAt {
+      VStack(spacing: Spacing.xxs) {
+        Text(String(localized: "shifts.added") + " " + formattedShiftTimestamp(createdAt))
+
+        if let updatedAt, !timestampsMatch(createdAt, updatedAt) {
+          Text(String(localized: .shiftsLastEdited) + " " + formattedShiftTimestamp(updatedAt))
+        }
+      }
       .font(.tidexCaptionRegular)
       .foregroundColor(.tidexTextMuted)
       .frame(maxWidth: .infinity)
       .padding(.top, Spacing.xs)
+    } else if let updatedAt {
+      Text(String(localized: .shiftsLastEdited) + " " + formattedShiftTimestamp(updatedAt))
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+        .frame(maxWidth: .infinity)
+        .padding(.top, Spacing.xs)
+    }
   }
 
-  /// Format the last edited date with relative or absolute formatting
-  private func formattedLastEdited(_ date: Date) -> String {
+  private func timestampsMatch(_ lhs: Date, _ rhs: Date) -> Bool {
+    abs(lhs.timeIntervalSince(rhs)) < 1
+  }
+
+  /// Format shift metadata dates with relative or absolute formatting.
+  private func formattedShiftTimestamp(_ date: Date) -> String {
     let calendar = Calendar.current
     let now = Date()
 

@@ -20,6 +20,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex需要访问您的照片库来保存日历和班次图片。";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex需要访问您的日历，以便将您的班次导出为日历事件。";

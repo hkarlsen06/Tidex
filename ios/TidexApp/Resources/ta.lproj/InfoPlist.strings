@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex பகிரப்பட்ட காலெண்டர் மற்றும் ஷிப்ட் படங்களை உங்கள் புகைப்படக் நூலகத்தில் சேமிக்க அணுகல் தேவை.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex உங்களின் ஷிப்டுகளை காலெண்டர் நிகழ்வுகளாக ஏற்றுமதி செய்ய காலெண்டர் அணுகல் தேவை.";

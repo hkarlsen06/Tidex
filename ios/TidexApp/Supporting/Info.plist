@@ -51,8 +51,6 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>Tidex needs calendar access to export your shifts as calendar events.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Tidex needs camera access to take profile pictures and chat images.</string>
 	<key>NSFaceIDUsageDescription</key>

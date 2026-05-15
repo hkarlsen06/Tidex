@@ -62,6 +62,7 @@ struct SettingsView: View {
     case appearance
     case pay(jobId: String?)
     case recurringShifts
+    case calendarSync(calendarSetupIntent: CalendarSubscriptionSetupIntent? = nil)
     case data
     case feedback
     case admin
@@ -178,6 +179,15 @@ struct SettingsView: View {
             ) {
               navigationPath.append(SettingsDestination.recurringShifts)
             }
+
+            settingsMenuDivider
+
+            SettingsMenuItem(
+              icon: "calendar.badge.clock",
+              title: String(localized: "calendar.subscription.title")
+            ) {
+              navigationPath.append(SettingsDestination.calendarSync())
+            }
           }
 
           // MARK: - Support & Data
@@ -260,6 +270,8 @@ struct SettingsView: View {
             PaySettingsView(initialJobId: jobId)
           case .recurringShifts:
             RecurringShiftsSettingsView()
+          case .calendarSync(let calendarSetupIntent):
+            CalendarSyncSettingsView(calendarSetupIntent: calendarSetupIntent)
           case .data:
             DataSettingsView()
           case .feedback:

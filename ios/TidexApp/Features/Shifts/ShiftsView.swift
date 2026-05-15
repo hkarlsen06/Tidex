@@ -88,6 +88,7 @@ struct ShiftsView: View {
   @Binding var selectedTab: MainTabView.Tab
 
   @StateObject private var viewModel = ShiftsViewModel()
+  @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared
   @ObservedObject private var celebrationManager = CelebrationManager.shared
   @ObservedObject private var syncStatusManager = SyncStatusManager.shared
   @State private var operationErrorMessage: String?
@@ -110,6 +111,7 @@ struct ShiftsView: View {
 
   // Recurring shift editor state
   @State private var recurringShiftToEdit: RecurringShiftRow?
+  @State private var showCalendarSubscriptionSettings = false
 
   // List scroll state (hidden until scrolled to today to prevent flash)
   @State private var listReady = false
@@ -151,6 +153,14 @@ struct ShiftsView: View {
       && editResult.shiftDate == originalShift.shiftDate
       && editResult.startTime == String(originalShift.startTime.prefix(5))
       && editResult.endTime == String(originalShift.endTime.prefix(5))
+  }
+
+  private func openCalendarSubscriptionSetupFromShifts() {
+    selectedShift = nil
+    selectedEvent = nil
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      showCalendarSubscriptionSettings = true
+    }
   }
 
   // Orientation tracking for iPad landscape layout
@@ -272,6 +282,7 @@ struct ShiftsView: View {
       baseBody
         .task {
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          await calendarSubscriptionStore.refreshIfNeeded()
           await viewModel.loadShifts()
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
@@ -388,6 +399,10 @@ struct ShiftsView: View {
                 }
               }
             },
+            showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+            onShowInCalendarRequested: {
+              openCalendarSubscriptionSetupFromShifts()
+            },
             tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
           )
           .presentationDetents([.medium, .large])
@@ -435,6 +450,7 @@ struct ShiftsView: View {
                 }
               }
             },
+            showsCalendarSubscriptionCTA: false,
             startInEditMode: true,
             tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
           )
@@ -458,10 +474,19 @@ struct ShiftsView: View {
             onInlineReminderUpdate: { editResult in
               try await viewModel.updateEvent(editResult)
             },
+            showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+            onShowInCalendarRequested: {
+              openCalendarSubscriptionSetupFromShifts()
+            },
             startInEditMode: selection.startInEditMode
           )
           .presentationDetents([.medium, .large])
           .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showCalendarSubscriptionSettings) {
+          SettingsView(
+            initialDestination: .calendarSync(
+              calendarSetupIntent: .setup(mode: .shiftsAndEvents, autoOpen: false)))
         }
         // Delete confirmation alert
         .alert(

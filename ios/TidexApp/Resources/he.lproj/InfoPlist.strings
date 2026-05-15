@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex זקוק לגישה כדי לשמור תמונות של לוח שנה ותורים משותפים בספריית התמונות שלך.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex זקוק לגישה ללוח השנה כדי לייצא את התורים שלך כאירועי לוח שנה.";

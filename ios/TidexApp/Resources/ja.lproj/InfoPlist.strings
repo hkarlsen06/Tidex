@@ -20,6 +20,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidexは共有カレンダーとシフト画像をフォトライブラリに保存するためにアクセスが必要です。";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidexはシフトをカレンダーイベントとしてエクスポートするため、カレンダーへのアクセスが必要です。";

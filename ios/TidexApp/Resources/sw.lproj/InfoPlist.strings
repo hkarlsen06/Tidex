@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex inahitaji umeme wa ufikaji wa picha ili kuhifadhi kalenda iliyoshirikishwa na picha za zamu kwenye maktaba yako ya picha.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex inahitaji umeme wa kalenda ili kuhamisha zamu zako kama matukio ya kalenda.";

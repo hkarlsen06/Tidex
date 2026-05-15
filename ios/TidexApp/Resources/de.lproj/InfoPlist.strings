@@ -20,6 +20,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex benötigt Zugriff, um freigegebene Kalender- und Schichtbilder in deiner Fotobibliothek zu speichern.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex benötigt Zugriff auf deinen Kalender, um deine Schichten als Kalenderereignisse zu exportieren.";

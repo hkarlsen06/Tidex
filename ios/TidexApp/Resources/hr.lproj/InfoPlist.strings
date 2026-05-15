@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex trebuje pristup galeriji kako bi mogao spremiti slike zajedničkog kalendara i smjena u vašu fototeku.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex trebuje pristup kalendaru kako bi mogao izvesti vaše smjene kao događaje u kalendaru.";

@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import PDFKit
 import Supabase
@@ -72,7 +73,6 @@ enum ExportPeriodPreset: String, CaseIterable, Identifiable {
 enum ExportFormat {
   case pdf
   case csv
-  case calendar
 }
 
 /// Response from the export API
@@ -120,7 +120,10 @@ final class DataSettingsViewModel: ObservableObject {
   @Published var isExportingCsv = false
 
   /// Loading state for calendar export
-  @Published var isExportingCalendar = false
+  @Published var calendarSubscriptionState: CalendarSubscriptionState = .inactive
+  @Published var isLoadingCalendarSubscription = false
+  @Published var isUpdatingCalendarSubscription = false
+  @Published var calendarSubscriptionFallbackURL: URL?
 
   /// Error message
   @Published var errorMessage: String?
@@ -134,6 +137,19 @@ final class DataSettingsViewModel: ObservableObject {
   // MARK: - Private Properties
 
   private var userId: String?
+  private let calendarSubscriptionStore: CalendarSubscriptionStore
+  private let calendarSetupIntent: CalendarSubscriptionSetupIntent?
+  private var cancellables: Set<AnyCancellable> = []
+  private var didHandleCalendarSetupIntent = false
+
+  init(
+    calendarSetupIntent: CalendarSubscriptionSetupIntent? = nil,
+    calendarSubscriptionStore: CalendarSubscriptionStore? = nil
+  ) {
+    self.calendarSetupIntent = calendarSetupIntent
+    self.calendarSubscriptionStore = calendarSubscriptionStore ?? .shared
+    bindCalendarSubscriptionStore()
+  }
 
   // MARK: - Computed Properties
 
@@ -154,8 +170,7 @@ final class DataSettingsViewModel: ObservableObject {
 
   /// Whether export is currently possible
   var canExport: Bool {
-    resolvedDateRange != nil && !isExportingPdf && !isExportingCsv && !isExportingCalendar
-      && !isSyncing
+    resolvedDateRange != nil && !isExportingPdf && !isExportingCsv && !isSyncing
   }
 
   /// Whether the custom date range is invalid
@@ -168,6 +183,8 @@ final class DataSettingsViewModel: ObservableObject {
   /// Load initial state
   func loadSettings() async {
     userId = await resolveUserIdForLocalData()
+    await calendarSubscriptionStore.refreshIfNeeded()
+    await handleCalendarSetupIntentIfNeeded()
   }
 
   /// Export shifts in the specified format
@@ -180,8 +197,6 @@ final class DataSettingsViewModel: ObservableObject {
       isExportingPdf = true
     case .csv:
       isExportingCsv = true
-    case .calendar:
-      isExportingCalendar = true
     }
     errorMessage = nil
 
@@ -191,18 +206,10 @@ final class DataSettingsViewModel: ObservableObject {
         isExportingPdf = false
       case .csv:
         isExportingCsv = false
-      case .calendar:
-        isExportingCalendar = false
       }
     }
 
     do {
-      // Calendar export uses local data - no network needed
-      if format == .calendar {
-        try await exportToCalendarFromLocalData(userId: userId, from: range.from, to: range.to)
-        return
-      }
-
       // PDF/CSV export is generated from local synced data.
       // Sync first to ensure local changes are pushed to the server
       isSyncing = true
@@ -244,142 +251,11 @@ final class DataSettingsViewModel: ObservableObject {
           localeIdentifier: locale.identifier
         )
         shareURL = fileURL
-
-      case .calendar:
-        break  // Already handled above
       }
 
     } catch {
       logger.error("Export failed: \(error.localizedDescription)")
       errorMessage = error.localizedDescription
-    }
-  }
-
-  /// Export shifts to the device calendar using local data
-  private func exportToCalendarFromLocalData(userId: String, from: String, to: String) async throws
-  {
-    logger.info("Exporting to calendar from local data: \(from) to \(to)")
-
-    // Parse date range
-    guard let startDate = parseISODate(from),
-      let endDate = parseISODate(to)
-    else {
-      throw CalendarExportError.invalidDate
-    }
-
-    // Fetch regular shifts from local storage
-    let regularShifts = ShiftsRepository.shared.getShifts(
-      for: userId,
-      startDate: startDate,
-      endDate: endDate
-    )
-    logger.info("Found \(regularShifts.count) regular shifts in local storage")
-
-    // Fetch recurring shifts from local storage
-    let recurringShifts = RecurringShiftsRepository.shared.getRecurringShifts(for: userId)
-    logger.info("Found \(recurringShifts.count) recurring shift patterns")
-
-    // Generate virtual shifts from recurring patterns
-    var virtualShifts: [ExportedShift] = []
-
-    let calendar = Calendar.current
-    let startYear = calendar.component(.year, from: startDate)
-    let startMonth = calendar.component(.month, from: startDate)
-    let endYear = calendar.component(.year, from: endDate)
-    let endMonth = calendar.component(.month, from: endDate)
-
-    // Track real shifts by date+time to detect duplicates from materialized recurring shifts
-    let realShiftKeys = Set(
-      regularShifts.map { "\($0.shift_date)|\($0.start_time)|\($0.end_time)" })
-
-    for recurring in recurringShifts {
-      var currentYear = startYear
-      var currentMonth = startMonth
-
-      while currentYear < endYear || (currentYear == endYear && currentMonth <= endMonth) {
-        let generatedShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-          year: currentYear,
-          month: currentMonth,
-          recurring: recurring
-        )
-
-        for virtualShift in generatedShifts {
-          // Skip if outside the date range
-          guard virtualShift.date >= from && virtualShift.date <= to else { continue }
-
-          // Skip if a real shift with matching times exists (materialized recurring shift)
-          let key = "\(virtualShift.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
-          guard !realShiftKeys.contains(key) else { continue }
-
-          // Convert to ExportedShift
-          virtualShifts.append(
-            ExportedShift(
-              id: "virtual-\(recurring.id)-\(virtualShift.date)",
-              date: virtualShift.date,
-              startTime: recurring.start_time,
-              endTime: recurring.end_time,
-              type: getShiftType(dateISO: virtualShift.date),
-              recurringId: recurring.id,
-              calc: ExportedShift.ShiftCalculation(hours: 0, baseWage: 0, supplement: 0, total: 0)
-            ))
-        }
-
-        // Move to next month
-        currentMonth += 1
-        if currentMonth > 12 {
-          currentMonth = 1
-          currentYear += 1
-        }
-      }
-    }
-
-    logger.info("Generated \(virtualShifts.count) virtual shifts from recurring patterns")
-
-    // Convert regular shifts to ExportedShift format
-    let exportedRegularShifts = regularShifts.map { shift in
-      ExportedShift(
-        id: shift.id,
-        date: shift.shift_date,
-        startTime: shift.start_time,
-        endTime: shift.end_time,
-        type: getShiftType(dateISO: shift.shift_date),
-        recurringId: shift.recurring_id,
-        calc: ExportedShift.ShiftCalculation(hours: 0, baseWage: 0, supplement: 0, total: 0)
-      )
-    }
-
-    // Combine and sort all shifts
-    let allShifts = (exportedRegularShifts + virtualShifts).sorted { $0.date < $1.date }
-
-    logger.info("Total shifts to export to calendar: \(allShifts.count)")
-
-    guard !allShifts.isEmpty else {
-      throw CalendarExportError.noShifts
-    }
-
-    let calendarName = String(localized: .dataExportCalendarCalendarName)
-    let eventTitle = String(localized: .dataExportCalendarEventTitle)
-
-    try await CalendarExportService.shared.exportShifts(
-      allShifts,
-      calendarName: calendarName,
-      eventTitle: eventTitle
-    )
-
-    Haptics.play(.success)
-  }
-
-  /// Calculate shift type based on date
-  /// 0 = weekday (Mon-Fri), 1 = Saturday, 2 = Sunday/holiday
-  private func getShiftType(dateISO: String) -> Int {
-    guard let date = parseISODate(dateISO) else { return 0 }
-    let calendar = Calendar.current
-    let weekday = calendar.component(.weekday, from: date)
-
-    switch weekday {
-    case 1: return 2  // Sunday
-    case 7: return 1  // Saturday
-    default: return 0  // Weekday
     }
   }
 
@@ -397,6 +273,82 @@ final class DataSettingsViewModel: ObservableObject {
     shareURL = nil
   }
 
+  func setupCalendarSubscription(mode: CalendarSubscriptionContentMode = .shiftsAndEvents) async {
+    isUpdatingCalendarSubscription = true
+    errorMessage = nil
+    defer { isUpdatingCalendarSubscription = false }
+
+    do {
+      if !calendarSubscriptionState.isActive {
+        do {
+          _ = try await calendarSubscriptionStore.create(mode: mode)
+        } catch CalendarSubscriptionStoreError.subscriptionAlreadyActive {
+          await calendarSubscriptionStore.refresh()
+        }
+      }
+
+      await calendarSubscriptionStore.openCalendarApp()
+      calendarSubscriptionFallbackURL = calendarSubscriptionStore.fallbackHTTPSURL
+      errorMessage = calendarSubscriptionStore.errorMessage
+    } catch {
+      errorMessage = ErrorTranslations.translate(error)
+    }
+  }
+
+  func updateCalendarSubscriptionMode(_ mode: CalendarSubscriptionContentMode) async {
+    isUpdatingCalendarSubscription = true
+    errorMessage = nil
+    defer { isUpdatingCalendarSubscription = false }
+
+    do {
+      try await calendarSubscriptionStore.setContentMode(mode)
+    } catch {
+      errorMessage = ErrorTranslations.translate(error)
+    }
+  }
+
+  func rotateCalendarSubscription() async {
+    isUpdatingCalendarSubscription = true
+    errorMessage = nil
+    defer { isUpdatingCalendarSubscription = false }
+
+    do {
+      _ = try await calendarSubscriptionStore.rotate(
+        mode: calendarSubscriptionState.metadata?.contentMode)
+      await calendarSubscriptionStore.openCalendarApp()
+      calendarSubscriptionFallbackURL = calendarSubscriptionStore.fallbackHTTPSURL
+      errorMessage = calendarSubscriptionStore.errorMessage
+    } catch {
+      errorMessage = ErrorTranslations.translate(error)
+    }
+  }
+
+  func disableCalendarSubscription() async {
+    isUpdatingCalendarSubscription = true
+    errorMessage = nil
+    defer { isUpdatingCalendarSubscription = false }
+
+    do {
+      try await calendarSubscriptionStore.disable()
+    } catch {
+      errorMessage = ErrorTranslations.translate(error)
+    }
+  }
+
+  func openCalendarSubscription() async {
+    isUpdatingCalendarSubscription = true
+    errorMessage = nil
+    defer { isUpdatingCalendarSubscription = false }
+
+    await calendarSubscriptionStore.openCalendarApp()
+    calendarSubscriptionFallbackURL = calendarSubscriptionStore.fallbackHTTPSURL
+    errorMessage = calendarSubscriptionStore.errorMessage
+  }
+
+  func copyCalendarSubscriptionFallbackURL() {
+    calendarSubscriptionStore.copyFallbackURL()
+  }
+
   // MARK: - Private Methods
 
   private func resolveUserIdForLocalData() async -> String? {
@@ -412,6 +364,40 @@ final class DataSettingsViewModel: ObservableObject {
 
       logger.error("Failed to get user session: \(error.localizedDescription)")
       return nil
+    }
+  }
+
+  private func bindCalendarSubscriptionStore() {
+    calendarSubscriptionStore.$state
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] state in
+        self?.calendarSubscriptionState = state
+      }
+      .store(in: &cancellables)
+
+    calendarSubscriptionStore.$isLoading
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] isLoading in
+        self?.isLoadingCalendarSubscription = isLoading
+      }
+      .store(in: &cancellables)
+
+    calendarSubscriptionStore.$fallbackHTTPSURL
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] url in
+        self?.calendarSubscriptionFallbackURL = url
+      }
+      .store(in: &cancellables)
+  }
+
+  private func handleCalendarSetupIntentIfNeeded() async {
+    guard !didHandleCalendarSetupIntent, let calendarSetupIntent else { return }
+    didHandleCalendarSetupIntent = true
+
+    switch calendarSetupIntent {
+    case .setup(let mode, let autoOpen):
+      guard autoOpen else { return }
+      await setupCalendarSubscription(mode: mode)
     }
   }
 
@@ -528,6 +514,18 @@ final class DataSettingsViewModel: ObservableObject {
         total: computed.gross
       )
     )
+  }
+
+  private func getShiftType(dateISO: String) -> Int {
+    guard let date = parseISODate(dateISO) else { return 0 }
+    let calendar = Calendar.current
+    let weekday = calendar.component(.weekday, from: date)
+
+    switch weekday {
+    case 1: return 2
+    case 7: return 1
+    default: return 0
+    }
   }
 
   /// Generate PDF from export data in a detached task.
