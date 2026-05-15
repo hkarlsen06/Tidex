@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex ต้องการสิทธิ์เข้าถึงไลบรารีรูปภาพของคุณเพื่อบันทึกปฏิทินและรูปภาพกะการทำงานที่แชร์";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex ต้องการเข้าถึงปฏิทินของคุณเพื่อเพิ่มและจัดการกะงานของคุณ";

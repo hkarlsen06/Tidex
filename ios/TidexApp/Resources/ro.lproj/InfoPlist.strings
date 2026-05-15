@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex are nevoie de acces pentru a salva imaginile calendarului și turelor partajate în biblioteca ta foto.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex are nevoie de acces complet la calendarul tău pentru a adăuga și gestiona turele.";

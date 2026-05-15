@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Το Tidex χρειάζεται πρόσβαση για να αποθηκεύσει κοινόχρηστες φωτογραφίες ημερολογίου και βάρδιας στη φωτοθήκη σας.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Το Tidex χρειάζεται πλήρη πρόσβαση στο Ημερολόγιό σας για να προσθέτει και να διαχειρίζεται τις βάρδιές σας.";

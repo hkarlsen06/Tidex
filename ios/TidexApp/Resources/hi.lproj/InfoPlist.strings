@@ -6,6 +6,12 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex को प्रोफ़ाइल फ़ोटो लेने के लिए कैमरे की एक्सेस चाहिए।";
 
@@ -14,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex को शेयर किए गए कैलेंडर और शिफ्ट की तस्वीरें आपकी फ़ोटो लाइब्रेरी में सहेजने के लिए एक्सेस चाहिए।";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex को आपकी शिफ्ट और काम के समय को आपके कैलेंडर में जोड़ने और प्रबंधित करने के लिए पूर्ण कैलेंडर एक्सेस चाहिए।";

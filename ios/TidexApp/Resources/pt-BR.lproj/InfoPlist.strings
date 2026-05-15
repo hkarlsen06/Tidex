@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex precisa de acesso para salvar calendários compartilhados e imagens de turnos na sua biblioteca de fotos.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "O Tidex usa seus calendários para sincronizar e gerenciar seus turnos de trabalho.";

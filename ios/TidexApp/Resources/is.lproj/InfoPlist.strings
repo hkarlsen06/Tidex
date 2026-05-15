@@ -6,6 +6,12 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex þarf aðgang að myndavélinni til að taka prófílmynd.";
 
@@ -14,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex þarf aðgang til að vista deildar dagatals- og vaktamyndir á myndasafnið þitt.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex þarf aðgang að dagatalinu þínu til að bæta við og halda utan um vaktir.";

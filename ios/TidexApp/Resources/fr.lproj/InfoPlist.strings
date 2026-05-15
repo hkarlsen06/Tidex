@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex a besoin d'accéder à votre photothèque pour enregistrer les calendriers et images de quarts partagés.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex a besoin d’un accès complet à votre calendrier pour enregistrer et gérer vos horaires de travail.";

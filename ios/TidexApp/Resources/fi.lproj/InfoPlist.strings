@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex tarvitsee käyttöoikeuden jaettujen kalenterien ja vuorojen kuvien tallentamiseen valokuviin.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex tarvitsee pääsyn kalenteriisi, jotta voit lisätä työvuorosi kalenteriin.";
