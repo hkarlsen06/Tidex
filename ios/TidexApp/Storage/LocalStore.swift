@@ -1203,6 +1203,7 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
+  // swiftlint:disable:next function_parameter_count
   func createEvent(
     id: String? = nil,
     userId: String,
@@ -1272,6 +1273,7 @@ actor LocalStoreActor {
     return localEvent.toEventRow()
   }
 
+  // swiftlint:disable:next function_parameter_count
   func updateEvent(
     id: String,
     startDate: Date?,
@@ -2960,6 +2962,7 @@ actor LocalStoreActor {
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
+  // swiftlint:disable:next function_parameter_count
   func autoMergeEvent(
     id: String,
     serverRow: SyncEventRow,
@@ -3712,6 +3715,7 @@ actor LocalStoreActor {
     existing.conflictServerSnapshot = nil
   }
 
+  // swiftlint:disable:next function_parameter_count
   func rebaseEvent(
     id: String,
     serverRow: SyncEventRow,

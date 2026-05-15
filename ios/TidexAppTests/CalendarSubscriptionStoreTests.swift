@@ -103,6 +103,7 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
     self.createError = createError
   }
 
+  // swiftlint:disable:next async_without_await
   func getSubscription() async throws -> CalendarSubscriptionState {
     if createError != nil {
       state = activeAfterDuplicate
@@ -110,6 +111,7 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
     return state
   }
 
+  // swiftlint:disable:next async_without_await
   func createSubscription(mode: CalendarSubscriptionContentMode) async throws
     -> CalendarSubscriptionCreated
   {
@@ -134,6 +136,7 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
     try await createSubscription(mode: mode ?? .shiftsAndEvents)
   }
 
+  // swiftlint:disable:next async_without_await
   func setContentMode(_ mode: CalendarSubscriptionContentMode) async throws
     -> CalendarSubscriptionMetadata
   {
@@ -152,6 +155,7 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
     return updated
   }
 
+  // swiftlint:disable:next async_without_await
   func disableSubscription() async throws -> Bool {
     state = .inactive
     return true

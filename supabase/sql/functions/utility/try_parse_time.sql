@@ -5,7 +5,7 @@
 CREATE OR REPLACE FUNCTION public.try_parse_time(val text)
  RETURNS time without time zone
  LANGUAGE plpgsql
- IMMUTABLE
+ STABLE
  SET search_path TO 'public', 'pg_temp'
 AS $function$
 BEGIN
