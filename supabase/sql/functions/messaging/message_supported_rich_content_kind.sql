@@ -4,7 +4,7 @@
 CREATE OR REPLACE FUNCTION public.message_supported_rich_content_kind(p_metadata jsonb)
 RETURNS text
 LANGUAGE plpgsql
-IMMUTABLE
+STABLE
 SET search_path TO ''
 AS $function$
 DECLARE

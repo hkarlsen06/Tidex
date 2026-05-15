@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -98,6 +99,7 @@ final class EventsRepository: ObservableObject {
     }
   }
 
+  // swiftlint:disable:next function_parameter_count
   func createEvent(
     eventId: String? = nil,
     userId: String,
