@@ -1,9 +1,6 @@
 import { assert, assertStringIncludes } from "jsr:@std/assert";
 
-import {
-  getSystemPrompt,
-  WAGEY_MESSAGE_BREAK_TOKEN,
-} from "./system-prompt.ts";
+import { getSystemPrompt, WAGEY_MESSAGE_BREAK_TOKEN } from "./system-prompt.ts";
 
 Deno.test("getSystemPrompt prefers explicit bubble breaks when supported", () => {
   const prompt = getSystemPrompt({
@@ -36,4 +33,18 @@ Deno.test("getSystemPrompt omits bubble instructions for legacy clients", () => 
   });
 
   assert(!prompt.includes("<message_bubbles>"));
+});
+
+Deno.test("getSystemPrompt includes simple agent operating model", () => {
+  const prompt = getSystemPrompt({
+    accessLevel: "pro",
+    used: 3,
+    remaining: 37,
+    bonus: 0,
+  });
+
+  assertStringIncludes(prompt, "<agent_operating_model>");
+  assertStringIncludes(prompt, "Use the simplest reliable path");
+  assertStringIncludes(prompt, "observe -> act -> verify loop");
+  assertStringIncludes(prompt, "If tool output contradicts your assumption");
 });

@@ -4,6 +4,7 @@ import { DEFAULT_CLAUDE_MODEL } from "./claude.ts";
 import { DEFAULT_OPENAI_MODEL } from "./openai.ts";
 import {
   assistantLikelyClaimsWriteAction,
+  getToolNarration,
   handleWageyRequest,
   isReadOnlyToolUse,
   userLikelyRequestedWriteAction,
@@ -354,6 +355,17 @@ Deno.test("handleWageyRequest emits built-in tool events and deduped sources for
 
     const chunks = await readChunkStream(response);
 
+    const firstTextIndex = chunks.findIndex((chunk) => chunk.type === "text");
+    const firstToolStartIndex = chunks.findIndex((chunk) =>
+      chunk.type === "wagey_built_in_tool_start"
+    );
+    assert(firstTextIndex >= 0);
+    assert(firstToolStartIndex >= 0);
+    assert(firstTextIndex < firstToolStartIndex);
+    assertEquals(
+      chunks[firstTextIndex].content,
+      "Jeg sjekker en oppdatert kilde først.",
+    );
     assert(chunks.some((chunk) => chunk.type === "text_start"));
     assert(chunks.some((chunk) => chunk.type === "wagey_built_in_tool_start"));
     assert(chunks.some((chunk) => chunk.type === "wagey_built_in_tool_result"));
@@ -795,6 +807,21 @@ Deno.test("assistantLikelyClaimsWriteAction detects promise/complete mutation la
   assertEquals(
     assistantLikelyClaimsWriteAction("Jeg sjekker lønnsinnstillingene dine."),
     false,
+  );
+});
+
+Deno.test("getToolNarration keeps fallback tool narration user-facing and localized", () => {
+  assertEquals(
+    getToolNarration("get_wage_info", "Matcher lønna mi med live tariff?"),
+    "Jeg sjekker lønnsoppsettet ditt først.",
+  );
+  assertEquals(
+    getToolNarration("web_search", "Is this tariff current?"),
+    "I'll check an up-to-date source first.",
+  );
+  assertEquals(
+    getToolNarration("manage_shift", "Kan du lage en vakt i morgen?"),
+    "Jeg sjekker vaktdetaljene først.",
   );
 });
 
