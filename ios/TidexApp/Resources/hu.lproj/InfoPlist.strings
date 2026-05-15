@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "A Tidex hozzáférésre van szüksége a megosztott naptári és műszak-képek fotókönyvtárba mentéséhez.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "A Tidex naptár-hozzáférésre van szüksége a műszakaid naptáreseményként való exportálásához.";

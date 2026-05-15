@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex necessita accés per guardar imatges del calendari i torns compartits a la teva biblioteca de fotos.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex necessita accés al calendari per exportar els teus torns com a events del calendari.";

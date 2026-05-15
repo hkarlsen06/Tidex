@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex کو شیئر شدہ کیلنڈر اور شفٹ کی تصاویر آپ کی فوٹو لائبریری میں محفوظ کرنے کے لیے رسائی کی ضرورت ہے۔";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex کو آپ کی شفٹوں کو کیلنڈر ایونٹس کے طور پر محفوظ کرنے کے لیے کیلنڈر تک رسائی کی ضرورت ہے۔";

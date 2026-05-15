@@ -2578,13 +2578,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     isDeletingEvent = true
     defer { isDeletingEvent = false }
 
-    do {
-      try await CalendarExportService.shared.deleteExportedEvent(event)
-    } catch {
-      logger.error(
-        "Failed to delete exported calendar event \(event.id): \(error.localizedDescription)")
-    }
-
     try await eventsRepository.deleteEvent(id: event.id)
     await reloadFromLocal()
     notifyShiftsDidChange()

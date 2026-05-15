@@ -151,6 +151,9 @@ struct ShiftWithComputations: Identifiable, Equatable {
   var startTime: String { shift.start_time }
   var endTime: String { shift.end_time }
   var isVirtual: Bool { shift.isVirtual }
+  var createdAt: Date? {
+    shift.created_at.flatMap { FormatterCache.iso8601Formatter().date(from: $0) }
+  }
   var updatedAt: Date? { shift.updated_at }
   var note: String? { shift.note }
 

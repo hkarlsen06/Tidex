@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex vajab juurdepääsu, et salvestada jagatud kalendri ja vahetuse pilte teie fotogaleriisse.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex vajab kalendrilubasust, et eksportida teie vahetused kalendrietüüpidena.";

@@ -20,6 +20,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex trenger tilgang til å lagre delte kalendre og skiftbilder i fotobiblioteket ditt.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex trenger tilgang til kalenderen for å eksportere vaktene dine som kalenderhendelser.";

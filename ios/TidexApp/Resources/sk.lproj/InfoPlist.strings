@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex potrebuje prístup k uloženiu zdieľaného kalendára a obrázkov zmien do vašej knižnice fotografií.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex potrebuje prístup k vášmu kalendáru, aby ste si mohli exportovať svoje zmeny ako udalosti v kalendári.";

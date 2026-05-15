@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex membutuhkan akses untuk menyimpan kalender bersama dan gambar shift ke galeri foto Anda.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex membutuhkan akses kalender untuk mengekspor shift Anda sebagai acara kalender.";

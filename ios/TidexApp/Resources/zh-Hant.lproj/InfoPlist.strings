@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex 需要存取權限以將共享日曆和班次圖片保存到您的相機膠卷。";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex 需要日曆存取權限來將您的班次匯出為日曆事件。";

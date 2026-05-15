@@ -26,6 +26,7 @@ struct DashboardView: View {
 
   @StateObject private var viewModel = DashboardViewModel()
   @StateObject private var countdownManager = CountdownManager()
+  @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared
   @ObservedObject private var pushManager = PushNotificationManager.shared
 
   /// State for showing push notification failure alert
@@ -56,6 +57,7 @@ struct DashboardView: View {
   @State private var temporarySessionReferenceDate = Date()
   @State private var showMixedCurrencyBreakdownPopover = false
   @State private var activeDashboardRefreshTask: Task<Void, Never>?
+  @State private var showCalendarSubscriptionSettings = false
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -109,6 +111,14 @@ struct DashboardView: View {
       await viewModel.refreshClockState()
       guard !Task.isCancelled else { return }
       await viewModel.preloadClockSelectableJobs()
+    }
+  }
+
+  private func openCalendarSubscriptionSetupFromDashboard() {
+    selectedShift = nil
+    selectedEvent = nil
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      showCalendarSubscriptionSettings = true
     }
   }
 
@@ -177,6 +187,7 @@ struct DashboardView: View {
     }
     .task {
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+      await calendarSubscriptionStore.refreshIfNeeded()
       await viewModel.loadDashboard()
 
       // If sync already completed before view appeared, reload to pick up synced data
@@ -418,6 +429,10 @@ struct DashboardView: View {
             }
           }
         },
+        showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+        onShowInCalendarRequested: {
+          openCalendarSubscriptionSetupFromDashboard()
+        },
         tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
       )
       .presentationDetents([.medium, .large])
@@ -440,10 +455,19 @@ struct DashboardView: View {
         onInlineReminderUpdate: { editResult in
           try await viewModel.updateEvent(editResult)
         },
+        showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+        onShowInCalendarRequested: {
+          openCalendarSubscriptionSetupFromDashboard()
+        },
         startInEditMode: selection.startInEditMode
       )
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
+    }
+    .sheet(isPresented: $showCalendarSubscriptionSettings) {
+      SettingsView(
+        initialDestination: .calendarSync(
+          calendarSetupIntent: .setup(mode: .shiftsAndEvents, autoOpen: false)))
     }
     // Delete confirmation dialog
     .confirmationDialog(

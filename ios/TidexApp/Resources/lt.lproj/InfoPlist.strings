@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex reikalinga prieiga, kad išsaugotų bendrinamus kalendoriaus ir pamainų vaizdulius jūsų nuotraukų bibliotekoje.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex reikalinga prieiga prie kalendoriaus, kad jūsų pamainas būtų galima eksportuoti kaip kalendoriaus renginius.";

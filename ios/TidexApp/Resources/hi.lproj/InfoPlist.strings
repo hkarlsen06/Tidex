@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex को शेयर किए गए कैलेंडर और शिफ्ट की तस्वीरें आपकी फ़ोटो लाइब्रेरी में सहेजने के लिए एक्सेस चाहिए।";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex को आपकी शिफ्ट को कैलेंडर इवेंट के रूप में एक्सपोर्ट करने के लिए कैलेंडर एक्सेस चाहिए।";

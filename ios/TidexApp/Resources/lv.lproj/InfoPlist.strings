@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex vajag piekļuvi fotoattēlu bibliotēkai, lai saglabātu koplietotus kalendārus un maiņu attēlus.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex vajag piekļuvi jūsu kalendāram, lai eksportētu jūsu maiņas kā kalendāra notikumus.";

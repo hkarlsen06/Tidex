@@ -1045,12 +1045,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     defer { isDeletingEvent = false }
 
     logger.info("🗑️ Deleting event \(event.id)")
-    do {
-      try await CalendarExportService.shared.deleteExportedEvent(event)
-    } catch {
-      logger.error(
-        "Failed to delete exported calendar event \(event.id): \(error.localizedDescription)")
-    }
 
     try await eventsRepository.deleteEvent(id: event.id)
     await reloadFromLocal()

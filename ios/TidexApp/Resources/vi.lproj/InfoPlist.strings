@@ -20,6 +20,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex cần quyền truy cập thư viện ảnh để lưu các hình ảnh lịch và ca làm việc được chia sẻ.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex cần quyền truy cập lịch để xuất các ca làm việc của bạn dưới dạng sự kiện lịch.";

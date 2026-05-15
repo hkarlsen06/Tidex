@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		CA1E4D0130A1000000C0FFEE /* CalendarExportServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E4D0230A1000000C0FFEE /* CalendarExportServiceTests.swift */; };
 		11263D3C2F2FF22700233D63 /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3B2F2FF22700233D63 /* CropViewController */; };
 		11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3F2F2FF3F700233D63 /* TOCropViewController */; };
 		114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -42,11 +41,12 @@
 		91106E689CB197BE16533EF4 /* PayrollTotalsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */; };
 		9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */; };
 		A1B2C3D43031111100A1B2C3 /* LaunchAppearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */; };
-		A9B8C7D63041ABCD00A1B2C3 /* OnboardingSaveManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */; };
 		A4460F5A061D70E12FA26564 /* SyncServerSnapshotDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */; };
+		A9B8C7D63041ABCD00A1B2C3 /* OnboardingSaveManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */; };
 		AA31C0013051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0023051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift */; };
 		AA31C0033051222200B4C5D6 /* EventReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */; };
 		AA31C0053051222200B4C5D6 /* RecurringShiftProjectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */; };
+		AA31C0073055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0083055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift */; };
 		B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */; };
 		C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */; };
 		C51778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
@@ -140,7 +140,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		CA1E4D0230A1000000C0FFEE /* CalendarExportServiceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarExportServiceTests.swift; sourceTree = "<group>"; };
 		00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotsServiceSelectionTests.swift; sourceTree = "<group>"; };
 		0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineDateLogicTests.swift; sourceTree = "<group>"; };
 		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -165,11 +164,12 @@
 		958DCC742DB07C7200EA8C5F /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = SOURCE_ROOT; };
 		A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LaunchAppearanceTests.swift; sourceTree = "<group>"; };
 		A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TidexAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/Watch/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingSaveManagerTests.swift; sourceTree = "<group>"; };
 		AA31C0023051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardFeaturedItemSelectorTests.swift; sourceTree = "<group>"; };
 		AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventReminderPlannerTests.swift; sourceTree = "<group>"; };
 		AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecurringShiftProjectorTests.swift; sourceTree = "<group>"; };
-		A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/Watch/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
+		AA31C0083055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSubscriptionStoreTests.swift; sourceTree = "<group>"; };
 		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };
 		BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TestFixtures.swift; path = TestSupport/TestFixtures.swift; sourceTree = "<group>"; };
 		C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageCompressorTests.swift; sourceTree = "<group>"; };
@@ -376,7 +376,6 @@
 		490F8B0AF0BA025DA4C44BCF /* TidexAppTests */ = {
 			isa = PBXGroup;
 			children = (
-				CA1E4D0230A1000000C0FFEE /* CalendarExportServiceTests.swift */,
 				130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */,
 				F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */,
 				0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */,
@@ -387,6 +386,7 @@
 				AA31C0023051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift */,
 				AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */,
 				AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */,
+				AA31C0083055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift */,
 				C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */,
 				00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */,
 				BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */,
@@ -894,7 +894,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CA1E4D0130A1000000C0FFEE /* CalendarExportServiceTests.swift in Sources */,
 				33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */,
 				DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */,
 				614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */,
@@ -905,6 +904,7 @@
 				AA31C0013051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift in Sources */,
 				AA31C0033051222200B4C5D6 /* EventReminderPlannerTests.swift in Sources */,
 				AA31C0053051222200B4C5D6 /* RecurringShiftProjectorTests.swift in Sources */,
+				AA31C0073055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift in Sources */,
 				C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */,
 				804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */,
 				188D65FF4E96734657711265 /* TestFixtures.swift in Sources */,
@@ -1678,17 +1678,6 @@
 		};
 /* End XCConfigurationList section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/TidexHQ/Chat.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.3;
-			};
-		};
-/* End XCLocalSwiftPackageReference section */
-
 /* Begin XCRemoteSwiftPackageReference section */
 		11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1712,6 +1701,14 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 9.1.0;
+			};
+		};
+		11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TidexHQ/Chat.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.3;
 			};
 		};
 		11F0A0023011111100A1B2C3 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {

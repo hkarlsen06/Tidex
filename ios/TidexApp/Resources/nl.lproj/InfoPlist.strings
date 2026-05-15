@@ -20,6 +20,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex heeft toegang nodig om gedeelde kalender- en roosterafbeeldingen op te slaan in je fototheek.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex heeft toegang tot je agenda nodig om je shifts als agendagebeuren te exporteren.";

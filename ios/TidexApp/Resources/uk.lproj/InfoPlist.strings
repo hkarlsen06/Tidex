@@ -20,6 +20,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex потребує доступу до фотогалереї, щоб зберігати спільний календар і зображення змін.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Tidex потребує доступу до календаря, щоб експортувати ваші зміни як події календаря.";

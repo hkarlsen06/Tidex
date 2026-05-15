@@ -959,6 +959,8 @@ final class AppCoordinator: ObservableObject {
 
     // Clear shared keychain (widget/watch access token)
     AuthSessionManager.shared.clearSharedKeychain()
+    CalendarSubscriptionStore.shared.resetForUserChange()
+    CalendarSubscriptionStore.clearStoredTokensForUserReset()
 
     // Stop StoreKit listener and clear entitlement cache
     StoreKitManager.shared.stopListening()

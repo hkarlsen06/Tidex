@@ -14,6 +14,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Kailangan ng Tidex ng access sa photo library upang magsave ng shared calendar at shift images.";
-
-/* Calendar access description */
-"NSCalendarsFullAccessUsageDescription" = "Kailangan ng Tidex ng calendar access upang i-export ang iyong shifts bilang calendar events.";
