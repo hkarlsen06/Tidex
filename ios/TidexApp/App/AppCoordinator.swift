@@ -84,6 +84,7 @@ final class AppCoordinator: ObservableObject {
       typingUserId: String?,
       navigationRequestId: UUID?
     )  // Navigate to a direct friend chat thread
+    case wagey  // Navigate to Wagey
     case addShift  // Navigate to Add Shift tab (preselected date set via SharedMonthContext)
     case feedback  // Navigate to feedback settings (for users receiving response)
     case adminFeedback  // Navigate to admin panel with feedback tab (for admins receiving new feedback)

@@ -646,6 +646,11 @@ struct MainTabView: View {
       if selectedTab != .add {
         activateTab(.add)
       }
+    case .wagey:
+      if selectedTab != .wagey {
+        activateTab(.wagey)
+      }
+      coordinator.clearPendingDeepLink()
     case .feedback:
       // Open feedback sheet for users viewing their feedback responses
       showFeedbackSheet = true

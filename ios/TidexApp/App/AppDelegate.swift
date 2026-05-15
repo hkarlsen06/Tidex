@@ -922,6 +922,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
         AppCoordinator.shared.pendingDeepLink = .adminFeedback
       }
     }
+    // Handle Wagey response notifications
+    else if type == "wagey_response" {
+      Task { @MainActor in
+        AppCoordinator.shared.pendingDeepLink = .wagey
+      }
+    }
     // Handle friend chat message notifications
     else if type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
       || type == "thread_reaction",

@@ -2,6 +2,7 @@ import Combine
 import Foundation
 import Observation
 import Supabase
+import UIKit
 import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyViewModel")
@@ -75,6 +76,9 @@ final class WageyViewModel {
 
   /// Coalescing window for streamed chunks before mutating UI state.
   private static let streamFlushInterval: TimeInterval = 0.016
+
+  /// Maximum body length for Wagey completion notifications.
+  private static let responseNotificationBodyMaxLength = 180
 
   // MARK: - Published State
 
@@ -246,6 +250,12 @@ final class WageyViewModel {
   /// Current streaming task (for cancellation)
   private var streamTask: Task<Void, Never>?
 
+  /// Background assertion for an active Wagey stream.
+  private var streamBackgroundTaskID: UIBackgroundTaskIdentifier = .invalid
+
+  /// Whether the current stream observed the app outside the active foreground state.
+  private var currentStreamEnteredBackground = false
+
   /// ID of the message currently being streamed
   private var currentAssistantMessageId: String?
 
@@ -288,6 +298,34 @@ final class WageyViewModel {
           self.wageyInvocations = nil
         }
       }
+  }
+
+  private func beginStreamBackgroundTask() {
+    endStreamBackgroundTask()
+    currentStreamEnteredBackground = UIApplication.shared.applicationState != .active
+
+    streamBackgroundTaskID = UIApplication.shared.beginBackgroundTask(
+      withName: "WageyChatStream"
+    ) { [weak self] in
+      Task { @MainActor [weak self] in
+        guard let self else { return }
+        logger.warning("Wagey stream background time expired")
+        self.cancelStream()
+      }
+    }
+  }
+
+  private func endStreamBackgroundTask() {
+    guard streamBackgroundTaskID != .invalid else { return }
+
+    UIApplication.shared.endBackgroundTask(streamBackgroundTaskID)
+    streamBackgroundTaskID = .invalid
+  }
+
+  private func updateCurrentStreamBackgroundState() {
+    if UIApplication.shared.applicationState != .active {
+      currentStreamEnteredBackground = true
+    }
   }
 
   // MARK: - Showcase State Management
@@ -452,6 +490,7 @@ final class WageyViewModel {
     hadSuccessfulToolCalls = false
     pendingSyncTables = []
     currentAssistantMessageId = nil
+    currentStreamEnteredBackground = false
     pendingCompactionContent = nil
     consentPersistenceTask?.cancel()
     consentPersistenceTask = nil
@@ -645,9 +684,13 @@ final class WageyViewModel {
 
     // Prepare haptics for token streaming
     Haptics.prepareStreamingHaptics()
+    beginStreamBackgroundTask()
 
     // Create streaming task
     streamTask = Task { @MainActor in
+      defer {
+        self.endStreamBackgroundTask()
+      }
       do {
         // Get user info from AppCoordinator
         let coordinator = AppCoordinator.shared
@@ -674,6 +717,7 @@ final class WageyViewModel {
         for try await chunk in stream {
           // Check for cancellation
           if Task.isCancelled { break }
+          updateCurrentStreamBackgroundState()
           bufferedChunks.append(chunk)
           let shouldFlush =
             !bufferedChunks.isEmpty
@@ -695,6 +739,7 @@ final class WageyViewModel {
 
         // Finalize the message if not cancelled
         if !Task.isCancelled {
+          updateCurrentStreamBackgroundState()
           finalizeStreamingText()
         }
       } catch {
@@ -710,6 +755,7 @@ final class WageyViewModel {
   func cancelStream() {
     streamTask?.cancel()
     streamTask = nil
+    endStreamBackgroundTask()
 
     // Finalize any partial message
     if isStreaming {
@@ -1116,6 +1162,9 @@ final class WageyViewModel {
 
   /// Finalize the streaming text into a message
   private func finalizeStreamingText(wasCancelled: Bool = false) {
+    let shouldNotifyBackgroundCompletion =
+      currentStreamEnteredBackground && UIApplication.shared.applicationState != .active
+      && !wasCancelled && !(streamTask?.isCancelled ?? false)
     let finalizeIncompleteToolCalls = wasCancelled || error != nil
     let finalizedBlocks = finalizedContentBlocks(
       finalizeIncompleteToolCalls: finalizeIncompleteToolCalls)
@@ -1152,6 +1201,17 @@ final class WageyViewModel {
       messages.append(contentsOf: finalizedMessages)
       applyPendingCompaction(keepingMessageId: keepingMessageId)
       saveCurrentConversation()
+      if shouldNotifyBackgroundCompletion,
+        let notificationBody = responseNotificationBody(from: finalizedMessages.last)
+      {
+        let conversationId = currentConversationId
+        Task {
+          await NotificationService.shared.scheduleWageyResponseNotification(
+            body: notificationBody,
+            conversationId: conversationId
+          )
+        }
+      }
     } else if let pendingCompactionContent {
       currentCompaction = pendingCompactionContent
       saveCurrentConversation()
@@ -1177,6 +1237,7 @@ final class WageyViewModel {
     isModelThinking = false
     currentThinkingStartedAt = nil
     currentAssistantMessageId = nil
+    currentStreamEnteredBackground = false
     streamTask = nil
     if !shouldPresentAlert(for: error) {
       error = nil
@@ -1278,6 +1339,27 @@ final class WageyViewModel {
     for chunk in chunks {
       processChunk(chunk)
     }
+  }
+
+  private func responseNotificationBody(from message: ChatMessage?) -> String? {
+    guard let message, message.role == .assistant else { return nil }
+
+    let text = message.content
+      .plainTextForNotification()
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty else { return nil }
+
+    return Self.truncatedNotificationBody(text)
+  }
+
+  private static func truncatedNotificationBody(_ text: String) -> String {
+    guard text.count > responseNotificationBodyMaxLength else { return text }
+
+    let endIndex = text.index(
+      text.startIndex,
+      offsetBy: responseNotificationBodyMaxLength - 1
+    )
+    return String(text[..<endIndex]).trimmingCharacters(in: .whitespacesAndNewlines) + "..."
   }
 
   private func createNewConversation(with messages: [ChatMessage]) {
@@ -1494,5 +1576,37 @@ enum WageyError: LocalizedError {
     case .networkError(let error):
       return error.localizedDescription
     }
+  }
+}
+
+extension String {
+  fileprivate func plainTextForNotification() -> String {
+    var text = self
+    let replacements: [(String, String)] = [
+      ("```[\\s\\S]*?```", " "),
+      ("`([^`]+)`", "$1"),
+      ("!\\[([^\\]]*)\\]\\([^\\)]*\\)", "$1"),
+      ("\\[([^\\]]+)\\]\\([^\\)]*\\)", "$1"),
+      ("\\*\\*([^*]+)\\*\\*", "$1"),
+      ("__([^_]+)__", "$1"),
+      ("\\*([^*]+)\\*", "$1"),
+      ("_([^_]+)_", "$1"),
+      ("~~([^~]+)~~", "$1"),
+      ("^\\s{0,3}#{1,6}\\s+", ""),
+      ("^\\s{0,3}>\\s?", ""),
+      ("^\\s*[-*+]\\s+", ""),
+      ("^\\s*\\d+[.)]\\s+", ""),
+      ("\\s+", " "),
+    ]
+
+    for (pattern, replacement) in replacements {
+      text = text.replacingOccurrences(
+        of: pattern,
+        with: replacement,
+        options: [.regularExpression]
+      )
+    }
+
+    return text
   }
 }
