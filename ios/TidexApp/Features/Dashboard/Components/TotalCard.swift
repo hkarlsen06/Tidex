@@ -16,6 +16,7 @@ struct TotalCard: View {
   let percentageChange: Double?
   let taxEnabled: Bool
   let monthlyGoal: Double?  // Optional monthly goal used for thin progress bar under total
+  var percentageIncludesPayrollAdjustments: Bool = false
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false
 
@@ -257,9 +258,18 @@ struct TotalCard: View {
         Image(systemName: isPositive ? "arrow.up" : "arrow.down")
           .font(.tidexButton)
           .contentTransition(.symbolEffect(.replace))
-        Text(formattedPercentage)
-          .font(.tidexHeadline)
-          .contentTransition(.numericText(value: displayPercentage))
+        HStack(alignment: .firstTextBaseline, spacing: 1) {
+          Text(formattedPercentage)
+            .font(.tidexHeadline)
+            .contentTransition(.numericText(value: displayPercentage))
+
+          if percentageIncludesPayrollAdjustments {
+            Text("*")
+              .font(.tidexFootnote.weight(.semibold))
+              .offset(y: -4)
+              .accessibilityHidden(true)
+          }
+        }
       }
       .foregroundColor(isPositive ? .tidexBlue : .tidexTextSecondary)
       .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: displayPercentage)

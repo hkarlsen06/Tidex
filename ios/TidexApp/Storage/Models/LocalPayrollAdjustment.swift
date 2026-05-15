@@ -29,6 +29,8 @@ final class LocalPayrollAdjustment {
   var taxTreatmentRaw: String
   var title: String
   var note: String?
+  var curatedNote: String?
+  var curatedLink: String?
   var earnedFromDate: Date?
   var earnedToDate: Date?
   var payoutDate: Date
@@ -102,6 +104,8 @@ final class LocalPayrollAdjustment {
     taxTreatment: PayrollAdjustmentTaxTreatment,
     title: String,
     note: String? = nil,
+    curatedNote: String? = nil,
+    curatedLink: String? = nil,
     earnedFromDate: Date? = nil,
     earnedToDate: Date? = nil,
     payoutDate: Date,
@@ -123,6 +127,8 @@ final class LocalPayrollAdjustment {
     self.taxTreatmentRaw = taxTreatment.rawValue
     self.title = title
     self.note = note
+    self.curatedNote = curatedNote
+    self.curatedLink = curatedLink
     self.earnedFromDate = earnedFromDate
     self.earnedToDate = earnedToDate
     self.payoutDate = payoutDate
@@ -149,6 +155,8 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
   let taxTreatment: PayrollAdjustmentTaxTreatment
   let title: String
   let note: String?
+  let curatedNote: String?
+  let curatedLink: String?
   let earnedFromDate: String?
   let earnedToDate: String?
   let payoutDate: String
@@ -177,6 +185,8 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
       taxTreatment: row.tax_treatment,
       title: row.title,
       note: row.note,
+      curatedNote: row.curated_note,
+      curatedLink: row.curated_link,
       earnedFromDate: row.earned_from_date,
       earnedToDate: row.earned_to_date,
       payoutDate: row.payout_date,
@@ -195,6 +205,8 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
     if taxTreatment != other.taxTreatment { changed.insert(.taxTreatment) }
     if title != other.title { changed.insert(.title) }
     if note != other.note { changed.insert(.note) }
+    if curatedNote != other.curatedNote { changed.insert(.curatedNote) }
+    if curatedLink != other.curatedLink { changed.insert(.curatedLink) }
     if earnedFromDate != other.earnedFromDate { changed.insert(.earnedFromDate) }
     if earnedToDate != other.earnedToDate { changed.insert(.earnedToDate) }
     if payoutDate != other.payoutDate { changed.insert(.payoutDate) }
@@ -214,6 +226,8 @@ extension LocalPayrollAdjustment {
       tax_treatment: taxTreatment,
       title: title,
       note: note,
+      curated_note: curatedNote,
+      curated_link: curatedLink,
       earned_from_date: earnedFromDateString,
       earned_to_date: earnedToDateString,
       payout_date: payoutDateString,
@@ -245,6 +259,8 @@ extension LocalPayrollAdjustment {
       taxTreatment: serverRow.tax_treatment,
       title: serverRow.title,
       note: serverRow.note,
+      curatedNote: serverRow.curated_note,
+      curatedLink: serverRow.curated_link,
       earnedFromDate: serverRow.earned_from_date.flatMap { dateFormatter.date(from: $0) },
       earnedToDate: serverRow.earned_to_date.flatMap { dateFormatter.date(from: $0) },
       payoutDate: dateFormatter.date(from: serverRow.payout_date) ?? Date(),

@@ -587,6 +587,11 @@ final class SyncCoordinator: ObservableObject {
       await Task.yield()
     }
 
+    if table == .payrollAdjustments {
+      let deletedCount = try await reconcilePayrollAdjustmentHardDeletes(userId: userId)
+      totalRows += deletedCount
+    }
+
     let finalCursor = cursor.updatedAt.map { formatSupabaseTimestamp($0) } ?? "initial"
     logger.debug("Pulled \(table.displayName): \(totalRows) rows, cursor now at \(finalCursor)")
 
@@ -598,6 +603,23 @@ final class SyncCoordinator: ObservableObject {
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged
+    )
+  }
+
+  private func reconcilePayrollAdjustmentHardDeletes(userId: String) async throws -> Int {
+    let serverRows: [SyncRowId] =
+      try await supabase
+      .from("payroll_adjustments")
+      .select("id")
+      .eq("user_id", value: userId)
+      .execute()
+      .value
+
+    let serverIds = Set(serverRows.map(\.id))
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    return try await storeActor.markMissingCleanPayrollAdjustmentsDeleted(
+      userId: userId,
+      serverIds: serverIds
     )
   }
 
@@ -1992,6 +2014,8 @@ final class SyncCoordinator: ObservableObject {
     }
     payload["job_id"] = adjustment.jobId.map(AnyJSON.string) ?? .null
     payload["note"] = adjustment.note.map(AnyJSON.string) ?? .null
+    payload["curated_note"] = adjustment.curatedNote.map(AnyJSON.string) ?? .null
+    payload["curated_link"] = adjustment.curatedLink.map(AnyJSON.string) ?? .null
     payload["earned_from_date"] = adjustment.earnedFromDateString.map(AnyJSON.string) ?? .null
     payload["earned_to_date"] = adjustment.earnedToDateString.map(AnyJSON.string) ?? .null
 

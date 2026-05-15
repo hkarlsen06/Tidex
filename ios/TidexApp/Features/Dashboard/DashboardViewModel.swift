@@ -240,6 +240,7 @@ struct DashboardData: Equatable {
   let previousMonthNet: Double?  // nil if tax not enabled
   let previousMonthTax: Double?
   let previousMonthTaxEnabled: Bool
+  let previousMonthHasPayrollAdjustments: Bool
 
   // Total Card (Current Month)
   let currentMonthGross: Double  // All shifts (projected total)
@@ -285,12 +286,62 @@ struct PayrollCardVariant: Identifiable, Equatable {
   let id: String
   let title: String
   let colorHex: String?
+  let badges: [PayrollCardBadge]
   let currency: String
   let payoutDate: Date
   let gross: Double
   let net: Double?
   let tax: Double?
   let taxEnabled: Bool
+  let hasPayrollAdjustments: Bool
+  let jobBreakdowns: [PayrollCardJobBreakdown]
+}
+
+struct PayrollCardBadge: Identifiable, Equatable {
+  let id: String
+  let title: String
+  let colorHex: String?
+}
+
+struct PayrollCardJobBreakdown: Identifiable, Equatable {
+  let id: String
+  let title: String
+  let colorHex: String?
+  let currency: String
+  let basePay: Double
+  let supplementPay: Double
+  let supplementBreakdowns: [PayrollSupplementBreakdown]
+  let postDeductions: Double
+  let postDeductionParts: [BreakDeductionPart]
+  let payoutDate: Date
+  let gross: Double
+  let net: Double?
+  let tax: Double?
+  let taxEnabled: Bool
+  let adjustments: [PayrollAdjustment]
+}
+
+struct PayrollSupplementBreakdown: Identifiable, Equatable {
+  let fromMin: Double
+  let toMin: Double
+  let rate: Double
+  let hours: Double
+  let amount: Double
+
+  var id: String { "\(fromMin)-\(toMin)-\(rate)" }
+
+  var segment: SupplementSegment {
+    SupplementSegment(
+      fromMin: fromMin,
+      toMin: toMin,
+      rate: rate,
+      actualHours: hours
+    )
+  }
+}
+
+enum PayrollAdjustmentCreationError: Error {
+  case missingUser
 }
 
 // MARK: - Temporary Clock Session
@@ -712,29 +763,35 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           id: "default",
           title: defaultTitle,
           colorHex: nil,
+          badges: [],
           currency: fallback.currency,
           payoutDate: fallback.payrollDate,
           gross: fallback.previousMonthGross,
           net: fallback.previousMonthNet,
           tax: fallback.previousMonthTax,
-          taxEnabled: fallback.previousMonthTaxEnabled
+          taxEnabled: fallback.previousMonthTaxEnabled,
+          hasPayrollAdjustments: fallback.previousMonthHasPayrollAdjustments,
+          jobBreakdowns: []
         )
       ]
     }
 
     let jobs = jobsRepository.getNonDeletedJobs(for: userId)
-    guard jobs.count > 1 else {
+    guard !jobs.isEmpty else {
       return [
         PayrollCardVariant(
           id: "default",
           title: defaultTitle,
           colorHex: nil,
+          badges: [],
           currency: fallback.currency,
           payoutDate: fallback.payrollDate,
           gross: fallback.previousMonthGross,
           net: fallback.previousMonthNet,
           tax: fallback.previousMonthTax,
-          taxEnabled: fallback.previousMonthTaxEnabled
+          taxEnabled: fallback.previousMonthTaxEnabled,
+          hasPayrollAdjustments: fallback.previousMonthHasPayrollAdjustments,
+          jobBreakdowns: []
         )
       ]
     }
@@ -763,7 +820,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       return lhsNext < rhsNext
     }
 
-    return sortedJobs.map { job in
+    let jobVariants = sortedJobs.map { job in
       let payrollDay = job.payroll_day ?? fallbackPayrollDay
       let payoutDate = PayrollDateAdjuster.adjustPayrollDate(
         payrollDay: payrollDay,
@@ -809,6 +866,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         payoutMonth: displayYM.month
       )
       let taxEnabled = jobShifts.contains { $0.taxEnabled } || adjustmentTotals.taxEnabled
+      let shiftBasePay = jobShifts.reduce(0) { total, shift in
+        total + displayedBasePay(for: shift)
+      }
+      let shiftSupplementPay = jobShifts.reduce(0) { total, shift in
+        total + displayedSupplementPay(for: shift)
+      }
+      let supplementBreakdowns = payrollSupplementBreakdowns(for: jobShifts)
+      let shiftPostDeductions = jobShifts.reduce(0) { total, shift in
+        total + breakDeductionAmount(for: shift)
+      }
+      let postDeductionParts = payrollBreakDeductionParts(for: jobShifts)
       let gross = totals.gross + adjustmentTotals.gross
       let net = totals.net + adjustmentTotals.net
       let tax = taxEnabled ? gross - net : nil
@@ -817,14 +885,156 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         id: job.id,
         title: job.name,
         colorHex: job.color,
+        badges: [
+          PayrollCardBadge(
+            id: job.id,
+            title: job.name,
+            colorHex: job.color
+          )
+        ],
         currency: job.currency,
         payoutDate: payoutDate,
         gross: gross,
         net: taxEnabled ? net : nil,
         tax: tax,
-        taxEnabled: taxEnabled
+        taxEnabled: taxEnabled,
+        hasPayrollAdjustments: !jobAdjustments.isEmpty,
+        jobBreakdowns: [
+          PayrollCardJobBreakdown(
+            id: job.id,
+            title: job.name,
+            colorHex: job.color,
+            currency: job.currency,
+            basePay: shiftBasePay,
+            supplementPay: shiftSupplementPay,
+            supplementBreakdowns: supplementBreakdowns,
+            postDeductions: shiftPostDeductions,
+            postDeductionParts: postDeductionParts,
+            payoutDate: payoutDate,
+            gross: gross,
+            net: taxEnabled ? net : nil,
+            tax: tax,
+            taxEnabled: taxEnabled,
+            adjustments: jobAdjustments
+          )
+        ]
       )
     }
+
+    let payableJobVariants = jobVariants.filter { $0.gross != 0 }
+    let detailBreakdowns = payableJobVariants.flatMap(\.jobBreakdowns)
+
+    guard let nextPayoutDate = payableJobVariants.first?.payoutDate else {
+      return []
+    }
+
+    let nextPayoutJobs = payableJobVariants.filter {
+      calendar.isDate($0.payoutDate, inSameDayAs: nextPayoutDate)
+    }
+
+    guard nextPayoutJobs.count > 1 else {
+      guard let nextPayoutJob = nextPayoutJobs.first else { return [] }
+      return [
+        PayrollCardVariant(
+          id: nextPayoutJob.id,
+          title: jobs.count > 1 ? nextPayoutJob.title : defaultTitle,
+          colorHex: jobs.count > 1 ? nextPayoutJob.colorHex : nil,
+          badges: jobs.count > 1 ? nextPayoutJob.badges : [],
+          currency: nextPayoutJob.currency,
+          payoutDate: nextPayoutJob.payoutDate,
+          gross: nextPayoutJob.gross,
+          net: nextPayoutJob.net,
+          tax: nextPayoutJob.tax,
+          taxEnabled: nextPayoutJob.taxEnabled,
+          hasPayrollAdjustments: nextPayoutJob.hasPayrollAdjustments,
+          jobBreakdowns: detailBreakdowns
+        )
+      ]
+    }
+
+    let taxEnabled = nextPayoutJobs.contains { $0.taxEnabled }
+    let gross = nextPayoutJobs.reduce(0) { $0 + $1.gross }
+    let net = nextPayoutJobs.reduce(0) { $0 + ($1.net ?? $1.gross) }
+    let tax = taxEnabled ? gross - net : nil
+
+    return [
+      PayrollCardVariant(
+        id: "payout-\(nextPayoutDate.timeIntervalSince1970)",
+        title: defaultTitle,
+        colorHex: nil,
+        badges: nextPayoutJobs.flatMap(\.badges),
+        currency: nextPayoutJobs.first?.currency ?? fallback.currency,
+        payoutDate: nextPayoutDate,
+        gross: gross,
+        net: taxEnabled ? net : nil,
+        tax: tax,
+        taxEnabled: taxEnabled,
+        hasPayrollAdjustments: nextPayoutJobs.contains { $0.hasPayrollAdjustments },
+        jobBreakdowns: detailBreakdowns
+      )
+    ]
+  }
+
+  func createPayrollAdjustment(_ draft: PayrollAdjustmentDraft) async throws -> PayrollAdjustment {
+    guard let userId = resolveUserIdForPayrollVariants() else {
+      throw PayrollAdjustmentCreationError.missingUser
+    }
+
+    let adjustment = try await payrollAdjustmentsRepository.createAdjustment(
+      userId: userId,
+      jobId: draft.jobId,
+      amount: draft.amount,
+      currency: draft.currency,
+      category: draft.category,
+      taxTreatment: draft.taxTreatment,
+      title: draft.title,
+      note: draft.note,
+      earnedFromDate: draft.earnedFromDate,
+      earnedToDate: draft.earnedToDate,
+      payoutDate: draft.payoutDate
+    )
+
+    previousPayrollAdjustments.append(adjustment)
+    await loadDashboardFromLocal(showLoadingState: false)
+    return adjustment
+  }
+
+  func updatePayrollAdjustment(_ id: String, _ draft: PayrollAdjustmentDraft) async throws
+    -> PayrollAdjustment
+  {
+    guard let userId = resolveUserIdForPayrollVariants() else {
+      throw PayrollAdjustmentCreationError.missingUser
+    }
+
+    let adjustment = try await payrollAdjustmentsRepository.updateAdjustment(
+      id: id,
+      userId: userId,
+      jobId: draft.jobId,
+      amount: draft.amount,
+      currency: draft.currency,
+      category: draft.category,
+      taxTreatment: draft.taxTreatment,
+      title: draft.title,
+      note: draft.note,
+      earnedFromDate: draft.earnedFromDate,
+      earnedToDate: draft.earnedToDate,
+      payoutDate: draft.payoutDate
+    )
+
+    previousPayrollAdjustments.removeAll { $0.id == id }
+    previousPayrollAdjustments.append(adjustment)
+    await loadDashboardFromLocal(showLoadingState: false)
+    return adjustment
+  }
+
+  func deletePayrollAdjustment(id: String) async throws {
+    guard let userId = resolveUserIdForPayrollVariants() else {
+      throw PayrollAdjustmentCreationError.missingUser
+    }
+
+    try await payrollAdjustmentsRepository.deleteAdjustment(id: id, userId: userId)
+    previousPayrollAdjustments.removeAll { $0.id == id }
+    await loadDashboardFromLocal(showLoadingState: false)
   }
 
   /// Resolve a stable user ID for payroll card variants while reload is in-flight.
@@ -844,6 +1054,167 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     return nil
+  }
+
+  private func displayedBasePay(for shift: ShiftWithComputations) -> Double {
+    breakDeductionAmount(for: shift) > 0
+      ? BreakDeductionBreakdown.basePay(for: shift.computed.originalWagePeriods)
+      : shift.computed.basePay
+  }
+
+  private func displayedSupplementPay(for shift: ShiftWithComputations) -> Double {
+    breakDeductionAmount(for: shift) > 0
+      ? BreakDeductionBreakdown.supplementPay(for: shift.computed.originalWagePeriods)
+      : shift.computed.supplementPay
+  }
+
+  private func breakDeductionAmount(for shift: ShiftWithComputations) -> Double {
+    guard shift.computed.breakAudit.deductedHours > 0 else { return 0 }
+    return BreakDeductionBreakdown.make(
+      originalPeriods: shift.computed.originalWagePeriods,
+      adjustedPeriods: shift.computed.wagePeriods
+    )?.totalAmount ?? 0
+  }
+
+  private func payrollBreakDeductionParts(for shifts: [ShiftWithComputations])
+    -> [BreakDeductionPart]
+  {
+    let parts = shifts.flatMap { shift -> [BreakDeductionPart] in
+      guard shift.computed.breakAudit.deductedHours > 0 else { return [] }
+      return BreakDeductionBreakdown.make(
+        originalPeriods: shift.computed.originalWagePeriods,
+        adjustedPeriods: shift.computed.wagePeriods
+      )?.parts ?? []
+    }
+
+    var grouped: [String: BreakDeductionPart] = [:]
+
+    for part in parts {
+      let key: String
+      switch part.kind {
+      case .base:
+        key = "base"
+      case .supplement:
+        key = "supplement-\(part.supplementSegment?.id ?? "\(part.rate ?? 0)")"
+      }
+
+      if let existing = grouped[key] {
+        let hours = existing.hours + part.hours
+        let amount = existing.amount + part.amount
+        grouped[key] = BreakDeductionPart(
+          id: key,
+          kind: existing.kind,
+          supplementSegment: existing.supplementSegment.map {
+            SupplementSegment(
+              fromMin: $0.fromMin,
+              toMin: $0.toMin,
+              rate: $0.rate,
+              actualHours: hours
+            )
+          },
+          hours: hours,
+          rate: hours > 0 ? amount / hours : existing.rate,
+          amount: amount
+        )
+      } else {
+        grouped[key] = BreakDeductionPart(
+          id: key,
+          kind: part.kind,
+          supplementSegment: part.supplementSegment,
+          hours: part.hours,
+          rate: part.rate,
+          amount: part.amount
+        )
+      }
+    }
+
+    return grouped.values.sorted { lhs, rhs in
+      if lhs.kind != rhs.kind {
+        return lhs.kind == .base
+      }
+      return lhs.id < rhs.id
+    }
+  }
+
+  private func payrollSupplementBreakdowns(for shifts: [ShiftWithComputations])
+    -> [PayrollSupplementBreakdown]
+  {
+    let segments = shifts.flatMap { shift -> [SupplementSegment] in
+      let original = shift.computed.originalWagePeriods
+      let adjusted =
+        shift.computed.breakAudit.deductedHours > 0
+        ? original : shift.computed.wagePeriods
+      var segments: [SupplementSegment] = []
+      var i = 0
+
+      while i < original.count {
+        let period = original[i]
+        guard period.supplementRate > 0 else {
+          i += 1
+          continue
+        }
+
+        let groupStart = period.fromMin
+        var groupEnd = period.toMin
+        let rate = period.supplementRate
+        var j = i + 1
+
+        while j < original.count && original[j].supplementRate == rate {
+          groupEnd = original[j].toMin
+          j += 1
+        }
+
+        var actualHours: Double = 0
+        for adjustedPeriod in adjusted where adjustedPeriod.supplementRate == rate {
+          let overlapStart = max(adjustedPeriod.fromMin, groupStart)
+          let overlapEnd = min(adjustedPeriod.toMin, groupEnd)
+          if overlapEnd > overlapStart {
+            actualHours += (overlapEnd - overlapStart) / 60.0
+          }
+        }
+
+        if actualHours > 0 {
+          segments.append(
+            SupplementSegment(
+              fromMin: groupStart,
+              toMin: groupEnd,
+              rate: rate,
+              actualHours: actualHours
+            ))
+        }
+
+        i = j
+      }
+
+      return segments
+    }
+
+    let grouped = segments.reduce(
+      into: [String: (fromMin: Double, toMin: Double, rate: Double, hours: Double)]()
+    ) { result, segment in
+      let key = segment.id
+      result[key, default: (segment.fromMin, segment.toMin, segment.rate, 0)].hours +=
+        segment.actualHours
+    }
+
+    return grouped.values.map { segment in
+      PayrollSupplementBreakdown(
+        fromMin: segment.fromMin,
+        toMin: segment.toMin,
+        rate: segment.rate,
+        hours: segment.hours,
+        amount: segment.hours * segment.rate
+      )
+    }
+    .sorted { lhs, rhs in
+      if lhs.fromMin == rhs.fromMin {
+        if lhs.toMin == rhs.toMin {
+          return lhs.rate < rhs.rate
+        }
+        return lhs.toMin < rhs.toMin
+      }
+      return lhs.fromMin < rhs.fromMin
+    }
   }
 
   // MARK: - User Profile Data (for UserMenuButton)
@@ -2228,15 +2599,34 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         jobs: displayJobs,
         fallbackCurrency: fallbackCurrency
       )
+      let previousPrimaryAdjustments = Self.payrollAdjustments(
+        previousAdjustments,
+        matching: currentMonthAggregate.primary,
+        jobs: displayJobs,
+        fallbackCurrency: fallbackCurrency
+      )
+      let previousPrimaryAdjustmentTotals = PayrollAdjustmentCalculator.totals(
+        adjustments: previousPrimaryAdjustments,
+        taxSettings: { adjustment in
+          payrollTaxSettings(
+            for: adjustment,
+            fallback: fallbackTaxSettings,
+            jobId: adjustment.job_id,
+            defaultJobId: displayJobs.first(where: { $0.is_default })?.id
+          )
+        },
+        halfTaxMonth: halfTaxMonth,
+        payoutMonth: displayYM.month
+      )
       previousComparisonGross =
         PayrollEngine.summarizeShiftTotals(
           shifts: previousPrimaryShifts,
           halfTaxMonth: halfTaxMonth,
           earningsMonth: previousYM.month,
           now: now
-        ).gross
+        ).gross + previousPrimaryAdjustmentTotals.gross
     } else {
-      previousComparisonGross = prevTotals.gross
+      previousComparisonGross = previousGross
     }
 
     let percentChange: Double? =
@@ -2271,6 +2661,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       previousMonthNet: prevTaxEnabled ? previousNet : nil,
       previousMonthTax: prevTax,
       previousMonthTaxEnabled: prevTaxEnabled,
+      previousMonthHasPayrollAdjustments: !previousAdjustments.isEmpty,
       currentMonthGross: displayTotals.gross,
       currentMonthNet: displayTaxEnabled ? displayTotals.net : nil,
       currentMonthCompletedGross: displayTotals.completedGross,
@@ -2387,15 +2778,36 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         jobs: jobs,
         fallbackCurrency: currency
       )
+      let previousPrimaryAdjustments = payrollAdjustments(
+        previousPayrollAdjustments,
+        matching: currentMonthAggregate.primary,
+        jobs: jobs,
+        fallbackCurrency: currency
+      )
+      let previousPrimaryAdjustmentTotals = PayrollAdjustmentCalculator.totals(
+        adjustments: previousPrimaryAdjustments,
+        taxSettings: { adjustment in
+          payrollTaxSettings(
+            for: adjustment,
+            fallback: fallbackTaxSettings,
+            snapshots: snapshots,
+            jobs: jobs,
+            jobId: adjustment.job_id,
+            defaultJobId: jobs.first(where: { $0.is_default })?.id
+          )
+        },
+        halfTaxMonth: halfTaxMonth,
+        payoutMonth: displayYM.month
+      )
       previousComparisonGross =
         PayrollEngine.summarizeShiftTotals(
           shifts: previousPrimaryShifts,
           halfTaxMonth: halfTaxMonth,
           earningsMonth: previousYM.month,
           now: now
-        ).gross
+        ).gross + previousPrimaryAdjustmentTotals.gross
     } else {
-      previousComparisonGross = prevTotals.gross
+      previousComparisonGross = previousGross
     }
 
     let percentChange: Double? =
@@ -2426,6 +2838,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       previousMonthNet: prevTaxEnabled ? previousNet : nil,
       previousMonthTax: prevTax,
       previousMonthTaxEnabled: prevTaxEnabled,
+      previousMonthHasPayrollAdjustments: !previousPayrollAdjustments.isEmpty,
       currentMonthGross: displayTotals.gross,
       currentMonthNet: displayTaxEnabled ? displayTotals.net : nil,
       currentMonthCompletedGross: displayTotals.completedGross,
@@ -2454,6 +2867,31 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     components.day = 1
     guard let date = gregorianCalendar.date(from: components) else { return "" }
     return FormatterCache.monthNameFormatter(locale: .appLocale).string(from: date)
+  }
+
+  nonisolated private static func payrollAdjustments(
+    _ adjustments: [PayrollAdjustment],
+    matching entry: JobCurrencyAggregateEntry,
+    jobs: [Job],
+    fallbackCurrency: String
+  ) -> [PayrollAdjustment] {
+    let activeJobs = jobs.filter { $0.deleted_at == nil && $0.archived_at == nil }
+    let defaultJobId =
+      activeJobs.first(where: { $0.is_default })?.id
+      ?? activeJobs.first?.id
+      ?? jobs.first(where: { $0.is_default })?.id
+      ?? jobs.first?.id
+    let jobsById = Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
+
+    return adjustments.filter { adjustment in
+      let effectiveJobId = adjustment.job_id ?? defaultJobId
+      let jobCurrency =
+        effectiveJobId.flatMap { jobId in
+          jobsById[jobId]?.currency
+        } ?? fallbackCurrency
+
+      return effectiveJobId == entry.jobId && jobCurrency == entry.currency
+    }
   }
 
   nonisolated private static func findBestShiftStatic(in shifts: [ShiftWithComputations])

@@ -2,6 +2,10 @@ import Foundation
 
 // MARK: - Server Row Types for Sync
 
+struct SyncRowId: Codable {
+  let id: String
+}
+
 /// Extended shift row with sync metadata fields
 /// Used when fetching from server for sync (includes updated_at, revision, deleted_at)
 struct SyncShiftRow: Codable {
@@ -187,6 +191,8 @@ struct SyncPayrollAdjustmentRow: Codable {
   let tax_treatment: PayrollAdjustmentTaxTreatment
   let title: String
   let note: String?
+  let curated_note: String?
+  let curated_link: String?
   let earned_from_date: String?
   let earned_to_date: String?
   let payout_date: String
@@ -206,6 +212,8 @@ struct SyncPayrollAdjustmentRow: Codable {
       tax_treatment: tax_treatment,
       title: title,
       note: note,
+      curated_note: curated_note,
+      curated_link: curated_link,
       earned_from_date: earned_from_date,
       earned_to_date: earned_to_date,
       payout_date: payout_date,

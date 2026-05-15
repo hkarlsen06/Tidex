@@ -489,16 +489,6 @@ struct EventDetailsSheet: View {
   private var actionButtons: some View {
     VStack(spacing: Spacing.md) {
       if !isEditing {
-        if showsCalendarSubscriptionCTA {
-          DetailSheetActionButton(
-            title: String(localized: "calendar.subscription.detail.cta"),
-            systemImage: "calendar.badge.clock",
-            style: .primary
-          ) {
-            showingCalendarSubscriptionConfirmation = true
-          }
-        }
-
         VStack(spacing: Spacing.sm) {
           DetailSheetActionButton(
             title: String(localized: .shiftsActionsEdit),
@@ -508,6 +498,16 @@ struct EventDetailsSheet: View {
           }
 
           deleteActionButton
+        }
+
+        if showsCalendarSubscriptionCTA {
+          DetailSheetActionButton(
+            title: String(localized: "calendar.subscription.detail.cta"),
+            systemImage: "calendar.badge.clock",
+            style: .primary
+          ) {
+            showingCalendarSubscriptionConfirmation = true
+          }
         }
       } else {
         deleteActionButton

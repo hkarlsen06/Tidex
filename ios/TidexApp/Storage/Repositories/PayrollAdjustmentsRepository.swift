@@ -81,6 +81,38 @@ final class PayrollAdjustmentsRepository: ObservableObject {
     triggerSync(userId: userId)
   }
 
+  // swiftlint:disable:next function_parameter_count
+  func updateAdjustment(
+    id: String,
+    userId: String,
+    jobId: String?,
+    amount: Double,
+    currency: String,
+    category: PayrollAdjustmentCategory,
+    taxTreatment: PayrollAdjustmentTaxTreatment,
+    title: String,
+    note: String? = nil,
+    earnedFromDate: Date? = nil,
+    earnedToDate: Date? = nil,
+    payoutDate: Date
+  ) async throws -> PayrollAdjustment {
+    let adjustment = try await localStore.storeActor.updatePayrollAdjustment(
+      id: id,
+      jobId: jobId,
+      amount: amount,
+      currency: currency,
+      category: category,
+      taxTreatment: taxTreatment,
+      title: title,
+      note: note,
+      earnedFromDate: earnedFromDate,
+      earnedToDate: earnedToDate,
+      payoutDate: payoutDate
+    )
+    triggerSync(userId: userId)
+    return adjustment
+  }
+
   private func triggerSync(userId: String) {
     Task {
       _ = await syncCoordinator.sync(reason: .localChange, userId: userId)

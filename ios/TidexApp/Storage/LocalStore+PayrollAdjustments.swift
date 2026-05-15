@@ -86,6 +86,8 @@ extension LocalStoreActor {
       taxTreatment: taxTreatment,
       title: title,
       note: note,
+      curatedNote: nil,
+      curatedLink: nil,
       earnedFromDate: earnedFromDate.map { payrollAdjustmentDateFormatter.string(from: $0) },
       earnedToDate: earnedToDate.map { payrollAdjustmentDateFormatter.string(from: $0) },
       payoutDate: payrollAdjustmentDateFormatter.string(from: payoutDate),
@@ -106,6 +108,8 @@ extension LocalStoreActor {
       taxTreatment: taxTreatment,
       title: title,
       note: note,
+      curatedNote: nil,
+      curatedLink: nil,
       earnedFromDate: earnedFromDate,
       earnedToDate: earnedToDate,
       payoutDate: payoutDate,
@@ -136,6 +140,41 @@ extension LocalStoreActor {
     try modelContext.save()
   }
 
+  // swiftlint:disable:next function_parameter_count
+  func updatePayrollAdjustment(
+    id: String,
+    jobId: String?,
+    amount: Double,
+    currency: String,
+    category: PayrollAdjustmentCategory,
+    taxTreatment: PayrollAdjustmentTaxTreatment,
+    title: String,
+    note: String?,
+    earnedFromDate: Date?,
+    earnedToDate: Date?,
+    payoutDate: Date
+  ) throws -> PayrollAdjustment {
+    guard let existing = try getPayrollAdjustment(id: id) else {
+      throw LocalStoreWriteError.notFound
+    }
+
+    existing.jobId = jobId
+    existing.amount = amount
+    existing.currency = currency
+    existing.category = category
+    existing.taxTreatment = taxTreatment
+    existing.title = title
+    existing.note = note
+    existing.earnedFromDate = earnedFromDate
+    existing.earnedToDate = earnedToDate
+    existing.payoutDate = payoutDate
+    existing.localUpdatedAt = Date()
+    existing.syncStatus = .dirty
+    existing.dirtyFieldKeys = Set(PayrollAdjustmentField.allCases)
+    try modelContext.save()
+    return existing.toPayrollAdjustment()
+  }
+
   func updatePayrollAdjustmentFromServer(
     id: String,
     serverRow: SyncPayrollAdjustmentRow,
@@ -152,6 +191,8 @@ extension LocalStoreActor {
     existing.taxTreatment = serverRow.tax_treatment
     existing.title = serverRow.title
     existing.note = serverRow.note
+    existing.curatedNote = serverRow.curated_note
+    existing.curatedLink = serverRow.curated_link
     existing.earnedFromDate = serverRow.earned_from_date.flatMap { formatter.date(from: $0) }
     existing.earnedToDate = serverRow.earned_to_date.flatMap { formatter.date(from: $0) }
     existing.payoutDate = formatter.date(from: serverRow.payout_date) ?? existing.payoutDate
@@ -202,6 +243,32 @@ extension LocalStoreActor {
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
+  }
+
+  func markMissingCleanPayrollAdjustmentsDeleted(userId: String, serverIds: Set<String>) throws
+    -> Int
+  {
+    let adjustments = try getAllPayrollAdjustments(userId: userId)
+    let deletedAt = Date()
+    var deletedCount = 0
+
+    for adjustment in adjustments
+    where adjustment.syncStatus == .clean
+      && adjustment.serverDeletedAt == nil
+      && !serverIds.contains(adjustment.id)
+    {
+      adjustment.serverDeletedAt = deletedAt
+      adjustment.syncStatus = .clean
+      adjustment.dirtyFieldKeys = []
+      adjustment.conflictServerSnapshot = nil
+      deletedCount += 1
+    }
+
+    if deletedCount > 0 {
+      try modelContext.save()
+    }
+
+    return deletedCount
   }
 
   func markPayrollAdjustmentConflict(

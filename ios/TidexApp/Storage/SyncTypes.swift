@@ -79,6 +79,8 @@ enum PayrollAdjustmentField: String, Codable, CaseIterable {
   case taxTreatment = "tax_treatment"
   case title = "title"
   case note = "note"
+  case curatedNote = "curated_note"
+  case curatedLink = "curated_link"
   case earnedFromDate = "earned_from_date"
   case earnedToDate = "earned_to_date"
   case payoutDate = "payout_date"

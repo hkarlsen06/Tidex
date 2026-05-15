@@ -22,6 +22,7 @@ struct DashboardView: View {
     let monthDate: Date
     let baselineGoal: Int?
     let initialGoal: Int?
+    let showsAdjustmentPercentageFootnote: Bool
   }
 
   @StateObject private var viewModel = DashboardViewModel()
@@ -53,11 +54,11 @@ struct DashboardView: View {
   @State private var temporaryClockReviewSession: TemporaryClockSession?
   @State private var clockInJobOptions: [Job] = []
   @State private var showClockInJobChooser = false
-  @State private var selectedPayrollVariantIndex = 0
   @State private var temporarySessionReferenceDate = Date()
   @State private var showMixedCurrencyBreakdownPopover = false
   @State private var activeDashboardRefreshTask: Task<Void, Never>?
   @State private var showCalendarSubscriptionSettings = false
+  @State private var selectedPayrollDetailsVariant: PayrollCardVariant?
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
@@ -120,6 +121,24 @@ struct DashboardView: View {
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
       showCalendarSubscriptionSettings = true
     }
+  }
+
+  private func payrollDetailsSheet(for variant: PayrollCardVariant) -> some View {
+    PayrollDetailsSheet(
+      variant: variant,
+      onCreateAdjustment: { draft in
+        try await viewModel.createPayrollAdjustment(draft)
+      },
+      onUpdateAdjustment: { id, draft in
+        try await viewModel.updatePayrollAdjustment(id, draft)
+      },
+      onDeleteAdjustment: { id in
+        try await viewModel.deletePayrollAdjustment(id: id)
+      }
+    )
+    .userCurrency(variant.currency)
+    .presentationDetents([.medium, .large])
+    .presentationDragIndicator(.visible)
   }
 
   var body: some View {
@@ -217,9 +236,6 @@ struct DashboardView: View {
     .onChange(of: viewModel.dashboardData) { _, newData in
       configureCountdown(with: newData)
       showMixedCurrencyBreakdownPopover = false
-    }
-    .onChange(of: selectedPayrollVariantIndex) { _, _ in
-      configureCountdown(with: viewModel.dashboardData)
     }
     .onChange(of: showFeaturedShiftActions) { _, isPresented in
       if !isPresented {
@@ -341,12 +357,16 @@ struct DashboardView: View {
       MonthlyGoalEditSheet(
         monthDate: context.monthDate,
         baselineGoal: context.baselineGoal,
-        initialGoal: context.initialGoal
+        initialGoal: context.initialGoal,
+        showsAdjustmentPercentageFootnote: context.showsAdjustmentPercentageFootnote
       ) { value in
         try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
       }
       .presentationDetents([.fraction(0.35), .medium])
       .presentationDragIndicator(.visible)
+    }
+    .sheet(item: $selectedPayrollDetailsVariant) { variant in
+      payrollDetailsSheet(for: variant)
     }
     .sheet(item: $temporaryClockReviewSession) { session in
       let clockJobs = viewModel.clockSelectableJobsSnapshot()
@@ -663,9 +683,7 @@ struct DashboardView: View {
       return data.payrollDate
     }
 
-    let safePayrollVariantIndex = max(
-      0, min(selectedPayrollVariantIndex, payrollVariants.count - 1))
-    return payrollVariants[safePayrollVariantIndex].payoutDate
+    return payrollVariants[0].payoutDate
   }
 
   private func featuredEventCountdownStatus(_ event: EventRow, now: Date = Date())
@@ -819,102 +837,101 @@ struct DashboardView: View {
       fallback: data,
       defaultTitle: payrollLabel
     )
-    let safePayrollVariantIndex = max(
-      0, min(selectedPayrollVariantIndex, payrollVariants.count - 1))
-    let selectedPayrollVariant = payrollVariants[safePayrollVariantIndex]
-    let showsMultiWorkplacePayroll = payrollVariants.count > 1
-    let selectedPayrollProgress: Double? = {
-      if !showsMultiWorkplacePayroll {
-        return defaultPayrollProgress
-      }
+    if let selectedPayrollVariant = payrollVariants.first {
+      let showsMultiWorkplacePayroll = !selectedPayrollVariant.badges.isEmpty
+      let selectedPayrollProgress: Double? = {
+        if !showsMultiWorkplacePayroll {
+          return defaultPayrollProgress
+        }
 
-      guard isViewingCurrentMonth else { return nil }
+        guard isViewingCurrentMonth else { return nil }
 
-      let selectedPayrollDayStart = calendar.startOfDay(for: selectedPayrollVariant.payoutDate)
-      let selectedPayrollDayEnd =
-        calendar.date(byAdding: .day, value: 1, to: selectedPayrollDayStart)
-        ?? selectedPayrollDayStart
-      guard now < selectedPayrollDayEnd else { return nil }
+        let selectedPayrollDayStart = calendar.startOfDay(for: selectedPayrollVariant.payoutDate)
+        let selectedPayrollDayEnd =
+          calendar.date(byAdding: .day, value: 1, to: selectedPayrollDayStart)
+          ?? selectedPayrollDayStart
+        guard now < selectedPayrollDayEnd else { return nil }
 
-      guard
-        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))
-      else {
-        return nil
-      }
+        guard
+          let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))
+        else {
+          return nil
+        }
 
-      let totalDuration = selectedPayrollDayStart.timeIntervalSince(monthStart)
-      let elapsed = now.timeIntervalSince(monthStart)
-      guard totalDuration > 0 else { return 100 }
+        let totalDuration = selectedPayrollDayStart.timeIntervalSince(monthStart)
+        let elapsed = now.timeIntervalSince(monthStart)
+        guard totalDuration > 0 else { return 100 }
 
-      let progress = (elapsed / totalDuration) * 100
-      return max(1, min(100, progress))
-    }()
+        let progress = (elapsed / totalDuration) * 100
+        return max(1, min(100, progress))
+      }()
 
-    // Cards stay in place - only numbers animate on month change (like Next.js)
-    VStack(spacing: Spacing.sm) {
-      // Payroll countdown text - fixed height to prevent layout shift
-      Text(countdownManager.payrollCountdownText ?? " ")
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-        .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
-        .frame(height: 20)
+      // Cards stay in place - only numbers animate on month change (like Next.js)
+      VStack(spacing: Spacing.sm) {
+        // Payroll countdown text - fixed height to prevent layout shift
+        Text(countdownManager.payrollCountdownText ?? " ")
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+          .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
+          .frame(height: 20)
 
-      // Payroll Card (Previous Month relative to displayed month)
-      payrollCardSection(
-        selectedVariant: selectedPayrollVariant,
-        variantCount: payrollVariants.count,
-        canManuallySetPayrollStatus: canManuallySetPayrollStatus,
-        payrollMarkedReceived: payrollMarkedReceived,
-        payrollOverrideUserId: payrollOverrideUserId,
-        payrollProgress: selectedPayrollProgress
-      )
-      .frame(
-        minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
-        alignment: .top
-      )
+        // Payroll Card (Previous Month relative to displayed month)
+        payrollCardSection(
+          selectedVariant: selectedPayrollVariant,
+          variantCount: payrollVariants.count,
+          canManuallySetPayrollStatus: canManuallySetPayrollStatus,
+          payrollMarkedReceived: payrollMarkedReceived,
+          payrollOverrideUserId: payrollOverrideUserId,
+          payrollProgress: selectedPayrollProgress
+        )
+        .frame(
+          minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
+          alignment: .top
+        )
 
-      // Total Card (Displayed Month) - THE ANCHOR
-      // Numbers animate smoothly when values change
-      TotalCard(
-        gross: data.currentMonthGross,
-        net: data.currentMonthNet,
-        completedGross: data.currentMonthCompletedGross,
-        completedNet: data.currentMonthCompletedNet,
-        shiftCount: data.currentMonthShiftCount,
-        plannedCount: data.currentMonthPlannedCount,
-        percentageChange: data.percentageChangeVsPrevious,
-        taxEnabled: data.currentMonthTaxEnabled,
-        monthlyGoal: data.currentMonthGoal
-      )
-      .contentShape(Rectangle())
-      .onTapGesture {
-        if data.currentMonthCurrencyAggregate.hasMixedCurrency {
-          impactHaptic.impactOccurred()
-          showMixedCurrencyBreakdownPopover.toggle()
+        // Total Card (Displayed Month) - THE ANCHOR
+        // Numbers animate smoothly when values change
+        TotalCard(
+          gross: data.currentMonthGross,
+          net: data.currentMonthNet,
+          completedGross: data.currentMonthCompletedGross,
+          completedNet: data.currentMonthCompletedNet,
+          shiftCount: data.currentMonthShiftCount,
+          plannedCount: data.currentMonthPlannedCount,
+          percentageChange: data.percentageChangeVsPrevious,
+          taxEnabled: data.currentMonthTaxEnabled,
+          monthlyGoal: data.currentMonthGoal,
+          percentageIncludesPayrollAdjustments: data.previousMonthHasPayrollAdjustments
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+          if data.currentMonthCurrencyAggregate.hasMixedCurrency {
+            impactHaptic.impactOccurred()
+            showMixedCurrencyBreakdownPopover.toggle()
+          } else {
+            openMonthlyGoalEditor()
+          }
+        }
+        .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
+          MixedCurrencyBreakdownPopover(entries: data.currentMonthCurrencyAggregate.secondary)
+            .presentationCompactAdaptation(.popover)
+        }
+
+        if viewModel.shouldShowDashboardClockButtons {
+          clockButtonsSection()
+        }
+
+        // Featured Shift Card - exact height on regular Dynamic Type to avoid
+        // skeleton/content vertical recentering during the loading transition.
+        if usesFixedCardHeights {
+          featuredShiftSection(data: data)
+            .frame(height: featuredSectionMinHeight, alignment: .top)
         } else {
-          openMonthlyGoalEditor()
+          featuredShiftSection(data: data)
         }
       }
-      .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
-        MixedCurrencyBreakdownPopover(entries: data.currentMonthCurrencyAggregate.secondary)
-          .presentationCompactAdaptation(.popover)
-      }
-
-      if viewModel.shouldShowDashboardClockButtons {
-        clockButtonsSection()
-      }
-
-      // Featured Shift Card - exact height on regular Dynamic Type to avoid
-      // skeleton/content vertical recentering during the loading transition.
-      if usesFixedCardHeights {
-        featuredShiftSection(data: data)
-          .frame(height: featuredSectionMinHeight, alignment: .top)
-      } else {
-        featuredShiftSection(data: data)
-      }
-    }
-    .onChange(of: payrollVariants.map(\.id)) { _, _ in
-      selectedPayrollVariantIndex = 0
+    } else {
+      EmptyView()
     }
   }
 
@@ -942,7 +959,9 @@ struct DashboardView: View {
     monthlyGoalEditContext = MonthlyGoalEditContext(
       monthDate: monthDate,
       baselineGoal: baseline,
-      initialGoal: initialGoal
+      initialGoal: initialGoal,
+      showsAdjustmentPercentageFootnote: viewModel.dashboardData?.previousMonthHasPayrollAdjustments
+        ?? false
     )
   }
 
@@ -1067,34 +1086,31 @@ struct DashboardView: View {
     payrollProgress: Double?
   ) -> some View {
     let showsWorkplaceVariants = variantCount > 1
-    let safeSelectedVariantIndex = max(0, min(selectedPayrollVariantIndex, variantCount - 1))
+    let showsGroupedWorkplaces = !selectedVariant.badges.isEmpty
 
     let card = PayrollCard(
       payrollDate: selectedVariant.payoutDate,
       label: selectedVariant.title,
       labelColorHex: selectedVariant.colorHex,
-      labelIsWorkplace: showsWorkplaceVariants,
-      pageIndicatorCount: variantCount,
-      pageIndicatorSelectedIndex: safeSelectedVariantIndex,
+      labelIsWorkplace: showsWorkplaceVariants || showsGroupedWorkplaces,
+      workplaceBadges: selectedVariant.badges,
       gross: selectedVariant.gross,
       net: selectedVariant.net,
       tax: selectedVariant.tax,
       taxEnabled: selectedVariant.taxEnabled,
+      hasPayrollAdjustments: selectedVariant.hasPayrollAdjustments,
       progress: payrollProgress
     )
 
-    if showsWorkplaceVariants {
-      card
-        .userCurrency(selectedVariant.currency)
-        .contentShape(Rectangle())
-        .onTapGesture {
-          guard variantCount > 1 else { return }
-          selectedPayrollVariantIndex = (selectedPayrollVariantIndex + 1) % variantCount
-          Haptics.play(.light)
-        }
-    } else {
-      Menu {
-        Section(String(localized: .dashboardPayrollStatusTitle)) {
+    card
+      .userCurrency(selectedVariant.currency)
+      .contentShape(Rectangle())
+      .onTapGesture {
+        impactHaptic.impactOccurred()
+        selectedPayrollDetailsVariant = selectedVariant
+      }
+      .contextMenu {
+        if canManuallySetPayrollStatus {
           Button {
             impactHaptic.impactOccurred()
             viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
@@ -1116,13 +1132,7 @@ struct DashboardView: View {
             )
           }
         }
-      } label: {
-        card
-          .userCurrency(selectedVariant.currency)
       }
-      .menuIndicator(.hidden)
-      .disabled(!canManuallySetPayrollStatus)
-    }
   }
 
   // MARK: - Featured Shift Section
