@@ -22,3 +22,6 @@ AS $function$
         true
     END
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.check_mfa_aal() FROM anon;
+GRANT EXECUTE ON FUNCTION public.check_mfa_aal() TO authenticated;
