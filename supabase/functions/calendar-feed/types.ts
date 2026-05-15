@@ -75,6 +75,7 @@ export type CalendarShiftRow = {
   end_time: string;
   note: string | null;
   job_id: string | null;
+  recurring_id: string | null;
   updated_at: string | null;
 };
 

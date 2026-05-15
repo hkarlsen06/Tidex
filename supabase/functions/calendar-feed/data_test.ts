@@ -191,3 +191,40 @@ Deno.test("projectRecurringShifts respects every-other-week patterns and end con
     "2026-05-18",
   ]);
 });
+
+Deno.test("projectRecurringShifts suppresses occurrences materialized as real recurring shifts", () => {
+  const projected = projectRecurringShifts([
+    {
+      id: "recurring-1",
+      start_time: "09:00",
+      end_time: "17:00",
+      repeat_interval_weeks: 0,
+      selected_days: { "1": "2026-05-04" },
+      end_condition: null,
+      exclusions: [],
+      date_specific_notes: null,
+      job_id: null,
+      updated_at: null,
+    },
+  ], {
+    startDate: "2026-05-01",
+    endDate: "2026-05-31",
+  }, [
+    {
+      id: "shift-1",
+      shift_date: "2026-05-11",
+      start_time: "10:00:00+02:00",
+      end_time: "18:00:00+02:00",
+      note: "Edited occurrence",
+      job_id: null,
+      recurring_id: "recurring-1",
+      updated_at: null,
+    },
+  ]);
+
+  assertEquals(projected.map((shift) => shift.occurrenceDate), [
+    "2026-05-04",
+    "2026-05-18",
+    "2026-05-25",
+  ]);
+});

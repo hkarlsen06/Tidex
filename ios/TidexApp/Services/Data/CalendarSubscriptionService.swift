@@ -149,7 +149,6 @@ struct CalendarSubscriptionService: CalendarSubscriptionServicing {
     let disabled: Bool =
       try await supabaseClient
       .rpc("disable_my_calendar_subscription")
-      .single()
       .execute()
       .value
 
