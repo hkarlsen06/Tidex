@@ -128,15 +128,8 @@ extension WatchConnectivityManager: WCSessionDelegate {
           tokenInfo["expiresAt"] = session.expiresAt
         }
 
-        // Trigger sync for user shifts
-        _ = await SyncCoordinator.shared.sync(reason: .watchRefresh, userId: userId)
-
-        // Also fetch friend data so it's available for the Watch
-        await self.refreshFriendData(userId: userId)
-
-        // Build payload once and send it through both channels:
-        // - reply payload (strict immediate acknowledgement)
-        // - applicationContext + transferUserInfo (background reliability)
+        // Reply with the current local payload before doing network work. The Watch-side
+        // request has a short timeout, while a full phone sync can legitimately take longer.
         let payload = await WatchDataConverter.buildPayload(for: userId)
         guard let replyData = encodedPayloadData(payload, maxBytes: maxReplyPayloadBytes) else {
           replyHandler(["success": false, "error": "Failed to encode refresh payload"])
@@ -158,6 +151,17 @@ extension WatchConnectivityManager: WCSessionDelegate {
           response["token"] = tokenInfo
         }
         replyHandler(response)
+
+        Task { @MainActor [weak self] in
+          guard let self else { return }
+          guard AppCoordinator.shared.userId == userId else { return }
+
+          _ = await SyncCoordinator.shared.sync(reason: .watchRefresh, userId: userId)
+          await self.refreshFriendData(userId: userId)
+
+          guard AppCoordinator.shared.userId == userId else { return }
+          _ = await self.sendUpdatedDataNow(userId: userId, reason: "watch_refresh_follow_up")
+        }
       }
     }
   }

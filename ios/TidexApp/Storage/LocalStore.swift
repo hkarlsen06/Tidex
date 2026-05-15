@@ -427,6 +427,18 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
+  func hasDirtyJobs(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalJob>(
+      predicate: #Predicate { job in
+        job.userId == userId
+          && (job.syncStatusRaw == "dirty" || job.syncStatusRaw == "pendingDelete"
+            || (job.syncStatusRaw == "conflict" && job.serverRevision == 0))
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
+  }
+
   // MARK: - Local Job Write Operations
 
   // swiftlint:disable:next function_parameter_count
@@ -861,6 +873,18 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
+  func hasDirtyUserShifts(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalUserShift>(
+      predicate: #Predicate { shift in
+        shift.userId == userId
+          && (shift.syncStatusRaw == "dirty" || shift.syncStatusRaw == "pendingDelete"
+            || (shift.syncStatusRaw == "conflict" && shift.serverRevision == 0))
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
+  }
+
   // MARK: - Local User Shift Write Operations
 
   func createUserShift(
@@ -1203,6 +1227,18 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
+  func hasDirtyEvents(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalEvent>(
+      predicate: #Predicate { event in
+        event.userId == userId
+          && (event.syncStatusRaw == "dirty" || event.syncStatusRaw == "pendingDelete"
+            || (event.syncStatusRaw == "conflict" && event.serverRevision == 0))
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
+  }
+
   // swiftlint:disable:next function_parameter_count
   func createEvent(
     id: String? = nil,
@@ -1506,6 +1542,18 @@ actor LocalStoreActor {
       }
     )
     return try modelContext.fetch(descriptor)
+  }
+
+  func hasDirtyRecurringShifts(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalRecurringShift>(
+      predicate: #Predicate { shift in
+        shift.userId == userId
+          && (shift.syncStatusRaw == "dirty" || shift.syncStatusRaw == "pendingDelete"
+            || (shift.syncStatusRaw == "conflict" && shift.serverRevision == 0))
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
   }
 
   // MARK: - Local Recurring Shift Write Operations
@@ -1929,6 +1977,18 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
+  func hasDirtyWageSnapshots(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalWageSnapshot>(
+      predicate: #Predicate { snapshot in
+        snapshot.userId == userId
+          && (snapshot.syncStatusRaw == "dirty" || snapshot.syncStatusRaw == "pendingDelete"
+            || (snapshot.syncStatusRaw == "conflict" && snapshot.serverRevision == 0))
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
+  }
+
   // MARK: - Local Wage Snapshot Write Operations
 
   // swiftlint:disable:next function_parameter_count
@@ -2250,6 +2310,18 @@ actor LocalStoreActor {
       }
     )
     return try modelContext.fetch(descriptor).first
+  }
+
+  func hasDirtyUserSettings(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalUserSettings>(
+      predicate: #Predicate { settings in
+        settings.userId == userId
+          && (settings.syncStatusRaw == "dirty"
+            || (settings.syncStatusRaw == "conflict" && settings.serverRevision == 0))
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
   }
 
   // MARK: - Local User Settings Write Operations
@@ -2649,17 +2721,13 @@ actor LocalStoreActor {
 
   /// Check if user has any pending changes
   func hasPendingChanges(userId: String) throws -> Bool {
-    let dirtyJobs = try getDirtyJobs(userId: userId)
-    let dirtyShifts = try getDirtyUserShifts(userId: userId)
-    let dirtyEvents = try getDirtyEvents(userId: userId)
-    let dirtyRecurring = try getDirtyRecurringShifts(userId: userId)
-    let dirtySnapshots = try getDirtyWageSnapshots(userId: userId)
-    let dirtySettings = try getDirtyUserSettings(userId: userId)
-
-    return !dirtyJobs.isEmpty || !dirtyShifts.isEmpty || !dirtyEvents.isEmpty
-      || !dirtyRecurring.isEmpty
-      || !dirtySnapshots.isEmpty
-      || dirtySettings != nil
+    try hasDirtyJobs(userId: userId)
+      || hasDirtyUserShifts(userId: userId)
+      || hasDirtyEvents(userId: userId)
+      || hasDirtyRecurringShifts(userId: userId)
+      || hasDirtyWageSnapshots(userId: userId)
+      || hasDirtyPayrollAdjustments(userId: userId)
+      || hasDirtyUserSettings(userId: userId)
   }
 
   /// Count total conflicts for a user

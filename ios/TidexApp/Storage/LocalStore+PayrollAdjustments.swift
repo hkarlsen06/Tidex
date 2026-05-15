@@ -31,6 +31,17 @@ extension LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
+  func hasDirtyPayrollAdjustments(userId: String) throws -> Bool {
+    var descriptor = FetchDescriptor<LocalPayrollAdjustment>(
+      predicate: #Predicate { adjustment in
+        adjustment.userId == userId
+          && (adjustment.syncStatusRaw == "dirty" || adjustment.syncStatusRaw == "pendingDelete")
+      }
+    )
+    descriptor.fetchLimit = 1
+    return try !modelContext.fetch(descriptor).isEmpty
+  }
+
   func upsertPayrollAdjustment(_ adjustment: LocalPayrollAdjustment) throws {
     let adjustmentId = adjustment.id
     let descriptor = FetchDescriptor<LocalPayrollAdjustment>(
