@@ -192,7 +192,7 @@ Deno.test("projectRecurringShifts respects every-other-week patterns and end con
   ]);
 });
 
-Deno.test("projectRecurringShifts suppresses occurrences materialized as real recurring shifts", () => {
+Deno.test("projectRecurringShifts ignores materialized shifts without recurring linkage", () => {
   const projected = projectRecurringShifts([
     {
       id: "recurring-1",
@@ -217,13 +217,13 @@ Deno.test("projectRecurringShifts suppresses occurrences materialized as real re
       end_time: "18:00:00+02:00",
       note: "Edited occurrence",
       job_id: null,
-      recurring_id: "recurring-1",
       updated_at: null,
     },
   ]);
 
   assertEquals(projected.map((shift) => shift.occurrenceDate), [
     "2026-05-04",
+    "2026-05-11",
     "2026-05-18",
     "2026-05-25",
   ]);
