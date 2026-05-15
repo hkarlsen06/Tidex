@@ -13,6 +13,7 @@ final class NotificationService {
   static let threadMessageCategoryIdentifier = "THREAD_MESSAGE"
   static let threadMessageReplyActionIdentifier = "THREAD_MESSAGE_REPLY"
   static let threadMessageMarkReadActionIdentifier = "THREAD_MESSAGE_MARK_READ"
+  static let wageyResponseCategoryIdentifier = "WAGEY_RESPONSE"
 
   private init() {}
 
@@ -113,9 +114,43 @@ final class NotificationService {
         intentIdentifiers: [],
         options: [.customDismissAction]
       ),
+      UNNotificationCategory(
+        identifier: Self.wageyResponseCategoryIdentifier,
+        actions: [],
+        intentIdentifiers: [],
+        options: [.customDismissAction]
+      ),
     ]
 
     center.setNotificationCategories(categories)
+  }
+
+  func scheduleWageyResponseNotification(body: String, conversationId: String?) async {
+    let notificationBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !notificationBody.isEmpty else { return }
+
+    let content = UNMutableNotificationContent()
+    content.title = "Wagey"
+    content.body = notificationBody
+    content.sound = .default
+    content.categoryIdentifier = Self.wageyResponseCategoryIdentifier
+    content.userInfo = [
+      "type": "wagey_response",
+      "conversation_id": conversationId ?? "",
+    ]
+
+    let identifier = "wagey-response-\(conversationId ?? UUID().uuidString)"
+    let request = UNNotificationRequest(
+      identifier: identifier,
+      content: content,
+      trigger: nil
+    )
+
+    do {
+      try await UNUserNotificationCenter.current().add(request)
+    } catch {
+      logger.error("Failed to schedule Wagey response notification: \(error.localizedDescription)")
+    }
   }
 
   func setApplicationBadgeCount(_ count: Int) {
