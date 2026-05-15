@@ -33,6 +33,7 @@ None - runs pure SQL cleanup.
 ## Related Functions
 
 - `send-push-notifications` edge function - Sends notifications and sets outbox status to 'sent'
+- `process-pending-push-notifications` cron job - Once-per-minute fallback that invokes `send-push-notifications` only when due pending notifications or stale sending notifications exist
 
 ## Monitoring
 
@@ -51,4 +52,21 @@ Check pending items that haven't been processed:
 
 ```sql
 SELECT COUNT(*) AS unsent_outbox FROM internal.notifications_outbox WHERE status != 'sent';
+```
+
+Check whether the push fallback cron has work to process:
+
+```sql
+SELECT EXISTS (
+  SELECT 1
+  FROM internal.notifications_outbox no
+  WHERE no.status = 'pending'
+    AND no.due_at <= now()
+    AND no.attempts < 10
+) OR EXISTS (
+  SELECT 1
+  FROM internal.notifications_outbox no
+  WHERE no.status = 'sending'
+    AND no.claimed_at < now() - INTERVAL '15 minutes'
+) AS push_fallback_has_work;
 ```

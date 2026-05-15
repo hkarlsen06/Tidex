@@ -1166,16 +1166,25 @@ Return one translation per input item.`;
 }
 
 // Main
-const xcstringsFiles = [
+const defaultXcstringsFiles = [
   path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
   path.join(__dirname, "../Resources/Localization/ShareExtension/Localizable.xcstrings"),
   path.join(__dirname, "../Resources/Localization/Watch/Localizable.xcstrings"),
   path.join(__dirname, "../Resources/Localization/Widget/Localizable.xcstrings"),
 ];
+const cliXcstringsFiles = process.argv
+  .slice(2)
+  .filter((file) => file.endsWith(".xcstrings"))
+  .map((file) => path.resolve(process.cwd(), file));
+const xcstringsFiles = cliXcstringsFiles.length > 0 ? cliXcstringsFiles : defaultXcstringsFiles;
+const isTargetedRun = cliXcstringsFiles.length > 0;
 
 console.log("XCStrings Translator v2");
 console.log("=======================");
 console.log(`Target languages: ${TARGET_LANGUAGES.map((l) => l.name).join(", ")}`);
+if (isTargetedRun) {
+  console.log(`Target files: ${xcstringsFiles.join(", ")}`);
+}
 
 for (const file of xcstringsFiles) {
   try {
@@ -1186,11 +1195,13 @@ for (const file of xcstringsFiles) {
   }
 }
 
-// Translate InfoPlist.strings (permission descriptions)
-await translateInfoPlistStrings();
+if (!isTargetedRun) {
+  // Translate InfoPlist.strings (permission descriptions)
+  await translateInfoPlistStrings();
 
-// Sync languages to Xcode project (makes them selectable in iOS Settings)
-await syncXcodeProjectLanguages();
+  // Sync languages to Xcode project (makes them selectable in iOS Settings)
+  await syncXcodeProjectLanguages();
+}
 
 // Print summary
 console.log("\n" + "=".repeat(40));
