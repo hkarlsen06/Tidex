@@ -7,20 +7,11 @@ import UIKit
 /// Card-style row view for displaying a shift on the Watch
 /// Shows avatar and name at top, with shift details card below
 struct ShiftRowView: View {
+  @Environment(WatchDataStore.self) private var store
+
   let shift: WatchShiftDTO
   let isCurrentUser: Bool
   let isRefreshing: Bool
-
-  /// Get formatter locale for date/number formatting
-  private var formatterLocale: Locale {
-    appLocale()
-  }
-
-  private func appLocale() -> Locale {
-    let identifier =
-      Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
-    return Locale(identifier: identifier)
-  }
 
   // Timer for countdown updates (under 24 hours)
   @State private var currentTime = Date()
@@ -56,8 +47,8 @@ struct ShiftRowView: View {
 
   /// Whether we should update the timer (upcoming within 24h or active)
   private var shouldCountdown: Bool {
-    guard let shiftStart = shiftStartDate,
-      let shiftEnd = shiftEndDate
+    guard let shiftStart = store.startDate(for: shift),
+      let shiftEnd = store.endDate(for: shift)
     else { return false }
 
     let now = Date()
@@ -75,55 +66,17 @@ struct ShiftRowView: View {
   }
 
   private var shiftStartDate: Date? {
-    guard let shiftDate = parseDate(shift.shiftDate) else { return nil }
-
-    let calendar = Calendar.current
-    let startParts = shift.startTime.split(separator: ":").compactMap { Int($0) }
-    guard startParts.count >= 2 else { return nil }
-
-    var startComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    startComponents.hour = startParts[0]
-    startComponents.minute = startParts[1]
-
-    return calendar.date(from: startComponents)
+    store.startDate(for: shift)
   }
 
   private var shiftEndDate: Date? {
-    guard let shiftDate = parseDate(shift.shiftDate),
-      let shiftStart = shiftStartDate
-    else { return nil }
-
-    let calendar = Calendar.current
-    let endParts = shift.endTime.split(separator: ":").compactMap { Int($0) }
-    guard endParts.count >= 2 else { return nil }
-
-    var endComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    endComponents.hour = endParts[0]
-    endComponents.minute = endParts[1]
-
-    guard var shiftEnd = calendar.date(from: endComponents) else { return nil }
-
-    if shiftEnd <= shiftStart {
-      shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
-    }
-
-    return shiftEnd
+    store.endDate(for: shift)
   }
 
   /// Dynamically computed status based on current time,
   /// so shifts transition from upcoming -> active -> past in real time.
   private var effectiveStatus: ShiftPreviewStatus {
-    guard let start = shiftStartDate, let end = shiftEndDate else {
-      return shift.status
-    }
-    let now = currentTime
-    if now >= start && now < end {
-      return .active
-    } else if now < start {
-      return .upcoming
-    } else {
-      return .past
-    }
+    store.effectiveStatus(for: shift, now: currentTime)
   }
 
   // MARK: - Shift Card
@@ -254,55 +207,18 @@ struct ShiftRowView: View {
   // MARK: - Date Formatting
 
   private var formattedDate: String {
-    guard let date = parseDate(shift.shiftDate) else { return shift.shiftDate }
-
-    let formatter = DateFormatter()
-    formatter.locale = formatterLocale
-    formatter.dateFormat = "EEE d MMM"
-    return formatter.string(from: date)
-  }
-
-  private func parseDate(_ dateString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    return formatter.date(from: dateString)
+    store.formattedDate(for: shift)
   }
 
   // MARK: - Progress for Active Shifts
 
   private var progress: Double {
     guard effectiveStatus == .active,
-      let shiftDate = parseDate(shift.shiftDate)
+      let shiftStart = shiftStartDate,
+      let shiftEnd = shiftEndDate
     else { return 0 }
 
     let now = Date()
-    let calendar = Calendar.current
-
-    // Parse start time
-    let startParts = shift.startTime.split(separator: ":").compactMap { Int($0) }
-    guard startParts.count >= 2 else { return 0 }
-
-    var startComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    startComponents.hour = startParts[0]
-    startComponents.minute = startParts[1]
-
-    guard let shiftStart = calendar.date(from: startComponents) else { return 0 }
-
-    // Parse end time
-    let endParts = shift.endTime.split(separator: ":").compactMap { Int($0) }
-    guard endParts.count >= 2 else { return 0 }
-
-    var endComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    endComponents.hour = endParts[0]
-    endComponents.minute = endParts[1]
-
-    var shiftEnd = calendar.date(from: endComponents) ?? shiftStart
-
-    // Handle cross-midnight
-    if shiftEnd <= shiftStart {
-      shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
-    }
 
     let totalDuration = shiftEnd.timeIntervalSince(shiftStart)
     let elapsed = now.timeIntervalSince(shiftStart)
@@ -313,35 +229,12 @@ struct ShiftRowView: View {
   // MARK: - Relative Time
 
   private var relativeTimeText: String {
-    guard let shiftDate = parseDate(shift.shiftDate) else { return "" }
+    guard let shiftStart = shiftStartDate,
+      let shiftEnd = shiftEndDate
+    else { return "" }
 
     let now = currentTime
     let calendar = Calendar.current
-
-    // Parse start time for upcoming shifts
-    let startParts = shift.startTime.split(separator: ":").compactMap { Int($0) }
-    guard startParts.count >= 2 else { return "" }
-
-    var startComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    startComponents.hour = startParts[0]
-    startComponents.minute = startParts[1]
-
-    guard let shiftStart = calendar.date(from: startComponents) else { return "" }
-
-    // Parse end time for past shifts
-    let endParts = shift.endTime.split(separator: ":").compactMap { Int($0) }
-    guard endParts.count >= 2 else { return "" }
-
-    var endComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    endComponents.hour = endParts[0]
-    endComponents.minute = endParts[1]
-
-    var shiftEnd = calendar.date(from: endComponents) ?? shiftStart
-
-    // Handle cross-midnight
-    if shiftEnd <= shiftStart {
-      shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
-    }
 
     let referenceTime = effectiveStatus == .past ? shiftEnd : shiftStart
     let diffSeconds = referenceTime.timeIntervalSince(now)

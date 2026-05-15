@@ -58,12 +58,16 @@ private enum SyncStartDecision {
 private actor SyncStateStore {
   private var syncState: SyncState = .idle
   private var lastAutoSyncAt: Date?
+  private var needsFollowUpSync = false
 
   func beginSync(reason: SyncReason, userId: String, minimumSyncInterval: TimeInterval)
     -> SyncStartDecision
   {
     switch syncState {
     case .syncing:
+      if reason.shouldQueueFollowUp {
+        needsFollowUpSync = true
+      }
       return .alreadySyncing
     case .idle:
       break
@@ -86,13 +90,28 @@ private actor SyncStateStore {
     return .started
   }
 
-  func endSync() {
+  func endSync() -> Bool {
     syncState = .idle
+    let shouldRunFollowUp = needsFollowUpSync
+    needsFollowUpSync = false
+    return shouldRunFollowUp
   }
 
   func reset() {
     syncState = .idle
     lastAutoSyncAt = nil
+    needsFollowUpSync = false
+  }
+}
+
+extension SyncReason {
+  fileprivate var shouldQueueFollowUp: Bool {
+    switch self {
+    case .localChange, .manualRefresh, .watchRefresh:
+      return true
+    case .appLaunch, .foreground:
+      return false
+    }
   }
 }
 
@@ -364,10 +383,18 @@ final class SyncCoordinator: ObservableObject {
       }
     }
 
-    await stateStore.endSync()
+    let needsFollowUpSync = await stateStore.endSync()
     await MainActor.run {
       isSyncing = false
     }
+
+    if needsFollowUpSync {
+      logger.info("Running coalesced follow-up sync after concurrent local changes")
+      Task {
+        _ = await self.sync(reason: .localChange, userId: userId)
+      }
+    }
+
     return result
   }
 
