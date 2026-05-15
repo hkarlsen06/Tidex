@@ -1,24 +1,41 @@
 import type { User } from "npm:@supabase/supabase-js@2";
 
 import type { WageyRequestContext } from "./context.ts";
-import { getCurrentYearMonth, getMonthEnd, getMonthStart, parseDateAsUTC } from "./date-utils.ts";
+import {
+  getCurrentYearMonth,
+  getMonthEnd,
+  getMonthStart,
+  parseDateAsUTC,
+} from "./date-utils.ts";
 import { getUserTier } from "./get-user-tier.ts";
 import {
   computeShift,
-  normalizeCustomPauseWindows,
-  PRESET_SUPPLEMENT_RULES,
   type CustomPauseWindows,
   type CustomSupplementsData,
   type Job,
+  normalizeCustomPauseWindows,
+  PRESET_SUPPLEMENT_RULES,
   type ShiftRow,
   type ShiftWithComputations,
   type UserSettings,
   type WageSnapshot,
 } from "./payroll/index.ts";
-import { detectAllRecurringConflicts, type ExistingShift } from "./recurring/conflicts.ts";
-import { generateVirtualShiftsForMonth, resolveEndWindow, toISODate } from "./recurring/utils.ts";
+import {
+  detectAllRecurringConflicts,
+  type ExistingShift,
+} from "./recurring/conflicts.ts";
+import {
+  generateVirtualShiftsForMonth,
+  resolveEndWindow,
+  toISODate,
+} from "./recurring/utils.ts";
 import { cleanTime } from "./time-utils.ts";
-import { getCurrentMonth, getResetDate, type WageyAccessResult, type WageyInvocationResult } from "./wagey-types.ts";
+import {
+  getCurrentMonth,
+  getResetDate,
+  type WageyAccessResult,
+  type WageyInvocationResult,
+} from "./wagey-types.ts";
 
 export type ShiftLoadOptions = {
   startDate?: string;
@@ -70,7 +87,9 @@ type SubscriptionRow = {
 type ProfileRow = {
   id: string;
   before_paywall: boolean;
-  wagey_invocations?: { count: number; month: string | null; bonus: number } | null;
+  wagey_invocations?:
+    | { count: number; month: string | null; bonus: number }
+    | null;
 };
 
 type DbRecurringShift = {
@@ -103,7 +122,9 @@ type ShiftResources = {
 
 type WageyAccessContextRow = {
   before_paywall: boolean;
-  wagey_invocations: { count: number; month: string | null; bonus: number } | null;
+  wagey_invocations:
+    | { count: number; month: string | null; bonus: number }
+    | null;
   status: string | null;
   product_id: string | null;
   current_period_end: string | null;
@@ -164,7 +185,8 @@ const FALLBACK_WAGEY_INVOCATION: WageyInvocationResult = {
   remaining: 0,
   bonus: 0,
 };
-const COMPUTED_SETTINGS_SELECT = "user_id, half_tax_month, payroll_day, monthly_goal, monthly_goals_by_month, currency";
+const COMPUTED_SETTINGS_SELECT =
+  "user_id, half_tax_month, payroll_day, monthly_goal, monthly_goals_by_month, currency";
 const COMPUTED_JOB_SELECT =
   "id, user_id, name, color, is_default, sort_order, payroll_day, half_tax_month, monthly_goal, archived_at, deleted_at, created_at";
 const COMPUTED_SNAPSHOT_SELECT =
@@ -177,7 +199,10 @@ const COMPUTED_RECURRING_SELECT =
   "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_pause_windows, date_specific_supplements, created_at, deleted_at";
 const FAR_FUTURE_DATE = "2100-12-31";
 
-function buildCacheKey(scope: string, payload: Record<string, unknown>): string {
+function buildCacheKey(
+  scope: string,
+  payload: Record<string, unknown>,
+): string {
   return `${scope}:${JSON.stringify(payload)}`;
 }
 
@@ -203,7 +228,9 @@ function snapshotKeyForJob(jobId?: string | null): string {
   return jobId ?? LEGACY_SNAPSHOT_KEY;
 }
 
-function buildSnapshotBuckets(snapshots: readonly WageSnapshot[]): ReadonlyMap<string, SnapshotBucket> {
+export function buildSnapshotBuckets(
+  snapshots: readonly WageSnapshot[],
+): ReadonlyMap<string, SnapshotBucket> {
   const buckets = new Map<string, SnapshotBucket>();
 
   for (const snapshot of snapshots) {
@@ -226,7 +253,7 @@ function buildSnapshotBuckets(snapshots: readonly WageSnapshot[]): ReadonlyMap<s
   return buckets;
 }
 
-function resolveSnapshotForDate(
+export function resolveSnapshotForDate(
   buckets: ReadonlyMap<string, SnapshotBucket>,
   snapshots: readonly WageSnapshot[],
   date: string,
@@ -259,7 +286,10 @@ function getDefaultEndDate(): string {
   return getMonthEnd(year, month);
 }
 
-function calculatePayoutDate(earningsDate: string, payrollDay: number): string {
+export function calculatePayoutDate(
+  earningsDate: string,
+  payrollDay: number,
+): string {
   const [earningsYear, earningsMonth] = earningsDate.split("-").map(Number);
   let payoutYear = earningsYear;
   let payoutMonth = earningsMonth + 1;
@@ -268,9 +298,42 @@ function calculatePayoutDate(earningsDate: string, payrollDay: number): string {
     payoutYear += 1;
   }
 
-  const daysInPayoutMonth = new Date(Date.UTC(payoutYear, payoutMonth, 0)).getUTCDate();
+  const daysInPayoutMonth = new Date(Date.UTC(payoutYear, payoutMonth, 0))
+    .getUTCDate();
   const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
-  return `${payoutYear}-${String(payoutMonth).padStart(2, "0")}-${String(effectivePayrollDay).padStart(2, "0")}`;
+  return `${payoutYear}-${String(payoutMonth).padStart(2, "0")}-${
+    String(effectivePayrollDay).padStart(2, "0")
+  }`;
+}
+
+export function resolveDefaultJob(jobs: readonly Job[]): Job | null {
+  const normalizedJobs = jobs.filter((job) => job.deleted_at == null);
+  return (
+    normalizedJobs.find((job) => job.is_default && job.archived_at == null) ??
+      normalizedJobs.find((job) => job.is_default) ??
+      normalizedJobs[0] ??
+      null
+  );
+}
+
+export function payrollDayForJob(
+  jobsById: ReadonlyMap<string, Job>,
+  defaultJob: Job | null,
+  settings: UserSettings,
+  jobId?: string | null,
+): number {
+  return jobsById.get(jobId ?? "")?.payroll_day ?? defaultJob?.payroll_day ??
+    settings.payroll_day ?? 1;
+}
+
+export function halfTaxMonthForJob(
+  jobsById: ReadonlyMap<string, Job>,
+  defaultJob: Job | null,
+  settings: UserSettings,
+  jobId?: string | null,
+): number | null {
+  return jobsById.get(jobId ?? "")?.half_tax_month ??
+    defaultJob?.half_tax_month ?? settings.half_tax_month ?? null;
 }
 
 function timeToMinutes(time: string): number {
@@ -303,17 +366,24 @@ function calculateNetPay(
 async function getProfileAndSubscription(
   ctx: WageyRequestContext,
   userId: string,
-): Promise<{ profile: ProfileRow | null; subscription: SubscriptionRow | null }> {
+): Promise<
+  { profile: ProfileRow | null; subscription: SubscriptionRow | null }
+> {
   return await getCachedValue(
     ctx,
     buildCacheKey("wagey_access_context", { userId }),
     async () => {
-      const { data, error } = await ctx.supabaseAdmin.rpc("get_wagey_access_context", {
-        p_user_id: userId,
-      });
+      const { data, error } = await ctx.supabaseAdmin.rpc(
+        "get_wagey_access_context",
+        {
+          p_user_id: userId,
+        },
+      );
       if (error) throw new Error(error.message);
 
-      const row = (Array.isArray(data) ? data[0] : data) as WageyAccessContextRow | null;
+      const row = (Array.isArray(data) ? data[0] : data) as
+        | WageyAccessContextRow
+        | null;
       if (!row) {
         return { profile: null, subscription: null };
       }
@@ -326,14 +396,14 @@ async function getProfileAndSubscription(
         },
         subscription: row.status
           ? {
-              id: `subscription:${userId}`,
-              user_id: userId,
-              provider: row.provider ?? "stripe",
-              status: row.status,
-              product_id: row.product_id,
-              current_period_end: row.current_period_end,
-              price_id: row.price_id,
-            }
+            id: `subscription:${userId}`,
+            user_id: userId,
+            provider: row.provider ?? "stripe",
+            status: row.status,
+            product_id: row.product_id,
+            current_period_end: row.current_period_end,
+            price_id: row.price_id,
+          }
           : null,
       };
     },
@@ -346,7 +416,10 @@ export async function getWageyAccess(
   const userId = ctx.user.id;
 
   try {
-    const { profile, subscription } = await getProfileAndSubscription(ctx, userId);
+    const { profile, subscription } = await getProfileAndSubscription(
+      ctx,
+      userId,
+    );
     const level = getUserTier(subscription, profile);
     const limit = WAGEY_LIMITS[level];
     const hasAccess = level !== "free";
@@ -384,11 +457,14 @@ export async function consumeWageyInvocation(
   const userId = ctx.user.id;
 
   try {
-    const { data, error } = await ctx.supabase.rpc("increment_wagey_invocation", {
-      p_user_id: userId,
-      p_current_month: getCurrentMonth(),
-      p_max_invocations: limit,
-    });
+    const { data, error } = await ctx.supabase.rpc(
+      "increment_wagey_invocation",
+      {
+        p_user_id: userId,
+        p_current_month: getCurrentMonth(),
+        p_max_invocations: limit,
+      },
+    );
 
     if (error || !data) {
       throw new Error(error?.message ?? "Failed to consume Wagey invocation");
@@ -407,7 +483,10 @@ export async function consumeWageyInvocation(
   }
 }
 
-export async function getUserSettings(ctx: WageyRequestContext, userId = ctx.user.id): Promise<UserSettings> {
+export async function getUserSettings(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+): Promise<UserSettings> {
   return await getCachedValue(
     ctx,
     buildCacheKey("user_settings", { userId }),
@@ -422,7 +501,10 @@ export async function getUserSettings(ctx: WageyRequestContext, userId = ctx.use
   );
 }
 
-export async function getUserCurrency(ctx: WageyRequestContext, userId = ctx.user.id): Promise<string> {
+export async function getUserCurrency(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+): Promise<string> {
   const settings = await getUserSettings(ctx, userId);
   return settings.currency || "NOK";
 }
@@ -565,7 +647,9 @@ export async function getUserEventById(
 }
 
 async function getRawRecurringShifts(
-  client: WageyRequestContext["supabase"] | WageyRequestContext["supabaseAdmin"],
+  client:
+    | WageyRequestContext["supabase"]
+    | WageyRequestContext["supabaseAdmin"],
   userId: string,
   jobId?: string,
 ): Promise<DbRecurringShift[]> {
@@ -700,27 +784,36 @@ function buildComputedShiftData(params: {
   startDate: string;
   endDate: string;
 }): LoadedShiftData {
-  const { userId, settings, jobs, snapshots, shifts, recurringShifts, startDate, endDate } = params;
+  const {
+    userId,
+    settings,
+    jobs,
+    snapshots,
+    shifts,
+    recurringShifts,
+    startDate,
+    endDate,
+  } = params;
   const normalizedJobs = jobs.filter((job) => job.deleted_at == null);
   const jobsById = new Map(normalizedJobs.map((job) => [job.id, job] as const));
-  const defaultJob =
-    normalizedJobs.find((job) => job.is_default && job.archived_at == null) ??
-    normalizedJobs.find((job) => job.is_default) ??
-    normalizedJobs[0] ??
-    null;
+  const defaultJob = resolveDefaultJob(normalizedJobs);
   const defaultJobId = defaultJob?.id ?? null;
   const buckets = buildSnapshotBuckets(snapshots);
-  const fallbackPayrollDay = settings.payroll_day ?? 1;
-  const payrollDayForJob = (jobId?: string | null): number =>
-    jobsById.get(jobId ?? "")?.payroll_day ?? defaultJob?.payroll_day ?? fallbackPayrollDay;
+  const resolvePayrollDay = (jobId?: string | null): number =>
+    payrollDayForJob(jobsById, defaultJob, settings, jobId);
 
   const computedStandalone: ShiftWithComputations[] = shifts.map((shift) => {
     const shiftJobId = shift.job_id ?? defaultJobId;
-    const snapshot = resolveSnapshotForDate(buckets, snapshots, shift.shift_date, shiftJobId);
+    const snapshot = resolveSnapshotForDate(
+      buckets,
+      snapshots,
+      shift.shift_date,
+      shiftJobId,
+    );
     const payoutSnapshot = resolveSnapshotForDate(
       buckets,
       snapshots,
-      calculatePayoutDate(shift.shift_date, payrollDayForJob(shiftJobId)),
+      calculatePayoutDate(shift.shift_date, resolvePayrollDay(shiftJobId)),
       shiftJobId,
     );
 
@@ -750,14 +843,24 @@ function buildComputedShiftData(params: {
 
     while (
       currentYear < end.getUTCFullYear() ||
-      (currentYear === end.getUTCFullYear() && currentMonth <= end.getUTCMonth() + 1)
+      (currentYear === end.getUTCFullYear() &&
+        currentMonth <= end.getUTCMonth() + 1)
     ) {
       const generated = generateVirtualShiftsForMonth(
         { year: currentYear, month: currentMonth },
         {
           start_time: cleanTime(recurring.start_time),
           end_time: cleanTime(recurring.end_time),
-          repeat_interval_weeks: recurring.repeat_interval_weeks as 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8,
+          repeat_interval_weeks: recurring.repeat_interval_weeks as
+            | 0
+            | 1
+            | 2
+            | 3
+            | 4
+            | 5
+            | 6
+            | 7
+            | 8,
           selected_days: recurring.selected_days,
           end_condition: recurring.end_condition as never,
           exclusions: recurring.exclusions || [],
@@ -765,14 +868,21 @@ function buildComputedShiftData(params: {
       );
 
       for (const generatedShift of generated) {
-        if (generatedShift.date < startDate || generatedShift.date > endDate) continue;
+        if (generatedShift.date < startDate || generatedShift.date > endDate) {
+          continue;
+        }
 
         const jobId = recurring.job_id ?? defaultJobId;
-        const snapshot = resolveSnapshotForDate(buckets, snapshots, generatedShift.date, jobId);
+        const snapshot = resolveSnapshotForDate(
+          buckets,
+          snapshots,
+          generatedShift.date,
+          jobId,
+        );
         const payoutSnapshot = resolveSnapshotForDate(
           buckets,
           snapshots,
-          calculatePayoutDate(generatedShift.date, payrollDayForJob(jobId)),
+          calculatePayoutDate(generatedShift.date, resolvePayrollDay(jobId)),
           jobId,
         );
         const syntheticShift: ShiftRow = {
@@ -782,8 +892,11 @@ function buildComputedShiftData(params: {
           shift_date: generatedShift.date,
           start_time: cleanTime(recurring.start_time),
           end_time: cleanTime(recurring.end_time),
-          custom_pause_windows: recurring.date_specific_pause_windows?.[generatedShift.date] ?? null,
-          custom_supplements: recurring.date_specific_supplements?.[generatedShift.date] ?? null,
+          custom_pause_windows:
+            recurring.date_specific_pause_windows?.[generatedShift.date] ??
+              null,
+          custom_supplements:
+            recurring.date_specific_supplements?.[generatedShift.date] ?? null,
           recurring_id: recurring.id,
           recurring_anchor_weekday: generatedShift.weekday,
         };
@@ -829,16 +942,24 @@ function sliceLoadedShiftData(
 ): LoadedShiftData {
   return {
     ...loaded,
-    shifts: loaded.shifts.filter((shift) => shift.shift_date >= startDate && shift.shift_date <= endDate),
+    shifts: loaded.shifts.filter((shift) =>
+      shift.shift_date >= startDate && shift.shift_date <= endDate
+    ),
   };
 }
 
 function getEarlierDate(...dates: string[]): string {
-  return dates.reduce((earliest, current) => (current < earliest ? current : earliest));
+  return dates.reduce((
+    earliest,
+    current,
+  ) => (current < earliest ? current : earliest));
 }
 
 function getLaterDate(...dates: string[]): string {
-  return dates.reduce((latest, current) => (current > latest ? current : latest));
+  return dates.reduce((
+    latest,
+    current,
+  ) => (current > latest ? current : latest));
 }
 
 function addDaysToIsoDate(date: string, days: number): string {
@@ -847,12 +968,19 @@ function addDaysToIsoDate(date: string, days: number): string {
   return toISODate(next);
 }
 
-function getRecurringEffectiveEndDate(recurring: DbRecurringShift, fallbackEndDate: string): string {
+function getRecurringEffectiveEndDate(
+  recurring: DbRecurringShift,
+  fallbackEndDate: string,
+): string {
   if (recurring.end_condition === null) {
     return fallbackEndDate;
   }
 
-  const window = resolveEndWindow(recurring.selected_days, recurring.end_condition as never, 0);
+  const window = resolveEndWindow(
+    recurring.selected_days,
+    recurring.end_condition as never,
+    0,
+  );
   if (!window) {
     return fallbackEndDate;
   }
@@ -866,7 +994,10 @@ function countRecurringOccurrencesInRange(
   startDate: string,
   fallbackEndDate: string,
 ): number {
-  const effectiveEndDate = getRecurringEffectiveEndDate(recurring, fallbackEndDate);
+  const effectiveEndDate = getRecurringEffectiveEndDate(
+    recurring,
+    fallbackEndDate,
+  );
   if (effectiveEndDate < startDate) {
     return 0;
   }
@@ -881,7 +1012,8 @@ function countRecurringOccurrencesInRange(
     let currentDate = anchorDate;
     if (currentDate < startDate) {
       const diffDays = Math.floor(
-        (parseDateAsUTC(startDate).getTime() - parseDateAsUTC(currentDate).getTime()) / (1000 * 60 * 60 * 24),
+        (parseDateAsUTC(startDate).getTime() -
+          parseDateAsUTC(currentDate).getTime()) / (1000 * 60 * 60 * 24),
       );
       const skippedSteps = Math.ceil(diffDays / stepDays);
       currentDate = addDaysToIsoDate(currentDate, skippedSteps * stepDays);
@@ -916,15 +1048,16 @@ export async function getComputedShiftsForApi(
       jobId: options.jobId ?? null,
     }),
     async () => {
-      const [{ settings, jobs, snapshots, recurringShifts }, rawShifts] = await Promise.all([
-        loadShiftResources(ctx, userId, { jobId: options.jobId }),
-        loadShiftRows(ctx, userId, {
-          startDate,
-          endDate,
-          limit: options.limit,
-          jobId: options.jobId,
-        }),
-      ]);
+      const [{ settings, jobs, snapshots, recurringShifts }, rawShifts] =
+        await Promise.all([
+          loadShiftResources(ctx, userId, { jobId: options.jobId }),
+          loadShiftRows(ctx, userId, {
+            startDate,
+            endDate,
+            limit: options.limit,
+            jobId: options.jobId,
+          }),
+        ]);
 
       return buildComputedShiftData({
         userId,
@@ -962,7 +1095,13 @@ export async function countShiftsAffectedBySnapshot(
   if (error) throw new Error(error.message);
 
   const recurringCount = recurringShifts.reduce(
-    (sum, recurring) => sum + countRecurringOccurrencesInRange(recurring, options.startDate, FAR_FUTURE_DATE),
+    (sum, recurring) =>
+      sum +
+      countRecurringOccurrencesInRange(
+        recurring,
+        options.startDate,
+        FAR_FUTURE_DATE,
+      ),
     0,
   );
 
@@ -1012,7 +1151,14 @@ export async function createShifts(
 
 export async function updateShift(
   ctx: WageyRequestContext,
-  input: { id: string; job_id?: string; shift_date: string; start: string; end: string; recurring_id?: string },
+  input: {
+    id: string;
+    job_id?: string;
+    shift_date: string;
+    start: string;
+    end: string;
+    recurring_id?: string;
+  },
 ): Promise<{ updated: number }> {
   if (input.recurring_id) {
     await convertRecurringShiftToStandalone(ctx, {
@@ -1058,7 +1204,9 @@ export async function deleteShift(
       .single();
     if (error || !recurring) throw new Error("Recurring shift not found");
 
-    const exclusions = Array.from(new Set([...(recurring.exclusions ?? []), shiftDate])).sort();
+    const exclusions = Array.from(
+      new Set([...(recurring.exclusions ?? []), shiftDate]),
+    ).sort();
     const { error: updateError } = await ctx.supabase
       .from("recurring_shifts")
       .update({ exclusions })
@@ -1108,7 +1256,9 @@ export async function createEvent(
     })
     .select(COMPUTED_EVENT_SELECT)
     .single();
-  if (error || !data) throw new Error(error?.message ?? "Failed to create event");
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create event");
+  }
   return data as EventRecord;
 }
 
@@ -1178,7 +1328,9 @@ export async function createJob(
     })
     .select("*")
     .single();
-  if (error || !data) throw new Error(error?.message ?? "Failed to create workplace");
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create workplace");
+  }
   return data as Job;
 }
 
@@ -1196,15 +1348,30 @@ export async function updateJob(
     .is("deleted_at", null)
     .select("*")
     .single();
-  if (error || !data) throw new Error(error?.message ?? "Failed to update workplace");
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to update workplace");
+  }
   return data as Job;
 }
 
-export async function archiveJob(ctx: WageyRequestContext, userId: string, jobId: string): Promise<Job> {
-  return await updateJob(ctx, userId, jobId, { archived_at: new Date().toISOString() } as Partial<Job>);
+export async function archiveJob(
+  ctx: WageyRequestContext,
+  userId: string,
+  jobId: string,
+): Promise<Job> {
+  return await updateJob(
+    ctx,
+    userId,
+    jobId,
+    { archived_at: new Date().toISOString() } as Partial<Job>,
+  );
 }
 
-export async function deleteJob(ctx: WageyRequestContext, userId: string, jobId: string): Promise<void> {
+export async function deleteJob(
+  ctx: WageyRequestContext,
+  userId: string,
+  jobId: string,
+): Promise<void> {
   const { error } = await ctx.supabase
     .from("jobs")
     .update({ deleted_at: new Date().toISOString(), is_default: false })
@@ -1224,7 +1391,13 @@ export async function draftRecurringShift(
     end_condition: unknown;
     exclusions: string[];
   },
-): Promise<{ conflictDates: string[]; conflictCount: number; projectedShiftCount: number }> {
+): Promise<
+  {
+    conflictDates: string[];
+    conflictCount: number;
+    projectedShiftCount: number;
+  }
+> {
   const { data, error } = await ctx.supabase
     .from("user_shifts")
     .select("shift_date, start_time, end_time")
@@ -1233,12 +1406,17 @@ export async function draftRecurringShift(
   if (error) throw new Error(error.message);
 
   const existingShifts = (data ?? []) as ExistingShift[];
-  const conflictDates = await detectAllRecurringConflicts(draft as never, existingShifts);
+  const conflictDates = await detectAllRecurringConflicts(
+    draft as never,
+    existingShifts,
+  );
 
-  const window =
-    draft.end_condition !== null
-      ? resolveEndWindow(draft.selected_days as never, draft.end_condition as never)
-      : resolveEndWindow(draft.selected_days as never, null, 6);
+  const window = draft.end_condition !== null
+    ? resolveEndWindow(
+      draft.selected_days as never,
+      draft.end_condition as never,
+    )
+    : resolveEndWindow(draft.selected_days as never, null, 6);
 
   let projectedShiftCount = 0;
   if (window) {
@@ -1246,10 +1424,15 @@ export async function draftRecurringShift(
     const endYear = window.maxMonth.getUTCFullYear();
 
     for (let year = startYear; year <= endYear; year++) {
-      const startMonth = year === startYear ? window.minMonth.getUTCMonth() + 1 : 1;
-      const endMonth = year === endYear ? window.maxMonth.getUTCMonth() + 1 : 12;
+      const startMonth = year === startYear
+        ? window.minMonth.getUTCMonth() + 1
+        : 1;
+      const endMonth = year === endYear
+        ? window.maxMonth.getUTCMonth() + 1
+        : 12;
       for (let month = startMonth; month <= endMonth; month++) {
-        projectedShiftCount += generateVirtualShiftsForMonth({ year, month }, draft as never).length;
+        projectedShiftCount +=
+          generateVirtualShiftsForMonth({ year, month }, draft as never).length;
       }
     }
   }
@@ -1284,9 +1467,13 @@ export async function createRecurringShift(
   options?: { conflictResolution?: "exclude_conflicts" | "keep_existing" },
 ): Promise<{ id: string }> {
   let exclusions = draft.exclusions || [];
-  if ((options?.conflictResolution ?? "exclude_conflicts") === "exclude_conflicts") {
+  if (
+    (options?.conflictResolution ?? "exclude_conflicts") === "exclude_conflicts"
+  ) {
     const validation = await draftRecurringShift(ctx, draft);
-    exclusions = Array.from(new Set([...exclusions, ...validation.conflictDates])).sort();
+    exclusions = Array.from(
+      new Set([...exclusions, ...validation.conflictDates]),
+    ).sort();
   }
 
   const timezoneSuffix = currentTimeZoneSuffix();
@@ -1304,7 +1491,9 @@ export async function createRecurringShift(
     })
     .select("id")
     .single();
-  if (error || !data) throw new Error(error?.message ?? "Failed to create recurring shift");
+  if (error || !data) {
+    throw new Error(error?.message ?? "Failed to create recurring shift");
+  }
   return { id: data.id };
 }
 
@@ -1336,7 +1525,10 @@ export async function updateRecurringShift(
   if (error) throw new Error(error.message);
 }
 
-export async function deleteRecurringShift(ctx: WageyRequestContext, recurringId: string): Promise<void> {
+export async function deleteRecurringShift(
+  ctx: WageyRequestContext,
+  recurringId: string,
+): Promise<void> {
   const { error } = await ctx.supabase
     .from("recurring_shifts")
     .update({ deleted_at: new Date().toISOString() })
@@ -1350,7 +1542,9 @@ export async function copyShifts(
   ctx: WageyRequestContext,
   input: { shiftIds: string[]; targetDate: string },
 ): Promise<{ copied: number }> {
-  const sourceShifts: Array<{ start_time: string; end_time: string; job_id?: string | null }> = [];
+  const sourceShifts: Array<
+    { start_time: string; end_time: string; job_id?: string | null }
+  > = [];
   const virtualIds = input.shiftIds.filter((id) => id.startsWith("virtual-"));
   const regularIds = input.shiftIds.filter((id) => !id.startsWith("virtual-"));
 
@@ -1362,14 +1556,20 @@ export async function copyShifts(
       .is("deleted_at", null)
       .in("id", regularIds);
     if (error) throw new Error(error.message);
-    sourceShifts.push(...((data ?? []) as Array<{ start_time: string; end_time: string; job_id?: string | null }>));
+    sourceShifts.push(
+      ...((data ?? []) as Array<
+        { start_time: string; end_time: string; job_id?: string | null }
+      >),
+    );
   }
 
   if (virtualIds.length > 0) {
     const recurringIds = Array.from(
       new Set(
         virtualIds
-          .map((id) => id.match(/^virtual-([a-f0-9-]+)-\d{4}-\d{2}-\d{2}$/)?.[1])
+          .map((id) =>
+            id.match(/^virtual-([a-f0-9-]+)-\d{4}-\d{2}-\d{2}$/)?.[1]
+          )
           .filter((id): id is string => Boolean(id)),
       ),
     );
@@ -1385,7 +1585,9 @@ export async function copyShifts(
 
       const recurringMap = new Map((data ?? []).map((row) => [row.id, row]));
       for (const virtualId of virtualIds) {
-        const recurringId = virtualId.match(/^virtual-([a-f0-9-]+)-\d{4}-\d{2}-\d{2}$/)?.[1];
+        const recurringId = virtualId.match(
+          /^virtual-([a-f0-9-]+)-\d{4}-\d{2}-\d{2}$/,
+        )?.[1];
         if (!recurringId) continue;
         const recurring = recurringMap.get(recurringId);
         if (!recurring) continue;
@@ -1428,9 +1630,13 @@ export async function updateCustomSupplements(
       .eq("user_id", ctx.user.id)
       .is("deleted_at", null)
       .single();
-    if (error || !recurring) throw new Error(error?.message ?? "Recurring shift not found");
+    if (error || !recurring) {
+      throw new Error(error?.message ?? "Recurring shift not found");
+    }
 
-    const updatedDateSpecific = { ...(recurring.date_specific_supplements ?? {}) };
+    const updatedDateSpecific = {
+      ...(recurring.date_specific_supplements ?? {}),
+    };
     if (input.customSupplements) {
       updatedDateSpecific[input.shiftDate] = input.customSupplements;
     } else {
@@ -1440,7 +1646,9 @@ export async function updateCustomSupplements(
     const { error: updateError } = await ctx.supabase
       .from("recurring_shifts")
       .update({
-        date_specific_supplements: Object.keys(updatedDateSpecific).length > 0 ? updatedDateSpecific : null,
+        date_specific_supplements: Object.keys(updatedDateSpecific).length > 0
+          ? updatedDateSpecific
+          : null,
       })
       .eq("id", input.recurringId)
       .eq("user_id", ctx.user.id)
@@ -1469,7 +1677,9 @@ export async function updateCustomPauseWindows(
     shiftDate?: string;
   },
 ): Promise<{ updated: number }> {
-  const normalizedPauseWindows = normalizeCustomPauseWindows(input.customPauseWindows);
+  const normalizedPauseWindows = normalizeCustomPauseWindows(
+    input.customPauseWindows,
+  );
 
   if (input.recurringId && input.shiftDate) {
     const { data: recurring, error } = await ctx.supabase
@@ -1479,9 +1689,13 @@ export async function updateCustomPauseWindows(
       .eq("user_id", ctx.user.id)
       .is("deleted_at", null)
       .single();
-    if (error || !recurring) throw new Error(error?.message ?? "Recurring shift not found");
+    if (error || !recurring) {
+      throw new Error(error?.message ?? "Recurring shift not found");
+    }
 
-    const updatedDateSpecific = { ...(recurring.date_specific_pause_windows ?? {}) };
+    const updatedDateSpecific = {
+      ...(recurring.date_specific_pause_windows ?? {}),
+    };
     if (normalizedPauseWindows) {
       updatedDateSpecific[input.shiftDate] = normalizedPauseWindows;
     } else {
@@ -1491,7 +1705,9 @@ export async function updateCustomPauseWindows(
     const { error: updateError } = await ctx.supabase
       .from("recurring_shifts")
       .update({
-        date_specific_pause_windows: Object.keys(updatedDateSpecific).length > 0 ? updatedDateSpecific : null,
+        date_specific_pause_windows: Object.keys(updatedDateSpecific).length > 0
+          ? updatedDateSpecific
+          : null,
       })
       .eq("id", input.recurringId)
       .eq("user_id", ctx.user.id)
@@ -1513,7 +1729,12 @@ export async function updateCustomPauseWindows(
 
 export async function convertRecurringShiftToStandalone(
   ctx: WageyRequestContext,
-  input: { recurringId: string; shiftDate: string; startTime: string; endTime: string },
+  input: {
+    recurringId: string;
+    shiftDate: string;
+    startTime: string;
+    endTime: string;
+  },
 ): Promise<void> {
   const { data: recurring, error } = await ctx.supabase
     .from("recurring_shifts")
@@ -1522,9 +1743,13 @@ export async function convertRecurringShiftToStandalone(
     .eq("user_id", ctx.user.id)
     .is("deleted_at", null)
     .single();
-  if (error || !recurring) throw new Error(error?.message ?? "Recurring shift not found");
+  if (error || !recurring) {
+    throw new Error(error?.message ?? "Recurring shift not found");
+  }
 
-  const exclusions = Array.from(new Set([...(recurring.exclusions ?? []), input.shiftDate])).sort();
+  const exclusions = Array.from(
+    new Set([...(recurring.exclusions ?? []), input.shiftDate]),
+  ).sort();
   const [{ error: updateError }, { error: insertError }] = await Promise.all([
     ctx.supabase
       .from("recurring_shifts")
@@ -1546,7 +1771,13 @@ export async function convertRecurringShiftToStandalone(
 
 export async function moveRecurringShift(
   ctx: WageyRequestContext,
-  input: { recurringId: string; sourceDate: string; targetDate: string; startTime: string; endTime: string },
+  input: {
+    recurringId: string;
+    sourceDate: string;
+    targetDate: string;
+    startTime: string;
+    endTime: string;
+  },
 ): Promise<void> {
   await convertRecurringShiftToStandalone(ctx, {
     recurringId: input.recurringId,
@@ -1568,7 +1799,10 @@ export async function moveRecurringShift(
   if (error) throw new Error(error.message);
 }
 
-export async function submitFeedback(ctx: WageyRequestContext, message: string): Promise<void> {
+export async function submitFeedback(
+  ctx: WageyRequestContext,
+  message: string,
+): Promise<void> {
   const trimmed = message.trim();
   if (!trimmed) throw new Error("Feedback cannot be empty");
   const { error } = await ctx.supabase.from("feedback").insert({
@@ -1579,7 +1813,9 @@ export async function submitFeedback(ctx: WageyRequestContext, message: string):
   if (error) throw new Error(error.message);
 }
 
-export async function getUserFeedback(ctx: WageyRequestContext): Promise<Array<Record<string, unknown>>> {
+export async function getUserFeedback(
+  ctx: WageyRequestContext,
+): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await ctx.supabase
     .from("feedback")
     .select("id, message, created_at, response, responded_at")
@@ -1616,7 +1852,10 @@ export async function updateDisplaySettings(
   ctx: WageyRequestContext,
   data: Record<string, unknown>,
 ): Promise<void> {
-  const { error } = await ctx.supabase.from("user_settings").update(data).eq("user_id", ctx.user.id);
+  const { error } = await ctx.supabase.from("user_settings").update(data).eq(
+    "user_id",
+    ctx.user.id,
+  );
   if (error) throw new Error(error.message);
 }
 
@@ -1627,7 +1866,10 @@ export async function updatePaySettings(
   const { monthly_goals_by_month: overridePatch, ...scalarData } = data;
   const updateData: Record<string, unknown> = { ...scalarData };
 
-  if (overridePatch && typeof overridePatch === "object" && !Array.isArray(overridePatch)) {
+  if (
+    overridePatch && typeof overridePatch === "object" &&
+    !Array.isArray(overridePatch)
+  ) {
     const { data: current, error: fetchError } = await ctx.supabase
       .from("user_settings")
       .select("monthly_goals_by_month")
@@ -1635,8 +1877,14 @@ export async function updatePaySettings(
       .single();
     if (fetchError) throw new Error(fetchError.message);
 
-    const merged = { ...((current?.monthly_goals_by_month ?? {}) as Record<string, number>) };
-    for (const [month, value] of Object.entries(overridePatch as Record<string, number | null>)) {
+    const merged = {
+      ...((current?.monthly_goals_by_month ?? {}) as Record<string, number>),
+    };
+    for (
+      const [month, value] of Object.entries(
+        overridePatch as Record<string, number | null>,
+      )
+    ) {
       if (value === null) {
         delete merged[month];
       } else {
@@ -1646,7 +1894,8 @@ export async function updatePaySettings(
     updateData.monthly_goals_by_month = merged;
   }
 
-  const { error } = await ctx.supabase.from("user_settings").update(updateData).eq("user_id", ctx.user.id);
+  const { error } = await ctx.supabase.from("user_settings").update(updateData)
+    .eq("user_id", ctx.user.id);
   if (error) throw new Error(error.message);
 }
 
@@ -1654,11 +1903,16 @@ export async function updatePreferencesSettings(
   ctx: WageyRequestContext,
   data: Record<string, unknown>,
 ): Promise<void> {
-  const { error } = await ctx.supabase.from("user_settings").update(data).eq("user_id", ctx.user.id);
+  const { error } = await ctx.supabase.from("user_settings").update(data).eq(
+    "user_id",
+    ctx.user.id,
+  );
   if (error) throw new Error(error.message);
 }
 
-export async function getTariffTypes(ctx: WageyRequestContext): Promise<Array<Record<string, unknown>>> {
+export async function getTariffTypes(
+  ctx: WageyRequestContext,
+): Promise<Array<Record<string, unknown>>> {
   const { data, error } = await ctx.supabase.rpc("get_tariff_types");
   if (error) throw new Error(error.message);
   return (data ?? []) as Array<Record<string, unknown>>;
@@ -1672,7 +1926,9 @@ export async function getLatestTariffVersion(
     p_tariff_type: tariffType,
   });
   if (error) throw new Error(error.message);
-  return (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  return (Array.isArray(data) ? data[0] : data) as
+    | Record<string, unknown>
+    | null;
 }
 
 export async function getTariffVersionForDate(
@@ -1680,18 +1936,33 @@ export async function getTariffVersionForDate(
   tariffType: string,
   targetDate: string,
 ): Promise<Record<string, unknown> | null> {
-  const { data, error } = await ctx.supabase.rpc("get_tariff_version_for_date", {
-    p_tariff_type: tariffType,
-    p_target_date: targetDate,
-  });
+  const { data, error } = await ctx.supabase.rpc(
+    "get_tariff_version_for_date",
+    {
+      p_tariff_type: tariffType,
+      p_target_date: targetDate,
+    },
+  );
   if (error) throw new Error(error.message);
-  return (Array.isArray(data) ? data[0] : data) as Record<string, unknown> | null;
+  return (Array.isArray(data) ? data[0] : data) as
+    | Record<string, unknown>
+    | null;
 }
 
 export async function getUsersByIds(
   ctx: WageyRequestContext,
   userIds: string[],
-): Promise<Map<string, { email: string | null; phone: string | null; firstName: string | null; oauthAvatarUrl: string | null }>> {
+): Promise<
+  Map<
+    string,
+    {
+      email: string | null;
+      phone: string | null;
+      firstName: string | null;
+      oauthAvatarUrl: string | null;
+    }
+  >
+> {
   if (userIds.length === 0) return new Map();
   const { data, error } = await ctx.supabaseAdmin.rpc("get_users_by_ids", {
     user_ids: userIds,
@@ -1711,7 +1982,9 @@ export async function getUsersByIds(
   );
 }
 
-function normalizeShareIdentifier(identifier: string): { type: "email" | "phone"; value: string } | null {
+function normalizeShareIdentifier(
+  identifier: string,
+): { type: "email" | "phone"; value: string } | null {
   const trimmed = identifier.trim();
   if (!trimmed) return null;
   if (trimmed.includes("@")) {
@@ -1720,14 +1993,23 @@ function normalizeShareIdentifier(identifier: string): { type: "email" | "phone"
 
   const digits = trimmed.replace(/\D/g, "");
   let local = digits;
-  if (digits.length === 12 && digits.startsWith("0047")) local = digits.slice(4);
-  else if (digits.length === 10 && digits.startsWith("47")) local = digits.slice(2);
-  else if (digits.length === 9 && digits.startsWith("0")) local = digits.slice(1);
+  if (digits.length === 12 && digits.startsWith("0047")) {
+    local = digits.slice(4);
+  } else if (digits.length === 10 && digits.startsWith("47")) {
+    local = digits.slice(2);
+  } else if (digits.length === 9 && digits.startsWith("0")) {
+    local = digits.slice(1);
+  }
   return local.length === 8 ? { type: "phone", value: `+47${local}` } : null;
 }
 
-async function canAddMoreRecipients(ctx: WageyRequestContext): Promise<{ currentCount: number; limit: number }> {
-  const { profile, subscription } = await getProfileAndSubscription(ctx, ctx.user.id);
+async function canAddMoreRecipients(
+  ctx: WageyRequestContext,
+): Promise<{ currentCount: number; limit: number }> {
+  const { profile, subscription } = await getProfileAndSubscription(
+    ctx,
+    ctx.user.id,
+  );
   const tier = getUserTier(subscription, profile);
   const limit = SHARE_LIMITS[tier];
   const { count, error } = await ctx.supabase
@@ -1745,12 +2027,18 @@ export async function createShare(
 ): Promise<{ success: boolean; error?: string }> {
   const normalized = normalizeShareIdentifier(identifier);
   if (!normalized) {
-    return { success: false, error: "Vennligst oppgi en gyldig e-post eller telefonnummer" };
+    return {
+      success: false,
+      error: "Vennligst oppgi en gyldig e-post eller telefonnummer",
+    };
   }
 
   const { currentCount, limit } = await canAddMoreRecipients(ctx);
   if (currentCount >= limit) {
-    return { success: false, error: "Du har nådd maksimalt antall delinger for ditt abonnement" };
+    return {
+      success: false,
+      error: "Du har nådd maksimalt antall delinger for ditt abonnement",
+    };
   }
 
   let recipientId: string | null = null;
@@ -1769,7 +2057,10 @@ export async function createShare(
   }
 
   if (!recipientId) {
-    return { success: false, error: "Fant ingen bruker med denne e-posten eller telefonnummeret" };
+    return {
+      success: false,
+      error: "Fant ingen bruker med denne e-posten eller telefonnummeret",
+    };
   }
   if (recipientId === ctx.user.id) {
     return { success: false, error: "Du kan ikke dele med deg selv" };
@@ -1782,7 +2073,10 @@ export async function createShare(
   });
   if (error) {
     if (error.code === "23505") {
-      return { success: false, error: "Du deler allerede vaktene dine med denne brukeren" };
+      return {
+        success: false,
+        error: "Du deler allerede vaktene dine med denne brukeren",
+      };
     }
     throw new Error(error.message);
   }
@@ -1790,7 +2084,10 @@ export async function createShare(
   return { success: true };
 }
 
-export async function removeShare(ctx: WageyRequestContext, recipientId: string): Promise<{ success: boolean }> {
+export async function removeShare(
+  ctx: WageyRequestContext,
+  recipientId: string,
+): Promise<{ success: boolean }> {
   const { error } = await ctx.supabase
     .from("shift_shares")
     .delete()
@@ -1814,7 +2111,10 @@ export async function toggleShareEarnings(
   return { success: true };
 }
 
-export async function blockSharer(ctx: WageyRequestContext, ownerId: string): Promise<{ success: boolean }> {
+export async function blockSharer(
+  ctx: WageyRequestContext,
+  ownerId: string,
+): Promise<{ success: boolean }> {
   const { error } = await ctx.supabase
     .from("shift_shares")
     .update({ hidden: true })
@@ -1824,7 +2124,10 @@ export async function blockSharer(ctx: WageyRequestContext, ownerId: string): Pr
   return { success: true };
 }
 
-export async function unblockSharer(ctx: WageyRequestContext, ownerId: string): Promise<{ success: boolean }> {
+export async function unblockSharer(
+  ctx: WageyRequestContext,
+  ownerId: string,
+): Promise<{ success: boolean }> {
   const { error } = await ctx.supabase
     .from("shift_shares")
     .update({ hidden: false })
@@ -1834,10 +2137,16 @@ export async function unblockSharer(ctx: WageyRequestContext, ownerId: string): 
   return { success: true };
 }
 
-export async function shareBack(ctx: WageyRequestContext, recipientId: string): Promise<{ success: boolean; error?: string }> {
+export async function shareBack(
+  ctx: WageyRequestContext,
+  recipientId: string,
+): Promise<{ success: boolean; error?: string }> {
   const { currentCount, limit } = await canAddMoreRecipients(ctx);
   if (currentCount >= limit) {
-    return { success: false, error: "Du har nådd maksimalt antall delinger for ditt abonnement" };
+    return {
+      success: false,
+      error: "Du har nådd maksimalt antall delinger for ditt abonnement",
+    };
   }
 
   const { error } = await ctx.supabase.from("shift_shares").insert({
@@ -1847,7 +2156,10 @@ export async function shareBack(ctx: WageyRequestContext, recipientId: string): 
   });
   if (error) {
     if (error.code === "23505") {
-      return { success: false, error: "Du deler allerede vaktene dine med denne brukeren" };
+      return {
+        success: false,
+        error: "Du deler allerede vaktene dine med denne brukeren",
+      };
     }
     throw new Error(error.message);
   }
@@ -1868,7 +2180,10 @@ export async function toggleSharerMuted(
   return { success: true };
 }
 
-export async function removeSharer(ctx: WageyRequestContext, ownerId: string): Promise<{ success: boolean }> {
+export async function removeSharer(
+  ctx: WageyRequestContext,
+  ownerId: string,
+): Promise<{ success: boolean }> {
   const { error } = await ctx.supabase
     .from("shift_shares")
     .delete()
@@ -1878,8 +2193,13 @@ export async function removeSharer(ctx: WageyRequestContext, ownerId: string): P
   return { success: true };
 }
 
-export async function getAllFriends(ctx: WageyRequestContext): Promise<FriendEntry[]> {
-  const [{ data: sharersRaw, error: sharersError }, { data: recipientsRaw, error: recipientsError }] = await Promise.all([
+export async function getAllFriends(
+  ctx: WageyRequestContext,
+): Promise<FriendEntry[]> {
+  const [
+    { data: sharersRaw, error: sharersError },
+    { data: recipientsRaw, error: recipientsError },
+  ] = await Promise.all([
     ctx.supabase.rpc("get_my_sharers"),
     ctx.supabase
       .from("shift_shares")
@@ -1891,7 +2211,12 @@ export async function getAllFriends(ctx: WageyRequestContext): Promise<FriendEnt
 
   const sharers = (sharersRaw ?? []) as Array<Record<string, unknown>>;
   const recipients = (recipientsRaw ?? []) as Array<Record<string, unknown>>;
-  const userIds = Array.from(new Set([...sharers.map((row) => String(row.id)), ...recipients.map((row) => String(row.viewer_id))]));
+  const userIds = Array.from(
+    new Set([
+      ...sharers.map((row) => String(row.id)),
+      ...recipients.map((row) => String(row.viewer_id)),
+    ]),
+  );
   const usersById = await getUsersByIds(ctx, userIds);
 
   const friends = new Map<string, FriendEntry>();
@@ -1912,7 +2237,8 @@ export async function getAllFriends(ctx: WageyRequestContext): Promise<FriendEnt
   for (const sharer of sharers) {
     const entry = friends.get(String(sharer.id));
     if (!entry) continue;
-    entry.profilePictureUrl = (sharer.profile_picture_url as string | null) ?? null;
+    entry.profilePictureUrl = (sharer.profile_picture_url as string | null) ??
+      null;
     entry.sharesWithMe = {
       blocked: Boolean(sharer.hidden),
       showEarningsToMe: Boolean(sharer.show_earnings),
@@ -1965,16 +2291,20 @@ async function loadSharedOwnerData(
         throw new Error("No access to shared shifts");
       }
 
-      const [{ settings, jobs, snapshots, recurringShifts }, shifts] = await Promise.all([
-        loadShiftResources(ctx, ownerId, { jobId: options.jobId, asAdmin: true }),
-        loadShiftRows(ctx, ownerId, {
-          startDate,
-          endDate,
-          limit: options.limit,
-          jobId: options.jobId,
-          asAdmin: true,
-        }),
-      ]);
+      const [{ settings, jobs, snapshots, recurringShifts }, shifts] =
+        await Promise.all([
+          loadShiftResources(ctx, ownerId, {
+            jobId: options.jobId,
+            asAdmin: true,
+          }),
+          loadShiftRows(ctx, ownerId, {
+            startDate,
+            endDate,
+            limit: options.limit,
+            jobId: options.jobId,
+            asAdmin: true,
+          }),
+        ]);
 
       const loaded = buildComputedShiftData({
         userId: ownerId,
@@ -2006,19 +2336,36 @@ export async function getSharedUserShifts(
 export async function getSharerShiftPreviews(
   ctx: WageyRequestContext,
   sharerIds: string[],
-): Promise<Array<{ sharerId: string; showEarnings: boolean; status: "active" | "upcoming" | "past" | null; shift: ShiftWithComputations | null }>> {
+): Promise<
+  Array<
+    {
+      sharerId: string;
+      showEarnings: boolean;
+      status: "active" | "upcoming" | "past" | null;
+      shift: ShiftWithComputations | null;
+    }
+  >
+> {
   const now = new Date();
-  const startDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 30))
+  const startDate = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 30),
+  )
     .toISOString()
     .slice(0, 10);
-  const endDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 30))
+  const endDate = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 30),
+  )
     .toISOString()
     .slice(0, 10);
 
   const previews = await Promise.all(
     sharerIds.map(async (sharerId) => {
       try {
-        const shared = await loadSharedOwnerData(ctx, sharerId, { startDate, endDate, limit: 1000 });
+        const shared = await loadSharedOwnerData(ctx, sharerId, {
+          startDate,
+          endDate,
+          limit: 1000,
+        });
         const shifts = [...shared.shifts].sort((a, b) => {
           const dateDiff = a.shift_date.localeCompare(b.shift_date);
           if (dateDiff !== 0) return dateDiff;
@@ -2026,31 +2373,56 @@ export async function getSharerShiftPreviews(
         });
 
         const active = shifts.find((shift) => {
-          const start = new Date(`${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`).getTime();
-          let end = new Date(`${shift.shift_date}T${cleanTime(shift.end_time)}:00Z`).getTime();
-          if (timeToMinutes(shift.end_time) <= timeToMinutes(shift.start_time)) {
+          const start = new Date(
+            `${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`,
+          ).getTime();
+          let end = new Date(
+            `${shift.shift_date}T${cleanTime(shift.end_time)}:00Z`,
+          ).getTime();
+          if (
+            timeToMinutes(shift.end_time) <= timeToMinutes(shift.start_time)
+          ) {
             end += 24 * 60 * 60 * 1000;
           }
           const current = now.getTime();
           return current >= start && current <= end;
         });
         if (active) {
-          return { sharerId, showEarnings: shared.showEarnings, status: "active" as const, shift: active };
+          return {
+            sharerId,
+            showEarnings: shared.showEarnings,
+            status: "active" as const,
+            shift: active,
+          };
         }
 
         const upcoming = shifts.find((shift) => {
-          const start = new Date(`${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`).getTime();
+          const start = new Date(
+            `${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`,
+          ).getTime();
           return start > now.getTime();
         });
         if (upcoming) {
-          return { sharerId, showEarnings: shared.showEarnings, status: "upcoming" as const, shift: upcoming };
+          return {
+            sharerId,
+            showEarnings: shared.showEarnings,
+            status: "upcoming" as const,
+            shift: upcoming,
+          };
         }
 
         const past = [...shifts].reverse().find((shift) => {
-          const start = new Date(`${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`).getTime();
+          const start = new Date(
+            `${shift.shift_date}T${cleanTime(shift.start_time)}:00Z`,
+          ).getTime();
           return start < now.getTime();
         });
-        return { sharerId, showEarnings: shared.showEarnings, status: past ? "past" as const : null, shift: past ?? null };
+        return {
+          sharerId,
+          showEarnings: shared.showEarnings,
+          status: past ? "past" as const : null,
+          shift: past ?? null,
+        };
       } catch {
         return { sharerId, showEarnings: false, status: null, shift: null };
       }
@@ -2093,7 +2465,11 @@ export async function getStatistics(
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
   const weekStartDate = weekStart.toISOString().slice(0, 10);
   const weekEndDate = weekEnd.toISOString().slice(0, 10);
-  const aggregateStart = getEarlierDate(yearStart, lastMonthStart, weekStartDate);
+  const aggregateStart = getEarlierDate(
+    yearStart,
+    lastMonthStart,
+    weekStartDate,
+  );
   const aggregateEnd = getLaterDate(yearEnd, currentMonthEnd, weekEndDate);
   const aggregateData = await getComputedShiftsForApi(ctx, ctx.user.id, {
     startDate: aggregateStart,
@@ -2101,46 +2477,86 @@ export async function getStatistics(
     jobId: options.jobId,
   });
   const settings = aggregateData.settings;
-  const currentMonthData = sliceLoadedShiftData(aggregateData, currentMonthStart, currentMonthEnd);
-  const lastMonthData = sliceLoadedShiftData(aggregateData, lastMonthStart, lastMonthEnd);
+  const currentMonthData = sliceLoadedShiftData(
+    aggregateData,
+    currentMonthStart,
+    currentMonthEnd,
+  );
+  const lastMonthData = sliceLoadedShiftData(
+    aggregateData,
+    lastMonthStart,
+    lastMonthEnd,
+  );
   const yearData = sliceLoadedShiftData(aggregateData, yearStart, yearEnd);
-  const weekData = sliceLoadedShiftData(aggregateData, weekStartDate, weekEndDate);
+  const weekData = sliceLoadedShiftData(
+    aggregateData,
+    weekStartDate,
+    weekEndDate,
+  );
 
   const summarize = (loaded: LoadedShiftData) => {
-    const totalEarnings = loaded.shifts.reduce((sum, shift) => sum + shift.computed.gross, 0);
+    const jobsById = new Map(loaded.jobs.map((job) => [job.id, job] as const));
+    const defaultJob = resolveDefaultJob(loaded.jobs);
+    const totalEarnings = loaded.shifts.reduce(
+      (sum, shift) => sum + shift.computed.gross,
+      0,
+    );
     const totalEarningsNet = loaded.shifts.reduce(
       (sum, shift) =>
         sum + calculateNetPay(
           shift.computed.gross,
-          { tax_enabled: shift.tax_enabled, tax_percentage: shift.tax_percentage },
-          loaded.settings.half_tax_month,
+          {
+            tax_enabled: shift.tax_enabled,
+            tax_percentage: shift.tax_percentage,
+          },
+          halfTaxMonthForJob(
+            jobsById,
+            defaultJob,
+            loaded.settings,
+            shift.job_id,
+          ),
           shift.shift_date,
         ),
       0,
     );
-    const totalHours = loaded.shifts.reduce((sum, shift) => sum + shift.computed.paidHours, 0);
+    const totalHours = loaded.shifts.reduce(
+      (sum, shift) => sum + shift.computed.paidHours,
+      0,
+    );
     return {
       totalEarnings: Number(totalEarnings.toFixed(2)),
       totalEarningsNet: Number(totalEarningsNet.toFixed(2)),
       totalHours: Number(totalHours.toFixed(2)),
       shiftCount: loaded.shifts.length,
-      averageRate: totalHours > 0 ? Number((totalEarnings / totalHours).toFixed(2)) : 0,
+      averageRate: totalHours > 0
+        ? Number((totalEarnings / totalHours).toFixed(2))
+        : 0,
     };
   };
 
-  const yearlyMonths = Array.from({ length: 12 }, (_, index) => index + 1).map((monthNumber) => {
-    const start = getMonthStart(year, monthNumber);
-    const end = getMonthEnd(year, monthNumber);
-    const monthShifts = yearData.shifts.filter((shift) => shift.shift_date >= start && shift.shift_date <= end);
-    const totalGross = monthShifts.reduce((sum, shift) => sum + shift.computed.gross, 0);
-    const totalHours = monthShifts.reduce((sum, shift) => sum + shift.computed.paidHours, 0);
-    return {
-      monthNumber,
-      totalEarnings: Number(totalGross.toFixed(2)),
-      totalHours: Number(totalHours.toFixed(2)),
-      shiftCount: monthShifts.length,
-    };
-  });
+  const yearlyMonths = Array.from({ length: 12 }, (_, index) => index + 1).map(
+    (monthNumber) => {
+      const start = getMonthStart(year, monthNumber);
+      const end = getMonthEnd(year, monthNumber);
+      const monthShifts = yearData.shifts.filter((shift) =>
+        shift.shift_date >= start && shift.shift_date <= end
+      );
+      const totalGross = monthShifts.reduce(
+        (sum, shift) => sum + shift.computed.gross,
+        0,
+      );
+      const totalHours = monthShifts.reduce(
+        (sum, shift) => sum + shift.computed.paidHours,
+        0,
+      );
+      return {
+        monthNumber,
+        totalEarnings: Number(totalGross.toFixed(2)),
+        totalHours: Number(totalHours.toFixed(2)),
+        shiftCount: monthShifts.length,
+      };
+    },
+  );
 
   const thisWeek = weekData.shifts.map((shift) => ({
     fullDate: shift.shift_date,
@@ -2150,17 +2566,38 @@ export async function getStatistics(
   }));
 
   const currentMonthBreakdown = {
-    basePay: Number(currentMonthData.shifts.reduce((sum, shift) => sum + shift.computed.basePay, 0).toFixed(2)),
-    supplementPay: Number(currentMonthData.shifts.reduce((sum, shift) => sum + shift.computed.supplementPay, 0).toFixed(2)),
+    basePay: Number(
+      currentMonthData.shifts.reduce(
+        (sum, shift) => sum + shift.computed.basePay,
+        0,
+      ).toFixed(2),
+    ),
+    supplementPay: Number(
+      currentMonthData.shifts.reduce(
+        (sum, shift) => sum + shift.computed.supplementPay,
+        0,
+      ).toFixed(2),
+    ),
     basePercentage: 0,
     supplementPercentage: 0,
   };
 
-  const totalBreakdown = currentMonthBreakdown.basePay + currentMonthBreakdown.supplementPay;
-  currentMonthBreakdown.basePercentage = totalBreakdown > 0 ? Number(((currentMonthBreakdown.basePay / totalBreakdown) * 100).toFixed(2)) : 0;
-  currentMonthBreakdown.supplementPercentage = totalBreakdown > 0 ? Number(((currentMonthBreakdown.supplementPay / totalBreakdown) * 100).toFixed(2)) : 0;
+  const totalBreakdown = currentMonthBreakdown.basePay +
+    currentMonthBreakdown.supplementPay;
+  currentMonthBreakdown.basePercentage = totalBreakdown > 0
+    ? Number(
+      ((currentMonthBreakdown.basePay / totalBreakdown) * 100).toFixed(2),
+    )
+    : 0;
+  currentMonthBreakdown.supplementPercentage = totalBreakdown > 0
+    ? Number(
+      ((currentMonthBreakdown.supplementPay / totalBreakdown) * 100).toFixed(2),
+    )
+    : 0;
 
-  const monthlyGoalTarget = settings.monthly_goals_by_month?.[`${year}-${String(month).padStart(2, "0")}`] ?? settings.monthly_goal ?? 0;
+  const monthlyGoalTarget = settings.monthly_goals_by_month
+    ?.[`${year}-${String(month).padStart(2, "0")}`] ??
+    settings.monthly_goal ?? 0;
   const currentSummary = summarize(currentMonthData);
 
   return {
@@ -2179,11 +2616,21 @@ export async function getStatistics(
           .reduce((sum, shift) => sum + shift.computed.paidHours, 0)
           .toFixed(2),
       ),
-      shiftCount: yearData.shifts.filter((shift) => shift.shift_date <= currentMonthEnd).length,
+      shiftCount:
+        yearData.shifts.filter((shift) => shift.shift_date <= currentMonthEnd)
+          .length,
     },
     fullYear: {
-      totalEarnings: Number(yearData.shifts.reduce((sum, shift) => sum + shift.computed.gross, 0).toFixed(2)),
-      totalHours: Number(yearData.shifts.reduce((sum, shift) => sum + shift.computed.paidHours, 0).toFixed(2)),
+      totalEarnings: Number(
+        yearData.shifts.reduce((sum, shift) => sum + shift.computed.gross, 0)
+          .toFixed(2),
+      ),
+      totalHours: Number(
+        yearData.shifts.reduce(
+          (sum, shift) => sum + shift.computed.paidHours,
+          0,
+        ).toFixed(2),
+      ),
       shiftCount: yearData.shifts.length,
     },
     yearlyMonths,
@@ -2192,8 +2639,15 @@ export async function getStatistics(
       enabled: monthlyGoalTarget > 0,
       target: monthlyGoalTarget,
       progress: currentSummary.totalEarnings,
-      percentage: monthlyGoalTarget > 0 ? Number(((currentSummary.totalEarnings / monthlyGoalTarget) * 100).toFixed(2)) : 0,
-      remaining: Math.max(0, Number((monthlyGoalTarget - currentSummary.totalEarnings).toFixed(2))),
+      percentage: monthlyGoalTarget > 0
+        ? Number(
+          ((currentSummary.totalEarnings / monthlyGoalTarget) * 100).toFixed(2),
+        )
+        : 0,
+      remaining: Math.max(
+        0,
+        Number((monthlyGoalTarget - currentSummary.totalEarnings).toFixed(2)),
+      ),
     },
     currentMonthBreakdown,
   };
