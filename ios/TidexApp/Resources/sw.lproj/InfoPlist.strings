@@ -6,6 +6,12 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex inahitaji umeme wa kamera ili kuchukua picha ya wasifu.";
 
@@ -14,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex inahitaji umeme wa ufikaji wa picha ili kuhifadhi kalenda iliyoshirikishwa na picha za zamu kwenye maktaba yako ya picha.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex inahitaji ufikiaji wa kalenda yako ili kusawazisha zamu zako na ratiba yako.";

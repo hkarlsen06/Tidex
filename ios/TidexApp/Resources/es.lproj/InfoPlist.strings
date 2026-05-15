@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex necesita acceso para guardar imágenes de calendario y turnos compartidos en tu fototeca.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex necesita acceso a tu calendario para añadir y gestionar tus turnos de trabajo.";

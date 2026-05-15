@@ -6,6 +6,12 @@
 /* App name */
 "CFBundleName" = "Tidex";
 
+/* CFBundleDisplayName */
+"CFBundleDisplayName" = "Tidex";
+
+/* CFBundleName */
+"CFBundleName" = "Tidex";
+
 /* Camera usage description */
 "NSCameraUsageDescription" = "Tidex vajag kameras piekļuvi, lai uzņemtu profila fotoattēlu.";
 
@@ -14,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex vajag piekļuvi fotoattēlu bibliotēkai, lai saglabātu koplietotus kalendārus un maiņu attēlus.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex nepieciešama pilna piekļuve kalendāram, lai pievienotu un pārvaldītu jūsu darba maiņas.";

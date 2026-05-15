@@ -20,3 +20,6 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex potrzebuje dostępu do biblioteki zdjęć, aby zapisać udostępniane kalendarze i zdjęcia zmian.";
+
+/* Calendar access description */
+"NSCalendarsFullAccessUsageDescription" = "Tidex potrzebuje pełnego dostępu do Kalendarza, aby dodawać i aktualizować Twoje zmiany.";
