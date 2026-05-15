@@ -114,6 +114,7 @@ export function createCalendarFeedHandler(
       const projectedRecurringShifts = projectRecurringShifts(
         data.recurringShifts,
         window,
+        data.shifts,
       );
       const locale = normalizeCalendarFeedLocale(subscription.locale);
       const body = req.method === "HEAD" ? null : await buildICalendarFeed(

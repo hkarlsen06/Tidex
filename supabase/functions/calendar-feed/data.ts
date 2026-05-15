@@ -13,7 +13,7 @@ import type {
 } from "./types.ts";
 
 const SHIFT_SELECT =
-  "id, shift_date, start_time, end_time, note, job_id, updated_at";
+  "id, shift_date, start_time, end_time, note, job_id, recurring_id, updated_at";
 const RECURRING_SHIFT_SELECT =
   "id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_notes, job_id, updated_at";
 const JOB_SELECT = "id, name";
@@ -108,8 +108,14 @@ export async function loadCalendarData(
 export function projectRecurringShifts(
   recurringShifts: CalendarRecurringShiftRow[],
   window: FeedWindow,
+  materializedShifts: CalendarShiftRow[] = [],
 ): ProjectedRecurringShift[] {
   const projected: ProjectedRecurringShift[] = [];
+  const materializedOccurrenceKeys = new Set(
+    materializedShifts.flatMap((shift) =>
+      shift.recurring_id ? [`${shift.recurring_id}|${shift.shift_date}`] : []
+    ),
+  );
 
   for (const recurringShift of recurringShifts) {
     for (const yearMonth of monthsBetweenInclusive(window)) {
@@ -135,6 +141,14 @@ export function projectRecurringShifts(
         if (
           compareISODate(occurrence.date, window.startDate) < 0 ||
           compareISODate(occurrence.date, window.endDate) > 0
+        ) {
+          continue;
+        }
+
+        if (
+          materializedOccurrenceKeys.has(
+            `${recurringShift.id}|${occurrence.date}`,
+          )
         ) {
           continue;
         }
