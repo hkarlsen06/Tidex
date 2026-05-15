@@ -23,14 +23,17 @@ function makeUuid(index: number): string {
   return `00000000-0000-0000-0000-${String(index).padStart(12, "0")}`;
 }
 
-class MockQueryBuilder implements PromiseLike<{ data: any; error: any; count?: number | null }> {
+class MockQueryBuilder
+  implements PromiseLike<{ data: any; error: any; count?: number | null }> {
   private mode: "select" | "insert" | "update" = "select";
   private insertedRows: Array<Record<string, unknown>> = [];
   private updateData: Record<string, unknown> = {};
   private selectAfterWrite = false;
   private singleMode: "many" | "single" | "maybeSingle" = "many";
   private filters: Array<(row: Record<string, unknown>) => boolean> = [];
-  private orders: Array<{ column: string; ascending: boolean; nullsFirst?: boolean }> = [];
+  private orders: Array<
+    { column: string; ascending: boolean; nullsFirst?: boolean }
+  > = [];
   private limitCount: number | null = null;
   private head = false;
   private countExact = false;
@@ -80,7 +83,10 @@ class MockQueryBuilder implements PromiseLike<{ data: any; error: any; count?: n
     return this;
   }
 
-  order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }) {
+  order(
+    column: string,
+    options?: { ascending?: boolean; nullsFirst?: boolean },
+  ) {
     this.orders.push({
       column,
       ascending: options?.ascending ?? true,
@@ -104,14 +110,26 @@ class MockQueryBuilder implements PromiseLike<{ data: any; error: any; count?: n
     return this;
   }
 
-  then<TResult1 = { data: any; error: any; count?: number | null }, TResult2 = never>(
-    onfulfilled?: ((value: { data: any; error: any; count?: number | null }) => TResult1 | PromiseLike<TResult1>) | null,
+  then<
+    TResult1 = { data: any; error: any; count?: number | null },
+    TResult2 = never,
+  >(
+    onfulfilled?:
+      | ((
+        value: { data: any; error: any; count?: number | null },
+      ) => TResult1 | PromiseLike<TResult1>)
+      | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): Promise<TResult1 | TResult2> {
-    return this.execute().then(onfulfilled ?? undefined, onrejected ?? undefined);
+    return this.execute().then(
+      onfulfilled ?? undefined,
+      onrejected ?? undefined,
+    );
   }
 
-  private async execute(): Promise<{ data: any; error: any; count?: number | null }> {
+  private async execute(): Promise<
+    { data: any; error: any; count?: number | null }
+  > {
     const rows = this.db[this.table];
 
     if (this.mode === "insert") {
@@ -127,13 +145,17 @@ class MockQueryBuilder implements PromiseLike<{ data: any; error: any; count?: n
       return this.formatResult(inserted);
     }
 
-    const filteredRows = rows.filter((row) => this.filters.every((filter) => filter(row)));
+    const filteredRows = rows.filter((row) =>
+      this.filters.every((filter) => filter(row))
+    );
 
     if (this.mode === "update") {
       for (const row of filteredRows) {
         Object.assign(row, clone(this.updateData));
       }
-      return this.selectAfterWrite ? this.formatResult(filteredRows.map(clone)) : { data: null, error: null };
+      return this.selectAfterWrite
+        ? this.formatResult(filteredRows.map(clone))
+        : { data: null, error: null };
     }
 
     let result = filteredRows.map(clone);
@@ -162,14 +184,20 @@ class MockQueryBuilder implements PromiseLike<{ data: any; error: any; count?: n
   private formatResult(rows: Array<Record<string, unknown>>) {
     if (this.singleMode === "single") {
       if (rows.length !== 1) {
-        return { data: null, error: { message: `Expected single row, got ${rows.length}` } };
+        return {
+          data: null,
+          error: { message: `Expected single row, got ${rows.length}` },
+        };
       }
       return { data: rows[0], error: null };
     }
 
     if (this.singleMode === "maybeSingle") {
       if (rows.length > 1) {
-        return { data: null, error: { message: `Expected at most one row, got ${rows.length}` } };
+        return {
+          data: null,
+          error: { message: `Expected at most one row, got ${rows.length}` },
+        };
       }
       return { data: rows[0] ?? null, error: null };
     }
@@ -181,8 +209,13 @@ class MockQueryBuilder implements PromiseLike<{ data: any; error: any; count?: n
 function createMockClient(db: MockDb, userId: string) {
   let idCounter = 100;
 
-  const resolveShortId = (table: TableName, shortOrFullId: string): string | null => {
-    const rows = db[table].filter((row) => row.user_id === userId && (row.deleted_at ?? null) === null);
+  const resolveShortId = (
+    table: TableName,
+    shortOrFullId: string,
+  ): string | null => {
+    const rows = db[table].filter((row) =>
+      row.user_id === userId && (row.deleted_at ?? null) === null
+    );
     const fullMatch = rows.find((row) => row.id === shortOrFullId);
     if (fullMatch) return String(fullMatch.id);
     if (!/^[a-f0-9]{4,8}$/i.test(shortOrFullId)) return null;
@@ -194,18 +227,40 @@ function createMockClient(db: MockDb, userId: string) {
 
   return {
     from(table: string) {
-      return new MockQueryBuilder(db, table as TableName, () => makeUuid(idCounter++));
+      return new MockQueryBuilder(
+        db,
+        table as TableName,
+        () => makeUuid(idCounter++),
+      );
     },
     async rpc(name: string, args: { p_short_or_full_id?: string }) {
       switch (name) {
         case "resolve_user_event_id":
-          return { data: resolveShortId("events", args.p_short_or_full_id ?? ""), error: null };
+          return {
+            data: resolveShortId("events", args.p_short_or_full_id ?? ""),
+            error: null,
+          };
         case "resolve_user_shift_id":
-          return { data: resolveShortId("user_shifts", args.p_short_or_full_id ?? ""), error: null };
+          return {
+            data: resolveShortId("user_shifts", args.p_short_or_full_id ?? ""),
+            error: null,
+          };
         case "resolve_recurring_shift_id":
-          return { data: resolveShortId("recurring_shifts", args.p_short_or_full_id ?? ""), error: null };
+          return {
+            data: resolveShortId(
+              "recurring_shifts",
+              args.p_short_or_full_id ?? "",
+            ),
+            error: null,
+          };
         case "resolve_wage_snapshot_id":
-          return { data: resolveShortId("wage_snapshots", args.p_short_or_full_id ?? ""), error: null };
+          return {
+            data: resolveShortId(
+              "wage_snapshots",
+              args.p_short_or_full_id ?? "",
+            ),
+            error: null,
+          };
         default:
           throw new Error(`Unexpected rpc: ${name}`);
       }
@@ -217,7 +272,12 @@ function createContext(dbOverrides: Partial<MockDb> = {}): WageyRequestContext {
   const db: MockDb = {
     events: [],
     user_shifts: [],
-    user_settings: [{ user_id: USER_ID, currency: "NOK", payroll_day: 15, half_tax_month: null }],
+    user_settings: [{
+      user_id: USER_ID,
+      currency: "NOK",
+      payroll_day: 15,
+      half_tax_month: null,
+    }],
     jobs: [],
     wage_snapshots: [],
     recurring_shifts: [],
@@ -237,7 +297,13 @@ function currentWeekRange(): { startDate: string; endDate: string } {
   const now = new Date();
   const day = now.getUTCDay();
   const diffToMonday = day === 0 ? -6 : 1 - day;
-  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diffToMonday));
+  const start = new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + diffToMonday,
+    ),
+  );
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 6);
   return {
@@ -335,7 +401,10 @@ Deno.test("manage_event creates a timed event", async () => {
   );
 
   assert(result.success);
-  assertEquals((result.data as Record<string, unknown>).note, "Doctor appointment");
+  assertEquals(
+    (result.data as Record<string, unknown>).note,
+    "Doctor appointment",
+  );
   assertEquals((result.data as Record<string, unknown>).startTime, "14:00");
   assertEquals((result.data as Record<string, unknown>).endTime, "15:00");
 });
@@ -370,8 +439,14 @@ Deno.test("manage_event creates a multi-day all-day event and updates reminders 
   );
 
   assert(updateResult.success);
-  assertEquals((updateResult.data as Record<string, unknown>).reminderMinutes, [60, 15]);
-  assertEquals((updateResult.data as Record<string, unknown>).reminderAnchorTime, "09:00");
+  assertEquals((updateResult.data as Record<string, unknown>).reminderMinutes, [
+    60,
+    15,
+  ]);
+  assertEquals(
+    (updateResult.data as Record<string, unknown>).reminderAnchorTime,
+    "09:00",
+  );
 });
 
 Deno.test("manage_event rejects invalid timed multi-day payloads", async () => {
@@ -474,7 +549,11 @@ Deno.test("query_events applies default week filtering, kind filtering, sorting,
     ],
   });
 
-  const defaultResult = await executeTool(ctx, "query_events", JSON.stringify({}));
+  const defaultResult = await executeTool(
+    ctx,
+    "query_events",
+    JSON.stringify({}),
+  );
   assert(defaultResult.success);
   const defaultRows = defaultResult.data as Array<Record<string, unknown>>;
   assertEquals(defaultRows.length, 2);
@@ -537,7 +616,9 @@ Deno.test("query_events preserves one-sided date filters instead of clamping to 
   );
   assert(futureOnlyResult.success);
   assertEquals(
-    (futureOnlyResult.data as Array<Record<string, unknown>>).map((event) => event.note),
+    (futureOnlyResult.data as Array<Record<string, unknown>>).map((event) =>
+      event.note
+    ),
     ["Future event"],
   );
 
@@ -548,7 +629,9 @@ Deno.test("query_events preserves one-sided date filters instead of clamping to 
   );
   assert(pastOnlyResult.success);
   assertEquals(
-    (pastOnlyResult.data as Array<Record<string, unknown>>).map((event) => event.note),
+    (pastOnlyResult.data as Array<Record<string, unknown>>).map((event) =>
+      event.note
+    ),
     ["Past event"],
   );
 });
@@ -591,7 +674,8 @@ Deno.test("plan_schedule agenda merges events and shifts chronologically", async
   );
 
   assert(result.success);
-  const items = (result.data as { items: Array<Record<string, unknown>> }).items;
+  const items =
+    (result.data as { items: Array<Record<string, unknown>> }).items;
   assertEquals(items.map((item) => item.type), ["event", "shift"]);
 });
 
@@ -636,7 +720,8 @@ Deno.test("plan_schedule conflicts detects overlaps against events and shifts", 
   );
 
   assert(result.success);
-  const conflicts = (result.data as { conflicts: Array<Record<string, unknown>> }).conflicts;
+  const conflicts =
+    (result.data as { conflicts: Array<Record<string, unknown>> }).conflicts;
   assertEquals(conflicts.length, 2);
   assertEquals(conflicts.map((item) => item.type), ["event", "shift"]);
 });
@@ -675,7 +760,8 @@ Deno.test("plan_schedule checks conflicts against shifts beyond the first 1000 l
   );
 
   assert(result.success);
-  const conflicts = (result.data as { conflicts: Array<Record<string, unknown>> }).conflicts;
+  const conflicts =
+    (result.data as { conflicts: Array<Record<string, unknown>> }).conflicts;
   assertEquals(conflicts.length, totalShifts);
   assertEquals(conflicts[0].date, firstDate);
 });
@@ -721,10 +807,21 @@ Deno.test("plan_schedule free_slots finds gaps after subtracting events and shif
   );
 
   assert(result.success);
-  const slots = (result.data as { slots: Array<Record<string, unknown>> }).slots;
+  const slots =
+    (result.data as { slots: Array<Record<string, unknown>> }).slots;
   assertEquals(slots, [
-    { date: "2026-04-19", startTime: "10:00", endTime: "13:00", durationMinutes: 180 },
-    { date: "2026-04-19", startTime: "17:00", endTime: "20:00", durationMinutes: 180 },
+    {
+      date: "2026-04-19",
+      startTime: "10:00",
+      endTime: "13:00",
+      durationMinutes: 180,
+    },
+    {
+      date: "2026-04-19",
+      startTime: "17:00",
+      endTime: "20:00",
+      durationMinutes: 180,
+    },
   ]);
 });
 
@@ -790,7 +887,11 @@ Deno.test("manage_shift_advanced rejects invalid custom pause window payloads", 
   );
 
   assertEquals(result.success, false);
-  assert(String(result.message).includes("Pause windows require different start and end times"));
+  assert(
+    String(result.message).includes(
+      "Pause windows require different start and end times",
+    ),
+  );
 });
 
 Deno.test("calculate_earnings hypothetical_change preserves custom pause windows on the source shift", async () => {
@@ -823,7 +924,9 @@ Deno.test("calculate_earnings hypothetical_change preserves custom pause windows
 
   assert(result.success);
 
-  const original = (result.data as { original: { breakdown: Record<string, unknown> } }).original;
+  const original =
+    (result.data as { original: { breakdown: Record<string, unknown> } })
+      .original;
   assertEquals(original.breakdown.break_deducted_minutes, 30);
   assertEquals(original.breakdown.break_source, "custom_pause_windows");
   assertEquals(original.breakdown.applied_pause_windows, [
@@ -831,13 +934,111 @@ Deno.test("calculate_earnings hypothetical_change preserves custom pause windows
   ]);
 });
 
+Deno.test("calculate_earnings uses default workplace scoped snapshots and payroll settings", async () => {
+  const jobId = "11111111-2222-4333-8444-555555555555";
+  const ctx = createContext({
+    user_settings: [{
+      user_id: USER_ID,
+      currency: "NOK",
+      payroll_day: 15,
+      half_tax_month: null,
+    }],
+    jobs: [{
+      id: jobId,
+      user_id: USER_ID,
+      name: "Cafe",
+      is_default: true,
+      sort_order: 0,
+      payroll_day: 31,
+      half_tax_month: 2,
+      monthly_goal: null,
+      archived_at: null,
+      deleted_at: null,
+    }],
+    wage_snapshots: [
+      {
+        id: "legacy-baseline",
+        user_id: USER_ID,
+        job_id: null,
+        from_date: null,
+        hourly_wage: 300,
+        wage_level: null,
+        tariff_type_id: null,
+        supplements: { rules: [] },
+        tax_enabled: false,
+        tax_percentage: 0,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      },
+      {
+        id: "job-baseline",
+        user_id: USER_ID,
+        job_id: jobId,
+        from_date: null,
+        hourly_wage: 100,
+        wage_level: null,
+        tariff_type_id: null,
+        supplements: { rules: [] },
+        tax_enabled: false,
+        tax_percentage: 0,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      },
+      {
+        id: "job-payout-tax",
+        user_id: USER_ID,
+        job_id: jobId,
+        from_date: "2026-02-20",
+        hourly_wage: 100,
+        wage_level: null,
+        tariff_type_id: null,
+        supplements: { rules: [] },
+        tax_enabled: true,
+        tax_percentage: 50,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      },
+    ],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "calculate_earnings",
+    JSON.stringify({
+      hypothetical: {
+        date: "2026-01-31",
+        start_time: "08:00",
+        end_time: "18:00",
+      },
+    }),
+  );
+
+  assert(result.success);
+  const scenario =
+    (result.data as { scenarios: Array<Record<string, unknown>> }).scenarios[0];
+  assertEquals(scenario.gross, 1000);
+  assertEquals(scenario.net, 750);
+});
+
 Deno.test("web_fetch returns truncated public URL content", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () =>
-    new Response("<html><title>Tariff</title><body>Updated rates</body></html>", {
-      status: 200,
-      headers: { "Content-Type": "text/html" },
-    });
+    new Response(
+      "<html><title>Tariff</title><body>Updated rates</body></html>",
+      {
+        status: 200,
+        headers: { "Content-Type": "text/html" },
+      },
+    );
 
   try {
     const result = await executeTool(
