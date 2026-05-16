@@ -65750,7 +65750,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidex is shown in your calendar app and updates automatically."
+            "value" : "Tidex shows shifts and events from the past 18 months and next 6 months in your calendar app, with automatic updates."
           }
         },
         "es" : {
@@ -65858,7 +65858,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidex vises i kalenderappen din og oppdateres automatisk."
+            "value" : "Tidex viser vakter og hendelser fra de siste 18 månedene og de neste 6 månedene i kalenderappen din, med automatiske oppdateringer."
           }
         },
         "nl" : {
@@ -66312,7 +66312,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidex will automatically sync with your calendar app. When you add, edit, or delete shifts and events in Tidex, your calendar app updates automatically."
+            "value" : "Tidex will sync shifts and events from the past 18 months and next 6 months with your calendar app. When you add, edit, or delete them in Tidex, your calendar app updates automatically."
           }
         },
         "es" : {
@@ -66420,7 +66420,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidex synkroniseres automatisk med kalenderappen din. Når du legger til, endrer eller sletter vakter og hendelser i Tidex, oppdateres kalenderappen automatisk."
+            "value" : "Tidex synkroniserer vakter og hendelser fra de siste 18 månedene og de neste 6 månedene med kalenderappen din. Når du legger til, endrer eller sletter dem i Tidex, oppdateres kalenderappen automatisk."
           }
         },
         "nl" : {
@@ -69684,7 +69684,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Show shifts and events in your calendar app with automatic updates."
+            "value" : "Show shifts and events from the past 18 months and next 6 months in your calendar app with automatic updates."
           }
         },
         "es" : {
@@ -69792,7 +69792,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vis vakter og hendelser i kalenderappen din med automatiske oppdateringer."
+            "value" : "Vis vakter og hendelser fra de siste 18 månedene og de neste 6 månedene i kalenderappen din med automatiske oppdateringer."
           }
         },
         "nl" : {

@@ -47,8 +47,8 @@ export function createFeedWindow(
 ): FeedWindow {
   const today = localISODate(now, timeZone);
   return {
-    startDate: addDays(today, -90),
-    endDate: addMonthsClamped(today, 12),
+    startDate: addMonthsClamped(today, -18),
+    endDate: addMonthsClamped(today, 6),
   };
 }
 

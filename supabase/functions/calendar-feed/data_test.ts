@@ -138,7 +138,7 @@ Deno.test("loadCalendarData loads both content groups for shifts_and_events", as
   );
 });
 
-Deno.test("projectRecurringShifts projects null-end recurring shifts beyond six months and clips to feed window", () => {
+Deno.test("projectRecurringShifts projects null-end recurring shifts across the feed window", () => {
   const projected = projectRecurringShifts([
     {
       id: "recurring-1",

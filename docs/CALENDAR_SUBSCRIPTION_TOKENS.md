@@ -57,7 +57,7 @@ The feed:
 - serves `text/calendar; charset=utf-8`
 - sets `Cache-Control: private, no-store`
 - includes shifts, personal events, or both according to `content_mode`
-- emits a rolling window from 90 days before today through 12 months ahead
+- emits a rolling window from 18 months before today through 6 months ahead
 
 ## Frontend Subscription URLs
 
