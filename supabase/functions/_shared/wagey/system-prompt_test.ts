@@ -48,3 +48,18 @@ Deno.test("getSystemPrompt includes simple agent operating model", () => {
   assertStringIncludes(prompt, "observe -> act -> verify loop");
   assertStringIncludes(prompt, "If tool output contradicts your assumption");
 });
+
+Deno.test("getSystemPrompt suppresses auto-defaulted adjustment tax details", () => {
+  const prompt = getSystemPrompt({
+    accessLevel: "pro",
+    used: 3,
+    remaining: 37,
+    bonus: 0,
+  });
+
+  assertStringIncludes(prompt, "taxTreatmentDefaulted=true");
+  assertStringIncludes(
+    prompt,
+    "do not mention tax, tax handling, net/manual, or taxTreatment",
+  );
+});

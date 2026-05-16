@@ -8,6 +8,8 @@ iOS-specific development guidance for the Tidex native app.
 
 Run commands from the repository root unless explicitly stated otherwise.
 
+When running verification or diagnostic commands, prefer flags that reduce non-actionable output and preserve useful diagnostics. Examples: use `swiftlint --quiet` for fast Swift checks, use `--json` on repository build/test wrappers when you need structured diagnostics, and use focused test filters where possible. Avoid verbose command modes unless the extra output is needed to debug the issue.
+
 Use the repository build wrapper for any iOS build. Do not run `xcodebuild` directly. If the wrapper hangs or takes unusually long, stop and report.
 Use the repository test wrapper for any iOS test run. Do not run `xcodebuild test` directly.
 
@@ -99,7 +101,7 @@ Prefer small focused unit tests over broad UI tests unless the behavior is UI-on
 
 - Added/updated tests for new behavior.
 - Confirmed tests are included in the correct test target.
-- Ran fast validation (`swiftlint`) and reported results.
+- Ran fast validation (`swiftlint --quiet`) and reported results.
 - Asked the user to run tests/build in Xcode for final verification.
 
 ## Localization (REQUIRED for all UI strings)

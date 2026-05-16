@@ -69,6 +69,7 @@ import type {
   ManageEventInput,
   ManageFeedbackInput,
   ManageFriendSharingInput,
+  ManagePayrollAdjustmentInput,
   ManageProfileInput,
   ManageRecurringExclusionInput,
   ManageRecurringShiftInput,
@@ -98,6 +99,7 @@ import {
   manageEventSchema,
   manageFeedbackSchema,
   manageFriendSharingSchema,
+  managePayrollAdjustmentSchema,
   manageProfileSchema,
   manageRecurringExclusionSchema,
   manageRecurringShiftSchema,
@@ -300,6 +302,27 @@ type EventReference = {
   notification_anchor_time: string | null;
 };
 
+type PayrollAdjustmentRow = {
+  id: string;
+  user_id: string;
+  job_id: string | null;
+  amount: number;
+  currency: string;
+  category: "retro_pay" | "bonus" | "correction" | "other";
+  tax_treatment:
+    | "gross_taxable"
+    | "net_manual"
+    | "excluded_from_tax_estimate";
+  description: string;
+  note: string | null;
+  earned_from_date: string | null;
+  earned_to_date: string | null;
+  payout_date: string;
+  created_at?: string | null;
+  updated_at?: string | null;
+  deleted_at?: string | null;
+};
+
 type TimeRange = {
   start: Date;
   end: Date;
@@ -318,7 +341,8 @@ async function resolveShortIdViaRpc(
     | "resolve_user_shift_id"
     | "resolve_recurring_shift_id"
     | "resolve_wage_snapshot_id"
-    | "resolve_user_event_id",
+    | "resolve_user_event_id"
+    | "resolve_payroll_adjustment_id",
   shortOrFullId: string,
 ): Promise<string | null> {
   if (!isShortId(shortOrFullId)) {
@@ -372,6 +396,17 @@ async function resolveEventId(
   return await resolveShortIdViaRpc(
     ctx,
     "resolve_user_event_id",
+    shortOrFullId,
+  );
+}
+
+async function resolvePayrollAdjustmentId(
+  ctx: WageyRequestContext,
+  shortOrFullId: string,
+): Promise<string | null> {
+  return await resolveShortIdViaRpc(
+    ctx,
+    "resolve_payroll_adjustment_id",
     shortOrFullId,
   );
 }
@@ -1037,6 +1072,8 @@ export async function executeTool(
         return await executeGetWageInfo(ctx, args);
       case "manage_wage_snapshots":
         return await executeManageWageSnapshots(ctx, args);
+      case "manage_payroll_adjustment":
+        return await executeManagePayrollAdjustment(ctx, args);
       case "calculate_earnings":
         return await executeCalculateEarnings(ctx, args);
       case "list_workplaces":
@@ -1793,7 +1830,25 @@ async function executeCalculateWages(
     jobId: input.jobId,
   });
   const currency = result.settings.currency || "NOK";
-  if (result.shifts.length === 0) {
+  const jobsById = new Map(result.jobs.map((job) => [job.id, job] as const));
+  const defaultJob = resolveDefaultJob(result.jobs);
+  const adjustmentSummary = await payrollAdjustmentSummaryForEarningsRange(
+    ctx,
+    {
+      startDate: input.startDate,
+      endDate: input.endDate,
+      jobId: input.jobId ?? null,
+    },
+    {
+      jobs: result.jobs,
+      jobsById,
+      defaultJob,
+      settings: result.settings,
+      currency,
+    },
+  );
+
+  if (result.shifts.length === 0 && adjustmentSummary.count === 0) {
     const period = input.startDate === input.endDate
       ? input.startDate
       : `${input.startDate} - ${input.endDate}`;
@@ -1806,6 +1861,12 @@ async function executeCalculateWages(
         totalGross: 0,
         totalNet: 0,
         taxDeducted: 0,
+        adjustments: [],
+        adjustmentCount: 0,
+        adjustmentGross: 0,
+        adjustmentNet: 0,
+        payoutStart: adjustmentSummary.payoutStart,
+        payoutEnd: adjustmentSummary.payoutEnd,
       },
       currency,
     };
@@ -1818,8 +1879,6 @@ async function executeCalculateWages(
     (sum, shift) => sum + shift.computed.gross,
     0,
   );
-  const jobsById = new Map(result.jobs.map((job) => [job.id, job] as const));
-  const defaultJob = resolveDefaultJob(result.jobs);
   const totalNet = result.shifts.reduce(
     (sum, shift) =>
       sum +
@@ -1837,18 +1896,186 @@ async function executeCalculateWages(
       ),
     0,
   );
+  const combinedGross = totalGross + adjustmentSummary.gross;
+  const combinedNet = totalNet + adjustmentSummary.net;
   return {
     success: true,
     message: t(tr.calculatedWages, { count: result.shifts.length }),
     data: {
       totalShifts: result.shifts.length,
       totalHours: Number(totalHours.toFixed(2)),
-      totalGross: Number(totalGross.toFixed(2)),
-      totalNet: Number(totalNet.toFixed(2)),
-      taxDeducted: Number((totalGross - totalNet).toFixed(2)),
+      shiftGross: Number(totalGross.toFixed(2)),
+      shiftNet: Number(totalNet.toFixed(2)),
+      totalGross: Number(combinedGross.toFixed(2)),
+      totalNet: Number(combinedNet.toFixed(2)),
+      taxDeducted: Number((combinedGross - combinedNet).toFixed(2)),
+      adjustments: adjustmentSummary.adjustments,
+      adjustmentCount: adjustmentSummary.count,
+      adjustmentGross: Number(adjustmentSummary.gross.toFixed(2)),
+      adjustmentNet: Number(adjustmentSummary.net.toFixed(2)),
+      payoutStart: adjustmentSummary.payoutStart,
+      payoutEnd: adjustmentSummary.payoutEnd,
     },
     currency,
   };
+}
+
+async function payrollAdjustmentSummaryForEarningsRange(
+  ctx: WageyRequestContext,
+  input: { startDate: string; endDate: string; jobId: string | null },
+  resources: {
+    jobs: Job[];
+    jobsById: ReadonlyMap<string, Job>;
+    defaultJob: Job | null;
+    settings: { payroll_day?: number | null; half_tax_month?: number | null };
+    currency: string;
+  },
+): Promise<{
+  adjustments: Array<ReturnType<typeof formatPayrollAdjustment>>;
+  count: number;
+  gross: number;
+  net: number;
+  payoutStart: string;
+  payoutEnd: string;
+}> {
+  const payoutRange = payoutRangeForEarningsRange(input, resources);
+  const [{ data, error }, { data: snapshotRows, error: snapshotError }] =
+    await Promise.all([
+      ctx.supabase
+        .from("payroll_adjustments")
+        .select("*")
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null)
+        .gte("payout_date", payoutRange.start)
+        .lte("payout_date", payoutRange.end),
+      ctx.supabase
+        .from("wage_snapshots")
+        .select("*")
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null),
+    ]);
+
+  if (error) throw new Error(error.message);
+  if (snapshotError) throw new Error(snapshotError.message);
+
+  const defaultJobId = resources.defaultJob?.id ?? null;
+  const rows = ((data ?? []) as PayrollAdjustmentRow[])
+    .filter((adjustment) => {
+      if (!input.jobId) return true;
+      return payrollAdjustmentEffectiveJobId(
+        adjustment.job_id,
+        defaultJobId,
+      ) ===
+        input.jobId;
+    });
+  const snapshots = (snapshotRows ?? []) as WageSnapshot[];
+
+  let gross = 0;
+  let net = 0;
+  for (const adjustment of rows) {
+    gross += adjustment.amount;
+    net += payrollAdjustmentNetAmount(adjustment, snapshots, resources);
+  }
+
+  return {
+    adjustments: rows.map(formatPayrollAdjustment),
+    count: rows.length,
+    gross,
+    net,
+    payoutStart: payoutRange.start,
+    payoutEnd: payoutRange.end,
+  };
+}
+
+function payoutRangeForEarningsRange(
+  input: { startDate: string; endDate: string; jobId: string | null },
+  resources: {
+    jobs: Job[];
+    jobsById: ReadonlyMap<string, Job>;
+    defaultJob: Job | null;
+    settings: { payroll_day?: number | null };
+  },
+): { start: string; end: string } {
+  const payrollDays = new Set<number>();
+  if (input.jobId) {
+    payrollDays.add(
+      payrollDayForJob(
+        resources.jobsById,
+        resources.defaultJob,
+        resources.settings,
+        input.jobId,
+      ),
+    );
+  } else {
+    payrollDays.add(resources.settings.payroll_day ?? 1);
+    for (const job of resources.jobs) {
+      payrollDays.add(
+        payrollDayForJob(
+          resources.jobsById,
+          resources.defaultJob,
+          resources.settings,
+          job.id,
+        ),
+      );
+    }
+  }
+
+  const payoutDates = [...payrollDays].flatMap((payrollDay) => [
+    calculatePayoutDate(input.startDate, payrollDay),
+    calculatePayoutDate(input.endDate, payrollDay),
+  ]);
+
+  return {
+    start: payoutDates.reduce((min, date) => date < min ? date : min),
+    end: payoutDates.reduce((max, date) => date > max ? date : max),
+  };
+}
+
+function payrollAdjustmentNetAmount(
+  adjustment: PayrollAdjustmentRow,
+  snapshots: WageSnapshot[],
+  resources: {
+    jobs: Job[];
+    jobsById: ReadonlyMap<string, Job>;
+    defaultJob: Job | null;
+    settings: { half_tax_month?: number | null };
+  },
+): number {
+  if (adjustment.tax_treatment !== "gross_taxable") {
+    return adjustment.amount;
+  }
+
+  const effectiveJobId = payrollAdjustmentEffectiveJobId(
+    adjustment.job_id,
+    resources.defaultJob?.id ?? null,
+  );
+  const scopedSnapshots = payrollAdjustmentTaxSnapshots(
+    snapshots,
+    resources.jobs,
+    effectiveJobId,
+  );
+  const snapshot = resolveSnapshotForDate(
+    buildSnapshotBuckets(scopedSnapshots),
+    scopedSnapshots,
+    adjustment.payout_date,
+    effectiveJobId,
+  );
+  if (!snapshot?.tax_enabled || !snapshot.tax_percentage) {
+    return adjustment.amount;
+  }
+
+  const payoutMonth = new Date(`${adjustment.payout_date}T12:00:00Z`)
+    .getUTCMonth() + 1;
+  const halfTaxMonth = halfTaxMonthForJob(
+    resources.jobsById,
+    resources.defaultJob,
+    resources.settings,
+    effectiveJobId,
+  );
+  const taxRate = payoutMonth === halfTaxMonth
+    ? snapshot.tax_percentage / 2
+    : snapshot.tax_percentage;
+  return adjustment.amount * (1 - Math.min(Math.max(taxRate, 0), 100) / 100);
 }
 
 async function executeListWorkplaces(
@@ -3460,6 +3687,618 @@ async function executeGetWageInfo(
         : undefined,
     },
   };
+}
+
+type PayrollAdjustmentValidationError = {
+  field: string;
+  message: string;
+};
+
+function payrollAdjustmentValidationFailure(
+  action: string,
+  validationErrors: PayrollAdjustmentValidationError[],
+): ToolResult {
+  const missingRequiredFields = validationErrors
+    .filter((error) => error.message === "required")
+    .map((error) => error.field);
+
+  return {
+    success: false,
+    action,
+    message: missingRequiredFields.length > 0
+      ? t(tr.missingFields, { fields: missingRequiredFields.join(", ") })
+      : t(tr.invalidInput, {
+        details: validationErrors.map((error) =>
+          `${error.field}: ${error.message}`
+        ).join(", "),
+      }),
+    validationErrors,
+    missingRequiredFields,
+    data: {
+      action,
+      success: false,
+      validationErrors,
+      missingRequiredFields,
+    },
+  };
+}
+
+function formatPayrollAdjustment(row: PayrollAdjustmentRow) {
+  return {
+    id: toShortId(row.id),
+    fullId: row.id,
+    jobId: row.job_id,
+    amount: row.amount,
+    currency: row.currency,
+    category: row.category,
+    taxTreatment: row.tax_treatment,
+    description: row.description,
+    note: row.note,
+    earnedFromDate: row.earned_from_date,
+    earnedToDate: row.earned_to_date,
+    payoutDate: row.payout_date,
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
+function payoutDateFromMonth(payoutMonth: string, payrollDay: number): string {
+  const [year, month] = payoutMonth.split("-").map(Number);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const effectiveDay = Math.min(Math.max(payrollDay, 1), daysInMonth);
+  return `${payoutMonth}-${String(effectiveDay).padStart(2, "0")}`;
+}
+
+async function resolvePayrollAdjustmentPayoutDate(
+  ctx: WageyRequestContext,
+  input: ManagePayrollAdjustmentInput,
+): Promise<{
+  payoutDate?: string;
+  validationErrors: PayrollAdjustmentValidationError[];
+}> {
+  if (input.payoutDate) {
+    return { payoutDate: input.payoutDate, validationErrors: [] };
+  }
+
+  if (!input.payoutMonth) {
+    return {
+      validationErrors: [{ field: "payoutDate", message: "required" }],
+    };
+  }
+
+  const settings = await getUserSettings(ctx);
+  const jobs = await getUserJobs(ctx, ctx.user.id, { includeArchived: false });
+  const defaultJob = resolveDefaultJob(jobs);
+  const jobsById = new Map(jobs.map((job) => [job.id, job]));
+
+  if (input.jobId && !jobsById.has(input.jobId)) {
+    return {
+      validationErrors: [{
+        field: "jobId",
+        message: "workplace not found or archived",
+      }],
+    };
+  }
+
+  const payrollDay = payrollDayForJob(
+    jobsById,
+    input.jobId ? defaultJob : null,
+    settings,
+    input.jobId,
+  );
+  return {
+    payoutDate: payoutDateFromMonth(input.payoutMonth, payrollDay),
+    validationErrors: [],
+  };
+}
+
+async function getPayrollAdjustmentById(
+  ctx: WageyRequestContext,
+  shortOrFullId: string,
+): Promise<PayrollAdjustmentRow | null> {
+  const fullAdjustmentId = await resolvePayrollAdjustmentId(ctx, shortOrFullId);
+  if (!fullAdjustmentId) return null;
+
+  const { data, error } = await ctx.supabase
+    .from("payroll_adjustments")
+    .select("*")
+    .eq("id", fullAdjustmentId)
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null)
+    .single();
+
+  if (error || !data) return null;
+  return data as PayrollAdjustmentRow;
+}
+
+async function isPayrollAdjustmentTaxEnabled(
+  ctx: WageyRequestContext,
+  payoutDate: string,
+  jobId?: string | null,
+): Promise<boolean> {
+  const payoutMonth = payoutDate.slice(0, 7);
+  const { start: earningsStart, end: earningsEnd } =
+    earningsMonthRangeForPayoutDate(payoutDate);
+  const payoutEnd = monthEndForDate(payoutDate);
+
+  const [
+    { data: snapshotRows, error: snapshotError },
+    { data: shiftRows, error: shiftError },
+    { data: adjustmentRows, error: adjustmentError },
+    jobs,
+  ] = await Promise.all([
+    ctx.supabase
+      .from("wage_snapshots")
+      .select("*")
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null),
+    ctx.supabase
+      .from("user_shifts")
+      .select("*")
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null)
+      .gte("shift_date", earningsStart)
+      .lte("shift_date", earningsEnd),
+    ctx.supabase
+      .from("payroll_adjustments")
+      .select("*")
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null)
+      .gte("payout_date", `${payoutMonth}-01`)
+      .lte("payout_date", payoutEnd),
+    getUserJobs(ctx, ctx.user.id, { includeArchived: false }),
+  ]);
+
+  if (snapshotError) throw new Error(snapshotError.message);
+  if (shiftError) throw new Error(shiftError.message);
+  if (adjustmentError) throw new Error(adjustmentError.message);
+
+  const snapshots = (snapshotRows ?? []) as WageSnapshot[];
+  if (snapshots.length === 0) return false;
+
+  const defaultJobId = resolveDefaultJob(jobs)?.id ?? null;
+  const effectiveJobId = jobId ?? defaultJobId;
+  const scopedSnapshots = payrollAdjustmentTaxSnapshots(
+    snapshots,
+    jobs,
+    effectiveJobId,
+  );
+
+  const snapshotBuckets = buildSnapshotBuckets(scopedSnapshots);
+  const shifts = (shiftRows ?? []) as Array<{
+    shift_date: string;
+    job_id?: string | null;
+  }>;
+  const hasTaxedShift = shifts
+    .filter((shift) =>
+      payrollAdjustmentEffectiveJobId(shift.job_id ?? null, defaultJobId) ===
+        effectiveJobId
+    )
+    .some((shift) =>
+      resolveSnapshotForDate(
+        snapshotBuckets,
+        scopedSnapshots,
+        shift.shift_date,
+        effectiveJobId,
+      )?.tax_enabled === true
+    );
+  if (hasTaxedShift) return true;
+
+  const adjustments = (adjustmentRows ?? []) as PayrollAdjustmentRow[];
+  return adjustments
+    .filter((adjustment) =>
+      payrollAdjustmentEffectiveJobId(adjustment.job_id, defaultJobId) ===
+        effectiveJobId
+    )
+    .some((adjustment) =>
+      adjustment.tax_treatment === "gross_taxable" &&
+      resolveSnapshotForDate(
+          snapshotBuckets,
+          scopedSnapshots,
+          adjustment.payout_date,
+          effectiveJobId,
+        )?.tax_enabled === true
+    );
+}
+
+function payrollAdjustmentEffectiveJobId(
+  jobId: string | null,
+  defaultJobId: string | null,
+): string | null {
+  return jobId ?? defaultJobId;
+}
+
+function earningsMonthRangeForPayoutDate(
+  payoutDate: string,
+): { start: string; end: string } {
+  const [year, month] = payoutDate.slice(0, 7).split("-").map(Number);
+  const earningsMonthDate = new Date(Date.UTC(year, month - 2, 1));
+  const earningsYear = earningsMonthDate.getUTCFullYear();
+  const earningsMonth = earningsMonthDate.getUTCMonth() + 1;
+  const start = `${earningsYear}-${String(earningsMonth).padStart(2, "0")}-01`;
+  const end = monthEndForDate(start);
+  return { start, end };
+}
+
+function monthEndForDate(isoDate: string): string {
+  const [year, month] = isoDate.slice(0, 7).split("-").map(Number);
+  const day = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return `${year}-${String(month).padStart(2, "0")}-${
+    String(day).padStart(2, "0")
+  }`;
+}
+
+function payrollAdjustmentTaxSnapshots(
+  snapshots: WageSnapshot[],
+  jobs: Job[],
+  jobId: string | null,
+): WageSnapshot[] {
+  const snapshotsByJobId = new Map<string, WageSnapshot[]>();
+  const legacySnapshots: WageSnapshot[] = [];
+
+  for (const snapshot of snapshots) {
+    const snapshotJobId = snapshot.job_id ?? null;
+    if (!snapshotJobId) {
+      legacySnapshots.push(snapshot);
+      continue;
+    }
+
+    const scoped = snapshotsByJobId.get(snapshotJobId) ?? [];
+    scoped.push(snapshot);
+    snapshotsByJobId.set(snapshotJobId, scoped);
+  }
+
+  if (!jobId) {
+    return legacySnapshots.length > 0 ? legacySnapshots : snapshots;
+  }
+
+  const explicitScoped = snapshotsByJobId.get(jobId);
+  if (explicitScoped && explicitScoped.length > 0) {
+    return explicitScoped;
+  }
+
+  const defaultJobId = resolveDefaultJob(jobs)?.id ?? null;
+  const defaultScoped = defaultJobId
+    ? snapshotsByJobId.get(defaultJobId)
+    : undefined;
+  if (defaultScoped && defaultScoped.length > 0) {
+    return defaultScoped;
+  }
+
+  return legacySnapshots.length > 0 ? legacySnapshots : snapshots;
+}
+
+async function executeManagePayrollAdjustment(
+  ctx: WageyRequestContext,
+  args: unknown,
+): Promise<ToolResult> {
+  const parsed = managePayrollAdjustmentSchema.safeParse(args);
+  if (!parsed.success) {
+    const action = typeof (args as { action?: unknown })?.action === "string"
+      ? String((args as { action: string }).action)
+      : "unknown";
+    const validationErrors = parsed.error.issues.map((issue) => ({
+      field: issue.path.join(".") || "input",
+      message: issue.message,
+    }));
+    return {
+      success: false,
+      action,
+      message: t(tr.invalidInput, {
+        details: validationErrors.map((error) =>
+          `${error.field}: ${error.message}`
+        ).join(", "),
+      }),
+      validationErrors,
+      data: { action, success: false, validationErrors },
+    };
+  }
+
+  const input = parsed.data as ManagePayrollAdjustmentInput;
+
+  if (
+    input.earnedFromDate && input.earnedToDate &&
+    input.earnedFromDate > input.earnedToDate
+  ) {
+    return payrollAdjustmentValidationFailure(input.action, [{
+      field: "earnedToDate",
+      message: "must be on or after earnedFromDate",
+    }]);
+  }
+
+  switch (input.action) {
+    case "list": {
+      if (
+        input.payoutStart && input.payoutEnd &&
+        input.payoutStart > input.payoutEnd
+      ) {
+        return payrollAdjustmentValidationFailure(input.action, [{
+          field: "payoutEnd",
+          message: "must be on or after payoutStart",
+        }]);
+      }
+
+      let query = ctx.supabase
+        .from("payroll_adjustments")
+        .select("*")
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null)
+        .order("payout_date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(input.limit ?? 30);
+
+      if (input.payoutStart) {
+        query = query.gte("payout_date", input.payoutStart);
+      }
+      if (input.payoutEnd) {
+        query = query.lte("payout_date", input.payoutEnd);
+      }
+      if (input.jobId) {
+        query = query.eq("job_id", input.jobId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      const adjustments = ((data ?? []) as PayrollAdjustmentRow[]).map(
+        formatPayrollAdjustment,
+      );
+      return {
+        success: true,
+        action: input.action,
+        message: `Found ${adjustments.length} payroll adjustment${
+          adjustments.length === 1 ? "" : "s"
+        }`,
+        data: {
+          action: input.action,
+          success: true,
+          adjustments,
+          count: adjustments.length,
+        },
+      };
+    }
+
+    case "create": {
+      const validationErrors: PayrollAdjustmentValidationError[] = [];
+      if (input.amount === null || input.amount === undefined) {
+        validationErrors.push({ field: "amount", message: "required" });
+      } else if (input.amount === 0) {
+        validationErrors.push({
+          field: "amount",
+          message: "must be non-zero",
+        });
+      }
+      if (!input.description?.trim()) {
+        validationErrors.push({ field: "description", message: "required" });
+      }
+      if (!input.payoutDate && !input.payoutMonth) {
+        validationErrors.push({ field: "payoutDate", message: "required" });
+      }
+      if (validationErrors.length > 0) {
+        return payrollAdjustmentValidationFailure(
+          input.action,
+          validationErrors,
+        );
+      }
+
+      const payoutResolution = await resolvePayrollAdjustmentPayoutDate(
+        ctx,
+        input,
+      );
+      if (
+        payoutResolution.validationErrors.length > 0 ||
+        !payoutResolution.payoutDate
+      ) {
+        return payrollAdjustmentValidationFailure(
+          input.action,
+          payoutResolution.validationErrors,
+        );
+      }
+
+      let taxTreatment = input.taxTreatment;
+      let taxTreatmentDefaulted = false;
+      if (!taxTreatment) {
+        const taxEnabled = await isPayrollAdjustmentTaxEnabled(
+          ctx,
+          payoutResolution.payoutDate,
+          input.jobId,
+        );
+        if (taxEnabled) {
+          return payrollAdjustmentValidationFailure(input.action, [{
+            field: "taxTreatment",
+            message: "required",
+          }]);
+        }
+        taxTreatment = "net_manual";
+        taxTreatmentDefaulted = true;
+      }
+
+      const currency = input.currency?.trim() || await getUserCurrency(ctx);
+      const { data, error } = await ctx.supabase
+        .from("payroll_adjustments")
+        .insert({
+          user_id: ctx.user.id,
+          job_id: input.jobId ?? null,
+          amount: input.amount,
+          currency,
+          category: input.category ?? "correction",
+          tax_treatment: taxTreatment,
+          description: input.description!.trim(),
+          note: input.note?.trim() || null,
+          earned_from_date: input.earnedFromDate ?? null,
+          earned_to_date: input.earnedToDate ?? null,
+          payout_date: payoutResolution.payoutDate,
+        })
+        .select("*")
+        .single();
+      if (error || !data) {
+        throw new Error(
+          error?.message ?? "Failed to create payroll adjustment",
+        );
+      }
+      const adjustment = formatPayrollAdjustment(data as PayrollAdjustmentRow);
+      return {
+        success: true,
+        action: input.action,
+        message: "Created payroll adjustment",
+        data: {
+          action: input.action,
+          success: true,
+          adjustment,
+          taxTreatmentDefaulted,
+        },
+      };
+    }
+
+    case "update": {
+      if (!input.adjustmentId) {
+        return payrollAdjustmentValidationFailure(input.action, [{
+          field: "adjustmentId",
+          message: "required",
+        }]);
+      }
+      const existing = await getPayrollAdjustmentById(ctx, input.adjustmentId);
+      if (!existing) {
+        return payrollAdjustmentValidationFailure(input.action, [{
+          field: "adjustmentId",
+          message: "not found or ambiguous",
+        }]);
+      }
+
+      const updateData: Record<string, unknown> = {};
+      if (input.amount !== null && input.amount !== undefined) {
+        if (input.amount === 0) {
+          return payrollAdjustmentValidationFailure(input.action, [{
+            field: "amount",
+            message: "must be non-zero",
+          }]);
+        }
+        updateData.amount = input.amount;
+      }
+      if (input.currency?.trim()) updateData.currency = input.currency.trim();
+      if (input.category) updateData.category = input.category;
+      if (input.taxTreatment) updateData.tax_treatment = input.taxTreatment;
+      if (input.description?.trim()) {
+        updateData.description = input.description.trim();
+      }
+      if (input.note?.trim()) updateData.note = input.note.trim();
+      if (input.jobId) updateData.job_id = input.jobId;
+      if (input.earnedFromDate) {
+        updateData.earned_from_date = input.earnedFromDate;
+      }
+      if (input.earnedToDate) updateData.earned_to_date = input.earnedToDate;
+      for (const field of input.clearFields ?? []) {
+        switch (field) {
+          case "jobId":
+            updateData.job_id = null;
+            break;
+          case "note":
+            updateData.note = null;
+            break;
+          case "earnedFromDate":
+            updateData.earned_from_date = null;
+            break;
+          case "earnedToDate":
+            updateData.earned_to_date = null;
+            break;
+        }
+      }
+      if (input.payoutDate || input.payoutMonth) {
+        const payoutResolution = await resolvePayrollAdjustmentPayoutDate(
+          ctx,
+          input,
+        );
+        if (
+          payoutResolution.validationErrors.length > 0 ||
+          !payoutResolution.payoutDate
+        ) {
+          return payrollAdjustmentValidationFailure(
+            input.action,
+            payoutResolution.validationErrors,
+          );
+        }
+        updateData.payout_date = payoutResolution.payoutDate;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return payrollAdjustmentValidationFailure(input.action, [{
+          field: "fields",
+          message: "provide at least one non-null field to update",
+        }]);
+      }
+
+      const { data, error } = await ctx.supabase
+        .from("payroll_adjustments")
+        .update(updateData)
+        .eq("id", existing.id)
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null)
+        .select("*")
+        .single();
+      if (error || !data) {
+        throw new Error(
+          error?.message ?? "Failed to update payroll adjustment",
+        );
+      }
+      const adjustment = formatPayrollAdjustment(data as PayrollAdjustmentRow);
+      return {
+        success: true,
+        action: input.action,
+        message: "Updated payroll adjustment",
+        data: {
+          action: input.action,
+          success: true,
+          adjustment,
+        },
+      };
+    }
+
+    case "delete": {
+      if (!input.adjustmentId) {
+        return payrollAdjustmentValidationFailure(input.action, [{
+          field: "adjustmentId",
+          message: "required",
+        }]);
+      }
+      const existing = await getPayrollAdjustmentById(ctx, input.adjustmentId);
+      if (!existing) {
+        return payrollAdjustmentValidationFailure(input.action, [{
+          field: "adjustmentId",
+          message: "not found or ambiguous",
+        }]);
+      }
+      const { data, error } = await ctx.supabase
+        .from("payroll_adjustments")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null)
+        .select("*")
+        .single();
+      if (error || !data) {
+        throw new Error(
+          error?.message ?? "Failed to delete payroll adjustment",
+        );
+      }
+      const adjustment = formatPayrollAdjustment(data as PayrollAdjustmentRow);
+      return {
+        success: true,
+        action: input.action,
+        message: "Deleted payroll adjustment",
+        data: {
+          action: input.action,
+          success: true,
+          adjustment,
+        },
+      };
+    }
+
+    default:
+      return {
+        success: false,
+        action: input.action,
+        message: t(tr.unknownAction, { action: input.action }),
+      };
+  }
 }
 
 async function executeManageWageSnapshots(

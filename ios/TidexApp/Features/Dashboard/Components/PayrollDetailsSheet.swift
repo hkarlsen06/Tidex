@@ -6,7 +6,7 @@ struct PayrollAdjustmentDraft {
   let currency: String
   let category: PayrollAdjustmentCategory
   let taxTreatment: PayrollAdjustmentTaxTreatment
-  let title: String
+  let description: String
   let note: String?
   let earnedFromDate: Date?
   let earnedToDate: Date?
@@ -533,16 +533,27 @@ struct PayrollDetailsSheet: View {
   private func adjustmentCard(_ adjustment: PayrollAdjustment, currency: String) -> some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       EarningsBreakdownDetailCard {
-        EarningsBreakdownDetailPrimaryRow(
-          title: adjustment.title,
-          value: formatCurrency(adjustment.amount, currency: currency),
-          valueColor: adjustment.amount < 0 ? .tidexError : .tidexTextPrimary
-        )
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+          Text(adjustmentSubtitle(adjustment))
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
 
-        EarningsBreakdownDetailSecondaryRow(
-          title: adjustmentSubtitle(adjustment),
-          value: nil
-        )
+          Spacer(minLength: Spacing.sm)
+
+          Text(formatCurrency(adjustment.amount, currency: currency))
+            .font(.tidexLabelStrong)
+            .foregroundColor(adjustment.amount < 0 ? .tidexError : .tidexTextPrimary)
+            .lineLimit(1)
+            .layoutPriority(1)
+        }
+
+        Text(adjustment.description)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .multilineTextAlignment(.leading)
+          .lineLimit(3)
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
 
       curatedAdjustmentLink(adjustment)
@@ -686,7 +697,7 @@ private struct PayrollAdjustmentFormSheet: View {
   let onDelete: (() async throws -> Void)?
 
   @Environment(\.dismiss) private var dismiss
-  @State private var title: String
+  @State private var descriptionText: String
   @State private var amountText = ""
   @State private var category: PayrollAdjustmentCategory = .correction
   @State private var taxTreatment: PayrollAdjustmentTaxTreatment = .grossTaxable
@@ -700,7 +711,7 @@ private struct PayrollAdjustmentFormSheet: View {
   @FocusState private var focusedField: Field?
 
   private enum Field {
-    case title
+    case description
     case amount
     case note
   }
@@ -714,7 +725,7 @@ private struct PayrollAdjustmentFormSheet: View {
     self.onSave = onSave
     self.onDelete = onDelete
     let adjustment = context.adjustment
-    _title = State(initialValue: adjustment?.title ?? "")
+    _descriptionText = State(initialValue: adjustment?.description ?? "")
     _amountText = State(initialValue: adjustment.map { String($0.amount) } ?? "")
     _category = State(initialValue: adjustment?.category ?? .correction)
     _taxTreatment = State(
@@ -735,7 +746,9 @@ private struct PayrollAdjustmentFormSheet: View {
   }
 
   private var canSave: Bool {
-    guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+    guard !descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+      return false
+    }
     guard let parsedAmount, parsedAmount != 0 else { return false }
     guard !useEarnedRange || earnedFromDate <= earnedToDate else { return false }
     return !isSaving
@@ -746,10 +759,13 @@ private struct PayrollAdjustmentFormSheet: View {
       Form {
         Section {
           TextField(
-            String(localized: .dashboardPayrollDetailsAdjustmentTitlePlaceholder), text: $title
+            String(localized: .dashboardPayrollDetailsAdjustmentDescriptionPlaceholder),
+            text: $descriptionText,
+            axis: .vertical
           )
           .textInputAutocapitalization(.sentences)
-          .focused($focusedField, equals: .title)
+          .lineLimit(2...4)
+          .focused($focusedField, equals: .description)
 
           HStack(spacing: Spacing.sm) {
             TextField(
@@ -894,7 +910,7 @@ private struct PayrollAdjustmentFormSheet: View {
       currency: context.breakdown.currency,
       category: category,
       taxTreatment: context.breakdown.taxEnabled ? taxTreatment : .netManual,
-      title: title.trimmingCharacters(in: .whitespacesAndNewlines),
+      description: descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
       note: normalizedNote(),
       earnedFromDate: useEarnedRange ? earnedFromDate : nil,
       earnedToDate: useEarnedRange ? earnedToDate : nil,

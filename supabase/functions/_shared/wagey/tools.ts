@@ -544,6 +544,48 @@ export type ManageWageSnapshotsInput = z.infer<
 >;
 
 /**
+ * Manage Payroll Adjustment Tool Schema
+ *
+ * The advertised OpenAI schema is strict and required-nullable. The runtime
+ * parser remains tolerant so old conversation history or non-strict tool calls
+ * can still be validated with action-specific errors by the executor.
+ */
+export const managePayrollAdjustmentSchema = z.object({
+  action: z.enum(["list", "create", "update", "delete"]),
+  adjustmentId: shortOrFullId.nullable().optional(),
+  payoutStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  payoutEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  payoutDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  payoutMonth: z.string().regex(/^\d{4}-\d{2}$/).nullable().optional(),
+  jobId: z.string().uuid().nullable().optional(),
+  amount: z.number().nullable().optional(),
+  currency: z.string().min(1).max(12).nullable().optional(),
+  category: z.enum(["retro_pay", "bonus", "correction", "other"]).nullable()
+    .optional(),
+  taxTreatment: z.enum([
+    "gross_taxable",
+    "net_manual",
+    "excluded_from_tax_estimate",
+  ]).nullable().optional(),
+  description: z.string().min(1).max(240).nullable().optional(),
+  note: z.string().max(1000).nullable().optional(),
+  earnedFromDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable()
+    .optional(),
+  earnedToDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  clearFields: z.array(z.enum([
+    "jobId",
+    "note",
+    "earnedFromDate",
+    "earnedToDate",
+  ])).nullable().optional(),
+  limit: z.number().int().min(1).max(100).nullable().optional(),
+}).strict();
+
+export type ManagePayrollAdjustmentInput = z.infer<
+  typeof managePayrollAdjustmentSchema
+>;
+
+/**
  * Hypothetical shift scenario for earnings calculation
  */
 const hypotheticalShiftSchema = z.object({
@@ -1057,18 +1099,22 @@ Notes:
   {
     name: "calculate_wages",
     description:
-      `Calculate total wages for a date range. Returns gross pay, net pay, hours worked, and tax deducted.
+      `Calculate total wages for an earnings date range. Returns gross pay, net pay, hours worked, tax deducted, and payroll adjustments paid out for that earnings period.
 
 Required: Both startDate and endDate (YYYY-MM-DD format).
 
 Returns:
-- Gross pay (before tax)
-- Net pay (after tax, if tax settings are configured)
+- Gross pay (before tax), including relevant payroll adjustments
+- Net pay (after tax, if tax settings are configured), including relevant payroll adjustments
+- Shift-only gross/net and adjustment-only gross/net
 - Total hours worked
 - Tax deducted
 - Number of shifts in the period
+- Payroll adjustments whose payout date belongs to the payout period for this earnings range
 
 Optional: Use jobId (UUID from list_workplaces) to calculate wages for a specific workplace only.
+
+Important: The input dates are earnings dates, not payout dates. For example, June earnings are normally paid in July, so June 1-30 includes adjustments on the July payout, not adjustments on the June payout.
 
 Note: For quick monthly/yearly totals, prefer get_statistics which is optimized for common time periods.`,
     input_schema: {
@@ -2071,6 +2117,195 @@ Other notes:
     ],
   },
 
+  {
+    name: "manage_payroll_adjustment",
+    description: `List, create, update, or delete manual payroll adjustments.
+
+Use this only when the user clearly asks to inspect or change payroll adjustments. Do not create, update, or delete an adjustment unless the user has clearly requested that mutation.
+
+Actions:
+- LIST: action="list". Optional payoutStart/payoutEnd filter by payout_date range.
+- CREATE: action="create". Requires amount, description, and either payoutDate or payoutMonth. If tax is enabled for that payout, taxTreatment is also required. If tax is disabled, the backend uses net_manual automatically.
+- UPDATE: action="update". Requires adjustmentId and at least one field to change.
+- DELETE: action="delete". Requires adjustmentId. List/resolve first; if the user's reference is ambiguous, ask for confirmation instead of deleting.
+
+Parameter semantics:
+- adjustmentId: Short 4-8 hex prefix or full UUID from a prior list result.
+- amount: Numeric adjustment amount. Positive values increase payout; negative values reduce payout.
+- description: Short user-visible summary of what the adjustment is and why it exists. The category is displayed as the adjustment card title, so description must be specific context/reason, not just a category label. Required for create.
+- payoutDate: ISO date (YYYY-MM-DD) for the payout where this adjustment should appear.
+- payoutMonth: Month (YYYY-MM) for the payout. The backend derives the payout date from the user's payroll day or selected workplace payroll day.
+- earnedFromDate/earnedToDate: Optional ISO dates (YYYY-MM-DD) describing the earning period the adjustment belongs to. They do not move the payout date.
+- jobId: Full workplace UUID from list_workplaces. Omit/null for no specific workplace.
+- taxTreatment: gross_taxable means estimate tax from gross; net_manual means amount is already a direct net payout/deduction; excluded_from_tax_estimate means show in gross/net without estimated tax. Required for create only when tax is enabled for the payout date/month.
+- category: retro_pay, bonus, correction, or other. Use correction only when the user's wording does not clearly match retro pay or bonus.
+- currency: Display currency/symbol, usually from user settings or the relevant payroll context.
+- clearFields: For update only, explicitly clear nullable fields. Allowed values: jobId, note, earnedFromDate, earnedToDate.`,
+    strict: true,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["list", "create", "update", "delete"],
+          description:
+            "The payroll adjustment operation to perform: list, create, update, or delete.",
+        },
+        adjustmentId: {
+          type: ["string", "null"],
+          description:
+            "Short 4-8 hex prefix or full UUID of an existing payroll adjustment. Required for update/delete.",
+        },
+        payoutStart: {
+          type: ["string", "null"],
+          description:
+            "Optional inclusive payout date range start as YYYY-MM-DD for list filtering.",
+        },
+        payoutEnd: {
+          type: ["string", "null"],
+          description:
+            "Optional inclusive payout date range end as YYYY-MM-DD for list filtering.",
+        },
+        payoutDate: {
+          type: ["string", "null"],
+          description:
+            "Payout date as YYYY-MM-DD. Required for create unless payoutMonth is provided.",
+        },
+        payoutMonth: {
+          type: ["string", "null"],
+          description:
+            "Payout month as YYYY-MM. The backend derives the actual payout date using payroll day. Used only when payoutDate is null.",
+        },
+        jobId: {
+          type: ["string", "null"],
+          description:
+            "Full workplace UUID from list_workplaces. Use null for no specific workplace.",
+        },
+        amount: {
+          type: ["number", "null"],
+          description:
+            "Adjustment amount. Positive increases payout; negative reduces payout. Required and must be non-zero for create.",
+        },
+        currency: {
+          type: ["string", "null"],
+          description:
+            "Currency or symbol to display for the adjustment, such as NOK or kr. Null uses user settings.",
+        },
+        category: {
+          type: ["string", "null"],
+          enum: ["retro_pay", "bonus", "correction", "other", null],
+          description:
+            "Adjustment category: retro_pay, bonus, correction, or other. Null defaults to correction for create.",
+        },
+        taxTreatment: {
+          type: ["string", "null"],
+          enum: [
+            "gross_taxable",
+            "net_manual",
+            "excluded_from_tax_estimate",
+            null,
+          ],
+          description:
+            "Tax handling. gross_taxable estimates tax from gross; net_manual is a direct net amount; excluded_from_tax_estimate shows the amount without estimated tax. Required for create only when tax is enabled for the payout date/month.",
+        },
+        description: {
+          type: ["string", "null"],
+          description:
+            "Short user-visible summary of what the adjustment is and why it exists, 1-240 characters. The category is displayed as the card title, so this must be specific context/reason, not just a category label. Required for create.",
+        },
+        note: {
+          type: ["string", "null"],
+          description: "Optional note with extra context, max 1000 characters.",
+        },
+        earnedFromDate: {
+          type: ["string", "null"],
+          description:
+            "Optional earning period start date as YYYY-MM-DD. Does not affect payout date.",
+        },
+        earnedToDate: {
+          type: ["string", "null"],
+          description:
+            "Optional earning period end date as YYYY-MM-DD. Must be on or after earnedFromDate when both are set.",
+        },
+        clearFields: {
+          type: ["array", "null"],
+          items: {
+            type: "string",
+            enum: ["jobId", "note", "earnedFromDate", "earnedToDate"],
+          },
+          description:
+            "For update only. Nullable fields to clear explicitly. Use null when not clearing anything.",
+        },
+        limit: {
+          type: ["number", "null"],
+          description:
+            "Optional maximum number of adjustments to return for list, 1-100.",
+        },
+      },
+      required: [
+        "action",
+        "adjustmentId",
+        "payoutStart",
+        "payoutEnd",
+        "payoutDate",
+        "payoutMonth",
+        "jobId",
+        "amount",
+        "currency",
+        "category",
+        "taxTreatment",
+        "description",
+        "note",
+        "earnedFromDate",
+        "earnedToDate",
+        "clearFields",
+        "limit",
+      ],
+      additionalProperties: false,
+    },
+    input_examples: [
+      {
+        action: "list",
+        adjustmentId: null,
+        payoutStart: "2026-05-01",
+        payoutEnd: "2026-05-31",
+        payoutDate: null,
+        payoutMonth: null,
+        jobId: null,
+        amount: null,
+        currency: null,
+        category: null,
+        taxTreatment: null,
+        description: null,
+        note: null,
+        earnedFromDate: null,
+        earnedToDate: null,
+        clearFields: null,
+        limit: 20,
+      },
+      {
+        action: "create",
+        adjustmentId: null,
+        payoutStart: null,
+        payoutEnd: null,
+        payoutDate: "2026-05-15",
+        payoutMonth: null,
+        jobId: null,
+        amount: 1200,
+        currency: null,
+        category: "retro_pay",
+        taxTreatment: "gross_taxable",
+        description:
+          "Retro pay for April that was missing from the original payout.",
+        note: null,
+        earnedFromDate: "2026-04-01",
+        earnedToDate: "2026-04-30",
+        clearFields: null,
+        limit: null,
+      },
+    ],
+  },
+
   // ---------------------------------------------------------------------------
   // HYPOTHETICAL EARNINGS CALCULATOR
   // ---------------------------------------------------------------------------
@@ -2770,6 +3005,7 @@ export type ToolName =
   | "manage_workplace"
   | "get_wage_info"
   | "manage_wage_snapshots"
+  | "manage_payroll_adjustment"
   | "calculate_earnings"
   | "list_workplaces"
   | "list_friends"
@@ -2787,6 +3023,9 @@ export type ToolName =
 export type ToolResult = {
   success: boolean;
   message: string;
+  action?: string;
+  validationErrors?: Array<{ field: string; message: string }>;
+  missingRequiredFields?: string[];
   data?: unknown;
   summary?: {
     shiftCount: number;

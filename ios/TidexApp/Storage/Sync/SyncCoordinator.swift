@@ -2031,7 +2031,7 @@ final class SyncCoordinator: ObservableObject {
       "currency": .string(adjustment.currency),
       "category": .string(adjustment.category.rawValue),
       "tax_treatment": .string(adjustment.taxTreatment.rawValue),
-      "title": .string(adjustment.title),
+      "description": .string(adjustment.descriptionText),
       "payout_date": .string(adjustment.payoutDateString),
     ]
 

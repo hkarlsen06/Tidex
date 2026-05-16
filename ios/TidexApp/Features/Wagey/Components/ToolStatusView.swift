@@ -69,7 +69,7 @@ struct ToolStatusView: View {
           Divider()
             .background(Color.tidexBorder)
 
-          detailRow(label: "Tool", value: toolCall.name)
+          detailRow(label: String(localized: .wageyToolName), value: toolDisplayName)
 
           if let arguments = toolCall.arguments, !arguments.isEmpty {
             detailSection(

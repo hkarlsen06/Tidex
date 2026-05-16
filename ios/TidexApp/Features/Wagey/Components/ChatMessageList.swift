@@ -189,23 +189,40 @@ struct ChatMessageList: View {
   }
 
   private var suggestionsSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      HStack(spacing: Spacing.sm) {
-        Text(.wageyEmptyStateQuickStart)
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "sparkles")
           .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexTextSecondary)
+          .foregroundColor(.tidexBlue)
 
-        Rectangle()
-          .fill(Color.tidexBorderSubtle)
-          .frame(height: 1)
+        Text(.wageyEmptyStateQuickStart)
+          .font(.tidexFootnoteStrong)
+          .foregroundColor(.tidexTextPrimary)
+
+        Spacer(minLength: 0)
       }
+      .padding(.horizontal, Spacing.sm)
+      .padding(.top, Spacing.sm)
 
-      VStack(spacing: Spacing.xs) {
-        ForEach(suggestions, id: \.text) { suggestion in
+      VStack(spacing: 0) {
+        ForEach(Array(suggestions.enumerated()), id: \.element.text) { index, suggestion in
           suggestionRow(icon: suggestion.icon, text: suggestion.text)
+
+          if index < suggestions.count - 1 {
+            Divider()
+              .overlay(Color.tidexBorderSubtle.opacity(0.7))
+              .padding(.leading, 42)
+          }
         }
       }
     }
+    .padding(Spacing.xxs)
+    .tidexGlass(
+      shape: .rect(cornerRadius: CornerRadius.lg),
+      tint: .tidexBlue.opacity(0.04),
+      interactive: false,
+      fallbackOpacity: 0.78
+    )
   }
 
   private var welcomeHero: some View {
@@ -297,38 +314,29 @@ struct ChatMessageList: View {
       Haptics.play(.light)
       onSuggestionTapped?(text)
     } label: {
-      HStack(spacing: Spacing.md) {
-        ZStack {
-          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-            .fill(Color.tidexBlue.opacity(0.1))
-            .frame(width: 34, height: 34)
+      HStack(alignment: .center, spacing: Spacing.sm) {
+        Image(systemName: icon)
+          .font(.tidexFootnoteStrong)
+          .foregroundColor(.tidexBlue)
+          .frame(width: 28, height: 28)
+          .background(Color.tidexBlue.opacity(0.09), in: Circle())
 
-          Image(systemName: icon)
-            .font(.tidexFootnoteStrong)
-            .foregroundColor(.tidexBlue)
-        }
-
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(text)
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextPrimary)
-            .multilineTextAlignment(.leading)
-        }
+        Text(text)
+          .font(.tidexFootnoteMedium)
+          .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.leading)
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
 
         Spacer(minLength: 0)
 
-        Image(systemName: "arrow.up.left")
-          .font(.tidexMicro)
+        Image(systemName: "pencil.circle.fill")
+          .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
-      .background(Color.tidexSurfacePrimary.opacity(0.82))
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .stroke(Color.tidexBorderSubtle.opacity(0.65), lineWidth: 1)
-      )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
   }
@@ -409,7 +417,8 @@ struct ChatMessageList: View {
   }
 
   private func formatToolCallForCopy(_ toolCall: ToolCall) -> String {
-    var sections = ["Tool: \(toolCall.name)"]
+    let toolName = WageyToolLabelResolver.displayName(for: toolCall, isExecuting: false)
+    var sections = ["\(String(localized: .wageyToolName)): \(toolName)"]
 
     if let arguments = toolCall.arguments, !arguments.isEmpty {
       sections.append("\(String(localized: .wageyToolRequest)):\n\(formatJSON(arguments))")

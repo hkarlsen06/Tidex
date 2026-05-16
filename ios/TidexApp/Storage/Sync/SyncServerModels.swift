@@ -189,7 +189,7 @@ struct SyncPayrollAdjustmentRow: Codable {
   let currency: String
   let category: PayrollAdjustmentCategory
   let tax_treatment: PayrollAdjustmentTaxTreatment
-  let title: String
+  let description: String
   let note: String?
   let curated_note: String?
   let curated_link: String?
@@ -210,7 +210,7 @@ struct SyncPayrollAdjustmentRow: Codable {
       currency: currency,
       category: category,
       tax_treatment: tax_treatment,
-      title: title,
+      description: description,
       note: note,
       curated_note: curated_note,
       curated_link: curated_link,
