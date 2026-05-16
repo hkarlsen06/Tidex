@@ -341,6 +341,22 @@ function timeToMinutes(time: string): number {
   return hours * 60 + minutes;
 }
 
+function toShortId(id: string): string {
+  return id.slice(0, 5);
+}
+
+function toDisplayShiftId(shiftId: string): string {
+  if (shiftId.startsWith("virtual-")) {
+    const match = shiftId.match(
+      /^virtual-([a-f0-9-]{4,36})-(\d{4}-\d{2}-\d{2})$/i,
+    );
+    if (match) {
+      return `virtual-${toShortId(match[1])}-${match[2]}`;
+    }
+  }
+  return toShortId(shiftId);
+}
+
 function calculateNetPay(
   gross: number,
   taxSettings: { tax_enabled?: boolean; tax_percentage?: number },
@@ -2434,7 +2450,14 @@ export async function getSharerShiftPreviews(
 
 export async function getStatistics(
   ctx: WageyRequestContext,
-  options: { year?: number; month?: number; jobId?: string } = {},
+  options: {
+    year?: number;
+    month?: number;
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    jobId?: string;
+  } = {},
 ): Promise<{
   currentMonth: Record<string, unknown>;
   lastMonth: Record<string, unknown>;
@@ -2444,6 +2467,7 @@ export async function getStatistics(
   thisWeek: Array<Record<string, unknown>>;
   monthlyGoal: Record<string, unknown>;
   currentMonthBreakdown: Record<string, unknown>;
+  shiftGaps: Record<string, unknown>;
 }> {
   const now = new Date();
   const year = options.year ?? now.getUTCFullYear();
@@ -2465,12 +2489,24 @@ export async function getStatistics(
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6);
   const weekStartDate = weekStart.toISOString().slice(0, 10);
   const weekEndDate = weekEnd.toISOString().slice(0, 10);
+  const shiftGapStart = options.startDate ?? yearStart;
+  const shiftGapEnd = options.endDate ?? (
+    options.year === undefined && options.month === undefined
+      ? now.toISOString().slice(0, 10)
+      : yearEnd
+  );
   const aggregateStart = getEarlierDate(
     yearStart,
     lastMonthStart,
     weekStartDate,
+    shiftGapStart,
   );
-  const aggregateEnd = getLaterDate(yearEnd, currentMonthEnd, weekEndDate);
+  const aggregateEnd = getLaterDate(
+    yearEnd,
+    currentMonthEnd,
+    weekEndDate,
+    shiftGapEnd,
+  );
   const aggregateData = await getComputedShiftsForApi(ctx, ctx.user.id, {
     startDate: aggregateStart,
     endDate: aggregateEnd,
@@ -2492,6 +2528,11 @@ export async function getStatistics(
     aggregateData,
     weekStartDate,
     weekEndDate,
+  );
+  const shiftGapData = sliceLoadedShiftData(
+    aggregateData,
+    shiftGapStart,
+    shiftGapEnd,
   );
 
   const summarize = (loaded: LoadedShiftData) => {
@@ -2599,6 +2640,12 @@ export async function getStatistics(
     ?.[`${year}-${String(month).padStart(2, "0")}`] ??
     settings.monthly_goal ?? 0;
   const currentSummary = summarize(currentMonthData);
+  const shiftGaps = summarizeShiftGaps(
+    shiftGapData.shifts,
+    shiftGapStart,
+    shiftGapEnd,
+    options.limit ?? 10,
+  );
 
   return {
     currentMonth: currentSummary,
@@ -2650,5 +2697,76 @@ export async function getStatistics(
       ),
     },
     currentMonthBreakdown,
+    shiftGaps,
+  };
+}
+
+function shiftBoundaryDateTime(
+  shift: ShiftWithComputations,
+  boundary: "start" | "end",
+): Date {
+  const time = boundary === "start" ? shift.start_time : shift.end_time;
+  const date = parseDateAsUTC(shift.shift_date);
+  const [hours, minutes] = cleanTime(time).split(":").map(Number);
+  date.setUTCHours(hours, minutes, 0, 0);
+
+  if (
+    boundary === "end" &&
+    timeToMinutes(shift.end_time) <= timeToMinutes(shift.start_time)
+  ) {
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+
+  return date;
+}
+
+function summarizeShiftGaps(
+  shifts: ShiftWithComputations[],
+  startDate: string,
+  endDate: string,
+  limit: number,
+): Record<string, unknown> {
+  const sorted = [...shifts].sort((a, b) => {
+    const startDiff = shiftBoundaryDateTime(a, "start").getTime() -
+      shiftBoundaryDateTime(b, "start").getTime();
+    if (startDiff !== 0) return startDiff;
+    return shiftBoundaryDateTime(a, "end").getTime() -
+      shiftBoundaryDateTime(b, "end").getTime();
+  });
+
+  const gaps = sorted.slice(1).map((shift, index) => {
+    const previousShift = sorted[index];
+    const previousEnd = shiftBoundaryDateTime(previousShift, "end");
+    const nextStart = shiftBoundaryDateTime(shift, "start");
+    const gapMs = Math.max(0, nextStart.getTime() - previousEnd.getTime());
+    const gapHours = Number((gapMs / (1000 * 60 * 60)).toFixed(2));
+    return {
+      previousShift: {
+        id: toDisplayShiftId(previousShift.id),
+        date: previousShift.shift_date,
+        start: cleanTime(previousShift.start_time),
+        end: cleanTime(previousShift.end_time),
+      },
+      nextShift: {
+        id: toDisplayShiftId(shift.id),
+        date: shift.shift_date,
+        start: cleanTime(shift.start_time),
+        end: cleanTime(shift.end_time),
+      },
+      gapHours,
+      gapDays: Number((gapHours / 24).toFixed(2)),
+      gapCalendarDays: Math.floor(gapMs / (1000 * 60 * 60 * 24)),
+    };
+  })
+    .sort((a, b) => b.gapHours - a.gapHours)
+    .map((gap, index) => ({ rank: index + 1, ...gap }));
+
+  return {
+    startDate,
+    endDate,
+    shiftCount: sorted.length,
+    gapCount: Math.max(0, sorted.length - 1),
+    longestGap: gaps[0] ?? null,
+    gaps: gaps.slice(0, limit),
   };
 }

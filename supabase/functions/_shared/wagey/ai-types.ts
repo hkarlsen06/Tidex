@@ -103,10 +103,12 @@ export type FunctionTool = {
   name: string;
   description: string;
   eager_input_streaming?: boolean;
+  strict?: boolean;
   input_schema: {
     type: "object";
     properties: Record<string, unknown>;
     required?: string[];
+    additionalProperties?: boolean;
   };
   input_examples?: ToolInputExample[];
 };

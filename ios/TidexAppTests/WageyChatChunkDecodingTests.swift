@@ -119,7 +119,8 @@ final class WageyChatChunkDecodingTests: XCTestCase {
       {
         "type": "wagey_built_in_tool_start",
         "toolName": "web_search",
-        "toolCallId": "search_1"
+        "toolCallId": "search_1",
+        "toolArguments": "{\"query\":\"tariff\"}"
       }
       """.utf8
     )
@@ -141,7 +142,11 @@ final class WageyChatChunkDecodingTests: XCTestCase {
 
     XCTAssertEqual(
       startChunk,
-      .builtInToolStart(toolName: "web_search", toolCallId: "search_1")
+      .builtInToolStart(
+        toolName: "web_search",
+        toolCallId: "search_1",
+        toolArguments: "{\"query\":\"tariff\"}"
+      )
     )
     XCTAssertEqual(
       resultChunk,
@@ -149,6 +154,34 @@ final class WageyChatChunkDecodingTests: XCTestCase {
         toolName: "web_search",
         toolCallId: "search_1",
         result: "{\"status\":\"completed\"}",
+        success: true
+      )
+    )
+  }
+
+  func testDecodesToolResultChunkWithFinalArguments() throws {
+    let data = Data(
+      #"""
+      {
+        "type": "tool_result",
+        "toolName": "get_statistics",
+        "toolCallId": "tool_1",
+        "toolArguments": "{\"metric\":\"current_month\"}",
+        "result": "{\"success\":true}",
+        "success": true
+      }
+      """#.utf8
+    )
+
+    let chunk = try JSONDecoder().decode(ChatChunk.self, from: data)
+
+    XCTAssertEqual(
+      chunk,
+      .toolResult(
+        toolName: "get_statistics",
+        toolCallId: "tool_1",
+        toolArguments: "{\"metric\":\"current_month\"}",
+        result: "{\"success\":true}",
         success: true
       )
     )
@@ -182,7 +215,7 @@ final class WageyChatChunkDecodingTests: XCTestCase {
 
     XCTAssertEqual(
       startChunk,
-      .builtInToolStart(toolName: "web_fetch", toolCallId: "fetch_1")
+      .builtInToolStart(toolName: "web_fetch", toolCallId: "fetch_1", toolArguments: nil)
     )
     XCTAssertEqual(
       resultChunk,

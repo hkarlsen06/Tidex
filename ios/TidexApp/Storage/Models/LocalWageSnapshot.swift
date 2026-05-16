@@ -144,6 +144,16 @@ final class LocalWageSnapshot {
     serverDeletedAt != nil
   }
 
+  /// Whether this snapshot has been deleted locally and is waiting to sync
+  var isPendingDelete: Bool {
+    syncStatusRaw == "pendingDelete"
+  }
+
+  /// Whether this snapshot should appear in regular user-facing reads
+  var isVisible: Bool {
+    serverDeletedAt == nil && !isPendingDelete
+  }
+
   /// Effective tax enabled (defaults to false if nil)
   var effectiveTaxEnabled: Bool {
     taxEnabled ?? false

@@ -345,6 +345,135 @@ Deno.test("query_shifts ignores null and placeholder optional filters", async ()
   assertEquals(rows[0].date, "2026-04-16");
 });
 
+Deno.test("manage_account routes profile and settings actions", async () => {
+  const ctx = createContext();
+
+  const profileResult = await executeTool(
+    ctx,
+    "manage_account",
+    JSON.stringify({ action: "view_profile" }),
+  );
+  assertEquals(profileResult.success, true);
+  assertEquals((profileResult.data as { id: string }).id, USER_ID);
+
+  const settingsResult = await executeTool(
+    ctx,
+    "manage_account",
+    JSON.stringify({ action: "view_settings" }),
+  );
+  assertEquals(settingsResult.success, true);
+  assertEquals(
+    (settingsResult.data as { goals: { payrollDay: number } }).goals
+      .payrollDay,
+    15,
+  );
+});
+
+Deno.test("get_statistics shift_gaps returns longest gaps between shifts", async () => {
+  const ctx = createContext({
+    user_shifts: [
+      {
+        id: "11111111-2222-3333-4444-555555555555",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-01-01",
+        start_time: "08:00",
+        end_time: "16:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+      {
+        id: "22222222-3333-4444-5555-666666666666",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-01-05",
+        start_time: "08:00",
+        end_time: "16:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+      {
+        id: "33333333-4444-5555-6666-777777777777",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-01-06",
+        start_time: "08:00",
+        end_time: "16:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+    ],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "get_statistics",
+    JSON.stringify({
+      metric: "shift_gaps",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+      limit: 2,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as {
+    shiftCount: number;
+    gapCount: number;
+    longestGap: { gapHours: number; gapDays: number };
+    gaps: Array<{ rank: number; gapHours: number }>;
+  };
+  assertEquals(data.shiftCount, 3);
+  assertEquals(data.gapCount, 2);
+  assertEquals(data.longestGap.gapHours, 88);
+  assertEquals(data.longestGap.gapDays, 3.67);
+  assertEquals(data.gaps.length, 2);
+  assertEquals(data.gaps[0].rank, 1);
+});
+
+Deno.test("get_statistics shift_gaps formats virtual shift IDs and rounded gaps", async () => {
+  const recurringId = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+  const ctx = createContext({
+    recurring_shifts: [{
+      id: recurringId,
+      user_id: USER_ID,
+      job_id: null,
+      start_time: "16:00",
+      end_time: "23:15",
+      repeat_interval_weeks: 1,
+      selected_days: { "3": "2026-04-22" },
+      end_condition: { type: "months", value: 1 },
+      exclusions: [],
+      deleted_at: null,
+    }],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "get_statistics",
+    JSON.stringify({
+      metric: "shift_gaps",
+      startDate: "2026-04-01",
+      endDate: "2026-05-16",
+      limit: 1,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as {
+    longestGap: {
+      gapHours: number;
+      gapDays: number;
+      previousShift: { id: string };
+      nextShift: { id: string };
+    };
+  };
+  assertEquals(data.longestGap.gapHours, 328.75);
+  assertEquals(data.longestGap.gapDays, 13.7);
+  assertEquals(data.longestGap.previousShift.id, "virtual-aaaaa-2026-04-22");
+  assertEquals(data.longestGap.nextShift.id, "virtual-aaaaa-2026-05-06");
+});
+
 Deno.test("manage_workplace preserves explicit null clears", async () => {
   const jobId = "11111111-2222-4333-8444-555555555555";
   const db: Partial<MockDb> = {

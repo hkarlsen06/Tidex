@@ -57,6 +57,8 @@ extension LocalStoreActor {
       existing.taxTreatmentRaw = adjustment.taxTreatmentRaw
       existing.title = adjustment.title
       existing.note = adjustment.note
+      existing.curatedNote = adjustment.curatedNote
+      existing.curatedLink = adjustment.curatedLink
       existing.earnedFromDate = adjustment.earnedFromDate
       existing.earnedToDate = adjustment.earnedToDate
       existing.payoutDate = adjustment.payoutDate

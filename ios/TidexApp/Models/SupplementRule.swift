@@ -44,6 +44,31 @@ struct CustomSupplementsData: Codable, Equatable {
 /// Container for supplement rules snapshot
 struct SupplementRulesSnapshot: Codable, Equatable {
   let rules: [SupplementRule]
+
+  init(rules: [SupplementRule]) {
+    self.rules = rules
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case rules
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+
+    if let decodedRules = try? container.decode([SupplementRule].self, forKey: .rules) {
+      rules = decodedRules
+      return
+    }
+
+    let copyDirective = try container.decodeIfPresent(String.self, forKey: .rules)
+    if copyDirective == "copy_current" {
+      rules = []
+      return
+    }
+
+    rules = try container.decode([SupplementRule].self, forKey: .rules)
+  }
 }
 
 // MARK: - Wage Period

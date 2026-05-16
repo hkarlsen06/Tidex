@@ -411,10 +411,11 @@ enum ChatChunk: Equatable {
   case toolStart(toolName: String, toolCallId: String, toolArguments: String?)
 
   /// A tool execution has completed
-  case toolResult(toolName: String, toolCallId: String, result: String, success: Bool)
+  case toolResult(
+    toolName: String, toolCallId: String, toolArguments: String?, result: String, success: Bool)
 
   /// A provider built-in tool execution has started
-  case builtInToolStart(toolName: String, toolCallId: String)
+  case builtInToolStart(toolName: String, toolCallId: String, toolArguments: String?)
 
   /// A provider built-in tool execution has completed
   case builtInToolResult(toolName: String, toolCallId: String, result: String, success: Bool)
@@ -489,15 +490,22 @@ extension ChatChunk: Decodable {
     case "tool_result":
       let toolName = try container.decode(String.self, forKey: .toolName)
       let toolCallId = try container.decode(String.self, forKey: .toolCallId)
+      let toolArguments = try container.decodeIfPresent(String.self, forKey: .toolArguments)
       let result = try container.decode(String.self, forKey: .result)
       let success = try container.decode(Bool.self, forKey: .success)
       self = .toolResult(
-        toolName: toolName, toolCallId: toolCallId, result: result, success: success)
+        toolName: toolName,
+        toolCallId: toolCallId,
+        toolArguments: toolArguments,
+        result: result,
+        success: success)
 
     case "wagey_built_in_tool_start":
       let toolName = try container.decode(String.self, forKey: .toolName)
       let toolCallId = try container.decode(String.self, forKey: .toolCallId)
-      self = .builtInToolStart(toolName: toolName, toolCallId: toolCallId)
+      let toolArguments = try container.decodeIfPresent(String.self, forKey: .toolArguments)
+      self = .builtInToolStart(
+        toolName: toolName, toolCallId: toolCallId, toolArguments: toolArguments)
 
     case "wagey_built_in_tool_result":
       let toolName = try container.decode(String.self, forKey: .toolName)

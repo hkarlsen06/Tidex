@@ -19,13 +19,23 @@ import type { HHMM } from "./payroll/types.ts";
 const shortOrFullId = z.string().regex(
   /^[a-f0-9]{4,8}$|^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i,
 );
-const optionalFilterPlaceholders = new Set(["", "null", "none", "undefined", "n/a", "all", "any"]);
+const optionalFilterPlaceholders = new Set([
+  "",
+  "null",
+  "none",
+  "undefined",
+  "n/a",
+  "all",
+  "any",
+]);
 
 function normalizeOptionalFilter(value: unknown): unknown {
   if (value === null) return undefined;
   if (typeof value !== "string") return value;
   const trimmed = value.trim();
-  return optionalFilterPlaceholders.has(trimmed.toLowerCase()) ? undefined : trimmed;
+  return optionalFilterPlaceholders.has(trimmed.toLowerCase())
+    ? undefined
+    : trimmed;
 }
 
 const optionalDateFilter = z.preprocess(
@@ -88,7 +98,9 @@ export const queryEventsSchema = z.object({
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   limit: z.number().int().min(1).max(100).optional().default(30),
   kind: z.enum(["all", "timed", "all_day"]).optional().default("all"),
-  sortBy: z.enum(["start_earliest", "start_latest"]).optional().default("start_earliest"),
+  sortBy: z.enum(["start_earliest", "start_latest"]).optional().default(
+    "start_earliest",
+  ),
 });
 
 export type QueryEventsInput = z.infer<typeof queryEventsSchema>;
@@ -211,9 +223,17 @@ export type ConfirmRecurringShiftInput = z.infer<
  * Manage Recurring Shift Tool Schema
  */
 export const manageRecurringShiftSchema = z.object({
-  action: z.enum(["list", "update", "delete"]),
+  action: z.enum([
+    "draft_create",
+    "confirm_create",
+    "list",
+    "update",
+    "delete",
+    "add_exclusion",
+    "remove_exclusion",
+  ]),
   recurringId: shortOrFullId.optional(),
-  // Update fields - use weekdays array to replace all weekdays
+  // Create/update fields - use weekdays array to replace all weekdays on update
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -225,11 +245,33 @@ export const manageRecurringShiftSchema = z.object({
     z.number().int().min(1),
     z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   ]).optional(),
+  conflictResolution: z.enum(["keep_both", "skip_conflicts"]).optional(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
 });
 
 export type ManageRecurringShiftInput = z.infer<
   typeof manageRecurringShiftSchema
 >;
+
+/**
+ * Manage Account Tool Schema
+ */
+export const manageAccountSchema = z.object({
+  action: z.enum([
+    "view_settings",
+    "update_settings",
+    "view_profile",
+    "update_name",
+    "submit_feedback",
+    "list_feedback",
+  ]),
+  category: z.enum(["display", "tax", "goals", "preferences"]).optional(),
+  settings: z.record(z.string(), z.any()).optional(),
+  firstName: z.string().max(100).optional(),
+  message: z.string().optional(),
+});
+
+export type ManageAccountInput = z.infer<typeof manageAccountSchema>;
 
 /**
  * Manage Recurring Exclusion Tool Schema
@@ -257,9 +299,13 @@ export const getStatisticsSchema = z.object({
     "this_week",
     "monthly_goal",
     "supplement_breakdown",
+    "shift_gaps",
   ]),
   year: z.number().int().min(2020).max(2100).optional(),
   month: z.number().int().min(1).max(12).optional(),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  limit: z.number().int().min(1).max(50).optional().default(10),
   // Optional workplace/job filter (full UUID from list_workplaces)
   jobId: z.string().uuid().optional(),
 });
@@ -350,6 +396,7 @@ export type ManageFriendSharingInput = z.infer<
  * Query Friend Shifts Tool Schema
  */
 export const queryFriendShiftsSchema = z.object({
+  mode: z.enum(["shifts", "featured"]).optional().default("shifts"),
   friendId: z.string().uuid(),
   startDate: optionalDateFilter,
   endDate: optionalDateFilter,
@@ -546,10 +593,10 @@ export const calculateEarningsSchema = z.object({
 export type CalculateEarningsInput = z.infer<typeof calculateEarningsSchema>;
 
 // =============================================================================
-// TOOL DEFINITIONS (Claude format with input_examples)
+// TOOL DEFINITIONS
 // =============================================================================
 
-export const tools: FunctionTool[] = [
+const allTools: FunctionTool[] = [
   // ---------------------------------------------------------------------------
   // SHIFT MANAGEMENT
   // ---------------------------------------------------------------------------
@@ -756,8 +803,7 @@ Use cases:
 
   {
     name: "query_events",
-    description:
-      `Get private calendar events with optional filters.
+    description: `Get private calendar events with optional filters.
 
 Default behavior: Without parameters, returns events overlapping the current week.
 
@@ -794,7 +840,8 @@ Use this for event lookup, agenda questions, and to get event IDs before update/
         kind: {
           type: "string",
           enum: ["all", "timed", "all_day"],
-          description: "Filter to all events, only timed events, or only all-day events",
+          description:
+            "Filter to all events, only timed events, or only all-day events",
         },
         sortBy: {
           type: "string",
@@ -819,8 +866,7 @@ Use this for event lookup, agenda questions, and to get event IDs before update/
 
   {
     name: "manage_event",
-    description:
-      `Create, update, or delete private calendar events.
+    description: `Create, update, or delete private calendar events.
 
 Actions:
 - CREATE: action="create", note, startDate, endDate, isAllDay, plus startTime/endTime for timed events
@@ -913,8 +959,7 @@ Rules:
 
   {
     name: "plan_schedule",
-    description:
-      `Plan around shifts and private calendar events.
+    description: `Plan around shifts and private calendar events.
 
 Actions:
 - agenda: Return a merged chronological agenda of shifts and events for a date range
@@ -943,11 +988,13 @@ Notes:
         },
         includeShifts: {
           type: "boolean",
-          description: "Include shifts in agenda/conflict/free-slot calculations (default true)",
+          description:
+            "Include shifts in agenda/conflict/free-slot calculations (default true)",
         },
         includeEvents: {
           type: "boolean",
-          description: "Include private events in agenda/conflict/free-slot calculations (default true)",
+          description:
+            "Include private events in agenda/conflict/free-slot calculations (default true)",
         },
         isAllDay: {
           type: "boolean",
@@ -967,11 +1014,13 @@ Notes:
         },
         durationMinutes: {
           type: "integer",
-          description: "Required for free_slots. Minimum free-slot length in minutes.",
+          description:
+            "Required for free_slots. Minimum free-slot length in minutes.",
         },
         windowStart: {
           type: "string",
-          description: "Daily search window start for free_slots (default 00:00)",
+          description:
+            "Daily search window start for free_slots (default 00:00)",
         },
         windowEnd: {
           type: "string",
@@ -1293,29 +1342,46 @@ The recurring shift will be created and shifts generated according to the patter
 
   {
     name: "manage_recurring_shift",
-    description: `List, update, or delete existing recurring shifts.
+    description:
+      `Draft, create, list, update, delete, or skip occurrences for recurring shifts.
 
 Actions:
+- DRAFT_CREATE: action="draft_create" - Preview a recurring pattern WITHOUT creating it; validates pattern and checks conflicts.
+- CONFIRM_CREATE: action="confirm_create" - Create after reviewing draft_create; include conflictResolution.
 - LIST: action="list" - Returns all recurring shifts with IDs, patterns, and schedules (weekdays array format)
 - UPDATE: action="update", recurringId, plus fields to change (weekdays, times, frequency, endType)
 - DELETE: action="delete", recurringId - Removes the recurring shift and ALL its virtual shifts disappear immediately
+- ADD_EXCLUSION: action="add_exclusion", recurringId, date - Skip one occurrence
+- REMOVE_EXCLUSION: action="remove_exclusion", recurringId, date - Restore one skipped occurrence
 
-Workflow: Always LIST first to get recurring shift IDs before update/delete.
+Create workflow: use draft_create first. If conflicts exist, ask how to handle them, then call confirm_create with the same pattern and conflictResolution.
+Modify workflow: Always list first to get recurring shift IDs before update/delete/exclusions.
 
 Note: Recurring shifts are virtual (not stored individually). Deleting a recurring shift removes all future occurrences.
 Only standalone shifts (manually created or converted) remain after deletion.
-When updating weekdays, provide the complete weekdays array (replaces all existing weekdays).`,
+When updating weekdays, provide the complete weekdays array (replaces all existing weekdays).
+Use weekdays array to create a SINGLE recurring shift with multiple weekdays. Do NOT create separate recurring shifts for each day.
+For alternating biweekly/every_N_weeks patterns, offset anchorDates by one week to alternate days between weeks.`,
     input_schema: {
       type: "object",
       properties: {
         action: {
           type: "string",
-          enum: ["list", "update", "delete"],
+          enum: [
+            "draft_create",
+            "confirm_create",
+            "list",
+            "update",
+            "delete",
+            "add_exclusion",
+            "remove_exclusion",
+          ],
           description: "The operation to perform",
         },
         recurringId: {
           type: "string",
-          description: "Recurring shift ID (required for update/delete)",
+          description:
+            "Recurring shift ID (required for update/delete/add_exclusion/remove_exclusion)",
         },
         weekdays: {
           type: "array",
@@ -1359,7 +1425,19 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
         },
         endValue: {
           type: ["integer", "string"],
-          description: "New end value for update",
+          description:
+            "For after_months/after_years: number of months/years. For on_date: end date (YYYY-MM-DD).",
+        },
+        conflictResolution: {
+          type: "string",
+          enum: ["keep_both", "skip_conflicts"],
+          description:
+            "Required for confirm_create. keep_both allows conflicts; skip_conflicts skips dates with existing shifts.",
+        },
+        date: {
+          type: "string",
+          description:
+            "Occurrence date (YYYY-MM-DD) for add_exclusion/remove_exclusion.",
         },
       },
       required: ["action"],
@@ -1368,6 +1446,30 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
       // List all recurring shifts
       {
         action: "list",
+      },
+      // Draft a new Mon/Wed/Fri recurring shift before creating it
+      {
+        action: "draft_create",
+        weekdays: [
+          { day: 1, anchorDate: "2025-01-20" },
+          { day: 3, anchorDate: "2025-01-22" },
+          { day: 5, anchorDate: "2025-01-24" },
+        ],
+        start: "09:00",
+        end: "17:00",
+        frequency: "weekly",
+        endType: "after_months",
+        endValue: 6,
+      },
+      // Confirm the same draft and skip conflicting dates
+      {
+        action: "confirm_create",
+        weekdays: [{ day: 1, anchorDate: "2025-01-20" }],
+        start: "09:00",
+        end: "17:00",
+        frequency: "weekly",
+        endType: "never",
+        conflictResolution: "skip_conflicts",
       },
       // Update recurring shift times (use short 5-char ID from list)
       {
@@ -1398,11 +1500,18 @@ When updating weekdays, provide the complete weekdays array (replaces all existi
         action: "delete",
         recurringId: "a1b2c",
       },
+      // Skip one occurrence
+      {
+        action: "add_exclusion",
+        recurringId: "a1b2c",
+        date: "2025-12-25",
+      },
     ],
   },
 
   {
     name: "manage_recurring_exclusion",
+    strict: true,
     description: `Add or remove a date exclusion from a recurring shift.
 
 Use cases:
@@ -1470,12 +1579,14 @@ Available metrics:
 - this_week: Daily breakdown Monday through Sunday
 - monthly_goal: Progress toward user's monthly goal (if set)
 - supplement_breakdown: How much is base pay vs evening/weekend supplements
+- shift_gaps: Longest gaps/breaks between consecutive shifts in a date range. Use this for questions like "longest break between shifts", "longest I've gone without working", or "pauses between shifts".
 
 When to use year_to_date vs full_year:
 - "How much had I earned by this point last year?" → year_to_date with year parameter
 - "How much did I earn in total last year?" → full_year with year parameter
 
 Optional: year and month parameters to query specific periods (defaults to current).
+For shift_gaps, prefer explicit startDate/endDate when the user asks "since", "between", or names a custom period. limit controls how many longest gaps to return.
 Optional: jobId (UUID from list_workplaces) to get statistics for a specific workplace only.`,
     input_schema: {
       type: "object",
@@ -1491,6 +1602,7 @@ Optional: jobId (UUID from list_workplaces) to get statistics for a specific wor
             "this_week",
             "monthly_goal",
             "supplement_breakdown",
+            "shift_gaps",
           ],
           description: "Which statistic to retrieve",
         },
@@ -1501,6 +1613,21 @@ Optional: jobId (UUID from list_workplaces) to get statistics for a specific wor
         month: {
           type: "integer",
           description: "Optional: specific month 1-12 (default: current)",
+        },
+        startDate: {
+          type: "string",
+          description:
+            "Optional custom start date (YYYY-MM-DD), especially for shift_gaps.",
+        },
+        endDate: {
+          type: "string",
+          description:
+            "Optional custom end date (YYYY-MM-DD), especially for shift_gaps.",
+        },
+        limit: {
+          type: "integer",
+          description:
+            "For shift_gaps, number of longest gaps to return (default 10, max 50).",
         },
         jobId: {
           type: "string",
@@ -1523,12 +1650,93 @@ Optional: jobId (UUID from list_workplaces) to get statistics for a specific wor
       { metric: "year_to_date", year: 2025 },
       // How many hours did I work in total last year / in 2025?
       { metric: "full_year", year: 2025 },
+      // Longest breaks between shifts since last year
+      {
+        metric: "shift_gaps",
+        startDate: "2025-01-01",
+        endDate: "2026-05-16",
+        limit: 5,
+      },
     ],
   },
 
   // ---------------------------------------------------------------------------
   // SETTINGS
   // ---------------------------------------------------------------------------
+  {
+    name: "manage_account",
+    description:
+      `View or update account-level settings, profile basics, and feedback.
+
+Use this for user preferences, monthly goals, currency/display settings, profile first name, and feedback.
+Do NOT use this for wages, wage history, tax percentage, tariff setup, or pause/supplement history; use get_wage_info/manage_wage_snapshots for those.
+
+Actions:
+- view_settings: returns display, goals, preferences, and tax halfTaxMonth
+- update_settings: category plus settings object
+- view_profile: returns low-risk profile fields (id, name, email, phone)
+- update_name: firstName
+- submit_feedback: message
+- list_feedback: returns previous feedback
+
+Settings categories and keys:
+- display: theme, defaultShiftsView, currency, showDashboardClockButtons
+- tax: halfTaxMonth (1-12, global half-tax month override only)
+- goals: monthlyGoal, payrollDay, monthlyGoalsByMonth
+- preferences: defaultStartupTab
+
+Only include fields that should change. For monthlyGoalsByMonth, use { "YYYY-MM": amount } to set an override and null to remove one.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: [
+            "view_settings",
+            "update_settings",
+            "view_profile",
+            "update_name",
+            "submit_feedback",
+            "list_feedback",
+          ],
+          description: "The account, settings, profile, or feedback operation.",
+        },
+        category: {
+          type: "string",
+          enum: ["display", "tax", "goals", "preferences"],
+          description: "Required for update_settings.",
+        },
+        settings: {
+          type: "object",
+          description: "Key-value settings to update for update_settings.",
+        },
+        firstName: {
+          type: "string",
+          description: "New first name for update_name.",
+        },
+        message: {
+          type: "string",
+          description: "Feedback text for submit_feedback.",
+        },
+      },
+      required: ["action"],
+    },
+    input_examples: [
+      { action: "view_settings" },
+      {
+        action: "update_settings",
+        category: "goals",
+        settings: { monthlyGoal: 50000 },
+      },
+      { action: "view_profile" },
+      { action: "update_name", firstName: "Hjalmar" },
+      {
+        action: "submit_feedback",
+        message: "Would love better weekend filters in stats.",
+      },
+    ],
+  },
+
   {
     name: "manage_settings",
     description:
@@ -1542,7 +1750,7 @@ Categories and keys:
 - display: theme, defaultShiftsView, currency (e.g., "kr", "$", "€", "£"), showDashboardClockButtons (boolean)
 - tax: halfTaxMonth (1-12, global half-tax month override)
 - goals: monthlyGoal (baseline for all months), payrollDay (1-31), monthlyGoalsByMonth (per-month overrides, see below)
-- preferences: directTimeInput, fullMinuteRange, defaultStartupTab ("home"|"shifts"|"add"|"stats"|"sharing")
+- preferences: defaultStartupTab ("home"|"shifts"|"add"|"stats"|"sharing")
 
 Per-month goal overrides (monthlyGoalsByMonth):
 - Provide a map of { "YYYY-MM": amount } to set overrides for specific months
@@ -1652,9 +1860,9 @@ Input:
 - If omitted, defaults to the user's default workplace
 
 Use this when the user asks about their wage, hourly rate, tax settings, payroll day, or wage history.
-For display/preference settings (theme, defaultStartupTab, etc.), use manage_settings instead.
+For display/preference settings (theme, defaultStartupTab, etc.), use manage_account instead.
 To modify wage entries, use manage_wage_snapshots with the id from get_wage_info.
-To modify halfTaxMonth or payrollDay, use manage_settings with category="tax" or category="goals".`,
+To modify halfTaxMonth or payrollDay, use manage_account action="update_settings" with category="tax" or category="goals".`,
     input_schema: {
       type: "object",
       properties: {
@@ -2264,11 +2472,15 @@ Direction guardrails:
 
   {
     name: "query_friend_shifts",
-    description: `Query shifts from a friend who shares with me.
+    description: `Query a friend's shared shifts or featured shift preview.
 
 Access rules:
 - Friend must have sharesWithMe=true from list_friends
 - If blocked or no access, returns explicit no-access result
+
+Modes:
+- shifts (default): returns a filtered list of shared shifts
+- featured: returns the active > upcoming > past featured shift preview, using the same logic as the friends page
 
 Filters match query_shifts:
 - startDate/endDate (default current week)
@@ -2289,6 +2501,12 @@ Important:
     input_schema: {
       type: "object",
       properties: {
+        mode: {
+          type: "string",
+          enum: ["shifts", "featured"],
+          description:
+            "Use featured for now/next/last/recent friend shift preview; use shifts for full viewing/filtering.",
+        },
         friendId: {
           type: "string",
           description: "Friend user ID (UUID) that shares shifts with me",
@@ -2336,6 +2554,10 @@ Important:
     input_examples: [
       { friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809" },
       {
+        mode: "featured",
+        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
+      },
+      {
         friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
         startDate: "2026-03-01",
         endDate: "2026-03-31",
@@ -2349,6 +2571,7 @@ Important:
   // ---------------------------------------------------------------------------
   {
     name: "query_friend_featured_shift",
+    strict: true,
     description:
       `Get the featured shift preview for a friend (active > upcoming > past), using the same logic as the friends page.
 
@@ -2513,6 +2736,20 @@ Actions:
   },
 ];
 
+const hiddenToolNames = new Set([
+  "draft_recurring_shift",
+  "confirm_recurring_shift",
+  "manage_recurring_exclusion",
+  "manage_settings",
+  "query_friend_featured_shift",
+  "manage_feedback",
+  "manage_profile",
+]);
+
+export const tools: FunctionTool[] = allTools.filter((tool) =>
+  !hiddenToolNames.has(tool.name)
+);
+
 /**
  * Tool name type
  */
@@ -2528,6 +2765,7 @@ export type ToolName =
   | "manage_recurring_shift"
   | "manage_recurring_exclusion"
   | "get_statistics"
+  | "manage_account"
   | "manage_settings"
   | "manage_workplace"
   | "get_wage_info"

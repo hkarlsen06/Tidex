@@ -53,8 +53,12 @@ enum WageyToolLabelResolver {
       "plan_schedule.free_slots": String(localized: .wageyToolScheduleFreeSlots),
 
       "manage_recurring_shift.create": String(localized: .wageyToolRecurringCreating),
+      "manage_recurring_shift.draft_create": String(localized: .wageyToolDraftRecurring),
+      "manage_recurring_shift.confirm_create": String(localized: .wageyToolConfirmRecurring),
       "manage_recurring_shift.update": String(localized: .wageyToolRecurringUpdating),
       "manage_recurring_shift.delete": String(localized: .wageyToolRecurringDeleting),
+      "manage_recurring_shift.add_exclusion": String(localized: .wageyToolExclusionAdding),
+      "manage_recurring_shift.remove_exclusion": String(localized: .wageyToolExclusionRemoving),
 
       "manage_recurring_exclusion.create": String(localized: .wageyToolExclusionAdding),
       "manage_recurring_exclusion.delete": String(localized: .wageyToolExclusionRemoving),
@@ -103,6 +107,13 @@ enum WageyToolLabelResolver {
 
       "manage_profile.view": String(localized: .wageyToolProfileView),
       "manage_profile.update_name": String(localized: .wageyToolProfileUpdateName),
+
+      "manage_account.view_settings": String(localized: .wageyToolManageSettings),
+      "manage_account.update_settings": String(localized: .wageyToolManageSettings),
+      "manage_account.view_profile": String(localized: .wageyToolProfileView),
+      "manage_account.update_name": String(localized: .wageyToolProfileUpdateName),
+      "manage_account.submit_feedback": String(localized: .wageyToolFeedbackSubmit),
+      "manage_account.list_feedback": String(localized: .wageyToolFeedbackList),
     ]
   }
 
@@ -121,6 +132,7 @@ enum WageyToolLabelResolver {
       "manage_recurring_exclusion": String(localized: .wageyToolManageExclusion),
 
       "get_statistics": String(localized: .wageyToolGetStatistics),
+      "manage_account": String(localized: .wageyToolManageSettings),
       "manage_settings": String(localized: .wageyToolManageSettings),
       "get_wage_info": String(localized: .wageyToolGetWageInfo),
       "calculate_earnings": String(localized: .wageyToolCalculateEarnings),

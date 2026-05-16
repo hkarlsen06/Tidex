@@ -424,12 +424,14 @@ private actor WageyStreamWorker {
       return .toolResult(
         toolName: toolName,
         toolCallId: toolCallId,
+        toolArguments: raw.toolArguments,
         result: result,
         success: raw.success ?? true
       )
     case "wagey_built_in_tool_start":
       guard let toolName = raw.toolName, let toolCallId = raw.toolCallId else { return nil }
-      return .builtInToolStart(toolName: toolName, toolCallId: toolCallId)
+      return .builtInToolStart(
+        toolName: toolName, toolCallId: toolCallId, toolArguments: raw.toolArguments)
     case "wagey_built_in_tool_result":
       guard let toolName = raw.toolName,
         let toolCallId = raw.toolCallId,

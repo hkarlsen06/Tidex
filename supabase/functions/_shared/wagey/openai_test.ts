@@ -255,6 +255,103 @@ Deno.test("streamOpenAIChat sends Responses API request shape", async () => {
   }
 });
 
+Deno.test("streamOpenAIChat preserves action-dependent optional tool schemas", async () => {
+  const originalFetch = globalThis.fetch;
+  let capturedBody: Record<string, unknown> | null = null;
+
+  globalThis.fetch = async (_input, init) => {
+    const request = init as { body?: string } | undefined;
+    capturedBody = JSON.parse(request?.body ?? "{}") as Record<
+      string,
+      unknown
+    >;
+    return createSseResponse([
+      {
+        type: "response.completed",
+        response: { status: "completed" },
+      },
+    ]);
+  };
+
+  try {
+    for await (
+      const _chunk of streamOpenAIChat({
+        apiKey: "test-key",
+        model: DEFAULT_OPENAI_MODEL,
+        messages: [{ role: "user", content: "Lag en vakt i morgen" }],
+        tools: [
+          {
+            name: "manage_shift",
+            description: "Create, update, or delete shifts.",
+            input_schema: {
+              type: "object",
+              properties: {
+                action: {
+                  type: "string",
+                  enum: ["create", "update", "delete"],
+                },
+                dates: { type: "array", items: { type: "string" } },
+                start: { type: "string" },
+                end: { type: "string" },
+                shiftId: { type: "string" },
+              },
+              required: ["action"],
+            },
+          },
+          {
+            type: "web_fetch_20260209",
+            name: "web_fetch",
+          },
+          {
+            name: "manage_recurring_exclusion",
+            description: "Add or remove an excluded date.",
+            strict: true,
+            input_schema: {
+              type: "object",
+              properties: {
+                recurringId: { type: "string" },
+                date: { type: "string" },
+                action: { type: "string", enum: ["add", "remove"] },
+              },
+              required: ["recurringId", "date", "action"],
+            },
+          },
+        ],
+      })
+    ) {
+      // Exhaust the stream so the request completes.
+    }
+
+    if (!capturedBody) {
+      throw new Error("Expected OpenAI request body to be captured");
+    }
+
+    const tools = (capturedBody as { tools: Array<Record<string, unknown>> })
+      .tools;
+    const manageShift = tools.find((tool) => tool.name === "manage_shift");
+    const webFetch = tools.find((tool) => tool.name === "web_fetch");
+    const recurringExclusion = tools.find((tool) =>
+      tool.name === "manage_recurring_exclusion"
+    );
+
+    assertEquals(manageShift?.strict, false);
+    assertEquals(recurringExclusion?.strict, true);
+    assertEquals(
+      (recurringExclusion?.parameters as { additionalProperties?: boolean })
+        .additionalProperties,
+      false,
+    );
+    assertEquals(webFetch?.strict, true);
+    assertEquals(
+      (webFetch?.parameters as { additionalProperties?: boolean })
+        .additionalProperties,
+      false,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 Deno.test("streamOpenAIChat serializes assistant history as output_text", async () => {
   const originalFetch = globalThis.fetch;
   let capturedBody: Record<string, unknown> | null = null;

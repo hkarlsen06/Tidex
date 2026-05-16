@@ -12,7 +12,8 @@ export const toolResults = {
   foundShifts: "Found {count} shifts",
   noShiftsFound: "No shifts found for {period}",
   calculatedWages: "Calculated wages for {count} shifts",
-  validatedRecurring: "Validated recurring shift. Will create {count} shifts. No conflicts.",
+  validatedRecurring:
+    "Validated recurring shift. Will create {count} shifts. No conflicts.",
   validatedRecurringConflicts:
     "Validated recurring shift. Will create {count} shifts. Found {conflicts} conflict(s).",
   recurringCreatedSkipped: "Recurring shift created. Conflicts were excluded.",
@@ -23,7 +24,8 @@ export const toolResults = {
   foundRecurringCount: "Found {count} recurring shifts",
   foundWorkplace: "Found {count} workplace",
   foundWorkplaces: "Found {count} workplaces",
-  foundWorkplacesIncludingArchived: "Found {count} workplaces ({archived} archived)",
+  foundWorkplacesIncludingArchived:
+    "Found {count} workplaces ({archived} archived)",
   createdWorkplaceNeedsWageSetup:
     'Created workplace "{name}". This workplace has no wage setup yet. Do you want me to create an initial wage entry now?',
   updatedWorkplace: 'Updated workplace "{name}"',
@@ -82,6 +84,7 @@ export const toolResults = {
   statsThisWeek: "This week statistics",
   statsMonthlyGoal: "Monthly goal status",
   statsSupplementBreakdown: "Supplement breakdown for current month",
+  statsShiftGaps: "Longest gaps between shifts",
   calculatedHypothetical: "Calculated hypothetical earnings for {label}",
   comparedScenarios: "Compared {count} scenarios",
   calculatedChange: "Calculated earnings change: {difference} kr",
@@ -103,10 +106,14 @@ export const toolResults = {
   missingWorkplaceName: "Missing workplace name",
   missingShiftIdOrIds: "Missing shiftId or shiftIds",
   mustProvideField: "Must provide at least one field to update",
-  mustProvideWorkplaceField: "Must provide at least one workplace field to update",
-  mustProvideDateStartEnd: "Must provide at least one field to update (date, start, or end)",
-  mustProvideCategoryAndSettings: "Must provide both 'category' and 'settings' to update",
-  mustSpecifyMode: "Must specify exactly one mode: hypothetical, compare, or hypothetical_change",
+  mustProvideWorkplaceField:
+    "Must provide at least one workplace field to update",
+  mustProvideDateStartEnd:
+    "Must provide at least one field to update (date, start, or end)",
+  mustProvideCategoryAndSettings:
+    "Must provide both 'category' and 'settings' to update",
+  mustSpecifyMode:
+    "Must specify exactly one mode: hypothetical, compare, or hypothetical_change",
   shiftNotFound: "Shift not found: {id}",
   recurringNotFound: "Recurring shift not found: {id}",
   workplaceNotFound: "Workplace not found: {id}",
@@ -121,8 +128,10 @@ export const toolResults = {
   friendNoAccess: "No access to this friend's shifts",
   friendMustShareWithMeFirst:
     "This user must share with you before share_back is allowed.",
-  friendMustBeRecipient: "This action requires someone you share with (recipient).",
-  friendMustBeSharer: "This action requires someone who shares with you (sharer).",
+  friendMustBeRecipient:
+    "This action requires someone you share with (recipient).",
+  friendMustBeSharer:
+    "This action requires someone who shares with you (sharer).",
   noShiftsWithIds: "No shifts found with provided IDs",
   failedAfterAttempts: "Failed after {count} attempts: {error}",
   failedToParseArgs: "Failed to parse arguments: {error}",
