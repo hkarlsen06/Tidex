@@ -339868,277 +339868,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "السماح لـ Wagey بإرسال البيانات إلى Anthropic (Claude AI) للمعالجة"
+            "value" : "السماح لـ Wagey بإرسال البيانات إلى OpenAI (GPT-5.5 AI) للمعالجة"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Позволете на Wagey да изпраща данни на Anthropic (Claude AI) за обработка"
+            "value" : "Позволете на Wagey да изпраща данни на OpenAI (GPT-5.5 AI) за обработка"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey-কে প্রক্রিয়াকরণের জন্য Anthropic (Claude AI)-এ ডেটা পাঠাতে অনুমতি দিন"
+            "value" : "Wagey-কে প্রক্রিয়াকরণের জন্য OpenAI (GPT-5.5 AI)-এ ডেটা পাঠাতে অনুমতি দিন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permet que Wagey envii dades a Anthropic (Claude AI) per al seu processament"
+            "value" : "Permet que Wagey envii dades a OpenAI (GPT-5.5 AI) per al seu processament"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Povolit Wagey odesílat data do Anthropic (Claude AI) ke zpracování"
+            "value" : "Povolit Wagey odesílat data do OpenAI (GPT-5.5 AI) ke zpracování"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillad Wagey at sende data til Anthropic (Claude AI) til behandling"
+            "value" : "Tillad Wagey at sende data til OpenAI (GPT-5.5 AI) til behandling"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Erlaube Wagey, Daten an Anthropic (Claude AI) zur Verarbeitung zu senden"
+            "value" : "Erlaube Wagey, Daten an OpenAI (GPT-5.5 AI) zur Verarbeitung zu senden"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Επιτρέψτε στο Wagey να στείλει δεδομένα στην Anthropic (Claude AI) για επεξεργασία"
+            "value" : "Επιτρέψτε στο Wagey να στείλει δεδομένα στην OpenAI (GPT-5.5 AI) για επεξεργασία"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Allow Wagey to send data to Anthropic (Claude AI) for processing"
+            "value" : "Allow Wagey to send data to OpenAI (GPT-5.5 AI) for processing"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permitir que Wagey envíe datos a Anthropic (Claude IA) para su procesamiento"
+            "value" : "Permitir que Wagey envíe datos a OpenAI (GPT-5.5 IA) para su procesamiento"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Luba Wageyl saata andmeid Anthropicu (Claude AI) töötlemiseks"
+            "value" : "Luba Wageyl saata andmeid OpenAIu (GPT-5.5 AI) töötlemiseks"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اجازه دهید Wagey داده‌ها را به Anthropic (Claude AI) برای پردازش ارسال کند"
+            "value" : "اجازه دهید Wagey داده‌ها را به OpenAI (GPT-5.5 AI) برای پردازش ارسال کند"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salli Wageyn lähettää tiedot Anthropicille (Claude AI) käsiteltäväksi"
+            "value" : "Salli Wageyn lähettää tiedot OpenAIille (GPT-5.5 AI) käsiteltäväksi"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Payagan ang Wagey na magpadala ng data sa Anthropic (Claude AI) para sa pagproseso"
+            "value" : "Payagan ang Wagey na magpadala ng data sa OpenAI (GPT-5.5 AI) para sa pagproseso"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Autoriser Wagey à envoyer des données à Anthropic (Claude AI) pour traitement"
+            "value" : "Autoriser Wagey à envoyer des données à OpenAI (GPT-5.5 AI) pour traitement"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "אפשר ל-Wagey לשלוח נתונים ל-Anthropic (Claude AI) לעיבוד"
+            "value" : "אפשר ל-Wagey לשלוח נתונים ל-OpenAI (GPT-5.5 AI) לעיבוד"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey को Anthropic (Claude AI) को डेटा भेजने की अनुमति दें"
+            "value" : "Wagey को OpenAI (GPT-5.5 AI) को डेटा भेजने की अनुमति दें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dopustite Wageyu da pošalje podatke Anthropicu (Claude AI) na obradu"
+            "value" : "Dopustite Wageyu da pošalje podatke OpenAIu (GPT-5.5 AI) na obradu"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Engedélyezd a Wagey-nek, hogy adatokat küldjön az Anthropic-nak (Claude AI) feldolgozásra"
+            "value" : "Engedélyezd a Wagey-nek, hogy adatokat küldjön az OpenAI-nak (GPT-5.5 AI) feldolgozásra"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Izinkan Wagey mengirim data ke Anthropic (Claude AI) untuk diproses"
+            "value" : "Izinkan Wagey mengirim data ke OpenAI (GPT-5.5 AI) untuk diproses"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leyfa Wagey að senda gögn til Anthropic (Claude AI) til vinnslu"
+            "value" : "Leyfa Wagey að senda gögn til OpenAI (GPT-5.5 AI) til vinnslu"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Consenti a Wagey di inviare dati ad Anthropic (Claude AI) per l'elaborazione"
+            "value" : "Consenti a Wagey di inviare dati ad OpenAI (GPT-5.5 AI) per l'elaborazione"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey が Anthropic（Claude AI）にデータを送信して処理することを許可する"
+            "value" : "Wagey が OpenAI（GPT-5.5 AI）にデータを送信して処理することを許可する"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey가 처리를 위해 Anthropic(Claude AI)으로 데이터를 전송하도록 허용"
+            "value" : "Wagey가 처리를 위해 OpenAI(GPT-5.5 AI)으로 데이터를 전송하도록 허용"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Leisti „Wagey“ siųsti duomenis į „Anthropic“ („Claude AI“) apdoroti"
+            "value" : "Leisti „Wagey“ siųsti duomenis į „OpenAI“ („GPT-5.5 AI“) apdoroti"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Atļaut Wagey nosūtīt datus uz Anthropic (Claude AI) apstrādei"
+            "value" : "Atļaut Wagey nosūtīt datus uz OpenAI (GPT-5.5 AI) apstrādei"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillat Wagey å sende data til Anthropic (Claude AI) for behandling"
+            "value" : "Tillat Wagey å sende data til OpenAI (GPT-5.5 AI) for behandling"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sta toe dat Wagey gegevens naar Anthropic (Claude AI) verzendt voor verwerking"
+            "value" : "Sta toe dat Wagey gegevens naar OpenAI (GPT-5.5 AI) verzendt voor verwerking"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillat Wagey å sende data til Anthropic (Claude AI) for behandling"
+            "value" : "Tillat Wagey å sende data til OpenAI (GPT-5.5 AI) for behandling"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zezwól Wagey na wysyłanie danych do Anthropic (Claude AI) w celu przetworzenia"
+            "value" : "Zezwól Wagey na wysyłanie danych do OpenAI (GPT-5.5 AI) w celu przetworzenia"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permitir que Wagey envie dados ao Anthropic (Claude IA) para processamento"
+            "value" : "Permitir que Wagey envie dados ao OpenAI (GPT-5.5 IA) para processamento"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Permite Wagey să trimită date la Anthropic (Claude AI) pentru procesare"
+            "value" : "Permite Wagey să trimită date la OpenAI (GPT-5.5 AI) pentru procesare"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Разрешить Wagey отправлять данные в Anthropic (Claude AI) для обработки"
+            "value" : "Разрешить Wagey отправлять данные в OpenAI (GPT-5.5 AI) для обработки"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Povoliť Wagey poslať údaje do Anthropic (Claude AI) na spracovanie"
+            "value" : "Povoliť Wagey poslať údaje do OpenAI (GPT-5.5 AI) na spracovanie"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dovoli Wageyju, da pošlje podatke podjetju Anthropic (Claude AI) v obdelavo"
+            "value" : "Dovoli Wageyju, da pošlje podatke podjetju OpenAI (GPT-5.5 AI) v obdelavo"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dozvolite Wagey-u da šalje podatke Anthropic-u (Claude AI) na obradu"
+            "value" : "Dozvolite Wagey-u da šalje podatke OpenAI-u (GPT-5.5 AI) na obradu"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tillåt Wagey att skicka data till Anthropic (Claude AI) för bearbetning"
+            "value" : "Tillåt Wagey att skicka data till OpenAI (GPT-5.5 AI) för bearbetning"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ruhusu Wagey kutuma data kwa Anthropic (Claude AI) kwa ajili ya uchakataji"
+            "value" : "Ruhusu Wagey kutuma data kwa OpenAI (GPT-5.5 AI) kwa ajili ya uchakataji"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey ஆனது தரவை Anthropic (Claude AI) க்கு செயல்படுத்துவதற்காக அனுப்ப அனுமதிக்கவும்"
+            "value" : "Wagey ஆனது தரவை OpenAI (GPT-5.5 AI) க்கு செயல்படுத்துவதற்காக அனுப்ப அனுமதிக்கவும்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "อนุญาตให้ Wagey ส่งข้อมูลไปยัง Anthropic (Claude AI) เพื่อการประมวลผล"
+            "value" : "อนุญาตให้ Wagey ส่งข้อมูลไปยัง OpenAI (GPT-5.5 AI) เพื่อการประมวลผล"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey'in verileri işlenmek üzere Anthropic'e (Claude AI) göndermesine izin verin"
+            "value" : "Wagey'in verileri işlenmek üzere OpenAI'e (GPT-5.5 AI) göndermesine izin verin"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Дозволити Wagey надсилати дані до Anthropic (Claude AI) для обробки"
+            "value" : "Дозволити Wagey надсилати дані до OpenAI (GPT-5.5 AI) для обробки"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey کو Anthropic (Claude AI) کو پروسیسنگ کے لیے ڈیٹا بھیجنے کی اجازت دیں"
+            "value" : "Wagey کو OpenAI (GPT-5.5 AI) کو پروسیسنگ کے لیے ڈیٹا بھیجنے کی اجازت دیں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cho phép Wagey gửi dữ liệu đến Anthropic (Claude AI) để xử lý"
+            "value" : "Cho phép Wagey gửi dữ liệu đến OpenAI (GPT-5.5 AI) để xử lý"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "允许Wagey向Anthropic（Claude AI）发送数据进行处理"
+            "value" : "允许Wagey向OpenAI（GPT-5.5 AI）发送数据进行处理"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "允許 Wagey 將數據發送至 Anthropic（Claude AI）進行處理"
+            "value" : "允許 Wagey 將數據發送至 OpenAI（GPT-5.5 AI）進行處理"
           }
         }
       }
@@ -423044,277 +423044,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يعمل Wagey بواسطة Claude، وهو نموذج ذكاء اصطناعي من Anthropic. لاستخدام Wagey، سيتم إرسال بعض بياناتك إلى Anthropic للمعالجة."
+            "value" : "يعمل Wagey بواسطة GPT-5.5، وهو نموذج ذكاء اصطناعي من OpenAI. لاستخدام Wagey، سيتم إرسال بعض بياناتك إلى OpenAI للمعالجة."
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey работи на Claude, модел на AI от Anthropic. За да използвате Wagey, някои от вашите данни ще бъдат изпратени на Anthropic за обработка."
+            "value" : "Wagey работи на GPT-5.5, модел на AI от OpenAI. За да използвате Wagey, някои от вашите данни ще бъдат изпратени на OpenAI за обработка."
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey Claude দ্বারা চালিত, যা Anthropic-এর একটি AI মডেল। Wagey ব্যবহার করতে আপনার কিছু ডেটা প্রক্রিয়াকরণের জন্য Anthropic-এ পাঠানো হবে।"
+            "value" : "Wagey GPT-5.5 দ্বারা চালিত, যা OpenAI-এর একটি AI মডেল। Wagey ব্যবহার করতে আপনার কিছু ডেটা প্রক্রিয়াকরণের জন্য OpenAI-এ পাঠানো হবে।"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey funciona amb Claude, un model d'IA d'Anthropic. Per utilitzar Wagey, algunas de les teves dades s'enviaran a Anthropic per al seu processament."
+            "value" : "Wagey funciona amb GPT-5.5, un model d'IA d'OpenAI. Per utilitzar Wagey, algunas de les teves dades s'enviaran a OpenAI per al seu processament."
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey je poháněn Claude, AI modelem od Anthropic. Chcete-li používat Wagey, budou některá vaše data odeslána do Anthropic ke zpracování."
+            "value" : "Wagey je poháněn GPT-5.5, AI modelem od OpenAI. Chcete-li používat Wagey, budou některá vaše data odeslána do OpenAI ke zpracování."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey drives af Claude, en AI-model fra Anthropic. For at bruge Wagey vil nogle af dine data blive sendt til Anthropic til behandling."
+            "value" : "Wagey drives af GPT-5.5, en AI-model fra OpenAI. For at bruge Wagey vil nogle af dine data blive sendt til OpenAI til behandling."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey wird von Claude, einem KI-Modell von Anthropic, betrieben. Um Wagey zu nutzen, werden einige deiner Daten an Anthropic zur Verarbeitung gesendet."
+            "value" : "Wagey wird von GPT-5.5, einem KI-Modell von OpenAI, betrieben. Um Wagey zu nutzen, werden einige deiner Daten an OpenAI zur Verarbeitung gesendet."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Το Wagey λειτουργεί με το Claude, ένα μοντέλο AI της Anthropic. Για να χρησιμοποιήσετε το Wagey, ορισμένα από τα δεδομένα σας θα αποσταλούν στην Anthropic για επεξεργασία."
+            "value" : "Το Wagey λειτουργεί με το GPT-5.5, ένα μοντέλο AI της OpenAI. Για να χρησιμοποιήσετε το Wagey, ορισμένα από τα δεδομένα σας θα αποσταλούν στην OpenAI για επεξεργασία."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey is powered by Claude from Anthropic. To use Wagey, some of your data will be sent to Anthropic, which processes it on behalf of Tidex."
+            "value" : "Wagey is powered by GPT-5.5 from OpenAI. To use Wagey, some of your data will be sent to OpenAI, which processes it on behalf of Tidex."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey funciona con Claude, un modelo de IA de Anthropic. Para usar Wagey, algunos de tus datos se enviarán a Anthropic para su procesamiento."
+            "value" : "Wagey funciona con GPT-5.5, un modelo de IA de OpenAI. Para usar Wagey, algunos de tus datos se enviarán a OpenAI para su procesamiento."
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey töötab Claude'il, mis on Anthropicu AI-mudel. Wagey kasutamiseks saadetakse osa teie andmetest Anthropicu töötlemiseks."
+            "value" : "Wagey töötab GPT-5.5'il, mis on OpenAIu AI-mudel. Wagey kasutamiseks saadetakse osa teie andmetest OpenAIu töötlemiseks."
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey توسط Claude، مدل هوش مصنوعی Anthropic، راه‌اندازی شده است. برای استفاده از Wagey، برخی از داده‌های شما به Anthropic برای پردازش ارسال خواهد شد."
+            "value" : "Wagey توسط GPT-5.5، مدل هوش مصنوعی OpenAI، راه‌اندازی شده است. برای استفاده از Wagey، برخی از داده‌های شما به OpenAI برای پردازش ارسال خواهد شد."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey toimii Claude-tekoälymallilla, jonka on kehittänyt Anthropic. Wagey-palvelun käyttämiseksi joitakin tietojasi lähetetään Anthropicille käsiteltäväksi."
+            "value" : "Wagey toimii GPT-5.5-tekoälymallilla, jonka on kehittänyt OpenAI. Wagey-palvelun käyttämiseksi joitakin tietojasi lähetetään OpenAIille käsiteltäväksi."
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ang Wagey ay pinapagana ng Claude, isang AI model ng Anthropic. Upang gamitin ang Wagey, ang ilan sa iyong data ay ipapadala sa Anthropic para sa pagproseso."
+            "value" : "Ang Wagey ay pinapagana ng GPT-5.5, isang AI model ng OpenAI. Upang gamitin ang Wagey, ang ilan sa iyong data ay ipapadala sa OpenAI para sa pagproseso."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey est alimenté par Claude, un modèle IA d'Anthropic. Pour utiliser Wagey, certaines de vos données seront envoyées à Anthropic pour traitement."
+            "value" : "Wagey est alimenté par GPT-5.5, un modèle IA d'OpenAI. Pour utiliser Wagey, certaines de vos données seront envoyées à OpenAI pour traitement."
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey מופעל על ידי Claude, מודל AI של Anthropic. כדי להשתמש ב-Wagey, חלק מהנתונים שלך יישלח ל-Anthropic לעיבוד."
+            "value" : "Wagey מופעל על ידי GPT-5.5, מודל AI של OpenAI. כדי להשתמש ב-Wagey, חלק מהנתונים שלך יישלח ל-OpenAI לעיבוד."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey को Claude द्वारा संचालित किया जाता है, जो Anthropic का एक AI मॉडल है। Wagey का उपयोग करने के लिए, आपके कुछ डेटा को Anthropic को भेजा जाएगा।"
+            "value" : "Wagey को GPT-5.5 द्वारा संचालित किया जाता है, जो OpenAI का एक AI मॉडल है। Wagey का उपयोग करने के लिए, आपके कुछ डेटा को OpenAI को भेजा जाएगा।"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey je pokrenut s Claude-om, AI modelom kompanije Anthropic. Za korištenje Wageya, neki od vaših podataka bit će poslani Anthropicu na obradu."
+            "value" : "Wagey je pokrenut s GPT-5.5-om, AI modelom kompanije OpenAI. Za korištenje Wageya, neki od vaših podataka bit će poslani OpenAIu na obradu."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A Wagey-t a Claude hajtja végre, amely az Anthropic AI-modellje. A Wagey használatához néhány adatod el lesz küldve az Anthropic-nak feldolgozásra."
+            "value" : "A Wagey-t a GPT-5.5 hajtja végre, amely az OpenAI AI-modellje. A Wagey használatához néhány adatod el lesz küldve az OpenAI-nak feldolgozásra."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey didukung oleh Claude, model AI dari Anthropic. Untuk menggunakan Wagey, beberapa data Anda akan dikirim ke Anthropic untuk diproses."
+            "value" : "Wagey didukung oleh GPT-5.5, model AI dari OpenAI. Untuk menggunakan Wagey, beberapa data Anda akan dikirim ke OpenAI untuk diproses."
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey er knúið af Claude, AI-líkani frá Anthropic. Til að nota Wagey verður að senda hluta af gögnum þínum til Anthropic til vinnslu."
+            "value" : "Wagey er knúið af GPT-5.5, AI-líkani frá OpenAI. Til að nota Wagey verður að senda hluta af gögnum þínum til OpenAI til vinnslu."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey è basato su Claude, un modello AI di Anthropic. Per utilizzare Wagey, alcuni dei tuoi dati verranno inviati ad Anthropic per l'elaborazione."
+            "value" : "Wagey è basato su GPT-5.5, un modello AI di OpenAI. Per utilizzare Wagey, alcuni dei tuoi dati verranno inviati ad OpenAI per l'elaborazione."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey は Anthropic の AI モデル Claude によって提供されています。Wagey を使用するには、お客様のデータの一部が Anthropic に送信され、処理されます。"
+            "value" : "Wagey は OpenAI の AI モデル GPT-5.5 によって提供されています。Wagey を使用するには、お客様のデータの一部が OpenAI に送信され、処理されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey는 Anthropic의 AI 모델인 Claude로 구동됩니다. Wagey를 사용하려면 일부 데이터가 처리를 위해 Anthropic으로 전송됩니다."
+            "value" : "Wagey는 OpenAI의 AI 모델인 GPT-5.5로 구동됩니다. Wagey를 사용하려면 일부 데이터가 처리를 위해 OpenAI으로 전송됩니다."
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„Wagey“ naudoja „Claude“, „Anthropic“ AI modelį, atsakymams generuoti. Norint naudoti „Wagey“, dalis jūsų duomenų bus siunčiama į „Anthropic“ apdoroti."
+            "value" : "„Wagey“ naudoja „GPT-5.5“, „OpenAI“ AI modelį, atsakymams generuoti. Norint naudoti „Wagey“, dalis jūsų duomenų bus siunčiama į „OpenAI“ apdoroti."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey darbojas, izmantojot Claude, Anthropic izstrādātu AI modeli. Lai izmantotu Wagey, daži jūsu dati tiks nosūtīti uz Anthropic apstrādei."
+            "value" : "Wagey darbojas, izmantojot GPT-5.5, OpenAI izstrādātu AI modeli. Lai izmantotu Wagey, daži jūsu dati tiks nosūtīti uz OpenAI apstrādei."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey drives av Claude fra Anthropic. For å bruke Wagey blir noen av dataene dine sendt til Anthropic, som behandler dem på vegne av Tidex."
+            "value" : "Wagey drives av GPT-5.5 fra OpenAI. For å bruke Wagey blir noen av dataene dine sendt til OpenAI, som behandler dem på vegne av Tidex."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey wordt aangestuurd door Claude, een AI-model van Anthropic. Om Wagey te gebruiken, worden enkele van uw gegevens naar Anthropic verzonden voor verwerking."
+            "value" : "Wagey wordt aangestuurd door GPT-5.5, een AI-model van OpenAI. Om Wagey te gebruiken, worden enkele van uw gegevens naar OpenAI verzonden voor verwerking."
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey drives av Claude, ein AI-modell frå Anthropic. For å bruke Wagey vil nokre av dataa dine bli sendt til Anthropic for behandling."
+            "value" : "Wagey drives av GPT-5.5, ein AI-modell frå OpenAI. For å bruke Wagey vil nokre av dataa dine bli sendt til OpenAI for behandling."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey jest wspierana przez Claude, model AI firmy Anthropic. Aby korzystać z Wagey, niektóre Twoje dane będą wysyłane do Anthropic w celu przetworzenia."
+            "value" : "Wagey jest wspierana przez GPT-5.5, model AI firmy OpenAI. Aby korzystać z Wagey, niektóre Twoje dane będą wysyłane do OpenAI w celu przetworzenia."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey é movido por Claude, um modelo de IA do Anthropic. Para usar o Wagey, alguns de seus dados serão enviados ao Anthropic para processamento."
+            "value" : "Wagey é movido por GPT-5.5, um modelo de IA do OpenAI. Para usar o Wagey, alguns de seus dados serão enviados ao OpenAI para processamento."
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey funcționează pe baza Claude, un model AI de la Anthropic. Pentru a utiliza Wagey, unele dintre datele tale vor fi trimise la Anthropic pentru procesare."
+            "value" : "Wagey funcționează pe baza GPT-5.5, un model AI de la OpenAI. Pentru a utiliza Wagey, unele dintre datele tale vor fi trimise la OpenAI pentru procesare."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey работает на Claude, модели ИИ от Anthropic. Для использования Wagey некоторые ваши данные будут отправлены в Anthropic для обработки."
+            "value" : "Wagey работает на GPT-5.5, модели ИИ от OpenAI. Для использования Wagey некоторые ваши данные будут отправлены в OpenAI для обработки."
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey je poháňaný Claude, AI modelom od Anthropic. Aby ste mohli používať Wagey, niektoré vaše údaje budú poslané do Anthropic na spracovanie."
+            "value" : "Wagey je poháňaný GPT-5.5, AI modelom od OpenAI. Aby ste mohli používať Wagey, niektoré vaše údaje budú poslané do OpenAI na spracovanie."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey poganja Claude, model umetne inteligence podjetja Anthropic. Za uporabo Wageyja bodo nekateri vaši podatki poslani podjetju Anthropic v obdelavo."
+            "value" : "Wagey poganja GPT-5.5, model umetne inteligence podjetja OpenAI. Za uporabo Wageyja bodo nekateri vaši podatki poslani podjetju OpenAI v obdelavo."
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey je pokrenut od strane Claude-a, AI modela kompanije Anthropic. Da biste koristili Wagey, neki od vaših podataka biće poslati Anthropic-u na obradu."
+            "value" : "Wagey je pokrenut od strane GPT-5.5-a, AI modela kompanije OpenAI. Da biste koristili Wagey, neki od vaših podataka biće poslati OpenAI-u na obradu."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey drivs av Claude, en AI-modell från Anthropic. För att använda Wagey kommer en del av dina data att skickas till Anthropic för bearbetning."
+            "value" : "Wagey drivs av GPT-5.5, en AI-modell från OpenAI. För att använda Wagey kommer en del av dina data att skickas till OpenAI för bearbetning."
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey inayumbishwa na Claude, mfano wa AI kutoka Anthropic. Ili kutumia Wagey, baadhi ya data yako itatolewa kwa Anthropic kwa ajili ya uchakataji."
+            "value" : "Wagey inayumbishwa na GPT-5.5, mfano wa AI kutoka OpenAI. Ili kutumia Wagey, baadhi ya data yako itatolewa kwa OpenAI kwa ajili ya uchakataji."
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey ஆனது Claude மூலம் இயங்குகிறது, இது Anthropic இன் AI மாதிரி. Wagey ஐ பயன்படுத்த, உங்கள் சில தரவு செயல்படுத்துவதற்காக Anthropic க்கு அனுப்பப்படும்."
+            "value" : "Wagey ஆனது GPT-5.5 மூலம் இயங்குகிறது, இது OpenAI இன் AI மாதிரி. Wagey ஐ பயன்படுத்த, உங்கள் சில தரவு செயல்படுத்துவதற்காக OpenAI க்கு அனுப்பப்படும்."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey ขับเคลื่อนโดย Claude ซึ่งเป็นโมเดล AI จาก Anthropic เพื่อใช้ Wagey ข้อมูลบางส่วนของคุณจะถูกส่งไปยัง Anthropic เพื่อการประมวลผล"
+            "value" : "Wagey ขับเคลื่อนโดย GPT-5.5 ซึ่งเป็นโมเดล AI จาก OpenAI เพื่อใช้ Wagey ข้อมูลบางส่วนของคุณจะถูกส่งไปยัง OpenAI เพื่อการประมวลผล"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey, Anthropic tarafından geliştirilen Claude adlı bir yapay zeka modeli tarafından desteklenmektedir. Wagey'i kullanmak için verilerinizin bir kısmı Anthropic'e işlenmek üzere gönderilecektir."
+            "value" : "Wagey, OpenAI tarafından geliştirilen GPT-5.5 adlı bir yapay zeka modeli tarafından desteklenmektedir. Wagey'i kullanmak için verilerinizin bir kısmı OpenAI'e işlenmek üzere gönderilecektir."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey працює на базі Claude, моделі AI від Anthropic. Щоб користуватися Wagey, деякі ваші дані будуть надіслані до Anthropic для обробки."
+            "value" : "Wagey працює на базі GPT-5.5, моделі AI від OpenAI. Щоб користуватися Wagey, деякі ваші дані будуть надіслані до OpenAI для обробки."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey کو Claude نے طاقت دی ہے، جو Anthropic کا ایک AI ماڈل ہے۔ Wagey استعمال کرنے کے لیے، آپ کا کچھ ڈیٹا Anthropic کو پروسیسنگ کے لیے بھیجا جائے گا۔"
+            "value" : "Wagey کو GPT-5.5 نے طاقت دی ہے، جو OpenAI کا ایک AI ماڈل ہے۔ Wagey استعمال کرنے کے لیے، آپ کا کچھ ڈیٹا OpenAI کو پروسیسنگ کے لیے بھیجا جائے گا۔"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey được cung cấp bởi Claude, một mô hình AI của Anthropic. Để sử dụng Wagey, một số dữ liệu của bạn sẽ được gửi đến Anthropic để xử lý."
+            "value" : "Wagey được cung cấp bởi GPT-5.5, một mô hình AI của OpenAI. Để sử dụng Wagey, một số dữ liệu của bạn sẽ được gửi đến OpenAI để xử lý."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey由Anthropic的AI模型Claude驱动。要使用Wagey，您的部分数据将被发送到Anthropic进行处理。"
+            "value" : "Wagey由OpenAI的AI模型GPT-5.5驱动。要使用Wagey，您的部分数据将被发送到OpenAI进行处理。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wagey 由 Anthropic 的 AI 模型 Claude 驅動。若要使用 Wagey，您的部分數據將被發送至 Anthropic 進行處理。"
+            "value" : "Wagey 由 OpenAI 的 AI 模型 GPT-5.5 驅動。若要使用 Wagey，您的部分數據將被發送至 OpenAI 進行處理。"
           }
         }
       }
@@ -423606,277 +423606,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "سياسة خصوصية Anthropic"
+            "value" : "سياسة خصوصية OpenAI"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Политика за поверителност на Anthropic"
+            "value" : "Политика за поверителност на OpenAI"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic-এর গোপনীয়তা নীতি"
+            "value" : "OpenAI-এর গোপনীয়তা নীতি"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Política de privacitat d'Anthropic"
+            "value" : "Política de privacitat d'OpenAI"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Prohlášení společnosti Anthropic o ochraně osobních údajů"
+            "value" : "Prohlášení společnosti OpenAI o ochraně osobních údajů"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropics privatlivspolitik"
+            "value" : "OpenAIs privatlivspolitik"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropics Datenschutzrichtlinie"
+            "value" : "OpenAIs Datenschutzrichtlinie"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Πολιτική απορρήτου της Anthropic"
+            "value" : "Πολιτική απορρήτου της OpenAI"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic Privacy Policy"
+            "value" : "OpenAI Privacy Policy"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Política de privacidad de Anthropic"
+            "value" : "Política de privacidad de OpenAI"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropicu privaatsuspoliitika"
+            "value" : "OpenAIu privaatsuspoliitika"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "سیاست حریم‌خصوصی Anthropic"
+            "value" : "سیاست حریم‌خصوصی OpenAI"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropicin tietosuojakäytäntö"
+            "value" : "OpenAIin tietosuojakäytäntö"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ang Privacy Policy ng Anthropic"
+            "value" : "Ang Privacy Policy ng OpenAI"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Politique de confidentialité d'Anthropic"
+            "value" : "Politique de confidentialité d'OpenAI"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "מדיניות הפרטיות של Anthropic"
+            "value" : "מדיניות הפרטיות של OpenAI"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic की गोपनीयता नीति"
+            "value" : "OpenAI की गोपनीयता नीति"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropicova Politika privatnosti"
+            "value" : "OpenAIova Politika privatnosti"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Az Anthropic adatvédelmi irányelvei"
+            "value" : "Az OpenAI adatvédelmi irányelvei"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kebijakan Privasi Anthropic"
+            "value" : "Kebijakan Privasi OpenAI"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Persónuverndstefna Anthropic"
+            "value" : "Persónuverndstefna OpenAI"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Informativa sulla privacy di Anthropic"
+            "value" : "Informativa sulla privacy di OpenAI"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic のプライバシーポリシー"
+            "value" : "OpenAI のプライバシーポリシー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic의 개인정보처리방침"
+            "value" : "OpenAI의 개인정보처리방침"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "„Anthropic“ privatumo politika"
+            "value" : "„OpenAI“ privatumo politika"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic privātuma politika"
+            "value" : "OpenAI privātuma politika"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic personvernerklæring"
+            "value" : "OpenAI personvernerklæring"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropics privacybeleid"
+            "value" : "OpenAIs privacybeleid"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropics personvernerklæring"
+            "value" : "OpenAIs personvernerklæring"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Polityka prywatności Anthropic"
+            "value" : "Polityka prywatności OpenAI"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Política de Privacidade do Anthropic"
+            "value" : "Política de Privacidade do OpenAI"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Politica de confidențialitate a Anthropic"
+            "value" : "Politica de confidențialitate a OpenAI"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Политика конфиденциальности Anthropic"
+            "value" : "Политика конфиденциальности OpenAI"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vyhlásenie Anthropic o ochrane osobných údajov"
+            "value" : "Vyhlásenie OpenAI o ochrane osobných údajov"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Politika zasebnosti podjetja Anthropic"
+            "value" : "Politika zasebnosti podjetja OpenAI"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic-ova politika privatnosti"
+            "value" : "OpenAI-ova politika privatnosti"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropics integritetspolicy"
+            "value" : "OpenAIs integritetspolicy"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sera ya Faragha ya Anthropic"
+            "value" : "Sera ya Faragha ya OpenAI"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic இன் தனியுரிமை கொள்கை"
+            "value" : "OpenAI இன் தனியுரிமை கொள்கை"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "นโยบายความเป็นส่วนตัวของ Anthropic"
+            "value" : "นโยบายความเป็นส่วนตัวของ OpenAI"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic'in Gizlilik Politikası"
+            "value" : "OpenAI'in Gizlilik Politikası"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Політика конфіденційності Anthropic"
+            "value" : "Політика конфіденційності OpenAI"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic کی رازداری کی پالیسی"
+            "value" : "OpenAI کی رازداری کی پالیسی"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chính sách bảo mật của Anthropic"
+            "value" : "Chính sách bảo mật của OpenAI"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic的隐私政策"
+            "value" : "OpenAI的隐私政策"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anthropic 隱私政策"
+            "value" : "OpenAI 隱私政策"
           }
         }
       }
@@ -423887,277 +423887,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "يتم إرسال هذه البيانات إلى Anthropic، وهي جهة خارجية لتوفير خدمات الذكاء الاصطناعي مقرها في الولايات المتحدة. تعالج Anthropic هذه البيانات لتوليد الردود ولا تستخدمها لتدريب نماذج الذكاء الاصطناعي."
+            "value" : "يتم إرسال هذه البيانات إلى OpenAI، وهي جهة خارجية لتوفير خدمات الذكاء الاصطناعي مقرها في الولايات المتحدة. تعالج OpenAI هذه البيانات لتوليد الردود ولا تستخدمها لتدريب نماذج الذكاء الاصطناعي."
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Тези данни се изпращат на Anthropic, доставчик на услуги за AI от трета страна, базиран в САЩ. Anthropic обработва тези данни, за да генерира отговори, и не ги използва за обучение на модели на AI."
+            "value" : "Тези данни се изпращат на OpenAI, доставчик на услуги за AI от трета страна, базиран в САЩ. OpenAI обработва тези данни, за да генерира отговори, и не ги използва за обучение на модели на AI."
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "এই ডেটা Anthropic-এ পাঠানো হয়, যা মার্কিন যুক্তরাষ্ট্রে অবস্থিত একটি তৃতীয় পক্ষের AI সেবা প্রদানকারী। Anthropic এই ডেটা প্রক্রিয়া করে প্রতিক্রিয়া তৈরি করে এবং এটি AI মডেল প্রশিক্ষণের জন্য ব্যবহার করে না।"
+            "value" : "এই ডেটা OpenAI-এ পাঠানো হয়, যা মার্কিন যুক্তরাষ্ট্রে অবস্থিত একটি তৃতীয় পক্ষের AI সেবা প্রদানকারী। OpenAI এই ডেটা প্রক্রিয়া করে প্রতিক্রিয়া তৈরি করে এবং এটি AI মডেল প্রশিক্ষণের জন্য ব্যবহার করে না।"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aquestes dades s'envien a Anthropic, un proveïdor de serveis d'IA tercers amb seu als Estats Units. Anthropic processa aquestes dades per generar respostes i no les utilitza per entrenar models d'IA."
+            "value" : "Aquestes dades s'envien a OpenAI, un proveïdor de serveis d'IA tercers amb seu als Estats Units. OpenAI processa aquestes dades per generar respostes i no les utilitza per entrenar models d'IA."
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tato data jsou odeslána společnosti Anthropic, poskytovateli služeb AI třetí strany se sídlem ve Spojených státech. Anthropic tato data zpracovává pro generování odpovědí a nepoužívá je k trénování AI modelů."
+            "value" : "Tato data jsou odeslána společnosti OpenAI, poskytovateli služeb AI třetí strany se sídlem ve Spojených státech. OpenAI tato data zpracovává pro generování odpovědí a nepoužívá je k trénování AI modelů."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disse data sendes til Anthropic, en tredjepartsaileverandør baseret i USA. Anthropic behandler disse data for at generere svar og bruger dem ikke til at træne AI-modeller."
+            "value" : "Disse data sendes til OpenAI, en tredjepartsaileverandør baseret i USA. OpenAI behandler disse data for at generere svar og bruger dem ikke til at træne AI-modeller."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Diese Daten werden an Anthropic, einen Drittanbieter von KI-Diensten mit Sitz in den USA, gesendet. Anthropic verarbeitet diese Daten, um Antworten zu generieren, und nutzt sie nicht zum Trainieren von KI-Modellen."
+            "value" : "Diese Daten werden an OpenAI, einen Drittanbieter von KI-Diensten mit Sitz in den USA, gesendet. OpenAI verarbeitet diese Daten, um Antworten zu generieren, und nutzt sie nicht zum Trainieren von KI-Modellen."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Αυτά τα δεδομένα αποστέλλονται στην Anthropic, έναν τρίτο πάροχο υπηρεσιών AI με έδρα τις Ηνωμένες Πολιτείες. Η Anthropic επεξεργάζεται αυτά τα δεδομένα για να δημιουργήσει απαντήσεις και δεν τα χρησιμοποιεί για την εκπαίδευση μοντέλων AI."
+            "value" : "Αυτά τα δεδομένα αποστέλλονται στην OpenAI, έναν τρίτο πάροχο υπηρεσιών AI με έδρα τις Ηνωμένες Πολιτείες. Η OpenAI επεξεργάζεται αυτά τα δεδομένα για να δημιουργήσει απαντήσεις και δεν τα χρησιμοποιεί για την εκπαίδευση μοντέλων AI."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This data is sent to Anthropic, a third-party AI provider based in the United States. For Wagey, Anthropic acts as a processor on behalf of Tidex to generate responses and does not use this data to train generative models unless Tidex explicitly opts in."
+            "value" : "This data is sent to OpenAI, a third-party AI provider based in the United States. For Wagey, OpenAI acts as a processor on behalf of Tidex to generate responses and does not use this data to train generative models unless Tidex explicitly opts in."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Estos datos se envían a Anthropic, un proveedor de servicios de IA de terceros con sede en Estados Unidos. Anthropic procesa estos datos para generar respuestas y no los utiliza para entrenar modelos de IA."
+            "value" : "Estos datos se envían a OpenAI, un proveedor de servicios de IA de terceros con sede en Estados Unidos. OpenAI procesa estos datos para generar respuestas y no los utiliza para entrenar modelos de IA."
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Need andmed saadetakse Anthropicu, USA-s asuva kolmanda osapoole AI-teenuse pakkujale. Anthropic töötleb neid andmeid vastuste genereerimiseks ja ei kasuta neid AI-mudelite koolitamiseks."
+            "value" : "Need andmed saadetakse OpenAIu, USA-s asuva kolmanda osapoole AI-teenuse pakkujale. OpenAI töötleb neid andmeid vastuste genereerimiseks ja ei kasuta neid AI-mudelite koolitamiseks."
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "این داده‌ها به Anthropic، یک ارائه‌دهنده سرویس هوش مصنوعی شخص ثالث مستقر در ایالات متحده، ارسال می‌شوند. Anthropic این داده‌ها را برای تولید پاسخ پردازش می‌کند و از آن‌ها برای آموزش مدل‌های هوش مصنوعی استفاده نمی‌کند."
+            "value" : "این داده‌ها به OpenAI، یک ارائه‌دهنده سرویس هوش مصنوعی شخص ثالث مستقر در ایالات متحده، ارسال می‌شوند. OpenAI این داده‌ها را برای تولید پاسخ پردازش می‌کند و از آن‌ها برای آموزش مدل‌های هوش مصنوعی استفاده نمی‌کند."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nämä tiedot lähetetään Anthropicille, kolmannen osapuolen AI-palveluntarjoajalle, joka sijaitsee Yhdysvalloissa. Anthropic käsittelee näitä tietoja vastausten luomiseksi eikä käytä niitä tekoälymallien kouluttamiseen."
+            "value" : "Nämä tiedot lähetetään OpenAIille, kolmannen osapuolen AI-palveluntarjoajalle, joka sijaitsee Yhdysvalloissa. OpenAI käsittelee näitä tietoja vastausten luomiseksi eikä käytä niitä tekoälymallien kouluttamiseen."
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ang data na ito ay ipinapadala sa Anthropic, isang third-party AI service provider na nakabase sa United States. Ginagamit ng Anthropic ang data na ito upang lumikha ng mga tugon at hindi ito ginagamit upang pagsanayin ang mga AI model."
+            "value" : "Ang data na ito ay ipinapadala sa OpenAI, isang third-party AI service provider na nakabase sa United States. Ginagamit ng OpenAI ang data na ito upang lumikha ng mga tugon at hindi ito ginagamit upang pagsanayin ang mga AI model."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ces données sont envoyées à Anthropic, un fournisseur de services IA tiers basé aux États-Unis. Anthropic traite ces données pour générer des réponses et ne les utilise pas pour entraîner des modèles IA."
+            "value" : "Ces données sont envoyées à OpenAI, un fournisseur de services IA tiers basé aux États-Unis. OpenAI traite ces données pour générer des réponses et ne les utilise pas pour entraîner des modèles IA."
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "נתונים אלה נשלחים ל-Anthropic, ספק שירות AI של צד שלישי שמבוסס בארצות הברית. Anthropic מעבד נתונים אלה כדי ליצור תגובות ואינו משתמש בהם לאימון מודלי AI."
+            "value" : "נתונים אלה נשלחים ל-OpenAI, ספק שירות AI של צד שלישי שמבוסס בארצות הברית. OpenAI מעבד נתונים אלה כדי ליצור תגובות ואינו משתמש בהם לאימון מודלי AI."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "यह डेटा Anthropic को भेजा जाता है, जो संयुक्त राज्य अमेरिका में स्थित एक तृतीय-पक्ष AI सेवा प्रदाता है। Anthropic इस डेटा को प्रतिक्रियाएं उत्पन्न करने के लिए संसाधित करता है और इसे AI मॉडल को प्रशिक्षित करने के लिए उपयोग नहीं करता है।"
+            "value" : "यह डेटा OpenAI को भेजा जाता है, जो संयुक्त राज्य अमेरिका में स्थित एक तृतीय-पक्ष AI सेवा प्रदाता है। OpenAI इस डेटा को प्रतिक्रियाएं उत्पन्न करने के लिए संसाधित करता है और इसे AI मॉडल को प्रशिक्षित करने के लिए उपयोग नहीं करता है।"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ti se podaci šalju Anthropicu, davatelju AI usluga trećih strana sa sjedištem u Sjedinjenim Državama. Anthropic obrađuje te podatke kako bi generirao odgovore i ne koristi ih za obuku AI modela."
+            "value" : "Ti se podaci šalju OpenAIu, davatelju AI usluga trećih strana sa sjedištem u Sjedinjenim Državama. OpenAI obrađuje te podatke kako bi generirao odgovore i ne koristi ih za obuku AI modela."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ezeket az adatokat az Anthropic-nak küldjük el, amely egy Egyesült Államokban működő harmadik fél AI-szolgáltatást nyújtó vállalat. Az Anthropic ezeket az adatokat válaszok generálására dolgozza fel, és nem használja őket AI-modellek betanítására."
+            "value" : "Ezeket az adatokat az OpenAI-nak küldjük el, amely egy Egyesült Államokban működő harmadik fél AI-szolgáltatást nyújtó vállalat. Az OpenAI ezeket az adatokat válaszok generálására dolgozza fel, és nem használja őket AI-modellek betanítására."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Data ini dikirim ke Anthropic, penyedia layanan AI pihak ketiga yang berbasis di Amerika Serikat. Anthropic memproses data ini untuk menghasilkan respons dan tidak menggunakannya untuk melatih model AI."
+            "value" : "Data ini dikirim ke OpenAI, penyedia layanan AI pihak ketiga yang berbasis di Amerika Serikat. OpenAI memproses data ini untuk menghasilkan respons dan tidak menggunakannya untuk melatih model AI."
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Þessi gögn eru send til Anthropic, þriðju aðila AI-þjónustuveitanda með aðsetur í Bandaríkjunum. Anthropic vinnur þessi gögn til að búa til svör og notar þau ekki til að þjálfa AI-líkön."
+            "value" : "Þessi gögn eru send til OpenAI, þriðju aðila AI-þjónustuveitanda með aðsetur í Bandaríkjunum. OpenAI vinnur þessi gögn til að búa til svör og notar þau ekki til að þjálfa AI-líkön."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questi dati vengono inviati ad Anthropic, un fornitore di servizi AI di terze parti con sede negli Stati Uniti. Anthropic elabora questi dati per generare risposte e non li utilizza per addestrare modelli di AI."
+            "value" : "Questi dati vengono inviati ad OpenAI, un fornitore di servizi AI di terze parti con sede negli Stati Uniti. OpenAI elabora questi dati per generare risposte e non li utilizza per addestrare modelli di AI."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このデータは、米国に拠点を置くサードパーティ AI サービスプロバイダー Anthropic に送信されます。Anthropic はこのデータを処理して応答を生成し、AI モデルのトレーニングには使用しません。"
+            "value" : "このデータは、米国に拠点を置くサードパーティ AI サービスプロバイダー OpenAI に送信されます。OpenAI はこのデータを処理して応答を生成し、AI モデルのトレーニングには使用しません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 데이터는 미국을 기반으로 하는 제3자 AI 서비스 제공업체인 Anthropic으로 전송됩니다. Anthropic은 이 데이터를 처리하여 응답을 생성하며 AI 모델 학습에 사용하지 않습니다."
+            "value" : "이 데이터는 미국을 기반으로 하는 제3자 AI 서비스 제공업체인 OpenAI으로 전송됩니다. OpenAI은 이 데이터를 처리하여 응답을 생성하며 AI 모델 학습에 사용하지 않습니다."
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Šie duomenys siunčiami į „Anthropic“, trečiosios šalies DI paslaugų teikėją Jungtinėse Valstijose. „Anthropic“ apdoroja šiuos duomenis atsakymams generuoti ir nenaudoja jų DI modeliams mokyti."
+            "value" : "Šie duomenys siunčiami į „OpenAI“, trečiosios šalies DI paslaugų teikėją Jungtinėse Valstijose. „OpenAI“ apdoroja šiuos duomenis atsakymams generuoti ir nenaudoja jų DI modeliams mokyti."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Šie dati tiek nosūtīti uz Anthropic, trešās puses AI pakalpojumu sniedzēju, kas atrodas Amerikas Savienotajās Valstīs. Anthropic apstrādā šos datus, lai ģenerētu atbildes, un tos neizmanto AI modeļu apmācībai."
+            "value" : "Šie dati tiek nosūtīti uz OpenAI, trešās puses AI pakalpojumu sniedzēju, kas atrodas Amerikas Savienotajās Valstīs. OpenAI apstrādā šos datus, lai ģenerētu atbildes, un tos neizmanto AI modeļu apmācībai."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disse dataene sendes til Anthropic, en tredjeparts AI-leverandør basert i USA. For Wagey opptrer Anthropic som databehandler på vegne av Tidex for å generere svar, og bruker ikke disse dataene til å trene generative modeller med mindre Tidex uttrykkelig melder seg på det."
+            "value" : "Disse dataene sendes til OpenAI, en tredjeparts AI-leverandør basert i USA. For Wagey opptrer OpenAI som databehandler på vegne av Tidex for å generere svar, og bruker ikke disse dataene til å trene generative modeller med mindre Tidex uttrykkelig melder seg på det."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deze gegevens worden verzonden naar Anthropic, een externe AI-serviceprovider gevestigd in de Verenigde Staten. Anthropic verwerkt deze gegevens om antwoorden te genereren en gebruikt deze niet voor het trainen van AI-modellen."
+            "value" : "Deze gegevens worden verzonden naar OpenAI, een externe AI-serviceprovider gevestigd in de Verenigde Staten. OpenAI verwerkt deze gegevens om antwoorden te genereren en gebruikt deze niet voor het trainen van AI-modellen."
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desse dataa blir sendt til Anthropic, ein tredjeparts AI-tjenesteleverandør basert i USA. Anthropic behandlar desse dataa for å generere svar og brukar dei ikkje til å treene AI-modellar."
+            "value" : "Desse dataa blir sendt til OpenAI, ein tredjeparts AI-tjenesteleverandør basert i USA. OpenAI behandlar desse dataa for å generere svar og brukar dei ikkje til å treene AI-modellar."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Te dane są wysyłane do Anthropic, zewnętrznego dostawcy usług AI z siedzibą w Stanach Zjednoczonych. Anthropic przetwarza te dane w celu generowania odpowiedzi i nie wykorzystuje ich do trenowania modeli AI."
+            "value" : "Te dane są wysyłane do OpenAI, zewnętrznego dostawcy usług AI z siedzibą w Stanach Zjednoczonych. OpenAI przetwarza te dane w celu generowania odpowiedzi i nie wykorzystuje ich do trenowania modeli AI."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esses dados são enviados ao Anthropic, um provedor de serviço de IA terceirizado baseado nos Estados Unidos. O Anthropic processa esses dados para gerar respostas e não os usa para treinar modelos de IA."
+            "value" : "Esses dados são enviados ao OpenAI, um provedor de serviço de IA terceirizado baseado nos Estados Unidos. O OpenAI processa esses dados para gerar respostas e não os usa para treinar modelos de IA."
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aceste date sunt trimise la Anthropic, un furnizor de servicii AI terță parte cu sediul în Statele Unite. Anthropic procesează aceste date pentru a genera răspunsuri și nu le folosește pentru a antrena modele AI."
+            "value" : "Aceste date sunt trimise la OpenAI, un furnizor de servicii AI terță parte cu sediul în Statele Unite. OpenAI procesează aceste date pentru a genera răspunsuri și nu le folosește pentru a antrena modele AI."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Эти данные отправляются в Anthropic, поставщика услуг ИИ третьей стороны, базирующегося в США. Anthropic обрабатывает эти данные для создания ответов и не использует их для обучения моделей ИИ."
+            "value" : "Эти данные отправляются в OpenAI, поставщика услуг ИИ третьей стороны, базирующегося в США. OpenAI обрабатывает эти данные для создания ответов и не использует их для обучения моделей ИИ."
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tieto údaje sú zaslané do Anthropic, poskytovateľa služieb AI tretej strany so sídlom v Spojených štátoch. Anthropic spracováva tieto údaje na generovanie odpovedí a nepoužíva ich na trénovanie AI modelov."
+            "value" : "Tieto údaje sú zaslané do OpenAI, poskytovateľa služieb AI tretej strany so sídlom v Spojených štátoch. OpenAI spracováva tieto údaje na generovanie odpovedí a nepoužíva ich na trénovanie AI modelov."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ti podatki se pošljejo podjetju Anthropic, tretjemu ponudniku storitve AI s sedežem v Združenih državah. Anthropic te podatke obdeluje za generiranje odgovorov in jih ne uporablja za usposabljanje modelov umetne inteligence."
+            "value" : "Ti podatki se pošljejo podjetju OpenAI, tretjemu ponudniku storitve AI s sedežem v Združenih državah. OpenAI te podatke obdeluje za generiranje odgovorov in jih ne uporablja za usposabljanje modelov umetne inteligence."
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ti podaci se šalju Anthropic-u, trećoj strani pružaoca AI servisa sa sedištem u Sjedinjenim Američkim Državama. Anthropic obrađuje ove podatke da bi generiusao odgovore i ne koristi ih za obuku AI modela."
+            "value" : "Ti podaci se šalju OpenAI-u, trećoj strani pružaoca AI servisa sa sedištem u Sjedinjenim Američkim Državama. OpenAI obrađuje ove podatke da bi generiusao odgovore i ne koristi ih za obuku AI modela."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dessa data skickas till Anthropic, en tredjepartsbaserad AI-tjänsteleverantör i USA. Anthropic behandlar dessa data för att generera svar och använder dem inte för att träna AI-modeller."
+            "value" : "Dessa data skickas till OpenAI, en tredjepartsbaserad AI-tjänsteleverantör i USA. OpenAI behandlar dessa data för att generera svar och använder dem inte för att träna AI-modeller."
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Data hii inatumwa kwa Anthropic, mtoa huduma wa AI wa tatu kulingana na Marekani. Anthropic inachakaza data hii ili kutengeneza majibu na haitumii kufunza mifano ya AI."
+            "value" : "Data hii inatumwa kwa OpenAI, mtoa huduma wa AI wa tatu kulingana na Marekani. OpenAI inachakaza data hii ili kutengeneza majibu na haitumii kufunza mifano ya AI."
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "இந்த தரவு Anthropic க்கு அனுப்பப்படுகிறது, இது USA வைத்திருக்கும் மூன்றாம் தரப்பு AI சேவை வழங்குநர். Anthropic இந்த தரவைச் செயல்படுத்தி பதிலளிக்கும் பொருட்டு பயன்படுத்துகிறது மற்றும் AI மாதிரிகளை பயிற்றுவிப்பதற்கு அதைப் பயன்படுத்துவதில்லை."
+            "value" : "இந்த தரவு OpenAI க்கு அனுப்பப்படுகிறது, இது USA வைத்திருக்கும் மூன்றாம் தரப்பு AI சேவை வழங்குநர். OpenAI இந்த தரவைச் செயல்படுத்தி பதிலளிக்கும் பொருட்டு பயன்படுத்துகிறது மற்றும் AI மாதிரிகளை பயிற்றுவிப்பதற்கு அதைப் பயன்படுத்துவதில்லை."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ข้อมูลนี้ถูกส่งไปยัง Anthropic ซึ่งเป็นผู้ให้บริการ AI บุคคลที่สามที่ตั้งอยู่ในสหรัฐอเมริกา Anthropic ประมวลผลข้อมูลนี้เพื่อสร้างการตอบกลับและไม่ใช้ข้อมูลนี้เพื่อฝึกโมเดล AI"
+            "value" : "ข้อมูลนี้ถูกส่งไปยัง OpenAI ซึ่งเป็นผู้ให้บริการ AI บุคคลที่สามที่ตั้งอยู่ในสหรัฐอเมริกา OpenAI ประมวลผลข้อมูลนี้เพื่อสร้างการตอบกลับและไม่ใช้ข้อมูลนี้เพื่อฝึกโมเดล AI"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu veriler, Amerika Birleşik Devletleri'nde bulunan üçüncü taraf bir yapay zeka hizmeti sağlayıcısı olan Anthropic'e gönderilir. Anthropic bu verileri yanıtlar oluşturmak için işler ve bunları yapay zeka modellerini eğitmek için kullanmaz."
+            "value" : "Bu veriler, Amerika Birleşik Devletleri'nde bulunan üçüncü taraf bir yapay zeka hizmeti sağlayıcısı olan OpenAI'e gönderilir. OpenAI bu verileri yanıtlar oluşturmak için işler ve bunları yapay zeka modellerini eğitmek için kullanmaz."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ці дані надсилаються до Anthropic, постачальника AI-послуг третьої сторони, розташованого в США. Anthropic обробляє ці дані для генерування відповідей і не використовує їх для навчання моделей AI."
+            "value" : "Ці дані надсилаються до OpenAI, постачальника AI-послуг третьої сторони, розташованого в США. OpenAI обробляє ці дані для генерування відповідей і не використовує їх для навчання моделей AI."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "یہ ڈیٹا Anthropic کو بھیجا جاتا ہے، جو ریاستہائے متحدہ میں مقیم ایک تیسری فریق AI سروس فراہم کنندہ ہے۔ Anthropic اس ڈیٹا کو جوابات تیار کرنے کے لیے پروسیس کرتا ہے اور اسے AI ماڈلز کو تربیت دینے کے لیے استعمال نہیں کرتا۔"
+            "value" : "یہ ڈیٹا OpenAI کو بھیجا جاتا ہے، جو ریاستہائے متحدہ میں مقیم ایک تیسری فریق AI سروس فراہم کنندہ ہے۔ OpenAI اس ڈیٹا کو جوابات تیار کرنے کے لیے پروسیس کرتا ہے اور اسے AI ماڈلز کو تربیت دینے کے لیے استعمال نہیں کرتا۔"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dữ liệu này được gửi đến Anthropic, một nhà cung cấp dịch vụ AI của bên thứ ba có trụ sở tại Hoa Kỳ. Anthropic xử lý dữ liệu này để tạo phản hồi và không sử dụng nó để huấn luyện các mô hình AI."
+            "value" : "Dữ liệu này được gửi đến OpenAI, một nhà cung cấp dịch vụ AI của bên thứ ba có trụ sở tại Hoa Kỳ. OpenAI xử lý dữ liệu này để tạo phản hồi và không sử dụng nó để huấn luyện các mô hình AI."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "这些数据被发送到Anthropic，一家总部位于美国的第三方AI服务提供商。Anthropic处理这些数据以生成响应，不会用其训练AI模型。"
+            "value" : "这些数据被发送到OpenAI，一家总部位于美国的第三方AI服务提供商。OpenAI处理这些数据以生成响应，不会用其训练AI模型。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此數據將發送至 Anthropic，一家位於美國的第三方 AI 服務提供商。Anthropic 處理這些數據以生成回覆，不會用於訓練 AI 模型。"
+            "value" : "此數據將發送至 OpenAI，一家位於美國的第三方 AI 服務提供商。OpenAI 處理這些數據以生成回覆，不會用於訓練 AI 模型。"
           }
         }
       }

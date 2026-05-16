@@ -223,6 +223,7 @@ actor LocalStoreActor {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { snapshot in
         snapshot.userId == userId && snapshot.serverDeletedAt == nil
+          && snapshot.syncStatusRaw != "pendingDelete"
       },
       sortBy: [SortDescriptor(\LocalWageSnapshot.fromDate, order: .reverse)]
     )

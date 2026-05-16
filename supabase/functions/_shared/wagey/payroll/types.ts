@@ -54,9 +54,7 @@ export type UserSettings = {
   show_dashboard_clock_buttons?: boolean | null;
   ai_data_sharing_enabled?: boolean | null;
 
-  // Input preferences
-  direct_time_input?: boolean | null;
-  full_minute_range?: boolean | null;
+  // App preferences
   default_startup_tab?: string | null;
 
   // Global calendar preferences (not per-snapshot)

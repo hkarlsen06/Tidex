@@ -11,12 +11,6 @@ import type {
   Tool,
   ToolResultContent,
 } from "./ai-types.ts";
-import {
-  ClaudeProviderError,
-  DEFAULT_CLAUDE_MODEL,
-  resolveClaudeModel,
-  streamClaudeChat,
-} from "./claude.ts";
 import { invalidateWageyCache, type WageyRequestContext } from "./context.ts";
 import { consumeWageyInvocation, getWageyAccess } from "./data.ts";
 import { executeTool } from "./executor.ts";
@@ -54,6 +48,7 @@ export type ChatChunk =
     type: "tool_result";
     toolName: string;
     toolCallId: string;
+    toolArguments?: string;
     result: string;
     success: boolean;
   }
@@ -68,7 +63,12 @@ export type ChatChunk =
   }
   | { type: "wagey_no_access" }
   | { type: "wagey_sources"; items: Source[] }
-  | { type: "wagey_built_in_tool_start"; toolName: string; toolCallId: string }
+  | {
+    type: "wagey_built_in_tool_start";
+    toolName: string;
+    toolCallId: string;
+    toolArguments?: string;
+  }
   | {
     type: "wagey_built_in_tool_result";
     toolName: string;
@@ -198,15 +198,15 @@ function hasClientCapability(
   return client?.capabilities?.includes(capability) ?? false;
 }
 
-export function convertToClaudeMessages(
+export function convertToProviderMessages(
   openAiMessages: ChatInput["messages"],
   compaction?: string,
 ): { system?: string; messages: Message[] } {
   let systemPrompt: string | undefined;
-  const claudeMessages: Message[] = [];
+  const providerMessages: Message[] = [];
 
   if (compaction) {
-    claudeMessages.push({
+    providerMessages.push({
       role: "assistant",
       content: [
         { type: "compaction", content: compaction } satisfies CompactionContent,
@@ -224,7 +224,7 @@ export function convertToClaudeMessages(
       if (Array.isArray(msg.content)) {
         const hasImages = msg.content.some((block) => block.type === "image");
         if (hasImages) {
-          claudeMessages.push({
+          providerMessages.push({
             role: "user",
             content: msg.content.map((block) => {
               if (block.type === "image") {
@@ -244,7 +244,7 @@ export function convertToClaudeMessages(
         }
       }
 
-      claudeMessages.push({
+      providerMessages.push({
         role: "user",
         content: extractTextContent(msg.content),
       });
@@ -276,7 +276,7 @@ export function convertToClaudeMessages(
         }
       }
 
-      claudeMessages.push({
+      providerMessages.push({
         role: "assistant",
         content: contentBlocks.length > 0 ? contentBlocks : textContent,
       });
@@ -285,7 +285,7 @@ export function convertToClaudeMessages(
 
     if (msg.role === "tool" && msg.tool_call_id) {
       const resultContent = extractTextContent(msg.content);
-      const lastMessage = claudeMessages[claudeMessages.length - 1];
+      const lastMessage = providerMessages[providerMessages.length - 1];
       if (lastMessage?.role === "user" && Array.isArray(lastMessage.content)) {
         (lastMessage.content as ContentBlock[]).push({
           type: "tool_result",
@@ -293,7 +293,7 @@ export function convertToClaudeMessages(
           content: resultContent,
         });
       } else {
-        claudeMessages.push({
+        providerMessages.push({
           role: "user",
           content: [{
             type: "tool_result",
@@ -305,7 +305,7 @@ export function convertToClaudeMessages(
     }
   }
 
-  return { system: systemPrompt, messages: claudeMessages };
+  return { system: systemPrompt, messages: providerMessages };
 }
 
 export function isReadOnlyToolUse(toolUse: PendingToolUse): boolean {
@@ -315,8 +315,14 @@ export function isReadOnlyToolUse(toolUse: PendingToolUse): boolean {
     return toolUse.input.action === undefined ||
       toolUse.input.action === "view";
   }
+  if (toolName === "manage_account") {
+    return toolUse.input.action === "view_settings" ||
+      toolUse.input.action === "view_profile" ||
+      toolUse.input.action === "list_feedback";
+  }
   if (toolName === "manage_recurring_shift") {
-    return toolUse.input.action === "list";
+    return toolUse.input.action === "list" ||
+      toolUse.input.action === "draft_create";
   }
   return false;
 }
@@ -356,89 +362,6 @@ export function assistantLikelyClaimsWriteAction(text: string): boolean {
     /\b(jeg skal (oppdatere|endre|sette|lage|slette))\b/.test(normalized);
 }
 
-function isLikelyNorwegian(text: string): boolean {
-  const normalized = text.toLowerCase();
-  return /[æøå]/.test(normalized) ||
-    /\b(kan|jeg|du|meg|min|mi|mitt|mine|lønn|vak(t|ter|tene)|jobb|uke|måned|sjekk|endre|lag|slett)\b/
-      .test(normalized);
-}
-
-export function getToolNarration(
-  toolName: string,
-  latestUserText: string,
-): string {
-  const norwegian = isLikelyNorwegian(latestUserText);
-
-  switch (toolName) {
-    case "web_search":
-    case "web_fetch":
-      return norwegian
-        ? "Jeg sjekker en oppdatert kilde først."
-        : "I'll check an up-to-date source first.";
-    case "query_shifts":
-    case "query_events":
-    case "plan_schedule":
-    case "query_friend_shifts":
-    case "query_friend_featured_shift":
-      return norwegian
-        ? "Jeg sjekker kalenderen din først."
-        : "I'll check your calendar first.";
-    case "get_statistics":
-      return norwegian
-        ? "Jeg henter tallene dine først."
-        : "I'll pull your numbers first.";
-    case "calculate_wages":
-    case "calculate_earnings":
-    case "get_wage_info":
-      return norwegian
-        ? "Jeg sjekker lønnsoppsettet ditt først."
-        : "I'll check your wage setup first.";
-    case "list_workplaces":
-    case "manage_workplace":
-      return norwegian
-        ? "Jeg sjekker arbeidsplassene dine først."
-        : "I'll check your workplaces first.";
-    case "list_friends":
-    case "manage_friend_sharing":
-      return norwegian
-        ? "Jeg sjekker delingen din først."
-        : "I'll check your sharing setup first.";
-    case "manage_shift":
-    case "draft_recurring_shift":
-    case "confirm_recurring_shift":
-    case "manage_recurring_shift":
-    case "manage_recurring_exclusion":
-    case "manage_shift_advanced":
-      return norwegian
-        ? "Jeg sjekker vaktdetaljene først."
-        : "I'll check the shift details first.";
-    case "manage_event":
-      return norwegian
-        ? "Jeg sjekker hendelsesdetaljene først."
-        : "I'll check the event details first.";
-    case "manage_settings":
-      return norwegian
-        ? "Jeg sjekker innstillingene dine først."
-        : "I'll check your settings first.";
-    case "manage_wage_snapshots":
-      return norwegian
-        ? "Jeg sjekker lønnshistorikken din først."
-        : "I'll check your wage history first.";
-    case "manage_feedback":
-      return norwegian
-        ? "Jeg sjekker tilbakemeldingen først."
-        : "I'll check the feedback details first.";
-    case "manage_profile":
-      return norwegian
-        ? "Jeg sjekker profilen din først."
-        : "I'll check your profile first.";
-    default:
-      return norwegian
-        ? "Jeg sjekker det nødvendige først."
-        : "I'll check the details first.";
-  }
-}
-
 async function executeSingleToolUse(
   ctx: WageyRequestContext,
   toolUse: PendingToolUse,
@@ -463,6 +386,7 @@ async function executeSingleToolUse(
           type: "tool_result",
           toolName: toolUse.name,
           toolCallId: toolUse.id,
+          toolArguments: JSON.stringify(toolUse.input),
           result: serialized,
           success: false,
         },
@@ -489,6 +413,7 @@ async function executeSingleToolUse(
         type: "tool_result",
         toolName: toolUse.name,
         toolCallId: toolUse.id,
+        toolArguments: JSON.stringify(toolUse.input),
         result: serialized,
         success: result.success,
       },
@@ -509,6 +434,7 @@ async function executeSingleToolUse(
         type: "tool_result",
         toolName: toolUse.name,
         toolCallId: toolUse.id,
+        toolArguments: JSON.stringify(toolUse.input),
         result: serialized,
         success: false,
       },
@@ -560,10 +486,6 @@ function log(
 }
 
 function getPublicErrorMessage(error: unknown): string {
-  if (error instanceof ClaudeProviderError) {
-    return error.publicMessage;
-  }
-
   if (error instanceof OpenAIProviderError) {
     return error.publicMessage;
   }
@@ -572,17 +494,6 @@ function getPublicErrorMessage(error: unknown): string {
 }
 
 function getLoggableErrorMetadata(error: unknown): Record<string, unknown> {
-  if (error instanceof ClaudeProviderError) {
-    return {
-      error: error.message,
-      status: error.status,
-      providerType: error.providerType,
-      providerMessage: error.providerMessage,
-      requestId: error.requestId,
-      publicMessage: error.publicMessage,
-    };
-  }
-
   if (error instanceof OpenAIProviderError) {
     return {
       error: error.message,
@@ -597,42 +508,6 @@ function getLoggableErrorMetadata(error: unknown): Record<string, unknown> {
   return {
     error: error instanceof Error ? error.message : String(error),
   };
-}
-
-type WageyAIProvider = "claude" | "openai";
-
-type ProviderConfig =
-  | { provider: "claude"; apiKey: string; model: string }
-  | { provider: "openai"; apiKey: string; model: string };
-
-function resolveWageyAIProvider(
-  configuredProvider?: string | null,
-): WageyAIProvider {
-  const provider = configuredProvider?.trim().toLowerCase() ?? "";
-  return provider === "openai" ? "openai" : "claude";
-}
-
-function getClaudeConfig(): { apiKey: string; model: string } {
-  const apiKey = Deno.env.get("CLAUDE_API_KEY")?.trim() ?? "";
-  const configuredModel = Deno.env.get("CLAUDE_MODEL")?.trim() ?? "";
-
-  if (!apiKey) {
-    throw new Error("Missing CLAUDE_API_KEY");
-  }
-
-  const model = resolveClaudeModel(configuredModel);
-
-  if (configuredModel && configuredModel !== model) {
-    console.warn(JSON.stringify({
-      scope: "wagey-router",
-      message:
-        "Ignoring unsupported CLAUDE_MODEL for Wagey; falling back to default Opus 4.7",
-      configuredModel,
-      fallbackModel: model,
-    }));
-  }
-
-  return { apiKey, model };
 }
 
 function getOpenAIConfig(): { apiKey: string; model: string } {
@@ -655,15 +530,6 @@ function getOpenAIConfig(): { apiKey: string; model: string } {
   }
 
   return { apiKey, model };
-}
-
-function getProviderConfig(): ProviderConfig {
-  const provider = resolveWageyAIProvider(Deno.env.get("WAGEY_AI_PROVIDER"));
-  if (provider === "openai") {
-    return { provider, ...getOpenAIConfig() };
-  }
-
-  return { provider, ...getClaudeConfig() };
 }
 
 function getResetDays(resetDate: Date | null): number {
@@ -830,7 +696,7 @@ export async function handleWageyRequest(
           ),
         };
 
-        let { system, messages } = convertToClaudeMessages(
+        let { system, messages } = convertToProviderMessages(
           input.messages,
           input.compaction,
         );
@@ -838,7 +704,7 @@ export async function handleWageyRequest(
           system = getSystemPrompt(systemContext);
         }
 
-        const providerConfig = getProviderConfig();
+        const openAIConfig = getOpenAIConfig();
 
         let iterationCount = 0;
         const MAX_ITERATIONS = 10;
@@ -854,8 +720,6 @@ export async function handleWageyRequest(
           input.client,
           "message_break_v1",
         );
-        const latestRequestUserText = getLatestUserText(conversationMessages);
-
         const ensureInvocationConsumed = async (): Promise<boolean> => {
           if (invocationConsumed) {
             return true;
@@ -900,8 +764,6 @@ export async function handleWageyRequest(
             const assistantContent: ContentBlock[] = [];
             let shouldStartNewAssistantTextBlock = true;
             let pendingAssistantText = "";
-            let hasNarrationSinceLastToolStart = false;
-
             const appendAssistantText = (content: string) => {
               if (!content) return;
 
@@ -926,9 +788,6 @@ export async function handleWageyRequest(
               appendAssistantText(content);
               sendChunk({ type: "text", content });
               hasUserVisibleAssistantOutput = true;
-              if (content.trim()) {
-                hasNarrationSinceLastToolStart = true;
-              }
               return true;
             };
 
@@ -937,23 +796,6 @@ export async function handleWageyRequest(
               if (supportsMessageBreaks) {
                 sendChunk({ type: "message_break" });
               }
-            };
-
-            const ensureToolNarration = async (
-              toolName: string,
-            ): Promise<boolean> => {
-              if (hasNarrationSinceLastToolStart) {
-                hasNarrationSinceLastToolStart = false;
-                return true;
-              }
-
-              const narration = getToolNarration(
-                toolName,
-                latestRequestUserText,
-              );
-              const didEmit = await emitAssistantText(narration);
-              hasNarrationSinceLastToolStart = false;
-              return didEmit;
             };
 
             const markerOverlapLength = (text: string): number => {
@@ -1044,25 +886,15 @@ export async function handleWageyRequest(
               return await emitAssistantText(flushableText);
             };
 
-            const providerStream = providerConfig.provider === "openai"
-              ? streamOpenAIChat({
-                apiKey: providerConfig.apiKey,
-                model: providerConfig.model,
-                system,
-                messages: conversationMessages,
-                tools: [...tools, ...BUILT_IN_TOOLS],
-                maxTokens: DEFAULT_WAGEY_MAX_TOKENS,
-                signal: req.signal,
-              })
-              : streamClaudeChat({
-                apiKey: providerConfig.apiKey,
-                model: providerConfig.model,
-                system,
-                messages: conversationMessages,
-                tools: [...tools, ...BUILT_IN_TOOLS],
-                maxTokens: DEFAULT_WAGEY_MAX_TOKENS,
-                signal: req.signal,
-              });
+            const providerStream = streamOpenAIChat({
+              apiKey: openAIConfig.apiKey,
+              model: openAIConfig.model,
+              system,
+              messages: conversationMessages,
+              tools: [...tools, ...BUILT_IN_TOOLS],
+              maxTokens: DEFAULT_WAGEY_MAX_TOKENS,
+              signal: req.signal,
+            });
 
             for await (const chunk of providerStream) {
               if (req.signal.aborted) break;
@@ -1088,9 +920,6 @@ export async function handleWageyRequest(
                 if (!(await ensureInvocationConsumed())) {
                   return;
                 }
-                if (!(await ensureToolNarration(chunk.name))) {
-                  return;
-                }
                 hasUserVisibleAssistantOutput = true;
                 shouldStartNewAssistantTextBlock = true;
                 assistantContent.push({
@@ -1104,13 +933,11 @@ export async function handleWageyRequest(
                     type: "wagey_built_in_tool_start",
                     toolName: chunk.name,
                     toolCallId: chunk.id,
+                    toolArguments: JSON.stringify(chunk.input),
                   });
                 }
               } else if (chunk.type === "tool_use_start") {
                 if (!(await ensureInvocationConsumed())) {
-                  return;
-                }
-                if (!(await ensureToolNarration(chunk.name))) {
                   return;
                 }
                 hasUserVisibleAssistantOutput = true;
@@ -1153,11 +980,6 @@ export async function handleWageyRequest(
                   });
                   hasUserVisibleAssistantOutput = true;
                   shouldStartNewAssistantTextBlock = true;
-                  if (!startedToolUseIds.has(chunk.id)) {
-                    if (!(await ensureToolNarration(chunk.name))) {
-                      return;
-                    }
-                  }
                   assistantContent.push({
                     type: "tool_use",
                     id: chunk.id,
@@ -1283,7 +1105,7 @@ export async function handleWageyRequest(
           log(
             "error",
             requestId,
-            `${providerConfig.provider} loop failed`,
+            "OpenAI loop failed",
             getLoggableErrorMetadata(error),
           );
           sendChunk({
@@ -1298,7 +1120,7 @@ export async function handleWageyRequest(
           log("warn", requestId, "No user-visible assistant output");
           sendChunk({
             type: "error",
-            error: `No response from ${providerConfig.provider} provider`,
+            error: "No response from OpenAI provider",
           });
         }
 

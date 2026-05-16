@@ -1,15 +1,14 @@
 import { assert, assertEquals } from "jsr:@std/assert";
 
-import { DEFAULT_CLAUDE_MODEL } from "./claude.ts";
 import { DEFAULT_OPENAI_MODEL } from "./openai.ts";
 import {
   assistantLikelyClaimsWriteAction,
-  getToolNarration,
   handleWageyRequest,
   isReadOnlyToolUse,
   userLikelyRequestedWriteAction,
 } from "./router.ts";
 import type { WageyRequestContext } from "./context.ts";
+import { tools } from "./tools.ts";
 
 function createSseResponse(events: Record<string, unknown>[]): Response {
   const encoder = new TextEncoder();
@@ -93,6 +92,22 @@ function createMockContext(userId: string): WageyRequestContext {
     } as unknown) as WageyRequestContext["supabaseAdmin"],
   };
 }
+
+Deno.test("Wagey exposes 18 app tools after structural consolidation", () => {
+  const toolNames = tools.map((tool) => tool.name);
+
+  assertEquals(toolNames.length, 18);
+  assert(toolNames.includes("manage_account"));
+  assert(toolNames.includes("manage_recurring_shift"));
+  assert(toolNames.includes("query_friend_shifts"));
+  assert(!toolNames.includes("draft_recurring_shift"));
+  assert(!toolNames.includes("confirm_recurring_shift"));
+  assert(!toolNames.includes("manage_recurring_exclusion"));
+  assert(!toolNames.includes("query_friend_featured_shift"));
+  assert(!toolNames.includes("manage_settings"));
+  assert(!toolNames.includes("manage_feedback"));
+  assert(!toolNames.includes("manage_profile"));
+});
 
 async function readChunkStream(
   response: Response,
@@ -221,92 +236,93 @@ function buildRequestBody(userId: string, capabilities: string[]): string {
 function buildResearchEvents(): Record<string, unknown>[] {
   return [
     {
-      type: "content_block_start",
-      content_block: {
-        type: "server_tool_use",
+      type: "response.output_item.added",
+      output_index: 0,
+      item: {
+        type: "web_search_call",
         id: "search_1",
-        name: "web_search",
-        input: { query: "HK Virke tariff 2026" },
+        action: { query: "HK Virke tariff 2026" },
       },
     },
-    { type: "content_block_stop" },
     {
-      type: "content_block_start",
-      content_block: {
-        type: "web_search_tool_result",
-        tool_use_id: "search_1",
-        content: [
+      type: "response.output_item.done",
+      output_index: 0,
+      item: {
+        type: "web_search_call",
+        id: "search_1",
+        results: [
           {
-            type: "web_search_result",
             title: "Tariffavtalen",
             url: "https://example.com/tariff",
           },
         ],
       },
     },
-    { type: "content_block_stop" },
     {
-      type: "content_block_start",
-      content_block: { type: "text" },
+      type: "response.output_item.added",
+      output_index: 1,
+      item: { type: "message", id: "msg_1" },
     },
     {
-      type: "content_block_delta",
-      delta: { type: "text_delta", text: "Jeg fant en oppdatert tariff." },
+      type: "response.output_text.delta",
+      delta: "Jeg fant en oppdatert tariff.",
     },
     {
-      type: "content_block_delta",
-      delta: {
-        type: "citations_delta",
-        citation: {
-          type: "web_search_result_location",
-          title: "Tariffavtalen",
-          url: "https://example.com/tariff",
-        },
+      type: "response.output_text.annotation.added",
+      annotation: {
+        type: "url_citation",
+        title: "Tariffavtalen",
+        url: "https://example.com/tariff",
       },
     },
-    { type: "content_block_stop" },
-    { type: "message_delta", delta: { stop_reason: "end_turn" } },
-    { type: "message_stop" },
+    {
+      type: "response.completed",
+      response: { status: "completed" },
+    },
   ];
 }
 
 function buildSlowTextOnlyEvents(): Record<string, unknown>[] {
   return [
     {
-      type: "content_block_start",
-      content_block: { type: "text" },
+      type: "response.output_item.added",
+      output_index: 0,
+      item: { type: "message", id: "msg_1" },
     },
     {
-      type: "content_block_delta",
-      delta: { type: "text_delta", text: "Dette er første del." },
+      type: "response.output_text.delta",
+      delta: "Dette er første del.",
     },
     {
-      type: "content_block_delta",
-      delta: { type: "text_delta", text: " Dette er andre del." },
+      type: "response.output_text.delta",
+      delta: " Dette er andre del.",
     },
-    { type: "content_block_stop" },
-    { type: "message_delta", delta: { stop_reason: "end_turn" } },
-    { type: "message_stop" },
+    {
+      type: "response.completed",
+      response: { status: "completed" },
+    },
   ];
 }
 
 function buildMessageBreakEvents(): Record<string, unknown>[] {
   return [
     {
-      type: "content_block_start",
-      content_block: { type: "text" },
+      type: "response.output_item.added",
+      output_index: 0,
+      item: { type: "message", id: "msg_1" },
     },
     {
-      type: "content_block_delta",
-      delta: { type: "text_delta", text: "Første del.\n<wagey_mess" },
+      type: "response.output_text.delta",
+      delta: "Første del.\n<wagey_mess",
     },
     {
-      type: "content_block_delta",
-      delta: { type: "text_delta", text: "age_break/>\nAndre del." },
+      type: "response.output_text.delta",
+      delta: "age_break/>\nAndre del.",
     },
-    { type: "content_block_stop" },
-    { type: "message_delta", delta: { stop_reason: "end_turn" } },
-    { type: "message_stop" },
+    {
+      type: "response.completed",
+      response: { status: "completed" },
+    },
   ];
 }
 
@@ -328,14 +344,51 @@ function buildOpenAITextOnlyEvents(): Record<string, unknown>[] {
   ];
 }
 
+function buildFunctionToolEvents(): Record<string, unknown>[] {
+  return [
+    {
+      type: "response.output_item.added",
+      output_index: 0,
+      item: {
+        type: "function_call",
+        id: "fc_1",
+        call_id: "tool_1",
+        name: "get_statistics",
+      },
+    },
+    {
+      type: "response.function_call_arguments.done",
+      output_index: 0,
+      arguments: '{"metric":"bad_metric"}',
+    },
+    {
+      type: "response.completed",
+      response: { status: "completed" },
+    },
+    {
+      type: "response.output_item.added",
+      output_index: 0,
+      item: { type: "message", id: "msg_2" },
+    },
+    {
+      type: "response.output_text.delta",
+      delta: "Denne måneden har du tjent 0 kr.",
+    },
+    {
+      type: "response.completed",
+      response: { status: "completed" },
+    },
+  ];
+}
+
 Deno.test("handleWageyRequest emits built-in tool events and deduped sources for capable clients", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
 
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
   globalThis.fetch = async () => createSseResponse(buildResearchEvents());
 
   try {
@@ -361,10 +414,13 @@ Deno.test("handleWageyRequest emits built-in tool events and deduped sources for
     );
     assert(firstTextIndex >= 0);
     assert(firstToolStartIndex >= 0);
-    assert(firstTextIndex < firstToolStartIndex);
     assertEquals(
       chunks[firstTextIndex].content,
-      "Jeg sjekker en oppdatert kilde først.",
+      "Jeg fant en oppdatert tariff.",
+    );
+    assertEquals(
+      chunks[firstToolStartIndex].toolArguments,
+      '{"query":"HK Virke tariff 2026"}',
     );
     assert(chunks.some((chunk) => chunk.type === "text_start"));
     assert(chunks.some((chunk) => chunk.type === "wagey_built_in_tool_start"));
@@ -408,14 +464,14 @@ Deno.test("handleWageyRequest emits built-in tool events and deduped sources for
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
+      Deno.env.delete("OPENAI_API_KEY");
     } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
     }
     if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
+      Deno.env.delete("OPENAI_MODEL");
     } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
+      Deno.env.set("OPENAI_MODEL", originalModel);
     }
   }
 });
@@ -423,11 +479,11 @@ Deno.test("handleWageyRequest emits built-in tool events and deduped sources for
 Deno.test("handleWageyRequest suppresses built-in tool events and sources for legacy clients", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
 
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
   globalThis.fetch = async () => createSseResponse(buildResearchEvents());
 
   try {
@@ -452,14 +508,64 @@ Deno.test("handleWageyRequest suppresses built-in tool events and sources for le
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
+      Deno.env.delete("OPENAI_API_KEY");
     } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
     }
     if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
+      Deno.env.delete("OPENAI_MODEL");
     } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
+      Deno.env.set("OPENAI_MODEL", originalModel);
+    }
+  }
+});
+
+Deno.test("handleWageyRequest includes final function input on tool_result chunks", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
+  let fetchCount = 0;
+
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
+  globalThis.fetch = async () => {
+    const events = fetchCount === 0
+      ? buildFunctionToolEvents().slice(0, 3)
+      : buildFunctionToolEvents().slice(3);
+    fetchCount += 1;
+    return createSseResponse(events);
+  };
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(userId, []),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    const chunks = await readChunkStream(response);
+    const resultChunk = chunks.find((chunk) => chunk.type === "tool_result");
+
+    assert(resultChunk);
+    assertEquals(resultChunk.toolName, "get_statistics");
+    assertEquals(resultChunk.toolArguments, '{"metric":"bad_metric"}');
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      Deno.env.delete("OPENAI_API_KEY");
+    } else {
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("OPENAI_MODEL");
+    } else {
+      Deno.env.set("OPENAI_MODEL", originalModel);
     }
   }
 });
@@ -467,11 +573,11 @@ Deno.test("handleWageyRequest suppresses built-in tool events and sources for le
 Deno.test("handleWageyRequest streams text chunks before the upstream turn fully completes", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
 
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
   globalThis.fetch = async () =>
     createDelayedSseResponse(buildSlowTextOnlyEvents(), 60);
 
@@ -508,14 +614,14 @@ Deno.test("handleWageyRequest streams text chunks before the upstream turn fully
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
+      Deno.env.delete("OPENAI_API_KEY");
     } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
     }
     if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
+      Deno.env.delete("OPENAI_MODEL");
     } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
+      Deno.env.set("OPENAI_MODEL", originalModel);
     }
   }
 });
@@ -523,11 +629,11 @@ Deno.test("handleWageyRequest streams text chunks before the upstream turn fully
 Deno.test("handleWageyRequest emits explicit message_break chunks only for capable clients", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
 
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
   globalThis.fetch = async () => createSseResponse(buildMessageBreakEvents());
 
   try {
@@ -563,14 +669,14 @@ Deno.test("handleWageyRequest emits explicit message_break chunks only for capab
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
+      Deno.env.delete("OPENAI_API_KEY");
     } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
     }
     if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
+      Deno.env.delete("OPENAI_MODEL");
     } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
+      Deno.env.set("OPENAI_MODEL", originalModel);
     }
   }
 });
@@ -578,11 +684,11 @@ Deno.test("handleWageyRequest emits explicit message_break chunks only for capab
 Deno.test("handleWageyRequest does not emit message_break chunks for legacy clients", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
 
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
   globalThis.fetch = async () => createSseResponse(buildMessageBreakEvents());
 
   try {
@@ -609,73 +715,26 @@ Deno.test("handleWageyRequest does not emit message_break chunks for legacy clie
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
+      Deno.env.delete("OPENAI_API_KEY");
     } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
     }
     if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
+      Deno.env.delete("OPENAI_MODEL");
     } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
+      Deno.env.set("OPENAI_MODEL", originalModel);
     }
   }
 });
 
-Deno.test("handleWageyRequest sends the explicit Opus 4.6 rollback model when configured", async () => {
+Deno.test("handleWageyRequest sends Wagey through OpenAI GPT-5.5", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
-  let capturedModel: string | null = null;
-
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", "claude-opus-4-6");
-  globalThis.fetch = async (_input, init) => {
-    const request = init as { body?: string } | undefined;
-    const body = JSON.parse(request?.body ?? "{}") as { model?: string };
-    capturedModel = body.model ?? null;
-    return createSseResponse(buildSlowTextOnlyEvents());
-  };
-
-  try {
-    const response = await handleWageyRequest(
-      new Request("https://example.com/functions/v1/wagey-chat-v2", {
-        method: "POST",
-        body: buildRequestBody(userId, []),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }),
-      createMockContext(userId),
-    );
-
-    await readChunkStream(response);
-    assertEquals(capturedModel, "claude-opus-4-6");
-  } finally {
-    globalThis.fetch = originalFetch;
-    if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
-    } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
-    }
-    if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
-    } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
-    }
-  }
-});
-
-Deno.test("handleWageyRequest can route Wagey through OpenAI GPT-5.5", async () => {
-  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
-  const originalFetch = globalThis.fetch;
-  const originalProvider = Deno.env.get("WAGEY_AI_PROVIDER");
   const originalApiKey = Deno.env.get("OPENAI_API_KEY");
   const originalModel = Deno.env.get("OPENAI_MODEL");
   let capturedUrl = "";
   let capturedModel: string | null = null;
 
-  Deno.env.set("WAGEY_AI_PROVIDER", "openai");
   Deno.env.set("OPENAI_API_KEY", "test-key");
   Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
   globalThis.fetch = async (input, init) => {
@@ -710,11 +769,6 @@ Deno.test("handleWageyRequest can route Wagey through OpenAI GPT-5.5", async () 
     );
   } finally {
     globalThis.fetch = originalFetch;
-    if (originalProvider === undefined) {
-      Deno.env.delete("WAGEY_AI_PROVIDER");
-    } else {
-      Deno.env.set("WAGEY_AI_PROVIDER", originalProvider);
-    }
     if (originalApiKey === undefined) {
       Deno.env.delete("OPENAI_API_KEY");
     } else {
@@ -724,59 +778,6 @@ Deno.test("handleWageyRequest can route Wagey through OpenAI GPT-5.5", async () 
       Deno.env.delete("OPENAI_MODEL");
     } else {
       Deno.env.set("OPENAI_MODEL", originalModel);
-    }
-  }
-});
-
-Deno.test("handleWageyRequest falls back to default Opus 4.7 for unsupported CLAUDE_MODEL", async () => {
-  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
-  const originalFetch = globalThis.fetch;
-  const originalWarn = console.warn;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
-  let capturedModel: string | null = null;
-  const warnings: string[] = [];
-
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", "claude-sonnet-4-6");
-  console.warn = (message?: unknown, ...optionalParams: unknown[]) => {
-    warnings.push([message, ...optionalParams].map(String).join(" "));
-  };
-  globalThis.fetch = async (_input, init) => {
-    const request = init as { body?: string } | undefined;
-    const body = JSON.parse(request?.body ?? "{}") as { model?: string };
-    capturedModel = body.model ?? null;
-    return createSseResponse(buildSlowTextOnlyEvents());
-  };
-
-  try {
-    const response = await handleWageyRequest(
-      new Request("https://example.com/functions/v1/wagey-chat-v2", {
-        method: "POST",
-        body: buildRequestBody(userId, []),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }),
-      createMockContext(userId),
-    );
-
-    await readChunkStream(response);
-
-    assertEquals(capturedModel, DEFAULT_CLAUDE_MODEL);
-    assert(warnings.some((warning) => warning.includes("default Opus 4.7")));
-  } finally {
-    globalThis.fetch = originalFetch;
-    console.warn = originalWarn;
-    if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
-    } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
-    }
-    if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
-    } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
     }
   }
 });
@@ -810,21 +811,6 @@ Deno.test("assistantLikelyClaimsWriteAction detects promise/complete mutation la
   );
 });
 
-Deno.test("getToolNarration keeps fallback tool narration user-facing and localized", () => {
-  assertEquals(
-    getToolNarration("get_wage_info", "Matcher lønna mi med live tariff?"),
-    "Jeg sjekker lønnsoppsettet ditt først.",
-  );
-  assertEquals(
-    getToolNarration("web_search", "Is this tariff current?"),
-    "I'll check an up-to-date source first.",
-  );
-  assertEquals(
-    getToolNarration("manage_shift", "Kan du lage en vakt i morgen?"),
-    "Jeg sjekker vaktdetaljene først.",
-  );
-});
-
 Deno.test("isReadOnlyToolUse treats event planning tools as read-only", () => {
   assertEquals(
     isReadOnlyToolUse({ id: "tool_1", name: "query_events", input: {} }),
@@ -846,64 +832,4 @@ Deno.test("isReadOnlyToolUse treats event planning tools as read-only", () => {
     }),
     false,
   );
-});
-
-Deno.test("handleWageyRequest returns a safe generic error for Anthropic billing failures", async () => {
-  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
-  const originalFetch = globalThis.fetch;
-  const originalApiKey = Deno.env.get("CLAUDE_API_KEY");
-  const originalModel = Deno.env.get("CLAUDE_MODEL");
-
-  Deno.env.set("CLAUDE_API_KEY", "test-key");
-  Deno.env.set("CLAUDE_MODEL", DEFAULT_CLAUDE_MODEL);
-  globalThis.fetch = async () =>
-    new Response(
-      JSON.stringify({
-        type: "error",
-        error: {
-          type: "invalid_request_error",
-          message:
-            "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
-        },
-        request_id: "req_test_low_credit",
-      }),
-      {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      },
-    );
-
-  try {
-    const response = await handleWageyRequest(
-      new Request("https://example.com/functions/v1/wagey-chat-v2", {
-        method: "POST",
-        body: buildRequestBody(userId, []),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }),
-      createMockContext(userId),
-    );
-
-    const chunks = await readChunkStream(response);
-    const errorChunk = chunks.find((chunk) => chunk.type === "error");
-
-    assert(errorChunk);
-    assertEquals(
-      errorChunk.error,
-      "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.",
-    );
-  } finally {
-    globalThis.fetch = originalFetch;
-    if (originalApiKey === undefined) {
-      Deno.env.delete("CLAUDE_API_KEY");
-    } else {
-      Deno.env.set("CLAUDE_API_KEY", originalApiKey);
-    }
-    if (originalModel === undefined) {
-      Deno.env.delete("CLAUDE_MODEL");
-    } else {
-      Deno.env.set("CLAUDE_MODEL", originalModel);
-    }
-  }
 });

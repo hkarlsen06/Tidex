@@ -1041,7 +1041,7 @@ final class WageyViewModel {
       )
       activeContentBlocks.append(.toolCall(toolCall))
 
-    case .toolResult(let toolName, let toolCallId, let result, let success):
+    case .toolResult(let toolName, let toolCallId, let toolArguments, let result, let success):
       completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
@@ -1053,7 +1053,7 @@ final class WageyViewModel {
         let updatedToolCall = ToolCall(
           id: toolCallId,
           name: toolName,
-          arguments: existingToolCall.arguments,
+          arguments: toolArguments ?? existingToolCall.arguments,
           result: result,
           success: success
         )
@@ -1065,14 +1065,15 @@ final class WageyViewModel {
         pendingSyncTables.formUnion(syncTables(for: toolName))
       }
 
-    case .builtInToolStart(let toolName, let toolCallId):
+    case .builtInToolStart(let toolName, let toolCallId, let toolArguments):
       completeThinkingPhaseIfNeeded()
       isModelThinking = false
       shouldStartNewStreamingTextBlock = true
       let toolCall = ToolCall(
         id: toolCallId,
         name: toolName,
-        kind: .builtIn
+        kind: .builtIn,
+        arguments: toolArguments
       )
       activeContentBlocks.append(.toolCall(toolCall))
 
@@ -1393,7 +1394,7 @@ final class WageyViewModel {
       return [.jobs, .wageSnapshots]
     case "manage_wage_snapshots":
       return [.wageSnapshots]
-    case "manage_settings":
+    case "manage_account", "manage_settings":
       return [.userSettings]
     default:
       return []

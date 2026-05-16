@@ -65,6 +65,7 @@ import type {
   GetWageInfoInput,
   ListFriendsInput,
   ListWorkplacesInput,
+  ManageAccountInput,
   ManageEventInput,
   ManageFeedbackInput,
   ManageFriendSharingInput,
@@ -93,6 +94,7 @@ import {
   getWageInfoSchema,
   listFriendsSchema,
   listWorkplacesSchema,
+  manageAccountSchema,
   manageEventSchema,
   manageFeedbackSchema,
   manageFriendSharingSchema,
@@ -114,14 +116,89 @@ import {
 import {
   computeShift,
   type CustomPauseWindows,
+  type HHMM,
   type Job,
   PRESET_SUPPLEMENT_RULES,
+  type SupplementRule,
+  type WageSnapshot,
 } from "./payroll/index.ts";
 import { generateVirtualShiftsForMonth } from "./recurring/utils.ts";
 
 type TariffVersion = {
   rates?: Record<string, number> | null;
 };
+
+type WageSnapshotSupplementInput = NonNullable<
+  ManageWageSnapshotsInput["supplements"]
+>;
+
+type WageSnapshotSupplementRuleInput = Exclude<
+  WageSnapshotSupplementInput,
+  "copy_current"
+>[number];
+
+function normalizeSupplementRuleInput(
+  rule: WageSnapshotSupplementRuleInput,
+): SupplementRule {
+  if ("from" in rule && "to" in rule) {
+    return {
+      days: rule.days,
+      from: rule.from as HHMM,
+      to: rule.to as HHMM,
+      ...(rule.rate !== undefined ? { rate: rule.rate } : {}),
+      ...(rule.percent !== undefined ? { percent: rule.percent } : {}),
+    };
+  }
+
+  return {
+    days: rule.days,
+    from: rule.startTime as HHMM,
+    to: rule.endTime as HHMM,
+    ...(rule.amount !== undefined
+      ? { rate: rule.amount }
+      : rule.rate !== undefined
+      ? { rate: rule.rate }
+      : {}),
+    ...(rule.percent !== undefined ? { percent: rule.percent } : {}),
+  };
+}
+
+function normalizeSupplementRulesInput(
+  rules: WageSnapshotSupplementRuleInput[],
+): SupplementRule[] {
+  return rules.map(normalizeSupplementRuleInput);
+}
+
+function normalizeStoredSupplementRules(rules: unknown): SupplementRule[] {
+  if (!Array.isArray(rules)) return [];
+  return rules.map((rule) =>
+    normalizeSupplementRuleInput(rule as WageSnapshotSupplementRuleInput)
+  );
+}
+
+async function resolveCurrentSupplementRules(
+  ctx: WageyRequestContext,
+  jobId?: string | null,
+): Promise<SupplementRule[]> {
+  const { data, error } = await ctx.supabase
+    .from("wage_snapshots")
+    .select("*")
+    .eq("user_id", ctx.user.id)
+    .is("deleted_at", null);
+
+  if (error) throw new Error(error.message);
+
+  const snapshots = (data ?? []) as WageSnapshot[];
+  const today = new Date().toISOString().slice(0, 10);
+  const current = resolveSnapshotForDate(
+    buildSnapshotBuckets(snapshots),
+    snapshots,
+    today,
+    jobId ?? null,
+  );
+
+  return normalizeStoredSupplementRules(current?.supplements?.rules);
+}
 
 function t(
   template: string,
@@ -771,6 +848,13 @@ function formatRecurringForAI(recurring: any): any {
 
 const KNOWN_TOOL_NAMES: ToolName[] = [
   ...toolDefinitions.map((tool) => tool.name as ToolName),
+  "draft_recurring_shift",
+  "confirm_recurring_shift",
+  "manage_recurring_exclusion",
+  "manage_settings",
+  "query_friend_featured_shift",
+  "manage_feedback",
+  "manage_profile",
   "web_fetch",
 ];
 
@@ -943,6 +1027,8 @@ export async function executeTool(
         return await executeManageRecurringExclusion(ctx, args);
       case "get_statistics":
         return await executeGetStatistics(ctx, args);
+      case "manage_account":
+        return await executeManageAccount(ctx, args);
       case "manage_settings":
         return await executeManageSettings(ctx, args);
       case "manage_workplace":
@@ -2073,6 +2159,11 @@ async function executeQueryFriendShifts(
     };
   }
   const input = parsed.data as QueryFriendShiftsInput;
+  if (input.mode === "featured") {
+    return await executeQueryFriendFeaturedShift(ctx, {
+      friendId: input.friendId,
+    });
+  }
   const weekRange = getCurrentWeekRange();
   let shared;
   try {
@@ -2607,6 +2698,51 @@ async function executeManageFeedback(
   };
 }
 
+async function executeManageAccount(
+  ctx: WageyRequestContext,
+  args: unknown,
+): Promise<ToolResult> {
+  const parsed = manageAccountSchema.safeParse(args);
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: t(tr.invalidInput, {
+        details: parsed.error.issues.map((i) => i.message).join(", "),
+      }),
+    };
+  }
+  const input = parsed.data as ManageAccountInput;
+  switch (input.action) {
+    case "view_settings":
+      return await executeManageSettings(ctx, { action: "view" });
+    case "update_settings":
+      return await executeManageSettings(ctx, {
+        action: "update",
+        category: input.category,
+        settings: input.settings,
+      });
+    case "view_profile":
+      return await executeManageProfile(ctx, { action: "view" });
+    case "update_name":
+      return await executeManageProfile(ctx, {
+        action: "update_name",
+        firstName: input.firstName,
+      });
+    case "submit_feedback":
+      return await executeManageFeedback(ctx, {
+        action: "submit",
+        message: input.message,
+      });
+    case "list_feedback":
+      return await executeManageFeedback(ctx, { action: "list" });
+    default:
+      return {
+        success: false,
+        message: t(tr.unknownAction, { action: input.action }),
+      };
+  }
+}
+
 async function executeManageProfile(
   ctx: WageyRequestContext,
   args: unknown,
@@ -2733,6 +2869,25 @@ async function executeManageRecurringShift(
   }
   const input = parsed.data as ManageRecurringShiftInput;
   switch (input.action) {
+    case "draft_create":
+      return await executeDraftRecurringShift(ctx, {
+        weekdays: input.weekdays,
+        start: input.start,
+        end: input.end,
+        frequency: input.frequency,
+        endType: input.endType,
+        endValue: input.endValue,
+      });
+    case "confirm_create":
+      return await executeConfirmRecurringShift(ctx, {
+        weekdays: input.weekdays,
+        start: input.start,
+        end: input.end,
+        frequency: input.frequency,
+        endType: input.endType,
+        endValue: input.endValue,
+        conflictResolution: input.conflictResolution,
+      });
     case "list": {
       if (input.recurringId) {
         const fullRecurringId = await resolveRecurringId(
@@ -2859,6 +3014,18 @@ async function executeManageRecurringShift(
         }),
       };
     }
+    case "add_exclusion":
+      return await executeManageRecurringExclusion(ctx, {
+        action: "add",
+        recurringId: input.recurringId,
+        date: input.date,
+      });
+    case "remove_exclusion":
+      return await executeManageRecurringExclusion(ctx, {
+        action: "remove",
+        recurringId: input.recurringId,
+        date: input.date,
+      });
     default:
       return {
         success: false,
@@ -2941,6 +3108,9 @@ async function executeGetStatistics(
     getStatistics(ctx, {
       year: input.year,
       month: input.month,
+      startDate: input.startDate,
+      endDate: input.endDate,
+      limit: input.limit,
       jobId: input.jobId,
     }),
   ]);
@@ -2978,6 +3148,10 @@ async function executeGetStatistics(
     case "supplement_breakdown":
       data = statsData.currentMonthBreakdown;
       message = tr.statsSupplementBreakdown;
+      break;
+    case "shift_gaps":
+      data = statsData.shiftGaps;
+      message = tr.statsShiftGaps;
       break;
     default:
       return {
@@ -3048,12 +3222,6 @@ async function executeManageSettings(
         break;
       case "preferences":
         await updatePreferencesSettings(ctx, {
-          ...(input.settings.directTimeInput !== undefined
-            ? { direct_time_input: input.settings.directTimeInput }
-            : {}),
-          ...(input.settings.fullMinuteRange !== undefined
-            ? { full_minute_range: input.settings.fullMinuteRange }
-            : {}),
           ...(input.settings.defaultStartupTab !== undefined
             ? { default_startup_tab: input.settings.defaultStartupTab }
             : {}),
@@ -3099,8 +3267,6 @@ async function executeManageSettings(
         payrollDay: settings.payroll_day ?? null,
       },
       preferences: {
-        directTimeInput: settings.direct_time_input ?? false,
-        fullMinuteRange: settings.full_minute_range ?? false,
         defaultStartupTab: settings.default_startup_tab ?? "home",
       },
     },
@@ -3341,6 +3507,11 @@ async function executeManageWageSnapshots(
       } else {
         tariffTypeId = null;
       }
+      const supplements = input.supplements === "copy_current"
+        ? { rules: await resolveCurrentSupplementRules(ctx, input.jobId) }
+        : input.supplements
+        ? { rules: normalizeSupplementRulesInput(input.supplements) }
+        : { rules: [] };
       const { data, error } = await ctx.supabase
         .from("wage_snapshots")
         .insert({
@@ -3350,9 +3521,7 @@ async function executeManageWageSnapshots(
           hourly_wage: hourlyWage,
           wage_level: wageLevel,
           tariff_type_id: tariffTypeId,
-          supplements: input.supplements
-            ? { rules: input.supplements as any[] }
-            : { rules: [] },
+          supplements,
           tax_enabled: input.tax_enabled ?? false,
           tax_percentage: input.tax_percentage ?? 0,
           break_enabled: input.break_enabled ?? false,
@@ -3421,6 +3590,11 @@ async function executeManageWageSnapshots(
           hourlyWage = tariffVersion.rates[String(wageLevel)];
         }
       }
+      const supplements = input.supplements === "copy_current"
+        ? { rules: await resolveCurrentSupplementRules(ctx, current.job_id) }
+        : input.supplements
+        ? { rules: normalizeSupplementRulesInput(input.supplements) }
+        : current.supplements;
       const { error: updateError } = await ctx.supabase
         .from("wage_snapshots")
         .update({
@@ -3430,9 +3604,7 @@ async function executeManageWageSnapshots(
           hourly_wage: hourlyWage,
           wage_level: wageLevel,
           tariff_type_id: tariffTypeId,
-          supplements: input.supplements
-            ? { rules: input.supplements as any[] }
-            : current.supplements,
+          supplements,
           tax_enabled: input.tax_enabled ?? current.tax_enabled,
           tax_percentage: input.tax_percentage ?? current.tax_percentage,
           break_enabled: input.break_enabled ?? current.break_enabled,

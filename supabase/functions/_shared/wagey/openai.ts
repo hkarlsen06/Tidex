@@ -277,18 +277,22 @@ function convertMessagesToOpenAIInput(messages: Message[]): OpenAIInputItem[] {
 
 function convertTool(tool: OpenAITool): Record<string, unknown> | null {
   if ("input_schema" in tool) {
-    const { input_examples, input_schema, ...functionTool } = tool;
+    const { input_examples, input_schema, strict, ...functionTool } = tool;
     const description = input_examples?.length
       ? `${functionTool.description}\n\nInput examples:\n${
         input_examples.map((example) => JSON.stringify(example)).join("\n")
       }`
       : functionTool.description;
+    const parameters = strict
+      ? { ...input_schema, additionalProperties: false }
+      : input_schema;
 
     return {
       type: "function",
       name: functionTool.name,
       description,
-      parameters: input_schema,
+      parameters,
+      strict: strict === true,
     };
   }
 
@@ -311,7 +315,9 @@ function convertTool(tool: OpenAITool): Record<string, unknown> | null {
           },
         },
         required: ["url"],
+        additionalProperties: false,
       },
+      strict: true,
     };
   }
 

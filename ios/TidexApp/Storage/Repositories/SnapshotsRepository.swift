@@ -69,7 +69,8 @@ final class SnapshotsRepository: ObservableObject {
         let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
         let primaryDescriptor = FetchDescriptor<LocalWageSnapshot>(
           predicate: #Predicate { snapshot in
-            snapshot.userId == userId && snapshot.serverDeletedAt == nil && snapshot.jobId == jobId
+            snapshot.userId == userId && snapshot.serverDeletedAt == nil
+              && snapshot.syncStatusRaw != "pendingDelete" && snapshot.jobId == jobId
           },
           sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
         )
@@ -77,7 +78,8 @@ final class SnapshotsRepository: ObservableObject {
         if includeLegacyNil {
           let legacyDescriptor = FetchDescriptor<LocalWageSnapshot>(
             predicate: #Predicate { snapshot in
-              snapshot.userId == userId && snapshot.serverDeletedAt == nil && snapshot.jobId == nil
+              snapshot.userId == userId && snapshot.serverDeletedAt == nil
+                && snapshot.syncStatusRaw != "pendingDelete" && snapshot.jobId == nil
             },
             sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
           )
@@ -102,6 +104,7 @@ final class SnapshotsRepository: ObservableObject {
         let descriptor = FetchDescriptor<LocalWageSnapshot>(
           predicate: #Predicate { snapshot in
             snapshot.userId == userId && snapshot.serverDeletedAt == nil
+              && snapshot.syncStatusRaw != "pendingDelete"
           },
           sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
         )
@@ -177,6 +180,7 @@ final class SnapshotsRepository: ObservableObject {
       let baselineDescriptor = FetchDescriptor<LocalWageSnapshot>(
         predicate: #Predicate { snapshot in
           snapshot.userId == userId && snapshot.fromDate == nil && snapshot.serverDeletedAt == nil
+            && snapshot.syncStatusRaw != "pendingDelete"
         }
       )
       let baselineRows = try context.fetch(baselineDescriptor)
