@@ -91,10 +91,6 @@ struct CalendarSyncSettingsView: View {
         )
 
       VStack(alignment: .leading, spacing: Spacing.xxxs) {
-        Text("calendar.subscription.title")
-          .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
-
         Text(
           LocalizedStringKey(
             viewModel.calendarSubscriptionState.isActive
