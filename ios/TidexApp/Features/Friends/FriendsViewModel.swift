@@ -677,7 +677,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     guard let sharer = selectedSharer else { return }
 
     error = nil
-    defer { isLoadingShifts = false }
 
     do {
       guard let userId = try await getCurrentUserId() else {
@@ -696,6 +695,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       }
       inFlightRequestKey = requestKey
       defer {
+        isLoadingShifts = false
         if inFlightRequestKey == requestKey {
           inFlightRequestKey = nil
         }

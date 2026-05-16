@@ -386,6 +386,8 @@ struct SharingView: View {
               highlightDates = Set(dates)
             }
 
+            await viewModel.loadShiftsForSelectedSharer()
+
             if !highlightDates.isEmpty || !highlightShiftIds.isEmpty {
               scheduleHighlightAutoClear()
             }
