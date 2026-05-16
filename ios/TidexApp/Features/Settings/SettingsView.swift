@@ -345,7 +345,8 @@ struct SettingsView: View {
   private var settingsMenuDivider: some View {
     Divider()
       .background(Color.tidexBorderSubtle)
-      .padding(.leading, Spacing.md + 38 + Spacing.sm)
+      .padding(
+        .leading, SettingsMenuLayout.iconEdgeInset + SettingsMenuLayout.iconBadgeSize + Spacing.sm)
   }
 
   // MARK: - Sign Out Rows
@@ -377,8 +378,9 @@ struct SettingsView: View {
 
         Spacer()
       }
-      .frame(minHeight: 52)
-      .padding(.horizontal, Spacing.md)
+      .frame(minHeight: SettingsMenuLayout.rowHeight)
+      .padding(.leading, SettingsMenuLayout.iconEdgeInset)
+      .padding(.trailing, Spacing.md)
     }
     .disabled(isSigningOut || isSigningOutGlobal)
   }
@@ -408,8 +410,9 @@ struct SettingsView: View {
 
         Spacer()
       }
-      .frame(minHeight: 52)
-      .padding(.horizontal, Spacing.md)
+      .frame(minHeight: SettingsMenuLayout.rowHeight)
+      .padding(.leading, SettingsMenuLayout.iconEdgeInset)
+      .padding(.trailing, Spacing.md)
     }
     .disabled(isSigningOut || isSigningOutGlobal)
   }
@@ -1219,6 +1222,12 @@ private struct RecurringShiftsSettingsView: View {
 
 // MARK: - Settings Menu Item
 
+private enum SettingsMenuLayout {
+  static let rowHeight: CGFloat = 52
+  static let iconBadgeSize: CGFloat = 38
+  static var iconEdgeInset: CGFloat { (rowHeight - iconBadgeSize) / 2 }
+}
+
 /// A single settings menu item with colored icon background, title, and chevron
 /// Designed for use inside a List section (iOS Settings style)
 struct SettingsMenuItem: View {
@@ -1227,7 +1236,6 @@ struct SettingsMenuItem: View {
   let action: () -> Void
 
   @Environment(\.layoutDirection) private var layoutDirection
-  private let rowHeight: CGFloat = 52
 
   var body: some View {
     Button(action: action) {
@@ -1251,8 +1259,9 @@ struct SettingsMenuItem: View {
           .font(.tidexFootnoteMedium)
           .foregroundStyle(.tertiary)
       }
-      .frame(minHeight: rowHeight)
-      .padding(.horizontal, Spacing.md)
+      .frame(minHeight: SettingsMenuLayout.rowHeight)
+      .padding(.leading, SettingsMenuLayout.iconEdgeInset)
+      .padding(.trailing, Spacing.md)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -1279,7 +1288,6 @@ private struct SettingsRowIcon: View {
   var foregroundColor: Color = .tidexTextPrimary
   var backgroundColor: Color = .tidexSurfaceSecondary
   var borderColor: Color = .tidexBorder
-  private let badgeSize: CGFloat = 38
   private let glyphBoxSize: CGFloat = 18
 
   var body: some View {
@@ -1288,7 +1296,7 @@ private struct SettingsRowIcon: View {
       .scaledToFit()
       .foregroundColor(foregroundColor)
       .frame(width: glyphBoxSize, height: glyphBoxSize)
-      .frame(width: badgeSize, height: badgeSize)
+      .frame(width: SettingsMenuLayout.iconBadgeSize, height: SettingsMenuLayout.iconBadgeSize)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
           .fill(backgroundColor)
