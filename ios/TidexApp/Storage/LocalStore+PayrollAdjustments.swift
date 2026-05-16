@@ -55,7 +55,7 @@ extension LocalStoreActor {
       existing.currency = adjustment.currency
       existing.categoryRaw = adjustment.categoryRaw
       existing.taxTreatmentRaw = adjustment.taxTreatmentRaw
-      existing.title = adjustment.title
+      existing.descriptionText = adjustment.descriptionText
       existing.note = adjustment.note
       existing.curatedNote = adjustment.curatedNote
       existing.curatedLink = adjustment.curatedLink
@@ -83,7 +83,7 @@ extension LocalStoreActor {
     currency: String,
     category: PayrollAdjustmentCategory,
     taxTreatment: PayrollAdjustmentTaxTreatment,
-    title: String,
+    description: String,
     note: String?,
     earnedFromDate: Date?,
     earnedToDate: Date?,
@@ -97,7 +97,7 @@ extension LocalStoreActor {
       currency: currency,
       category: category,
       taxTreatment: taxTreatment,
-      title: title,
+      description: description,
       note: note,
       curatedNote: nil,
       curatedLink: nil,
@@ -119,7 +119,7 @@ extension LocalStoreActor {
       currency: currency,
       category: category,
       taxTreatment: taxTreatment,
-      title: title,
+      description: description,
       note: note,
       curatedNote: nil,
       curatedLink: nil,
@@ -161,7 +161,7 @@ extension LocalStoreActor {
     currency: String,
     category: PayrollAdjustmentCategory,
     taxTreatment: PayrollAdjustmentTaxTreatment,
-    title: String,
+    description: String,
     note: String?,
     earnedFromDate: Date?,
     earnedToDate: Date?,
@@ -176,7 +176,7 @@ extension LocalStoreActor {
     existing.currency = currency
     existing.category = category
     existing.taxTreatment = taxTreatment
-    existing.title = title
+    existing.descriptionText = description
     existing.note = note
     existing.earnedFromDate = earnedFromDate
     existing.earnedToDate = earnedToDate
@@ -202,7 +202,7 @@ extension LocalStoreActor {
     existing.currency = serverRow.currency
     existing.category = serverRow.category
     existing.taxTreatment = serverRow.tax_treatment
-    existing.title = serverRow.title
+    existing.descriptionText = serverRow.description
     existing.note = serverRow.note
     existing.curatedNote = serverRow.curated_note
     existing.curatedLink = serverRow.curated_link

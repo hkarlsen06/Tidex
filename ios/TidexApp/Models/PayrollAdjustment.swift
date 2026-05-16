@@ -21,7 +21,7 @@ struct PayrollAdjustment: Codable, Identifiable, Equatable {
   let currency: String
   let category: PayrollAdjustmentCategory
   let tax_treatment: PayrollAdjustmentTaxTreatment
-  let title: String
+  let description: String
   let note: String?
   let curated_note: String?
   let curated_link: String?

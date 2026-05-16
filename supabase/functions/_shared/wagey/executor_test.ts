@@ -11,7 +11,8 @@ type TableName =
   | "user_settings"
   | "jobs"
   | "wage_snapshots"
-  | "recurring_shifts";
+  | "recurring_shifts"
+  | "payroll_adjustments";
 
 type MockDb = Record<TableName, Array<Record<string, unknown>>>;
 
@@ -261,6 +262,14 @@ function createMockClient(db: MockDb, userId: string) {
             ),
             error: null,
           };
+        case "resolve_payroll_adjustment_id":
+          return {
+            data: resolveShortId(
+              "payroll_adjustments",
+              args.p_short_or_full_id ?? "",
+            ),
+            error: null,
+          };
         default:
           throw new Error(`Unexpected rpc: ${name}`);
       }
@@ -281,6 +290,7 @@ function createContext(dbOverrides: Partial<MockDb> = {}): WageyRequestContext {
     jobs: [],
     wage_snapshots: [],
     recurring_shifts: [],
+    payroll_adjustments: [],
     ...dbOverrides,
   };
 
@@ -367,6 +377,760 @@ Deno.test("manage_account routes profile and settings actions", async () => {
       .payrollDay,
     15,
   );
+});
+
+Deno.test("manage_payroll_adjustment rejects create without essentials", async () => {
+  const result = await executeTool(
+    createContext(),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: null,
+      jobId: null,
+      amount: null,
+      currency: null,
+      category: null,
+      taxTreatment: null,
+      description: null,
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assertEquals(result.success, false);
+  assertEquals(result.action, "create");
+  assertEquals(result.missingRequiredFields, [
+    "amount",
+    "description",
+    "payoutDate",
+  ]);
+});
+
+Deno.test("manage_payroll_adjustment requires tax treatment when payout has tax", async () => {
+  const result = await executeTool(
+    createContext({
+      user_shifts: [{
+        id: "11111111-2222-3333-4444-555555555555",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-05-20",
+        start_time: "09:00",
+        end_time: "17:00",
+        custom_supplements: null,
+        deleted_at: null,
+      }],
+      wage_snapshots: [{
+        id: "99999999-9999-4999-8999-999999999999",
+        user_id: USER_ID,
+        job_id: null,
+        from_date: null,
+        hourly_wage: 200,
+        wage_level: null,
+        tariff_type_id: null,
+        supplements: { rules: [] },
+        tax_enabled: true,
+        tax_percentage: 35,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      }],
+    }),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: "2026-06-15",
+      payoutMonth: null,
+      jobId: null,
+      amount: 2000,
+      currency: null,
+      category: "bonus",
+      taxTreatment: null,
+      description: "Bonus",
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assertEquals(result.success, false);
+  assertEquals(result.missingRequiredFields, ["taxTreatment"]);
+});
+
+Deno.test("manage_payroll_adjustment defaults to net manual when payout has no taxed payroll", async () => {
+  const result = await executeTool(
+    createContext({
+      wage_snapshots: [{
+        id: "99999999-9999-4999-8999-999999999999",
+        user_id: USER_ID,
+        job_id: null,
+        from_date: null,
+        hourly_wage: 200,
+        wage_level: null,
+        tariff_type_id: null,
+        supplements: { rules: [] },
+        tax_enabled: true,
+        tax_percentage: 35,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      }],
+    }),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: "2026-06",
+      jobId: null,
+      amount: 2000,
+      currency: null,
+      category: "bonus",
+      taxTreatment: null,
+      description: "Bonus",
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as { adjustment: Record<string, unknown> };
+  assertEquals(data.adjustment.taxTreatment, "net_manual");
+  assertEquals(data.adjustment.payoutDate, "2026-06-15");
+});
+
+Deno.test("manage_payroll_adjustment ignores older taxed snapshots when latest earning snapshot has no tax", async () => {
+  const defaultJobId = "11111111-2222-4333-8444-555555555555";
+  const result = await executeTool(
+    createContext({
+      jobs: [{
+        id: defaultJobId,
+        user_id: USER_ID,
+        name: "Kafe",
+        color: "#112233",
+        payroll_day: 10,
+        half_tax_month: 12,
+        monthly_goal: null,
+        sort_order: 0,
+        is_default: true,
+        archived_at: null,
+        deleted_at: null,
+      }],
+      user_shifts: [{
+        id: "11111111-2222-3333-4444-555555555555",
+        user_id: USER_ID,
+        job_id: defaultJobId,
+        shift_date: "2026-05-08",
+        start_time: "16:00",
+        end_time: "23:15",
+        custom_supplements: null,
+        deleted_at: null,
+      }],
+      wage_snapshots: [
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          user_id: USER_ID,
+          job_id: defaultJobId,
+          from_date: null,
+          hourly_wage: 200,
+          wage_level: null,
+          tariff_type_id: null,
+          supplements: { rules: [] },
+          tax_enabled: true,
+          tax_percentage: 35,
+          break_enabled: false,
+          break_method: "none",
+          break_threshold_hours: 5.5,
+          break_deduction_minutes: 30,
+          deleted_at: null,
+        },
+        {
+          id: "88888888-8888-4888-8888-888888888888",
+          user_id: USER_ID,
+          job_id: defaultJobId,
+          from_date: "2026-04-01",
+          hourly_wage: 200,
+          wage_level: null,
+          tariff_type_id: null,
+          supplements: { rules: [] },
+          tax_enabled: false,
+          tax_percentage: 35,
+          break_enabled: false,
+          break_method: "none",
+          break_threshold_hours: 5.5,
+          break_deduction_minutes: 30,
+          deleted_at: null,
+        },
+      ],
+    }),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: "2026-06",
+      jobId: null,
+      amount: 2000,
+      currency: null,
+      category: "bonus",
+      taxTreatment: null,
+      description: "Bonus",
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as { adjustment: Record<string, unknown> };
+  assertEquals(data.adjustment.taxTreatment, "net_manual");
+});
+
+Deno.test("manage_payroll_adjustment defaults to net manual when payout has no tax", async () => {
+  const result = await executeTool(
+    createContext({
+      wage_snapshots: [{
+        id: "99999999-9999-4999-8999-999999999999",
+        user_id: USER_ID,
+        job_id: null,
+        from_date: null,
+        hourly_wage: 200,
+        wage_level: null,
+        tariff_type_id: null,
+        supplements: { rules: [] },
+        tax_enabled: false,
+        tax_percentage: 0,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      }],
+    }),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: "2026-06",
+      jobId: null,
+      amount: 2000,
+      currency: null,
+      category: "bonus",
+      taxTreatment: null,
+      description: "Bonus",
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as { adjustment: Record<string, unknown> };
+  assertEquals(data.adjustment.taxTreatment, "net_manual");
+  assertEquals(data.adjustment.payoutDate, "2026-06-15");
+});
+
+Deno.test("manage_payroll_adjustment uses default job tax settings for unscoped create", async () => {
+  const defaultJobId = "11111111-2222-4333-8444-555555555555";
+  const result = await executeTool(
+    createContext({
+      jobs: [{
+        id: defaultJobId,
+        user_id: USER_ID,
+        name: "Kafe",
+        color: "#112233",
+        payroll_day: 20,
+        half_tax_month: null,
+        monthly_goal: null,
+        sort_order: 0,
+        is_default: true,
+        archived_at: null,
+        deleted_at: null,
+      }],
+      wage_snapshots: [
+        {
+          id: "99999999-9999-4999-8999-999999999999",
+          user_id: USER_ID,
+          job_id: null,
+          from_date: null,
+          hourly_wage: 200,
+          wage_level: null,
+          tariff_type_id: null,
+          supplements: { rules: [] },
+          tax_enabled: true,
+          tax_percentage: 35,
+          break_enabled: false,
+          break_method: "none",
+          break_threshold_hours: 5.5,
+          break_deduction_minutes: 30,
+          deleted_at: null,
+        },
+        {
+          id: "88888888-8888-4888-8888-888888888888",
+          user_id: USER_ID,
+          job_id: defaultJobId,
+          from_date: null,
+          hourly_wage: 200,
+          wage_level: null,
+          tariff_type_id: null,
+          supplements: { rules: [] },
+          tax_enabled: false,
+          tax_percentage: 0,
+          break_enabled: false,
+          break_method: "none",
+          break_threshold_hours: 5.5,
+          break_deduction_minutes: 30,
+          deleted_at: null,
+        },
+      ],
+    }),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: "2026-06",
+      jobId: null,
+      amount: 2000,
+      currency: null,
+      category: "bonus",
+      taxTreatment: null,
+      description: "Bonus",
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as { adjustment: Record<string, unknown> };
+  assertEquals(data.adjustment.taxTreatment, "net_manual");
+  assertEquals(data.adjustment.payoutDate, "2026-06-15");
+});
+
+Deno.test("manage_payroll_adjustment creates with derived payout date", async () => {
+  const jobId = "11111111-2222-4333-8444-555555555555";
+  const db: Partial<MockDb> = {
+    jobs: [{
+      id: jobId,
+      user_id: USER_ID,
+      name: "Kafe",
+      color: "#112233",
+      payroll_day: 31,
+      half_tax_month: null,
+      monthly_goal: null,
+      sort_order: 0,
+      is_default: true,
+      archived_at: null,
+      deleted_at: null,
+    }],
+  };
+
+  const result = await executeTool(
+    createContext(db),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: "2026-02",
+      jobId,
+      amount: 1200,
+      currency: null,
+      category: "retro_pay",
+      taxTreatment: "gross_taxable",
+      description: "Retro pay April",
+      note: "Back pay",
+      earnedFromDate: "2026-04-01",
+      earnedToDate: "2026-04-30",
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as { adjustment: Record<string, unknown> };
+  assertEquals(data.adjustment.payoutDate, "2026-02-28");
+  assertEquals(data.adjustment.currency, "NOK");
+  assertEquals(data.adjustment.taxTreatment, "gross_taxable");
+});
+
+Deno.test("manage_payroll_adjustment uses global payroll day without workplace", async () => {
+  const result = await executeTool(
+    createContext({
+      jobs: [{
+        id: "11111111-2222-4333-8444-555555555555",
+        user_id: USER_ID,
+        name: "Kafe",
+        color: "#112233",
+        payroll_day: 31,
+        half_tax_month: null,
+        monthly_goal: null,
+        sort_order: 0,
+        is_default: true,
+        archived_at: null,
+        deleted_at: null,
+      }],
+    }),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "create",
+      adjustmentId: null,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: "2026-02",
+      jobId: null,
+      amount: 500,
+      currency: null,
+      category: "correction",
+      taxTreatment: "net_manual",
+      description: "General correction",
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as { adjustment: Record<string, unknown> };
+  assertEquals(data.adjustment.jobId, null);
+  assertEquals(data.adjustment.payoutDate, "2026-02-15");
+});
+
+Deno.test("manage_payroll_adjustment lists payout range and excludes deleted", async () => {
+  const ctx = createContext({
+    payroll_adjustments: [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        user_id: USER_ID,
+        job_id: null,
+        amount: 500,
+        currency: "NOK",
+        category: "bonus",
+        tax_treatment: "gross_taxable",
+        description: "Bonus",
+        note: null,
+        earned_from_date: null,
+        earned_to_date: null,
+        payout_date: "2026-05-15",
+        created_at: "2026-05-01T10:00:00Z",
+        updated_at: "2026-05-01T10:00:00Z",
+        deleted_at: null,
+      },
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        user_id: USER_ID,
+        job_id: null,
+        amount: 200,
+        currency: "NOK",
+        category: "correction",
+        tax_treatment: "net_manual",
+        description: "Old correction",
+        note: null,
+        earned_from_date: null,
+        earned_to_date: null,
+        payout_date: "2026-05-20",
+        deleted_at: "2026-05-02T10:00:00Z",
+      },
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        user_id: USER_ID,
+        job_id: null,
+        amount: 300,
+        currency: "NOK",
+        category: "correction",
+        tax_treatment: "net_manual",
+        description: "June correction",
+        note: null,
+        earned_from_date: null,
+        earned_to_date: null,
+        payout_date: "2026-06-15",
+        deleted_at: null,
+      },
+    ],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "list",
+      adjustmentId: null,
+      payoutStart: "2026-05-01",
+      payoutEnd: "2026-05-31",
+      payoutDate: null,
+      payoutMonth: null,
+      jobId: null,
+      amount: null,
+      currency: null,
+      category: null,
+      taxTreatment: null,
+      description: null,
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: 10,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as {
+    adjustments: Array<Record<string, unknown>>;
+    count: number;
+  };
+  assertEquals(data.count, 1);
+  assertEquals(data.adjustments[0].description, "Bonus");
+});
+
+Deno.test("manage_payroll_adjustment updates by short ID", async () => {
+  const adjustmentId = "abcdef12-1111-4111-8111-111111111111";
+  const db: Partial<MockDb> = {
+    payroll_adjustments: [{
+      id: adjustmentId,
+      user_id: USER_ID,
+      job_id: null,
+      amount: 500,
+      currency: "NOK",
+      category: "bonus",
+      tax_treatment: "gross_taxable",
+      description: "Bonus",
+      note: null,
+      earned_from_date: null,
+      earned_to_date: null,
+      payout_date: "2026-05-15",
+      deleted_at: null,
+    }],
+  };
+
+  const result = await executeTool(
+    createContext(db),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "update",
+      adjustmentId: "abcdef",
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: null,
+      jobId: null,
+      amount: 750,
+      currency: null,
+      category: null,
+      taxTreatment: null,
+      description: "Updated bonus",
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.payroll_adjustments?.[0].amount, 750);
+  assertEquals(db.payroll_adjustments?.[0].description, "Updated bonus");
+});
+
+Deno.test("manage_payroll_adjustment clears nullable fields explicitly", async () => {
+  const adjustmentId = "abcdef12-1111-4111-8111-111111111111";
+  const jobId = "11111111-2222-4333-8444-555555555555";
+  const db: Partial<MockDb> = {
+    payroll_adjustments: [{
+      id: adjustmentId,
+      user_id: USER_ID,
+      job_id: jobId,
+      amount: 500,
+      currency: "NOK",
+      category: "bonus",
+      tax_treatment: "gross_taxable",
+      description: "Bonus",
+      note: "Temporary note",
+      earned_from_date: "2026-04-01",
+      earned_to_date: "2026-04-30",
+      payout_date: "2026-05-15",
+      deleted_at: null,
+    }],
+  };
+
+  const result = await executeTool(
+    createContext(db),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "update",
+      adjustmentId,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: null,
+      jobId: null,
+      amount: null,
+      currency: null,
+      category: null,
+      taxTreatment: null,
+      description: null,
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: ["jobId", "note", "earnedFromDate", "earnedToDate"],
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.payroll_adjustments?.[0].job_id, null);
+  assertEquals(db.payroll_adjustments?.[0].note, null);
+  assertEquals(db.payroll_adjustments?.[0].earned_from_date, null);
+  assertEquals(db.payroll_adjustments?.[0].earned_to_date, null);
+});
+
+Deno.test("manage_payroll_adjustment rejects ambiguous delete reference", async () => {
+  const result = await executeTool(
+    createContext({
+      payroll_adjustments: [
+        {
+          id: "aaaaaaaa-1111-4111-8111-111111111111",
+          user_id: USER_ID,
+          job_id: null,
+          amount: 100,
+          currency: "NOK",
+          category: "other",
+          tax_treatment: "net_manual",
+          description: "First",
+          note: null,
+          earned_from_date: null,
+          earned_to_date: null,
+          payout_date: "2026-05-15",
+          deleted_at: null,
+        },
+        {
+          id: "aaaaaaaa-2222-4222-8222-222222222222",
+          user_id: USER_ID,
+          job_id: null,
+          amount: 200,
+          currency: "NOK",
+          category: "other",
+          tax_treatment: "net_manual",
+          description: "Second",
+          note: null,
+          earned_from_date: null,
+          earned_to_date: null,
+          payout_date: "2026-05-15",
+          deleted_at: null,
+        },
+      ],
+    }),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "delete",
+      adjustmentId: "aaaa",
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: null,
+      jobId: null,
+      amount: null,
+      currency: null,
+      category: null,
+      taxTreatment: null,
+      description: null,
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assertEquals(result.success, false);
+  assertEquals(result.validationErrors?.[0].field, "adjustmentId");
+  assertEquals(result.validationErrors?.[0].message, "not found or ambiguous");
+});
+
+Deno.test("manage_payroll_adjustment deletes by full ID", async () => {
+  const adjustmentId = "abcdef12-1111-4111-8111-111111111111";
+  const db: Partial<MockDb> = {
+    payroll_adjustments: [{
+      id: adjustmentId,
+      user_id: USER_ID,
+      job_id: null,
+      amount: 500,
+      currency: "NOK",
+      category: "bonus",
+      tax_treatment: "gross_taxable",
+      description: "Bonus",
+      note: null,
+      earned_from_date: null,
+      earned_to_date: null,
+      payout_date: "2026-05-15",
+      deleted_at: null,
+    }],
+  };
+
+  const result = await executeTool(
+    createContext(db),
+    "manage_payroll_adjustment",
+    JSON.stringify({
+      action: "delete",
+      adjustmentId,
+      payoutStart: null,
+      payoutEnd: null,
+      payoutDate: null,
+      payoutMonth: null,
+      jobId: null,
+      amount: null,
+      currency: null,
+      category: null,
+      taxTreatment: null,
+      description: null,
+      note: null,
+      earnedFromDate: null,
+      earnedToDate: null,
+      clearFields: null,
+      limit: null,
+    }),
+  );
+
+  assert(result.success, result.message);
+  assert(typeof db.payroll_adjustments?.[0].deleted_at === "string");
 });
 
 Deno.test("get_statistics shift_gaps returns longest gaps between shifts", async () => {
@@ -1021,6 +1785,144 @@ Deno.test("manage_shift_advanced rejects invalid custom pause window payloads", 
       "Pause windows require different start and end times",
     ),
   );
+});
+
+Deno.test("calculate_wages includes adjustments in the following payout month", async () => {
+  const ctx = createContext({
+    user_settings: [{
+      user_id: USER_ID,
+      currency: "NOK",
+      payroll_day: 10,
+      half_tax_month: null,
+    }],
+    wage_snapshots: [{
+      id: "99999999-9999-4999-8999-999999999999",
+      user_id: USER_ID,
+      job_id: null,
+      from_date: null,
+      hourly_wage: 100,
+      wage_level: null,
+      tariff_type_id: null,
+      supplements: { rules: [] },
+      tax_enabled: false,
+      tax_percentage: 0,
+      break_enabled: false,
+      break_method: "none",
+      break_threshold_hours: 5.5,
+      break_deduction_minutes: 30,
+      deleted_at: null,
+    }],
+    user_shifts: [{
+      id: "11111111-2222-3333-4444-555555555555",
+      user_id: USER_ID,
+      job_id: null,
+      shift_date: "2026-06-05",
+      start_time: "10:00",
+      end_time: "18:00",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+    payroll_adjustments: [
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        user_id: USER_ID,
+        job_id: null,
+        amount: 2000,
+        currency: "NOK",
+        category: "bonus",
+        tax_treatment: "net_manual",
+        description: "Bonus",
+        note: null,
+        earned_from_date: null,
+        earned_to_date: null,
+        payout_date: "2026-07-10",
+        created_at: "2026-05-16T12:00:00Z",
+        updated_at: "2026-05-16T12:00:00Z",
+        deleted_at: null,
+      },
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        user_id: USER_ID,
+        job_id: null,
+        amount: 500,
+        currency: "NOK",
+        category: "bonus",
+        tax_treatment: "net_manual",
+        description: "June payout bonus",
+        note: null,
+        earned_from_date: null,
+        earned_to_date: null,
+        payout_date: "2026-06-10",
+        deleted_at: null,
+      },
+    ],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "calculate_wages",
+    JSON.stringify({
+      startDate: "2026-06-01",
+      endDate: "2026-06-30",
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as Record<string, unknown>;
+  assertEquals(data.totalShifts, 1);
+  assertEquals(data.shiftGross, 800);
+  assertEquals(data.adjustmentCount, 1);
+  assertEquals(data.adjustmentGross, 2000);
+  assertEquals(data.totalGross, 2800);
+  assertEquals(data.totalNet, 2800);
+  assertEquals(data.payoutStart, "2026-07-10");
+  assertEquals(data.payoutEnd, "2026-07-10");
+  const adjustments = data.adjustments as Array<Record<string, unknown>>;
+  assertEquals(adjustments[0].description, "Bonus");
+});
+
+Deno.test("calculate_wages returns payout adjustments even when no shifts exist", async () => {
+  const ctx = createContext({
+    user_settings: [{
+      user_id: USER_ID,
+      currency: "NOK",
+      payroll_day: 10,
+      half_tax_month: null,
+    }],
+    payroll_adjustments: [{
+      id: "22222222-2222-4222-8222-222222222222",
+      user_id: USER_ID,
+      job_id: null,
+      amount: 2000,
+      currency: "NOK",
+      category: "bonus",
+      tax_treatment: "net_manual",
+      description: "Bonus",
+      note: null,
+      earned_from_date: null,
+      earned_to_date: null,
+      payout_date: "2026-07-10",
+      created_at: "2026-05-16T12:00:00Z",
+      updated_at: "2026-05-16T12:00:00Z",
+      deleted_at: null,
+    }],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "calculate_wages",
+    JSON.stringify({
+      startDate: "2026-06-01",
+      endDate: "2026-06-30",
+    }),
+  );
+
+  assert(result.success, result.message);
+  const data = result.data as Record<string, unknown>;
+  assertEquals(data.totalShifts, 0);
+  assertEquals(data.adjustmentCount, 1);
+  assertEquals(data.totalGross, 2000);
+  assertEquals(data.totalNet, 2000);
 });
 
 Deno.test("calculate_earnings hypothetical_change preserves custom pause windows on the source shift", async () => {

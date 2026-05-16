@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -53,7 +54,7 @@ final class PayrollAdjustmentsRepository: ObservableObject {
     currency: String,
     category: PayrollAdjustmentCategory,
     taxTreatment: PayrollAdjustmentTaxTreatment,
-    title: String,
+    description: String,
     note: String? = nil,
     earnedFromDate: Date? = nil,
     earnedToDate: Date? = nil,
@@ -66,7 +67,7 @@ final class PayrollAdjustmentsRepository: ObservableObject {
       currency: currency,
       category: category,
       taxTreatment: taxTreatment,
-      title: title,
+      description: description,
       note: note,
       earnedFromDate: earnedFromDate,
       earnedToDate: earnedToDate,
@@ -90,7 +91,7 @@ final class PayrollAdjustmentsRepository: ObservableObject {
     currency: String,
     category: PayrollAdjustmentCategory,
     taxTreatment: PayrollAdjustmentTaxTreatment,
-    title: String,
+    description: String,
     note: String? = nil,
     earnedFromDate: Date? = nil,
     earnedToDate: Date? = nil,
@@ -103,7 +104,7 @@ final class PayrollAdjustmentsRepository: ObservableObject {
       currency: currency,
       category: category,
       taxTreatment: taxTreatment,
-      title: title,
+      description: description,
       note: note,
       earnedFromDate: earnedFromDate,
       earnedToDate: earnedToDate,

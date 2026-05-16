@@ -1394,6 +1394,8 @@ final class WageyViewModel {
       return [.jobs, .wageSnapshots]
     case "manage_wage_snapshots":
       return [.wageSnapshots]
+    case "manage_payroll_adjustment":
+      return [.payrollAdjustments]
     case "manage_account", "manage_settings":
       return [.userSettings]
     default:

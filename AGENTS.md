@@ -158,8 +158,10 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 
 Run commands from the repository root unless explicitly stated otherwise.
 
+When running verification or diagnostic commands, prefer flags that reduce non-actionable output and preserve useful diagnostics. Examples: use `swiftlint --quiet` for fast Swift checks, use `--json` on repository build/test wrappers when you need structured diagnostics, and use focused test filters where possible. Avoid verbose command modes unless the extra output is needed to debug the issue.
+
 **iOS Builds:**
-- To check for Swift errors, run `swiftlint` (fast, catches common issues)
+- To check for Swift errors, run `swiftlint --quiet` (fast, catches common issues)
 - When building the iOS app, always run:
 
 ```bash

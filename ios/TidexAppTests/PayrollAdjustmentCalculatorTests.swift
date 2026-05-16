@@ -81,7 +81,7 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
       currency: "kr",
       category: category,
       tax_treatment: taxTreatment,
-      title: "Etterbetaling",
+      description: "Etterbetaling for manglende timer.",
       note: nil,
       curated_note: nil,
       curated_link: nil,

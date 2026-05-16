@@ -59,6 +59,36 @@ final class WageyToolLabelResolverTests: XCTestCase {
     )
   }
 
+  func testManagePayrollAdjustmentUsesLocalizedLabels() {
+    let fallbackCall = ToolCall(
+      id: "tool-7",
+      name: "manage_payroll_adjustment"
+    )
+    let createCall = ToolCall(
+      id: "tool-8",
+      name: "manage_payroll_adjustment",
+      arguments: #"{"action":"create"}"#
+    )
+    let deleteCall = ToolCall(
+      id: "tool-9",
+      name: "manage_payroll_adjustment",
+      arguments: #"{"action":"delete"}"#
+    )
+
+    XCTAssertEqual(
+      WageyToolLabelResolver.displayName(for: fallbackCall, isExecuting: true),
+      String(localized: .wageyToolManagePayrollAdjustment)
+    )
+    XCTAssertEqual(
+      WageyToolLabelResolver.displayName(for: createCall, isExecuting: true),
+      String(localized: .wageyToolPayrollAdjustmentCreating)
+    )
+    XCTAssertEqual(
+      WageyToolLabelResolver.displayName(for: deleteCall, isExecuting: true),
+      String(localized: .wageyToolPayrollAdjustmentDeleting)
+    )
+  }
+
   func testCompletedLabelsStripTrailingEllipsis() {
     let toolCall = ToolCall(
       id: "tool-6",

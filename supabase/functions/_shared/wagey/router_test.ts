@@ -93,12 +93,13 @@ function createMockContext(userId: string): WageyRequestContext {
   };
 }
 
-Deno.test("Wagey exposes 18 app tools after structural consolidation", () => {
+Deno.test("Wagey exposes 19 app tools after structural consolidation", () => {
   const toolNames = tools.map((tool) => tool.name);
 
-  assertEquals(toolNames.length, 18);
+  assertEquals(toolNames.length, 19);
   assert(toolNames.includes("manage_account"));
   assert(toolNames.includes("manage_recurring_shift"));
+  assert(toolNames.includes("manage_payroll_adjustment"));
   assert(toolNames.includes("query_friend_shifts"));
   assert(!toolNames.includes("draft_recurring_shift"));
   assert(!toolNames.includes("confirm_recurring_shift"));
@@ -107,6 +108,45 @@ Deno.test("Wagey exposes 18 app tools after structural consolidation", () => {
   assert(!toolNames.includes("manage_settings"));
   assert(!toolNames.includes("manage_feedback"));
   assert(!toolNames.includes("manage_profile"));
+});
+
+Deno.test("manage_payroll_adjustment advertises strict nullable schema", () => {
+  const tool = tools.find((candidate) =>
+    candidate.name === "manage_payroll_adjustment"
+  );
+
+  assert(tool && "input_schema" in tool);
+  assertEquals(tool.strict, true);
+  assertEquals(tool.input_schema.additionalProperties, false);
+
+  const required = tool.input_schema.required ?? [];
+  assertEquals(required.includes("action"), true);
+  assertEquals(required.includes("amount"), true);
+  assertEquals(required.includes("description"), true);
+  assertEquals(required.includes("title"), false);
+  assertEquals(required.includes("payoutMonth"), true);
+  assertEquals(required.includes("earnedToDate"), true);
+  assertEquals(required.includes("clearFields"), true);
+
+  const properties = tool.input_schema.properties as Record<
+    string,
+    Record<string, unknown>
+  >;
+  assertEquals(properties.action.enum, ["list", "create", "update", "delete"]);
+  assertEquals(properties.amount.type, ["number", "null"]);
+  assertEquals(properties.description.type, ["string", "null"]);
+  assert(typeof properties.description.description === "string");
+  assertEquals("title" in properties, false);
+  assertEquals(properties.taxTreatment.enum, [
+    "gross_taxable",
+    "net_manual",
+    "excluded_from_tax_estimate",
+    null,
+  ]);
+  assertEquals(properties.clearFields.type, ["array", "null"]);
+  assert(typeof properties.clearFields.description === "string");
+  assert(typeof properties.payoutDate.description === "string");
+  assert(typeof properties.earnedFromDate.description === "string");
 });
 
 async function readChunkStream(

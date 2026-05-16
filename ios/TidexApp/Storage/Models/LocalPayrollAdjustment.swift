@@ -27,7 +27,8 @@ final class LocalPayrollAdjustment {
   var currency: String
   var categoryRaw: String
   var taxTreatmentRaw: String
-  var title: String
+  @Attribute(originalName: "title")
+  var descriptionText: String
   var note: String?
   var curatedNote: String?
   var curatedLink: String?
@@ -102,7 +103,7 @@ final class LocalPayrollAdjustment {
     currency: String,
     category: PayrollAdjustmentCategory,
     taxTreatment: PayrollAdjustmentTaxTreatment,
-    title: String,
+    description: String,
     note: String? = nil,
     curatedNote: String? = nil,
     curatedLink: String? = nil,
@@ -125,7 +126,7 @@ final class LocalPayrollAdjustment {
     self.currency = currency
     self.categoryRaw = category.rawValue
     self.taxTreatmentRaw = taxTreatment.rawValue
-    self.title = title
+    self.descriptionText = description
     self.note = note
     self.curatedNote = curatedNote
     self.curatedLink = curatedLink
@@ -153,7 +154,7 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
   let currency: String
   let category: PayrollAdjustmentCategory
   let taxTreatment: PayrollAdjustmentTaxTreatment
-  let title: String
+  let description: String
   let note: String?
   let curatedNote: String?
   let curatedLink: String?
@@ -183,7 +184,7 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
       currency: row.currency,
       category: row.category,
       taxTreatment: row.tax_treatment,
-      title: row.title,
+      description: row.description,
       note: row.note,
       curatedNote: row.curated_note,
       curatedLink: row.curated_link,
@@ -203,7 +204,7 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
     if currency != other.currency { changed.insert(.currency) }
     if category != other.category { changed.insert(.category) }
     if taxTreatment != other.taxTreatment { changed.insert(.taxTreatment) }
-    if title != other.title { changed.insert(.title) }
+    if description != other.description { changed.insert(.description) }
     if note != other.note { changed.insert(.note) }
     if curatedNote != other.curatedNote { changed.insert(.curatedNote) }
     if curatedLink != other.curatedLink { changed.insert(.curatedLink) }
@@ -224,7 +225,7 @@ extension LocalPayrollAdjustment {
       currency: currency,
       category: category,
       tax_treatment: taxTreatment,
-      title: title,
+      description: descriptionText,
       note: note,
       curated_note: curatedNote,
       curated_link: curatedLink,
@@ -257,7 +258,7 @@ extension LocalPayrollAdjustment {
       currency: serverRow.currency,
       category: serverRow.category,
       taxTreatment: serverRow.tax_treatment,
-      title: serverRow.title,
+      description: serverRow.description,
       note: serverRow.note,
       curatedNote: serverRow.curated_note,
       curatedLink: serverRow.curated_link,

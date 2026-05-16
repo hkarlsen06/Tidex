@@ -67,6 +67,14 @@ enum WageyToolLabelResolver {
       "manage_wage_snapshots.update": String(localized: .wageyToolWageSnapshotUpdating),
       "manage_wage_snapshots.delete": String(localized: .wageyToolWageSnapshotDeleting),
 
+      "manage_payroll_adjustment.list": String(localized: .wageyToolPayrollAdjustmentListing),
+      "manage_payroll_adjustment.create": String(
+        localized: .wageyToolPayrollAdjustmentCreating),
+      "manage_payroll_adjustment.update": String(
+        localized: .wageyToolPayrollAdjustmentUpdating),
+      "manage_payroll_adjustment.delete": String(
+        localized: .wageyToolPayrollAdjustmentDeleting),
+
       "manage_workplace.create": String(localized: .wageyToolWorkplaceCreating),
       "manage_workplace.update": String(localized: .wageyToolWorkplaceUpdating),
       "manage_workplace.archive": String(localized: .wageyToolWorkplaceArchiving),
@@ -138,6 +146,7 @@ enum WageyToolLabelResolver {
       "calculate_earnings": String(localized: .wageyToolCalculateEarnings),
 
       "manage_wage_snapshots": String(localized: .wageyToolManageWageSnapshots),
+      "manage_payroll_adjustment": String(localized: .wageyToolManagePayrollAdjustment),
 
       "list_workplaces": String(localized: .wageyToolListWorkplaces),
       "manage_workplace": String(localized: .wageyToolManageWorkplace),
