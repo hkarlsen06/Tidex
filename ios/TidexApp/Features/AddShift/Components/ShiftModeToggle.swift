@@ -79,11 +79,11 @@ struct ShiftModeToggle: View {
   private func iconName(for mode: AddShiftMode) -> String {
     switch mode {
     case .single:
-      return "calendar.badge.plus"
+      return "banknote"
     case .recurring:
       return "repeat"
     case .events:
-      return "info.circle"
+      return "calendar.badge.plus"
     }
   }
 
