@@ -8,181 +8,140 @@ interface ProjectsPageProps {
 
 export function ProjectsPage({ dictionary }: ProjectsPageProps) {
   const { projects } = dictionary;
+  const projectItems = [
+    {
+      title: projects.tidexIos.title,
+      subtitle: projects.tidexIos.subtitle,
+      description: projects.tidexIos.description,
+      techLabel: projects.tidexIos.tech,
+      featuresLabel: projects.tidexIos.features,
+      features: [
+        projects.tidexIos.feature1,
+        projects.tidexIos.feature2,
+        projects.tidexIos.feature3,
+        projects.tidexIos.feature4,
+        projects.tidexIos.feature5,
+      ],
+      technologies: ['Swift', 'SwiftUI', 'Supabase', 'StoreKit 2', 'WidgetKit'],
+      href: 'https://apps.apple.com/app/tidex/id6757129790',
+      cta: projects.tidexIos.viewAppStore,
+      visual: (
+        <div className="flex items-center gap-5">
+          <Image
+            src="/icons/tidex-app-icon.png"
+            alt="Tidex app icon"
+            width={88}
+            height={88}
+            className="rounded-[1.35rem] shadow-app-lg"
+          />
+          <div>
+            <div className="text-2xl font-semibold tracking-[-0.02em] text-text-primary">Tidex</div>
+            <div className="mt-1 text-sm text-text-muted">{projects.tidexIos.subtitle}</div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: projects.tidexWeb.title,
+      subtitle: projects.tidexWeb.subtitle,
+      description: projects.tidexWeb.description,
+      techLabel: projects.tidexWeb.tech,
+      featuresLabel: projects.tidexWeb.features,
+      features: [
+        projects.tidexWeb.feature1,
+        projects.tidexWeb.feature2,
+        projects.tidexWeb.feature3,
+        projects.tidexWeb.feature4,
+        projects.tidexWeb.feature5,
+      ],
+      technologies: ['Next.js 16', 'TypeScript', 'Tailwind CSS', 'React 19', 'Cloudflare Pages'],
+      href: 'https://tidex.no',
+      cta: projects.tidexWeb.viewLive,
+      visual: (
+        <div>
+          <Image
+            src="/icons/tidex-wordmark.webp"
+            alt="Tidex"
+            width={220}
+            height={62}
+            className="h-auto w-52"
+          />
+          <div className="mt-4 text-sm text-text-muted">{projects.tidexWeb.subtitle}</div>
+        </div>
+      ),
+    },
+  ];
 
   return (
-    <div className="min-h-screen px-4 py-24">
+    <div className="min-h-screen px-5 pb-20 pt-32 text-text-primary sm:px-8">
       <div className="mx-auto max-w-6xl">
-        {/* Header */}
-        <div className="mb-16 text-center">
-          <h1 className="mb-4 bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end bg-clip-text text-5xl font-bold text-transparent">
+        <div className="mb-14 max-w-3xl">
+          <h1 className="text-balance text-[3rem] font-semibold leading-[1.06] tracking-[-0.05em] sm:text-[4rem]">
             {projects.title}
           </h1>
-          <p className="text-xl text-text-secondary">{projects.subtitle}</p>
+          <p className="mt-5 text-pretty text-lg leading-8 text-text-secondary">{projects.subtitle}</p>
         </div>
 
-        <div className="space-y-12">
-          {/* Tidex iOS Project Card */}
-          <div className="overflow-hidden rounded-3xl border border-border/40 bg-surface-primary/50 shadow-app-lg backdrop-blur-xs">
-            <div className="grid gap-8 md:grid-cols-2">
-              {/* Project Image/Preview */}
-              <div className="flex items-center justify-center bg-linear-to-br from-brand-gradient-start/10 to-brand-gradient-end/10 p-12">
-                <div className="text-center">
-                  <div className="mb-6 flex justify-center">
-                    <Image
-                      src="/icons/tidex-app-icon.png"
-                      alt="Tidex app icon"
-                      width={96}
-                      height={96}
-                      className="rounded-[22px] shadow-app-lg"
-                    />
+        <div className="space-y-8">
+          {projectItems.map((project) => (
+            <article key={project.title} className="overflow-hidden rounded-2xl border border-white/10 bg-surface-primary/64 shadow-app-lg">
+              <div className="grid md:grid-cols-[22rem_1fr]">
+                <div className="flex min-h-56 items-center border-b border-white/10 bg-[linear-gradient(180deg,rgba(8,17,30,0.72),rgba(5,12,22,0.88))] p-6 md:border-b-0 md:border-r md:p-8">
+                  {project.visual}
+                </div>
+
+                <div className="p-6 md:p-8">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-sm text-text-muted">{project.subtitle}</p>
+                      <h2 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-text-primary">
+                        {project.title}
+                      </h2>
+                    </div>
+                    <a
+                      href={project.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-text-inverse transition-all duration-200 hover:shadow-[0_4px_30px_rgba(255,255,255,0.18)] active:scale-[0.98]"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      {project.cta}
+                    </a>
                   </div>
-                  <div className="mb-2 text-2xl font-bold text-text-primary">Tidex</div>
-                  <div className="text-lg text-text-muted">{projects.tidexIos.subtitle}</div>
-                </div>
-              </div>
 
-              {/* Project Details */}
-              <div className="p-8">
-                <h2 className="mb-4 text-3xl font-bold text-text-primary">
-                  {projects.tidexIos.title}
-                </h2>
-                <p className="mb-6 text-text-secondary">{projects.tidexIos.description}</p>
+                  <p className="mt-5 max-w-3xl leading-7 text-text-secondary">{project.description}</p>
 
-                {/* Technologies */}
-                <div className="mb-6">
-                  <h3 className="mb-3 text-lg font-semibold text-text-primary">
-                    {projects.tidexIos.tech}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {['Swift', 'SwiftUI', 'Supabase', 'StoreKit 2', 'WidgetKit'].map((tech) => (
-                      <span
-                        key={tech}
-                        className="rounded-full border border-border bg-surface-secondary px-3 py-1 text-sm text-text-secondary"
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Features */}
-                <div className="mb-6">
-                  <h3 className="mb-3 text-lg font-semibold text-text-primary">
-                    {projects.tidexIos.features}
-                  </h3>
-                  <ul className="space-y-2 text-text-secondary">
-                    {[
-                      projects.tidexIos.feature1,
-                      projects.tidexIos.feature2,
-                      projects.tidexIos.feature3,
-                      projects.tidexIos.feature4,
-                      projects.tidexIos.feature5,
-                    ].map((feature) => (
-                      <li key={feature} className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gradient-mid" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Links */}
-                <div className="flex flex-wrap gap-4">
-                  <a
-                    href="https://apps.apple.com/app/tidex/id6757129790"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-6 py-3 font-semibold text-text-inverse shadow-app transition-transform hover:scale-105"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    {projects.tidexIos.viewAppStore}
-                  </a>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Tidex Marketing Site Project Card */}
-          <div className="overflow-hidden rounded-3xl border border-border/40 bg-surface-primary/50 shadow-app-lg backdrop-blur-xs">
-            <div className="grid gap-8 md:grid-cols-2">
-              {/* Project Image/Preview */}
-              <div className="flex items-center justify-center bg-linear-to-br from-brand-gradient-start/10 to-brand-gradient-end/10 p-12">
-                <div className="text-center">
-                  <div className="mb-6 flex justify-center">
-                    <Image
-                      src="/icons/tidex-wordmark.webp"
-                      alt="Tidex"
-                      width={240}
-                      height={68}
-                      className="drop-shadow-2xl"
-                    />
-                  </div>
-                  <div className="text-lg text-text-muted">{projects.tidexWeb.subtitle}</div>
-                </div>
-              </div>
-
-              {/* Project Details */}
-              <div className="p-8">
-                <h2 className="mb-4 text-3xl font-bold text-text-primary">
-                  {projects.tidexWeb.title}
-                </h2>
-                <p className="mb-6 text-text-secondary">{projects.tidexWeb.description}</p>
-
-                {/* Technologies */}
-                <div className="mb-6">
-                  <h3 className="mb-3 text-lg font-semibold text-text-primary">
-                    {projects.tidexWeb.tech}
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {['Next.js 16', 'TypeScript', 'Tailwind CSS', 'React 19', 'Cloudflare Pages'].map(
-                      (tech) => (
+                  <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                    <div>
+                      <h3 className="text-base font-semibold text-text-primary">{project.techLabel}</h3>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {project.technologies.map((tech) => (
                         <span
                           key={tech}
-                          className="rounded-full border border-border bg-surface-secondary px-3 py-1 text-sm text-text-secondary"
+                          className="rounded-lg border border-white/10 bg-surface-secondary px-2.5 py-1 text-sm text-text-secondary"
                         >
                           {tech}
                         </span>
-                      )
-                    )}
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-base font-semibold text-text-primary">{project.featuresLabel}</h3>
+                      <ul className="mt-3 space-y-2.5">
+                        {project.features.map((feature) => (
+                          <li key={feature} className="flex gap-3 text-sm leading-6 text-text-secondary">
+                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-brand-highlight/80" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 </div>
-
-                {/* Features */}
-                <div className="mb-6">
-                  <h3 className="mb-3 text-lg font-semibold text-text-primary">
-                    {projects.tidexWeb.features}
-                  </h3>
-                  <ul className="space-y-2 text-text-secondary">
-                    {[
-                      projects.tidexWeb.feature1,
-                      projects.tidexWeb.feature2,
-                      projects.tidexWeb.feature3,
-                      projects.tidexWeb.feature4,
-                      projects.tidexWeb.feature5,
-                    ].map((feature) => (
-                      <li key={feature} className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand-gradient-mid" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Links */}
-                <div className="flex flex-wrap gap-4">
-                  <a
-                    href="https://tidex.no"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-6 py-3 font-semibold text-text-inverse shadow-app transition-transform hover:scale-105"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    {projects.tidexWeb.viewLive}
-                  </a>
-                </div>
               </div>
-            </div>
-          </div>
+            </article>
+          ))}
         </div>
       </div>
     </div>

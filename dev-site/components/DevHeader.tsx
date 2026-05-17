@@ -31,14 +31,18 @@ export function DevHeader({ locale, dictionary }: DevHeaderProps) {
   ];
 
   return (
-    <header className="fixed top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href={buildLocalizedDevPath(locale, '/')} className="text-xl font-bold text-text-primary">
+    <header className="fixed top-0 z-50 w-full border-b border-white/8 bg-background/78 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
+        <Link
+          href={buildLocalizedDevPath(locale, '/')}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-surface-primary text-sm font-semibold text-text-primary transition-colors hover:border-brand-highlight/35"
+          aria-label="Hjalmar Karlsen"
+        >
           HK
         </Link>
 
         <NavigationMenu className="hidden md:flex">
-          <NavigationMenuList>
+          <NavigationMenuList className="gap-1">
             {navItems.map((item) => (
               <NavigationMenuItem key={item.href}>
                 <NavigationMenuLink href={item.href} className={navigationMenuTriggerStyle()}>

@@ -177,7 +177,7 @@
     --shadow-color: 222 47% 4% / 0.4;
     --shadow-color-strong: 222 47% 4% / 0.6;
     --hero-initial-dvh: 100dvh;
-    --radius: 24px;
+    --radius: 12px;
   }
 }
 
@@ -188,6 +188,9 @@
 
   body {
     background-color: hsl(var(--background));
+    background-image: radial-gradient(ellipse 130% 80% at 50% -15%, hsl(199 89% 48% / 0.24), transparent 60%);
+    background-repeat: no-repeat;
+    background-size: 100% 42rem;
     color: hsl(var(--foreground));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -201,6 +204,7 @@
   h5,
   h6 {
     color: hsl(var(--text-primary));
+    font-family: var(--font-display), "Inter", ui-sans-serif, system-ui, sans-serif;
     font-weight: 600;
   }
 
