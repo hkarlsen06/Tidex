@@ -7,13 +7,8 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
   @Published var shouldShowCelebration: Bool = false
   @Published var celebrationData: CelebrationData?
 
-  /// Delay before showing celebration to allow TotalCard count-up animation to complete
-  /// TotalCard uses 0.8s animation, we add a small buffer
-  private static let displayDelay: UInt64 = 900_000_000  // 0.9 seconds in nanoseconds
-
   private var pendingState: CelebrationState?
   private var checkTask: Task<Void, Never>?
-  private var displayTask: Task<Void, Never>?
 
   private init() {}
 
@@ -259,10 +254,6 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
     let stateKey = CelebrationPersistence.stateKey(
       userId: userId, year: month.year, month: month.month)
 
-    // Cancel any pending display task
-    displayTask?.cancel()
-    displayTask = nil
-
     if let pendingState {
       CelebrationPersistence.saveState(pendingState, forKey: stateKey)
     }
@@ -283,26 +274,12 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
     }
   #endif
 
-  private func apply(result: CelebrationResult, stateKey: String, immediate: Bool = false) {
+  private func apply(result: CelebrationResult, stateKey: String) {
     switch result {
     case .show(let data, let state):
       pendingState = state
       celebrationData = data
-
-      // Cancel any existing display task
-      displayTask?.cancel()
-
-      if immediate || AppCoordinator.shared.pendingDeepLink != nil {
-        // Show immediately for deep link launches
-        shouldShowCelebration = true
-      } else {
-        // Delay to allow TotalCard count-up animation to complete
-        displayTask = Task { [weak self] in
-          try? await Task.sleep(nanoseconds: Self.displayDelay)
-          guard !Task.isCancelled else { return }
-          self?.shouldShowCelebration = true
-        }
-      }
+      shouldShowCelebration = true
     case .store(let state):
       CelebrationPersistence.saveState(state, forKey: stateKey)
       pendingState = nil
