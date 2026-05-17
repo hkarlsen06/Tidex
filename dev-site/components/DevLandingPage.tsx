@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Github, Mail } from 'lucide-react';
 import type { DevLocale } from '../lib/i18n-config';
 import type { DevDictionary } from '../lib/dictionaries';
@@ -14,17 +15,63 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
   const skills = [
     {
       title: home.skills.frontend,
-      items: ['React', 'Next.js', 'TypeScript', 'Tailwind CSS'],
+      items: ['Swift', 'SwiftUI', 'SwiftData', 'MVVM'],
     },
     {
       title: home.skills.backend,
-      items: ['Node.js', 'Supabase', 'PostgreSQL', 'APIs'],
+      items: ['Supabase', 'PostgreSQL', 'Realtime', 'RLS'],
     },
     {
       title: home.skills.tools,
-      items: ['GitHub', 'Vercel', 'ESLint', 'Product craft'],
+      items: ['StoreKit', 'WidgetKit', 'ActivityKit', 'watchOS'],
     },
   ];
+  const profileCard = (
+    <div className="rounded-2xl border border-white/10 bg-surface-primary/72 p-5 shadow-app-lg">
+      <div className="flex items-center gap-4 border-b border-white/8 pb-5">
+        <div className="h-18 w-18 shrink-0 overflow-hidden rounded-2xl">
+          <Image
+            src="/profile-hjalmar.webp"
+            alt="Hjalmar Karlsen"
+            width={144}
+            height={144}
+            className="h-full w-full scale-[1.18] object-cover"
+            priority
+          />
+        </div>
+        <div>
+          <div className="text-base font-semibold text-text-primary">{home.hero.title}</div>
+          <div className="mt-0.5 max-w-[24ch] text-sm leading-5 text-text-muted">{home.hero.tagline}</div>
+        </div>
+      </div>
+      <dl className="mt-5 space-y-4">
+        {skills.map((skill) => (
+          <div key={skill.title}>
+            <dt className="text-sm font-medium text-text-primary">{skill.title}</dt>
+            <dd className="mt-2 flex flex-wrap gap-2">
+              {skill.items.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-lg border border-white/10 bg-surface-secondary px-2.5 py-1 text-xs text-text-secondary"
+                >
+                  {item}
+                </span>
+              ))}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <a
+        href="https://github.com/TidexHQ"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-6 flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-medium text-text-secondary transition-colors hover:border-brand-highlight/35 hover:text-text-primary"
+      >
+        <Github className="h-4 w-4" />
+        GitHub
+      </a>
+    </div>
+  );
 
   return (
     <div className="min-h-screen text-text-primary">
@@ -37,7 +84,7 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
 
         <div className="mx-auto grid w-full max-w-6xl gap-12 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-center lg:gap-16">
           <div className="max-w-3xl">
-            <p className="mb-4 text-base leading-7 text-text-muted sm:text-lg">
+            <p className="mb-2 text-base leading-7 text-text-muted sm:mb-3 sm:text-lg">
               {home.hero.greeting}
             </p>
             <h1 className="text-balance text-[3.2rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[4.2rem] lg:text-[4.75rem]">
@@ -68,43 +115,15 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
             </div>
           </div>
 
-          <aside className="rounded-2xl border border-white/10 bg-surface-primary/72 p-5 shadow-app-lg">
-            <div className="flex items-center gap-4 border-b border-white/8 pb-5">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-lg font-semibold text-text-inverse">
-                HK
-              </div>
-              <div>
-                <div className="text-base font-semibold text-text-primary">{home.hero.name}</div>
-                <div className="mt-1 text-sm text-text-muted">{home.hero.title}</div>
-              </div>
-            </div>
-            <dl className="mt-5 space-y-4">
-              {skills.map((skill) => (
-                <div key={skill.title}>
-                  <dt className="text-sm font-medium text-text-primary">{skill.title}</dt>
-                  <dd className="mt-2 flex flex-wrap gap-2">
-                    {skill.items.map((item) => (
-                      <span
-                        key={item}
-                        className="rounded-lg border border-white/10 bg-surface-secondary px-2.5 py-1 text-xs text-text-secondary"
-                      >
-                        {item}
-                      </span>
-                    ))}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-            <a
-              href="https://github.com/TidexHQ"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-6 flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-medium text-text-secondary transition-colors hover:border-brand-highlight/35 hover:text-text-primary"
-            >
-              <Github className="h-4 w-4" />
-              GitHub
-            </a>
+          <aside className="hidden lg:block lg:translate-y-8">
+            {profileCard}
           </aside>
+        </div>
+      </section>
+
+      <section className="px-5 pb-8 sm:px-8 lg:hidden">
+        <div className="mx-auto w-full max-w-6xl">
+          {profileCard}
         </div>
       </section>
 

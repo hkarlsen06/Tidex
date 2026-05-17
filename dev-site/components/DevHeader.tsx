@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { DevLocale } from '../lib/i18n-config';
 import { buildLocalizedDevPath } from '../lib/paths';
@@ -35,10 +36,17 @@ export function DevHeader({ locale, dictionary }: DevHeaderProps) {
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
         <Link
           href={buildLocalizedDevPath(locale, '/')}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-surface-primary text-sm font-semibold text-text-primary transition-colors hover:border-brand-highlight/35"
+          className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-surface-primary transition-colors hover:border-brand-highlight/35"
           aria-label="Hjalmar Karlsen"
         >
-          HK
+          <Image
+            src="/profile-hjalmar.webp"
+            alt="Hjalmar Karlsen"
+            width={80}
+            height={80}
+            className="h-full w-full scale-[1.18] object-cover"
+            priority
+          />
         </Link>
 
         <NavigationMenu className="hidden md:flex">

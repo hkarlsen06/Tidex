@@ -22,9 +22,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Hjalmar Karlsen — Full-Stack Developer',
+  title: 'Hjalmar Karlsen — iOS Developer',
   description:
-    'Full-stack developer building beautiful websites with seamless integration. Specializing in React, Next.js, TypeScript, and modern web technologies.',
+    'Native iOS developer building SwiftUI apps with SwiftData, Supabase sync, StoreKit, widgets, live activities, and watchOS support.',
   metadataBase: new URL('https://kkarlsen.dev'),
   manifest: '/site.webmanifest',
   icons: {
@@ -36,9 +36,9 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Hjalmar Karlsen — Full-Stack Developer',
+    title: 'Hjalmar Karlsen — iOS Developer',
     description:
-      'Full-stack developer building beautiful websites with seamless integration. Check out my portfolio.',
+      'Native iOS developer building SwiftUI apps with local-first data, sync, subscriptions, widgets, and watchOS support.',
     url: 'https://kkarlsen.dev',
     type: 'website',
     images: [
@@ -52,9 +52,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Hjalmar Karlsen — Full-Stack Developer',
+    title: 'Hjalmar Karlsen — iOS Developer',
     description:
-      'Full-stack developer building beautiful websites. View my portfolio and projects.',
+      'Native iOS developer building SwiftUI apps with production Apple-platform architecture.',
     images: ['/og/landing.png'],
   },
 };
