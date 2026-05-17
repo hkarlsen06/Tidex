@@ -252,10 +252,18 @@ struct PaywallView: View {
   }
 
   // swiftlint:disable force_unwrapping
+  private var termsURL: URL {
+    URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/terms")!
+  }
+
+  private var privacyURL: URL {
+    URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/privacy")!
+  }
+
   private var legalLinks: some View {
     HStack(spacing: Spacing.md) {
       Link(
-        String(localized: .paywallTermsOfUse), destination: URL(string: "https://tidex.no/terms")!
+        String(localized: .paywallTermsOfUse), destination: termsURL
       )
       .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)
@@ -265,7 +273,7 @@ struct PaywallView: View {
 
       Link(
         String(localized: .paywallPrivacyPolicy),
-        destination: URL(string: "https://tidex.no/privacy")!
+        destination: privacyURL
       )
       .font(.tidexFootnote)
       .foregroundColor(.tidexTextMuted)

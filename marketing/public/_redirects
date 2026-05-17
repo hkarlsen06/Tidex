@@ -1,15 +1,14 @@
 # Cloudflare Pages: all locales use explicit prefix (/no/, /en/)
 
-# Root paths → Norwegian (default locale)
-/ /no/ 302
-/terms /no/terms/ 302
-/terms/ /no/terms/ 302
-/privacy /no/privacy/ 302
-/privacy/ /no/privacy/ 302
-/support /no/support/ 302
-/support/ /no/support/ 302
-/security /no/security/ 302
-/security/ /no/security/ 302
+# Unprefixed informational paths → English
+/terms /en/terms/ 302
+/terms/ /en/terms/ 302
+/privacy /en/privacy/ 302
+/privacy/ /en/privacy/ 302
+/support /en/support/ 302
+/support/ /en/support/ 302
+/security /en/security/ 302
+/security/ /en/security/ 302
 
 # Pass through static assets (must come before locale catch-all)
 /_next/* /_next/:splat 200

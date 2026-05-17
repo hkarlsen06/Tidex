@@ -7,10 +7,13 @@
 "CFBundleName" = "Tidex";
 
 /* Camera usage description */
-"NSCameraUsageDescription" = "Tidex needs camera access to take profile pictures and chat images.";
+"NSCameraUsageDescription" = "Tidex needs camera access to take profile pictures and attach images in chat and Wagey.";
 
 /* Face ID usage description */
 "NSFaceIDUsageDescription" = "Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.";
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex needs access to save shared calendar and shift images to your photo library.";
+
+/* Photo library usage description */
+"NSPhotoLibraryUsageDescription" = "Tidex needs photo library access to show recent images you can attach in chat and Wagey.";
