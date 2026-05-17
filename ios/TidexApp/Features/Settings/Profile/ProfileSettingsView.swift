@@ -8,6 +8,7 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSetting
 /// Displays profile picture, name, email, and danger zone (delete account)
 struct ProfileSettingsView: View {
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.displayScale) private var displayScale
   @StateObject private var viewModel = ProfileSettingsViewModel()
 
   /// Photo picker selection
@@ -408,6 +409,7 @@ struct ProfileSettingsView: View {
     {
       CachedAsyncImage(
         url: url,
+        maxPixelSize: 192 * displayScale,
         content: { image in
           image
             .resizable()

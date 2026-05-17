@@ -3,6 +3,8 @@ import SwiftUI
 /// Reusable avatar component with image loading and initials fallback
 /// Used across Friends tab, Sharing views, and profile displays
 struct AvatarView: View {
+  @Environment(\.displayScale) private var displayScale
+
   let url: String?
   let initials: String
   let size: CGFloat
@@ -30,7 +32,11 @@ struct AvatarView: View {
 
   var body: some View {
     if let urlString = url, let imageUrl = URL(string: urlString) {
-      CachedAsyncImage(url: imageUrl, syncToNotificationServiceCache: true) { image in
+      CachedAsyncImage(
+        url: imageUrl,
+        syncToNotificationServiceCache: true,
+        maxPixelSize: size * displayScale
+      ) { image in
         image
           .resizable()
           .aspectRatio(contentMode: .fill)

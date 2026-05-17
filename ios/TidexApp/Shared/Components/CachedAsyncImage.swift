@@ -1,4 +1,5 @@
 import CryptoKit
+import ImageIO
 import SwiftUI
 import os.log
 
@@ -109,15 +110,16 @@ final class ImageCache: @unchecked Sendable {
   }
 
   /// Get image from memory cache if not expired
-  func get(for url: URL) -> UIImage? {
-    guard let wrapper = memoryCache.object(forKey: url.absoluteString as NSString) else {
+  func get(for url: URL, maxPixelSize: CGFloat? = nil) -> UIImage? {
+    let key = cacheKey(for: url, maxPixelSize: maxPixelSize)
+    guard let wrapper = memoryCache.object(forKey: key as NSString) else {
       return nil
     }
 
     // Check if cached image has expired
     if wrapper.isExpired(ttl: cacheTTL) {
       logger.debug("🕐 Memory cache EXPIRED for: \(url.lastPathComponent)")
-      memoryCache.removeObject(forKey: url.absoluteString as NSString)
+      memoryCache.removeObject(forKey: key as NSString)
       return nil
     }
 
@@ -125,7 +127,7 @@ final class ImageCache: @unchecked Sendable {
   }
 
   /// Get image from disk cache if not expired (async)
-  func getFromDisk(for url: URL) async -> UIImage? {
+  func getFromDisk(for url: URL, maxPixelSize: CGFloat? = nil) async -> UIImage? {
     await withCheckedContinuation { continuation in
       diskCacheQueue.async { [weak self] in
         guard let self = self else {
@@ -133,7 +135,7 @@ final class ImageCache: @unchecked Sendable {
           return
         }
 
-        let filePath = self.diskCachePath(for: url)
+        let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize)
         let exists = self.fileManager.fileExists(atPath: filePath.path)
 
         if !exists {
@@ -160,12 +162,12 @@ final class ImageCache: @unchecked Sendable {
         }
 
         if let data = try? Data(contentsOf: filePath),
-          let image = UIImage(data: data)
+          let image = Self.decodedImage(from: data, maxPixelSize: maxPixelSize)
         {
           logger.debug("💾 Disk cache HIT for: \(url.lastPathComponent)")
           // Also populate memory cache
           DispatchQueue.main.async {
-            self.setMemoryCache(image, for: url)
+            self.setMemoryCache(image, for: url, maxPixelSize: maxPixelSize)
           }
           continuation.resume(returning: image)
         } else {
@@ -177,22 +179,25 @@ final class ImageCache: @unchecked Sendable {
   }
 
   /// Set image in memory cache only
-  private func setMemoryCache(_ image: UIImage, for url: URL) {
+  private func setMemoryCache(_ image: UIImage, for url: URL, maxPixelSize: CGFloat? = nil) {
     let wrapper = CachedImageWrapper(image)
-    let cost = Int(image.size.width * image.size.height * image.scale * 4)
-    memoryCache.setObject(wrapper, forKey: url.absoluteString as NSString, cost: cost)
+    let pixelWidth = image.size.width * image.scale
+    let pixelHeight = image.size.height * image.scale
+    let cost = Int(pixelWidth * pixelHeight * 4)
+    let key = cacheKey(for: url, maxPixelSize: maxPixelSize)
+    memoryCache.setObject(wrapper, forKey: key as NSString, cost: cost)
   }
 
   /// Set image in both memory and disk cache
-  func set(_ image: UIImage, for url: URL) {
+  func set(_ image: UIImage, for url: URL, maxPixelSize: CGFloat? = nil) {
     // Save to memory cache immediately
-    setMemoryCache(image, for: url)
+    setMemoryCache(image, for: url, maxPixelSize: maxPixelSize)
 
     // Save to disk cache asynchronously
     diskCacheQueue.async { [weak self] in
       guard let self = self else { return }
 
-      let filePath = self.diskCachePath(for: url)
+      let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize)
 
       // Use JPEG for photos, PNG for images with transparency
       if let data = image.jpegData(compressionQuality: 0.8) {
@@ -209,13 +214,22 @@ final class ImageCache: @unchecked Sendable {
   }
 
   func remove(for url: URL) {
-    memoryCache.removeObject(forKey: url.absoluteString as NSString)
+    memoryCache.removeObject(forKey: cacheKey(for: url, maxPixelSize: nil) as NSString)
     NotificationAvatarSharedCache.remove(for: url)
 
     diskCacheQueue.async { [weak self] in
       guard let self = self else { return }
-      let filePath = self.diskCachePath(for: url)
-      try? self.fileManager.removeItem(at: filePath)
+      guard
+        let files = try? self.fileManager.contentsOfDirectory(
+          at: self.diskCacheDirectory,
+          includingPropertiesForKeys: nil
+        )
+      else { return }
+
+      let urlPrefix = self.cacheKey(for: url, maxPixelSize: nil)
+      for file in files where file.lastPathComponent.hasPrefix(urlPrefix) {
+        try? self.fileManager.removeItem(at: file)
+      }
     }
   }
 
@@ -267,10 +281,39 @@ final class ImageCache: @unchecked Sendable {
   }
 
   /// Generate a unique filename for the URL using SHA256 hash
-  private func diskCachePath(for url: URL) -> URL {
+  private func diskCachePath(for url: URL, maxPixelSize: CGFloat? = nil) -> URL {
+    diskCacheDirectory.appendingPathComponent(cacheKey(for: url, maxPixelSize: maxPixelSize))
+  }
+
+  private func cacheKey(for url: URL, maxPixelSize: CGFloat? = nil) -> String {
     let hash = SHA256.hash(data: Data(url.absoluteString.utf8))
     let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-    return diskCacheDirectory.appendingPathComponent(hashString)
+    guard let maxPixelSize, maxPixelSize > 0 else { return hashString }
+    return "\(hashString)-px\(Int(maxPixelSize.rounded(.up)))"
+  }
+
+  nonisolated static func decodedImage(from data: Data, maxPixelSize: CGFloat?) -> UIImage? {
+    guard let maxPixelSize, maxPixelSize > 0 else {
+      return UIImage(data: data)
+    }
+
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+      return UIImage(data: data)
+    }
+
+    let options: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceThumbnailMaxPixelSize: Int(maxPixelSize.rounded(.up)),
+    ]
+
+    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    else {
+      return UIImage(data: data)
+    }
+
+    return UIImage(cgImage: cgImage)
   }
 }
 
@@ -281,6 +324,7 @@ final class ImageCache: @unchecked Sendable {
 struct CachedAsyncImage<Content: View, Placeholder: View>: View {
   let url: URL?
   let syncToNotificationServiceCache: Bool
+  let maxPixelSize: CGFloat?
   let content: (Image) -> Content
   let placeholder: () -> Placeholder
 
@@ -291,11 +335,13 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
   init(
     url: URL?,
     syncToNotificationServiceCache: Bool = false,
+    maxPixelSize: CGFloat? = nil,
     @ViewBuilder content: @escaping (Image) -> Content,
     @ViewBuilder placeholder: @escaping () -> Placeholder
   ) {
     self.url = url
     self.syncToNotificationServiceCache = syncToNotificationServiceCache
+    self.maxPixelSize = maxPixelSize
     self.content = content
     self.placeholder = placeholder
   }
@@ -334,7 +380,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     guard !isLoading else { return }
 
     // Check memory cache first (synchronous, fast)
-    if let cached = ImageCache.shared.get(for: url) {
+    if let cached = ImageCache.shared.get(for: url, maxPixelSize: maxPixelSize) {
       if syncToNotificationServiceCache {
         NotificationAvatarSharedCache.store(cached, for: url)
       }
@@ -346,7 +392,10 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
 
     loadingTask = Task {
       // Check disk cache second (async but no network)
-      if let diskCached = await ImageCache.shared.getFromDisk(for: url) {
+      if let diskCached = await ImageCache.shared.getFromDisk(
+        for: url,
+        maxPixelSize: maxPixelSize
+      ) {
         guard !Task.isCancelled else { return }
         if syncToNotificationServiceCache {
           NotificationAvatarSharedCache.store(diskCached, for: url)
@@ -364,9 +413,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
       do {
         let (data, _) = try await URLSession.shared.data(from: url)
         guard !Task.isCancelled else { return }
-        if let image = UIImage(data: data) {
+        if let image = ImageCache.decodedImage(from: data, maxPixelSize: maxPixelSize) {
           // Cache the image (memory + disk)
-          ImageCache.shared.set(image, for: url)
+          ImageCache.shared.set(image, for: url, maxPixelSize: maxPixelSize)
           if syncToNotificationServiceCache {
             NotificationAvatarSharedCache.store(image, for: url)
           }
