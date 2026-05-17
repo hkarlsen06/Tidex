@@ -463776,6 +463776,40 @@
           }
         }
       }
+    },
+    "stats.charts.employment.completedAverage.range" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "average %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i snitt %@"
+          }
+        }
+      }
+    },
+    "stats.charts.employment.completedAverage.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "average completed months"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "i snitt fullførte måneder"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

@@ -2,7 +2,7 @@ import Charts
 import SwiftUI
 
 /// Chart showing employment percentage across the year
-/// Displays monthly average employment percentages with yearly average header
+/// Displays monthly average employment percentages with a completed-month average header
 struct EmploymentPercentageChart: View {
   let data: EmploymentData
 
@@ -20,16 +20,34 @@ struct EmploymentPercentageChart: View {
     Calendar.current.component(.year, from: Date())
   }
 
-  /// Filter out leading and trailing zero months for display
+  private var completedAverageSubtitle: String {
+    guard let rangeLabel = data.completedAverageRangeLabel() else {
+      return String(localized: "stats.charts.employment.completedAverage.empty")
+    }
+
+    return String(
+      format: String(localized: "stats.charts.employment.completedAverage.range"),
+      rangeLabel
+    )
+  }
+
+  /// Filter out leading and trailing months that are neither worked nor contextually relevant.
   private var filteredData: [EmploymentMonthlyData] {
     let months = data.monthlyData
-    guard let firstNonZeroIndex = months.firstIndex(where: { $0.averagePercentage > 0 }) else {
-      return months  // All zeros, return as-is
+
+    func shouldDisplay(_ month: EmploymentMonthlyData) -> Bool {
+      month.averagePercentage > 0
+        || data.isIncludedInCompletedAverage(month)
+        || (month.monthNumber == currentMonth && month.year == currentYear)
     }
-    guard let lastNonZeroIndex = months.lastIndex(where: { $0.averagePercentage > 0 }) else {
+
+    guard let firstDisplayIndex = months.firstIndex(where: shouldDisplay) else {
+      return months  // All zeros with no completed/current context, return as-is
+    }
+    guard let lastDisplayIndex = months.lastIndex(where: shouldDisplay) else {
       return months
     }
-    return Array(months[firstNonZeroIndex...lastNonZeroIndex])
+    return Array(months[firstDisplayIndex...lastDisplayIndex])
   }
 
   /// Get selected month data
@@ -62,7 +80,7 @@ struct EmploymentPercentageChart: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      // Header with yearly average
+      // Header with completed-month average
       headerView
 
       // Chart
@@ -84,20 +102,20 @@ struct EmploymentPercentageChart: View {
         .foregroundColor(.tidexTextPrimary)
 
       HStack(alignment: .firstTextBaseline) {
-        // Yearly average percentage
-        if let average = data.yearlyAverage {
+        // Average percentage for completed months
+        if let average = data.completedMonthsAverage() {
           Text(Self.formatPercent(average))
             .font(.tidexMonoDisplay)
-            .foregroundColor(.tidexTextPrimary)
+            .foregroundColor(.tidexPurple)
         } else {
           Text("---")
             .font(.tidexMonoDisplay)
             .foregroundColor(.tidexTextMuted)
         }
 
-        Text(.statsChartsEmploymentYearlyAverage)
+        Text(completedAverageSubtitle)
           .font(.tidexLabel)
-          .foregroundColor(.tidexTextMuted)
+          .foregroundColor(.tidexPurple)
 
         Spacer()
 
@@ -132,6 +150,11 @@ struct EmploymentPercentageChart: View {
       ChartOverlayContent(
         proxy: proxy,
         data: filteredData,
+        outlinedMonthNumbers: Set(
+          filteredData
+            .filter { data.isIncludedInCompletedAverage($0) }
+            .map(\.monthNumber)
+        ),
         selectedMonth: $selectedMonth
       )
     }
@@ -140,13 +163,21 @@ struct EmploymentPercentageChart: View {
         AxisValueLabel {
           if let label = value.as(String.self) {
             let monthData = filteredData.first(where: { $0.month == label })
-            let isHighlighted =
+            let isIncluded =
+              monthData.map { data.isIncludedInCompletedAverage($0) } ?? false
+            let isCurrentMonth =
               monthData?.monthNumber == currentMonth && monthData?.year == currentYear
             let isSelected = selectedMonth == monthData?.monthNumber
+            let isEmphasized = isIncluded || isCurrentMonth || isSelected
 
             Text(label)
-              .font((isHighlighted || isSelected) ? .tidexCaptionStrong : .tidexCaptionRegular)
-              .foregroundColor((isHighlighted || isSelected) ? .tidexBlue : .tidexTextPrimary)
+              .font(isEmphasized ? .tidexCaptionStrong : .tidexCaptionRegular)
+              .foregroundColor(
+                axisLabelColor(
+                  isIncluded: isIncluded,
+                  isCurrentMonth: isCurrentMonth,
+                  isSelected: isSelected
+                ))
           }
         }
       }
@@ -173,16 +204,35 @@ struct EmploymentPercentageChart: View {
 
   // MARK: - Helpers
 
-  /// Get bar color based on current month and selection state
+  /// Get bar color based on completed-month average inclusion and selection state
   private func barColor(for month: EmploymentMonthlyData, isSelected: Bool) -> Color {
     // Selected bars are always full color
     if isSelected {
       return .tidexBlue
     }
 
-    // Current month is highlighted
+    // Months included in the average are highlighted.
+    if data.isIncludedInCompletedAverage(month) {
+      return .tidexBlue.opacity(0.16)
+    }
+
+    // Current month is highlighted, but not treated as part of the average.
     let isCurrentMonth = month.monthNumber == currentMonth && month.year == currentYear
-    return isCurrentMonth ? .tidexBlue : .tidexBlue.opacity(0.2)
+    return isCurrentMonth ? .tidexBlue : .tidexBlue.opacity(0.16)
+  }
+
+  private func axisLabelColor(
+    isIncluded: Bool,
+    isCurrentMonth: Bool,
+    isSelected: Bool
+  ) -> Color {
+    if isIncluded {
+      return .tidexPurple
+    }
+    if isCurrentMonth || isSelected {
+      return .tidexBlue
+    }
+    return .tidexTextPrimary
   }
 
   /// Format hours for display (e.g., "37,50" or "40,00")
@@ -202,6 +252,7 @@ struct EmploymentPercentageChart: View {
 private struct ChartOverlayContent: View {
   let proxy: ChartProxy
   let data: [EmploymentMonthlyData]
+  let outlinedMonthNumbers: Set<Int>
   @Binding var selectedMonth: Int?
   @State private var tooltipWidth: CGFloat = 0
 
@@ -210,6 +261,22 @@ private struct ChartOverlayContent: View {
       let plotFrame: CGRect = proxy.plotFrame.map { geometry[$0] } ?? .zero
 
       ZStack {
+        ForEach(data.filter { outlinedMonthNumbers.contains($0.monthNumber) }) { month in
+          if let outlineFrame = barOutlineFrame(for: month, plotFrame: plotFrame) {
+            UnevenRoundedRectangle(
+              cornerRadii: RectangleCornerRadii(
+                topLeading: CornerRadius.xs,
+                bottomLeading: 0,
+                bottomTrailing: 0,
+                topTrailing: CornerRadius.xs
+              )
+            )
+            .stroke(Color.tidexPurple, lineWidth: 1.5)
+            .frame(width: outlineFrame.width, height: outlineFrame.height)
+            .position(x: outlineFrame.midX, y: outlineFrame.midY)
+          }
+        }
+
         // Tap detection layer
         Rectangle()
           .fill(Color.clear)
@@ -240,6 +307,29 @@ private struct ChartOverlayContent: View {
         }
       }
     }
+  }
+
+  private func barOutlineFrame(for month: EmploymentMonthlyData, plotFrame: CGRect) -> CGRect? {
+    guard !data.isEmpty,
+      month.averagePercentage > 0,
+      let xPosition = proxy.position(forX: month.month),
+      let yPosition = proxy.position(forY: month.averagePercentage)
+    else {
+      return nil
+    }
+
+    let barSlotWidth = plotFrame.width / CGFloat(data.count)
+    let barWidth = barSlotWidth * 0.62
+    let topY = plotFrame.minY + yPosition
+    let height = max(plotFrame.maxY - topY, 0)
+    let centerX = plotFrame.minX + xPosition
+
+    return CGRect(
+      x: centerX - barWidth / 2,
+      y: topY,
+      width: barWidth,
+      height: height
+    )
   }
 
   private func handleTap(at location: CGPoint, plotFrame: CGRect) {
