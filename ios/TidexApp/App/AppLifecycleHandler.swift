@@ -16,6 +16,8 @@ extension Notification.Name {
 final class AppLifecycleHandler {
   static let shared = AppLifecycleHandler()
   private static let liveActivityRecoveryDelay: UInt64 = 1_000_000_000  // 1 second
+  private static let foregroundMaintenanceDelay: UInt64 = 350_000_000  // 0.35 seconds
+  private var hasHandledInitialActivation = false
   private var foregroundMaintenanceTask: Task<Void, Never>?
   private var liveActivityRecoveryTask: Task<Void, Never>?
 
@@ -24,15 +26,31 @@ final class AppLifecycleHandler {
   // MARK: - Lifecycle Handlers (UIKit notification-driven)
 
   func handleDidBecomeActive() {
+    let isInitialActivation = !hasHandledInitialActivation
+    hasHandledInitialActivation = true
+
     AppearanceManager.shared.applyToWindows()
     PrivacyBlurManager.hide()
     liveActivityRecoveryTask?.cancel()
     liveActivityRecoveryTask = nil
     foregroundMaintenanceTask?.cancel()
-    AppCoordinator.shared.handleAppForeground()
     NotificationCenter.default.post(name: .tidexDidBecomeActive, object: nil)
+
+    if isInitialActivation {
+      // Cold launch already runs the app-launch sync and live activity pass.
+      // Avoid stacking foreground storage work onto first activation/render.
+      return
+    }
+
+    AppCoordinator.shared.handleAppForeground()
     foregroundMaintenanceTask = Task { @MainActor [weak self] in
       guard let self else { return }
+      do {
+        try await Task.sleep(nanoseconds: Self.foregroundMaintenanceDelay)
+      } catch {
+        return
+      }
+      guard !Task.isCancelled else { return }
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
       guard !Task.isCancelled else { return }
       await self.runForegroundLiveActivityMaintenance()
