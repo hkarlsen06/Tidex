@@ -1,11 +1,44 @@
--- Function: send_message
--- Description: Validates and inserts a canonical user message with structured metadata and private attachments
+-- Add a conservative text safety filter for user-generated messaging content.
 
-DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, uuid, jsonb, jsonb);
-DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, uuid, jsonb);
-DROP FUNCTION IF EXISTS public.send_message(uuid, uuid, text, jsonb);
+CREATE OR REPLACE FUNCTION public.is_objectionable_text(p_text text)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  v_normalized text := regexp_replace(lower(COALESCE(p_text, '')), '[^[:alnum:]]+', ' ', 'g');
+BEGIN
+  IF btrim(v_normalized) = '' THEN
+    RETURN false;
+  END IF;
 
-CREATE FUNCTION public.send_message(
+  RETURN v_normalized ~* (
+    'kys|' ||
+    'kill[[:space:]]+yourself|' ||
+    'rape|' ||
+    'rapist|' ||
+    'porn|' ||
+    'pornography|' ||
+    'nude[[:space:]]+pics?|' ||
+    'send[[:space:]]+nudes?|' ||
+    'nigger|' ||
+    'nigga|' ||
+    'faggot|' ||
+    'tranny|' ||
+    'retard|' ||
+    'heil[[:space:]]+hitler|' ||
+    'gas[[:space:]]+the[[:space:]]+jews'
+  );
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.is_objectionable_text(text) FROM public;
+REVOKE EXECUTE ON FUNCTION public.is_objectionable_text(text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.is_objectionable_text(text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.send_message(
   p_thread_id uuid,
   p_client_id uuid,
   p_body text,
@@ -190,7 +223,6 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- Emit the V2 sync payload after attachments have been persisted.
   PERFORM set_config('tidex.messaging_v2_emit_message_insert', 'false', true);
 
   INSERT INTO public.messages (
@@ -276,3 +308,181 @@ $function$;
 REVOKE EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb, jsonb) FROM public;
 REVOKE EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb, jsonb) FROM anon;
 GRANT EXECUTE ON FUNCTION public.send_message(uuid, uuid, text, uuid, jsonb, jsonb) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.edit_message(
+  p_message_id uuid,
+  p_body text
+)
+RETURNS TABLE (
+  id uuid,
+  thread_id uuid,
+  sender_user_id uuid,
+  message_type text,
+  body text,
+  client_id uuid,
+  reply_to_message_id uuid,
+  created_at timestamptz,
+  edited_at timestamptz,
+  deleted_at timestamptz,
+  metadata jsonb,
+  attachments jsonb,
+  reactions jsonb
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'auth', 'pg_temp'
+AS $function$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_thread_id uuid;
+  v_sender_user_id uuid;
+  v_message_type text;
+  v_deleted_at timestamptz;
+  v_existing_body text;
+  v_normalized_body text;
+  v_is_preview_source boolean := false;
+  v_did_update boolean := false;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT
+    m.thread_id,
+    m.sender_user_id,
+    m.message_type,
+    m.deleted_at,
+    NULLIF(regexp_replace(COALESCE(m.body, ''), '^\s+|\s+$', '', 'g'), '')
+  INTO
+    v_thread_id,
+    v_sender_user_id,
+    v_message_type,
+    v_deleted_at,
+    v_existing_body
+  FROM public.messages m
+  WHERE m.id = p_message_id;
+
+  IF v_thread_id IS NULL THEN
+    RAISE EXCEPTION 'Message not found';
+  END IF;
+
+  IF NOT public.can_access_thread(v_thread_id) THEN
+    RAISE EXCEPTION 'Thread access denied';
+  END IF;
+
+  IF v_sender_user_id <> v_uid THEN
+    RAISE EXCEPTION 'Only the sender can edit this message';
+  END IF;
+
+  IF v_message_type <> 'user' THEN
+    RAISE EXCEPTION 'Only user messages can be edited';
+  END IF;
+
+  IF v_deleted_at IS NOT NULL THEN
+    RAISE EXCEPTION 'Deleted messages cannot be edited';
+  END IF;
+
+  IF v_existing_body IS NULL THEN
+    RAISE EXCEPTION 'Only text messages can be edited';
+  END IF;
+
+  v_normalized_body := NULLIF(
+    regexp_replace(COALESCE(p_body, ''), '^\s+|\s+$', '', 'g'),
+    ''
+  );
+
+  IF v_normalized_body IS NULL THEN
+    RAISE EXCEPTION 'Message body cannot be empty';
+  END IF;
+
+  IF char_length(v_normalized_body) > 2000 THEN
+    RAISE EXCEPTION 'Message body exceeds the 2000 character limit';
+  END IF;
+
+  IF public.is_objectionable_text(v_normalized_body) THEN
+    RAISE EXCEPTION 'Message blocked by safety filter';
+  END IF;
+
+  IF v_normalized_body IS DISTINCT FROM v_existing_body THEN
+    SELECT t.last_message_id = p_message_id
+    INTO v_is_preview_source
+    FROM public.threads t
+    WHERE t.id = v_thread_id;
+
+    UPDATE public.messages
+    SET
+      body = v_normalized_body,
+      edited_at = now()
+    WHERE messages.id = p_message_id;
+
+    v_did_update := FOUND;
+  END IF;
+
+  IF v_did_update THEN
+    PERFORM internal.append_thread_event(
+      v_thread_id,
+      'message_upserted',
+      'message',
+      p_message_id,
+      internal.build_message_sync_payload_v2(p_message_id),
+      v_uid
+    );
+
+    IF COALESCE(v_is_preview_source, false) THEN
+      PERFORM internal.emit_thread_upserted_inbox_event_v2(tm.user_id, v_thread_id)
+      FROM public.thread_memberships tm
+      WHERE tm.thread_id = v_thread_id
+        AND tm.status = 'active'
+        AND internal.can_access_thread_as_user(v_thread_id, tm.user_id);
+    END IF;
+  END IF;
+
+  RETURN QUERY
+  SELECT *
+  FROM public.get_message_payload(p_message_id);
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.edit_message(uuid, text) FROM public;
+REVOKE EXECUTE ON FUNCTION public.edit_message(uuid, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.edit_message(uuid, text) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.enforce_message_content_validity()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  v_message_id uuid := COALESCE(NEW.id, OLD.id);
+  v_body text;
+  v_metadata jsonb;
+  v_attachments jsonb;
+BEGIN
+  SELECT
+    m.body,
+    m.metadata,
+    COALESCE(
+      (
+        SELECT jsonb_agg(jsonb_build_object('id', ma.id) ORDER BY ma.attachment_index ASC)
+        FROM public.message_attachments ma
+        WHERE ma.message_id = m.id
+      ),
+      '[]'::jsonb
+    )
+  INTO v_body, v_metadata, v_attachments
+  FROM public.messages m
+  WHERE m.id = v_message_id;
+
+  PERFORM public.assert_message_metadata_validity(v_metadata);
+
+  IF NOT public.message_has_renderable_content(v_body, v_attachments, v_metadata) THEN
+    RAISE EXCEPTION 'A message must include text, at least one attachment, or supported rich content';
+  END IF;
+
+  IF public.is_objectionable_text(v_body) THEN
+    RAISE EXCEPTION 'Message blocked by safety filter';
+  END IF;
+
+  RETURN COALESCE(NEW, OLD);
+END;
+$function$;

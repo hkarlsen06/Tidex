@@ -91,6 +91,10 @@ BEGIN
     RAISE EXCEPTION 'Message body exceeds the 2000 character limit';
   END IF;
 
+  IF public.is_objectionable_text(v_normalized_body) THEN
+    RAISE EXCEPTION 'Message blocked by safety filter';
+  END IF;
+
   IF v_normalized_body IS DISTINCT FROM v_existing_body THEN
     SELECT t.last_message_id = p_message_id
     INTO v_is_preview_source

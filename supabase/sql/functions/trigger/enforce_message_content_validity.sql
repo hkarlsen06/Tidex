@@ -33,6 +33,10 @@ BEGIN
     RAISE EXCEPTION 'A message must include text, at least one attachment, or supported rich content';
   END IF;
 
+  IF public.is_objectionable_text(v_body) THEN
+    RAISE EXCEPTION 'Message blocked by safety filter';
+  END IF;
+
   RETURN COALESCE(NEW, OLD);
 END;
 $function$;

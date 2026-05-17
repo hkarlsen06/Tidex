@@ -463810,6 +463810,40 @@
           }
         }
       }
+    },
+    "profile.errors.nameSafetyFilter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This name can’t be saved because it contains blocked content."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette navnet kan ikke lagres fordi det inneholder blokkert innhold."
+          }
+        }
+      }
+    },
+    "friends.chat.composer.safetyFilter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This message can’t be sent because it contains blocked content."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denne meldingen kan ikke sendes fordi den inneholder blokkert innhold."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"
