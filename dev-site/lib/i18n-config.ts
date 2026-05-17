@@ -4,6 +4,6 @@ export type DevLocale = (typeof devLocales)[number];
 export const defaultDevLocale: DevLocale = 'no';
 
 export const devLocaleNames: Record<DevLocale, string> = {
-  no: 'NO',
-  en: 'EN',
+  no: 'Norsk',
+  en: 'English',
 };

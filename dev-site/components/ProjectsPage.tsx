@@ -22,7 +22,7 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
         projects.tidexIos.feature4,
         projects.tidexIos.feature5,
       ],
-      technologies: ['Swift', 'SwiftUI', 'Supabase', 'StoreKit 2', 'WidgetKit'],
+      technologies: ['Swift', 'SwiftUI', 'SwiftData', 'Supabase', 'StoreKit 2', 'WidgetKit', 'ActivityKit', 'watchOS'],
       href: 'https://apps.apple.com/app/tidex/id6757129790',
       cta: projects.tidexIos.viewAppStore,
       visual: (
