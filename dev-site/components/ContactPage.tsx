@@ -9,55 +9,42 @@ export function ContactPage({ dictionary }: ContactPageProps) {
   const { contact } = dictionary;
 
   return (
-    <div className="min-h-screen px-4 py-24">
-      <div className="mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-16 text-center">
-          <h1 className="mb-4 bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end bg-clip-text text-5xl font-bold text-transparent">
+    <div className="min-h-screen px-5 pb-20 pt-32 text-text-primary sm:px-8">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-14 max-w-3xl">
+          <h1 className="text-balance text-[3rem] font-semibold leading-[1.06] tracking-[-0.05em] sm:text-[4rem]">
             {contact.title}
           </h1>
-          <p className="text-xl text-text-secondary">{contact.subtitle}</p>
+          <p className="mt-5 text-pretty text-lg leading-8 text-text-secondary">{contact.subtitle}</p>
         </div>
 
-        {/* Message */}
-        <div className="mb-12 text-center">
-          <p className="text-lg text-text-secondary">{contact.message}</p>
-        </div>
-
-        {/* Contact Cards */}
-        <div className="grid gap-8 md:grid-cols-2">
-          {/* Email Card */}
-          <div className="rounded-3xl border border-border/40 bg-surface-primary/50 p-8 text-center shadow-app backdrop-blur-xs">
-            <div className="mb-6 flex justify-center">
-              <div className="rounded-full bg-linear-to-br from-brand-gradient-start to-brand-gradient-end p-4">
-                <Mail className="h-8 w-8 text-text-inverse" />
-              </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-surface-primary/64 p-6 shadow-app md:p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-surface-secondary">
+              <Mail className="h-5 w-5 text-brand-highlight" />
             </div>
-            <h2 className="mb-4 text-2xl font-bold text-text-primary">{contact.email.title}</h2>
-            <p className="mb-6 text-text-secondary">kristensenhjalmar2006@gmail.com</p>
+            <h2 className="text-2xl font-semibold tracking-[-0.02em] text-text-primary">{contact.email.title}</h2>
+            <p className="mt-3 text-text-secondary">kristensenhjalmar2006@gmail.com</p>
             <a
               href="mailto:kristensenhjalmar2006@gmail.com"
-              className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-6 py-3 font-semibold text-text-inverse shadow-app transition-transform hover:scale-105"
+              className="mt-8 inline-flex h-11 items-center gap-2 rounded-full bg-white px-4 text-sm font-semibold text-text-inverse transition-all duration-200 hover:shadow-[0_4px_30px_rgba(255,255,255,0.18)] active:scale-[0.98]"
             >
               <Mail className="h-4 w-4" />
               {contact.email.cta}
             </a>
           </div>
 
-          {/* GitHub Card */}
-          <div className="rounded-3xl border border-border/40 bg-surface-primary/50 p-8 text-center shadow-app backdrop-blur-xs">
-            <div className="mb-6 flex justify-center">
-              <div className="rounded-full bg-linear-to-br from-brand-gradient-start to-brand-gradient-end p-4">
-                <Github className="h-8 w-8 text-text-inverse" />
-              </div>
+          <div className="rounded-2xl border border-white/10 bg-surface-primary/64 p-6 shadow-app md:p-8">
+            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/10 bg-surface-secondary">
+              <Github className="h-5 w-5 text-brand-highlight" />
             </div>
-            <h2 className="mb-4 text-2xl font-bold text-text-primary">{contact.github.title}</h2>
-            <p className="mb-6 text-text-secondary">@kkarlsen06</p>
+            <h2 className="text-2xl font-semibold tracking-[-0.02em] text-text-primary">{contact.github.title}</h2>
+            <p className="mt-3 text-text-secondary">@kkarlsen06</p>
             <a
               href="https://github.com/TidexHQ"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-secondary px-6 py-3 font-semibold text-text-primary shadow-app transition-colors hover:bg-surface-primary"
+              className="mt-8 inline-flex h-11 items-center gap-2 rounded-full border border-white/10 px-4 text-sm font-semibold text-text-primary transition-colors hover:border-brand-highlight/35"
             >
               <Github className="h-4 w-4" />
               {contact.github.cta}
@@ -65,17 +52,16 @@ export function ContactPage({ dictionary }: ContactPageProps) {
           </div>
         </div>
 
-        {/* Bottom CTA */}
-        <div className="mt-16 rounded-3xl border border-border/40 bg-linear-to-br from-brand-gradient-start/10 to-brand-gradient-end/10 p-12 text-center shadow-app backdrop-blur-xs">
-          <h2 className="mb-4 text-3xl font-bold text-text-primary">
+        <div className="mt-8 rounded-2xl border border-brand-highlight/18 bg-[linear-gradient(180deg,rgba(8,17,30,0.74),rgba(5,12,22,0.9))] p-6 md:p-8">
+          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-text-primary">
             {dictionary.home?.hero.cta || 'Hire Me'}
           </h2>
-          <p className="mb-6 text-lg text-text-secondary">{contact.message}</p>
+          <p className="mt-4 max-w-2xl text-lg leading-8 text-text-secondary">{contact.message}</p>
           <a
             href="mailto:kristensenhjalmar2006@gmail.com"
-            className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-8 py-4 text-lg font-semibold text-text-inverse shadow-app-lg transition-transform hover:scale-105"
+            className="mt-8 inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5 text-sm font-semibold text-text-inverse shadow-[0_2px_20px_rgba(255,255,255,0.1)] transition-all duration-200 hover:shadow-[0_4px_30px_rgba(255,255,255,0.18)] active:scale-[0.98]"
           >
-            <Mail className="h-5 w-5" />
+            <Mail className="h-[1.05rem] w-[1.05rem]" />
             {contact.email.cta}
           </a>
         </div>

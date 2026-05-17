@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
-import { Inter } from 'next/font/google';
+import { Inter, Manrope } from 'next/font/google';
 import './globals.css';
 
 const inter = Inter({
@@ -9,6 +9,7 @@ const inter = Inter({
   preload: true,
   variable: '--font-inter'
 });
+const manrope = Manrope({ subsets: ['latin'], display: 'swap', variable: '--font-display' });
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/og/portfolio.png',
+        url: '/og/landing.png',
         width: 1200,
         height: 630,
         alt: 'Hjalmar Karlsen — Developer Portfolio',
@@ -54,7 +55,7 @@ export const metadata: Metadata = {
     title: 'Hjalmar Karlsen — Full-Stack Developer',
     description:
       'Full-stack developer building beautiful websites. View my portfolio and projects.',
-    images: ['/og/portfolio.png'],
+    images: ['/og/landing.png'],
   },
 };
 
@@ -72,7 +73,7 @@ export default function RootLayout({
         {/* DNS prefetch for any external resources */}
         <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       </head>
-      <body className={`${inter.className} bg-background text-foreground antialiased`}>
+      <body className={`${inter.className} ${manrope.variable} bg-background text-foreground antialiased`}>
         {children}
       </body>
     </html>

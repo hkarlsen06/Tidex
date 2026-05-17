@@ -7,72 +7,55 @@ interface AboutPageProps {
 
 export function AboutPage({ dictionary }: AboutPageProps) {
   const { about } = dictionary;
+  const skillGroups = [
+    about.skills.frontend,
+    about.skills.backend,
+    about.skills.tools,
+  ];
 
   return (
-    <div className="min-h-screen px-4 py-24">
-      <div className="mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-16 text-center">
-          <h1 className="mb-4 bg-linear-to-r from-brand-gradient-start via-brand-gradient-mid to-brand-gradient-end bg-clip-text text-5xl font-bold text-transparent">
+    <div className="min-h-screen px-5 pb-20 pt-32 text-text-primary sm:px-8">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-14 max-w-3xl">
+          <h1 className="text-balance text-[3rem] font-semibold leading-[1.06] tracking-[-0.05em] sm:text-[4rem]">
             {about.title}
           </h1>
-          <p className="text-xl text-text-secondary">{about.subtitle}</p>
+          <p className="mt-5 text-pretty text-lg leading-8 text-text-secondary">{about.subtitle}</p>
         </div>
 
-        {/* Bio Section */}
-        <section className="mb-16 rounded-3xl border border-border/40 bg-surface-primary/50 p-8 shadow-app backdrop-blur-xs md:p-12">
-          <p className="mb-6 text-lg leading-relaxed text-text-secondary">{about.bio.intro}</p>
-          <p className="text-lg leading-relaxed text-text-secondary">{about.bio.passion}</p>
+        <section className="mb-12 rounded-2xl border border-white/10 bg-surface-primary/64 p-6 shadow-app md:p-8">
+          <p className="text-lg leading-8 text-text-secondary">{about.bio.intro}</p>
+          <p className="mt-6 text-lg leading-8 text-text-secondary">{about.bio.passion}</p>
         </section>
 
-        {/* Skills Section */}
-        <section className="mb-16">
-          <h2 className="mb-8 text-center text-3xl font-bold text-text-primary">
+        <section className="mb-12">
+          <h2 className="mb-6 text-3xl font-semibold tracking-[-0.03em] text-text-primary">
             {about.skills.title}
           </h2>
 
-          <div className="space-y-6">
-            {/* Frontend */}
-            <div className="rounded-2xl border border-border/40 bg-surface-primary/50 p-6 shadow-app backdrop-blur-xs">
-              <h3 className="mb-3 text-xl font-semibold text-brand-gradient-mid">
-                {about.skills.frontend.title}
-              </h3>
-              <p className="text-text-secondary">{about.skills.frontend.list}</p>
-            </div>
-
-            {/* Backend */}
-            <div className="rounded-2xl border border-border/40 bg-surface-primary/50 p-6 shadow-app backdrop-blur-xs">
-              <h3 className="mb-3 text-xl font-semibold text-brand-gradient-mid">
-                {about.skills.backend.title}
-              </h3>
-              <p className="text-text-secondary">{about.skills.backend.list}</p>
-            </div>
-
-            {/* Tools */}
-            <div className="rounded-2xl border border-border/40 bg-surface-primary/50 p-6 shadow-app backdrop-blur-xs">
-              <h3 className="mb-3 text-xl font-semibold text-brand-gradient-mid">
-                {about.skills.tools.title}
-              </h3>
-              <p className="text-text-secondary">{about.skills.tools.list}</p>
-            </div>
+          <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-surface-primary/58">
+            {skillGroups.map((group) => (
+              <div key={group.title} className="border-b border-white/10 p-6 last:border-b-0 md:grid md:grid-cols-[12rem_1fr] md:gap-8">
+                <h3 className="text-lg font-semibold text-text-primary">{group.title}</h3>
+                <p className="mt-3 leading-7 text-text-secondary md:mt-0">{group.list}</p>
+              </div>
+            ))}
           </div>
         </section>
 
-        {/* Approach Section */}
-        <section className="mb-16 rounded-3xl border border-border/40 bg-linear-to-br from-brand-gradient-start/10 to-brand-gradient-end/10 p-8 shadow-app backdrop-blur-xs md:p-12">
-          <h2 className="mb-4 text-2xl font-bold text-text-primary">{about.approach.title}</h2>
-          <p className="text-lg text-text-secondary">{about.approach.description}</p>
+        <section className="mb-12 rounded-2xl border border-brand-highlight/18 bg-[linear-gradient(180deg,rgba(8,17,30,0.74),rgba(5,12,22,0.9))] p-6 md:p-8">
+          <h2 className="text-2xl font-semibold tracking-[-0.02em] text-text-primary">{about.approach.title}</h2>
+          <p className="mt-4 max-w-3xl text-lg leading-8 text-text-secondary">{about.approach.description}</p>
         </section>
 
-        {/* GitHub CTA */}
-        <div className="text-center">
+        <div>
           <a
             href="https://github.com/TidexHQ"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end px-8 py-4 text-lg font-semibold text-text-inverse shadow-app-lg transition-transform hover:scale-105"
+            className="inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5 text-sm font-semibold text-text-inverse shadow-[0_2px_20px_rgba(255,255,255,0.1)] transition-all duration-200 hover:shadow-[0_4px_30px_rgba(255,255,255,0.18)] active:scale-[0.98]"
           >
-            <Github className="h-5 w-5" />
+            <Github className="h-[1.05rem] w-[1.05rem]" />
             View my GitHub
           </a>
         </div>

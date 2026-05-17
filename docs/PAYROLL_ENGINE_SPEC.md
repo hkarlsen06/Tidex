@@ -1,7 +1,7 @@
 # Tidex Payroll Engine Specification
 
-> **Version:** 1.2
-> **Last Updated:** 2026-02-26
+> **Version:** 3.2
+> **Last Updated:** 2026-05-17
 > **Source of Truth:** Shared payroll logic in the Tidex monorepo (`ios` and `supabase/functions/_shared/wagey`)
 > **Purpose:** Enable re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results
 
@@ -12,9 +12,10 @@
 The Tidex payroll engine computes wage earnings for work shifts. It takes shift data (date, start/end time) and wage settings (hourly rate, supplements, tax, break deductions) to produce deterministic earnings values.
 
 ### Inputs
-- **Shift data**: `shift_date` (ISO), `start_time` (HH:MM), `end_time` (HH:MM), optional custom supplements, `job_id`
-- **Wage snapshot**: Hourly wage, supplement rules, tax settings, break deduction settings, `job_id`
-- **Job**: Name, color, `payroll_day`, `half_tax_month`, `monthly_goal` (now the primary source; user settings mirrored for legacy clients)
+- **Shift data**: `shift_date` (ISO), `start_time` (HH:MM), `end_time` (HH:MM), optional `note`, optional custom pause windows, optional custom supplements, `job_id`
+- **Wage snapshot**: Hourly wage, supplement rules, tax settings, break deduction settings, `tariff_type_id`, `job_id`
+- **Job**: Name, color, immutable `currency`, `payroll_day`, `half_tax_month`, `monthly_goal` (now the primary source; user settings mirrored for legacy clients)
+- **Payroll adjustments**: Manual payout-level bonuses, retro pay, corrections, and other additions with payout date, job scope, amount, currency, and tax treatment
 - **User settings**: Global preferences; `payroll_day`/`half_tax_month`/`monthly_goal` kept as fallback during compatibility window
 
 ### Outputs
@@ -23,17 +24,19 @@ The Tidex payroll engine computes wage earnings for work shifts. It takes shift 
 - `basePay`: Earnings from base hourly rate (NOK)
 - `supplementPay`: Earnings from supplement overlays (NOK)
 - `gross`: Total before tax (`basePay + supplementPay`)
-- `taxAmount`: Tax deduction (if enabled)
-- `net`: After-tax earnings (`gross - taxAmount`)
+- `wagePeriods`: Post-deduction paid periods
+- `originalWagePeriods`: Periods before break or pause deduction
+- `breakAudit`: Deduction method, source, deducted hours, applied pause windows, and notes
+- Downstream totals: `taxAmount`, `net`, completed gross/net, projection values, and payroll adjustment gross/net totals
 
 ### Key Invariants
 1. **Deterministic**: Same inputs always produce same outputs
 2. **Pure computation**: Zero I/O, all inputs explicit
 3. **Cross-midnight support**: Shifts spanning midnight are calculated as continuous time
-4. **Payout-date-based tax/snapshot**: Tax and snapshot selection use payout date, not worked date
+4. **Dual-date snapshot logic**: Wage/supplements/breaks use shift date; tax uses payout date
 5. **Precision**: 3 decimal places for hours, 2 decimal places for currency
 6. **Job-scoped snapshots**: Each shift is matched to wage snapshots that belong to the same job; legacy (job-less) snapshots serve as fallback
-7. **Job-scoped payroll day**: `payroll_day` is resolved from the shift's job first, then falls back to `user_settings.payroll_day`
+7. **Job-scoped payroll day**: `payroll_day` is resolved from the shift's job first, then the default job, then `user_settings.payroll_day`
 
 ### Definitions
 
@@ -44,26 +47,36 @@ The Tidex payroll engine computes wage earnings for work shifts. It takes shift 
 | **Wage snapshot** | Point-in-time capture of wage, supplement, tax, and break settings — now scoped to a job |
 | **Baseline snapshot** | Snapshot with `from_date = NULL`, serves as fallback within its job bucket |
 | **Supplement window** | Time-of-day range when a supplement rate applies |
+| **Pause window** | Exact unpaid interval clipped from wage periods before pay is calculated |
 | **Payout date** | Date when wages are paid (typically month after work + payroll day) |
 | **Payroll period** | The calendar month whose earnings are grouped for a payout |
 | **Month grouping** | Shifts worked in month M are paid in month M+1 |
+| **Payroll adjustment** | Manual payout-level bonus, retro pay, correction, or other non-shift amount included in payout totals |
 | **Job** | An employer/workplace entity that groups shifts and wage snapshots; owns `payroll_day`, `half_tax_month`, `monthly_goal` |
 | **Default job** | Each user has exactly one active default job; shifts without an explicit `job_id` are assigned here |
-| **Legacy snapshot** | A `wage_snapshot` with `job_id = NULL`; used as fallback when no job-specific snapshot exists |
+| **Legacy snapshot** | A local or historical `wage_snapshot` with `job_id = NULL`; used only as rollout fallback, primarily for the default job |
 
 ### Entry Points
 
-**Pure function (core calculation):**
-```typescript
-computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll/calc.ts
+**iOS month orchestration (active app):**
+```swift
+PayrollEngine.computeShiftsForMonth(request)
+// ios/TidexApp/Services/Payroll/PayrollEngine.swift
 ```
 
-**Effect-wrapped (with validation):**
-```typescript
-computeShift(shift, settings, presetRules, snapshot, job?) // from @/lib/payroll/effect.ts
+**iOS per-shift calculator (active app):**
+```swift
+PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+// ios/TidexApp/Services/Payroll/PayrollCalculator.swift
 ```
 
-The `job` parameter is currently reserved for future use (e.g., per-job payroll day in the pure function). Payroll day resolution is performed upstream in `ShiftsService` before calling `computeShift`.
+**Shared TypeScript calculator (Wagey / server-side tools):**
+```typescript
+computeShift(shift, settings, presetRules, snapshot, job?)
+// supabase/functions/_shared/wagey/payroll/calc.ts
+```
+
+The TypeScript `settings` and `job` parameters are compatibility arguments for older call sites. Payroll day, payout date, and tax snapshot selection are resolved upstream by the iOS `PayrollEngine` and by `supabase/functions/_shared/wagey/data.ts`.
 
 ---
 
@@ -79,9 +92,13 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 | `shift_date` | `date` | No | The date of the shift (ISO: `YYYY-MM-DD`) |
 | `start_time` | `text` | No | Start time in `HH:MM` format |
 | `end_time` | `text` | No | End time in `HH:MM` format (supports cross-midnight) |
+| `note` | `text` | Yes | Private owner-only shift note; omitted from shared payloads |
 | `custom_pause_windows` | `jsonb` | Yes | Exact per-shift pause windows: `{ windows: [{ start, end }] }` |
 | `custom_supplements` | `jsonb` | Yes | Shift-specific supplement overrides |
 | `created_at` | `timestamptz` | Yes | Creation timestamp (default: `now()`) |
+| `updated_at` | `timestamptz` | Yes | Sync timestamp |
+| `revision` | `bigint` | No | Local-first sync revision |
+| `deleted_at` | `timestamptz` | Yes | Soft-delete marker |
 
 **Behavior notes:**
 - When `end_time <= start_time`, shift crosses midnight (e.g., 22:00 to 06:00)
@@ -104,13 +121,17 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 | `exclusions` | `jsonb` | Yes | Array of ISO dates to skip |
 | `date_specific_pause_windows` | `jsonb` | Yes | Per-date pause overrides: `{ "2025-01-15": { windows: [...] } }` |
 | `date_specific_supplements` | `jsonb` | Yes | Per-date custom supplements: `{ "2025-01-15": { rules: [...] } }` |
+| `date_specific_notes` | `jsonb` | Yes | Per-date private notes keyed by ISO date |
+| `updated_at` | `timestamptz` | Yes | Sync timestamp |
+| `revision` | `bigint` | No | Local-first sync revision |
+| `deleted_at` | `timestamptz` | Yes | Soft-delete marker |
 
 **Behavior notes:**
 - Virtual shifts are generated at runtime, never persisted
 - `selected_days` keys are weekday numbers (0=Sunday to 6=Saturday)
 - Values are anchor ISO dates from which recurrence starts
 - A recurring pattern and all its generated virtual shifts belong to one job; there is no per-occurrence job override
-- **Note:** Table does NOT have `created_at` or `updated_at` columns
+- Generated virtual shifts inherit date-specific pause windows, supplements, and notes for their occurrence date
 
 ### B.3 `wage_snapshots` — Point-in-Time Wage Settings
 
@@ -122,7 +143,8 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 | `from_date` | `date` | Yes | - | Effective date (`NULL` = baseline snapshot for this job) |
 | `hourly_wage` | `numeric` | No | - | Base hourly wage in NOK |
 | `wage_level` | `integer` | Yes | - | Tariff level (1-9) or `NULL` for custom wage |
-| `supplements` | `jsonb` | No | `'[]'::jsonb` | Array of `SupplementRule` objects (wrapped in `{ rules: [...] }` at runtime) |
+| `tariff_type_id` | `text` | Yes | - | Tariff type identifier such as `hk_retail`, or `NULL` for custom wage |
+| `supplements` | `jsonb` | No | `{ "rules": [] }` | Object containing an array of `SupplementRule` objects |
 | `tax_enabled` | `boolean` | Yes | `false` | Whether tax deduction is enabled |
 | `tax_percentage` | `numeric` | Yes | `0` | Tax percentage (0-100) |
 | `break_enabled` | `boolean` | Yes | `true` | Whether break deduction is enabled |
@@ -130,6 +152,9 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 | `break_threshold_hours` | `numeric` | Yes | `5.5` | Hours before break applies |
 | `break_deduction_minutes` | `integer` | Yes | `30` | Break duration in minutes |
 | `created_at` | `timestamptz` | Yes | - | Creation timestamp |
+| `updated_at` | `timestamptz` | Yes | - | Sync timestamp |
+| `revision` | `bigint` | No | `1` | Local-first sync revision |
+| `deleted_at` | `timestamptz` | Yes | `NULL` | Soft-delete marker |
 
 **Unique constraints (updated for multi-job):**
 - `UNIQUE (user_id, job_id) WHERE from_date IS NULL AND deleted_at IS NULL` — one baseline per (user, job)
@@ -138,12 +163,13 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 **Behavior notes:**
 - Snapshots are **job-scoped**: each bucket belongs to a specific `job_id`
 - Only one baseline snapshot (`from_date = NULL`) allowed per (user, job) pair
-- Legacy snapshots (`job_id = NULL`, created before migration) serve as fallback bucket
+- The live database backfilled snapshots to non-null `job_id`; `job_id = NULL` remains supported only as a rollout/local compatibility fallback
 - **Snapshot selection uses TWO different dates:**
   - **Wage, supplements, break settings**: Selected based on **shift date** (the date the shift is worked)
   - **Tax settings only**: Selected based on **payout date** (shift month + 1, on job's payroll day)
-- For a target date D: choose latest snapshot where `from_date <= D` and `from_date IS NOT NULL`; fallback chain: job-specific dated → job-specific baseline → legacy dated → legacy baseline
-- **Note:** DB stores `supplements` as `'[]'::jsonb` but code expects `{ rules: [...] }` structure
+- For a target date D: choose latest snapshot where `from_date <= D` and `from_date IS NOT NULL`; fallback chain in shared TypeScript: job-specific dated → legacy dated → job-specific baseline → legacy baseline
+- In the iOS local repository, nil-job snapshots are only included for the selected default job; non-default jobs do not borrow legacy nil-job snapshots
+- The app expects `supplements` to decode as `{ rules: [...] }`
 
 ### B.4 `user_settings` — User Preferences
 
@@ -153,7 +179,11 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 | `payroll_day` | `integer` | Yes | `15` | Day of month (1-31) when payroll is received |
 | `half_tax_month` | `integer` | Yes | - | Month (11 or 12) for half-tax; `NULL` = disabled |
 | `monthly_goal` | `integer` | Yes | `20000` | Monthly earnings goal in NOK |
+| `monthly_goals_by_month` | `jsonb` | No | `{}` | Sparse `YYYY-MM` monthly goal overrides |
 | `default_shifts_view` | `varchar(10)` | Yes | `'calendar'` | UI preference: `list` or `calendar` |
+| `show_dashboard_clock_buttons` | `boolean` | No | `true` | Whether dashboard clock controls are visible |
+| `default_startup_tab` | `text` | No | `'home'` | App tab opened at launch |
+| `ai_data_sharing_enabled` | `boolean` | Yes | `NULL` | Wagey / AI data sharing preference |
 | `currency` | `text` | Yes | `'kr'` | Currency display symbol |
 | `theme` | `text` | No | `'dark'` | UI theme preference (`light`, `dark`, `system`) |
 | `profile_picture_url` | `text` | Yes | - | User's profile picture URL |
@@ -165,7 +195,7 @@ The `job` parameter is currently reserved for future use (e.g., per-job payroll 
 - Wage settings have been moved to `wage_snapshots` (historical accuracy)
 - `payroll_day`, `half_tax_month`, `monthly_goal` are now primarily owned by the `jobs` table; `user_settings` keeps mirrored copies for legacy client compatibility during the transition window
 - DB triggers keep `user_settings` and the default job in sync in both directions
-- `payroll_day` is used to calculate payout dates for snapshot selection; resolution order: job's `payroll_day` → `user_settings.payroll_day` → app fallback (`1`)
+- `payroll_day` is used to calculate payout dates for snapshot selection; resolution order: shift job's `payroll_day` → default job's `payroll_day` → `user_settings.payroll_day` → app fallback (`1`)
 - `half_tax_month` applies to payout month, not worked month
 
 ### B.4.5 `jobs` — Employer/Workplace Entities
@@ -183,6 +213,7 @@ Each user has one or more jobs. New table added in the multi-job rollout.
 | `payroll_day` | `integer` | Yes | `15` | Day of month (1-31) payroll is received for this job |
 | `half_tax_month` | `integer` | Yes | `NULL` | Month (11 or 12) for half-tax; `NULL` = disabled |
 | `monthly_goal` | `integer` | Yes | `20000` | Monthly earnings goal for this job |
+| `currency` | `text` | No | `'kr'` | Immutable display currency for this job |
 | `archived_at` | `timestamptz` | Yes | `NULL` | Set when archived; hides from Add Shift pickers |
 | `deleted_at` | `timestamptz` | Yes | `NULL` | Soft-delete; retained for historical data |
 | `created_at` | `timestamptz` | No | `now()` | Creation timestamp |
@@ -197,7 +228,39 @@ Each user has one or more jobs. New table added in the multi-job rollout.
 - A default job cannot be deleted; the user must designate another job as default first
 - Archived jobs (`archived_at IS NOT NULL`) remain visible in historical shift views but are excluded from Add Shift pickers
 - Soft-deleted jobs (`deleted_at IS NOT NULL`) are excluded from all active queries
-- `payroll_day` resolution for payout date: job value → `user_settings.payroll_day` → `1`
+- `payroll_day` resolution for payout date: shift job value → default job value → `user_settings.payroll_day` → `1`
+- Job `currency` is captured at job creation and used for dashboard grouping, payout variants, and mixed-currency breakdowns
+
+### B.4.6 `payroll_adjustments` — Manual Payout Corrections
+
+Payroll adjustments are payout-level amounts that are not tied to a single shift. They cover retro pay, bonuses, corrections, and other additions that should appear on a payroll card without changing shift hours or shift-level wage periods.
+
+| Column | Type | Nullable | Default | Purpose |
+|--------|------|----------|---------|---------|
+| `id` | `uuid` | No | `gen_random_uuid()` | Primary key |
+| `user_id` | `uuid` | No | - | Foreign key to `auth.users` |
+| `job_id` | `uuid` | Yes | `NULL` | Optional job scope; `NULL` resolves to the default job for display and tax lookup |
+| `amount` | `numeric` | No | - | Adjustment amount in the row currency |
+| `currency` | `text` | No | `'kr'` | Display currency |
+| `category` | `text` | No | - | One of: `retro_pay`, `bonus`, `correction`, `other` |
+| `tax_treatment` | `text` | No | `gross_taxable` | One of: `gross_taxable`, `net_manual`, `excluded_from_tax_estimate` |
+| `description` | `text` | No | - | Short user-visible explanation |
+| `note` | `text` | Yes | `NULL` | Private user note |
+| `curated_note` | `text` | Yes | `NULL` | Optional Wagey-authored explanation |
+| `curated_link` | `text` | Yes | `NULL` | Optional source link for the curated explanation |
+| `earned_from_date` | `date` | Yes | `NULL` | Optional earned-period start |
+| `earned_to_date` | `date` | Yes | `NULL` | Optional earned-period end |
+| `payout_date` | `date` | No | - | Payroll date whose totals include this adjustment |
+| `created_at` | `timestamptz` | No | `now()` | Creation timestamp |
+| `updated_at` | `timestamptz` | No | `now()` | Sync timestamp |
+| `revision` | `bigint` | No | `1` | Local-first sync revision |
+| `deleted_at` | `timestamptz` | Yes | `NULL` | Soft-delete marker |
+
+**Behavior notes:**
+- Explicit `job_id` values must belong to the same active, non-deleted, non-archived user-owned job
+- Adjustments are filtered by `payout_date`; they are not allocated back into shift periods
+- `gross_taxable` adjustments use payout-date tax settings for their job and the same half-tax rule as shifts
+- `net_manual` and `excluded_from_tax_estimate` contribute their amount to both gross and net totals without estimated tax
 
 ### B.5 JSONB Structure: `SupplementRule`
 
@@ -224,7 +287,7 @@ type SupplementRule = {
 
 ### B.6 Preset Supplement Rules (Tariff Default)
 
-From `@/lib/payroll/presets.ts`:
+From `PayrollCalculator.presetSupplementRules` and `supabase/functions/_shared/wagey/payroll/presets.ts`:
 
 ```typescript
 const PRESET_SUPPLEMENT_RULES = [
@@ -239,7 +302,7 @@ const PRESET_SUPPLEMENT_RULES = [
 
 ### B.7 Preset Wage Rates (Tariff Levels)
 
-From `@/lib/payroll/calc.ts`:
+From `PayrollCalculator.presetWageRates` and `supabase/functions/_shared/wagey/payroll/calc.ts`:
 
 | Level | Rate (NOK/hour) |
 |-------|-----------------|
@@ -254,112 +317,68 @@ From `@/lib/payroll/calc.ts`:
 
 ---
 
-## C) UI Values Map
+## C) Active App Values Map
 
-### C.1 `TotalCard` Component
+The active product surface is the native iOS app. The historical Next.js app components (`components/app/TotalCard.tsx`, `NextPayrollCard`, `ShiftCard`, DAL cache tags, and SSR prefetch windows) are retired and are not part of the live payroll behavior.
 
-**Location:** `components/app/TotalCard.tsx`
+### C.1 Dashboard Total Card
 
-**Purpose:** Displays monthly earnings total with optional projection and breakdown.
+**Location:** `ios/TidexApp/Features/Dashboard/Components/TotalCard.swift`
 
-| Displayed Field | Source | Formula |
-|-----------------|--------|---------|
-| Main display (large blue number) | `projectedTotal` or `total` prop | Sum of `shift.computed.gross` for all shifts in month |
-| Percentage change | `percentageChange` prop | `((currentMonth - previousMonth) / previousMonth) * 100` |
-| Subtitle (earned to date) | `total` prop when `projectedTotal` differs | Sum of shifts where `shift_date <= today` |
-| Subtitle (before tax) | `grossBeforeTax` prop | Sum of `gross` before tax deduction |
-| Shift count | `totalShiftsCount` prop | Count of shifts in month |
-| Planned shifts count | `plannedShiftsCount` prop | Count of future shifts in month |
-
-**Conditional UI logic:**
-- Shows `— — —` placeholder when total is `0 kr` and `useZeroPlaceholder` is true
-- Shows "earned to date" when future shifts exist (projected ≠ total)
-- Shows "before tax" when tax is enabled but no future shifts
-- Shows shift count when no earnings data available
-- Shows help tooltip when displaying dashes but `hasPendingShifts` is true
-
-**Data source:** SSR via `getComputedShifts()` in dashboard page
-
-### C.2 `NextPayrollCard` Component
-
-**Location:** `components/app/NextPayrollCard.tsx`
-
-**Purpose:** Displays next payroll date and amount to be paid.
+**Purpose:** Displays the selected month's shift-derived earnings and projection for the primary currency bucket.
 
 | Displayed Field | Source | Formula |
 |-----------------|--------|---------|
-| Payroll date | Calculated from `payrollDay` + `selectedMonth` | `adjustPayrollDate(payrollDay, month, year, locale)` |
-| Net amount | `netAmount` prop | Sum of `(gross - taxAmount)` for previous month's shifts |
-| Gross amount | `grossAmount` prop | Sum of `gross` for previous month's shifts |
-| Tax amount | `taxAmount` prop | `gross * (taxPercentage / 100)` |
-| Base amount | `baseAmount` prop | Sum of `basePay` for previous month's shifts |
-| Supplement amount | `supplementAmount` prop | Sum of `supplementPay` for previous month's shifts |
-| Progress bar | `progress` prop | Progress through month until payroll (1-100) |
+| Main amount | `DashboardData.displayTotal` / projected total | Shift totals after conflict exclusion; net when tax is enabled, otherwise gross |
+| Earned to date | Completed shift totals | Completed shifts are determined by `Date.hasShiftEnded(...)` |
+| Before-tax amount | Gross total | Sum of included `shift.grossPay` |
+| Shift count | Dashboard month shifts | Count of included visible shifts |
+| Mixed-currency indicator | `JobCurrencyAggregateResolver` | Shown when the selected month has positive gross in more than one job currency |
 
-**Conditional UI logic:**
-- Shows breakdown as either `gross − tax` or `base + supplements` depending on `taxEnabled` and `hasSupplements`
-- Shows "Previous payroll" label if today > adjusted payroll date
-- Shows "I dag" with party popper icon if `isPayrollToday` is true
-- Shows placeholder dashes (`——`) when `hasPayout` is false
+Monthly totals remain shift-only. Payroll adjustments are shown in payout cards and details sheets so non-shift money does not distort hours, average hourly rate, or projection math.
 
-**Payout date adjustment:**
-```
-payrollDate = adjustPayrollDate(payrollDay, month, year, locale)
-```
-Adjusts backwards from `payrollDay` until a valid payroll day (Tuesday-Friday, non-holiday).
+### C.2 Payroll Card and Details Sheet
 
-**Data source:** SSR via `getComputedShifts()` with `payoutTaxSettings` and `currentPayoutTaxSettings`
+**Locations:**
+- `ios/TidexApp/Features/Dashboard/Components/PayrollCard.swift`
+- `ios/TidexApp/Features/Dashboard/Components/PayrollDetailsSheet.swift`
 
-### C.3 `ShiftCard` Component
-
-**Location:** `components/app/ShiftCard.tsx`
-
-**Purpose:** Displays individual shift with earnings breakdown.
+**Purpose:** Displays a payout date, payout gross/net/tax, shift breakdown, break/pause deductions, and payroll adjustments for the payout month.
 
 | Displayed Field | Source | Formula |
 |-----------------|--------|---------|
-| Day name | Calculated from `shift.shift_date` | `daysFull[date.getUTCDay()]` |
-| Date display | `shift.shift_date` | Formatted as "15 jan" (locale-aware) |
-| Time range | `shift.start_time`, `shift.end_time` | `"09:00 – 17:00"` |
-| Paid hours | `shift.computed.paidHours` | Formatted with "t" suffix |
-| Display amount | `shift.computed` + tax settings | `taxEnabled ? netAmount : gross` |
-| Breakdown | `shift.computed` + tax settings | `gross − tax` or `basePay + supplementPay` |
-| Progress bar | `progress` prop | Progress through active shift (0-100) |
+| Payout date | Job `payroll_day` + visible payout month | `adjustPayrollDate(...)` for display/countdown only |
+| Shift gross | Previous earnings month shifts | Sum of included shift `grossPay` |
+| Shift net | Previous earnings month shifts | Per-shift gross less payout-date tax with half-tax applied when configured |
+| Adjustment gross/net | `payroll_adjustments` by `payout_date` | `PayrollAdjustmentCalculator.totals(...)` |
+| Total payout | Shift totals + adjustment totals | Gross/net shown in the job/currency variant |
+| Break details | `ShiftComputed.breakAudit` | Shows automatic break or exact pause-window deductions |
 
-**Tax calculation in component:**
-```typescript
-let taxPercentage = taxEnabled ? taxSettings.percentage : 0;
+### C.3 Shift Cards and Shift Details
 
-// Half-tax: applied based on PAYOUT month (shift month + 1)
-const shiftMonth = parseInt(shift.shift_date.substring(5, 7), 10);
-const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
-if (taxEnabled && halfTaxMonth && payoutMonth === halfTaxMonth) {
-  taxPercentage = taxPercentage / 2;
-}
+**Representative locations:**
+- `ios/TidexApp/Features/Dashboard/Components/FeaturedShiftCard.swift`
+- `ios/TidexApp/Features/Shifts/`
+- `ios/TidexApp/Shared/Components/EarningsBreakdownCard.swift`
 
-const taxAmount = taxEnabled ? gross * (taxPercentage / 100) : 0;
-const netAmount = gross - taxAmount;
-```
-
-**Additional props:**
-- `showEarnings`: When false, hides earnings (shows `——` placeholder)
-- `hasConflict`: Shows warning icon and orange border for overlapping shifts
-- `excludedFromTotal`: Shows strikethrough for earnings excluded from totals
-
-**Data source:** Passed as `shift` prop from parent component
+| Displayed Field | Source | Formula |
+|-----------------|--------|---------|
+| Paid hours | `shift.computed.paidHours` | Raw duration minus exact pause windows or automatic break |
+| Display amount | `ShiftWithComputations` tax settings | Net when tax is enabled, otherwise gross |
+| Breakdown | `basePay`, `supplementPay`, `breakAudit` | Base + supplements, plus pre/post deduction details |
+| Conflict state | `ConflictExclusion` | Higher-gross overlaps are visible but excluded from totals |
 
 ### C.4 Stats Views
 
-**Location:** `app/[locale]/(app)/stats/page.tsx`
-
-**Data source:** `@dal/stats.ts` via `StatsService`
+**Location:** `ios/TidexApp/Features/Stats/`
 
 | Metric | Formula |
 |--------|---------|
-| Total earnings | Sum of `gross` for all shifts in period |
-| Total hours | Sum of `paidHours` for all shifts in period |
+| Total earnings | Sum of included shift gross/net for the selected range |
+| Total hours | Sum of included `paidHours` |
+| Average per shift | `totalEarnings / shiftCount` |
 | Average hourly rate | `totalEarnings / totalHours` |
-| Monthly comparison | `(currentMonth - previousMonth) / previousMonth * 100` |
+| Month-over-month % | `(current - previous) / previous * 100`, scoped to the primary currency bucket when mixed currencies exist |
 
 ---
 
@@ -367,7 +386,7 @@ const netAmount = gross - taxAmount;
 
 ### D.1 Canonical Shift Object: `ShiftWithComputations`
 
-From `@/lib/payroll/types.ts`:
+Mirrors `ios/TidexApp/Models/*` and `supabase/functions/_shared/wagey/payroll/types.ts`:
 
 ```typescript
 // ShiftRow now includes job_id
@@ -464,18 +483,21 @@ type BreakAudit = {
   method: BreakMethod;
   thresholdHours: number;
   deductedHours: number;
+  source: "none" | "automatic_break" | "custom_pause_windows";
+  appliedPauseWindows?: PauseWindow[];
   notes?: string[];
 };
 ```
 
 ### D.2 Pipeline Steps
 
-#### Step 1: Fetch Stored Shifts, Recurring Shifts, Jobs, and Snapshots (concurrent)
+#### Step 1: Load Stored Shifts, Recurring Shifts, Jobs, and Snapshots
 
-All four queries run in parallel via `Effect.all(..., { concurrency: 4 })`:
+The active iOS app reads payroll input from the local SwiftData repositories, then sync fills those local stores from Supabase. The shared Wagey TypeScript path performs equivalent Supabase reads for server-side tools.
 
 ```typescript
-// From ShiftsService in @/lib/services/shifts.ts
+// Representative Wagey/server-side read path.
+// iOS equivalent: MonthlyPayrollReadService + local repositories.
 const [shifts, recurringShifts, jobs, allSnapshots] = await Promise.all([
   supabase.from("user_shifts")
     .select("*")
@@ -578,7 +600,6 @@ const resolveSnapshotForDate = (buckets, snapshots, date, jobId?) => {
 For each recurring shift template and each month in range:
 
 ```typescript
-// From @/lib/recurring/utils.ts
 function generateVirtualShiftsForMonth(
   yearMonth: { year: number; month: number },
   draft: RecurringDraft
@@ -592,7 +613,7 @@ function generateVirtualShiftsForMonth(
    c. Check if date is in phase with anchor (`isInPhase`)
    d. Check if within end window (if end condition exists)
    e. Check if not in exclusions list
-   f. If all pass, add to virtual shifts
+   f. If all pass, add to virtual shifts, inheriting the recurring shift's `job_id`, date-specific pause windows, date-specific supplements, and date-specific notes
    g. Advance by 7 days and repeat
 
 **Phase check formula:**
@@ -618,7 +639,7 @@ for (const shift of shifts) {
   const snapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, shift.shift_date, shiftJobId);
 
   // Tax snapshot: use payout date for THIS shift's job
-  const payoutDate = calculatePayoutDate(year, month, payrollDayForJob(shiftJobId));
+  const payoutDate = calculatePayoutDate(shift.shift_date, payrollDayForJob(shiftJobId));
   const taxSnapshot = resolveSnapshotForDate(snapshotBuckets, snapshots, payoutDate, shiftJobId);
 
   const computed = computeShift(
@@ -680,8 +701,9 @@ if (end <= start) {
 ```
 
 **Supplement matching for cross-midnight:**
-- Supplements from both the start day and next day are considered
-- Time windows are projected into the extended timeline (0-2880 minutes)
+- Supplement rules are matched by the shift's weekday, not by the next calendar day after midnight
+- Windows for that weekday are projected into the extended timeline (0-2880 minutes)
+- Example: a Saturday 20:00-02:00 shift can receive Saturday evening supplements after midnight only if the Saturday rule itself crosses midnight; Sunday-only rules are not applied to that shift
 
 ### D.5 Virtual Shift Identity
 
@@ -699,7 +721,7 @@ This ensures stable identity for React keys and conflict detection.
 
 ### E.1 Payout Date Calculation
 
-From `@/lib/services/shifts.ts`:
+Implemented in `PayrollEngine.calculatePayoutDate(...)` and `supabase/functions/_shared/wagey/data.ts`:
 
 ```typescript
 function calculatePayoutDate(
@@ -732,7 +754,7 @@ function calculatePayoutDate(
 
 ### E.2 Payout Date Adjustment for Holidays
 
-From `@/lib/payroll/adjust-payroll-date.ts`:
+Implemented for display/countdown UX in `ios/TidexApp/Shared/Utilities/PayrollDateAdjuster.swift` and the marketing docs helper:
 
 ```typescript
 function adjustPayrollDate(
@@ -758,7 +780,7 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
 
 **Valid payroll days:** Tuesday, Wednesday, Thursday, Friday (excluding holidays)
 
-**Norwegian holidays:** See `@/lib/holidays/norwegian-holidays.ts`
+**Norwegian holidays:** Fixed and Easter-based Norwegian public holidays are excluded.
 - Fixed: New Year's Day, Labour Day (May 1), Constitution Day (May 17), Christmas Day, Boxing Day
 - Moveable (Easter-based): Maundy Thursday, Good Friday, Easter Sunday, Easter Monday, Ascension Day, Whit Sunday, Whit Monday
 
@@ -824,7 +846,7 @@ const resolveSnapshotForDate = (
 
 ### E.4 Multiple Snapshots Same Date
 
-If multiple snapshots have the same `from_date`, behavior is undefined (database constraint prevents this). The unique index `idx_wage_snapshots_unique_date` enforces one snapshot per date per user.
+If multiple snapshots have the same `from_date` for the same `(user_id, job_id)`, behavior is undefined in the in-memory resolver, but the database constraint prevents it. The unique index `idx_wage_snapshots_unique_date` enforces one dated snapshot per `(user_id, job_id, from_date)` and `idx_wage_snapshots_baseline` enforces one baseline per `(user_id, job_id)`.
 
 ---
 
@@ -901,7 +923,8 @@ function resolveSupplementRules(
   customSupplements: CustomSupplementsData | null
 ): SupplementRule[] {
   // Custom supplements completely replace predefined rules
-  if (customSupplements?.rules?.length > 0) {
+  if (customSupplements) {
+    if (customSupplements.rules.length === 0) return []; // explicitly no supplements
     return customSupplements.rules.map(rule => ({
       ...rule,
       days: [weekday], // Apply to this shift's weekday only
@@ -914,7 +937,7 @@ function resolveSupplementRules(
 
 ### F.7 Wage Periods Construction
 
-From `@/lib/payroll/periods.ts`:
+Implemented in `WagePeriodBuilder.swift` and `supabase/functions/_shared/wagey/payroll/periods.ts`:
 
 **Algorithm:**
 1. Collect all time boundaries (shift start/end + rule boundaries)
@@ -997,12 +1020,12 @@ function buildWagePeriods(
 ```typescript
 function resolveSupplementRate(rule: SupplementRule, baseRate: number): number {
   // Fixed rate (NOK per hour)
-  if (rule.rate != null && !isNaN(rule.rate)) {
+  if (rule.rate != null && Number.isFinite(rule.rate) && rule.rate >= 0) {
     return rule.rate;
   }
 
   // Percentage of base rate
-  if (rule.percent != null && !isNaN(rule.percent)) {
+  if (rule.percent != null && Number.isFinite(rule.percent) && rule.percent >= 0) {
     return (baseRate * rule.percent) / 100;
   }
 
@@ -1014,7 +1037,9 @@ function resolveSupplementRate(rule: SupplementRule, baseRate: number): number {
 
 ### F.9 Break Deduction
 
-From `@/lib/payroll/breaks.ts`:
+Implemented in `BreakDeduction.swift` and `supabase/functions/_shared/wagey/payroll/breaks.ts`:
+
+Exact `custom_pause_windows` take precedence over automatic break deduction. When normalized pause windows are present, the engine clips those intervals from wage periods, sets `breakAudit.source = "custom_pause_windows"`, sets `method = "none"`, and does not run `applyBreakDeduction`.
 
 ```typescript
 function applyBreakDeduction(
@@ -1030,6 +1055,7 @@ function applyBreakDeduction(
   let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
 
   let adjusted = periods.map(p => ({ ...p }));
+  const notes: string[] = [];
 
   if (toDeduct > 0 && method !== "none") {
     let remaining = Math.round(toDeduct * 60);
@@ -1071,7 +1097,13 @@ function applyBreakDeduction(
 
   return {
     periods: adjusted,
-    audit: { method, thresholdHours, deductedHours: toDeduct },
+    audit: {
+      method,
+      thresholdHours,
+      deductedHours: toDeduct,
+      source: "automatic_break",
+      notes,
+    },
   };
 }
 ```
@@ -1110,11 +1142,11 @@ const gross = +(basePay + supplementPay).toFixed(2);
 
 ### F.11 Tax Calculation
 
-Tax is applied **client-side** or in aggregations, not in `computeShift`:
+Tax is applied downstream in `PayrollEngine`, dashboard aggregation, payout-details code, and Wagey response shaping, not inside `computeShift`:
 
 ```typescript
 const taxEnabled = snapshot.tax_enabled;
-const taxPercentage = snapshot.tax_percentage;
+const taxPercentage = Math.min(Math.max(snapshot.tax_percentage, 0), 100);
 
 // Half-tax adjustment (based on payout month)
 const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
@@ -1129,9 +1161,7 @@ const net = gross - taxAmount;
 ### F.12 Complete Computation Flow (Pseudocode)
 
 ```
-FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
-  // Note: job parameter is reserved for future use.
-  // payroll_day resolution happens upstream in ShiftsService before this call.
+FUNCTION computeShift(shift, snapshot, presetRules):
   // 1. Parse times
   start_minutes = toMinutes(shift.start_time)
   end_minutes = toMinutes(shift.end_time)
@@ -1150,6 +1180,7 @@ FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
 
   // 5. Build wage periods
   periods = buildWagePeriods(start, end, weekday, baseRate, rules)
+  originalPeriods = copy(periods)
 
   // 6. Calculate raw duration
   totalMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
@@ -1157,22 +1188,22 @@ FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
 
   // 7. Apply pause handling
   IF shift.custom_pause_windows EXISTS THEN
-    periods = clipPeriodsByPauseWindows(periods, shift.custom_pause_windows)
+    periods, deductedHours, appliedPauseWindows =
+      clipPeriodsByPauseWindows(periods, shift.custom_pause_windows, shift.start_time, shift.end_time)
     breakAudit = {
+      method: "none",
+      thresholdHours: 0,
       source: "custom_pause_windows",
-      deductedHours: clippedPauseHours,
-      appliedPauseWindows: clippedPauseWindows
+      deductedHours,
+      appliedPauseWindows,
+      notes: appliedPauseWindows.length ? ["Deducted using custom pause windows"] : []
     }
   ELSE
-    // Automatic break deduction
-  breakEnabled = snapshot.break_enabled OR true
-  breakMethod = snapshot.break_method OR "proportional"
-  threshold = snapshot.break_threshold_hours OR 5.5
-  breakMinutes = breakEnabled ? (snapshot.break_deduction_minutes OR 30) : 0
-
-  IF durationHours > threshold AND breakEnabled THEN
-    periods = applyBreakDeduction(periods, breakMethod, threshold, breakMinutes/60)
-    breakAudit.source = "automatic_break"
+    breakEnabled = snapshot.break_enabled OR true
+    breakMethod = snapshot.break_method OR "proportional"
+    threshold = snapshot.break_threshold_hours OR 5.5
+    breakMinutes = breakEnabled ? (snapshot.break_deduction_minutes OR 30) : 0
+    periods, breakAudit = applyBreakDeduction(periods, breakMethod, threshold, breakMinutes/60)
   ENDIF
 
   // 8. Calculate paid hours
@@ -1198,7 +1229,7 @@ FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
     gross,
     wagePeriods: periods,
     originalWagePeriods: originalPeriods,
-    breakAudit: { method, threshold, deducted }
+    breakAudit
   }
 ```
 
@@ -1206,19 +1237,23 @@ FUNCTION computeShift(shift, settings, presetRules, snapshot, job?):
 
 ## G) Aggregations and Higher-Level Metrics
 
-### G.1 Monthly Totals (TotalCard)
+### G.1 Monthly Shift Totals
 
 ```typescript
-// From ShiftsService
-const aggregates = shifts.reduce((acc, shift) => ({
+// Exclude higher-earning overlapping shifts first.
+const excludedIds = buildExcludedShiftIds(shifts);
+const included = shifts.filter(s => !excludedIds.has(s.id));
+
+const aggregates = included.reduce((acc, shift) => ({
   totalHours: acc.totalHours + shift.computed.paidHours,
   totalEarnings: acc.totalEarnings + shift.computed.gross,
 }), { totalHours: 0, totalEarnings: 0 });
 ```
 
 **Filter:** Shifts where `startDate <= shift_date <= endDate`
+**Adjustment policy:** Monthly shift totals are shift-only. Payroll adjustments are added only to payout totals, not to hours or average-hourly metrics.
 
-### G.2 Next Payroll (NextPayrollCard)
+### G.2 Payout Totals
 
 **Which shifts included:** Previous month's shifts (earnings month = current month - 1)
 
@@ -1235,12 +1270,52 @@ const prevMonthShifts = shifts.filter(s => {
 });
 
 // Get tax settings for current payout
-const payoutDate = calculatePayoutDate(prevYear, actualPrevMonth, payrollDay);
+const payoutDate = calculatePayoutDate(`${prevYear}-${String(actualPrevMonth).padStart(2, "0")}-01`, payrollDay);
 const snapshot = getSnapshotForDate(payoutDate);
 
 const grossAmount = SUM(shift.computed.gross);
 const taxAmount = snapshot.tax_enabled ? grossAmount * (snapshot.tax_percentage / 100) : 0;
 const netAmount = grossAmount - taxAmount;
+
+const adjustmentTotals = payrollAdjustmentTotals(
+  payoutAdjustments.filter(a => a.payout_date === payoutDate && !a.deleted_at),
+  taxSettingsForAdjustment,
+  halfTaxMonth,
+  payoutMonth
+);
+
+const payoutGross = grossAmount + adjustmentTotals.gross;
+const payoutNet = netAmount + adjustmentTotals.net;
+```
+
+### G.2.1 Payroll Adjustment Totals
+
+```typescript
+function payrollAdjustmentTotals(adjustments, taxSettingsForAdjustment, halfTaxMonth, payoutMonth) {
+  return adjustments
+    .filter(a => !a.deleted_at)
+    .reduce((totals, adjustment) => {
+      const gross = adjustment.amount;
+      if (adjustment.tax_treatment !== "gross_taxable") {
+        return {
+          gross: totals.gross + gross,
+          net: totals.net + gross,
+          taxEnabled: totals.taxEnabled,
+        };
+      }
+
+      const tax = taxSettingsForAdjustment(adjustment);
+      const pct = Math.min(Math.max(tax.percentage, 0), 100);
+      const effectivePct = halfTaxMonth === payoutMonth ? pct / 2 : pct;
+      const net = tax.enabled ? gross * (1 - effectivePct / 100) : gross;
+
+      return {
+        gross: totals.gross + gross,
+        net: totals.net + net,
+        taxEnabled: totals.taxEnabled || tax.enabled,
+      };
+    }, { gross: 0, net: 0, taxEnabled: false });
+}
 ```
 
 ### G.3 Projected Total
@@ -1291,8 +1366,6 @@ const nextShift = shifts
 
 ### G.5 Stats Aggregates
 
-From `@dal/stats.ts`:
-
 | Aggregate | Formula | Period |
 |-----------|---------|--------|
 | Total hours | `SUM(paidHours)` | Selected range |
@@ -1303,7 +1376,7 @@ From `@dal/stats.ts`:
 
 ### G.6 Conflict Exclusion
 
-From `@/lib/shifts/conflictExclusion.ts`:
+Implemented in `ConflictExclusion.swift`:
 
 When multiple shifts overlap on the same date, only one contributes to earnings totals. The shift with the **lowest** gross earnings is kept; all higher-earning overlapping shifts are excluded (displayed with strikethrough).
 
@@ -1366,79 +1439,48 @@ The retired Next.js app previously used React request caching and Next.js tag in
 
 ---
 
-## H) Data Fetching, SSR Windowing, and API Expansion
+## H) Active Data Access and Sync
 
-### H.1 SSR Prefetch Window
+The active iOS app is local-first. Payroll reads are assembled from SwiftData repositories and are recalculated in memory from local rows. Supabase remains the sync backend and the shared server-side source for Wagey tools, but the retired Next.js SSR windowing and cache-tag invalidation model is no longer part of the app behavior.
 
-Dashboard and shifts pages prefetch 3 months of data:
+### H.1 iOS Local Read Context
 
-```typescript
-// Dashboard page
-const previous = getPreviousYearMonth();
-const current = getCurrentYearMonth();
-const next = getNextYearMonth();
+`MonthlyPayrollReadService` builds the payroll read context:
 
-const { shifts } = await getComputedShifts(user.id, {
-  startDate: getMonthStart(previous.year, previous.month),
-  endDate: getMonthEnd(next.year, next.month),
-  limit: 200, // ~50 shifts per month × 3 + headroom
-  year: current.year,
-  month: current.month,
-});
+```swift
+PayrollReadContext(
+  userId: userId,
+  settings: settingsRepository.getSettings(for: userId),
+  snapshots: snapshotsRepository.getSnapshots(for: userId, jobId: jobId),
+  recurringShifts: recurringShiftsRepository.getRecurringShifts(for: userId, jobId: jobId),
+  jobs: jobsRepository.getNonDeletedJobs(for: userId)
+)
 ```
 
-**Preloaded months tracked:**
-```typescript
-const preloadedMonths = [
-  `${previous.year}-${previous.month.toString().padStart(2, '0')}`,
-  `${current.year}-${current.month.toString().padStart(2, '0')}`,
-  `${next.year}-${next.month.toString().padStart(2, '0')}`,
-];
-```
+Stored shifts are loaded for the requested inclusive date range, optionally filtered by job. The engine then generates matching virtual shifts locally from recurring templates and computes all payroll values from local rows.
 
-### H.2 Client-Side Expansion
+### H.2 Sync-Relevant Tables
 
-When user navigates outside prefetched window:
+The local-first sync model depends on `updated_at`, `revision`, and `deleted_at` metadata on payroll-related tables:
 
-```typescript
-// Client component fetches additional months
-async function loadMonth(year: number, month: number) {
-  const response = await fetch(`/api/shifts?year=${year}&month=${month}`);
-  const data = await response.json();
-  // Merge with existing shifts in state
-}
-```
+| Table | Sync role |
+|-------|-----------|
+| `user_shifts` | Stored shifts and per-shift pause/supplement/note overrides |
+| `recurring_shifts` | Recurring templates and date-specific overrides |
+| `wage_snapshots` | Job-scoped wage/tax/break history |
+| `jobs` | Employer configuration, job currency, and payroll-day ownership |
+| `payroll_adjustments` | Payout-level manual additions/corrections |
+| `user_settings` | Global preferences and legacy default-job mirrors |
 
-### H.3 API Routes
+Soft-deleted rows remain in sync long enough for clients to observe deletes, then are purged by the soft-delete cleanup job.
 
-**`GET /api/shifts`:**
-- Accepts: `year`, `month`, optional `jobId`
-- Uses `getComputedShiftsForApi()` (no automatic redirect)
-- Returns: `{ shifts, settings, jobs, payoutTaxSettings }`
-- Caching: `Cache-Control: private, max-age=300, stale-while-revalidate=60`
+### H.3 Shared Wagey / Server-Side Path
 
-**`POST /api/shifts`:**
-- Body: `{ dates: string[], start: string, end: string, recurringId?: string }`
-- Calls `createShifts()` server action
-- Returns: `{ success: true, id: string }` or `{ error: string }`
+Wagey tools use `supabase/functions/_shared/wagey/data.ts` and `supabase/functions/_shared/wagey/payroll/*` to load the same logical inputs, build snapshot buckets, compute shifts, summarize earnings, and include payroll adjustments where payout-level totals are requested.
 
-### H.4 Cache Tags and Invalidation
+### H.4 Public Documentation Surface
 
-| Cache Tag | Set By | Invalidated By |
-|-----------|--------|----------------|
-| `user-${userId}` | All DAL functions | Any user data mutation |
-| `user-shifts` | `getComputedShifts()` | Shift CRUD operations |
-| `user-settings` | `getUserSettings()` | Settings updates |
-| `user-wages` | `getUserWageSnapshots()` | Wage snapshot mutations |
-| `user-jobs` | `getUserJobs()` | Job CRUD operations |
-
-**Invalidation pattern:**
-```typescript
-// From @dal/cache.ts
-export function invalidateUserCache(userId: string) {
-  revalidateTag(`user-${userId}`, "max");
-}
-```
+The marketing site renders a public, structured payroll docs page at `marketing/app/docs/payroll/page.tsx`. That page should stay conceptually aligned with this Markdown spec, but the implementation source of truth remains the iOS payroll services plus shared Supabase TypeScript helpers listed in the appendix.
 
 ---
 
@@ -1844,10 +1886,10 @@ const snapshot = createSnapshot({
   durationHours: 6.00,
   paidHours: 6.00,
   // 20:00-00:00 (4h) at Saturday rate 110
-  // 00:00-02:00 (2h) at Sunday rate 115
+  // 00:00-02:00 (2h) has no Sunday supplement because rules are matched by shift weekday
   basePay: 1110.00,       // 6h × 185
-  supplementPay: 670.00,  // 4h×110 + 2h×115 = 440 + 230
-  gross: 1780.00,
+  supplementPay: 440.00,  // 4h×110
+  gross: 1550.00,
 }
 ```
 
@@ -1884,31 +1926,58 @@ expect(excludedIds.has("shift-a")).toBe(false);
 // Monthly total = 1480 (only shift-a counted)
 ```
 
+### Test Case 14: Payroll Adjustment with Half-Tax
+
+**Inputs:**
+```typescript
+const adjustment = {
+  amount: 1000,
+  tax_treatment: "gross_taxable",
+  payout_date: "2025-12-15",
+};
+
+const payoutTax = {
+  enabled: true,
+  percentage: 30,
+};
+
+const halfTaxMonth = 12;
+```
+
+**Expected:**
+```typescript
+// Payout month = December, so half-tax applies.
+const effectiveTaxPct = 30 / 2; // 15%
+
+{
+  gross: 1000.00,
+  net: 850.00,
+  taxEnabled: true,
+}
+```
+
 ---
 
 ## Appendix: File Location Reference
 
 | Component/Module | Path Alias | Purpose |
 |------------------|------------|---------|
-| `computeShift` (pure) | `@/lib/payroll/calc.ts` | Core payroll calculation |
-| `computeShift` (Effect) | `@/lib/payroll/effect.ts` | Validated calculation |
-| `buildWagePeriods` | `@/lib/payroll/periods.ts` | Time period construction |
-| `applyBreakDeduction` | `@/lib/payroll/breaks.ts` | Break deduction logic |
-| `PRESET_SUPPLEMENT_RULES` | `@/lib/payroll/presets.ts` | Tariff supplement rules |
-| `adjustPayrollDate` | `@/lib/payroll/adjust-payroll-date.ts` | Holiday adjustment |
-| `ShiftsService` | `@/lib/services/shifts.ts` | Effect-based shift + job loading |
-| `JobsService` | `@/lib/services/jobs.ts` | Effect-based job CRUD |
-| `getComputedShifts` | `@dal/shifts.ts` | DAL Promise wrapper |
-| `getUserJobs` | `@dal/jobs.ts` | Job list with caching |
-| `getDefaultJob` | `@dal/jobs.ts` | Default job lookup |
-| `getUserWageSnapshots` | `@dal/wage-snapshots.ts` | Wage snapshot access (all jobs) |
-| `getSnapshotForDate` | `@dal/wage-snapshots.ts` | Single-date snapshot lookup |
-| `TotalCard` | `components/app/TotalCard.tsx` | Monthly total display |
-| `NextPayrollCard` | `components/app/NextPayrollCard.tsx` | Payout display |
-| `ShiftCard` | `components/app/ShiftCard.tsx` | Individual shift display |
-| `generateVirtualShiftsForMonth` | `@/lib/recurring/utils.ts` | Virtual shift generation |
-| `buildExcludedShiftIds` | `@/lib/shifts/conflictExclusion.ts` | Conflict exclusion logic |
-| `invalidateUserCache` | `@dal/cache.ts` | Cache invalidation |
+| `PayrollEngine` | `ios/TidexApp/Services/Payroll/PayrollEngine.swift` | Month orchestration, payout-date tax lookup, totals |
+| `PayrollCalculator` | `ios/TidexApp/Services/Payroll/PayrollCalculator.swift` | Core per-shift payroll calculation |
+| `WagePeriodBuilder` | `ios/TidexApp/Services/Payroll/WagePeriodBuilder.swift` | Time period construction |
+| `BreakDeduction` | `ios/TidexApp/Services/Payroll/BreakDeduction.swift` | Automatic break deduction logic |
+| `PayrollAdjustmentCalculator` | `ios/TidexApp/Services/Payroll/PayrollAdjustmentCalculator.swift` | Payout-level adjustment totals |
+| `ConflictExclusion` | `ios/TidexApp/Services/Payroll/ConflictExclusion.swift` | Overlap cluster exclusion |
+| `RecurringShiftGenerator` | `ios/TidexApp/Services/Payroll/RecurringShiftGenerator.swift` | Virtual shift generation |
+| `MonthlyPayrollReadService` | `ios/TidexApp/Services/Payroll/MonthlyPayrollReadService.swift` | Local-first payroll input loading |
+| `PayrollDateAdjuster` | `ios/TidexApp/Shared/Utilities/PayrollDateAdjuster.swift` | Display payroll date adjustment |
+| `computeShift` | `supabase/functions/_shared/wagey/payroll/calc.ts` | Shared TypeScript per-shift calculation |
+| `buildWagePeriods` | `supabase/functions/_shared/wagey/payroll/periods.ts` | Shared TypeScript period construction |
+| `applyBreakDeduction` | `supabase/functions/_shared/wagey/payroll/breaks.ts` | Shared TypeScript break deduction |
+| `applyCustomPauseWindowClipping` | `supabase/functions/_shared/wagey/payroll/pause-windows.ts` | Exact pause-window clipping |
+| `buildSnapshotBuckets` / `resolveSnapshotForDate` | `supabase/functions/_shared/wagey/data.ts` | Server-side snapshot resolution |
+| `payroll_adjustments` SQL | `supabase/migrations/20260514000516_add_payroll_adjustments.sql` | Manual payout corrections |
+| Public docs page | `marketing/app/docs/payroll/page.tsx` | Public rendered payroll documentation |
 
 ---
 
@@ -1932,7 +2001,7 @@ expect(excludedIds.has("shift-a")).toBe(false);
    - Wage/supplements/break: Use **shift date** + **shift's job_id**
    - Tax settings: Use **payout date** (shift month + 1) + **shift's job_id**
 6. **Cross-midnight**: End time can be less than start time (add 24 hours)
-7. **Payroll day resolution**: Job's `payroll_day` takes priority over `user_settings.payroll_day`
+7. **Payroll day resolution**: Shift job `payroll_day` takes priority, then default job, then `user_settings.payroll_day`
 8. **Legacy snapshots**: Snapshots with `job_id = NULL` serve as fallback; do not discard them
 
 ---
@@ -1941,91 +2010,27 @@ expect(excludedIds.has("shift-a")).toBe(false);
 
 ---
 
-**Date:** 2026-02-26
-**Version:** 1.2
+**Date:** 2026-05-17
+**Version:** 3.2
 
-### Changes Made (Multi-Job Rollout)
+### Current Alignment Pass
 
-#### Section A (Overview)
-- ➕ Added `job_id` and `Job` to Inputs
-- ➕ Added invariants 6 and 7 (job-scoped snapshots, job-scoped payroll day)
-- ➕ Added `Job`, `Default job`, `Legacy snapshot` to Definitions
-- ⚠️ Updated `computeShift` entry point signature to include optional `job?` parameter
-
-#### Section B (Data Model)
-- ➕ **B.1**: Added `job_id` column to `user_shifts` (NOT NULL, assigned by trigger for legacy clients)
-- ➕ **B.2**: Added `job_id` column to `recurring_shifts` (NOT NULL; all virtual shifts inherit it)
-- ➕ **B.3**: Added `job_id` column to `wage_snapshots` (NOT NULL); updated uniqueness constraints to include `job_id`; updated behavior notes for job-scoped fallback chain
-- ⚠️ **B.4**: Added note that `payroll_day`/`half_tax_month`/`monthly_goal` are now owned by `jobs`; `user_settings` mirrors for legacy compatibility
-- ➕ **B.4.5**: New `jobs` table documented
-- ➕ **D.1**: Added `ShiftRow.job_id`, `WageSnapshot.job_id`, `Job` type, `ShiftData.jobs` to type definitions
-
-#### Section D (Pipeline)
-- ➕ Rewrote D.2 Step 1: jobs and snapshots now fetched in parallel (4-way concurrent query)
-- ➕ Added Step 2: snapshot bucket construction with `buildSnapshotBuckets`
-- ➕ Updated Step 4: compute uses job-scoped `resolveSnapshotForDate` + job-aware payroll day
-- ➕ Updated Step 5: virtual shifts also use job-scoped logic
-
-#### Section E (Snapshot Selection)
-- ➕ **E.3**: Rewrote snapshot selection to be job-scoped with documented fallback chain
-
-#### Section H (API)
-- ⚠️ **H.3**: `GET /api/shifts` response now includes `jobs` array; accepts optional `jobId`
-- ➕ **H.4**: Added `user-jobs` cache tag
-
-#### Appendix
-- ➕ Added `JobsService`, `getUserJobs`, `getDefaultJob` to file reference
-- ➕ Added `createJob()` factory to test case factory section
-- ➕ Added multi-job pitfalls to Common Pitfalls
-
----
-
-**Date:** 2026-01-14
-**Version:** 1.1
+Verified this document against:
+- iOS payroll services in `ios/TidexApp/Services/Payroll/`
+- iOS local models/repositories for wage snapshots, jobs, shifts, recurring shifts, and payroll adjustments
+- Shared Wagey TypeScript payroll helpers in `supabase/functions/_shared/wagey/`
+- Supabase migrations for multi-job support, exact pause windows, shift notes, job currencies, monthly goal overrides, and payroll adjustments
+- Public payroll docs page in `marketing/app/docs/payroll/page.tsx`
 
 ### Changes Made
 
-#### Section B (Data Model)
-- ⚠️ **B.1**: Updated `user_id` to nullable (was incorrectly marked NOT nullable)
-- ⚠️ **B.1**: Updated `created_at` to nullable with default
-- ⚠️ **B.2**: Removed `created_at` and `updated_at` columns (don't exist in DB)
-- ⚠️ **B.2**: Updated `end_condition` type options to match actual JSONB structure
-- ⚠️ **B.3**: Updated all break/tax fields to nullable (DB allows nulls with defaults)
-- ⚠️ **B.3**: Updated `supplements` default value to `'[]'::jsonb`
-- ➕ **B.4**: Added missing columns: `created_at`, `updated_at`, `last_active`, `profile_picture_url`
-
-#### Section C (UI Components)
-- ⚠️ **C.1**: Added `plannedShiftsCount` prop documentation
-- ⚠️ **C.2**: Added `progress` prop documentation
-- ⚠️ **C.3**: Added `showEarnings`, `hasConflict`, `excludedFromTotal` props
-- ❌ Removed reference to non-existent `NextShiftCard` component
-
-#### Section D (Pipeline)
-- ✅ Virtual shift generation verified correct
-
-#### Section E (Snapshot Selection)
-- ✅ Binary search algorithm verified correct
-
-#### Section F (Math Spec)
-- ✅ All formulas verified against actual code
-- ✅ Precision constants verified
-- ✅ Break deduction methods verified
-
-#### Section H (API)
-- ⚠️ **H.3**: Corrected API response format (no `aggregates` in response)
-
-#### Appendix
-- ➕ Added `buildExcludedShiftIds` to file reference
-- ➕ Added `invalidateUserCache` to file reference
-
-### Verified Sections
-
-All sections have been verified against the codebase:
-- ✅ Schema matches actual database (with corrections noted)
-- ✅ File paths verified to exist
-- ✅ Function signatures match documented
-- ✅ Formulas mathematically verified
-- ✅ Test vectors cross-referenced with existing tests
+- Updated the spec version/date and active entry points to reflect the native iOS app plus shared Wagey TypeScript helpers
+- Replaced retired Next.js UI, SSR, API route, DAL cache, and Effect-service descriptions with active iOS local-first read/sync behavior
+- Added exact pause windows, break audit source metadata, private shift notes, recurring date-specific notes, job currencies, monthly goal overrides, and sync metadata
+- Added payroll adjustments, including schema, tax treatments, payout filtering, and gross/net aggregation behavior
+- Corrected cross-midnight supplement behavior: rules are matched by the shift weekday and projected into the extended timeline; next-calendar-day rules are not automatically applied
+- Clarified job-scoped snapshot fallback differences between shared TypeScript and iOS local rollout compatibility
+- Updated the implementation appendix to real current file paths
 
 ---
 
@@ -2050,19 +2055,18 @@ All sections have been verified against the codebase:
 - [x] Tax calculation verified
 - [x] Rounding behavior verified
 
-### Components (Section C)
-- [x] All components exist at documented paths
-- [x] All displayed values traced to source
-- [x] Conditional logic documented correctly
+### App Surfaces (Section C)
+- [x] Active iOS dashboard, payroll card/details, shift, and stats surfaces documented
+- [x] Retired web app surfaces marked historical
 
 ### Data Flow (Section H)
-- [x] SSR prefetch windows verified (3 months)
-- [x] API endpoints documented correctly
-- [x] Cache invalidation patterns verified
+- [x] iOS local-first read context documented
+- [x] Sync metadata tables documented
+- [x] Shared Wagey/server-side path documented
 
 ### Test Vectors (Section I)
-- [x] All 13 test cases mathematically verified
-- [x] Edge cases from existing tests included
+- [x] Existing test vectors reviewed for current behavior
+- [x] Payroll adjustment behavior added to the spec
 
 ### Completeness
 - [x] No undocumented tables used in payroll

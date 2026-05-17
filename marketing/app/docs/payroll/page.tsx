@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 // Comprehensive payroll documentation based on PAYROLL_ENGINE_SPEC.md
 const payrollDocs = {
-  badge: 'PAYROLL ENGINE SPECIFICATION V3.1',
+  badge: 'PAYROLL ENGINE SPECIFICATION V3.2',
   title: 'How Tidex calculates your pay',
   subtitle:
     'A transparent, auditable reference for every payroll rule we apply. This specification enables re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results.',
@@ -32,6 +32,7 @@ const payrollDocs = {
     { id: 'snapshots', label: 'Snapshots & Payout' },
     { id: 'calculation', label: 'Calculation Engine' },
     { id: 'breaks', label: 'Pauses & Breaks' },
+    { id: 'adjustments', label: 'Adjustments' },
     { id: 'aggregations', label: 'Aggregations' },
     { id: 'test-vectors', label: 'Test Vectors' },
   ],
@@ -62,6 +63,7 @@ const payrollDocs = {
             'Shift data: shift_date (ISO), start_time (HH:MM), end_time (HH:MM), optional custom pause windows, optional custom supplements, job_id',
             'Wage snapshot: Hourly wage, supplement rules, tax settings, break deduction settings — scoped to a job',
             'Job: Name, color, payroll_day, half_tax_month, monthly_goal — primary source for payroll configuration',
+            'Payroll adjustments: Manual payout-level additions or corrections with amount, payout date, job scope, and tax treatment',
             'User settings: Global preferences; payroll_day/half_tax_month/monthly_goal kept as legacy fallback during compatibility window',
           ],
         },
@@ -70,7 +72,7 @@ const payrollDocs = {
           list: [
             'computeShift output: durationHours, paidHours, basePay, supplementPay, gross, wagePeriods, originalWagePeriods, breakAudit',
             'breakAudit output: method, thresholdHours, deductedHours, source, appliedPauseWindows, notes',
-            'Downstream totals output: taxAmount and net (calculated outside computeShift)',
+            'Downstream totals output: taxAmount and net (calculated outside computeShift), plus payroll adjustment gross/net totals for payout cards',
           ],
         },
         {
@@ -100,6 +102,7 @@ const payrollDocs = {
               ['Payout date', 'Date when wages are paid (typically month after work + payroll day)'],
               ['Payroll period', 'The calendar month whose earnings are grouped for a payout'],
               ['Month grouping', 'Shifts worked in month M are paid in month M+1'],
+              ['Payroll adjustment', 'A manual payout-level bonus, retro pay, correction, or other adjustment included in payroll totals'],
               ['Job', 'An employer/workplace entity that groups shifts and wage snapshots; owns payroll_day, half_tax_month, monthly_goal'],
               ['Default job', 'Each user has exactly one active default job; shifts without an explicit job_id are assigned here'],
               ['Legacy snapshot', 'A wage_snapshot with job_id = NULL; used as fallback when no job-specific snapshot exists'],
@@ -214,6 +217,33 @@ computeShift(shift, settings, presetRules, snapshot, job?)
             ],
           },
           note: 'DB triggers keep user_settings and the default job in sync bidirectionally. The jobs table is the authoritative source for payroll_day, half_tax_month, and monthly_goal in job-aware clients. Resolution order for payroll_day: job value → user_settings.payroll_day → 1.',
+        },
+        {
+          heading: 'payroll_adjustments - Manual payout corrections',
+          paragraphs: [
+            'Payroll adjustments are payout-level rows used for bonuses, retro pay, corrections, and other additions that are not tied to a single shift.',
+          ],
+          table: {
+            caption: 'payroll_adjustments table schema',
+            headers: ['Column', 'Type', 'Purpose'],
+            rows: [
+              ['id', 'uuid', 'Primary key'],
+              ['user_id', 'uuid', 'Foreign key to auth.users'],
+              ['job_id', 'uuid', 'Optional job scope; NULL means use the default job for display and tax lookup'],
+              ['amount', 'numeric', 'Adjustment amount in the row currency'],
+              ['currency', 'text', 'Currency display code/symbol, default kr'],
+              ['category', 'text', 'One of: retro_pay, bonus, correction, other'],
+              ['tax_treatment', 'text', 'One of: gross_taxable, net_manual, excluded_from_tax_estimate'],
+              ['description', 'text', 'Short user-visible explanation'],
+              ['note', 'text', 'Private user note'],
+              ['curated_note', 'text', 'Optional Wagey-authored explanation'],
+              ['curated_link', 'text', 'Optional source link for the curated explanation'],
+              ['earned_from_date / earned_to_date', 'date', 'Optional earned-period range for context'],
+              ['payout_date', 'date', 'Payroll date whose totals include this adjustment'],
+              ['revision / deleted_at', 'bigint / timestamptz', 'Sync conflict and soft-delete metadata'],
+            ],
+          },
+          note: 'The database validates that explicit job_id values belong to the same active user-owned job. Adjustment rows are synced through the local-first iOS store and protected by the same owner-scoped RLS model as shifts.',
         },
         {
           heading: 'SupplementRule structure',
@@ -585,7 +615,7 @@ if (end <= start) {
 
   // Handle edge case: payroll_day exceeds days in payout month
   const daysInPayoutMonth = new Date(payoutYear, payoutMonth, 0).getDate();
-  const effectivePayrollDay = Math.min(payrollDay, daysInPayoutMonth);
+  const effectivePayrollDay = Math.min(Math.max(payrollDay, 1), daysInPayoutMonth);
 
   return \`\${payoutYear}-\${padZero(payoutMonth)}-\${padZero(effectivePayrollDay)}\`;
 }
@@ -622,7 +652,7 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
   return isWeekend(date) || isMonday(date) || isPublicHoliday(date, locale);
 }`,
           },
-          note: 'This adjustment is used for payroll date display/countdown UX. Snapshot selection for tax uses calculatePayoutDate() (unadjusted). Holiday detection includes fixed and Easter-based Norwegian public holidays.',
+          note: 'This adjustment is used for payroll date display/countdown UX. Snapshot selection for tax uses calculatePayoutDate() (unadjusted). Holiday detection includes fixed and Easter-based Norwegian public holidays. Raw payroll_day values are clamped to the valid range for the payout month before a payout date is emitted.',
         },
         {
           heading: 'Job-scoped snapshot selection algorithm',
@@ -703,14 +733,20 @@ const CURRENCY_PRECISION = 100;       // 2 decimal places (cents)`,
           heading: 'Time conversion',
           code: {
             language: 'typescript',
-            content: `function toMin(hhmm: string): number {
+            content: `function toMin(hhmm: string): number | null {
   const [h, m] = hhmm.split(":").map(Number);
+  if (!Number.isInteger(h) || !Number.isInteger(m)) return null;
+  if (m < 0 || m >= 60) return null;
+  if (h < 0 || h > 24) return null;
+  if (h === 24 && m !== 0) return null;
   return h * 60 + m;
 }
 // "09:00" -> 540
 // "17:30" -> 1050
-// "24:00" -> 1440`,
+// "24:00" -> 1440
+// "24:30" -> null`,
           },
+          note: 'Invalid shift times or invalid supplement-window times are ignored defensively. A shift with invalid start/end time produces no wage periods and therefore no calculated pay.',
         },
         {
           heading: 'Duration calculation',
@@ -729,6 +765,20 @@ const durationHours = +(totalMinutes / 60).toFixed(2);`,
           },
         },
         {
+          heading: 'Defensive normalization',
+          paragraphs: [
+            'The live iOS engine clamps unsafe numeric inputs before they can affect pay. This keeps corrupted snapshots or stale local data from producing negative hours, negative taxes, or non-finite earnings.',
+          ],
+          list: [
+            'payroll_day is clamped to 1 through the number of days in the payout month',
+            'tax_percentage is clamped to 0 through 100 before gross-to-net conversion',
+            'break_threshold_hours falls back to the default when missing, negative, or non-finite',
+            'break_deduction_minutes is clamped to zero or higher and never deducts more than the shift duration',
+            'hourly wage, fixed supplements, and percentage supplements must be finite and non-negative',
+            'negative wage-period durations are ignored when totaling break input periods',
+          ],
+        },
+        {
           heading: 'Weekday calculation',
           code: {
             language: 'typescript',
@@ -745,12 +795,12 @@ const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7 (Mon-Sun)`,
             language: 'typescript',
             content: `function resolveBaseRate(shift: ShiftRow, snapshot: WageSnapshot | null): number {
   // Priority 1: New snapshot system
-  if (snapshot?.hourly_wage && snapshot.hourly_wage > 0) {
+  if (Number.isFinite(snapshot?.hourly_wage) && snapshot.hourly_wage > 0) {
     return snapshot.hourly_wage;
   }
 
   // Priority 2: Legacy per-shift snapshot (backward compatibility)
-  if (shift.hourly_wage_snapshot && shift.hourly_wage_snapshot > 0) {
+  if (Number.isFinite(shift.hourly_wage_snapshot) && shift.hourly_wage_snapshot > 0) {
     return shift.hourly_wage_snapshot;
   }
 
@@ -836,19 +886,19 @@ const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7 (Mon-Sun)`,
             language: 'typescript',
             content: `function resolveSupplementRate(rule: SupplementRule, baseRate: number): number {
   // Fixed rate (NOK per hour)
-  if (rule.rate != null && !isNaN(rule.rate)) {
+  if (rule.rate != null && Number.isFinite(rule.rate) && rule.rate >= 0) {
     return rule.rate;
   }
 
   // Percentage of base rate
-  if (rule.percent != null && !isNaN(rule.percent)) {
+  if (rule.percent != null && Number.isFinite(rule.percent) && rule.percent >= 0) {
     return (baseRate * rule.percent) / 100;
   }
 
   return 0;
 }`,
           },
-          note: 'Stacking behavior: Highest-wins. Only the highest supplement rate applies to each time period.',
+          note: 'Stacking behavior: Highest-wins. Only the highest non-negative finite supplement rate applies to each time period.',
         },
         {
           heading: 'Pay calculation',
@@ -879,7 +929,7 @@ const gross = +(basePay + supplementPay).toFixed(2);`,
           code: {
             language: 'typescript',
             content: `const taxEnabled = snapshot.tax_enabled;
-const taxPercentage = snapshot.tax_percentage;
+const taxPercentage = Math.min(Math.max(snapshot.tax_percentage, 0), 100);
 
 // Half-tax adjustment (based on payout month)
 const payoutMonth = shiftMonth === 12 ? 1 : shiftMonth + 1;
@@ -1134,6 +1184,76 @@ let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
       ],
     },
     {
+      id: 'adjustments',
+      title: 'Payroll Adjustments',
+      subsections: [
+        {
+          heading: 'What adjustments represent',
+          paragraphs: [
+            'Payroll adjustments are manual payout-level amounts that are added after shift earnings have been computed. They cover bonuses, retro pay, corrections, and other payroll items that should appear on a payout but do not come from a shift.',
+            'Adjustments are filtered by payout_date. They are not allocated back into shift wage periods and do not change durationHours, paidHours, basePay, or supplementPay for any shift.',
+          ],
+        },
+        {
+          heading: 'Tax treatments',
+          table: {
+            caption: 'Adjustment tax behavior',
+            headers: ['Tax treatment', 'Gross contribution', 'Net contribution', 'Uses tax estimate'],
+            rows: [
+              ['gross_taxable', 'amount', 'amount minus estimated tax using the adjustment payout tax settings', 'Yes, when tax is enabled'],
+              ['net_manual', 'amount', 'amount exactly as entered', 'No'],
+              ['excluded_from_tax_estimate', 'amount', 'amount exactly as entered', 'No'],
+            ],
+          },
+          note: 'gross_taxable adjustments use the same half-tax rule as shift totals: if half_tax_month equals the payout month, the effective tax percentage is halved before calculating net.',
+        },
+        {
+          heading: 'Adjustment totals algorithm',
+          code: {
+            language: 'typescript',
+            content: `function payrollAdjustmentTotals(
+  adjustments: PayrollAdjustment[],
+  taxSettingsForAdjustment: (a: PayrollAdjustment) => PayoutTaxSettings,
+  halfTaxMonth: number | null,
+  payoutMonth: number
+): PayrollAdjustmentTotals {
+  return adjustments
+    .filter(a => !a.deleted_at)
+    .reduce((totals, adjustment) => {
+      const tax = taxSettingsForAdjustment(adjustment);
+      const gross = adjustment.amount;
+
+      if (adjustment.tax_treatment !== "gross_taxable") {
+        return {
+          gross: totals.gross + gross,
+          net: totals.net + gross,
+          taxEnabled: totals.taxEnabled,
+        };
+      }
+
+      const pct = Math.min(Math.max(tax.percentage, 0), 100);
+      const effectivePct = halfTaxMonth === payoutMonth ? pct / 2 : pct;
+      const net = tax.enabled ? gross * (1 - effectivePct / 100) : gross;
+
+      return {
+        gross: totals.gross + gross,
+        net: totals.net + net,
+        taxEnabled: totals.taxEnabled || tax.enabled,
+      };
+    }, { gross: 0, net: 0, taxEnabled: false });
+}`,
+          },
+        },
+        {
+          heading: 'Job and tax lookup',
+          paragraphs: [
+            'An adjustment can be tied to a job. If job_id is omitted, the default job is used for display grouping and tax snapshot lookup.',
+            'Tax settings for a gross_taxable adjustment are resolved from the adjustment payout_date, scoped to the adjustment job using the same job-specific snapshot fallback chain as shift tax lookup.',
+          ],
+        },
+      ],
+    },
+    {
       id: 'aggregations',
       title: 'Aggregations & Higher-Level Metrics',
       subsections: [
@@ -1145,11 +1265,12 @@ let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
 const excludedIds = buildExcludedShiftIds(shifts);
 const included = shifts.filter(s => !excludedIds.has(s.id));
 
-const aggregates = included.reduce((acc, shift) => ({
+const shiftTotals = included.reduce((acc, shift) => ({
   totalHours: acc.totalHours + shift.computed.paidHours,
   totalEarnings: acc.totalEarnings + shift.computed.gross,
 }), { totalHours: 0, totalEarnings: 0 });`,
           },
+          note: 'Monthly shift totals remain shift-only. Payout cards add payroll adjustments separately so hours and average-hourly metrics are not distorted by non-shift money.',
         },
         {
           heading: 'Next payroll (NextPayrollCard)',
@@ -1163,7 +1284,17 @@ const grossAmount = summarizeShiftTotals({ shifts: earningsMonthShifts }).gross;
 const taxAmount = payoutTax?.enabled
   ? grossAmount * (payoutTax.percentage / 100)
   : 0;
-const netAmount = grossAmount - taxAmount;`,
+const netAmount = grossAmount - taxAmount;
+
+const adjustmentTotals = payrollAdjustmentTotals(
+  payoutAdjustments,
+  () => payoutTax,
+  halfTaxMonth,
+  payoutMonth
+);
+
+const payoutGross = grossAmount + adjustmentTotals.gross;
+const payoutNet = netAmount + adjustmentTotals.net;`,
           },
         },
         {
@@ -1525,6 +1656,35 @@ const excludedIds = buildExcludedShiftIds(shifts);
 // excludedIds.has("shift-a") === false
 
 // Monthly total = 1480 (only shift-a counted)`,
+          },
+        },
+        {
+          heading: 'Test case 10: Payroll adjustment with tax',
+          code: {
+            language: 'typescript',
+            content: `// Input
+const adjustment = {
+  amount: 1000,
+  tax_treatment: "gross_taxable",
+  payout_date: "2025-12-15",
+};
+
+const payoutTax = {
+  enabled: true,
+  percentage: 30,
+};
+
+const halfTaxMonth = 12;
+
+// Expected adjustment contribution
+// Payout month = December, so half-tax applies
+const effectiveTaxPct = 30 / 2; // 15%
+
+{
+  gross: 1000.00,
+  net: 850.00,
+  taxEnabled: true,
+}`,
           },
         },
       ],

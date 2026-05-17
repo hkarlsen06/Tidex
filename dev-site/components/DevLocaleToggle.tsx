@@ -23,7 +23,7 @@ export function DevLocaleToggle({ currentLocale }: DevLocaleToggleProps) {
   }
 
   return (
-    <div className="inline-flex items-center gap-2 rounded-full bg-surface-primary/70 p-1 text-sm font-medium text-text-secondary shadow-app">
+    <div className="inline-flex items-center gap-1 rounded-full border border-white/6 bg-white/[0.015] p-[0.2rem] text-sm font-medium text-text-secondary backdrop-blur-sm">
       {devLocales.map((locale) => {
         const isActive = locale === currentLocale;
         const href = buildLocalizedDevPath(locale, rawPath);
@@ -35,7 +35,7 @@ export function DevLocaleToggle({ currentLocale }: DevLocaleToggleProps) {
             aria-current={isActive ? 'page' : undefined}
             className={`rounded-full px-3 py-1 transition-colors ${
               isActive
-                ? 'bg-brand-gradient-mid/90 text-text-inverse'
+                ? 'bg-white/[0.05] text-text-secondary'
                 : 'text-text-secondary hover:text-text-primary'
             }`}
           >
