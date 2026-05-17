@@ -218,6 +218,12 @@ final class ProfileSettingsViewModel: ObservableObject {
     guard let currentUserId = userId else { return }
     guard displayName != originalDisplayName else { return }
 
+    let normalizedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+    if UserGeneratedContentFilter.containsBlockedText(normalizedDisplayName) {
+      errorMessage = String(localized: "profile.errors.nameSafetyFilter", table: "Localizable")
+      return
+    }
+
     isSavingName = true
     errorMessage = nil
 
@@ -225,16 +231,17 @@ final class ProfileSettingsViewModel: ObservableObject {
       // Update Supabase auth user metadata
       _ = try await supabase.auth.update(
         user: UserAttributes(
-          data: ["full_name": .string(displayName)]
+          data: ["full_name": .string(normalizedDisplayName)]
         ))
 
       // Refresh session to get updated JWT via serialized auth path
       _ = try? await AuthSessionManager.shared.forceRefresh()
 
-      originalDisplayName = displayName
+      displayName = normalizedDisplayName
+      originalDisplayName = normalizedDisplayName
 
       // Update AppCoordinator's display name
-      AppCoordinator.shared.updateDisplayName(displayName)
+      AppCoordinator.shared.updateDisplayName(normalizedDisplayName)
 
       // Trigger sync to push changes
       Task {

@@ -159,6 +159,7 @@ final class FriendsThreadViewModel: ObservableObject {
   @Published var draft = "" {
     didSet {
       updateDraftValidation(for: draft)
+      clearSafetyFilterSendErrorIfResolved(for: draft)
     }
   }
   @Published var stagedComposerAttachments: [FriendsComposerAttachmentDraft] = []
@@ -662,6 +663,11 @@ final class FriendsThreadViewModel: ObservableObject {
     let composerAttachments = stagedComposerAttachments
     guard !normalizedContent.isEmpty || !composerAttachments.isEmpty else { return false }
     guard !isMessageBodyTooLong(normalizedContent) else { return false }
+    guard !UserGeneratedContentFilter.containsBlockedText(normalizedContent) else {
+      sendErrorMessage = messageBlockedBySafetyFilterMessage
+      composerValidationMessage = messageBlockedBySafetyFilterMessage
+      return false
+    }
     guard canSendShiftSnapshotAttachments(composerAttachments) else {
       sendErrorMessage = shiftSnapshotSendUnavailableMessage
       return false
@@ -729,7 +735,11 @@ final class FriendsThreadViewModel: ObservableObject {
         } else {
           await repository.deleteMessage(id: optimisticMessage.id, viewerUserId: viewerUserId)
           await restoreComposerSnapshot(composerSnapshot, requestFocus: true)
-          sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
+          if isSafetyFilterError(error) {
+            sendErrorMessage = messageBlockedBySafetyFilterMessage
+          } else {
+            sendErrorMessage = isMessageBodyTooLongError(error) ? nil : sendMessageFailedMessage
+          }
         }
         loadFromCache()
         threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
@@ -1284,6 +1294,11 @@ final class FriendsThreadViewModel: ObservableObject {
     let normalizedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedContent.isEmpty else { return false }
     guard !isMessageBodyTooLong(normalizedContent) else { return false }
+    guard !UserGeneratedContentFilter.containsBlockedText(normalizedContent) else {
+      sendErrorMessage = messageBlockedBySafetyFilterMessage
+      composerValidationMessage = messageBlockedBySafetyFilterMessage
+      return false
+    }
 
     if currentMessage.normalizedBody == normalizedContent {
       sendErrorMessage = nil
@@ -1319,7 +1334,11 @@ final class FriendsThreadViewModel: ObservableObject {
       sendErrorMessage =
         isConnectivityError(error)
         ? serverActionOfflineMessage
-        : (isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage)
+        : (
+          isSafetyFilterError(error)
+            ? messageBlockedBySafetyFilterMessage
+            : (isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage)
+        )
       Haptics.play(.error)
       threadLogger.error("Failed to edit message: \(error.localizedDescription)")
       return false
@@ -1542,7 +1561,22 @@ final class FriendsThreadViewModel: ObservableObject {
     let normalizedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     draftCharacterCount = messageBodyLengthForBackendValidation(normalizedDraft)
     composerValidationMessage =
-      isMessageBodyTooLong(normalizedDraft) ? messageTooLongMessage : nil
+      if isMessageBodyTooLong(normalizedDraft) {
+        messageTooLongMessage
+      } else if UserGeneratedContentFilter.containsBlockedText(normalizedDraft) {
+        messageBlockedBySafetyFilterMessage
+      } else {
+        nil
+      }
+  }
+
+  private func clearSafetyFilterSendErrorIfResolved(for draft: String) {
+    guard sendErrorMessage == messageBlockedBySafetyFilterMessage else { return }
+
+    let normalizedDraft = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !UserGeneratedContentFilter.containsBlockedText(normalizedDraft) {
+      sendErrorMessage = nil
+    }
   }
 
   private func isMessageBodyTooLong(_ normalizedBody: String) -> Bool {
@@ -1596,6 +1630,12 @@ final class FriendsThreadViewModel: ObservableObject {
     guard let serviceError = error as? FriendsMessagingServiceError else { return false }
     guard case .httpError(_, let message) = serviceError else { return false }
     return (message ?? "").localizedCaseInsensitiveContains("2000 character limit")
+  }
+
+  private func isSafetyFilterError(_ error: Error) -> Bool {
+    guard let serviceError = error as? FriendsMessagingServiceError else { return false }
+    guard case .httpError(_, let message) = serviceError else { return false }
+    return (message ?? "").localizedCaseInsensitiveContains("safety filter")
   }
 
   private func isConnectivityError(_ error: Error) -> Bool {
@@ -1768,6 +1808,10 @@ final class FriendsThreadViewModel: ObservableObject {
   private var messageTooLongMessage: String {
     String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
       .replacingOccurrences(of: "{limit}", with: "\(MessageBody.characterLimit)")
+  }
+
+  private var messageBlockedBySafetyFilterMessage: String {
+    String(localized: "friends.chat.composer.safetyFilter", table: "Localizable")
   }
 
   private var editMessageFailedMessage: String {
