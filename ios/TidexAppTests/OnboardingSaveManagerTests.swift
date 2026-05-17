@@ -20,4 +20,16 @@ final class OnboardingSaveManagerTests: XCTestCase {
     XCTAssertNil(manager.errorMessage)
     XCTAssertFalse(manager.status.allowsCompletion)
   }
+
+  func testDefaultJobNameUsesEnglishLocale() {
+    let name = OnboardingSaveManager.defaultJobName(locale: Locale(identifier: "en"))
+
+    XCTAssertEqual(name, "Job")
+  }
+
+  func testDefaultJobNameUsesNorwegianLocale() {
+    let name = OnboardingSaveManager.defaultJobName(locale: Locale(identifier: "nb"))
+
+    XCTAssertEqual(name, "Jobb")
+  }
 }

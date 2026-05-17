@@ -15,7 +15,21 @@ enum OnboardingCompletionMode: Equatable {
 @MainActor
 final class OnboardingSaveManager: ObservableObject {
   private static let startupTabCacheKey = "defaultStartupTab"
-  private static let defaultJobName = "Jobb"
+
+  static func defaultJobName(locale: Locale? = nil) -> String {
+    guard let locale else {
+      return String(
+        localized: String.LocalizationValue("jobs.defaultPlaceholderName"),
+        table: "Localizable"
+      )
+    }
+
+    if locale.isNorwegian {
+      return "Jobb"
+    }
+
+    return "Job"
+  }
 
   // MARK: - Published State
 
@@ -148,7 +162,7 @@ final class OnboardingSaveManager: ObservableObject {
     // complete on the first post-onboarding render.
     let createdJob = try await jobsRepository.createJob(
       userId: userId,
-      name: Self.defaultJobName,
+      name: Self.defaultJobName(),
       color: nil,
       currency: resolvedJobCurrency(for: data),
       payrollDay: data.payrollDay,
