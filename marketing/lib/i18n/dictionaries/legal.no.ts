@@ -195,7 +195,7 @@ export const legalNo = {
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-05-05',
+    lastUpdatedDate: '2026-05-17',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -216,7 +216,6 @@ export const legalNo = {
           { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Apple for kjøp i appen på iOS. Vi lagrer ikke kortinformasjon.' },
           { boldLabel: 'AI-assistentdata:', text: 'Når du bruker Wagey AI-assistenten, blir meldingene du sender (inkludert tekst og bilder), visningsnavnet ditt og skiftdata som hentes under samtalen behandlet av en tredjeparts AI-tjeneste (se punkt 5).' },
           { boldLabel: 'Varslingsmetadata:', text: 'Hvis du aktiverer pushvarsler, kan varslingspayloaden inneholde avsenderidentitet, begrenset meldingsforhåndsvisning, skjermbildevarsler og trådidentifikatorer slik at appen kan vise og åpne riktig samtale.' },
-          { boldLabel: 'Diagnostikkdata:', text: 'I appbygg der krasjrapportering er aktivert, kan teknisk diagnostikk som appversjon, enhetstype, operativsystem og krasj- eller feilkontekst behandles for å hjelpe oss med å oppdage og rette stabilitetsproblemer.' },
         ],
       },
       {
@@ -232,7 +231,6 @@ export const legalNo = {
           { text: 'Kommunisere med deg om tjenesten.' },
           { text: 'Tilby AI-drevet assistanse gjennom Wagey-funksjonen, inkludert å svare på spørsmål om skiftene dine, hjelpe med å administrere skift og beregne lønn. Dette krever sending av relevante data til en tredjeparts AI-tjeneste (se punkt 5).' },
           { text: 'Behandle misbruksrapporter, håndheve reglene våre og beskytte brukere og tjenesten mot misbruk.' },
-          { text: 'Oppdage, undersøke og rette krasj, feil og stabilitetsproblemer.' },
         ],
         importantNote: {
           label: 'Viktig:',
@@ -274,14 +272,6 @@ export const legalNo = {
             text: 'Valgfri Google-innlogging. Les deres {link}.',
             link: {
               href: 'https://policies.google.com/privacy',
-              text: 'personvernerklæring',
-            },
-          },
-          {
-            boldLabel: 'Sentry:',
-            text: 'Krasj- og feilmåling i appbygg der dette er aktivert. Les deres {link}.',
-            link: {
-              href: 'https://sentry.io/privacy/',
               text: 'personvernerklæring',
             },
           },

@@ -1,5 +1,4 @@
 import ActivityKit
-import Sentry
 import Supabase
 import UIKit
 import os
@@ -159,35 +158,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
   }
 
-  private func sentryEnvironment() -> String {
-    #if DEBUG
-      return "development"
-    #else
-      if Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" {
-        return "beta"
-      }
-      return "production"
-    #endif
-  }
-
   func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     launchLog.info("[Launch] AppDelegate.didFinishLaunching START")
-
-    if let sentryDSN = Bundle.main.object(forInfoDictionaryKey: "SENTRY_DSN") as? String,
-      !sentryDSN.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    {
-      SentrySDK.start { options in
-        options.dsn = sentryDSN
-        options.debug = false
-        options.environment = self.sentryEnvironment()
-      }
-      launchLog.info("[Launch] Sentry initialized")
-    } else {
-      launchLog.info("[Launch] Sentry not initialized (missing SENTRY_DSN)")
-    }
 
     // --- Synchronous (must complete before launch finishes) ---
 

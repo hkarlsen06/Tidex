@@ -65,8 +65,6 @@
 	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
-	<key>SENTRY_DSN</key>
-	<string>https://161b9d66d788ba2d3ea2d4ff53456046@o4510320442998784.ingest.de.sentry.io/4510320444309584</string>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb</string>
 	<key>SUPABASE_URL</key>
