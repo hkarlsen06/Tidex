@@ -411,7 +411,7 @@ struct PostAuthOnboardingView: View {
       do {
         let placeholderJob = try await jobsRepository.createJob(
           userId: userId,
-          name: "Jobb",
+          name: OnboardingSaveManager.defaultJobName(),
           color: nil,
           currency: onboardingData.currency.isEmpty ? "kr" : onboardingData.currency,
           payrollDay: onboardingData.payrollDay,

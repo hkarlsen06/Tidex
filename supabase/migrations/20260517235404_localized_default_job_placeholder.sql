@@ -1,8 +1,3 @@
--- Function: ensure_default_job
--- Description:
---   Ensures a user has one active default job and returns its ID.
---   Used by compatibility triggers for legacy clients that omit job_id.
-
 CREATE OR REPLACE FUNCTION public.ensure_default_job(p_user_id uuid)
 RETURNS uuid
 LANGUAGE plpgsql
@@ -135,3 +130,82 @@ BEGIN
   RETURN v_job_id;
 END;
 $$;
+
+WITH localized_names(locale, name) AS (
+  VALUES
+    ('ar', 'وظيفة'),
+    ('bg', 'Работа'),
+    ('bn', 'চাকরি'),
+    ('ca', 'Treball'),
+    ('cs', 'Práce'),
+    ('da', 'Job'),
+    ('de', 'Stelle'),
+    ('el', 'Δουλειά'),
+    ('en', 'Job'),
+    ('es', 'Trabajo'),
+    ('et', 'Töö'),
+    ('fa', 'شغل'),
+    ('fi', 'Työ'),
+    ('fil', 'Trabaho'),
+    ('fr', 'Emploi'),
+    ('he', 'עבודה'),
+    ('hi', 'नौकरी'),
+    ('hr', 'Posao'),
+    ('hu', 'Munka'),
+    ('id', 'Pekerjaan'),
+    ('is', 'Starf'),
+    ('it', 'Lavoro'),
+    ('ja', '職務'),
+    ('ko', '직업'),
+    ('lt', 'Darbas'),
+    ('lv', 'Darbs'),
+    ('nb', 'Jobb'),
+    ('nl', 'Baan'),
+    ('nn', 'Jobb'),
+    ('no', 'Jobb'),
+    ('pl', 'Praca'),
+    ('pt-br', 'Trabalho'),
+    ('ro', 'Slujbă'),
+    ('ru', 'Работа'),
+    ('sk', 'Úloha'),
+    ('sl', 'Delo'),
+    ('sr', 'Posao'),
+    ('sv', 'Jobb'),
+    ('sw', 'Kazi'),
+    ('ta', 'வேலை'),
+    ('th', 'งาน'),
+    ('tr', 'İş'),
+    ('uk', 'Робота'),
+    ('ur', 'نوکری'),
+    ('vi', 'Công việc'),
+    ('zh-hans', '工作'),
+    ('zh-hant', '工作')
+),
+candidate_jobs AS (
+  SELECT
+    j.id,
+    COALESCE(exact_locale.name, base_locale.name, 'Job') AS localized_name
+  FROM public.jobs j
+  JOIN auth.users au ON au.id = j.user_id
+  LEFT JOIN localized_names exact_locale
+    ON exact_locale.locale = lower(replace(au.raw_user_meta_data->>'locale', '_', '-'))
+  LEFT JOIN localized_names base_locale
+    ON base_locale.locale = split_part(
+      lower(replace(au.raw_user_meta_data->>'locale', '_', '-')),
+      '-',
+      1
+    )
+  WHERE j.name = 'Job'
+    AND j.is_default = true
+    AND j.deleted_at IS NULL
+)
+UPDATE public.jobs j
+SET name = c.localized_name
+FROM candidate_jobs c
+WHERE j.id = c.id
+  AND j.name IS DISTINCT FROM c.localized_name;
+
+-- Verification scenarios:
+-- 1. A default, non-deleted job named exactly 'Job' with locale nb/nn/no becomes 'Jobb'.
+-- 2. A default, non-deleted job named exactly 'Job' with locale en or an unknown locale remains 'Job'.
+-- 3. Jobs named 'Jobb' or any user-entered value are untouched because the backfill only matches name = 'Job'.
