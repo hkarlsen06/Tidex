@@ -1,3 +1,5 @@
+import Foundation
+
 // MARK: - Stats API Response
 
 /// Stats data from the /api/stats endpoint
@@ -96,6 +98,71 @@ struct EmploymentData: Codable, Equatable {
   let monthlyData: [EmploymentMonthlyData]  // All 12 months of the focus year
   let yearlyAverage: Double?  // Yearly average (nil if no shifts)
   let fullTimeHoursPerWeek: Double  // Full-time hours used (37.5 or 40)
+
+  func completedMonthsAverage(
+    now: Date = Date(),
+    calendar: Calendar = .current
+  ) -> Double? {
+    let includedMonths = completedAverageMonthNumbers(now: now, calendar: calendar)
+    guard !includedMonths.isEmpty else { return nil }
+
+    let values = monthlyData
+      .filter { includedMonths.contains($0.monthNumber) }
+      .map(\.averagePercentage)
+
+    guard !values.isEmpty else { return nil }
+    let average = values.reduce(0, +) / Double(values.count)
+    return (average * 10).rounded() / 10
+  }
+
+  func completedAverageRangeLabel(
+    now: Date = Date(),
+    calendar: Calendar = .current
+  ) -> String? {
+    let includedMonths = completedAverageMonthNumbers(now: now, calendar: calendar).sorted()
+    guard let firstMonth = includedMonths.first,
+      let lastMonth = includedMonths.last,
+      let firstLabel = monthlyData.first(where: { $0.monthNumber == firstMonth })?.month,
+      let lastLabel = monthlyData.first(where: { $0.monthNumber == lastMonth })?.month
+    else {
+      return nil
+    }
+
+    return firstMonth == lastMonth ? firstLabel : "\(firstLabel)-\(lastLabel)"
+  }
+
+  func isIncludedInCompletedAverage(
+    _ month: EmploymentMonthlyData,
+    now: Date = Date(),
+    calendar: Calendar = .current
+  ) -> Bool {
+    completedAverageMonthNumbers(now: now, calendar: calendar).contains(month.monthNumber)
+  }
+
+  private func completedAverageMonthNumbers(
+    now: Date,
+    calendar inputCalendar: Calendar
+  ) -> Set<Int> {
+    guard let focusYear = monthlyData.first?.year else { return [] }
+
+    var calendar = inputCalendar
+    calendar.timeZone = Date.localTimeZone
+
+    let currentYear = calendar.component(.year, from: now)
+    let currentMonth = calendar.component(.month, from: now)
+
+    let completedThroughMonth: Int
+    if focusYear < currentYear {
+      completedThroughMonth = 12
+    } else if focusYear == currentYear {
+      completedThroughMonth = max(currentMonth - 1, 0)
+    } else {
+      completedThroughMonth = 0
+    }
+
+    guard completedThroughMonth > 0 else { return [] }
+    return Set(1...completedThroughMonth)
+  }
 }
 
 /// Monthly income data for yearly income chart

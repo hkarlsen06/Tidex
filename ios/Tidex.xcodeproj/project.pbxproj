@@ -47,6 +47,7 @@
 		AA31C0033051222200B4C5D6 /* EventReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */; };
 		AA31C0053051222200B4C5D6 /* RecurringShiftProjectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */; };
 		AA31C0073055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0083055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift */; };
+		ABCD10003052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD10013052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift */; };
 		B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */; };
 		C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */; };
 		C51778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
@@ -170,6 +171,7 @@
 		AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventReminderPlannerTests.swift; sourceTree = "<group>"; };
 		AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecurringShiftProjectorTests.swift; sourceTree = "<group>"; };
 		AA31C0083055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSubscriptionStoreTests.swift; sourceTree = "<group>"; };
+		ABCD10013052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EmploymentDataCompletedAverageTests.swift; sourceTree = "<group>"; };
 		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };
 		BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TestFixtures.swift; path = TestSupport/TestFixtures.swift; sourceTree = "<group>"; };
 		C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageCompressorTests.swift; sourceTree = "<group>"; };
@@ -387,6 +389,7 @@
 				AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */,
 				AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */,
 				AA31C0083055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift */,
+				ABCD10013052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift */,
 				C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */,
 				00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */,
 				BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */,
@@ -905,6 +908,7 @@
 				AA31C0033051222200B4C5D6 /* EventReminderPlannerTests.swift in Sources */,
 				AA31C0053051222200B4C5D6 /* RecurringShiftProjectorTests.swift in Sources */,
 				AA31C0073055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift in Sources */,
+				ABCD10003052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift in Sources */,
 				C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */,
 				804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */,
 				188D65FF4E96734657711265 /* TestFixtures.swift in Sources */,
