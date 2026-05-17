@@ -195,7 +195,7 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-05-05',
+    lastUpdatedDate: '2026-05-17',
     dateLocale: 'en-US',
     sections: [
       {
@@ -216,7 +216,6 @@ export const legalEn = {
           { boldLabel: 'Payment data:', text: 'Handled by Apple for iOS in-app purchases. We do not store card information.' },
           { boldLabel: 'AI assistant data:', text: 'When you use the Wagey AI assistant, the messages you send (including text and images), your display name, and shift data retrieved during the conversation are processed by a third-party AI service (see section 5).' },
           { boldLabel: 'Notification metadata:', text: 'If you enable push notifications, notification payloads may include sender identity, limited message preview text, screenshot alerts, and thread identifiers so the app can show and open the correct conversation.' },
-          { boldLabel: 'Diagnostics data:', text: 'In app builds where crash reporting is enabled, technical diagnostics such as app version, device type, operating system, and crash or error context may be processed to help us detect and fix reliability issues.' },
         ],
       },
       {
@@ -232,7 +231,6 @@ export const legalEn = {
           { text: 'Communicate with you about the service.' },
           { text: 'Provide AI-powered assistance through the Wagey feature, including answering questions about your shifts, helping manage shifts, and calculating wages. This requires sending relevant data to a third-party AI service (see section 5).' },
           { text: 'Review abuse reports, enforce our rules, and protect users and the service from abuse.' },
-          { text: 'Detect, investigate, and fix crashes, errors, and reliability issues.' },
         ],
         importantNote: {
           label: 'Important:',
@@ -274,14 +272,6 @@ export const legalEn = {
             text: 'Optional Google Sign-In. Read their {link}.',
             link: {
               href: 'https://policies.google.com/privacy',
-              text: 'privacy policy',
-            },
-          },
-          {
-            boldLabel: 'Sentry:',
-            text: 'Crash and error monitoring in app builds where it is enabled. Read their {link}.',
-            link: {
-              href: 'https://sentry.io/privacy/',
               text: 'privacy policy',
             },
           },
