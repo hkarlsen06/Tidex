@@ -4,6 +4,7 @@ import SwiftUI
 /// Supports email/password, Google, and Apple sign-up
 struct SignupView: View {
   @ObservedObject var viewModel: SignupViewModel
+  let currency: String
   var onNavigateToLogin: (() -> Void)?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var hasPlayedEntrance = false
@@ -14,9 +15,12 @@ struct SignupView: View {
 
   init(
     viewModel: SignupViewModel,
+    currency: String = OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
+      ?? OnboardingCurrencyResolver.detectDefaultCurrency(),
     onNavigateToLogin: (() -> Void)? = nil
   ) {
     self.viewModel = viewModel
+    self.currency = currency
     self.onNavigateToLogin = onNavigateToLogin
   }
 
@@ -34,6 +38,7 @@ struct SignupView: View {
               VStack(spacing: Spacing.xl) {
                 AuthHeroVisual(
                   logoSize: 132,
+                  currency: currency,
                   onLogoTap: restartOnboarding
                 )
                 .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)

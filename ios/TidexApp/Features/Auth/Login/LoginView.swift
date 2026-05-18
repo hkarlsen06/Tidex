@@ -4,6 +4,7 @@ import SwiftUI
 /// Supports email/password, phone/OTP, Google, and Apple sign-in
 struct LoginView: View {
   @ObservedObject var viewModel: LoginViewModel
+  let currency: String
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   private enum ScrollTarget {
@@ -16,10 +17,13 @@ struct LoginView: View {
 
   init(
     viewModel: LoginViewModel,
+    currency: String = OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
+      ?? OnboardingCurrencyResolver.detectDefaultCurrency(),
     onNavigateToSignup: (() -> Void)? = nil,
     onNavigateToResetPassword: (() -> Void)? = nil
   ) {
     self.viewModel = viewModel
+    self.currency = currency
     self.onNavigateToSignup = onNavigateToSignup
     self.onNavigateToResetPassword = onNavigateToResetPassword
   }
@@ -38,6 +42,7 @@ struct LoginView: View {
               VStack(spacing: Spacing.xl) {
                 AuthHeroVisual(
                   logoSize: 132,
+                  currency: currency,
                   onLogoTap: restartOnboarding
                 )
 
@@ -340,6 +345,7 @@ struct LoginView: View {
 
 struct AuthHeroVisual: View {
   let logoSize: CGFloat
+  let currency: String
   var onLogoTap: (() -> Void)?
 
   var body: some View {
@@ -386,10 +392,10 @@ struct AuthHeroVisual: View {
   }
 
   private var ghostedAmountText: String {
-    let hourlyWage = OnboardingCurrencyResolver.defaultHourlyWage(for: "kr")
+    let hourlyWage = OnboardingCurrencyResolver.defaultHourlyWage(for: currency)
     let estimatedMonthlyHours = 162.0
     let estimatedNet = hourlyWage * estimatedMonthlyHours * 0.8
-    return CurrencyConfig.format(estimatedNet, currency: "kr")
+    return CurrencyConfig.format(estimatedNet, currency: currency)
   }
 
   @ViewBuilder
