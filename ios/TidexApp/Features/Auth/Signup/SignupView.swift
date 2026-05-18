@@ -1,10 +1,14 @@
 import SwiftUI
 
 /// Main signup screen view with native iOS styling
-/// Supports email/password, phone/OTP, Google, and Apple sign-up
+/// Supports email/password, Google, and Apple sign-up
 struct SignupView: View {
   @ObservedObject var viewModel: SignupViewModel
   var onNavigateToLogin: (() -> Void)?
+
+  private enum ScrollTarget {
+    case bottom
+  }
 
   init(
     viewModel: SignupViewModel,
@@ -20,37 +24,34 @@ struct SignupView: View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        ScrollView {
-          VStack(spacing: 0) {
-            Spacer(minLength: Spacing.xxl)
+        ScrollViewReader { scrollProxy in
+          ScrollView {
+            VStack(spacing: 0) {
+              Spacer(minLength: Spacing.xxl)
 
-            VStack(spacing: Spacing.xl) {
-              AuthHeroVisual(logoSize: 132)
+              VStack(spacing: Spacing.xl) {
+                AuthHeroVisual(logoSize: 132)
 
-              messageStack
+                messageStack
 
-              VStack(spacing: Spacing.lg) {
-                switch viewModel.currentStep {
-                case .input:
-                  inputStepContent
-                case .otp:
-                  SignupOTPForm(viewModel: viewModel)
-                }
-              }
+                inputStepContent(scrollProxy: scrollProxy)
 
-              if viewModel.currentStep == .input {
                 footerView
               }
+              .frame(maxWidth: 420)
+              .padding(.horizontal, Spacing.xl)
+              .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
+              .frame(maxWidth: .infinity)
+
+              Color.clear
+                .frame(height: 0)
+                .id(ScrollTarget.bottom)
             }
-            .frame(maxWidth: 420)
-            .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
             .frame(maxWidth: .infinity)
+            .frame(minHeight: geometry.size.height)
           }
-          .frame(maxWidth: .infinity)
-          .frame(minHeight: geometry.size.height)
+          .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
       }
     }
     .loading(viewModel.isLoading)
@@ -74,53 +75,48 @@ struct SignupView: View {
           onDismiss: { viewModel.errorMessage = nil }
         )
       }
-
-      if let success = viewModel.successMessage {
-        SuccessBanner(
-          message: success,
-          onDismiss: { viewModel.successMessage = nil }
-        )
-      }
     }
   }
 
   // MARK: - Input Step Content
 
   @ViewBuilder
-  private var inputStepContent: some View {
+  private func inputStepContent(scrollProxy: ScrollViewProxy) -> some View {
     VStack(spacing: Spacing.md) {
-      // OAuth buttons
       OAuthButtonsView(
         onGoogleTap: { Task { await viewModel.signUpWithGoogle() } },
         onAppleTap: { Task { await viewModel.signUpWithApple() } },
         isLoading: viewModel.isLoading
       )
 
-      // Divider
       dividerView
         .padding(.vertical, Spacing.xs)
 
-      // Email/phone form or reveal button
       if viewModel.showEmailForm {
         SignupForm(viewModel: viewModel)
       } else {
-        revealEmailButton
+        revealEmailButton(scrollProxy: scrollProxy)
       }
     }
   }
 
   // MARK: - Reveal Email Button
 
-  private var revealEmailButton: some View {
+  private func revealEmailButton(scrollProxy: ScrollViewProxy) -> some View {
     Button {
       withAnimation(.easeInOut(duration: 0.2)) {
         viewModel.showEmailForm = true
+      }
+      DispatchQueue.main.async {
+        withAnimation(.easeInOut(duration: 0.2)) {
+          scrollProxy.scrollTo(ScrollTarget.bottom, anchor: .bottom)
+        }
       }
     } label: {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "envelope")
           .font(.tidexBody)
-        Text(.signupEmailOrPhoneReveal)
+        Text(.signupEmailReveal)
           .font(.tidexBodyMedium)
       }
       .foregroundColor(.tidexTextSecondary)
@@ -128,10 +124,10 @@ struct SignupView: View {
       .frame(height: 50)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
           .stroke(Color.tidexBorderSubtle, lineWidth: 1)
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
   }
@@ -175,15 +171,13 @@ struct SignupView: View {
 
 // MARK: - Signup Form
 
-/// Email/phone, password, and terms form for signup with native iOS styling
+/// Email, password, and name form for signup with native iOS styling
 struct SignupForm: View {
   @ObservedObject var viewModel: SignupViewModel
 
   var body: some View {
     VStack(spacing: Spacing.md) {
-      // Name fields side by side
       HStack(spacing: Spacing.sm) {
-        // First name
         VStack(spacing: 0) {
           TextField(String(localized: .signupFirstNamePlaceholder), text: $viewModel.firstName)
             .font(.tidexBody)
@@ -201,7 +195,6 @@ struct SignupForm: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
-        // Last name
         VStack(spacing: 0) {
           TextField(String(localized: .signupLastNamePlaceholder), text: $viewModel.lastName)
             .font(.tidexBody)
@@ -220,7 +213,6 @@ struct SignupForm: View {
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       }
 
-      // Name error messages
       if let firstNameError = viewModel.fieldErrors.firstName {
         Text(firstNameError)
           .font(.tidexFootnote)
@@ -237,11 +229,9 @@ struct SignupForm: View {
           .padding(.horizontal, Spacing.xxs)
       }
 
-      // Email/Phone and Password in grouped style
       VStack(spacing: 0) {
-        // Email/Phone field
         NativeTextField(
-          placeholder: String(localized: .signupEmailOrPhonePlaceholder),
+          placeholder: String(localized: .signupEmailPlaceholder),
           text: $viewModel.emailOrPhone,
           keyboardType: .emailAddress,
           textContentType: .emailAddress
@@ -250,7 +240,6 @@ struct SignupForm: View {
         Divider()
           .background(Color.tidexBorderSubtle)
 
-        // Password field
         NativeSecureField(
           placeholder: String(localized: .signupPasswordPlaceholder),
           text: $viewModel.password,
@@ -266,7 +255,6 @@ struct SignupForm: View {
       )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
 
-      // Error messages
       if let emailError = viewModel.fieldErrors.emailOrPhone {
         Text(emailError)
           .font(.tidexFootnote)
@@ -283,13 +271,6 @@ struct SignupForm: View {
           .padding(.horizontal, Spacing.xxs)
       }
 
-      // Password hint
-      Text(.signupPasswordHint)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
-        .frame(maxWidth: .infinity, alignment: .leading)
-
-      // Submit button
       PrimaryButton(
         title: String(localized: .signupSubmitButton),
         action: {
@@ -297,70 +278,6 @@ struct SignupForm: View {
         },
         isLoading: viewModel.isLoading
       )
-    }
-  }
-}
-
-// MARK: - Signup OTP Form
-
-/// OTP verification form for phone signup with native iOS styling
-struct SignupOTPForm: View {
-  @ObservedObject var viewModel: SignupViewModel
-
-  var body: some View {
-    VStack(spacing: Spacing.lg) {
-      // OTP explanation
-      VStack(spacing: Spacing.xs) {
-        Text(.otpTitle)
-          .font(.tidexTitle)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(String(localized: .otpSubtitle(viewModel.normalizedPhone)))
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .multilineTextAlignment(.center)
-      }
-
-      // OTP Input
-      OTPInputField(
-        code: $viewModel.otpCode,
-        error: viewModel.fieldErrors.otp
-      )
-
-      // Verify button
-      PrimaryButton(
-        title: String(localized: .otpSubmitButton),
-        action: {
-          Task { await viewModel.verifyOTP() }
-        },
-        isLoading: viewModel.isLoading
-      )
-
-      // Resend and back links
-      VStack(spacing: Spacing.md) {
-        Button(action: {
-          Task { await viewModel.resendOTP() }
-        }) {
-          Text(.otpResendCode)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexBlue)
-        }
-        .buttonStyle(.plain)
-        .disabled(viewModel.isLoading)
-
-        Button(action: {
-          viewModel.backToInput()
-        }) {
-          HStack(spacing: Spacing.xxs) {
-            Image(systemName: "chevron.left")
-              .font(.tidexCaption)
-            Text(.signupBackToSignup)
-              .font(.tidexSubheadline)
-          }
-          .foregroundColor(.tidexTextSecondary)
-        }
-        .buttonStyle(.plain)
-      }
     }
   }
 }

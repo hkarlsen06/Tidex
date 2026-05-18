@@ -636,9 +636,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let success: Bool
       }
 
-      // Route session access through AuthSessionManager to avoid refresh races
-      // with other startup/foreground tasks that also need auth.
-      _ = try await AuthSessionManager.shared.getSession()
+      // Push tokens are user-scoped server records. If APNs returns a token
+      // while the app is signed out, keep the cached token and retry after login.
+      guard await AuthSessionManager.shared.getSessionIfAvailable() != nil else {
+        print("[APNs] Skipping token registration because no authenticated session is available")
+        return
+      }
 
       var payload: [String: AnyJSON] = [
         "p_apns_token": .string(token),
@@ -677,6 +680,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
             "Registration failed", underlying: nil)
         }
       }
+    } catch let error where isAPNsRegistrationCancellation(error) {
+      print("[APNs] Token registration cancelled")
     } catch {
       print("[APNs] Failed to register token: \(error)")
       await MainActor.run {
@@ -686,6 +691,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         )
       }
     }
+  }
+
+  private func isAPNsRegistrationCancellation(_ error: Error) -> Bool {
+    if error is CancellationError {
+      return true
+    }
+
+    let nsError = error as NSError
+    return nsError.domain == NSURLErrorDomain
+      && nsError.code == URLError.Code.cancelled.rawValue
   }
 
   private func cacheAPNsToken(_ token: String) {

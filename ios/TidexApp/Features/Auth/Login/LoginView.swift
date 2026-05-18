@@ -6,6 +6,10 @@ struct LoginView: View {
   @ObservedObject var viewModel: LoginViewModel
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+  private enum ScrollTarget {
+    case bottom
+  }
+
   // Navigation callbacks
   var onNavigateToSignup: (() -> Void)?
   var onNavigateToResetPassword: (() -> Void)?
@@ -26,40 +30,46 @@ struct LoginView: View {
         Color.tidexBackground
           .ignoresSafeArea()
 
-        ScrollView {
-          VStack(spacing: 0) {
-            Spacer(minLength: Spacing.xxl)
+        ScrollViewReader { scrollProxy in
+          ScrollView {
+            VStack(spacing: 0) {
+              Spacer(minLength: Spacing.xxl)
 
-            VStack(spacing: Spacing.xl) {
-              AuthHeroVisual(
-                logoSize: 132,
-                onLogoTap: debugRestartOnboarding
-              )
+              VStack(spacing: Spacing.xl) {
+                AuthHeroVisual(
+                  logoSize: 132,
+                  onLogoTap: debugRestartOnboarding
+                )
 
-              messageStack
+                messageStack
 
-              VStack(spacing: Spacing.lg) {
-                switch viewModel.currentStep {
-                case .input:
-                  inputStepContent
-                case .otp:
-                  PhoneOTPForm(viewModel: viewModel)
+                VStack(spacing: Spacing.lg) {
+                  switch viewModel.currentStep {
+                  case .input:
+                    inputStepContent(scrollProxy: scrollProxy)
+                  case .otp:
+                    PhoneOTPForm(viewModel: viewModel)
+                  }
+                }
+
+                if viewModel.currentStep == .input {
+                  footerView
                 }
               }
+              .frame(maxWidth: 420)
+              .padding(.horizontal, Spacing.xl)
+              .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
+              .frame(maxWidth: .infinity)
 
-              if viewModel.currentStep == .input {
-                footerView
-              }
+              Color.clear
+                .frame(height: 0)
+                .id(ScrollTarget.bottom)
             }
-            .frame(maxWidth: 420)
-            .padding(.horizontal, Spacing.xl)
-            .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
             .frame(maxWidth: .infinity)
+            .frame(minHeight: geometry.size.height)
           }
-          .frame(maxWidth: .infinity)
-          .frame(minHeight: geometry.size.height)
+          .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
       }
     }
     .loading(viewModel.isLoading)
@@ -105,7 +115,7 @@ struct LoginView: View {
   // MARK: - Input Step Content
 
   @ViewBuilder
-  private var inputStepContent: some View {
+  private func inputStepContent(scrollProxy: ScrollViewProxy) -> some View {
     VStack(spacing: Spacing.md) {
       // OAuth buttons
       OAuthButtonsView(
@@ -122,7 +132,7 @@ struct LoginView: View {
       if viewModel.showEmailForm {
         emailFormSection
       } else {
-        revealEmailButton
+        revealEmailButton(scrollProxy: scrollProxy)
       }
     }
   }
@@ -243,10 +253,15 @@ struct LoginView: View {
     .cornerRadius(CornerRadius.md)
   }
 
-  private var revealEmailButton: some View {
+  private func revealEmailButton(scrollProxy: ScrollViewProxy) -> some View {
     Button {
       MotionTokens.animate(.feedback, reduceMotion: reduceMotion) {
         viewModel.showEmailForm = true
+      }
+      DispatchQueue.main.async {
+        MotionTokens.animate(.feedback, reduceMotion: reduceMotion) {
+          scrollProxy.scrollTo(ScrollTarget.bottom, anchor: .bottom)
+        }
       }
     } label: {
       HStack(spacing: Spacing.xs) {
@@ -260,10 +275,10 @@ struct LoginView: View {
       .frame(height: 50)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
           .stroke(Color.tidexBorderSubtle, lineWidth: 1)
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
   }

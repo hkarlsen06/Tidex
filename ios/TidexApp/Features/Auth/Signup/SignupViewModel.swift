@@ -2,7 +2,7 @@ import Combine
 import Foundation
 
 /// View model for the signup screen
-/// Handles email/password, phone/OTP, and OAuth registration
+/// Handles email/password and OAuth registration
 @MainActor
 final class SignupViewModel: ObservableObject {
 
@@ -19,14 +19,11 @@ final class SignupViewModel: ObservableObject {
   @Published var emailOrPhone: String = ""
   @Published var password: String = ""
   @Published var confirmPassword: String = ""
-  @Published var otpCode: String = ""
 
-  @Published var currentStep: SignupStep = .input
   @Published var isLoading = false
   @Published var showEmailForm = false
 
   @Published var errorMessage: String?
-  @Published var successMessage: String?
 
   @Published var fieldErrors = FieldErrors()
 
@@ -36,20 +33,12 @@ final class SignupViewModel: ObservableObject {
 
   // MARK: - Types
 
-  enum SignupStep {
-    case input
-    case otp  // Phone OTP verification
-  }
-
-  typealias InputType = AuthIdentityInputType
-
   struct FieldErrors {
     var firstName: String?
     var lastName: String?
     var emailOrPhone: String?
     var password: String?
     var confirmPassword: String?
-    var otp: String?
 
     mutating func clear() {
       firstName = nil
@@ -57,32 +46,10 @@ final class SignupViewModel: ObservableObject {
       emailOrPhone = nil
       password = nil
       confirmPassword = nil
-      otp = nil
     }
   }
 
-  // MARK: - Private State
-
-  private var authTask: Task<Void, Never>?
-
   // MARK: - Computed Properties
-
-  /// Detected input type based on current emailOrPhone value
-  var inputType: InputType {
-    AuthIdentityInput.detectType(emailOrPhone)
-  }
-
-  /// Normalized phone number in E.164 format
-  var normalizedPhone: String {
-    AuthIdentityInput.normalizedPhone(emailOrPhone)
-  }
-
-  /// Check if form is valid for submission
-  var isFormValid: Bool {
-    !firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      && !lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-      && !emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !password.isEmpty
-  }
 
   /// Full name combined from first and last name
   var fullName: String {
@@ -94,20 +61,16 @@ final class SignupViewModel: ObservableObject {
   init(
     authService: AuthService? = nil,
     appleAuthProvider: AppleAuthProvider? = nil,
-    googleAuthProvider: GoogleAuthProvider? = nil,
+    googleAuthProvider: GoogleAuthProvider? = nil
   ) {
     self.authService = authService ?? AuthService.shared
     self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
     self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
   }
 
-  deinit {
-    authTask?.cancel()
-  }
-
   // MARK: - Actions
 
-  /// Main sign up action - routes to appropriate method based on input type
+  /// Sign up with email and password.
   func signUp() async {
     clearMessages()
     fieldErrors.clear()
@@ -118,41 +81,12 @@ final class SignupViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
-      switch inputType {
-      case .email:
-        try await signUpWithEmail()
-
-      case .phone:
-        try await signUpWithPhone()
-
-      case .unknown:
-        fieldErrors.emailOrPhone = String(localized: .signupErrorsInvalidEmailOrPhone)
-      }
-    } catch {
-      handleError(error)
-    }
-  }
-
-  /// Verify OTP code for phone signup
-  func verifyOTP() async {
-    clearMessages()
-    fieldErrors.clear()
-
-    guard !otpCode.isEmpty else {
-      fieldErrors.otp = String(localized: .otpErrorsCodeRequired)
-      return
-    }
-
-    guard otpCode.count == 6 else {
-      fieldErrors.otp = String(localized: .otpErrorsCodeInvalid)
-      return
-    }
-
-    isLoading = true
-    defer { isLoading = false }
-
-    do {
-      let _ = try await authService.verifyOTP(phone: normalizedPhone, token: otpCode)
+      let email = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+      let _ = try await authService.signUpWithEmail(
+        email: email,
+        password: password,
+        fullName: fullName
+      )
       await handleSuccessfulSignup()
     } catch {
       handleError(error)
@@ -196,85 +130,46 @@ final class SignupViewModel: ObservableObject {
     }
   }
 
-  /// Go back from OTP/email sent step to input step
-  func backToInput() {
-    currentStep = .input
-    otpCode = ""
-    clearMessages()
-  }
-
-  /// Resend OTP code
-  func resendOTP() async {
-    clearMessages()
-    isLoading = true
-    defer { isLoading = false }
-
-    do {
-      try await authService.signUpWithPhone(
-        phone: normalizedPhone, password: password, fullName: fullName)
-      successMessage = String(localized: .signupSuccessOtpResent)
-    } catch {
-      handleError(error)
-    }
-  }
-
   /// Navigate to login screen
   func navigateToLogin() {
     onNavigateToLogin?()
   }
 
   func applyLoginPrefill(emailOrPhone: String, password: String) {
-    currentStep = .input
-    self.emailOrPhone = emailOrPhone
-    self.password = password
-    otpCode = ""
+    let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
+    let isEmail = AuthIdentityInput.detectType(trimmed) == .email
+
+    self.emailOrPhone = isEmail ? trimmed : ""
+    self.password = isEmail ? password : ""
     fieldErrors.clear()
     clearMessages()
-    showEmailForm = !emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    showEmailForm = isEmail
   }
 
   // MARK: - Private Methods
-
-  private func signUpWithEmail() async throws {
-    // Email verification disabled - session is returned immediately
-    let _ = try await authService.signUpWithEmail(
-      email: emailOrPhone, password: password, fullName: fullName)
-    await handleSuccessfulSignup()
-  }
-
-  private func signUpWithPhone() async throws {
-    try await authService.signUpWithPhone(
-      phone: normalizedPhone, password: password, fullName: fullName)
-    successMessage = String(localized: .signupSuccessOtpSent)
-    currentStep = .otp
-  }
 
   private func validateInput() -> Bool {
     var isValid = true
     let trimmed = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
 
-    // First name required
     if firstName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       fieldErrors.firstName = String(localized: .signupErrorsFirstNameRequired)
       isValid = false
     }
 
-    // Last name required
     if lastName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
       fieldErrors.lastName = String(localized: .signupErrorsLastNameRequired)
       isValid = false
     }
 
-    // Email/phone required
     if trimmed.isEmpty {
-      fieldErrors.emailOrPhone = String(localized: .signupErrorsEmailOrPhoneRequired)
+      fieldErrors.emailOrPhone = String(localized: .signupErrorsEmailRequired)
       isValid = false
-    } else if inputType == .unknown {
-      fieldErrors.emailOrPhone = String(localized: .signupErrorsInvalidEmailOrPhone)
+    } else if AuthIdentityInput.detectType(trimmed) != .email {
+      fieldErrors.emailOrPhone = String(localized: .signupErrorsInvalidEmail)
       isValid = false
     }
 
-    // Password required and minimum length
     if password.isEmpty {
       fieldErrors.password = String(localized: .signupErrorsPasswordRequired)
       isValid = false
@@ -283,7 +178,6 @@ final class SignupViewModel: ObservableObject {
       isValid = false
     }
 
-    // Confirm password must match (if visible)
     if !confirmPassword.isEmpty && password != confirmPassword {
       fieldErrors.confirmPassword = String(localized: .signupErrorsPasswordMismatch)
       isValid = false
@@ -305,6 +199,5 @@ final class SignupViewModel: ObservableObject {
 
   private func clearMessages() {
     errorMessage = nil
-    successMessage = nil
   }
 }

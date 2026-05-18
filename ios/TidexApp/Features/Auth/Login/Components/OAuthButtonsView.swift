@@ -1,8 +1,6 @@
-import AuthenticationServices
 import SwiftUI
 
 /// OAuth sign-in buttons for Google and Apple
-/// Uses native SignInWithAppleButton for the official iOS look
 struct OAuthButtonsView: View {
   let onGoogleTap: () -> Void
   let onAppleTap: () -> Void
@@ -10,58 +8,34 @@ struct OAuthButtonsView: View {
 
   var body: some View {
     VStack(spacing: Spacing.sm) {
-      // Native Apple Sign-In Button
-      NativeAppleSignInButton(action: onAppleTap, isLoading: isLoading)
-        .frame(height: 50)
+      OAuthProviderButton(
+        title: String(localized: .oauthContinueWithApple),
+        action: onAppleTap,
+        isLoading: isLoading
+      ) {
+        Image(systemName: "apple.logo")
+          .font(.system(size: 19, weight: .medium))
+      }
 
-      // Google Sign-In Button
-      GoogleSignInButton(
+      OAuthProviderButton(
         title: String(localized: .oauthContinueWithGoogle),
         action: onGoogleTap,
         isLoading: isLoading
-      )
-    }
-  }
-}
-
-// MARK: - Native Apple Sign-In Button
-
-/// Wrapper around the official SignInWithAppleButton
-private struct NativeAppleSignInButton: View {
-  let action: () -> Void
-  var isLoading: Bool = false
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    SignInWithAppleButton(.continue) { _ in
-      // The request configuration is handled elsewhere
-    } onCompletion: { _ in
-      // We ignore this - actual auth is handled by the action
-    }
-    .signInWithAppleButtonStyle(colorScheme == .dark ? .whiteOutline : .black)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .disabled(isLoading)
-    .opacity(isLoading ? 0.6 : 1)
-    .allowsHitTesting(false)  // Disable built-in tap handling
-    .overlay {
-      // Invisible button that triggers our custom action
-      Button {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        action()
-      } label: {
-        Color.clear
+      ) {
+        GoogleLogo()
       }
-      .disabled(isLoading)
     }
   }
 }
 
-// MARK: - Google Sign-In Button
+// MARK: - OAuth Provider Button
 
-private struct GoogleSignInButton: View {
+private struct OAuthProviderButton<Icon: View>: View {
   let title: String
   let action: () -> Void
-  var isLoading: Bool = false
+  let isLoading: Bool
+  @ViewBuilder let icon: () -> Icon
+
   @Environment(\.colorScheme) private var colorScheme
 
   var body: some View {
@@ -70,24 +44,24 @@ private struct GoogleSignInButton: View {
       action()
     } label: {
       HStack(spacing: Spacing.sm) {
-        GoogleLogo()
-          .frame(width: 18, height: 18)
+        icon()
+          .frame(width: 19, height: 19)
 
         Text(title)
-          // Match the native Apple button label sizing.
-          .font(.system(size: 17, weight: .semibold))
+          .font(.system(size: 18, weight: .semibold))
           .lineLimit(1)
           .minimumScaleFactor(0.9)
-          .foregroundColor(colorScheme == .dark ? .black : .white)
       }
-      .frame(maxWidth: .infinity)
+      .foregroundColor(colorScheme == .dark ? .black : .white)
+      .padding(.leading, 64)
+      .frame(maxWidth: .infinity, alignment: .leading)
       .frame(height: 50)
       .background(colorScheme == .dark ? Color.white : Color.black)
       .overlay {
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
           .stroke(colorScheme == .dark ? Color.clear : Color.black.opacity(0.16), lineWidth: 1)
       }
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
     .disabled(isLoading)
