@@ -514,10 +514,6 @@ struct SharingView: View {
             viewModel.selectSharer(sharer)
             navigationPath.append(sharer)
           },
-          onSelectHiddenSharer: { sharer in
-            viewModel.selectSharer(sharer)
-            navigationPath.append(sharer)
-          },
           onMessageTap: { sharer in
             Task {
               await openChat(for: sharer)
