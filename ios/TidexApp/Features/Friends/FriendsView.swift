@@ -52,9 +52,11 @@ struct SharingView: View {
   @State private var activeChatHighlightUserId: String?
   @State private var chatOpenErrorMessage: String?
   @State private var unreadChatUserIds: Set<String> = []
+  @State private var bottomedChatUserIds: Set<String> = []
   @State private var unreadChatCountsByUserId: [String: Int] = [:]
   @State private var chatPreviewsByUserId: [String: FriendCardMessagePreview] = [:]
   @State private var typingUserIds: Set<String> = []
+  @State private var profileSharer: SharedUser?
   @State private var typingResetTasks: [String: Task<Void, Never>] = [:]
   @State private var latestIncomingMessageIdsByUserId: [String: String] = [:]
   @State private var unreadRefreshTask: Task<Void, Never>?
@@ -147,6 +149,9 @@ struct SharingView: View {
               highlightedUserId: result.thread.counterpartUserId,
               resetNavigationFirst: true
             )
+          },
+          onFeedPlacementChange: {
+            scheduleChatMetadataRefresh()
           }
         )
         .toolbarRole(.editor)
@@ -174,6 +179,7 @@ struct SharingView: View {
     .task(id: startupTaskID) {
       guard selectedTab == .sharing else { return }
       refreshChatMetadata()
+      await refreshFeedPlacements()
       await viewModel.loadSharers()
       guard !Task.isCancelled, selectedTab == .sharing else { return }
       scheduleChatMetadataRefresh()
@@ -273,6 +279,9 @@ struct SharingView: View {
       Task {
         await syncTypingSubscriptions()
       }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .friendFeedPlacementDidChange)) { _ in
+      scheduleChatMetadataRefresh()
     }
     .onReceive(NotificationCenter.default.publisher(for: .friendsThreadTypingDidChange)) {
       notification in
@@ -492,6 +501,7 @@ struct SharingView: View {
           chatOnlyUserIds: viewModel.chatOnlyUserIds,
           typingUserIds: typingUserIds,
           unreadChatUserIds: unreadChatUserIds,
+          bottomedUserIds: bottomedChatUserIds,
           unreadChatCountsByUserId: unreadChatCountsByUserId,
           chatPreviewsByUserId: chatPreviewsByUserId,
           selectedSharer: viewModel.selectedSharer,
@@ -513,6 +523,9 @@ struct SharingView: View {
               await openChat(for: sharer)
             }
           },
+          onProfileRequested: { sharer in
+            profileSharer = sharer
+          },
           highlightedChatUserId: activeChatHighlightUserId,
           openingThreadUserId: openingThreadUserId,
           onAddFriend: {
@@ -528,6 +541,27 @@ struct SharingView: View {
     }
     .refreshable {
       await refreshFriendsTab()
+    }
+    .sheet(item: $profileSharer) { sharer in
+      FriendProfileView(
+        sharedUser: sharer,
+        onVisibilityChange: {
+          Task {
+            await viewModel.loadSharers(forceRefreshPreviews: true)
+          }
+        },
+        onFeedPlacementChange: {
+          scheduleChatMetadataRefresh()
+        },
+        onMessageTapped: {
+          profileSharer = nil
+          Task {
+            await openChat(for: sharer)
+          }
+        }
+      )
+      .presentationDetents([.medium, .large])
+      .presentationDragIndicator(.visible)
     }
   }
 
@@ -827,6 +861,23 @@ struct SharingView: View {
       try? await Task.sleep(for: .milliseconds(120))
       guard !Task.isCancelled else { return }
       refreshChatMetadata()
+      await refreshFeedPlacements()
+    }
+  }
+
+  private func refreshFeedPlacements() async {
+    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
+      withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+        bottomedChatUserIds = []
+      }
+      return
+    }
+
+    let nextBottomedUserIds = await friendsMessagesRepository.getActiveBottomedFriendIds(
+      for: viewerUserId
+    )
+    withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
+      bottomedChatUserIds = nextBottomedUserIds
     }
   }
 
@@ -1016,6 +1067,7 @@ private struct SharedShiftsDetailView: View {
   @Binding var highlightShiftIds: Set<String>
   let onMessageTapped: (SharedUser) -> Void
   let onSendToChatCompleted: (SendShiftToChatResult) -> Void
+  let onFeedPlacementChange: () -> Void
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.userCurrency) private var fallbackCurrency
@@ -1124,6 +1176,7 @@ private struct SharedShiftsDetailView: View {
             await viewModel.loadSharers(forceRefreshPreviews: true)
           }
         },
+        onFeedPlacementChange: onFeedPlacementChange,
         onFriendRemoved: {
           shouldNavigateBack = true
         },

@@ -96,6 +96,39 @@ final class FriendsMessagesRepository: ObservableObject {
     }
   }
 
+  func getActiveBottomedFriendIds(for viewerUserId: String) async -> Set<String> {
+    do {
+      return try await storeActor.fetchActiveBottomedFriendIds(for: viewerUserId)
+    } catch {
+      logger.error("Failed to fetch feed placements: \(error.localizedDescription)")
+      return []
+    }
+  }
+
+  func setFriendMovedToBottom(friendUserId: String, viewerUserId: String) async {
+    do {
+      try await storeActor.setFriendMovedToBottom(
+        friendUserId: friendUserId,
+        viewerUserId: viewerUserId
+      )
+      logger.info("Saved friend feed placement for \(friendUserId, privacy: .private)")
+    } catch {
+      logger.error("Failed to save friend feed placement: \(error.localizedDescription)")
+    }
+  }
+
+  func clearFriendFeedPlacement(friendUserId: String, viewerUserId: String) async {
+    do {
+      try await storeActor.clearFriendFeedPlacement(
+        friendUserId: friendUserId,
+        viewerUserId: viewerUserId
+      )
+      logger.info("Cleared friend feed placement for \(friendUserId, privacy: .private)")
+    } catch {
+      logger.error("Failed to clear friend feed placement: \(error.localizedDescription)")
+    }
+  }
+
   func getMessages(threadId: String, viewerUserId: String) -> [FriendMessage] {
     let context = ModelContext(container)
     let messageDescriptor = FetchDescriptor<LocalMessage>(

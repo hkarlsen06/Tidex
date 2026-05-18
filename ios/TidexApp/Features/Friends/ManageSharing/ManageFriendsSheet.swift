@@ -338,6 +338,7 @@ struct ManageSharingSheet: View {
     FriendsListOrdering(
       typingUserIds: typingUserIds,
       unreadChatUserIds: unreadChatUserIds,
+      bottomedUserIds: [],
       chatPreviewsByUserId: chatPreviewsByUserId,
       shiftPreviews: shiftPreviews,
       isLoadingShiftPreviews: isLoadingPreviews

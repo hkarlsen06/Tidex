@@ -138,6 +138,70 @@ extension LocalStoreActor {
     return try modelContext.fetch(descriptor).map { $0.toFriendThread() }
   }
 
+  func fetchActiveBottomedFriendIds(for viewerUserId: String) throws -> Set<String> {
+    let descriptor = FetchDescriptor<LocalThreadFeedPlacement>(
+      predicate: #Predicate { $0.viewerUserId == viewerUserId }
+    )
+
+    var activeFriendIds: Set<String> = []
+    for placement in try modelContext.fetch(descriptor) {
+      if try isFeedPlacementStale(placement) {
+        modelContext.delete(placement)
+      } else {
+        activeFriendIds.insert(placement.friendUserId)
+      }
+    }
+
+    try modelContext.save()
+    return activeFriendIds
+  }
+
+  func setFriendMovedToBottom(friendUserId: String, viewerUserId: String) throws {
+    let normalizedFriendUserId = friendUserId.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedFriendUserId.isEmpty else { return }
+
+    let thread = try fetchDirectThread(
+      friendUserId: normalizedFriendUserId, viewerUserId: viewerUserId)
+    let compositeKey = "\(viewerUserId):\(normalizedFriendUserId)"
+    let descriptor = FetchDescriptor<LocalThreadFeedPlacement>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    if let existing = try modelContext.fetch(descriptor).first {
+      existing.threadId = thread?.id
+      existing.baselineLastMessageId = thread?.lastMessageId
+      existing.baselineLastMessageAt = thread?.lastMessageAt
+      existing.updatedAt = Date()
+    } else {
+      modelContext.insert(
+        LocalThreadFeedPlacement(
+          viewerUserId: viewerUserId,
+          friendUserId: normalizedFriendUserId,
+          threadId: thread?.id,
+          baselineLastMessageId: thread?.lastMessageId,
+          baselineLastMessageAt: thread?.lastMessageAt
+        ))
+    }
+
+    try modelContext.save()
+  }
+
+  func clearFriendFeedPlacement(friendUserId: String, viewerUserId: String) throws {
+    let normalizedFriendUserId = friendUserId.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !normalizedFriendUserId.isEmpty else { return }
+
+    let compositeKey = "\(viewerUserId):\(normalizedFriendUserId)"
+    let descriptor = FetchDescriptor<LocalThreadFeedPlacement>(
+      predicate: #Predicate { $0.compositeKey == compositeKey }
+    )
+
+    for placement in try modelContext.fetch(descriptor) {
+      modelContext.delete(placement)
+    }
+
+    try modelContext.save()
+  }
+
   func saveThreadSummaries(_ threads: [FriendThread], for viewerUserId: String) throws {
     try reconcileMissingThreads(keeping: threads.map(\.id), for: viewerUserId)
     for thread in threads {
@@ -896,6 +960,61 @@ extension LocalStoreActor {
     }
   }
 
+  private func fetchDirectThread(friendUserId: String, viewerUserId: String) throws -> LocalThread?
+  {
+    let directKindRaw = FriendThreadKind.direct.rawValue
+    let descriptor = FetchDescriptor<LocalThread>(
+      predicate: #Predicate { localThread in
+        localThread.viewerUserId == viewerUserId
+          && localThread.kindRaw == directKindRaw
+          && localThread.counterpartUserId == friendUserId
+      },
+      sortBy: [
+        SortDescriptor(\LocalThread.sortTimestamp, order: .reverse),
+        SortDescriptor(\LocalThread.id, order: .reverse),
+      ]
+    )
+
+    return try modelContext.fetch(descriptor).first
+  }
+
+  private func fetchThread(id: String, viewerUserId: String) throws -> LocalThread? {
+    let descriptor = FetchDescriptor<LocalThread>(
+      predicate: #Predicate { localThread in
+        localThread.id == id && localThread.viewerUserId == viewerUserId
+      }
+    )
+
+    return try modelContext.fetch(descriptor).first
+  }
+
+  private func isFeedPlacementStale(_ placement: LocalThreadFeedPlacement) throws -> Bool {
+    let thread: LocalThread?
+    if let threadId = placement.threadId {
+      thread = try fetchThread(id: threadId, viewerUserId: placement.viewerUserId)
+    } else {
+      thread = try fetchDirectThread(
+        friendUserId: placement.friendUserId,
+        viewerUserId: placement.viewerUserId
+      )
+    }
+
+    guard let thread else {
+      return false
+    }
+
+    switch (placement.baselineLastMessageAt, thread.lastMessageAt) {
+    case (let baseline?, let current?):
+      return current > baseline
+    case (nil, .some):
+      return true
+    case (.some, nil):
+      return false
+    case (nil, nil):
+      return thread.lastMessageId != placement.baselineLastMessageId
+    }
+  }
+
   func deleteThread(id: String, viewerUserId: String) throws {
     let threadDescriptor = FetchDescriptor<LocalThread>(
       predicate: #Predicate { localThread in
@@ -913,6 +1032,15 @@ extension LocalStoreActor {
     )
     for existingState in try modelContext.fetch(threadStateDescriptor) {
       modelContext.delete(existingState)
+    }
+
+    let feedPlacementDescriptor = FetchDescriptor<LocalThreadFeedPlacement>(
+      predicate: #Predicate { placement in
+        placement.threadId == id && placement.viewerUserId == viewerUserId
+      }
+    )
+    for placement in try modelContext.fetch(feedPlacementDescriptor) {
+      modelContext.delete(placement)
     }
 
     let messageDescriptor = FetchDescriptor<LocalMessage>(

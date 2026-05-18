@@ -79,6 +79,7 @@ final class LocalStore {
       LocalPendingFriendComposerDraft.self,
       LocalThread.self,
       LocalThreadState.self,
+      LocalThreadFeedPlacement.self,
       LocalMessage.self,
       LocalMessageAttachment.self,
       LocalMessageReaction.self,
@@ -186,6 +187,7 @@ actor LocalStoreActor {
       try modelContext.delete(model: LocalPendingFriendComposerDraft.self)
       try modelContext.delete(model: LocalThread.self)
       try modelContext.delete(model: LocalThreadState.self)
+      try modelContext.delete(model: LocalThreadFeedPlacement.self)
       try modelContext.delete(model: LocalMessage.self)
       try modelContext.delete(model: LocalMessageAttachment.self)
       try modelContext.delete(model: LocalMessageReaction.self)

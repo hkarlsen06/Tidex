@@ -8,6 +8,7 @@ private let realtimeLogger = Logger(
 
 extension Notification.Name {
   static let friendsThreadDidUpdate = Notification.Name("friendsThreadDidUpdate")
+  static let friendFeedPlacementDidChange = Notification.Name("friendFeedPlacementDidChange")
   static let friendsThreadTypingDidChange = Notification.Name("friendsThreadTypingDidChange")
 }
 
