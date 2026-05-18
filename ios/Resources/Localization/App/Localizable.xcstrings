@@ -65416,6 +65416,287 @@
         }
       }
     },
+    "auth.restartPreAuthOnboarding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أعد بدء التعريف"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Рестартирай onboarding"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "অনবোর্ডিং আবার শুরু করুন"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reinicia la presentació"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restartovat onboarding"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Genstart onboarding"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onboarding neu starten"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Επανεκκίνηση εισαγωγής"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart onboarding"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reiniciar introducción"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alusta onboardingut uuesti"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "شروع دوباره راه‌اندازی اولیه"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aloita perehdytys alusta"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ulitin ang onboarding"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redémarrer l’onboarding"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "התחל מחדש את ההדרכה"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ऑनबोर्डिंग फिर से शुरू करें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ponovno pokreni onboarding"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onboarding újraindítása"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mulai ulang onboarding"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Endurræsa kynningu"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riavvia onboarding"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オンボーディングを再開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "온보딩 다시 시작"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paleisti įvadą iš naujo"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sākt ievadu no jauna"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start onboarding på nytt"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onboarding opnieuw starten"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Start onboarding på nytt"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Uruchom onboarding ponownie"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reiniciar onboarding"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repornește onboarding-ul"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Начать onboarding заново"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spustiť onboarding znova"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Znova zaženi uvajanje"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ponovo pokreni onboarding"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starta om onboarding"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anza onboarding upya"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onboarding-ஐ மீண்டும் தொடங்கவும்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เริ่มการแนะนำอีกครั้ง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Onboarding'i yeniden başlat"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перезапустити онбординг"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آن بورڈنگ دوبارہ شروع کریں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khởi động lại hướng dẫn"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新开始引导"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新開始新手導覽"
+          }
+        }
+      }
+    },
     "by %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -195720,6 +196001,287 @@
         }
       }
     },
+    "onboarding.how.takeControl" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تولَّ زمام الأمور"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поеми контрол"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নিয়ন্ত্রণ নিন"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pren el control"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Převezměte kontrolu"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tag kontrol"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrolle übernehmen"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Πάρε τον έλεγχο"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Take control"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toma el control"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Võta kontroll enda kätte"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کنترل را به دست بگیرید"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ota ohjat"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Magkaroon ng kontrol"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prenez le contrôle"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קחו שליטה"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नियंत्रण लें"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preuzmite kontrolu"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vedd át az irányítást"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambil kendali"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Taktu stjórnina"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prendi il controllo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "主導権を握る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "주도권을 잡으세요"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perimkite kontrolę"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pārņem kontroli"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta kontroll"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neem de controle"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta kontroll"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przejmij kontrolę"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assuma o controle"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preia controlul"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Возьмите всё под контроль"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prevezmite kontrolu"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prevzemi nadzor"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preuzmi kontrolu"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ta kontroll"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chukua udhibiti"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "கட்டுப்பாட்டை எடுக்கவும்"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ควบคุมได้เอง"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kontrolü ele al"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Візьміть контроль"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کنٹرول سنبھالیں"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nắm quyền kiểm soát"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "掌控一切"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "掌握主導權"
+          }
+        }
+      }
+    },
     "onboarding.how.title" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -226074,277 +226636,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "سجل الورديات. اطلع على أجرك. بدون مفاجآت."
+            "value" : "...لتعرف دائمًا ما ستحصل عليه فعليًا."
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Регистрирайте смени. Видете вашата заплата. Без изненади."
+            "value" : "...за да знаеш винаги колко реално ще ти платят."
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "শিফট ট্র্যাক করুন। আপনার বেতন দেখুন। কোনো অবাক হওয়ার কিছু নেই।"
+            "value" : "...যাতে আপনি সবসময় জানেন, আসলে কত বেতন পাবেন।"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registreu les vostres tasques. Consulteu la vostra paga. Sense sorpreses."
+            "value" : "...perquè sempre sàpigues què cobraràs realment."
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sledujte směny. Vidět svůj plat. Žádná překvapení."
+            "value" : "…abyste vždy věděli, kolik skutečně dostanete zaplaceno."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registrer vakter. Se din løn. Ingen overraskelser."
+            "value" : "...så du altid ved, hvad du faktisk får udbetalt."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schichten erfassen. Lohn sehen. Keine Überraschungen."
+            "value" : "…damit du immer weißt, was du tatsächlich ausgezahlt bekommst."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Καταγράψτε τις βάρδιες. Δείτε τη μισθοδοσία σας. Χωρίς εκπλήξεις."
+            "value" : "…ώστε να ξέρεις πάντα τι θα πληρωθείς πραγματικά."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Track shifts. See your pay. No surprises."
+            "value" : "...so you always know what you will actually get paid."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registra turnos. Ve tu pago. Sin sorpresas."
+            "value" : "...para que siempre sepas cuánto cobrarás realmente."
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registreeri vahetused. Näe oma palka. Ühtegi üllatust."
+            "value" : "…et sa alati teaksid, mida sulle tegelikult makstakse."
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "شیفت‌ها را ثبت کنید. دستمزد خود را ببینید. بدون شگفتی."
+            "value" : "...تا همیشه بدانید واقعاً چقدر حقوق می‌گیرید."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Seuraa vuoroja. Näe palkkasi. Ei yllätyksiä."
+            "value" : "...joten tiedät aina, mitä sinulle oikeasti maksetaan."
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Subaybayan ang mga shift. Makita ang iyong bayad. Walang sorpresa."
+            "value" : "...para lagi mong alam kung magkano talaga ang matatanggap mo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enregistrez vos quarts. Voyez votre paie. Aucune surprise."
+            "value" : "…pour toujours savoir ce que vous serez réellement payé."
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "עקוב אחרי משמרות. ראה את השכר שלך. ללא הפתעות."
+            "value" : "...כך שתמיד תדע כמה באמת תקבל"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "शिफ्ट ट्रैक करें। अपना वेतन देखें। कोई आश्चर्य नहीं।"
+            "value" : "...ताकि आप हमेशा जानें कि आपको वास्तव में कितना भुगतान मिलेगा।"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pratite smjene. Vidjite svoju plaću. Bez iznenađenja."
+            "value" : "...kako biste uvijek znali koliko ćete stvarno biti plaćeni."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Követi a műszakokat. Látja a fizetését. Nincs überraschung."
+            "value" : "…így mindig tudod, mennyit kapsz ténylegesen."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Catat shift. Lihat gaji Anda. Tidak ada kejutan."
+            "value" : "...jadi Anda selalu tahu berapa yang benar-benar akan Anda terima."
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skráðu vaktir. Sjáðu laun þín. Engar überraskningar."
+            "value" : "…svo þú vitir alltaf hvað þú færð í raun greitt."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registra i turni. Vedi la tua paga. Niente sorprese."
+            "value" : "...così sai sempre quanto verrai effettivamente pagato."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "シフトを記録。給与を確認。驚きなし。"
+            "value" : "…だから実際の手取りがいつでも分かります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "근무 기록. 급여 확인. 놀라움 없음."
+            "value" : "...그래서 실제로 얼마를 받는지 항상 알 수 있어요."
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sekite pamainą. Žiūrėkite savo algą. Jokių staigmenų."
+            "value" : "…kad visada žinotumėte, kiek iš tikrųjų gausite."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reģistrējiet maiņas. Skatiet savu algu. Bez pārsteigumiem."
+            "value" : "...lai tu vienmēr zinātu, ko patiesībā saņemsi."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registrer vakter. Se lønna. Ingen overraskelser."
+            "value" : "…så du alltid vet hva du faktisk får utbetalt."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registreer diensten. Bekijk je loon. Geen verrassingen."
+            "value" : "...zodat je altijd weet wat je echt uitbetaald krijgt."
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registrer vakter. Se lønna. Ingen overraskelser."
+            "value" : "…så du alltid veit kva du faktisk får utbetalt."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rejestruj zmiany. Sprawdzaj wypłatę. Bez niespodzianek."
+            "value" : "...aby zawsze wiedzieć, ile faktycznie dostaniesz."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registre turnos. Veja seu pagamento. Sem surpresas."
+            "value" : "...para você sempre saber quanto realmente vai receber."
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Urmărește schimburile. Vezi salariul. Fără surprize."
+            "value" : "...ca să știi mereu cât vei fi plătit de fapt."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Отслеживайте смены. Проверьте зарплату. Без сюрпризов."
+            "value" : "...чтобы вы всегда знали, сколько вам на самом деле заплатят."
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zaznamenávajte zmeny. Vidzte svoju mzdu. Žiadne prekvapenia."
+            "value" : "…aby ste vždy vedeli, čo skutočne dostanete vyplatené."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spremljaj izmene. Vidi svojo plačo. Brez presenečenj."
+            "value" : "...da vedno veš, koliko boš dejansko dobil plačano."
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pratite smene. Vidite zaradu. Bez iznenađenja."
+            "value" : "...tako da uvek znaš koliko ćeš zaista biti plaćen."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registrera skift. Se din lön. Inga överraskningar."
+            "value" : "…så du alltid vet vad du faktiskt får utbetalt."
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Fuatilia zamu. Tazama malipo yako. Hakuna maajabu."
+            "value" : "...ili ujue kila mara unacholipwa hasa."
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ஷிப்டுகளைக் கண்காணிக்கவும். உங்கள் சம்பளத்தைப் பார்க்கவும். எந்த ஆச்சரியமும் இல்லை."
+            "value" : "...அதனால் உங்களுக்கு உண்மையில் எவ்வளவு சம்பளம் கிடைக்கும் என்று எப்போதும் தெரியும்."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "บันทึกเวลาทำงาน ดูเงินเดือน ไม่มีความประหลาดใจ"
+            "value" : "...เพื่อให้คุณรู้เสมอว่าคุณจะได้รับเงินจริงเท่าไร"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vardiyaları kaydedin. Ücretinizi görün. Sürpriz yok."
+            "value" : "...böylece gerçekte ne kadar ücret alacağını her zaman bilirsin."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Записуйте зміни. Див. вашу зарплату. Без сюрпризів."
+            "value" : "...щоб ви завжди знали, скільки фактично отримаєте."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "شفٹ ریکارڈ کریں۔ اپنی تنخواہ دیکھیں۔ کوئی حیرانی نہیں۔"
+            "value" : "…تاکہ آپ ہمیشہ جان سکیں کہ آپ کو حقیقت میں کتنی ادائیگی ملے گی۔"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Theo dõi ca làm. Xem lương của bạn. Không có bất ngờ."
+            "value" : "...để bạn luôn biết mình thực sự sẽ nhận được bao nhiêu."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "记录班次。查看工资。无惊喜。"
+            "value" : "……让你随时知道自己实际能拿到多少钱。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記錄班次。查看薪資。沒有驚喜。"
+            "value" : "…讓你隨時知道實際會領到多少薪資。"
           }
         }
       }
@@ -226355,277 +226917,277 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اعرف بالضبط ما تكسبه"
+            "value" : "اعرف قيمة ورديتك"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Знайте точно колко печелите"
+            "value" : "Знай колко струва смяната ти"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ঠিক কত উপার্জন করছেন তা জানুন"
+            "value" : "আপনার শিফটের মূল্য জানুন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sabeu exactament el que guanyeu"
+            "value" : "Sàpigues quant val el teu torn"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vězte přesně, co vydělávate"
+            "value" : "Zjistěte, kolik vaše směna stojí"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ved præcis hvad du tjener"
+            "value" : "Se, hvad din vagt er værd"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wisse genau, was du verdienst"
+            "value" : "Wissen, was deine Schicht wert ist"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ξέρετε ακριβώς τι κερδίζετε"
+            "value" : "Δες τι αξίζει η βάρδιά σου"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Know exactly what you earn"
+            "value" : "Know what your shift is worth"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sabe exactamente qué ganas"
+            "value" : "Sabe cuánto vale tu turno"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tea täpselt, mis sa teenid"
+            "value" : "Tea, mida su vahetus väärt on"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "دقیقاً بدانید چه درآمدی دارید"
+            "value" : "بدانید شیفت‌تان چقدر می‌ارزد"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tiedä tarkalleen mitä ansaitset"
+            "value" : "Näe vuorosi arvo"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Malaman nang eksakto kung magkano ang iyong kita"
+            "value" : "Alamin ang halaga ng shift mo"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Savez exactement ce que vous gagnez"
+            "value" : "Voyez ce que vaut votre service"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "דע בדיוק כמה אתה משתכר"
+            "value" : "דע כמה המשמרת שלך שווה"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "बिल्कुल जानें कि आप कितना कमाते हैं"
+            "value" : "जानें आपकी शिफ्ट की कीमत"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Znajte točno što zarađujete"
+            "value" : "Znajte koliko vrijedi vaša smjena"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tudja pontosan, mennyit keres"
+            "value" : "Tudd, mennyit ér a műszakod"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tahu persis berapa yang Anda hasilkan"
+            "value" : "Ketahui nilai shift Anda"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vittu nákvæmlega hvað þú þénar"
+            "value" : "Sjáðu hvað vaktin þín er virði"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sappi esattamente quanto guadagni"
+            "value" : "Scopri quanto vale il tuo turno"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正確に稼ぎを把握する"
+            "value" : "シフトの価値を把握"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "정확히 얼마를 버는지 알기"
+            "value" : "교대 근무의 가치를 확인하세요"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Žinokite tiksliai, kiek uždirbate"
+            "value" : "Žinokite, kiek verta jūsų pamaina"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ziniet tieši, cik jūs nopelnāt"
+            "value" : "Zini, cik vērta ir tava maiņa"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vit nøyaktig hva du tjener"
+            "value" : "Se hva vakten din er verdt"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Weet precies wat je verdient"
+            "value" : "Weet wat je dienst waard is"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vit nøyaktig hva du tjener"
+            "value" : "Sjå kva vakta di er verd"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wiedz dokładnie, ile zarabiasz"
+            "value" : "Wiedz, ile warta jest Twoja zmiana"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Saiba exatamente quanto você ganha"
+            "value" : "Saiba quanto vale seu turno"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Știi exact cât câștigi"
+            "value" : "Știi cât valorează tura ta"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Узнайте точно, сколько вы зарабатываете"
+            "value" : "Знайте, сколько стоит ваша смена"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vedzte presne, čo zarábate"
+            "value" : "Vedzte, koľko vaša zmena stojí"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Točno vedi, kaj zaslužiš"
+            "value" : "Vedi, koliko je tvoja izmena vredna"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Znajte tačno koliko zarađujete"
+            "value" : "Znaj koliko vredi tvoja smena"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vet exakt vad du tjänar"
+            "value" : "Se vad ditt arbetspass är värt"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Jua kwa usahihi kiasi unachokipata"
+            "value" : "Jua thamani ya zamu yako"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "நீங்கள் சம்பாதிப்பதை சரியாக அறிந்து கொள்ளுங்கள்"
+            "value" : "உங்கள் ஷிப்டின் மதிப்பை அறியுங்கள்"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "รู้ว่าคุณมีรายได้เท่าไหร่"
+            "value" : "รู้ว่ากะของคุณมีมูลค่าเท่าไร"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tam olarak ne kazandığınızı bilin"
+            "value" : "Vardiyanın ne kadar ettiğini bil"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Знайте точно, скільки ви заробляєте"
+            "value" : "Знайте, чого варта ваша зміна"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "بالکل جانیں کہ آپ کتنا کماتے ہیں"
+            "value" : "جانیں آپ کی شفٹ کی کتنی قدر ہے"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Biết chính xác bạn kiếm được bao nhiêu"
+            "value" : "Biết ca làm của bạn đáng giá bao nhiêu"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "准确了解您的收入"
+            "value" : "知道你的班次值多少钱"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "精確了解你的收入"
+            "value" : "知道你的班值多少"
           }
         }
       }

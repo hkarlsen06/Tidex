@@ -90,7 +90,7 @@ struct StepItem: View {
       .frame(width: iconSize)
 
       // Right column: Text content (vertically centered to icon)
-      VStack(alignment: .leading, spacing: Spacing.micro) {
+      VStack(alignment: .leading, spacing: 0) {
         Text(title)
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
@@ -187,9 +187,21 @@ private struct StepTitleFocusIndicator: View {
       .onChange(of: trigger) { _, _ in
         runOneShot()
       }
+      .onChange(of: isVisible) { _, visible in
+        if !visible {
+          resetHiddenState()
+        }
+      }
       .onDisappear {
         animationToken += 1
+        resetHiddenState()
       }
+  }
+
+  private func resetHiddenState() {
+    leadingProgress = 0
+    trailingProgress = 0
+    indicatorOpacity = 0
   }
 
   private func runOneShot() {

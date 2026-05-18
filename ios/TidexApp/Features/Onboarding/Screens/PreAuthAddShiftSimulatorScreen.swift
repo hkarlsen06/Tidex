@@ -192,20 +192,18 @@ struct PreAuthAddShiftSimulatorScreen: View {
     ZStack(alignment: .center) {
       HStack(spacing: Spacing.sm) {
         Button {
+          UIImpactFeedbackGenerator(style: .light).impactOccurred()
           onSkip()
         } label: {
-          Text(.onboardingSkip)
-            .font(.tidexBodyMedium)
+          Image(systemName: "forward.end.fill")
+            .font(.system(size: 15, weight: .semibold))
             .foregroundColor(.tidexTextSecondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.9)
-            .allowsTightening(true)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xxxs)
+            .frame(width: 46, height: 34)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
         }
-        .fixedSize(horizontal: true, vertical: false)
-        .buttonStyle(.plain)
-        .tidexGlass(shape: .capsule, interactive: true)
+        .buttonStyle(SnappyButtonStyle())
+        .accessibilityLabel(Text(.onboardingSkip))
 
         Spacer(minLength: 0)
 

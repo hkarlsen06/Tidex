@@ -38,7 +38,7 @@ struct LoginView: View {
               VStack(spacing: Spacing.xl) {
                 AuthHeroVisual(
                   logoSize: 132,
-                  onLogoTap: debugRestartOnboarding
+                  onLogoTap: restartOnboarding
                 )
 
                 messageStack
@@ -69,6 +69,7 @@ struct LoginView: View {
             .frame(minHeight: geometry.size.height)
           }
           .scrollBounceBehavior(.basedOnSize)
+          .scrollDisabled(!allowsScrolling)
         }
       }
     }
@@ -79,14 +80,14 @@ struct LoginView: View {
     }
   }
 
-  private var debugRestartOnboarding: (() -> Void)? {
-    #if DEBUG
-      return {
-        NotificationCenter.default.post(name: .debugRestartPreAuthOnboarding, object: nil)
-      }
-    #else
-      return nil
-    #endif
+  private var restartOnboarding: () -> Void {
+    {
+      NotificationCenter.default.post(name: .restartPreAuthOnboarding, object: nil)
+    }
+  }
+
+  private var allowsScrolling: Bool {
+    viewModel.showEmailForm || viewModel.currentStep != .input
   }
 
   @ViewBuilder
@@ -377,8 +378,7 @@ struct AuthHeroVisual: View {
       content
         .onTapGesture(perform: onLogoTap)
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint(
-          Text(String(localized: "debug.auth.restart_pre_auth_onboarding", table: "Localizable")))
+        .accessibilityHint(Text(.authRestartPreAuthOnboarding))
     } else {
       content
         .accessibilityHidden(true)

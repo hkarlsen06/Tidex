@@ -14,6 +14,8 @@ struct HowItWorksScreen: View {
   let shouldShowConfetti: Bool
   let shouldAnimateTotalFromPrevious: Bool
   let totalCardSeed: Int
+  let isExiting: Bool
+  let showsTitle: Bool
 
   @State private var step1Visible = false
   @State private var step2Visible = false
@@ -40,7 +42,9 @@ struct HowItWorksScreen: View {
     isActive: Bool = false,
     shouldShowConfetti: Bool = false,
     shouldAnimateTotalFromPrevious: Bool = false,
-    totalCardSeed: Int = 0
+    totalCardSeed: Int = 0,
+    isExiting: Bool = false,
+    showsTitle: Bool = true
   ) {
     self.totalFrom = totalFrom
     self.totalTo = totalTo
@@ -49,6 +53,8 @@ struct HowItWorksScreen: View {
     self.shouldShowConfetti = shouldShowConfetti
     self.shouldAnimateTotalFromPrevious = shouldAnimateTotalFromPrevious
     self.totalCardSeed = totalCardSeed
+    self.isExiting = isExiting
+    self.showsTitle = showsTitle
   }
 
   var body: some View {
@@ -57,15 +63,18 @@ struct HowItWorksScreen: View {
     let isStep3Dimmed = shouldDimStep(at: 2)
 
     VStack(spacing: 0) {
-      Text(.onboardingHowTitle)
-        .font(.tidexScreenTitle)
-        .foregroundColor(.tidexTextPrimary)
-        .multilineTextAlignment(.center)
-        .lineSpacing(2)
-        .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.md)
-        .padding(.bottom, Spacing.md)
+      if showsTitle {
+        Text(.onboardingHowTitle)
+          .font(.tidexScreenTitle)
+          .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.center)
+          .lineSpacing(2)
+          .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+          .padding(.horizontal, Spacing.md)
+          .padding(.top, Spacing.md)
+          .padding(.bottom, Spacing.md)
+          .onboardingHowExitStep(isExiting: isExiting, delay: 0.00)
+      }
 
       VStack(spacing: 0) {
         // Steps as a progression timeline, not a list
@@ -119,6 +128,7 @@ struct HowItWorksScreen: View {
         }
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
         .padding(.horizontal, Spacing.md)
+        .onboardingHowExitStep(isExiting: isExiting, delay: 0.045)
 
         Spacer()
           .frame(height: 20)
@@ -136,6 +146,7 @@ struct HowItWorksScreen: View {
           value: totalCardVisible
         )
         .animation(.easeInOut(duration: 0.26), value: isStep3Dimmed)
+        .onboardingHowExitStep(isExiting: isExiting, delay: 0.085)
 
         Spacer()
           .frame(height: 20)
@@ -146,8 +157,14 @@ struct HowItWorksScreen: View {
           .foregroundColor(.tidexBlue)
           .opacity(outcomeVisible ? 0.6 : 0)
           .offset(y: outcomeVisible ? 0 : 8)
+          .onboardingHowExitStep(isExiting: isExiting, delay: 0.125)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+      .padding(.top, showsTitle ? 0 : Spacing.sm)
+      .frame(
+        maxWidth: .infinity,
+        maxHeight: .infinity,
+        alignment: showsTitle ? .center : .top
+      )
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .overlay {
@@ -335,6 +352,27 @@ struct HowItWorksScreen: View {
         hasCompletedFocusSequence = true
       }
     }
+  }
+}
+
+private struct OnboardingHowExitStepModifier: ViewModifier {
+  let isExiting: Bool
+  let delay: TimeInterval
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(isExiting ? 0 : 1)
+      .offset(y: isExiting ? -24 : 0)
+      .animation(
+        .easeInOut(duration: 0.18).delay(delay),
+        value: isExiting
+      )
+  }
+}
+
+extension View {
+  fileprivate func onboardingHowExitStep(isExiting: Bool, delay: TimeInterval) -> some View {
+    modifier(OnboardingHowExitStepModifier(isExiting: isExiting, delay: delay))
   }
 }
 

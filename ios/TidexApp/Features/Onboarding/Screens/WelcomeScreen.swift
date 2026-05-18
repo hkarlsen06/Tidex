@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Screen 1: Welcome/Hero
 /// Establishes brand, creates emotional connection, sets expectation
@@ -6,79 +7,80 @@ struct WelcomeScreen: View {
   let currency: String
 
   // Entrance animation states - animate once, then stillness
-  @State private var showLogo = false
   @State private var showCard = false
   @State private var showHeadline = false
   @State private var showSubheadline = false
 
+  private var heroTitleFont: Font {
+    let size = UIFontMetrics(forTextStyle: .largeTitle).scaledValue(for: 50)
+    return .system(size: size, weight: .semibold, design: .default)
+  }
+
+  private var heroSubtitleFont: Font {
+    let size = UIFontMetrics(forTextStyle: .body).scaledValue(for: 17)
+    return .system(size: size, weight: .regular, design: .default)
+  }
+
+  private var titleLines: [String] {
+    let title = String(localized: .onboardingWelcomeTitle)
+    let words = title.split(separator: " ").map(String.init)
+    guard words.count > 3 else { return [title] }
+
+    let targetLength = Double(title.count) / 2
+    var bestSplitIndex = 1
+    var bestDistance = Double.greatestFiniteMagnitude
+
+    for splitIndex in 1..<words.count {
+      let firstLineLength = words[..<splitIndex].joined(separator: " ").count
+      let distance = abs(Double(firstLineLength) - targetLength)
+      if distance < bestDistance {
+        bestDistance = distance
+        bestSplitIndex = splitIndex
+      }
+    }
+
+    return [
+      words[..<bestSplitIndex].joined(separator: " "),
+      words[bestSplitIndex...].joined(separator: " "),
+    ]
+  }
+
   var body: some View {
-    VStack(spacing: 0) {
-      Spacer()
-        .frame(height: 48)
-
-      // Logo anchored in subtle card container
-      logoSection
-        .opacity(showLogo ? 1 : 0)
-        .offset(y: showLogo ? 0 : 8)
-
-      // Ghosted paycheck preview - deliberately obscured
-      ghostedPaycheckPreview
-        .opacity(showCard ? 1 : 0)
-        .offset(y: showCard ? 0 : 12)
-
-      Spacer()
-
-      // Headline and subheadline at bottom
-      textContent
-
-      Spacer()
-        .frame(height: 120)
+    GeometryReader { geometry in
+      heroContent
+        .frame(maxWidth: .infinity)
+        .position(
+          x: geometry.size.width / 2,
+          y: geometry.size.height * 0.44
+        )
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .onAppear {
       // Staggered entrance choreography - motion with a cause, then stillness
       withAnimation(.easeOut(duration: 0.4)) {
-        showLogo = true
-      }
-      withAnimation(.easeOut(duration: 0.45).delay(0.12)) {
-        showCard = true
-      }
-      withAnimation(.easeOut(duration: 0.4).delay(0.24)) {
         showHeadline = true
       }
-      withAnimation(.easeOut(duration: 0.4).delay(0.34)) {
+      withAnimation(.easeOut(duration: 0.4).delay(0.08)) {
         showSubheadline = true
+      }
+      withAnimation(.easeOut(duration: 0.45).delay(0.16)) {
+        showCard = true
       }
     }
   }
 
   // MARK: - Subviews
 
-  @ViewBuilder
-  private var logoSection: some View {
-    ZStack {
-      // Soft card glow anchoring the logo - makes it feel grounded
-      RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
-        .fill(
-          RadialGradient(
-            gradient: Gradient(colors: [
-              Color.tidexBlue.opacity(0.08),
-              Color.tidexBlue.opacity(0.02),
-              Color.clear,
-            ]),
-            center: .center,
-            startRadius: 20,
-            endRadius: 100
-          )
-        )
-        .frame(width: 180, height: 180)
+  private var heroContent: some View {
+    VStack(spacing: 0) {
+      textContent
 
-      // Tidex logo from assets (transparent)
-      Image("TidexLogo")
-        .resizable()
-        .scaledToFit()
-        .frame(width: 120, height: 120)
+      ghostedPaycheckPreview
+        .opacity(showCard ? 1 : 0)
+        .offset(y: showCard ? 0 : 14)
+        .padding(.top, Spacing.huge + Spacing.xl)
     }
+    .frame(maxWidth: .infinity)
   }
 
   /// Sample amount for the ghosted preview driven by selected currency wage defaults.
@@ -171,35 +173,33 @@ struct WelcomeScreen: View {
   @ViewBuilder
   private var textContent: some View {
     VStack(spacing: Spacing.sm) {
-      // Headline - sized to never truncate on any device
-      Text(.onboardingWelcomeTitle)
-        .font(.tidexLargeTitle)
-        .foregroundStyle(
-          LinearGradient(
-            colors: [.tidexBlue, .tidexBlue.opacity(0.85)],
-            startPoint: .leading,
-            endPoint: .trailing
-          )
-        )
-        .multilineTextAlignment(.center)
-        .lineLimit(2)
-        .minimumScaleFactor(0.85)
-        .fixedSize(horizontal: false, vertical: true)
-        .opacity(showHeadline ? 1 : 0)
-        .offset(y: showHeadline ? 0 : 8)
+      VStack(alignment: .leading, spacing: -10) {
+        ForEach(Array(titleLines.enumerated()), id: \.offset) { _, line in
+          Text(line)
+            .font(heroTitleFont)
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.78)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+      }
+      .opacity(showHeadline ? 1 : 0)
+      .offset(y: showHeadline ? 0 : 8)
 
-      // Subheadline
       Text(.onboardingWelcomeSubtitle)
-        .font(.tidexBody)
+        .font(heroSubtitleFont)
         .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(.center)
+        .multilineTextAlignment(.leading)
+        .lineSpacing(2)
         .lineLimit(3)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
         .opacity(showSubheadline ? 1 : 0)
         .offset(y: showSubheadline ? 0 : 6)
     }
-    .padding(.horizontal, Spacing.xxl)
-    .adaptiveContentWidth()
+    .frame(maxWidth: 350, alignment: .leading)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.leading, Spacing.xl)
   }
 }
 

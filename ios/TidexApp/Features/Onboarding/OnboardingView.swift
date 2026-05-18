@@ -1,11 +1,9 @@
 import SwiftUI
 
-/// Pre-auth onboarding flow container (Screens 1-4)
+/// Pre-auth onboarding flow container (Screens 1-3)
 /// Shows value proposition before requiring authentication
 struct OnboardingView: View {
-  let onComplete: () -> Void
   let onNavigateToSignup: () -> Void
-  let onNavigateToLogin: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentPage = 0
@@ -22,17 +20,19 @@ struct OnboardingView: View {
   @State private var isAdvancingFromSimulatorAdd = false
   @State private var shouldPreloadSimulatorScreen = false
   @State private var shouldPreloadHowItWorksScreen = false
+  @State private var isCompletingPreAuth = false
 
-  private let totalPages = 4
+  private let totalPages = 3
   private let simulatorPage = 1
   private let howItWorksPage = 2
+  private let completionHandoffDelay: TimeInterval = 0.32
 
   private var isSimulatorPage: Bool {
     currentPage == simulatorPage
   }
 
   private var shouldShowTopHeader: Bool {
-    currentPage != simulatorPage && currentPage < totalPages - 1
+    currentPage != simulatorPage
   }
 
   private var fallbackHowItWorksTotals: CalendarHeaderTotals {
@@ -93,21 +93,12 @@ struct OnboardingView: View {
             isActive: currentPage == 2,
             shouldShowConfetti: howItWorksShouldShowConfetti,
             shouldAnimateTotalFromPrevious: howItWorksShouldAnimateFromPrevious,
-            totalCardSeed: howItWorksTotalCardSeed
+            totalCardSeed: howItWorksTotalCardSeed,
+            isExiting: isCompletingPreAuth,
+            showsTitle: false
           )
           .tag(2)
 
-          GetStartedScreen(
-            onCreateAccount: {
-              onComplete()
-              onNavigateToSignup()
-            },
-            onLogin: {
-              onComplete()
-              onNavigateToLogin()
-            }
-          )
-          .tag(3)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .motionAnimation(.pageTransition, value: currentPage, reduceMotion: reduceMotion)
@@ -118,30 +109,26 @@ struct OnboardingView: View {
 
         // Bottom controls area - constrained for iPad
         if !isSimulatorPage {
-          VStack(spacing: Spacing.md) {
-            PageIndicator(totalPages: totalPages, currentPage: currentPage)
-
-            if currentPage < totalPages - 1 {
-              OnboardingButton(
-                title: String(localized: .commonContinue),
-                action: {
-                  MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-                    currentPage += 1
-                  }
-                }
-              )
-            }
-          }
-          .padding(.horizontal, Spacing.lg)
-          .adaptiveContentWidth()
-          .padding(.bottom, Spacing.xl)
-          .motionAnimation(.emphasis, value: currentPage, reduceMotion: reduceMotion)
+          bottomControls
         }
       }
+      .opacity(isCompletingPreAuth && currentPage != howItWorksPage ? 0 : 1)
+      .scaleEffect(isCompletingPreAuth && currentPage != howItWorksPage ? 0.985 : 1)
+      .offset(y: isCompletingPreAuth && currentPage != howItWorksPage ? -18 : 0)
+      .motionAnimation(.emphasis, value: isCompletingPreAuth, reduceMotion: reduceMotion)
+      .allowsHitTesting(!isCompletingPreAuth)
     }
     .safeAreaInset(edge: .top, spacing: 0) {
       if shouldShowTopHeader {
         topHeader
+          .opacity(isCompletingPreAuth ? 0 : 1)
+          .offset(
+            y: isCompletingPreAuth ? -10 : 0
+          )
+          .animation(
+            reduceMotion ? nil : .easeInOut(duration: 0.16),
+            value: isCompletingPreAuth
+          )
       }
     }
     .onAppear {
@@ -175,7 +162,8 @@ struct OnboardingView: View {
       isActive: false,
       shouldShowConfetti: false,
       shouldAnimateTotalFromPrevious: false,
-      totalCardSeed: howItWorksTotalCardSeed
+      totalCardSeed: howItWorksTotalCardSeed,
+      showsTitle: false
     )
     .frame(width: 1, height: 1)
     .clipped()
@@ -187,46 +175,116 @@ struct OnboardingView: View {
   @ViewBuilder
   private var topHeader: some View {
     ZStack(alignment: .center) {
-      HStack(spacing: Spacing.sm) {
-        Button {
-          MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-            currentPage = totalPages - 1
-          }
-        } label: {
-          Text(.onboardingSkip)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextSecondary)
+      HStack(alignment: .center, spacing: Spacing.sm) {
+        if currentPage == 0 {
+          Image("MarketingAppIcon")
+            .resizable()
+            .scaledToFit()
+            .frame(width: 54, height: 54)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityLabel(Text("Tidex"))
+        } else if currentPage == howItWorksPage {
+          Text(.onboardingHowTitle)
+            .font(.tidexScreenTitle)
+            .foregroundColor(.tidexTextPrimary)
             .lineLimit(1)
-            .minimumScaleFactor(0.9)
-            .allowsTightening(true)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xxxs)
+            .minimumScaleFactor(0.72)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .fixedSize(horizontal: true, vertical: false)
-        .buttonStyle(.plain)
-        .tidexGlass(shape: .capsule, interactive: true)
 
         Spacer(minLength: 0)
-      }
 
-      OnboardingCurrencyCapsuleSelector(
-        selectedCurrency: Binding(
-          get: { preAuthCurrency },
-          set: { selectedCurrency in
-            guard selectedCurrency != preAuthCurrency else { return }
-            preAuthCurrency = selectedCurrency
-            OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
-          }
+        OnboardingCurrencyCapsuleSelector(
+          selectedCurrency: Binding(
+            get: { preAuthCurrency },
+            set: { selectedCurrency in
+              guard selectedCurrency != preAuthCurrency else { return }
+              preAuthCurrency = selectedCurrency
+              OnboardingCurrencyCarryoverStore.writePreferredCurrency(selectedCurrency)
+            }
+          )
         )
-      )
-      .fixedSize(horizontal: true, vertical: false)
+        .fixedSize(horizontal: true, vertical: false)
+      }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .frame(maxWidth: .infinity)
     .padding(.horizontal, Spacing.lg)
-    .padding(.top, Spacing.xxxs)
-    .padding(.bottom, Spacing.sm)
+    .padding(.top, Spacing.lg)
+    .padding(.bottom, currentPage == howItWorksPage ? Spacing.sm : Spacing.xl)
     .background(Color.tidexBackground)
+  }
+
+  private var bottomControls: some View {
+    VStack(spacing: Spacing.sm) {
+      primaryBottomAction
+
+      PageIndicator(totalPages: totalPages, currentPage: currentPage)
+        .preAuthCompletionExitStep(
+          isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
+          delay: 0.205
+        )
+        .padding(.top, Spacing.xxs)
+    }
+    .padding(.horizontal, Spacing.lg)
+    .adaptiveContentWidth()
+    .padding(.bottom, Spacing.xs)
+    .motionAnimation(.emphasis, value: currentPage, reduceMotion: reduceMotion)
+  }
+
+  @ViewBuilder
+  private var primaryBottomAction: some View {
+    if currentPage < totalPages - 1 {
+      if currentPage == 0 {
+        firstPageActionRow
+      } else {
+        OnboardingButton(
+          title: String(localized: .commonContinue),
+          action: advanceToNextPage
+        )
+      }
+    } else {
+      OnboardingButton(
+        title: String(localized: .onboardingHowTakeControl),
+        action: completeAndNavigateToSignup
+      )
+      .preAuthCompletionExitStep(
+        isExiting: isCompletingPreAuth && currentPage == howItWorksPage,
+        delay: 0.165
+      )
+    }
+  }
+
+  private var firstPageActionRow: some View {
+    GeometryReader { geometry in
+      let availableWidth = max(0, geometry.size.width - Spacing.sm)
+      let skipWidth = availableWidth / 5
+      let continueWidth = availableWidth - skipWidth
+
+      HStack(spacing: Spacing.sm) {
+        Button {
+          UIImpactFeedbackGenerator(style: .light).impactOccurred()
+          completeAndNavigateToSignup()
+        } label: {
+          Image(systemName: "forward.end.fill")
+            .font(.system(size: 18, weight: .semibold))
+            .foregroundColor(.tidexTextSecondary)
+            .frame(width: skipWidth)
+            .frame(height: 54)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xl, style: .continuous))
+        }
+        .buttonStyle(SnappyButtonStyle())
+        .accessibilityLabel(Text(.onboardingSkip))
+
+        OnboardingButton(
+          title: String(localized: .commonContinue),
+          action: advanceToNextPage
+        )
+        .frame(width: continueWidth)
+      }
+    }
+    .frame(height: 54)
   }
 
   private func completeSimulatorAndAdvance(
@@ -243,13 +301,42 @@ struct OnboardingView: View {
     howItWorksTotalCardSeed += 1
 
     MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-      currentPage = min(currentPage + 1, totalPages - 1)
+      currentPage = min(currentPage + 1, howItWorksPage)
     }
   }
 
   private func skipFromSimulator() {
+    let baseline = simulatorBaselineTotals ?? fallbackHowItWorksTotals
+    isAdvancingFromSimulatorAdd = true
+    howItWorksFromTotals = baseline
+    howItWorksToTotals = baseline
+    howItWorksShouldShowConfetti = false
+    howItWorksShouldAnimateFromPrevious = false
+    howItWorksTotalCardSeed += 1
+
     MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
-      currentPage = totalPages - 1
+      currentPage = howItWorksPage
+    }
+  }
+
+  private func advanceToNextPage() {
+    MotionTokens.animate(.pageTransition, reduceMotion: reduceMotion) {
+      currentPage += 1
+    }
+  }
+
+  private func completeAndNavigateToSignup() {
+    guard !isCompletingPreAuth else { return }
+
+    guard !reduceMotion else {
+      onNavigateToSignup()
+      return
+    }
+
+    isCompletingPreAuth = true
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + completionHandoffDelay) {
+      onNavigateToSignup()
     }
   }
 
@@ -269,7 +356,6 @@ struct OnboardingView: View {
         howItWorksToTotals = baseline
         howItWorksShouldShowConfetti = false
         howItWorksShouldAnimateFromPrevious = false
-        howItWorksTotalCardSeed += 1
       }
     }
 
@@ -298,10 +384,29 @@ struct OnboardingView: View {
   }
 }
 
+private struct PreAuthCompletionExitStepModifier: ViewModifier {
+  let isExiting: Bool
+  let delay: TimeInterval
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(isExiting ? 0 : 1)
+      .offset(y: isExiting ? -24 : 0)
+      .animation(
+        .easeInOut(duration: 0.18).delay(delay),
+        value: isExiting
+      )
+  }
+}
+
+extension View {
+  fileprivate func preAuthCompletionExitStep(isExiting: Bool, delay: TimeInterval) -> some View {
+    modifier(PreAuthCompletionExitStepModifier(isExiting: isExiting, delay: delay))
+  }
+}
+
 #Preview {
   OnboardingView(
-    onComplete: {},
-    onNavigateToSignup: {},
-    onNavigateToLogin: {}
+    onNavigateToSignup: {}
   )
 }
