@@ -5,6 +5,8 @@ import SwiftUI
 struct SignupView: View {
   @ObservedObject var viewModel: SignupViewModel
   var onNavigateToLogin: (() -> Void)?
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var hasPlayedEntrance = false
 
   private enum ScrollTarget {
     case bottom
@@ -30,13 +32,20 @@ struct SignupView: View {
               Spacer(minLength: Spacing.xxl)
 
               VStack(spacing: Spacing.xl) {
-                AuthHeroVisual(logoSize: 132)
+                AuthHeroVisual(
+                  logoSize: 132,
+                  onLogoTap: restartOnboarding
+                )
+                .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)
 
                 messageStack
+                  .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.035)
 
                 inputStepContent(scrollProxy: scrollProxy)
+                  .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.07)
 
                 footerView
+                  .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.105)
               }
               .frame(maxWidth: 420)
               .padding(.horizontal, Spacing.xl)
@@ -51,6 +60,7 @@ struct SignupView: View {
             .frame(minHeight: geometry.size.height)
           }
           .scrollBounceBehavior(.basedOnSize)
+          .scrollDisabled(!viewModel.showEmailForm)
         }
       }
     }
@@ -61,10 +71,29 @@ struct SignupView: View {
     }
     .onAppear {
       viewModel.onNavigateToLogin = onNavigateToLogin
+      runEntranceAnimationIfNeeded()
     }
   }
 
   // MARK: - Header Section
+
+  private var restartOnboarding: () -> Void {
+    {
+      NotificationCenter.default.post(name: .restartPreAuthOnboarding, object: nil)
+    }
+  }
+
+  private func runEntranceAnimationIfNeeded() {
+    guard !hasPlayedEntrance else { return }
+    guard !reduceMotion else {
+      hasPlayedEntrance = true
+      return
+    }
+
+    DispatchQueue.main.async {
+      hasPlayedEntrance = true
+    }
+  }
 
   @ViewBuilder
   private var messageStack: some View {
@@ -166,6 +195,27 @@ struct SignupView: View {
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+  }
+}
+
+private struct SignupEntranceStepModifier: ViewModifier {
+  let isVisible: Bool
+  let delay: TimeInterval
+
+  func body(content: Content) -> some View {
+    content
+      .opacity(isVisible ? 1 : 0)
+      .offset(y: isVisible ? 0 : 22)
+      .animation(
+        .spring(response: 0.30, dampingFraction: 0.86).delay(delay),
+        value: isVisible
+      )
+  }
+}
+
+extension View {
+  fileprivate func signupEntranceStep(isVisible: Bool, delay: TimeInterval) -> some View {
+    modifier(SignupEntranceStepModifier(isVisible: isVisible, delay: delay))
   }
 }
 

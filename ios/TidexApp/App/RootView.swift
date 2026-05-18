@@ -6,7 +6,7 @@ import os
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
 extension Notification.Name {
-  static let debugRestartPreAuthOnboarding = Notification.Name("debugRestartPreAuthOnboarding")
+  static let restartPreAuthOnboarding = Notification.Name("restartPreAuthOnboarding")
 }
 
 /// Root view wrapper that ensures a seamless launch experience.
@@ -89,7 +89,7 @@ private struct RootContent: View {
     )
 
     ZStack {
-      TidexAppBackground()
+      rootBackground
 
       // Content based on app state
       Group {
@@ -99,18 +99,10 @@ private struct RootContent: View {
 
         case .unauthenticated:
           if !hasCompletedPreAuthOnboarding && !showAuthAfterOnboarding {
-            // Show pre-auth onboarding (screens 1-4)
+            // Show pre-auth onboarding (screens 1-3)
             OnboardingView(
-              onComplete: {
-                hasCompletedPreAuthOnboarding = true
-              },
               onNavigateToSignup: {
-                authDestination = .signup
-                showAuthAfterOnboarding = true
-              },
-              onNavigateToLogin: {
-                authDestination = .login
-                showAuthAfterOnboarding = true
+                completePreAuthOnboarding(destination: .signup)
               }
             )
             .transition(.opacity)
@@ -218,10 +210,8 @@ private struct RootContent: View {
     } message: {
       Text(.alertsStorageIssueMessage)
     }
-    .onReceive(NotificationCenter.default.publisher(for: .debugRestartPreAuthOnboarding)) { _ in
-      hasCompletedPreAuthOnboarding = false
-      showAuthAfterOnboarding = false
-      authDestination = .login
+    .onReceive(NotificationCenter.default.publisher(for: .restartPreAuthOnboarding)) { _ in
+      restartPreAuthOnboarding()
     }
     .onReceive(NotificationCenter.default.publisher(for: .inAppChatToastRequested)) {
       notification in
@@ -257,6 +247,17 @@ private struct RootContent: View {
     }
   }
 
+  @ViewBuilder
+  private var rootBackground: some View {
+    switch coordinator.appState {
+    case .unauthenticated:
+      Color.tidexBackground
+        .ignoresSafeArea()
+    default:
+      TidexAppBackground()
+    }
+  }
+
   private func showChatToast(_ payload: InAppChatToastPayload) {
     chatToastDismissTask?.cancel()
     withAnimation(.spring(duration: 0.32, bounce: 0.14)) {
@@ -276,6 +277,28 @@ private struct RootContent: View {
     withAnimation(.spring(duration: 0.28, bounce: 0.08)) {
       activeChatToast = nil
     }
+  }
+
+  private func completePreAuthOnboarding(destination: AuthDestination) {
+    performWithoutRootTransition {
+      hasCompletedPreAuthOnboarding = true
+      authDestination = destination
+      showAuthAfterOnboarding = true
+    }
+  }
+
+  private func restartPreAuthOnboarding() {
+    performWithoutRootTransition {
+      hasCompletedPreAuthOnboarding = false
+      showAuthAfterOnboarding = false
+      authDestination = .login
+    }
+  }
+
+  private func performWithoutRootTransition(_ updates: () -> Void) {
+    var transaction = Transaction(animation: nil)
+    transaction.disablesAnimations = true
+    withTransaction(transaction, updates)
   }
 }
 
