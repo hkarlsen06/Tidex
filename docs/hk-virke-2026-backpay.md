@@ -4,7 +4,7 @@ This runbook covers the one-off HK/Virke 2026 backpay adjustment and the later a
 
 ## Scope
 
-- Backpay script: `scripts/hk-virke-backpay.ts`
+- Backpay and operational wage-update script: `scripts/hk-virke-backpay.ts`
 - Package command: `pnpm tariff:hk-virke:backpay`
 - Backpay period: `2026-02-01` through `2026-05-31`
 - Payout date: `2026-06-15`
@@ -12,7 +12,12 @@ This runbook covers the one-off HK/Virke 2026 backpay adjustment and the later a
 - Adjustment marker: `hk_virke_2026_backpay`
 - Source page: `https://www.virke.no/tariff-og-lonn/finn-tariffavtale/landsoverenskomsten-hk/#sistenyttavtale`
 
-The script writes only `public.payroll_adjustments` rows. It does not edit shifts, recurring shifts, jobs, wage snapshots, or historical tariff versions.
+On `--apply`, the script writes:
+
+- `public.payroll_adjustments` rows for historical backpay.
+- One new `public.wage_snapshots` row effective `2026-06-01` for each active job whose current snapshot uses the HK/Virke tariff.
+
+It does not edit shifts, recurring shifts, jobs, existing wage snapshots, or historical tariff versions.
 
 ## Tariff Values
 
@@ -50,9 +55,14 @@ Latest dry run against production on `2026-05-18`:
 | Generated recurring shifts included | 12 |
 | Conflicting entries excluded | 17 |
 | Total gross backpay | 3166.05 kr |
+| Operational wage snapshots to create | 19 |
+| Existing `2026-06-01` wage snapshots | 0 |
+| Operational wage snapshots skipped without an increase | 0 |
 | Existing marker rows before apply | 0 |
 
-Eligibility includes legacy HK/Virke snapshots where `tariff_type_id IS NULL`. Production currently has 19 eligible jobs: 1 explicit `hk_retail` and 18 legacy `NULL` tariff snapshots. All current trinn 6 jobs in this run are legacy `NULL` snapshots.
+Eligibility includes legacy HK/Virke snapshots where `tariff_type_id IS NULL`. Production currently has 19 eligible jobs: 2 explicit `hk_retail` and 17 legacy `NULL` tariff snapshots. All current trinn 6 jobs in this run are legacy `NULL` snapshots.
+
+All 19 eligible jobs are active, non-archived jobs whose current wage snapshot should receive a new `2026-06-01` wage entry with `tariff_type_id = 'hk_retail'` and the new stored hourly wage for the same tariff level. No production jobs currently have that operational wage snapshot.
 
 ## Adjustment Row Review
 
@@ -107,6 +117,9 @@ Payout date: 2026-06-15
 Eligible jobs: 19
 Adjustment groups: 6
 Total gross backpay: 3166.05 kr
+Operational wage snapshots for 2026-06-01: 19
+Existing operational wage snapshots skipped: 0
+Operational wage snapshots skipped without an increase: 0
 No rows inserted. Re-run with --apply after approval.
 ```
 
@@ -139,7 +152,7 @@ pnpm tariff:hk-virke:backpay -- --apply
 
 The script refuses `--apply` before `2026-05-27`.
 
-After apply, verify that 6 rows exist:
+After apply, verify that 6 adjustment rows exist:
 
 ```sql
 select user_id, job_id, amount, currency, description,
@@ -152,6 +165,26 @@ where deleted_at is null
   and note ilike '%hk_virke_2026_backpay%'
 order by amount desc;
 ```
+
+Also verify that 19 operational wage snapshots were created for active HK/Virke jobs:
+
+```sql
+select ws.id, ws.user_id, ws.job_id, j.name as job_name,
+       ws.from_date, ws.hourly_wage, ws.wage_level, ws.tariff_type_id
+from public.wage_snapshots ws
+join public.jobs j on j.id = ws.job_id
+where ws.deleted_at is null
+  and j.deleted_at is null
+  and j.archived_at is null
+  and ws.from_date = date '2026-06-01'
+  and ws.tariff_type_id = 'hk_retail'
+  and ws.wage_level in (-2, -1, 1, 2, 3, 4, 5, 6)
+order by ws.user_id, j.name;
+```
+
+Expected rows: 19.
+
+These wage snapshots copy supplements, tax settings, and break settings from each job's current snapshot. They only replace the stored hourly wage and normalize legacy HK/Virke snapshots from `tariff_type_id IS NULL` to `tariff_type_id = 'hk_retail'`.
 
 ## Recovery
 
@@ -166,7 +199,18 @@ where deleted_at is null
   and note ilike '%hk_virke_2026_backpay%';
 ```
 
-The source of truth remains the database shifts, recurring shifts, jobs, and snapshots. The generated adjustment rows are amendable.
+The source of truth remains the database shifts, recurring shifts, jobs, and snapshots. The generated adjustment and wage snapshot rows are amendable.
+
+If the operational wage snapshots need to be removed, first capture the generated snapshot IDs from the verification query and soft-delete exactly those IDs:
+
+```sql
+update public.wage_snapshots
+set deleted_at = now()
+where deleted_at is null
+  and id in (
+    -- paste the verified generated wage_snapshot ids here
+  );
+```
 
 ## Adding The App-Facing Tariff Rates
 
