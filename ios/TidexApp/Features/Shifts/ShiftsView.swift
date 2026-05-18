@@ -83,6 +83,7 @@ private struct ListWeekGroup: Identifiable {
 struct ShiftsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   /// Binding to the selected tab for navigation (to switch to Add tab)
   @Binding var selectedTab: MainTabView.Tab
@@ -121,6 +122,10 @@ struct ShiftsView: View {
   @State private var deepLinkAction: AppCoordinator.ShiftDeepLinkAction = .open
   @State private var deepLinkHighlightDates: Set<String> = []
   @State private var deepLinkHighlightClearTask: Task<Void, Never>?
+
+  private var listSwipeActionHeight: CGFloat? {
+    dynamicTypeSize.isAccessibilitySize ? nil : ShiftCardMetrics.regularCardMinHeight
+  }
 
   // Share functionality state
   @State private var showingShareDestinationPicker = false
@@ -1609,8 +1614,12 @@ struct ShiftsView: View {
     )
     if viewModel.isCurrentMonth {
       let today = todayISO()
-      let hasShiftToday = filtered.contains { $0.shiftDate == today }
-      if !hasShiftToday {
+      if ShiftsListPlaceholderPolicy.shouldShowTodayPlaceholder(
+        isCurrentMonth: viewModel.isCurrentMonth,
+        filteredShifts: filtered,
+        eventCoverageByDate: viewModel.eventCoverageByDate,
+        todayISO: today
+      ) {
         items.append(.todayPlaceholder)
       }
     }
@@ -1678,9 +1687,8 @@ struct ShiftsView: View {
 
   @ViewBuilder
   private var shiftListContent: some View {
-    // ARCHITECTURE: Using native List with .swipeActions() for reliable gesture handling
-    // This is Apple's designed solution - no custom gesture conflicts with scrolling
-    // Styled with .listRowBackground() and .listRowSeparator(.hidden) for custom look
+    // Styled with .listRowBackground() and .listRowSeparator(.hidden) for custom look.
+    // Row swipe actions use SwipeableShiftCard so they match the dashboard featured cards.
     ScrollViewReader { proxy in
       List {
         if shouldShowListJobFilter {
@@ -1743,64 +1751,49 @@ struct ShiftsView: View {
   private func listItemRow(item: ShiftListItem) -> some View {
     switch item {
     case .shift(let shift):
-      shiftCardRow(shift: shift)
-        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-        .listRowBackground(Color.clear)
-        .listRowSeparator(.hidden)
-        // Native swipe actions - works perfectly with List scrolling
-        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-          Button {
-            selectionHaptic.selectionChanged()
-            // Open sheet directly in edit mode
-            shiftToEditDirectly = shift
-          } label: {
-            Label(String(localized: .shiftsActionsEdit), systemImage: "pencil")
-          }
-          .tint(.tidexBlue)
-        }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-          // Allow delete for both regular and virtual shifts
-          Button(role: .destructive) {
-            impactHaptic.impactOccurred()
-            shiftToDelete = shift
-            showDeleteConfirmation = true
-          } label: {
-            Label(String(localized: .shiftsActionsDelete), systemImage: "trash")
-          }
-          .tint(.red)
-        }
-
-    case .event(let event):
-      EventRowCard(
-        event: event.event,
-        coveredDateISO: event.coveredDateISO,
-        onTap: {
+      SwipeableShiftCard(
+        onEdit: {
           selectionHaptic.selectionChanged()
-          handleEventTapped(event.event)
-        }
-      )
+          shiftToEditDirectly = shift
+        },
+        onDelete: {
+          impactHaptic.impactOccurred()
+          shiftToDelete = shift
+          showDeleteConfirmation = true
+        },
+        actionHeight: listSwipeActionHeight
+      ) {
+        shiftCardRow(shift: shift)
+      }
       .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
       .listRowBackground(Color.clear)
       .listRowSeparator(.hidden)
-      .swipeActions(edge: .leading, allowsFullSwipe: true) {
-        Button {
+
+    case .event(let event):
+      SwipeableShiftCard(
+        onEdit: {
           selectionHaptic.selectionChanged()
           handleEventTapped(event.event, startInEditMode: true)
-        } label: {
-          Label(String(localized: .shiftsActionsEdit), systemImage: "pencil")
-        }
-        .tint(.tidexBlue)
-      }
-      .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-        Button(role: .destructive) {
+        },
+        onDelete: {
           impactHaptic.impactOccurred()
           eventToDelete = event.event
           showEventDeleteConfirmation = true
-        } label: {
-          Label(String(localized: .eventsDeleteButton), systemImage: "trash")
-        }
-        .tint(.red)
+        },
+        actionHeight: listSwipeActionHeight
+      ) {
+        EventRowCard(
+          event: event.event,
+          coveredDateISO: event.coveredDateISO,
+          onTap: {
+            selectionHaptic.selectionChanged()
+            handleEventTapped(event.event)
+          }
+        )
       }
+      .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+      .listRowBackground(Color.clear)
+      .listRowSeparator(.hidden)
 
     case .todayPlaceholder:
       TodayPlaceholderCard(onTap: {

@@ -39,6 +39,7 @@ struct SwipeableShiftCard<Content: View>: View {
   private let actionThreshold: CGFloat = 0.4
   /// Width of the action area
   private let actionWidth: CGFloat = 80
+  private let resetAnimationDuration: TimeInterval = 0.18
 
   init(
     onEdit: @escaping () -> Void,
@@ -217,21 +218,24 @@ struct SwipeableShiftCard<Content: View>: View {
     let fullySwipedRight = wasSwipingRight && (finalOffset >= thresholdOffset || velocity > 300)
     let fullySwipedLeft = wasSwipingLeft && (abs(finalOffset) >= thresholdOffset || velocity < -300)
 
-    // Animate back to center
-    withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+    let triggeredAction: (() -> Void)?
+    if fullySwipedRight {
+      triggeredAction = onEdit
+    } else if fullySwipedLeft && onDelete != nil {
+      triggeredAction = onDelete
+    } else {
+      triggeredAction = nil
+    }
+
+    // Animate back to center before mutating parent presentation state.
+    withAnimation(.easeOut(duration: resetAnimationDuration)) {
       offset = 0
     }
 
-    // Trigger actions
-    if fullySwipedRight {
+    if triggeredAction != nil {
       SwipeHaptics.impact.impactOccurred()
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        onEdit()
-      }
-    } else if fullySwipedLeft && onDelete != nil {
-      SwipeHaptics.impact.impactOccurred()
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-        onDelete?()
+      DispatchQueue.main.asyncAfter(deadline: .now() + resetAnimationDuration + 0.04) {
+        triggeredAction?()
       }
     }
   }
