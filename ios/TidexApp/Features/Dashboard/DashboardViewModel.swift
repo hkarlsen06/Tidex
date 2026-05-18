@@ -925,7 +925,22 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let detailBreakdowns = payableJobVariants.flatMap(\.jobBreakdowns)
 
     guard let nextPayoutDate = payableJobVariants.first?.payoutDate else {
-      return []
+      return [
+        PayrollCardVariant(
+          id: "default",
+          title: defaultTitle,
+          colorHex: nil,
+          badges: [],
+          currency: fallback.currency,
+          payoutDate: fallback.payrollDate,
+          gross: fallback.previousMonthGross,
+          net: fallback.previousMonthNet,
+          tax: fallback.previousMonthTax,
+          taxEnabled: fallback.previousMonthTaxEnabled,
+          hasPayrollAdjustments: fallback.previousMonthHasPayrollAdjustments,
+          jobBreakdowns: []
+        )
+      ]
     }
 
     let nextPayoutJobs = payableJobVariants.filter {
