@@ -3,6 +3,8 @@ import SwiftUI
 /// Card displaying previous month's earnings and payroll information
 /// Design matches NextPayrollCard from the Next.js app
 struct PayrollCard: View {
+  private static let centeredTrailingAmountOffset: CGFloat = 11
+
   let payrollDate: Date
   let label: String
   var labelColorHex: String? = nil
@@ -52,6 +54,10 @@ struct PayrollCard: View {
     !dynamicTypeSize.isAccessibilitySize
   }
 
+  private var shouldCenterTrailingAmount: Bool {
+    showPayout && !showBreakdown
+  }
+
   // MARK: - Body
 
   /// Whether to show the progress bar (valid progress between 1-100)
@@ -61,7 +67,7 @@ struct PayrollCard: View {
   }
 
   var body: some View {
-    ShiftCardContentLayout(centerTrailing: showPayout && !showBreakdown, topRowAlignment: .center) {
+    ShiftCardContentLayout(topRowAlignment: .center) {
       // Row 1: Label (leads with purpose, matches shift card title size)
       payrollLabelContent
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -123,6 +129,7 @@ struct PayrollCard: View {
           }
         }
         .foregroundColor(.tidexTextPrimary)
+        .offset(y: shouldCenterTrailingAmount ? Self.centeredTrailingAmountOffset : 0)
       } else {
         ZStack {
           Text("00 000")

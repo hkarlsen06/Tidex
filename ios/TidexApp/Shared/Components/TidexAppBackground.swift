@@ -7,19 +7,23 @@ struct TidexAppBackground: View {
   @Environment(\.colorScheme) private var colorScheme
 
   private var verticalTopOpacity: Double {
-    colorScheme == .dark ? 0.13 : 0.055
+    colorScheme == .dark ? 0.08 : 0.055
   }
 
   private var verticalMidOpacity: Double {
-    colorScheme == .dark ? 0.07 : 0.025
+    colorScheme == .dark ? 0.035 : 0.025
   }
 
   private var glowOpacityPrimary: Double {
-    colorScheme == .dark ? 0.16 : 0.06
+    colorScheme == .dark ? 0.09 : 0.06
   }
 
   private var glowOpacitySecondary: Double {
-    colorScheme == .dark ? 0.07 : 0.025
+    colorScheme == .dark ? 0.035 : 0.025
+  }
+
+  private var midGlowOpacity: Double {
+    colorScheme == .dark ? 0.025 : 0.02
   }
 
   private var primaryGlowRadius: CGFloat {
@@ -60,7 +64,7 @@ struct TidexAppBackground: View {
 
       RadialGradient(
         colors: [
-          Color.tidexBlue.opacity(colorScheme == .dark ? 0.055 : 0.02),
+          Color.tidexBlue.opacity(midGlowOpacity),
           Color.clear,
         ],
         center: UnitPoint(x: 0.5, y: 0.46),
