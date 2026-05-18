@@ -17,6 +17,7 @@
     "ios:l10n:search": "swift ios/Scripts/search-strings.swift",
     "ios:l10n:audit": "swift ios/Scripts/audit-strings.swift",
     "ios:l10n:validate": "swift ios/Scripts/validate-localization.swift",
+    "tariff:hk-virke:backpay": "pnpm dlx deno-bin@2.2.7 run --no-lock --allow-env --allow-net --config supabase/functions/deno.json scripts/hk-virke-backpay.ts",
     "screenshots": "./ios/ASConnectScreenshots/resize-screenshots.sh",
     "swiftlint": "sh -c 'for arg in \"$@\"; do if [ \"$arg\" = \"--fix\" ] || [ \"$arg\" = \"autocorrect\" ]; then echo \"swiftlint autocorrect is disabled in this repo. Use pnpm swift-format.\"; exit 1; fi; done; swiftlint lint \"$@\" && swift ios/Scripts/check-swift-imports.swift' --",
     "swiftlint:analyze": "sh -c 'if [ -n \"$SWIFTLINT_COMPILE_COMMANDS_PATH\" ]; then swiftlint analyze --config .swiftlint.yml --compile-commands \"$SWIFTLINT_COMPILE_COMMANDS_PATH\"; elif [ -n \"$SWIFTLINT_COMPILER_LOG_PATH\" ]; then swiftlint analyze --config .swiftlint.yml --compiler-log-path \"$SWIFTLINT_COMPILER_LOG_PATH\"; else echo \"Set SWIFTLINT_COMPILE_COMMANDS_PATH or SWIFTLINT_COMPILER_LOG_PATH\"; exit 1; fi'",

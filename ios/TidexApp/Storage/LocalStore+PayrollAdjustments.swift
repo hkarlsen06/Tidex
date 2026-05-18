@@ -58,7 +58,9 @@ extension LocalStoreActor {
       existing.descriptionText = adjustment.descriptionText
       existing.note = adjustment.note
       existing.curatedNote = adjustment.curatedNote
+      existing.curatedDescription = adjustment.curatedDescription
       existing.curatedLink = adjustment.curatedLink
+      existing.curatedLinkTitle = adjustment.curatedLinkTitle
       existing.earnedFromDate = adjustment.earnedFromDate
       existing.earnedToDate = adjustment.earnedToDate
       existing.payoutDate = adjustment.payoutDate
@@ -100,7 +102,9 @@ extension LocalStoreActor {
       description: description,
       note: note,
       curatedNote: nil,
+      curatedDescription: nil,
       curatedLink: nil,
+      curatedLinkTitle: nil,
       earnedFromDate: earnedFromDate.map { payrollAdjustmentDateFormatter.string(from: $0) },
       earnedToDate: earnedToDate.map { payrollAdjustmentDateFormatter.string(from: $0) },
       payoutDate: payrollAdjustmentDateFormatter.string(from: payoutDate),
@@ -122,7 +126,9 @@ extension LocalStoreActor {
       description: description,
       note: note,
       curatedNote: nil,
+      curatedDescription: nil,
       curatedLink: nil,
+      curatedLinkTitle: nil,
       earnedFromDate: earnedFromDate,
       earnedToDate: earnedToDate,
       payoutDate: payoutDate,
@@ -205,7 +211,9 @@ extension LocalStoreActor {
     existing.descriptionText = serverRow.description
     existing.note = serverRow.note
     existing.curatedNote = serverRow.curated_note
+    existing.curatedDescription = serverRow.curated_description
     existing.curatedLink = serverRow.curated_link
+    existing.curatedLinkTitle = serverRow.curated_link_title
     existing.earnedFromDate = serverRow.earned_from_date.flatMap { formatter.date(from: $0) }
     existing.earnedToDate = serverRow.earned_to_date.flatMap { formatter.date(from: $0) }
     existing.payoutDate = formatter.date(from: serverRow.payout_date) ?? existing.payoutDate

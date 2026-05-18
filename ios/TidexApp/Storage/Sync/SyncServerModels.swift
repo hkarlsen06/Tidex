@@ -192,7 +192,9 @@ struct SyncPayrollAdjustmentRow: Codable {
   let description: String
   let note: String?
   let curated_note: String?
+  let curated_description: String?
   let curated_link: String?
+  let curated_link_title: String?
   let earned_from_date: String?
   let earned_to_date: String?
   let payout_date: String
@@ -213,7 +215,9 @@ struct SyncPayrollAdjustmentRow: Codable {
       description: description,
       note: note,
       curated_note: curated_note,
+      curated_description: curated_description,
       curated_link: curated_link,
+      curated_link_title: curated_link_title,
       earned_from_date: earned_from_date,
       earned_to_date: earned_to_date,
       payout_date: payout_date,

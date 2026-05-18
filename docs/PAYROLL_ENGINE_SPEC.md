@@ -246,8 +246,10 @@ Payroll adjustments are payout-level amounts that are not tied to a single shift
 | `tax_treatment` | `text` | No | `gross_taxable` | One of: `gross_taxable`, `net_manual`, `excluded_from_tax_estimate` |
 | `description` | `text` | No | - | Short user-visible explanation |
 | `note` | `text` | Yes | `NULL` | Private user note |
-| `curated_note` | `text` | Yes | `NULL` | Optional Wagey-authored explanation |
+| `curated_note` | `text` | Yes | `NULL` | Optional Wagey-authored CTA text |
+| `curated_description` | `text` | Yes | `NULL` | Optional longer curated explanation shown after tapping the CTA |
 | `curated_link` | `text` | Yes | `NULL` | Optional source link for the curated explanation |
+| `curated_link_title` | `text` | Yes | `NULL` | Optional user-visible title for the curated source link |
 | `earned_from_date` | `date` | Yes | `NULL` | Optional earned-period start |
 | `earned_to_date` | `date` | Yes | `NULL` | Optional earned-period end |
 | `payout_date` | `date` | No | - | Payroll date whose totals include this adjustment |
