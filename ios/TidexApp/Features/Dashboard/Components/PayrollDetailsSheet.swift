@@ -28,6 +28,7 @@ struct PayrollDetailsSheet: View {
   @State private var editedAdjustmentsById: [String: PayrollAdjustment] = [:]
   @State private var deletedAdjustmentIds: Set<String> = []
   @State private var adjustmentFormContext: PayrollAdjustmentFormContext?
+  @State private var curatedAdjustmentContext: PayrollAdjustmentCuratedContext?
 
   private var totalNet: Double {
     displayedBreakdowns.reduce(0) { $0 + displayAmount(for: $1) }
@@ -90,6 +91,11 @@ struct PayrollDetailsSheet: View {
       )
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
+    }
+    .sheet(item: $curatedAdjustmentContext) { context in
+      PayrollAdjustmentCuratedSheet(context: context)
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
     }
   }
 
@@ -566,7 +572,22 @@ struct PayrollDetailsSheet: View {
       !text.isEmpty
     {
       let linkText = adjustment.curated_link?.trimmingCharacters(in: .whitespacesAndNewlines)
-      if let linkText, let url = URL(string: linkText) {
+      let description = adjustment.curated_description?.trimmingCharacters(
+        in: .whitespacesAndNewlines)
+      if let description, !description.isEmpty {
+        Button {
+          curatedAdjustmentContext = PayrollAdjustmentCuratedContext(
+            adjustment: adjustment,
+            description: description,
+            linkURL: linkText.flatMap(URL.init(string:)),
+            linkTitle: adjustment.curated_link_title?.trimmingCharacters(
+              in: .whitespacesAndNewlines)
+          )
+        } label: {
+          curatedAdjustmentText(text)
+        }
+        .buttonStyle(.plain)
+      } else if let linkText, let url = URL(string: linkText) {
         Link(destination: url) {
           curatedAdjustmentText(text)
         }
@@ -584,6 +605,7 @@ struct PayrollDetailsSheet: View {
       .frame(maxWidth: .infinity, alignment: .leading)
       .fixedSize(horizontal: false, vertical: true)
       .padding(.horizontal, CornerRadius.lg)
+      .padding(.bottom, Spacing.xs)
   }
 
   private func earningsRow(
@@ -689,6 +711,70 @@ private struct PayrollAdjustmentFormContext: Identifiable {
   let breakdown: PayrollCardJobBreakdown
   let jobOptions: [PayrollAdjustmentJobOption]
   let adjustment: PayrollAdjustment?
+}
+
+private struct PayrollAdjustmentCuratedContext: Identifiable {
+  let id = UUID()
+  let adjustment: PayrollAdjustment
+  let description: String
+  let linkURL: URL?
+  let linkTitle: String?
+}
+
+private struct PayrollAdjustmentCuratedSheet: View {
+  let context: PayrollAdjustmentCuratedContext
+
+  @Environment(\.dismiss) private var dismiss
+
+  private var displayLinkTitle: String {
+    let trimmed = context.linkTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    return trimmed.isEmpty
+      ? String(localized: .dashboardPayrollDetailsCuratedLinkFallback)
+      : trimmed
+  }
+
+  var body: some View {
+    NavigationStack {
+      ScrollView {
+        VStack(alignment: .leading, spacing: Spacing.lg) {
+          Text(context.description)
+            .font(.tidexBody)
+            .foregroundColor(.tidexTextPrimary)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+          if let linkURL = context.linkURL {
+            Link(destination: linkURL) {
+              HStack(spacing: Spacing.xxs) {
+                Text(displayLinkTitle)
+                Image(systemName: "arrow.up.right")
+                  .font(.tidexFootnote)
+              }
+              .font(.tidexLabel)
+              .foregroundColor(.tidexBlue)
+              .padding(.vertical, Spacing.xs)
+              .frame(maxWidth: .infinity)
+              .background(Color.tidexBlue.opacity(0.08))
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+            }
+          }
+        }
+        .padding(.horizontal, Spacing.lg)
+        .padding(.top, Spacing.lg)
+        .padding(.bottom, Spacing.xxl)
+      }
+      .background(Color.tidexBackground.ignoresSafeArea())
+      .navigationTitle(context.adjustment.description)
+      .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .topBarTrailing) {
+          Button(String(localized: .commonDone)) {
+            dismiss()
+          }
+        }
+      }
+    }
+  }
 }
 
 private struct PayrollAdjustmentFormSheet: View {

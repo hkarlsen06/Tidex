@@ -19,6 +19,12 @@ Tidex is now an iOS-only product. The repository still includes supporting publi
 
 The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`.
 
+## Supabase MCP Tool Discovery
+
+Supabase MCP tools may be lazy-loaded in Codex sessions. For any Supabase task, first call `tool_search` for `Supabase execute_sql get_project_url list_tables` so the `mcp__supabase__.*` tools become available.
+
+Prefer `mcp__supabase__.execute_sql` for database inspection and narrow, targeted data fixes when it is available. Use the Supabase JS client or ad hoc service-role scripts only as a fallback when MCP tools are unavailable or insufficient, and explain why.
+
 ## Repository Structure
 
 ```
