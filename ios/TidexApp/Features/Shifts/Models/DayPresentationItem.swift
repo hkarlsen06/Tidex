@@ -57,3 +57,16 @@ enum DayPresentationItem: Identifiable, Equatable {
     }
   }
 }
+
+enum ShiftsListPlaceholderPolicy {
+  static func shouldShowTodayPlaceholder(
+    isCurrentMonth: Bool,
+    filteredShifts: [ShiftWithComputations],
+    eventCoverageByDate: [String: [EventPresentation]],
+    todayISO: String
+  ) -> Bool {
+    guard isCurrentMonth else { return false }
+    guard !filteredShifts.contains(where: { $0.shiftDate == todayISO }) else { return false }
+    return eventCoverageByDate[todayISO]?.isEmpty != false
+  }
+}
