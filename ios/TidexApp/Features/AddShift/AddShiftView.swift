@@ -115,11 +115,6 @@ struct AddShiftView: View {
                   .offset(y: tabTransitionOffset)
                   .opacity(tabTransitionOpacity)
                 }
-                .monthSwipeGesture(
-                  onSwipeLeft: { viewModel.goToNextMonth() },
-                  onSwipeRight: { viewModel.goToPreviousMonth() },
-                  isEnabled: true
-                )
                 .refreshable {
                   await refreshAddContent()
                 }
@@ -544,6 +539,11 @@ private struct RecurringShiftContent: View {
       titleSection
 
       RecurringCalendarView(viewModel: viewModel)
+        .monthSwipeGesture(
+          onSwipeLeft: { viewModel.goToNextMonth() },
+          onSwipeRight: { viewModel.goToPreviousMonth() },
+          isEnabled: true
+        )
 
       // Chip bar showing selected anchor days
       WeekdayChipBar(
@@ -655,6 +655,11 @@ private struct EventContent: View {
           onToggleDateOverride: viewModel.toggleEventCalendarDate,
           showSelectionCheckmark: false,
           selectionEmphasis: .subtle
+        )
+        .monthSwipeGesture(
+          onSwipeLeft: { viewModel.goToNextMonth() },
+          onSwipeRight: { viewModel.goToPreviousMonth() },
+          isEnabled: true
         )
         .simultaneousGesture(
           TapGesture().onEnded {

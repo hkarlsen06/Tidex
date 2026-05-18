@@ -30,6 +30,7 @@ struct SwipeableShiftCard<Content: View>: View {
   let content: () -> Content
   let onEdit: () -> Void
   let onDelete: (() -> Void)?
+  let actionHeight: CGFloat?
 
   @State private var offset: CGFloat = 0
   @State private var hasTriggeredHaptic = false
@@ -42,20 +43,22 @@ struct SwipeableShiftCard<Content: View>: View {
   init(
     onEdit: @escaping () -> Void,
     onDelete: (() -> Void)? = nil,
+    actionHeight: CGFloat? = nil,
     @ViewBuilder content: @escaping () -> Content
   ) {
     self.onEdit = onEdit
     self.onDelete = onDelete
+    self.actionHeight = actionHeight
     self.content = content
   }
 
   var body: some View {
-    ZStack(alignment: .center) {
+    ZStack(alignment: .top) {
       // Background actions - positioned behind content
       HStack(spacing: 0) {
         // Left action (Edit) - revealed on swipe right
         editActionBackground
-          .frame(width: actionWidth)
+          .frame(width: actionWidth, height: actionHeight)
           .opacity(offset > 0 ? 1 : 0)
 
         Spacer()
@@ -63,10 +66,11 @@ struct SwipeableShiftCard<Content: View>: View {
         // Right action (Delete) - revealed on swipe left
         if onDelete != nil {
           deleteActionBackground
-            .frame(width: actionWidth)
+            .frame(width: actionWidth, height: actionHeight)
             .opacity(offset < 0 ? 1 : 0)
         }
       }
+      .frame(maxHeight: .infinity, alignment: .top)
 
       // Main content with offset for swipe animation
       content()
