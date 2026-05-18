@@ -63,6 +63,34 @@ type AdjustmentInsert = {
   payout_date: string;
 };
 
+type WageSnapshotInsert = {
+  user_id: string;
+  job_id: string;
+  from_date: string;
+  hourly_wage: number;
+  wage_level: number;
+  tariff_type_id: "hk_retail";
+  supplements: WageSnapshot["supplements"];
+  tax_enabled: boolean;
+  tax_percentage: number;
+  break_enabled: boolean;
+  break_method: BreakMethod;
+  break_threshold_hours: number;
+  break_deduction_minutes: number;
+};
+
+type OperationalWageUpdate = {
+  jobId: string;
+  userId: string;
+  jobName: string;
+  sourceSnapshotId: string;
+  wageLevel: number;
+  oldHourlyWage: number;
+  newHourlyWage: number;
+  legacyTariffType: boolean;
+  insert: WageSnapshotInsert;
+};
+
 type BackpayLine = {
   source: "shift" | "recurring";
   userId: string;
@@ -720,6 +748,80 @@ function toAdjustment(group: BackpayGroup, payoutDate: string): AdjustmentInsert
   };
 }
 
+function buildOperationalWageUpdates(
+  jobs: JobRow[],
+  snapshotsByUserId: Map<string, WageSnapshot[]>,
+  defaultJobByUserId: Map<string, string>,
+  eligibleJobKeys: Set<string>,
+  eligibilityDate: string,
+): {
+  updates: OperationalWageUpdate[];
+  skippedExisting: number;
+  skippedNotIncreased: number;
+} {
+  const updates: OperationalWageUpdate[] = [];
+  let skippedExisting = 0;
+  let skippedNotIncreased = 0;
+
+  for (const job of jobs) {
+    if (job.deleted_at !== null || job.archived_at !== null) continue;
+    if (!eligibleJobKeys.has(jobKey(job.user_id, job.id))) continue;
+
+    const userSnapshots = snapshotsByUserId.get(job.user_id) ?? [];
+    const jobSnapshots = snapshotsForJob(
+      userSnapshots,
+      job.id,
+      defaultJobByUserId.get(job.user_id) ?? null,
+    );
+
+    if (jobSnapshots.some((snapshot) => snapshot.from_date === JUNE_OPERATIONAL_TARIFF_DATE)) {
+      skippedExisting += 1;
+      continue;
+    }
+
+    const currentSnapshot = snapshotForDate(eligibilityDate, jobSnapshots);
+    if (!currentSnapshot || !isHkVirkeTariffSnapshot(currentSnapshot, false)) continue;
+
+    const wageLevel = currentSnapshot.wage_level;
+    if (wageLevel === null) continue;
+
+    const targetRate = targetRateFor(wageLevel, JUNE_OPERATIONAL_TARIFF_DATE);
+    if (targetRate === null) continue;
+    if (targetRate <= currentSnapshot.hourly_wage) {
+      skippedNotIncreased += 1;
+      continue;
+    }
+
+    updates.push({
+      jobId: job.id,
+      userId: job.user_id,
+      jobName: job.name,
+      sourceSnapshotId: currentSnapshot.id,
+      wageLevel,
+      oldHourlyWage: currentSnapshot.hourly_wage,
+      newHourlyWage: targetRate,
+      legacyTariffType: currentSnapshot.tariff_type_id === null,
+      insert: {
+        user_id: job.user_id,
+        job_id: job.id,
+        from_date: JUNE_OPERATIONAL_TARIFF_DATE,
+        hourly_wage: targetRate,
+        wage_level: wageLevel,
+        tariff_type_id: "hk_retail",
+        supplements: currentSnapshot.supplements,
+        tax_enabled: currentSnapshot.tax_enabled,
+        tax_percentage: currentSnapshot.tax_percentage,
+        break_enabled: currentSnapshot.break_enabled,
+        break_method: currentSnapshot.break_method,
+        break_threshold_hours: currentSnapshot.break_threshold_hours,
+        break_deduction_minutes: currentSnapshot.break_deduction_minutes,
+      },
+    });
+  }
+
+  return { updates, skippedExisting, skippedNotIncreased };
+}
+
 async function main() {
   const { apply } = parseRunMode(Deno.args);
   validateRunConfig(RUN_CONFIG, apply);
@@ -862,9 +964,17 @@ async function main() {
   const groups = groupLines(lines, jobsById, settingsByUserId);
   const adjustments = groups.map((group) => toAdjustment(group, RUN_CONFIG.payoutDate));
   adjustments.forEach(validateAdjustmentPayload);
+  const operationalWages = buildOperationalWageUpdates(
+    jobs,
+    snapshotsByUserId,
+    defaultJobByUserId,
+    eligibleJobKeys,
+    eligibilityDate,
+  );
 
   let inserted = 0;
   let skippedExisting = 0;
+  let wageSnapshotsInserted = 0;
 
   if (apply && adjustments.length > 0) {
     for (const adjustment of adjustments) {
@@ -895,6 +1005,14 @@ async function main() {
     }
   }
 
+  if (apply && operationalWages.updates.length > 0) {
+    const { error } = await supabase.from("wage_snapshots").insert(
+      operationalWages.updates.map((update) => update.insert),
+    );
+    if (error) throw new Error(error.message);
+    wageSnapshotsInserted = operationalWages.updates.length;
+  }
+
   const totalAmount = roundCurrency(groups.reduce((sum, group) => sum + group.amount, 0));
   const result = {
     mode: apply ? "apply" : "dry-run",
@@ -913,6 +1031,20 @@ async function main() {
     totalAmount,
     inserted,
     skippedExisting,
+    operationalWageSnapshots: operationalWages.updates.length,
+    operationalWageSnapshotsInserted: wageSnapshotsInserted,
+    operationalWageSnapshotsSkippedExisting: operationalWages.skippedExisting,
+    operationalWageSnapshotsSkippedNotIncreased: operationalWages.skippedNotIncreased,
+    operationalWageUpdates: operationalWages.updates.map((update) => ({
+      userId: update.userId,
+      jobId: update.jobId,
+      jobName: update.jobName,
+      sourceSnapshotId: update.sourceSnapshotId,
+      wageLevel: update.wageLevel,
+      oldHourlyWage: update.oldHourlyWage,
+      newHourlyWage: update.newHourlyWage,
+      legacyTariffType: update.legacyTariffType,
+    })),
     adjustments,
   };
 
@@ -933,9 +1065,19 @@ async function main() {
   console.log(`Recurring shifts included: ${result.recurringShifts}`);
   console.log(`Conflicting entries excluded: ${result.excludedConflicts}`);
   console.log(`Total gross backpay: ${result.totalAmount.toFixed(2)} ${DEFAULT_CURRENCY}`);
+  console.log(
+    `Operational wage snapshots for ${JUNE_OPERATIONAL_TARIFF_DATE}: ${result.operationalWageSnapshots}`,
+  );
+  console.log(
+    `Existing operational wage snapshots skipped: ${result.operationalWageSnapshotsSkippedExisting}`,
+  );
+  console.log(
+    `Operational wage snapshots skipped without an increase: ${result.operationalWageSnapshotsSkippedNotIncreased}`,
+  );
   if (apply) {
     console.log(`Inserted: ${inserted}`);
     console.log(`Skipped existing: ${skippedExisting}`);
+    console.log(`Wage snapshots inserted: ${wageSnapshotsInserted}`);
   } else {
     console.log("No rows inserted. Re-run with --apply after approval.");
   }
