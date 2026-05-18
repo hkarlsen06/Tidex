@@ -2,7 +2,29 @@ import Foundation
 
 /// Resolves onboarding currency defaults and wage presets from locale.
 enum OnboardingCurrencyResolver {
-  /// Region-first map to supported currency symbols.
+  /// ISO 4217 currency codes mapped to supported Tidex display symbols.
+  private static let currencyCodeToSymbol: [String: String] = [
+    "NOK": "kr",
+    "SEK": "kr",
+    "DKK": "kr",
+    "USD": "$",
+    "CAD": "C$",
+    "AUD": "A$",
+    "SGD": "S$",
+    "EUR": "€",
+    "GBP": "£",
+    "JPY": "¥",
+    "KRW": "₩",
+    "INR": "₹",
+    "CZK": "Kč",
+    "PLN": "zł",
+    "RUB": "₽",
+    "BRL": "R$",
+    "ZAR": "R",
+    "THB": "฿",
+  ]
+
+  /// Region fallback for supported symbols when Foundation currency metadata is unavailable.
   private static let regionToCurrency: [String: String] = [
     // Krone
     "NO": "kr",
@@ -51,6 +73,13 @@ enum OnboardingCurrencyResolver {
   ]
 
   static func detectDefaultCurrency(locale: Locale = .current) -> String {
+    if let currencyCode = locale.currency?.identifier.uppercased(),
+      let currencySymbol = currencyCodeToSymbol[currencyCode],
+      isSupportedCurrency(currencySymbol)
+    {
+      return currencySymbol
+    }
+
     if let regionCode = locale.region?.identifier,
       let regionCurrency = regionToCurrency[regionCode],
       isSupportedCurrency(regionCurrency)
