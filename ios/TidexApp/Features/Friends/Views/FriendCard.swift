@@ -31,6 +31,7 @@ struct FriendCard: View {
   let isRefreshing: Bool
   let onChatTap: () -> Void
   let onCalendarTap: () -> Void
+  var onProfileRequested: (() -> Void)?
   var isCalendarAvailable = true
   var isOpeningMessage = false
   var unreadMessageCount = 0
@@ -42,20 +43,21 @@ struct FriendCard: View {
     ZStack(alignment: .topTrailing) {
       VStack(spacing: 0) {
         HStack(spacing: Spacing.sm) {
-          Button(action: onChatTap) {
-            CompactFriendIdentityRow(
-              sharer: sharer,
-              unreadMessageCount: unreadMessageCount,
-              messagePreview: messagePreview,
-              isTyping: isTyping
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
+          CompactFriendIdentityRow(
+            sharer: sharer,
+            unreadMessageCount: unreadMessageCount,
+            messagePreview: messagePreview,
+            isTyping: isTyping,
+            onAvatarTap: onProfileRequested,
+            onContentTap: onChatTap,
+            onLongPress: onProfileRequested
+          )
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .contentShape(Rectangle())
           .allowsHitTesting(!isOpeningMessage)
           .accessibilityLabel(Text(verbatim: "\(sharer.displayName) chat"))
           .accessibilityHint(Text(.friendsChatMessageAction))
+          .accessibilityAddTraits(.isButton)
 
           if isCalendarAvailable {
             Color.clear
@@ -87,6 +89,9 @@ struct FriendCard: View {
           }
           .contentShape(Rectangle())
           .onTapGesture(perform: onChatTap)
+          .onLongPressGesture {
+            onProfileRequested?()
+          }
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)

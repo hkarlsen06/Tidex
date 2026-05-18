@@ -107,6 +107,40 @@ final class LocalThreadState {
   }
 }
 
+// MARK: - Local Thread Feed Placement
+
+@Model
+final class LocalThreadFeedPlacement {
+  @Attribute(.unique)
+  var compositeKey: String
+  var viewerUserId: String
+  var friendUserId: String
+  var threadId: String?
+  var baselineLastMessageId: String?
+  var baselineLastMessageAt: Date?
+  var createdAt: Date
+  var updatedAt: Date
+
+  init(
+    viewerUserId: String,
+    friendUserId: String,
+    threadId: String?,
+    baselineLastMessageId: String?,
+    baselineLastMessageAt: Date?,
+    createdAt: Date = Date(),
+    updatedAt: Date = Date()
+  ) {
+    self.compositeKey = "\(viewerUserId):\(friendUserId)"
+    self.viewerUserId = viewerUserId
+    self.friendUserId = friendUserId
+    self.threadId = threadId
+    self.baselineLastMessageId = baselineLastMessageId
+    self.baselineLastMessageAt = baselineLastMessageAt
+    self.createdAt = createdAt
+    self.updatedAt = updatedAt
+  }
+}
+
 // MARK: - Local Message
 
 @Model

@@ -13,6 +13,7 @@ final class FriendsListOrderingTests: XCTestCase {
     let ordering = FriendsListOrdering(
       typingUserIds: [],
       unreadChatUserIds: ["older-message"],
+      bottomedUserIds: [],
       chatPreviewsByUserId: [
         "older-message": FriendCardMessagePreview(
           text: "Unread",
@@ -53,6 +54,7 @@ final class FriendsListOrderingTests: XCTestCase {
     let ordering = FriendsListOrdering(
       typingUserIds: [],
       unreadChatUserIds: [],
+      bottomedUserIds: [],
       chatPreviewsByUserId: [:],
       shiftPreviews: [
         "upcoming": makeShiftPreview(
@@ -88,6 +90,7 @@ final class FriendsListOrderingTests: XCTestCase {
     let ordering = FriendsListOrdering(
       typingUserIds: [],
       unreadChatUserIds: [],
+      bottomedUserIds: [],
       chatPreviewsByUserId: [
         "hidden-chat": FriendCardMessagePreview(
           text: "Hey",
@@ -133,6 +136,7 @@ final class FriendsListOrderingTests: XCTestCase {
     let ordering = FriendsListOrdering(
       typingUserIds: ["typing"],
       unreadChatUserIds: ["unread"],
+      bottomedUserIds: [],
       chatPreviewsByUserId: [
         "typing": FriendCardMessagePreview(
           text: "Typing…",
@@ -155,6 +159,163 @@ final class FriendsListOrderingTests: XCTestCase {
     )
 
     XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["typing", "recent", "unread"])
+  }
+
+  func testBottomedMessageActiveFriendSortsBelowNonBottomedUsers() {
+    let users = [
+      makeUser(id: "bottomed", firstName: "Bottomed"),
+      makeUser(id: "recent", firstName: "Recent"),
+      makeUser(id: "shift", firstName: "Shift"),
+    ]
+
+    let ordering = FriendsListOrdering(
+      typingUserIds: [],
+      unreadChatUserIds: ["bottomed"],
+      bottomedUserIds: ["bottomed"],
+      chatPreviewsByUserId: [
+        "bottomed": FriendCardMessagePreview(
+          text: "Unread",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          state: .incomingUnread
+        ),
+        "recent": FriendCardMessagePreview(
+          text: "Seen",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_200),
+          state: .incomingOpened
+        ),
+      ],
+      shiftPreviews: [
+        "shift": makeShiftPreview(
+          sharerId: "shift",
+          shiftDate: "2026-03-18",
+          startTime: "08:00",
+          endTime: "16:00",
+          status: .active
+        )
+      ],
+      isLoadingShiftPreviews: false
+    )
+
+    XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["recent", "shift", "bottomed"])
+  }
+
+  func testBottomedStateDoesNotDisturbNonBottomedOrdering() {
+    let users = [
+      makeUser(id: "older", firstName: "Older"),
+      makeUser(id: "bottomed", firstName: "Bottomed"),
+      makeUser(id: "newer", firstName: "Newer"),
+    ]
+
+    let ordering = FriendsListOrdering(
+      typingUserIds: [],
+      unreadChatUserIds: [],
+      bottomedUserIds: ["bottomed"],
+      chatPreviewsByUserId: [
+        "older": FriendCardMessagePreview(
+          text: "Older",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_100),
+          state: .incomingOpened
+        ),
+        "bottomed": FriendCardMessagePreview(
+          text: "Bottomed",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          state: .incomingOpened
+        ),
+        "newer": FriendCardMessagePreview(
+          text: "Newer",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_200),
+          state: .incomingOpened
+        ),
+      ],
+      shiftPreviews: [:],
+      isLoadingShiftPreviews: false
+    )
+
+    XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["newer", "older", "bottomed"])
+  }
+
+  func testMultipleBottomedUsersKeepExistingRelativeOrdering() {
+    let users = [
+      makeUser(id: "bottomed-older", firstName: "Bottomed Older"),
+      makeUser(id: "normal", firstName: "Normal"),
+      makeUser(id: "bottomed-newer", firstName: "Bottomed Newer"),
+    ]
+
+    let ordering = FriendsListOrdering(
+      typingUserIds: [],
+      unreadChatUserIds: [],
+      bottomedUserIds: ["bottomed-older", "bottomed-newer"],
+      chatPreviewsByUserId: [
+        "bottomed-older": FriendCardMessagePreview(
+          text: "Older",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_100),
+          state: .incomingOpened
+        ),
+        "normal": FriendCardMessagePreview(
+          text: "Normal",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_150),
+          state: .incomingOpened
+        ),
+        "bottomed-newer": FriendCardMessagePreview(
+          text: "Newer",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          state: .incomingOpened
+        ),
+      ],
+      shiftPreviews: [:],
+      isLoadingShiftPreviews: false
+    )
+
+    XCTAssertEqual(
+      ordering.sortedSharers(users).map(\.id),
+      ["normal", "bottomed-newer", "bottomed-older"]
+    )
+  }
+
+  func testHiddenPromotedMessageUserCanBeBottomedWithinVisibleFeed() {
+    let visible = [
+      makeUser(id: "visible", firstName: "Visible", hidden: false)
+    ]
+    let hidden = [
+      makeUser(id: "hidden-chat", firstName: "Hidden Chat", hidden: true),
+      makeUser(id: "hidden-shift", firstName: "Hidden Shift", hidden: true),
+    ]
+
+    let ordering = FriendsListOrdering(
+      typingUserIds: [],
+      unreadChatUserIds: [],
+      bottomedUserIds: ["hidden-chat"],
+      chatPreviewsByUserId: [
+        "hidden-chat": FriendCardMessagePreview(
+          text: "Hey",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          state: .incomingOpened
+        )
+      ],
+      shiftPreviews: [
+        "visible": makeShiftPreview(
+          sharerId: "visible",
+          shiftDate: "2026-03-18",
+          startTime: "08:00",
+          endTime: "16:00",
+          status: .active
+        ),
+        "hidden-shift": makeShiftPreview(
+          sharerId: "hidden-shift",
+          shiftDate: "2026-03-18",
+          startTime: "08:00",
+          endTime: "16:00",
+          status: .active
+        ),
+      ],
+      isLoadingShiftPreviews: false
+    )
+
+    XCTAssertEqual(
+      ordering.visibleSharers(visible: visible, hidden: hidden).map(\.id),
+      ["visible", "hidden-chat"]
+    )
+    XCTAssertEqual(ordering.hiddenDisclosureSharers(hidden).map(\.id), ["hidden-shift"])
   }
 
   func testCalendarAvailabilityHidesChatOnlyUsers() {

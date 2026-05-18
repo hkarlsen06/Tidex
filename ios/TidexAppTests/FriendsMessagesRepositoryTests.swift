@@ -11,6 +11,7 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     let schema = Schema([
       LocalThread.self,
       LocalThreadState.self,
+      LocalThreadFeedPlacement.self,
       LocalMessage.self,
       LocalMessageAttachment.self,
       LocalMessageReaction.self,
@@ -79,6 +80,78 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(threads.map(\.id), ["thread-newer", "thread-older"])
     XCTAssertEqual(
       repository.getThreadState(threadId: "thread-newer", viewerUserId: viewerUserId)?.muted, true)
+  }
+
+  func testFriendFeedPlacementPersistsWhileBaselineMessageIsUnchanged() async throws {
+    let repository = try makeRepository()
+    await repository.saveThread(makeThread(lastMessageId: "message-1"), for: viewerUserId)
+
+    await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
+
+    XCTAssertEqual(
+      await repository.getActiveBottomedFriendIds(for: viewerUserId), Set(["friend-1"]))
+  }
+
+  func testFriendFeedPlacementCanBeClearedManually() async throws {
+    let repository = try makeRepository()
+    await repository.saveThread(makeThread(lastMessageId: "message-1"), for: viewerUserId)
+
+    await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
+    await repository.clearFriendFeedPlacement(friendUserId: "friend-1", viewerUserId: viewerUserId)
+
+    XCTAssertEqual(await repository.getActiveBottomedFriendIds(for: viewerUserId), Set<String>())
+  }
+
+  func testFriendFeedPlacementClearsWhenThreadLastMessageChanges() async throws {
+    let repository = try makeRepository()
+    await repository.saveThread(makeThread(lastMessageId: "message-1"), for: viewerUserId)
+
+    await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
+    await repository.saveThread(
+      makeThread(
+        lastMessageId: "message-2",
+        lastMessageAt: Date(timeIntervalSince1970: 1_700_000_100)
+      ),
+      for: viewerUserId
+    )
+
+    XCTAssertEqual(await repository.getActiveBottomedFriendIds(for: viewerUserId), Set<String>())
+  }
+
+  func testFriendFeedPlacementSurvivesUnchangedThreadRefresh() async throws {
+    let repository = try makeRepository()
+    let lastMessageAt = Date(timeIntervalSince1970: 1_700_000_050)
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-1", lastMessageAt: lastMessageAt),
+      for: viewerUserId
+    )
+
+    await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-1", lastMessageAt: lastMessageAt),
+      for: viewerUserId
+    )
+
+    XCTAssertEqual(
+      await repository.getActiveBottomedFriendIds(for: viewerUserId), Set(["friend-1"]))
+  }
+
+  func testFriendFeedPlacementSurvivesLastMessageIdChangeAtSameTimestamp() async throws {
+    let repository = try makeRepository()
+    let lastMessageAt = Date(timeIntervalSince1970: 1_700_000_050)
+    await repository.saveThread(
+      makeThread(lastMessageId: "local-message-1", lastMessageAt: lastMessageAt),
+      for: viewerUserId
+    )
+
+    await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
+    await repository.saveThread(
+      makeThread(lastMessageId: "message-1", lastMessageAt: lastMessageAt),
+      for: viewerUserId
+    )
+
+    XCTAssertEqual(
+      await repository.getActiveBottomedFriendIds(for: viewerUserId), Set(["friend-1"]))
   }
 
   func testSaveMessagesRoundTripsAttachmentsInAscendingOrder() async throws {
@@ -170,6 +243,33 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     XCTAssertEqual(messages.first?.attachments.map(\.id), ["attachment-1", "attachment-2"])
     XCTAssertEqual(
       repository.getThread(id: "thread-1", viewerUserId: viewerUserId)?.lastMessageId, "message-2")
+  }
+
+  private func makeThread(
+    id: String = "thread-1",
+    friendUserId: String = "friend-1",
+    lastMessageId: String?,
+    lastMessageAt: Date = Date(timeIntervalSince1970: 1_700_000_000)
+  ) -> FriendThread {
+    FriendThread(
+      id: id,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: friendUserId,
+      counterpartDisplayName: "Friend",
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: lastMessageId,
+      lastMessageSenderId: friendUserId,
+      lastMessageAt: lastMessageId == nil ? nil : lastMessageAt,
+      lastMessageBody: lastMessageId == nil ? nil : "Hello",
+      lastMessageHasImage: false,
+      unreadCount: 0,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_699_999_900)
+    )
   }
 
   func testSaveConfirmedMessageKeepsSingleMessageAndPreservesOptimisticOrder() async throws {

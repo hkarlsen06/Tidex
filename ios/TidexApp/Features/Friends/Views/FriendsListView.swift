@@ -3,6 +3,7 @@ import SwiftUI
 struct FriendsListOrdering {
   let typingUserIds: Set<String>
   let unreadChatUserIds: Set<String>
+  let bottomedUserIds: Set<String>
   let chatPreviewsByUserId: [String: FriendCardMessagePreview]
   let shiftPreviews: [String: SharerShiftPreview]
   let isLoadingShiftPreviews: Bool
@@ -35,6 +36,7 @@ struct FriendsListOrdering {
 
     return FriendSortDescriptor(
       displayName: sharer.displayName,
+      isBottomed: bottomedUserIds.contains(sharer.id),
       messageStatus: messageStatus(for: sharer.id),
       shiftStatus: isLoadingShiftPreviews ? nil : preview?.status,
       shiftPriority: isLoadingShiftPreviews ? 3 : shiftStatusPriority(for: preview?.status),
@@ -46,6 +48,10 @@ struct FriendsListOrdering {
     lhsDescriptor: FriendSortDescriptor,
     rhsDescriptor: FriendSortDescriptor
   ) -> Bool {
+    if lhsDescriptor.isBottomed != rhsDescriptor.isBottomed {
+      return !lhsDescriptor.isBottomed
+    }
+
     let messageStatusLhs = lhsDescriptor.messageStatus
     let messageStatusRhs = rhsDescriptor.messageStatus
 
@@ -192,6 +198,7 @@ private struct MessageStatusSortDescriptor {
 
 private struct FriendSortDescriptor {
   let displayName: String
+  let isBottomed: Bool
   let messageStatus: MessageStatusSortDescriptor
   let shiftStatus: ShiftPreviewStatus?
   let shiftPriority: Int
@@ -217,6 +224,7 @@ struct SharerListView: View {
   let chatOnlyUserIds: Set<String>
   let typingUserIds: Set<String>
   let unreadChatUserIds: Set<String>
+  let bottomedUserIds: Set<String>
   let unreadChatCountsByUserId: [String: Int]
   let chatPreviewsByUserId: [String: FriendCardMessagePreview]
   let selectedSharer: SharedUser?
@@ -228,6 +236,7 @@ struct SharerListView: View {
   let onSelectSharer: (SharedUser) -> Void
   let onSelectHiddenSharer: (SharedUser) -> Void
   let onMessageTap: (SharedUser) -> Void
+  let onProfileRequested: (SharedUser) -> Void
   var highlightedChatUserId: String? = nil
   var openingThreadUserId: String? = nil
   var onAddFriend: (() -> Void)?
@@ -246,6 +255,7 @@ struct SharerListView: View {
     FriendsListOrdering(
       typingUserIds: typingUserIds,
       unreadChatUserIds: unreadChatUserIds,
+      bottomedUserIds: bottomedUserIds,
       chatPreviewsByUserId: chatPreviewsByUserId,
       shiftPreviews: shiftPreviews,
       isLoadingShiftPreviews: isLoadingPreviews
@@ -294,6 +304,7 @@ struct SharerListView: View {
     .animation(.spring(duration: 0.35, bounce: 0.12), value: isShowingHiddenSharers)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: unreadChatUserIds)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: typingUserIds)
+    .animation(.spring(duration: 0.35, bounce: 0.12), value: bottomedUserIds)
   }
 
   @ViewBuilder
@@ -378,6 +389,9 @@ struct SharerListView: View {
         }
         onSelectSharer(sharer)
       },
+      onProfileRequested: {
+        onProfileRequested(sharer)
+      },
       isCalendarAvailable: isCalendarAvailable,
       isOpeningMessage: isOpeningMessage,
       unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0
@@ -413,6 +427,9 @@ struct SharerListView: View {
           return
         }
         onSelectHiddenSharer(sharer)
+      },
+      onProfileRequested: {
+        onProfileRequested(sharer)
       },
       isCalendarAvailable: isCalendarAvailable,
       isOpeningMessage: isOpeningMessage,
@@ -452,6 +469,7 @@ struct SharerListView: View {
     chatOnlyUserIds: [],
     typingUserIds: [],
     unreadChatUserIds: [],
+    bottomedUserIds: [],
     unreadChatCountsByUserId: [:],
     chatPreviewsByUserId: [:],
     selectedSharer: nil,
@@ -462,7 +480,8 @@ struct SharerListView: View {
     isRefreshing: false,
     onSelectSharer: { _ in },
     onSelectHiddenSharer: { _ in },
-    onMessageTap: { _ in }
+    onMessageTap: { _ in },
+    onProfileRequested: { _ in }
   )
   .background(Color.tidexBackground)
 }

@@ -13,32 +13,50 @@ struct CompactFriendIdentityRow: View {
   var isTyping = false
   var showsContactInfo = true
   var avatarSize: CGFloat = AvatarView.Size.large
+  var onAvatarTap: (() -> Void)?
+  var onContentTap: (() -> Void)?
+  var onLongPress: (() -> Void)?
 
   var body: some View {
     HStack(spacing: Spacing.sm) {
       avatarView
-
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(sharer.displayName)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
-          .truncationMode(.tail)
-
-        if isTyping {
-          FriendCardTypingPreviewRow()
-        } else if let messagePreview {
-          FriendCardMessagePreviewRow(messagePreview: messagePreview)
-        } else if showsContactInfo, let contactInfo = sharer.contactInfo {
-          Text(contactInfo)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
-            .lineLimit(1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+          onAvatarTap?()
         }
-      }
 
-      Spacer()
+      HStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
+          Text(sharer.displayName)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+
+          if isTyping {
+            FriendCardTypingPreviewRow()
+          } else if let messagePreview {
+            FriendCardMessagePreviewRow(messagePreview: messagePreview)
+          } else if showsContactInfo, let contactInfo = sharer.contactInfo {
+            Text(contactInfo)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextMuted)
+              .lineLimit(1)
+          }
+        }
+
+        Spacer()
+      }
+      .contentShape(Rectangle())
+      .onTapGesture {
+        onContentTap?()
+      }
     }
+    .simultaneousGesture(
+      LongPressGesture().onEnded { _ in
+        onLongPress?()
+      }
+    )
   }
 
   private var avatarView: some View {

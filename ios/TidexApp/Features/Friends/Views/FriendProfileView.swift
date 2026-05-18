@@ -6,6 +6,7 @@ import SwiftUI
 struct FriendProfileView: View {
   let sharedUser: SharedUser
   var onVisibilityChange: (() -> Void)?
+  var onFeedPlacementChange: (() -> Void)?
   var onFriendRemoved: (() -> Void)?
   var onMessageTapped: (() -> Void)?
 
@@ -15,6 +16,10 @@ struct FriendProfileView: View {
   @State private var showManageSheet = false
   @State private var friendToRemove: Friend?
   @State private var removeAction: FriendSharingRemovalAction?
+  @State private var isMovedToBottom = false
+  @State private var didPlayOpenHaptic = false
+
+  private let friendsMessagesRepository = FriendsMessagesRepository.shared
 
   private var friend: Friend? {
     viewModel.friends.first { $0.id == sharedUser.id }
@@ -50,8 +55,14 @@ struct FriendProfileView: View {
     .listStyle(.insetGrouped)
     .scrollContentBackground(.hidden)
     .background(Color.tidexBackground)
+    .onAppear {
+      guard !didPlayOpenHaptic else { return }
+      didPlayOpenHaptic = true
+      Haptics.play(.light)
+    }
     .task {
       await viewModel.loadFriends()
+      await refreshFeedPlacement()
     }
     .sheet(isPresented: $showManageSheet) {
       ManageSharingSheet(onVisibilityChange: onVisibilityChange)
@@ -215,6 +226,18 @@ struct FriendProfileView: View {
       }
 
       if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
+        Button {
+          Task { await toggleFeedPlacement() }
+        } label: {
+          Label(
+            String(
+              localized: isMovedToBottom
+                ? .sharingProfileRestoreNormalOrder
+                : .sharingProfileMoveToBottom),
+            systemImage: isMovedToBottom ? "arrow.up.to.line" : "arrow.down.to.line"
+          )
+        }
+
         let isHidden = viewModel.isHiddenInFriendsTab(for: friend)
         Button {
           Task {
@@ -286,6 +309,44 @@ struct FriendProfileView: View {
     if friend.isMutual { return .mutual }
     if friend.isOutgoingOnly { return .outgoing }
     return .incoming
+  }
+
+  @MainActor
+  private func refreshFeedPlacement() async {
+    guard let viewerUserId = AppCoordinator.shared.getCurrentUserId(), !viewerUserId.isEmpty else {
+      isMovedToBottom = false
+      return
+    }
+
+    let bottomedUserIds = await friendsMessagesRepository.getActiveBottomedFriendIds(
+      for: viewerUserId
+    )
+    isMovedToBottom = bottomedUserIds.contains(sharedUser.id)
+  }
+
+  @MainActor
+  private func toggleFeedPlacement() async {
+    guard let viewerUserId = AppCoordinator.shared.getCurrentUserId(), !viewerUserId.isEmpty else {
+      return
+    }
+
+    if isMovedToBottom {
+      await friendsMessagesRepository.clearFriendFeedPlacement(
+        friendUserId: sharedUser.id,
+        viewerUserId: viewerUserId
+      )
+      isMovedToBottom = false
+    } else {
+      await friendsMessagesRepository.setFriendMovedToBottom(
+        friendUserId: sharedUser.id,
+        viewerUserId: viewerUserId
+      )
+      isMovedToBottom = true
+    }
+
+    onFeedPlacementChange?()
+    NotificationCenter.default.post(name: .friendFeedPlacementDidChange, object: nil)
+    dismiss()
   }
 }
 
