@@ -7,6 +7,7 @@ struct AuthNavigationView: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentScreen: AuthScreen
+  @State private var authCurrency: String
   @StateObject private var loginViewModel = LoginViewModel()
   @StateObject private var signupViewModel = SignupViewModel()
 
@@ -19,6 +20,10 @@ struct AuthNavigationView: View {
   init(initialScreen: AuthScreen = .login) {
     self.initialScreen = initialScreen
     self._currentScreen = State(initialValue: initialScreen)
+    self._authCurrency = State(
+      initialValue: OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
+        ?? OnboardingCurrencyResolver.detectDefaultCurrency()
+    )
   }
 
   var body: some View {
@@ -33,6 +38,7 @@ struct AuthNavigationView: View {
         case .login:
           LoginView(
             viewModel: loginViewModel,
+            currency: authCurrency,
             onNavigateToSignup: { navigateToSignup() },
             onNavigateToResetPassword: { navigateTo(.resetPassword) }
           )
@@ -42,6 +48,7 @@ struct AuthNavigationView: View {
         case .signup:
           SignupView(
             viewModel: signupViewModel,
+            currency: authCurrency,
             onNavigateToLogin: { navigateToLoginFromSignup() }
           )
           .transition(
@@ -57,13 +64,23 @@ struct AuthNavigationView: View {
       }
     }
     .motionAnimation(.navigationPush, value: currentScreen, reduceMotion: reduceMotion)
+    .onAppear {
+      refreshAuthCurrency()
+    }
     .onReceive(NotificationCenter.default.publisher(for: .tidexNavigateToLoginRequested)) { _ in
       navigateTo(.login)
     }
   }
 
   private func navigateTo(_ screen: AuthScreen) {
+    refreshAuthCurrency()
     currentScreen = screen
+  }
+
+  private func refreshAuthCurrency() {
+    authCurrency =
+      OnboardingCurrencyCarryoverStore.readValidPreferredCurrency()
+      ?? OnboardingCurrencyResolver.detectDefaultCurrency()
   }
 
   private func navigateToSignup() {
