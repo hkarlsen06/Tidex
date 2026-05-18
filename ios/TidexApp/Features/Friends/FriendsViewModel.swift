@@ -971,6 +971,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     return result
   }
 
+  /// Raw user shifts grouped by ISO date for precise overlap checks.
+  var userShiftsByDate: [String: [ShiftRow]] {
+    Dictionary(grouping: userShiftsForMonth, by: \.shift_date)
+  }
+
   // MARK: - Private Methods
 
   private nonisolated static func convertSharedShiftsOffMain(_ shifts: [SharedShiftData]) async

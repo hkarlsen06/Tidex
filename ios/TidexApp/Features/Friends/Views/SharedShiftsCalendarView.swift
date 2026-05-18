@@ -24,6 +24,9 @@ struct SharedShiftsCalendarView: View {
   /// User's own shift hours by date (for superimpose feature)
   var userHoursByDate: [String: HoursData]?
 
+  /// User's own raw shifts by date (for precise overlap indicators)
+  var userShiftsByDate: [String: [ShiftRow]]?
+
   /// User's own earnings by date (for superimpose feature in earnings mode)
   var userEarningsByDate: [String: CalendarEarningsData]?
 
@@ -280,10 +283,11 @@ struct SharedShiftsCalendarView: View {
     let isToday = dayInfo.dateISO == metrics.todayISO
     let isHighlighted = isDateHighlighted(dayInfo: dayInfo, shiftsOnDay: shiftsOnDay)
 
-    // Show overlap indicator whenever both user and friend have shifts.
+    // Show overlap indicator only when at least one shift interval intersects.
     let friendHasShift = !shiftsOnDay.isEmpty
     let userHasShift = dayInfo.dateISO.flatMap { userHoursByDate?[$0] } != nil
-    let showOverlap = friendHasShift && userHasShift
+    let userShiftsOnDay = dayInfo.dateISO.flatMap { userShiftsByDate?[$0] } ?? []
+    let showOverlap = shiftsOverlap(friendShifts: shiftsOnDay, userShifts: userShiftsOnDay)
     let showOnlyUserIndicator = isSuperimposing && userHasShift && !friendHasShift
     let showOnlyFriendIndicator = isSuperimposing && friendHasShift && !userHasShift
     let showSingleUserIndicator = showOnlyUserIndicator || showOnlyFriendIndicator
@@ -422,6 +426,30 @@ struct SharedShiftsCalendarView: View {
       return nil
     }
     return Color(uiColor: uiColor)
+  }
+
+  private func shiftsOverlap(friendShifts: [ShiftWithComputations], userShifts: [ShiftRow]) -> Bool
+  {
+    guard !friendShifts.isEmpty, !userShifts.isEmpty else { return false }
+
+    return friendShifts.contains { friendShift in
+      let friendInterval = shiftInterval(
+        startTime: friendShift.startTime, endTime: friendShift.endTime)
+      return userShifts.contains { userShift in
+        let userInterval = shiftInterval(
+          startTime: userShift.start_time, endTime: userShift.end_time)
+        return friendInterval.start < userInterval.end && userInterval.start < friendInterval.end
+      }
+    }
+  }
+
+  private func shiftInterval(startTime: String, endTime: String) -> (start: Int, end: Int) {
+    let start = CalendarGridHelper.timeToMinutes(startTime)
+    var end = CalendarGridHelper.timeToMinutes(endTime)
+    if end <= start {
+      end += 24 * 60
+    }
+    return (start, end)
   }
 
   private var hiddenFriendMetricsPlaceholder: some View {

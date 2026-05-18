@@ -1057,6 +1057,7 @@ private struct SharedShiftsDetailView: View {
           highlightShiftIds: highlightShiftIds,
           isSuperimposing: viewModel.isSuperimposing,
           userHoursByDate: viewModel.userHoursByDate,
+          userShiftsByDate: viewModel.userShiftsByDate,
           userEarningsByDate: viewModel.userEarningsByDate,
           onSendToChatCompleted: { result in
             onSendToChatCompleted(result)
