@@ -168,6 +168,8 @@ When running verification or diagnostic commands, prefer flags that reduce non-a
 
 **iOS Builds:**
 - To check for Swift errors, run `swiftlint --quiet` (fast, catches common issues)
+- Prefer not to run full iOS builds for small, focused changes. Use `swiftlint --quiet` and targeted inspection by default, then report when a build was intentionally skipped.
+- Run the build wrapper when the user explicitly asks for a build, when the change is broad or risky enough that lint is insufficient, or when you know you are working autonomously on a longer task and should verify end-to-end before handing back.
 - When building the iOS app, always run:
 
 ```bash
