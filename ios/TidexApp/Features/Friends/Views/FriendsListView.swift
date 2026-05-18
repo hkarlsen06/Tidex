@@ -19,16 +19,8 @@ struct FriendsListOrdering {
     }
   }
 
-  func visibleSharers(visible: [SharedUser], hidden: [SharedUser]) -> [SharedUser] {
-    sortedSharers(visible + hidden.filter { hasMessageStatus(for: $0.id) })
-  }
-
-  func hiddenDisclosureSharers(_ hidden: [SharedUser]) -> [SharedUser] {
-    sortedSharers(hidden.filter { !hasMessageStatus(for: $0.id) })
-  }
-
-  func shouldSuppressShiftPreview(for sharer: SharedUser) -> Bool {
-    sharer.hidden && hasMessageStatus(for: sharer.id)
+  func visibleSharers(visible: [SharedUser], hidden _: [SharedUser]) -> [SharedUser] {
+    sortedSharers(visible)
   }
 
   private func sortDescriptor(for sharer: SharedUser) -> FriendSortDescriptor {
@@ -234,21 +226,14 @@ struct SharerListView: View {
   let hasFinishedInitialLoad: Bool
   let isRefreshing: Bool
   let onSelectSharer: (SharedUser) -> Void
-  let onSelectHiddenSharer: (SharedUser) -> Void
   let onMessageTap: (SharedUser) -> Void
   let onProfileRequested: (SharedUser) -> Void
   var highlightedChatUserId: String? = nil
   var openingThreadUserId: String? = nil
   var onAddFriend: (() -> Void)?
 
-  @State private var isShowingHiddenSharers = false
-
   private var sortedVisibleSharers: [SharedUser] {
     ordering.visibleSharers(visible: sharers, hidden: hiddenSharers)
-  }
-
-  private var sortedHiddenSharers: [SharedUser] {
-    ordering.hiddenDisclosureSharers(hiddenSharers)
   }
 
   private var ordering: FriendsListOrdering {
@@ -268,7 +253,7 @@ struct SharerListView: View {
         || (isLoading && sharers.isEmpty && hiddenSharers.isEmpty)
       {
         loadingState
-      } else if sharers.isEmpty && hiddenSharers.isEmpty {
+      } else if sharers.isEmpty {
         FriendsListEmptyState(onAddFriend: onAddFriend)
       } else {
         sharersList
@@ -294,74 +279,17 @@ struct SharerListView: View {
       ForEach(sortedVisibleSharers) { sharer in
         sharerCard(for: sharer)
       }
-
-      if !sortedHiddenSharers.isEmpty {
-        hiddenSharersDisclosure
-      }
     }
     .padding(.horizontal, Spacing.md)
     .animation(.spring(duration: 0.4, bounce: 0.15), value: isLoadingPreviews)
-    .animation(.spring(duration: 0.35, bounce: 0.12), value: isShowingHiddenSharers)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: unreadChatUserIds)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: typingUserIds)
     .animation(.spring(duration: 0.35, bounce: 0.12), value: bottomedUserIds)
   }
 
   @ViewBuilder
-  private var hiddenSharersDisclosure: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Button {
-        withAnimation(.spring(duration: 0.35, bounce: 0.12)) {
-          isShowingHiddenSharers.toggle()
-        }
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "eye.slash")
-            .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexTextMuted)
-
-          Text(.sharingHidden)
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text("\(sortedHiddenSharers.count)")
-            .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexTextMuted)
-            .padding(.horizontal, Spacing.xs)
-            .padding(.vertical, Spacing.xxxs)
-            .background(
-              Capsule(style: .continuous)
-                .fill(Color.tidexSurfaceSecondary)
-            )
-
-          Spacer()
-
-          Image(systemName: isShowingHiddenSharers ? "chevron.up" : "chevron.down")
-            .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexTextMuted)
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
-            .fill(Color.tidexSurfacePrimary)
-        )
-        .tidexCardShadow(.subtle, cornerRadius: CornerRadius.card)
-      }
-      .buttonStyle(.plain)
-
-      if isShowingHiddenSharers {
-        ForEach(sortedHiddenSharers) { sharer in
-          hiddenSharerCard(for: sharer)
-        }
-      }
-    }
-  }
-
-  @ViewBuilder
   private func sharerCard(for sharer: SharedUser) -> some View {
-    let suppressShiftPreview = ordering.shouldSuppressShiftPreview(for: sharer)
-    let preview = suppressShiftPreview ? nil : shiftPreviews[sharer.id]
+    let preview = shiftPreviews[sharer.id]
     let isOpeningMessage = openingThreadUserId == sharer.id
     let isSelected =
       selectedSharer?.id == sharer.id
@@ -388,45 +316,6 @@ struct SharerListView: View {
           return
         }
         onSelectSharer(sharer)
-      },
-      onProfileRequested: {
-        onProfileRequested(sharer)
-      },
-      isCalendarAvailable: isCalendarAvailable,
-      isOpeningMessage: isOpeningMessage,
-      unreadMessageCount: unreadChatCountsByUserId[sharer.id] ?? 0
-    )
-  }
-
-  @ViewBuilder
-  private func hiddenSharerCard(for sharer: SharedUser) -> some View {
-    let preview = shiftPreviews[sharer.id]
-    let isOpeningMessage = openingThreadUserId == sharer.id
-    let isSelected =
-      selectedSharer?.id == sharer.id
-      || highlightedChatUserId == sharer.id
-      || isOpeningMessage
-    let isCalendarAvailable = FriendCalendarAvailability.isAvailable(
-      sharer: sharer,
-      chatOnlyUserIds: chatOnlyUserIds,
-      preview: preview
-    )
-
-    FriendCard(
-      sharer: sharer,
-      preview: preview,
-      messagePreview: chatPreviewsByUserId[sharer.id],
-      isTyping: typingUserIds.contains(sharer.id),
-      isSelected: isSelected,
-      isRefreshing: isRefreshing,
-      onChatTap: {
-        onMessageTap(sharer)
-      },
-      onCalendarTap: {
-        if !isCalendarAvailable {
-          return
-        }
-        onSelectHiddenSharer(sharer)
       },
       onProfileRequested: {
         onProfileRequested(sharer)
@@ -479,7 +368,6 @@ struct SharerListView: View {
     hasFinishedInitialLoad: true,
     isRefreshing: false,
     onSelectSharer: { _ in },
-    onSelectHiddenSharer: { _ in },
     onMessageTap: { _ in },
     onProfileRequested: { _ in }
   )

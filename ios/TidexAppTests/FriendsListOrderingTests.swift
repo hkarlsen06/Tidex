@@ -78,7 +78,7 @@ final class FriendsListOrderingTests: XCTestCase {
     XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["active", "upcoming", "no-shift"])
   }
 
-  func testHiddenUsersWithMessageActivityArePromotedOutOfHiddenDisclosure() {
+  func testHiddenUsersWithMessageActivityStayOutOfVisibleFeed() {
     let visible = [
       makeUser(id: "visible", firstName: "Visible", hidden: false)
     ]
@@ -88,8 +88,8 @@ final class FriendsListOrderingTests: XCTestCase {
     ]
 
     let ordering = FriendsListOrdering(
-      typingUserIds: [],
-      unreadChatUserIds: [],
+      typingUserIds: ["hidden-shift"],
+      unreadChatUserIds: ["hidden-chat"],
       bottomedUserIds: [],
       chatPreviewsByUserId: [
         "hidden-chat": FriendCardMessagePreview(
@@ -119,11 +119,8 @@ final class FriendsListOrderingTests: XCTestCase {
 
     XCTAssertEqual(
       ordering.visibleSharers(visible: visible, hidden: hidden).map(\.id),
-      ["hidden-chat", "visible"]
+      ["visible"]
     )
-    XCTAssertEqual(ordering.hiddenDisclosureSharers(hidden).map(\.id), ["hidden-shift"])
-    XCTAssertTrue(ordering.shouldSuppressShiftPreview(for: hidden[0]))
-    XCTAssertFalse(ordering.shouldSuppressShiftPreview(for: hidden[1]))
   }
 
   func testTypingUsersSortAheadOfOtherMessageActivityAndThenSortByRecency() {
@@ -272,7 +269,7 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 
-  func testHiddenPromotedMessageUserCanBeBottomedWithinVisibleFeed() {
+  func testHiddenMessageUserIsNotBottomedIntoVisibleFeed() {
     let visible = [
       makeUser(id: "visible", firstName: "Visible", hidden: false)
     ]
@@ -313,9 +310,8 @@ final class FriendsListOrderingTests: XCTestCase {
 
     XCTAssertEqual(
       ordering.visibleSharers(visible: visible, hidden: hidden).map(\.id),
-      ["visible", "hidden-chat"]
+      ["visible"]
     )
-    XCTAssertEqual(ordering.hiddenDisclosureSharers(hidden).map(\.id), ["hidden-shift"])
   }
 
   func testCalendarAvailabilityHidesChatOnlyUsers() {
