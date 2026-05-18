@@ -59,6 +59,7 @@ final class PushNotificationManager: ObservableObject {
       .cannotFindHost,
       .cannotConnectToHost,
       .networkConnectionLost,
+      .cancelled,
       .dnsLookupFailed,
       .notConnectedToInternet,
       .internationalRoamingOff,
@@ -84,6 +85,8 @@ final class PushNotificationManager: ObservableObject {
     let lowercased = message.lowercased()
     return
       lowercased.contains("offline")
+      || lowercased.contains("cancelled")
+      || lowercased.contains("avbrutt")
       || lowercased.contains("timed out")
       || lowercased.contains("network connection")
       || lowercased.contains("could not connect")

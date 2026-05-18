@@ -34,7 +34,7 @@ struct PrimaryButton: View {
           : Color.tidexBrandPrimary
       )
       .foregroundColor(.tidexTextOnBrand)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
     }
     .buttonStyle(SnappyPrimaryButtonStyle(reduceMotion: reduceMotion))
     .disabled(isDisabled || isLoading)

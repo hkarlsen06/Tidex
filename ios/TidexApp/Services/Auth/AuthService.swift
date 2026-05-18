@@ -123,36 +123,6 @@ final class AuthService: ObservableObject {
     return session
   }
 
-  /// Sign up with phone number and password
-  /// - Parameters:
-  ///   - phone: Phone number in E.164 format
-  ///   - password: User's password
-  ///   - fullName: User's full name (optional)
-  /// - Note: User will receive an OTP code via SMS to verify
-  func signUpWithPhone(phone: String, password: String, fullName: String? = nil) async throws {
-    isLoading = true
-    defer { isLoading = false }
-
-    // Build user metadata
-    let localeCode =
-      Locale.autoupdatingCurrent.language.languageCode?.identifier.lowercased() ?? "en"
-    var data: [String: AnyJSON] = [
-      "terms_accepted_at": .string(Date().toISO8601String()),
-      // Keep metadata locale aligned with current iPhone/app language from first write.
-      "locale": .string(localeCode),
-    ]
-    if let fullName = fullName, !fullName.isEmpty {
-      data["full_name"] = .string(fullName)
-    }
-
-    _ = try await supabase.auth.signUp(
-      phone: phone,
-      password: password,
-      data: data
-    )
-    // User needs to verify OTP before signing in
-  }
-
   // MARK: - Password Reset
 
   /// Send password reset email
