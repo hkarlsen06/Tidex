@@ -108,9 +108,9 @@ struct EmploymentPercentageChart: View {
             .font(.tidexMonoDisplay)
             .foregroundColor(.tidexPurple)
         } else {
-          Text("---")
-            .font(.tidexMonoDisplay)
-            .foregroundColor(.tidexTextMuted)
+          Text("--")
+            .font(.tidexMonoBody)
+            .foregroundColor(.tidexPurple)
         }
 
         Text(completedAverageSubtitle)

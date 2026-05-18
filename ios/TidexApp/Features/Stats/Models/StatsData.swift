@@ -106,7 +106,8 @@ struct EmploymentData: Codable, Equatable {
     let includedMonths = completedAverageMonthNumbers(now: now, calendar: calendar)
     guard !includedMonths.isEmpty else { return nil }
 
-    let values = monthlyData
+    let values =
+      monthlyData
       .filter { includedMonths.contains($0.monthNumber) }
       .map(\.averagePercentage)
 
@@ -120,6 +121,8 @@ struct EmploymentData: Codable, Equatable {
     calendar: Calendar = .current
   ) -> String? {
     let includedMonths = completedAverageMonthNumbers(now: now, calendar: calendar).sorted()
+    guard includedMonths.isContiguous else { return nil }
+
     guard let firstMonth = includedMonths.first,
       let lastMonth = includedMonths.last,
       let firstLabel = monthlyData.first(where: { $0.monthNumber == firstMonth })?.month,
@@ -161,7 +164,18 @@ struct EmploymentData: Codable, Equatable {
     }
 
     guard completedThroughMonth > 0 else { return [] }
-    return Set(1...completedThroughMonth)
+    return Set(
+      monthlyData
+        .filter { $0.monthNumber <= completedThroughMonth && $0.hasShifts }
+        .map(\.monthNumber)
+    )
+  }
+}
+
+extension [Int] {
+  fileprivate var isContiguous: Bool {
+    guard let first, let last else { return true }
+    return count == last - first + 1
   }
 }
 
