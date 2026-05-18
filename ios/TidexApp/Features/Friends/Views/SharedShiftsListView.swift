@@ -26,6 +26,9 @@ struct SharedShiftsListView: View {
   /// User's own shift hours by date (for superimpose feature)
   var userHoursByDate: [String: HoursData]?
 
+  /// User's own raw shifts by date (for precise overlap indicators)
+  var userShiftsByDate: [String: [ShiftRow]]?
+
   /// User's own earnings by date (for superimpose feature in earnings mode)
   var userEarningsByDate: [String: CalendarEarningsData]?
 
@@ -83,6 +86,7 @@ struct SharedShiftsListView: View {
               highlightShiftIds: highlightShiftIds,
               isSuperimposing: isSuperimposing,
               userHoursByDate: userHoursByDate,
+              userShiftsByDate: userShiftsByDate,
               userEarningsByDate: userEarningsByDate,
               onShiftTapped: { shift in
                 selectedShift = shift
