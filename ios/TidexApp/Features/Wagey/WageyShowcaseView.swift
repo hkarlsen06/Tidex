@@ -291,6 +291,7 @@ struct WageyShowcaseView: View {
 
   private var tryButton: some View {
     Button {
+      Haptics.play(.success)
       onTryWagey()
     } label: {
       HStack(spacing: Spacing.xs) {
