@@ -255,7 +255,7 @@ struct EventDetailsSheet: View {
       }
       .onAppear {
         resetDraft()
-        shouldFocusTitleWhenEditing = startInEditMode
+        shouldFocusTitleWhenEditing = false
         isEditing = startInEditMode
       }
       .onDisappear {
@@ -494,7 +494,7 @@ struct EventDetailsSheet: View {
             title: String(localized: .shiftsActionsEdit),
             style: .secondary
           ) {
-            beginEditing(focusTitle: true)
+            beginEditing(focusTitle: false)
           }
 
           deleteActionButton
