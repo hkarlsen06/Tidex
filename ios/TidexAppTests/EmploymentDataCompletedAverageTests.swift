@@ -14,14 +14,48 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
     XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "jan.-apr.")
   }
 
-  func testCompletedMonthsAverageIncludesZeroCompletedMonths() {
+  func testCompletedMonthsAverageExcludesEmptyCompletedMonths() {
     let data = makeEmploymentData(
       year: 2026,
       percentages: [0, 20, 0, 40, 100, 100, 100, 100, 100, 100, 100, 100]
     )
     let now = makeDate(year: 2026, month: 5, day: 17)
 
+    XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 30)
+    XCTAssertNil(data.completedAverageRangeLabel(now: now, calendar: calendar))
+  }
+
+  func testCompletedMonthsAverageExcludesLeadingEmptyMonths() {
+    let data = makeEmploymentData(
+      year: 2026,
+      percentages: [0, 0, 30, 40, 100, 100, 100, 100, 100, 100, 100, 100]
+    )
+    let now = makeDate(year: 2026, month: 5, day: 17)
+
+    XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 35)
+    XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "mar.-apr.")
+  }
+
+  func testCompletedMonthsAverageExcludesTrailingEmptyMonthsForPastYear() {
+    let data = makeEmploymentData(
+      year: 2025,
+      percentages: [10, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    )
+    let now = makeDate(year: 2026, month: 5, day: 17)
+
     XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 15)
+    XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "jan.-feb.")
+  }
+
+  func testCompletedMonthsAverageIsNilWhenOnlyCurrentMonthHasShifts() {
+    let data = makeEmploymentData(
+      year: 2026,
+      percentages: [0, 0, 0, 0, 10, 100, 100, 100, 100, 100, 100, 100]
+    )
+    let now = makeDate(year: 2026, month: 5, day: 17)
+
+    XCTAssertNil(data.completedMonthsAverage(now: now, calendar: calendar))
+    XCTAssertNil(data.completedAverageRangeLabel(now: now, calendar: calendar))
   }
 
   func testCompletedMonthsAverageUsesAllMonthsForPastYear() {
