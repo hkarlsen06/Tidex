@@ -61,7 +61,7 @@ struct PayrollCard: View {
   }
 
   var body: some View {
-    ShiftCardContentLayout(centerTrailing: !showBreakdown, topRowAlignment: .center) {
+    ShiftCardContentLayout(centerTrailing: showPayout && !showBreakdown, topRowAlignment: .center) {
       // Row 1: Label (leads with purpose, matches shift card title size)
       payrollLabelContent
         .frame(maxWidth: .infinity, alignment: .leading)
