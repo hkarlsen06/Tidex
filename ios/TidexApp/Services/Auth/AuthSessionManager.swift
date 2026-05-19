@@ -142,10 +142,22 @@ final class AuthSessionManager: ObservableObject {
 
     do {
       let session = try await task.value
+      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       sessionTask = nil
       sessionTaskAllowsProactiveRefresh = false
       return session
     } catch {
+      AuthDiagnosticsReporter.shared.record(
+        .sessionFetchFailed,
+        severity: .warning,
+        error: error,
+        metadata: [
+          "allow_proactive_refresh": .bool(allowProactiveRefresh),
+          "is_revoked_error": .bool(isSessionRevokedError(error)),
+          "is_transient_network_error": .bool(isTransientNetworkError(error)),
+          "is_transient_session_resolution_error": .bool(isTransientSessionResolutionError(error)),
+        ]
+      )
       sessionTask = nil
       sessionTaskAllowsProactiveRefresh = false
       throw error
@@ -389,6 +401,11 @@ final class AuthSessionManager: ObservableObject {
     }
 
     logger.info("Starting token refresh...")
+    AuthDiagnosticsReporter.shared.record(
+      .tokenRefreshStarted,
+      severity: .debug,
+      metadata: ["had_existing_refresh_task": .bool(refreshTask != nil)]
+    )
     isRefreshing = true
 
     let task = Task<Session, Error> { [weak self] in
@@ -406,6 +423,18 @@ final class AuthSessionManager: ObservableObject {
         }
         let session = try await self.refreshSessionWithTimeout()
         logger.info("Token refreshed successfully, new expiry: \(session.expiresAt)")
+        await MainActor.run {
+          AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
+          AuthDiagnosticsReporter.shared.record(
+            .tokenRefreshSucceeded,
+            severity: .info,
+            userId: session.normalizedUserId,
+            metadata: AuthDiagnosticsReporter.shared.sessionMetadata(
+              session,
+              source: "refresh_success"
+            )
+          )
+        }
 
         // Store refreshed token in shared keychain
         await MainActor.run {
@@ -415,6 +444,22 @@ final class AuthSessionManager: ObservableObject {
         return session
       } catch {
         logger.error("Token refresh failed: \(error.localizedDescription)")
+        await MainActor.run {
+          AuthDiagnosticsReporter.shared.record(
+            .tokenRefreshFailed,
+            severity: .error,
+            error: error,
+            metadata: [
+              "is_revoked_error": .bool(AuthSessionManager.shared.isSessionRevokedError(error)),
+              "is_transient_network_error": .bool(
+                AuthSessionManager.shared.isTransientNetworkError(error)
+              ),
+              "is_transient_session_resolution_error": .bool(
+                AuthSessionManager.shared.isTransientSessionResolutionError(error)
+              ),
+            ]
+          )
+        }
         throw error
       }
     }
