@@ -31,3 +31,6 @@ begin
   where id = p_user_id;
 end;
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.increment_wagey_bonus(uuid, integer) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_wagey_bonus(uuid, integer) TO service_role;

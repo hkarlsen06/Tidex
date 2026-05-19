@@ -13,3 +13,5 @@ AS $function$
   INNER JOIN public.subscriptions s ON s.user_id = pd.user_id
   WHERE s.status IN ('active', 'trialing');
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_count_target_users_pro() FROM authenticated;

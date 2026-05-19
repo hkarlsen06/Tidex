@@ -13,3 +13,5 @@ AS $function$
   INNER JOIN public.user_settings us ON us.user_id = pd.user_id
   WHERE us.last_active >= NOW() - INTERVAL '7 days';
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_target_users_active() FROM authenticated;

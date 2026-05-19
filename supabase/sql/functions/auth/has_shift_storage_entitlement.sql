@@ -9,7 +9,16 @@ CREATE OR REPLACE FUNCTION public.has_shift_storage_entitlement(p_user_id uuid)
  SET search_path TO ''
 AS $function$
   SELECT COALESCE(
-    (SELECT is_entitled FROM public.user_entitlements WHERE user_id = p_user_id),
+    (
+      SELECT is_entitled
+      FROM public.user_entitlements
+      WHERE user_id = p_user_id
+        AND (
+          p_user_id = auth.uid()
+          OR auth.role() = 'service_role'
+          OR public.is_admin()
+        )
+    ),
     false
   );
 $function$;

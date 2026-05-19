@@ -12,3 +12,5 @@ AS $function$
   FROM internal.push_devices pd
   WHERE (exclude_user_id IS NULL OR pd.user_id != exclude_user_id);
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_target_users_all(uuid) FROM authenticated;

@@ -14,3 +14,5 @@ AS $function$
   FROM auth.users u
   WHERE u.id = ANY(user_ids);
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_user_locales(uuid[]) FROM authenticated;

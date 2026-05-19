@@ -30,4 +30,4 @@ $function$;
 
 REVOKE EXECUTE ON FUNCTION public.is_user_pair_abuse_blocked(uuid) FROM public;
 REVOKE EXECUTE ON FUNCTION public.is_user_pair_abuse_blocked(uuid) FROM anon;
-GRANT EXECUTE ON FUNCTION public.is_user_pair_abuse_blocked(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.is_user_pair_abuse_blocked(uuid) FROM authenticated;

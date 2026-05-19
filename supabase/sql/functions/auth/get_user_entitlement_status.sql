@@ -18,5 +18,10 @@ AS $function$
     'subscription_ends_at', subscription_ends_at
   )
   FROM public.user_entitlements
-  WHERE user_id = p_user_id;
+  WHERE user_id = p_user_id
+    AND (
+      p_user_id = auth.uid()
+      OR auth.role() = 'service_role'
+      OR public.is_admin()
+    );
 $function$;
