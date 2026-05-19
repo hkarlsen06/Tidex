@@ -150,6 +150,8 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 
 **NEVER push to git automatically** - commit when requested, but wait for user approval before pushing.
 
+**Commits must always be signed** - never disable commit signing. If signing fails, stop and report the signing failure instead of creating an unsigned commit.
+
 **Legal policy updates:**
 
 - When changing the Terms of Service or Privacy Policy copy, always update the canonical client-facing version references in the same change.
