@@ -928,14 +928,18 @@ struct LoadingView: View {
       try await fetchMessagePayload(messageId: messageId)
     }
 
-    func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {
+    func toggleMessageReaction(
+      messageId: String,
+      emoji: String,
+      attachmentId: String?
+    ) async throws -> FriendMessage {
       await Task.yield()
       guard let index = messages.firstIndex(where: { $0.id == messageId }) else {
         throw FriendsMessagingServiceError.httpError(statusCode: 404, message: "Message not found")
       }
 
       let message = messages[index]
-      let updated = message.toggledReaction(emoji: emoji)
+      let updated = message.toggledReaction(emoji: emoji, attachmentId: attachmentId)
       messages[index] = updated
       return updated
     }

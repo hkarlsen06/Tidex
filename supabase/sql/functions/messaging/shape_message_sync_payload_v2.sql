@@ -23,7 +23,55 @@ AS $function$
     'edited_at', p_payload->'edited_at',
     'deleted_at', p_payload->'deleted_at',
     'metadata', COALESCE(p_payload->'metadata', '{}'::jsonb),
-    'attachments', COALESCE(p_payload->'attachments', '[]'::jsonb),
+    'attachments', COALESCE(
+      (
+        SELECT jsonb_agg(
+          jsonb_set(
+            attachment.value,
+            '{reactions}',
+            COALESCE(
+              (
+                SELECT jsonb_agg(
+                  jsonb_build_object(
+                    'emoji', reaction.emoji,
+                    'count', reaction.reaction_count,
+                    'viewer_has_reacted', reaction.viewer_has_reacted
+                  )
+                  ORDER BY
+                    reaction.viewer_has_reacted DESC,
+                    reaction.reaction_count DESC,
+                    reaction.first_created_at ASC,
+                    reaction.emoji ASC
+                )
+                FROM (
+                  SELECT
+                    r.emoji,
+                    COALESCE(r.reaction_count, 0) AS reaction_count,
+                    EXISTS (
+                      SELECT 1
+                      FROM jsonb_array_elements_text(COALESCE(r.reactor_user_ids, '[]'::jsonb)) AS reactor(user_id)
+                      WHERE reactor.user_id::uuid = p_viewer_user_id
+                    ) AS viewer_has_reacted,
+                    r.first_created_at
+                  FROM jsonb_to_recordset(COALESCE(attachment.value->'reactions', '[]'::jsonb))
+                    AS r(
+                      emoji text,
+                      reaction_count integer,
+                      reactor_user_ids jsonb,
+                      first_created_at timestamptz
+                    )
+                ) AS reaction
+              ),
+              '[]'::jsonb
+            )
+          )
+          ORDER BY attachment.ordinality
+        )
+        FROM jsonb_array_elements(COALESCE(p_payload->'attachments', '[]'::jsonb))
+          WITH ORDINALITY AS attachment(value, ordinality)
+      ),
+      '[]'::jsonb
+    ),
     'reactions', COALESCE(
       (
         SELECT jsonb_agg(
@@ -61,4 +109,3 @@ AS $function$
     )
   );
 $function$;
-

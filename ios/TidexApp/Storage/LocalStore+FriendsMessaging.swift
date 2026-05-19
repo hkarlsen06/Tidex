@@ -551,11 +551,28 @@ extension LocalStoreActor {
           viewerUserId: viewerUserId,
           threadId: message.threadId,
           messageId: message.id,
+          attachmentId: nil,
           reactionIndex: index,
           emoji: reaction.emoji,
           count: reaction.count,
           viewerHasReacted: reaction.viewerHasReacted
         ))
+    }
+
+    for attachment in message.attachments {
+      for (index, reaction) in attachment.reactions.enumerated() {
+        modelContext.insert(
+          LocalMessageReaction(
+            viewerUserId: viewerUserId,
+            threadId: message.threadId,
+            messageId: message.id,
+            attachmentId: attachment.id,
+            reactionIndex: index,
+            emoji: reaction.emoji,
+            count: reaction.count,
+            viewerHasReacted: reaction.viewerHasReacted
+          ))
+      }
     }
   }
 

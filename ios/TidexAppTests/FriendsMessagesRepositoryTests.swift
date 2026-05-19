@@ -245,6 +245,74 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
       repository.getThread(id: "thread-1", viewerUserId: viewerUserId)?.lastMessageId, "message-2")
   }
 
+  func testSaveMessagesRoundTripsMessageAndAttachmentReactionsSeparately() async throws {
+    let repository = try makeRepository()
+    await repository.saveThread(makeThread(lastMessageId: nil), for: viewerUserId)
+
+    let createdAt = Date(timeIntervalSince1970: 1_700_000_010)
+    await repository.saveMessages(
+      [
+        FriendMessage(
+          id: "message-1",
+          threadId: "thread-1",
+          senderUserId: "friend-1",
+          messageType: .user,
+          body: nil,
+          clientId: "client-1",
+          replyToMessageId: nil,
+          createdAt: createdAt,
+          editedAt: nil,
+          deletedAt: nil,
+          metadataData: nil,
+          attachments: [
+            FriendMessageAttachment(
+              id: "attachment-1",
+              attachmentIndex: 0,
+              kind: .image,
+              storageBucket: "message-attachments",
+              storagePath: "thread-1/friend-1/attachment-1.jpeg",
+              mimeType: "image/jpeg",
+              byteSize: 128,
+              width: 320,
+              height: 240,
+              createdAt: createdAt,
+              reactions: [
+                FriendMessageReaction(emoji: "🔥", count: 1, viewerHasReacted: true)
+              ]
+            ),
+            FriendMessageAttachment(
+              id: "attachment-2",
+              attachmentIndex: 1,
+              kind: .image,
+              storageBucket: "message-attachments",
+              storagePath: "thread-1/friend-1/attachment-2.jpeg",
+              mimeType: "image/jpeg",
+              byteSize: 256,
+              width: 640,
+              height: 480,
+              createdAt: createdAt,
+              reactions: [
+                FriendMessageReaction(emoji: "😂", count: 2, viewerHasReacted: false)
+              ]
+            ),
+          ],
+          reactions: [
+            FriendMessageReaction(emoji: "❤️", count: 3, viewerHasReacted: true)
+          ]
+        )
+      ],
+      in: "thread-1",
+      for: viewerUserId
+    )
+
+    let message = try XCTUnwrap(
+      repository.getMessage(id: "message-1", viewerUserId: viewerUserId)
+    )
+    XCTAssertEqual(message.reactions.map(\.emoji), ["❤️"])
+    XCTAssertEqual(message.attachments[0].reactions.map(\.emoji), ["🔥"])
+    XCTAssertEqual(message.attachments[1].reactions.map(\.emoji), ["😂"])
+  }
+
   private func makeThread(
     id: String = "thread-1",
     friendUserId: String = "friend-1",

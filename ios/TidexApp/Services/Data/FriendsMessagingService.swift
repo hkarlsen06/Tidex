@@ -41,7 +41,8 @@ protocol FriendsMessagingServiceProviding: AnyObject {
   func fetchThreadState(threadId: String, userId: String) async throws -> FriendThreadState?
   func fetchMessagePayload(messageId: String) async throws -> FriendMessage
   func fetchMessageSyncPayloadV2(messageId: String) async throws -> FriendMessage
-  func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage
+  func toggleMessageReaction(messageId: String, emoji: String, attachmentId: String?)
+    async throws -> FriendMessage
   func createAbuseReport(
     threadId: String,
     reportedUserId: String,
@@ -683,11 +684,18 @@ final class FriendsMessagingService: ObservableObject {
     }
   }
 
-  func toggleMessageReaction(messageId: String, emoji: String) async throws -> FriendMessage {
-    let params: [String: AnyJSON] = [
+  func toggleMessageReaction(
+    messageId: String,
+    emoji: String,
+    attachmentId: String? = nil
+  ) async throws -> FriendMessage {
+    var params: [String: AnyJSON] = [
       "p_message_id": .string(messageId),
       "p_emoji": .string(emoji),
     ]
+    if let attachmentId {
+      params["p_attachment_id"] = .string(attachmentId)
+    }
 
     do {
       _ = try await AuthSessionManager.shared.getSession()
@@ -1435,6 +1443,7 @@ private struct MessagingAttachmentRow: Decodable {
   let width: Int?
   let height: Int?
   let createdAt: Date
+  let reactions: [MessagingReactionRow]?
 
   enum CodingKeys: String, CodingKey {
     case id
@@ -1447,6 +1456,7 @@ private struct MessagingAttachmentRow: Decodable {
     case width
     case height
     case createdAt = "created_at"
+    case reactions
   }
 
   func toFriendAttachment() -> FriendMessageAttachment {
@@ -1460,7 +1470,8 @@ private struct MessagingAttachmentRow: Decodable {
       byteSize: byteSize,
       width: width,
       height: height,
-      createdAt: createdAt
+      createdAt: createdAt,
+      reactions: (reactions ?? []).map { $0.toFriendReaction() }
     )
   }
 }

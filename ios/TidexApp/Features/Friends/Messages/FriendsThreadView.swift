@@ -26,6 +26,16 @@ struct FriendsThreadView: View {
     let snapshot: FriendShiftSnapshot
   }
 
+  private struct PendingAttachmentReactionTarget: Equatable {
+    let messageId: String
+    let attachmentId: String
+    let createdAt: Date
+
+    func isValid(for messageId: String, now: Date = .now) -> Bool {
+      self.messageId == messageId && now.timeIntervalSince(createdAt) <= 10
+    }
+  }
+
   private static func normalizedIdentifier(_ value: String?) -> String? {
     guard let value else { return nil }
     let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -60,6 +70,8 @@ struct FriendsThreadView: View {
   @State private var liveEdgeTargetPresentedMessageID: String?
   @State private var selectedImageGallery: SelectedImageGallery?
   @State private var pendingForwardAttachment: PendingForwardAttachment?
+  @State private var activeAttachmentReactionTarget: PendingAttachmentReactionTarget?
+  @State private var pendingAttachmentReactionTarget: PendingAttachmentReactionTarget?
   @State private var visibilityOwnerId = UUID()
 
   init(route: FriendChatRoute, viewerUserId: String) {
@@ -170,11 +182,23 @@ struct FriendsThreadView: View {
           counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
           counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
           showsTypingIndicator: viewModel.counterpartIsTyping,
-          typingIndicatorCreatedAt: viewModel.thread.lastMessageAt ?? viewModel.thread.createdAt
+          typingIndicatorCreatedAt: viewModel.thread.lastMessageAt ?? viewModel.thread.createdAt,
+          reactionAttachmentTargets: activeReactionAttachmentTargets
         )
       ),
       highlightedPresentedMessageID: highlightedPresentedMessageID
     )
+  }
+
+  private var activeReactionAttachmentTargets: [String: String] {
+    [activeAttachmentReactionTarget, pendingAttachmentReactionTarget]
+      .compactMap { target -> (String, String)? in
+        guard let target, target.isValid(for: target.messageId) else { return nil }
+        return (target.messageId, target.attachmentId)
+      }
+      .reduce(into: [:]) { targets, pair in
+        targets[pair.0] = pair.1
+      }
   }
 
   private var viewportScrollRequest: FriendsThreadChatViewportScrollRequest? {
@@ -588,7 +612,13 @@ struct FriendsThreadView: View {
       didReactTo: { message, draftReaction in
         guard case .emoji(let emoji) = draftReaction.type else { return }
         guard let friendMessage = presentedMessageLookup[message.id] else { return }
-        handleReactionSelection(emoji, forMessageId: friendMessage.id)
+        let attachmentId = resolvedPendingAttachmentReactionTarget(
+          forMessageId: friendMessage.id
+        )?.attachmentId
+        activeAttachmentReactionTarget = nil
+        pendingAttachmentReactionTarget = nil
+        handleReactionSelection(emoji, forMessageId: friendMessage.id, attachmentId: attachmentId)
+        FriendsThreadAttachmentReactionMenuTarget.clear(messageId: friendMessage.id)
       },
       canReactTo: { message in
         presentedMessageLookup[message.id]?.canReact ?? false
@@ -683,6 +713,17 @@ struct FriendsThreadView: View {
         groupContext: groupContext,
         messageStatus: messageStatus
       )
+      let isHighlighted = FriendsThreadExyteHighlightRedrawResolver.isHighlighted(exyteMessage)
+      let attachmentHighlightTarget =
+        activeAttachmentReactionTarget?.isValid(for: message.id) == true
+        ? activeAttachmentReactionTarget
+        : pendingAttachmentReactionTarget
+      let highlightedAttachmentId: String? =
+        if attachmentHighlightTarget?.isValid(for: message.id) == true {
+          attachmentHighlightTarget?.attachmentId
+        } else {
+          nil
+        }
 
       FriendsChatMessageRowContent(
         message: message,
@@ -692,7 +733,8 @@ struct FriendsThreadView: View {
         counterpartAvatarUrl: counterpartAvatarUrl,
         counterpartAvatarInitials: FriendsChatMessageGrouping.initials(
           from: counterpartDisplayName),
-        isHighlighted: FriendsThreadExyteHighlightRedrawResolver.isHighlighted(exyteMessage),
+        isHighlighted: isHighlighted,
+        highlightedAttachmentId: highlightedAttachmentId,
         visibleMessageText: FriendsThreadExyteHighlightRedrawResolver.visibleText(
           for: exyteMessage
         ),
@@ -709,14 +751,34 @@ struct FriendsThreadView: View {
             await viewModel.retryMessage(messageId: message.id)
           }
         },
-        onToggleReaction: { emoji in
-          handleReactionSelection(emoji, forMessageId: message.id)
+        onToggleReaction: { emoji, attachmentId in
+          handleReactionSelection(emoji, forMessageId: message.id, attachmentId: attachmentId)
         },
         onTapQuotedMessage: {
           handleQuotedMessageTap(for: message)
         },
         onOpenImageAttachment: { attachment in
           selectedImageGallery = SelectedImageGallery(attachmentID: attachment.id)
+        },
+        onImageReactionPressChanged: { attachment, isPressing in
+          if isPressing {
+            activeAttachmentReactionTarget = PendingAttachmentReactionTarget(
+              messageId: message.id,
+              attachmentId: attachment.id,
+              createdAt: .now
+            )
+          } else if pendingAttachmentReactionTarget?.attachmentId != attachment.id {
+            activeAttachmentReactionTarget = nil
+          }
+        },
+        onPrepareImageReaction: { attachment in
+          let target = PendingAttachmentReactionTarget(
+            messageId: message.id,
+            attachmentId: attachment.id,
+            createdAt: .now
+          )
+          activeAttachmentReactionTarget = target
+          pendingAttachmentReactionTarget = target
         },
         onOpenShiftSnapshot: { snapshot in
           openShiftSnapshot(snapshot)
@@ -1035,6 +1097,9 @@ struct FriendsThreadView: View {
     _ message: ExyteChat.Message
   ) {
     guard let friendMessage = presentedMessageLookup[message.id] else { return }
+    activeAttachmentReactionTarget = nil
+    pendingAttachmentReactionTarget = nil
+    FriendsThreadAttachmentReactionMenuTarget.clear(messageId: friendMessage.id)
 
     switch action {
     case .reply:
@@ -1141,12 +1206,37 @@ struct FriendsThreadView: View {
     AppCoordinator.shared.pendingDeepLink = deepLink
   }
 
-  private func handleReactionSelection(_ emoji: String, forMessageId messageId: String) {
+  private func handleReactionSelection(
+    _ emoji: String,
+    forMessageId messageId: String,
+    attachmentId: String? = nil
+  ) {
     reactionPaletteStore.recordSelection(emoji)
 
     Task {
-      await viewModel.toggleReaction(messageId: messageId, emoji: emoji)
+      await viewModel.toggleReaction(messageId: messageId, emoji: emoji, attachmentId: attachmentId)
     }
+  }
+
+  private func resolvedPendingAttachmentReactionTarget(
+    forMessageId messageId: String
+  ) -> PendingAttachmentReactionTarget? {
+    if let target = pendingAttachmentReactionTarget {
+      if target.isValid(for: messageId) {
+        return target
+      }
+      pendingAttachmentReactionTarget = nil
+    }
+
+    if let attachmentId = FriendsThreadAttachmentReactionMenuTarget.attachmentId(for: messageId) {
+      return PendingAttachmentReactionTarget(
+        messageId: messageId,
+        attachmentId: attachmentId,
+        createdAt: .now
+      )
+    }
+
+    return nil
   }
 
   private func handleQuotedMessageTap(for message: FriendMessage) {

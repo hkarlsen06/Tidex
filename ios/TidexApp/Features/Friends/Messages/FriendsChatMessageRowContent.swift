@@ -28,6 +28,39 @@ enum FriendsChatMessageStatus: Equatable {
   case failed
 }
 
+@MainActor
+enum FriendsThreadAttachmentReactionMenuTarget {
+  private struct Target {
+    let messageId: String
+    let attachmentId: String
+    let createdAt: Date
+  }
+
+  private static var target: Target?
+  private static let expirationInterval: TimeInterval = 10
+
+  static func set(messageId: String, attachmentId: String) {
+    target = Target(messageId: messageId, attachmentId: attachmentId, createdAt: .now)
+  }
+
+  static func clear(messageId: String? = nil, attachmentId: String? = nil) {
+    guard let current = target else { return }
+    if let messageId, current.messageId != messageId { return }
+    if let attachmentId, current.attachmentId != attachmentId { return }
+    target = nil
+  }
+
+  static func attachmentId(for messageId: String, now: Date = .now) -> String? {
+    guard let current = target else { return nil }
+    guard current.messageId == messageId else { return nil }
+    guard now.timeIntervalSince(current.createdAt) <= expirationInterval else {
+      target = nil
+      return nil
+    }
+    return current.attachmentId
+  }
+}
+
 struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
   private static let reactionHorizontalOffset: CGFloat = 12
@@ -67,6 +100,7 @@ struct FriendsChatMessageRowContent: View {
   let onToggleReaction: (String, String?) -> Void
   let onTapQuotedMessage: () -> Void
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
+  let onImageReactionPressChanged: (FriendMessageAttachment, Bool) -> Void
   let onPrepareImageReaction: (FriendMessageAttachment) -> Void
   let onOpenShiftSnapshot: (FriendShiftSnapshot) -> Void
   let onReplySwipe: (() -> Void)?
@@ -76,14 +110,29 @@ struct FriendsChatMessageRowContent: View {
   @State private var hasTriggeredReplySwipeHaptic = false
 
   var body: some View {
-    let hasMessageText = !visibleMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    let imageAttachments = message.attachments.filter { $0.kind == .image }
+    let menuAttachmentId =
+      messageFrame != nil
+      ? FriendsThreadAttachmentReactionMenuTarget.attachmentId(for: message.id)
+      : nil
+    let targetAttachmentId = menuAttachmentId ?? highlightedAttachmentId
+    let isShowingAttachmentReactionTarget = messageFrame != nil && targetAttachmentId != nil
+    let hasMessageText =
+      !isShowingAttachmentReactionTarget
+      && !visibleMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    let allImageAttachments = message.attachments.filter { $0.kind == .image }
+    let imageAttachments =
+      if isShowingAttachmentReactionTarget, let targetAttachmentId {
+        allImageAttachments.filter { $0.id == targetAttachmentId }
+      } else {
+        allImageAttachments
+      }
     let shiftSnapshot = message.shiftSnapshot
     let fallbackPreviewText = message.previewText
     let showsFallbackBubble =
       !hasMessageText && imageAttachments.isEmpty && shiftSnapshot == nil
       && fallbackPreviewText != nil
-    let showsMetadataRow = inlineMetadataStatus != nil || message.editedAt != nil
+    let showsMetadataRow =
+      !isShowingAttachmentReactionTarget && (inlineMetadataStatus != nil || message.editedAt != nil)
     let topPadding = groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
     let bottomPadding =
       if showsMetadataRow {
@@ -120,7 +169,7 @@ struct FriendsChatMessageRowContent: View {
               }
 
               VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-                if !hasMessageText, let quotedPreview {
+                if !isShowingAttachmentReactionTarget, !hasMessageText, let quotedPreview {
                   FriendsChatMessageReplyPreview(
                     preview: quotedPreview,
                     isCurrentUser: isCurrentUser,
@@ -133,11 +182,13 @@ struct FriendsChatMessageRowContent: View {
                   index, attachment in
                   if attachment.kind == .image {
                     FriendsChatImageView(
+                      messageId: message.id,
                       attachment: attachment,
                       isCurrentUser: isCurrentUser,
                       canReact: message.canReact,
-                      isHighlighted: highlightedAttachmentId == attachment.id,
+                      isHighlighted: false,
                       onOpenImageAttachment: onOpenImageAttachment,
+                      onReactionPressChanged: onImageReactionPressChanged,
                       onPrepareReaction: onPrepareImageReaction
                     )
                     .friendsChatMessageFrame(
@@ -149,7 +200,8 @@ struct FriendsChatMessageRowContent: View {
                         let reactionTarget = imageReactionTarget(
                           for: attachment,
                           index: index,
-                          imageCount: imageAttachments.count
+                          imageCount: imageAttachments.count,
+                          allowsMessageFallback: !isShowingAttachmentReactionTarget
                         )
                         reactionStrip(
                           for: reactionTarget.reactions,
@@ -271,6 +323,9 @@ struct FriendsChatMessageRowContent: View {
 
   private var shouldHighlightWholeMessage: Bool {
     isHighlighted && highlightedAttachmentId == nil
+      && !message.attachments.contains {
+        $0.kind == .image
+      }
   }
 
   @ViewBuilder
@@ -285,7 +340,7 @@ struct FriendsChatMessageRowContent: View {
       }
       .contentShape(Rectangle())
       .onTapGesture {}
-      .highPriorityGesture(
+      .simultaneousGesture(
         DragGesture(minimumDistance: 20)
           .onChanged { value in
             handleReplySwipeChanged(value: value)
@@ -516,13 +571,14 @@ struct FriendsChatMessageRowContent: View {
   private func imageReactionTarget(
     for attachment: FriendMessageAttachment,
     index: Int,
-    imageCount: Int
+    imageCount: Int,
+    allowsMessageFallback: Bool
   ) -> (reactions: [FriendMessageReaction], attachmentId: String?) {
     if !attachment.reactions.isEmpty {
       return (attachment.reactions, attachment.id)
     }
 
-    if index == imageCount - 1 {
+    if allowsMessageFallback && index == imageCount - 1 {
       return (message.reactions, nil)
     }
 
@@ -1060,11 +1116,13 @@ struct ChatShiftSnapshotCard: View {
 }
 
 private struct FriendsChatImageView: View {
+  let messageId: String
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
   let canReact: Bool
   let isHighlighted: Bool
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
+  let onReactionPressChanged: (FriendMessageAttachment, Bool) -> Void
   let onPrepareReaction: (FriendMessageAttachment) -> Void
 
   @State private var tapSuppressedUntil: Date?
@@ -1082,18 +1140,36 @@ private struct FriendsChatImageView: View {
       else {
         return
       }
+      FriendsThreadAttachmentReactionMenuTarget.clear(
+        messageId: messageId,
+        attachmentId: attachment.id
+      )
+      onReactionPressChanged(attachment, false)
       onOpenImageAttachment(attachment)
     }
-    .simultaneousGesture(
-      LongPressGesture(
-        minimumDuration: FriendsThreadAttachmentTapGuard.messageMenuRecognitionDuration
-      )
-      .onEnded { _ in
+    .overlay(touchReporter)
+    .onLongPressGesture(
+      minimumDuration: FriendsThreadAttachmentTapGuard.messageMenuRecognitionDuration,
+      maximumDistance: 20,
+      perform: {
         tapSuppressedUntil =
           FriendsThreadAttachmentTapGuard
           .suppressedUntilAfterMenuRecognition()
         guard canReact else { return }
+        FriendsThreadAttachmentReactionMenuTarget.set(
+          messageId: messageId,
+          attachmentId: attachment.id
+        )
         onPrepareReaction(attachment)
+      },
+      onPressingChanged: { isPressing in
+        if isPressing, canReact {
+          FriendsThreadAttachmentReactionMenuTarget.set(
+            messageId: messageId,
+            attachmentId: attachment.id
+          )
+        }
+        onReactionPressChanged(attachment, isPressing && canReact)
       }
     )
     .onChange(of: canReact) { _, canReact in
@@ -1101,6 +1177,119 @@ private struct FriendsChatImageView: View {
         return
       }
       tapSuppressedUntil = nil
+      FriendsThreadAttachmentReactionMenuTarget.clear(
+        messageId: messageId,
+        attachmentId: attachment.id
+      )
+      onReactionPressChanged(attachment, false)
+    }
+  }
+
+  private var touchReporter: some View {
+    FriendsThreadAttachmentTouchReporter(
+      onTouchDown: {
+        guard canReact else { return }
+        FriendsThreadAttachmentReactionMenuTarget.set(
+          messageId: messageId,
+          attachmentId: attachment.id
+        )
+        onReactionPressChanged(attachment, true)
+      },
+      onTap: {
+        guard
+          FriendsThreadAttachmentTapGuard.shouldHandleTap(
+            suppressedUntil: tapSuppressedUntil
+          )
+        else {
+          return
+        }
+        FriendsThreadAttachmentReactionMenuTarget.clear(
+          messageId: messageId,
+          attachmentId: attachment.id
+        )
+        onReactionPressChanged(attachment, false)
+        onOpenImageAttachment(attachment)
+      }
+    )
+  }
+}
+
+private struct FriendsThreadAttachmentTouchReporter: UIViewRepresentable {
+  let onTouchDown: () -> Void
+  let onTap: () -> Void
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onTouchDown: onTouchDown, onTap: onTap)
+  }
+
+  func makeUIView(context: Context) -> UIView {
+    let view = UIView(frame: .zero)
+    view.backgroundColor = .clear
+    view.isUserInteractionEnabled = true
+
+    let touchDownRecognizer = TouchDownGestureRecognizer(
+      target: context.coordinator,
+      action: #selector(Coordinator.handleTouchDown)
+    )
+    touchDownRecognizer.cancelsTouchesInView = false
+    touchDownRecognizer.delegate = context.coordinator
+    view.addGestureRecognizer(touchDownRecognizer)
+
+    let tapRecognizer = UITapGestureRecognizer(
+      target: context.coordinator,
+      action: #selector(Coordinator.handleTap)
+    )
+    tapRecognizer.cancelsTouchesInView = false
+    tapRecognizer.delegate = context.coordinator
+    view.addGestureRecognizer(tapRecognizer)
+
+    return view
+  }
+
+  func updateUIView(_ uiView: UIView, context: Context) {
+    context.coordinator.onTouchDown = onTouchDown
+    context.coordinator.onTap = onTap
+  }
+
+  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    var onTouchDown: () -> Void
+    var onTap: () -> Void
+
+    init(onTouchDown: @escaping () -> Void, onTap: @escaping () -> Void) {
+      self.onTouchDown = onTouchDown
+      self.onTap = onTap
+    }
+
+    @objc func handleTouchDown() {
+      onTouchDown()
+    }
+
+    @objc func handleTap() {
+      onTap()
+    }
+
+    func gestureRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+      true
+    }
+  }
+
+  final class TouchDownGestureRecognizer: UIGestureRecognizer {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+      super.touchesBegan(touches, with: event)
+      state = .recognized
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+      super.touchesMoved(touches, with: event)
+      state = .failed
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+      super.touchesCancelled(touches, with: event)
+      state = .cancelled
     }
   }
 }
@@ -1639,7 +1828,7 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
   }
 
   func makeUIView(context: Context) -> UIScrollView {
-    let scrollView = UIScrollView()
+    let scrollView = ZoomScrollView()
     scrollView.delegate = context.coordinator
     scrollView.backgroundColor = .clear
     scrollView.showsHorizontalScrollIndicator = false
@@ -1662,6 +1851,9 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
     )
     doubleTapRecognizer.numberOfTapsRequired = 2
     scrollView.addGestureRecognizer(doubleTapRecognizer)
+    scrollView.onLayout = { [weak coordinator = context.coordinator] scrollView in
+      coordinator?.layoutIfNeeded(in: scrollView)
+    }
     context.coordinator.configure(image: image, in: scrollView, forceReset: true)
 
     return scrollView
@@ -1676,6 +1868,15 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
     }
   }
 
+  private final class ZoomScrollView: UIScrollView {
+    var onLayout: ((UIScrollView) -> Void)?
+
+    override func layoutSubviews() {
+      super.layoutSubviews()
+      onLayout?(self)
+    }
+  }
+
   final class Coordinator: NSObject, UIScrollViewDelegate {
     let imageView = UIImageView()
     var onZoomStateChanged: (Bool) -> Void
@@ -1686,6 +1887,7 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
     private var fittedImageSize: CGSize = .zero
     private var reportedIsZoomed = false
     private var isResettingZoom = false
+    private var pendingImage: UIImage?
 
     init(onZoomStateChanged: @escaping (Bool) -> Void) {
       self.onZoomStateChanged = onZoomStateChanged
@@ -1747,8 +1949,15 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
     }
 
     func configure(image: UIImage, in scrollView: UIScrollView, forceReset: Bool) {
+      pendingImage = image
       let imageIdentifier = ObjectIdentifier(image)
       let boundsSize = scrollView.bounds.size
+
+      guard boundsSize.width > 0, boundsSize.height > 0 else {
+        imageView.image = image
+        return
+      }
+
       let imageChanged = imageIdentifier != currentImageIdentifier
       let boundsChanged = boundsSize != lastBoundsSize
 
@@ -1772,7 +1981,14 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
       centerImage(in: scrollView)
     }
 
+    func layoutIfNeeded(in scrollView: UIScrollView) {
+      guard let pendingImage else { return }
+      configure(image: pendingImage, in: scrollView, forceReset: false)
+    }
+
     func resetZoom(in scrollView: UIScrollView) {
+      guard fittedImageSize.width > 0, fittedImageSize.height > 0 else { return }
+
       isResettingZoom = true
       defer { isResettingZoom = false }
 

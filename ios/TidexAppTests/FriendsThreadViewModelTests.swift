@@ -3350,6 +3350,21 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     try XCTUnwrap(sentMessage)
   }
 
+  func fetchMessageSyncPayloadV2(messageId _: String) async throws -> FriendMessage {
+    await Task.yield()
+    try XCTUnwrap(sentMessage)
+  }
+
+  func toggleMessageReaction(
+    messageId: String,
+    emoji: String,
+    attachmentId: String?
+  ) async throws -> FriendMessage {
+    await Task.yield()
+    let message = try XCTUnwrap(threadMessages.first { $0.id == messageId })
+    return message.toggledReaction(emoji: emoji, attachmentId: attachmentId)
+  }
+
   func createAbuseReport(
     threadId: String,
     reportedUserId: String,

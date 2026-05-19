@@ -263,6 +263,7 @@ final class LocalMessageReaction {
   var viewerUserId: String
   var threadId: String
   var messageId: String
+  var attachmentId: String? = nil
   var reactionIndex: Int
   var emoji: String
   var count: Int
@@ -273,16 +274,20 @@ final class LocalMessageReaction {
     viewerUserId: String,
     threadId: String,
     messageId: String,
+    attachmentId: String? = nil,
     reactionIndex: Int,
     emoji: String,
     count: Int,
     viewerHasReacted: Bool,
     updatedAt: Date = Date()
   ) {
-    self.compositeKey = "\(viewerUserId):\(messageId):\(emoji)"
+    self.compositeKey =
+      attachmentId.map { "\(viewerUserId):\(messageId):\($0):\(emoji)" }
+      ?? "\(viewerUserId):\(messageId):\(emoji)"
     self.viewerUserId = viewerUserId
     self.threadId = threadId
     self.messageId = messageId
+    self.attachmentId = attachmentId
     self.reactionIndex = reactionIndex
     self.emoji = emoji
     self.count = count
@@ -403,7 +408,8 @@ extension LocalThreadState {
 }
 
 extension LocalMessageAttachment {
-  func toFriendMessageAttachment() -> FriendMessageAttachment {
+  func toFriendMessageAttachment(reactions: [LocalMessageReaction] = []) -> FriendMessageAttachment
+  {
     FriendMessageAttachment(
       id: id,
       attachmentIndex: attachmentIndex,
@@ -414,7 +420,22 @@ extension LocalMessageAttachment {
       byteSize: byteSize,
       width: width,
       height: height,
-      createdAt: createdAt
+      createdAt: createdAt,
+      reactions:
+        reactions
+        .sorted {
+          if $0.reactionIndex == $1.reactionIndex {
+            return $0.emoji < $1.emoji
+          }
+          return $0.reactionIndex < $1.reactionIndex
+        }
+        .map {
+          FriendMessageReaction(
+            emoji: $0.emoji,
+            count: $0.count,
+            viewerHasReacted: $0.viewerHasReacted
+          )
+        }
     )
   }
 }
@@ -424,7 +445,15 @@ extension LocalMessage {
     attachments: [LocalMessageAttachment],
     reactions: [LocalMessageReaction]
   ) -> FriendMessage {
-    FriendMessage(
+    let reactionsByAttachmentId = Dictionary(
+      grouping: reactions.compactMap { reaction -> LocalMessageReaction? in
+        reaction.attachmentId == nil ? nil : reaction
+      },
+      by: { $0.attachmentId ?? "" }
+    )
+    let messageReactions = reactions.filter { $0.attachmentId == nil }
+
+    return FriendMessage(
       id: id,
       threadId: threadId,
       senderUserId: senderUserId,
@@ -444,9 +473,11 @@ extension LocalMessage {
           }
           return $0.attachmentIndex < $1.attachmentIndex
         }
-        .map { $0.toFriendMessageAttachment() },
+        .map {
+          $0.toFriendMessageAttachment(reactions: reactionsByAttachmentId[$0.id] ?? [])
+        },
       reactions:
-        reactions
+        messageReactions
         .sorted {
           if $0.reactionIndex == $1.reactionIndex {
             return $0.emoji < $1.emoji

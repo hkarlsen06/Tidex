@@ -47,7 +47,34 @@ AS $function$
             'byte_size', ma.byte_size,
             'width', ma.width,
             'height', ma.height,
-            'created_at', ma.created_at
+            'created_at', ma.created_at,
+            'reactions', COALESCE(
+              (
+                SELECT jsonb_agg(
+                  jsonb_build_object(
+                    'emoji', reaction_summary.emoji,
+                    'count', reaction_summary.reaction_count,
+                    'viewer_has_reacted', reaction_summary.viewer_has_reacted
+                  )
+                  ORDER BY
+                    reaction_summary.viewer_has_reacted DESC,
+                    reaction_summary.reaction_count DESC,
+                    reaction_summary.first_created_at ASC,
+                    reaction_summary.emoji ASC
+                )
+                FROM (
+                  SELECT
+                    mr.emoji,
+                    COUNT(*)::integer AS reaction_count,
+                    BOOL_OR(mr.user_id = auth.uid()) AS viewer_has_reacted,
+                    MIN(mr.created_at) AS first_created_at
+                  FROM public.message_reactions mr
+                  WHERE mr.attachment_id = ma.id
+                  GROUP BY mr.emoji
+                ) AS reaction_summary
+              ),
+              '[]'::jsonb
+            )
           )
           ORDER BY ma.attachment_index ASC
         )
@@ -78,6 +105,7 @@ AS $function$
             MIN(mr.created_at) AS first_created_at
           FROM public.message_reactions mr
           WHERE mr.message_id = m.id
+            AND mr.attachment_id IS NULL
           GROUP BY mr.emoji
         ) AS reaction_summary
       ),
