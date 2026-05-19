@@ -38,6 +38,11 @@ extension Color {
     Color(hue: 258 / 360, saturation: 0.70, brightness: 0.75)
   }
 
+  /// Employment analytics accent - green with stronger contrast on dark chart surfaces.
+  static var tidexEmploymentAccent: Color {
+    tidexSuccess
+  }
+
   // MARK: - Gradient Colors
 
   /// Logo gradient colors from short-logo-gradient.svg
