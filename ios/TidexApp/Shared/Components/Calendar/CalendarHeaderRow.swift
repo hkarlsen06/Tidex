@@ -7,6 +7,11 @@ struct CalendarHeaderTotals: Equatable {
   let secondary: Double?
 }
 
+enum CalendarHeaderSecondaryStyle {
+  case detail
+  case delta
+}
+
 /// Shared month/year header used by calendar-based screens.
 /// Supports optional trailing totals.
 struct CalendarHeaderRow: View {
@@ -16,6 +21,7 @@ struct CalendarHeaderRow: View {
   let phase: MonthTransitionPhase?
   let totals: CalendarHeaderTotals?
   let trailingAccessory: AnyView?
+  var secondaryStyle: CalendarHeaderSecondaryStyle = .detail
 
   @State private var lastDisplayedPrimary: Double = 0
   @State private var lastDisplayedSecondary: Double = 0
@@ -84,20 +90,7 @@ struct CalendarHeaderRow: View {
     if let secondary = totals.secondary {
       VStack(alignment: .trailing, spacing: Spacing.micro) {
         primaryAmountText(totals.primary)
-        animatedAmount(
-          secondary,
-          animateFrom: lastDisplayedSecondary > 0 ? lastDisplayedSecondary : nil
-        )
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
-        .onChange(of: secondary) { _, newValue in
-          lastDisplayedSecondary = newValue
-        }
-        .onAppear {
-          if lastDisplayedSecondary == 0 {
-            lastDisplayedSecondary = secondary
-          }
-        }
+        secondaryAmountText(secondary)
       }
     } else {
       primaryAmountText(totals.primary)
@@ -125,6 +118,37 @@ struct CalendarHeaderRow: View {
       Text("—")
         .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
+    }
+  }
+
+  @ViewBuilder
+  private func secondaryAmountText(_ amount: Double) -> some View {
+    let amountText = animatedAmount(
+      amount,
+      animateFrom: lastDisplayedSecondary > 0 ? lastDisplayedSecondary : nil
+    )
+    .font(.tidexFootnote)
+    .onChange(of: amount) { _, newValue in
+      lastDisplayedSecondary = newValue
+    }
+    .onAppear {
+      if lastDisplayedSecondary == 0 {
+        lastDisplayedSecondary = amount
+      }
+    }
+
+    switch secondaryStyle {
+    case .detail:
+      amountText
+        .foregroundColor(.tidexTextMuted)
+    case .delta:
+      HStack(alignment: .center, spacing: Spacing.xxxs) {
+        Image(systemName: "plus")
+          .font(.caption2.weight(.bold))
+        amountText
+      }
+      .foregroundColor(.tidexBlue)
+      .transition(.offset(y: -4).combined(with: .opacity))
     }
   }
 

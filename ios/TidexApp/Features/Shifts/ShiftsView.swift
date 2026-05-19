@@ -1252,9 +1252,15 @@ struct ShiftsView: View {
               isMoveMode: viewModel.isMoveMode,
               isCopying: viewModel.isCopying,
               isMoving: viewModel.isMoving,
+              copyTargetDates: viewModel.copyTargetDates,
+              copyPreviewEarnings: viewModel.copyPreviewEarnings,
+              copyPreviewConflictDates: viewModel.copyPreviewConflictDates,
               onCopyToDate: { targetDateISO in
+                viewModel.toggleCopyTargetDate(targetDateISO)
+              },
+              onFinishCopy: {
                 Task {
-                  await viewModel.handleCopyToDate(targetDateISO)
+                  await viewModel.finishCopyToSelectedDates()
                 }
               },
               onMoveToDate: { targetDateISO in
@@ -1472,9 +1478,15 @@ struct ShiftsView: View {
               isMoveMode: viewModel.isMoveMode,
               isCopying: viewModel.isCopying,
               isMoving: viewModel.isMoving,
+              copyTargetDates: viewModel.copyTargetDates,
+              copyPreviewEarnings: viewModel.copyPreviewEarnings,
+              copyPreviewConflictDates: viewModel.copyPreviewConflictDates,
               onCopyToDate: { targetDateISO in
+                viewModel.toggleCopyTargetDate(targetDateISO)
+              },
+              onFinishCopy: {
                 Task {
-                  await viewModel.handleCopyToDate(targetDateISO)
+                  await viewModel.finishCopyToSelectedDates()
                 }
               },
               onMoveToDate: { targetDateISO in

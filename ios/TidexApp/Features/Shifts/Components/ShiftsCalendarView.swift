@@ -11,6 +11,11 @@ private enum GestureMode: Equatable {
   case selecting
 }
 
+private enum SingleSelectionActionMode: Equatable {
+  case primary
+  case copyMoveChoices
+}
+
 // MARK: - Shifts Calendar View
 
 /// Full-featured calendar for the Shifts tab
@@ -74,9 +79,13 @@ struct ShiftsCalendarView: View {
   let isMoveMode: Bool
   let isCopying: Bool
   let isMoving: Bool
+  let copyTargetDates: Set<String>
+  let copyPreviewEarnings: [String: CalendarEarningsData]
+  let copyPreviewConflictDates: Set<String>
 
   // Copy/Move callbacks
   var onCopyToDate: ((String) -> Void)?
+  var onFinishCopy: (() -> Void)?
   var onMoveToDate: ((String) -> Void)?
   var onCancelCopyMove: (() -> Void)?
 
@@ -96,7 +105,7 @@ struct ShiftsCalendarView: View {
   var excludedFromTotalIds: Set<String> = []
 
   @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
-  @State private var showSingleSelectionOverflowMenu = false
+  @State private var singleSelectionActionMode: SingleSelectionActionMode = .primary
   @State private var showSingleSelectionDeleteConfirm = false
   @State private var showMultiSelectionDeleteConfirm = false
   @State private var showMixedCurrencyBreakdownPopover = false
@@ -159,7 +168,11 @@ struct ShiftsCalendarView: View {
     isMoveMode: Bool,
     isCopying: Bool,
     isMoving: Bool,
+    copyTargetDates: Set<String> = [],
+    copyPreviewEarnings: [String: CalendarEarningsData] = [:],
+    copyPreviewConflictDates: Set<String> = [],
     onCopyToDate: ((String) -> Void)? = nil,
+    onFinishCopy: (() -> Void)? = nil,
     onMoveToDate: ((String) -> Void)? = nil,
     onCancelCopyMove: (() -> Void)? = nil,
     isSelectionModeEnabled: Binding<Bool>,
@@ -200,7 +213,11 @@ struct ShiftsCalendarView: View {
     self.isMoveMode = isMoveMode
     self.isCopying = isCopying
     self.isMoving = isMoving
+    self.copyTargetDates = copyTargetDates
+    self.copyPreviewEarnings = copyPreviewEarnings
+    self.copyPreviewConflictDates = copyPreviewConflictDates
     self.onCopyToDate = onCopyToDate
+    self.onFinishCopy = onFinishCopy
     self.onMoveToDate = onMoveToDate
     self.onCancelCopyMove = onCancelCopyMove
     _isSelectionModeEnabled = isSelectionModeEnabled
@@ -333,15 +350,34 @@ struct ShiftsCalendarView: View {
   }
 
   private var multiDeleteConfirmTitle: String {
-    String(localized: .shiftsMultiDeleteConfirmTitle(selectedDates.count))
+    String(localized: .shiftsMultiDeleteConfirmTitle(deleteTargetCount))
   }
 
   private var multiDeleteConfirmMessage: String {
-    let count = selectedDates.count
+    deleteConfirmMessage
+  }
+
+  private var singleDeleteConfirmTitle: String {
+    deleteTargetCount == 1
+      ? String(localized: .shiftsDeleteConfirmTitle)
+      : String(localized: .shiftsMultiDeleteConfirmTitle(deleteTargetCount))
+  }
+
+  private var singleDeleteConfirmMessage: String {
+    deleteConfirmMessage
+  }
+
+  private var deleteConfirmMessage: String {
+    let count = deleteTargetCount
     if count == 1 {
       return String(localized: .shiftsDeleteConfirmMessage)
     }
     return String(localized: .shiftsDeleteConfirmPluralMessage(count))
+  }
+
+  private var deleteTargetCount: Int {
+    let selectedShiftCount = shifts.filter { selectedDates.contains($0.shiftDate) }.count
+    return max(selectedShiftCount, selectedDates.count)
   }
 
   // MARK: - Body
@@ -354,7 +390,8 @@ struct ShiftsCalendarView: View {
         selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
         phase: phase,
         totals: headerTotals,
-        trailingAccessory: nil
+        trailingAccessory: nil,
+        secondaryStyle: headerSecondaryStyle
       )
       .userCurrency(headerDisplayCurrency)
       .contentShape(Rectangle())
@@ -393,6 +430,10 @@ struct ShiftsCalendarView: View {
   private var headerTotals: CalendarHeaderTotals? {
     guard showEarnings else { return nil }
 
+    if isCopyMode, !copyPreviewEarnings.isEmpty {
+      return copyPreviewHeaderTotals
+    }
+
     let primaryAmount: Double?
     let secondaryAmount: Double?
 
@@ -423,6 +464,49 @@ struct ShiftsCalendarView: View {
       primary: primaryAmount,
       secondary: secondaryAmount
     )
+  }
+
+  private var copyPreviewHeaderTotals: CalendarHeaderTotals? {
+    let existingByDate = earningsByDate.filter { dateISO, _ in
+      isDateInDisplayedMonth(dateISO)
+    }
+    let previewByDate = copyPreviewEarnings.filter { dateISO, _ in
+      isDateInDisplayedMonth(dateISO)
+    }
+    guard !previewByDate.isEmpty else { return nil }
+
+    let totals = ConflictExclusion.combinedEarnings(
+      existingByDate: existingByDate,
+      previewByDate: previewByDate,
+      conflictDates: copyPreviewConflictDates
+    )
+    guard totals.gross > 0 else { return nil }
+
+    let baselineTotals = ConflictExclusion.combinedEarnings(
+      existingByDate: existingByDate,
+      previewByDate: [:],
+      conflictDates: []
+    )
+
+    let primaryAmount = totals.hasTaxEnabled ? totals.net : totals.gross
+    let baselinePrimary =
+      baselineTotals.hasTaxEnabled ? baselineTotals.net : baselineTotals.gross
+    let delta = max(primaryAmount - baselinePrimary, 0)
+
+    return CalendarHeaderTotals(
+      primary: primaryAmount,
+      secondary: delta > 0 ? delta : nil
+    )
+  }
+
+  private var headerSecondaryStyle: CalendarHeaderSecondaryStyle {
+    isCopyMode && !copyPreviewEarnings.isEmpty ? .delta : .detail
+  }
+
+  private func isDateInDisplayedMonth(_ dateISO: String) -> Bool {
+    guard let date = Date.fromISODateString(dateISO) else { return false }
+    let components = calendar.dateComponents([.year, .month], from: date)
+    return components.year == year && components.month == monthNumber
   }
 
   private var monthlyIncludedShifts: [ShiftWithComputations] {
@@ -482,13 +566,16 @@ struct ShiftsCalendarView: View {
     CalendarMonthGrid(days: days) { dayInfo in
       let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
       let eventsOnDay = dayInfo.dateISO.flatMap { eventCoverageByDate[$0] } ?? []
-      let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
+      let isSelected =
+        dayInfo.dateISO.map { selectedDates.contains($0) || copyTargetDates.contains($0) } ?? false
       let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
       let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
       let isDeepLinkHighlighted =
         dayInfo.dateISO.map { deepLinkHighlightDates.contains($0) } ?? false
       let isToday = dayInfo.dateISO == currentTodayISO
-      let hasConflict = dayInfo.dateISO.map { conflictDates.contains($0) } ?? false
+      let hasConflict =
+        dayInfo.dateISO.map { conflictDates.contains($0) || copyPreviewConflictDates.contains($0) }
+        ?? false
       let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
       let shouldColorJobMetrics =
         hasMultipleActiveJobs
@@ -593,11 +680,12 @@ struct ShiftsCalendarView: View {
       )
     }
     if isSelected || isInDragPreview {
+      let color: Color = hasConflict ? .tidexWarning : .tidexBlue
       return CalendarCellStyle(
-        backgroundColor: isToday ? Color.tidexBlue.opacity(0.2) : .tidexSurfacePrimary,
-        borderColor: .tidexBlue,
+        backgroundColor: isToday ? color.opacity(0.2) : .tidexSurfacePrimary,
+        borderColor: color,
         borderWidth: 2,
-        dayNumberColor: .tidexTextPrimary,
+        dayNumberColor: hasConflict ? .tidexWarning : .tidexTextPrimary,
         showsTodayBadge: isToday
       )
     }
@@ -630,6 +718,17 @@ struct ShiftsCalendarView: View {
     hoursByDate: [String: HoursData]
   ) -> CalendarCellContent {
     guard let dateISO = dayInfo.dateISO else { return .empty }
+
+    if isCopyMode, copyTargetDates.contains(dateISO) {
+      if let earnings = copyPreviewEarnings[dateISO] {
+        return .earningsBreakdown(
+          earnings,
+          color: copyPreviewConflictDates.contains(dateISO) ? .tidexWarning : .tidexBlue,
+          beforeTaxColor: .tidexTextMuted
+        )
+      }
+      return .custom
+    }
 
     let effectiveViewMode = showEarnings ? viewMode : .hours
 
@@ -872,39 +971,28 @@ struct ShiftsCalendarView: View {
     .animation(
       reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8), value: isMoveMode
     )
+    .animation(
+      reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.8),
+      value: singleSelectionActionMode
+    )
     .onAppear {
       toggleHaptic.prepare()
       warningHaptic.prepare()
     }
-    .confirmationDialog(
-      String(localized: .shiftsActionsMenuTitle),
-      isPresented: $showSingleSelectionOverflowMenu,
-      titleVisibility: .visible
-    ) {
-      Button(role: .destructive) {
-        showSingleSelectionDeleteConfirm = true
-      } label: {
-        Label(String(localized: .shiftsActionsDelete), systemImage: "trash")
-      }
-
-      Button {
-        toggleHaptic.impactOccurred()
-        onCopy?()
-      } label: {
-        Label(String(localized: "common.copy"), systemImage: "doc.on.doc")
-      }
-
-      Button {
-        toggleHaptic.impactOccurred()
-        onMove?()
-      } label: {
-        Label(String(localized: .shiftsMove), systemImage: "arrow.left.arrow.right")
-      }
-
-      Button(String(localized: .commonCancel), role: .cancel) {}
+    .onChange(of: selectedDates) { _, _ in
+      singleSelectionActionMode = .primary
+    }
+    .onChange(of: confirmingDelete) { _, _ in
+      singleSelectionActionMode = .primary
+    }
+    .onChange(of: isCopyMode) { _, _ in
+      singleSelectionActionMode = .primary
+    }
+    .onChange(of: isMoveMode) { _, _ in
+      singleSelectionActionMode = .primary
     }
     .alert(
-      String(localized: .shiftsDeleteConfirmTitle),
+      singleDeleteConfirmTitle,
       isPresented: $showSingleSelectionDeleteConfirm
     ) {
       Button(String(localized: .commonCancel), role: .cancel) {}
@@ -913,7 +1001,7 @@ struct ShiftsCalendarView: View {
         onConfirmDelete?()
       }
     } message: {
-      Text(.shiftsDeleteConfirmMessage)
+      Text(singleDeleteConfirmMessage)
     }
     .alert(multiDeleteConfirmTitle, isPresented: $showMultiSelectionDeleteConfirm) {
       Button(String(localized: .commonCancel), role: .cancel) {}
@@ -953,7 +1041,7 @@ struct ShiftsCalendarView: View {
 
         Text(
           isCopyMode
-            ? String(localized: .shiftsSelectCopyTarget)
+            ? String(localized: "shifts.chooseDates")
             : String(localized: .shiftsSelectMoveTarget)
         )
         .font(.tidexLabel)
@@ -977,6 +1065,26 @@ struct ShiftsCalendarView: View {
       }
       .buttonStyle(.plain)
       .disabled(isCopying || isMoving)
+
+      if isCopyMode {
+        Button {
+          toggleHaptic.impactOccurred()
+          onFinishCopy?()
+        } label: {
+          Text("common.copy")
+            .font(.tidexLabelStrong)
+            .foregroundColor(copyTargetDates.isEmpty ? .tidexTextMuted : .tidexTextOnBrand)
+            .padding(.horizontal, Spacing.md)
+            .frame(height: 44)
+            .background(
+              Capsule()
+                .fill(copyTargetDates.isEmpty ? Color.clear : Color.tidexBrandPrimary)
+                .tidexGlass(shape: .capsule, interactive: !copyTargetDates.isEmpty)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isCopying || copyTargetDates.isEmpty)
+      }
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))
@@ -984,6 +1092,15 @@ struct ShiftsCalendarView: View {
 
   @ViewBuilder
   private var singleSelectionBar: some View {
+    if singleSelectionActionMode == .copyMoveChoices {
+      copyMoveChoicesBar
+    } else {
+      primarySingleSelectionBar
+    }
+  }
+
+  @ViewBuilder
+  private var primarySingleSelectionBar: some View {
     HStack(spacing: Spacing.xxs) {
       Button {
         toggleHaptic.impactOccurred()
@@ -1047,7 +1164,7 @@ struct ShiftsCalendarView: View {
 
       Button {
         toggleHaptic.impactOccurred()
-        showSingleSelectionOverflowMenu = true
+        singleSelectionActionMode = .copyMoveChoices
       } label: {
         Image(systemName: "line.3.horizontal")
           .font(.tidexLabel)
@@ -1060,6 +1177,73 @@ struct ShiftsCalendarView: View {
       }
       .buttonStyle(.plain)
       .accessibilityLabel(Text(.shiftsMoreActionsLabel))
+    }
+    .padding(Spacing.xxs)
+    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+  }
+
+  @ViewBuilder
+  private var copyMoveChoicesBar: some View {
+    HStack(spacing: Spacing.xxs) {
+      Button {
+        toggleHaptic.impactOccurred()
+        onCopy?()
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "doc.on.doc")
+            .font(.tidexLabel)
+          Text("common.copy")
+            .font(.tidexLabelStrong)
+        }
+        .foregroundColor(.tidexBlue)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.15), interactive: true)
+        )
+      }
+      .buttonStyle(.plain)
+
+      Button {
+        toggleHaptic.impactOccurred()
+        onMove?()
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "arrow.left.arrow.right")
+            .font(.tidexLabel)
+          Text(.shiftsMove)
+            .font(.tidexLabelStrong)
+        }
+        .foregroundColor(.tidexWarning)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, tint: .tidexWarning.opacity(0.15), interactive: true)
+        )
+      }
+      .buttonStyle(.plain)
+
+      Button {
+        toggleHaptic.impactOccurred()
+        singleSelectionActionMode = .primary
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "xmark")
+            .font(.tidexLabel)
+          Text(.commonCancel)
+            .font(.tidexLabelStrong)
+        }
+        .foregroundColor(.tidexTextPrimary)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, interactive: true)
+        )
+      }
+      .buttonStyle(.plain)
     }
     .padding(Spacing.xxs)
     .background(Capsule().fill(Color.tidexSurfaceSecondary))

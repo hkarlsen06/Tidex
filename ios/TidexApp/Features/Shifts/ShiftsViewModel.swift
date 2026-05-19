@@ -256,6 +256,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Whether a move operation is in progress
   @Published var isMoving: Bool = false
 
+  /// Target dates selected while choosing where to copy a shift.
+  @Published var copyTargetDates: Set<String> = []
+
   /// Whether a recurring shift update is in progress
   @Published var isUpdatingRecurring: Bool = false
 
@@ -292,6 +295,37 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   var selectedCurrencyAggregate: JobCurrencyAggregateResolution? {
     selectionSummary?.currencyAggregate
+  }
+
+  /// Earnings preview for the shift currently being copied to selected target dates.
+  var copyPreviewEarnings: [String: CalendarEarningsData] {
+    guard isCopyMode, let sourceShift = shiftForOperation else { return [:] }
+
+    var result: [String: CalendarEarningsData] = [:]
+    for dateISO in copyTargetDates {
+      if let earnings = computeCopyPreviewEarnings(for: dateISO, sourceShift: sourceShift) {
+        result[dateISO] = earnings
+      }
+    }
+    return result
+  }
+
+  /// Target dates where the copied shift would overlap an existing shift.
+  var copyPreviewConflictDates: Set<String> {
+    guard isCopyMode,
+      let sourceShift = shiftForOperation,
+      !copyTargetDates.isEmpty
+    else {
+      return []
+    }
+
+    return ShiftConflictDetector.detectConflicts(
+      dates: Array(copyTargetDates),
+      startTime: sourceShift.startTime,
+      endTime: sourceShift.endTime,
+      existingShifts: shifts.map(\.shift),
+      existingRecurringShifts: recurringShifts
+    )
   }
 
   /// Shifts for the selected date (single selection mode)
@@ -679,6 +713,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // Also clear copy/move state
     isCopyMode = false
     isMoveMode = false
+    copyTargetDates.removeAll()
     shiftForOperation = nil
   }
 
@@ -761,7 +796,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     // Store the shift and enter copy mode
     shiftForOperation = shift
+    copyTargetDates.removeAll()
     isCopyMode = true
+    isMoveMode = false
     confirmingDelete = false
   }
 
@@ -780,6 +817,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     // Store the shift and enter move mode
     shiftForOperation = shift
+    copyTargetDates.removeAll()
+    isCopyMode = false
     isMoveMode = true
     confirmingDelete = false
   }
@@ -788,27 +827,38 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   func cancelCopyMoveMode() {
     isCopyMode = false
     isMoveMode = false
+    copyTargetDates.removeAll()
     shiftForOperation = nil
     // Keep the original selection so user can try again
   }
 
-  /// Handle date tap when in copy mode - copy shift to the tapped date
-  /// - Parameter targetDateISO: The ISO date string to copy to
-  func handleCopyToDate(_ targetDateISO: String) async {
+  /// Toggle a target date while choosing where to copy the selected shift.
+  /// - Parameter targetDateISO: The ISO date string to copy to.
+  func toggleCopyTargetDate(_ targetDateISO: String) {
+    guard isCopyMode, let sourceShift = shiftForOperation else { return }
+    guard targetDateISO != sourceShift.shiftDate else { return }
+
+    if copyTargetDates.contains(targetDateISO) {
+      copyTargetDates.remove(targetDateISO)
+    } else {
+      copyTargetDates.insert(targetDateISO)
+    }
+  }
+
+  /// Finish copy mode by copying the selected shift to all chosen target dates.
+  func finishCopyToSelectedDates() async {
     // Prevent duplicate taps
     guard !isCopying else { return }
 
     guard isCopyMode,
-      let sourceShift = shiftForOperation
+      let sourceShift = shiftForOperation,
+      !copyTargetDates.isEmpty
     else { return }
 
-    // Don't copy to the same date
-    guard targetDateISO != sourceShift.shiftDate else {
-      cancelCopyMoveMode()
-      return
-    }
-
     isCopying = true
+    defer {
+      isCopying = false
+    }
 
     do {
       // Get current user ID - use cached value or fall back to AppCoordinator
@@ -818,28 +868,29 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         throw ShiftsError.notAuthenticated
       }
 
-      // Parse the target date
-      guard let targetDate = Date.fromISODateString(targetDateISO) else {
-        logger.error("Invalid target date: \(targetDateISO)")
-        isCopying = false
-        cancelCopyMoveMode()
-        return
+      for targetDateISO in copyTargetDates.sorted() {
+        guard let targetDate = Date.fromISODateString(targetDateISO) else {
+          logger.error("Invalid target date: \(targetDateISO)")
+          continue
+        }
+
+        // Create a new shift with the same times at the target date
+        _ = try await shiftsRepository.createShift(
+          userId: userId,
+          jobId: sourceShift.shift.job_id,
+          shiftDate: targetDate,
+          startTime: sourceShift.startTime,
+          endTime: sourceShift.endTime,
+          customSupplements: sourceShift.shift.custom_supplements
+        )
       }
 
-      // Create a new shift with the same times at the target date
-      _ = try await shiftsRepository.createShift(
-        userId: userId,
-        jobId: sourceShift.shift.job_id,
-        shiftDate: targetDate,
-        startTime: sourceShift.startTime,
-        endTime: sourceShift.endTime,
-        customSupplements: sourceShift.shift.custom_supplements
-      )
-
-      logger.info("Copied shift from \(sourceShift.shiftDate) to \(targetDateISO)")
+      logger.info(
+        "Copied shift from \(sourceShift.shiftDate) to \(self.copyTargetDates.count) target dates")
 
       // Exit copy mode and clear selection
       isCopyMode = false
+      copyTargetDates.removeAll()
       shiftForOperation = nil
       clearSelection()
 
@@ -850,8 +901,61 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     } catch {
       logger.error("Failed to copy shift: \(error.localizedDescription)")
     }
+  }
 
-    isCopying = false
+  private func computeCopyPreviewEarnings(
+    for dateISO: String,
+    sourceShift: ShiftWithComputations
+  ) -> CalendarEarningsData? {
+    let jobId = sourceShift.shift.job_id
+    let scopedSnapshots = snapshotsForJob(jobId)
+
+    let wageSnapshot = SnapshotsService.snapshotForDate(dateISO, from: scopedSnapshots)
+    let payoutDate = PayrollEngine.calculatePayoutDate(
+      shiftDate: dateISO,
+      payrollDay: payrollDay(for: jobId)
+    )
+    let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: scopedSnapshots)
+
+    let shift = ShiftRow(
+      id: "copy-preview-\(dateISO)",
+      user_id: sourceShift.shift.user_id,
+      job_id: jobId,
+      shift_date: dateISO,
+      start_time: sourceShift.startTime,
+      end_time: sourceShift.endTime,
+      custom_supplements: sourceShift.shift.custom_supplements
+    )
+
+    let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
+    let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
+    let net = computed.netPay(
+      taxEnabled: taxEnabled,
+      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+    )
+
+    return CalendarEarningsData(net: net, gross: computed.gross, hasTaxEnabled: taxEnabled)
+  }
+
+  private func snapshotsForJob(_ jobId: String?) -> [WageSnapshot] {
+    let jobSnapshots = snapshots.filter { $0.job_id == jobId }
+    if !jobSnapshots.isEmpty {
+      return jobSnapshots
+    }
+
+    let defaultJobId = activeJobs.first(where: { $0.is_default })?.id
+    if defaultJobId == jobId {
+      return snapshots.filter { $0.job_id == nil }
+    }
+
+    return []
+  }
+
+  private func payrollDay(for jobId: String?) -> Int {
+    if let jobId, let jobPayrollDay = activeJobs.first(where: { $0.id == jobId })?.payroll_day {
+      return jobPayrollDay
+    }
+    return settings?.effectivePayrollDay ?? 1
   }
 
   /// Handle date tap when in move mode - move shift to the tapped date
