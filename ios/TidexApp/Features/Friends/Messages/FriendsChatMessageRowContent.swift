@@ -32,9 +32,21 @@ struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
   private static let reactionHorizontalOffset: CGFloat = 12
   private static let reactionVerticalOffset: CGFloat = 8
-  private static let statusHorizontalOffset: CGFloat = 5
-  private static let statusVerticalOffset: CGFloat = 5
   private static let avatarSize = AvatarView.Size.small
+  private static let replySwipeResetAnimationDuration: TimeInterval = 0.18
+
+  private enum ReplySwipeHaptics {
+    static let impact = UIImpactFeedbackGenerator(style: .medium)
+    static let selection = UISelectionFeedbackGenerator()
+    private static var isPrepared = false
+
+    static func prepareIfNeeded() {
+      guard !isPrepared else { return }
+      isPrepared = true
+      impact.prepare()
+      selection.prepare()
+    }
+  }
 
   let message: FriendMessage
   let quotedPreview: FriendsChatReplyPreviewModel?
@@ -55,7 +67,11 @@ struct FriendsChatMessageRowContent: View {
   let onTapQuotedMessage: () -> Void
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
   let onOpenShiftSnapshot: (FriendShiftSnapshot) -> Void
+  let onReplySwipe: (() -> Void)?
   let messageFrame: Binding<CGRect>?
+
+  @State private var replySwipeOffset: CGFloat = 0
+  @State private var hasTriggeredReplySwipeHaptic = false
 
   var body: some View {
     let hasMessageText = !visibleMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -81,167 +97,153 @@ struct FriendsChatMessageRowContent: View {
         FriendsChatDateSeparator(date: separatorDate)
       }
 
-      ChatMessageRow(
-        isCurrentUser: isCurrentUser,
-        minSpacer: Spacing.xxxl,
-        spacing: Spacing.xxs,
-        horizontalInset: Spacing.sm
-      ) {
-        HStack(alignment: .top, spacing: Spacing.xs) {
-          if !isCurrentUser {
-            avatarSlot
-          }
-
-          VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
-            if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
-              Text(senderFirstName)
-                .font(.tidexCaptionRegular)
-                .foregroundColor(.tidexTextMuted)
-                .padding(.horizontal, CornerRadius.bubble)
+      replySwipeContainer {
+        ChatMessageRow(
+          isCurrentUser: isCurrentUser,
+          minSpacer: Spacing.xxxl,
+          spacing: Spacing.xxs,
+          horizontalInset: Spacing.sm
+        ) {
+          HStack(alignment: .top, spacing: Spacing.xs) {
+            if !isCurrentUser {
+              avatarSlot
             }
 
-            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-              if !hasMessageText, let quotedPreview {
-                FriendsChatMessageReplyPreview(
-                  preview: quotedPreview,
-                  isCurrentUser: isCurrentUser,
-                  isHighlighted: false,
-                  onTap: onTapQuotedMessage
-                )
+            VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: 3) {
+              if showsSenderLabel, let senderFirstName, !senderFirstName.isEmpty {
+                Text(senderFirstName)
+                  .font(.tidexCaptionRegular)
+                  .foregroundColor(.tidexTextMuted)
+                  .padding(.horizontal, CornerRadius.bubble)
               }
 
-              ForEach(Array(imageAttachments.enumerated()), id: \.element.id) {
-                index, attachment in
-                if attachment.kind == .image {
-                  FriendsChatImageView(
-                    attachment: attachment,
+              VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
+                if !hasMessageText, let quotedPreview {
+                  FriendsChatMessageReplyPreview(
+                    preview: quotedPreview,
                     isCurrentUser: isCurrentUser,
-                    onOpenImageAttachment: onOpenImageAttachment
+                    isHighlighted: false,
+                    onTap: onTapQuotedMessage
+                  )
+                }
+
+                ForEach(Array(imageAttachments.enumerated()), id: \.element.id) {
+                  index, attachment in
+                  if attachment.kind == .image {
+                    FriendsChatImageView(
+                      attachment: attachment,
+                      isCurrentUser: isCurrentUser,
+                      onOpenImageAttachment: onOpenImageAttachment
+                    )
+                    .friendsChatMessageFrame(
+                      !hasMessageText && shiftSnapshot == nil && index == imageAttachments.count - 1
+                        ? messageFrame : nil
+                    )
+                    .overlay(alignment: reactionAlignment) {
+                      if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
+                        index == imageAttachments.count - 1
+                      {
+                        reactionStrip
+                      }
+                    }
+                  }
+                }
+
+                if let shiftSnapshot {
+                  ChatShiftSnapshotCard(
+                    snapshot: shiftSnapshot,
+                    isCurrentUser: isCurrentUser,
+                    onTap: {
+                      onOpenShiftSnapshot(shiftSnapshot)
+                    }
                   )
                   .friendsChatMessageFrame(
-                    !hasMessageText && shiftSnapshot == nil && index == imageAttachments.count - 1
-                      ? messageFrame : nil
+                    hasMessageText || !imageAttachments.isEmpty ? nil : messageFrame
                   )
                   .overlay(alignment: reactionAlignment) {
-                    if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
-                      index == imageAttachments.count - 1
-                    {
+                    if !hasMessageText, imageAttachments.isEmpty {
                       reactionStrip
                     }
                   }
-                  .overlay(alignment: bubbleStatusAlignment) {
-                    if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
-                      index == imageAttachments.count - 1
-                    {
-                      bubbleEdgeStatusBadge
-                    }
-                  }
                 }
-              }
 
-              if let shiftSnapshot {
-                ChatShiftSnapshotCard(
-                  snapshot: shiftSnapshot,
-                  isCurrentUser: isCurrentUser,
-                  onTap: {
-                    onOpenShiftSnapshot(shiftSnapshot)
-                  }
-                )
-                .friendsChatMessageFrame(
-                  hasMessageText || !imageAttachments.isEmpty ? nil : messageFrame
-                )
-                .overlay(alignment: reactionAlignment) {
-                  if !hasMessageText, imageAttachments.isEmpty {
-                    reactionStrip
-                  }
-                }
-                .overlay(alignment: bubbleStatusAlignment) {
-                  if !hasMessageText, imageAttachments.isEmpty {
-                    bubbleEdgeStatusBadge
-                  }
-                }
-              }
-
-              if showsFallbackBubble, let fallbackPreviewText {
-                FriendsChatReactionAnchoredBubbleCard(
-                  isCurrentUser: isCurrentUser,
-                  groupContext: groupContext,
-                  minWidth: Self.minimumBubbleWidthForTimestamp,
-                  maxWidth: 280,
-                  messageFrame: messageFrame
-                ) {
-                  Text(fallbackPreviewText)
-                    .font(.tidexBody)
-                    .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                } reaction: {
-                  reactionStrip
-                } status: {
-                  bubbleEdgeStatusBadge
-                }
-              }
-
-              if hasMessageText {
-                FriendsChatReactionAnchoredBubbleCard(
-                  isCurrentUser: isCurrentUser,
-                  groupContext: groupContext,
-                  minWidth: Self.minimumBubbleWidthForTimestamp,
-                  maxWidth: 280,
-                  messageFrame: messageFrame
-                ) {
-                  VStack(alignment: .leading, spacing: Spacing.xs) {
-                    if let quotedPreview {
-                      FriendsChatMessageReplyPreview(
-                        preview: quotedPreview,
-                        isCurrentUser: isCurrentUser,
-                        isHighlighted: false,
-                        onTap: onTapQuotedMessage
-                      )
-                    }
-
-                    Text(visibleMessageText)
+                if showsFallbackBubble, let fallbackPreviewText {
+                  FriendsChatReactionAnchoredBubbleCard(
+                    isCurrentUser: isCurrentUser,
+                    groupContext: groupContext,
+                    minWidth: Self.minimumBubbleWidthForTimestamp,
+                    maxWidth: 280,
+                    messageFrame: messageFrame
+                  ) {
+                    Text(fallbackPreviewText)
                       .font(.tidexBody)
                       .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
                       .multilineTextAlignment(.leading)
                       .fixedSize(horizontal: false, vertical: true)
-                  }
-                } reaction: {
-                  reactionStrip
-                } status: {
-                  bubbleEdgeStatusBadge
-                }
-              }
-            }
-
-            if showsMetadataRow {
-              HStack(spacing: Spacing.xxs) {
-                if isCurrentUser {
-                  if let inlineMetadataStatus {
-                    statusView(inlineMetadataStatus)
-                  }
-
-                  if message.editedAt != nil {
-                    Text(String(localized: "friends.chat.edited", table: "Localizable"))
-                      .lineLimit(1)
-                      .fixedSize(horizontal: true, vertical: false)
-                  }
-
-                } else {
-                  if message.editedAt != nil {
-                    Text(String(localized: "friends.chat.edited", table: "Localizable"))
-                      .lineLimit(1)
-                      .fixedSize(horizontal: true, vertical: false)
-                  }
-
-                  if let inlineMetadataStatus {
-                    statusView(inlineMetadataStatus)
+                  } reaction: {
+                    reactionStrip
                   }
                 }
+
+                if hasMessageText {
+                  FriendsChatReactionAnchoredBubbleCard(
+                    isCurrentUser: isCurrentUser,
+                    groupContext: groupContext,
+                    minWidth: Self.minimumBubbleWidthForTimestamp,
+                    maxWidth: 280,
+                    messageFrame: messageFrame
+                  ) {
+                    VStack(alignment: .leading, spacing: Spacing.xs) {
+                      if let quotedPreview {
+                        FriendsChatMessageReplyPreview(
+                          preview: quotedPreview,
+                          isCurrentUser: isCurrentUser,
+                          isHighlighted: false,
+                          onTap: onTapQuotedMessage
+                        )
+                      }
+
+                      Text(visibleMessageText)
+                        .font(.tidexBody)
+                        .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                  } reaction: {
+                    reactionStrip
+                  }
+                }
               }
-              .font(.tidexMicro)
-              .foregroundColor(.tidexTextMuted)
-              .fixedSize(horizontal: true, vertical: false)
+
+              if showsMetadataRow {
+                HStack(spacing: Spacing.xxs) {
+                  if isCurrentUser {
+                    if let inlineMetadataStatus {
+                      statusView(inlineMetadataStatus)
+                    }
+
+                    if message.editedAt != nil {
+                      Text(String(localized: "friends.chat.edited", table: "Localizable"))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                    }
+
+                  } else {
+                    if message.editedAt != nil {
+                      Text(String(localized: "friends.chat.edited", table: "Localizable"))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                    }
+
+                    if let inlineMetadataStatus {
+                      statusView(inlineMetadataStatus)
+                    }
+                  }
+                }
+                .font(.tidexMicro)
+                .foregroundColor(.tidexTextMuted)
+                .fixedSize(horizontal: true, vertical: false)
+              }
             }
           }
         }
@@ -253,6 +255,127 @@ struct FriendsChatMessageRowContent: View {
         Rectangle()
           .fill(isHighlighted ? Color.tidexBlue.opacity(0.12) : Color.clear)
       )
+    }
+  }
+
+  @ViewBuilder
+  private func replySwipeContainer<Content: View>(
+    @ViewBuilder content: @escaping () -> Content
+  ) -> some View {
+    if onReplySwipe != nil {
+      ZStack {
+        replySwipeActionBackground
+        content()
+          .offset(x: replySwipeOffset)
+      }
+      .contentShape(Rectangle())
+      .onTapGesture {}
+      .highPriorityGesture(
+        DragGesture(minimumDistance: 20)
+          .onChanged { value in
+            handleReplySwipeChanged(value: value)
+          }
+          .onEnded { value in
+            handleReplySwipeEnded(value: value)
+          }
+      )
+      .onAppear {
+        ReplySwipeHaptics.prepareIfNeeded()
+      }
+    } else {
+      content()
+    }
+  }
+
+  private var replySwipeActionBackground: some View {
+    HStack(spacing: 0) {
+      if replySwipeDirection == .right {
+        replySwipeActionLabel
+          .padding(.leading, Spacing.sm)
+        Spacer(minLength: 0)
+      } else {
+        Spacer(minLength: 0)
+        replySwipeActionLabel
+          .padding(.trailing, Spacing.sm)
+      }
+    }
+    .padding(.horizontal, Spacing.sm)
+    .opacity(replySwipeActionOpacity)
+  }
+
+  private var replySwipeActionLabel: some View {
+    ZStack {
+      Capsule()
+        .fill(Color.tidexBlue)
+
+      Image(systemName: "arrowshape.turn.up.left.fill")
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundColor(.tidexTextOnBrand)
+    }
+    .frame(width: 44, height: 32)
+    .scaleEffect(replySwipeActionScale)
+  }
+
+  private var replySwipeDirection: FriendsChatReplySwipeDirection {
+    isCurrentUser ? .left : .right
+  }
+
+  private var replySwipeActionOpacity: Double {
+    min(Double(abs(replySwipeOffset)) / Double(FriendsChatReplySwipeResolver.actionWidth * 0.6), 1)
+  }
+
+  private var replySwipeActionScale: CGFloat {
+    let progress = min(abs(replySwipeOffset) / FriendsChatReplySwipeResolver.actionWidth, 1)
+    return 0.7 + (progress * 0.3)
+  }
+
+  private func handleReplySwipeChanged(value: DragGesture.Value) {
+    guard
+      let newOffset = FriendsChatReplySwipeResolver.clampedOffset(
+        horizontal: value.translation.width,
+        vertical: value.translation.height,
+        allowedDirection: replySwipeDirection
+      )
+    else {
+      return
+    }
+
+    replySwipeOffset = newOffset
+
+    let crossedThreshold = FriendsChatReplySwipeResolver.crossedThreshold(offset: replySwipeOffset)
+    if crossedThreshold && !hasTriggeredReplySwipeHaptic {
+      hasTriggeredReplySwipeHaptic = true
+      ReplySwipeHaptics.impact.impactOccurred()
+      ReplySwipeHaptics.impact.prepare()
+    } else if !crossedThreshold && hasTriggeredReplySwipeHaptic {
+      hasTriggeredReplySwipeHaptic = false
+      ReplySwipeHaptics.selection.prepare()
+    }
+  }
+
+  private func handleReplySwipeEnded(value: DragGesture.Value) {
+    let finalOffset = replySwipeOffset
+    hasTriggeredReplySwipeHaptic = false
+
+    guard finalOffset != 0 else { return }
+
+    let outcome = FriendsChatReplySwipeResolver.outcome(
+      offset: finalOffset,
+      velocity: value.velocity.width,
+      allowedDirection: replySwipeDirection
+    )
+
+    withAnimation(.easeOut(duration: Self.replySwipeResetAnimationDuration)) {
+      replySwipeOffset = 0
+    }
+
+    guard outcome == .trigger, let onReplySwipe else { return }
+
+    ReplySwipeHaptics.impact.impactOccurred()
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + Self.replySwipeResetAnimationDuration + 0.04
+    ) {
+      onReplySwipe()
     }
   }
 
@@ -271,16 +394,24 @@ struct FriendsChatMessageRowContent: View {
       }
 
     case .delivered:
-      HStack(spacing: 0) {
+      HStack(spacing: 3) {
         Image(systemName: "checkmark")
           .font(.system(size: 11, weight: .semibold))
+
+        Text(.friendsChatStatusDelivered)
+          .lineLimit(1)
+          .fixedSize(horizontal: true, vertical: false)
       }
 
     case .read:
-      HStack(spacing: 0) {
-        Image(systemName: "eye.fill")
+      HStack(spacing: 3) {
+        Image(systemName: "checkmark.circle.fill")
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.tidexBlue)
+
+        Text(.friendsChatStatusRead)
+          .lineLimit(1)
+          .fixedSize(horizontal: true, vertical: false)
       }
 
     case .failed:
@@ -311,77 +442,15 @@ struct FriendsChatMessageRowContent: View {
   private var inlineMetadataStatus: FriendsChatMessageStatus? {
     guard let messageStatus else { return nil }
     switch messageStatus {
+    case .sending, .delivered, .read:
+      return messageStatus
     case .failed:
       return .failed
-    case .sending, .delivered, .read:
-      return nil
-    }
-  }
-
-  private var showsBubbleEdgeStatusBadge: Bool {
-    guard isCurrentUser, let messageStatus else { return false }
-    switch messageStatus {
-    case .sending, .delivered, .read:
-      return true
-    case .failed:
-      return false
     }
   }
 
   private var bubbleEdgeBadgeStackingOrder: Double {
-    showsBubbleEdgeStatusBadge ? stackingOrder : 0
-  }
-
-  @ViewBuilder
-  private var bubbleEdgeStatusBadge: some View {
-    if isCurrentUser, let messageStatus {
-      switch messageStatus {
-      case .sending:
-        ProgressView()
-          .controlSize(.mini)
-          .padding(6)
-          .background(.ultraThinMaterial, in: Circle())
-          .overlay(
-            Circle()
-              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-          )
-          .offset(x: -Self.statusHorizontalOffset, y: Self.statusVerticalOffset)
-          .zIndex(2)
-
-      case .delivered:
-        Image(systemName: "checkmark")
-          .font(.system(size: 10, weight: .bold))
-          .foregroundColor(.tidexTextMuted)
-          .padding(6)
-          .background(.ultraThinMaterial, in: Circle())
-          .overlay(
-            Circle()
-              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-          )
-          .offset(x: -Self.statusHorizontalOffset, y: Self.statusVerticalOffset)
-          .zIndex(2)
-
-      case .read:
-        Image(systemName: "eye.fill")
-          .font(.system(size: 10, weight: .bold))
-          .foregroundColor(.tidexBlue)
-          .padding(6)
-          .background(.ultraThinMaterial, in: Circle())
-          .overlay(
-            Circle()
-              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-          )
-          .offset(x: -Self.statusHorizontalOffset, y: Self.statusVerticalOffset)
-          .zIndex(2)
-
-      case .failed:
-        EmptyView()
-      }
-    }
-  }
-
-  private var bubbleStatusAlignment: Alignment {
-    isCurrentUser ? .bottomLeading : .bottomTrailing
+    inlineMetadataStatus != nil ? stackingOrder : 0
   }
 
   @ViewBuilder

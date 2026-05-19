@@ -571,40 +571,6 @@ struct FriendsThreadView: View {
     .setAvailableInputs([.text])
     .keyboardDismissMode(.interactive)
     .contentInsets(bottom: Self.bottomMessageComposerClearance)
-    .swipeActions(
-      edge: .leading, performsFirstActionWithFullSwipe: true,
-      items: [
-        SwipeAction(
-          action: handleSwipeReplyAction,
-          activeFor: { exyteMessage in
-            guard let friendMessage = presentedMessageLookup[exyteMessage.id] else { return false }
-            return !exyteMessage.user.isCurrentUser
-              && friendMessage.messageType == .user
-              && friendMessage.deletedAt == nil
-          },
-          background: .tidexBlue
-        ) {
-          chatReplySwipeActionLabel
-        }
-      ]
-    )
-    .swipeActions(
-      edge: .trailing, performsFirstActionWithFullSwipe: true,
-      items: [
-        SwipeAction(
-          action: handleSwipeReplyAction,
-          activeFor: { exyteMessage in
-            guard let friendMessage = presentedMessageLookup[exyteMessage.id] else { return false }
-            return exyteMessage.user.isCurrentUser
-              && friendMessage.messageType == .user
-              && friendMessage.deletedAt == nil
-          },
-          background: .tidexBlue
-        ) {
-          chatReplySwipeActionLabel
-        }
-      ]
-    )
     .onWillDisplayCell(handleChatCellWillDisplay)
     .scrollToMessageID(packageReplyScrollRequest?.presentedMessageID)
     .enableLoadMore(offset: 50) {
@@ -755,6 +721,11 @@ struct FriendsThreadView: View {
         onOpenShiftSnapshot: { snapshot in
           openShiftSnapshot(snapshot)
         },
+        onReplySwipe: canReply(to: message)
+          ? {
+            viewModel.setReplyTarget(message)
+          }
+          : nil,
         messageFrame: messageFrame
       )
       .id(exyteMessage.id)
@@ -773,6 +744,10 @@ struct FriendsThreadView: View {
       return false
     }
     return true
+  }
+
+  private func canReply(to message: FriendMessage) -> Bool {
+    message.messageType == .user && message.deletedAt == nil
   }
 
   private var shouldTypingIndicatorJoinPrevious: Bool {
@@ -889,13 +864,6 @@ struct FriendsThreadView: View {
     }
     .buttonStyle(.plain)
     .accessibilityIdentifier(AccessibilityID.unreadPill)
-  }
-
-  private var chatReplySwipeActionLabel: some View {
-    Image(systemName: "arrowshape.turn.up.left")
-      .imageScale(.large)
-      .foregroundStyle(.white)
-      .frame(width: 32, height: 32)
   }
 
   private var actionsMenu: some View {
@@ -1089,16 +1057,6 @@ struct FriendsThreadView: View {
     case .report:
       pendingReportTarget = .message(messageId: friendMessage.id)
     }
-  }
-
-  private func handleSwipeReplyAction(
-    message: ExyteChat.Message,
-    defaultActionClosure: @escaping (ExyteChat.Message, DefaultMessageMenuAction) -> Void
-  ) {
-    _ = defaultActionClosure
-    guard let friendMessage = presentedMessageLookup[message.id] else { return }
-    Haptics.play(.medium)
-    viewModel.setReplyTarget(friendMessage)
   }
 
   private func handleMessageIDsChange(from oldValue: [String], to newValue: [String]) {
