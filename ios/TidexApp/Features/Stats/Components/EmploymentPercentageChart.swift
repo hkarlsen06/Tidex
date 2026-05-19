@@ -106,16 +106,16 @@ struct EmploymentPercentageChart: View {
         if let average = data.completedMonthsAverage() {
           Text(Self.formatPercent(average))
             .font(.tidexMonoDisplay)
-            .foregroundColor(.tidexPurple)
+            .foregroundColor(.tidexEmploymentAccent)
         } else {
           Text("--")
             .font(.tidexMonoBody)
-            .foregroundColor(.tidexPurple)
+            .foregroundColor(.tidexEmploymentAccent)
         }
 
         Text(completedAverageSubtitle)
           .font(.tidexLabel)
-          .foregroundColor(.tidexPurple)
+          .foregroundColor(.tidexEmploymentAccent)
 
         Spacer()
 
@@ -227,7 +227,7 @@ struct EmploymentPercentageChart: View {
     isSelected: Bool
   ) -> Color {
     if isIncluded {
-      return .tidexPurple
+      return .tidexEmploymentAccent
     }
     if isCurrentMonth || isSelected {
       return .tidexBlue
@@ -271,7 +271,7 @@ private struct ChartOverlayContent: View {
                 topTrailing: CornerRadius.xs
               )
             )
-            .stroke(Color.tidexPurple, lineWidth: 1.5)
+            .stroke(Color.tidexEmploymentAccent, lineWidth: 1.5)
             .frame(width: outlineFrame.width, height: outlineFrame.height)
             .position(x: outlineFrame.midX, y: outlineFrame.midY)
           }
