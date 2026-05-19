@@ -211,6 +211,15 @@ final class AppCoordinator: ObservableObject {
     self.authService = authService ?? AuthService.shared
     self.settingsService = settingsService ?? SettingsService.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    AuthDiagnosticsReporter.shared.record(
+      .appLaunch,
+      appState: String(describing: appState),
+      metadata: [
+        "did_receive_initial_session": .bool(didReceiveInitialSession),
+        "is_updating_auth_state": .bool(isUpdatingAuthState),
+        "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
+      ]
+    )
     setupAuthStateListener()
     setupInitialSessionCheck()
     setupMaxLoadingTimeout()
@@ -258,6 +267,17 @@ final class AppCoordinator: ObservableObject {
       if self.appState == .loading && !self.didReceiveInitialSession {
         launchLog.warning(
           "[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.5s")
+        AuthDiagnosticsReporter.shared.record(
+          .initialSessionTimeout,
+          severity: .warning,
+          appState: String(describing: self.appState),
+          metadata: [
+            "timeout_ms": .integer(Int(Self.initialSessionTimeout / 1_000_000)),
+            "did_receive_initial_session": .bool(self.didReceiveInitialSession),
+            "is_updating_auth_state": .bool(self.isUpdatingAuthState),
+            "launch_session_timeout_count": .integer(self.currentLaunchSessionTimeoutCount()),
+          ]
+        )
         await self.performInitialSessionCheck()
       }
     }
@@ -270,10 +290,23 @@ final class AppCoordinator: ObservableObject {
       // Use AuthSessionManager to prevent concurrent refresh race conditions
       let session = try await AuthSessionManager.shared.getSession(allowProactiveRefresh: false)
       resetLaunchSessionTimeoutCount()
+      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       // Returning user — skip MFA, go straight to terms check
       await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
     } catch {
       if isLaunchSessionTimeoutError(error) {
+        AuthDiagnosticsReporter.shared.record(
+          .initialSessionCheckFailed,
+          severity: .warning,
+          appState: String(describing: appState),
+          error: error,
+          metadata: [
+            "failure_class": .string("launch_session_timeout"),
+            "did_receive_initial_session": .bool(didReceiveInitialSession),
+            "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
+            "recovery_threshold": .integer(Self.launchSessionTimeoutRecoveryThreshold),
+          ]
+        )
         if handleRepeatedLaunchSessionTimeoutIfNeeded() {
           return
         }
@@ -288,9 +321,31 @@ final class AppCoordinator: ObservableObject {
       {
         launchLog.warning(
           "[Launch] Initial session check transient failure; keeping loading state")
+        AuthDiagnosticsReporter.shared.record(
+          .initialSessionCheckFailed,
+          severity: .warning,
+          appState: String(describing: appState),
+          error: error,
+          metadata: authFailureMetadata(
+            error,
+            reason: "initial_session_transient_failure",
+            previousState: appState
+          )
+        )
         return
       }
       launchLog.info("[Launch] AppCoordinator → .unauthenticated (no session)")
+      AuthDiagnosticsReporter.shared.record(
+        .forcedUnauthenticated,
+        severity: .warning,
+        appState: String(describing: appState),
+        error: error,
+        metadata: authFailureMetadata(
+          error,
+          reason: "initial_session_unrecoverable_failure",
+          previousState: appState
+        )
+      )
       appState = .unauthenticated
     }
   }
@@ -310,6 +365,7 @@ final class AppCoordinator: ObservableObject {
 
         if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
           launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
+          AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
           self.loadOnboardingStateFromUser(session.user)
           self.userId = session.user.normalizedId
           self.initialSyncComplete = false
@@ -317,6 +373,18 @@ final class AppCoordinator: ObservableObject {
         } else {
           launchLog.error(
             "[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
+          AuthDiagnosticsReporter.shared.record(
+            .forcedUnauthenticated,
+            severity: .error,
+            appState: String(describing: self.appState),
+            metadata: [
+              "reason": .string("hard_loading_timeout"),
+              "timeout_ms": .integer(Int(Self.maxLoadingTimeout / 1_000_000)),
+              "did_receive_initial_session": .bool(self.didReceiveInitialSession),
+              "is_updating_auth_state": .bool(self.isUpdatingAuthState),
+              "launch_session_timeout_count": .integer(self.currentLaunchSessionTimeoutCount()),
+            ]
+          )
           self.appState = .unauthenticated
         }
       })
@@ -335,6 +403,7 @@ final class AppCoordinator: ObservableObject {
       launchLog.info("[Launch] AppCoordinator authStateChanges loop entered")
       for await (event, session) in supabase.auth.authStateChanges {
         guard let self = self else { return }
+        self.recordAuthStateEvent(event, session: session)
 
         switch event {
         case .initialSession:
@@ -349,6 +418,7 @@ final class AppCoordinator: ObservableObject {
 
           // On app launch, check if we have a valid session
           if let session = session {
+            AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
             self.resetLaunchSessionTimeoutCount()
             // Returning user with existing session — skip MFA (already at AAL2
             // from a previous login) and go straight to terms check.
@@ -358,6 +428,13 @@ final class AppCoordinator: ObservableObject {
               allowProactiveRefresh: false
             )
           } else {
+            AuthDiagnosticsReporter.shared.record(
+              .initialSessionMissing,
+              severity: AuthDiagnosticsReporter.shared.hasRememberedAuthenticatedUserId
+                ? .warning : .info,
+              appState: String(describing: self.appState),
+              authEvent: String(describing: event)
+            )
             self.appState = .unauthenticated
           }
 
@@ -370,6 +447,13 @@ final class AppCoordinator: ObservableObject {
           await self.checkMFAAndUpdateState()
 
         case .signedOut:
+          AuthDiagnosticsReporter.shared.record(
+            .signedOutReceived,
+            severity: .warning,
+            userId: self.userId,
+            appState: String(describing: self.appState),
+            authEvent: String(describing: event)
+          )
           self.applySignedOutState()
 
         case .tokenRefreshed:
@@ -485,6 +569,7 @@ final class AppCoordinator: ObservableObject {
         )
       }
       let user = session.user
+      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
 
       // Get terms_accepted_at from user metadata
       let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String
@@ -501,6 +586,18 @@ final class AppCoordinator: ObservableObject {
         loadOnboardingStateFromUser(user)
         self.initialSyncComplete = false
         launchLog.info("[Launch] AppCoordinator → .authenticated")
+        AuthDiagnosticsReporter.shared.record(
+          .authenticated,
+          userId: session.normalizedUserId,
+          appState: String(describing: self.appState),
+          metadata: AuthDiagnosticsReporter.shared.sessionMetadata(
+            session,
+            source: "terms_check_authenticated"
+          ).merging([
+            "terms_accepted_at_present": .bool(termsAcceptedAt != nil),
+            "needs_terms_reacceptance_immediate": .bool(needsReAcceptanceImmediate),
+          ]) { current, _ in current }
+        )
         self.appState = .authenticated
         await updateUserProfile()
 
@@ -518,6 +615,7 @@ final class AppCoordinator: ObservableObject {
         allowProactiveRefresh: allowProactiveRefresh
       ) {
         loadOnboardingStateFromUser(session.user)
+        AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       }
       self.initialSyncComplete = false
       self.appState = .authenticated
@@ -834,6 +932,20 @@ final class AppCoordinator: ObservableObject {
           launchLog.warning(
             "[Auth] Foreground session fetch detected revoked session; transitioning to unauthenticated"
           )
+          await MainActor.run {
+            AuthDiagnosticsReporter.shared.record(
+              .revokedSessionDetected,
+              severity: .error,
+              userId: self.userId,
+              appState: String(describing: self.appState),
+              error: error,
+              metadata: self.authFailureMetadata(
+                error,
+                reason: "foreground_revoked_session",
+                previousState: self.appState
+              )
+            )
+          }
           try? await supabase.auth.signOut(scope: .local)
           Task { @MainActor [weak self] in
             guard let self else { return }
@@ -848,11 +960,39 @@ final class AppCoordinator: ObservableObject {
         {
           launchLog.warning(
             "[Auth] Foreground session fetch transient failure; keeping authenticated state")
+          await MainActor.run {
+            AuthDiagnosticsReporter.shared.record(
+              .foregroundSessionFailed,
+              severity: .warning,
+              userId: self.userId,
+              appState: String(describing: self.appState),
+              error: error,
+              metadata: self.authFailureMetadata(
+                error,
+                reason: "foreground_transient_failure",
+                previousState: self.appState
+              )
+            )
+          }
           return
         }
 
         launchLog.warning(
           "[Auth] Foreground session fetch failed: \(error.localizedDescription, privacy: .public)")
+        await MainActor.run {
+          AuthDiagnosticsReporter.shared.record(
+            .foregroundSessionFailed,
+            severity: .warning,
+            userId: self.userId,
+            appState: String(describing: self.appState),
+            error: error,
+            metadata: self.authFailureMetadata(
+              error,
+              reason: "foreground_session_failure",
+              previousState: self.appState
+            )
+          )
+        }
       }
     }
   }
@@ -914,6 +1054,13 @@ final class AppCoordinator: ObservableObject {
   /// Internal sign out implementation
   /// - Parameter global: If true, signs out from all devices; if false, only this device
   private func performSignOut(global: Bool) async {
+    AuthDiagnosticsReporter.shared.record(
+      .userInitiatedSignOut,
+      severity: .info,
+      userId: userId,
+      appState: String(describing: appState),
+      metadata: ["global": .bool(global)]
+    )
     OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
 
     // Clear all cached data
@@ -1032,11 +1179,82 @@ final class AppCoordinator: ObservableObject {
       {
         launchLog.warning(
           "[Launch] checkSession transient failure; applying non-destructive fallback")
+        AuthDiagnosticsReporter.shared.record(
+          .recoverableAuthFailure,
+          severity: .warning,
+          userId: userId,
+          appState: String(describing: previousState),
+          error: error,
+          metadata: authFailureMetadata(
+            error,
+            reason: "manual_check_recoverable_failure",
+            previousState: previousState
+          )
+        )
         applyRecoverableAuthFailureFallback(previousState: previousState)
         return
       }
+      AuthDiagnosticsReporter.shared.record(
+        .forcedUnauthenticated,
+        severity: .warning,
+        userId: userId,
+        appState: String(describing: previousState),
+        error: error,
+        metadata: authFailureMetadata(
+          error,
+          reason: "manual_check_forced_unauthenticated",
+          previousState: previousState
+        )
+      )
       appState = .unauthenticated
     }
+  }
+
+  private func recordAuthStateEvent(_ event: AuthChangeEvent, session: Session?) {
+    let eventName = String(describing: event)
+    if let session {
+      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
+    }
+
+    var metadata: [String: AnyJSON] = ["has_session": .bool(session != nil)]
+    if let session {
+      metadata.merge(
+        AuthDiagnosticsReporter.shared.sessionMetadata(session, source: "auth_state_event")
+      ) { current, _ in current }
+    }
+
+    AuthDiagnosticsReporter.shared.record(
+      event == .initialSession && session != nil ? .initialSessionReceived : .authStateChanged,
+      severity: event == .signedOut ? .warning : .debug,
+      userId: session?.normalizedUserId ?? userId,
+      appState: String(describing: appState),
+      authEvent: eventName,
+      metadata: metadata
+    )
+  }
+
+  private func currentLaunchSessionTimeoutCount() -> Int {
+    UserDefaults.standard.integer(forKey: Self.launchSessionTimeoutCountKey)
+  }
+
+  private func authFailureMetadata(
+    _ error: Error,
+    reason: String,
+    previousState: AppState
+  ) -> [String: AnyJSON] {
+    [
+      "reason": .string(reason),
+      "previous_app_state": .string(String(describing: previousState)),
+      "current_app_state": .string(String(describing: appState)),
+      "did_receive_initial_session": .bool(didReceiveInitialSession),
+      "is_updating_auth_state": .bool(isUpdatingAuthState),
+      "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
+      "is_revoked_error": .bool(AuthSessionManager.shared.isSessionRevokedError(error)),
+      "is_transient_network_error": .bool(AuthSessionManager.shared.isTransientNetworkError(error)),
+      "is_transient_session_resolution_error": .bool(
+        AuthSessionManager.shared.isTransientSessionResolutionError(error)
+      ),
+    ]
   }
 
   // MARK: - Profile Updates
