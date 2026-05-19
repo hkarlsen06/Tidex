@@ -1,1 +1,1 @@
-ture,pontaj,salariu,muncă,ore,timp,program,câștiguri,schimburi,serviciu
+tură,ore,salariu,muncă,program,câștiguri,pontaj,schimb,job,bani

@@ -1,8 +1,8 @@
-- Kalenderexport voor gebeurtenissen toegevoegd
-- Offline ondersteuning verbeterd in instellingen, profiel, beveiliging, feedback, vrienden, statistieken, dashboard en diensten
-- Het Vrienden-scherm, waar je vrienden toevoegt en machtigingen wijzigt, visueel vernieuwd
-- Delen met vrienden en chatsynchronisatie verbeterd
-- Ondersteuning toegevoegd voor meldingen wanneer vrienden gedeelde diensten toevoegen
-- Een probleem opgelost bij het tegelijk verwijderen van meerdere terugkerende diensten
-- Beveiliging, afhankelijkheden en algehele betrouwbaarheid verbeterd
+- Kalenderabonnementen toegevoegd, zodat je diensten up-to-date blijven in je agenda-app
+- Loonaanpassingen toegevoegd voor bonussen, correcties en andere extra uitbetalingsdetails
+- Onboarding en registreren verbeterd met duidelijkere begeleiding en slimmere standaardselectie van valuta
+- Wagey verbeterd met duidelijkere toolupdates, ondersteuning voor loonaanpassingen en betere meldingen bij voltooiing op de achtergrond
+- Delen met vrienden verbeterd met het laden van gedeelde diensten, overzichtelijker lijstgedrag en betere chatsynchronisatie
+- Dashboard, loonkaarten en statistieken over het arbeidspercentage verbeterd voor duidelijker inzicht in inkomsten
+- Afhandeling van terugkerende diensten, swipe-acties voor diensten en detectie van overlap bij gedeelde diensten opgelost
 - Bugfixes en andere verbeteringen

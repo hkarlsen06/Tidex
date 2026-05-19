@@ -1,8 +1,8 @@
-- Lagt til kalendereksport for hendelser
-- Forbedret støtte for bruk uten nett i innstillinger, profil, sikkerhet, tilbakemelding, venner, statistikk, oversikt og vakter
-- Visuelt overhalt vennevisningen der du legger til venner og endrer tillatelser
-- Forbedret synkronisering av vennedeling og chat
-- Lagt til støtte for varsler når venner legger til delte vakter
-- Rettet sletting av flere gjentakende vakter samtidig
-- Forbedret sikkerhet, avhengigheter og generell stabilitet
+- Lagt til kalenderabonnementer slik at vaktene dine kan holdes oppdatert i kalenderappen din
+- Lagt til lønnsjusteringer for bonuser, korrigeringer og andre ekstra lønnsdetaljer
+- Forbedret onboarding og registrering med tydeligere veiledning og smartere standardvalg av valuta
+- Forbedret Wagey med tydeligere verktøyoppdateringer, støtte for lønnsjusteringer og bedre varsler når den fullfører i bakgrunnen
+- Forbedret vennedeling med innlasting av delte vakter, ryddigere listevisning og bedre chatsynkronisering
+- Forbedret oversikten, lønnskortene og statistikk for stillingsprosent for tydeligere innsikt i inntekt
+- Rettet håndtering av gjentakende vakter, sveipehandlinger på vakter og kontroll av overlappende delte vakter
 - Feilrettinger og andre forbedringer

@@ -1,8 +1,8 @@
-- Dodan izvoz događaja u kalendar
-- Poboljšana podrška za rad izvan mreže u postavkama, profilu, sigurnosti, povratnim informacijama, prijateljima, statistici, nadzornoj ploči i smjenama
-- Vizualno je preuređen zaslon Prijatelji na kojem dodajete prijatelje i mijenjate dopuštenja
-- Poboljšano dijeljenje s prijateljima i sinkronizacija chata
-- Dodana podrška za obavijesti kada prijatelji dodaju dijeljene smjene
-- Ispravljeno brisanje više ponavljajućih pojavljivanja smjena odjednom
-- Poboljšani su sigurnost, ovisnosti i ukupna pouzdanost
-- Ispravci grešaka i druga poboljšanja
+- Dodane su pretplate na kalendar kako bi vaše smjene ostale ažurne u vašoj aplikaciji kalendara
+- Dodane su prilagodbe obračuna plaće za bonuse, ispravke i druge detalje dodatne isplate
+- Poboljšani su onboarding i registracija uz jasnije smjernice i pametniji zadani odabir valute
+- Poboljšan je Wagey uz jasnija ažuriranja alata, podršku za prilagodbe obračuna plaće i bolje obavijesti o dovršetku u pozadini
+- Poboljšano je dijeljenje s prijateljima uz učitavanje dijeljenih smjena, preglednije ponašanje popisa i bolju sinkronizaciju chata
+- Poboljšani su nadzorna ploča, kartice obračuna plaće i statistika postotka zaposlenja za jasniji uvid u zaradu
+- Ispravljeno je rukovanje ponavljajućim smjenama, radnje povlačenja po smjenama i otkrivanje preklapanja dijeljenih smjena
+- Ispravci pogrešaka i druga poboljšanja

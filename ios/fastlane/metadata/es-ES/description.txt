@@ -1,4 +1,4 @@
-Lleva un control de tus turnos de trabajo y calcula tu sueldo con Tidex.
+Lleva el control de tus turnos de trabajo y calcula tu salario con Tidex.
 
 Funciones:
 • Registro fácil de turnos con horas de inicio y fin
@@ -8,4 +8,4 @@ Funciones:
 • Widget para acceso rápido
 • Sincronización entre dispositivos
 
-Perfecta para empleados que quieren llevar un control de sus horas de trabajo e ingresos.
+Perfecto para empleados que quieren llevar un control de sus horas de trabajo e ingresos.

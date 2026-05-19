@@ -4,7 +4,7 @@ Fonctionnalités :
 • Enregistrement facile des shifts avec heures de début et de fin
 • Calcul automatique du salaire
 • Vue calendrier de tous les shifts
-• Aperçu des gains et statistiques
+• Aperçu des revenus et statistiques
 • Widget pour un accès rapide
 • Synchronisation entre appareils
 

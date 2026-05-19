@@ -1,8 +1,8 @@
-- Menambahkan ekspor kalender untuk acara
-- Meningkatkan dukungan offline di pengaturan, profil, keamanan, masukan, teman, statistik, dasbor, dan shift
-- Tampilan layar Teman diperbarui secara visual, tempat Anda menambahkan teman dan mengubah izin
-- Meningkatkan sinkronisasi berbagi dengan teman dan chat
-- Menambahkan dukungan notifikasi saat teman menambahkan shift bersama
-- Memperbaiki penghapusan beberapa kemunculan shift berulang sekaligus
-- Meningkatkan keamanan, dependensi, dan keandalan secara keseluruhan
+- Menambahkan langganan kalender agar shift Anda tetap terbaru di aplikasi kalender Anda
+- Menambahkan penyesuaian penggajian untuk bonus, koreksi, dan detail tambahan lainnya
+- Meningkatkan onboarding dan pendaftaran dengan panduan yang lebih jelas serta pilihan mata uang default yang lebih cerdas
+- Meningkatkan Wagey dengan pembaruan alat yang lebih jelas, dukungan penyesuaian penggajian, dan peringatan penyelesaian latar belakang yang lebih baik
+- Meningkatkan berbagi dengan teman dengan pemuatan shift bersama, perilaku daftar yang lebih rapi, dan sinkronisasi chat yang lebih baik
+- Meningkatkan dasbor, kartu penggajian, dan statistik persentase kerja untuk wawasan penghasilan yang lebih jelas
+- Memperbaiki penanganan shift berulang, tindakan usap pada shift, dan deteksi tumpang tindih shift bersama
 - Perbaikan bug dan peningkatan lainnya
