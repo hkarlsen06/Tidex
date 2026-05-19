@@ -110,7 +110,12 @@ private struct FriendCardMessagePreviewRow: View {
             .lineLimit(1)
             .fixedSize(horizontal: true, vertical: false)
 
-          Text(relativeTimestamp(referenceDate: context.date))
+          Text(
+            FriendCardMessagePreviewTimestampFormatter.relativeTimestamp(
+              messageDate: messagePreview.timestamp,
+              referenceDate: context.date
+            )
+          )
             .font(.tidexCaptionRegular)
             .foregroundColor(statusColor)
             .monospacedDigit()
@@ -154,17 +159,34 @@ private struct FriendCardMessagePreviewRow: View {
     }
   }
 
-  private func relativeTimestamp(referenceDate: Date) -> String {
+}
+
+enum FriendCardMessagePreviewTimestampFormatter {
+  static func relativeTimestamp(
+    messageDate: Date,
+    referenceDate: Date,
+    nowText: String = String(localized: .commonNow)
+  ) -> String {
+    let elapsed = referenceDate.timeIntervalSince(messageDate)
+    guard elapsed >= 60 else {
+      return nowText
+    }
+
     let formatter = DateComponentsFormatter()
     formatter.allowedUnits = [.year, .month, .weekOfMonth, .day, .hour, .minute]
     formatter.unitsStyle = .abbreviated
     formatter.maximumUnitCount = 1
     formatter.zeroFormattingBehavior = .dropAll
 
-    let elapsed = max(referenceDate.timeIntervalSince(messagePreview.timestamp), 60)
-    return formatter.string(from: elapsed)?
-      .replacingOccurrences(of: " ", with: "")
-      ?? "1m"
+    guard let timestamp = formatter.string(from: elapsed) else {
+      return "1m"
+    }
+
+    return String(
+      timestamp.unicodeScalars.filter {
+        !CharacterSet.whitespacesAndNewlines.contains($0)
+      }
+    )
   }
 }
 

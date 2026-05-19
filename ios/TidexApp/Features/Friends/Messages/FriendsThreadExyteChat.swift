@@ -145,6 +145,66 @@ enum FriendsThreadMessageStatusResolver {
   }
 }
 
+enum FriendsChatReplySwipeDirection: Equatable {
+  case left
+  case right
+}
+
+enum FriendsChatReplySwipeOutcome: Equatable {
+  case reset
+  case trigger
+}
+
+enum FriendsChatReplySwipeResolver {
+  static let actionThreshold: CGFloat = 0.4
+  static let actionWidth: CGFloat = 80
+  static let velocityThreshold: CGFloat = 300
+
+  static func clampedOffset(
+    horizontal: CGFloat,
+    vertical: CGFloat,
+    allowedDirection: FriendsChatReplySwipeDirection
+  ) -> CGFloat? {
+    guard abs(horizontal) > abs(vertical) else { return nil }
+
+    switch allowedDirection {
+    case .left:
+      guard horizontal < 0 else { return 0 }
+    case .right:
+      guard horizontal > 0 else { return 0 }
+    }
+
+    if abs(horizontal) > actionWidth {
+      let excess = abs(horizontal) - actionWidth
+      let sign: CGFloat = horizontal > 0 ? 1 : -1
+      return sign * (actionWidth + excess * 0.3)
+    }
+
+    return horizontal
+  }
+
+  static func crossedThreshold(offset: CGFloat) -> Bool {
+    abs(offset) >= actionWidth * actionThreshold
+  }
+
+  static func outcome(
+    offset: CGFloat,
+    velocity: CGFloat,
+    allowedDirection: FriendsChatReplySwipeDirection
+  ) -> FriendsChatReplySwipeOutcome {
+    switch allowedDirection {
+    case .left:
+      return offset < 0 && (crossedThreshold(offset: offset) || velocity < -velocityThreshold)
+        ? .trigger
+        : .reset
+    case .right:
+      return offset > 0 && (crossedThreshold(offset: offset) || velocity > velocityThreshold)
+        ? .trigger
+        : .reset
+    }
+  }
+}
+
 enum FriendsThreadMessageListChangeResolver {
   enum Change: Equatable {
     case none

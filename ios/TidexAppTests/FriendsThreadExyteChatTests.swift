@@ -451,6 +451,48 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testReplySwipeResolverTriggersAtShiftCardThreshold() {
+    XCTAssertEqual(
+      FriendsChatReplySwipeResolver.outcome(
+        offset: FriendsChatReplySwipeResolver.actionWidth
+          * FriendsChatReplySwipeResolver.actionThreshold,
+        velocity: 0,
+        allowedDirection: .right
+      ),
+      .trigger
+    )
+  }
+
+  func testReplySwipeResolverTriggersOnFastSwipeBeforeThreshold() {
+    XCTAssertEqual(
+      FriendsChatReplySwipeResolver.outcome(
+        offset: 12,
+        velocity: FriendsChatReplySwipeResolver.velocityThreshold + 1,
+        allowedDirection: .right
+      ),
+      .trigger
+    )
+  }
+
+  func testReplySwipeResolverIgnoresWrongDirectionAndVerticalDrag() {
+    XCTAssertEqual(
+      FriendsChatReplySwipeResolver.clampedOffset(
+        horizontal: 28,
+        vertical: 2,
+        allowedDirection: .left
+      ),
+      0
+    )
+
+    XCTAssertNil(
+      FriendsChatReplySwipeResolver.clampedOffset(
+        horizontal: 28,
+        vertical: 32,
+        allowedDirection: .right
+      )
+    )
+  }
+
   func testLiveEdgeResolverTreatsFocusedComposerAsPinnedToLatest() {
     XCTAssertTrue(
       FriendsThreadLiveEdgeResolver.shouldStickToLatest(
