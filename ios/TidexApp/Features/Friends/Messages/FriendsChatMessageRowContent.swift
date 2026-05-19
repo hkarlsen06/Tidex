@@ -55,6 +55,7 @@ struct FriendsChatMessageRowContent: View {
   let counterpartAvatarUrl: String?
   let counterpartAvatarInitials: String
   let isHighlighted: Bool
+  let highlightedAttachmentId: String?
   let visibleMessageText: String
   let senderFirstName: String?
   let separatorDate: Date?
@@ -63,9 +64,10 @@ struct FriendsChatMessageRowContent: View {
   let messageStatus: FriendsChatMessageStatus?
   let stackingOrder: Double
   let onRetry: () -> Void
-  let onToggleReaction: (String) -> Void
+  let onToggleReaction: (String, String?) -> Void
   let onTapQuotedMessage: () -> Void
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
+  let onPrepareImageReaction: (FriendMessageAttachment) -> Void
   let onOpenShiftSnapshot: (FriendShiftSnapshot) -> Void
   let onReplySwipe: (() -> Void)?
   let messageFrame: Binding<CGRect>?
@@ -133,17 +135,26 @@ struct FriendsChatMessageRowContent: View {
                     FriendsChatImageView(
                       attachment: attachment,
                       isCurrentUser: isCurrentUser,
-                      onOpenImageAttachment: onOpenImageAttachment
+                      canReact: message.canReact,
+                      isHighlighted: highlightedAttachmentId == attachment.id,
+                      onOpenImageAttachment: onOpenImageAttachment,
+                      onPrepareReaction: onPrepareImageReaction
                     )
                     .friendsChatMessageFrame(
                       !hasMessageText && shiftSnapshot == nil && index == imageAttachments.count - 1
                         ? messageFrame : nil
                     )
                     .overlay(alignment: reactionAlignment) {
-                      if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil,
-                        index == imageAttachments.count - 1
-                      {
-                        reactionStrip
+                      if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil {
+                        let reactionTarget = imageReactionTarget(
+                          for: attachment,
+                          index: index,
+                          imageCount: imageAttachments.count
+                        )
+                        reactionStrip(
+                          for: reactionTarget.reactions,
+                          attachmentId: reactionTarget.attachmentId
+                        )
                       }
                     }
                   }
@@ -162,7 +173,7 @@ struct FriendsChatMessageRowContent: View {
                   )
                   .overlay(alignment: reactionAlignment) {
                     if !hasMessageText, imageAttachments.isEmpty {
-                      reactionStrip
+                      reactionStrip(for: message.reactions)
                     }
                   }
                 }
@@ -181,7 +192,7 @@ struct FriendsChatMessageRowContent: View {
                       .multilineTextAlignment(.leading)
                       .fixedSize(horizontal: false, vertical: true)
                   } reaction: {
-                    reactionStrip
+                    reactionStrip(for: message.reactions)
                   }
                 }
 
@@ -210,7 +221,7 @@ struct FriendsChatMessageRowContent: View {
                         .fixedSize(horizontal: false, vertical: true)
                     }
                   } reaction: {
-                    reactionStrip
+                    reactionStrip(for: message.reactions)
                   }
                 }
               }
@@ -253,9 +264,13 @@ struct FriendsChatMessageRowContent: View {
       .padding(.bottom, bottomPadding)
       .background(
         Rectangle()
-          .fill(isHighlighted ? Color.tidexBlue.opacity(0.12) : Color.clear)
+          .fill(shouldHighlightWholeMessage ? Color.tidexBlue.opacity(0.12) : Color.clear)
       )
     }
+  }
+
+  private var shouldHighlightWholeMessage: Bool {
+    isHighlighted && highlightedAttachmentId == nil
   }
 
   @ViewBuilder
@@ -454,36 +469,64 @@ struct FriendsChatMessageRowContent: View {
   }
 
   @ViewBuilder
-  private var reactionStrip: some View {
-    if !message.reactions.isEmpty {
-      HStack(spacing: Spacing.xxxs) {
-        ForEach(message.reactions) { reaction in
-          Button {
-            onToggleReaction(reaction.emoji)
-          } label: {
-            HStack(spacing: 4) {
-              FriendsChatEmojiGlyph(emoji: reaction.emoji, size: 22)
-
-              if reaction.count > 1 {
-                Text("\(reaction.count)")
-                  .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexTextSecondary)
-              }
-            }
-            .padding(.horizontal, 2)
-            .padding(.vertical, 1)
-            .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-          .disabled(!message.canReact)
-        }
+  private func reactionStrip(
+    for reactions: [FriendMessageReaction],
+    attachmentId: String? = nil
+  ) -> some View {
+    Group {
+      if !reactions.isEmpty {
+        reactionButtons(for: reactions, attachmentId: attachmentId)
+          .offset(
+            x: isCurrentUser ? -Self.reactionHorizontalOffset : Self.reactionHorizontalOffset,
+            y: -Self.reactionVerticalOffset
+          )
+          .zIndex(2)
       }
-      .offset(
-        x: isCurrentUser ? -Self.reactionHorizontalOffset : Self.reactionHorizontalOffset,
-        y: -Self.reactionVerticalOffset
-      )
-      .zIndex(2)
     }
+  }
+
+  private func reactionButtons(
+    for reactions: [FriendMessageReaction],
+    attachmentId: String?
+  ) -> some View {
+    HStack(spacing: Spacing.xxxs) {
+      ForEach(reactions) { reaction in
+        Button {
+          onToggleReaction(reaction.emoji, attachmentId)
+        } label: {
+          HStack(spacing: 4) {
+            FriendsChatEmojiGlyph(emoji: reaction.emoji, size: 22)
+
+            if reaction.count > 1 {
+              Text("\(reaction.count)")
+                .font(.tidexCaptionRegular)
+                .foregroundColor(.tidexTextSecondary)
+            }
+          }
+          .padding(.horizontal, 2)
+          .padding(.vertical, 1)
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!message.canReact)
+      }
+    }
+  }
+
+  private func imageReactionTarget(
+    for attachment: FriendMessageAttachment,
+    index: Int,
+    imageCount: Int
+  ) -> (reactions: [FriendMessageReaction], attachmentId: String?) {
+    if !attachment.reactions.isEmpty {
+      return (attachment.reactions, attachment.id)
+    }
+
+    if index == imageCount - 1 {
+      return (message.reactions, nil)
+    }
+
+    return ([], attachment.id)
   }
 
   private var reactionAlignment: Alignment {
@@ -1019,14 +1062,45 @@ struct ChatShiftSnapshotCard: View {
 private struct FriendsChatImageView: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let canReact: Bool
+  let isHighlighted: Bool
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
+  let onPrepareReaction: (FriendMessageAttachment) -> Void
+
+  @State private var tapSuppressedUntil: Date?
 
   var body: some View {
     FriendsChatImageAttachmentCard(
       attachment: attachment,
-      isCurrentUser: isCurrentUser
+      isCurrentUser: isCurrentUser,
+      isHighlighted: isHighlighted
     ) {
+      guard
+        FriendsThreadAttachmentTapGuard.shouldHandleTap(
+          suppressedUntil: tapSuppressedUntil
+        )
+      else {
+        return
+      }
       onOpenImageAttachment(attachment)
+    }
+    .simultaneousGesture(
+      LongPressGesture(
+        minimumDuration: FriendsThreadAttachmentTapGuard.messageMenuRecognitionDuration
+      )
+      .onEnded { _ in
+        tapSuppressedUntil =
+          FriendsThreadAttachmentTapGuard
+          .suppressedUntilAfterMenuRecognition()
+        guard canReact else { return }
+        onPrepareReaction(attachment)
+      }
+    )
+    .onChange(of: canReact) { _, canReact in
+      if canReact {
+        return
+      }
+      tapSuppressedUntil = nil
     }
   }
 }
@@ -1141,6 +1215,7 @@ final class FriendsChatImageLoader: ObservableObject {
 struct FriendsChatImageAttachmentCard: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let isHighlighted: Bool
   let displaySize: CGSize?
   let cornerRadius: CGFloat
   let placeholderSymbolSize: CGFloat
@@ -1151,6 +1226,7 @@ struct FriendsChatImageAttachmentCard: View {
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
+    isHighlighted: Bool = false,
     displaySize: CGSize? = nil,
     cornerRadius: CGFloat = CornerRadius.lg,
     placeholderSymbolSize: CGFloat = 22,
@@ -1158,6 +1234,7 @@ struct FriendsChatImageAttachmentCard: View {
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
+    self.isHighlighted = isHighlighted
     self.displaySize = displaySize
     self.cornerRadius = cornerRadius
     self.placeholderSymbolSize = placeholderSymbolSize
@@ -1187,9 +1264,15 @@ struct FriendsChatImageAttachmentCard: View {
           .overlay {
             imageShape
               .strokeBorder(
-                isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder,
-                lineWidth: 1
+                imageBorderColor,
+                lineWidth: isHighlighted ? 2 : 1
               )
+          }
+          .overlay {
+            if isHighlighted {
+              imageShape
+                .fill(Color.tidexBlue.opacity(0.14))
+            }
           }
           .contentShape(imageShape)
           .onTapGesture {
@@ -1220,6 +1303,13 @@ struct FriendsChatImageAttachmentCard: View {
     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
   }
 
+  private var imageBorderColor: Color {
+    if isHighlighted {
+      return .tidexBlue
+    }
+    return isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder
+  }
+
   @ViewBuilder
   private func placeholder<Content: View>(@ViewBuilder content: () -> Content) -> some View {
     imageShape
@@ -1231,8 +1321,8 @@ struct FriendsChatImageAttachmentCard: View {
       .overlay {
         imageShape
           .strokeBorder(
-            isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder,
-            lineWidth: 1
+            imageBorderColor,
+            lineWidth: isHighlighted ? 2 : 1
           )
       }
   }
@@ -1554,17 +1644,16 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
     scrollView.backgroundColor = .clear
     scrollView.showsHorizontalScrollIndicator = false
     scrollView.showsVerticalScrollIndicator = false
+    scrollView.contentInsetAdjustmentBehavior = .never
     scrollView.bouncesZoom = true
     scrollView.decelerationRate = .fast
     scrollView.minimumZoomScale = 1
     scrollView.maximumZoomScale = 4
-    scrollView.isScrollEnabled = false
+    scrollView.panGestureRecognizer.isEnabled = false
 
     let imageView = context.coordinator.imageView
     imageView.image = image
-    imageView.contentMode = .scaleAspectFit
-    imageView.frame = scrollView.bounds
-    imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    imageView.contentMode = .scaleToFill
     scrollView.addSubview(imageView)
 
     let doubleTapRecognizer = UITapGestureRecognizer(
@@ -1573,29 +1662,30 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
     )
     doubleTapRecognizer.numberOfTapsRequired = 2
     scrollView.addGestureRecognizer(doubleTapRecognizer)
-    context.coordinator.scrollView = scrollView
+    context.coordinator.configure(image: image, in: scrollView, forceReset: true)
 
     return scrollView
   }
 
   func updateUIView(_ scrollView: UIScrollView, context: Context) {
     context.coordinator.onZoomStateChanged = onZoomStateChanged
-    context.coordinator.imageView.image = image
-    context.coordinator.imageView.frame = scrollView.bounds
-    context.coordinator.updateInsets(for: scrollView)
+    context.coordinator.configure(image: image, in: scrollView, forceReset: !isActive)
 
     if !isActive, scrollView.zoomScale > scrollView.minimumZoomScale {
-      scrollView.setZoomScale(scrollView.minimumZoomScale, animated: false)
-      scrollView.contentOffset = .zero
-      scrollView.isScrollEnabled = false
-      onZoomStateChanged(false)
+      context.coordinator.resetZoom(in: scrollView)
     }
   }
 
   final class Coordinator: NSObject, UIScrollViewDelegate {
     let imageView = UIImageView()
-    weak var scrollView: UIScrollView?
     var onZoomStateChanged: (Bool) -> Void
+    private let minimumZoomEpsilon: CGFloat = 0.01
+    private let minimumZoomSnapThreshold: CGFloat = 0.06
+    private var currentImageIdentifier: ObjectIdentifier?
+    private var lastBoundsSize: CGSize = .zero
+    private var fittedImageSize: CGSize = .zero
+    private var reportedIsZoomed = false
+    private var isResettingZoom = false
 
     init(onZoomStateChanged: @escaping (Bool) -> Void) {
       self.onZoomStateChanged = onZoomStateChanged
@@ -1606,10 +1696,12 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
     }
 
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
-      let isZoomed = scrollView.zoomScale > scrollView.minimumZoomScale + 0.01
+      let isZoomed = isZoomed(scrollView)
       scrollView.isScrollEnabled = isZoomed
-      updateInsets(for: scrollView)
-      onZoomStateChanged(isZoomed)
+      scrollView.panGestureRecognizer.isEnabled = isZoomed
+      centerImage(in: scrollView)
+      guard !isResettingZoom else { return }
+      setZoomState(isZoomed)
     }
 
     func scrollViewDidEndZooming(
@@ -1617,19 +1709,24 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
       with _: UIView?,
       atScale scale: CGFloat
     ) {
-      let isZoomed = scale > scrollView.minimumZoomScale + 0.01
+      if scale <= scrollView.minimumZoomScale + minimumZoomSnapThreshold {
+        resetZoom(in: scrollView)
+        return
+      }
+
+      let isZoomed = scale > scrollView.minimumZoomScale + minimumZoomEpsilon
       scrollView.isScrollEnabled = isZoomed
-      onZoomStateChanged(isZoomed)
+      scrollView.panGestureRecognizer.isEnabled = isZoomed
+      centerImage(in: scrollView)
+      setZoomState(isZoomed)
     }
 
     @objc
     func handleDoubleTap(_ recognizer: UITapGestureRecognizer) {
-      guard let scrollView else { return }
+      guard let scrollView = recognizer.view as? UIScrollView else { return }
 
-      if scrollView.zoomScale > scrollView.minimumZoomScale + 0.01 {
-        scrollView.setZoomScale(scrollView.minimumZoomScale, animated: true)
-        scrollView.isScrollEnabled = false
-        onZoomStateChanged(false)
+      if isZoomed(scrollView) {
+        resetZoom(in: scrollView)
         return
       }
 
@@ -1645,18 +1742,82 @@ private struct FriendsChatZoomableImageView: UIViewRepresentable {
       )
       scrollView.zoom(to: zoomRect, animated: true)
       scrollView.isScrollEnabled = true
-      onZoomStateChanged(true)
+      scrollView.panGestureRecognizer.isEnabled = true
+      setZoomState(true)
     }
 
-    func updateInsets(for scrollView: UIScrollView) {
-      let horizontalInset = max((scrollView.bounds.width - imageView.frame.width) / 2, 0)
-      let verticalInset = max((scrollView.bounds.height - imageView.frame.height) / 2, 0)
-      scrollView.contentInset = UIEdgeInsets(
-        top: verticalInset,
-        left: horizontalInset,
-        bottom: verticalInset,
-        right: horizontalInset
+    func configure(image: UIImage, in scrollView: UIScrollView, forceReset: Bool) {
+      let imageIdentifier = ObjectIdentifier(image)
+      let boundsSize = scrollView.bounds.size
+      let imageChanged = imageIdentifier != currentImageIdentifier
+      let boundsChanged = boundsSize != lastBoundsSize
+
+      guard imageChanged || boundsChanged || forceReset else {
+        centerImage(in: scrollView)
+        return
+      }
+
+      currentImageIdentifier = imageIdentifier
+      lastBoundsSize = boundsSize
+      imageView.image = image
+      fittedImageSize = Self.fittedSize(for: image.size, in: boundsSize)
+
+      if imageChanged || forceReset || !isZoomed(scrollView) {
+        resetZoom(in: scrollView)
+        return
+      }
+
+      imageView.frame = CGRect(origin: .zero, size: fittedImageSize)
+      scrollView.contentSize = fittedImageSize
+      centerImage(in: scrollView)
+    }
+
+    func resetZoom(in scrollView: UIScrollView) {
+      isResettingZoom = true
+      defer { isResettingZoom = false }
+
+      scrollView.contentInset = .zero
+      scrollView.contentOffset = .zero
+      scrollView.minimumZoomScale = 1
+      scrollView.maximumZoomScale = 4
+      scrollView.zoomScale = scrollView.minimumZoomScale
+      imageView.transform = .identity
+      imageView.frame = CGRect(origin: .zero, size: fittedImageSize)
+      scrollView.contentSize = fittedImageSize
+      centerImage(in: scrollView)
+      scrollView.isScrollEnabled = false
+      scrollView.panGestureRecognizer.isEnabled = false
+      setZoomState(false)
+    }
+
+    private func centerImage(in scrollView: UIScrollView) {
+      let horizontalInset = max((scrollView.bounds.width - scrollView.contentSize.width) / 2, 0)
+      let verticalInset = max((scrollView.bounds.height - scrollView.contentSize.height) / 2, 0)
+      imageView.center = CGPoint(
+        x: scrollView.contentSize.width / 2 + horizontalInset,
+        y: scrollView.contentSize.height / 2 + verticalInset
       )
+    }
+
+    private func isZoomed(_ scrollView: UIScrollView) -> Bool {
+      scrollView.zoomScale > scrollView.minimumZoomScale + minimumZoomEpsilon
+    }
+
+    private func setZoomState(_ isZoomed: Bool) {
+      guard reportedIsZoomed != isZoomed else { return }
+      reportedIsZoomed = isZoomed
+      onZoomStateChanged(isZoomed)
+    }
+
+    private static func fittedSize(for imageSize: CGSize, in boundsSize: CGSize) -> CGSize {
+      guard imageSize.width > 0, imageSize.height > 0,
+        boundsSize.width > 0, boundsSize.height > 0
+      else {
+        return boundsSize
+      }
+
+      let scale = min(boundsSize.width / imageSize.width, boundsSize.height / imageSize.height)
+      return CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
     }
   }
 }
