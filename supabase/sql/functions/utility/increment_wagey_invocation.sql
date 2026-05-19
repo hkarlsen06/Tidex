@@ -73,3 +73,6 @@ begin
   );
 end;
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.increment_wagey_invocation(uuid, text, integer) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_wagey_invocation(uuid, text, integer) TO service_role;

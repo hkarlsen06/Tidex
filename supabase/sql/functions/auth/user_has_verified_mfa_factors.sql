@@ -15,3 +15,5 @@ AS $function$
       AND status = 'verified'
   )
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.user_has_verified_mfa_factors() FROM authenticated;

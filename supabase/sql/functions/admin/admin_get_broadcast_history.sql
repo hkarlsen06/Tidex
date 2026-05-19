@@ -26,3 +26,5 @@ AS $function$
   ORDER BY ab.created_at DESC
   LIMIT limit_count;
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_broadcast_history(integer) FROM authenticated;

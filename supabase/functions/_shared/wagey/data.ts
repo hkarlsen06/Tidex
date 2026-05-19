@@ -473,7 +473,7 @@ export async function consumeWageyInvocation(
   const userId = ctx.user.id;
 
   try {
-    const { data, error } = await ctx.supabase.rpc(
+    const { data, error } = await ctx.supabaseAdmin.rpc(
       "increment_wagey_invocation",
       {
         p_user_id: userId,

@@ -55,6 +55,11 @@ function createMockContext(userId: string): WageyRequestContext {
     cache: new Map(),
     supabase: ({
       rpc: async (name: string) => {
+        throw new Error(`Unexpected supabase rpc: ${name}`);
+      },
+    } as unknown) as WageyRequestContext["supabase"],
+    supabaseAdmin: ({
+      rpc: async (name: string) => {
         if (name === "increment_wagey_invocation") {
           return {
             data: {
@@ -67,11 +72,6 @@ function createMockContext(userId: string): WageyRequestContext {
           };
         }
 
-        throw new Error(`Unexpected supabase rpc: ${name}`);
-      },
-    } as unknown) as WageyRequestContext["supabase"],
-    supabaseAdmin: ({
-      rpc: async (name: string) => {
         if (name === "get_wagey_access_context") {
           return {
             data: {

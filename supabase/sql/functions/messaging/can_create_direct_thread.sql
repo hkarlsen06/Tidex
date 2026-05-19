@@ -34,4 +34,4 @@ $function$;
 
 REVOKE EXECUTE ON FUNCTION public.can_create_direct_thread(uuid) FROM public;
 REVOKE EXECUTE ON FUNCTION public.can_create_direct_thread(uuid) FROM anon;
-GRANT EXECUTE ON FUNCTION public.can_create_direct_thread(uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.can_create_direct_thread(uuid) FROM authenticated;

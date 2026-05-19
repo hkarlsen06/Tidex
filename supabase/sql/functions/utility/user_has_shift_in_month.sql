@@ -12,6 +12,13 @@ AS $function$
     select 1
     from public.user_shifts
     where user_id = u
+      and (
+        u = auth.uid()
+        or auth.role() = 'service_role'
+        or public.is_admin()
+      )
       and date_trunc('month', shift_date)::date = date_trunc('month', d)::date
   );
 $function$;
+
+REVOKE EXECUTE ON FUNCTION public.user_has_shift_in_month(uuid, date) FROM authenticated;
