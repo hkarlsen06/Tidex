@@ -143,6 +143,13 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 
 ## Agent Behavior Guidelines
 
+**Parallel agent safety:**
+
+- The developer often runs multiple agents in parallel in the same worktree.
+- If you see unrelated changes, do not touch, revert, reformat, or "clean up" them.
+- Treat unrelated diffs as owned by the user or another agent, even if they appeared after your work began.
+- Only modify files and hunks required for your task; if unrelated changes block you, stop and ask before proceeding.
+
 **Do NOT create unnecessary files:**
 
 - NO summary documents, audit reports, or markdown files unless explicitly requested
