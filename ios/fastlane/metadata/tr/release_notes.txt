@@ -1,8 +1,8 @@
-- Etkinlikler için takvim dışa aktarma eklendi
-- Ayarlar, profil, güvenlik, geri bildirim, arkadaşlar, istatistikler, panel ve vardiyalar genelinde çevrimdışı destek iyileştirildi
-- Arkadaş eklediğiniz ve izinleri değiştirdiğiniz Arkadaşlar ekranı görsel olarak yenilendi
-- Arkadaş paylaşımı ve sohbet senkronizasyonu iyileştirildi
-- Arkadaşlar paylaşılan vardiya eklediğinde bildirim desteği eklendi
-- Birden fazla yinelenen vardiya tekrarını aynı anda silme sorunu düzeltildi
-- Güvenlik, bağımlılıklar ve genel güvenilirlik iyileştirildi
+- Vardiyalarınızın takvim uygulamanızda güncel kalabilmesi için takvim abonelikleri eklendi
+- Primler, düzeltmeler ve diğer ek ödeme ayrıntıları için bordro ayarlamaları eklendi
+- Daha net yönlendirmeler ve daha akıllı varsayılan para birimi seçimiyle başlangıç deneyimi ve kayıt süreci iyileştirildi
+- Wagey, daha net araç güncellemeleri, bordro ayarlama desteği ve arka planda tamamlama için daha iyi bildirimlerle geliştirildi
+- Paylaşılan vardiyaların yüklenmesi, daha düzenli liste davranışı ve daha iyi sohbet senkronizasyonu ile arkadaşlarla paylaşım geliştirildi
+- Kazançları daha net görmek için kontrol paneli, bordro kartları ve çalışma oranı istatistikleri iyileştirildi
+- Tekrarlanan vardiyaların işlenmesi, vardiya kaydırma işlemleri ve paylaşılan vardiyalarda çakışma algılama düzeltildi
 - Hata düzeltmeleri ve diğer iyileştirmeler

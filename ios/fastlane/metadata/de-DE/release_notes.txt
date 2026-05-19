@@ -1,8 +1,8 @@
-- Kalenderexport für Ereignisse hinzugefügt
-- Offline-Unterstützung in Einstellungen, Profil, Sicherheit, Feedback, Freunde, Statistiken, Dashboard und Schichten verbessert
-- Die Freunde-Ansicht zum Hinzufügen von Freunden und Ändern von Berechtigungen visuell überarbeitet
-- Synchronisierung von Freundesfreigaben und Chat verbessert
-- Unterstützung für Benachrichtigungen hinzugefügt, wenn Freunde geteilte Schichten hinzufügen
-- Fehler beim gleichzeitigen Löschen mehrerer wiederkehrender Schichtvorkommen behoben
-- Sicherheit, Abhängigkeiten und allgemeine Zuverlässigkeit verbessert
+- Kalenderabonnements hinzugefügt, damit deine Schichten in deiner Kalender-App aktuell bleiben
+- Lohnanpassungen für Boni, Korrekturen und andere zusätzliche Vergütungsdetails hinzugefügt
+- Onboarding und Registrierung mit klarerer Anleitung und intelligenterer Standardauswahl der Währung verbessert
+- Wagey mit klareren Tool-Updates, Unterstützung für Lohnanpassungen und besseren Hinweisen bei Abschluss im Hintergrund verbessert
+- Teilen mit Freunden mit Laden gemeinsamer Schichten, aufgeräumterem Listenverhalten und besserer Chat-Synchronisierung verbessert
+- Dashboard, Lohnkarten und Statistiken zum Beschäftigungsgrad für klarere Einblicke in die Verdienste verbessert
+- Die Handhabung wiederkehrender Schichten, Wischaktionen bei Schichten und die Erkennung überlappender gemeinsamer Schichten behoben
 - Fehlerbehebungen und weitere Verbesserungen

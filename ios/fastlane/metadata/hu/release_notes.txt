@@ -1,8 +1,8 @@
-- Események naptárexportjának hozzáadása
-- Javított offline támogatás a beállítások, profil, biztonság, visszajelzés, barátok, statisztikák, irányítópult és műszakok részeken
-- Vizuálisan megújult a Barátok képernyő, ahol barátokat adhatsz hozzá és módosíthatod a jogosultságokat
-- Javult a barátokkal való megosztás és a csevegés szinkronizálása
-- Értesítések támogatása, amikor a barátok megosztott műszakokat adnak hozzá
-- Javítva több ismétlődő műszakelőfordulás egyidejű törlése
-- Javult a biztonság, a függőségek kezelése és az általános megbízhatóság
+- Hozzáadtuk a naptár-előfizetéseket, így a műszakjaid naprakészen maradhatnak a naptáralkalmazásodban
+- Hozzáadtuk a bérkorrekciókat bónuszokhoz, javításokhoz és egyéb extra kifizetési részletekhez
+- Javítottuk a bevezetést és a regisztrációt egyértelműbb útmutatással és okosabb alapértelmezett pénznemválasztással
+- Továbbfejlesztettük a Wageyt átláthatóbb eszközfrissítésekkel, bérkorrekciós támogatással és jobb háttérben történő befejezési értesítésekkel
+- Javítottuk a megosztást ismerősökkel a megosztott műszakok betöltésével, letisztultabb listakezeléssel és jobb csevegésszinkronizálással
+- Javítottuk az irányítópultot, a bérkártyákat és a foglalkoztatási százalék statisztikáit az átláthatóbb kereseti betekintésért
+- Javítottuk az ismétlődő műszakok kezelését, a műszakokon végzett lapozási műveleteket és a megosztott műszakok átfedésének észlelését
 - Hibajavítások és egyéb fejlesztések

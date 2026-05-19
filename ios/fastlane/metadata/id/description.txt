@@ -4,8 +4,8 @@ Fitur:
 • Pencatatan shift yang mudah dengan waktu mulai/selesai
 • Perhitungan gaji otomatis
 • Tampilan kalender untuk semua shift
-• Ringkasan pendapatan dan statistik
+• Ringkasan penghasilan dan statistik
 • Widget untuk akses cepat
 • Sinkronisasi antar perangkat
 
-Cocok untuk karyawan yang ingin melacak jam kerja dan pendapatan mereka.
+Cocok untuk karyawan yang ingin melacak jam kerja dan penghasilan mereka.

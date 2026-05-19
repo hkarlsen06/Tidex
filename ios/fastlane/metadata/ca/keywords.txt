@@ -1,1 +1,1 @@
-torns,hores,sou,feina,treball,temps,horari,ingressos,calendari,registre
+torn,seguiment,sou,salari,feina,hores,temps,fitxar,horari,guanys

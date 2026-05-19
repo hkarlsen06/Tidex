@@ -1,8 +1,8 @@
-- Se ha añadido la exportación de eventos al calendario
-- Se ha mejorado la compatibilidad sin conexión en ajustes, perfil, seguridad, comentarios, amigos, estadísticas, panel y turnos
-- Se ha renovado visualmente la pantalla de Amigos, donde puedes añadir amigos y cambiar permisos
-- Se ha mejorado la sincronización del contenido compartido con amigos y del chat
-- Se ha añadido compatibilidad con notificaciones cuando tus amigos añaden turnos compartidos
-- Se ha corregido la eliminación de varias repeticiones de turnos recurrentes a la vez
-- Se ha mejorado la seguridad, las dependencias y la fiabilidad general
+- Se han añadido suscripciones al calendario para que tus turnos se mantengan actualizados en tu app de calendario
+- Se han añadido ajustes de nómina para bonificaciones, correcciones y otros detalles de pago extra
+- Se ha mejorado la introducción y el registro con indicaciones más claras y una selección de divisa predeterminada más inteligente
+- Se ha mejorado Wagey con actualizaciones de herramientas más claras, compatibilidad con ajustes de nómina y mejores avisos al completarse en segundo plano
+- Se ha mejorado el uso compartido con amigos con carga de turnos compartidos, un comportamiento de listas más limpio y una mejor sincronización del chat
+- Se han mejorado el panel, las tarjetas de nómina y las estadísticas de porcentaje de empleo para ofrecer una visión más clara de los ingresos
+- Se ha corregido la gestión de turnos recurrentes, las acciones al deslizar en los turnos y la detección de solapamientos en turnos compartidos
 - Corrección de errores y otras mejoras

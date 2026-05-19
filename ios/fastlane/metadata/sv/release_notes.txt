@@ -1,8 +1,8 @@
-- Lade till kalendereexport för händelser
-- Förbättrat stöd för offlineläge i inställningar, profil, säkerhet, feedback, vänner, statistik, översikt och pass
-- Vänskärmen där du lägger till vänner och ändrar behörigheter har fått en visuell uppdatering
-- Förbättrad synkronisering för vänsdelning och chatt
-- Lade till stöd för notiser när vänner lägger till delade pass
-- Fixade radering av flera återkommande pass vid ett och samma tillfälle
-- Förbättrad säkerhet, beroenden och övergripande tillförlitlighet
+- Lade till kalenderprenumerationer så att dina pass kan hållas uppdaterade i din kalenderapp
+- Lade till lönejusteringar för bonusar, korrigeringar och andra extra löneuppgifter
+- Förbättrad onboarding och registrering med tydligare vägledning och smartare standardval av valuta
+- Förbättrade Wagey med tydligare verktygsuppdateringar, stöd för lönejusteringar och bättre aviseringar när den slutförs i bakgrunden
+- Förbättrade delning med vänner med inläsning av delade pass, renare listbeteende och bättre chatsynkronisering
+- Förbättrade översikten, lönekorten och statistik för sysselsättningsgrad för tydligare insikter om intäkter
+- Åtgärdade hantering av återkommande pass, svepåtgärder för pass och upptäckt av överlappande delade pass
 - Buggfixar och andra förbättringar

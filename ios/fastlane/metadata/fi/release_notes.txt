@@ -1,8 +1,8 @@
-- Lisätty kalenterivienti tapahtumille
-- Parannettu offline-tukea asetuksissa, profiilissa, tietoturvassa, palautteessa, kavereissa, tilastoissa, koontinäytössä ja vuoroissa
-- Uudistettu visuaalisesti Kaverit-näkymä, jossa lisäät kavereita ja muutat käyttöoikeuksia
-- Parannettu kaverijaon ja chatin synkronointia
-- Lisätty tuki ilmoituksille, kun kaverit lisäävät jaettuja vuoroja
-- Korjattu useiden toistuvien vuorojen esiintymien poistaminen kerralla
-- Parannettu tietoturvaa, riippuvuuksia ja yleistä luotettavuutta
+- Lisätty kalenteritilaukset, jotta työvuorosi pysyvät ajan tasalla kalenterisovelluksessasi
+- Lisätty palkkatarkistukset bonuksia, korjauksia ja muita ylimääräisiä palkan tietoja varten
+- Parannettu käyttöönottoa ja rekisteröitymistä selkeämmällä ohjauksella ja älykkäämmällä oletusvaluutan valinnalla
+- Parannettu Wageyta selkeämmillä työkalupäivityksillä, palkkatarkistusten tuella ja paremmilla ilmoituksilla taustalla valmistumisesta
+- Parannettu ystävien kanssa jakamista jaettujen vuorojen latauksella, selkeämmällä listan toiminnalla ja paremmalla chatin synkronoinnilla
+- Parannettu koontinäyttöä, palkkakortteja ja työsuhdeprosentin tilastoja selkeämpiä ansionäkymiä varten
+- Korjattu toistuvien vuorojen käsittelyä, vuorojen pyyhkäisytoimintoja ja jaettujen vuorojen päällekkäisyyksien tunnistusta
 - Virheenkorjauksia ja muita parannuksia

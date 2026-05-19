@@ -1,8 +1,8 @@
-- Dodano eksport wydarzeń do kalendarza
-- Ulepszono obsługę offline w ustawieniach, profilu, zabezpieczeniach, opinii, znajomych, statystykach, panelu i zmianach
-- Odświeżono wygląd ekranu Znajomi, na którym dodajesz znajomych i zmieniasz uprawnienia
-- Ulepszono udostępnianie znajomym i synchronizację czatu
-- Dodano obsługę powiadomień, gdy znajomi dodają współdzielone zmiany
-- Naprawiono usuwanie wielu wystąpień powtarzających się zmian jednocześnie
-- Ulepszono zabezpieczenia, zależności i ogólną niezawodność
+- Dodano subskrypcje kalendarza, dzięki którym Twoje zmiany mogą być zawsze aktualne w aplikacji kalendarza
+- Dodano korekty wypłaty dla premii, poprawek i innych dodatkowych składników wynagrodzenia
+- Ulepszono onboarding i rejestrację dzięki jaśniejszym wskazówkom oraz inteligentniejszemu domyślnemu wyborowi waluty
+- Ulepszono Wagey dzięki czytelniejszym aktualizacjom narzędzia, obsłudze korekt wypłaty i lepszym alertom o zakończeniu działania w tle
+- Ulepszono udostępnianie znajomym dzięki wczytywaniu współdzielonych zmian, bardziej przejrzystemu działaniu listy i lepszej synchronizacji czatu
+- Ulepszono panel, karty wypłaty i statystyki procentu zatrudnienia, aby zapewnić lepszy wgląd w zarobki
+- Naprawiono obsługę powtarzających się zmian, akcje przesunięcia na zmianach oraz wykrywanie nakładania się współdzielonych zmian
 - Poprawki błędów i inne ulepszenia

@@ -1,1 +1,1 @@
-schicht,stundenlohn,lohn,gehalt,arbeit,stunden,zeit,uhr,schichtplan,einnahmen
+schicht,arbeitszeit,lohn,gehalt,arbeit,stunden,zeiterfassung,dienstplan,einnahmen,stempeluhr

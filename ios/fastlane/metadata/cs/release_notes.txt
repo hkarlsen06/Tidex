@@ -1,8 +1,8 @@
-- Přidán export událostí do kalendáře
-- Vylepšena podpora offline režimu v nastavení,profilu,zabezpečení,zpětné vazbě,přátelích,statistikách,přehledu a směnách
-- Vizuálně přepracována obrazovka Přátelé, kde přidáváte přátele a měníte oprávnění
-- Vylepšena synchronizace sdílení s přáteli a chatu
-- Přidána podpora oznámení, když přátelé přidají sdílené směny
-- Opravena možnost smazat více opakujících se výskytů směn najednou
-- Vylepšeno zabezpečení, závislosti a celková spolehlivost
+- Přidána odběry kalendáře, aby se vaše směny mohly v aplikaci kalendáře průběžně aktualizovat
+- Přidány mzdové úpravy pro bonusy, opravy a další detaily mimořádných výplat
+- Vylepšen onboarding a registrace díky jasnějším pokynům a chytřejšímu výchozímu výběru měny
+- Vylepšen Wagey díky přehlednějším aktualizacím nástrojů, podpoře mzdových úprav a lepším upozorněním na dokončení na pozadí
+- Vylepšeno sdílení s přáteli díky načítání sdílených směn, přehlednějšímu chování seznamu a lepší synchronizaci chatu
+- Vylepšen přehled, mzdové karty a statistiky pracovního úvazku pro jasnější přehled o výdělcích
+- Opravena práce s opakujícími se směnami, akce přejetím u směn a detekce překrývání sdílených směn
 - Opravy chyb a další vylepšení

@@ -1,8 +1,8 @@
-- Pridaný export udalostí do kalendára
-- Vylepšená podpora offline režimu v nastaveniach, profile, zabezpečení, spätnej väzbe, priateľoch, štatistikách, prehľade a zmenách
-- Vizuálne prepracovaná obrazovka Priatelia, kde pridávate priateľov a meníte oprávnenia
-- Vylepšené zdieľanie s priateľmi a synchronizácia chatu
-- Pridaná podpora upozornení, keď priatelia pridajú zdieľané zmeny
-- Opravené odstraňovanie viacerých opakujúcich sa výskytov zmien naraz
-- Vylepšené zabezpečenie, závislosti a celková spoľahlivosť
+- Pridané odbery kalendára, aby sa vaše zmeny mohli priebežne aktualizovať v aplikácii kalendára
+- Pridané úpravy miezd pre bonusy, opravy a ďalšie podrobnosti o dodatočnej odmene
+- Vylepšené úvodné nastavenie a registrácia s jasnejšími pokynmi a inteligentnejším predvoleným výberom meny
+- Vylepšený Wagey s jasnejšími aktualizáciami nástrojov, podporou úprav miezd a lepšími upozorneniami na dokončenie na pozadí
+- Vylepšené zdieľanie s priateľmi načítavaním zdieľaných zmien, prehľadnejším správaním zoznamu a lepšou synchronizáciou chatu
+- Vylepšený hlavný panel, mzdové karty a štatistiky percenta pracovného úväzku pre jasnejší prehľad zárobkov
+- Opravené spracovanie opakujúcich sa zmien, akcie potiahnutím pri zmenách a detekcia prekrývania zdieľaných zmien
 - Opravy chýb a ďalšie vylepšenia

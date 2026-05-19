@@ -1,8 +1,8 @@
-- Ajout de l’exportation du calendrier pour les événements
-- Amélioration de la prise en charge hors ligne dans les réglages, le profil, la sécurité, les retours, les amis, les statistiques, le tableau de bord et les shifts
-- Refonte visuelle de l’écran Amis où vous ajoutez des amis et modifiez les autorisations
-- Amélioration du partage entre amis et de la synchronisation du chat
-- Ajout de la prise en charge des notifications lorsque des amis ajoutent des shifts partagés
-- Correction de la suppression simultanée de plusieurs occurrences de shifts récurrents
-- Amélioration de la sécurité, des dépendances et de la fiabilité générale
+- Ajout des abonnements au calendrier pour que vos shifts restent à jour dans votre app de calendrier
+- Ajout d’ajustements de paie pour les bonus, corrections et autres détails de rémunération supplémentaires
+- Amélioration de l’onboarding et de l’inscription avec des indications plus claires et une sélection plus intelligente de la devise par défaut
+- Amélioration de Wagey avec des mises à jour d’outils plus claires, la prise en charge des ajustements de paie et de meilleures alertes de fin d’exécution en arrière-plan
+- Amélioration du partage avec les amis avec le chargement des shifts partagés, un comportement de liste plus fluide et une meilleure synchronisation du chat
+- Amélioration du tableau de bord, des cartes de paie et des statistiques de pourcentage d’emploi pour une vision plus claire des revenus
+- Correction de la gestion des shifts récurrents, des actions de balayage sur les shifts et de la détection des chevauchements de shifts partagés
 - Corrections de bugs et autres améliorations
