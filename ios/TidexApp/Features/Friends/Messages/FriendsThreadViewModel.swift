@@ -822,7 +822,7 @@ final class FriendsThreadViewModel: ObservableObject {
     sendMessageInBackground(message.withSendState(.sending))
   }
 
-  func toggleReaction(messageId: String, emoji: String) async {
+  func toggleReaction(messageId: String, emoji: String, attachmentId: String? = nil) async {
     let normalizedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedEmoji.isEmpty else { return }
     guard !isThreadReadOnly else {
@@ -835,12 +835,19 @@ final class FriendsThreadViewModel: ObservableObject {
       return
     }
 
-    let reactionKey = "\(messageId):\(normalizedEmoji)"
+    if let attachmentId, !message.attachments.contains(where: { $0.id == attachmentId }) {
+      return
+    }
+
+    let reactionKey = "\(messageId):\(attachmentId ?? "message"):\(normalizedEmoji)"
     guard !togglingReactionKeys.contains(reactionKey) else { return }
     togglingReactionKeys.insert(reactionKey)
 
     let originalMessage = message
-    let optimisticMessage = message.toggledReaction(emoji: normalizedEmoji)
+    let optimisticMessage = message.toggledReaction(
+      emoji: normalizedEmoji,
+      attachmentId: attachmentId
+    )
     sendErrorMessage = nil
 
     await repository.saveMessages([optimisticMessage], in: route.threadId, for: viewerUserId)
@@ -849,7 +856,8 @@ final class FriendsThreadViewModel: ObservableObject {
     do {
       let updatedMessage = try await service.toggleMessageReaction(
         messageId: messageId,
-        emoji: normalizedEmoji
+        emoji: normalizedEmoji,
+        attachmentId: attachmentId
       )
       await repository.saveMessages([updatedMessage], in: route.threadId, for: viewerUserId)
       Haptics.play(.light)
@@ -1334,11 +1342,9 @@ final class FriendsThreadViewModel: ObservableObject {
       sendErrorMessage =
         isConnectivityError(error)
         ? serverActionOfflineMessage
-        : (
-          isSafetyFilterError(error)
-            ? messageBlockedBySafetyFilterMessage
-            : (isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage)
-        )
+        : (isSafetyFilterError(error)
+          ? messageBlockedBySafetyFilterMessage
+          : (isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage))
       Haptics.play(.error)
       threadLogger.error("Failed to edit message: \(error.localizedDescription)")
       return false

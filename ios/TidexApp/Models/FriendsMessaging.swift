@@ -598,6 +598,83 @@ struct FriendMessageAttachment: Identifiable, Codable, Equatable {
   let width: Int?
   let height: Int?
   let createdAt: Date
+  let reactions: [FriendMessageReaction]
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case attachmentIndex
+    case kind
+    case storageBucket
+    case storagePath
+    case mimeType
+    case byteSize
+    case width
+    case height
+    case createdAt
+    case reactions
+  }
+
+  init(
+    id: String,
+    attachmentIndex: Int,
+    kind: FriendMessageAttachmentKind,
+    storageBucket: String,
+    storagePath: String,
+    mimeType: String,
+    byteSize: Int64,
+    width: Int?,
+    height: Int?,
+    createdAt: Date,
+    reactions: [FriendMessageReaction] = []
+  ) {
+    self.id = id
+    self.attachmentIndex = attachmentIndex
+    self.kind = kind
+    self.storageBucket = storageBucket
+    self.storagePath = storagePath
+    self.mimeType = mimeType
+    self.byteSize = byteSize
+    self.width = width
+    self.height = height
+    self.createdAt = createdAt
+    self.reactions = reactions
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    attachmentIndex = try container.decode(Int.self, forKey: .attachmentIndex)
+    kind = try container.decode(FriendMessageAttachmentKind.self, forKey: .kind)
+    storageBucket = try container.decode(String.self, forKey: .storageBucket)
+    storagePath = try container.decode(String.self, forKey: .storagePath)
+    mimeType = try container.decode(String.self, forKey: .mimeType)
+    byteSize = try container.decode(Int64.self, forKey: .byteSize)
+    width = try container.decodeIfPresent(Int.self, forKey: .width)
+    height = try container.decodeIfPresent(Int.self, forKey: .height)
+    createdAt = try container.decode(Date.self, forKey: .createdAt)
+    reactions =
+      try container.decodeIfPresent([FriendMessageReaction].self, forKey: .reactions) ?? []
+  }
+
+  func withReactions(_ reactions: [FriendMessageReaction]) -> FriendMessageAttachment {
+    FriendMessageAttachment(
+      id: id,
+      attachmentIndex: attachmentIndex,
+      kind: kind,
+      storageBucket: storageBucket,
+      storagePath: storagePath,
+      mimeType: mimeType,
+      byteSize: byteSize,
+      width: width,
+      height: height,
+      createdAt: createdAt,
+      reactions: reactions
+    )
+  }
+
+  func toggledReaction(emoji: String) -> FriendMessageAttachment {
+    withReactions(FriendMessage.toggledReactions(reactions, emoji: emoji))
+  }
 }
 
 struct FriendMessageReaction: Identifiable, Codable, Equatable, Hashable {
@@ -821,8 +898,51 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   }
 
   func toggledReaction(emoji: String) -> FriendMessage {
+    withReactions(Self.toggledReactions(reactions, emoji: emoji))
+  }
+
+  func toggledReaction(emoji: String, attachmentId: String?) -> FriendMessage {
+    guard let attachmentId else {
+      return toggledReaction(emoji: emoji)
+    }
+
+    var updatedAttachments = attachments
+    guard let attachmentIndex = updatedAttachments.firstIndex(where: { $0.id == attachmentId })
+    else {
+      return self
+    }
+
+    updatedAttachments[attachmentIndex] = updatedAttachments[attachmentIndex]
+      .toggledReaction(emoji: emoji)
+
+    return FriendMessage(
+      id: id,
+      threadId: threadId,
+      senderUserId: senderUserId,
+      messageType: messageType,
+      body: body,
+      clientId: clientId,
+      replyToMessageId: replyToMessageId,
+      createdAt: createdAt,
+      editedAt: editedAt,
+      deletedAt: deletedAt,
+      metadataData: metadataData,
+      attachments: updatedAttachments,
+      reactions: reactions,
+      sendState: sendState,
+      failureMessage: failureMessage
+    )
+  }
+
+  var canReact: Bool {
+    messageType == .user && deletedAt == nil && sendState == .sent
+  }
+
+  static func toggledReactions(_ reactions: [FriendMessageReaction], emoji: String)
+    -> [FriendMessageReaction]
+  {
     let normalizedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalizedEmoji.isEmpty else { return self }
+    guard !normalizedEmoji.isEmpty else { return reactions }
 
     var updatedReactions = reactions
 
@@ -856,14 +976,10 @@ struct FriendMessage: Identifiable, Codable, Equatable {
       )
     }
 
-    return withReactions(Self.sortedReactions(updatedReactions))
+    return sortedReactions(updatedReactions)
   }
 
-  var canReact: Bool {
-    messageType == .user && deletedAt == nil && sendState == .sent
-  }
-
-  private static func sortedReactions(_ reactions: [FriendMessageReaction])
+  static func sortedReactions(_ reactions: [FriendMessageReaction])
     -> [FriendMessageReaction]
   {
     reactions.sorted {

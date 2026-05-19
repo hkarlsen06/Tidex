@@ -718,6 +718,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var lastPinnedToBottomState: Bool?
     private var lastVisiblePresentedMessageID: String?
     private var lastReportedObservedPresentedMessageID: String?
+    private var deferredScrollRequest: FriendsThreadChatViewportScrollRequest?
     private var onPinnedToBottomChanged: ((Bool) -> Void)?
     private var onLatestVisiblePresentedMessageIDChanged: ((String?) -> Void)?
     private var onObservedPresentedMessageVisible: ((String) -> Void)?
@@ -854,6 +855,12 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private func attemptPendingScroll() {
       guard let tableView, let scrollRequest else { return }
       guard handledScrollRequest != scrollRequest else { return }
+
+      if scrollRequest.kind == .restore && isUserInteracting(with: tableView) {
+        scheduleDeferredScroll(scrollRequest)
+        return
+      }
+
       guard let layoutSnapshot = resolvedLayoutSnapshot() else { return }
       guard
         let indexPath = FriendsThreadChatViewportResolver.indexPath(
@@ -893,6 +900,22 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         self?.onDidHandleScrollRequest?(scrollRequest)
       }
       reportLatestVisiblePresentedMessageIDIfNeeded()
+    }
+
+    private func isUserInteracting(with tableView: UITableView) -> Bool {
+      tableView.isTracking || tableView.isDragging || tableView.isDecelerating
+    }
+
+    private func scheduleDeferredScroll(_ scrollRequest: FriendsThreadChatViewportScrollRequest) {
+      guard deferredScrollRequest != scrollRequest else { return }
+      deferredScrollRequest = scrollRequest
+
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        guard let self else { return }
+        guard self.deferredScrollRequest == scrollRequest else { return }
+        self.deferredScrollRequest = nil
+        self.attemptPendingScroll()
+      }
     }
 
     private func refreshHighlightedRowsIfNeeded(force: Bool) {
@@ -1000,6 +1023,7 @@ enum FriendsThreadExyteMessageFactory {
     let counterpartLastReadAt: Date?
     let showsTypingIndicator: Bool
     let typingIndicatorCreatedAt: Date
+    let reactionAttachmentTargets: [String: String]
   }
 
   struct Context {
@@ -1010,6 +1034,7 @@ enum FriendsThreadExyteMessageFactory {
     let counterpartAvatarUrl: String?
     let latestOutgoingMessageId: String?
     let readReceiptMessageId: String?
+    let reactionAttachmentTargets: [String: String]
   }
 
   static func makeMessages(messages: [FriendMessage], conversation: ConversationContext)
@@ -1033,7 +1058,8 @@ enum FriendsThreadExyteMessageFactory {
       counterpartDisplayName: conversation.counterpartDisplayName,
       counterpartAvatarUrl: conversation.counterpartAvatarUrl,
       latestOutgoingMessageId: latestOutgoingMessageId,
-      readReceiptMessageId: readReceiptMessageId
+      readReceiptMessageId: readReceiptMessageId,
+      reactionAttachmentTargets: conversation.reactionAttachmentTargets
     )
 
     var exyteMessages = messages.map { message in
@@ -1083,7 +1109,11 @@ enum FriendsThreadExyteMessageFactory {
       text: message.normalizedBody ?? "",
       attachments: [],
       giphyMediaId: exyteMenuMarker(for: message),
-      reactions: exyteReactions(for: message, viewerUserId: context.viewerUserId),
+      reactions: exyteReactions(
+        for: message,
+        viewerUserId: context.viewerUserId,
+        attachmentId: context.reactionAttachmentTargets[message.id]
+      ),
       replyMessage: replyMessage
     )
   }
@@ -1114,9 +1144,16 @@ enum FriendsThreadExyteMessageFactory {
 
   static func exyteReactions(
     for message: FriendMessage,
-    viewerUserId: String
+    viewerUserId: String,
+    attachmentId: String? = nil
   ) -> [ExyteChat.Reaction] {
-    message.reactions.compactMap { reaction in
+    let reactions =
+      attachmentId
+      .flatMap { attachmentId in
+        message.attachments.first { $0.id == attachmentId }?.reactions
+      } ?? message.reactions
+
+    return reactions.compactMap { reaction in
       guard reaction.viewerHasReacted else { return nil }
       return ExyteChat.Reaction(
         user: ExyteChat.User(
