@@ -114,7 +114,7 @@ struct FriendRow: View {
       sharingSection
       notificationSection
       visibilitySection
-      safetySection
+      destructiveSection
     } label: {
       rowContent
     }
@@ -219,23 +219,31 @@ struct FriendRow: View {
 
       if sectionType == .mutual || sectionType == .incoming {
         Toggle(
-          String(localized: .sharingMenuNotifyMeOfTheirShifts(friend.firstNameOnly)),
           isOn: .init(
             get: { !(friend.sharesWithMe?.isMuted ?? true) },
             set: { _ in onToggleMuted() }
           )
-        )
+        ) {
+          Label(
+            String(localized: .sharingMenuNotifyMeOfTheirShifts(friend.firstNameOnly)),
+            systemImage: "bell"
+          )
+        }
         .disabled(areServerActionsUnavailable)
       }
 
       if sectionType == .mutual || sectionType == .outgoing {
         Toggle(
-          String(localized: .sharingMenuNotifyThemOfMyShifts(friend.firstNameOnly)),
           isOn: .init(
             get: { !(friend.iShareWith?.ownerMuted ?? true) },
             set: { _ in onToggleOwnerMuted() }
           )
-        )
+        ) {
+          Label(
+            String(localized: .sharingMenuNotifyThemOfMyShifts(friend.firstNameOnly)),
+            systemImage: "bell.badge"
+          )
+        }
         .disabled(areServerActionsUnavailable)
       }
     }
@@ -248,12 +256,16 @@ struct FriendRow: View {
     Section(String(localized: .sharingMenuSectionSharing)) {
       if sectionType == .mutual || sectionType == .outgoing {
         Toggle(
-          String(localized: .sharingMenuShowThemMyEarnings(friend.firstNameOnly)),
           isOn: .init(
             get: { friend.iShareWith?.showEarningsToThem ?? false },
             set: { _ in onToggleEarnings() }
           )
-        )
+        ) {
+          Label(
+            String(localized: .sharingMenuShowThemMyEarnings(friend.firstNameOnly)),
+            systemImage: "banknote"
+          )
+        }
         .disabled(areServerActionsUnavailable)
       }
 
@@ -262,16 +274,6 @@ struct FriendRow: View {
           onShareBack()
         } label: {
           Label(String(localized: .sharingShareBack), systemImage: "arrowshape.turn.up.left")
-        }
-        .disabled(areServerActionsUnavailable)
-      }
-
-      ForEach(FriendSharingRemovalAction.availableActions(for: sectionType), id: \.self) {
-        removalAction in
-        Button(role: .destructive) {
-          onRemove(removalAction)
-        } label: {
-          Label(removalAction.title, systemImage: removalAction.systemImage)
         }
         .disabled(areServerActionsUnavailable)
       }
@@ -297,11 +299,21 @@ struct FriendRow: View {
     }
   }
 
-  // MARK: - Safety Section
+  // MARK: - Destructive Section
 
   @ViewBuilder
-  private var safetySection: some View {
+  private var destructiveSection: some View {
     Section(String(localized: .sharingMenuSectionSafety)) {
+      ForEach(FriendSharingRemovalAction.availableActions(for: sectionType), id: \.self) {
+        removalAction in
+        Button(role: .destructive) {
+          onRemove(removalAction)
+        } label: {
+          Label(removalAction.title, systemImage: removalAction.systemImage)
+        }
+        .disabled(areServerActionsUnavailable)
+      }
+
       Button(role: .destructive) {
         onBlock()
       } label: {
