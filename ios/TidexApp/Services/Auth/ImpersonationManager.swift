@@ -64,12 +64,19 @@ final class ImpersonationManager: ObservableObject {
       return
     }
 
-    // 2. Validate the session is still active server-side
-    // Try to get current session - if it fails, the impersonated session is invalid
+    // 2. Validate the session is still active server-side.
+    // Transient session resolution failures should not end impersonation.
     do {
       _ = try await AuthSessionManager.shared.getSession()
       logger.info("Impersonation session validated successfully")
     } catch {
+      if AuthSessionManager.shared.isTransientSessionResolutionError(error) {
+        logger.warning(
+          "Impersonation session validation hit transient error; keeping session: \(error.localizedDescription)"
+        )
+        return
+      }
+
       logger.warning("Impersonation session validation failed: \(error.localizedDescription)")
       await handleInvalidSession()
     }
@@ -98,8 +105,8 @@ final class ImpersonationManager: ObservableObject {
         await AppCoordinator.shared.completeUserSwitch()
       } catch {
         logger.error("Failed to restore admin session: \(error.localizedDescription)")
-        // Sign out completely as fallback
-        try? await supabase.auth.signOut()
+        // Sign out locally as fallback; do not invalidate other sessions.
+        try? await supabase.auth.signOut(scope: .local)
       }
     }
 
