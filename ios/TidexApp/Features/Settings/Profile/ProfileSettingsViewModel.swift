@@ -668,7 +668,7 @@ final class ProfileSettingsViewModel: ObservableObject {
       if response.success {
         // Account deleted successfully - sign out locally
         Haptics.play(.warning)
-        try? await supabase.auth.signOut()
+        try? await supabase.auth.signOut(scope: .local)
 
         // Clear local data via AppCoordinator
         await AppCoordinator.shared.signOut()

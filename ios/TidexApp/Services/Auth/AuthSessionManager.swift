@@ -220,10 +220,13 @@ final class AuthSessionManager: ObservableObject {
     let message = error.localizedDescription.lowercased()
     return
       message.contains("refresh token not found")
+      || message.contains("refresh token already used")
       || message.contains("invalid refresh token")
       || (message.contains("refresh token") && message.contains("revoked"))
       || message.contains("invalid_grant")
       || message.contains("session_not_found")
+      || message.contains("refresh_token_already_used")
+      || message.contains("session_expired")
   }
 
   /// Best-effort classification of transient network errors where we should not sign user out.
