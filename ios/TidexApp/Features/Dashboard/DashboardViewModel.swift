@@ -3035,27 +3035,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   }
 
   func clockIn(jobId: String? = nil, at now: Date = Date()) async {
-    print("[Clock] Clock in requested")
     guard !isClockActionInProgress else {
-      print("[Clock] Clock in skipped: action already in progress")
       return
     }
     await refreshClockActiveState(referenceDate: now)
 
     guard case .none = activeClockState else {
-      let stateDescription: String = {
-        switch activeClockState {
-        case .none:
-          return "none"
-        case .temporary(let session):
-          return "temporary(\(session.id))"
-        case .persisted(let shift):
-          return "persisted(\(shift.id))"
-        case .computed(let shift):
-          return "computed(\(shift.id))"
-        }
-      }()
-      print("[Clock] Clock in skipped: active state is \(stateDescription)")
       // Self-heal: if an active local clock state exists but its Live Activity is missing,
       // reconciling can recreate the temporary activity.
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: now)
@@ -3064,7 +3049,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     guard let userId = await ensureCachedUserId() else {
       logger.error("❌ Clock in aborted: unable to resolve user ID")
-      print("[Clock] Clock in aborted: unable to resolve user ID")
       return
     }
     let resolvedJobId = jobId ?? defaultJobId(for: userId)
@@ -3084,7 +3068,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     guard let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
     else {
       logger.error("❌ Clock in aborted: AppDelegate unavailable")
-      print("[Clock] Clock in aborted: AppDelegate unavailable")
       return
     }
 

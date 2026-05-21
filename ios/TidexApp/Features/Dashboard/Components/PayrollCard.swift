@@ -119,7 +119,6 @@ struct PayrollCard: View {
             )
           )
           .font(.tidexTitle)
-          .tracking(-0.5)
 
           if hasPayrollAdjustments {
             adjustmentMarker
@@ -134,7 +133,6 @@ struct PayrollCard: View {
         ZStack {
           Text("00 000")
             .font(.tidexTitle)
-            .tracking(-0.5)
             .opacity(0)
 
           RoundedRectangle(cornerRadius: CornerRadius.xs)

@@ -50,7 +50,6 @@ struct EmptyShiftCard: View {
         ZStack {
           Text("00 000")
             .font(.tidexTitle)
-            .tracking(-0.5)
             .opacity(0)
 
           RoundedRectangle(cornerRadius: CornerRadius.xs)
