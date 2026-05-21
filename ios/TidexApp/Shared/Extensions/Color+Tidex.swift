@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Tidex Adaptive Color System
 //
@@ -69,14 +70,14 @@ extension Color {
   /// Light mode surface primary - Pure white for maximum contrast against blue-tinted background
   static let tidexLightSurfacePrimary = Color.white
 
-  /// Dark mode surface primary - cooler navy tuned for the gradient background (#16243A)
-  static let tidexDarkSurfacePrimary = Color(red: 0.086, green: 0.141, blue: 0.227)
+  /// Dark mode surface primary - same navy hue family as the app background (#151F32)
+  static let tidexDarkSurfacePrimary = Color(red: 0.082, green: 0.122, blue: 0.196)
 
   /// Light mode surface secondary - Very light gray (#F7F8F8)
   static let tidexLightSurfaceSecondary = Color(red: 0.965, green: 0.969, blue: 0.973)
 
-  /// Dark mode surface secondary - slightly lighter cool navy (#1B2C45)
-  static let tidexDarkSurfaceSecondary = Color(red: 0.106, green: 0.173, blue: 0.271)
+  /// Dark mode surface secondary - lifted navy for nested controls (#1B2942)
+  static let tidexDarkSurfaceSecondary = Color(red: 0.106, green: 0.161, blue: 0.259)
 
   /// Light mode text primary - HSlocalized(222, 84%, 8%)
   static let tidexLightTextPrimary = Color(hue: 222 / 360, saturation: 0.84, brightness: 0.08)
@@ -105,14 +106,27 @@ extension Color {
   /// Light mode border - Darker for better visibility (#C7D1DB)
   static let tidexLightBorder = Color(red: 0.78, green: 0.82, blue: 0.86)
 
-  /// Dark mode border - Lighter for better visibility (#384761)
-  static let tidexDarkBorder = Color(red: 0.22, green: 0.28, blue: 0.38)
+  /// Dark mode border - same-hue rim for dark navy surfaces (#3E4B61)
+  static let tidexDarkBorder = Color(red: 0.243, green: 0.294, blue: 0.380)
 
   /// Light mode border subtle - Darker (#D9E0E8)
   static let tidexLightBorderSubtle = Color(red: 0.85, green: 0.88, blue: 0.91)
 
-  /// Dark mode border subtle - Lighter for better visibility (#303D52)
-  static let tidexDarkBorderSubtle = Color(red: 0.19, green: 0.24, blue: 0.32)
+  /// Dark mode border subtle - restrained same-hue rim (#303C50)
+  static let tidexDarkBorderSubtle = Color(red: 0.188, green: 0.235, blue: 0.314)
+
+  /// Default glass surface tint, matched to the lifted surface color.
+  static var tidexGlassSurface: Color {
+    Color(
+      UIColor { traitCollection in
+        switch traitCollection.userInterfaceStyle {
+        case .dark:
+          return UIColor(red: 0.082, green: 0.122, blue: 0.196, alpha: 1)
+        default:
+          return UIColor.white
+        }
+      })
+  }
 }
 
 // MARK: - Card Shadow Colors

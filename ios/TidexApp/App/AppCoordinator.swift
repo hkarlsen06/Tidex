@@ -199,6 +199,7 @@ final class AppCoordinator: ObservableObject {
   private var backgroundTasks: [Task<Void, Never>] = []
   private var didReceiveInitialSession = false
   private var isUpdatingAuthState = false
+  private var isUserInitiatedSignOutInProgress = false
 
   // MARK: - Initialization
 
@@ -447,12 +448,19 @@ final class AppCoordinator: ObservableObject {
           await self.checkMFAAndUpdateState()
 
         case .signedOut:
+          let isExpectedSignOut =
+            self.isUserInitiatedSignOutInProgress || self.appState == .unauthenticated
           AuthDiagnosticsReporter.shared.record(
             .signedOutReceived,
-            severity: .warning,
+            severity: isExpectedSignOut ? .info : .warning,
             userId: self.userId,
             appState: String(describing: self.appState),
-            authEvent: String(describing: event)
+            authEvent: String(describing: event),
+            metadata: [
+              "is_user_initiated_sign_out_in_progress": .bool(
+                self.isUserInitiatedSignOutInProgress),
+              "is_expected_sign_out": .bool(isExpectedSignOut),
+            ]
           )
           self.applySignedOutState()
 
@@ -1054,6 +1062,7 @@ final class AppCoordinator: ObservableObject {
   /// Internal sign out implementation
   /// - Parameter global: If true, signs out from all devices; if false, only this device
   private func performSignOut(global: Bool) async {
+    isUserInitiatedSignOutInProgress = true
     AuthDiagnosticsReporter.shared.record(
       .userInitiatedSignOut,
       severity: .info,
@@ -1139,6 +1148,7 @@ final class AppCoordinator: ObservableObject {
 
   private func applySignedOutState() {
     resetLaunchSessionTimeoutCount()
+    isUserInitiatedSignOutInProgress = false
     appState = .unauthenticated
     pendingMFAFactor = nil
     userId = nil
@@ -1225,12 +1235,24 @@ final class AppCoordinator: ObservableObject {
 
     AuthDiagnosticsReporter.shared.record(
       event == .initialSession && session != nil ? .initialSessionReceived : .authStateChanged,
-      severity: event == .signedOut ? .warning : .debug,
+      severity: authStateEventSeverity(event),
       userId: session?.normalizedUserId ?? userId,
       appState: String(describing: appState),
       authEvent: eventName,
       metadata: metadata
     )
+  }
+
+  private func authStateEventSeverity(
+    _ event: AuthChangeEvent
+  ) -> AuthDiagnosticsReporter.Severity {
+    switch event {
+    case .signedOut:
+      return isUserInitiatedSignOutInProgress || appState == .unauthenticated
+        ? .info : .warning
+    default:
+      return .debug
+    }
   }
 
   private func currentLaunchSessionTimeoutCount() -> Int {

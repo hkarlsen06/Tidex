@@ -31,6 +31,7 @@ extension View {
 
 private struct TidexGlassModifier: ViewModifier {
   @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+  @Environment(\.colorScheme) private var colorScheme
 
   let shape: TidexGlassShape
   let tint: Color?
@@ -41,8 +42,8 @@ private struct TidexGlassModifier: ViewModifier {
 
   private var glassEffect: Glass {
     var effect: Glass = clear ? .clear : .regular
-    if let tint {
-      effect = effect.tint(tint)
+    if let resolvedTint {
+      effect = effect.tint(resolvedTint)
     }
     if interactive {
       effect = effect.interactive()
@@ -51,8 +52,8 @@ private struct TidexGlassModifier: ViewModifier {
   }
 
   func body(content: Content) -> some View {
-    let fallbackBase = Color.tidexSurfacePrimary.opacity(fallbackOpacity)
-    let fallbackTint = tint?.opacity(0.18) ?? .clear
+    let fallbackBase = Color.tidexGlassSurface.opacity(fallbackOpacity)
+    let fallbackTint = resolvedTint?.opacity(colorScheme == .dark ? 0.24 : 0.16) ?? .clear
 
     if reduceTransparency || disabled {
       switch shape {
@@ -102,12 +103,29 @@ private struct TidexGlassModifier: ViewModifier {
     } else {
       switch shape {
       case .rect(let cornerRadius):
-        content.glassEffect(glassEffect, in: .rect(cornerRadius: cornerRadius))
+        content
+          .background(
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+              .fill(glassBaseFill)
+          )
+          .glassEffect(glassEffect, in: .rect(cornerRadius: cornerRadius))
       case .capsule:
-        content.glassEffect(glassEffect, in: .capsule)
+        content
+          .background(Capsule().fill(glassBaseFill))
+          .glassEffect(glassEffect, in: .capsule)
       case .circle:
-        content.glassEffect(glassEffect, in: .circle)
+        content
+          .background(Circle().fill(glassBaseFill))
+          .glassEffect(glassEffect, in: .circle)
       }
     }
+  }
+
+  private var resolvedTint: Color? {
+    tint ?? Color.tidexGlassSurface.opacity(colorScheme == .dark ? 0.86 : 0.42)
+  }
+
+  private var glassBaseFill: Color {
+    Color.tidexGlassSurface.opacity(colorScheme == .dark ? (clear ? 0.34 : 0.26) : 0.10)
   }
 }

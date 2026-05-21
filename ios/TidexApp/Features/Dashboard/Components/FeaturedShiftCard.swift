@@ -182,7 +182,6 @@ struct FeaturedShiftCard: View {
           if showIncreaseHighlight {
             Text("+")
               .font(.tidexTitle)
-              .tracking(-0.5)
               .foregroundColor(.tidexBlue)
           }
           CurrencyCountUpText(
@@ -197,7 +196,6 @@ struct FeaturedShiftCard: View {
             )
           )
           .font(.tidexTitle)
-          .tracking(-0.5)
           .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
         }
       } trailingBottom: {
@@ -409,6 +407,7 @@ private struct CardShadowModifier: ViewModifier {
 }
 
 private struct LiveEndTimeTypingDots: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var activeDotIndex: Int? = nil
 
   var body: some View {
@@ -418,13 +417,14 @@ private struct LiveEndTimeTypingDots: View {
         Circle()
           .fill(Color.tidexTextMuted)
           .frame(width: 3, height: 3)
-          .scaleEffect(isActive ? 1.0 : 0.55)
-          .opacity(isActive ? 1.0 : 0.35)
-          .animation(.easeInOut(duration: 0.2), value: activeDotIndex)
+          .scaleEffect(reduceMotion ? 1.0 : (isActive ? 1.0 : 0.55))
+          .opacity(reduceMotion ? 0.65 : (isActive ? 1.0 : 0.35))
+          .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: activeDotIndex)
       }
     }
     .frame(width: 14, alignment: .leading)
     .task {
+      guard !reduceMotion else { return }
       while !Task.isCancelled {
         for index in 0..<3 {
           activeDotIndex = index

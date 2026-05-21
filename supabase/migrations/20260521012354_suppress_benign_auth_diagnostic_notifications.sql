@@ -77,3 +77,8 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+REVOKE ALL ON FUNCTION internal.queue_auth_diagnostic_notification() FROM public;
+REVOKE ALL ON FUNCTION internal.queue_auth_diagnostic_notification() FROM anon;
+REVOKE ALL ON FUNCTION internal.queue_auth_diagnostic_notification() FROM authenticated;
+GRANT EXECUTE ON FUNCTION internal.queue_auth_diagnostic_notification() TO service_role;

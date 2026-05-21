@@ -400,7 +400,6 @@ struct DashboardView: View {
         },
         onSelect: { jobId in
           showClockInJobChooser = false
-          print("[Clock] Job chooser selected job \(jobId)")
           Task {
             await viewModel.clockIn(jobId: jobId)
           }
@@ -1050,12 +1049,10 @@ struct DashboardView: View {
         systemImage: "play.fill",
         isEnabled: viewModel.isClockInEnabled
       ) {
-        print("[Clock] Clock in button tapped (enabled=\(viewModel.isClockInEnabled))")
         guard viewModel.isClockInEnabled else { return }
         impactHaptic.impactOccurred()
         Task {
           let cachedJobs = viewModel.clockSelectableJobsSnapshot()
-          print("[Clock] Clock in has \(cachedJobs.count) cached jobs")
           if cachedJobs.count > 1 {
             clockInJobOptions = cachedJobs
             showClockInJobChooser = true
@@ -1103,7 +1100,8 @@ struct DashboardView: View {
           .font(.tidexCaption)
       }
       .frame(maxWidth: .infinity)
-      .padding(.vertical, Spacing.xs)
+      .frame(minHeight: 44)
+      .padding(.vertical, Spacing.xxs)
       .foregroundColor(
         isEnabled
           ? .tidexTextPrimary
@@ -1111,15 +1109,18 @@ struct DashboardView: View {
       )
       .tidexGlass(
         shape: .rect(cornerRadius: CornerRadius.card),
-        tint: isEnabled ? Color.tidexBlue.opacity(0.04) : Color.white.opacity(0.01),
+        tint: isEnabled
+          ? Color.tidexBlue.opacity(0.04)
+          : Color.tidexSurfaceSecondary.opacity(0.04),
         clear: true,
         interactive: isEnabled,
         fallbackOpacity: isEnabled ? 0.5 : 0.42
       )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
       .tidexCardShadow(cornerRadius: CornerRadius.card)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(DashboardClockButtonStyle())
     .disabled(!isEnabled)
   }
 
@@ -1127,7 +1128,7 @@ struct DashboardView: View {
   private func clockButtonsSkeletonSection() -> some View {
     HStack(spacing: Spacing.sm) {
       RoundedRectangle(cornerRadius: CornerRadius.card)
-        .frame(height: 34)
+        .frame(height: 44)
         .tidexGlass(
           shape: .rect(cornerRadius: CornerRadius.card),
           tint: Color.tidexBlue.opacity(0.03),
@@ -1139,7 +1140,7 @@ struct DashboardView: View {
         .shimmer(isActive: true)
 
       RoundedRectangle(cornerRadius: CornerRadius.card)
-        .frame(height: 34)
+        .frame(height: 44)
         .tidexGlass(
           shape: .rect(cornerRadius: CornerRadius.card),
           tint: Color.tidexBlue.opacity(0.03),
@@ -1441,6 +1442,16 @@ struct DashboardView: View {
     .padding(.horizontal, Spacing.xxl)
   }
 
+}
+
+private struct DashboardClockButtonStyle: ButtonStyle {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.98 : 1.0))
+      .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: configuration.isPressed)
+  }
 }
 
 private struct ClockOutReviewSheet: View {
