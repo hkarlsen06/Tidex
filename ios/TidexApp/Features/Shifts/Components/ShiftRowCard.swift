@@ -106,6 +106,16 @@ struct ShiftRowCard: View {
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextMuted)
         }
+
+        if isToday {
+          Text(.commonToday)
+            .font(.tidexMicro)
+            .foregroundColor(.tidexBlue)
+            .padding(.horizontal, Spacing.xs)
+            .padding(.vertical, Spacing.micro)
+            .background(Color.tidexBlue.opacity(0.12))
+            .clipShape(Capsule())
+        }
       }
     } leadingBottom: {
       // Row 2: Time range
@@ -115,7 +125,6 @@ struct ShiftRowCard: View {
       let displayAmount = shift.taxEnabled ? shift.netPay : shift.grossPay
       Text(amountTextOverride ?? formatCurrency(displayAmount))
         .font(.tidexTitle)
-        .tracking(-0.5)
         .foregroundColor(excludedFromTotal ? .tidexTextMuted : .tidexTextPrimary)
         .strikethrough(excludedFromTotal, color: .tidexTextMuted)
     } trailingBottom: {

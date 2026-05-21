@@ -516,6 +516,8 @@ struct TimeRangePicker: View {
   /// Optional accessory displayed to the left of recent time chips.
   var leadingChipAccessory: AnyView? = nil
   @State private var focusController = TimeInputFocusController()
+  @ScaledMetric(relativeTo: .body) private var compactInputWidth: CGFloat = 156
+  @ScaledMetric(relativeTo: .body) private var compactInputHeight: CGFloat = 58
 
   /// Shortened label for start time field
   private var startLabel: String {
@@ -528,48 +530,49 @@ struct TimeRangePicker: View {
   }
 
   var body: some View {
-    GeometryReader { geometry in
-      VStack(spacing: Spacing.xs) {
-        HStack(spacing: Spacing.sm) {
-          NumericTimeInput(
-            time: $startTime,
-            label: startLabel,
-            focusController: focusController,
-            field: .start,
-            nextField: .end,
-            previousField: nil,
-            onComplete: nil
-          )
+    VStack(spacing: Spacing.xs) {
+      HStack(spacing: Spacing.sm) {
+        NumericTimeInput(
+          time: $startTime,
+          label: startLabel,
+          focusController: focusController,
+          field: .start,
+          nextField: .end,
+          previousField: nil,
+          onComplete: nil
+        )
+        .frame(width: compactInputWidth, height: compactInputHeight)
 
-          NumericTimeInput(
-            time: $endTime,
-            label: endLabel,
-            focusController: focusController,
-            field: .end,
-            nextField: nil,
-            previousField: .start,
-            onComplete: nil
-          )
+        NumericTimeInput(
+          time: $endTime,
+          label: endLabel,
+          focusController: focusController,
+          field: .end,
+          nextField: nil,
+          previousField: .start,
+          onComplete: nil
+        )
+        .frame(width: compactInputWidth, height: compactInputHeight)
+      }
+      .frame(maxWidth: .infinity, alignment: .center)
+
+      HStack(spacing: Spacing.xs) {
+        if let leadingChipAccessory {
+          leadingChipAccessory
+            .fixedSize(horizontal: true, vertical: false)
         }
 
-        HStack(spacing: Spacing.xs) {
-          if let leadingChipAccessory {
-            leadingChipAccessory
-              .fixedSize(horizontal: true, vertical: false)
-          }
-
-          RecentTimesChips(
-            onSelect: { range in
-              applyTimeRange(range)
-            },
-            activeRangeId: activeRangeId,
-            presetRanges: presetRanges
-          )
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        RecentTimesChips(
+          onSelect: { range in
+            applyTimeRange(range)
+          },
+          activeRangeId: activeRangeId,
+          presetRanges: presetRanges
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
-    .frame(height: 92)  // Time inputs (~56pt) + spacing (8pt) + chips (28pt)
+    .frame(height: compactInputHeight + Spacing.xs + 28, alignment: .top)
     .id(scrollId)
     .onAppear {
       focusController.onFocusChange = { (focused: TimeInputField?) in
