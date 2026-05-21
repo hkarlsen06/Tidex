@@ -2514,14 +2514,24 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     let current = Date.currentYearMonth()
     guard displayYear == current.year && displayMonth == current.month else { return }
+    guard dashboardData.displayedYear == current.year,
+      dashboardData.displayedMonth == current.month
+    else {
+      return
+    }
 
     let display = CelebrationDetector.displayValue(dashboardData: dashboardData)
     let currency = settings.currency ?? dashboardData.currency
+    let currentMonthShifts = displayedMonthShifts.filter { shift in
+      guard let date = Date.fromISODateString(shift.shiftDate) else { return false }
+      let components = Calendar.current.dateComponents([.year, .month], from: date)
+      return components.year == current.year && components.month == current.month
+    }
 
     ShiftCompletionCelebrationManager.shared.checkForCelebration(
       userId: userId,
       month: current,
-      shifts: displayedMonthShifts,
+      shifts: currentMonthShifts,
       displayValue: display.value,
       displayTaxEnabled: display.taxEnabled,
       currency: currency,
