@@ -209,11 +209,9 @@ struct SharingView: View {
       ManageSharingSheet(
         highlightUserId: highlightUserId,
         autoExpandAddForm: autoExpandAddForm,
-        onVisibilityChange: {
-          // Refresh sharers list when visibility changes (hide/show)
-          Task {
-            await viewModel.loadSharers(forceRefreshPreviews: true)
-          }
+        initialSnapshot: viewModel.hasFinishedInitialSharersLoad ? viewModel.managementSnapshot : nil,
+        onBootstrapRefresh: { bootstrap in
+          await viewModel.applyFriendsTabBootstrap(bootstrap)
         },
         typingUserIds: typingUserIds,
         unreadChatUserIds: unreadChatUserIds,
@@ -270,6 +268,9 @@ struct SharingView: View {
         viewModel.handleUnblockedUser(unblockedUserId)
       }
       scheduleChatMetadataRefresh()
+      if notification.userInfo?["source"] as? String == "manageSheetBootstrapApplied" {
+        return
+      }
       Task {
         await viewModel.loadSharers(forceRefreshPreviews: true)
       }

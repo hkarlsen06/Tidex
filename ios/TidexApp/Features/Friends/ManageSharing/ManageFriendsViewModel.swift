@@ -59,6 +59,8 @@ final class ManageSharingViewModel: ObservableObject {
   @Published var addError: String?
 
   private var cachedUserId: String?
+  private var hasHydratedFromInitialSnapshot = false
+  var onBootstrapRefresh: ((FriendsTabBootstrapData) async -> Void)?
 
   // MARK: - Computed Properties
 
@@ -96,14 +98,31 @@ final class ManageSharingViewModel: ObservableObject {
   // MARK: - Initialization
 
   init(
+    initialSnapshot: FriendsManagementSnapshot? = nil,
     sharingService: SharingService? = nil,
     visibilityStore: FriendsVisibilityStore? = nil
   ) {
     self.sharingService = sharingService ?? SharingService.shared
     self.visibilityStore = visibilityStore ?? FriendsVisibilityStore.shared
+    if let initialSnapshot {
+      applyManagementSnapshot(initialSnapshot)
+      hasHydratedFromInitialSnapshot = true
+    }
   }
 
   // MARK: - Data Loading
+
+  func loadFriendsIfNeeded() async {
+    if hasHydratedFromInitialSnapshot {
+      hasHydratedFromInitialSnapshot = false
+      if let userId = await bestEffortCurrentUserId() {
+        hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
+      }
+      return
+    }
+
+    await loadFriends()
+  }
 
   /// Load all friends and capacity
   func loadFriends() async {
@@ -111,18 +130,17 @@ final class ManageSharingViewModel: ObservableObject {
     errorMessage = nil
 
     do {
-      let result = try await sharingService.fetchAllFriends()
-      friends = result.friends
-      blockedFriends = result.blockedFriends
-      capacity = result.capacity
+      let bootstrap = try await sharingService.fetchFriendsTabBootstrap()
+      applyManagementSnapshot(bootstrap.managementSnapshot)
       areServerActionsUnavailable = false
       if let userId = await bestEffortCurrentUserId() {
         hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
       } else {
         hiddenOutgoingFriendIds = []
       }
+      await onBootstrapRefresh?(bootstrap)
       logger.info(
-        "Loaded \(result.friends.count) friends and \(result.blockedFriends.count) blocked friends")
+        "Loaded \(self.friends.count) friends and \(self.blockedFriends.count) blocked friends")
     } catch is CancellationError {
       // Task was cancelled (e.g., user released pull-to-refresh early)
       // This is not an error, just log and return without showing error message
@@ -158,6 +176,30 @@ final class ManageSharingViewModel: ObservableObject {
     await loadFriends()
   }
 
+  private func applyManagementSnapshot(_ snapshot: FriendsManagementSnapshot) {
+    friends = snapshot.friends
+    blockedFriends = snapshot.blockedFriends
+    capacity = snapshot.capacity
+  }
+
+  private func reconcileAfterSuccessfulAction() async {
+    do {
+      let bootstrap = try await sharingService.fetchFriendsTabBootstrap()
+      applyManagementSnapshot(bootstrap.managementSnapshot)
+      areServerActionsUnavailable = false
+      if let userId = await bestEffortCurrentUserId() {
+        hiddenOutgoingFriendIds = visibilityStore.hiddenOutgoingFriendIds(for: userId)
+      }
+      await onBootstrapRefresh?(bootstrap)
+    } catch {
+      logger.error("Failed to reconcile friends after action: \(error.localizedDescription)")
+      errorMessage = userFacingActionError(
+        for: error,
+        fallback: String(localized: .sharingErrorLoadFriends)
+      )
+    }
+  }
+
   // MARK: - Add Friend
 
   /// Add a new friend by email or phone
@@ -177,8 +219,7 @@ final class ManageSharingViewModel: ObservableObject {
     do {
       try await sharingService.createShare(identifier: identifier, showEarnings: addShowEarnings)
 
-      // Refresh to get the new friend in the list
-      await loadFriends()
+      await reconcileAfterSuccessfulAction()
 
       // Reset form
       addIdentifier = ""
@@ -224,6 +265,7 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.toggleShareEarnings(recipientId: friend.id, showEarnings: newValue)
+      await reconcileAfterSuccessfulAction()
       logger.info("Toggled earnings for \(friend.id) to \(newValue)")
       Haptics.play(.selection)
     } catch {
@@ -268,6 +310,7 @@ final class ManageSharingViewModel: ObservableObject {
         } else {
           try await sharingService.showSharer(ownerId: friend.id)
         }
+        await reconcileAfterSuccessfulAction()
         logger.info("Toggled hidden for \(friend.id) to \(newValue)")
         Haptics.play(.selection)
       } catch {
@@ -297,6 +340,9 @@ final class ManageSharingViewModel: ObservableObject {
       }
 
       visibilityStore.setOutgoingFriendHidden(newValue, friendId: friend.id, viewerId: userId)
+      if let bootstrap = try? await sharingService.fetchFriendsTabBootstrap() {
+        await onBootstrapRefresh?(bootstrap)
+      }
       logger.info("Toggled outgoing-only hidden for \(friend.id) to \(newValue)")
       Haptics.play(.selection)
     } catch {
@@ -344,6 +390,7 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.toggleSharerMuted(ownerId: friend.id, muted: newValue)
+      await reconcileAfterSuccessfulAction()
       logger.info("Toggled muted for \(friend.id) to \(newValue)")
       Haptics.play(.selection)
     } catch {
@@ -385,6 +432,7 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.toggleOwnerMuted(viewerId: friend.id, ownerMuted: newValue)
+      await reconcileAfterSuccessfulAction()
       logger.info("Toggled owner_muted for \(friend.id) to \(newValue)")
       Haptics.play(.selection)
     } catch {
@@ -431,6 +479,7 @@ final class ManageSharingViewModel: ObservableObject {
         }
         hiddenOutgoingFriendIds.remove(friend.id)
       }
+      await reconcileAfterSuccessfulAction()
       logger.info("Removed share with \(friend.id)")
       Haptics.play(.success)
     } catch {
@@ -476,6 +525,7 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.removeSharer(ownerId: friend.id)
+      await reconcileAfterSuccessfulAction()
       logger.info("Removed sharer \(friend.id)")
       Haptics.play(.success)
     } catch {
@@ -537,6 +587,7 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.shareBack(recipientId: friend.id)
+      await reconcileAfterSuccessfulAction()
       logger.info("Shared back with \(friend.id)")
     } catch {
       // Revert on failure
@@ -576,11 +627,11 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.blockFriend(userId: friend.id)
-      await loadFriends()
+      await reconcileAfterSuccessfulAction()
       NotificationCenter.default.post(
         name: Notification.Name("friendsVisibilityChanged"),
         object: nil,
-        userInfo: ["blockedUserId": friend.id]
+        userInfo: ["blockedUserId": friend.id, "source": "manageSheetBootstrapApplied"]
       )
       logger.info("Blocked friend \(friend.id)")
       Haptics.play(.success)
@@ -605,11 +656,11 @@ final class ManageSharingViewModel: ObservableObject {
 
     do {
       try await sharingService.unblockFriend(userId: friend.id)
-      await loadFriends()
+      await reconcileAfterSuccessfulAction()
       NotificationCenter.default.post(
         name: Notification.Name("friendsVisibilityChanged"),
         object: nil,
-        userInfo: ["unblockedUserId": friend.id]
+        userInfo: ["unblockedUserId": friend.id, "source": "manageSheetBootstrapApplied"]
       )
       logger.info("Unblocked friend \(friend.id)")
       Haptics.play(.success)

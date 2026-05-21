@@ -7,7 +7,7 @@ import SwiftUI
 struct ManageSharingSheet: View {
   @Environment(\.dismiss) private var dismiss
 
-  @StateObject private var viewModel = ManageSharingViewModel()
+  @StateObject private var viewModel: ManageSharingViewModel
 
   /// User ID to highlight and scroll to (from deep link)
   var highlightUserId: String?
@@ -17,6 +17,7 @@ struct ManageSharingSheet: View {
 
   /// Callback when visibility changes (hide/show) to refresh the sharer list
   var onVisibilityChange: (() -> Void)?
+  var onBootstrapRefresh: ((FriendsTabBootstrapData) async -> Void)?
 
   var typingUserIds: Set<String> = []
   var unreadChatUserIds: Set<String> = []
@@ -32,6 +33,32 @@ struct ManageSharingSheet: View {
   /// Whether the highlighted user is currently pulsing
   @State private var isHighlightActive = false
   @State private var isBlockedUsersExpanded = false
+
+  init(
+    highlightUserId: String? = nil,
+    autoExpandAddForm: Bool = false,
+    initialSnapshot: FriendsManagementSnapshot? = nil,
+    onVisibilityChange: (() -> Void)? = nil,
+    onBootstrapRefresh: ((FriendsTabBootstrapData) async -> Void)? = nil,
+    typingUserIds: Set<String> = [],
+    unreadChatUserIds: Set<String> = [],
+    chatPreviewsByUserId: [String: FriendCardMessagePreview] = [:],
+    shiftPreviews: [String: SharerShiftPreview] = [:],
+    isLoadingPreviews: Bool = false
+  ) {
+    _viewModel = StateObject(
+      wrappedValue: ManageSharingViewModel(initialSnapshot: initialSnapshot)
+    )
+    self.highlightUserId = highlightUserId
+    self.autoExpandAddForm = autoExpandAddForm
+    self.onVisibilityChange = onVisibilityChange
+    self.onBootstrapRefresh = onBootstrapRefresh
+    self.typingUserIds = typingUserIds
+    self.unreadChatUserIds = unreadChatUserIds
+    self.chatPreviewsByUserId = chatPreviewsByUserId
+    self.shiftPreviews = shiftPreviews
+    self.isLoadingPreviews = isLoadingPreviews
+  }
 
   var body: some View {
     NavigationStack {
@@ -142,7 +169,8 @@ struct ManageSharingSheet: View {
       }
     }
     .task {
-      await viewModel.loadFriends()
+      viewModel.onBootstrapRefresh = onBootstrapRefresh
+      await viewModel.loadFriendsIfNeeded()
       if autoExpandAddForm {
         try? await Task.sleep(for: .milliseconds(300))
         viewModel.isAddFormExpanded = true
@@ -209,9 +237,6 @@ struct ManageSharingSheet: View {
       }
     } message: {
       Text(.friendsChatBlockConfirmMessage)
-    }
-    .onChange(of: viewModel.friends) { _, _ in
-      onVisibilityChange?()
     }
     .onChange(of: viewModel.blockedFriends) { _, blockedFriends in
       if blockedFriends.isEmpty {

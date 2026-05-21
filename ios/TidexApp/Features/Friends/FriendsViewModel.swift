@@ -117,6 +117,13 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Shift previews for each sharer (most relevant shift per sharer)
   @Published private(set) var shiftPreviews: [String: SharerShiftPreview] = [:]
 
+  /// Latest management-sheet payload from the Friends tab bootstrap RPC.
+  @Published private(set) var managementSnapshot = FriendsManagementSnapshot(
+    friends: [],
+    blockedFriends: [],
+    capacity: ShareCapacity(canAdd: true, currentCount: 0, limit: 5)
+  )
+
   /// Whether shift previews are being loaded
   @Published private(set) var isLoadingPreviews = false
 
@@ -308,9 +315,9 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Public Methods
 
-  /// Load initial data (sharers list)
-  /// - Parameter forceRefreshPreviews: If true, forces fresh preview data (used on pull-to-refresh)
+  /// Load initial Friends tab data through the consolidated bootstrap RPC.
   func loadSharers(forceRefreshPreviews: Bool = false) async {
+    _ = forceRefreshPreviews
     error = nil
 
     do {
@@ -331,97 +338,60 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
           let filteredCachedSharers = filteredBlockedUsers(from: cachedFriends.sharers)
           let partitionedSharers = partitionSharers(filteredCachedSharers)
 
-          // Update both together so UI renders with complete data and correct sorting
-          sharers = partitionedSharers.visible
-          hiddenSharers = partitionedSharers.hidden
-          chatOnlyUserIds = cachedFriends.chatOnlyUserIds.subtracting(locallyBlockedUserIds)
           if !cachedPreviews.isEmpty {
+            // Update both together so UI renders with complete data and correct sorting
             shiftPreviews = cachedPreviews.filter { !locallyBlockedUserIds.contains($0.key) }
+            sharers = partitionedSharers.visible
+            hiddenSharers = partitionedSharers.hidden
+            chatOnlyUserIds = cachedFriends.chatOnlyUserIds.subtracting(locallyBlockedUserIds)
+            loadedFromCache = true
+            hasFinishedInitialSharersLoad = true
+            logger.info(
+              """
+              Loaded \(self.sharers.count) visible sharers, \(self.hiddenSharers.count) hidden sharers,
+              and \(cachedPreviews.count) previews from cache together
+              """
+            )
+          } else {
+            logger.info("Skipping cached sharers because no cached preview sort order is available")
           }
-          loadedFromCache = true
-          hasFinishedInitialSharersLoad = true
-          logger.info(
-            """
-            Loaded \(self.sharers.count) visible sharers, \(self.hiddenSharers.count) hidden sharers,
-            and \(cachedPreviews.count) previews from cache together
-            """
-          )
         }
       }
 
       // Only show loading indicator if we have no cached data
       if !loadedFromCache && sharers.isEmpty && hiddenSharers.isEmpty {
         isLoadingSharers = true
+        isLoadingPreviews = true
       }
 
-      // Fetch fresh data from network
-      logger.info("Fetching fresh sharers from network...")
-      async let sharersTask = sharingService.fetchSharers(for: userId)
-      async let friendsTask = try? sharingService.fetchAllFriends()
-
-      let freshSharers = try await sharersTask
-      let friendsResult = await friendsTask
-      let blockedUserIds = Set(friendsResult?.blockedFriends.map { $0.id } ?? [])
-      if friendsResult != nil {
-        locallyBlockedUserIds = blockedUserIds
-      }
-
-      let effectiveBlockedUserIds = locallyBlockedUserIds.union(blockedUserIds)
-      let filteredFreshSharers = freshSharers.filter { !effectiveBlockedUserIds.contains($0.id) }
-      let outgoingChatSharers = chatOnlySharers(
-        from: friendsResult?.friends ?? [],
-        excluding: Set(filteredFreshSharers.map { $0.id }).union(effectiveBlockedUserIds),
-        viewerId: userId
-      )
-      logger.info(
-        "Network returned \(filteredFreshSharers.count) non-blocked sharers: \(filteredFreshSharers.map { $0.displayName })"
-      )
-
-      let partitionedSharers = partitionSharers(filteredFreshSharers)
-      let partitionedOutgoingChatSharers = partitionSharers(outgoingChatSharers)
-
-      // Update UI with fresh data
-      sharers = partitionedSharers.visible + partitionedOutgoingChatSharers.visible
-      hiddenSharers = partitionedSharers.hidden + partitionedOutgoingChatSharers.hidden
-      chatOnlyUserIds = Set(outgoingChatSharers.map { $0.id })
-      if let selectedSharer,
-        !(sharers + hiddenSharers).contains(where: { $0.id == selectedSharer.id })
-      {
-        deselectSharer()
-      }
-      hasFinishedInitialSharersLoad = true
-      logger.info(
-        """
-        Updated sharers properties, now has \(self.sharers.count) visible and
-        \(self.hiddenSharers.count) hidden items (\(outgoingChatSharers.count) chat-only)
-        """
-      )
-
-      // Save to cache
-      await sharedShiftsRepository.saveSharers(
-        sharers + hiddenSharers,
-        chatOnlyUserIds: chatOnlyUserIds,
-        for: userId
+      logger.info("Fetching Friends tab bootstrap from network...")
+      let bootstrap = try await sharingService.fetchFriendsTabBootstrap()
+      await applyFriendsTabBootstrap(
+        bootstrap,
+        userId: userId,
+        animatePreviewReveal: !loadedFromCache && shiftPreviews.isEmpty
       )
 
       logger.info(
         "Loaded \(self.sharers.count) visible sharers and \(self.hiddenSharers.count) hidden sharers"
       )
 
-      // Fetch shift previews after sharers loaded
       isLoadingSharers = false
-      await loadShiftPreviews(forceRefresh: forceRefreshPreviews)
+      isLoadingPreviews = false
+      await persistShiftPreviews(bootstrap.previews, userId: userId)
 
     } catch is CancellationError {
       // Task was cancelled (e.g., user released pull-to-refresh early)
       // This is not an error, just log and return
       logger.info("loadSharers was cancelled")
       isLoadingSharers = false
+      isLoadingPreviews = false
     } catch {
       // Check if the underlying error is a cancellation (URLError.cancelled)
       if let urlError = error as? URLError, urlError.code == .cancelled {
         logger.info("loadSharers network request was cancelled")
         isLoadingSharers = false
+        isLoadingPreviews = false
         return
       }
 
@@ -432,83 +402,96 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         chatOnlyUserIds = []
       }
       isLoadingSharers = false
+      isLoadingPreviews = false
     }
   }
 
-  /// Load shift previews for all sharers
-  /// - Parameter forceRefresh: If true, bypasses cache and fetches fresh data
-  func loadShiftPreviews(forceRefresh: Bool = false) async {
-    let allSharers = (sharers + hiddenSharers).filter { !chatOnlyUserIds.contains($0.id) }
-    guard !allSharers.isEmpty else { return }
+  private func previewMap(from previews: [SharerShiftPreview]) -> [String: SharerShiftPreview] {
+    var map: [String: SharerShiftPreview] = [:]
+    for preview in previews {
+      map[preview.sharerId] = preview
+    }
+    return map
+  }
 
-    do {
-      guard let userId = try await getCurrentUserId() else {
-        throw SharingError.notAuthenticated
+  func applyFriendsTabBootstrap(_ bootstrap: FriendsTabBootstrapData) async {
+    guard let userId = try? await getCurrentUserId() else { return }
+    await applyFriendsTabBootstrap(
+      bootstrap,
+      userId: userId,
+      animatePreviewReveal: false
+    )
+    await persistShiftPreviews(bootstrap.previews, userId: userId)
+  }
+
+  private func applyFriendsTabBootstrap(
+    _ bootstrap: FriendsTabBootstrapData,
+    userId: String,
+    animatePreviewReveal: Bool
+  ) async {
+    managementSnapshot = bootstrap.managementSnapshot
+
+    let blockedUserIds = Set(bootstrap.blockedFriends.map(\.id))
+    locallyBlockedUserIds = blockedUserIds
+
+    let filteredFreshSharers = bootstrap.sharers.filter { !blockedUserIds.contains($0.id) }
+    let outgoingChatSharers = chatOnlySharers(
+      from: bootstrap.friends,
+      excluding: Set(filteredFreshSharers.map { $0.id }).union(blockedUserIds),
+      viewerId: userId
+    )
+    logger.info(
+      "Network returned \(filteredFreshSharers.count) non-blocked sharers: \(filteredFreshSharers.map { $0.displayName })"
+    )
+
+    let partitionedSharers = partitionSharers(filteredFreshSharers)
+    let partitionedOutgoingChatSharers = partitionSharers(outgoingChatSharers)
+    let freshPreviewMap = previewMap(from: bootstrap.previews)
+      .filter { !blockedUserIds.contains($0.key) }
+
+    if animatePreviewReveal {
+      withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
+        shiftPreviews = freshPreviewMap
       }
-
-      // Check if we already have cached data (loaded in loadSharers or from previous fetch)
-      // This determines whether to animate the network data reveal
-      var hasCachedData = !shiftPreviews.isEmpty
-
-      // If we don't have data yet and not forcing refresh, try loading from cache
-      if !forceRefresh && !hasCachedData {
-        let cachedPreviews = sharedShiftsRepository.getShiftPreviews(for: userId)
-        if !cachedPreviews.isEmpty {
-          shiftPreviews = cachedPreviews
-          hasCachedData = true
-          logger.info("Loaded \(cachedPreviews.count) shift previews from persistent cache")
-        }
-      }
-
-      // Only show loading animation if we have no data to display
-      // This prevents animation when cached data is available
-      if !hasCachedData && shiftPreviews.isEmpty {
-        isLoadingPreviews = true
-      }
-
-      // Fetch fresh data from network
-      let sharerIds = allSharers.map { $0.id }
-      let previews = try await sharingService.fetchShiftPreviews(
-        sharerIds: sharerIds,
-        forceRefresh: forceRefresh
-      )
-
-      // Convert to dictionary for quick lookup
-      var previewMap: [String: SharerShiftPreview] = [:]
-      for preview in previews {
-        previewMap[preview.sharerId] = preview
-      }
-
-      // Animate the reveal only when loading fresh (no cached data)
-      // When cached data exists, update silently (no animation needed)
-      if !hasCachedData {
-        withAnimation(.spring(duration: 0.4, bounce: 0.15)) {
-          shiftPreviews = previewMap
-        }
-      } else {
-        shiftPreviews = previewMap
-      }
-
-      // Save to persistent cache
-      await sharedShiftsRepository.saveShiftPreviews(previews, for: userId)
-
-      // Update friend widget storage with sharers and previews
-      let widgetSharers = sharers.filter { !chatOnlyUserIds.contains($0.id) }
-      if !widgetSharers.isEmpty {
-        NativeWidgetStorage.updateFriendWidgetStorage(
-          sharers: widgetSharers,
-          previews: previews
-        )
-      }
-
-      logger.info(
-        "Loaded shift previews for \(previews.count) sharers (forceRefresh: \(forceRefresh))")
-    } catch {
-      logger.error("Failed to load shift previews: \(error.localizedDescription)")
-      // Don't set error - previews are non-critical
+    } else {
+      shiftPreviews = freshPreviewMap
     }
 
-    isLoadingPreviews = false
+    sharers = partitionedSharers.visible + partitionedOutgoingChatSharers.visible
+    hiddenSharers = partitionedSharers.hidden + partitionedOutgoingChatSharers.hidden
+    chatOnlyUserIds = Set(outgoingChatSharers.map { $0.id })
+    if let selectedSharer,
+      !(sharers + hiddenSharers).contains(where: { $0.id == selectedSharer.id })
+    {
+      deselectSharer()
+    }
+    hasFinishedInitialSharersLoad = true
+    logger.info(
+      """
+      Updated sharers properties, now has \(self.sharers.count) visible and
+      \(self.hiddenSharers.count) hidden items (\(outgoingChatSharers.count) chat-only)
+      """
+    )
+
+    await sharedShiftsRepository.saveSharers(
+      sharers + hiddenSharers,
+      chatOnlyUserIds: chatOnlyUserIds,
+      for: userId
+    )
+  }
+
+  private func persistShiftPreviews(_ previews: [SharerShiftPreview], userId: String) async {
+    guard !previews.isEmpty else { return }
+
+    await sharedShiftsRepository.saveShiftPreviews(previews, for: userId)
+
+    let widgetSharers = sharers.filter { !chatOnlyUserIds.contains($0.id) }
+    if !widgetSharers.isEmpty {
+      NativeWidgetStorage.updateFriendWidgetStorage(
+        sharers: widgetSharers,
+        previews: previews
+      )
+    }
   }
 
   func handleBlockedUser(_ userId: String) {
