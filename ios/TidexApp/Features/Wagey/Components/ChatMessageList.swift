@@ -2,6 +2,8 @@ import SwiftUI
 
 /// Scrollable list of chat messages with auto-scroll to bottom
 struct ChatMessageList: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let messages: [ChatMessage]
   let streamingMessages: [ChatMessage]
   let streamingContentBlocks: [ContentBlock]
@@ -217,77 +219,72 @@ struct ChatMessageList: View {
       }
     }
     .padding(Spacing.xxs)
-    .tidexGlass(
-      shape: .rect(cornerRadius: CornerRadius.lg),
-      tint: .tidexBlue.opacity(0.04),
-      interactive: false,
-      fallbackOpacity: 0.78
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+        .fill(Color.tidexSurfacePrimary)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+        .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
   }
 
   private var welcomeHero: some View {
-    ZStack(alignment: .topLeading) {
-      Circle()
-        .fill(Color.tidexBlue.opacity(0.12))
-        .frame(width: 180, height: 180)
-        .blur(radius: 42)
-        .offset(x: -16, y: -52)
+    VStack(alignment: .leading, spacing: Spacing.md) {
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        Image(systemName: "sparkles")
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexBlue)
+          .frame(width: 32, height: 32)
+          .background(Color.tidexBlue.opacity(0.1), in: Circle())
 
-      Circle()
-        .fill(Color.white.opacity(0.08))
-        .frame(width: 120, height: 120)
-        .blur(radius: 40)
-        .offset(x: 180, y: 24)
+        Text(.wageyEmptyStateWelcomeTitle)
+          .font(.tidexScreenTitle)
+          .foregroundColor(.tidexTextPrimary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
 
-      VStack(alignment: .leading, spacing: Spacing.md) {
-        HStack(alignment: .top, spacing: Spacing.md) {
-          Text(.wageyEmptyStateWelcomeTitle)
-            .font(.tidexScreenTitle)
-            .foregroundColor(.tidexTextPrimary)
-            .fixedSize(horizontal: false, vertical: true)
+      Text(.wageyEmptyStateWelcomeSubtitle)
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      HStack(spacing: Spacing.sm) {
+        if let remainingMessagesText, !remainingMessagesText.isEmpty {
+          Text(remainingMessagesText)
+            .font(.tidexFootnoteStrong)
+            .foregroundColor(.tidexTextSecondary)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(Capsule())
         }
 
-        Text(.wageyEmptyStateWelcomeSubtitle)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .fixedSize(horizontal: false, vertical: true)
-
-        HStack(spacing: Spacing.sm) {
-          if let remainingMessagesText, !remainingMessagesText.isEmpty {
-            Text(remainingMessagesText)
-              .font(.tidexFootnoteStrong)
-              .foregroundColor(.tidexTextSecondary)
-              .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, Spacing.xs)
-              .background(Color.tidexSurfaceSecondary.opacity(0.8))
-              .clipShape(Capsule())
-          }
-
-          if !showsSuggestions {
-            Button {
-              withAnimation(.easeInOut(duration: 0.2)) {
-                showsSuggestions = true
-              }
-            } label: {
-              HStack(spacing: Spacing.xs) {
-                Image(systemName: "sparkles")
-                  .font(.tidexFootnoteStrong)
-
-                Text(.wageyEmptyStateQuickStart)
-                  .font(.tidexFootnoteStrong)
-              }
-              .foregroundColor(.tidexTextSecondary)
-              .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, Spacing.xs)
-              .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.1))
+        if !showsSuggestions {
+          Button {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+              showsSuggestions = true
             }
-            .buttonStyle(.plain)
+          } label: {
+            HStack(spacing: Spacing.xs) {
+              Image(systemName: "list.bullet")
+                .font(.tidexFootnoteStrong)
+
+              Text(.wageyEmptyStateQuickStart)
+                .font(.tidexFootnoteStrong)
+            }
+            .foregroundColor(.tidexTextSecondary)
+            .padding(.horizontal, Spacing.sm)
+            .padding(.vertical, Spacing.xs)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(Capsule())
           }
+          .buttonStyle(.plain)
         }
       }
-      .padding(.top, Spacing.md)
-      .padding(.trailing, showsHistoryButton ? 56 : 0)
     }
+    .padding(.top, Spacing.md)
+    .padding(.trailing, showsHistoryButton ? 56 : 0)
     .frame(maxWidth: .infinity, alignment: .leading)
     .overlay(alignment: .topTrailing) {
       if showsHistoryButton {
@@ -299,7 +296,8 @@ struct ChatMessageList: View {
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextSecondary)
             .frame(width: 40, height: 40)
-            .tidexGlass(shape: .circle, tint: .tidexBlue.opacity(0.08))
+            .background(Color.tidexSurfaceSecondary, in: Circle())
+            .overlay(Circle().stroke(Color.tidexBorderSubtle, lineWidth: 1))
         }
         .buttonStyle(.plain)
         .padding(.top, Spacing.sm)
@@ -432,18 +430,7 @@ struct ChatMessageList: View {
   }
 
   private func formatJSON(_ string: String) -> String {
-    guard let data = string.data(using: .utf8),
-      let jsonObject = try? JSONSerialization.jsonObject(with: data),
-      let prettyData = try? JSONSerialization.data(
-        withJSONObject: jsonObject,
-        options: [.prettyPrinted, .sortedKeys]
-      ),
-      let prettyString = String(data: prettyData, encoding: .utf8)
-    else {
-      return string
-    }
-
-    return prettyString
+    WageyToolJSONFormatter.format(string)
   }
 
   // MARK: - Scroll Helper

@@ -32,6 +32,7 @@ const REQUEST_ID_HEADER = "x-wagey-request-id";
 const SSE_HEARTBEAT_MS = 15_000;
 const SSE_FLUSH_PADDING = ": " + " ".repeat(2048) + "\n\n";
 const DEFAULT_WAGEY_MAX_TOKENS = 8_192;
+const TOOL_RESULT_DECIMAL_ARTIFACT_EPSILON = 1e-9;
 
 export type ChatChunk =
   | { type: "text_start" }
@@ -77,6 +78,52 @@ export type ChatChunk =
     success: boolean;
   }
   | { type: "wagey_compaction"; content: string };
+
+function normalizeToolResultNumber(value: number): number {
+  if (!Number.isFinite(value)) return value;
+
+  const roundedToCents = Math.round(value * 100) / 100;
+  if (
+    Math.abs(value - roundedToCents) < TOOL_RESULT_DECIMAL_ARTIFACT_EPSILON
+  ) {
+    return roundedToCents;
+  }
+
+  const roundedToMicros = Math.round(value * 1_000_000) / 1_000_000;
+  if (
+    Math.abs(value - roundedToMicros) <
+      TOOL_RESULT_DECIMAL_ARTIFACT_EPSILON
+  ) {
+    return roundedToMicros;
+  }
+
+  return value;
+}
+
+function normalizeToolResultPayload(value: unknown): unknown {
+  if (typeof value === "number") {
+    return normalizeToolResultNumber(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map(normalizeToolResultPayload);
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nestedValue]) => [
+        key,
+        normalizeToolResultPayload(nestedValue),
+      ]),
+    );
+  }
+
+  return value;
+}
+
+export function serializeToolResultPayload(value: unknown): string {
+  return JSON.stringify(normalizeToolResultPayload(value));
+}
 
 const imageContentBlockSchema = z.object({
   type: z.literal("image"),
@@ -380,7 +427,7 @@ async function executeSingleToolUse(
           "Tool input was invalid or incomplete JSON. Please resend a valid JSON object for this tool call.",
         invalid_input: { INVALID_JSON: invalidJson },
       };
-      const serialized = JSON.stringify(invalidResult);
+      const serialized = serializeToolResultPayload(invalidResult);
       return {
         uiChunk: {
           type: "tool_result",
@@ -407,7 +454,7 @@ async function executeSingleToolUse(
     if (result.success && !isReadOnlyToolUse(toolUse)) {
       invalidateWageyCache(ctx);
     }
-    const serialized = JSON.stringify(result);
+    const serialized = serializeToolResultPayload(result);
     return {
       uiChunk: {
         type: "tool_result",
@@ -425,7 +472,7 @@ async function executeSingleToolUse(
       },
     };
   } catch (error) {
-    const serialized = JSON.stringify({
+    const serialized = serializeToolResultPayload({
       success: false,
       message: error instanceof Error ? error.message : "Unknown error",
     });
@@ -963,7 +1010,7 @@ export async function handleWageyRequest(
                     type: "wagey_built_in_tool_result",
                     toolName: chunk.name,
                     toolCallId: chunk.id,
-                    result: JSON.stringify(chunk.result),
+                    result: serializeToolResultPayload(chunk.result),
                     success: chunk.success,
                   });
                 }

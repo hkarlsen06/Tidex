@@ -1276,13 +1276,15 @@ final class WageyViewModel {
   private func completeThinkingPhaseIfNeeded() {
     guard let startedAt = currentThinkingStartedAt else { return }
 
-    let elapsedSeconds = max(1, Int(Date().timeIntervalSince(startedAt).rounded()))
-    streamingMessages.append(
-      ChatMessage(
-        role: .assistant,
-        contentBlocks: [.thoughtStatus(ThoughtStatus(durationSeconds: elapsedSeconds))],
-        timestamp: Date()
-      ))
+    let elapsedSeconds = Self.thinkingStatusDurationSeconds(since: startedAt)
+    if Self.shouldPersistThinkingStatus(durationSeconds: elapsedSeconds) {
+      streamingMessages.append(
+        ChatMessage(
+          role: .assistant,
+          contentBlocks: [.thoughtStatus(ThoughtStatus(durationSeconds: elapsedSeconds))],
+          timestamp: Date()
+        ))
+    }
     currentThinkingStartedAt = nil
   }
 
@@ -1543,6 +1545,14 @@ final class WageyViewModel {
     onMessageBreak activeContentBlocks: [ContentBlock]
   ) -> Bool {
     !activeContentBlocks.isEmpty
+  }
+
+  static func shouldPersistThinkingStatus(durationSeconds: Int) -> Bool {
+    durationSeconds > 2
+  }
+
+  static func thinkingStatusDurationSeconds(since startedAt: Date, now: Date = Date()) -> Int {
+    max(1, Int(now.timeIntervalSince(startedAt).rounded()))
   }
 }
 

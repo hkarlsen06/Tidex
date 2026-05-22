@@ -269,11 +269,11 @@ struct ChatInputField: View {
         }
       }
       .animation(
-        reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.86),
+        reduceMotion ? nil : .easeOut(duration: 0.16),
         value: isComposerFocused
       )
       .animation(
-        reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.9),
+        reduceMotion ? nil : .easeOut(duration: 0.14),
         value: shouldHideAttachmentButton
       )
     }
@@ -330,7 +330,7 @@ struct ChatInputField: View {
         } else {
           Image(systemName: "photo.on.rectangle.angled")
             .font(.system(size: 21))
-            .foregroundColor(effectiveDisabled ? .tidexTextMuted : .tidexBlue)
+            .foregroundColor(attachmentControlsDisabled ? .tidexTextMuted : .tidexBlue)
         }
       }
       .frame(width: 50, height: 50)
@@ -347,7 +347,7 @@ struct ChatInputField: View {
     .disabled(attachmentControlsDisabled || isProcessingImage)
     .frame(width: 50, height: 50)
     .contentShape(Rectangle())
-    .accessibilityLabel(Text(String(localized: "profile.personalInfo.uploadImage")))
+    .accessibilityLabel(Text(String(localized: .profilePersonalInfoUploadImage)))
   }
 
   // MARK: - Image Preview
@@ -377,10 +377,10 @@ struct ChatInputField: View {
         } label: {
           Image(systemName: "xmark.circle.fill")
             .font(.system(size: 20))
-            .foregroundColor(.white)
+            .foregroundColor(.tidexTextOnBrand)
             .background(
               Circle()
-                .fill(Color.black.opacity(0.5))
+                .fill(Color.tidexDarkBackgroundColor.opacity(0.62))
                 .frame(width: 18, height: 18)
             )
             .frame(minWidth: 44, minHeight: 44)
