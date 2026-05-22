@@ -272,7 +272,11 @@ async function readChunksUntil(
   return chunks;
 }
 
-function buildRequestBody(userId: string, capabilities: string[]): string {
+function buildRequestBody(
+  userId: string,
+  capabilities: string[],
+  deeplinks?: Array<{ destination: string; url: string; parameters?: string[] }>,
+): string {
   return JSON.stringify({
     routerStreamKey: "wagey",
     input: {
@@ -287,6 +291,7 @@ function buildRequestBody(userId: string, capabilities: string[]): string {
         platform: "ios",
         appVersion: "1.0",
         capabilities,
+        ...(deeplinks ? { deeplinks } : {}),
       },
     },
   });
@@ -520,6 +525,66 @@ Deno.test("handleWageyRequest emits built-in tool events and deduped sources for
         },
       ],
     );
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalApiKey === undefined) {
+      Deno.env.delete("OPENAI_API_KEY");
+    } else {
+      Deno.env.set("OPENAI_API_KEY", originalApiKey);
+    }
+    if (originalModel === undefined) {
+      Deno.env.delete("OPENAI_MODEL");
+    } else {
+      Deno.env.set("OPENAI_MODEL", originalModel);
+    }
+  }
+});
+
+Deno.test("handleWageyRequest accepts deeplink-capable clients", async () => {
+  const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+  const originalFetch = globalThis.fetch;
+  const originalApiKey = Deno.env.get("OPENAI_API_KEY");
+  const originalModel = Deno.env.get("OPENAI_MODEL");
+
+  Deno.env.set("OPENAI_API_KEY", "test-key");
+  Deno.env.set("OPENAI_MODEL", DEFAULT_OPENAI_MODEL);
+  globalThis.fetch = async () =>
+    createSseResponse([
+      {
+        type: "response.output_text.delta",
+        delta: "Her er en lenke.",
+      },
+      {
+        type: "response.completed",
+        response: { status: "completed" },
+      },
+    ]);
+
+  try {
+    const response = await handleWageyRequest(
+      new Request("https://example.com/functions/v1/wagey-chat-v2", {
+        method: "POST",
+        body: buildRequestBody(
+          userId,
+          ["deeplinks_v1"],
+          [
+            {
+              destination: "settings.pay",
+              url: "tidex://settings/pay?jobId=JOB_ID",
+              parameters: ["jobId"],
+            },
+          ],
+        ),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      createMockContext(userId),
+    );
+
+    assertEquals(response.status, 200);
+    const chunks = await readChunkStream(response);
+    assert(chunks.some((chunk) => chunk.type === "text"));
   } finally {
     globalThis.fetch = originalFetch;
     if (originalApiKey === undefined) {

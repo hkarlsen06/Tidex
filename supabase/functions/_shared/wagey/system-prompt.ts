@@ -35,6 +35,12 @@ export type SystemPromptContext = {
   userName?: string;
   /** Whether the client supports explicit visual assistant bubble breaks */
   allowMessageBreaks?: boolean;
+  /** Client-supported app navigation links */
+  deeplinks?: Array<{
+    destination: string;
+    url: string;
+    parameters?: string[];
+  }>;
 };
 
 export const WAGEY_MESSAGE_BREAK_TOKEN = "<wagey_message_break/>";
@@ -129,6 +135,42 @@ Use their name naturally when appropriate (greetings, confirmations) but don't o
 </message_bubbles>`
     : "";
 
+  const hasAddShiftDeeplinks =
+    context?.deeplinks?.some((link) => link.destination.startsWith("add_shift")) ?? false;
+  const addShiftDeeplinkGuidance = hasAddShiftDeeplinks
+    ? `- For questions about where to add a new shift, deeplink to the Add tab. Use add_shift.single for ordinary shifts, add_shift.events for private calendar events, and add_shift.recurring for "fast vakt", fixed shifts, or recurring/gjentakende shifts.
+- Do not send users to settings.recurring_shifts when they ask where to add a new recurring/fixed shift. Use settings.recurring_shifts only when they want to view or manage existing recurring shift rules.`
+    : "";
+
+  const deeplinkSection = context?.deeplinks?.length
+    ? `
+<deeplinks>
+The client can open these in-app links from markdown links:
+${
+      context.deeplinks.map((link) => {
+        const parameters = link.parameters?.length
+          ? ` parameters=${link.parameters.join(",")}`
+          : "";
+        return `- ${link.destination}: ${link.url}${parameters}`;
+      }).join("\n")
+    }
+
+Use deeplinks when they help the user inspect or continue after your action:
+- After changing a setting, include one concise markdown link to the relevant settings page.
+${addShiftDeeplinkGuidance}
+- After creating or updating shifts, include one concise markdown link to Shifts. Replace known YYYY-MM-DD and SHIFT_ID placeholders with actual values from tool results.
+- After answering about shifts without changing them, deeplink to the Shifts tab, a date, or specific highlighted shifts when that would help the user inspect the result.
+- After answering about friends/shared shifts, deeplink to Sharing, a specific sharer, or sharing management when applicable.
+- After admin-only moderation, feedback, notification, or report work, deeplink to the relevant admin destination when the user has access and a supported link exists.
+- Deeplink markdown links are extracted from your text and rendered as standalone glass buttons between message bubbles.
+- Any text before and after a deeplink becomes separate message bubbles, so never place deeplink markdown inline inside a sentence.
+- Put deeplink markdown on its own line or paragraph after the explanatory text. Do not attach punctuation or sentence fragments that depend on text around the link.
+- If there is no supported deeplink for the user's requested destination, say that directly without inserting a nearby or example deeplink.
+- Do not invent IDs. Omit unknown optional parameters instead.
+- Keep the visible link text natural and localized, and always capitalize the first letter of the button text.
+</deeplinks>`
+    : "";
+
   return `You are Wagey, a friendly and knowledgeable assistant for Tidex, helping users manage work shifts and track wages.
 
 <language>
@@ -149,7 +191,7 @@ Weekday numbers: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
 - Complete the requested task before offering optional follow-up help.
 - If the request is blocked by missing required details, ask only for the minimum missing detail.
 </output_contract>
-${messageBreakSection}
+${messageBreakSection}${deeplinkSection}
 
 <agent_operating_model>
 - Use the simplest reliable path: answer directly when tools are unnecessary, use one or more tools when user data or fresh external facts materially affect correctness, and avoid extra tool calls that do not change the answer.

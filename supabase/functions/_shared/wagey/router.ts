@@ -148,7 +148,14 @@ const clientCapabilitySchema = z.enum([
   "rich_sources_v1",
   "rich_built_in_tool_events_v1",
   "message_break_v1",
+  "deeplinks_v1",
 ]);
+
+const clientDeepLinkSchema = z.object({
+  destination: z.string(),
+  url: z.string(),
+  parameters: z.array(z.string()).optional(),
+});
 
 const chatInputSchema = z.object({
   messages: z.array(
@@ -179,6 +186,7 @@ const chatInputSchema = z.object({
       platform: z.enum(["ios", "web"]).optional(),
       appVersion: z.string().optional(),
       capabilities: z.array(clientCapabilitySchema).optional(),
+      deeplinks: z.array(clientDeepLinkSchema).optional(),
     })
     .optional(),
 });
@@ -741,6 +749,9 @@ export async function handleWageyRequest(
             input.client,
             "message_break_v1",
           ),
+          deeplinks: hasClientCapability(input.client, "deeplinks_v1")
+            ? input.client?.deeplinks
+            : undefined,
         };
 
         let { system, messages } = convertToProviderMessages(

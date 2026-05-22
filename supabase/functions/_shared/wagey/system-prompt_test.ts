@@ -35,6 +35,84 @@ Deno.test("getSystemPrompt omits bubble instructions for legacy clients", () => 
   assert(!prompt.includes("<message_bubbles>"));
 });
 
+Deno.test("getSystemPrompt includes supported deeplink instructions", () => {
+  const prompt = getSystemPrompt({
+    accessLevel: "pro",
+    used: 3,
+    remaining: 37,
+    bonus: 0,
+    deeplinks: [
+      {
+        destination: "settings.pay",
+        url: "tidex://settings/pay?jobId=JOB_ID",
+        parameters: ["jobId"],
+      },
+      {
+        destination: "shifts",
+        url: "tidex://shifts",
+      },
+      {
+        destination: "shifts.shift",
+        url: "tidex://shifts?dates=YYYY-MM-DD&shiftIds=SHIFT_ID&action=highlight",
+        parameters: ["dates", "shiftIds", "action"],
+      },
+      {
+        destination: "add_shift.recurring",
+        url: "tidex://add-shift?mode=recurring",
+        parameters: ["mode"],
+      },
+      {
+        destination: "settings.recurring_shifts",
+        url: "tidex://settings/recurring-shifts",
+      },
+      {
+        destination: "sharing.manage",
+        url: "tidex://sharing/manage?highlight=USER_ID",
+        parameters: ["highlight"],
+      },
+      {
+        destination: "admin.report",
+        url: "tidex://admin?tab=reports&reportId=REPORT_ID",
+        parameters: ["tab", "reportId"],
+      },
+    ],
+  });
+
+  assertStringIncludes(prompt, "<deeplinks>");
+  assertStringIncludes(prompt, "settings.pay: tidex://settings/pay?jobId=JOB_ID");
+  assertStringIncludes(prompt, "shifts: tidex://shifts");
+  assertStringIncludes(prompt, "add_shift.recurring: tidex://add-shift?mode=recurring");
+  assertStringIncludes(prompt, "sharing.manage: tidex://sharing/manage?highlight=USER_ID");
+  assertStringIncludes(prompt, "admin.report: tidex://admin?tab=reports&reportId=REPORT_ID");
+  assertStringIncludes(
+    prompt,
+    "Use add_shift.single for ordinary shifts, add_shift.events for private calendar events, and add_shift.recurring",
+  );
+  assertStringIncludes(
+    prompt,
+    "Do not send users to settings.recurring_shifts when they ask where to add a new recurring/fixed shift",
+  );
+  assertStringIncludes(prompt, "After creating or updating shifts");
+  assertStringIncludes(prompt, "deeplink to Sharing");
+  assertStringIncludes(prompt, "deeplink to the relevant admin destination");
+  assertStringIncludes(
+    prompt,
+    "rendered as standalone glass buttons between message bubbles",
+  );
+  assertStringIncludes(
+    prompt,
+    "never place deeplink markdown inline inside a sentence",
+  );
+  assertStringIncludes(
+    prompt,
+    "without inserting a nearby or example deeplink",
+  );
+  assertStringIncludes(
+    prompt,
+    "always capitalize the first letter of the button text",
+  );
+});
+
 Deno.test("getSystemPrompt includes simple agent operating model", () => {
   const prompt = getSystemPrompt({
     accessLevel: "pro",
