@@ -4,6 +4,7 @@
     "jsr:@std/assert@*": "1.0.19",
     "jsr:@std/internal@^1.0.12": "1.0.12",
     "npm:@apple/app-store-server-library@*": "3.0.0",
+    "npm:@supabase/server@1.0.0": "1.0.0_@supabase+supabase-js@2.45.4",
     "npm:@supabase/supabase-js@2": "2.45.4",
     "npm:@supabase/supabase-js@2.45.4": "2.45.4",
     "npm:ws@*": "8.19.0",
@@ -65,6 +66,13 @@
         "@types/phoenix",
         "@types/ws",
         "ws"
+      ]
+    },
+    "@supabase/server@1.0.0_@supabase+supabase-js@2.45.4": {
+      "integrity": "sha512-9mBelWHk4yTcfOpjTpcCYx75/5M+WD5Brnp0SZWkoH9qwdwefH1COB0r7EgTL7GqfwCtmH4Hmc+W2gvQRRXr7g==",
+      "dependencies": [
+        "@supabase/supabase-js",
+        "jose"
       ]
     },
     "@supabase/storage-js@2.7.0": {
@@ -231,6 +239,9 @@
       "dependencies": [
         "function-bind"
       ]
+    },
+    "jose@6.2.3": {
+      "integrity": "sha512-YYVDInQKFJfR/xa3ojUTl8c2KoTwiL1R5Wg9YCydwH0x0B9grbzlg5HC7mMjCtUJjbQ/YnGEZIhI5tCgfTb4Hw=="
     },
     "jsonwebtoken@9.0.3": {
       "integrity": "sha512-MT/xP0CrubFRNLNKvxJ2BYfy53Zkm++5bX9dtuPbqAeQpTVe0MQTFhao8+Cp//EmJp244xt6Drw/GVEGCUj40g==",
@@ -450,5 +461,10 @@
     "https://deno.land/x/jose@v5.2.2/util/decode_protected_header.ts": "546eac15dd97d267373cb3d8d9a94ad03481f1328c4457560ffde9a5a595ebe8",
     "https://deno.land/x/jose@v5.2.2/util/errors.ts": "ca227b0dfbc2464bd0940969d2fbffcb80803d25b1dba6385dfe486e2aa0a089",
     "https://deno.land/x/jose@v5.2.2/util/runtime.ts": "088cae7df0d285065f141d880c5c21a572234997082337d1125d7f1603059642"
+  },
+  "workspace": {
+    "dependencies": [
+      "npm:@supabase/server@1.0.0"
+    ]
   }
 }
