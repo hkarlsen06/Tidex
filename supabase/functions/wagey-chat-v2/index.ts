@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { withSupabase } from "npm:@supabase/server@1.0.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { createWageyContext } from "../_shared/wagey/context.ts";
 import { handleWageyRequest } from "../_shared/wagey/router.ts";
@@ -20,7 +20,12 @@ function json(
   });
 }
 
-function log(level: "info" | "warn" | "error", requestId: string, message: string, metadata: Record<string, unknown> = {}): void {
+function log(
+  level: "info" | "warn" | "error",
+  requestId: string,
+  message: string,
+  metadata: Record<string, unknown> = {},
+): void {
   const payload = {
     scope: "wagey-chat-v2",
     requestId,
@@ -39,56 +44,57 @@ function log(level: "info" | "warn" | "error", requestId: string, message: strin
   console.log(JSON.stringify(payload));
 }
 
-serve(async (req: Request) => {
-  const requestId = req.headers.get(REQUEST_ID_HEADER) ?? crypto.randomUUID();
+export default {
+  fetch: withSupabase<any>(
+    { auth: "user", cors: corsHeaders },
+    async (req, supabaseContext) => {
+      const requestId =
+        req.headers.get(REQUEST_ID_HEADER) ?? crypto.randomUUID();
 
-  if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: {
-        ...corsHeaders,
-        [REQUEST_ID_HEADER]: requestId,
-      },
-    });
-  }
+      if (req.method !== "POST") {
+        return json({ error: "Method not allowed" }, 405, {
+          [REQUEST_ID_HEADER]: requestId,
+        });
+      }
 
-  if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405, {
-      [REQUEST_ID_HEADER]: requestId,
-    });
-  }
+      try {
+        const requestHeaders = new Headers(req.headers);
+        requestHeaders.set(REQUEST_ID_HEADER, requestId);
+        const requestWithId = new Request(req, { headers: requestHeaders });
 
-  try {
-    const requestHeaders = new Headers(req.headers);
-    requestHeaders.set(REQUEST_ID_HEADER, requestId);
-    const requestWithId = new Request(req, { headers: requestHeaders });
+        const response = await handleWageyRequest(requestWithId, async () => {
+          return await createWageyContext(supabaseContext);
+        });
 
-    const response = await handleWageyRequest(requestWithId, async () => {
-      return await createWageyContext(requestWithId);
-    });
+        const responseHeaders = new Headers(response.headers);
+        for (const [key, value] of Object.entries(corsHeaders)) {
+          responseHeaders.set(key, value);
+        }
+        responseHeaders.set(REQUEST_ID_HEADER, requestId);
 
-    const responseHeaders = new Headers(response.headers);
-    for (const [key, value] of Object.entries(corsHeaders)) {
-      responseHeaders.set(key, value);
-    }
-    responseHeaders.set(REQUEST_ID_HEADER, requestId);
-
-    return new Response(response.body, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: responseHeaders,
-    });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to initialize Wagey";
-    log("error", requestId, "Initialization failed", {
-      error: message,
-    });
-    if (message === "Missing authorization header" || message === "Unauthorized") {
-      return json({ error: message }, 401, {
-        [REQUEST_ID_HEADER]: requestId,
-      });
-    }
-    return json({ error: message }, 500, {
-      [REQUEST_ID_HEADER]: requestId,
-    });
-  }
-});
+        return new Response(response.body, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: responseHeaders,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to initialize Wagey";
+        log("error", requestId, "Initialization failed", {
+          error: message,
+        });
+        if (
+          message === "Missing authorization header" ||
+          message === "Unauthorized"
+        ) {
+          return json({ error: message }, 401, {
+            [REQUEST_ID_HEADER]: requestId,
+          });
+        }
+        return json({ error: message }, 500, {
+          [REQUEST_ID_HEADER]: requestId,
+        });
+      }
+    },
+  ),
+};

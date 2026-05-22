@@ -1,10 +1,6 @@
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { withSupabase } from "npm:@supabase/server@1.0.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const STORAGE_REMOVE_BATCH_SIZE = 100;
 
 function jsonResponse(status: number, body: Record<string, unknown>) {
@@ -12,10 +8,6 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-function getAuthHeader(request: Request) {
-  return request.headers.get("Authorization") ?? "";
 }
 
 type StorageObjectRow = {
@@ -31,7 +23,9 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
-function parsePublicStorageURL(value: string | null | undefined): StorageObjectRow | null {
+function parsePublicStorageURL(
+  value: string | null | undefined,
+): StorageObjectRow | null {
   if (!value) return null;
 
   try {
@@ -66,10 +60,14 @@ async function listOwnedStorageObjects(
     .maybeSingle();
 
   if (settingsError) {
-    throw new Error(`Failed to load profile picture path: ${settingsError.message}`);
+    throw new Error(
+      `Failed to load profile picture path: ${settingsError.message}`,
+    );
   }
 
-  const profilePictureObject = parsePublicStorageURL(settings?.profile_picture_url);
+  const profilePictureObject = parsePublicStorageURL(
+    settings?.profile_picture_url,
+  );
   if (profilePictureObject) {
     objects.push(profilePictureObject);
   }
@@ -80,7 +78,9 @@ async function listOwnedStorageObjects(
     .eq("messages.sender_user_id", userId);
 
   if (attachmentsError) {
-    throw new Error(`Failed to load message attachment paths: ${attachmentsError.message}`);
+    throw new Error(
+      `Failed to load message attachment paths: ${attachmentsError.message}`,
+    );
   }
 
   for (const attachment of attachments ?? []) {
@@ -124,63 +124,68 @@ async function deleteOwnedStorageObjects(adminClient: any, userId: string) {
   }
 }
 
-serve(async (request) => {
-  if (request.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+export default {
+  fetch: withSupabase<any>(
+    { auth: "user", cors: corsHeaders },
+    async (request, ctx) => {
+      if (request.method !== "DELETE" && request.method !== "POST") {
+        return jsonResponse(405, {
+          success: false,
+          error: "Method not allowed",
+        });
+      }
 
-  if (request.method !== "DELETE" && request.method !== "POST") {
-    return jsonResponse(405, { success: false, error: "Method not allowed" });
-  }
+      const {
+        data: { user },
+        error: userError,
+      } = await ctx.supabase.auth.getUser();
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonResponse(500, { success: false, error: "Missing Supabase configuration" });
-  }
+      if (userError || !user) {
+        return jsonResponse(401, {
+          success: false,
+          error: "Not authenticated",
+        });
+      }
 
-  const authHeader = getAuthHeader(request);
-  if (!authHeader.startsWith("Bearer ")) {
-    return jsonResponse(401, { success: false, error: "Missing bearer token" });
-  }
+      const { error: cleanupError } = await ctx.supabase.rpc(
+        "prepare_user_for_deletion",
+        {
+          target_user_id: user.id,
+        },
+      );
 
-  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false },
-    global: { headers: { Authorization: authHeader } },
-  });
+      if (cleanupError) {
+        console.error(
+          "[delete-account] prepare_user_for_deletion failed",
+          cleanupError,
+        );
+        return jsonResponse(500, {
+          success: false,
+          error: "Failed to prepare account deletion",
+        });
+      }
 
-  const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  });
+      try {
+        await deleteOwnedStorageObjects(ctx.supabaseAdmin, user.id);
+      } catch (storageError) {
+        console.error("[delete-account] storage cleanup failed", storageError);
+        return jsonResponse(500, {
+          success: false,
+          error: "Failed to clean up account storage",
+        });
+      }
 
-  const {
-    data: { user },
-    error: userError,
-  } = await userClient.auth.getUser();
+      const { error: deleteError } =
+        await ctx.supabaseAdmin.auth.admin.deleteUser(user.id);
+      if (deleteError) {
+        console.error("[delete-account] deleteUser failed", deleteError);
+        return jsonResponse(500, {
+          success: false,
+          error: "Failed to delete account",
+        });
+      }
 
-  if (userError || !user) {
-    return jsonResponse(401, { success: false, error: "Not authenticated" });
-  }
-
-  const { error: cleanupError } = await userClient.rpc("prepare_user_for_deletion", {
-    target_user_id: user.id,
-  });
-
-  if (cleanupError) {
-    console.error("[delete-account] prepare_user_for_deletion failed", cleanupError);
-    return jsonResponse(500, { success: false, error: "Failed to prepare account deletion" });
-  }
-
-  try {
-    await deleteOwnedStorageObjects(adminClient, user.id);
-  } catch (storageError) {
-    console.error("[delete-account] storage cleanup failed", storageError);
-    return jsonResponse(500, { success: false, error: "Failed to clean up account storage" });
-  }
-
-  const { error: deleteError } = await adminClient.auth.admin.deleteUser(user.id);
-  if (deleteError) {
-    console.error("[delete-account] deleteUser failed", deleteError);
-    return jsonResponse(500, { success: false, error: "Failed to delete account" });
-  }
-
-  return jsonResponse(200, { success: true });
-});
+      return jsonResponse(200, { success: true });
+    },
+  ),
+};

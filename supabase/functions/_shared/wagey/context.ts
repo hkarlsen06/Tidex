@@ -1,4 +1,5 @@
-import { createClient, type SupabaseClient, type User } from "npm:@supabase/supabase-js@2";
+import type { SupabaseContext } from "npm:@supabase/server@1.0.0";
+import type { SupabaseClient, User } from "npm:@supabase/supabase-js@2";
 
 export type WageyRequestContext = {
   supabase: SupabaseClient;
@@ -7,71 +8,25 @@ export type WageyRequestContext = {
   cache: Map<string, Promise<unknown>>;
 };
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-export function createUserClient(accessToken: string): SupabaseClient {
-  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  });
-}
-
-export function createAdminClient(): SupabaseClient {
-  if (!globalThis.__wageyAdminClient) {
-    globalThis.__wageyAdminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    });
-  }
-
-  return globalThis.__wageyAdminClient;
-}
-
-declare global {
-  var __wageyAdminClient: SupabaseClient | undefined;
-}
-
 export function invalidateWageyCache(ctx: WageyRequestContext): void {
   ctx.cache.clear();
 }
 
-export async function createWageyContext(req: Request): Promise<WageyRequestContext> {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  const authorization = req.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    throw new Error("Missing authorization header");
-  }
-
-  const accessToken = authorization.slice("Bearer ".length);
-  const supabase = createUserClient(accessToken);
-  const supabaseAdmin = createAdminClient();
-
+export async function createWageyContext(
+  supabaseContext: SupabaseContext,
+): Promise<WageyRequestContext> {
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser();
+  } = await supabaseContext.supabase.auth.getUser();
 
   if (error || !user) {
     throw new Error("Unauthorized");
   }
 
   return {
-    supabase,
-    supabaseAdmin,
+    supabase: supabaseContext.supabase as unknown as SupabaseClient,
+    supabaseAdmin: supabaseContext.supabaseAdmin as unknown as SupabaseClient,
     user,
     cache: new Map(),
   };

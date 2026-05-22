@@ -4,19 +4,14 @@
 // - Returns entitlement status
 // - Requires authenticated Supabase user
 // - Uses StoreKit 2 / App Store Server API (not legacy verifyReceipt)
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { withSupabase } from "npm:@supabase/server@1.0.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import * as jose from "https://deno.land/x/jose@v5.2.2/index.ts";
 
 // ---------- Environment ----------
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
-  "";
-
 // Apple App Store Server API credentials
-const APPLE_APP_BUNDLE_ID = Deno.env.get("APPLE_APP_BUNDLE_ID") ??
-  "no.tidex.app";
+const APPLE_APP_BUNDLE_ID =
+  Deno.env.get("APPLE_APP_BUNDLE_ID") ?? "no.tidex.app";
 const APPLE_KEY_ID = Deno.env.get("APPLE_KEY_ID") ?? "";
 const APPLE_ISSUER_ID = Deno.env.get("APPLE_ISSUER_ID") ?? "";
 const APPLE_PRIVATE_KEY_RAW = Deno.env.get("APPLE_PRIVATE_KEY");
@@ -79,11 +74,7 @@ function mapAppleProductToInternal(appleProductId: string): string {
 }
 
 // ---------- Supabase Client ----------
-const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  })
-  : null;
+let supabaseAdmin: any = null;
 
 // ---------- Apple JWT Generation ----------
 async function generateAppleJWT(): Promise<string> {
@@ -105,9 +96,9 @@ async function generateAppleJWT(): Promise<string> {
 
     // Debug: Check what we're dealing with
     console.log(
-      `[apple-verify] Raw key has literal backslash-n: ${
-        keyPem.includes("\\n")
-      }`,
+      `[apple-verify] Raw key has literal backslash-n: ${keyPem.includes(
+        "\\n",
+      )}`,
     );
     console.log(
       `[apple-verify] Raw key has actual newlines: ${keyPem.includes("\n")}`,
@@ -118,9 +109,9 @@ async function generateAppleJWT(): Promise<string> {
     keyPem = keyPem.replace(/\\n/g, "\n");
 
     console.log(
-      `[apple-verify] After replacement, key has newlines: ${
-        keyPem.includes("\n")
-      }`,
+      `[apple-verify] After replacement, key has newlines: ${keyPem.includes(
+        "\n",
+      )}`,
     );
     console.log(`[apple-verify] Key line count: ${keyPem.split("\n").length}`);
     console.log(`[apple-verify] Key starts with: ${keyPem.substring(0, 30)}`);
@@ -222,14 +213,13 @@ async function fetchWithTimeout(
 async function verifyTransactionWithApple(
   transactionId: string,
   environment: "Production" | "Sandbox" = "Sandbox", // Default to Sandbox for testing
-): Promise<
-  | { transactionInfo: AppleTransactionInfo; renewalInfo?: AppleRenewalInfo }
-  | null
-> {
+): Promise<{
+  transactionInfo: AppleTransactionInfo;
+  renewalInfo?: AppleRenewalInfo;
+} | null> {
   const jwt = await generateAppleJWT();
-  const baseUrl = environment === "Sandbox"
-    ? APPLE_SANDBOX_URL
-    : APPLE_PRODUCTION_URL;
+  const baseUrl =
+    environment === "Sandbox" ? APPLE_SANDBOX_URL : APPLE_PRODUCTION_URL;
 
   console.log(
     `[apple-verify] Calling Apple API: ${baseUrl}/inApps/v1/transactions/${transactionId}`,
@@ -348,7 +338,8 @@ function assertUploadedJWSMatchesApple(
   for (const field of fieldsToCompare) {
     const uploadedValue = uploadedTransactionInfo[field];
     if (
-      uploadedValue !== undefined && uploadedValue !== transactionInfo[field]
+      uploadedValue !== undefined &&
+      uploadedValue !== transactionInfo[field]
     ) {
       console.error(
         `[apple-verify] Uploaded JWS mismatch for ${field}: uploaded=${uploadedValue}, apple=${
@@ -373,7 +364,8 @@ async function lookupUserIdByAppAccountToken(
   }
 
   const { data, error } = await supabaseAdmin
-    .schema("internal").from("app_account_tokens")
+    .schema("internal")
+    .from("app_account_tokens")
     .select("user_id")
     .eq("token", appAccountToken)
     .maybeSingle();
@@ -457,9 +449,8 @@ async function assertTransactionBelongsToUser(
 ): Promise<{ ok: boolean; error?: string; status?: number }> {
   const appAccountToken = transactionInfo.appAccountToken ?? null;
   if (!appAccountToken) {
-    const existingOwner = await lookupExistingOwnerForLegacyTransaction(
-      transactionInfo,
-    );
+    const existingOwner =
+      await lookupExistingOwnerForLegacyTransaction(transactionInfo);
     if (existingOwner === userId) {
       return { ok: true };
     }
@@ -612,7 +603,8 @@ async function upsertAppleSubscription(
   if (existingByProviderSub) {
     // Found by unique constraint - update it
     if (
-      existingByProviderSub.user_id && existingByProviderSub.user_id !== userId
+      existingByProviderSub.user_id &&
+      existingByProviderSub.user_id !== userId
     ) {
       console.warn(
         `[apple-verify] Subscription ownership mismatch by provider_subscription_id: existing=${existingByProviderSub.user_id}, auth=${userId}`,
@@ -627,7 +619,8 @@ async function upsertAppleSubscription(
     // Don't overwrite price_display if it already exists (preserve original purchase price)
     const updatePayload = { ...payload };
     if (
-      existingByProviderSub.price_display && "price_display" in updatePayload
+      existingByProviderSub.price_display &&
+      "price_display" in updatePayload
     ) {
       delete (updatePayload as any).price_display;
     }
@@ -729,9 +722,7 @@ async function upsertAppleSubscription(
   }
 
   // No existing subscription - insert new
-  const { error } = await supabaseAdmin
-    .from("subscriptions")
-    .insert(payload);
+  const { error } = await supabaseAdmin.from("subscriptions").insert(payload);
 
   if (error) {
     console.error("[apple-verify] Insert failed:", error.message);
@@ -803,260 +794,267 @@ async function creditConsumable(
 }
 
 // ---------- Request Handlers ----------
-serve(async (req) => {
-  // VERY FIRST THING: Log that we received the request
-  console.log("[apple-verify] ========== REQUEST RECEIVED ==========");
-  console.log(`[apple-verify] Method: ${req.method}`);
-  console.log(`[apple-verify] URL: ${req.url}`);
+export default {
+  fetch: withSupabase<any>(
+    { auth: "user", cors: corsHeaders },
+    async (req, ctx) => {
+      supabaseAdmin = ctx.supabaseAdmin;
 
-  // Log all headers for debugging
-  const headersObj: Record<string, string> = {};
-  req.headers.forEach((value, key) => {
-    // Mask sensitive values but show they exist
-    if (key.toLowerCase() === "authorization") {
-      headersObj[key] = value
-        ? `Bearer ${value.substring(7, 20)}...`
-        : "(empty)";
-    } else if (key.toLowerCase() === "apikey") {
-      headersObj[key] = value ? `${value.substring(0, 15)}...` : "(empty)";
-    } else {
-      headersObj[key] = value;
-    }
-  });
-  console.log("[apple-verify] Headers:", JSON.stringify(headersObj, null, 2));
+      // VERY FIRST THING: Log that we received the request
+      console.log("[apple-verify] ========== REQUEST RECEIVED ==========");
+      console.log(`[apple-verify] Method: ${req.method}`);
+      console.log(`[apple-verify] URL: ${req.url}`);
 
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    console.log("[apple-verify] Handling CORS preflight");
-    return new Response("ok", { headers: corsHeaders });
-  }
+      // Log all headers for debugging
+      const headersObj: Record<string, string> = {};
+      req.headers.forEach((value, key) => {
+        // Mask sensitive values but show they exist
+        if (key.toLowerCase() === "authorization") {
+          headersObj[key] = value
+            ? `Bearer ${value.substring(7, 20)}...`
+            : "(empty)";
+        } else if (key.toLowerCase() === "apikey") {
+          headersObj[key] = value ? `${value.substring(0, 15)}...` : "(empty)";
+        } else {
+          headersObj[key] = value;
+        }
+      });
+      console.log(
+        "[apple-verify] Headers:",
+        JSON.stringify(headersObj, null, 2),
+      );
 
-  try {
-    if (req.method !== "POST") {
-      console.log("[apple-verify] Rejecting non-POST method");
-      return json({ error: "Method not allowed" }, 405);
-    }
-
-    if (!supabaseAdmin) {
-      console.log("[apple-verify] supabaseAdmin not configured");
-      return json({ error: "Service not configured" }, 503);
-    }
-
-    // Verify Supabase auth
-    const authHeader = req.headers.get("Authorization");
-    console.log(`[apple-verify] Authorization header present: ${!!authHeader}`);
-    console.log(
-      `[apple-verify] Authorization header length: ${authHeader?.length ?? 0}`,
-    );
-
-    if (!authHeader) {
-      console.log("[apple-verify] REJECTING: Missing authorization header");
-      return json({ error: "Missing authorization header" }, 401);
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    console.log(`[apple-verify] Token extracted, length: ${token.length}`);
-    console.log(`[apple-verify] Token prefix: ${token.substring(0, 20)}...`);
-    console.log("[apple-verify] Calling supabaseAdmin.auth.getUser...");
-
-    const { data: { user }, error: authError } = await supabaseAdmin.auth
-      .getUser(token);
-    console.log(
-      `[apple-verify] getUser result - user: ${user?.id ?? "null"}, error: ${
-        authError?.message ?? "none"
-      }`,
-    );
-
-    if (authError || !user) {
-      return json({ error: "Invalid or expired token" }, 401);
-    }
-
-    // Parse request body
-    const body = await req.json();
-    const {
-      jws,
-      transactionId,
-      originalTransactionId,
-      productId,
-      priceDisplay, // Localized price string from StoreKit (e.g., "29,00 kr")
-      environment = "Sandbox", // Default to Sandbox for TestFlight testing
-    } = body;
-
-    let uploadedTransactionInfo: Partial<AppleTransactionInfo> | null = null;
-    if (typeof jws === "string" && jws.trim().length > 0) {
       try {
-        uploadedTransactionInfo = decodeAppleJWS(jws) as Partial<
-          AppleTransactionInfo
-        >;
+        if (req.method !== "POST") {
+          console.log("[apple-verify] Rejecting non-POST method");
+          return json({ error: "Method not allowed" }, 405);
+        }
+
+        if (!supabaseAdmin) {
+          console.log("[apple-verify] supabaseAdmin not configured");
+          return json({ error: "Service not configured" }, 503);
+        }
+
+        const {
+          data: { user },
+          error: authError,
+        } = await ctx.supabase.auth.getUser();
+        console.log(
+          `[apple-verify] getUser result - user: ${user?.id ?? "null"}, error: ${
+            authError?.message ?? "none"
+          }`,
+        );
+
+        if (authError || !user) {
+          return json({ error: "Invalid or expired token" }, 401);
+        }
+
+        // Parse request body
+        const body = await req.json();
+        const {
+          jws,
+          transactionId,
+          originalTransactionId,
+          productId,
+          priceDisplay, // Localized price string from StoreKit (e.g., "29,00 kr")
+          environment = "Sandbox", // Default to Sandbox for TestFlight testing
+        } = body;
+
+        let uploadedTransactionInfo: Partial<AppleTransactionInfo> | null =
+          null;
+        if (typeof jws === "string" && jws.trim().length > 0) {
+          try {
+            uploadedTransactionInfo = decodeAppleJWS(
+              jws,
+            ) as Partial<AppleTransactionInfo>;
+          } catch (e) {
+            console.error(
+              "[apple-verify] Uploaded JWS decode failed:",
+              e instanceof Error ? e.message : e,
+            );
+            return json({ error: "Invalid transaction JWS" }, 400);
+          }
+        }
+
+        const signedTransactionId = uploadedTransactionInfo?.transactionId;
+        if (uploadedTransactionInfo && !signedTransactionId) {
+          return json(
+            {
+              error: "Uploaded transaction JWS is missing transactionId",
+            },
+            400,
+          );
+        }
+
+        // Validate required fields. Prefer the StoreKit JWS transaction ID when present.
+        if (!signedTransactionId && !transactionId && !originalTransactionId) {
+          return json(
+            {
+              error: "jws, transactionId, or originalTransactionId required",
+            },
+            400,
+          );
+        }
+
+        if (productId && !ALLOWED_APPLE_PRODUCTS.includes(productId)) {
+          return json({ error: "Invalid product ID" }, 400);
+        }
+
+        // Use Apple's signed StoreKit JWS transaction ID when present; client transaction IDs are
+        // only a legacy fallback and must still pass appAccountToken ownership binding below.
+        const txnToVerify =
+          signedTransactionId ?? transactionId ?? originalTransactionId;
+        const environmentToVerify = normalizeAppleEnvironment(
+          uploadedTransactionInfo?.environment ?? environment,
+        );
+
+        // Verify with Apple
+        console.log(
+          `[apple-verify] Verifying transaction ${txnToVerify} for user ${user.id}`,
+        );
+        const result = await verifyTransactionWithApple(
+          txnToVerify,
+          environmentToVerify,
+        );
+
+        if (!result) {
+          return json({ error: "Transaction verification failed" }, 400);
+        }
+
+        const { transactionInfo, renewalInfo } = result;
+
+        const jwsMatch = assertUploadedJWSMatchesApple(
+          uploadedTransactionInfo,
+          transactionInfo,
+        );
+        if (!jwsMatch.ok) {
+          return json(
+            { error: jwsMatch.error ?? "Uploaded transaction mismatch" },
+            400,
+          );
+        }
+
+        const ownership = await assertTransactionBelongsToUser(
+          user.id,
+          transactionInfo,
+        );
+        if (!ownership.ok) {
+          return json(
+            {
+              error: ownership.error ?? "Apple transaction ownership mismatch",
+            },
+            ownership.status ?? 403,
+          );
+        }
+
+        // Validate bundle ID
+        if (transactionInfo.bundleId !== APPLE_APP_BUNDLE_ID) {
+          console.error(
+            `[apple-verify] Bundle ID mismatch: ${transactionInfo.bundleId}`,
+          );
+          return json({ error: "Invalid bundle ID" }, 400);
+        }
+
+        // Validate product ID if provided
+        if (productId && transactionInfo.productId !== productId) {
+          console.warn(
+            `[apple-verify] Product ID mismatch: expected ${productId}, got ${transactionInfo.productId}`,
+          );
+        }
+
+        // Validate product is allowed
+        if (!ALLOWED_APPLE_PRODUCTS.includes(transactionInfo.productId)) {
+          console.error(
+            `[apple-verify] Unknown product ID: ${transactionInfo.productId}`,
+          );
+          return json({ error: "Unknown product ID" }, 400);
+        }
+
+        // ---------- Consumable handling ----------
+        const consumableCredits = CONSUMABLE_CREDITS[transactionInfo.productId];
+        if (consumableCredits !== undefined) {
+          const creditResult = await creditConsumable(
+            user.id,
+            transactionInfo,
+            consumableCredits,
+          );
+          if (!creditResult.success) {
+            return json(
+              {
+                error: creditResult.error ?? "Failed to credit consumable",
+              },
+              500,
+            );
+          }
+          console.log(
+            `[apple-verify] Consumable processed: user=${user.id}, credits=${consumableCredits}, alreadyCredited=${creditResult.alreadyCredited}`,
+          );
+          return json({
+            ok: true,
+            type: "consumable",
+            credits: consumableCredits,
+            alreadyCredited: creditResult.alreadyCredited,
+          });
+        }
+
+        // ---------- Subscription handling ----------
+        // Upsert subscription
+        const upsertResult = await upsertAppleSubscription(
+          user.id,
+          transactionInfo,
+          renewalInfo,
+          priceDisplay ?? null,
+        );
+
+        if (!upsertResult.success) {
+          return json(
+            {
+              error: upsertResult.error ?? "Failed to save subscription",
+            },
+            upsertResult.status ?? 500,
+          );
+        }
+
+        // Determine entitlement status
+        const { status, isEntitled } = determineSubscriptionStatus(
+          transactionInfo,
+          renewalInfo,
+        );
+
+        console.log(
+          `[apple-verify] Success: user=${user.id}, status=${status}, entitled=${isEntitled}`,
+        );
+
+        return json({
+          ok: true,
+          entitled: isEntitled,
+          subscription: {
+            status,
+            productId: transactionInfo.productId,
+            internalProductId: mapAppleProductToInternal(
+              transactionInfo.productId,
+            ),
+            expiresAt: transactionInfo.expiresDate
+              ? new Date(transactionInfo.expiresDate).toISOString()
+              : null,
+            environment: transactionInfo.environment,
+            autoRenewEnabled: renewalInfo?.autoRenewStatus === 1,
+          },
+        });
       } catch (e) {
         console.error(
-          "[apple-verify] Uploaded JWS decode failed:",
+          "[apple-verify] Exception:",
           e instanceof Error ? e.message : e,
         );
-        return json({ error: "Invalid transaction JWS" }, 400);
+        console.error(
+          "[apple-verify] Stack:",
+          e instanceof Error ? e.stack : "no stack",
+        );
+        return json({ error: "Internal server error" }, 500);
       }
-    }
-
-    const signedTransactionId = uploadedTransactionInfo?.transactionId;
-    if (uploadedTransactionInfo && !signedTransactionId) {
-      return json({
-        error: "Uploaded transaction JWS is missing transactionId",
-      }, 400);
-    }
-
-    // Validate required fields. Prefer the StoreKit JWS transaction ID when present.
-    if (!signedTransactionId && !transactionId && !originalTransactionId) {
-      return json({
-        error: "jws, transactionId, or originalTransactionId required",
-      }, 400);
-    }
-
-    if (productId && !ALLOWED_APPLE_PRODUCTS.includes(productId)) {
-      return json({ error: "Invalid product ID" }, 400);
-    }
-
-    // Use Apple's signed StoreKit JWS transaction ID when present; client transaction IDs are
-    // only a legacy fallback and must still pass appAccountToken ownership binding below.
-    const txnToVerify = signedTransactionId ?? transactionId ??
-      originalTransactionId;
-    const environmentToVerify = normalizeAppleEnvironment(
-      uploadedTransactionInfo?.environment ?? environment,
-    );
-
-    // Verify with Apple
-    console.log(
-      `[apple-verify] Verifying transaction ${txnToVerify} for user ${user.id}`,
-    );
-    const result = await verifyTransactionWithApple(
-      txnToVerify,
-      environmentToVerify,
-    );
-
-    if (!result) {
-      return json({ error: "Transaction verification failed" }, 400);
-    }
-
-    const { transactionInfo, renewalInfo } = result;
-
-    const jwsMatch = assertUploadedJWSMatchesApple(
-      uploadedTransactionInfo,
-      transactionInfo,
-    );
-    if (!jwsMatch.ok) {
-      return json(
-        { error: jwsMatch.error ?? "Uploaded transaction mismatch" },
-        400,
-      );
-    }
-
-    const ownership = await assertTransactionBelongsToUser(
-      user.id,
-      transactionInfo,
-    );
-    if (!ownership.ok) {
-      return json({
-        error: ownership.error ?? "Apple transaction ownership mismatch",
-      }, ownership.status ?? 403);
-    }
-
-    // Validate bundle ID
-    if (transactionInfo.bundleId !== APPLE_APP_BUNDLE_ID) {
-      console.error(
-        `[apple-verify] Bundle ID mismatch: ${transactionInfo.bundleId}`,
-      );
-      return json({ error: "Invalid bundle ID" }, 400);
-    }
-
-    // Validate product ID if provided
-    if (productId && transactionInfo.productId !== productId) {
-      console.warn(
-        `[apple-verify] Product ID mismatch: expected ${productId}, got ${transactionInfo.productId}`,
-      );
-    }
-
-    // Validate product is allowed
-    if (!ALLOWED_APPLE_PRODUCTS.includes(transactionInfo.productId)) {
-      console.error(
-        `[apple-verify] Unknown product ID: ${transactionInfo.productId}`,
-      );
-      return json({ error: "Unknown product ID" }, 400);
-    }
-
-    // ---------- Consumable handling ----------
-    const consumableCredits = CONSUMABLE_CREDITS[transactionInfo.productId];
-    if (consumableCredits !== undefined) {
-      const creditResult = await creditConsumable(
-        user.id,
-        transactionInfo,
-        consumableCredits,
-      );
-      if (!creditResult.success) {
-        return json({
-          error: creditResult.error ?? "Failed to credit consumable",
-        }, 500);
-      }
-      console.log(
-        `[apple-verify] Consumable processed: user=${user.id}, credits=${consumableCredits}, alreadyCredited=${creditResult.alreadyCredited}`,
-      );
-      return json({
-        ok: true,
-        type: "consumable",
-        credits: consumableCredits,
-        alreadyCredited: creditResult.alreadyCredited,
-      });
-    }
-
-    // ---------- Subscription handling ----------
-    // Upsert subscription
-    const upsertResult = await upsertAppleSubscription(
-      user.id,
-      transactionInfo,
-      renewalInfo,
-      priceDisplay ?? null,
-    );
-
-    if (!upsertResult.success) {
-      return json({
-        error: upsertResult.error ?? "Failed to save subscription",
-      }, upsertResult.status ?? 500);
-    }
-
-    // Determine entitlement status
-    const { status, isEntitled } = determineSubscriptionStatus(
-      transactionInfo,
-      renewalInfo,
-    );
-
-    console.log(
-      `[apple-verify] Success: user=${user.id}, status=${status}, entitled=${isEntitled}`,
-    );
-
-    return json({
-      ok: true,
-      entitled: isEntitled,
-      subscription: {
-        status,
-        productId: transactionInfo.productId,
-        internalProductId: mapAppleProductToInternal(transactionInfo.productId),
-        expiresAt: transactionInfo.expiresDate
-          ? new Date(transactionInfo.expiresDate).toISOString()
-          : null,
-        environment: transactionInfo.environment,
-        autoRenewEnabled: renewalInfo?.autoRenewStatus === 1,
-      },
-    });
-  } catch (e) {
-    console.error(
-      "[apple-verify] Exception:",
-      e instanceof Error ? e.message : e,
-    );
-    console.error(
-      "[apple-verify] Stack:",
-      e instanceof Error ? e.stack : "no stack",
-    );
-    return json({ error: "Internal server error" }, 500);
-  }
-});
+    },
+  ),
+};
 
 // ---------- Response Helpers ----------
 function json(obj: Record<string, any>, status = 200) {
