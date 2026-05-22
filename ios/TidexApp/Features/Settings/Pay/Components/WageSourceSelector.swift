@@ -192,7 +192,7 @@ private struct WageTypeToggleButton: View {
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
           .stroke(
-            isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
+            isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 1)
       )
     }
     .buttonStyle(.plain)
@@ -224,7 +224,7 @@ private struct TariffLevelSelectionRow: View {
         // Selection indicator
         ZStack {
           Circle()
-            .stroke(isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 2)
+            .stroke(isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 1)
             .frame(width: Spacing.iconSize, height: Spacing.iconSize)
 
           if isSelected {
@@ -240,7 +240,7 @@ private struct TariffLevelSelectionRow: View {
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
           .stroke(
-            isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
+            isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 1)
       )
     }
     .buttonStyle(.plain)

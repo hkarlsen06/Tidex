@@ -18,7 +18,7 @@ struct WorkplaceNameText: View {
     if let badgeColor = resolvedBadgeColor {
       Text(name)
         .font(font)
-        .foregroundColor(badgeForegroundColor)
+        .foregroundColor(badgeForegroundColor(for: badgeColor))
         .lineLimit(lineLimit)
         .padding(.horizontal, badgeHorizontalPadding)
         .padding(.vertical, badgeVerticalPadding)
@@ -44,8 +44,44 @@ struct WorkplaceNameText: View {
     return nil
   }
 
-  private var badgeForegroundColor: Color {
-    colorScheme == .dark ? .white : .black
+  private func badgeForegroundColor(for badgeColor: UIColor) -> Color {
+    let resolvedColor = badgeColor.resolvedColor(
+      with: UITraitCollection(userInterfaceStyle: userInterfaceStyle))
+    let luminance = Self.relativeLuminance(for: resolvedColor)
+    let contrastWithWhite = Self.contrastRatio(luminance, 1)
+    let contrastWithBlack = Self.contrastRatio(luminance, 0)
+    return contrastWithWhite >= contrastWithBlack ? .white : .black
+  }
+
+  private var userInterfaceStyle: UIUserInterfaceStyle {
+    colorScheme == .dark ? .dark : .light
+  }
+
+  private static func contrastRatio(_ firstLuminance: CGFloat, _ secondLuminance: CGFloat)
+    -> CGFloat
+  {
+    (max(firstLuminance, secondLuminance) + 0.05) / (min(firstLuminance, secondLuminance) + 0.05)
+  }
+
+  private static func relativeLuminance(for color: UIColor) -> CGFloat {
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    var alpha: CGFloat = 0
+
+    guard color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+      return 0
+    }
+
+    return 0.2126 * linearizedSRGB(red)
+      + 0.7152 * linearizedSRGB(green)
+      + 0.0722 * linearizedSRGB(blue)
+  }
+
+  private static func linearizedSRGB(_ component: CGFloat) -> CGFloat {
+    component <= 0.03928
+      ? component / 12.92
+      : pow((component + 0.055) / 1.055, 2.4)
   }
 }
 

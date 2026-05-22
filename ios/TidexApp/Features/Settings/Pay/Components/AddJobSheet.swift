@@ -302,7 +302,7 @@ struct AddJobSheet: View {
                   .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
                   .overlay(
                     RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                      .stroke(Color.tidexBlue, lineWidth: 2)
+                      .stroke(Color.tidexBlue, lineWidth: 1)
                   )
                   .onChange(of: isPaydayInputFocused) { _, focused in
                     if !focused {

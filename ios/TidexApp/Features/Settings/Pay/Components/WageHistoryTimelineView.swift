@@ -377,7 +377,7 @@ private struct DashedLineRect: View {
         path.move(to: CGPoint(x: geometry.size.width / 2, y: 0))
         path.addLine(to: CGPoint(x: geometry.size.width / 2, y: geometry.size.height))
       }
-      .stroke(color, style: StrokeStyle(lineWidth: 2, dash: [4, 4]))
+      .stroke(color, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
     }
   }
 }

@@ -257,7 +257,7 @@ private struct BreakMethodRow: View {
         // Selection indicator
         ZStack {
           Circle()
-            .stroke(isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 2)
+            .stroke(isSelected ? Color.tidexBrandPrimary : Color.tidexBorder, lineWidth: 1)
             .frame(width: 20, height: 20)
 
           if isSelected {

@@ -103,7 +103,7 @@ struct ChatBubbleCard<Content: View>: View {
       .overlay(
         bubbleShape
           .stroke(
-            isCurrentUser ? Color.clear : Color.tidexBorderSubtle,
+            isCurrentUser ? Color.clear : Color.tidexBorderSubtle.opacity(0.45),
             lineWidth: 1
           )
       )
