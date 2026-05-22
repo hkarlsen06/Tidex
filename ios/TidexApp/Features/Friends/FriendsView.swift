@@ -209,7 +209,8 @@ struct SharingView: View {
       ManageSharingSheet(
         highlightUserId: highlightUserId,
         autoExpandAddForm: autoExpandAddForm,
-        initialSnapshot: viewModel.hasFinishedInitialSharersLoad ? viewModel.managementSnapshot : nil,
+        initialSnapshot: viewModel.hasFinishedInitialSharersLoad
+          ? viewModel.managementSnapshot : nil,
         onBootstrapRefresh: { bootstrap in
           await viewModel.applyFriendsTabBootstrap(bootstrap)
         },
@@ -439,7 +440,7 @@ struct SharingView: View {
       // Not handled here - AddShiftView will handle this
       break
 
-    case .wagey, .feedback, .adminFeedback, .adminReport:
+    case .wagey, .settings, .feedback, .adminFeedback, .adminReport:
       // Not handled here - MainTabView handles these
       break
     }

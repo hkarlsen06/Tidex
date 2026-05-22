@@ -840,7 +840,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     {
       Task { @MainActor in
         SharedMonthContext.shared.preselectedDate = dateISO
-        AppCoordinator.shared.pendingDeepLink = .addShift
+        AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil)
       }
     }
     // Handle shift reminder notification taps
@@ -849,7 +849,12 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     {
       // Navigate to shifts view with the shift highlighted
       Task { @MainActor in
-        AppCoordinator.shared.pendingDeepLink = .shifts(dates: [shiftDate], action: .highlight)
+        let shiftId = userInfo["shift_id"] as? String
+        AppCoordinator.shared.pendingDeepLink = .shifts(
+          dates: [shiftDate],
+          shiftIds: shiftId.map { [$0] },
+          action: .highlight
+        )
       }
     }
     // Handle shared shift notifications (created, updated, deleted)

@@ -256,7 +256,11 @@ struct AddShiftView: View {
       viewModel.onShiftsCreated = { completion in
         switch completion {
         case .single(let dates):
-          coordinator.pendingDeepLink = .shifts(dates: dates.sorted(), action: .highlight)
+          coordinator.pendingDeepLink = .shifts(
+            dates: dates.sorted(),
+            shiftIds: nil,
+            action: .highlight
+          )
           selectedTab = .shifts
         case .recurring:
           selectedTab = .shifts
@@ -381,7 +385,10 @@ struct AddShiftView: View {
   // MARK: - Deep Link Handling
 
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-    guard case .addShift = deepLink else { return }
+    guard case .addShift(let mode) = deepLink else { return }
+    if let mode {
+      viewModel.applyDeepLinkMode(mode)
+    }
     applyPendingPreselectedDateWithoutAnimation()
     coordinator.clearPendingDeepLink()
   }

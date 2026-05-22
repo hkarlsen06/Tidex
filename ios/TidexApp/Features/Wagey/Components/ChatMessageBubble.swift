@@ -26,6 +26,15 @@ struct ChatMessageBubble: View {
     effectiveGroupContext.joinsNext ? Spacing.micro : Spacing.xxs
   }
 
+  private var containsDeeplinkButton: Bool {
+    renderBlocks.contains { block in
+      if case .text(let text) = block {
+        return WageyDeeplinkTextSplitter.containsDeeplink(in: text)
+      }
+      return false
+    }
+  }
+
   var body: some View {
     ChatMessageRow(isCurrentUser: message.role == .user) {
       // Render content blocks in chronological order
@@ -36,7 +45,7 @@ struct ChatMessageBubble: View {
             if message.role == .user {
               userMessageContent(text: text)
             } else {
-              assistantMessageContent(text: text)
+              assistantMessageSegments(text: text, forceStandaloneBubbles: containsDeeplinkButton)
             }
           }
         case .toolCall(let toolCall):
@@ -78,8 +87,30 @@ struct ChatMessageBubble: View {
     }
   }
 
-  private func assistantMessageContent(text: String) -> some View {
-    ChatBubbleCard(isCurrentUser: false, groupContext: effectiveGroupContext) {
+  @ViewBuilder
+  private func assistantMessageSegments(text: String, forceStandaloneBubbles: Bool) -> some View {
+    let segments = WageyDeeplinkTextSplitter.split(text)
+    ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+      switch segment {
+      case .text(let text):
+        assistantMessageContent(
+          text: text,
+          forceStandaloneBubble: forceStandaloneBubbles || segments.count > 1
+        )
+      case .deeplink(let title, let url):
+        WageyDeeplinkButton(title: title, url: url)
+      }
+    }
+  }
+
+  private func assistantMessageContent(text: String, forceStandaloneBubble: Bool = false)
+    -> some View
+  {
+    ChatBubbleCard(
+      isCurrentUser: false,
+      groupContext: forceStandaloneBubble
+        ? .standalone(isCurrentUser: false) : effectiveGroupContext
+    ) {
       FormattedMessageContent(content: text)
     }
     .contextMenu {
@@ -102,7 +133,7 @@ struct ChatMessageBubble: View {
           .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .strokeBorder(
-                isUser ? Color.tidexTextOnBrand.opacity(0.22) : Color.tidexBorder,
+                isUser ? Color.tidexTextOnBrand.opacity(0.22) : Color.tidexBorder.opacity(0.45),
                 lineWidth: 1
               )
           )
@@ -132,6 +163,80 @@ struct ChatMessageBubble: View {
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xxs)
+  }
+}
+
+private struct WageyDeeplinkButton: View {
+  let title: String
+  let url: URL
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  var body: some View {
+    Button {
+      Task { @MainActor in
+        AppCoordinator.shared.handleDeepLink(url)
+      }
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "arrow.up.forward.app")
+          .font(.tidexFootnoteMedium)
+          .foregroundColor(.tidexBlue)
+          .frame(width: 28, height: 28)
+          .background(Color.tidexBlue.opacity(0.12))
+          .clipShape(Circle())
+          .accessibilityHidden(true)
+
+        Text(title)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(2)
+          .multilineTextAlignment(.leading)
+
+        Spacer(minLength: 0)
+
+        Image(systemName: "chevron.right")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.tidexBlue)
+          .accessibilityHidden(true)
+      }
+      .padding(.leading, Spacing.xs)
+      .padding(.trailing, Spacing.sm)
+      .padding(.vertical, Spacing.xxs)
+      .frame(minHeight: 44)
+      .frame(maxWidth: 320, alignment: .leading)
+      .tidexGlass(
+        shape: .capsule,
+        tint: Color.tidexBlue.opacity(0.16),
+        clear: true,
+        interactive: true,
+        fallbackOpacity: 0.9
+      )
+      .shadow(color: Color.tidexBlue.opacity(0.08), radius: 14, y: 5)
+      .contentShape(Capsule())
+    }
+    .buttonStyle(WageyDeeplinkButtonStyle(reduceMotion: reduceMotion))
+    .accessibilityLabel(Text(title))
+    .contextMenu {
+      Button {
+        UIPasteboard.general.string = url.absoluteString
+      } label: {
+        Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+      }
+    }
+  }
+}
+
+private struct WageyDeeplinkButtonStyle: ButtonStyle {
+  let reduceMotion: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+      .animation(
+        reduceMotion ? nil : .easeOut(duration: 0.12),
+        value: configuration.isPressed
+      )
   }
 }
 
@@ -408,6 +513,15 @@ struct StreamingMessageBubble: View {
     effectiveGroupContext.joinsNext ? Spacing.micro : Spacing.xxs
   }
 
+  private var containsDeeplinkButton: Bool {
+    renderBlocks.contains { block in
+      if case .text(let text) = block {
+        return WageyDeeplinkTextSplitter.containsDeeplink(in: text)
+      }
+      return false
+    }
+  }
+
   var body: some View {
     HStack {
       VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -422,7 +536,7 @@ struct StreamingMessageBubble: View {
             switch block {
             case .text(let text):
               if !text.isEmpty {
-                streamingTextView(text: text)
+                streamingTextSegments(text: text, forceStandaloneBubbles: containsDeeplinkButton)
               }
             case .toolCall(let toolCall):
               ToolStatusView(toolCall: toolCall)
@@ -447,18 +561,42 @@ struct StreamingMessageBubble: View {
     .padding(.bottom, bottomPadding)
   }
 
-  private func streamingTextView(text: String) -> some View {
+  @ViewBuilder
+  private func streamingTextSegments(text: String, forceStandaloneBubbles: Bool) -> some View {
+    let segments = WageyDeeplinkTextSplitter.split(text)
+    ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+      switch segment {
+      case .text(let text):
+        streamingTextView(
+          text: text,
+          forceStandaloneBubble: forceStandaloneBubbles || segments.count > 1
+        )
+      case .deeplink(let title, let url):
+        WageyDeeplinkButton(title: title, url: url)
+      }
+    }
+  }
+
+  private func streamingTextView(text: String, forceStandaloneBubble: Bool = false) -> some View {
     Group {
       if let attributedString = try? AttributedString(
         markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
       {
-        ChatBubbleCard(isCurrentUser: false, groupContext: effectiveGroupContext) {
+        ChatBubbleCard(
+          isCurrentUser: false,
+          groupContext: forceStandaloneBubble
+            ? .standalone(isCurrentUser: false) : effectiveGroupContext
+        ) {
           Text(attributedString)
             .font(.tidexBody)
             .foregroundColor(.tidexTextPrimary)
         }
       } else {
-        ChatBubbleCard(isCurrentUser: false, groupContext: effectiveGroupContext) {
+        ChatBubbleCard(
+          isCurrentUser: false,
+          groupContext: forceStandaloneBubble
+            ? .standalone(isCurrentUser: false) : effectiveGroupContext
+        ) {
           Text(text)
             .font(.tidexBody)
             .foregroundColor(.tidexTextPrimary)

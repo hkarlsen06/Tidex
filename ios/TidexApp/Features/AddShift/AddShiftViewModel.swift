@@ -59,6 +59,7 @@ final class AddShiftViewModel: ObservableObject {
   private var eventRangeAnchorDate: Date?
   private var didEditEventCalendarSelectionSinceEnteringEventMode = false
   private var isSyncingCalendarSelectionAcrossModes = false
+  private var pendingDeepLinkMode: AddShiftMode?
 
   // MARK: - Mode State
 
@@ -928,6 +929,7 @@ final class AddShiftViewModel: ObservableObject {
     // Check for pre-selected date from SharedMonthContext (e.g., tapping empty day in Shifts tab)
     applyPreselectedDate()
     hasLoadedInitialData = true
+    applyPendingDeepLinkMode()
 
     // Trigger view update now that cached data is loaded
     cacheVersion += 1
@@ -970,6 +972,20 @@ final class AddShiftViewModel: ObservableObject {
     // preselected date. Otherwise the restored draft can overwrite the tapped date.
     guard hasLoadedInitialData else { return }
     applyPreselectedDate()
+  }
+
+  /// Apply a mode requested by external navigation.
+  /// If initial load is still restoring a draft, defer until loadData() completes so
+  /// draft restoration cannot overwrite the requested mode.
+  func applyDeepLinkMode(_ mode: AddShiftMode) {
+    pendingDeepLinkMode = mode
+    applyPendingDeepLinkMode()
+  }
+
+  private func applyPendingDeepLinkMode() {
+    guard hasLoadedInitialData, let pendingDeepLinkMode else { return }
+    self.pendingDeepLinkMode = nil
+    mode = pendingDeepLinkMode
   }
 
   /// Apply and consume the pre-selected date from SharedMonthContext

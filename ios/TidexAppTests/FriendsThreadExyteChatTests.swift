@@ -115,7 +115,7 @@ final class FriendsThreadExyteChatTests: XCTestCase {
 
     XCTAssertEqual(
       deepLink,
-      .shifts(dates: ["2026-04-04"], action: .highlight)
+      .shifts(dates: ["2026-04-04"], shiftIds: nil, action: .highlight)
     )
   }
 

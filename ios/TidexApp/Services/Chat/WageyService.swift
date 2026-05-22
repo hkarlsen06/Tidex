@@ -11,6 +11,7 @@ private struct WageyStreamRequestContext {
   let userName: String?
   let compaction: String?
   let clientCapabilities: [String]
+  let clientDeepLinks: [ChatAPIRequest.ClientDeepLink]
   let appVersion: String?
 }
 
@@ -33,6 +34,13 @@ private struct ChatAPIRequest: Encodable {
     let platform: String
     let appVersion: String?
     let capabilities: [String]
+    let deeplinks: [ClientDeepLink]
+  }
+
+  struct ClientDeepLink: Encodable {
+    let destination: String
+    let url: String
+    let parameters: [String]
   }
 
   struct APIMessage: Encodable {
@@ -144,6 +152,129 @@ final class WageyService: ObservableObject {
     "rich_sources_v1",
     "rich_built_in_tool_events_v1",
     "message_break_v1",
+    "deeplinks_v1",
+  ]
+  fileprivate static let clientDeepLinks = [
+    ChatAPIRequest.ClientDeepLink(
+      destination: "shifts",
+      url: "tidex://shifts",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "shifts.date",
+      url: "tidex://shifts?dates=YYYY-MM-DD&action=highlight",
+      parameters: ["dates", "action"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "shifts.shift",
+      url: "tidex://shifts?dates=YYYY-MM-DD&shiftIds=SHIFT_ID&action=highlight",
+      parameters: ["dates", "shiftIds", "action"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "add_shift",
+      url: "tidex://add-shift",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "add_shift.single",
+      url: "tidex://add-shift?mode=single",
+      parameters: ["mode"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "add_shift.events",
+      url: "tidex://add-shift?mode=events",
+      parameters: ["mode"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "add_shift.recurring",
+      url: "tidex://add-shift?mode=recurring",
+      parameters: ["mode"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "sharing",
+      url: "tidex://sharing",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "sharing.user",
+      url: "tidex://sharing?user=USER_ID&dates=YYYY-MM-DD",
+      parameters: ["user", "dates"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "sharing.manage",
+      url: "tidex://sharing/manage?highlight=USER_ID",
+      parameters: ["highlight"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings",
+      url: "tidex://settings",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.profile",
+      url: "tidex://settings/profile",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.security",
+      url: "tidex://settings/security",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.subscription",
+      url: "tidex://settings/subscription",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.notifications",
+      url: "tidex://settings/notifications",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.appearance",
+      url: "tidex://settings/appearance",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.pay",
+      url: "tidex://settings/pay?jobId=JOB_ID",
+      parameters: ["jobId"]
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.recurring_shifts",
+      url: "tidex://settings/recurring-shifts",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.calendar_sync",
+      url: "tidex://settings/calendar-sync",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.data",
+      url: "tidex://settings/data",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.feedback",
+      url: "tidex://settings/feedback",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "settings.admin",
+      url: "tidex://settings/admin",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "admin",
+      url: "tidex://admin",
+      parameters: []
+    ),
+    ChatAPIRequest.ClientDeepLink(
+      destination: "admin.report",
+      url: "tidex://admin?tab=reports&reportId=REPORT_ID",
+      parameters: ["tab", "reportId"]
+    ),
   ]
 
   @Published private(set) var isStreaming = false
@@ -196,6 +327,7 @@ final class WageyService: ObservableObject {
             userName: userName,
             compaction: compaction,
             clientCapabilities: Self.clientCapabilities,
+            clientDeepLinks: Self.clientDeepLinks,
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
           ),
           continuation: continuation
@@ -395,7 +527,8 @@ private actor WageyStreamWorker {
         client: ChatAPIRequest.ClientContext(
           platform: "ios",
           appVersion: context.appVersion,
-          capabilities: context.clientCapabilities
+          capabilities: context.clientCapabilities,
+          deeplinks: context.clientDeepLinks
         )
       )
     )
