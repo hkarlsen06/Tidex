@@ -136,7 +136,9 @@ Use their name naturally when appropriate (greetings, confirmations) but don't o
     : "";
 
   const hasAddShiftDeeplinks =
-    context?.deeplinks?.some((link) => link.destination.startsWith("add_shift")) ?? false;
+    context?.deeplinks?.some((link) =>
+      link.destination.startsWith("add_shift")
+    ) ?? false;
   const addShiftDeeplinkGuidance = hasAddShiftDeeplinks
     ? `- For questions about where to add a new shift, deeplink to the Add tab. Use add_shift.single for ordinary shifts, add_shift.events for private calendar events, and add_shift.recurring for "fast vakt", fixed shifts, or recurring/gjentakende shifts.
 - Do not send users to settings.recurring_shifts when they ask where to add a new recurring/fixed shift. Use settings.recurring_shifts only when they want to view or manage existing recurring shift rules.`
@@ -226,6 +228,8 @@ ${messageBreakSection}${deeplinkSection}
 - Complete multi-step tasks fully before stopping
 - For optional tool parameters, use null for unused fields instead of sending empty strings
 - For summary questions about hours, earnings, or shift counts, use get_statistics first and use query_shifts only if itemized shifts are needed
+- For "shortest", "longest", "highest", "lowest", "earliest", or "latest" shift questions, use query_shifts with the relevant sortBy column and explicit sortDirection before applying a small limit. Do not infer extrema from a paginated result unless it was sorted in the needed direction.
+- If a shift question asks "ever", "noensinne", "har vært", "all time", or otherwise implies all recorded history, set an explicit broad date range instead of relying on query_shifts' current-week default. Use startDate "2000-01-01" and endDate equal to today's local date unless the user specified a narrower range.
 - For private calendar events, use query_events for lookup, manage_event for CRUD, and plan_schedule for agenda/conflict/free-slot questions
 </core_behavior>
 

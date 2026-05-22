@@ -81,9 +81,23 @@ export const queryShiftsSchema = z.object({
   maxTime: optionalTimeFilter,
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
   sortBy: z
-    .enum(["date_latest", "date_earliest", "date", "earnings", "hours"])
+    .enum([
+      "date_latest",
+      "date_earliest",
+      "date",
+      "day",
+      "start",
+      "end",
+      "hours",
+      "earnings",
+      "gross",
+      "net",
+      "workplace",
+      "id",
+    ])
     .optional()
     .default("date_latest"),
+  sortDirection: z.enum(["asc", "desc"]).optional(),
   // Optional workplace/job filter (full UUID from list_workplaces)
   jobId: optionalUuidFilter,
 });
@@ -405,9 +419,23 @@ export const queryFriendShiftsSchema = z.object({
   maxTime: optionalTimeFilter,
   weekdays: z.array(z.number().int().min(0).max(6)).optional(),
   sortBy: z
-    .enum(["date_latest", "date_earliest", "date", "earnings", "hours"])
+    .enum([
+      "date_latest",
+      "date_earliest",
+      "date",
+      "day",
+      "start",
+      "end",
+      "hours",
+      "earnings",
+      "gross",
+      "net",
+      "workplace",
+      "id",
+    ])
     .optional()
     .default("date_latest"),
+  sortDirection: z.enum(["asc", "desc"]).optional(),
   jobId: optionalUuidFilter,
 });
 
@@ -743,6 +771,7 @@ Default behavior: Without parameters, returns shifts for the current week.
 
 Important:
 - For aggregate summaries, use get_statistics first and use query_shifts only when you need itemized shift rows
+- For all-time wording like "ever", "noensinne", or "har vært", pass an explicit broad date range (startDate "2000-01-01", endDate today's local date). Otherwise this tool defaults to the current week.
 - Use null for optional filters you are not using
 - Never send empty strings for startDate, endDate, minTime, maxTime, or jobId
 
@@ -759,9 +788,9 @@ Filters:
 - Sorting:
   - date_latest (default): newest first
   - date_earliest: oldest first
-  - earnings: highest first
-  - hours: highest first
   - date: legacy alias for date_latest
+  - day, start, end, hours, earnings/gross, net, workplace, id: sortable shift columns
+  - sortDirection: asc or desc. Use hours + asc for shortest shifts, hours + desc for longest shifts, gross/earnings + desc for highest gross pay.
 
 Use cases:
 - Before update/delete: Query to get shift IDs
@@ -802,9 +831,28 @@ Use cases:
         },
         sortBy: {
           type: "string",
-          enum: ["date_latest", "date_earliest", "date", "earnings", "hours"],
+          enum: [
+            "date_latest",
+            "date_earliest",
+            "date",
+            "day",
+            "start",
+            "end",
+            "hours",
+            "earnings",
+            "gross",
+            "net",
+            "workplace",
+            "id",
+          ],
           description:
-            "Sort order (default: date_latest; date is a legacy alias for date_latest)",
+            "Column to sort by (default: date_latest; date is a legacy alias for date_latest; earnings is an alias for gross)",
+        },
+        sortDirection: {
+          type: "string",
+          enum: ["asc", "desc"],
+          description:
+            "Optional sort direction. Use asc for shortest/lowest/earliest and desc for longest/highest/latest. Legacy defaults: date_latest/date desc, date_earliest asc, hours/earnings desc.",
         },
         jobId: {
           type: "string",
@@ -2724,13 +2772,14 @@ Filters match query_shifts:
 - sortBy:
   - date_latest (default): newest first
   - date_earliest: oldest first
-  - earnings: highest first
-  - hours: highest first
   - date: legacy alias for date_latest
+  - day, start, end, hours, earnings/gross, net, workplace, id: sortable shift columns
+- sortDirection: asc or desc. Use hours + asc for shortest shifts, hours + desc for longest shifts, gross/earnings + desc for highest gross pay.
 - jobId (friend workplace UUID)
 - limit (default 30, max 100)
 
 Important:
+- For all-time wording like "ever", "noensinne", or "har vært", pass an explicit broad date range (startDate "2000-01-01", endDate today's local date). Otherwise this tool defaults to the current week.
 - Use null for optional filters you are not using
 - Never send empty strings for startDate, endDate, minTime, maxTime, or jobId`,
     input_schema: {
@@ -2775,9 +2824,28 @@ Important:
         },
         sortBy: {
           type: "string",
-          enum: ["date_latest", "date_earliest", "date", "earnings", "hours"],
+          enum: [
+            "date_latest",
+            "date_earliest",
+            "date",
+            "day",
+            "start",
+            "end",
+            "hours",
+            "earnings",
+            "gross",
+            "net",
+            "workplace",
+            "id",
+          ],
           description:
-            "Sort order (default: date_latest; date is a legacy alias for date_latest)",
+            "Column to sort by (default: date_latest; date is a legacy alias for date_latest; earnings is an alias for gross)",
+        },
+        sortDirection: {
+          type: "string",
+          enum: ["asc", "desc"],
+          description:
+            "Optional sort direction. Use asc for shortest/lowest/earliest and desc for longest/highest/latest. Legacy defaults: date_latest/date desc, date_earliest asc, hours/earnings desc.",
         },
         jobId: {
           type: "string",
