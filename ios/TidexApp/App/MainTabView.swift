@@ -87,7 +87,7 @@ struct MainTabView: View {
       switch self {
       case .home: return "speedometer"
       case .shifts: return "calendar"
-      case .add: return "plus.circle.fill"
+      case .add: return "calendar.badge.plus"
       case .wagey: return "sparkles"
       case .sharing: return "person.2.fill"
       }
@@ -104,14 +104,24 @@ struct MainTabView: View {
     }
 
     static let orderedTabs: [Tab] = [.home, .shifts, .add, .wagey, .sharing]
+    static let splitTabBarOrderedTabs: [Tab] = [.home, .shifts, .wagey, .sharing, .add]
 
     var index: Int {
       Self.orderedTabs.firstIndex(of: self) ?? 0
     }
 
+    var splitTabBarIndex: Int {
+      Self.splitTabBarOrderedTabs.firstIndex(of: self) ?? 0
+    }
+
     init?(index: Int) {
       guard Self.orderedTabs.indices.contains(index) else { return nil }
       self = Self.orderedTabs[index]
+    }
+
+    init?(splitTabBarIndex: Int) {
+      guard Self.splitTabBarOrderedTabs.indices.contains(splitTabBarIndex) else { return nil }
+      self = Self.splitTabBarOrderedTabs[splitTabBarIndex]
     }
   }
 
@@ -163,50 +173,61 @@ struct MainTabView: View {
           TidexAppBackground()
 
           TabView(selection: tabSelection) {
-            tabHost(for: .home) {
-              DashboardView(selectedTab: tabSelection, showStatsView: $showHomeStats)
+            SwiftUI.Tab(
+              String(localized: Tab.home.localizationKey),
+              systemImage: Tab.home.icon,
+              value: Tab.home
+            ) {
+              tabHost(for: .home) {
+                DashboardView(selectedTab: tabSelection, showStatsView: $showHomeStats)
+              }
             }
-            .tabItem {
-              Label(String(localized: Tab.home.localizationKey), systemImage: Tab.home.icon)
-            }
-            .tag(Tab.home)
 
-            tabHost(for: .shifts) {
-              ShiftsView(selectedTab: tabSelection)
+            SwiftUI.Tab(
+              String(localized: Tab.shifts.localizationKey),
+              systemImage: Tab.shifts.icon,
+              value: Tab.shifts
+            ) {
+              tabHost(for: .shifts) {
+                ShiftsView(selectedTab: tabSelection)
+              }
             }
-            .tabItem {
-              Label(String(localized: Tab.shifts.localizationKey), systemImage: Tab.shifts.icon)
-            }
-            .tag(Tab.shifts)
 
-            tabHost(for: .add) {
-              AddShiftView(selectedTab: tabSelection, isKeyboardVisible: $isKeyboardVisible)
+            SwiftUI.Tab(
+              String(localized: Tab.add.localizationKey),
+              systemImage: Tab.add.icon,
+              value: Tab.add,
+              role: .search
+            ) {
+              tabHost(for: .add) {
+                AddShiftView(selectedTab: tabSelection, isKeyboardVisible: $isKeyboardVisible)
+              }
             }
-            .tabItem {
-              Label(String(localized: Tab.add.localizationKey), systemImage: Tab.add.icon)
-            }
-            .tag(Tab.add)
 
-            tabHost(for: .wagey) {
-              WageyView(selectedTab: tabSelection)
+            SwiftUI.Tab(
+              String(localized: Tab.wagey.localizationKey),
+              systemImage: Tab.wagey.icon,
+              value: Tab.wagey
+            ) {
+              tabHost(for: .wagey) {
+                WageyView(selectedTab: tabSelection)
+              }
             }
-            .tabItem {
-              Label(String(localized: Tab.wagey.localizationKey), systemImage: Tab.wagey.icon)
-            }
-            .tag(Tab.wagey)
 
-            tabHost(for: .sharing) {
-              SharingView(
-                selectedTab: tabSelection, hasSelectedSharer: $sharingHasSelectedSharer)
+            SwiftUI.Tab(
+              String(localized: Tab.sharing.localizationKey),
+              systemImage: friendsTabIcon,
+              value: Tab.sharing
+            ) {
+              tabHost(for: .sharing) {
+                SharingView(
+                  selectedTab: tabSelection, hasSelectedSharer: $sharingHasSelectedSharer)
+              }
             }
-            .tabItem {
-              Label(String(localized: Tab.sharing.localizationKey), systemImage: friendsTabIcon)
-            }
-            .tag(Tab.sharing)
           }
           .background(
-            TabBarTapObserver(selectedIndex: selectedTab.index) { tappedIndex in
-              guard let tappedTab = Tab(index: tappedIndex), tappedTab == selectedTab else {
+            TabBarTapObserver(selectedIndex: selectedTab.splitTabBarIndex) { tappedIndex in
+              guard let tappedTab = Tab(splitTabBarIndex: tappedIndex), tappedTab == selectedTab else {
                 return
               }
               selectionHaptic.selectionChanged()
@@ -476,7 +497,7 @@ struct MainTabView: View {
           disabled: disableHeavyCompositingForHangInvestigation
         )
 
-        // Add button - only on Add tab
+        // Submit button - only on Add tab
         if selectedTab == .add {
           Button {
             handleAddButtonTap()
@@ -487,7 +508,7 @@ struct MainTabView: View {
                   .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
                   .scaleEffect(0.9)
               } else {
-                Image(systemName: "plus")
+                Image(systemName: "checkmark.circle.badge.plus.fill")
                   .font(.tidexHeadline)
                   .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
               }
@@ -506,7 +527,7 @@ struct MainTabView: View {
           )
           .opacity(addShiftCoordinator.canSubmit ? 1.0 : 0.6)
           .transition(.opacity)
-          .accessibilityLabel(Text(.tabsAdd))
+          .accessibilityLabel(Text(.commonSave))
         }
       }
     }

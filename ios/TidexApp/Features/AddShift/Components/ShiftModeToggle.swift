@@ -83,7 +83,7 @@ struct ShiftModeToggle: View {
     case .recurring:
       return "repeat"
     case .events:
-      return "calendar.badge.plus"
+      return "calendar.and.person"
     }
   }
 
