@@ -270,6 +270,20 @@ function createMockClient(db: MockDb, userId: string) {
             ),
             error: null,
           };
+        case "get_tariff_version_for_date": {
+          const targetDate = (args as { p_target_date?: string })
+            .p_target_date ?? "";
+          return {
+            data: [{
+              rates: targetDate >= "2026-05-01" ? { "3": 195.25 } : {
+                "3": 187.46,
+              },
+            }],
+            error: null,
+          };
+        }
+        case "get_tariff_versions":
+          return { data: [{ rates: { "3": 195.25 } }], error: null };
         default:
           throw new Error(`Unexpected rpc: ${name}`);
       }
@@ -321,6 +335,171 @@ function currentWeekRange(): { startDate: string; endDate: string } {
     endDate: end.toISOString().slice(0, 10),
   };
 }
+
+Deno.test("manage_wage_snapshots create copies current default workplace snapshot", async () => {
+  const jobId = "11111111-2222-4333-8444-555555555555";
+  const db: Partial<MockDb> = {
+    jobs: [{
+      id: jobId,
+      user_id: USER_ID,
+      name: "Extra",
+      is_default: true,
+      sort_order: 0,
+      archived_at: null,
+      deleted_at: null,
+    }],
+    wage_snapshots: [
+      {
+        id: "baseline",
+        user_id: USER_ID,
+        job_id: jobId,
+        from_date: null,
+        hourly_wage: 184.54,
+        wage_level: 1,
+        tariff_type_id: "hk_retail",
+        supplements: {
+          rules: [{
+            days: [1, 2, 3, 4, 5],
+            from: "18:00",
+            to: "21:00",
+            rate: 22,
+          }],
+        },
+        tax_enabled: true,
+        tax_percentage: 5,
+        break_enabled: true,
+        break_method: "proportional",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      },
+      {
+        id: "current",
+        user_id: USER_ID,
+        job_id: jobId,
+        from_date: "2026-04-01",
+        hourly_wage: 187.46,
+        wage_level: 3,
+        tariff_type_id: "hk_retail",
+        supplements: {
+          rules: [{ days: [6], from: "18:00", to: "24:00", rate: 110 }],
+        },
+        tax_enabled: false,
+        tax_percentage: 7,
+        break_enabled: false,
+        break_method: "none",
+        break_threshold_hours: 5.5,
+        break_deduction_minutes: 30,
+        deleted_at: null,
+      },
+    ],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_wage_snapshots",
+    JSON.stringify({
+      action: "create",
+      from_date: "2026-06-01",
+      tax_enabled: true,
+      tax_percentage: 5,
+    }),
+  );
+
+  assert(result.success);
+  const created = db.wage_snapshots?.find((snapshot) =>
+    snapshot.from_date === "2026-06-01"
+  );
+  assertEquals(created?.job_id, jobId);
+  assertEquals(created?.hourly_wage, 187.46);
+  assertEquals(created?.wage_level, 3);
+  assertEquals(created?.tariff_type_id, "hk_retail");
+  assertEquals(created?.supplements, {
+    rules: [{ days: [6], from: "18:00", to: "24:00", rate: 110 }],
+  });
+  assertEquals(created?.tax_enabled, true);
+  assertEquals(created?.tax_percentage, 5);
+  assertEquals(created?.break_enabled, false);
+  assertEquals(created?.break_method, "none");
+});
+
+Deno.test("manage_wage_snapshots update hourly_wage switches to custom", async () => {
+  const db: Partial<MockDb> = {
+    wage_snapshots: [{
+      id: "aaaaa000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: null,
+      from_date: "2026-04-01",
+      hourly_wage: 187.46,
+      wage_level: 3,
+      tariff_type_id: "hk_retail",
+      supplements: { rules: [] },
+      tax_enabled: false,
+      tax_percentage: 7,
+      break_enabled: false,
+      break_method: "none",
+      break_threshold_hours: 5.5,
+      break_deduction_minutes: 30,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_wage_snapshots",
+    JSON.stringify({
+      action: "update",
+      snapshot_id: "aaaaa",
+      hourly_wage: 210,
+    }),
+  );
+
+  assert(result.success);
+  assertEquals(db.wage_snapshots?.[0].hourly_wage, 210);
+  assertEquals(db.wage_snapshots?.[0].wage_level, null);
+  assertEquals(db.wage_snapshots?.[0].tariff_type_id, null);
+});
+
+Deno.test("manage_wage_snapshots update date recalculates tariff wage", async () => {
+  const db: Partial<MockDb> = {
+    wage_snapshots: [{
+      id: "aaaaa000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: null,
+      from_date: "2026-04-01",
+      hourly_wage: 187.46,
+      wage_level: 3,
+      tariff_type_id: "hk_retail",
+      supplements: { rules: [] },
+      tax_enabled: false,
+      tax_percentage: 7,
+      break_enabled: false,
+      break_method: "none",
+      break_threshold_hours: 5.5,
+      break_deduction_minutes: 30,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_wage_snapshots",
+    JSON.stringify({
+      action: "update",
+      snapshot_id: "aaaaa",
+      from_date: "2026-06-01",
+    }),
+  );
+
+  assert(result.success);
+  assertEquals(db.wage_snapshots?.[0].from_date, "2026-06-01");
+  assertEquals(db.wage_snapshots?.[0].hourly_wage, 195.25);
+  assertEquals(db.wage_snapshots?.[0].wage_level, 3);
+  assertEquals(db.wage_snapshots?.[0].tariff_type_id, "hk_retail");
+});
 
 Deno.test("query_shifts ignores null and placeholder optional filters", async () => {
   const ctx = createContext({
