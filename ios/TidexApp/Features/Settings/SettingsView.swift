@@ -164,7 +164,8 @@ struct SettingsView: View {
           settingsMenuSection(title: String(localized: .settingsGroupWork)) {
             SettingsMenuItem(
               icon: "banknote",
-              title: String(localized: .settingsMenuPayLabel)
+              title: String(localized: .settingsMenuPayLabel),
+              isLoading: isOpeningPaySettings
             ) {
               Task {
                 await openPaySettings()
@@ -1233,6 +1234,7 @@ private enum SettingsMenuLayout {
 struct SettingsMenuItem: View {
   let icon: String
   let title: String
+  var isLoading: Bool = false
   let action: () -> Void
 
   @Environment(\.layoutDirection) private var layoutDirection
@@ -1254,10 +1256,15 @@ struct SettingsMenuItem: View {
 
         Spacer()
 
-        // Chevron
-        Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-          .font(.tidexFootnoteMedium)
-          .foregroundStyle(.tertiary)
+        if isLoading {
+          ProgressView()
+            .controlSize(.small)
+            .tint(.tidexBlue)
+        } else {
+          Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
+            .font(.tidexFootnoteMedium)
+            .foregroundStyle(.tertiary)
+        }
       }
       .frame(minHeight: SettingsMenuLayout.rowHeight)
       .padding(.leading, SettingsMenuLayout.iconEdgeInset)
@@ -1265,6 +1272,7 @@ struct SettingsMenuItem: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .disabled(isLoading)
   }
 }
 

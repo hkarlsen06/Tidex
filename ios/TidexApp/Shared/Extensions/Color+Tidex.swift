@@ -101,8 +101,8 @@ extension Color {
   /// Light mode brand blue - WCAG AA with tidexTextOnBrand
   static let tidexLightBlue = Color(red: 0.145, green: 0.388, blue: 0.922)
 
-  /// Dark mode brand blue - HSlocalized(217, 91%, 65%)
-  static let tidexDarkBlue = Color(hue: 217 / 360, saturation: 0.91, brightness: 0.90)
+  /// Dark mode brand blue - WCAG AA with tidexTextOnBrand
+  static let tidexDarkBlue = tidexLightBlue
 
   /// Light mode border - WCAG non-text boundary against light surfaces (#8A8F98)
   static let tidexLightBorder = Color(red: 0.541, green: 0.561, blue: 0.596)

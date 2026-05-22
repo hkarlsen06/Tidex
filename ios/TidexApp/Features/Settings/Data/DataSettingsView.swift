@@ -101,13 +101,15 @@ struct DataSettingsView: View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       // Section header
       Text(.dataExportPeriodLabel)
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextMuted)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
         .textCase(.uppercase)
+        .padding(.horizontal, Spacing.sm)
 
       Text(.dataExportPeriodDescription)
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
+        .padding(.horizontal, Spacing.sm)
 
       // Preset buttons
       LazyVGrid(columns: presetColumns, spacing: Spacing.xs) {
@@ -143,7 +145,7 @@ struct DataSettingsView: View {
     } label: {
       Text(presetLabel(preset))
         .font(.tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(
@@ -259,14 +261,14 @@ struct DataSettingsView: View {
       // PDF Export
       exportCard(
         icon: "doc.text.fill",
-        iconColor: Color(red: 1.0, green: 0.0, blue: 0.0),  // Red for PDF
+        iconColor: .tidexBlue,
         title: String(localized: .dataExportPdfTitle),
         description: String(localized: .dataExportPdfDescription),
         buttonLabel: viewModel.isExportingPdf
           ? String(localized: .dataExportPdfExporting)
           : String(localized: .dataExportPdfButton),
         isLoading: viewModel.isExportingPdf,
-        buttonColor: Color(red: 1.0, green: 0.0, blue: 0.0)
+        buttonColor: .tidexBlue
       ) {
         Task {
           await viewModel.exportShifts(format: .pdf, locale: Locale.current)
@@ -335,7 +337,7 @@ struct DataSettingsView: View {
         HStack(spacing: Spacing.xs) {
           if isLoading {
             ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .white))
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
               .scaleEffect(0.8)
           } else {
             Image(systemName: "square.and.arrow.down")
@@ -345,7 +347,7 @@ struct DataSettingsView: View {
           Text(buttonLabel)
             .font(.tidexLabelStrong)
         }
-        .foregroundColor(.white)
+        .foregroundColor(.tidexTextOnBrand)
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(
@@ -361,6 +363,7 @@ struct DataSettingsView: View {
       RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexSurfacePrimary)
     )
+    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 
   // MARK: - About Section

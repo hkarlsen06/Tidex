@@ -419,7 +419,7 @@ struct ProfileSettingsView: View {
           initialAvatar
             .overlay(
               ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
             )
         }
       )
@@ -644,27 +644,15 @@ struct ProfileSettingsView: View {
     titleColor: Color = .tidexTextSecondary,
     @ViewBuilder content: () -> Content
   ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(title)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(titleColor)
-        .textCase(.uppercase)
-        .padding(.horizontal, Spacing.sm)
-
+    TidexSettingsSection(title: title, titleColor: titleColor) {
       VStack(alignment: .leading, spacing: 0) {
         content()
       }
-      .padding(Spacing.md)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .tidexCardShadow(cornerRadius: CornerRadius.lg)
     }
   }
 
   private var settingsDivider: some View {
-    Divider()
-      .background(Color.tidexBorderSubtle)
-      .padding(.vertical, Spacing.sm)
+    TidexSettingsDivider()
   }
 
   // MARK: - Photo Selection Handler

@@ -115,34 +115,20 @@ struct SecuritySettingsView: View {
     footer: String? = nil,
     @ViewBuilder content: () -> Content
   ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(title)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-        .textCase(.uppercase)
-        .padding(.horizontal, Spacing.sm)
-
-      VStack(spacing: 0) {
-        content()
+    TidexSettingsSection(
+      title: title,
+      footer: {
+        if let footer {
+          Text(footer)
+        }
       }
-      .padding(Spacing.md)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .tidexCardShadow(cornerRadius: CornerRadius.lg)
-
-      if let footer {
-        Text(footer)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-          .padding(.horizontal, Spacing.sm)
-      }
+    ) {
+      content()
     }
   }
 
   private var settingsDivider: some View {
-    Divider()
-      .background(Color.tidexBorderSubtle)
-      .padding(.vertical, Spacing.sm)
+    TidexSettingsDivider()
   }
 
   // MARK: - AI Data Sharing Section
@@ -166,14 +152,7 @@ struct SecuritySettingsView: View {
         )
       ) {
         HStack(spacing: Spacing.sm) {
-          RoundedRectangle(cornerRadius: CornerRadius.xs)
-            .fill(Color.purple.opacity(0.75))
-            .frame(width: 29, height: 29)
-            .overlay(
-              Image(systemName: "sparkles")
-                .font(.system(size: 14))
-                .foregroundColor(.white)
-            )
+          TidexSettingsIcon(systemName: "sparkles", foregroundColor: .tidexBlue, size: 29)
 
           Text(String(localized: .settingsWageyAiDataSharing))
             .font(.tidexBodyMedium)
@@ -190,14 +169,7 @@ struct SecuritySettingsView: View {
     settingsSection(title: String(localized: .securityPasswordSectionTitle)) {
       HStack(spacing: Spacing.sm) {
         // Icon
-        RoundedRectangle(cornerRadius: CornerRadius.xs)
-          .fill(Color.orange.opacity(0.75))
-          .frame(width: 29, height: 29)
-          .overlay(
-            Image(systemName: "lock.fill")
-              .font(.tidexFootnote)
-              .foregroundColor(.white)
-          )
+        TidexSettingsIcon(systemName: "lock.fill", foregroundColor: .tidexBlue, size: 29)
 
         // Content
         VStack(alignment: .leading, spacing: Spacing.micro) {
@@ -226,7 +198,7 @@ struct SecuritySettingsView: View {
               : String(localized: .securityPasswordSet)
           )
           .font(.tidexLabel)
-          .foregroundColor(viewModel.hasPassword ? .tidexBlue : .white)
+          .foregroundColor(viewModel.hasPassword ? .tidexBlue : .tidexTextOnBrand)
           .padding(.horizontal, Spacing.md)
           .padding(.vertical, Spacing.xs)
           .background(viewModel.hasPassword ? Color.tidexBlue.opacity(0.1) : Color.tidexBlue)
@@ -248,7 +220,7 @@ struct SecuritySettingsView: View {
       // Phone connection
       connectionRow(
         icon: "phone.fill",
-        iconColor: .green,
+        iconColor: .tidexBlue,
         title: String(localized: .securityConnectionsPhoneTitle),
         isConnected: viewModel.hasPhoneConnected,
         connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
@@ -269,7 +241,7 @@ struct SecuritySettingsView: View {
       // Google connection
       connectionRow(
         icon: "g.circle.fill",
-        iconColor: .red,
+        iconColor: .tidexBlue,
         title: String(localized: .securityConnectionsGoogleTitle),
         isConnected: viewModel.hasGoogleConnected,
         connectedText: String(localized: .securityConnectionsGoogleConnected),
@@ -289,7 +261,7 @@ struct SecuritySettingsView: View {
       // Apple connection
       connectionRow(
         icon: "apple.logo",
-        iconColor: Color(.systemGray),
+        iconColor: .tidexBlue,
         title: String(localized: .securityConnectionsAppleTitle),
         isConnected: viewModel.hasAppleConnected,
         connectedText: String(localized: .securityConnectionsAppleConnected),
@@ -322,14 +294,7 @@ struct SecuritySettingsView: View {
   ) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      RoundedRectangle(cornerRadius: CornerRadius.xs)
-        .fill(iconColor.opacity(0.75))
-        .frame(width: 29, height: 29)
-        .overlay(
-          Image(systemName: icon)
-            .font(.tidexFootnote)
-            .foregroundColor(.white)
-        )
+      TidexSettingsIcon(systemName: icon, foregroundColor: iconColor, size: 29)
 
       // Content
       VStack(alignment: .leading, spacing: Spacing.micro) {
@@ -413,14 +378,7 @@ struct SecuritySettingsView: View {
       // Enrolled factors
       if viewModel.mfaFactors.isEmpty {
         HStack(spacing: Spacing.sm) {
-          RoundedRectangle(cornerRadius: CornerRadius.xs)
-            .fill(Color.indigo.opacity(0.75))
-            .frame(width: 29, height: 29)
-            .overlay(
-              Image(systemName: "shield.slash")
-                .font(.tidexFootnote)
-                .foregroundColor(.white)
-            )
+          TidexSettingsIcon(systemName: "shield.slash", foregroundColor: .tidexBlue, size: 29)
 
           Text(.securityMfaNoFactors)
             .font(.tidexSubheadline)
@@ -468,14 +426,7 @@ struct SecuritySettingsView: View {
   private func mfaFactorRow(_ factor: SecuritySettingsViewModel.MFAFactor) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      RoundedRectangle(cornerRadius: CornerRadius.xs)
-        .fill(Color.tidexBlue.opacity(0.75))
-        .frame(width: 29, height: 29)
-        .overlay(
-          Image(systemName: "iphone")
-            .font(.tidexFootnote)
-            .foregroundColor(.white)
-        )
+      TidexSettingsIcon(systemName: "iphone", foregroundColor: .tidexBlue, size: 29)
 
       // Content
       VStack(alignment: .leading, spacing: Spacing.micro) {
