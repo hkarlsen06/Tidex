@@ -385,13 +385,132 @@ function getWeekdayAbbr(isoDate: string): string {
   return tr.weekdays[weekdayKeys[date.getUTCDay()]];
 }
 
-function sortShiftsByDateDesc<
-  T extends { shift_date: string; start_time: string },
->(shifts: T[]): T[] {
-  return shifts.sort((a, b) => {
-    const dateDiff = b.shift_date.localeCompare(a.shift_date);
-    if (dateDiff !== 0) return dateDiff;
-    return b.start_time.localeCompare(a.start_time);
+type SortableComputedShift = {
+  id: string;
+  shift_date: string;
+  start_time: string;
+  end_time: string;
+  job_id?: string | null;
+  tax_enabled?: boolean;
+  tax_percentage?: number;
+  computed: {
+    paidHours: number;
+    gross: number;
+  };
+};
+
+type ShiftSortInput = Pick<QueryShiftsInput, "sortBy" | "sortDirection">;
+
+function normalizeShiftSort(
+  input: ShiftSortInput,
+): { column: string; direction: "asc" | "desc" } {
+  if (input.sortBy === "date_earliest") {
+    return { column: "date", direction: input.sortDirection ?? "asc" };
+  }
+  if (input.sortBy === "date_latest" || input.sortBy === "date") {
+    return { column: "date", direction: input.sortDirection ?? "desc" };
+  }
+  if (input.sortBy === "earnings") {
+    return { column: "gross", direction: input.sortDirection ?? "desc" };
+  }
+  if (input.sortBy === "hours") {
+    return { column: "hours", direction: input.sortDirection ?? "desc" };
+  }
+  return { column: input.sortBy, direction: input.sortDirection ?? "asc" };
+}
+
+function compareValues(
+  left: number | string | null,
+  right: number | string | null,
+): number {
+  if (left === right) return 0;
+  if (left === null) return 1;
+  if (right === null) return -1;
+  if (typeof left === "number" && typeof right === "number") {
+    return left - right;
+  }
+  return String(left).localeCompare(String(right), "nb");
+}
+
+function shiftSortValue(
+  shift: SortableComputedShift,
+  column: string,
+  jobMap: ReadonlyMap<string, string>,
+  jobsById: ReadonlyMap<string, Job>,
+  defaultJob: Job | null,
+  settings: { half_tax_month?: number | null },
+): number | string | null {
+  switch (column) {
+    case "id":
+      return toDisplayShiftId(shift.id);
+    case "date":
+      return shift.shift_date;
+    case "day":
+      return new Date(`${shift.shift_date}T12:00:00Z`).getUTCDay();
+    case "start":
+      return shift.start_time;
+    case "end":
+      return shift.end_time;
+    case "hours":
+      return shift.computed.paidHours;
+    case "gross":
+      return shift.computed.gross;
+    case "net":
+      return calculateShiftNet(
+        shift.computed.gross,
+        {
+          tax_enabled: shift.tax_enabled,
+          tax_percentage: shift.tax_percentage,
+        },
+        shift.shift_date,
+        shift.job_id,
+        jobsById,
+        defaultJob,
+        settings,
+      );
+    case "workplace":
+      return shift.job_id ? (jobMap.get(shift.job_id) ?? null) : null;
+    default:
+      return shift.shift_date;
+  }
+}
+
+function tieBreakShifts(
+  left: SortableComputedShift,
+  right: SortableComputedShift,
+  primaryColumn: string,
+  direction: "asc" | "desc",
+): number {
+  if (primaryColumn === "date" && direction === "desc") {
+    return (
+      right.start_time.localeCompare(left.start_time) ||
+      toDisplayShiftId(left.id).localeCompare(toDisplayShiftId(right.id))
+    );
+  }
+  return (
+    left.shift_date.localeCompare(right.shift_date) ||
+    left.start_time.localeCompare(right.start_time) ||
+    toDisplayShiftId(left.id).localeCompare(toDisplayShiftId(right.id))
+  );
+}
+
+function sortComputedShiftsForQuery<T extends SortableComputedShift>(
+  shifts: T[],
+  input: ShiftSortInput,
+  jobMap: ReadonlyMap<string, string>,
+  jobsById: ReadonlyMap<string, Job>,
+  defaultJob: Job | null,
+  settings: { half_tax_month?: number | null },
+): T[] {
+  const { column, direction } = normalizeShiftSort(input);
+  const directionMultiplier = direction === "asc" ? 1 : -1;
+  return shifts.sort((left, right) => {
+    const primary = compareValues(
+      shiftSortValue(left, column, jobMap, jobsById, defaultJob, settings),
+      shiftSortValue(right, column, jobMap, jobsById, defaultJob, settings),
+    );
+    if (primary !== 0) return primary * directionMultiplier;
+    return tieBreakShifts(left, right, column, direction);
   });
 }
 
@@ -1373,18 +1492,14 @@ async function executeQueryShifts(
       )
     );
   }
-  if (input.sortBy === "earnings") {
-    filtered = filtered.sort((a, b) => b.computed.gross - a.computed.gross);
-  } else if (input.sortBy === "hours") {
-    filtered = filtered.sort((a, b) =>
-      b.computed.paidHours - a.computed.paidHours
-    );
-  } else if (input.sortBy === "date_earliest") {
-    filtered = filtered.sort((a, b) =>
-      a.shift_date.localeCompare(b.shift_date) ||
-      a.start_time.localeCompare(b.start_time)
-    );
-  } else filtered = sortShiftsByDateDesc(filtered);
+  filtered = sortComputedShiftsForQuery(
+    filtered,
+    input,
+    jobMap,
+    jobsById,
+    defaultJob,
+    result.settings,
+  );
   const limited = filtered.slice(0, input.limit || 30);
   const currency = result.settings.currency || "NOK";
   const hasTaxDeduction = limited.some((shift) =>
@@ -2538,6 +2653,9 @@ async function executeQueryFriendShifts(
       oauthAvatarUrl: null,
     };
   let filtered = shared.shifts;
+  const jobMap = new Map(shared.jobs.map((job) => [job.id, job.name]));
+  const jobsById = new Map(shared.jobs.map((job) => [job.id, job] as const));
+  const defaultJob = resolveDefaultJob(shared.jobs);
   if (input.minTime) {
     filtered = filtered.filter((shift) => shift.start_time >= input.minTime!);
   }
@@ -2551,23 +2669,16 @@ async function executeQueryFriendShifts(
       )
     );
   }
-  if (input.sortBy === "earnings") {
-    filtered = filtered.sort((a, b) => b.computed.gross - a.computed.gross);
-  } else if (input.sortBy === "hours") {
-    filtered = filtered.sort((a, b) =>
-      b.computed.paidHours - a.computed.paidHours
-    );
-  } else if (input.sortBy === "date_earliest") {
-    filtered = filtered.sort((a, b) =>
-      a.shift_date.localeCompare(b.shift_date) ||
-      a.start_time.localeCompare(b.start_time)
-    );
-  } else filtered = sortShiftsByDateDesc(filtered);
+  filtered = sortComputedShiftsForQuery(
+    filtered,
+    input,
+    jobMap,
+    jobsById,
+    defaultJob,
+    shared.settings,
+  );
   const limited = filtered.slice(0, input.limit || 30);
   const canShowEarnings = shared.showEarnings;
-  const jobMap = new Map(shared.jobs.map((job) => [job.id, job.name]));
-  const jobsById = new Map(shared.jobs.map((job) => [job.id, job] as const));
-  const defaultJob = resolveDefaultJob(shared.jobs);
   const rows = limited.map((shift) => {
     const base = {
       id: toDisplayShiftId(shift.id),

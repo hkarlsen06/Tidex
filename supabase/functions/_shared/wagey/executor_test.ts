@@ -534,6 +534,104 @@ Deno.test("query_shifts ignores null and placeholder optional filters", async ()
   assertEquals(rows[0].date, "2026-04-16");
 });
 
+Deno.test("query_shifts sorts by hours ascending before limiting", async () => {
+  const ctx = createContext({
+    user_shifts: [
+      {
+        id: "dfe14000-0000-0000-0000-000000000001",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2025-04-09",
+        start_time: "16:00",
+        end_time: "23:15",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+      {
+        id: "10e02000-0000-0000-0000-000000000002",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2025-11-06",
+        start_time: "15:35",
+        end_time: "16:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+      {
+        id: "cee13000-0000-0000-0000-000000000003",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2025-07-24",
+        start_time: "10:00",
+        end_time: "18:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+    ],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "query_shifts",
+    JSON.stringify({
+      startDate: "2025-01-01",
+      endDate: "2025-12-31",
+      sortBy: "hours",
+      sortDirection: "asc",
+      limit: 1,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const rows = result.data as Array<Record<string, unknown>>;
+  assertEquals(rows.length, 1);
+  assertEquals(rows[0].id, "10e02");
+  assertEquals(rows[0].hours, 0.42);
+});
+
+Deno.test("query_shifts supports sorting returned shift columns in either direction", async () => {
+  const ctx = createContext({
+    user_shifts: [
+      {
+        id: "aaaaa000-0000-0000-0000-000000000001",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-01-01",
+        start_time: "08:00",
+        end_time: "12:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+      {
+        id: "bbbbb000-0000-0000-0000-000000000002",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-01-02",
+        start_time: "20:00",
+        end_time: "23:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+    ],
+  });
+
+  const result = await executeTool(
+    ctx,
+    "query_shifts",
+    JSON.stringify({
+      startDate: "2026-01-01",
+      endDate: "2026-01-02",
+      sortBy: "start",
+      sortDirection: "desc",
+      limit: 1,
+    }),
+  );
+
+  assert(result.success, result.message);
+  const rows = result.data as Array<Record<string, unknown>>;
+  assertEquals(rows[0].id, "bbbbb");
+});
+
 Deno.test("manage_account routes profile and settings actions", async () => {
   const ctx = createContext();
 

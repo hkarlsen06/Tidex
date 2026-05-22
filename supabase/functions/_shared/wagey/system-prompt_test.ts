@@ -53,7 +53,8 @@ Deno.test("getSystemPrompt includes supported deeplink instructions", () => {
       },
       {
         destination: "shifts.shift",
-        url: "tidex://shifts?dates=YYYY-MM-DD&shiftIds=SHIFT_ID&action=highlight",
+        url:
+          "tidex://shifts?dates=YYYY-MM-DD&shiftIds=SHIFT_ID&action=highlight",
         parameters: ["dates", "shiftIds", "action"],
       },
       {
@@ -79,11 +80,23 @@ Deno.test("getSystemPrompt includes supported deeplink instructions", () => {
   });
 
   assertStringIncludes(prompt, "<deeplinks>");
-  assertStringIncludes(prompt, "settings.pay: tidex://settings/pay?jobId=JOB_ID");
+  assertStringIncludes(
+    prompt,
+    "settings.pay: tidex://settings/pay?jobId=JOB_ID",
+  );
   assertStringIncludes(prompt, "shifts: tidex://shifts");
-  assertStringIncludes(prompt, "add_shift.recurring: tidex://add-shift?mode=recurring");
-  assertStringIncludes(prompt, "sharing.manage: tidex://sharing/manage?highlight=USER_ID");
-  assertStringIncludes(prompt, "admin.report: tidex://admin?tab=reports&reportId=REPORT_ID");
+  assertStringIncludes(
+    prompt,
+    "add_shift.recurring: tidex://add-shift?mode=recurring",
+  );
+  assertStringIncludes(
+    prompt,
+    "sharing.manage: tidex://sharing/manage?highlight=USER_ID",
+  );
+  assertStringIncludes(
+    prompt,
+    "admin.report: tidex://admin?tab=reports&reportId=REPORT_ID",
+  );
   assertStringIncludes(
     prompt,
     "Use add_shift.single for ordinary shifts, add_shift.events for private calendar events, and add_shift.recurring",
@@ -125,6 +138,10 @@ Deno.test("getSystemPrompt includes simple agent operating model", () => {
   assertStringIncludes(prompt, "Use the simplest reliable path");
   assertStringIncludes(prompt, "observe -> act -> verify loop");
   assertStringIncludes(prompt, "If tool output contradicts your assumption");
+  assertStringIncludes(
+    prompt,
+    'Use startDate "2000-01-01" and endDate equal to today\'s local date',
+  );
 });
 
 Deno.test("getSystemPrompt suppresses auto-defaulted adjustment tax details", () => {
