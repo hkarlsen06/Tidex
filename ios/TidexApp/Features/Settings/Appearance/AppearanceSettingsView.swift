@@ -67,9 +67,9 @@ struct AppearanceSettingsView: View {
   // MARK: - Theme Selection Section
 
   private var themeSelectionSection: some View {
-    settingsSection(
+    TidexSettingsSection(
       title: String(localized: .appearanceThemeSectionTitle),
-      footer: currentThemeInfo
+      footer: { currentThemeInfo }
     ) {
       ForEach(AppTheme.allCases, id: \.self) { theme in
         themeOptionRow(theme)
@@ -93,12 +93,12 @@ struct AppearanceSettingsView: View {
         // Theme info
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(themeTitle(theme))
-            .font(.body)
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text(themeDescription(theme))
-            .font(.caption)
-            .foregroundColor(.secondary)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
         }
 
         Spacer()
@@ -131,16 +131,13 @@ struct AppearanceSettingsView: View {
     return ZStack {
       // Background
       RoundedRectangle(cornerRadius: CornerRadius.sm)
-        .fill(
-          isDark
-            ? Color(red: 0.1, green: 0.1, blue: 0.15) : Color(red: 0.95, green: 0.95, blue: 0.97)
-        )
+        .fill(isDark ? Color.tidexDarkSurfacePrimary : Color.tidexLightSurfaceSecondary)
         .frame(width: 48, height: 48)
 
       // Icon
       Image(systemName: themeIcon(theme))
         .font(.tidexBodyLarge)
-        .foregroundColor(isDark ? .white : Color(red: 0.2, green: 0.2, blue: 0.25))
+        .foregroundColor(isDark ? .tidexDarkTextPrimary : .tidexLightTextPrimary)
     }
   }
 
@@ -180,7 +177,7 @@ struct AppearanceSettingsView: View {
   // MARK: - Calendar Animation Section
 
   private var calendarAnimationSection: some View {
-    settingsSection(title: String(localized: .appearanceCalendarAnimationSectionTitle)) {
+    TidexSettingsSection(title: String(localized: .appearanceCalendarAnimationSectionTitle)) {
       ForEach(CalendarAnimationStyle.allCases, id: \.self) { style in
         animationStyleOptionRow(style)
         if style != CalendarAnimationStyle.allCases.last {
@@ -203,12 +200,12 @@ struct AppearanceSettingsView: View {
         // Style info
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(animationStyleTitle(style))
-            .font(.body)
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text(animationStyleDescription(style))
-            .font(.caption)
-            .foregroundColor(.secondary)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
         }
 
         Spacer()
@@ -294,9 +291,9 @@ struct AppearanceSettingsView: View {
   // MARK: - Startup Tab
 
   private var startupTabSection: some View {
-    settingsSection(
+    TidexSettingsSection(
       title: String(localized: .appearanceStartupTabSectionTitle),
-      footer: Text(String(localized: .appearanceStartupTabSectionDescription))
+      footer: { Text(String(localized: .appearanceStartupTabSectionDescription)) }
     ) {
       ForEach(StartupTabOption.allCases, id: \.self) { tab in
         startupTabRow(tab)
@@ -325,7 +322,7 @@ struct AppearanceSettingsView: View {
         }
 
         Text(startupTabTitle(tab))
-          .font(.body)
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
 
         Spacer()
@@ -372,62 +369,24 @@ struct AppearanceSettingsView: View {
   // MARK: - Dashboard Controls
 
   private var dashboardControlsSection: some View {
-    settingsSection(title: String(localized: .appearanceDashboardSectionTitle)) {
+    TidexSettingsSection(title: String(localized: .appearanceDashboardSectionTitle)) {
       Toggle(isOn: $viewModel.showDashboardClockButtons) {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(String(localized: .appearanceDashboardClockButtonsTitle))
-            .font(.body)
+            .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
           Text(String(localized: .appearanceDashboardClockButtonsDescription))
-            .font(.caption)
-            .foregroundColor(.secondary)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
         }
       }
       .tint(.tidexBlue)
     }
   }
 
-  @ViewBuilder
-  private func settingsSection<Footer: View, Content: View>(
-    title: String,
-    footer: Footer,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(title)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-        .textCase(.uppercase)
-        .padding(.horizontal, Spacing.sm)
-
-      VStack(spacing: 0) {
-        content()
-      }
-      .padding(Spacing.md)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .tidexCardShadow(cornerRadius: CornerRadius.lg)
-
-      footer
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .padding(.horizontal, Spacing.sm)
-    }
-  }
-
-  @ViewBuilder
-  private func settingsSection<Content: View>(
-    title: String,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    settingsSection(title: title, footer: EmptyView(), content: content)
-  }
-
   private var settingsDivider: some View {
-    Divider()
-      .background(Color.tidexBorderSubtle)
-      .padding(.vertical, Spacing.sm)
+    TidexSettingsDivider()
   }
 }
 

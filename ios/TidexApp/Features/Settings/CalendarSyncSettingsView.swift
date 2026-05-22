@@ -83,11 +83,11 @@ struct CalendarSyncSettingsView: View {
     HStack(spacing: Spacing.sm) {
       Image(systemName: "calendar.badge.clock")
         .font(.system(size: 20, weight: .medium))
-        .foregroundColor(.orange)
+        .foregroundColor(.tidexBlue)
         .frame(width: 40, height: 40)
         .background(
           RoundedRectangle(cornerRadius: CornerRadius.md)
-            .fill(Color.orange.opacity(0.15))
+            .fill(Color.tidexBlue.opacity(0.12))
         )
 
       VStack(alignment: .leading, spacing: Spacing.xxxs) {
@@ -122,9 +122,10 @@ struct CalendarSyncSettingsView: View {
   ) -> some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text("calendar.subscription.include.label")
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextMuted)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
         .textCase(.uppercase)
+        .padding(.horizontal, Spacing.sm)
 
       ForEach(CalendarSubscriptionContentMode.allCases) { mode in
         calendarModeButton(
@@ -142,9 +143,10 @@ struct CalendarSyncSettingsView: View {
   private var setupCalendarModeOptions: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       Text("calendar.subscription.include.label")
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextMuted)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
         .textCase(.uppercase)
+        .padding(.horizontal, Spacing.sm)
 
       ForEach(CalendarSubscriptionContentMode.allCases) { mode in
         calendarModeButton(
@@ -304,7 +306,7 @@ struct CalendarSyncSettingsView: View {
     HStack(spacing: Spacing.xs) {
       if isLoading {
         ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .white))
+          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
           .scaleEffect(0.8)
       } else {
         Image(systemName: systemImage)
@@ -313,12 +315,12 @@ struct CalendarSyncSettingsView: View {
       Text(title)
         .font(.tidexLabelStrong)
     }
-    .foregroundColor(.white)
+    .foregroundColor(.tidexTextOnBrand)
     .frame(maxWidth: .infinity)
     .padding(.vertical, Spacing.sm)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.md)
-        .fill(Color.orange)
+        .fill(Color.tidexBlue)
     )
   }
 

@@ -69,13 +69,13 @@ struct NotificationSettingsView: View {
   // MARK: - System Permission Section
 
   private var systemPermissionSection: some View {
-    settingsSection(
+    TidexSettingsSection(
       title: String(localized: .notificationsPermissionSectionTitle),
-      footer: notificationPermissionFooter
+      footer: { notificationPermissionFooter }
     ) {
       HStack(spacing: Spacing.sm) {
         // Icon
-        settingsIcon(systemName: permissionIcon, color: permissionIconColor)
+        TidexSettingsIcon(systemName: permissionIcon, foregroundColor: permissionIconColor)
 
         // Content
         VStack(alignment: .leading, spacing: Spacing.micro) {
@@ -195,14 +195,14 @@ struct NotificationSettingsView: View {
   // MARK: - Shift Reminders Section
 
   private var shiftRemindersSection: some View {
-    settingsSection(
+    TidexSettingsSection(
       title: String(localized: .notificationsRemindersSectionTitle),
-      footer: Text(.notificationsRemindersSectionSubtitle)
+      footer: { Text(.notificationsRemindersSectionSubtitle) }
     ) {
       // Enable toggle
       Toggle(isOn: $viewModel.shiftRemindersEnabled) {
         HStack(spacing: Spacing.sm) {
-          settingsIcon(systemName: "bell.fill", color: .tidexBlue)
+          TidexSettingsIcon(systemName: "bell.fill", foregroundColor: .tidexBlue)
 
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsRemindersTitle)
@@ -288,13 +288,13 @@ struct NotificationSettingsView: View {
   // MARK: - Shared Shifts Section
 
   private var smartNotificationsSection: some View {
-    settingsSection(
+    TidexSettingsSection(
       title: String(localized: .notificationsSmartSectionTitle),
-      footer: smartStatusFooter
+      footer: { smartStatusFooter }
     ) {
       Toggle(isOn: $viewModel.smartNotificationsEnabled) {
         HStack(spacing: Spacing.sm) {
-          settingsIcon(systemName: "brain.head.profile", color: .purple)
+          TidexSettingsIcon(systemName: "brain.head.profile", foregroundColor: .tidexBlue)
 
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsSmartTitle)
@@ -323,13 +323,13 @@ struct NotificationSettingsView: View {
       case .insufficientData(let weeksFound, let weeksRequired):
         let weeksNeeded = weeksRequired - weeksFound
         Text(.notificationsSmartStatusInsufficientData(weeksNeeded, weeksFound, weeksRequired))
-          .foregroundColor(.orange)
+          .foregroundColor(.tidexWarning)
       case .noShifts:
         Text(.notificationsSmartStatusNoShifts)
-          .foregroundColor(.orange)
+          .foregroundColor(.tidexWarning)
       case .noPatternDetected:
         Text(.notificationsSmartStatusNoPattern)
-          .foregroundColor(.orange)
+          .foregroundColor(.tidexWarning)
       case .disabled, .permissionDenied:
         Text(.notificationsSmartSectionSubtitle)
       }
@@ -339,13 +339,13 @@ struct NotificationSettingsView: View {
   }
 
   private var sharedShiftsSection: some View {
-    settingsSection(
+    TidexSettingsSection(
       title: String(localized: .notificationsSharedSectionTitle),
-      footer: Text(.notificationsSharedSectionSubtitle)
+      footer: { Text(.notificationsSharedSectionSubtitle) }
     ) {
       Toggle(isOn: $viewModel.sharedShiftsEnabled) {
         HStack(spacing: Spacing.sm) {
-          settingsIcon(systemName: "person.2.fill", color: .green)
+          TidexSettingsIcon(systemName: "person.2.fill", foregroundColor: .tidexBlue)
 
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsSharedTitle)
@@ -364,49 +364,8 @@ struct NotificationSettingsView: View {
     .disabled(viewModel.notificationStatus == .denied)
   }
 
-  // MARK: - Settings Icon
-
-  private func settingsIcon(systemName: String, color: Color) -> some View {
-    Image(systemName: systemName)
-      .font(.tidexFootnote)
-      .foregroundColor(.white)
-      .frame(width: 29, height: 29)
-      .background(color.opacity(0.75))
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
-  }
-
-  @ViewBuilder
-  private func settingsSection<Footer: View, Content: View>(
-    title: String,
-    footer: Footer,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(title)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-        .textCase(.uppercase)
-        .padding(.horizontal, Spacing.sm)
-
-      VStack(spacing: 0) {
-        content()
-      }
-      .padding(Spacing.md)
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .tidexCardShadow(cornerRadius: CornerRadius.lg)
-
-      footer
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .padding(.horizontal, Spacing.sm)
-    }
-  }
-
   private var settingsDivider: some View {
-    Divider()
-      .background(Color.tidexBorderSubtle)
-      .padding(.vertical, Spacing.sm)
+    TidexSettingsDivider()
   }
 }
 
