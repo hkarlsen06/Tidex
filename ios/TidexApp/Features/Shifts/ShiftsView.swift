@@ -119,6 +119,7 @@ struct ShiftsView: View {
 
   // Deep link navigation state
   @State private var highlightedDateISO: String?
+  @State private var highlightedShiftIds: Set<String> = []
   @State private var deepLinkAction: AppCoordinator.ShiftDeepLinkAction = .open
   @State private var deepLinkHighlightDates: Set<String> = []
   @State private var deepLinkHighlightClearTask: Task<Void, Never>?
@@ -600,7 +601,11 @@ struct ShiftsView: View {
         .onChange(of: viewModel.committedMonth) { _, _ in
           // Check if we have a pending deep link for this month
           if let dateISO = highlightedDateISO, !viewModel.isLoading {
-            selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+            selectShiftFromDeepLink(
+              dateISO: dateISO,
+              shiftIds: highlightedShiftIds,
+              shifts: viewModel.shifts
+            )
           }
         }
         // Deep link handling - navigate to specific date from widget
@@ -611,13 +616,21 @@ struct ShiftsView: View {
         .onChange(of: viewModel.isLoading) { _, isLoading in
           if !isLoading, let dateISO = highlightedDateISO {
             logger.debug(" Shifts finished loading, checking for deep link date: \(dateISO)")
-            selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+            selectShiftFromDeepLink(
+              dateISO: dateISO,
+              shiftIds: highlightedShiftIds,
+              shifts: viewModel.shifts
+            )
           }
         }
         // Also watch for shifts array changes (handles cases where shifts update without loading state change)
         .onChange(of: viewModel.shifts) { _, shifts in
           if let dateISO = highlightedDateISO, !shifts.isEmpty {
-            selectShiftFromDeepLink(dateISO: dateISO, shifts: shifts)
+            selectShiftFromDeepLink(
+              dateISO: dateISO,
+              shiftIds: highlightedShiftIds,
+              shifts: shifts
+            )
           }
         }
     )
@@ -845,10 +858,14 @@ struct ShiftsView: View {
 
   /// Handle pending deep link from widget or notification
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-    guard case .shifts(let dates, let action) = deepLink,
-      let sortedDates = dates?.sorted(),
-      let dateISO = sortedDates.first
-    else { return }
+    guard case .shifts(let dates, let shiftIds, let action) = deepLink else { return }
+
+    let sortedDates = dates?.sorted() ?? []
+    let targetShiftIds = Set(shiftIds ?? [])
+    let dateISO =
+      sortedDates.first
+      ?? viewModel.shifts.first(where: { targetShiftIds.contains($0.id) })?.shiftDate
+    guard let dateISO else { return }
 
     // Avoid processing the same deep link twice
     if highlightedDateISO == dateISO {
@@ -860,13 +877,15 @@ struct ShiftsView: View {
 
     // Store the action to use when selecting the shift
     deepLinkAction = action
+    highlightedShiftIds = targetShiftIds
     if action == .highlight {
-      showDeepLinkHighlights(for: Set(sortedDates))
+      showDeepLinkHighlights(for: Set(sortedDates), shiftIds: targetShiftIds)
     }
 
     // Parse the date to extract year and month
     guard let date = Date.fromISODateString(dateISO) else {
       logger.debug(" Failed to parse date: \(dateISO)")
+      highlightedShiftIds = []
       coordinator.clearPendingDeepLink()
       return
     }
@@ -890,17 +909,22 @@ struct ShiftsView: View {
       // The onChange(of: viewModel.shifts) will then call selectShiftFromDeepLink
     } else if !viewModel.shifts.isEmpty {
       // Already on the correct month and shifts are loaded - select immediately
-      selectShiftFromDeepLink(dateISO: dateISO, shifts: viewModel.shifts)
+      selectShiftFromDeepLink(dateISO: dateISO, shiftIds: targetShiftIds, shifts: viewModel.shifts)
     }
     // If shifts are empty, the onChange(of: viewModel.shifts) will handle it when they load
   }
 
   /// Select or highlight shift for the given date once shifts are loaded
-  private func selectShiftFromDeepLink(dateISO: String, shifts: [ShiftWithComputations]) {
+  private func selectShiftFromDeepLink(
+    dateISO: String,
+    shiftIds: Set<String>,
+    shifts: [ShiftWithComputations]
+  ) {
     // Parse target date to verify we're looking at the correct month
     guard let targetDate = Date.fromISODateString(dateISO) else {
       logger.debug(" Invalid date format: \(dateISO)")
       highlightedDateISO = nil
+      highlightedShiftIds = []
       return
     }
 
@@ -918,14 +942,16 @@ struct ShiftsView: View {
       return
     }
 
-    // Find shifts on the target date
-    let shiftsOnDate = shifts.filter { $0.shiftDate == dateISO }
+    let shiftsOnDate = shifts.filter { shift in
+      shift.shiftDate == dateISO && (shiftIds.isEmpty || shiftIds.contains(shift.id))
+    }
 
     guard !shiftsOnDate.isEmpty else {
       logger.debug(" No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
       // Clear highlighted date - we're on the right month but there's no shift
       // This handles the case where the shift was deleted
       highlightedDateISO = nil
+      highlightedShiftIds = []
       return
     }
 
@@ -937,6 +963,7 @@ struct ShiftsView: View {
 
     // Clear the highlighted date and reset action since we're handling it now
     highlightedDateISO = nil
+    highlightedShiftIds = []
     deepLinkAction = .open  // Reset to default
 
     // Small delay to allow view to stabilize after month navigation
@@ -947,9 +974,7 @@ struct ShiftsView: View {
       // When action is .highlight (from widgets), show visual highlight instead
       if action == .highlight {
         logger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
-        MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
-          deepLinkHighlightDates.insert(dateISO)
-        }
+        showDeepLinkHighlights(for: [dateISO], shiftIds: shiftIds)
         return
       }
 
@@ -966,12 +991,13 @@ struct ShiftsView: View {
     }
   }
 
-  private func showDeepLinkHighlights(for dates: Set<String>) {
-    guard !dates.isEmpty else { return }
+  private func showDeepLinkHighlights(for dates: Set<String>, shiftIds: Set<String>) {
+    guard !dates.isEmpty || !shiftIds.isEmpty else { return }
     deepLinkHighlightClearTask?.cancel()
 
     MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
       deepLinkHighlightDates = dates
+      highlightedShiftIds = shiftIds
     }
 
     deepLinkHighlightClearTask = Task { @MainActor in
@@ -983,6 +1009,7 @@ struct ShiftsView: View {
 
       MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
         deepLinkHighlightDates.subtract(dates)
+        highlightedShiftIds.subtract(shiftIds)
       }
       deepLinkHighlightClearTask = nil
     }
@@ -1924,6 +1951,7 @@ struct ShiftsView: View {
         isToday: shift.shiftDate == todayISO(),
         hasConflict: viewModel.conflictingShiftIds.contains(shift.id),
         excludedFromTotal: viewModel.excludedFromTotalIds.contains(shift.id),
+        isDeepLinkHighlighted: highlightedShiftIds.contains(shift.id),
         showJobIndicator: viewModel.shouldShowJobIndicators,
         jobName: shiftJob?.name,
         jobColorHex: shiftJob?.color,

@@ -7,6 +7,7 @@ struct ShiftRowCard: View {
   let isToday: Bool
   let hasConflict: Bool
   let excludedFromTotal: Bool
+  let isDeepLinkHighlighted: Bool
   let showJobIndicator: Bool
   let jobName: String?
   let jobColorHex: String?
@@ -23,6 +24,7 @@ struct ShiftRowCard: View {
     isToday: Bool,
     hasConflict: Bool = false,
     excludedFromTotal: Bool = false,
+    isDeepLinkHighlighted: Bool = false,
     showJobIndicator: Bool = false,
     jobName: String? = nil,
     jobColorHex: String? = nil,
@@ -33,6 +35,7 @@ struct ShiftRowCard: View {
     self.isToday = isToday
     self.hasConflict = hasConflict
     self.excludedFromTotal = excludedFromTotal
+    self.isDeepLinkHighlighted = isDeepLinkHighlighted
     self.showJobIndicator = showJobIndicator
     self.jobName = jobName
     self.jobColorHex = jobColorHex
@@ -161,14 +164,17 @@ struct ShiftRowCard: View {
     .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(hasConflict ? Color.tidexWarning.opacity(0.08) : Color.tidexSurfacePrimary)
+        .fill(
+          isDeepLinkHighlighted
+            ? Color.tidexPurple.opacity(0.12)
+            : (hasConflict ? Color.tidexWarning.opacity(0.08) : Color.tidexSurfacePrimary)
+        )
     )
     .overlay(
-      // Border: today (blue), conflict (orange), or none
       RoundedRectangle(cornerRadius: CornerRadius.card)
         .strokeBorder(
-          isToday ? Color.tidexBlue : (hasConflict ? Color.tidexWarning.opacity(0.5) : Color.clear),
-          lineWidth: isToday ? 2 : (hasConflict ? 1 : 0)
+          rowBorderColor,
+          lineWidth: rowBorderWidth
         )
     )
     .tidexCardShadow()
@@ -217,6 +223,20 @@ struct ShiftRowCard: View {
       }
     }
     .font(.tidexFootnote)
+  }
+
+  private var rowBorderColor: Color {
+    if isDeepLinkHighlighted { return .tidexPurple }
+    if isToday { return .tidexBlue }
+    if hasConflict { return .tidexWarning.opacity(0.5) }
+    return .clear
+  }
+
+  private var rowBorderWidth: CGFloat {
+    if isDeepLinkHighlighted { return 2.5 }
+    if isToday { return 2 }
+    if hasConflict { return 1 }
+    return 0
   }
 
 }

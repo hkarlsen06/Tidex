@@ -39,6 +39,8 @@ struct MainTabView: View {
   @State private var sharingHasSelectedSharer = false
 
   // State for feedback deep link sheets
+  @State private var showSettingsSheet = false
+  @State private var settingsSheetInitialDestination: SettingsView.SettingsDestination?
   @State private var showFeedbackSheet = false
   @State private var showAdminFeedbackSheet = false
   @State private var adminSheetInitialTab: AdminTab = .feedback
@@ -227,7 +229,8 @@ struct MainTabView: View {
           }
           .background(
             TabBarTapObserver(selectedIndex: selectedTab.splitTabBarIndex) { tappedIndex in
-              guard let tappedTab = Tab(splitTabBarIndex: tappedIndex), tappedTab == selectedTab else {
+              guard let tappedTab = Tab(splitTabBarIndex: tappedIndex), tappedTab == selectedTab
+              else {
                 return
               }
               selectionHaptic.selectionChanged()
@@ -335,6 +338,11 @@ struct MainTabView: View {
       NavigationStack {
         FeedbackSettingsView()
       }
+    }
+    .sheet(isPresented: $showSettingsSheet) {
+      SettingsView(initialDestination: settingsSheetInitialDestination)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
     .sheet(isPresented: $showAdminFeedbackSheet) {
       AdminSettingsView(
@@ -672,6 +680,10 @@ struct MainTabView: View {
         activateTab(.wagey)
       }
       coordinator.clearPendingDeepLink()
+    case .settings(let destination):
+      settingsSheetInitialDestination = destination?.settingsDestination
+      showSettingsSheet = true
+      coordinator.clearPendingDeepLink()
     case .feedback:
       // Open feedback sheet for users viewing their feedback responses
       showFeedbackSheet = true
@@ -706,6 +718,35 @@ struct MainTabView: View {
       content()
     } else {
       Color.clear
+    }
+  }
+}
+
+extension AppCoordinator.SettingsDeepLinkDestination {
+  fileprivate var settingsDestination: SettingsView.SettingsDestination {
+    switch self {
+    case .profile:
+      return .profile
+    case .security:
+      return .security
+    case .subscription:
+      return .subscription
+    case .notifications:
+      return .notifications
+    case .appearance:
+      return .appearance
+    case .pay(let jobId):
+      return .pay(jobId: jobId)
+    case .recurringShifts:
+      return .recurringShifts
+    case .calendarSync:
+      return .calendarSync()
+    case .data:
+      return .data
+    case .feedback:
+      return .feedback
+    case .admin:
+      return .admin
     }
   }
 }

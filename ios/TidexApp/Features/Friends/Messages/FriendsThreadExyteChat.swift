@@ -363,7 +363,7 @@ enum FriendsThreadShiftSnapshotNavigationResolver {
     guard !shiftDate.isEmpty else { return nil }
 
     if snapshot.ownerUserId == viewerUserId {
-      return .shifts(dates: [shiftDate], action: .highlight)
+      return .shifts(dates: [shiftDate], shiftIds: nil, action: .highlight)
     }
 
     guard canViewSharedShifts(ownerUserId: snapshot.ownerUserId, cachedFriends: cachedFriends)
