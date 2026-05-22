@@ -95,4 +95,20 @@ final class WageyViewModelStreamFallbackTests: XCTestCase {
         onMessageBreak: []
       ))
   }
+
+  func testDoesNotPersistThinkingStatusForTwoSecondsOrShorter() {
+    XCTAssertFalse(WageyViewModel.shouldPersistThinkingStatus(durationSeconds: 1))
+    XCTAssertFalse(WageyViewModel.shouldPersistThinkingStatus(durationSeconds: 2))
+  }
+
+  func testPersistsThinkingStatusAfterTwoSeconds() {
+    XCTAssertTrue(WageyViewModel.shouldPersistThinkingStatus(durationSeconds: 3))
+  }
+
+  func testRoundsThinkingStatusDuration() {
+    let startedAt = Date(timeIntervalSince1970: 1_700_000_000)
+    let now = Date(timeIntervalSince1970: 1_700_000_002.6)
+
+    XCTAssertEqual(WageyViewModel.thinkingStatusDurationSeconds(since: startedAt, now: now), 3)
+  }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 /// Composes the header, message list, input field, and conversation sidebar
 struct WageyView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Binding private var selectedTab: MainTabView.Tab
 
   /// Shared ViewModel for managing chat state
@@ -233,7 +234,7 @@ struct WageyView: View {
     .overlay(alignment: .bottom) {
       bottomChrome
     }
-    .animation(.easeInOut(duration: 0.2), value: showsScrollToBottomButton)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsScrollToBottomButton)
     .onPreferenceChange(WageyBottomChromeHeightPreferenceKey.self) { value in
       bottomChromeHeight = value
     }
@@ -456,7 +457,7 @@ struct WageyView: View {
             .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
         )
         .clipShape(Circle())
-        .shadow(color: Color.black.opacity(0.18), radius: 12, y: 4)
+        .shadow(color: Color.tidexTextPrimary.opacity(0.16), radius: 12, y: 4)
     }
     .buttonStyle(.plain)
     .accessibilityLabel(Text(String(localized: "wagey.chat.jump_to_latest")))

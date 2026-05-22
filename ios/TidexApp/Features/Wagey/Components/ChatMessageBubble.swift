@@ -102,7 +102,7 @@ struct ChatMessageBubble: View {
           .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .strokeBorder(
-                isUser ? Color.white.opacity(0.2) : Color.tidexBorder,
+                isUser ? Color.tidexTextOnBrand.opacity(0.22) : Color.tidexBorder,
                 lineWidth: 1
               )
           )
@@ -248,6 +248,8 @@ private struct SelectedImageViewer: Identifiable {
 
 /// Full-screen image viewer with zoom and dismiss gestures
 struct ImageViewerOverlay: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   let image: UIImage
   let onDismiss: () -> Void
   let onSave: (() -> Void)?
@@ -270,7 +272,7 @@ struct ImageViewerOverlay: View {
   var body: some View {
     ZStack {
       // Background
-      Color.black.ignoresSafeArea()
+      Color.tidexDarkBackgroundColor.ignoresSafeArea()
 
       // Image with zoom
       Image(uiImage: image)
@@ -289,7 +291,7 @@ struct ImageViewerOverlay: View {
               lastScale = 1.0
               // Reset if zoomed out
               if scale <= 1 {
-                withAnimation(.spring(response: 0.3)) {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
                   scale = 1
                   offset = .zero
                 }
@@ -315,7 +317,7 @@ struct ImageViewerOverlay: View {
               if scale <= 1 && value.translation.height > 100 {
                 onDismiss()
               } else if scale <= 1 {
-                withAnimation(.spring(response: 0.3)) {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
                   offset = .zero
                 }
                 lastOffset = .zero
@@ -323,7 +325,7 @@ struct ImageViewerOverlay: View {
             }
         )
         .onTapGesture(count: 2) {
-          withAnimation(.spring(response: 0.3)) {
+          withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
             if scale > 1 {
               scale = 1
               offset = .zero
@@ -341,10 +343,10 @@ struct ImageViewerOverlay: View {
             Button(action: onSave) {
               Image(systemName: "arrow.down.circle.fill")
                 .font(.system(size: 30))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(.tidexTextOnBrand.opacity(0.86))
                 .background(
                   Circle()
-                    .fill(Color.black.opacity(0.3))
+                    .fill(Color.tidexDarkBackgroundColor.opacity(0.58))
                 )
             }
             .accessibilityLabel(
@@ -359,10 +361,10 @@ struct ImageViewerOverlay: View {
           } label: {
             Image(systemName: "xmark.circle.fill")
               .font(.system(size: 30))
-              .foregroundColor(.white.opacity(0.8))
+              .foregroundColor(.tidexTextOnBrand.opacity(0.86))
               .background(
                 Circle()
-                  .fill(Color.black.opacity(0.3))
+                  .fill(Color.tidexDarkBackgroundColor.opacity(0.58))
               )
           }
           .padding(Spacing.mlg)

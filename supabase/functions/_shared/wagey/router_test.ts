@@ -5,6 +5,7 @@ import {
   assistantLikelyClaimsWriteAction,
   handleWageyRequest,
   isReadOnlyToolUse,
+  serializeToolResultPayload,
   userLikelyRequestedWriteAction,
 } from "./router.ts";
 import type { WageyRequestContext } from "./context.ts";
@@ -48,6 +49,24 @@ function createDelayedSseResponse(
 
   return new Response(body, { status: 200 });
 }
+
+Deno.test("serializeToolResultPayload removes floating point artifacts recursively", () => {
+  const serialized = serializeToolResultPayload({
+    success: true,
+    currency: "kr",
+    data: {
+      totalEarnings: 85821.020000000004,
+      totalHours: 399.07999999999998,
+      shiftCount: 62,
+      nested: [{ rate: 204.99999999999997 }],
+    },
+  });
+
+  assertEquals(
+    serialized,
+    '{"success":true,"currency":"kr","data":{"totalEarnings":85821.02,"totalHours":399.08,"shiftCount":62,"nested":[{"rate":205}]}}',
+  );
+});
 
 function createMockContext(userId: string): WageyRequestContext {
   return {

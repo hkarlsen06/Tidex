@@ -95,7 +95,7 @@ struct ToolStatusView: View {
     .onTapGesture {
       guard !isExecuting else { return }
       Haptics.play(.light)
-      withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+      withAnimation(.easeOut(duration: 0.18)) {
         isExpanded.toggle()
       }
     }
@@ -161,15 +161,7 @@ struct ToolStatusView: View {
 
   /// Format a JSON string for display (pretty-print if valid JSON)
   private func formatJSON(_ string: String) -> String {
-    guard let data = string.data(using: .utf8),
-      let jsonObject = try? JSONSerialization.jsonObject(with: data),
-      let prettyData = try? JSONSerialization.data(
-        withJSONObject: jsonObject, options: [.prettyPrinted, .sortedKeys]),
-      let prettyString = String(data: prettyData, encoding: .utf8)
-    else {
-      return string
-    }
-    return prettyString
+    WageyToolJSONFormatter.format(string)
   }
 
   @ViewBuilder
