@@ -202,6 +202,126 @@ async function resolveCurrentSupplementRules(
   return normalizeStoredSupplementRules(current?.supplements?.rules);
 }
 
+async function resolveWageSnapshotCreateDefaults(
+  ctx: WageyRequestContext,
+  input: ManageWageSnapshotsInput,
+): Promise<{
+  jobId: string | null;
+  snapshot: WageSnapshot | null;
+}> {
+  const [jobs, snapshotsResult] = await Promise.all([
+    getUserJobs(ctx, ctx.user.id, { includeArchived: false }),
+    ctx.supabase
+      .from("wage_snapshots")
+      .select("*")
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null),
+  ]);
+
+  if (snapshotsResult.error) throw new Error(snapshotsResult.error.message);
+
+  const jobId = input.jobId ?? resolveDefaultJob(jobs)?.id ?? null;
+  const snapshots = (snapshotsResult.data ?? []) as WageSnapshot[];
+  const snapshot = input.from_date
+    ? resolveSnapshotForDate(
+      buildSnapshotBuckets(snapshots),
+      snapshots,
+      input.from_date,
+      jobId,
+    )
+    : null;
+
+  return { jobId, snapshot };
+}
+
+async function resolveWageValues(
+  ctx: WageyRequestContext,
+  input: Pick<
+    ManageWageSnapshotsInput,
+    "from_date" | "hourly_wage" | "wage_level"
+  >,
+  current: Pick<
+    WageSnapshot,
+    "from_date" | "hourly_wage" | "wage_level" | "tariff_type_id"
+  >,
+  options: { recalculateTariffForDateChange?: boolean } = {},
+): Promise<{
+  hourlyWage: number;
+  wageLevel: number | null;
+  tariffTypeId: string | null;
+}> {
+  const DEFAULT_TARIFF_TYPE = "hk_retail";
+
+  if (input.hourly_wage !== undefined) {
+    return {
+      hourlyWage: input.hourly_wage,
+      wageLevel: null,
+      tariffTypeId: null,
+    };
+  }
+
+  if (input.wage_level !== undefined) {
+    const wageLevel = input.wage_level;
+    if (wageLevel === null) {
+      return {
+        hourlyWage: current.hourly_wage,
+        wageLevel: null,
+        tariffTypeId: null,
+      };
+    }
+
+    return resolveTariffWageValues(ctx, input, current, wageLevel);
+  }
+
+  if (
+    options.recalculateTariffForDateChange && input.from_date !== undefined &&
+    current.wage_level !== null
+  ) {
+    return resolveTariffWageValues(ctx, input, current, current.wage_level);
+  }
+
+  return {
+    hourlyWage: current.hourly_wage,
+    wageLevel: current.wage_level,
+    tariffTypeId: current.tariff_type_id,
+  };
+}
+
+async function resolveTariffWageValues(
+  ctx: WageyRequestContext,
+  input: Pick<ManageWageSnapshotsInput, "from_date">,
+  current: Pick<
+    WageSnapshot,
+    "from_date" | "hourly_wage" | "tariff_type_id"
+  >,
+  wageLevel: number,
+): Promise<{
+  hourlyWage: number;
+  wageLevel: number;
+  tariffTypeId: string;
+}> {
+  const DEFAULT_TARIFF_TYPE = "hk_retail";
+  let hourlyWage = current.hourly_wage;
+  const tariffTypeId = current.tariff_type_id ?? DEFAULT_TARIFF_TYPE;
+  const targetDate = input.from_date !== undefined
+    ? input.from_date
+    : current.from_date;
+  const tariffVersion =
+    (targetDate
+      ? await getTariffVersionForDate(ctx, tariffTypeId, targetDate)
+      : await getLatestTariffVersion(ctx, tariffTypeId)) as
+        | TariffVersion
+        | null;
+  if (
+    tariffVersion?.rates &&
+    tariffVersion.rates[String(wageLevel)] !== undefined
+  ) {
+    hourlyWage = tariffVersion.rates[String(wageLevel)];
+  }
+
+  return { hourlyWage, wageLevel, tariffTypeId };
+}
+
 function t(
   template: string,
   params: Record<string, string | number> = {},
@@ -4315,58 +4435,51 @@ async function executeManageWageSnapshots(
     };
   }
   const input = parsed.data as ManageWageSnapshotsInput;
-  const DEFAULT_TARIFF_TYPE = "hk_retail";
 
   switch (input.action) {
     case "create": {
       if (input.from_date === undefined) {
         return { success: false, message: tr.missingFromDate };
       }
-      let hourlyWage = input.hourly_wage ?? 200;
-      let wageLevel = input.wage_level ?? null;
-      let tariffTypeId: string | null = wageLevel !== null
-        ? DEFAULT_TARIFF_TYPE
-        : null;
-      if (wageLevel !== null) {
-        const tariffVersion = (input.from_date
-          ? await getTariffVersionForDate(
-            ctx,
-            DEFAULT_TARIFF_TYPE,
-            input.from_date,
-          )
-          : await getLatestTariffVersion(ctx, DEFAULT_TARIFF_TYPE)) as
-            | TariffVersion
-            | null;
-        if (
-          tariffVersion?.rates &&
-          tariffVersion.rates[String(wageLevel)] !== undefined
-        ) {
-          hourlyWage = tariffVersion.rates[String(wageLevel)];
-        }
-      } else {
-        tariffTypeId = null;
-      }
+      const { jobId, snapshot } = await resolveWageSnapshotCreateDefaults(
+        ctx,
+        input,
+      );
+      const current = snapshot ?? {
+        from_date: null,
+        hourly_wage: 200,
+        wage_level: null,
+        tariff_type_id: null,
+      };
+      const { hourlyWage, wageLevel, tariffTypeId } = await resolveWageValues(
+        ctx,
+        input,
+        current,
+      );
       const supplements = input.supplements === "copy_current"
-        ? { rules: await resolveCurrentSupplementRules(ctx, input.jobId) }
+        ? { rules: await resolveCurrentSupplementRules(ctx, jobId) }
         : input.supplements
         ? { rules: normalizeSupplementRulesInput(input.supplements) }
-        : { rules: [] };
+        : snapshot?.supplements ?? { rules: [] };
       const { data, error } = await ctx.supabase
         .from("wage_snapshots")
         .insert({
           user_id: ctx.user.id,
-          ...(input.jobId ? { job_id: input.jobId } : {}),
+          ...(jobId ? { job_id: jobId } : {}),
           from_date: input.from_date,
           hourly_wage: hourlyWage,
           wage_level: wageLevel,
           tariff_type_id: tariffTypeId,
           supplements,
-          tax_enabled: input.tax_enabled ?? false,
-          tax_percentage: input.tax_percentage ?? 0,
-          break_enabled: input.break_enabled ?? false,
-          break_method: input.break_method ?? "none",
-          break_threshold_hours: input.break_threshold_hours ?? 5.5,
-          break_deduction_minutes: input.break_deduction_minutes ?? 30,
+          tax_enabled: input.tax_enabled ?? snapshot?.tax_enabled ?? false,
+          tax_percentage: input.tax_percentage ?? snapshot?.tax_percentage ?? 0,
+          break_enabled: input.break_enabled ?? snapshot?.break_enabled ??
+            false,
+          break_method: input.break_method ?? snapshot?.break_method ?? "none",
+          break_threshold_hours: input.break_threshold_hours ??
+            snapshot?.break_threshold_hours ?? 5.5,
+          break_deduction_minutes: input.break_deduction_minutes ??
+            snapshot?.break_deduction_minutes ?? 30,
         })
         .select("id")
         .single();
@@ -4410,25 +4523,12 @@ async function executeManageWageSnapshots(
           message: t(tr.snapshotNotFound, { id: input.snapshot_id }),
         };
       }
-      let hourlyWage = input.hourly_wage ?? current.hourly_wage;
-      let wageLevel = input.wage_level !== undefined
-        ? input.wage_level
-        : current.wage_level;
-      let tariffTypeId = wageLevel !== null ? DEFAULT_TARIFF_TYPE : null;
-      if (wageLevel !== null) {
-        const targetDate = input.from_date ?? current.from_date;
-        const tariffVersion = (targetDate
-          ? await getTariffVersionForDate(ctx, DEFAULT_TARIFF_TYPE, targetDate)
-          : await getLatestTariffVersion(ctx, DEFAULT_TARIFF_TYPE)) as
-            | TariffVersion
-            | null;
-        if (
-          tariffVersion?.rates &&
-          tariffVersion.rates[String(wageLevel)] !== undefined
-        ) {
-          hourlyWage = tariffVersion.rates[String(wageLevel)];
-        }
-      }
+      const { hourlyWage, wageLevel, tariffTypeId } = await resolveWageValues(
+        ctx,
+        input,
+        current,
+        { recalculateTariffForDateChange: true },
+      );
       const supplements = input.supplements === "copy_current"
         ? { rules: await resolveCurrentSupplementRules(ctx, current.job_id) }
         : input.supplements
