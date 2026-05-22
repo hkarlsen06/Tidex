@@ -4,16 +4,17 @@ import UIKit
 // MARK: - Tidex Adaptive Color System
 //
 // This color system automatically adapts to iOS system appearance (light/dark mode).
-// Colors are organized into semantic categories that match the web app's CSS tokens
-// defined in globals.css.
+// Semantic text, filled-control, and boundary tokens are chosen against WCAG 2.x
+// contrast formulas: text and filled-control foregrounds meet AA contrast, while
+// surface boundaries meet the 3:1 non-text contrast requirement.
 //
 // Usage: Always use these semantic colors in views (e.g., Color.tidexBackground)
 // rather than hardcoded values. This ensures consistent theming across the app.
 
 extension Color {
   /// Launch screen background - adapts to light/dark mode
-  /// Light: HSlocalized(220, 40%, 98%) - soft off-white (matches tidexBackground)
-  /// Dark: HSlocalized(222.2, 84%, 4.9%) - deep navy (matches tidexBackground)
+  /// Light: soft off-white (matches tidexBackground)
+  /// Dark: deep navy (matches tidexBackground)
   static var tidexLaunchBackground: Color {
     Color("LaunchBackground")
   }
@@ -61,10 +62,10 @@ extension Color {
 // These are used as fallbacks and for the widget (which can't access main app assets)
 
 extension Color {
-  /// Light mode background - HSlocalized(220, 40%, 98%)
+  /// Light mode background - soft off-white
   static let tidexLightBackground = Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
 
-  /// Dark mode background - HSlocalized(222.2, 84%, 4.9%)
+  /// Dark mode background - deep navy
   static let tidexDarkBackgroundColor = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
 
   /// Light mode surface primary - Pure white for maximum contrast against blue-tinted background
@@ -79,41 +80,41 @@ extension Color {
   /// Dark mode surface secondary - lifted navy for nested controls (#1B2942)
   static let tidexDarkSurfaceSecondary = Color(red: 0.106, green: 0.161, blue: 0.259)
 
-  /// Light mode text primary - HSlocalized(222, 84%, 8%)
+  /// Light mode text primary
   static let tidexLightTextPrimary = Color(hue: 222 / 360, saturation: 0.84, brightness: 0.08)
 
-  /// Dark mode text primary - HSlocalized(210, 40%, 98%)
+  /// Dark mode text primary
   static let tidexDarkTextPrimary = Color(hue: 210 / 360, saturation: 0.40, brightness: 0.98)
 
-  /// Light mode text secondary - HSlocalized(214, 28%, 35%)
+  /// Light mode text secondary
   static let tidexLightTextSecondary = Color(hue: 214 / 360, saturation: 0.28, brightness: 0.35)
 
-  /// Dark mode text secondary - HSlocalized(214, 32%, 85%)
+  /// Dark mode text secondary
   static let tidexDarkTextSecondary = Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
 
   /// Light mode text muted - Darker for better contrast (#596B80)
   static let tidexLightTextMuted = Color(red: 0.35, green: 0.42, blue: 0.50)
 
-  /// Dark mode text muted - HSlocalized(215, 20%, 70%)
+  /// Dark mode text muted
   static let tidexDarkTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
 
-  /// Light mode brand blue - HSlocalized(221, 83%, 53%)
-  static let tidexLightBlue = Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
+  /// Light mode brand blue - WCAG AA with tidexTextOnBrand
+  static let tidexLightBlue = Color(red: 0.145, green: 0.388, blue: 0.922)
 
   /// Dark mode brand blue - HSlocalized(217, 91%, 65%)
   static let tidexDarkBlue = Color(hue: 217 / 360, saturation: 0.91, brightness: 0.90)
 
-  /// Light mode border - Darker for better visibility (#C7D1DB)
-  static let tidexLightBorder = Color(red: 0.78, green: 0.82, blue: 0.86)
+  /// Light mode border - WCAG non-text boundary against light surfaces (#8A8F98)
+  static let tidexLightBorder = Color(red: 0.541, green: 0.561, blue: 0.596)
 
-  /// Dark mode border - same-hue rim for dark navy surfaces (#3E4B61)
-  static let tidexDarkBorder = Color(red: 0.243, green: 0.294, blue: 0.380)
+  /// Dark mode border - WCAG non-text boundary against dark surfaces (#6B7280)
+  static let tidexDarkBorder = Color(red: 0.420, green: 0.447, blue: 0.502)
 
-  /// Light mode border subtle - Darker (#D9E0E8)
-  static let tidexLightBorderSubtle = Color(red: 0.85, green: 0.88, blue: 0.91)
+  /// Light mode subtle border - intentionally shares the compliant surface boundary color.
+  static let tidexLightBorderSubtle = tidexLightBorder
 
-  /// Dark mode border subtle - restrained same-hue rim (#303C50)
-  static let tidexDarkBorderSubtle = Color(red: 0.188, green: 0.235, blue: 0.314)
+  /// Dark mode subtle border - intentionally shares the compliant surface boundary color.
+  static let tidexDarkBorderSubtle = tidexDarkBorder
 
   /// Default glass surface tint, matched to the lifted surface color.
   static var tidexGlassSurface: Color {

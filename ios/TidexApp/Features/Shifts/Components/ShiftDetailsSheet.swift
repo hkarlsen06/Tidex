@@ -280,6 +280,18 @@ struct ShiftDetailsSheet: View {
     onUpdatePause != nil || hasCustomPauseWindows || shift.computed.breakAudit.deductedHours > 0
   }
 
+  private var shouldShowEditOptionsSection: Bool {
+    canEditSupplements || canEditPauseWindows
+  }
+
+  private var canEditSupplements: Bool {
+    onUpdate != nil && !tariffRules.isEmpty
+  }
+
+  private var canEditPauseWindows: Bool {
+    onUpdatePause != nil
+  }
+
   private var displayedPauseWindows: [PauseWindow] {
     if shift.computed.breakAudit.source == .customPauseWindows,
       let appliedPauseWindows = shift.computed.breakAudit.appliedPauseWindows,
@@ -436,6 +448,10 @@ struct ShiftDetailsSheet: View {
             noteEditorSection
           } else {
             noteSection
+          }
+
+          if isEditing, shouldShowEditOptionsSection {
+            editOptionsSection
           }
 
           if !isEditing, shouldShowBreakSection {
@@ -1153,23 +1169,13 @@ struct ShiftDetailsSheet: View {
         if onUpdatePause != nil {
           Divider()
 
-          Button {
+          inlineEditOptionButton(
+            title: pauseEditorButtonTitle,
+            systemImage: hasCustomPauseWindows ? "pencil.circle" : "plus.circle"
+          ) {
             impactHaptic.impactOccurred()
             showingPauseEditor = true
-          } label: {
-            HStack(spacing: Spacing.xxxs) {
-              Image(systemName: hasCustomPauseWindows ? "pencil.circle" : "plus.circle")
-                .font(.tidexFootnote)
-              Text(pauseEditorButtonTitle)
-                .font(.tidexLabel)
-            }
-            .foregroundColor(.tidexBlue)
-            .padding(.vertical, Spacing.xs)
-            .frame(maxWidth: .infinity)
-            .background(Color.tidexBlue.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
           }
-          .buttonStyle(.plain)
         }
       }
       .padding(Spacing.md)
@@ -1209,6 +1215,51 @@ struct ShiftDetailsSheet: View {
   }
 
   // MARK: - Action Buttons
+
+  private var editOptionsSection: some View {
+    VStack(spacing: Spacing.sm) {
+      if canEditSupplements {
+        inlineEditOptionButton(
+          title: String(localized: .supplementsEditButton),
+          systemImage: "slider.horizontal.3"
+        ) {
+          impactHaptic.impactOccurred()
+          showingSupplementsEditor = true
+        }
+      }
+
+      if canEditPauseWindows {
+        inlineEditOptionButton(
+          title: pauseEditorButtonTitle,
+          systemImage: hasCustomPauseWindows ? "pencil.circle" : "plus.circle"
+        ) {
+          impactHaptic.impactOccurred()
+          showingPauseEditor = true
+        }
+      }
+    }
+  }
+
+  private func inlineEditOptionButton(
+    title: String,
+    systemImage: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      HStack(spacing: Spacing.xxxs) {
+        Image(systemName: systemImage)
+          .font(.tidexFootnote)
+        Text(title)
+          .font(.tidexLabel)
+      }
+      .foregroundColor(.tidexBlue)
+      .padding(.vertical, Spacing.xs)
+      .frame(maxWidth: .infinity)
+      .background(Color.tidexBlue.opacity(0.08))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+    }
+    .buttonStyle(.plain)
+  }
 
   /// Action buttons for edit mode
   private var editActionButtons: some View {
@@ -1367,25 +1418,15 @@ struct ShiftDetailsSheet: View {
           )
         }
 
-        if onUpdate != nil && !tariffRules.isEmpty {
+        if canEditSupplements {
           Divider()
-          Button {
+          inlineEditOptionButton(
+            title: String(localized: .supplementsEditButton),
+            systemImage: "slider.horizontal.3"
+          ) {
             impactHaptic.impactOccurred()
             showingSupplementsEditor = true
-          } label: {
-            HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "slider.horizontal.3")
-                .font(.tidexFootnote)
-              Text(.supplementsEditButton)
-                .font(.tidexLabel)
-            }
-            .foregroundColor(.tidexBlue)
-            .padding(.vertical, Spacing.xs)
-            .frame(maxWidth: .infinity)
-            .background(Color.tidexBlue.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
           }
-          .buttonStyle(.plain)
         }
       }
     }
