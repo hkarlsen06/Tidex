@@ -89,7 +89,7 @@ struct TaxDeductionSection: View {
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
                 .overlay(
                   RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-                    .stroke(Color.tidexBlue, lineWidth: 2)
+                    .stroke(Color.tidexBlue, lineWidth: 1)
                 )
                 .onChange(of: isPercentageInputFocused) { _, focused in
                   if !focused {

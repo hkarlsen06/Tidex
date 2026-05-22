@@ -201,8 +201,8 @@ final class PaySettingsViewModel: ObservableObject {
     requiresJobReselection && activeJobs.count > 1 && selectedJobId == nil
   }
 
-  var shouldShowJobPicker: Bool {
-    activeJobs.count > 1 || hasArchivedJobs
+  var shouldShowWorkplaceHeader: Bool {
+    selectedJob != nil
   }
 
   var selectedJobName: String? {

@@ -125,23 +125,21 @@ struct WageyView: View {
           ToolbarItem(placement: .topBarTrailing) {
             historyButton
           }
-
-          ToolbarSpacer(.fixed, placement: .topBarTrailing)
-        }
-
-        if isShowingWelcomeState {
-          ToolbarItem(placement: .topBarTrailing) {
-            UserMenuButton(
-              displayName: coordinator.userDisplayName,
-              avatarUrl: coordinator.userAvatarUrl
-            )
-          }
         }
 
         if !isShowingWelcomeState && !viewModel.conversations.isEmpty {
           ToolbarItem(placement: .topBarTrailing) {
             historyButton
           }
+        }
+
+        ToolbarSpacer(.fixed, placement: .topBarTrailing)
+
+        ToolbarItem(placement: .topBarTrailing) {
+          UserMenuButton(
+            displayName: coordinator.userDisplayName,
+            avatarUrl: coordinator.userAvatarUrl
+          )
         }
       }
       .iPadToolbarTransaction()

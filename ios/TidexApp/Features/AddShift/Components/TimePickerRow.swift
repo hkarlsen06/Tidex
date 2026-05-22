@@ -365,7 +365,7 @@ struct NumericTimeInput: View {
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .strokeBorder(
           isFocused ? Color.tidexBlue : Color.tidexBorder,
-          lineWidth: isFocused ? 2 : 1
+          lineWidth: 1
         )
     )
     .animation(.easeInOut(duration: 0.15), value: isFocused)

@@ -177,7 +177,7 @@ struct PaySettingsView: View {
   private var mainContent: some View {
     ScrollView {
       VStack(spacing: Spacing.lg) {
-        if viewModel.shouldShowJobPicker {
+        if viewModel.shouldShowWorkplaceHeader {
           currentWorkplaceTitle
             .padding(.horizontal, Spacing.md)
         }

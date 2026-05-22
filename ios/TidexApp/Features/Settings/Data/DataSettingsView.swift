@@ -248,7 +248,7 @@ struct DataSettingsView: View {
       )
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.lg)
-          .stroke(isSelected ? Color.tidexBlue : Color.tidexBorder, lineWidth: isSelected ? 2 : 1)
+          .stroke(isSelected ? Color.tidexBlue : Color.tidexBorder, lineWidth: 1)
       )
     }
     .buttonStyle(.plain)
