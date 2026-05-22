@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ChatComposerField<LeadingAccessory: View>: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.colorScheme) private var colorScheme
 
   private let composerControlHeight: CGFloat = 56
 
@@ -126,6 +127,7 @@ struct ChatComposerField<LeadingAccessory: View>: View {
     .padding(.horizontal, Spacing.msm)
     .padding(.vertical, Spacing.sm)
     .frame(minHeight: composerControlHeight)
+    .background(composerSurfaceFill)
     .tidexGlass(
       shape: .rect(cornerRadius: composerCornerRadius),
       tint: composerTint,
@@ -170,15 +172,58 @@ struct ChatComposerField<LeadingAccessory: View>: View {
   }
 
   private var composerTint: Color {
-    isFocused ? Color.tidexBlue.opacity(0.24) : Color.tidexBlue.opacity(0.14)
+    if colorScheme == .light {
+      return isFocused
+        ? Color.tidexSurfacePrimary.opacity(0.96)
+        : Color.tidexSurfacePrimary.opacity(0.9)
+    }
+
+    if isFocused {
+      return Color.tidexBlue.opacity(0.24)
+    }
+
+    return Color.tidexBlue.opacity(0.14)
+  }
+
+  private var composerSurfaceFill: some View {
+    RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous)
+      .fill(composerSurfaceColor)
+  }
+
+  private var composerSurfaceColor: Color {
+    if colorScheme == .light {
+      if isFocused {
+        return Color.tidexSurfacePrimary.opacity(0.88)
+      }
+
+      return Color.tidexSurfacePrimary.opacity(0.8)
+    }
+
+    return Color.tidexSurfacePrimary.opacity(0.08)
   }
 
   private var composerBorder: some View {
     RoundedRectangle(cornerRadius: composerCornerRadius, style: .continuous)
       .stroke(
-        isFocused ? Color.tidexBlue.opacity(0.4) : Color.tidexBorder.opacity(0.38),
+        composerBorderColor,
         lineWidth: 1
       )
+  }
+
+  private var composerBorderColor: Color {
+    if isFocused {
+      if colorScheme == .light {
+        return Color.tidexBlue.opacity(0.52)
+      }
+
+      return Color.tidexBlue.opacity(0.4)
+    }
+
+    if colorScheme == .light {
+      return Color.tidexBorder.opacity(0.72)
+    }
+
+    return Color.tidexBorder.opacity(0.38)
   }
 }
 
