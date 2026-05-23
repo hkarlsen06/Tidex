@@ -1106,6 +1106,66 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testChatProjectionPrecomputesLookupsAndRowContext() {
+    let baseDate = Date(timeIntervalSince1970: 1_731_000_000)
+    let outgoing = makeMessage(
+      id: "outgoing",
+      senderUserId: "viewer",
+      createdAt: baseDate
+    )
+    let incoming = FriendMessage(
+      id: "incoming",
+      threadId: "thread-1",
+      senderUserId: "other",
+      messageType: .user,
+      body: "Photo",
+      clientId: "incoming",
+      replyToMessageId: nil,
+      createdAt: baseDate.addingTimeInterval(60),
+      editedAt: nil,
+      deletedAt: nil,
+      attachments: [
+        makeImageAttachment(id: "image-0", attachmentIndex: 0)
+      ],
+      reactions: [],
+      sendState: .sent,
+      failureMessage: nil
+    )
+
+    let projection = FriendsThreadChatProjection.make(
+      input: .init(
+        messages: [outgoing, incoming],
+        viewerUserId: "viewer",
+        currentUserDisplayName: "Viewer Person",
+        counterpartDisplayName: "Other Person",
+        counterpartAvatarUrl: nil,
+        quotedMessagesById: [:],
+        counterpartLastReadMessageId: outgoing.id,
+        counterpartLastReadAt: baseDate.addingTimeInterval(1),
+        showsTypingIndicator: true,
+        typingIndicatorCreatedAt: incoming.createdAt,
+        reactionAttachmentTargets: [:]
+      )
+    )
+
+    XCTAssertEqual(projection.presentedMessageIDs, ["client:outgoing", "message:incoming"])
+    XCTAssertEqual(projection.presentedMessageLookup["message:incoming"]?.id, incoming.id)
+    XCTAssertEqual(projection.presentedMessageIndexLookup["message:incoming"], 1)
+    XCTAssertEqual(projection.imageAttachments.map(\.id), ["image-0"])
+    XCTAssertEqual(
+      projection.exyteMessages.map(\.id),
+      ["client:outgoing", "message:incoming", "typing-indicator"])
+    XCTAssertTrue(projection.typingIndicatorJoinsPrevious)
+    XCTAssertTrue(
+      projection.rowProjectionsByPresentedMessageID["message:incoming"]?
+        .groupContext.joinsNext ?? false
+    )
+    XCTAssertEqual(
+      projection.rowProjectionsByPresentedMessageID["client:outgoing"]?.messageStatus,
+      .read
+    )
+  }
+
   func testImageGalleryResolverPreservesRequestedSelectionWhenPresent() {
     let attachments = [
       makeImageAttachment(id: "image-0", attachmentIndex: 0),
