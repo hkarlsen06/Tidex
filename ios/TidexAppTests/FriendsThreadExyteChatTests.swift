@@ -563,6 +563,70 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testPanGestureResolverRequiresDirectionalVelocityForReplyAndNavigation() {
+    XCTAssertTrue(
+      FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
+        velocity: CGSize(width: 300, height: 80),
+        direction: .right
+      )
+    )
+
+    XCTAssertTrue(
+      FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
+        velocity: CGSize(width: -300, height: 80),
+        direction: .left
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
+        velocity: CGSize(width: 300, height: 80),
+        direction: .left
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
+        velocity: CGSize(width: 120, height: 100),
+        direction: .right
+      )
+    )
+  }
+
+  func testPanGestureResolverTriggersNavigationBackForRightwardDistanceOrVelocity() {
+    XCTAssertTrue(
+      FriendsChatPanGestureResolver.shouldTriggerNavigationBack(
+        translation: CGSize(
+          width: FriendsChatPanGestureResolver.navigationBackDistanceThreshold, height: 4),
+        velocity: .zero
+      )
+    )
+
+    XCTAssertTrue(
+      FriendsChatPanGestureResolver.shouldTriggerNavigationBack(
+        translation: CGSize(width: 12, height: 2),
+        velocity: CGSize(
+          width: FriendsChatPanGestureResolver.navigationBackVelocityThreshold, height: 0)
+      )
+    )
+  }
+
+  func testPanGestureResolverDoesNotTriggerNavigationBackForVerticalOrLeftwardDrag() {
+    XCTAssertFalse(
+      FriendsChatPanGestureResolver.shouldTriggerNavigationBack(
+        translation: CGSize(width: 120, height: 130),
+        velocity: CGSize(width: 600, height: 0)
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsChatPanGestureResolver.shouldTriggerNavigationBack(
+        translation: CGSize(width: -120, height: 2),
+        velocity: CGSize(width: -800, height: 0)
+      )
+    )
+  }
+
   func testLiveEdgeResolverTreatsFocusedComposerAsPinnedToLatest() {
     XCTAssertTrue(
       FriendsThreadLiveEdgeResolver.shouldStickToLatest(

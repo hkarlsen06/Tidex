@@ -1,5 +1,5 @@
 -- Function: queue_message_reaction_notification
--- Description: Enqueues push notifications when a direct-message reaction is added
+-- Description: Corrects Norwegian reaction push notification copy.
 
 CREATE OR REPLACE FUNCTION public.queue_message_reaction_notification()
 RETURNS trigger

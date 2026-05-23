@@ -43,6 +43,7 @@ struct FriendsThreadView: View {
   }
 
   @Environment(\.openURL) private var openURL
+  @Environment(\.dismiss) private var dismiss
 
   private let route: FriendChatRoute
   @StateObject private var viewModel: FriendsThreadViewModel
@@ -634,22 +635,28 @@ struct FriendsThreadView: View {
     )
     .chatTheme(chatTheme)
     .overlay {
-      FriendsThreadChatViewportBridge(
-        messages: exyteMessages,
-        scrollRequest: bridgeViewportScrollRequest,
-        observedPresentedMessageID: packageReplyScrollRequest?.presentedMessageID,
-        highlightedPresentedMessageID: highlightedPresentedMessageID,
-        onPinnedToBottomChanged: {
-          isPinnedToBottom = $0
-        },
-        onLatestVisiblePresentedMessageIDChanged: { presentedMessageID in
-          viewModel.updateLatestVisibleMessage(
-            messageId: presentedMessageID.flatMap(messageID(for:))
-          )
-        },
-        onObservedPresentedMessageVisible: handlePackageReplyPresentedMessageVisible,
-        onDidHandleScrollRequest: handleViewportScrollRequest
-      )
+      ZStack {
+        FriendsThreadChatViewportBridge(
+          messages: exyteMessages,
+          scrollRequest: bridgeViewportScrollRequest,
+          observedPresentedMessageID: packageReplyScrollRequest?.presentedMessageID,
+          highlightedPresentedMessageID: highlightedPresentedMessageID,
+          onPinnedToBottomChanged: {
+            isPinnedToBottom = $0
+          },
+          onLatestVisiblePresentedMessageIDChanged: { presentedMessageID in
+            viewModel.updateLatestVisibleMessage(
+              messageId: presentedMessageID.flatMap(messageID(for:))
+            )
+          },
+          onObservedPresentedMessageVisible: handlePackageReplyPresentedMessageVisible,
+          onDidHandleScrollRequest: handleViewportScrollRequest
+        )
+
+        FriendsThreadNavigationGestureBridge {
+          dismiss()
+        }
+      }
       .allowsHitTesting(false)
     }
   }
