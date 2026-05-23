@@ -351,12 +351,25 @@ enum FriendsThreadIncomingAppendResolver {
   }
 }
 
+enum FriendsThreadOutgoingAppendScrollResolver {
+  static func scrollTarget(
+    change: FriendsThreadMessageListChangeResolver.Change,
+    shouldScrollToNextOutgoingMessage: Bool,
+    newMessageIDs: [String]
+  ) -> String? {
+    guard shouldScrollToNextOutgoingMessage, change == .appendedOutgoing else {
+      return nil
+    }
+
+    return newMessageIDs.last
+  }
+}
+
 enum FriendsThreadLiveEdgeResolver {
   static func shouldStickToLatest(
-    isPinnedToBottom: Bool,
-    isComposerFocused: Bool
+    isPinnedToBottom: Bool
   ) -> Bool {
-    isPinnedToBottom || isComposerFocused
+    isPinnedToBottom
   }
 }
 

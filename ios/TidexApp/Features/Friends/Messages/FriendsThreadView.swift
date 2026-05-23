@@ -68,7 +68,7 @@ struct FriendsThreadView: View {
   @State private var isComposerFocused = false
   @State private var isAttachmentDrawerOpen = false
   @State private var lastHandledNavigationRequestId: UUID?
-  @State private var pendingFocusScrollTask: Task<Void, Never>?
+  @State private var shouldScrollToNextOutgoingMessage = false
   @State private var liveEdgeTargetPresentedMessageID: String?
   @State private var selectedImageGallery: SelectedImageGallery?
   @State private var pendingForwardAttachment: PendingForwardAttachment?
@@ -183,8 +183,7 @@ struct FriendsThreadView: View {
 
   private var shouldStickToLatest: Bool {
     FriendsThreadLiveEdgeResolver.shouldStickToLatest(
-      isPinnedToBottom: isPinnedToBottom,
-      isComposerFocused: isComposerFocused
+      isPinnedToBottom: isPinnedToBottom
     )
   }
 
@@ -233,13 +232,7 @@ struct FriendsThreadView: View {
         }
       }
       .onChange(of: isComposerFocused) { _, newValue in
-        pendingFocusScrollTask?.cancel()
         guard newValue else { return }
-        unreadIncomingCount = 0
-        showsNewMessagesPill = false
-        if !isPinnedToBottom {
-          scheduleScrollToBottomAfterKeyboardSettles()
-        }
         Task {
           await viewModel.markVisibleMessagesReadIfNeeded()
         }
@@ -248,7 +241,6 @@ struct FriendsThreadView: View {
         handleMessageIDsChange(from: oldValue, to: newValue)
       }
       .onDisappear {
-        pendingFocusScrollTask?.cancel()
         SensitiveContentPresentationState.shared.clearVisibleContextIfOwnedByFriendThread(
           visibilityOwnerId
         )
@@ -993,15 +985,22 @@ struct FriendsThreadView: View {
       }
     }
     composerBridge.onSend = { content in
+      await MainActor.run {
+        shouldScrollToNextOutgoingMessage = true
+      }
+
       let didSend = await viewModel.sendMessage(content: content)
-      guard didSend else { return false }
 
       await MainActor.run {
-        unreadIncomingCount = 0
-        showsNewMessagesPill = false
-        requestScrollToBottom()
+        if didSend {
+          unreadIncomingCount = 0
+          showsNewMessagesPill = false
+        } else {
+          shouldScrollToNextOutgoingMessage = false
+        }
       }
-      return true
+
+      return didSend
     }
     composerBridge.onSaveEdit = { content in
       await viewModel.sendMessage(content: content)
@@ -1064,6 +1063,14 @@ struct FriendsThreadView: View {
     case .appendedOutgoing:
       unreadIncomingCount = 0
       showsNewMessagesPill = false
+      if let scrollTarget = FriendsThreadOutgoingAppendScrollResolver.scrollTarget(
+        change: change,
+        shouldScrollToNextOutgoingMessage: shouldScrollToNextOutgoingMessage,
+        newMessageIDs: newValue
+      ) {
+        shouldScrollToNextOutgoingMessage = false
+        requestScrollToBottom(presentedMessageID: scrollTarget)
+      }
       return
     case .appendedIncoming:
       break
@@ -1091,18 +1098,8 @@ struct FriendsThreadView: View {
     }
   }
 
-  private func requestScrollToBottom() {
-    liveEdgeTargetPresentedMessageID = chatProjection.presentedMessageIDs.last
-  }
-
-  private func scheduleScrollToBottomAfterKeyboardSettles() {
-    pendingFocusScrollTask?.cancel()
-    pendingFocusScrollTask = Task { @MainActor in
-      try? await Task.sleep(for: .milliseconds(220))
-      guard !Task.isCancelled, isComposerFocused else { return }
-      guard !isPinnedToBottom else { return }
-      requestScrollToBottom()
-    }
+  private func requestScrollToBottom(presentedMessageID: String? = nil) {
+    liveEdgeTargetPresentedMessageID = presentedMessageID ?? chatProjection.presentedMessageIDs.last
   }
 
   private func openCounterpartShiftPreview(preview: SharerShiftPreview) {

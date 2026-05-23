@@ -410,6 +410,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
   func setReplyTarget(_ message: FriendMessage) {
     composerState = .reply(message)
+    composerFocusRequestToken += 1
   }
 
   func clearReplyTarget() {

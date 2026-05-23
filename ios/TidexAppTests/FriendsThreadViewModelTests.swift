@@ -176,6 +176,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
 
     let optimisticMessages = repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1")
     XCTAssertEqual(optimisticMessages.count, 1)
+    XCTAssertEqual(optimisticMessages.first?.body, "Hello")
     XCTAssertEqual(optimisticMessages.first?.sendState, .sending)
     XCTAssertTrue(optimisticMessages.first?.id.hasPrefix("local-") ?? false)
     XCTAssertEqual(viewModel.draft, "")
@@ -187,6 +188,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     let confirmedMessages = repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1")
     XCTAssertEqual(confirmedMessages.count, 1)
     XCTAssertEqual(confirmedMessages.first?.id, "message-1")
+    XCTAssertEqual(confirmedMessages.first?.body, "Hello")
     XCTAssertEqual(confirmedMessages.first?.sendState, .sent)
   }
 
@@ -514,6 +516,39 @@ final class FriendsThreadViewModelTests: XCTestCase {
       repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").last?.replyToMessageId,
       repliedToMessage.id
     )
+  }
+
+  func testSetReplyTargetRequestsComposerFocus() throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let repliedToMessage = FriendMessage(
+      id: "message-0",
+      threadId: route.threadId,
+      senderUserId: "friend-1",
+      messageType: .user,
+      body: "Original",
+      clientId: "client-0",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: MockFriendsMessagingService(),
+      repository: repository,
+      realtimeCoordinator: MockFriendsRealtimeCoordinator()
+    )
+
+    XCTAssertEqual(viewModel.composerFocusRequestToken, 0)
+
+    viewModel.setReplyTarget(repliedToMessage)
+
+    XCTAssertEqual(viewModel.draftReplyTarget?.id, repliedToMessage.id)
+    XCTAssertEqual(viewModel.composerFocusRequestToken, 1)
   }
 
   func testStartEditingSeedsComposerStateAndClearsReplyAndAttachment() async throws {
