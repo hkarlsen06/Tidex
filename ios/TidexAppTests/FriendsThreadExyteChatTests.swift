@@ -398,6 +398,34 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testOutgoingAppendScrollResolverTargetsNewOutgoingMessageWhenPending() {
+    XCTAssertEqual(
+      FriendsThreadOutgoingAppendScrollResolver.scrollTarget(
+        change: .appendedOutgoing,
+        shouldScrollToNextOutgoingMessage: true,
+        newMessageIDs: ["message-1", "message-2", "message-3"]
+      ),
+      "message-3"
+    )
+  }
+
+  func testOutgoingAppendScrollResolverIgnoresNonPendingOrIncomingChanges() {
+    XCTAssertNil(
+      FriendsThreadOutgoingAppendScrollResolver.scrollTarget(
+        change: .appendedOutgoing,
+        shouldScrollToNextOutgoingMessage: false,
+        newMessageIDs: ["message-1", "message-2", "message-3"]
+      )
+    )
+    XCTAssertNil(
+      FriendsThreadOutgoingAppendScrollResolver.scrollTarget(
+        change: .appendedIncoming,
+        shouldScrollToNextOutgoingMessage: true,
+        newMessageIDs: ["message-1", "message-2", "message-3"]
+      )
+    )
+  }
+
   func testIncomingAppendResolverShowsNewMessagesPillWhenUserIsScrolledUp() {
     XCTAssertEqual(
       FriendsThreadIncomingAppendResolver.resolve(
@@ -627,26 +655,23 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
-  func testLiveEdgeResolverTreatsFocusedComposerAsPinnedToLatest() {
-    XCTAssertTrue(
+  func testLiveEdgeResolverDoesNotTreatFocusedComposerAsPinnedToLatest() {
+    XCTAssertFalse(
       FriendsThreadLiveEdgeResolver.shouldStickToLatest(
-        isPinnedToBottom: false,
-        isComposerFocused: true
+        isPinnedToBottom: false
       )
     )
   }
 
-  func testLiveEdgeResolverFallsBackToViewportPinWhenComposerIsNotFocused() {
+  func testLiveEdgeResolverUsesViewportPinState() {
     XCTAssertFalse(
       FriendsThreadLiveEdgeResolver.shouldStickToLatest(
-        isPinnedToBottom: false,
-        isComposerFocused: false
+        isPinnedToBottom: false
       )
     )
     XCTAssertTrue(
       FriendsThreadLiveEdgeResolver.shouldStickToLatest(
-        isPinnedToBottom: true,
-        isComposerFocused: false
+        isPinnedToBottom: true
       )
     )
   }
