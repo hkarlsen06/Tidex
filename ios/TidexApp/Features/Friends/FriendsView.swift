@@ -226,6 +226,7 @@ struct SharingView: View {
     }
     .onAppear {
       // Handle any pending deep link on initial appearance
+      friendsRealtimeCoordinator.setFriendsFeedVisible(selectedTab == .sharing)
       handlePendingDeepLink(coordinator.pendingDeepLink)
       hasSelectedSharer = viewModel.selectedSharer != nil
     }
@@ -249,11 +250,13 @@ struct SharingView: View {
     }
     .onChange(of: selectedTab) { _, newTab in
       guard newTab == .sharing else {
+        friendsRealtimeCoordinator.setFriendsFeedVisible(false)
         Task {
           await stopTypingSubscriptions()
         }
         return
       }
+      friendsRealtimeCoordinator.setFriendsFeedVisible(true)
       refreshChatMetadata()
       Task {
         await resubscribeTypingSubscriptions()
@@ -322,9 +325,8 @@ struct SharingView: View {
       typingResetTasks.values.forEach { $0.cancel() }
       typingResetTasks.removeAll()
       typingUserIds.removeAll()
-      Task {
-        await friendsRealtimeCoordinator.stopThreadListTypingSubscriptions()
-      }
+      friendsRealtimeCoordinator.setFriendsFeedVisible(false)
+      friendsRealtimeCoordinator.setVisibleThreadIds([])
     }
     .alert(
       String(localized: .friendsChatOpenFailed),
@@ -881,7 +883,7 @@ struct SharingView: View {
 
   private func syncTypingSubscriptions() async {
     guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else {
-      await friendsRealtimeCoordinator.stopThreadListTypingSubscriptions()
+      friendsRealtimeCoordinator.setVisibleThreadIds([])
       await MainActor.run {
         typingResetTasks.values.forEach { $0.cancel() }
         typingResetTasks.removeAll()
@@ -896,7 +898,7 @@ struct SharingView: View {
       .filter { $0.kind == .direct }
       .map(\.id)
 
-    await friendsRealtimeCoordinator.syncThreadListTypingSubscriptions(threadIds: directThreadIds)
+    friendsRealtimeCoordinator.setVisibleThreadIds(directThreadIds)
   }
 
   private func resubscribeTypingSubscriptions() async {
@@ -906,7 +908,7 @@ struct SharingView: View {
   }
 
   private func stopTypingSubscriptions() async {
-    await friendsRealtimeCoordinator.stopThreadListTypingSubscriptions()
+    friendsRealtimeCoordinator.setVisibleThreadIds([])
     await MainActor.run {
       typingResetTasks.values.forEach { $0.cancel() }
       typingResetTasks.removeAll()

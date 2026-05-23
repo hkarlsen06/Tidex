@@ -39,6 +39,25 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(from: action), "thread-22")
   }
 
+  func testExtractReactionMessageIdUsesMessageIdInsteadOfReactionPrimaryId() {
+    let action = AnyAction.insert(
+      InsertAction(
+        columns: [],
+        commitTimestamp: Date(),
+        record: [
+          "id": "reaction-1",
+          "thread_id": "thread-1",
+          "message_id": "message-1",
+        ],
+        rawMessage: Self.rawMessage()
+      ))
+
+    XCTAssertEqual(
+      FriendsMessagingRealtimeCoordinator.extractReactionMessageId(from: action),
+      "message-1"
+    )
+  }
+
   func testDecodeThreadUserStateParsesInsertedPayload() {
     let updatedAt = Date(timeIntervalSince1970: 1_700_000_000)
     let lastReadAt = Date(timeIntervalSince1970: 1_699_999_900)
@@ -83,6 +102,95 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
       ))
 
     XCTAssertNil(FriendsMessagingRealtimeCoordinator.decodeThreadUserState(from: action))
+  }
+
+  func testDecodeTypingPayloadParsesRealtimeBroadcastEnvelope() throws {
+    let payload: JSONObject = [
+      "event": "typing_start",
+      "payload": [
+        "thread_id": "thread-1",
+        "user_id": "user-1",
+        "sent_at_ms": 1_775_000_000_000,
+      ],
+      "type": "broadcast",
+    ]
+
+    let typingPayload = try FriendsMessagingRealtimeCoordinator.decodeTypingPayload(from: payload)
+
+    XCTAssertEqual(typingPayload.threadId, "thread-1")
+    XCTAssertEqual(typingPayload.userId, "user-1")
+    XCTAssertEqual(typingPayload.sentAtMs, 1_775_000_000_000)
+  }
+
+  func testDecodeTypingPayloadParsesRawBroadcastPayload() throws {
+    let payload: JSONObject = [
+      "thread_id": "thread-2",
+      "user_id": "user-2",
+      "sent_at_ms": 1_775_000_000_001,
+    ]
+
+    let typingPayload = try FriendsMessagingRealtimeCoordinator.decodeTypingPayload(from: payload)
+
+    XCTAssertEqual(typingPayload.threadId, "thread-2")
+    XCTAssertEqual(typingPayload.userId, "user-2")
+    XCTAssertEqual(typingPayload.sentAtMs, 1_775_000_000_001)
+  }
+
+  func testTypingChannelHealthRequiresExpectedTopicSubscribedStatusAndListeners() {
+    XCTAssertTrue(
+      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
+        threadId: "thread-1",
+        topic: "realtime:friends-thread-typing:thread-1",
+        status: .subscribed,
+        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
+          .listenerTaskCount,
+        hasSubscriptionTask: false
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
+        threadId: "thread-1",
+        topic: "realtime:friends-thread-detail:thread-1",
+        status: .subscribed,
+        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
+          .listenerTaskCount,
+        hasSubscriptionTask: false
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
+        threadId: "thread-1",
+        topic: "realtime:friends-thread-typing:thread-1",
+        status: .unsubscribed,
+        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
+          .listenerTaskCount,
+        hasSubscriptionTask: false
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
+        threadId: "thread-1",
+        topic: "realtime:friends-thread-typing:thread-1",
+        status: .subscribed,
+        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
+          .listenerTaskCount - 1,
+        hasSubscriptionTask: false
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsMessagingRealtimeCoordinator.TypingChannelHealth.isHealthy(
+        threadId: "thread-1",
+        topic: "realtime:friends-thread-typing:thread-1",
+        status: .subscribed,
+        listenerTaskCount: FriendsMessagingRealtimeCoordinator.TypingChannelHealth
+          .listenerTaskCount,
+        hasSubscriptionTask: true
+      )
+    )
   }
 
   func testThreadListRefreshesForViewerStateUpdates() {

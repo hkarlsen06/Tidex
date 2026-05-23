@@ -196,6 +196,44 @@ final class FriendsListOrderingTests: XCTestCase {
     XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["recent", "shift", "bottomed"])
   }
 
+  func testBottomedTypingFriendSortsWithActiveTypingUsers() {
+    let users = [
+      makeUser(id: "bottomed-typing", firstName: "Bottomed Typing"),
+      makeUser(id: "recent", firstName: "Recent"),
+      makeUser(id: "shift", firstName: "Shift"),
+    ]
+
+    let ordering = FriendsListOrdering(
+      typingUserIds: ["bottomed-typing"],
+      unreadChatUserIds: [],
+      bottomedUserIds: ["bottomed-typing"],
+      chatPreviewsByUserId: [
+        "bottomed-typing": FriendCardMessagePreview(
+          text: "Typing...",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_100),
+          state: .incomingOpened
+        ),
+        "recent": FriendCardMessagePreview(
+          text: "Seen",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          state: .incomingOpened
+        ),
+      ],
+      shiftPreviews: [
+        "shift": makeShiftPreview(
+          sharerId: "shift",
+          shiftDate: "2026-03-18",
+          startTime: "08:00",
+          endTime: "16:00",
+          status: .active
+        )
+      ],
+      isLoadingShiftPreviews: false
+    )
+
+    XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["bottomed-typing", "recent", "shift"])
+  }
+
   func testBottomedStateDoesNotDisturbNonBottomedOrdering() {
     let users = [
       makeUser(id: "older", firstName: "Older"),

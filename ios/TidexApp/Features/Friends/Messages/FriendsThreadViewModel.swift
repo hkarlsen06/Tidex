@@ -202,6 +202,8 @@ final class FriendsThreadViewModel: ObservableObject {
   private var suspendedComposerSnapshot: ComposerSnapshot?
   private var latestVisibleMessageId: String?
   private var latestCounterpartMessageId: String?
+  private var receivedReactionCountsByMessageId: [String: Int] = [:]
+  private var hasReceivedReactionBaseline = false
 
   var composerMode: FriendsThreadComposerMode {
     composerState.mode
@@ -302,7 +304,10 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   func loadIfNeeded() async {
-    guard !hasLoaded else { return }
+    if hasLoaded {
+      await startRealtime()
+      return
+    }
     await load()
   }
 
@@ -561,7 +566,7 @@ final class FriendsThreadViewModel: ObservableObject {
     resetCounterpartTypingState()
     threadStatesRefreshTask?.cancel()
     threadStatesRefreshTask = nil
-    await realtimeCoordinator.stopThreadSubscription(threadId: route.threadId)
+    await realtimeCoordinator.clearActiveThread(threadId: route.threadId)
   }
 
   func startRealtime() async {
@@ -569,7 +574,7 @@ final class FriendsThreadViewModel: ObservableObject {
       threadLogger.error("Skipping realtime thread subscription because viewer user ID is missing")
       return
     }
-    await realtimeCoordinator.startThreadSubscription(
+    await realtimeCoordinator.setActiveThread(
       threadId: route.threadId,
       viewerUserId: viewerUserId
     )
@@ -580,6 +585,7 @@ final class FriendsThreadViewModel: ObservableObject {
     if pendingNotificationTypingUserId == nil {
       resetCounterpartTypingState()
     }
+    await startRealtime()
     await refreshFromServer()
     retryQueuedMessagesIfNeeded()
     reapplyPendingNotificationTypingIndicatorIfNeeded()
@@ -922,6 +928,7 @@ final class FriendsThreadViewModel: ObservableObject {
     if let normalizedViewerUserId = Self.normalizedUserId(viewerUserId) {
       if viewerUserId != normalizedViewerUserId {
         viewerUserId = normalizedViewerUserId
+        resetReceivedReactionBaseline()
       }
       return true
     }
@@ -934,6 +941,7 @@ final class FriendsThreadViewModel: ObservableObject {
     viewerUserId = resolvedViewerUserId
 
     if forceReloadCache, didChangeViewerUserId {
+      resetReceivedReactionBaseline()
       loadFromCache()
     }
 
@@ -1040,7 +1048,10 @@ final class FriendsThreadViewModel: ObservableObject {
         viewerUserId: route.counterpartUserId
       )
     }
-    messages = repository.getMessages(threadId: route.threadId, viewerUserId: viewerUserId)
+    let cachedMessages = repository.getMessages(
+      threadId: route.threadId, viewerUserId: viewerUserId)
+    playReceivedReactionHapticIfNeeded(for: cachedMessages)
+    messages = cachedMessages
     latestCounterpartMessageId = latestIncomingCounterpartMessageId(in: thread)
     if latestCounterpartMessageId != nil, latestCounterpartMessageId != previousCounterpartMessageId
     {
@@ -1051,6 +1062,56 @@ final class FriendsThreadViewModel: ObservableObject {
     syncCounterpartShiftPreviewFromCache()
     syncComposerStateWithCachedMessages()
     prefetchQuotedMessagesIfNeeded()
+  }
+
+  private func playReceivedReactionHapticIfNeeded(for cachedMessages: [FriendMessage]) {
+    let reactionCounts = receivedReactionCounts(in: cachedMessages)
+    defer {
+      receivedReactionCountsByMessageId = reactionCounts
+      hasReceivedReactionBaseline = true
+    }
+
+    guard hasReceivedReactionBaseline else { return }
+
+    let hasNewReceivedReaction = reactionCounts.contains { messageId, count in
+      count > (receivedReactionCountsByMessageId[messageId] ?? 0)
+    }
+    if hasNewReceivedReaction {
+      Haptics.play(.light)
+    }
+  }
+
+  private func resetReceivedReactionBaseline() {
+    receivedReactionCountsByMessageId = [:]
+    hasReceivedReactionBaseline = false
+  }
+
+  private func receivedReactionCounts(in messages: [FriendMessage]) -> [String: Int] {
+    Dictionary(
+      uniqueKeysWithValues:
+        messages
+        .filter { $0.senderUserId == viewerUserId }
+        .map { message in
+          (
+            message.id,
+            Self.receivedReactionCount(for: message)
+          )
+        }
+    )
+  }
+
+  private static func receivedReactionCount(for message: FriendMessage) -> Int {
+    let messageReactionCount = message.reactions.reduce(0) { partialResult, reaction in
+      partialResult + max(reaction.count - (reaction.viewerHasReacted ? 1 : 0), 0)
+    }
+    let attachmentReactionCount = message.attachments.reduce(0) { partialResult, attachment in
+      partialResult
+        + attachment.reactions.reduce(0) { attachmentResult, reaction in
+          attachmentResult + max(reaction.count - (reaction.viewerHasReacted ? 1 : 0), 0)
+        }
+    }
+
+    return messageReactionCount + attachmentReactionCount
   }
 
   private func loadPendingComposerDraft() async {

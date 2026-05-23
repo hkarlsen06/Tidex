@@ -335,6 +335,63 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.messages.map(\.id), [message.id])
   }
 
+  func testLoadIfNeededRestartsRealtimeAfterInitialLoad() async throws {
+    let repository = try makeRepository()
+    let route = makeRoute()
+    let message = FriendMessage(
+      id: "message-restart-1",
+      threadId: route.threadId,
+      senderUserId: route.counterpartUserId,
+      messageType: .user,
+      body: "Welcome back",
+      clientId: "client-restart-1",
+      replyToMessageId: nil,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_001),
+      editedAt: nil,
+      deletedAt: nil,
+      metadataData: nil,
+      attachments: []
+    )
+    let thread = FriendThread(
+      id: route.threadId,
+      kind: .direct,
+      title: nil,
+      avatarUrl: nil,
+      metadataData: nil,
+      counterpartUserId: route.counterpartUserId,
+      counterpartDisplayName: route.displayName,
+      counterpartProfilePictureUrl: nil,
+      counterpartOAuthAvatarUrl: nil,
+      lastMessageId: message.id,
+      lastMessageSenderId: message.senderUserId,
+      lastMessageAt: message.createdAt,
+      lastMessageBody: message.body,
+      lastMessageHasImage: false,
+      unreadCount: 1,
+      muted: false,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+    )
+    let mockService = MockFriendsMessagingService()
+    mockService.threadSummary = thread
+    mockService.threadMessages = [message]
+    let realtimeCoordinator = MockFriendsRealtimeCoordinator()
+    let viewModel = FriendsThreadViewModel(
+      route: route,
+      viewerUserId: "viewer-1",
+      service: mockService,
+      repository: repository,
+      realtimeCoordinator: realtimeCoordinator
+    )
+
+    await viewModel.loadIfNeeded()
+    SensitiveContentPresentationState.shared.setVisibleContext(nil)
+    await viewModel.stopRealtime()
+    await viewModel.loadIfNeeded()
+
+    XCTAssertEqual(realtimeCoordinator.startThreadSubscriptionCallCount, 2)
+    XCTAssertEqual(realtimeCoordinator.stopThreadSubscriptionCallCount, 1)
+  }
+
   func testSendDraftBlocksMessagesThatExceedBackendCodePointLimit() async throws {
     let repository = try makeRepository()
     let route = makeRoute()
@@ -3408,8 +3465,35 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
 private final class MockFriendsRealtimeCoordinator: FriendsMessagingRealtimeCoordinating {
   var canBroadcastTyping = true
   private(set) var startThreadSubscriptionCallCount = 0
+  private(set) var stopThreadSubscriptionCallCount = 0
   private(set) var typingStartCallCount = 0
   private(set) var typingStopCallCount = 0
+
+  func startForAuthenticatedUser(viewerUserId _: String) async {
+    await Task.yield()
+  }
+
+  func stopForAuthenticatedUser() async {
+    await Task.yield()
+  }
+
+  func handleAppDidBecomeActive() async {
+    await Task.yield()
+  }
+
+  func setFriendsFeedVisible(_: Bool) {}
+
+  func setVisibleThreadIds(_: [String]) {}
+
+  func setActiveThread(threadId _: String, viewerUserId _: String) async {
+    startThreadSubscriptionCallCount += 1
+    await Task.yield()
+  }
+
+  func clearActiveThread(threadId _: String) async {
+    stopThreadSubscriptionCallCount += 1
+    await Task.yield()
+  }
 
   func startThreadListSubscription(viewerUserId _: String) async {
     await Task.yield()
@@ -3425,6 +3509,7 @@ private final class MockFriendsRealtimeCoordinator: FriendsMessagingRealtimeCoor
   }
 
   func stopThreadSubscription(threadId _: String) async {
+    stopThreadSubscriptionCallCount += 1
     await Task.yield()
   }
 

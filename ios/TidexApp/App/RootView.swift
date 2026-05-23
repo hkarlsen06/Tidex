@@ -151,7 +151,7 @@ private struct RootContent: View {
                         threadId: activeChatToast.threadId,
                         messageId: activeChatToast.messageId,
                         senderUserId: activeChatToast.senderUserId,
-                        typingUserId: nil,
+                        typingUserId: activeChatToast.typingUserId,
                         navigationRequestId: UUID()
                       )
                     },
@@ -664,6 +664,13 @@ struct LoadingView: View {
 
   @MainActor
   private final class FriendsThreadUITestRealtimeCoordinator: FriendsMessagingRealtimeCoordinating {
+    func startForAuthenticatedUser(viewerUserId _: String) async { await Task.yield() }
+    func stopForAuthenticatedUser() async { await Task.yield() }
+    func handleAppDidBecomeActive() async { await Task.yield() }
+    func setFriendsFeedVisible(_: Bool) {}
+    func setVisibleThreadIds(_: [String]) {}
+    func setActiveThread(threadId _: String, viewerUserId _: String) async { await Task.yield() }
+    func clearActiveThread(threadId _: String) async { await Task.yield() }
     func startThreadListSubscription(viewerUserId _: String) async { await Task.yield() }
     func stopThreadListSubscription() async { await Task.yield() }
     func startThreadSubscription(threadId _: String, viewerUserId _: String) async {
