@@ -1,13 +1,13 @@
 {
-  "originHash" : "6d989b4b27d88073aca11a4c356428a175cfae22df0246225fb5dde010e04d9e",
+  "originHash" : "21612a9018d8e7cef8174337a95b29cb7d5f98907edead396faf92626057f569",
   "pins" : [
     {
       "identity" : "activityindicatorview",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/exyte/ActivityIndicatorView",
       "state" : {
-        "revision" : "36140867802ae4a1d2b11490bcbbefe058001d14",
-        "version" : "1.2.1"
+        "revision" : "15384b0f9ca3a9b072e12ab779d545e9717adba4",
+        "version" : "2.0.0"
       }
     },
     {
@@ -35,15 +35,6 @@
       "state" : {
         "revision" : "145104f5ea9d58ae21b60add007c33c1cc0c948e",
         "version" : "2.0.0"
-      }
-    },
-    {
-      "identity" : "chat",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/TidexHQ/Chat.git",
-      "state" : {
-        "revision" : "d9522fc67824317e1c75c4aec1d90eb30b5adc45",
-        "version" : "3.0.3"
       }
     },
     {
