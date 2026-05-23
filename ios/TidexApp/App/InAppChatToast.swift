@@ -8,9 +8,28 @@ struct InAppChatToastPayload: Equatable, Sendable {
   let threadId: String
   let messageId: String?
   let senderUserId: String?
+  let typingUserId: String?
   let senderName: String
   let senderAvatarUrl: String?
   let previewText: String
+
+  init(
+    threadId: String,
+    messageId: String?,
+    senderUserId: String?,
+    typingUserId: String?,
+    senderName: String,
+    senderAvatarUrl: String?,
+    previewText: String
+  ) {
+    self.threadId = threadId
+    self.messageId = messageId
+    self.senderUserId = senderUserId
+    self.typingUserId = typingUserId
+    self.senderName = senderName
+    self.senderAvatarUrl = senderAvatarUrl
+    self.previewText = previewText
+  }
 
   init?(
     userInfo: [AnyHashable: Any],
@@ -25,6 +44,7 @@ struct InAppChatToastPayload: Equatable, Sendable {
     self.threadId = threadId
     self.messageId = userInfo["message_id"] as? String
     self.senderUserId = userInfo["sender_user_id"] as? String
+    self.typingUserId = type == "thread_typing" ? self.senderUserId : nil
     self.senderName =
       ((userInfo["sender_name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines))
       .flatMap { $0.isEmpty ? nil : $0 }

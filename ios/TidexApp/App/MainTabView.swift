@@ -25,7 +25,6 @@ struct MainTabView: View {
   @ObservedObject private var impersonationManager = ImpersonationManager.shared
   @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
   private let friendsMessagesRepository = FriendsMessagesRepository.shared
-  private let friendsRealtimeCoordinator = FriendsMessagingRealtimeCoordinator.shared
 
   @State private var selectedTab: Tab = .home
   @State private var loadedTabs: Set<Tab> = [.home]
@@ -56,7 +55,6 @@ struct MainTabView: View {
   @State private var showAddSubmitRequirementsAlert = false
   @State private var unreadFriendsCount = 0
   @State private var unreadRefreshTask: Task<Void, Never>?
-  @State private var friendsThreadListTrackingTask: Task<Void, Never>?
   @State private var lastHandledReselectionTab: Tab?
   @State private var lastHandledReselectionDate = Date.distantPast
 
@@ -287,7 +285,6 @@ struct MainTabView: View {
     }
     .task {
       scheduleUnreadFriendsCountRefresh()
-      scheduleFriendsThreadListTrackingIfNeeded()
     }
     .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { _ in
       scheduleUnreadFriendsCountRefresh()
@@ -310,13 +307,7 @@ struct MainTabView: View {
       handlePendingDeepLink(deepLink)
     }
     .onChange(of: coordinator.userId) { _, _ in
-      Task { @MainActor in
-        friendsThreadListTrackingTask?.cancel()
-        friendsThreadListTrackingTask = nil
-        await friendsRealtimeCoordinator.stopThreadListSubscription()
-        scheduleUnreadFriendsCountRefresh()
-        scheduleFriendsThreadListTrackingIfNeeded()
-      }
+      scheduleUnreadFriendsCountRefresh()
       handlePendingDeepLink(coordinator.pendingDeepLink)
     }
     .onAppear {
@@ -331,8 +322,6 @@ struct MainTabView: View {
     .onDisappear {
       unreadRefreshTask?.cancel()
       unreadRefreshTask = nil
-      friendsThreadListTrackingTask?.cancel()
-      friendsThreadListTrackingTask = nil
     }
     .sheet(isPresented: $showFeedbackSheet) {
       NavigationStack {
@@ -362,16 +351,6 @@ struct MainTabView: View {
 
   private var friendsTabIcon: String {
     unreadFriendsCount > 0 ? "person.2.badge.fill" : Tab.sharing.icon
-  }
-
-  private func scheduleFriendsThreadListTrackingIfNeeded() {
-    guard selectedTab == .sharing else { return }
-    guard let viewerUserId = coordinator.getCurrentUserId(), !viewerUserId.isEmpty else { return }
-
-    friendsThreadListTrackingTask?.cancel()
-    friendsThreadListTrackingTask = Task { @MainActor in
-      await friendsRealtimeCoordinator.startThreadListSubscription(viewerUserId: viewerUserId)
-    }
   }
 
   private func refreshUnreadFriendsCount() async {
@@ -706,7 +685,6 @@ struct MainTabView: View {
   private func activateTab(_ tab: Tab) {
     loadedTabs.insert(tab)
     selectedTab = tab
-    scheduleFriendsThreadListTrackingIfNeeded()
   }
 
   @ViewBuilder

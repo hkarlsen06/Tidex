@@ -14,6 +14,13 @@ extension Notification.Name {
 
 @MainActor
 protocol FriendsMessagingRealtimeCoordinating: AnyObject {
+  func startForAuthenticatedUser(viewerUserId: String) async
+  func stopForAuthenticatedUser() async
+  func handleAppDidBecomeActive() async
+  func setFriendsFeedVisible(_ isVisible: Bool)
+  func setVisibleThreadIds(_ threadIds: [String])
+  func setActiveThread(threadId: String, viewerUserId: String) async
+  func clearActiveThread(threadId: String) async
   func startThreadListSubscription(viewerUserId: String) async
   func stopThreadListSubscription() async
   func startThreadSubscription(threadId: String, viewerUserId: String) async
@@ -47,6 +54,14 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     static let timeoutNanoseconds: UInt64 = 15_000_000_000
   }
 
+  private enum TypingRepair {
+    static let retryDelay: Duration = .seconds(3)
+  }
+
+  private enum TypingToast {
+    static let cooldown: TimeInterval = 12
+  }
+
   private enum TypingEvent {
     static let start = "typing_start"
     static let stop = "typing_stop"
@@ -56,6 +71,27 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     static func name(threadId: String) -> String {
       "friends-thread-typing:\(threadId)"
     }
+
+    static func realtimeName(threadId: String) -> String {
+      "realtime:\(name(threadId: threadId))"
+    }
+  }
+
+  enum TypingChannelHealth {
+    static let listenerTaskCount = 2
+
+    static func isHealthy(
+      threadId: String,
+      topic: String?,
+      status: RealtimeChannelStatus?,
+      listenerTaskCount: Int,
+      hasSubscriptionTask: Bool
+    ) -> Bool {
+      topic == TypingTopic.realtimeName(threadId: threadId)
+        && status == .subscribed
+        && listenerTaskCount >= Self.listenerTaskCount
+        && !hasSubscriptionTask
+    }
   }
 
   static let shared = FriendsMessagingRealtimeCoordinator()
@@ -63,17 +99,27 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private let service: any FriendsMessagingServiceProviding
   private let repository: any FriendsMessagesRepositoryProviding
 
+  private var authenticatedViewerUserId: String?
+  private var activeThreadId: String?
+  private var activeThreadViewerUserId: String?
   private var threadListChannel: RealtimeChannelV2?
   private var threadListTasks: [Task<Void, Never>] = []
+  private var threadListRetryTask: Task<Void, Never>?
+  private var outboundListTypingChannel: RealtimeChannelV2?
+  private var outboundListTypingRecipientUserId: String?
+  private var typingToastLastShownAtByThreadId: [String: Date] = [:]
+  private var isFriendsFeedVisible = false
   private var listTypingThreadIds: Set<String> = []
   private var detailTypingThreadIds: Set<String> = []
   private var typingChannels: [String: RealtimeChannelV2] = [:]
   private var typingTasks: [String: [Task<Void, Never>]] = [:]
   private var typingSubscriptionTasks: [String: Task<Bool, Never>] = [:]
+  private var typingRepairTasks: [String: Task<Void, Never>] = [:]
+  private var typingRetryTasks: [String: Task<Void, Never>] = [:]
   private var threadChannels: [String: RealtimeChannelV2] = [:]
   private var threadTasks: [String: [Task<Void, Never>]] = [:]
 
-  private struct ThreadTypingPayload: Codable {
+  struct ThreadTypingPayload: Codable, Equatable {
     let threadId: String
     let userId: String
     let sentAtMs: Int64
@@ -93,10 +139,128 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     self.repository = repository ?? FriendsMessagesRepository.shared
   }
 
+  func startForAuthenticatedUser(viewerUserId: String) async {
+    guard let normalizedViewerUserId = Self.normalizedUserId(viewerUserId) else {
+      await stopForAuthenticatedUser()
+      return
+    }
+
+    if authenticatedViewerUserId != normalizedViewerUserId {
+      await stopForAuthenticatedUser()
+      authenticatedViewerUserId = normalizedViewerUserId
+    }
+
+    if threadListChannel?.status == .subscribed {
+      return
+    }
+
+    await startThreadListSubscription(viewerUserId: normalizedViewerUserId)
+  }
+
+  func stopForAuthenticatedUser() async {
+    threadListRetryTask?.cancel()
+    threadListRetryTask = nil
+    authenticatedViewerUserId = nil
+    activeThreadId = nil
+    activeThreadViewerUserId = nil
+    listTypingThreadIds.removeAll()
+    detailTypingThreadIds.removeAll()
+    typingToastLastShownAtByThreadId.removeAll()
+    isFriendsFeedVisible = false
+
+    await stopThreadListSubscription()
+    await teardownOutboundListTypingChannel()
+
+    for threadId in Array(threadChannels.keys) {
+      await teardownThreadDetailChannel(threadId: threadId)
+    }
+
+    for threadId in Array(typingChannels.keys) {
+      await teardownTypingChannel(threadId: threadId)
+    }
+  }
+
+  func handleAppDidBecomeActive() async {
+    guard let authenticatedViewerUserId else { return }
+    await startForAuthenticatedUser(viewerUserId: authenticatedViewerUserId)
+
+    guard
+      let activeThreadId,
+      let activeThreadViewerUserId
+    else {
+      return
+    }
+    await setActiveThread(threadId: activeThreadId, viewerUserId: activeThreadViewerUserId)
+  }
+
+  func setVisibleThreadIds(_ threadIds: [String]) {
+    listTypingThreadIds = Set(threadIds.compactMap(Self.normalizedUserId))
+  }
+
+  func setFriendsFeedVisible(_ isVisible: Bool) {
+    isFriendsFeedVisible = isVisible
+  }
+
+  func setActiveThread(threadId: String, viewerUserId: String) async {
+    guard
+      let normalizedThreadId = Self.normalizedUserId(threadId),
+      let normalizedViewerUserId = Self.normalizedUserId(viewerUserId)
+    else {
+      return
+    }
+
+    if authenticatedViewerUserId != normalizedViewerUserId {
+      await startForAuthenticatedUser(viewerUserId: normalizedViewerUserId)
+    }
+
+    if let activeThreadId, activeThreadId != normalizedThreadId {
+      detailTypingThreadIds.remove(activeThreadId)
+      await teardownThreadDetailChannel(threadId: activeThreadId)
+      await teardownTypingChannel(threadId: activeThreadId)
+    }
+
+    activeThreadId = normalizedThreadId
+    activeThreadViewerUserId = normalizedViewerUserId
+    detailTypingThreadIds = [normalizedThreadId]
+
+    _ = await ensureTypingChannel(threadId: normalizedThreadId)
+    if let counterpartUserId = counterpartUserId(
+      threadId: normalizedThreadId,
+      viewerUserId: normalizedViewerUserId
+    ) {
+      await ensureOutboundListTypingChannel(recipientUserId: counterpartUserId)
+    }
+
+    if let existingChannel = threadChannels[normalizedThreadId],
+      existingChannel.status == .subscribed
+    {
+      return
+    }
+
+    await startThreadDetailSubscription(
+      threadId: normalizedThreadId,
+      viewerUserId: normalizedViewerUserId
+    )
+  }
+
+  func clearActiveThread(threadId: String) async {
+    guard let normalizedThreadId = Self.normalizedUserId(threadId) else { return }
+    guard activeThreadId == normalizedThreadId else { return }
+
+    activeThreadId = nil
+    activeThreadViewerUserId = nil
+    detailTypingThreadIds.remove(normalizedThreadId)
+    await teardownThreadDetailChannel(threadId: normalizedThreadId)
+    await teardownTypingChannel(threadId: normalizedThreadId)
+    await teardownOutboundListTypingChannel()
+  }
+
   func startThreadListSubscription(viewerUserId: String) async {
     await stopThreadListSubscription()
 
-    let channel = supabase.channel("friends-thread-list:\(viewerUserId)")
+    let channel = supabase.channel("friends-thread-list:\(viewerUserId)") { config in
+      config.broadcast.receiveOwnBroadcasts = true
+    }
     let threadChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "threads")
     let messageChanges = channel.postgresChange(AnyAction.self, schema: "public", table: "messages")
     let stateChanges = channel.postgresChange(
@@ -107,43 +271,56 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
     do {
       try await subscribeWithTimeout(channel)
+      guard authenticatedViewerUserId == nil || authenticatedViewerUserId == viewerUserId else {
+        await supabase.removeChannel(channel)
+        return
+      }
       threadListChannel = channel
+      threadListRetryTask?.cancel()
+      threadListRetryTask = nil
 
-      threadListTasks = [
-        makeStatusTask(
-          for: channel,
-          viewerUserId: viewerUserId,
-          skipInitialSubscribedRefresh: true
-        ),
-        Task { [weak self] in
-          guard let self else { return }
-          for await action in threadChanges {
-            await self.handleThreadListThreadAction(action, viewerUserId: viewerUserId)
-          }
-        },
-        Task { [weak self] in
-          guard let self else { return }
-          for await action in messageChanges {
-            await self.handleThreadListMessageAction(action, viewerUserId: viewerUserId)
-          }
-        },
-        Task { [weak self] in
-          guard let self else { return }
-          for await action in stateChanges {
-            await self.handleThreadListStateAction(action, viewerUserId: viewerUserId)
-          }
-        },
-      ]
+      threadListTasks =
+        [
+          makeStatusTask(
+            for: channel,
+            viewerUserId: viewerUserId,
+            skipInitialSubscribedRefresh: true
+          ),
+          Task { [weak self] in
+            guard let self else { return }
+            for await action in threadChanges {
+              await self.handleThreadListThreadAction(action, viewerUserId: viewerUserId)
+            }
+          },
+          Task { [weak self] in
+            guard let self else { return }
+            for await action in messageChanges {
+              await self.handleThreadListMessageAction(action, viewerUserId: viewerUserId)
+            }
+          },
+          Task { [weak self] in
+            guard let self else { return }
+            for await action in stateChanges {
+              await self.handleThreadListStateAction(action, viewerUserId: viewerUserId)
+            }
+          },
+        ] + makeThreadListTypingChannelTasks(for: channel)
 
       await refreshThreadList(viewerUserId: viewerUserId)
     } catch {
       realtimeLogger.error(
         "Failed to subscribe thread list realtime: \(error.localizedDescription)")
       await supabase.removeChannel(channel)
+      scheduleThreadListRetry(
+        viewerUserId: viewerUserId,
+        reason: error.localizedDescription
+      )
     }
   }
 
   func stopThreadListSubscription() async {
+    threadListRetryTask?.cancel()
+    threadListRetryTask = nil
     threadListTasks.forEach { $0.cancel() }
     threadListTasks.removeAll()
 
@@ -153,35 +330,20 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
-  func syncThreadListTypingSubscriptions(threadIds: [String]) async {
-    let previousThreadIds = listTypingThreadIds
-    let desiredThreadIds = Set(threadIds)
-    listTypingThreadIds = desiredThreadIds
-
-    for threadId in previousThreadIds.union(desiredThreadIds) {
-      await syncTypingChannel(threadId: threadId)
-    }
+  func syncThreadListTypingSubscriptions(threadIds: [String]) {
+    setVisibleThreadIds(threadIds)
   }
 
-  func stopThreadListTypingSubscriptions() async {
-    let trackedThreadIds = listTypingThreadIds
+  func stopThreadListTypingSubscriptions() {
     listTypingThreadIds.removeAll()
-
-    for threadId in trackedThreadIds {
-      await syncTypingChannel(threadId: threadId)
-    }
   }
 
   func startThreadSubscription(threadId: String, viewerUserId: String) async {
-    detailTypingThreadIds.insert(threadId)
-    _ = await ensureTypingChannel(threadId: threadId)
+    await setActiveThread(threadId: threadId, viewerUserId: viewerUserId)
+  }
 
-    if let existingChannel = threadChannels[threadId], existingChannel.status == .subscribed {
-      return
-    }
-
+  private func startThreadDetailSubscription(threadId: String, viewerUserId: String) async {
     await teardownThreadDetailChannel(threadId: threadId)
-
     let channel = supabase.channel("friends-thread-detail:\(threadId)") { config in
       config.broadcast.receiveOwnBroadcasts = true
     }
@@ -254,23 +416,18 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       realtimeLogger.error(
         "Failed to subscribe thread detail realtime: \(error.localizedDescription)")
       await supabase.removeChannel(channel)
-      detailTypingThreadIds.remove(threadId)
-      await syncTypingChannel(threadId: threadId)
+      if activeThreadId == threadId {
+        scheduleTypingChannelRepair(threadId: threadId, reason: error.localizedDescription)
+      }
     }
   }
 
   func stopThreadSubscription(threadId: String) async {
-    detailTypingThreadIds.remove(threadId)
-    await syncTypingChannel(threadId: threadId)
-    await teardownThreadDetailChannel(threadId: threadId)
+    await clearActiveThread(threadId: threadId)
   }
 
   func stopAll() async {
-    await stopThreadListSubscription()
-    await stopThreadListTypingSubscriptions()
-    for threadId in Array(threadChannels.keys) {
-      await stopThreadSubscription(threadId: threadId)
-    }
+    await stopForAuthenticatedUser()
   }
 
   func sendTypingStart(threadId: String, userId: String) async -> Bool {
@@ -477,7 +634,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   ) async {
     guard let changedThreadId = Self.extractThreadId(from: action), changedThreadId == threadId
     else { return }
-    await refreshThreadSummary(threadId: threadId, viewerUserId: viewerUserId)
+    await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
   }
 
   private func handleThreadDetailMessageAction(
@@ -520,7 +677,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   ) async {
     guard Self.extractThreadId(from: action) == threadId else { return }
 
-    if let messageId = Self.extractMessageId(from: action) {
+    if let messageId = Self.extractReactionMessageId(from: action) {
       await refreshMessage(messageId: messageId, viewerUserId: viewerUserId)
     } else {
       await refreshThreadDetail(threadId: threadId, viewerUserId: viewerUserId)
@@ -548,28 +705,145 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func broadcastTypingEvent(event: String, threadId: String, userId: String) async -> Bool {
-    guard await ensureTypingChannel(threadId: threadId),
-      let channel = typingChannels[threadId],
-      channel.status == .subscribed
-    else {
-      return false
-    }
-
     let payload = ThreadTypingPayload(
       threadId: threadId,
       userId: userId,
       sentAtMs: Int64(Date().timeIntervalSince1970 * 1000)
     )
 
+    let didSendThreadTyping: Bool
+    if let channel = typingChannels[threadId],
+      isTypingChannelHealthy(threadId: threadId, channel: channel)
+    {
+      didSendThreadTyping = await broadcastTypingPayload(
+        payload,
+        event: event,
+        channel: channel
+      )
+    } else {
+      scheduleTypingChannelRepair(threadId: threadId, reason: "pre-send health check failed")
+      didSendThreadTyping = false
+    }
+
+    let didSendListTyping = await broadcastTypingPayloadToCounterpartList(
+      payload,
+      event: event,
+      senderUserId: userId
+    )
+
+    return didSendThreadTyping || didSendListTyping
+  }
+
+  private func broadcastTypingPayload(
+    _ payload: ThreadTypingPayload,
+    event: String,
+    channel: RealtimeChannelV2
+  ) async -> Bool {
     do {
       try await channel.broadcast(event: event, message: payload)
       return true
     } catch {
-      realtimeLogger.error(
-        "Failed to broadcast typing event \(event, privacy: .public): \(error.localizedDescription)"
-      )
       return false
     }
+  }
+
+  private func broadcastTypingPayloadToCounterpartList(
+    _ payload: ThreadTypingPayload,
+    event: String,
+    senderUserId: String
+  ) async -> Bool {
+    guard
+      let counterpartUserId = counterpartUserId(
+        threadId: payload.threadId,
+        viewerUserId: senderUserId
+      )
+    else {
+      return false
+    }
+
+    guard
+      outboundListTypingRecipientUserId == counterpartUserId,
+      let channel = outboundListTypingChannel,
+      channel.status == .subscribed
+    else {
+      Task { @MainActor [weak self] in
+        await self?.ensureOutboundListTypingChannel(recipientUserId: counterpartUserId)
+      }
+      return false
+    }
+
+    do {
+      try await channel.broadcast(event: event, message: payload)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  private func counterpartUserId(threadId: String, viewerUserId: String) -> String? {
+    guard
+      let normalizedViewerUserId = Self.normalizedUserId(viewerUserId),
+      let thread = repository.getThread(id: threadId, viewerUserId: normalizedViewerUserId),
+      thread.kind == .direct,
+      let counterpartUserId = Self.normalizedUserId(thread.counterpartUserId),
+      counterpartUserId != normalizedViewerUserId
+    else {
+      return nil
+    }
+    return counterpartUserId
+  }
+
+  private func listTopic(userId: String) -> String {
+    "friends-thread-list:\(userId)"
+  }
+
+  private func ensureOutboundListTypingChannel(recipientUserId: String) async {
+    guard let normalizedRecipientUserId = Self.normalizedUserId(recipientUserId) else { return }
+
+    if outboundListTypingRecipientUserId == normalizedRecipientUserId,
+      let outboundListTypingChannel,
+      outboundListTypingChannel.status == .subscribed
+    {
+      return
+    }
+
+    await teardownOutboundListTypingChannel()
+
+    let channel = supabase.channel(listTopic(userId: normalizedRecipientUserId)) { config in
+      config.broadcast.receiveOwnBroadcasts = false
+    }
+
+    do {
+      try await subscribeWithTimeout(channel)
+      guard activeThreadId != nil else {
+        await supabase.removeChannel(channel)
+        return
+      }
+      outboundListTypingRecipientUserId = normalizedRecipientUserId
+      outboundListTypingChannel = channel
+    } catch {
+      await supabase.removeChannel(channel)
+    }
+  }
+
+  private func teardownOutboundListTypingChannel() async {
+    outboundListTypingRecipientUserId = nil
+    if let outboundListTypingChannel {
+      await supabase.removeChannel(outboundListTypingChannel)
+      self.outboundListTypingChannel = nil
+    }
+  }
+
+  private static func normalizedUserId(_ userId: String?) -> String? {
+    guard let userId else { return nil }
+    let normalizedUserId = userId.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    return normalizedUserId.isEmpty ? nil : normalizedUserId
+  }
+
+  private static func nonEmptyTrimmed(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmedValue.isEmpty ? nil : trimmedValue
   }
 
   private func makeStatusTask(
@@ -582,6 +856,13 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       var hasSkippedInitialSubscribedRefresh = false
       for await status in channel.statusChange {
         guard !Task.isCancelled else { return }
+        if status == .unsubscribed {
+          self.scheduleThreadListRetry(
+            viewerUserId: viewerUserId,
+            reason: "thread list status unsubscribed"
+          )
+          continue
+        }
         guard status == .subscribed else { continue }
         if skipInitialSubscribedRefresh, !hasSkippedInitialSubscribedRefresh {
           hasSkippedInitialSubscribedRefresh = true
@@ -660,10 +941,99 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     ]
   }
 
+  private func makeThreadListTypingChannelTasks(
+    for channel: RealtimeChannelV2
+  ) -> [Task<Void, Never>] {
+    let typingStartBroadcast = channel.broadcastStream(event: TypingEvent.start)
+    let typingStopBroadcast = channel.broadcastStream(event: TypingEvent.stop)
+    return [
+      makeThreadListTypingBroadcastTask(
+        stream: typingStartBroadcast,
+        isTyping: true
+      ),
+      makeThreadListTypingBroadcastTask(
+        stream: typingStopBroadcast,
+        isTyping: false
+      ),
+    ]
+  }
+
+  private func makeThreadListTypingBroadcastTask(
+    stream: AsyncStream<JSONObject>,
+    isTyping: Bool
+  ) -> Task<Void, Never> {
+    Task { [weak self] in
+      guard let self else { return }
+      for await payload in stream {
+        self.handleThreadListTypingBroadcast(payload, isTyping: isTyping)
+      }
+    }
+  }
+
+  private func handleThreadListTypingBroadcast(_ payload: JSONObject, isTyping: Bool) {
+    do {
+      let typingPayload = try Self.decodeTypingPayload(from: payload)
+      if isTyping {
+        notifyTypingToastIfNeeded(typingPayload)
+      }
+      guard listTypingThreadIds.contains(typingPayload.threadId) else { return }
+      notifyThreadTypingChanged(
+        threadId: typingPayload.threadId,
+        userId: typingPayload.userId,
+        isTyping: isTyping
+      )
+    } catch {
+      realtimeLogger.error(
+        "Failed to decode thread list typing payload: \(error.localizedDescription)"
+      )
+    }
+  }
+
+  private func notifyTypingToastIfNeeded(_ typingPayload: ThreadTypingPayload) {
+    guard !isFriendsFeedVisible else { return }
+    guard activeThreadId != typingPayload.threadId else { return }
+    guard
+      let viewerUserId = authenticatedViewerUserId,
+      let normalizedTypingUserId = Self.normalizedUserId(typingPayload.userId),
+      normalizedTypingUserId != viewerUserId,
+      let thread = repository.getThread(id: typingPayload.threadId, viewerUserId: viewerUserId),
+      thread.kind == .direct,
+      let counterpartUserId = Self.normalizedUserId(thread.counterpartUserId),
+      counterpartUserId == normalizedTypingUserId
+    else {
+      return
+    }
+
+    let now = Date()
+    if let lastShownAt = typingToastLastShownAtByThreadId[typingPayload.threadId],
+      now.timeIntervalSince(lastShownAt) < TypingToast.cooldown
+    {
+      return
+    }
+    typingToastLastShownAtByThreadId[typingPayload.threadId] = now
+
+    let senderName =
+      Self.nonEmptyTrimmed(thread.counterpartDisplayName)
+      ?? Self.nonEmptyTrimmed(thread.title)
+      ?? String(localized: .friendsChatTypingToastSenderFallback)
+
+    NotificationCenter.default.post(
+      name: .inAppChatToastRequested,
+      object: InAppChatToastPayload(
+        threadId: typingPayload.threadId,
+        messageId: nil,
+        senderUserId: typingPayload.userId,
+        typingUserId: typingPayload.userId,
+        senderName: senderName,
+        senderAvatarUrl: thread.counterpartAvatarUrl,
+        previewText: String(localized: .friendsChatTypingToastBody)
+      )
+    )
+  }
+
   private func handleTypingBroadcast(_ payload: JSONObject, threadId: String, isTyping: Bool) {
     do {
-      let typingPayload = try (payload["payload"]?.objectValue ?? payload).decode(
-        as: ThreadTypingPayload.self)
+      let typingPayload = try Self.decodeTypingPayload(from: payload)
       guard typingPayload.threadId == threadId else { return }
       notifyThreadTypingChanged(
         threadId: typingPayload.threadId,
@@ -678,7 +1048,9 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func ensureTypingChannel(threadId: String) async -> Bool {
-    if let channel = typingChannels[threadId], channel.status == .subscribed {
+    if let channel = typingChannels[threadId],
+      isTypingChannelHealthy(threadId: threadId, channel: channel)
+    {
       return true
     }
 
@@ -690,8 +1062,17 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       guard let self else { return false }
       defer { self.typingSubscriptionTasks[threadId] = nil }
 
-      if let channel = self.typingChannels[threadId], channel.status == .subscribed {
+      if let channel = self.typingChannels[threadId],
+        self.isTypingChannelHealthy(threadId: threadId, channel: channel)
+      {
         return true
+      }
+
+      if let channel = self.typingChannels[threadId] {
+        realtimeLogger.info(
+          "Replacing stale typing realtime channel for \(threadId, privacy: .private) with status \(String(describing: channel.status), privacy: .public)"
+        )
+        await self.teardownTypingChannel(threadId: threadId, cancelSubscriptionTask: false)
       }
 
       let channel = supabase.channel(TypingTopic.name(threadId: threadId)) { config in
@@ -714,6 +1095,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           "Failed to subscribe typing realtime for \(threadId, privacy: .private): \(error.localizedDescription)"
         )
         await supabase.removeChannel(channel)
+        self.scheduleTypingChannelRetry(threadId: threadId, reason: error.localizedDescription)
         return false
       }
     }
@@ -722,9 +1104,21 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     return await task.value
   }
 
-  private func teardownTypingChannel(threadId: String) async {
-    typingSubscriptionTasks[threadId]?.cancel()
-    typingSubscriptionTasks[threadId] = nil
+  private func teardownTypingChannel(
+    threadId: String,
+    cancelSubscriptionTask: Bool = true,
+    cancelRepairTask: Bool = true
+  ) async {
+    if cancelSubscriptionTask {
+      typingSubscriptionTasks[threadId]?.cancel()
+      typingSubscriptionTasks[threadId] = nil
+    }
+    if cancelRepairTask {
+      typingRepairTasks[threadId]?.cancel()
+      typingRepairTasks[threadId] = nil
+      typingRetryTasks[threadId]?.cancel()
+      typingRetryTasks[threadId] = nil
+    }
     typingTasks[threadId]?.forEach { $0.cancel() }
     typingTasks[threadId] = nil
 
@@ -745,8 +1139,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 
   private func syncTypingChannel(threadId: String) async {
-    let shouldTrackTyping =
-      listTypingThreadIds.contains(threadId) || detailTypingThreadIds.contains(threadId)
+    let shouldTrackTyping = shouldTrackTypingChannel(threadId: threadId)
 
     if shouldTrackTyping {
       _ = await ensureTypingChannel(threadId: threadId)
@@ -755,11 +1148,92 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
+  private func shouldTrackTypingChannel(threadId: String) -> Bool {
+    detailTypingThreadIds.contains(threadId)
+  }
+
+  private func isTypingChannelHealthy(threadId: String, channel: RealtimeChannelV2?) -> Bool {
+    TypingChannelHealth.isHealthy(
+      threadId: threadId,
+      topic: channel?.topic,
+      status: channel?.status,
+      listenerTaskCount: typingTasks[threadId]?.count ?? 0,
+      hasSubscriptionTask: typingSubscriptionTasks[threadId] != nil
+    )
+  }
+
+  private func repairTypingChannel(threadId: String, reason: String) async {
+    realtimeLogger.info(
+      "Repairing typing realtime channel for \(threadId, privacy: .private): \(reason, privacy: .public)"
+    )
+    await teardownTypingChannel(threadId: threadId, cancelRepairTask: false)
+
+    if shouldTrackTypingChannel(threadId: threadId) {
+      _ = await ensureTypingChannel(threadId: threadId)
+    }
+  }
+
+  private func scheduleTypingChannelRepair(threadId: String, reason: String) {
+    guard shouldTrackTypingChannel(threadId: threadId) else { return }
+    guard typingRepairTasks[threadId] == nil else { return }
+
+    typingRepairTasks[threadId] = Task { @MainActor [weak self] in
+      guard let self else { return }
+      defer { self.typingRepairTasks[threadId] = nil }
+      await self.repairTypingChannel(threadId: threadId, reason: reason)
+    }
+  }
+
+  private func scheduleTypingChannelRetry(threadId: String, reason: String) {
+    guard shouldTrackTypingChannel(threadId: threadId) else { return }
+    guard typingRetryTasks[threadId] == nil else { return }
+
+    typingRetryTasks[threadId] = Task { @MainActor [weak self] in
+      guard let self else { return }
+      defer { self.typingRetryTasks[threadId] = nil }
+      do {
+        try await Task.sleep(for: TypingRepair.retryDelay)
+      } catch {
+        return
+      }
+      guard !Task.isCancelled else { return }
+      guard self.shouldTrackTypingChannel(threadId: threadId) else { return }
+      _ = await self.ensureTypingChannel(threadId: threadId)
+    }
+  }
+
+  private func scheduleThreadListRetry(viewerUserId: String, reason: String) {
+    guard authenticatedViewerUserId == viewerUserId else { return }
+    guard threadListRetryTask == nil else { return }
+
+    threadListRetryTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      defer { self.threadListRetryTask = nil }
+      do {
+        try await Task.sleep(for: TypingRepair.retryDelay)
+      } catch {
+        return
+      }
+      guard !Task.isCancelled else { return }
+      guard self.authenticatedViewerUserId == viewerUserId else { return }
+      await self.startThreadListSubscription(viewerUserId: viewerUserId)
+    }
+  }
+
+  private func prepareRealtimeAuth() async throws {
+    let session = try await AuthSessionManager.shared.getSession()
+    await supabase.realtimeV2.setAuth(session.accessToken)
+  }
+
   private func subscribeWithTimeout(_ channel: RealtimeChannelV2) async throws {
+    try await prepareRealtimeAuth()
+
     let operationTask = Task {
       try await channel.subscribeWithError()
     }
-    defer { operationTask.cancel() }
+    defer {
+      operationTask.cancel()
+    }
 
     try await withTaskCancellationHandler {
       try await withThrowingTaskGroup(of: Void.self) { group in
@@ -807,6 +1281,17 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
+  static func extractReactionMessageId(from action: AnyAction) -> String? {
+    switch action {
+    case .insert(let insert):
+      return insert.record["message_id"]?.stringValue
+    case .update(let update):
+      return update.record["message_id"]?.stringValue
+    case .delete(let delete):
+      return delete.oldRecord["message_id"]?.stringValue
+    }
+  }
+
   static func decodeThreadUserState(from action: AnyAction) -> FriendThreadState? {
     let payload: JSONObject?
     switch action {
@@ -828,6 +1313,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
         "Failed to decode thread user state from realtime payload: \(error.localizedDescription)")
       return nil
     }
+  }
+
+  static func decodeTypingPayload(from payload: JSONObject) throws -> ThreadTypingPayload {
+    try (payload["payload"]?.objectValue ?? payload).decode(as: ThreadTypingPayload.self)
   }
 
   static func shouldRefreshThreadList(

@@ -114,7 +114,11 @@ final class AppCoordinator: ObservableObject {
   // MARK: - User Profile State
 
   /// Current user's ID (lowercase UUID string)
-  @Published private(set) var userId: String?
+  @Published private(set) var userId: String? {
+    didSet {
+      syncFriendsRealtimeForCurrentUser()
+    }
+  }
 
   // MARK: - User ID Access Errors
 
@@ -211,6 +215,8 @@ final class AppCoordinator: ObservableObject {
 
   private var authStateTask: Task<Void, Never>?
   private var initialSessionTimeoutTask: Task<Void, Never>?
+  private var friendsRealtimeTask: Task<Void, Never>?
+  private var appActiveObserver: AnyCancellable?
   private var backgroundTasks: [Task<Void, Never>] = []
   private var didReceiveInitialSession = false
   private var isUpdatingAuthState = false
@@ -237,6 +243,7 @@ final class AppCoordinator: ObservableObject {
       ]
     )
     setupAuthStateListener()
+    setupFriendsRealtimeLifecycle()
     setupInitialSessionCheck()
     setupMaxLoadingTimeout()
     launchLog.info("[Launch] AppCoordinator.init END")
@@ -245,7 +252,34 @@ final class AppCoordinator: ObservableObject {
   deinit {
     authStateTask?.cancel()
     initialSessionTimeoutTask?.cancel()
+    friendsRealtimeTask?.cancel()
+    appActiveObserver?.cancel()
     backgroundTasks.forEach { $0.cancel() }
+  }
+
+  private func setupFriendsRealtimeLifecycle() {
+    appActiveObserver = NotificationCenter.default
+      .publisher(for: .tidexDidBecomeActive)
+      .sink { _ in
+        Task { @MainActor in
+          await FriendsMessagingRealtimeCoordinator.shared.handleAppDidBecomeActive()
+        }
+      }
+  }
+
+  private func syncFriendsRealtimeForCurrentUser() {
+    let currentUserId = userId
+    friendsRealtimeTask?.cancel()
+    friendsRealtimeTask = Task { @MainActor in
+      guard !Task.isCancelled else { return }
+      if let currentUserId, !currentUserId.isEmpty {
+        await FriendsMessagingRealtimeCoordinator.shared.startForAuthenticatedUser(
+          viewerUserId: currentUserId
+        )
+      } else {
+        await FriendsMessagingRealtimeCoordinator.shared.stopForAuthenticatedUser()
+      }
+    }
   }
 
   // MARK: - Initial Session Check

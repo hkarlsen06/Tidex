@@ -28,7 +28,7 @@ struct FriendsListOrdering {
 
     return FriendSortDescriptor(
       displayName: sharer.displayName,
-      isBottomed: bottomedUserIds.contains(sharer.id),
+      isBottomed: bottomedUserIds.contains(sharer.id) && !typingUserIds.contains(sharer.id),
       messageStatus: messageStatus(for: sharer.id),
       shiftStatus: isLoadingShiftPreviews ? nil : preview?.status,
       shiftPriority: isLoadingShiftPreviews ? 3 : shiftStatusPriority(for: preview?.status),
