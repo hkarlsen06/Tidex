@@ -144,6 +144,49 @@ Deno.test("getSystemPrompt includes simple agent operating model", () => {
   );
 });
 
+Deno.test("getSystemPrompt constrains Wagey to app-relevant requests", () => {
+  const prompt = getSystemPrompt({
+    accessLevel: "pro",
+    used: 3,
+    remaining: 37,
+    bonus: 0,
+  });
+
+  assertStringIncludes(prompt, "<app_scope>");
+  assertStringIncludes(prompt, "You are a Tidex product assistant");
+  assertStringIncludes(
+    prompt,
+    "For unrelated requests, give a brief refusal or redirect",
+  );
+  assertStringIncludes(
+    prompt,
+    "Do not use web_search or web_fetch for unrelated requests",
+  );
+  assertStringIncludes(
+    prompt,
+    "Do not use web search or web fetch to satisfy off-topic requests",
+  );
+});
+
+Deno.test("getSystemPrompt blocks adult-content discovery", () => {
+  const prompt = getSystemPrompt({
+    accessLevel: "pro",
+    used: 3,
+    remaining: 37,
+    bonus: 0,
+  });
+
+  assertStringIncludes(prompt, "Adult-content requests are unrelated to Tidex");
+  assertStringIncludes(
+    prompt,
+    "Do not recommend, rank, compare, name, link to, or help discover pornographic sites, channels, studios, performers, titles, categories, or videos",
+  );
+  assertStringIncludes(
+    prompt,
+    "briefly say you can only help with Tidex shift and wage questions",
+  );
+});
+
 Deno.test("getSystemPrompt suppresses auto-defaulted adjustment tax details", () => {
   const prompt = getSystemPrompt({
     accessLevel: "pro",
