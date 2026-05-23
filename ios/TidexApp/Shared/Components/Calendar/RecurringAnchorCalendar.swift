@@ -158,7 +158,7 @@ struct RecurringAnchorCalendar: View {
         backgroundColor: .tidexSurfacePrimary,
         borderColor: .clear,
         borderWidth: 0,
-        dayNumberColor: .tidexBlue,
+        dayNumberColor: .tidexTextPrimary,
         showsTodayBadge: false
       )
     }
