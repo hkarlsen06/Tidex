@@ -1037,21 +1037,35 @@ final class FriendsThreadViewModel: ObservableObject {
   private func loadFromCache() {
     let previousCounterpartMessageId = latestCounterpartMessageId
 
-    if let cachedThread = repository.getThread(id: route.threadId, viewerUserId: viewerUserId) {
+    if let cachedThread = repository.getThread(id: route.threadId, viewerUserId: viewerUserId),
+      cachedThread != thread
+    {
       thread = cachedThread
     }
+
+    let cachedCounterpartReadState: FriendThreadState?
     if route.counterpartUserId.isEmpty {
-      counterpartReadState = nil
+      cachedCounterpartReadState = nil
     } else {
-      counterpartReadState = repository.getThreadState(
+      cachedCounterpartReadState = repository.getThreadState(
         threadId: route.threadId,
         viewerUserId: route.counterpartUserId
       )
     }
+    if counterpartReadState != cachedCounterpartReadState {
+      counterpartReadState = cachedCounterpartReadState
+    }
+
     let cachedMessages = repository.getMessages(
       threadId: route.threadId, viewerUserId: viewerUserId)
-    playReceivedReactionHapticIfNeeded(for: cachedMessages)
-    messages = cachedMessages
+    let messagesDidChange = messages != cachedMessages
+    if messagesDidChange || !hasReceivedReactionBaseline {
+      playReceivedReactionHapticIfNeeded(for: cachedMessages)
+    }
+    if messagesDidChange {
+      messages = cachedMessages
+    }
+
     latestCounterpartMessageId = latestIncomingCounterpartMessageId(in: thread)
     if latestCounterpartMessageId != nil, latestCounterpartMessageId != previousCounterpartMessageId
     {

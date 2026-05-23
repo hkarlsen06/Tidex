@@ -50,6 +50,7 @@ struct FriendsThreadView: View {
   @StateObject private var composerBridge = FriendsThreadComposerBridge()
   @StateObject private var reactionPaletteStore = FriendsChatReactionPaletteStore()
   @StateObject private var chatListRuntime = ChatListRuntime()
+  @StateObject private var chatProjectionStore = FriendsThreadChatProjectionStore()
 
   @State private var pendingReportTarget: ReportTarget?
   @State private var showBlockConfirmation = false
@@ -131,65 +132,24 @@ struct FriendsThreadView: View {
     )
   }
 
-  private var latestOutgoingMessageId: String? {
-    FriendsThreadMessageStatusResolver.latestOutgoingMessageId(
-      messages: viewModel.messages,
-      viewerUserId: viewModel.viewerUserId
-    )
-  }
-
-  private var readReceiptMessageId: String? {
-    FriendsThreadMessageStatusResolver.readReceiptMessageId(
+  private var chatProjectionInput: FriendsThreadChatProjection.Input {
+    FriendsThreadChatProjection.Input(
       messages: viewModel.messages,
       viewerUserId: viewModel.viewerUserId,
+      currentUserDisplayName: currentUserDisplayName,
+      counterpartDisplayName: counterpartDisplayName,
+      counterpartAvatarUrl: counterpartAvatarUrl,
+      quotedMessagesById: viewModel.quotedMessagesById,
       counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
-      counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt
+      counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
+      showsTypingIndicator: viewModel.counterpartIsTyping,
+      typingIndicatorCreatedAt: viewModel.thread.lastMessageAt ?? viewModel.thread.createdAt,
+      reactionAttachmentTargets: activeReactionAttachmentTargets
     )
   }
 
-  private var presentedMessageLookup: [String: FriendMessage] {
-    Dictionary(
-      uniqueKeysWithValues: viewModel.messages.map {
-        (
-          FriendsThreadMessagePresentationID.make(
-            for: $0,
-            viewerUserId: viewModel.viewerUserId
-          ),
-          $0
-        )
-      }
-    )
-  }
-
-  private var presentedMessageIDs: [String] {
-    viewModel.messages.map {
-      FriendsThreadMessagePresentationID.make(for: $0, viewerUserId: viewModel.viewerUserId)
-    }
-  }
-
-  private var presentedMessageIndexLookup: [String: Int] {
-    Dictionary(uniqueKeysWithValues: zip(presentedMessageIDs, viewModel.messages.indices))
-  }
-
-  private var exyteMessages: [ExyteChat.Message] {
-    FriendsThreadExyteHighlightRedrawResolver.applyingHighlightMarker(
-      to: FriendsThreadExyteMessageFactory.makeMessages(
-        messages: viewModel.messages,
-        conversation: .init(
-          viewerUserId: viewModel.viewerUserId,
-          currentUserDisplayName: currentUserDisplayName,
-          counterpartDisplayName: counterpartDisplayName,
-          counterpartAvatarUrl: counterpartAvatarUrl,
-          quotedMessagesById: viewModel.quotedMessagesById,
-          counterpartLastReadMessageId: viewModel.counterpartReadState?.lastReadMessageId,
-          counterpartLastReadAt: viewModel.counterpartReadState?.lastReadAt,
-          showsTypingIndicator: viewModel.counterpartIsTyping,
-          typingIndicatorCreatedAt: viewModel.thread.lastMessageAt ?? viewModel.thread.createdAt,
-          reactionAttachmentTargets: activeReactionAttachmentTargets
-        )
-      ),
-      highlightedPresentedMessageID: highlightedPresentedMessageID
-    )
+  private var chatProjection: FriendsThreadChatProjection {
+    chatProjectionStore.projection(for: chatProjectionInput)
   }
 
   private var activeReactionAttachmentTargets: [String: String] {
@@ -237,12 +197,8 @@ struct FriendsThreadView: View {
       && !(isComposerFocused && isAttachmentDrawerOpen)
   }
 
-  private var chatImageAttachments: [FriendMessageAttachment] {
-    FriendsThreadImageGalleryResolver.imageAttachments(messages: viewModel.messages)
-  }
-
   private func messageID(for presentedMessageID: String) -> String? {
-    if let messageId = presentedMessageLookup[presentedMessageID]?.id {
+    if let messageId = chatProjection.presentedMessageLookup[presentedMessageID]?.id {
       return messageId
     }
 
@@ -288,7 +244,7 @@ struct FriendsThreadView: View {
           await viewModel.markVisibleMessagesReadIfNeeded()
         }
       }
-      .onChange(of: presentedMessageIDs) { oldValue, newValue in
+      .onChange(of: chatProjection.presentedMessageIDs) { oldValue, newValue in
         handleMessageIDsChange(from: oldValue, to: newValue)
       }
       .onDisappear {
@@ -499,10 +455,10 @@ struct FriendsThreadView: View {
     .fullScreenCover(item: $selectedImageGallery) { selection in
       if let initialAttachmentID = FriendsThreadImageGalleryResolver.initialSelectionID(
         requestedAttachmentID: selection.attachmentID,
-        attachments: chatImageAttachments
+        attachments: chatProjection.imageAttachments
       ) {
         FriendsChatImageGalleryOverlay(
-          attachments: chatImageAttachments,
+          attachments: chatProjection.imageAttachments,
           initialAttachmentID: initialAttachmentID,
           onDismiss: {
             selectedImageGallery = nil
@@ -551,8 +507,14 @@ struct FriendsThreadView: View {
   }
 
   private var chatView: some View {
-    ChatView(
-      messages: exyteMessages,
+    let projection = chatProjection
+    let highlightedMessages = FriendsThreadExyteHighlightRedrawResolver.applyingHighlightMarker(
+      to: projection.exyteMessages,
+      highlightedPresentedMessageID: highlightedPresentedMessageID
+    )
+
+    return ChatView(
+      messages: highlightedMessages,
       chatType: .conversation,
       replyMode: .quote,
       didSendMessage: { draft in
@@ -563,6 +525,7 @@ struct FriendsThreadView: View {
       messageBuilder: { params in
         chatRow(
           for: params.message,
+          projection: projection,
           messageFrame: params.messageFrame,
           showContextMenu: params.showContextMenuClosure
         )
@@ -606,7 +569,7 @@ struct FriendsThreadView: View {
     .onMessageReaction(
       didReactTo: { message, draftReaction in
         guard case .emoji(let emoji) = draftReaction.type else { return }
-        guard let friendMessage = presentedMessageLookup[message.id] else { return }
+        guard let friendMessage = projection.presentedMessageLookup[message.id] else { return }
         let attachmentId = resolvedPendingAttachmentReactionTarget(
           forMessageId: friendMessage.id
         )?.attachmentId
@@ -616,13 +579,13 @@ struct FriendsThreadView: View {
         FriendsThreadAttachmentReactionMenuTarget.clear(messageId: friendMessage.id)
       },
       canReactTo: { message in
-        presentedMessageLookup[message.id]?.canReact ?? false
+        projection.presentedMessageLookup[message.id]?.canReact ?? false
       },
       availableReactionsFor: { _ in
         reactionPaletteStore.displayEmojis.map(ReactionType.emoji)
       },
       allowEmojiSearchFor: { message in
-        presentedMessageLookup[message.id]?.canReact ?? false
+        projection.presentedMessageLookup[message.id]?.canReact ?? false
       },
       shouldShowOverviewFor: { _ in false }
     )
@@ -630,7 +593,7 @@ struct FriendsThreadView: View {
     .overlay {
       ZStack {
         FriendsThreadChatViewportBridge(
-          messages: exyteMessages,
+          messages: highlightedMessages,
           scrollRequest: viewportScrollRequest,
           observedPresentedMessageID: nil,
           highlightedPresentedMessageID: highlightedPresentedMessageID,
@@ -675,6 +638,7 @@ struct FriendsThreadView: View {
   @ViewBuilder
   private func chatRow(
     for exyteMessage: ExyteChat.Message,
+    projection: FriendsThreadChatProjection,
     messageFrame: Binding<CGRect>?,
     showContextMenu: @escaping () -> Void
   )
@@ -684,40 +648,11 @@ struct FriendsThreadView: View {
       FriendsChatTypingRow(
         counterpartAvatarUrl: counterpartAvatarUrl,
         counterpartInitials: FriendsChatMessageGrouping.initials(from: counterpartDisplayName),
-        joinsPrevious: shouldTypingIndicatorJoinPrevious
+        joinsPrevious: projection.typingIndicatorJoinsPrevious
       )
       .id(exyteMessage.id)
-    } else if let message = presentedMessageLookup[exyteMessage.id] {
-      let isCurrentUser = message.senderUserId == viewModel.viewerUserId
-      let index = presentedMessageIndexLookup[exyteMessage.id]
-      let previousMessage = index.flatMap { $0 > 0 ? viewModel.messages[$0 - 1] : nil }
-      let nextMessage = index.flatMap {
-        $0 < (viewModel.messages.count - 1) ? viewModel.messages[$0 + 1] : nil
-      }
-      let baseGroupContext = FriendsChatMessageGrouping.context(
-        for: message,
-        previous: previousMessage,
-        next: nextMessage,
-        viewerUserId: viewModel.viewerUserId
-      )
-      let groupContext =
-        if shouldJoinTypingIndicator(message: message, index: index) {
-          baseGroupContext.joiningNext()
-        } else {
-          baseGroupContext
-        }
-      let messageStatus = FriendsThreadMessageStatusResolver.status(
-        for: message,
-        viewerUserId: viewModel.viewerUserId,
-        latestOutgoingMessageId: latestOutgoingMessageId,
-        readReceiptMessageId: readReceiptMessageId
-      )
-      let shouldShowTimestamp = FriendsThreadMessageStatusResolver.shouldShowTimestamp(
-        for: message,
-        isCurrentUser: isCurrentUser,
-        groupContext: groupContext,
-        messageStatus: messageStatus
-      )
+    } else if let rowProjection = projection.rowProjectionsByPresentedMessageID[exyteMessage.id] {
+      let message = rowProjection.message
       let isHighlighted = FriendsThreadExyteHighlightRedrawResolver.isHighlighted(exyteMessage)
       let attachmentHighlightTarget =
         activeAttachmentReactionTarget?.isValid(for: message.id) == true
@@ -733,8 +668,8 @@ struct FriendsThreadView: View {
       FriendsChatMessageRowContent(
         message: message,
         quotedPreview: viewModel.quotedMessage(for: message).map(replyPreviewModel(for:)),
-        isCurrentUser: isCurrentUser,
-        groupContext: groupContext,
+        isCurrentUser: rowProjection.isCurrentUser,
+        groupContext: rowProjection.groupContext,
         counterpartAvatarUrl: counterpartAvatarUrl,
         counterpartAvatarInitials: FriendsChatMessageGrouping.initials(
           from: counterpartDisplayName),
@@ -744,13 +679,13 @@ struct FriendsThreadView: View {
           for: exyteMessage
         ),
         senderFirstName: firstName(
-          from: isCurrentUser ? currentUserDisplayName : counterpartDisplayName
+          from: rowProjection.isCurrentUser ? currentUserDisplayName : counterpartDisplayName
         ),
         separatorDate: nil,
         showsSenderLabel: false,
-        showsTimestamp: shouldShowTimestamp,
-        messageStatus: messageStatus,
-        stackingOrder: Double(viewModel.messages.count - (index ?? 0)),
+        showsTimestamp: rowProjection.shouldShowTimestamp,
+        messageStatus: rowProjection.messageStatus,
+        stackingOrder: Double(projection.messages.count - rowProjection.index),
         onRetry: {
           Task {
             await viewModel.retryMessage(messageId: message.id)
@@ -806,27 +741,8 @@ struct FriendsThreadView: View {
     }
   }
 
-  private func shouldJoinTypingIndicator(message: FriendMessage, index: Int?) -> Bool {
-    guard viewModel.counterpartIsTyping else { return false }
-    guard message.senderUserId != viewModel.viewerUserId else { return false }
-    guard message.messageType == .user, message.deletedAt == nil else { return false }
-    guard index == viewModel.messages.indices.last else { return false }
-    guard Date().timeIntervalSince(message.createdAt) <= FriendsChatMessageGrouping.maximumGap
-    else {
-      return false
-    }
-    return true
-  }
-
   private func canReply(to message: FriendMessage) -> Bool {
     message.messageType == .user && message.deletedAt == nil
-  }
-
-  private var shouldTypingIndicatorJoinPrevious: Bool {
-    guard viewModel.counterpartIsTyping, let lastMessage = viewModel.messages.last else {
-      return false
-    }
-    return shouldJoinTypingIndicator(message: lastMessage, index: viewModel.messages.indices.last)
   }
 
   @ViewBuilder
@@ -1106,7 +1022,7 @@ struct FriendsThreadView: View {
     _ defaultActionClosure: @escaping (ExyteChat.Message, DefaultMessageMenuAction) -> Void,
     _ message: ExyteChat.Message
   ) {
-    guard let friendMessage = presentedMessageLookup[message.id] else { return }
+    guard let friendMessage = chatProjection.presentedMessageLookup[message.id] else { return }
     activeAttachmentReactionTarget = nil
     pendingAttachmentReactionTarget = nil
     FriendsThreadAttachmentReactionMenuTarget.clear(messageId: friendMessage.id)
@@ -1176,7 +1092,7 @@ struct FriendsThreadView: View {
   }
 
   private func requestScrollToBottom() {
-    liveEdgeTargetPresentedMessageID = presentedMessageIDs.last
+    liveEdgeTargetPresentedMessageID = chatProjection.presentedMessageIDs.last
   }
 
   private func scheduleScrollToBottomAfterKeyboardSettles() {
