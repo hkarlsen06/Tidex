@@ -173,6 +173,7 @@ struct FriendsChatMessageRowContent: View {
                     preview: quotedPreview,
                     isCurrentUser: isCurrentUser,
                     isHighlighted: false,
+                    maxWidth: Self.maximumTextBubbleWidth,
                     onTap: onTapQuotedMessage
                   )
                 }
@@ -392,17 +393,14 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private var timestampRevealSurface: some View {
-    Color.tidexBackground.opacity(0.001)
-      .frame(width: timestampRevealSurfaceWidth, height: timestampRevealSurfaceHeight)
-      .contentShape(Rectangle())
-      .highPriorityGesture(
-        DragGesture(
-          minimumDistance: FriendsChatTimestampRevealResolver.minimumDistance,
-          coordinateSpace: .global
-        )
-        .onChanged(handleTimestampRevealChanged)
-        .onEnded(handleTimestampRevealEnded)
-      )
+    FriendsChatHorizontalPanSurface(
+      targetKind: .timestampRevealGutter,
+      minimumDistance: FriendsChatTimestampRevealResolver.minimumDistance,
+      direction: .left,
+      onChanged: handleTimestampRevealChanged,
+      onEnded: handleTimestampRevealEnded
+    )
+    .frame(width: timestampRevealSurfaceWidth, height: timestampRevealSurfaceHeight)
   }
 
   private var timestampRevealSurfaceWidth: CGFloat {
@@ -430,7 +428,7 @@ struct FriendsChatMessageRowContent: View {
     return union.isNull ? .zero : union
   }
 
-  private func handleTimestampRevealChanged(_ value: DragGesture.Value) {
+  private func handleTimestampRevealChanged(_ value: FriendsChatReplyDragValue) {
     guard
       let newOffset = FriendsChatTimestampRevealResolver.clampedRevealOffset(
         horizontal: value.translation.width,
@@ -443,7 +441,7 @@ struct FriendsChatMessageRowContent: View {
     timestampRevealOffset = newOffset
   }
 
-  private func handleTimestampRevealEnded(_ value: DragGesture.Value) {
+  private func handleTimestampRevealEnded(_ value: FriendsChatReplyDragValue) {
     handleTimestampRevealChanged(value)
 
     guard timestampRevealOffset != 0 else { return }
@@ -693,6 +691,7 @@ struct FriendsChatMessageRowContent: View {
     HStack(spacing: Spacing.xxxs) {
       ForEach(reactions) { reaction in
         Button {
+          guard !reaction.viewerHasReacted else { return }
           onToggleReaction(reaction.emoji, attachmentId)
         } label: {
           HStack(spacing: 4) {
@@ -1042,6 +1041,7 @@ private struct FriendsChatMessageReplyPreview: View {
   let preview: FriendsChatReplyPreviewModel
   let isCurrentUser: Bool
   let isHighlighted: Bool
+  var maxWidth: CGFloat? = nil
   let onTap: () -> Void
 
   var body: some View {
@@ -1060,12 +1060,9 @@ private struct FriendsChatMessageReplyPreview: View {
           thumbnailSize: CGSize(width: 56, height: 56),
           hidesImageOnlySnippet: true
         )
-
-        Spacer(minLength: 0)
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.xs)
-      .frame(maxWidth: .infinity, alignment: .leading)
       .fixedSize(horizontal: false, vertical: true)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
@@ -1077,6 +1074,7 @@ private struct FriendsChatMessageReplyPreview: View {
       )
     }
     .buttonStyle(.plain)
+    .frame(maxWidth: maxWidth, alignment: isCurrentUser ? .trailing : .leading)
   }
 
   private var replyBackgroundColor: Color {
@@ -1143,7 +1141,6 @@ struct FriendsChatReplyPreviewContent: View {
 
           if let snippetText {
             snippetLabel(snippetText)
-              .frame(maxWidth: .infinity, alignment: .leading)
           }
         }
       }
@@ -1365,8 +1362,9 @@ private struct FriendsChatImageView: View {
             messageId: messageId,
             attachmentId: attachment.id
           )
+          return
         }
-        onReactionPressChanged(attachment, isPressing && canReact)
+        onReactionPressChanged(attachment, false)
       }
     )
     .onChange(of: canReact) { _, canReact in
@@ -1425,46 +1423,71 @@ private struct FriendsChatReplyGestureModifier: ViewModifier {
   let onEnded: (FriendsChatReplyDragValue) -> Void
 
   func body(content: Content) -> some View {
-    if isCurrentUser {
-      content.highPriorityGesture(
-        DragGesture(
-          minimumDistance: FriendsChatReplySwipeResolver.minimumDistance,
-          coordinateSpace: .global
-        )
-        .onChanged { value in onChanged(FriendsChatReplyDragValue(value)) }
-        .onEnded { value in onEnded(FriendsChatReplyDragValue(value)) }
+    content.overlay {
+      FriendsChatHorizontalPanSurface(
+        targetKind: .replyPayload,
+        minimumDistance: FriendsChatReplySwipeResolver.minimumDistance,
+        direction: isCurrentUser ? .left : .right,
+        onChanged: onChanged,
+        onEnded: onEnded
       )
-    } else {
-      content.overlay {
-        FriendsChatReplyPanSurface(
-          minimumDistance: FriendsChatReplySwipeResolver.minimumDistance,
-          onChanged: onChanged,
-          onEnded: onEnded
-        )
-      }
     }
   }
 }
 
-private struct FriendsChatReplyPanSurface: UIViewRepresentable {
+enum FriendsChatGestureTargetKind {
+  case replyPayload
+  case timestampRevealGutter
+}
+
+final class FriendsChatGestureTargetView: UIView {
+  var kind: FriendsChatGestureTargetKind
+
+  init(kind: FriendsChatGestureTargetKind) {
+    self.kind = kind
+    super.init(frame: .zero)
+    backgroundColor = .clear
+    isUserInteractionEnabled = false
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+    false
+  }
+}
+
+private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
+  let targetKind: FriendsChatGestureTargetKind
   let minimumDistance: CGFloat
+  let direction: FriendsChatReplySwipeDirection
   let onChanged: (FriendsChatReplyDragValue) -> Void
   let onEnded: (FriendsChatReplyDragValue) -> Void
 
   func makeCoordinator() -> Coordinator {
-    Coordinator(minimumDistance: minimumDistance, onChanged: onChanged, onEnded: onEnded)
+    Coordinator(
+      minimumDistance: minimumDistance,
+      direction: direction,
+      onChanged: onChanged,
+      onEnded: onEnded
+    )
   }
 
   func makeUIView(context: Context) -> UIView {
-    let view = UIView(frame: .zero)
-    view.backgroundColor = .clear
-    view.isUserInteractionEnabled = true
+    let view = FriendsChatGestureTargetView(kind: targetKind)
     context.coordinator.attach(to: view)
     return view
   }
 
   func updateUIView(_ uiView: UIView, context: Context) {
+    if let targetView = uiView as? FriendsChatGestureTargetView {
+      targetView.kind = targetKind
+    }
     context.coordinator.minimumDistance = minimumDistance
+    context.coordinator.direction = direction
     context.coordinator.onChanged = onChanged
     context.coordinator.onEnded = onEnded
     context.coordinator.attach(to: uiView)
@@ -1475,45 +1498,73 @@ private struct FriendsChatReplyPanSurface: UIViewRepresentable {
   }
 
   final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-    private static let horizontalIntentRatio: CGFloat = 1.45
-
     var minimumDistance: CGFloat
+    var direction: FriendsChatReplySwipeDirection
     var onChanged: (FriendsChatReplyDragValue) -> Void
     var onEnded: (FriendsChatReplyDragValue) -> Void
     private weak var view: UIView?
+    private weak var gestureHostView: UIView?
     private var recognizer: UIPanGestureRecognizer?
     private var hasPassedMinimumDistance = false
 
     init(
       minimumDistance: CGFloat,
+      direction: FriendsChatReplySwipeDirection,
       onChanged: @escaping (FriendsChatReplyDragValue) -> Void,
       onEnded: @escaping (FriendsChatReplyDragValue) -> Void
     ) {
       self.minimumDistance = minimumDistance
+      self.direction = direction
       self.onChanged = onChanged
       self.onEnded = onEnded
     }
 
     func attach(to view: UIView) {
       self.view = view
-      guard recognizer == nil else { return }
+      installRecognizerIfPossible()
 
-      let recognizer = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
-      recognizer.cancelsTouchesInView = false
-      recognizer.delaysTouchesBegan = false
-      recognizer.delaysTouchesEnded = false
-      recognizer.delegate = self
-      view.addGestureRecognizer(recognizer)
-      self.recognizer = recognizer
+      DispatchQueue.main.async { [weak self, weak view] in
+        guard let self, self.view === view else { return }
+        self.installRecognizerIfPossible()
+      }
     }
 
     func detach() {
-      if let recognizer, let view {
-        view.removeGestureRecognizer(recognizer)
+      if let recognizer, let gestureHostView {
+        gestureHostView.removeGestureRecognizer(recognizer)
       }
       recognizer = nil
       view = nil
+      gestureHostView = nil
       hasPassedMinimumDistance = false
+    }
+
+    private func installRecognizerIfPossible() {
+      guard let view, let hostView = gestureHost(for: view) else { return }
+      guard gestureHostView !== hostView else { return }
+
+      if let recognizer, let gestureHostView {
+        gestureHostView.removeGestureRecognizer(recognizer)
+      }
+
+      let panRecognizer =
+        recognizer
+        ?? UIPanGestureRecognizer(
+          target: self,
+          action: #selector(handlePan(_:))
+        )
+      panRecognizer.cancelsTouchesInView = false
+      panRecognizer.delaysTouchesBegan = false
+      panRecognizer.delaysTouchesEnded = false
+      panRecognizer.delegate = self
+      hostView.addGestureRecognizer(panRecognizer)
+      self.recognizer = panRecognizer
+      gestureHostView = hostView
+    }
+
+    private func gestureHost(for view: UIView) -> UIView? {
+      let ancestors = sequence(first: view.superview, next: { $0?.superview })
+      return ancestors.first { $0 is UITableViewCell } ?? view.superview
     }
 
     @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
@@ -1585,16 +1636,19 @@ private struct FriendsChatReplyPanSurface: UIViewRepresentable {
       guard let recognizer = gestureRecognizer as? UIPanGestureRecognizer, let view else {
         return true
       }
+      guard view.bounds.contains(recognizer.location(in: view)) else { return false }
       let velocity = recognizer.velocity(in: view.window ?? view)
-      return velocity.x > 0
-        && velocity.x > abs(velocity.y) * Self.horizontalIntentRatio
+      return FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
+        velocity: CGSize(width: velocity.x, height: velocity.y),
+        direction: direction
+      )
     }
 
     func gestureRecognizer(
       _ gestureRecognizer: UIGestureRecognizer,
       shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
-      false
+      true
     }
   }
 }

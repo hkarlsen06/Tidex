@@ -19,8 +19,13 @@ struct FriendsListOrdering {
     }
   }
 
-  func visibleSharers(visible: [SharedUser], hidden _: [SharedUser]) -> [SharedUser] {
-    sortedSharers(visible)
+  func visibleSharers(visible: [SharedUser], hidden: [SharedUser]) -> [SharedUser] {
+    let visibleIds = Set(visible.map(\.id))
+    let temporarilyVisibleHiddenSharers = hidden.filter {
+      !visibleIds.contains($0.id) && unreadChatUserIds.contains($0.id)
+    }
+
+    return sortedSharers(visible + temporarilyVisibleHiddenSharers)
   }
 
   private func sortDescriptor(for sharer: SharedUser) -> FriendSortDescriptor {
@@ -253,7 +258,7 @@ struct SharerListView: View {
         || (isLoading && sharers.isEmpty && hiddenSharers.isEmpty)
       {
         loadingState
-      } else if sharers.isEmpty {
+      } else if sortedVisibleSharers.isEmpty {
         FriendsListEmptyState(onAddFriend: onAddFriend)
       } else {
         sharersList

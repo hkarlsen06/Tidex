@@ -78,7 +78,7 @@ final class FriendsListOrderingTests: XCTestCase {
     XCTAssertEqual(ordering.sortedSharers(users).map(\.id), ["active", "upcoming", "no-shift"])
   }
 
-  func testHiddenUsersWithMessageActivityStayOutOfVisibleFeed() {
+  func testHiddenUserWithUnreadMessageTemporarilyAppearsInVisibleFeed() {
     let visible = [
       makeUser(id: "visible", firstName: "Visible", hidden: false)
     ]
@@ -95,7 +95,7 @@ final class FriendsListOrderingTests: XCTestCase {
         "hidden-chat": FriendCardMessagePreview(
           text: "Hey",
           timestamp: Date(timeIntervalSince1970: 1_700_000_300),
-          state: .incomingOpened
+          state: .incomingUnread
         )
       ],
       shiftPreviews: [
@@ -114,6 +114,35 @@ final class FriendsListOrderingTests: XCTestCase {
           status: .active
         ),
       ],
+      isLoadingShiftPreviews: false
+    )
+
+    XCTAssertEqual(
+      ordering.visibleSharers(visible: visible, hidden: hidden).map(\.id),
+      ["hidden-chat", "visible"]
+    )
+  }
+
+  func testHiddenUserWithOpenedMessageStaysOutOfVisibleFeed() {
+    let visible = [
+      makeUser(id: "visible", firstName: "Visible", hidden: false)
+    ]
+    let hidden = [
+      makeUser(id: "hidden-chat", firstName: "Hidden Chat", hidden: true)
+    ]
+
+    let ordering = FriendsListOrdering(
+      typingUserIds: [],
+      unreadChatUserIds: [],
+      bottomedUserIds: [],
+      chatPreviewsByUserId: [
+        "hidden-chat": FriendCardMessagePreview(
+          text: "Hey",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          state: .incomingOpened
+        )
+      ],
+      shiftPreviews: [:],
       isLoadingShiftPreviews: false
     )
 
