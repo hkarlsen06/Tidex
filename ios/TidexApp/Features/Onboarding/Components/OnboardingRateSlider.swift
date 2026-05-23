@@ -1,6 +1,78 @@
 import SwiftUI
 import UIKit
 
+enum HourlyRateInputFormatter {
+  static func display(_ amount: Double) -> String {
+    let formatter = NumberFormatter()
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 0
+    formatter.maximumFractionDigits = 2
+    formatter.locale = .current
+    return formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
+  }
+
+  static func parse(_ text: String) -> Double? {
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+
+    let compact =
+      trimmed
+      .replacingOccurrences(of: "\u{00a0}", with: "")
+      .replacingOccurrences(of: " ", with: "")
+
+    let lastComma = compact.lastIndex(of: ",")
+    let lastPeriod = compact.lastIndex(of: ".")
+    let normalized: String
+    if let lastComma, let lastPeriod {
+      if lastComma > lastPeriod {
+        normalized =
+          compact
+          .replacingOccurrences(of: ".", with: "")
+          .replacingOccurrences(of: ",", with: ".")
+      } else {
+        normalized = compact.replacingOccurrences(of: ",", with: "")
+      }
+    } else if lastComma != nil {
+      normalized =
+        isSingleGroupingSeparator(",", in: compact)
+        ? compact.replacingOccurrences(of: ",", with: "")
+        : compact.replacingOccurrences(of: ",", with: ".")
+    } else if lastPeriod != nil, isSingleGroupingSeparator(".", in: compact) {
+      normalized = compact.replacingOccurrences(of: ".", with: "")
+    } else {
+      normalized = compact
+    }
+
+    if let parsed = Double(normalized) {
+      return parsed
+    }
+
+    for locale in [Locale.current, Locale(identifier: "nb_NO"), Locale(identifier: "en_US_POSIX")] {
+      let formatter = NumberFormatter()
+      formatter.numberStyle = .decimal
+      formatter.locale = locale
+      if let number = formatter.number(from: trimmed) {
+        return number.doubleValue
+      }
+    }
+
+    return nil
+  }
+
+  static func roundedToCents(_ amount: Double) -> Double {
+    (amount * 100).rounded() / 100
+  }
+
+  private static func isSingleGroupingSeparator(_ separator: Character, in text: String) -> Bool {
+    let parts = text.split(separator: separator, omittingEmptySubsequences: false)
+    guard parts.count == 2 else { return false }
+    guard parts[0].count >= 1, parts[1].count == 3 else { return false }
+    return parts.allSatisfy { part in
+      part.allSatisfy(\.isNumber)
+    }
+  }
+}
+
 /// Unified hourly rate slider for onboarding flows
 /// Supports compact (inline) and full (with label/helper) styles
 struct OnboardingRateSlider: View {
@@ -220,9 +292,9 @@ struct OnboardingRateSlider: View {
     }
   }
 
-  /// Format value for display as whole numbers.
+  /// Format value for display, preserving manually entered decimal rates.
   private func formatValueWithDecimals(_ amount: Double) -> String {
-    formatValue(amount)
+    HourlyRateInputFormatter.display(amount)
   }
 
   // MARK: - Tappable Value Views
@@ -350,13 +422,10 @@ struct OnboardingRateSlider: View {
   }
 
   private func applyCustomValue() {
-    // Parse the input, handling both comma and period as decimal separator.
-    let normalized = inputText.replacingOccurrences(of: ",", with: ".")
-    if let parsed = Double(normalized) {
+    if let parsed = HourlyRateInputFormatter.parse(inputText) {
       // Allow any positive value 0-10000 when manually entered (not limited by slider range).
       let clamped = min(max(parsed, 0), 10000)
-      let rounded = clamped.rounded()
-      value = rounded
+      value = HourlyRateInputFormatter.roundedToCents(clamped)
     }
     showingCustomInput = false
     isInputFocused = false

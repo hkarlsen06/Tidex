@@ -40,6 +40,20 @@ final class OnboardingCurrencyResolverTests: XCTestCase {
     )
   }
 
+  func testHourlyRateInputParserPreservesTwoDecimalValues() {
+    XCTAssertEqual(HourlyRateInputFormatter.parse("184.54"), 184.54)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("184,54"), 184.54)
+    XCTAssertEqual(HourlyRateInputFormatter.roundedToCents(184.545), 184.55)
+  }
+
+  func testHourlyRateInputParserHandlesGroupedDecimalValues() {
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1,234"), 1234)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1.234"), 1234)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1 234,56"), 1234.56)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1,234.56"), 1234.56)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1.234,56"), 1234.56)
+  }
+
   func testDetectDefaultCurrencyHandlesExpandedSupportedCurrencies() {
     XCTAssertEqual(
       OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "pl_PL")),
