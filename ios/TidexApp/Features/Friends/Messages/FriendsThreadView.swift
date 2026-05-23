@@ -213,16 +213,6 @@ struct FriendsThreadView: View {
     )
   }
 
-  private var packageReplyScrollRequest: FriendsThreadChatViewportScrollRequest? {
-    guard viewportScrollRequest?.kind == .reply else { return nil }
-    return viewportScrollRequest
-  }
-
-  private var bridgeViewportScrollRequest: FriendsThreadChatViewportScrollRequest? {
-    guard viewportScrollRequest?.kind != .reply else { return nil }
-    return viewportScrollRequest
-  }
-
   private var highlightedPresentedMessageID: String? {
     FriendsThreadChatViewportRequestResolver.presentedMessageID(
       for: highlightedMessageId,
@@ -571,7 +561,11 @@ struct FriendsThreadView: View {
         }
       },
       messageBuilder: { params in
-        chatRow(for: params.message, messageFrame: params.messageFrame)
+        chatRow(
+          for: params.message,
+          messageFrame: params.messageFrame,
+          showContextMenu: params.showContextMenuClosure
+        )
       },
       inputViewBuilder: { params in
         FriendsThreadComposerHostedView(
@@ -598,7 +592,6 @@ struct FriendsThreadView: View {
     .keyboardDismissMode(.interactive)
     .contentInsets(bottom: Self.bottomMessageComposerClearance)
     .onWillDisplayCell(handleChatCellWillDisplay)
-    .scrollToMessageID(packageReplyScrollRequest?.presentedMessageID)
     .enableLoadMore(offset: 50) {
       guard
         let lastWillDisplayPresentedMessageID = chatListRuntime.lastWillDisplayPresentedMessageID,
@@ -638,8 +631,8 @@ struct FriendsThreadView: View {
       ZStack {
         FriendsThreadChatViewportBridge(
           messages: exyteMessages,
-          scrollRequest: bridgeViewportScrollRequest,
-          observedPresentedMessageID: packageReplyScrollRequest?.presentedMessageID,
+          scrollRequest: viewportScrollRequest,
+          observedPresentedMessageID: nil,
           highlightedPresentedMessageID: highlightedPresentedMessageID,
           onPinnedToBottomChanged: {
             isPinnedToBottom = $0
@@ -649,7 +642,7 @@ struct FriendsThreadView: View {
               messageId: presentedMessageID.flatMap(messageID(for:))
             )
           },
-          onObservedPresentedMessageVisible: handlePackageReplyPresentedMessageVisible,
+          onObservedPresentedMessageVisible: { _ in },
           onDidHandleScrollRequest: handleViewportScrollRequest
         )
 
@@ -680,7 +673,11 @@ struct FriendsThreadView: View {
   }
 
   @ViewBuilder
-  private func chatRow(for exyteMessage: ExyteChat.Message, messageFrame: Binding<CGRect>?)
+  private func chatRow(
+    for exyteMessage: ExyteChat.Message,
+    messageFrame: Binding<CGRect>?,
+    showContextMenu: @escaping () -> Void
+  )
     -> some View
   {
     if exyteMessage.id == FriendsThreadExyteMessageFactory.typingIndicatorMessageID {
@@ -759,8 +756,12 @@ struct FriendsThreadView: View {
             await viewModel.retryMessage(messageId: message.id)
           }
         },
-        onToggleReaction: { emoji, attachmentId in
-          handleReactionSelection(emoji, forMessageId: message.id, attachmentId: attachmentId)
+        onShowReactionMenu: { attachmentId in
+          showReactionMenu(
+            for: message,
+            attachmentId: attachmentId,
+            showContextMenu: showContextMenu
+          )
         },
         onTapQuotedMessage: {
           handleQuotedMessageTap(for: message)
@@ -1227,6 +1228,34 @@ struct FriendsThreadView: View {
     }
   }
 
+  private func showReactionMenu(
+    for message: FriendMessage,
+    attachmentId: String?,
+    showContextMenu: @escaping () -> Void
+  ) {
+    guard message.canReact else { return }
+
+    if let attachmentId {
+      let target = PendingAttachmentReactionTarget(
+        messageId: message.id,
+        attachmentId: attachmentId,
+        createdAt: .now
+      )
+      activeAttachmentReactionTarget = target
+      pendingAttachmentReactionTarget = target
+      FriendsThreadAttachmentReactionMenuTarget.set(
+        messageId: message.id,
+        attachmentId: attachmentId
+      )
+    } else {
+      activeAttachmentReactionTarget = nil
+      pendingAttachmentReactionTarget = nil
+      FriendsThreadAttachmentReactionMenuTarget.clear(messageId: message.id)
+    }
+
+    showContextMenu()
+  }
+
   private func resolvedPendingAttachmentReactionTarget(
     forMessageId messageId: String
   ) -> PendingAttachmentReactionTarget? {
@@ -1256,12 +1285,6 @@ struct FriendsThreadView: View {
 
   private func handleChatCellWillDisplay(_ message: ExyteChat.Message) {
     chatListRuntime.lastWillDisplayPresentedMessageID = message.id
-  }
-
-  private func handlePackageReplyPresentedMessageVisible(_ presentedMessageID: String) {
-    guard let request = packageReplyScrollRequest, request.presentedMessageID == presentedMessageID
-    else { return }
-    completeReplyScrollRequest(request)
   }
 
   private func handleViewportScrollRequest(_ request: FriendsThreadChatViewportScrollRequest) {

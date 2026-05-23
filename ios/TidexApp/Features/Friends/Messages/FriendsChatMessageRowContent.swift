@@ -61,6 +61,39 @@ enum FriendsThreadAttachmentReactionMenuTarget {
   }
 }
 
+@MainActor
+private enum FriendsThreadAttachmentTapSuppressor {
+  private static var targets: [String: Date] = [:]
+  private static let expirationInterval: TimeInterval = 10
+
+  static func suppressNextTap(messageId: String, attachmentId: String) {
+    let key = key(messageId: messageId, attachmentId: attachmentId)
+    targets[key] = .now
+  }
+
+  static func consumeSuppressedTap(
+    messageId: String,
+    attachmentId: String,
+    now: Date = .now
+  ) -> Bool {
+    pruneExpired(now: now)
+
+    let key = key(messageId: messageId, attachmentId: attachmentId)
+    guard targets.removeValue(forKey: key) != nil else { return false }
+    return true
+  }
+
+  private static func pruneExpired(now: Date) {
+    targets = targets.filter { _, createdAt in
+      now.timeIntervalSince(createdAt) <= expirationInterval
+    }
+  }
+
+  private static func key(messageId: String, attachmentId: String) -> String {
+    "\(messageId)#\(attachmentId)"
+  }
+}
+
 struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
   private static let maximumTextBubbleWidth: CGFloat = 360
@@ -98,7 +131,7 @@ struct FriendsChatMessageRowContent: View {
   let messageStatus: FriendsChatMessageStatus?
   let stackingOrder: Double
   let onRetry: () -> Void
-  let onToggleReaction: (String, String?) -> Void
+  let onShowReactionMenu: (String?) -> Void
   let onTapQuotedMessage: () -> Void
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
   let onImageReactionPressChanged: (FriendMessageAttachment, Bool) -> Void
@@ -109,6 +142,7 @@ struct FriendsChatMessageRowContent: View {
   let messageFrame: Binding<CGRect>?
 
   @State private var replySwipeOffset: CGFloat = 0
+  @State private var activeReplySwipePayloadId: String?
   @State private var hasTriggeredReplySwipeHaptic = false
   @State private var rowFrame: CGRect = .zero
   @State private var payloadFrame: CGRect = .zero
@@ -186,6 +220,7 @@ struct FriendsChatMessageRowContent: View {
                         messageId: message.id,
                         attachment: attachment,
                         isCurrentUser: isCurrentUser,
+                        canOpenAttachment: messageFrame == nil,
                         canReact: message.canReact,
                         isHighlighted: false,
                         onOpenImageAttachment: onOpenImageAttachment,
@@ -219,9 +254,10 @@ struct FriendsChatMessageRowContent: View {
                     ChatShiftSnapshotCard(
                       snapshot: shiftSnapshot,
                       isCurrentUser: isCurrentUser,
-                      onTap: {
-                        onOpenShiftSnapshot(shiftSnapshot)
-                      }
+                      onTap: messageFrame == nil
+                        ? {
+                          onOpenShiftSnapshot(shiftSnapshot)
+                        } : nil
                     )
                   }
                   .friendsChatMessageFrame(
@@ -461,14 +497,13 @@ struct FriendsChatMessageRowContent: View {
         isCurrentUser: isCurrentUser,
         offset: renderedReplySwipeOffset,
         actionAlignment: replySwipeActionAlignment,
-        onChanged: handleReplySwipeChanged,
-        onEnded: handleReplySwipeEnded
+        onChanged: { handleReplySwipeChanged(id: id, value: $0) },
+        onEnded: { handleReplySwipeEnded(id: id, value: $0) }
       ) {
         content()
       } actionLabel: {
         replySwipeActionLabel
-          .padding(.horizontal, Spacing.sm)
-          .opacity(replySwipeActionOpacity)
+          .opacity(replySwipeActionOpacity(for: id))
       }
       .onAppear {
         ReplySwipeHaptics.prepareIfNeeded()
@@ -503,8 +538,12 @@ struct FriendsChatMessageRowContent: View {
     isCurrentUser ? 48 : -48
   }
 
-  private var replySwipeActionOpacity: Double {
-    min(Double(abs(replySwipeOffset)) / Double(FriendsChatReplySwipeResolver.actionWidth * 0.6), 1)
+  private func replySwipeActionOpacity(for id: String) -> Double {
+    guard activeReplySwipePayloadId == id else { return 0 }
+    return min(
+      Double(abs(replySwipeOffset)) / Double(FriendsChatReplySwipeResolver.actionWidth * 0.6),
+      1
+    )
   }
 
   private var replySwipeActionScale: CGFloat {
@@ -527,14 +566,14 @@ struct FriendsChatMessageRowContent: View {
       actionLabel: AnyView(
         replySwipeActionLabel
           .offset(x: replySwipeActionXOffset)
-          .opacity(replySwipeActionOpacity)
+          .opacity(replySwipeActionOpacity(for: id))
       ),
-      onChanged: handleReplySwipeChanged,
-      onEnded: handleReplySwipeEnded
+      onChanged: { handleReplySwipeChanged(id: id, value: $0) },
+      onEnded: { handleReplySwipeEnded(id: id, value: $0) }
     )
   }
 
-  private func handleReplySwipeChanged(value: FriendsChatReplyDragValue) {
+  private func handleReplySwipeChanged(id: String, value: FriendsChatReplyDragValue) {
     guard
       let newOffset = clampedReplySwipeOffset(
         horizontal: value.translation.width,
@@ -544,6 +583,13 @@ struct FriendsChatMessageRowContent: View {
       return
     }
 
+    if newOffset == 0 {
+      if activeReplySwipePayloadId == id {
+        activeReplySwipePayloadId = nil
+      }
+    } else {
+      activeReplySwipePayloadId = id
+    }
     replySwipeOffset = newOffset
 
     let crossedThreshold = FriendsChatReplySwipeResolver.crossedThreshold(offset: replySwipeOffset)
@@ -554,16 +600,27 @@ struct FriendsChatMessageRowContent: View {
     }
   }
 
-  private func handleReplySwipeEnded(value: FriendsChatReplyDragValue) {
+  private func handleReplySwipeEnded(id: String, value: FriendsChatReplyDragValue) {
     let finalOffset = replySwipeOffset
     hasTriggeredReplySwipeHaptic = false
 
-    guard finalOffset != 0 else { return }
+    guard finalOffset != 0 else {
+      if activeReplySwipePayloadId == id {
+        activeReplySwipePayloadId = nil
+      }
+      return
+    }
 
     let outcome = replySwipeOutcome(offset: finalOffset, velocity: value.velocity.width)
 
     withAnimation(.easeOut(duration: Self.replySwipeResetAnimationDuration)) {
       replySwipeOffset = 0
+    }
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.replySwipeResetAnimationDuration) {
+      if activeReplySwipePayloadId == id {
+        activeReplySwipePayloadId = nil
+      }
     }
 
     guard outcome == .trigger, let onReplySwipe else { return }
@@ -691,8 +748,7 @@ struct FriendsChatMessageRowContent: View {
     HStack(spacing: Spacing.xxxs) {
       ForEach(reactions) { reaction in
         Button {
-          guard !reaction.viewerHasReacted else { return }
-          onToggleReaction(reaction.emoji, attachmentId)
+          onShowReactionMenu(attachmentId)
         } label: {
           HStack(spacing: 4) {
             FriendsChatEmojiGlyph(emoji: reaction.emoji, size: 22)
@@ -1244,7 +1300,7 @@ struct ChatShiftSnapshotCard: View {
   let snapshot: FriendShiftSnapshot
   let isCurrentUser: Bool
   var onTap: (() -> Void)? = nil
-  @State private var tapSuppressedUntil: Date?
+  @State private var shouldSuppressNextTap = false
 
   private var ownerPrimaryTextColor: Color {
     .tidexTextMuted
@@ -1259,17 +1315,13 @@ struct ChatShiftSnapshotCard: View {
           minimumDuration: FriendsThreadAttachmentTapGuard.messageMenuRecognitionDuration,
           maximumDistance: 20,
           perform: {
-            tapSuppressedUntil =
-              FriendsThreadAttachmentTapGuard.suppressedUntilAfterMenuRecognition()
+            shouldSuppressNextTap = true
           },
           onPressingChanged: { _ in }
         )
         .onTapGesture {
-          guard
-            FriendsThreadAttachmentTapGuard.shouldHandleTap(
-              suppressedUntil: tapSuppressedUntil
-            )
-          else {
+          guard !shouldSuppressNextTap else {
+            shouldSuppressNextTap = false
             return
           }
           onTap()
@@ -1281,23 +1333,9 @@ struct ChatShiftSnapshotCard: View {
 
   private var cardContent: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      HStack(alignment: .center, spacing: Spacing.xs) {
-        AvatarView(
-          url: snapshot.ownerAvatarUrl,
-          initials: snapshot.ownerInitials,
-          size: AvatarView.Size.small,
-          cornerRadius: CornerRadius.sm
-        )
-
-        Text(snapshot.ownerFirstName)
-          .font(.tidexCaptionStrong)
-          .foregroundColor(ownerPrimaryTextColor)
-          .lineLimit(1)
-
-        Spacer(minLength: 0)
-      }
-      .padding(.horizontal, Spacing.sm)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      ownerHeader
+        .padding(.horizontal, Spacing.sm)
+        .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
 
       SharedShiftRow(
         shift: snapshot.renderableShift,
@@ -1308,47 +1346,66 @@ struct ChatShiftSnapshotCard: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }
+
+  @ViewBuilder
+  private var ownerHeader: some View {
+    HStack(alignment: .center, spacing: Spacing.xs) {
+      if isCurrentUser {
+        Spacer(minLength: 0)
+        ownerName
+        ownerAvatar
+      } else {
+        ownerAvatar
+        ownerName
+        Spacer(minLength: 0)
+      }
+    }
+  }
+
+  private var ownerAvatar: some View {
+    AvatarView(
+      url: snapshot.ownerAvatarUrl,
+      initials: snapshot.ownerInitials,
+      size: AvatarView.Size.small,
+      cornerRadius: CornerRadius.sm
+    )
+  }
+
+  private var ownerName: some View {
+    Text(snapshot.ownerFirstName)
+      .font(.tidexCaptionStrong)
+      .foregroundColor(ownerPrimaryTextColor)
+      .lineLimit(1)
+  }
 }
 
 private struct FriendsChatImageView: View {
   let messageId: String
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let canOpenAttachment: Bool
   let canReact: Bool
   let isHighlighted: Bool
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
   let onReactionPressChanged: (FriendMessageAttachment, Bool) -> Void
   let onPrepareReaction: (FriendMessageAttachment) -> Void
 
-  @State private var tapSuppressedUntil: Date?
+  @State private var shouldSuppressNextTap = false
 
   var body: some View {
+    let onImageTap: (() -> Void)? = canOpenAttachment ? handleImageTap : nil
+
     FriendsChatImageAttachmentCard(
       attachment: attachment,
       isCurrentUser: isCurrentUser,
-      isHighlighted: isHighlighted
-    ) {
-      guard
-        FriendsThreadAttachmentTapGuard.shouldHandleTap(
-          suppressedUntil: tapSuppressedUntil
-        )
-      else {
-        return
-      }
-      FriendsThreadAttachmentReactionMenuTarget.clear(
-        messageId: messageId,
-        attachmentId: attachment.id
-      )
-      onReactionPressChanged(attachment, false)
-      onOpenImageAttachment(attachment)
-    }
+      isHighlighted: isHighlighted,
+      onTap: onImageTap
+    )
     .onLongPressGesture(
       minimumDuration: FriendsThreadAttachmentTapGuard.messageMenuRecognitionDuration,
       maximumDistance: 20,
       perform: {
-        tapSuppressedUntil =
-          FriendsThreadAttachmentTapGuard
-          .suppressedUntilAfterMenuRecognition()
+        shouldSuppressNextTap = true
         guard canReact else { return }
         FriendsThreadAttachmentReactionMenuTarget.set(
           messageId: messageId,
@@ -1371,13 +1428,42 @@ private struct FriendsChatImageView: View {
       if canReact {
         return
       }
-      tapSuppressedUntil = nil
+      shouldSuppressNextTap = false
       FriendsThreadAttachmentReactionMenuTarget.clear(
         messageId: messageId,
         attachmentId: attachment.id
       )
       onReactionPressChanged(attachment, false)
     }
+    .onAppear {
+      if !canOpenAttachment {
+        FriendsThreadAttachmentTapSuppressor.suppressNextTap(
+          messageId: messageId,
+          attachmentId: attachment.id
+        )
+      }
+    }
+  }
+
+  private func handleImageTap() {
+    guard !shouldSuppressNextTap else {
+      shouldSuppressNextTap = false
+      return
+    }
+    guard
+      !FriendsThreadAttachmentTapSuppressor.consumeSuppressedTap(
+        messageId: messageId,
+        attachmentId: attachment.id
+      )
+    else {
+      return
+    }
+    FriendsThreadAttachmentReactionMenuTarget.clear(
+      messageId: messageId,
+      attachmentId: attachment.id
+    )
+    onReactionPressChanged(attachment, false)
+    onOpenImageAttachment(attachment)
   }
 }
 
@@ -1674,12 +1760,12 @@ private struct FriendsChatReplySwipeContainer<Content: View, ActionLabel: View>:
           onEnded: onEnded
         )
       )
-      .offset(x: offset)
       .overlay(alignment: actionAlignment) {
         actionLabel()
           .offset(x: actionAlignment == .leading ? -48 : 48)
           .allowsHitTesting(false)
       }
+      .offset(x: offset)
   }
 
   private var framePreference: some View {
@@ -1701,6 +1787,7 @@ final class FriendsChatImageLoader: ObservableObject {
 
   @Published private(set) var image: UIImage?
   @Published private(set) var isLoading = false
+  @Published private(set) var didFail = false
 
   private let variant: Variant
 
@@ -1717,17 +1804,23 @@ final class FriendsChatImageLoader: ObservableObject {
 
     let cacheURL = Self.cacheURL(for: attachment.storagePath, variant: variant)
 
-    if let cached = ImageCache.shared.get(for: cacheURL) {
+    if let cached = await cachedImage(for: cacheURL) {
       image = cached
+      didFail = false
       return
     }
 
-    if let cached = await ImageCache.shared.getFromDisk(for: cacheURL) {
+    if let cached = await originalCachedImageFallback(
+      storagePath: attachment.storagePath,
+      displayCacheURL: cacheURL
+    ) {
       image = cached
+      didFail = false
       return
     }
 
     guard !isLoading else { return }
+    didFail = false
     isLoading = true
     defer { isLoading = false }
 
@@ -1735,12 +1828,38 @@ final class FriendsChatImageLoader: ObservableObject {
       let data = try await FriendsMessagingService.shared.downloadAttachmentData(
         path: attachment.storagePath
       )
+      try Task.checkCancellation()
       guard let loadedImage = await Self.decodeImage(from: data, variant: variant) else { return }
+      try Task.checkCancellation()
       ImageCache.shared.set(loadedImage, for: cacheURL)
       image = loadedImage
+      didFail = false
+    } catch is CancellationError {
+      didFail = false
     } catch {
       image = nil
+      didFail = true
     }
+  }
+
+  private func cachedImage(for cacheURL: URL) async -> UIImage? {
+    if let cached = ImageCache.shared.get(for: cacheURL) {
+      return cached
+    }
+
+    return await ImageCache.shared.getFromDisk(for: cacheURL)
+  }
+
+  private func originalCachedImageFallback(
+    storagePath: String,
+    displayCacheURL: URL
+  ) async -> UIImage? {
+    guard case .display = variant else { return nil }
+
+    let originalCacheURL = Self.cacheURL(for: storagePath, variant: .original)
+    guard let cached = await cachedImage(for: originalCacheURL) else { return nil }
+    ImageCache.shared.set(cached, for: displayCacheURL)
+    return cached
   }
 
   nonisolated static func cacheURL(for storagePath: String, variant: Variant = .original) -> URL {
@@ -1841,49 +1960,60 @@ struct FriendsChatImageAttachmentCard: View {
   }
 
   var body: some View {
-    Group {
+    ZStack {
       if let image = loader.image {
-        Image(uiImage: image)
-          .resizable()
-          .scaledToFill()
-          .frame(width: imageFrameSize.width, height: imageFrameSize.height)
-          .clipShape(imageShape)
-          .overlay {
-            imageShape
-              .strokeBorder(
-                imageBorderColor,
-                lineWidth: 1
-              )
-          }
-          .overlay {
-            if isHighlighted {
-              imageShape
-                .fill(Color.tidexBlue.opacity(0.14))
-            }
-          }
-          .contentShape(imageShape)
-          .onTapGesture {
-            onTap?()
-          }
-      } else if loader.isLoading {
-        placeholder {
-          ProgressView()
-        }
-      } else {
+        loadedImage(image)
+      } else if loader.didFail {
         placeholder {
           Image(systemName: "photo")
             .font(.system(size: placeholderSymbolSize, weight: .medium))
             .foregroundColor(.tidexTextMuted)
         }
+      } else {
+        placeholder {
+          loadingIndicator
+        }
       }
     }
-    .task(id: attachment.id) {
+    .task(id: attachment.storagePath) {
       await loader.loadIfNeeded(attachment: attachment)
     }
   }
 
   private var imageFrameSize: CGSize {
     displaySize ?? attachment.friendsChatImageFrameSize()
+  }
+
+  @ViewBuilder
+  private func loadedImage(_ image: UIImage) -> some View {
+    if let onTap {
+      imageContent(image)
+        .onTapGesture(perform: onTap)
+    } else {
+      imageContent(image)
+    }
+  }
+
+  private func imageContent(_ image: UIImage) -> some View {
+    Image(uiImage: image)
+      .resizable()
+      .scaledToFill()
+      .frame(width: imageFrameSize.width, height: imageFrameSize.height)
+      .clipShape(imageShape)
+      .overlay {
+        imageShape
+          .strokeBorder(
+            imageBorderColor,
+            lineWidth: 1
+          )
+      }
+      .overlay {
+        if isHighlighted {
+          imageShape
+            .fill(Color.tidexBlue.opacity(0.14))
+        }
+      }
+      .contentShape(imageShape)
   }
 
   private var imageShape: RoundedRectangle {
@@ -1895,6 +2025,14 @@ struct FriendsChatImageAttachmentCard: View {
       return .tidexBlue
     }
     return isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder.opacity(0.45)
+  }
+
+  private var loadingIndicator: some View {
+    ProgressView()
+      .progressViewStyle(.circular)
+      .tint(.tidexTextMuted)
+      .controlSize(.regular)
+      .scaleEffect(placeholderSymbolSize <= 14 ? 0.72 : 1)
   }
 
   @ViewBuilder

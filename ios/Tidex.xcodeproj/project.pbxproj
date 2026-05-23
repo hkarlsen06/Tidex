@@ -720,7 +720,7 @@
 				11923C172F16B94B0076AFD6 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */,
-				11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */,
+				11CD7FA32F63CFC700A987E7 /* XCLocalSwiftPackageReference "../../Chat" */,
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
@@ -1711,13 +1711,9 @@
 				minimumVersion = 9.1.0;
 			};
 		};
-		11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/TidexHQ/Chat.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.3;
-			};
+		11CD7FA32F63CFC700A987E7 /* XCLocalSwiftPackageReference "../../Chat" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../Chat;
 		};
 /* End XCRemoteSwiftPackageReference section */
 
@@ -1774,7 +1770,6 @@
 		};
 		11CD7FA42F63CFC700A987E7 /* ExyteChat */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */;
 			productName = ExyteChat;
 		};
 /* End XCSwiftPackageProductDependency section */
