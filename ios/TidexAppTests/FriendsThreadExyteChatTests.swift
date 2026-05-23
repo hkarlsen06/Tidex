@@ -521,20 +521,44 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
-  func testTimestampRevealResolverStartsOnlyOutsidePayloadFrame() {
-    let payloadFrame = CGRect(x: 40, y: 100, width: 220, height: 64)
+  func testTimestampRevealResolverUsesOppositeBackgroundSpacerForSender() {
+    XCTAssertEqual(
+      FriendsChatTimestampRevealResolver.activeSurface(isCurrentUser: true),
+      .leadingSpacer
+    )
 
+    XCTAssertEqual(
+      FriendsChatTimestampRevealResolver.activeSurface(isCurrentUser: false),
+      .trailingSpacer
+    )
+  }
+
+  func testPanGestureResolverUsesConfiguredMinimumDistance() {
     XCTAssertFalse(
-      FriendsChatTimestampRevealResolver.canBegin(
-        at: CGPoint(x: 120, y: 124),
-        payloadFrame: payloadFrame
+      FriendsChatPanGestureResolver.hasPassedMinimumDistance(
+        translation: CGSize(width: 8, height: 6),
+        minimumDistance: FriendsChatReplySwipeResolver.minimumDistance
       )
     )
 
     XCTAssertTrue(
-      FriendsChatTimestampRevealResolver.canBegin(
-        at: CGPoint(x: 24, y: 124),
-        payloadFrame: payloadFrame
+      FriendsChatPanGestureResolver.hasPassedMinimumDistance(
+        translation: CGSize(width: 16, height: 12),
+        minimumDistance: FriendsChatReplySwipeResolver.minimumDistance
+      )
+    )
+  }
+
+  func testPanGestureResolverBeginsOnlyForHorizontalIntent() {
+    XCTAssertTrue(
+      FriendsChatPanGestureResolver.hasHorizontalIntent(
+        translation: CGSize(width: 24, height: 8)
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsChatPanGestureResolver.hasHorizontalIntent(
+        translation: CGSize(width: 8, height: 24)
       )
     )
   }

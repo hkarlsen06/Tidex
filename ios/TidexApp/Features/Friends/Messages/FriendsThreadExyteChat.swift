@@ -155,7 +155,18 @@ enum FriendsChatReplySwipeOutcome: Equatable {
   case trigger
 }
 
+enum FriendsChatPanGestureResolver {
+  static func hasPassedMinimumDistance(translation: CGSize, minimumDistance: CGFloat) -> Bool {
+    hypot(translation.width, translation.height) >= minimumDistance
+  }
+
+  static func hasHorizontalIntent(translation: CGSize) -> Bool {
+    abs(translation.width) > abs(translation.height)
+  }
+}
+
 enum FriendsChatReplySwipeResolver {
+  static let minimumDistance: CGFloat = 20
   static let actionThreshold: CGFloat = 0.4
   static let actionWidth: CGFloat = 80
   static let velocityThreshold: CGFloat = 300
@@ -206,17 +217,22 @@ enum FriendsChatReplySwipeResolver {
 }
 
 enum FriendsChatTimestampRevealResolver {
+  enum Surface: Equatable {
+    case leadingSpacer
+    case trailingSpacer
+  }
+
   static let revealWidth: CGFloat = 64
+  static let minimumDistance: CGFloat = 16
+
+  static func activeSurface(isCurrentUser: Bool) -> Surface {
+    isCurrentUser ? .leadingSpacer : .trailingSpacer
+  }
 
   static func clampedRevealOffset(horizontal: CGFloat, vertical: CGFloat) -> CGFloat? {
     guard abs(horizontal) > abs(vertical) else { return nil }
     guard horizontal < 0 else { return 0 }
     return min(abs(horizontal), revealWidth)
-  }
-
-  static func canBegin(at startLocation: CGPoint, payloadFrame: CGRect) -> Bool {
-    guard !payloadFrame.isNull, !payloadFrame.isEmpty else { return true }
-    return !payloadFrame.contains(startLocation)
   }
 }
 
