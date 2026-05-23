@@ -1337,6 +1337,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     self.lastObservedYear = self.monthContext.displayYear
     self.lastObservedMonth = self.monthContext.displayMonth
 
+    seedLayoutPreferencesFromLocalSettings()
+
     // Subscribe to month context changes
     setupMonthContextSubscription()
 
@@ -1373,6 +1375,20 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         self?.invalidateCurrentMonthCache(reason: "significant-time-change")
       }
     }
+  }
+
+  private func seedLayoutPreferencesFromLocalSettings() {
+    guard
+      let userId = AppCoordinator.shared.getCurrentUserId(),
+      !userId.isEmpty,
+      let localSettings = settingsRepository.getSettings(for: userId)
+    else {
+      return
+    }
+
+    cachedUserId = userId
+    settings = localSettings
+    shouldShowDashboardClockButtons = localSettings.effectiveShowDashboardClockButtons
   }
 
   /// Subscribe to SharedMonthContext changes to reload data when month changes
