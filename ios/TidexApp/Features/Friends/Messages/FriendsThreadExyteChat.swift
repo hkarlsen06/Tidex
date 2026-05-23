@@ -205,6 +205,21 @@ enum FriendsChatReplySwipeResolver {
   }
 }
 
+enum FriendsChatTimestampRevealResolver {
+  static let revealWidth: CGFloat = 64
+
+  static func clampedRevealOffset(horizontal: CGFloat, vertical: CGFloat) -> CGFloat? {
+    guard abs(horizontal) > abs(vertical) else { return nil }
+    guard horizontal < 0 else { return 0 }
+    return min(abs(horizontal), revealWidth)
+  }
+
+  static func canBegin(at startLocation: CGPoint, payloadFrame: CGRect) -> Bool {
+    guard !payloadFrame.isNull, !payloadFrame.isEmpty else { return true }
+    return !payloadFrame.contains(startLocation)
+  }
+}
+
 enum FriendsThreadMessageListChangeResolver {
   enum Change: Equatable {
     case none

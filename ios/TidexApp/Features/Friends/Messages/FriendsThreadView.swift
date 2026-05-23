@@ -72,6 +72,7 @@ struct FriendsThreadView: View {
   @State private var pendingForwardAttachment: PendingForwardAttachment?
   @State private var activeAttachmentReactionTarget: PendingAttachmentReactionTarget?
   @State private var pendingAttachmentReactionTarget: PendingAttachmentReactionTarget?
+  @State private var timestampRevealOffset: CGFloat = 0
   @State private var visibilityOwnerId = UUID()
 
   init(route: FriendChatRoute, viewerUserId: String) {
@@ -788,6 +789,7 @@ struct FriendsThreadView: View {
             viewModel.setReplyTarget(message)
           }
           : nil,
+        timestampRevealOffset: $timestampRevealOffset,
         messageFrame: messageFrame
       )
       .id(exyteMessage.id)
