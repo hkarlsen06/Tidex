@@ -1,3 +1,4 @@
+import CoreGraphics
 import ExyteChat
 import XCTest
 
@@ -489,6 +490,51 @@ final class FriendsThreadExyteChatTests: XCTestCase {
         horizontal: 28,
         vertical: 32,
         allowedDirection: .right
+      )
+    )
+  }
+
+  func testTimestampRevealResolverClampsLeftSwipeToColumnWidth() {
+    XCTAssertEqual(
+      FriendsChatTimestampRevealResolver.clampedRevealOffset(
+        horizontal: -120,
+        vertical: 4
+      ),
+      FriendsChatTimestampRevealResolver.revealWidth
+    )
+  }
+
+  func testTimestampRevealResolverIgnoresRightSwipeAndVerticalDrag() {
+    XCTAssertEqual(
+      FriendsChatTimestampRevealResolver.clampedRevealOffset(
+        horizontal: 28,
+        vertical: 2
+      ),
+      0
+    )
+
+    XCTAssertNil(
+      FriendsChatTimestampRevealResolver.clampedRevealOffset(
+        horizontal: -28,
+        vertical: 32
+      )
+    )
+  }
+
+  func testTimestampRevealResolverStartsOnlyOutsidePayloadFrame() {
+    let payloadFrame = CGRect(x: 40, y: 100, width: 220, height: 64)
+
+    XCTAssertFalse(
+      FriendsChatTimestampRevealResolver.canBegin(
+        at: CGPoint(x: 120, y: 124),
+        payloadFrame: payloadFrame
+      )
+    )
+
+    XCTAssertTrue(
+      FriendsChatTimestampRevealResolver.canBegin(
+        at: CGPoint(x: 24, y: 124),
+        payloadFrame: payloadFrame
       )
     )
   }

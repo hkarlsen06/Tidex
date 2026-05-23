@@ -104,10 +104,13 @@ struct FriendsChatMessageRowContent: View {
   let onPrepareImageReaction: (FriendMessageAttachment) -> Void
   let onOpenShiftSnapshot: (FriendShiftSnapshot) -> Void
   let onReplySwipe: (() -> Void)?
+  @Binding var timestampRevealOffset: CGFloat
   let messageFrame: Binding<CGRect>?
 
   @State private var replySwipeOffset: CGFloat = 0
   @State private var hasTriggeredReplySwipeHaptic = false
+  @State private var payloadFrame: CGRect = .zero
+  @State private var canUpdateTimestampReveal = false
 
   var body: some View {
     let menuAttachmentId =
@@ -148,7 +151,7 @@ struct FriendsChatMessageRowContent: View {
         FriendsChatDateSeparator(date: separatorDate)
       }
 
-      replySwipeContainer {
+      timestampRevealContainer {
         ChatMessageRow(
           isCurrentUser: isCurrentUser,
           minSpacer: Spacing.xxxl,
@@ -181,16 +184,18 @@ struct FriendsChatMessageRowContent: View {
                 ForEach(Array(imageAttachments.enumerated()), id: \.element.id) {
                   index, attachment in
                   if attachment.kind == .image {
-                    FriendsChatImageView(
-                      messageId: message.id,
-                      attachment: attachment,
-                      isCurrentUser: isCurrentUser,
-                      canReact: message.canReact,
-                      isHighlighted: false,
-                      onOpenImageAttachment: onOpenImageAttachment,
-                      onReactionPressChanged: onImageReactionPressChanged,
-                      onPrepareReaction: onPrepareImageReaction
-                    )
+                    replySwipeContainer {
+                      FriendsChatImageView(
+                        messageId: message.id,
+                        attachment: attachment,
+                        isCurrentUser: isCurrentUser,
+                        canReact: message.canReact,
+                        isHighlighted: false,
+                        onOpenImageAttachment: onOpenImageAttachment,
+                        onReactionPressChanged: onImageReactionPressChanged,
+                        onPrepareReaction: onPrepareImageReaction
+                      )
+                    }
                     .friendsChatMessageFrame(
                       !hasMessageText && shiftSnapshot == nil && index == imageAttachments.count - 1
                         ? messageFrame : nil
@@ -213,13 +218,15 @@ struct FriendsChatMessageRowContent: View {
                 }
 
                 if let shiftSnapshot {
-                  ChatShiftSnapshotCard(
-                    snapshot: shiftSnapshot,
-                    isCurrentUser: isCurrentUser,
-                    onTap: {
-                      onOpenShiftSnapshot(shiftSnapshot)
-                    }
-                  )
+                  replySwipeContainer {
+                    ChatShiftSnapshotCard(
+                      snapshot: shiftSnapshot,
+                      isCurrentUser: isCurrentUser,
+                      onTap: {
+                        onOpenShiftSnapshot(shiftSnapshot)
+                      }
+                    )
+                  }
                   .friendsChatMessageFrame(
                     hasMessageText || !imageAttachments.isEmpty ? nil : messageFrame
                   )
@@ -231,52 +238,57 @@ struct FriendsChatMessageRowContent: View {
                 }
 
                 if showsFallbackBubble, let fallbackPreviewText {
-                  FriendsChatReactionAnchoredBubbleCard(
-                    isCurrentUser: isCurrentUser,
-                    groupContext: groupContext,
-                    minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: 280,
-                    messageFrame: messageFrame
-                  ) {
-                    Text(fallbackPreviewText)
-                      .font(.tidexBody)
-                      .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-                      .multilineTextAlignment(.leading)
-                      .fixedSize(horizontal: false, vertical: true)
-                  } reaction: {
-                    reactionStrip(for: message.reactions)
-                  }
-                }
-
-                if hasMessageText {
-                  FriendsChatReactionAnchoredBubbleCard(
-                    isCurrentUser: isCurrentUser,
-                    groupContext: groupContext,
-                    minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: 280,
-                    messageFrame: messageFrame
-                  ) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                      if let quotedPreview {
-                        FriendsChatMessageReplyPreview(
-                          preview: quotedPreview,
-                          isCurrentUser: isCurrentUser,
-                          isHighlighted: false,
-                          onTap: onTapQuotedMessage
-                        )
-                      }
-
-                      Text(visibleMessageText)
+                  replySwipeContainer {
+                    FriendsChatReactionAnchoredBubbleCard(
+                      isCurrentUser: isCurrentUser,
+                      groupContext: groupContext,
+                      minWidth: Self.minimumBubbleWidthForTimestamp,
+                      maxWidth: 280,
+                      messageFrame: messageFrame
+                    ) {
+                      Text(fallbackPreviewText)
                         .font(.tidexBody)
                         .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
+                    } reaction: {
+                      reactionStrip(for: message.reactions)
                     }
-                  } reaction: {
-                    reactionStrip(for: message.reactions)
+                  }
+                }
+
+                if hasMessageText {
+                  replySwipeContainer {
+                    FriendsChatReactionAnchoredBubbleCard(
+                      isCurrentUser: isCurrentUser,
+                      groupContext: groupContext,
+                      minWidth: Self.minimumBubbleWidthForTimestamp,
+                      maxWidth: 280,
+                      messageFrame: messageFrame
+                    ) {
+                      VStack(alignment: .leading, spacing: Spacing.xs) {
+                        if let quotedPreview {
+                          FriendsChatMessageReplyPreview(
+                            preview: quotedPreview,
+                            isCurrentUser: isCurrentUser,
+                            isHighlighted: false,
+                            onTap: onTapQuotedMessage
+                          )
+                        }
+
+                        Text(visibleMessageText)
+                          .font(.tidexBody)
+                          .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+                          .multilineTextAlignment(.leading)
+                          .fixedSize(horizontal: false, vertical: true)
+                      }
+                    } reaction: {
+                      reactionStrip(for: message.reactions)
+                    }
                   }
                 }
               }
+              .friendsChatMessageFrame($payloadFrame)
 
               if showsMetadataRow {
                 HStack(spacing: Spacing.xxs) {
@@ -328,13 +340,79 @@ struct FriendsChatMessageRowContent: View {
       }
   }
 
+  private func timestampRevealContainer<Content: View>(
+    @ViewBuilder content: @escaping () -> Content
+  ) -> some View {
+    ZStack(alignment: .trailing) {
+      timestampRevealColumn
+      content()
+        .offset(x: -timestampRevealOffset)
+    }
+    .contentShape(Rectangle())
+    .simultaneousGesture(timestampRevealGesture)
+  }
+
+  private var timestampRevealColumn: some View {
+    HStack {
+      Spacer(minLength: 0)
+
+      Text(message.createdAt.toHourMinuteString())
+        .font(.tidexMicro)
+        .foregroundColor(.tidexTextMuted)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(width: FriendsChatTimestampRevealResolver.revealWidth, alignment: .trailing)
+        .padding(.trailing, Spacing.sm)
+        .opacity(timestampRevealOpacity)
+    }
+    .allowsHitTesting(false)
+  }
+
+  private var timestampRevealOpacity: Double {
+    let progress = timestampRevealOffset / FriendsChatTimestampRevealResolver.revealWidth
+    return min(max(Double(progress), 0), 1)
+  }
+
+  private var timestampRevealGesture: some Gesture {
+    DragGesture(minimumDistance: 16, coordinateSpace: .global)
+      .onChanged { value in
+        if timestampRevealOffset == 0 {
+          canUpdateTimestampReveal = FriendsChatTimestampRevealResolver.canBegin(
+            at: value.startLocation,
+            payloadFrame: payloadFrame
+          )
+        }
+
+        guard canUpdateTimestampReveal else { return }
+        guard
+          let newOffset = FriendsChatTimestampRevealResolver.clampedRevealOffset(
+            horizontal: value.translation.width,
+            vertical: value.translation.height
+          )
+        else {
+          return
+        }
+
+        timestampRevealOffset = newOffset
+      }
+      .onEnded { _ in
+        canUpdateTimestampReveal = false
+        guard timestampRevealOffset != 0 else { return }
+        withAnimation(.easeOut(duration: Self.replySwipeResetAnimationDuration)) {
+          timestampRevealOffset = 0
+        }
+      }
+  }
+
   @ViewBuilder
   private func replySwipeContainer<Content: View>(
     @ViewBuilder content: @escaping () -> Content
   ) -> some View {
     if onReplySwipe != nil {
-      ZStack {
-        replySwipeActionBackground
+      ZStack(alignment: replySwipeActionAlignment) {
+        replySwipeActionLabel
+          .padding(.horizontal, Spacing.sm)
+          .opacity(replySwipeActionOpacity)
         content()
           .offset(x: replySwipeOffset)
       }
@@ -357,22 +435,6 @@ struct FriendsChatMessageRowContent: View {
     }
   }
 
-  private var replySwipeActionBackground: some View {
-    HStack(spacing: 0) {
-      if replySwipeDirection == .right {
-        replySwipeActionLabel
-          .padding(.leading, Spacing.sm)
-        Spacer(minLength: 0)
-      } else {
-        Spacer(minLength: 0)
-        replySwipeActionLabel
-          .padding(.trailing, Spacing.sm)
-      }
-    }
-    .padding(.horizontal, Spacing.sm)
-    .opacity(replySwipeActionOpacity)
-  }
-
   private var replySwipeActionLabel: some View {
     ZStack {
       Capsule()
@@ -388,6 +450,10 @@ struct FriendsChatMessageRowContent: View {
 
   private var replySwipeDirection: FriendsChatReplySwipeDirection {
     isCurrentUser ? .left : .right
+  }
+
+  private var replySwipeActionAlignment: Alignment {
+    replySwipeDirection == .right ? .leading : .trailing
   }
 
   private var replySwipeActionOpacity: Double {
@@ -703,7 +769,7 @@ struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View, Stat
       .overlay(
         bubbleShape
           .stroke(
-            isCurrentUser ? Color.clear : Color.tidexBorderSubtle,
+            isCurrentUser ? Color.clear : Color.tidexBorderSubtle.opacity(0.45),
             lineWidth: 1
           )
       )
@@ -1454,7 +1520,7 @@ struct FriendsChatImageAttachmentCard: View {
             imageShape
               .strokeBorder(
                 imageBorderColor,
-                lineWidth: isHighlighted ? 2 : 1
+                lineWidth: 1
               )
           }
           .overlay {
@@ -1496,7 +1562,7 @@ struct FriendsChatImageAttachmentCard: View {
     if isHighlighted {
       return .tidexBlue
     }
-    return isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder
+    return isCurrentUser ? Color.white.opacity(0.2) : Color.tidexBorder.opacity(0.45)
   }
 
   @ViewBuilder
@@ -1511,7 +1577,7 @@ struct FriendsChatImageAttachmentCard: View {
         imageShape
           .strokeBorder(
             imageBorderColor,
-            lineWidth: isHighlighted ? 2 : 1
+            lineWidth: 1
           )
       }
   }
