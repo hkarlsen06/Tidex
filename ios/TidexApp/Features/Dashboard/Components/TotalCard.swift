@@ -366,7 +366,7 @@ struct TotalCard: View {
         .frame(height: 8)
 
         ZStack(alignment: .trailing) {
-          // Always present — anchors both the width and height to the real font metrics.
+          // Always present - anchors both the width and height to the real font metrics.
           Text("999%")
             .font(.tidexLabel)
             .monospacedDigit()

@@ -17,7 +17,7 @@ struct EmptyShiftCard: View {
   // MARK: - Body
 
   var body: some View {
-    VStack(spacing: Spacing.xs) {
+    VStack(spacing: Spacing.sm) {
       // Main card content
       ShiftCardContentLayout(rowSpacing: 4, centerTrailing: true) {
         // Placeholder day name and date
