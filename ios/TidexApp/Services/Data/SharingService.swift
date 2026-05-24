@@ -54,8 +54,8 @@ enum SharingServiceError: Error, LocalizedError {
       return "Network error: \(error.localizedDescription)"
     case .decodingError(let error):
       return "Failed to decode response: \(error.localizedDescription)"
-    case .httpError(let code, let message):
-      return "HTTP \(code): \(message ?? "Unknown error")"
+    case .httpError(_, let message):
+      return message ?? "Something went wrong. Please try again."
     case .noShareAccess:
       return "No access to shared shifts"
     }
@@ -210,8 +210,7 @@ final class SharingService: ObservableObject {
     }
   }
 
-  /// Fetch users who have shared their shifts with the current user
-  /// Uses Supabase RPC get_my_sharers()
+  /// Fetch users who have shared their shifts with the current user.
   func fetchSharers(for userId: String) async throws -> [SharedUser] {
     _ = userId  // Signature stability for existing callers
     isLoadingSharers = true
@@ -223,41 +222,12 @@ final class SharingService: ObservableObject {
         // Check for cancellation before making network request
         try Task.checkCancellation()
 
-        // Ensure we have a valid authenticated Supabase session.
-        _ = try await AuthSessionManager.shared.getSession()
-
-        // Execute RPC
-        let rpcRows: [SharingRPCSharerRow] =
-          try await supabase
-          .rpc("get_my_sharers")
-          .execute()
-          .value
-
-        // Check for cancellation after RPC
+        let bootstrap = try await fetchFriendsTabBootstrap()
         try Task.checkCancellation()
 
-        // Map to SharedUser
-        let users = rpcRows.map { sharer in
-          SharedUser(
-            id: sharer.id,
-            email: sharer.email,
-            phone: sharer.phone,
-            username: sharer.username,
-            firstName: sharer.firstName,
-            profilePictureUrl: sharer.profilePictureUrl,
-            oauthAvatarUrl: sharer.oauthAvatarUrl,
-            sharedAt: sharer.sharedAt,
-            showEarnings: sharer.showEarnings,
-            hidden: sharer.hidden,
-            hasSharedCalendarContent: sharer.hasSharedCalendarContent,
-            latestSharedShiftDate: sharer.latestSharedShiftDate,
-            hasRecurringSharedShifts: sharer.hasRecurringSharedShifts
-          )
-        }
-
-        sharers = users
-        logger.info("Loaded \(users.count) sharers for user")
-        return users
+        sharers = bootstrap.sharers
+        logger.info("Loaded \(bootstrap.sharers.count) sharers for user")
+        return bootstrap.sharers
 
       } catch let error as SharingServiceError {
         self.error = error
@@ -393,46 +363,13 @@ final class SharingService: ObservableObject {
     }
 
     do {
-      // Ensure we have a valid authenticated Supabase session.
-      _ = try await AuthSessionManager.shared.getSession()
-
-      let now = Date()
-      let startDate = SharingComputeCore.isoDateString(
-        Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
-      let endDate = SharingComputeCore.isoDateString(
-        Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
-
-      let params: [String: AnyJSON] = [
-        "p_sharer_ids": .array(uncachedIds.map { .string($0) }),
-        "p_start_date": .string(startDate),
-        "p_end_date": .string(endDate),
-      ]
-
       logger.info(
-        "Fetching \(uncachedIds.count) shift preview payloads via RPC (cached: \(cachedPreviews.count))"
+        "Fetching consolidated shift previews via RPC (needed: \(uncachedIds.count), cached: \(cachedPreviews.count))"
       )
 
-      let payloadRows: [SharingRPCPreviewPayloadRow] =
-        try await supabase
-        .rpc("get_my_sharer_preview_payloads", params: params)
-        .execute()
-        .value
-
-      let payloadBySharerId = Dictionary(
-        payloadRows.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last }
-      )
-
-      let freshPreviews = await Self.computeShiftPreviewsOffMain(
-        uncachedIds: uncachedIds,
-        payloadBySharerId: payloadBySharerId,
-        startDate: startDate,
-        endDate: endDate,
-        now: now
-      )
-
-      // Cache the fresh previews
-      for preview in freshPreviews {
-        previewCache[preview.sharerId] = CachedPreview(preview: preview, cachedAt: now)
+      let uncachedIdSet = Set(uncachedIds)
+      let freshPreviews = try await fetchFriendsTabBootstrap().previews.filter {
+        uncachedIdSet.contains($0.sharerId)
       }
 
       // Merge cached + fresh and return
@@ -719,49 +656,18 @@ final class SharingService: ObservableObject {
   ) {
     do {
       logger.info("Starting fetchAllFriends...")
-      let session = try await AuthSessionManager.shared.getSession()
-      let userId = session.normalizedUserId
-      logger.info("Got session, token expires at: \(session.expiresAt)")
 
       do {
-        let apiResponse: FriendsAPIResponse =
-          try await supabase
-          .rpc("get_sharing_friends_api")
-          .single()
-          .execute()
-          .value
-        let blockedSets = try? await fetchBlockedUserSets(for: userId)
-        let allBlockedPairIds = blockedSets?.allBlockedPairIds ?? Set<String>()
-        let blockedByCurrentUserIds = blockedSets?.blockedByCurrentUserIds ?? Set<String>()
-
-        let sanitizedFriends = apiResponse.friends.filter { !allBlockedPairIds.contains($0.id) }
-        let apiBlockedFriends = (apiResponse.blockedFriends ?? []).filter {
-          blockedByCurrentUserIds.contains($0.id)
-        }
-        let blockedFriendsFromFriends = apiResponse.friends.filter {
-          blockedByCurrentUserIds.contains($0.id)
-        }
-
-        var mergedBlockedFriendsById: [String: Friend] = [:]
-        for friend in apiBlockedFriends {
-          mergedBlockedFriendsById[friend.id] = friend
-        }
-        for friend in blockedFriendsFromFriends {
-          mergedBlockedFriendsById[friend.id] = friend
-        }
-
-        let mergedBlockedFriends = mergedBlockedFriendsById.values.sorted {
-          $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-        }
+        let bootstrap = try await fetchFriendsTabBootstrap()
 
         logger.info(
           """
-          Loaded \(sanitizedFriends.count) friends and
-          \(mergedBlockedFriends.count) blocked friends
-          (capacity: \(apiResponse.capacity.currentCount)/\(apiResponse.capacity.limit))
+          Loaded \(bootstrap.friends.count) friends and
+          \(bootstrap.blockedFriends.count) blocked friends
+          (capacity: \(bootstrap.capacity.currentCount)/\(bootstrap.capacity.limit))
           """
         )
-        return (sanitizedFriends, mergedBlockedFriends, apiResponse.capacity)
+        return (bootstrap.friends, bootstrap.blockedFriends, bootstrap.capacity)
       } catch let error as PostgrestError {
         throw mapRPCError(error)
       } catch let error as AuthError {

@@ -49,6 +49,10 @@ BEGIN
 
   v_username := NULLIF(lower(btrim(COALESCE(p_username, ''))), '');
 
+  IF public.is_objectionable_text(v_username) THEN
+    RAISE EXCEPTION 'Username blocked by safety filter';
+  END IF;
+
   UPDATE public.profiles
   SET
     username = v_username,

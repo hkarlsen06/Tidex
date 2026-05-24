@@ -44,4 +44,18 @@ final class FriendCardMessagePreviewTimestampFormatterTests: XCTestCase {
       "1m"
     )
   }
+
+  func testMessagesAtOneMonthDoNotUseBareMinuteAbbreviation() {
+    let referenceDate = Date(timeIntervalSince1970: 1_700_000_100)
+    let messageDate = Calendar.current.date(byAdding: .month, value: -1, to: referenceDate)!
+
+    XCTAssertNotEqual(
+      FriendCardMessagePreviewTimestampFormatter.relativeTimestamp(
+        messageDate: messageDate,
+        referenceDate: referenceDate,
+        nowText: "now"
+      ),
+      "1m"
+    )
+  }
 }

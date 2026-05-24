@@ -52,6 +52,11 @@ protocol FriendsComposerRecentPhotoProviding: AnyObject {
 final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProviding {
   static let shared = FriendsComposerRecentPhotoProvider()
 
+  private enum PhotoKitErrorCode {
+    static let unknown = -1
+    static let resourceUnavailable = 3164
+  }
+
   private let imageManager = PHCachingImageManager()
 
   func authorizationState() -> FriendsComposerPhotoAuthorizationState {
@@ -88,8 +93,11 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
         )
       }
 
+      let maxAssetsToInspect = max(limit * 4, limit)
+      let endIndex = min(assets.count, startIndex + maxAssetsToInspect)
+
       var nextOffset = startIndex
-      while nextOffset < assets.count, photos.count < limit {
+      while nextOffset < endIndex, photos.count < limit {
         let index = nextOffset
         nextOffset += 1
         let asset = assets.object(at: index)
@@ -214,7 +222,10 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
 
   private static func shouldSuppressThumbnailErrorLog(_ error: Error) -> Bool {
     let nsError = error as NSError
-    return nsError.domain == PHPhotosErrorDomain && nsError.code == -1
+    guard nsError.domain == PHPhotosErrorDomain else { return false }
+
+    return nsError.code == PhotoKitErrorCode.unknown
+      || nsError.code == PhotoKitErrorCode.resourceUnavailable
   }
 }
 

@@ -59,6 +59,8 @@ struct FriendsComposerShiftCalendarPicker: View {
               showsActionBar: false,
               phase: transitionPhase,
               onDayTapped: handleDayTapped(dateISO:shiftsOnDay:),
+              onSwipeLeft: goToNextMonth,
+              onSwipeRight: goToPreviousMonth,
               selectedDates: $selectedDates,
               confirmingDelete: false,
               isDeleting: false,
@@ -105,12 +107,10 @@ struct FriendsComposerShiftCalendarPicker: View {
         .contentShape(Rectangle())
         .monthSwipeGesture(
           onSwipeLeft: {
-            AppearanceTracker.shared.reset()
-            viewModel.goToNextMonth()
+            goToNextMonth()
           },
           onSwipeRight: {
-            AppearanceTracker.shared.reset()
-            viewModel.goToPreviousMonth()
+            goToPreviousMonth()
           },
           isEnabled: true
         )
@@ -194,12 +194,10 @@ struct FriendsComposerShiftCalendarPicker: View {
       phase: transitionPhase,
       config: .default,
       onPrevious: {
-        AppearanceTracker.shared.reset()
-        viewModel.goToPreviousMonth()
+        goToPreviousMonth()
       },
       onNext: {
-        AppearanceTracker.shared.reset()
-        viewModel.goToNextMonth()
+        goToNextMonth()
       },
       onNavigateToMonth: { year, month in
         AppearanceTracker.shared.reset()
@@ -222,5 +220,15 @@ struct FriendsComposerShiftCalendarPicker: View {
       Color.tidexBackground
         .ignoresSafeArea(edges: .bottom)
     }
+  }
+
+  private func goToPreviousMonth() {
+    AppearanceTracker.shared.reset()
+    viewModel.goToPreviousMonth()
+  }
+
+  private func goToNextMonth() {
+    AppearanceTracker.shared.reset()
+    viewModel.goToNextMonth()
   }
 }

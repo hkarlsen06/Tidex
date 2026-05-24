@@ -89,6 +89,7 @@ enum FriendsChatMessageGrouping {
     guard lhs.senderUserId == rhs.senderUserId else { return false }
     guard lhs.messageType == .user, rhs.messageType == .user else { return false }
     guard lhs.deletedAt == nil, rhs.deletedAt == nil else { return false }
+    guard lhs.shiftSnapshot == nil, rhs.shiftSnapshot == nil else { return false }
 
     let gap = rhs.createdAt.timeIntervalSince(lhs.createdAt)
     return gap >= 0 && gap <= maximumGap

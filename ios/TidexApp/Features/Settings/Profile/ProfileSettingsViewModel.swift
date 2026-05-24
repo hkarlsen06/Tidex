@@ -46,6 +46,8 @@ final class ProfileSettingsViewModel: ObservableObject {
 
   /// Error message to display
   @Published var errorMessage: String?
+  /// Username-specific validation or save error shown near the username field
+  @Published var usernameErrorMessage: String?
   /// Whether profile data was loaded from partial offline fallback state
   @Published private(set) var isOfflineProfileFallback = false
 
@@ -66,8 +68,6 @@ final class ProfileSettingsViewModel: ObservableObject {
   private var originalUsername: String = ""
   /// Debounce task for auto-saving name
   private var nameSaveTask: Task<Void, Never>?
-  /// Debounce task for auto-saving username
-  private var usernameSaveTask: Task<Void, Never>?
   // MARK: - Initialization
 
   init(
@@ -260,24 +260,21 @@ final class ProfileSettingsViewModel: ObservableObject {
   func onUsernameChanged() {
     guard !isOfflineProfileFallback else { return }
 
-    let normalizedUsername = Self.normalizeUsername(username)
-    if username != normalizedUsername {
-      username = normalizedUsername
+    let sanitizedUsername = Self.sanitizeUsernameInput(username)
+    if username != sanitizedUsername {
+      username = sanitizedUsername
     }
 
-    usernameSaveTask?.cancel()
     errorMessage = nil
+    usernameErrorMessage = nil
+  }
 
-    guard username != originalUsername else { return }
-    guard normalizedUsername.isEmpty || Self.isValidUsername(normalizedUsername) else { return }
+  func saveUsernameNow() async {
+    await saveUsername()
+  }
 
-    usernameSaveTask = Task {
-      try? await Task.sleep(nanoseconds: 1_500_000_000)
-
-      guard !Task.isCancelled else { return }
-
-      await saveUsername()
-    }
+  var canSaveUsername: Bool {
+    !isOfflineProfileFallback && !isSavingUsername && username != originalUsername
   }
 
   private func saveUsername() async {
@@ -289,12 +286,18 @@ final class ProfileSettingsViewModel: ObservableObject {
     guard username != originalUsername else { return }
 
     guard normalizedUsername.isEmpty || Self.isValidUsername(normalizedUsername) else {
-      errorMessage = String(localized: .profileErrorsUsernameInvalid)
+      setUsernameError(String(localized: .profileErrorsUsernameInvalid))
+      return
+    }
+
+    if UserGeneratedContentFilter.containsBlockedText(normalizedUsername) {
+      setUsernameError(String(localized: "profile.errors.nameSafetyFilter", table: "Localizable"))
       return
     }
 
     isSavingUsername = true
     errorMessage = nil
+    usernameErrorMessage = nil
 
     do {
       let params: [String: AnyJSON] = ["p_username": .string(normalizedUsername)]
@@ -312,15 +315,24 @@ final class ProfileSettingsViewModel: ObservableObject {
       originalUsername = username
     } catch let error as PostgrestError {
       if Self.isUsernameTaken(error) {
-        errorMessage = String(localized: .profileErrorsUsernameTaken)
+        setUsernameError(String(localized: .profileErrorsUsernameTaken))
+      } else if Self.isUsernameSafetyFilterViolation(error) {
+        setUsernameError(String(localized: "profile.errors.nameSafetyFilter", table: "Localizable"))
+      } else if Self.isUsernameCheckConstraintViolation(error) {
+        setUsernameError(String(localized: .profileErrorsUsernameInvalid))
       } else {
-        errorMessage = String(localized: .profileErrorsUsernameSaveFailed)
+        setUsernameError(String(localized: .profileErrorsUsernameSaveFailed))
       }
     } catch {
-      errorMessage = String(localized: .profileErrorsUsernameSaveFailed)
+      setUsernameError(String(localized: .profileErrorsUsernameSaveFailed))
     }
 
     isSavingUsername = false
+  }
+
+  private func setUsernameError(_ message: String) {
+    usernameErrorMessage = message
+    errorMessage = message
   }
 
   // MARK: - Email Change
@@ -686,11 +698,13 @@ final class ProfileSettingsViewModel: ObservableObject {
   // MARK: - Helpers
 
   private static func normalizeUsername(_ username: String) -> String {
-    var normalized = username.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-    while normalized.hasPrefix("@") {
-      normalized.removeFirst()
-    }
-    return normalized
+    sanitizeUsernameInput(username.trimmingCharacters(in: .whitespacesAndNewlines))
+  }
+
+  private static func sanitizeUsernameInput(_ username: String) -> String {
+    username
+      .lowercased()
+      .filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "_") }
   }
 
   private static func isValidUsername(_ username: String) -> Bool {
@@ -708,6 +722,22 @@ final class ProfileSettingsViewModel: ObservableObject {
 
     let message = "\(error.message) \(error.localizedDescription)".lowercased()
     return message.contains("duplicate") || message.contains("unique")
+  }
+
+  private static func isUsernameCheckConstraintViolation(_ error: PostgrestError) -> Bool {
+    guard error.code == "23514" else { return false }
+
+    let message = "\(error.message) \(error.localizedDescription)".lowercased()
+    return message.contains("profiles_username_format")
+      || message.contains("check constraint")
+      || message.contains("violates check")
+  }
+
+  private static func isUsernameSafetyFilterViolation(_ error: PostgrestError) -> Bool {
+    let message = "\(error.message) \(error.localizedDescription)".lowercased()
+    return message.contains("profiles_username_safety_filter")
+      || message.contains("safety filter")
+      || message.contains("objectionable")
   }
 
   /// Get initials from display name or email

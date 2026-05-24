@@ -116,10 +116,10 @@ private struct FriendCardMessagePreviewRow: View {
               referenceDate: context.date
             )
           )
-            .font(.tidexCaptionRegular)
-            .foregroundColor(statusColor)
-            .monospacedDigit()
-            .fixedSize(horizontal: true, vertical: false)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(statusColor)
+          .monospacedDigit()
+          .fixedSize(horizontal: true, vertical: false)
         }
 
         Text(messagePreview.text)
@@ -172,9 +172,10 @@ enum FriendCardMessagePreviewTimestampFormatter {
       return nowText
     }
 
+    let unit = largestNonZeroUnit(from: messageDate, to: referenceDate)
     let formatter = DateComponentsFormatter()
-    formatter.allowedUnits = [.year, .month, .weekOfMonth, .day, .hour, .minute]
-    formatter.unitsStyle = .abbreviated
+    formatter.allowedUnits = [unit]
+    formatter.unitsStyle = unit == .month ? .short : .abbreviated
     formatter.maximumUnitCount = 1
     formatter.zeroFormattingBehavior = .dropAll
 
@@ -182,11 +183,30 @@ enum FriendCardMessagePreviewTimestampFormatter {
       return "1m"
     }
 
-    return String(
+    let compactTimestamp = String(
       timestamp.unicodeScalars.filter {
         !CharacterSet.whitespacesAndNewlines.contains($0)
       }
     )
+    return unit == .month
+      ? compactTimestamp.replacingOccurrences(of: ".", with: "") : compactTimestamp
+  }
+
+  private static func largestNonZeroUnit(from messageDate: Date, to referenceDate: Date)
+    -> NSCalendar.Unit
+  {
+    let calendarComponents = Calendar.current.dateComponents(
+      [.year, .month, .weekOfMonth, .day, .hour, .minute],
+      from: messageDate,
+      to: referenceDate
+    )
+
+    if (calendarComponents.year ?? 0) > 0 { return .year }
+    if (calendarComponents.month ?? 0) > 0 { return .month }
+    if (calendarComponents.weekOfMonth ?? 0) > 0 { return .weekOfMonth }
+    if (calendarComponents.day ?? 0) > 0 { return .day }
+    if (calendarComponents.hour ?? 0) > 0 { return .hour }
+    return .minute
   }
 }
 
