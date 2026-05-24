@@ -98,8 +98,8 @@ BEGIN
     ''
   );
 
-  IF v_normalized_body IS NOT NULL AND char_length(v_normalized_body) > 2000 THEN
-    RAISE EXCEPTION 'Message body exceeds the 2000 character limit';
+  IF v_normalized_body IS NOT NULL AND char_length(v_normalized_body) > 5000 THEN
+    RAISE EXCEPTION 'Message body exceeds the 5000 character limit';
   END IF;
 
   IF public.is_objectionable_text(v_normalized_body) THEN

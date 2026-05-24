@@ -1,14 +1,11 @@
 -- Function: get_friends_tab_bootstrap
 -- Description:
 --   Consolidated native Friends tab bootstrap payload.
---   Replaces the new-client open path that previously called:
+--   Replaces the old multi-RPC open path that previously called:
 --     - get_my_sharers()
 --     - get_sharing_friends_api()
 --     - get_my_sharer_preview_payloads(...)
 --     - direct shift_shares blocked-state selects
---
--- Compatibility:
---   Keep the older RPCs above until the supported iOS client floor no longer needs them.
 
 CREATE OR REPLACE FUNCTION public.get_friends_tab_bootstrap(
   p_preview_start_date date DEFAULT NULL,

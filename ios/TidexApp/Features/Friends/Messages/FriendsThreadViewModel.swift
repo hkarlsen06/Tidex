@@ -53,7 +53,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private enum MessageBody {
-    static let characterLimit = 2000
+    static let characterLimit = 5000
   }
 
   private enum VisibleReadTracking {
@@ -1711,7 +1711,7 @@ final class FriendsThreadViewModel: ObservableObject {
   private func isMessageBodyTooLongError(_ error: Error) -> Bool {
     guard let serviceError = error as? FriendsMessagingServiceError else { return false }
     guard case .httpError(_, let message) = serviceError else { return false }
-    return (message ?? "").localizedCaseInsensitiveContains("2000 character limit")
+    return (message ?? "").localizedCaseInsensitiveContains("character limit")
   }
 
   private func isSafetyFilterError(_ error: Error) -> Bool {
