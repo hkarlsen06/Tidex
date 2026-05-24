@@ -4,12 +4,17 @@ import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSettings")
 
+private enum ProfileField: Hashable {
+  case username
+}
+
 /// Profile settings view
 /// Displays profile picture, name, email, and danger zone (delete account)
 struct ProfileSettingsView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.displayScale) private var displayScale
   @StateObject private var viewModel = ProfileSettingsViewModel()
+  @FocusState private var focusedField: ProfileField?
 
   /// Photo picker selection
   @State private var selectedPhotoItem: PhotosPickerItem?
@@ -37,7 +42,9 @@ struct ProfileSettingsView: View {
     ScrollView {
       VStack(alignment: .leading, spacing: Spacing.lg) {
         // Error banner (for avatar upload, name save, etc.)
-        if let error = viewModel.errorMessage, !viewModel.showEmailChangeSheet {
+        if let error = viewModel.errorMessage, viewModel.usernameErrorMessage == nil,
+          !viewModel.showEmailChangeSheet
+        {
           ErrorBanner(
             message: error,
             onDismiss: { viewModel.errorMessage = nil }
@@ -126,6 +133,20 @@ struct ProfileSettingsView: View {
     }
     .sheet(isPresented: $viewModel.showEmailChangeSheet) {
       emailChangeSheet
+    }
+    .toolbar {
+      ToolbarItemGroup(placement: .keyboard) {
+        if focusedField == .username {
+          Spacer()
+          Button(String(localized: .commonSave)) {
+            Task {
+              await viewModel.saveUsernameNow()
+              focusedField = nil
+            }
+          }
+          .disabled(!viewModel.canSaveUsername)
+        }
+      }
     }
   }
 
@@ -520,6 +541,14 @@ struct ProfileSettingsView: View {
       .disabled(viewModel.isOfflineProfileFallback)
       .textInputAutocapitalization(.never)
       .autocorrectionDisabled()
+      .focused($focusedField, equals: .username)
+      .submitLabel(.done)
+      .onSubmit {
+        Task {
+          await viewModel.saveUsernameNow()
+          focusedField = nil
+        }
+      }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, Spacing.sm)
       .background(
@@ -537,6 +566,12 @@ struct ProfileSettingsView: View {
       )
       .font(.tidexCaptionRegular)
       .foregroundColor(.tidexTextMuted)
+
+      if let error = viewModel.usernameErrorMessage {
+        Text(error)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexError)
+      }
     }
   }
 

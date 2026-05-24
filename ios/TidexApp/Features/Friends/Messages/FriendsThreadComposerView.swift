@@ -608,7 +608,7 @@ private struct FriendsThreadComposerPlusButton: View {
       .frame(width: 44, height: 44)
       .background(
         Circle()
-          .fill(isOpen ? Color.tidexBlue.opacity(0.18) : Color.tidexBlue.opacity(0.12))
+          .fill(isOpen ? Color.tidexBlue.opacity(0.28) : Color.tidexBlue.opacity(0.2))
       )
       .contentShape(Circle())
     }
@@ -710,22 +710,26 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Spacing.sm) {
               ForEach(recentPhotos) { photo in
-                Button {
-                  onSelectRecentPhoto(photo)
-                } label: {
-                  Image(uiImage: photo.thumbnail)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: Layout.previewWidth, height: Layout.previewHeight)
-                    .clipShape(
-                      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(isProcessingAttachment || !canAddMoreImages)
-                .onAppear {
-                  onRecentPhotoAppear(photo)
-                }
+                Image(uiImage: photo.thumbnail)
+                  .resizable()
+                  .scaledToFill()
+                  .frame(width: Layout.previewWidth, height: Layout.previewHeight)
+                  .clipShape(
+                    RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+                  )
+                  .contentShape(
+                    RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+                  )
+                  .opacity(isProcessingAttachment || !canAddMoreImages ? 0.55 : 1)
+                  .onTapGesture {
+                    guard !isProcessingAttachment, canAddMoreImages else { return }
+                    onSelectRecentPhoto(photo)
+                  }
+                  .accessibilityAddTraits(.isButton)
+                  .accessibilityLabel(Text(.friendsChatPreviewImage))
+                  .onAppear {
+                    onRecentPhotoAppear(photo)
+                  }
               }
 
               if isLoadingMoreRecentPhotos {
@@ -746,6 +750,10 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           .scrollBounceBehavior(.always, axes: .horizontal)
           .scrollBounceBehavior(.basedOnSize, axes: .vertical)
           .padding(.horizontal, -Spacing.md)
+          .overlay {
+            FriendsChatGestureTargetSurface(targetKind: .attachmentPhotoCarousel)
+              .allowsHitTesting(false)
+          }
         case .empty:
           drawerMessage(
             String(

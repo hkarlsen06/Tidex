@@ -69,8 +69,8 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
       return "Network error: \(error.localizedDescription)"
     case .decodingError(let error):
       return "Failed to decode response: \(error.localizedDescription)"
-    case .httpError(let statusCode, let message):
-      return "HTTP \(statusCode): \(message ?? "Unknown error")"
+    case .httpError(_, let message):
+      return message ?? "Something went wrong. Please try again."
     }
   }
 }

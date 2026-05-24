@@ -196,6 +196,10 @@ struct FriendsThreadView: View {
       && !(isComposerFocused && isAttachmentDrawerOpen)
   }
 
+  private var shouldShowScrollToLatestButton: Bool {
+    !viewModel.messages.isEmpty && (!isPinnedToBottom || showsNewMessagesPill)
+  }
+
   private func messageID(for presentedMessageID: String) -> String? {
     if let messageId = chatProjection.presentedMessageLookup[presentedMessageID]?.id {
       return messageId
@@ -543,6 +547,7 @@ struct FriendsThreadView: View {
     }
     .showMessageTimeView(false)
     .showMessageMenuOnLongPress(true)
+    .showScrollToBottomButton(false)
     .setAvailableInputs([.text])
     .keyboardDismissMode(.interactive)
     .contentInsets(bottom: Self.bottomMessageComposerClearance)
@@ -611,19 +616,19 @@ struct FriendsThreadView: View {
 
   @ViewBuilder
   private var chatFooterAccessory: some View {
-    if showsNewMessagesPill {
+    if shouldShowScrollToLatestButton {
       VStack(spacing: 0) {
-        if showsNewMessagesPill, !viewModel.messages.isEmpty {
-          HStack {
-            Spacer(minLength: 0)
-            scrollToLatestButton
-            Spacer(minLength: 0)
-          }
-          .padding(.top, Spacing.xs)
-          .padding(.bottom, Spacing.xs)
-          .transition(.move(edge: .bottom).combined(with: .opacity))
+        HStack {
+          Spacer(minLength: 0)
+          scrollToLatestButton
+          Spacer(minLength: 0)
         }
+        .padding(.top, Spacing.xs)
+        .padding(.bottom, Spacing.xs)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
       }
+      .animation(.spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
+      .animation(.spring(duration: 0.28, bounce: 0.18), value: isPinnedToBottom)
     }
   }
 
@@ -817,32 +822,40 @@ struct FriendsThreadView: View {
     Button {
       unreadIncomingCount = 0
       showsNewMessagesPill = false
+      isPinnedToBottom = true
       Haptics.play(.light)
       SoundManager.shared.play("tap")
       requestScrollToBottom()
     } label: {
       HStack(spacing: Spacing.xs) {
-        Image(systemName: "arrow.down")
-          .font(.system(size: 14, weight: .semibold))
+        Image(systemName: "chevron.down")
+          .font(.system(size: 17, weight: .semibold))
+          .frame(width: 20, height: 20)
 
-        Text(.friendsChatNewMessages)
-          .font(.tidexFootnoteMedium)
+        if showsNewMessagesPill {
+          Text(.friendsChatNewMessages)
+            .font(.tidexFootnoteMedium)
+            .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .trailing)))
 
-        if unreadIncomingCount > 0 {
-          Text("\(min(unreadIncomingCount, 99))")
-            .font(.tidexMicro.weight(.semibold))
-            .foregroundColor(.white)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Capsule().fill(Color.tidexBrandPrimary))
+          if unreadIncomingCount > 0 {
+            Text("\(min(unreadIncomingCount, 99))")
+              .font(.tidexMicro.weight(.semibold))
+              .foregroundColor(.white)
+              .padding(.horizontal, 6)
+              .padding(.vertical, 3)
+              .background(Capsule().fill(Color.tidexBrandPrimary))
+              .transition(.opacity.combined(with: .scale(scale: 0.9)))
+          }
         }
       }
       .foregroundColor(.tidexTextPrimary)
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.sm)
+      .frame(minWidth: showsNewMessagesPill ? 0 : 44, minHeight: 44)
+      .padding(.horizontal, showsNewMessagesPill ? Spacing.md : 0)
+      .padding(.vertical, showsNewMessagesPill ? Spacing.sm : 0)
       .tidexGlass(shape: .capsule, tint: .tidexBlue.opacity(0.12), interactive: true)
     }
     .buttonStyle(.plain)
+    .animation(.spring(duration: 0.28, bounce: 0.18), value: showsNewMessagesPill)
     .accessibilityIdentifier(AccessibilityID.unreadPill)
   }
 
@@ -1209,6 +1222,9 @@ struct FriendsThreadView: View {
         viewModel.consumeRestoreScrollTarget()
       }
     case .liveEdge:
+      isPinnedToBottom = true
+      unreadIncomingCount = 0
+      showsNewMessagesPill = false
       liveEdgeTargetPresentedMessageID = nil
     }
   }

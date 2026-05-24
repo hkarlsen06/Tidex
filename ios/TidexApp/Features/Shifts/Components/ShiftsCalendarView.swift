@@ -41,6 +41,8 @@ struct ShiftsCalendarView: View {
   var onDayTapped: ((String, [ShiftWithComputations]) -> Void)?
   // Day long-press callback (normal mode details/picker presentation)
   var onDayLongPressed: ((String, [ShiftWithComputations]) -> Void)?
+  var onSwipeLeft: (() -> Void)?
+  var onSwipeRight: (() -> Void)?
 
   // Selection state bindings from ViewModel
   @Binding var selectedDates: Set<String>
@@ -148,6 +150,8 @@ struct ShiftsCalendarView: View {
     phase: MonthTransitionPhase? = nil,
     onDayTapped: ((String, [ShiftWithComputations]) -> Void)? = nil,
     onDayLongPressed: ((String, [ShiftWithComputations]) -> Void)? = nil,
+    onSwipeLeft: (() -> Void)? = nil,
+    onSwipeRight: (() -> Void)? = nil,
     selectedDates: Binding<Set<String>>,
     confirmingDelete: Bool,
     isDeleting: Bool,
@@ -193,6 +197,8 @@ struct ShiftsCalendarView: View {
     self.phase = phase
     self.onDayTapped = onDayTapped
     self.onDayLongPressed = onDayLongPressed
+    self.onSwipeLeft = onSwipeLeft
+    self.onSwipeRight = onSwipeRight
     _selectedDates = selectedDates
     self.confirmingDelete = confirmingDelete
     self.isDeleting = isDeleting
@@ -620,6 +626,8 @@ struct ShiftsCalendarView: View {
             onLongPress: { location in
               handleLongPress(at: location, geometry: geometry, days: days)
             },
+            onSwipeLeft: onSwipeLeft,
+            onSwipeRight: onSwipeRight,
             isEnabled: !isSelectionModeEnabled
           )
           .calendarSelectionGestures(

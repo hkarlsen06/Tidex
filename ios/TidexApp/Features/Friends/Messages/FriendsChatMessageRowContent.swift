@@ -98,7 +98,7 @@ struct FriendsChatMessageRowContent: View {
   private static let minimumBubbleWidthForTimestamp: CGFloat = 92
   private static let maximumTextBubbleWidth: CGFloat = 360
   private static let reactionHorizontalOffset: CGFloat = 12
-  private static let reactionVerticalOffset: CGFloat = 8
+  private static let reactionVerticalOffset: CGFloat = 12
   private static let avatarSize = AvatarView.Size.small
   private static let replySwipeResetAnimationDuration: TimeInterval = 0.18
 
@@ -207,7 +207,7 @@ struct FriendsChatMessageRowContent: View {
                     preview: quotedPreview,
                     isCurrentUser: isCurrentUser,
                     isHighlighted: false,
-                    maxWidth: Self.maximumTextBubbleWidth,
+                    maxWidth: resolvedMaximumTextBubbleWidth,
                     onTap: onTapQuotedMessage
                   )
                 }
@@ -254,6 +254,8 @@ struct FriendsChatMessageRowContent: View {
                     ChatShiftSnapshotCard(
                       snapshot: shiftSnapshot,
                       isCurrentUser: isCurrentUser,
+                      showsOwnerHeader: shiftSnapshot.ownerUserId != message.senderUserId,
+                      topInset: imageAttachments.isEmpty ? 0 : Spacing.xs,
                       onTap: messageFrame == nil
                         ? {
                           onOpenShiftSnapshot(shiftSnapshot)
@@ -275,7 +277,7 @@ struct FriendsChatMessageRowContent: View {
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: Self.maximumTextBubbleWidth,
+                    maxWidth: resolvedMaximumTextBubbleWidth,
                     messageFrame: messageFrame,
                     replySwipe: textBubbleReplySwipeConfiguration(id: "fallback-\(message.id)")
                   ) {
@@ -294,7 +296,7 @@ struct FriendsChatMessageRowContent: View {
                     isCurrentUser: isCurrentUser,
                     groupContext: groupContext,
                     minWidth: Self.minimumBubbleWidthForTimestamp,
-                    maxWidth: Self.maximumTextBubbleWidth,
+                    maxWidth: resolvedMaximumTextBubbleWidth,
                     messageFrame: messageFrame,
                     replySwipe: textBubbleReplySwipeConfiguration(id: "text-\(message.id)")
                   ) {
@@ -370,6 +372,13 @@ struct FriendsChatMessageRowContent: View {
       }
   }
 
+  private var resolvedMaximumTextBubbleWidth: CGFloat {
+    FriendsChatTimestampRevealResolver.contentMaxWidth(
+      baseWidth: Self.maximumTextBubbleWidth,
+      isCurrentUser: isCurrentUser
+    )
+  }
+
   private func timestampRevealContainer<Content: View>(
     @ViewBuilder content: @escaping () -> Content
   ) -> some View {
@@ -440,13 +449,19 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private var timestampRevealSurfaceWidth: CGFloat {
-    guard rowFrame.width > 0, payloadFrame.width > 0 else {
+    guard rowFrame.width > 0 else {
       return isCurrentUser ? Spacing.xxxl : 0
     }
 
-    let emptyWidth =
-      isCurrentUser ? payloadFrame.minX - rowFrame.minX : rowFrame.maxX - payloadFrame.maxX
+    guard isCurrentUser else {
+      return rowFrame.width
+    }
 
+    guard payloadFrame.width > 0 else {
+      return Spacing.xxxl
+    }
+
+    let emptyWidth = payloadFrame.minX - rowFrame.minX
     return max(min(emptyWidth, rowFrame.width), 0)
   }
 
@@ -732,8 +747,11 @@ struct FriendsChatMessageRowContent: View {
     Group {
       if !reactions.isEmpty {
         reactionButtons(for: reactions, attachmentId: attachmentId)
+          .alignmentGuide(.leading) { dimensions in
+            isCurrentUser ? dimensions[.trailing] : dimensions[.leading]
+          }
           .offset(
-            x: isCurrentUser ? -Self.reactionHorizontalOffset : Self.reactionHorizontalOffset,
+            x: isCurrentUser ? Self.reactionHorizontalOffset : Self.reactionHorizontalOffset,
             y: -Self.reactionVerticalOffset
           )
           .zIndex(2)
@@ -1299,6 +1317,8 @@ struct FriendsChatReplyPreviewContent: View {
 struct ChatShiftSnapshotCard: View {
   let snapshot: FriendShiftSnapshot
   let isCurrentUser: Bool
+  var showsOwnerHeader = true
+  var topInset: CGFloat = 0
   var onTap: (() -> Void)? = nil
   @State private var shouldSuppressNextTap = false
 
@@ -1333,9 +1353,11 @@ struct ChatShiftSnapshotCard: View {
 
   private var cardContent: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      ownerHeader
-        .padding(.horizontal, Spacing.sm)
-        .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
+      if showsOwnerHeader {
+        ownerHeader
+          .padding(.horizontal, Spacing.sm)
+          .frame(maxWidth: .infinity, alignment: isCurrentUser ? .trailing : .leading)
+      }
 
       SharedShiftRow(
         shift: snapshot.renderableShift,
@@ -1344,6 +1366,7 @@ struct ChatShiftSnapshotCard: View {
         currency: snapshot.currency
       )
     }
+    .padding(.top, topInset)
     .frame(maxWidth: .infinity, alignment: .leading)
   }
 
@@ -1508,12 +1531,16 @@ private struct FriendsChatReplyGestureModifier: ViewModifier {
   let onChanged: (FriendsChatReplyDragValue) -> Void
   let onEnded: (FriendsChatReplyDragValue) -> Void
 
+  private var direction: FriendsChatReplySwipeDirection {
+    isCurrentUser ? .left : .right
+  }
+
   func body(content: Content) -> some View {
     content.overlay {
       FriendsChatHorizontalPanSurface(
-        targetKind: .replyPayload,
+        targetKind: .replyPayload(direction: direction),
         minimumDistance: FriendsChatReplySwipeResolver.minimumDistance,
-        direction: isCurrentUser ? .left : .right,
+        direction: direction,
         onChanged: onChanged,
         onEnded: onEnded
       )
@@ -1522,7 +1549,8 @@ private struct FriendsChatReplyGestureModifier: ViewModifier {
 }
 
 enum FriendsChatGestureTargetKind {
-  case replyPayload
+  case replyPayload(direction: FriendsChatReplySwipeDirection)
+  case attachmentPhotoCarousel
   case timestampRevealGutter
 }
 
@@ -1546,6 +1574,25 @@ final class FriendsChatGestureTargetView: UIView {
   }
 }
 
+final class FriendsChatDirectionalPanGestureRecognizer: UIPanGestureRecognizer {
+  var targetKind: FriendsChatGestureTargetKind?
+  var direction: FriendsChatReplySwipeDirection?
+}
+
+struct FriendsChatGestureTargetSurface: UIViewRepresentable {
+  let targetKind: FriendsChatGestureTargetKind
+
+  func makeUIView(context _: Context) -> UIView {
+    FriendsChatGestureTargetView(kind: targetKind)
+  }
+
+  func updateUIView(_ uiView: UIView, context _: Context) {
+    if let targetView = uiView as? FriendsChatGestureTargetView {
+      targetView.kind = targetKind
+    }
+  }
+}
+
 private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
   let targetKind: FriendsChatGestureTargetKind
   let minimumDistance: CGFloat
@@ -1555,6 +1602,7 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
 
   func makeCoordinator() -> Coordinator {
     Coordinator(
+      targetKind: targetKind,
       minimumDistance: minimumDistance,
       direction: direction,
       onChanged: onChanged,
@@ -1572,6 +1620,7 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
     if let targetView = uiView as? FriendsChatGestureTargetView {
       targetView.kind = targetKind
     }
+    context.coordinator.targetKind = targetKind
     context.coordinator.minimumDistance = minimumDistance
     context.coordinator.direction = direction
     context.coordinator.onChanged = onChanged
@@ -1584,6 +1633,7 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
   }
 
   final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    var targetKind: FriendsChatGestureTargetKind
     var minimumDistance: CGFloat
     var direction: FriendsChatReplySwipeDirection
     var onChanged: (FriendsChatReplyDragValue) -> Void
@@ -1594,11 +1644,13 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
     private var hasPassedMinimumDistance = false
 
     init(
+      targetKind: FriendsChatGestureTargetKind,
       minimumDistance: CGFloat,
       direction: FriendsChatReplySwipeDirection,
       onChanged: @escaping (FriendsChatReplyDragValue) -> Void,
       onEnded: @escaping (FriendsChatReplyDragValue) -> Void
     ) {
+      self.targetKind = targetKind
       self.minimumDistance = minimumDistance
       self.direction = direction
       self.onChanged = onChanged
@@ -1635,10 +1687,14 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
 
       let panRecognizer =
         recognizer
-        ?? UIPanGestureRecognizer(
+        ?? FriendsChatDirectionalPanGestureRecognizer(
           target: self,
           action: #selector(handlePan(_:))
         )
+      if let directionalRecognizer = panRecognizer as? FriendsChatDirectionalPanGestureRecognizer {
+        directionalRecognizer.targetKind = targetKind
+        directionalRecognizer.direction = direction
+      }
       panRecognizer.cancelsTouchesInView = false
       panRecognizer.delaysTouchesBegan = false
       panRecognizer.delaysTouchesEnded = false

@@ -90,6 +90,38 @@ final class FriendsChatMessageGroupingTests: XCTestCase {
     XCTAssertFalse(context.showsSenderLabel)
   }
 
+  func testShiftSnapshotMessagesDoNotJoinAdjacentMessages() {
+    let previous = makeMessage(
+      id: "message-1",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_000
+    )
+    let shiftSnapshot = makeMessage(
+      id: "message-2",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_030,
+      metadataData: makeShiftSnapshotMetadataData()
+    )
+    let next = makeMessage(
+      id: "message-3",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_060
+    )
+
+    let context = FriendsChatMessageGrouping.context(
+      for: shiftSnapshot,
+      previous: previous,
+      next: next,
+      viewerUserId: "viewer-1"
+    )
+
+    XCTAssertFalse(FriendsChatMessageGrouping.shouldGroup(previous, shiftSnapshot))
+    XCTAssertFalse(FriendsChatMessageGrouping.shouldGroup(shiftSnapshot, next))
+    XCTAssertEqual(context.position, .standalone)
+    XCTAssertTrue(context.showsAvatar)
+    XCTAssertTrue(context.showsSenderLabel)
+  }
+
   func testInitialsUseFirstTwoWordsWhenAvailable() {
     XCTAssertEqual(FriendsChatMessageGrouping.initials(from: "Ada Lovelace"), "AL")
     XCTAssertEqual(FriendsChatMessageGrouping.initials(from: "Friend"), "FR")
@@ -99,7 +131,8 @@ final class FriendsChatMessageGroupingTests: XCTestCase {
   private func makeMessage(
     id: String,
     senderUserId: String,
-    timestamp: TimeInterval
+    timestamp: TimeInterval,
+    metadataData: Data? = nil
   ) -> FriendMessage {
     FriendMessage(
       id: id,
@@ -112,8 +145,39 @@ final class FriendsChatMessageGroupingTests: XCTestCase {
       createdAt: Date(timeIntervalSince1970: timestamp),
       editedAt: nil,
       deletedAt: nil,
-      metadataData: nil,
+      metadataData: metadataData,
       attachments: []
+    )
+  }
+
+  private func makeShiftSnapshotMetadataData() -> Data {
+    Data(
+      """
+      {
+        "content": {
+          "kind": "shift_snapshot",
+          "shift_snapshot": {
+            "schema_version": 1,
+            "owner_user_id": "owner-1",
+            "owner_display_name": "Owner",
+            "owner_avatar_url": null,
+            "shift_id": "shift-1",
+            "job_name": "Cafe",
+            "job_color_hex": null,
+            "shift_date": "2026-03-11",
+            "start_time": "09:00",
+            "end_time": "17:00",
+            "paid_hours": 7.5,
+            "currency": "kr",
+            "includes_earnings": false,
+            "gross_pay": null,
+            "net_pay": null,
+            "tax_enabled": false,
+            "source": "tests"
+          }
+        }
+      }
+      """.utf8
     )
   }
 }

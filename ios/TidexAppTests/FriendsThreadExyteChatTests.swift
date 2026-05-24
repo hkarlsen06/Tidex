@@ -220,6 +220,50 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testReadReceiptFallsBackToBackendTupleOrderingWhenCounterpartReadMessageIsNotLoaded() {
+    let readAt = Date(timeIntervalSince1970: 1_731_000_000)
+    let messages = [
+      makeMessage(id: "out-a", senderUserId: "viewer", createdAt: readAt.addingTimeInterval(-1)),
+      makeMessage(id: "out-b", senderUserId: "viewer", createdAt: readAt),
+      makeMessage(id: "out-z", senderUserId: "viewer", createdAt: readAt),
+      makeMessage(id: "out-later", senderUserId: "viewer", createdAt: readAt.addingTimeInterval(1)),
+    ]
+
+    XCTAssertEqual(
+      FriendsThreadMessageStatusResolver.readReceiptMessageId(
+        messages: messages,
+        viewerUserId: "viewer",
+        counterpartLastReadMessageId: "out-b",
+        counterpartLastReadAt: readAt
+      ),
+      "out-b"
+    )
+  }
+
+  func testReadReceiptNormalizesViewerUserIdAndSkipsDeletedMessages() {
+    let baseDate = Date(timeIntervalSince1970: 1_731_000_000)
+    let messages = [
+      makeMessage(
+        id: "out-deleted",
+        senderUserId: "viewer",
+        createdAt: baseDate,
+        deletedAt: baseDate.addingTimeInterval(5)
+      ),
+      makeMessage(
+        id: "out-visible", senderUserId: "viewer", createdAt: baseDate.addingTimeInterval(10)),
+    ]
+
+    XCTAssertEqual(
+      FriendsThreadMessageStatusResolver.readReceiptMessageId(
+        messages: messages,
+        viewerUserId: " viewer ",
+        counterpartLastReadMessageId: "out-visible",
+        counterpartLastReadAt: baseDate.addingTimeInterval(10)
+      ),
+      "out-visible"
+    )
+  }
+
   func testFactoryMapsViewerReactionForMenuSelectionState() {
     let message = makeMessage(
       id: "message-3",
@@ -558,6 +602,18 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     XCTAssertEqual(
       FriendsChatTimestampRevealResolver.activeSurface(isCurrentUser: false),
       .trailingSpacer
+    )
+  }
+
+  func testTimestampRevealResolverReservesRevealWidthForIncomingContent() {
+    XCTAssertEqual(
+      FriendsChatTimestampRevealResolver.contentMaxWidth(baseWidth: 360, isCurrentUser: true),
+      360
+    )
+
+    XCTAssertEqual(
+      FriendsChatTimestampRevealResolver.contentMaxWidth(baseWidth: 360, isCurrentUser: false),
+      296
     )
   }
 
@@ -1225,7 +1281,9 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     id: String,
     senderUserId: String,
     createdAt: Date,
+    messageType: FriendMessageType = .user,
     body: String? = "Hello",
+    deletedAt: Date? = nil,
     metadataData: Data? = nil,
     reactions: [FriendMessageReaction] = []
   ) -> FriendMessage {
@@ -1233,13 +1291,13 @@ final class FriendsThreadExyteChatTests: XCTestCase {
       id: id,
       threadId: "thread-1",
       senderUserId: senderUserId,
-      messageType: .user,
+      messageType: messageType,
       body: body,
       clientId: id,
       replyToMessageId: nil,
       createdAt: createdAt,
       editedAt: nil,
-      deletedAt: nil,
+      deletedAt: deletedAt,
       metadataData: metadataData,
       attachments: [],
       reactions: reactions,

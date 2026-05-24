@@ -51,6 +51,10 @@ struct FriendProfileView: View {
       }
 
       manageFriendsLink
+
+      if let friend {
+        friendshipFooterSection(friend: friend)
+      }
     }
     .listStyle(.insetGrouped)
     .scrollContentBackground(.hidden)
@@ -286,6 +290,23 @@ struct FriendProfileView: View {
     .listRowBackground(Color.clear)
   }
 
+  // MARK: - Friendship Footer
+
+  @ViewBuilder
+  private func friendshipFooterSection(friend: Friend) -> some View {
+    if let friendsSinceText = friendsSinceText(for: friend) {
+      Section {
+        Text(friendsSinceText)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextMuted)
+          .frame(maxWidth: .infinity, alignment: .center)
+          .multilineTextAlignment(.center)
+          .padding(.vertical, Spacing.xs)
+      }
+      .listRowBackground(Color.clear)
+    }
+  }
+
   // MARK: - Confirmation Title
 
   private var confirmationTitle: String {
@@ -309,6 +330,28 @@ struct FriendProfileView: View {
     if friend.isMutual { return .mutual }
     if friend.isOutgoingOnly { return .outgoing }
     return .incoming
+  }
+
+  private func friendsSinceText(for friend: Friend) -> String? {
+    guard let date = friendshipStartDate(for: friend) else { return nil }
+    let formattedDate = date.formatted(.dateTime.day().month(.wide).year())
+    return String(localized: .sharingProfileFriendsSince(formattedDate))
+  }
+
+  private func friendshipStartDate(for friend: Friend) -> Date? {
+    [
+      friend.sharesWithMe?.sharedAt,
+      friend.iShareWith?.sharedAt,
+    ]
+    .compactMap { $0 }
+    .compactMap(parseFriendshipDate)
+    .min()
+  }
+
+  private func parseFriendshipDate(_ value: String) -> Date? {
+    FormatterCache.iso8601Formatter().date(from: value)
+      ?? Date.fromISODateString(value)
+      ?? Date.fromISODateStringUTC(value)
   }
 
   @MainActor

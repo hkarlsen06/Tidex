@@ -171,6 +171,8 @@ struct CalendarTapGestureModifier: ViewModifier {
 struct CalendarLongPressGestureModifier: ViewModifier {
   let onTap: ((CGPoint) -> Void)?
   let onLongPress: ((CGPoint) -> Void)?
+  let onSwipeLeft: (() -> Void)?
+  let onSwipeRight: (() -> Void)?
   let isEnabled: Bool
 
   private let tapHaptic = UISelectionFeedbackGenerator()
@@ -185,7 +187,9 @@ struct CalendarLongPressGestureModifier: ViewModifier {
               tapHaptic.prepare()
               onTap?(location)
             },
-            onLongPress: onLongPress
+            onLongPress: onLongPress,
+            onSwipeLeft: onSwipeLeft,
+            onSwipeRight: onSwipeRight
           )
           .allowsHitTesting(true)
         }
@@ -199,6 +203,8 @@ struct CalendarLongPressGestureModifier: ViewModifier {
 private struct CalendarPressOverlay: UIViewRepresentable {
   let onTap: ((CGPoint) -> Void)?
   let onLongPress: ((CGPoint) -> Void)?
+  let onSwipeLeft: (() -> Void)?
+  let onSwipeRight: (() -> Void)?
 
   func makeUIView(context: Context) -> UIView {
     let view = UIView(frame: .zero)
@@ -222,25 +228,54 @@ private struct CalendarPressOverlay: UIViewRepresentable {
     recognizer.delegate = context.coordinator
     view.addGestureRecognizer(recognizer)
 
+    let panRecognizer = UIPanGestureRecognizer(
+      target: context.coordinator,
+      action: #selector(Coordinator.handlePan(_:))
+    )
+    panRecognizer.cancelsTouchesInView = false
+    panRecognizer.delegate = context.coordinator
+    view.addGestureRecognizer(panRecognizer)
+
     return view
   }
 
   func updateUIView(_ uiView: UIView, context: Context) {
     context.coordinator.onTap = onTap
     context.coordinator.onLongPress = onLongPress
+    context.coordinator.onSwipeLeft = onSwipeLeft
+    context.coordinator.onSwipeRight = onSwipeRight
   }
 
   func makeCoordinator() -> Coordinator {
-    Coordinator(onTap: onTap, onLongPress: onLongPress)
+    Coordinator(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      onSwipeLeft: onSwipeLeft,
+      onSwipeRight: onSwipeRight
+    )
   }
 
   final class Coordinator: NSObject, UIGestureRecognizerDelegate {
     var onTap: ((CGPoint) -> Void)?
     var onLongPress: ((CGPoint) -> Void)?
+    var onSwipeLeft: (() -> Void)?
+    var onSwipeRight: (() -> Void)?
 
-    init(onTap: ((CGPoint) -> Void)?, onLongPress: ((CGPoint) -> Void)?) {
+    private let swipeThreshold: CGFloat = 40
+    private let flickVelocity: CGFloat = 280
+    private let haptic = UIImpactFeedbackGenerator(style: .medium)
+
+    init(
+      onTap: ((CGPoint) -> Void)?,
+      onLongPress: ((CGPoint) -> Void)?,
+      onSwipeLeft: (() -> Void)?,
+      onSwipeRight: (() -> Void)?
+    ) {
       self.onTap = onTap
       self.onLongPress = onLongPress
+      self.onSwipeLeft = onSwipeLeft
+      self.onSwipeRight = onSwipeRight
+      haptic.prepare()
     }
 
     @objc
@@ -250,9 +285,41 @@ private struct CalendarPressOverlay: UIViewRepresentable {
     }
 
     @objc
+    func handlePan(_ recognizer: UIPanGestureRecognizer) {
+      guard recognizer.state == .ended, let view = recognizer.view else { return }
+      guard onSwipeLeft != nil || onSwipeRight != nil else { return }
+
+      let translation = recognizer.translation(in: view)
+      let velocity = recognizer.velocity(in: view)
+      let horizontal = translation.x
+      let vertical = abs(translation.y)
+      let isFlick = abs(velocity.x) >= flickVelocity
+      let crossedThreshold = abs(horizontal) >= swipeThreshold
+
+      guard abs(horizontal) > vertical, isFlick || crossedThreshold else { return }
+
+      haptic.impactOccurred()
+      haptic.prepare()
+
+      if horizontal < 0 {
+        onSwipeLeft?()
+      } else {
+        onSwipeRight?()
+      }
+    }
+
+    @objc
     func handleLongPress(_ recognizer: UILongPressGestureRecognizer) {
       guard recognizer.state == .began, let view = recognizer.view else { return }
       onLongPress?(recognizer.location(in: view))
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+      guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+      guard onSwipeLeft != nil || onSwipeRight != nil else { return false }
+
+      let velocity = pan.velocity(in: pan.view)
+      return abs(velocity.x) >= abs(velocity.y) * 0.9
     }
 
     func gestureRecognizer(
@@ -297,12 +364,16 @@ extension View {
   func calendarPressGestures(
     onTap: ((CGPoint) -> Void)?,
     onLongPress: ((CGPoint) -> Void)?,
+    onSwipeLeft: (() -> Void)? = nil,
+    onSwipeRight: (() -> Void)? = nil,
     isEnabled: Bool = true
   ) -> some View {
     modifier(
       CalendarLongPressGestureModifier(
         onTap: onTap,
         onLongPress: onLongPress,
+        onSwipeLeft: onSwipeLeft,
+        onSwipeRight: onSwipeRight,
         isEnabled: isEnabled
       ))
   }

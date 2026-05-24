@@ -86,20 +86,24 @@ enum FriendsThreadMessageStatusResolver {
     counterpartLastReadAt: Date?
   ) -> String? {
     guard let counterpartLastReadAt else { return nil }
-
-    if let counterpartLastReadMessageId,
-      let readMessageIndex = messages.firstIndex(where: { $0.id == counterpartLastReadMessageId })
-    {
-      return messages[...readMessageIndex].last(where: { $0.senderUserId == viewerUserId })?.id
-    }
+    guard let normalizedViewerUserId = normalizedUserId(viewerUserId) else { return nil }
 
     return messages.last(where: {
-      $0.senderUserId == viewerUserId && $0.createdAt <= counterpartLastReadAt
+      isReadReceiptCandidate($0, viewerUserId: normalizedViewerUserId)
+        && isMessage(
+          $0,
+          readThroughAt: counterpartLastReadAt,
+          readThroughMessageId: counterpartLastReadMessageId
+        )
     })?.id
   }
 
   static func latestOutgoingMessageId(messages: [FriendMessage], viewerUserId: String) -> String? {
-    messages.last(where: { $0.senderUserId == viewerUserId })?.id
+    guard let normalizedViewerUserId = normalizedUserId(viewerUserId) else { return nil }
+
+    return messages.last(where: {
+      isReadReceiptCandidate($0, viewerUserId: normalizedViewerUserId)
+    })?.id
   }
 
   static func status(
@@ -142,6 +146,32 @@ enum FriendsThreadMessageStatusResolver {
     case .none:
       return message.sendState == .sent
     }
+  }
+
+  private static func isReadReceiptCandidate(
+    _ message: FriendMessage,
+    viewerUserId: String
+  ) -> Bool {
+    normalizedUserId(message.senderUserId) == viewerUserId
+      && message.messageType == .user
+      && message.deletedAt == nil
+  }
+
+  private static func isMessage(
+    _ message: FriendMessage,
+    readThroughAt: Date,
+    readThroughMessageId: String?
+  ) -> Bool {
+    guard let readThroughMessageId else {
+      return message.createdAt <= readThroughAt
+    }
+
+    return (message.createdAt, message.id) <= (readThroughAt, readThroughMessageId)
+  }
+
+  private static func normalizedUserId(_ userId: String) -> String? {
+    let normalized = userId.trimmingCharacters(in: .whitespacesAndNewlines)
+    return normalized.isEmpty ? nil : normalized
   }
 }
 
@@ -258,6 +288,10 @@ enum FriendsChatTimestampRevealResolver {
 
   static func activeSurface(isCurrentUser: Bool) -> Surface {
     isCurrentUser ? .leadingSpacer : .trailingSpacer
+  }
+
+  static func contentMaxWidth(baseWidth: CGFloat, isCurrentUser: Bool) -> CGFloat {
+    isCurrentUser ? baseWidth : max(0, baseWidth - revealWidth)
   }
 
   static func clampedRevealOffset(horizontal: CGFloat, vertical: CGFloat) -> CGFloat? {
@@ -1086,13 +1120,17 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
         }
       }
 
-      return !startsInReplyPayload(gestureRecognizer)
+      return !startsInNavigationBackExcludedTarget(gestureRecognizer)
     }
 
     func gestureRecognizer(
       _ gestureRecognizer: UIGestureRecognizer,
       shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
+      if isBackNavigationRecognizer(gestureRecognizer, competingWith: otherGestureRecognizer) {
+        return false
+      }
+
       if gestureRecognizer === backgroundBackPanGestureRecognizer
         || otherGestureRecognizer === backgroundBackPanGestureRecognizer
       {
@@ -1113,6 +1151,10 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
       _ gestureRecognizer: UIGestureRecognizer,
       shouldRequireFailureOf otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
+      if isBackNavigationRecognizer(gestureRecognizer, competingWith: otherGestureRecognizer) {
+        return true
+      }
+
       guard gestureRecognizer === contentPopGestureRecognizer else {
         return originalDelegate?.gestureRecognizer?(
           gestureRecognizer,
@@ -1127,6 +1169,13 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
       _ gestureRecognizer: UIGestureRecognizer,
       shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
     ) -> Bool {
+      if isRightReplyGesture(gestureRecognizer),
+        otherGestureRecognizer === contentPopGestureRecognizer
+          || otherGestureRecognizer === backgroundBackPanGestureRecognizer
+      {
+        return false
+      }
+
       guard gestureRecognizer === contentPopGestureRecognizer else {
         return originalDelegate?.gestureRecognizer?(
           gestureRecognizer,
@@ -1137,19 +1186,54 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
       return false
     }
 
+    private func isBackNavigationRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      competingWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+      (gestureRecognizer === contentPopGestureRecognizer
+        || gestureRecognizer === backgroundBackPanGestureRecognizer)
+        && isRightReplyGesture(otherGestureRecognizer)
+    }
+
+    private func isRightReplyGesture(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+      guard
+        let recognizer = gestureRecognizer as? FriendsChatDirectionalPanGestureRecognizer,
+        case .replyPayload(direction: .right) = recognizer.targetKind
+      else {
+        return false
+      }
+
+      return recognizer.direction == .right
+    }
+
     private func startsInChatTableBackground(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
       guard let rootView = gestureRecognizer.view else { return false }
       let location = gestureRecognizer.location(in: rootView)
       guard let tableView = rootView.containingTableView(at: location) else { return false }
       let tableLocation = gestureRecognizer.location(in: tableView)
       guard tableView.bounds.contains(tableLocation) else { return false }
-      return rootView.chatGestureTargetKind(at: location) != .replyPayload
+      return !isNavigationBackExcludedTarget(rootView.chatGestureTargetKind(at: location))
     }
 
-    private func startsInReplyPayload(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+    private func startsInNavigationBackExcludedTarget(
+      _ gestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
       guard let rootView = gestureRecognizer.view else { return false }
       let location = gestureRecognizer.location(in: rootView)
-      return rootView.chatGestureTargetKind(at: location) == .replyPayload
+      return isNavigationBackExcludedTarget(rootView.chatGestureTargetKind(at: location))
+    }
+
+    private func isNavigationBackExcludedTarget(
+      _ targetKind: FriendsChatGestureTargetKind?
+    ) -> Bool {
+      switch targetKind {
+      case .replyPayload(direction: .right), .attachmentPhotoCarousel:
+        return true
+      case .replyPayload(direction: .left):
+        return false
+      case .timestampRevealGutter, .none:
+        return false
+      }
     }
   }
 }
