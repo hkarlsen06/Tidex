@@ -159,6 +159,13 @@ type FriendEntry = {
   } | null;
 };
 
+type BootstrapFriendEntry = Omit<FriendEntry, "sharesWithMe"> & {
+  sharesWithMe: (Omit<NonNullable<FriendEntry["sharesWithMe"]>, "blocked"> & {
+    blocked?: boolean;
+    hidden?: boolean;
+  }) | null;
+};
+
 const LEGACY_SNAPSHOT_KEY = "__legacy__";
 const WAGEY_LIMITS = {
   free: 3,
@@ -2212,69 +2219,23 @@ export async function removeSharer(
 export async function getAllFriends(
   ctx: WageyRequestContext,
 ): Promise<FriendEntry[]> {
-  const [
-    { data: sharersRaw, error: sharersError },
-    { data: recipientsRaw, error: recipientsError },
-  ] = await Promise.all([
-    ctx.supabase.rpc("get_my_sharers"),
-    ctx.supabase
-      .from("shift_shares")
-      .select("viewer_id, created_at, show_earnings, owner_muted")
-      .eq("owner_id", ctx.user.id),
-  ]);
-  if (sharersError) throw new Error(sharersError.message);
-  if (recipientsError) throw new Error(recipientsError.message);
+  const { data, error } = await ctx.supabase.rpc("get_friends_tab_bootstrap", {
+    p_preview_start_date: null,
+    p_preview_end_date: null,
+  });
+  if (error) throw new Error(error.message);
 
-  const sharers = (sharersRaw ?? []) as Array<Record<string, unknown>>;
-  const recipients = (recipientsRaw ?? []) as Array<Record<string, unknown>>;
-  const userIds = Array.from(
-    new Set([
-      ...sharers.map((row) => String(row.id)),
-      ...recipients.map((row) => String(row.viewer_id)),
-    ]),
-  );
-  const usersById = await getUsersByIds(ctx, userIds);
-
-  const friends = new Map<string, FriendEntry>();
-  for (const userId of userIds) {
-    const user = usersById.get(userId);
-    friends.set(userId, {
-      id: userId,
-      email: user?.email ?? null,
-      phone: user?.phone ?? null,
-      firstName: user?.firstName ?? null,
-      profilePictureUrl: null,
-      oauthAvatarUrl: user?.oauthAvatarUrl ?? null,
-      sharesWithMe: null,
-      iShareWith: null,
-    });
-  }
-
-  for (const sharer of sharers) {
-    const entry = friends.get(String(sharer.id));
-    if (!entry) continue;
-    entry.profilePictureUrl = (sharer.profile_picture_url as string | null) ??
-      null;
-    entry.sharesWithMe = {
-      blocked: Boolean(sharer.hidden),
-      showEarningsToMe: Boolean(sharer.show_earnings),
-      sharedAt: String(sharer.shared_at),
-      notificationFrequency: Boolean(sharer.hidden) ? "muted" : "instant",
-    };
-  }
-
-  for (const recipient of recipients) {
-    const id = String(recipient.viewer_id);
-    const entry = friends.get(id);
-    if (!entry) continue;
-    entry.iShareWith = {
-      showEarningsToThem: Boolean(recipient.show_earnings),
-      sharedAt: String(recipient.created_at),
-      ownerMuted: Boolean(recipient.owner_muted),
-    };
-  }
-
-  return Array.from(friends.values());
+  const payload = (data ?? {}) as { friends?: BootstrapFriendEntry[] };
+  return (payload.friends ?? []).map((friend) => ({
+    ...friend,
+    sharesWithMe: friend.sharesWithMe
+      ? {
+        ...friend.sharesWithMe,
+        blocked: friend.sharesWithMe.blocked ?? friend.sharesWithMe.hidden ??
+          false,
+      }
+      : null,
+  }));
 }
 
 async function loadSharedOwnerData(

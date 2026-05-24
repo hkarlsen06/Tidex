@@ -2017,9 +2017,7 @@ private struct RPCErrorResponse: Codable {
 /// Lightweight API client for fetching friends data directly
 /// Used by widget and watch to bypass the main app's data flow
 ///
-/// This client now fetches from Supabase RPC:
-/// - get_my_sharers
-/// - get_my_sharer_preview_payloads
+/// This client fetches from the consolidated Supabase Friends bootstrap RPC.
 ///
 /// Preview selection and payroll computation are handled client-side via SharingComputeCore.
 enum FriendsAPIClient {
@@ -2061,25 +2059,26 @@ enum FriendsAPIClient {
       throw FriendsAPIError.noAnonKey
     }
 
-    let sharers = try await fetchSharers(accessToken: accessToken)
-    let activeSharers = sharers.filter { !$0.hidden }
-
-    guard !activeSharers.isEmpty else {
-      return []
-    }
-
     let now = Date()
     let startDate = SharingComputeCore.isoDateString(
       Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
     let endDate = SharingComputeCore.isoDateString(
       Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
 
-    let payloadRows = try await fetchPreviewPayloads(
-      sharerIds: activeSharers.map { $0.id },
+    let bootstrap = try await fetchFriendsTabBootstrap(
       startDate: startDate,
       endDate: endDate,
       accessToken: accessToken
     )
+    let sharers = bootstrap.sharers
+    let activeSharers = sharers.filter { !$0.hidden }
+
+    guard !activeSharers.isEmpty else {
+      return []
+    }
+
+    let activeSharerIds = Set(activeSharers.map(\.id))
+    let payloadRows = bootstrap.previewPayloads.filter { activeSharerIds.contains($0.sharerId) }
 
     let rowsBySharerId = Dictionary(
       payloadRows.map { ($0.sharerId, $0) }, uniquingKeysWith: { _, last in last })
@@ -2155,29 +2154,41 @@ enum FriendsAPIClient {
 
   // MARK: - Private API Methods
 
-  private static func fetchSharers(accessToken: String) async throws -> [SharingRPCSharerRow] {
-    try await callRPC(
-      functionName: "get_my_sharers",
-      body: [:],
-      accessToken: accessToken
-    )
-  }
-
-  private static func fetchPreviewPayloads(
-    sharerIds: [String],
+  private static func fetchFriendsTabBootstrap(
     startDate: String,
     endDate: String,
     accessToken: String
-  ) async throws -> [SharingRPCPreviewPayloadRow] {
+  ) async throws -> FriendsTabBootstrapRPCResponse {
     try await callRPC(
-      functionName: "get_my_sharer_preview_payloads",
+      functionName: "get_friends_tab_bootstrap",
       body: [
-        "p_sharer_ids": sharerIds,
-        "p_start_date": startDate,
-        "p_end_date": endDate,
+        "p_preview_start_date": startDate,
+        "p_preview_end_date": endDate,
       ],
-      accessToken: accessToken
+      accessToken: accessToken,
+      expectsSingleObject: true
     )
+  }
+
+  private struct FriendsTabBootstrapRPCResponse: Decodable, Sendable {
+    let sharers: [BootstrapSharerRow]
+    let previewPayloads: [SharingRPCPreviewPayloadRow]
+  }
+
+  private struct BootstrapSharerRow: Decodable, Sendable {
+    let id: String
+    let email: String?
+    let phone: String?
+    let username: String?
+    let firstName: String?
+    let profilePictureUrl: String?
+    let oauthAvatarUrl: String?
+    let sharedAt: String
+    let showEarnings: Bool
+    let hidden: Bool
+    let hasSharedCalendarContent: Bool
+    let latestSharedShiftDate: String?
+    let hasRecurringSharedShifts: Bool
   }
 
   fileprivate static func callRPC<T: Decodable>(
@@ -2409,8 +2420,11 @@ enum FriendsAPIClient {
 
     private static func fetchFriends(accessToken: String) async throws -> ShareFriendsResponse {
       try await FriendsAPIClient.callRPC(
-        functionName: "get_sharing_friends_api",
-        body: [:],
+        functionName: "get_friends_tab_bootstrap",
+        body: [
+          "p_preview_start_date": NSNull(),
+          "p_preview_end_date": NSNull(),
+        ],
         accessToken: accessToken,
         expectsSingleObject: true
       )

@@ -210,20 +210,20 @@ final class FriendsThreadViewModelTests: XCTestCase {
       realtimeCoordinator: realtimeCoordinator
     )
 
-    viewModel.draft = String(repeating: "a", count: 2001)
+    viewModel.draft = String(repeating: "a", count: 5001)
 
-    XCTAssertEqual(viewModel.draftCharacterCount, 2001)
+    XCTAssertEqual(viewModel.draftCharacterCount, 5001)
     XCTAssertEqual(
       viewModel.composerValidationMessage,
       String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
-        .replacingOccurrences(of: "{limit}", with: "2000")
+        .replacingOccurrences(of: "{limit}", with: "5000")
     )
 
     let didSend = await viewModel.sendDraft()
 
     XCTAssertFalse(didSend)
     XCTAssertEqual(mockService.sendMessageCallCount, 0)
-    XCTAssertEqual(viewModel.draft, String(repeating: "a", count: 2001))
+    XCTAssertEqual(viewModel.draft, String(repeating: "a", count: 5001))
     XCTAssertTrue(
       repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").isEmpty)
   }
@@ -412,13 +412,13 @@ final class FriendsThreadViewModelTests: XCTestCase {
       realtimeCoordinator: realtimeCoordinator
     )
 
-    let draft = String(repeating: "👨‍👩‍👧‍👦", count: 300)
+    let draft = String(repeating: "👨‍👩‍👧‍👦", count: 715)
     let expectedBackendCount =
       draft
       .trimmingCharacters(in: .whitespacesAndNewlines)
       .unicodeScalars.count
 
-    XCTAssertTrue(expectedBackendCount > 2000)
+    XCTAssertTrue(expectedBackendCount > 5000)
 
     viewModel.draft = draft
 
@@ -426,7 +426,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(
       viewModel.composerValidationMessage,
       String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
-        .replacingOccurrences(of: "{limit}", with: "2000")
+        .replacingOccurrences(of: "{limit}", with: "5000")
     )
 
     let didSend = await viewModel.sendDraft()
