@@ -45,9 +45,11 @@ final class FriendCardMessagePreviewTimestampFormatterTests: XCTestCase {
     )
   }
 
-  func testMessagesAtOneMonthDoNotUseBareMinuteAbbreviation() {
+  func testMessagesAtOneMonthDoNotUseBareMinuteAbbreviation() throws {
     let referenceDate = Date(timeIntervalSince1970: 1_700_000_100)
-    let messageDate = Calendar.current.date(byAdding: .month, value: -1, to: referenceDate)!
+    let messageDate = try XCTUnwrap(
+      Calendar.current.date(byAdding: .month, value: -1, to: referenceDate)
+    )
 
     XCTAssertNotEqual(
       FriendCardMessagePreviewTimestampFormatter.relativeTimestamp(

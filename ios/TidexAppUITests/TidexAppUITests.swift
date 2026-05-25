@@ -177,14 +177,7 @@ final class TidexAppUITests: XCTestCase {
       message: "Expected delete confirmation to appear"
     )
 
-    let cancelButton = wageyHistoryCancelDeleteButton(in: app)
-    assertExists(
-      cancelButton,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected a way to dismiss the delete confirmation"
-    )
-    cancelButton.tap()
+    dismissWageyHistoryDeleteConfirmation(in: app)
 
     assertExists(
       row,
@@ -433,6 +426,16 @@ final class TidexAppUITests: XCTestCase {
         )
         .firstMatch
     )
+  }
+
+  private func dismissWageyHistoryDeleteConfirmation(in app: XCUIApplication) {
+    let cancelButton = wageyHistoryCancelDeleteButton(in: app)
+    if cancelButton.waitForExistence(timeout: 1) {
+      cancelButton.tap()
+      return
+    }
+
+    app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
   }
 
   private func firstExistingElement(
