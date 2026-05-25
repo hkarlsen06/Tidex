@@ -1887,7 +1887,7 @@ final class FriendsChatImageLoader: ObservableObject {
       try Task.checkCancellation()
       guard let loadedImage = await Self.decodeImage(from: data, variant: variant) else { return }
       try Task.checkCancellation()
-      ImageCache.shared.set(loadedImage, for: cacheURL)
+      ImageCache.shared.set(loadedImage, for: cacheURL, policy: .messageAttachment)
       image = loadedImage
       didFail = false
     } catch is CancellationError {
@@ -1899,11 +1899,11 @@ final class FriendsChatImageLoader: ObservableObject {
   }
 
   private func cachedImage(for cacheURL: URL) async -> UIImage? {
-    if let cached = ImageCache.shared.get(for: cacheURL) {
+    if let cached = ImageCache.shared.get(for: cacheURL, policy: .messageAttachment) {
       return cached
     }
 
-    return await ImageCache.shared.getFromDisk(for: cacheURL)
+    return await ImageCache.shared.getFromDisk(for: cacheURL, policy: .messageAttachment)
   }
 
   private func originalCachedImageFallback(
@@ -1914,7 +1914,7 @@ final class FriendsChatImageLoader: ObservableObject {
 
     let originalCacheURL = Self.cacheURL(for: storagePath, variant: .original)
     guard let cached = await cachedImage(for: originalCacheURL) else { return nil }
-    ImageCache.shared.set(cached, for: displayCacheURL)
+    ImageCache.shared.set(cached, for: displayCacheURL, policy: .messageAttachment)
     return cached
   }
 
@@ -2009,7 +2009,7 @@ struct FriendsChatImageAttachmentCard: View {
     )
     let variant = FriendsChatImageLoader.Variant.display(pixelSize: pixelSize)
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath, variant: variant)
-    let initialImage = ImageCache.shared.get(for: cacheURL)
+    let initialImage = ImageCache.shared.get(for: cacheURL, policy: .messageAttachment)
     _loader = StateObject(
       wrappedValue: FriendsChatImageLoader(initialImage: initialImage, variant: variant)
     )
@@ -2367,7 +2367,7 @@ private struct FriendsChatImageGalleryPage: View {
     self.onImageLoaded = onImageLoaded
     self.onZoomStateChanged = onZoomStateChanged
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
-    let initialImage = ImageCache.shared.get(for: cacheURL)
+    let initialImage = ImageCache.shared.get(for: cacheURL, policy: .messageAttachment)
     _loader = StateObject(
       wrappedValue: FriendsChatImageLoader(initialImage: initialImage, variant: .original)
     )

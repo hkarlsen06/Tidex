@@ -76,15 +76,45 @@ final class CachedImageWrapper {
 
 // MARK: - Image Cache
 
+enum ImageCachePolicy: Equatable {
+  case defaultImage
+  case messageAttachment
+
+  var ttl: TimeInterval {
+    switch self {
+    case .defaultImage:
+      return 3600
+    case .messageAttachment:
+      return 60 * 60 * 24 * 90
+    }
+  }
+
+  var diskSizeLimit: Int64? {
+    switch self {
+    case .defaultImage:
+      return nil
+    case .messageAttachment:
+      return 1_000 * 1024 * 1024
+    }
+  }
+
+  fileprivate var cacheKeyPrefix: String? {
+    switch self {
+    case .defaultImage:
+      return nil
+    case .messageAttachment:
+      return "message-attachment"
+    }
+  }
+}
+
 /// Thread-safe image cache with both in-memory and disk persistence
 /// Memory cache (NSCache) provides fast access and auto-evicts under memory pressure
 /// Disk cache provides persistence across app restarts
-/// Images expire after 1 hour to ensure fresh content when users update their profile pictures
+/// Default images expire after 1 hour; message attachments are retained longer because their
+/// storage paths are stable and expensive to refetch.
 final class ImageCache: @unchecked Sendable {
   static let shared = ImageCache()
-
-  /// Time-to-live for cached images (1 hour)
-  private let cacheTTL: TimeInterval = 3600
 
   private let memoryCache = NSCache<NSString, CachedImageWrapper>()
   private let fileManager = FileManager.default
@@ -110,14 +140,18 @@ final class ImageCache: @unchecked Sendable {
   }
 
   /// Get image from memory cache if not expired
-  func get(for url: URL, maxPixelSize: CGFloat? = nil) -> UIImage? {
-    let key = cacheKey(for: url, maxPixelSize: maxPixelSize)
+  func get(
+    for url: URL,
+    maxPixelSize: CGFloat? = nil,
+    policy: ImageCachePolicy = .defaultImage
+  ) -> UIImage? {
+    let key = cacheKey(for: url, maxPixelSize: maxPixelSize, policy: policy)
     guard let wrapper = memoryCache.object(forKey: key as NSString) else {
       return nil
     }
 
     // Check if cached image has expired
-    if wrapper.isExpired(ttl: cacheTTL) {
+    if wrapper.isExpired(ttl: policy.ttl) {
       logger.debug("🕐 Memory cache EXPIRED for: \(url.lastPathComponent)")
       memoryCache.removeObject(forKey: key as NSString)
       return nil
@@ -127,7 +161,11 @@ final class ImageCache: @unchecked Sendable {
   }
 
   /// Get image from disk cache if not expired (async)
-  func getFromDisk(for url: URL, maxPixelSize: CGFloat? = nil) async -> UIImage? {
+  func getFromDisk(
+    for url: URL,
+    maxPixelSize: CGFloat? = nil,
+    policy: ImageCachePolicy = .defaultImage
+  ) async -> UIImage? {
     await withCheckedContinuation { continuation in
       diskCacheQueue.async { [weak self] in
         guard let self = self else {
@@ -135,7 +173,7 @@ final class ImageCache: @unchecked Sendable {
           return
         }
 
-        let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize)
+        let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize, policy: policy)
         let exists = self.fileManager.fileExists(atPath: filePath.path)
 
         if !exists {
@@ -149,7 +187,7 @@ final class ImageCache: @unchecked Sendable {
           let attributes = try self.fileManager.attributesOfItem(atPath: filePath.path)
           if let modificationDate = attributes[.modificationDate] as? Date {
             let age = Date().timeIntervalSince(modificationDate)
-            if age > self.cacheTTL {
+            if age > policy.ttl {
               logger.debug("🕐 Disk cache EXPIRED for: \(url.lastPathComponent)")
               // Remove expired file
               try? self.fileManager.removeItem(at: filePath)
@@ -167,7 +205,7 @@ final class ImageCache: @unchecked Sendable {
           logger.debug("💾 Disk cache HIT for: \(url.lastPathComponent)")
           // Also populate memory cache
           DispatchQueue.main.async {
-            self.setMemoryCache(image, for: url, maxPixelSize: maxPixelSize)
+            self.setMemoryCache(image, for: url, maxPixelSize: maxPixelSize, policy: policy)
           }
           continuation.resume(returning: image)
         } else {
@@ -179,31 +217,42 @@ final class ImageCache: @unchecked Sendable {
   }
 
   /// Set image in memory cache only
-  private func setMemoryCache(_ image: UIImage, for url: URL, maxPixelSize: CGFloat? = nil) {
+  private func setMemoryCache(
+    _ image: UIImage,
+    for url: URL,
+    maxPixelSize: CGFloat? = nil,
+    policy: ImageCachePolicy = .defaultImage
+  ) {
     let wrapper = CachedImageWrapper(image)
     let pixelWidth = image.size.width * image.scale
     let pixelHeight = image.size.height * image.scale
     let cost = Int(pixelWidth * pixelHeight * 4)
-    let key = cacheKey(for: url, maxPixelSize: maxPixelSize)
+    let key = cacheKey(for: url, maxPixelSize: maxPixelSize, policy: policy)
     memoryCache.setObject(wrapper, forKey: key as NSString, cost: cost)
   }
 
   /// Set image in both memory and disk cache
-  func set(_ image: UIImage, for url: URL, maxPixelSize: CGFloat? = nil) {
+  func set(
+    _ image: UIImage,
+    for url: URL,
+    maxPixelSize: CGFloat? = nil,
+    policy: ImageCachePolicy = .defaultImage
+  ) {
     // Save to memory cache immediately
-    setMemoryCache(image, for: url, maxPixelSize: maxPixelSize)
+    setMemoryCache(image, for: url, maxPixelSize: maxPixelSize, policy: policy)
 
     // Save to disk cache asynchronously
     diskCacheQueue.async { [weak self] in
       guard let self = self else { return }
 
-      let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize)
+      let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize, policy: policy)
 
       // Use JPEG for photos, PNG for images with transparency
       if let data = image.jpegData(compressionQuality: 0.8) {
         do {
           try data.write(to: filePath)
           logger.debug("💾 Saved image to disk: \(url.lastPathComponent) (\(data.count) bytes)")
+          self.trimDiskCacheIfNeeded(for: policy)
         } catch {
           logger.error("Failed to write image to disk: \(error.localizedDescription)")
         }
@@ -226,7 +275,7 @@ final class ImageCache: @unchecked Sendable {
         )
       else { return }
 
-      let urlPrefix = self.cacheKey(for: url, maxPixelSize: nil)
+      let urlPrefix = self.cacheKey(for: url, maxPixelSize: nil, policy: .defaultImage)
       for file in files where file.lastPathComponent.hasPrefix(urlPrefix) {
         try? self.fileManager.removeItem(at: file)
       }
@@ -264,7 +313,7 @@ final class ImageCache: @unchecked Sendable {
           let attributes = try self.fileManager.attributesOfItem(atPath: file.path)
           if let modificationDate = attributes[.modificationDate] as? Date {
             let age = Date().timeIntervalSince(modificationDate)
-            if age > self.cacheTTL {
+            if age > self.cachePolicy(for: file).ttl {
               try self.fileManager.removeItem(at: file)
               removedCount += 1
             }
@@ -277,19 +326,86 @@ final class ImageCache: @unchecked Sendable {
       if removedCount > 0 {
         logger.info("🧹 Cleared \(removedCount) expired images from disk cache")
       }
+
+      self.trimDiskCacheIfNeeded(for: .messageAttachment)
     }
   }
 
   /// Generate a unique filename for the URL using SHA256 hash
-  private func diskCachePath(for url: URL, maxPixelSize: CGFloat? = nil) -> URL {
-    diskCacheDirectory.appendingPathComponent(cacheKey(for: url, maxPixelSize: maxPixelSize))
+  private func diskCachePath(
+    for url: URL,
+    maxPixelSize: CGFloat? = nil,
+    policy: ImageCachePolicy = .defaultImage
+  ) -> URL {
+    diskCacheDirectory.appendingPathComponent(
+      cacheKey(for: url, maxPixelSize: maxPixelSize, policy: policy)
+    )
   }
 
-  private func cacheKey(for url: URL, maxPixelSize: CGFloat? = nil) -> String {
+  private func cacheKey(
+    for url: URL,
+    maxPixelSize: CGFloat? = nil,
+    policy: ImageCachePolicy = .defaultImage
+  ) -> String {
     let hash = SHA256.hash(data: Data(url.absoluteString.utf8))
-    let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-    guard let maxPixelSize, maxPixelSize > 0 else { return hashString }
-    return "\(hashString)-px\(Int(maxPixelSize.rounded(.up)))"
+    var key = hash.compactMap { String(format: "%02x", $0) }.joined()
+    if let prefix = policy.cacheKeyPrefix {
+      key = "\(prefix)-\(key)"
+    }
+    guard let maxPixelSize, maxPixelSize > 0 else { return key }
+    return "\(key)-px\(Int(maxPixelSize.rounded(.up)))"
+  }
+
+  private func cachePolicy(for file: URL) -> ImageCachePolicy {
+    file.lastPathComponent.hasPrefix("message-attachment-")
+      ? .messageAttachment
+      : .defaultImage
+  }
+
+  private func trimDiskCacheIfNeeded(for policy: ImageCachePolicy) {
+    guard let diskSizeLimit = policy.diskSizeLimit else { return }
+    guard
+      let files = try? fileManager.contentsOfDirectory(
+        at: diskCacheDirectory,
+        includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]
+      )
+    else { return }
+
+    var entries: [(url: URL, size: Int64, modificationDate: Date)] = []
+    var totalSize: Int64 = 0
+
+    for file in files where cachePolicy(for: file) == policy {
+      do {
+        let resourceValues = try file.resourceValues(forKeys: [
+          .contentModificationDateKey,
+          .fileSizeKey,
+        ])
+        let size = Int64(resourceValues.fileSize ?? 0)
+        let modificationDate = resourceValues.contentModificationDate ?? .distantPast
+        entries.append((file, size, modificationDate))
+        totalSize += size
+      } catch {
+        continue
+      }
+    }
+
+    guard totalSize > diskSizeLimit else { return }
+
+    var removedCount = 0
+    for entry in entries.sorted(by: { $0.modificationDate < $1.modificationDate }) {
+      guard totalSize > diskSizeLimit else { break }
+      do {
+        try fileManager.removeItem(at: entry.url)
+        totalSize -= entry.size
+        removedCount += 1
+      } catch {
+        continue
+      }
+    }
+
+    if removedCount > 0 {
+      logger.info("🧹 Trimmed \(removedCount) message attachment images from disk cache")
+    }
   }
 
   nonisolated static func decodedImage(from data: Data, maxPixelSize: CGFloat?) -> UIImage? {

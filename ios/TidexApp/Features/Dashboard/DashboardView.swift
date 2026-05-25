@@ -1285,8 +1285,12 @@ struct DashboardView: View {
             .onTapGesture {
               impactHaptic.impactOccurred()
               if countdownManager.isShiftActive {
-                featuredShiftActionTarget = featuredShift
-                showFeaturedShiftActions = true
+                if viewModel.shouldShowDashboardClockButtons {
+                  selectedShift = featuredShift
+                } else {
+                  featuredShiftActionTarget = featuredShift
+                  showFeaturedShiftActions = true
+                }
               } else {
                 selectedShift = featuredShift
               }
