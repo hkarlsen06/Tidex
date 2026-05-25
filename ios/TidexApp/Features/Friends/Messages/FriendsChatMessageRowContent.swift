@@ -1914,8 +1914,9 @@ final class FriendsChatImageLoader: ObservableObject {
 
     let originalCacheURL = Self.cacheURL(for: storagePath, variant: .original)
     guard let cached = await cachedImage(for: originalCacheURL) else { return nil }
-    ImageCache.shared.set(cached, for: displayCacheURL, policy: .messageAttachment)
-    return cached
+    let displayImage = await Self.displayImage(from: cached, variant: variant)
+    ImageCache.shared.set(displayImage, for: displayCacheURL, policy: .messageAttachment)
+    return displayImage
   }
 
   nonisolated static func cacheURL(for storagePath: String, variant: Variant = .original) -> URL {
@@ -1971,6 +1972,42 @@ final class FriendsChatImageLoader: ObservableObject {
     }
 
     return UIImage(cgImage: cgImage)
+  }
+
+  nonisolated private static func displayImage(from image: UIImage, variant: Variant) async
+    -> UIImage
+  {
+    await Task.detached(priority: .utility) {
+      autoreleasepool {
+        resizedDisplayImage(from: image, variant: variant)
+      }
+    }.value
+  }
+
+  nonisolated private static func resizedDisplayImage(from image: UIImage, variant: Variant)
+    -> UIImage
+  {
+    guard case .display(let pixelSize) = variant else { return image }
+    let maxPixelSize = max(pixelSize.width, pixelSize.height)
+    guard maxPixelSize > 0 else { return image }
+
+    let sourcePixelWidth = image.size.width * image.scale
+    let sourcePixelHeight = image.size.height * image.scale
+    let sourceMaxPixelSize = max(sourcePixelWidth, sourcePixelHeight)
+    guard sourceMaxPixelSize > maxPixelSize else { return image }
+
+    let scale = maxPixelSize / sourceMaxPixelSize
+    let targetSize = CGSize(
+      width: max(1, sourcePixelWidth * scale),
+      height: max(1, sourcePixelHeight * scale)
+    )
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    format.opaque = false
+
+    return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+      image.draw(in: CGRect(origin: .zero, size: targetSize))
+    }
   }
 }
 
