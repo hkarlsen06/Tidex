@@ -1,8 +1,8 @@
 - Lade till kalenderprenumerationer så att dina pass kan hållas uppdaterade i din kalenderapp
 - Lade till lönejusteringar för bonusar, korrigeringar och andra extra löneuppgifter
-- Förbättrad onboarding och registrering med tydligare vägledning och smartare standardval av valuta
-- Förbättrade Wagey med tydligare verktygsuppdateringar, stöd för lönejusteringar och bättre aviseringar när den slutförs i bakgrunden
-- Förbättrade delning med vänner med inläsning av delade pass, renare listbeteende och bättre chatsynkronisering
-- Förbättrade översikten, lönekorten och statistik för sysselsättningsgrad för tydligare insikter om intäkter
+- Förbättrade onboarding och registrering med tydligare vägledning och smartare val av standardvaluta
+- Förbättrade Wagey med applänkar, tydligare verktygsuppdateringar, stöd för lönejusteringar och bättre aviseringar när bakgrundsslutförande är klart
+- Förbättrade delning med vänner och chatten med inläsning av delade pass, meddelandegester, medieinteraktioner, renare listbeteende och bättre synkronisering
+- Förbättrade instrumentpanelen, lönekorten och statistiken för sysselsättningsgrad för tydligare insikter om intäkter
 - Åtgärdade hantering av återkommande pass, svepåtgärder för pass och upptäckt av överlappande delade pass
 - Buggfixar och andra förbättringar

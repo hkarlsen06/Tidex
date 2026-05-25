@@ -1,1 +1,1 @@
-vakt,timer,lønn,arbeid,timeplan,inntekt,kalkulator,skift,jobb,penger
+timer,arbeid,timeplan,inntekt,skift,jobb,penger,overtid,timeliste,arbeidstid,timelønn,timeseddel

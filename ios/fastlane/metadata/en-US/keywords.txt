@@ -1,1 +1,1 @@
-shift,tracker,wage,salary,work,hours,time,clock,schedule,earnings
+salary,work,hours,time,clock,schedule,earnings,calculator,overtime,paycheck,calendar,planner,log

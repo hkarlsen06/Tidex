@@ -1,8 +1,8 @@
-- Đã thêm đăng ký lịch để ca làm của bạn luôn được cập nhật trong ứng dụng lịch
+- Đã thêm đăng ký lịch để các ca làm của bạn luôn được cập nhật trong ứng dụng lịch
 - Đã thêm điều chỉnh bảng lương cho tiền thưởng, chỉnh sửa và các khoản trả thêm khác
-- Cải thiện quá trình làm quen và đăng ký với hướng dẫn rõ ràng hơn và lựa chọn tiền tệ mặc định thông minh hơn
-- Cải thiện Wagey với cập nhật công cụ rõ ràng hơn, hỗ trợ điều chỉnh bảng lương và cảnh báo hoàn tất trong nền tốt hơn
-- Cải thiện chia sẻ với bạn bè với tải ca làm được chia sẻ, danh sách gọn gàng hơn và đồng bộ trò chuyện tốt hơn
-- Cải thiện bảng điều khiển, thẻ bảng lương và thống kê phần trăm việc làm để mang lại cái nhìn rõ ràng hơn về thu nhập
-- Đã sửa xử lý ca làm lặp lại, thao tác vuốt trên ca làm và phát hiện chồng chéo của ca làm được chia sẻ
-- Sửa lỗi và cải tiến khác
+- Đã cải thiện quy trình làm quen và đăng ký với hướng dẫn rõ ràng hơn và lựa chọn tiền tệ mặc định thông minh hơn
+- Đã cải thiện Wagey với liên kết ứng dụng, cập nhật công cụ rõ ràng hơn, hỗ trợ điều chỉnh bảng lương và thông báo hoàn tất nền tốt hơn
+- Đã cải thiện chia sẻ với bạn bè và trò chuyện với tính năng tải ca làm chung, thao tác cử chỉ trên tin nhắn, tương tác phương tiện, hành vi danh sách gọn gàng hơn và đồng bộ tốt hơn
+- Đã cải thiện bảng điều khiển, thẻ bảng lương và thống kê phần trăm việc làm để mang lại góc nhìn rõ ràng hơn về thu nhập
+- Đã sửa cách xử lý ca làm lặp lại, thao tác vuốt trên ca làm và phát hiện chồng chéo của ca làm được chia sẻ
+- Sửa lỗi và các cải tiến khác

@@ -1,8 +1,8 @@
 - Přidána odběry kalendáře, aby se vaše směny mohly v aplikaci kalendáře průběžně aktualizovat
 - Přidány mzdové úpravy pro bonusy, opravy a další detaily mimořádných výplat
-- Vylepšen onboarding a registrace díky jasnějším pokynům a chytřejšímu výchozímu výběru měny
-- Vylepšen Wagey díky přehlednějším aktualizacím nástrojů, podpoře mzdových úprav a lepším upozorněním na dokončení na pozadí
-- Vylepšeno sdílení s přáteli díky načítání sdílených směn, přehlednějšímu chování seznamu a lepší synchronizaci chatu
-- Vylepšen přehled, mzdové karty a statistiky pracovního úvazku pro jasnější přehled o výdělcích
+- Vylepšen onboarding a registrace díky jasnějším pokynům a chytřejšímu výběru výchozí měny
+- Vylepšen Wagey o odkazy do aplikace, přehlednější aktualizace nástrojů, podporu mzdových úprav a lepší upozornění na dokončení na pozadí
+- Vylepšeno sdílení s přáteli a chat díky načítání sdílených směn, gestům u zpráv, práci s médii, přehlednějšímu chování seznamů a lepší synchronizaci
+- Vylepšen přehled, mzdové karty a statistiky procenta úvazku pro jasnější přehled o výdělcích
 - Opravena práce s opakujícími se směnami, akce přejetím u směn a detekce překrývání sdílených směn
 - Opravy chyb a další vylepšení

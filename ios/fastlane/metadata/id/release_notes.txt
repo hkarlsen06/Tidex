@@ -1,8 +1,8 @@
-- Menambahkan langganan kalender agar shift Anda tetap terbaru di aplikasi kalender Anda
-- Menambahkan penyesuaian penggajian untuk bonus, koreksi, dan detail tambahan lainnya
-- Meningkatkan onboarding dan pendaftaran dengan panduan yang lebih jelas serta pilihan mata uang default yang lebih cerdas
-- Meningkatkan Wagey dengan pembaruan alat yang lebih jelas, dukungan penyesuaian penggajian, dan peringatan penyelesaian latar belakang yang lebih baik
-- Meningkatkan berbagi dengan teman dengan pemuatan shift bersama, perilaku daftar yang lebih rapi, dan sinkronisasi chat yang lebih baik
-- Meningkatkan dasbor, kartu penggajian, dan statistik persentase kerja untuk wawasan penghasilan yang lebih jelas
-- Memperbaiki penanganan shift berulang, tindakan usap pada shift, dan deteksi tumpang tindih shift bersama
+- Menambahkan langganan kalender agar shift Anda tetap terbarui di aplikasi kalender
+- Menambahkan penyesuaian penggajian untuk bonus, koreksi, dan detail tambahan penghasilan lainnya
+- Meningkatkan onboarding dan pendaftaran dengan panduan yang lebih jelas serta pemilihan mata uang default yang lebih cerdas
+- Meningkatkan Wagey dengan tautan aplikasi, pembaruan alat yang lebih jelas, dukungan penyesuaian penggajian, dan notifikasi penyelesaian di latar belakang yang lebih baik
+- Meningkatkan berbagi dengan teman dan obrolan dengan pemuatan shift bersama, gestur pesan, interaksi media, perilaku daftar yang lebih rapi, dan sinkronisasi yang lebih baik
+- Meningkatkan dasbor, kartu penggajian, dan statistik persentase pekerjaan untuk wawasan penghasilan yang lebih jelas
+- Memperbaiki penanganan shift berulang, aksi geser pada shift, dan deteksi tumpang tindih shift bersama
 - Perbaikan bug dan peningkatan lainnya

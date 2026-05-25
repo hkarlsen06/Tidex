@@ -1,8 +1,8 @@
-- Pridané odbery kalendára, aby sa vaše zmeny mohli priebežne aktualizovať v aplikácii kalendára
-- Pridané úpravy miezd pre bonusy, opravy a ďalšie podrobnosti o dodatočnej odmene
-- Vylepšené úvodné nastavenie a registrácia s jasnejšími pokynmi a inteligentnejším predvoleným výberom meny
-- Vylepšený Wagey s jasnejšími aktualizáciami nástrojov, podporou úprav miezd a lepšími upozorneniami na dokončenie na pozadí
-- Vylepšené zdieľanie s priateľmi načítavaním zdieľaných zmien, prehľadnejším správaním zoznamu a lepšou synchronizáciou chatu
-- Vylepšený hlavný panel, mzdové karty a štatistiky percenta pracovného úväzku pre jasnejší prehľad zárobkov
-- Opravené spracovanie opakujúcich sa zmien, akcie potiahnutím pri zmenách a detekcia prekrývania zdieľaných zmien
+- Pridané odbery kalendára, aby sa vaše zmeny mohli automaticky aktualizovať vo vašej kalendárovej aplikácii
+- Pridané úpravy výplat pre bonusy, opravy a ďalšie podrobnosti o dodatočnej odmene
+- Vylepšený onboarding a registrácia s jasnejšími pokynmi a inteligentnejším predvoleným výberom meny
+- Vylepšený Wagey o odkazy do aplikácie, jasnejšie aktualizácie nástrojov, podporu úprav výplat a lepšie upozornenia na dokončenie na pozadí
+- Vylepšené zdieľanie s priateľmi a chat načítavaním zdieľaných zmien, gestami v správach, interakciami s médiami, prehľadnejším správaním zoznamu a lepšou synchronizáciou
+- Vylepšený panel, karty výplat a štatistiky percenta pracovného úväzku pre jasnejší prehľad o zárobkoch
+- Opravené spracovanie opakujúcich sa zmien, akcie potiahnutím na zmenách a zisťovanie prekrytia zdieľaných zmien
 - Opravy chýb a ďalšie vylepšenia

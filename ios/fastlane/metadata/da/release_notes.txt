@@ -1,8 +1,8 @@
 - Tilføjet kalenderabonnementer, så dine vagter kan holdes opdateret i din kalenderapp
 - Tilføjet lønjusteringer for bonusser, korrektioner og andre ekstra løndetaljer
-- Forbedret onboarding og tilmelding med tydeligere vejledning og smartere standardvalg af valuta
-- Forbedret Wagey med tydeligere værktøjsopdateringer, understøttelse af lønjusteringer og bedre notifikationer ved fuldførelse i baggrunden
-- Forbedret deling med venner med indlæsning af delte vagter, mere overskuelig listevisning og bedre chatsynkronisering
-- Forbedret dashboard, lønkort og statistik for ansættelsesgrad for tydeligere indsigt i indtjening
-- Rettet håndtering af gentagne vagter, swipehandlinger på vagter og registrering af overlappende delte vagter
+- Forbedret onboarding og tilmelding med tydeligere vejledning og smartere valg af standardvaluta
+- Forbedret Wagey med applinks, tydeligere værktøjsopdateringer, understøttelse af lønjusteringer og bedre beskeder, når den bliver færdig i baggrunden
+- Forbedret deling med venner og chat med indlæsning af delte vagter, beskedbevægelser, mediehåndtering, mere ryddelig listeadfærd og bedre synkronisering
+- Forbedret dashboard, lønkort og statistik for ansættelsesprocent for tydeligere indsigt i indtjening
+- Rettet håndtering af tilbagevendende vagter, swipehandlinger på vagter og registrering af overlap mellem delte vagter
 - Fejlrettelser og andre forbedringer

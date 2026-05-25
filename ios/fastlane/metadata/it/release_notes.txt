@@ -1,8 +1,8 @@
-- Aggiunti gli abbonamenti al calendario così i tuoi turni possono restare aggiornati nell'app Calendario
-- Aggiunte regolazioni della busta paga per bonus, correzioni e altri dettagli di retribuzione extra
+- Aggiunti gli abbonamenti al calendario, così i tuoi turni restano aggiornati nell'app Calendario
+- Aggiunti aggiustamenti in busta paga per bonus, correzioni e altri dettagli di retribuzione extra
 - Migliorati onboarding e registrazione con indicazioni più chiare e una selezione predefinita della valuta più intelligente
-- Migliorato Wagey con aggiornamenti degli strumenti più chiari, supporto alle regolazioni della busta paga e avvisi migliori al completamento in background
-- Migliorata la condivisione con gli amici con caricamento dei turni condivisi, comportamento delle liste più pulito e migliore sincronizzazione della chat
-- Migliorati dashboard, schede della busta paga e statistiche sulla percentuale di impiego per una visione più chiara dei guadagni
-- Risolti problemi nella gestione dei turni ricorrenti, nelle azioni di scorrimento dei turni e nel rilevamento delle sovrapposizioni nei turni condivisi
+- Migliorato Wagey con link all'app, aggiornamenti degli strumenti più chiari, supporto agli aggiustamenti in busta paga e notifiche migliori per il completamento in background
+- Migliorate la condivisione con gli amici e la chat con caricamento dei turni condivisi, gesture nei messaggi, interazioni con i contenuti multimediali, comportamento delle liste più pulito e sincronizzazione migliore
+- Migliorati dashboard, schede paga e statistiche sulla percentuale di impiego per una visione più chiara dei guadagni
+- Risolti problemi nella gestione dei turni ricorrenti, nelle azioni di scorrimento dei turni e nel rilevamento delle sovrapposizioni dei turni condivisi
 - Correzioni di bug e altri miglioramenti

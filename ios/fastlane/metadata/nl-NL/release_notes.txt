@@ -1,8 +1,8 @@
-- Kalenderabonnementen toegevoegd, zodat je diensten up-to-date blijven in je agenda-app
-- Loonaanpassingen toegevoegd voor bonussen, correcties en andere extra uitbetalingsdetails
-- Onboarding en registreren verbeterd met duidelijkere begeleiding en slimmere standaardselectie van valuta
-- Wagey verbeterd met duidelijkere toolupdates, ondersteuning voor loonaanpassingen en betere meldingen bij voltooiing op de achtergrond
-- Delen met vrienden verbeterd met het laden van gedeelde diensten, overzichtelijker lijstgedrag en betere chatsynchronisatie
+- Kalenderabonnementen toegevoegd zodat je diensten up-to-date blijven in je agenda-app
+- Loonaanpassingen toegevoegd voor bonussen, correcties en andere extra loongegevens
+- Onboarding en registratie verbeterd met duidelijkere begeleiding en een slimmere standaardselectie van valuta
+- Wagey verbeterd met applinks, duidelijkere toolupdates, ondersteuning voor loonaanpassingen en betere meldingen bij voltooiing op de achtergrond
+- Delen met vrienden en chat verbeterd met het laden van gedeelde diensten, berichtgebaren, media-interacties, netter lijstgedrag en betere synchronisatie
 - Dashboard, loonkaarten en statistieken over het arbeidspercentage verbeterd voor duidelijker inzicht in inkomsten
-- Afhandeling van terugkerende diensten, swipe-acties voor diensten en detectie van overlap bij gedeelde diensten opgelost
+- Afhandeling van terugkerende diensten, veegacties voor diensten en detectie van overlappende gedeelde diensten opgelost
 - Bugfixes en andere verbeteringen
