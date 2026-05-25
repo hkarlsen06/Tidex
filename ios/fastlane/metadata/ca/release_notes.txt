@@ -1,8 +1,8 @@
-- S'han afegit subscripcions al calendari perquè els teus torns es mantinguin actualitzats a l'app de calendari
-- S'han afegit ajustos de nòmina per a bonificacions, correccions i altres detalls de pagaments extra
-- S'ha millorat la introducció i el registre amb indicacions més clares i una selecció de moneda predeterminada més intel·ligent
-- S'ha millorat Wagey amb actualitzacions d'eines més clares, compatibilitat amb ajustos de nòmina i millors alertes de finalització en segon pla
-- S'ha millorat l'ús compartit amb amics amb la càrrega de torns compartits, un comportament de llista més net i una millor sincronització del xat
-- S'han millorat el tauler, les targetes de nòmina i les estadístiques del percentatge de jornada per oferir una visió més clara dels ingressos
+- S'han afegit subscripcions al calendari perquè els teus torns es mantinguin actualitzats a la teva app de calendari
+- S'han afegit ajustos de nòmina per a bonificacions, correccions i altres detalls de paga extra
+- S'ha millorat la incorporació i el registre amb orientacions més clares i una selecció predeterminada de moneda més intel·ligent
+- S'ha millorat Wagey amb enllaços a l'app, actualitzacions d'eines més clares, compatibilitat amb ajustos de nòmina i millors avisos de finalització en segon pla
+- S'han millorat l'ús compartit amb amics i el xat amb la càrrega de torns compartits, gestos als missatges, interaccions amb contingut multimèdia, un comportament de llista més net i una millor sincronització
+- S'han millorat el tauler, les targetes de nòmina i les estadístiques de percentatge de jornada laboral per oferir una visió més clara dels ingressos
 - S'ha corregit la gestió dels torns recurrents, les accions de lliscament als torns i la detecció de solapaments en torns compartits
 - Correccions d'errors i altres millores

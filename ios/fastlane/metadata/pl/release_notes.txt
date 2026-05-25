@@ -1,8 +1,8 @@
-- Dodano subskrypcje kalendarza, dzięki którym Twoje zmiany mogą być zawsze aktualne w aplikacji kalendarza
-- Dodano korekty wypłaty dla premii, poprawek i innych dodatkowych składników wynagrodzenia
+- Dodano subskrypcje kalendarza, dzięki czemu Twoje zmiany mogą być na bieżąco aktualizowane w aplikacji kalendarza
+- Dodano korekty listy płac dla premii, poprawek i innych dodatkowych składników wynagrodzenia
 - Ulepszono onboarding i rejestrację dzięki jaśniejszym wskazówkom oraz inteligentniejszemu domyślnemu wyborowi waluty
-- Ulepszono Wagey dzięki czytelniejszym aktualizacjom narzędzia, obsłudze korekt wypłaty i lepszym alertom o zakończeniu działania w tle
-- Ulepszono udostępnianie znajomym dzięki wczytywaniu współdzielonych zmian, bardziej przejrzystemu działaniu listy i lepszej synchronizacji czatu
-- Ulepszono panel, karty wypłaty i statystyki procentu zatrudnienia, aby zapewnić lepszy wgląd w zarobki
-- Naprawiono obsługę powtarzających się zmian, akcje przesunięcia na zmianach oraz wykrywanie nakładania się współdzielonych zmian
-- Poprawki błędów i inne ulepszenia
+- Ulepszono Wagey o linki do aplikacji, czytelniejsze aktualizacje narzędzi, obsługę korekt listy płac i lepsze powiadomienia o zakończeniu działania w tle
+- Ulepszono udostępnianie znajomym i czat dzięki wczytywaniu współdzielonych zmian, gestom w wiadomościach, interakcjom z multimediami, czytelniejszemu działaniu list i lepszej synchronizacji
+- Ulepszono panel, karty wypłat i statystyki procentu zatrudnienia, aby zapewnić lepszy wgląd w zarobki
+- Naprawiono obsługę powtarzających się zmian, akcje przesunięcia na zmianach oraz wykrywanie nakładających się współdzielonych zmian
+- Poprawki błędów i inne usprawnienia

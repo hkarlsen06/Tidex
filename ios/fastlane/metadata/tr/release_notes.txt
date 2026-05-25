@@ -1,8 +1,8 @@
 - Vardiyalarınızın takvim uygulamanızda güncel kalabilmesi için takvim abonelikleri eklendi
 - Primler, düzeltmeler ve diğer ek ödeme ayrıntıları için bordro ayarlamaları eklendi
-- Daha net yönlendirmeler ve daha akıllı varsayılan para birimi seçimiyle başlangıç deneyimi ve kayıt süreci iyileştirildi
-- Wagey, daha net araç güncellemeleri, bordro ayarlama desteği ve arka planda tamamlama için daha iyi bildirimlerle geliştirildi
-- Paylaşılan vardiyaların yüklenmesi, daha düzenli liste davranışı ve daha iyi sohbet senkronizasyonu ile arkadaşlarla paylaşım geliştirildi
-- Kazançları daha net görmek için kontrol paneli, bordro kartları ve çalışma oranı istatistikleri iyileştirildi
-- Tekrarlanan vardiyaların işlenmesi, vardiya kaydırma işlemleri ve paylaşılan vardiyalarda çakışma algılama düzeltildi
+- Daha net yönlendirme ve daha akıllı varsayılan para birimi seçimiyle karşılama ve kayıt süreci iyileştirildi
+- Wagey; uygulama bağlantıları, daha net araç güncellemeleri, bordro ayarlama desteği ve arka planda tamamlanma için daha iyi uyarılarla geliştirildi
+- Arkadaşlarla paylaşım ve sohbet; paylaşılan vardiyaların yüklenmesi, mesaj hareketleri, medya etkileşimleri, daha düzenli liste davranışı ve daha iyi senkronizasyonla iyileştirildi
+- Daha net kazanç içgörüleri için pano, bordro kartları ve çalışma oranı istatistikleri iyileştirildi
+- Yinelenen vardiyaların işlenmesi, vardiya kaydırma işlemleri ve paylaşılan vardiya çakışma algılama düzeltildi
 - Hata düzeltmeleri ve diğer iyileştirmeler

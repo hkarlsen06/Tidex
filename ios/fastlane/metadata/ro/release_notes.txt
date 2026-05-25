@@ -1,8 +1,8 @@
 - Am adăugat abonamente la calendar, astfel încât turele tale să rămână actualizate în aplicația de calendar
 - Am adăugat ajustări de salarizare pentru bonusuri, corecții și alte detalii despre plăți suplimentare
-- Am îmbunătățit onboardingul și înregistrarea cu indicații mai clare și o selecție implicită mai inteligentă a monedei
-- Am îmbunătățit Wagey cu actualizări mai clare ale instrumentelor, suport pentru ajustări de salarizare și alerte mai bune la finalizarea în fundal
-- Am îmbunătățit partajarea cu prietenii prin încărcarea turelor partajate, un comportament mai curat al listei și o sincronizare mai bună a chatului
-- Am îmbunătățit tabloul de bord, cardurile de salarizare și statisticile privind procentul de angajare pentru o imagine mai clară asupra câștigurilor
-- Am corectat gestionarea turelor recurente, acțiunile de glisare pentru ture și detectarea suprapunerii turelor partajate
+- Am îmbunătățit introducerea și înregistrarea cu indicații mai clare și o selecție implicită mai inteligentă a monedei
+- Am îmbunătățit Wagey cu linkuri către aplicație, actualizări mai clare ale instrumentelor, suport pentru ajustări de salarizare și alerte mai bune pentru finalizarea în fundal
+- Am îmbunătățit partajarea cu prietenii și chatul cu încărcarea turelor partajate, gesturi pentru mesaje, interacțiuni media, un comportament mai curat al listelor și o sincronizare mai bună
+- Am îmbunătățit tabloul de bord, cardurile de salarizare și statisticile procentului de angajare pentru o imagine mai clară asupra câștigurilor
+- Am remediat gestionarea turelor recurente, acțiunile de glisare pentru ture și detectarea suprapunerii turelor partajate
 - Corecturi de erori și alte îmbunătățiri

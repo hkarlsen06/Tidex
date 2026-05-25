@@ -1,8 +1,8 @@
-- Adicionadas assinaturas de calendário para que seus turnos fiquem sempre atualizados no seu app de calendário
+- Adicionadas assinaturas de calendário para que seus turnos fiquem atualizados no seu app de calendário
 - Adicionados ajustes na folha de pagamento para bônus, correções e outros detalhes de pagamentos extras
-- Melhoramos a introdução ao app e o cadastro com orientações mais claras e uma seleção padrão de moeda mais inteligente
-- Melhoramos o Wagey com atualizações de ferramentas mais claras, suporte a ajustes na folha de pagamento e alertas melhores de conclusão em segundo plano
-- Melhoramos o compartilhamento com amigos com carregamento de turnos compartilhados, comportamento de lista mais limpo e melhor sincronização do chat
-- Melhoramos o painel, os cartões da folha de pagamento e as estatísticas de percentual de trabalho para uma visão mais clara dos ganhos
-- Corrigido o tratamento de turnos recorrentes, as ações de deslizar nos turnos e a detecção de sobreposição em turnos compartilhados
+- Melhorado o onboarding e o cadastro com orientações mais claras e uma seleção de moeda padrão mais inteligente
+- Melhorado o Wagey com links para o app, atualizações de ferramentas mais claras, suporte a ajustes na folha de pagamento e alertas melhores de conclusão em segundo plano
+- Melhorados o compartilhamento com amigos e o chat com carregamento de turnos compartilhados, gestos em mensagens, interações com mídia, comportamento de lista mais limpo e melhor sincronização
+- Melhorados o painel, os cartões da folha de pagamento e as estatísticas de percentual de trabalho para uma visão mais clara dos ganhos
+- Corrigidos o tratamento de turnos recorrentes, as ações de deslizar nos turnos e a detecção de sobreposição de turnos compartilhados
 - Correções de bugs e outras melhorias

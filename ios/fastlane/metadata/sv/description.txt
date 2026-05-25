@@ -2,7 +2,7 @@ Håll koll på dina arbetspass och räkna ut din lön med Tidex.
 
 Funktioner:
 • Enkel registrering av arbetspass med start- och sluttider
-• Automatiska löneberäkningar
+• Automatisk löneberäkning
 • Kalendervy över alla pass
 • Översikt över intäkter och statistik
 • Widget för snabb åtkomst

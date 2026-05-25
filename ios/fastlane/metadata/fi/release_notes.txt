@@ -1,8 +1,8 @@
-- Lisätty kalenteritilaukset, jotta työvuorosi pysyvät ajan tasalla kalenterisovelluksessasi
-- Lisätty palkkatarkistukset bonuksia, korjauksia ja muita ylimääräisiä palkan tietoja varten
+- Lisätty kalenteritilaukset, jotta vuorosi pysyvät ajan tasalla kalenterisovelluksessasi
+- Lisätty palkkakorjaukset bonuksille, oikaisuille ja muille lisäpalkan tiedoille
 - Parannettu käyttöönottoa ja rekisteröitymistä selkeämmällä ohjauksella ja älykkäämmällä oletusvaluutan valinnalla
-- Parannettu Wageyta selkeämmillä työkalupäivityksillä, palkkatarkistusten tuella ja paremmilla ilmoituksilla taustalla valmistumisesta
-- Parannettu ystävien kanssa jakamista jaettujen vuorojen latauksella, selkeämmällä listan toiminnalla ja paremmalla chatin synkronoinnilla
-- Parannettu koontinäyttöä, palkkakortteja ja työsuhdeprosentin tilastoja selkeämpiä ansionäkymiä varten
-- Korjattu toistuvien vuorojen käsittelyä, vuorojen pyyhkäisytoimintoja ja jaettujen vuorojen päällekkäisyyksien tunnistusta
+- Parannettu Wageyta applinkeillä, selkeämmillä työkalupäivityksillä, palkkakorjausten tuella ja paremmilla ilmoituksilla taustalla valmistumisesta
+- Parannettu jakamista kavereiden kanssa ja chattia jaettujen vuorojen latauksella, viestieleillä, median käsittelyllä, siistimmällä listakäytöksellä ja paremmalla synkronoinnilla
+- Parannettu kojelautaa, palkkakortteja ja työaikaprosentin tilastoja selkeämpiä ansionäkymiä varten
+- Korjattu toistuvien vuorojen käsittelyä, vuorojen pyyhkäisytoimintoja ja jaettujen vuorojen päällekkäisyyden tunnistusta
 - Virheenkorjauksia ja muita parannuksia
