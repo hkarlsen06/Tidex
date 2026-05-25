@@ -1838,13 +1838,16 @@ final class FriendsThreadViewModel: ObservableObject {
     return await Task.detached(priority: .userInitiated) {
       let cacheURL = Self.imageCacheURL(for: storagePath)
 
-      if let cachedImage = ImageCache.shared.get(for: cacheURL),
+      if let cachedImage = ImageCache.shared.get(for: cacheURL, policy: .messageAttachment),
         let data = cachedImage.jpegData(compressionQuality: 0.9)
       {
         return ImageAttachment(id: attachmentId, data: data, mediaType: "image/jpeg")
       }
 
-      if let cachedImage = await ImageCache.shared.getFromDisk(for: cacheURL),
+      if let cachedImage = await ImageCache.shared.getFromDisk(
+        for: cacheURL,
+        policy: .messageAttachment
+      ),
         let data = cachedImage.jpegData(compressionQuality: 0.9)
       {
         return ImageAttachment(id: attachmentId, data: data, mediaType: "image/jpeg")
@@ -1856,7 +1859,11 @@ final class FriendsThreadViewModel: ObservableObject {
 
   private func cacheImage(_ image: ImageAttachment, for storagePath: String) {
     guard let uiImage = UIImage(data: image.data) else { return }
-    ImageCache.shared.set(uiImage, for: Self.imageCacheURL(for: storagePath))
+    ImageCache.shared.set(
+      uiImage,
+      for: Self.imageCacheURL(for: storagePath),
+      policy: .messageAttachment
+    )
   }
 
   private nonisolated static func imageCacheURL(for storagePath: String) -> URL {
