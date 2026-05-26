@@ -14,12 +14,6 @@ struct SettingsView: View {
   /// Whether the current user can access admin settings
   /// Requires both admin role and AAL2 assurance level.
   @State private var canAccessAdminSettings = false
-  /// Whether sign out is in progress
-  @State private var isSigningOut = false
-  /// Whether global sign out is in progress
-  @State private var isSigningOutGlobal = false
-  /// Whether to show the global sign out confirmation alert
-  @State private var showSignOutEverywhereAlert = false
   /// Whether to show the pay job chooser before opening pay settings.
   @State private var showPayJobChooser = false
   /// Whether to show quick add-job sheet from the pay chooser.
@@ -222,13 +216,6 @@ struct SettingsView: View {
             }
           }
 
-          // MARK: - Sign Out
-          settingsMenuSection {
-            signOutRow
-            settingsMenuDivider
-            signOutEverywhereRow
-          }
-
           // MARK: - Debug (DEBUG builds only)
           #if DEBUG
             settingsMenuSection(title: "Debug") {
@@ -258,7 +245,9 @@ struct SettingsView: View {
         Group {
           switch destination {
           case .profile:
-            ProfileSettingsView()
+            ProfileSettingsView {
+              navigationPath.append(SettingsDestination.security)
+            }
           case .security:
             SecuritySettingsView()
           case .subscription:
@@ -302,19 +291,6 @@ struct SettingsView: View {
         await createPayJobAndOpen(input: input)
       }
     }
-    .alert(
-      String(localized: .userMenuLogoutEverywhereConfirmTitle),
-      isPresented: $showSignOutEverywhereAlert
-    ) {
-      Button(String(localized: .userMenuLogoutEverywhereConfirmCancel), role: .cancel) {}
-      Button(String(localized: .userMenuLogoutEverywhereConfirmAction), role: .destructive) {
-        Task {
-          await signOutGlobal()
-        }
-      }
-    } message: {
-      Text(.userMenuLogoutEverywhereConfirmDescription)
-    }
     .onAppear {
       guard !didApplyInitialDestination, let initialDestination else { return }
       navigationPath.append(initialDestination)
@@ -350,74 +326,6 @@ struct SettingsView: View {
         .leading, SettingsMenuLayout.iconEdgeInset + SettingsMenuLayout.iconBadgeSize + Spacing.sm)
   }
 
-  // MARK: - Sign Out Rows
-
-  /// Sign out from this device only (local scope)
-  private var signOutRow: some View {
-    Button {
-      Task {
-        await signOut()
-      }
-    } label: {
-      HStack(spacing: Spacing.sm) {
-        SettingsRowIcon(
-          systemName: "rectangle.portrait.and.arrow.right",
-          foregroundColor: .tidexError,
-          backgroundColor: .tidexError.opacity(0.12),
-          borderColor: .tidexError.opacity(0.18)
-        )
-
-        if isSigningOut {
-          ProgressView()
-            .tint(.tidexError)
-          Text(String(localized: .userMenuLoggingOut))
-            .foregroundColor(.tidexError)
-        } else {
-          Text(String(localized: .userMenuLogout))
-            .foregroundColor(.tidexError)
-        }
-
-        Spacer()
-      }
-      .frame(minHeight: SettingsMenuLayout.rowHeight)
-      .padding(.leading, SettingsMenuLayout.iconEdgeInset)
-      .padding(.trailing, Spacing.md)
-    }
-    .disabled(isSigningOut || isSigningOutGlobal)
-  }
-
-  /// Sign out from ALL devices (global scope)
-  private var signOutEverywhereRow: some View {
-    Button {
-      showSignOutEverywhereAlert = true
-    } label: {
-      HStack(spacing: Spacing.sm) {
-        SettingsRowIcon(
-          systemName: "rectangle.portrait.and.arrow.right.fill",
-          foregroundColor: .tidexError,
-          backgroundColor: .tidexError.opacity(0.12),
-          borderColor: .tidexError.opacity(0.18)
-        )
-
-        if isSigningOutGlobal {
-          ProgressView()
-            .tint(.tidexError)
-          Text(String(localized: .userMenuLogoutEverywhereLoading))
-            .foregroundColor(.tidexError)
-        } else {
-          Text(String(localized: .userMenuLogoutEverywhere))
-            .foregroundColor(.tidexError)
-        }
-
-        Spacer()
-      }
-      .frame(minHeight: SettingsMenuLayout.rowHeight)
-      .padding(.leading, SettingsMenuLayout.iconEdgeInset)
-      .padding(.trailing, Spacing.md)
-    }
-    .disabled(isSigningOut || isSigningOutGlobal)
-  }
-
   // MARK: - Actions
 
   private func checkAdminStatus() async {
@@ -438,20 +346,6 @@ struct SettingsView: View {
       canAccessAdminSettings = false
       logger.debug("Could not check admin access status: \(error.localizedDescription)")
     }
-  }
-
-  private func signOut() async {
-    isSigningOut = true
-    await coordinator.signOut()
-    dismiss()
-    isSigningOut = false
-  }
-
-  private func signOutGlobal() async {
-    isSigningOutGlobal = true
-    await coordinator.signOutGlobal()
-    dismiss()
-    isSigningOutGlobal = false
   }
 
   private func openPaySettings() async {

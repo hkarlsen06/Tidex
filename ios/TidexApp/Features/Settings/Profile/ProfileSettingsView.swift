@@ -4,22 +4,31 @@ import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSettings")
 
-private enum ProfileField: Hashable {
-  case username
+private enum ProfileActionRowLayout {
+  static let rowHeight: CGFloat = 48
+  static let iconSize: CGFloat = 32
+  static let horizontalPadding: CGFloat = Spacing.md
+  static var dividerLeadingPadding: CGFloat { horizontalPadding + iconSize + Spacing.sm }
 }
 
 /// Profile settings view
 /// Displays profile picture, name, email, and danger zone (delete account)
 struct ProfileSettingsView: View {
+  @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.dismiss) private var dismiss
   @Environment(\.displayScale) private var displayScale
   @StateObject private var viewModel = ProfileSettingsViewModel()
-  @FocusState private var focusedField: ProfileField?
+
+  private let onOpenSecurity: () -> Void
+
+  init(onOpenSecurity: @escaping () -> Void = {}) {
+    self.onOpenSecurity = onOpenSecurity
+  }
 
   /// Photo picker selection
   @State private var selectedPhotoItem: PhotosPickerItem?
-  /// Whether to show the remove avatar confirmation
-  @State private var showRemoveAvatarConfirmation = false
+  /// Whether to show profile picture actions
+  @State private var showAvatarActionDialog = false
   /// Whether to show the image source picker (camera vs gallery)
   @State private var showImageSourcePicker = false
   /// Whether to show the gallery picker
@@ -30,11 +39,24 @@ struct ProfileSettingsView: View {
   @State private var pendingImage: UIImage?
   /// Whether to show the crop sheet
   @State private var showCropSheet = false
+  /// Whether sign out is in progress
+  @State private var isSigningOut = false
+  /// Whether global sign out is in progress
+  @State private var isSigningOutGlobal = false
+  /// Whether to show the global sign out confirmation alert
+  @State private var showSignOutEverywhereAlert = false
+  /// Whether to show the display name edit alert
+  @State private var showNameEditAlert = false
+  /// Whether to show the username edit alert
+  @State private var showUsernameEditAlert = false
+  /// Draft display name while the edit alert is open
+  @State private var draftDisplayName = ""
+  /// Draft username while the edit alert is open
+  @State private var draftUsername = ""
 
   /// Prevent conflicting avatar modal presentations from rapid repeated taps
   private var isAvatarActionInProgress: Bool {
-    viewModel.isUploadingAvatar || showImageSourcePicker || showRemoveAvatarConfirmation
-      || showGalleryPicker
+    viewModel.isUploadingAvatar || showAvatarActionDialog || showImageSourcePicker || showGalleryPicker
       || showCamera || showCropSheet
   }
 
@@ -55,14 +77,11 @@ struct ProfileSettingsView: View {
         settingsSection(title: String(localized: .profilePersonalInfoTitle)) {
           avatarSection
           settingsDivider
-          nameField
-          settingsDivider
-          usernameField
-          settingsDivider
           emailField
         }
 
-        // Danger Zone Section
+        accountAccessSection
+        sessionsSection
         dangerZoneSection
       }
       .padding(.horizontal, Spacing.md)
@@ -78,6 +97,48 @@ struct ProfileSettingsView: View {
       Task {
         await handlePhotoSelection(newItem)
       }
+    }
+    .alert(
+      String(localized: .profilePersonalInfoNameLabel),
+      isPresented: $showNameEditAlert
+    ) {
+      TextField(
+        String(localized: .profilePersonalInfoNamePlaceholder),
+        text: $draftDisplayName
+      )
+
+      Button(String(localized: .commonCancel), role: .cancel) {
+        draftDisplayName = viewModel.displayName
+      }
+
+      Button(String(localized: .commonSave)) {
+        Task {
+          await saveEditedName()
+        }
+      }
+      .disabled(viewModel.isSavingName || viewModel.isOfflineProfileFallback)
+    }
+    .alert(
+      String(localized: .profilePersonalInfoUsernameLabel),
+      isPresented: $showUsernameEditAlert
+    ) {
+      TextField(
+        String(localized: .profilePersonalInfoUsernamePlaceholder),
+        text: $draftUsername
+      )
+      .textInputAutocapitalization(.never)
+      .autocorrectionDisabled()
+
+      Button(String(localized: .commonCancel), role: .cancel) {
+        draftUsername = viewModel.username
+      }
+
+      Button(String(localized: .commonSave)) {
+        Task {
+          await saveEditedUsername()
+        }
+      }
+      .disabled(viewModel.isSavingUsername || viewModel.isOfflineProfileFallback)
     }
     .alert(
       String(localized: .profileDangerZoneDeleteAccountDialogTitle),
@@ -99,6 +160,19 @@ struct ProfileSettingsView: View {
       .disabled(!viewModel.canConfirmDelete)
     } message: {
       Text(.profileDangerZoneDeleteAccountDialogDescription)
+    }
+    .alert(
+      String(localized: .userMenuLogoutEverywhereConfirmTitle),
+      isPresented: $showSignOutEverywhereAlert
+    ) {
+      Button(String(localized: .userMenuLogoutEverywhereConfirmCancel), role: .cancel) {}
+      Button(String(localized: .userMenuLogoutEverywhereConfirmAction), role: .destructive) {
+        Task {
+          await signOutGlobal()
+        }
+      }
+    } message: {
+      Text(.userMenuLogoutEverywhereConfirmDescription)
     }
     .photosPicker(
       isPresented: $showGalleryPicker,
@@ -133,20 +207,6 @@ struct ProfileSettingsView: View {
     }
     .sheet(isPresented: $viewModel.showEmailChangeSheet) {
       emailChangeSheet
-    }
-    .toolbar {
-      ToolbarItemGroup(placement: .keyboard) {
-        if focusedField == .username {
-          Spacer()
-          Button(String(localized: .commonSave)) {
-            Task {
-              await viewModel.saveUsernameNow()
-              focusedField = nil
-            }
-          }
-          .disabled(!viewModel.canSaveUsername)
-        }
-      }
     }
   }
 
@@ -311,116 +371,210 @@ struct ProfileSettingsView: View {
     }
   }
 
-  /// Upload button label - extracted to avoid main actor isolation issues in PhotosPicker closure
-  private var uploadButtonLabel: some View {
-    HStack(spacing: Spacing.xxxs) {
-      if viewModel.isUploadingAvatar {
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-          .scaleEffect(0.8)
-      } else {
-        Image(systemName: "arrow.left.arrow.right")
-          .font(.tidexCaption)
-      }
-      Text(uploadButtonText)
-        .font(.tidexLabel)
-    }
-    .foregroundColor(.tidexBlue)
-    .padding(.horizontal, Spacing.sm)
-    .padding(.vertical, Spacing.xs)
-    .background(Color.tidexBlue.opacity(0.1))
-    .cornerRadius(CornerRadius.sm)
-  }
-
   private var avatarSection: some View {
     HStack(spacing: Spacing.md) {
-      // Avatar
-      avatarView
-        .frame(width: 80, height: 80)
+      Button {
+        guard !viewModel.isOfflineProfileFallback else { return }
+        showAvatarActionDialog = true
+      } label: {
+        ZStack(alignment: .bottomTrailing) {
+          avatarView
+            .frame(width: 80, height: 80)
 
-      // Buttons
-      VStack(alignment: .leading, spacing: Spacing.xs) {
-        Button {
+          if viewModel.isUploadingAvatar {
+            RoundedRectangle(cornerRadius: CornerRadius.xxl)
+              .fill(Color.tidexTextPrimary.opacity(0.28))
+              .frame(width: 80, height: 80)
+
+            ProgressView()
+              .progressViewStyle(CircularProgressViewStyle(tint: .white))
+          } else {
+            Image(systemName: "camera.fill")
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundColor(.tidexTextOnBrand)
+              .frame(width: 26, height: 26)
+              .background(Color.tidexBlue)
+              .clipShape(Circle())
+              .overlay(
+                Circle()
+                  .stroke(Color.tidexSurfacePrimary, lineWidth: 2)
+              )
+          }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+      }
+      .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(uploadButtonText))
+      .confirmationDialog(
+        String(localized: .profilePersonalInfoProfilePicture),
+        isPresented: $showAvatarActionDialog,
+        titleVisibility: .visible
+      ) {
+        Button(uploadButtonText) {
+          showAvatarActionDialog = false
           Task { @MainActor in
-            showRemoveAvatarConfirmation = false
             await Task.yield()
             showImageSourcePicker = true
-          }
-        } label: {
-          uploadButtonLabel
-        }
-        .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
-        .buttonStyle(.plain)
-        .confirmationDialog(
-          String(localized: .profilePersonalInfoChooseImageSource),
-          isPresented: $showImageSourcePicker,
-          titleVisibility: .visible
-        ) {
-          Button(String(localized: .profilePersonalInfoTakePhoto)) {
-            showImageSourcePicker = false
-            Task { @MainActor in
-              // Defer until dialog dismissal has settled.
-              await Task.yield()
-              showCamera = false
-              showCamera = true
-            }
-          }
-          Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
-            showImageSourcePicker = false
-            Task { @MainActor in
-              // Reset to ensure picker can always re-open after cancel.
-              selectedPhotoItem = nil
-              showGalleryPicker = false
-              // Defer until dialog dismissal has settled.
-              await Task.yield()
-              showGalleryPicker = true
-            }
-          }
-          Button(String(localized: .commonCancel), role: .cancel) {
-            showImageSourcePicker = false
           }
         }
 
         if viewModel.profilePictureUrl != nil {
-          Button {
-            Task { @MainActor in
-              showImageSourcePicker = false
-              await Task.yield()
-              showRemoveAvatarConfirmation = true
+          Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
+            showAvatarActionDialog = false
+            Task {
+              await viewModel.removeProfilePicture()
             }
-          } label: {
-            HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "trash")
-                .font(.tidexCaption)
-              Text(.profilePersonalInfoRemoveImage)
-                .font(.tidexLabel)
-            }
-            .foregroundColor(.tidexError)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xs)
-            .background(Color.tidexError.opacity(0.1))
-            .cornerRadius(CornerRadius.sm)
           }
-          .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
-          .buttonStyle(.plain)
-          .confirmationDialog(
-            String(localized: .profilePersonalInfoRemoveImageConfirm),
-            isPresented: $showRemoveAvatarConfirmation,
-            titleVisibility: .visible
-          ) {
-            Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
-              Task {
-                await viewModel.removeProfilePicture()
-              }
-            }
-            Button(String(localized: .commonCancel), role: .cancel) {}
+        }
+
+        Button(String(localized: .commonCancel), role: .cancel) {
+          showAvatarActionDialog = false
+        }
+      }
+      .confirmationDialog(
+        String(localized: .profilePersonalInfoChooseImageSource),
+        isPresented: $showImageSourcePicker,
+        titleVisibility: .visible
+      ) {
+        Button(String(localized: .profilePersonalInfoTakePhoto)) {
+          showImageSourcePicker = false
+          Task { @MainActor in
+            // Defer until dialog dismissal has settled.
+            await Task.yield()
+            showCamera = false
+            showCamera = true
           }
+        }
+        Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
+          showImageSourcePicker = false
+          Task { @MainActor in
+            // Reset to ensure picker can always re-open after cancel.
+            selectedPhotoItem = nil
+            showGalleryPicker = false
+            // Defer until dialog dismissal has settled.
+            await Task.yield()
+            showGalleryPicker = true
+          }
+        }
+        Button(String(localized: .commonCancel), role: .cancel) {
+          showImageSourcePicker = false
         }
       }
 
-      Spacer()
+      VStack(alignment: .leading, spacing: 0) {
+        profileNameRow
+        profileUsernameRow
+
+        if viewModel.isOfflineProfileFallback {
+          Text(.profileOfflineEditingUnavailable)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextMuted)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+
+        if let error = viewModel.usernameErrorMessage {
+          Text(error)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexError)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
     .opacity(viewModel.isOfflineProfileFallback ? 0.65 : 1)
+  }
+
+  private var profileNameRow: some View {
+    HStack(spacing: Spacing.xs) {
+      Text(
+        viewModel.displayName.isEmpty
+          ? String(localized: .profilePersonalInfoNamePlaceholder)
+          : viewModel.displayName
+      )
+      .font(.tidexTitle)
+      .foregroundColor(viewModel.displayName.isEmpty ? .tidexTextMuted : .tidexTextPrimary)
+      .lineLimit(2)
+      .fixedSize(horizontal: false, vertical: true)
+      .minimumScaleFactor(0.85)
+      .layoutPriority(1)
+
+      profileEditAccessory(isSaving: viewModel.isSavingName, font: .tidexSubheadline) {
+        startEditingName()
+      }
+
+      Spacer(minLength: Spacing.xs)
+    }
+    .disabled(viewModel.isOfflineProfileFallback)
+  }
+
+  private var profileUsernameRow: some View {
+    HStack(spacing: Spacing.xs) {
+      Text(usernameDisplayText)
+        .font(.tidexSubheadline)
+        .foregroundColor(viewModel.username.isEmpty ? .tidexTextMuted : .tidexTextSecondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)
+
+      profileEditAccessory(isSaving: viewModel.isSavingUsername, font: .tidexSubheadline) {
+        startEditingUsername()
+      }
+
+      Spacer(minLength: Spacing.xs)
+    }
+    .disabled(viewModel.isOfflineProfileFallback)
+  }
+
+  private var usernameDisplayText: String {
+    let username = viewModel.username.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !username.isEmpty else {
+      return String(localized: .profilePersonalInfoUsernamePlaceholder)
+    }
+    return username.hasPrefix("@") ? username : "@\(username)"
+  }
+
+  private func profileEditAccessory(
+    isSaving: Bool,
+    font: Font,
+    onEdit: @escaping () -> Void
+  ) -> some View {
+    Group {
+      if isSaving {
+        ProgressView()
+          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
+          .scaleEffect(0.6)
+      } else {
+        Button(action: onEdit) {
+          Image(systemName: "pencil")
+            .font(font)
+            .foregroundColor(.tidexTextPrimary)
+        }
+        .buttonStyle(.plain)
+      }
+    }
+  }
+
+  private func startEditingName() {
+    guard !viewModel.isOfflineProfileFallback else { return }
+    draftDisplayName = viewModel.displayName
+    showNameEditAlert = true
+  }
+
+  private func startEditingUsername() {
+    guard !viewModel.isOfflineProfileFallback else { return }
+    draftUsername = viewModel.username
+    showUsernameEditAlert = true
+  }
+
+  private func saveEditedName() async {
+    viewModel.displayName = draftDisplayName
+    await viewModel.saveNameNow()
+  }
+
+  private func saveEditedUsername() async {
+    viewModel.username = draftUsername
+    viewModel.onUsernameChanged()
+    await viewModel.saveUsernameNow()
   }
 
   @ViewBuilder
@@ -461,119 +615,7 @@ struct ProfileSettingsView: View {
     }
   }
 
-  // MARK: - Name Field
-
-  private var nameField: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      HStack {
-        Text(.profilePersonalInfoNameLabel)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-
-        Spacer()
-
-        if viewModel.isSavingName {
-          HStack(spacing: Spacing.xxs) {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
-              .scaleEffect(0.6)
-            Text(.commonSaving)
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-          }
-        }
-      }
-
-      TextField(
-        String(localized: .profilePersonalInfoNamePlaceholder), text: $viewModel.displayName
-      )
-      .font(.tidexBody)
-      .foregroundColor(viewModel.isOfflineProfileFallback ? .tidexTextSecondary : .tidexTextPrimary)
-      .disabled(viewModel.isOfflineProfileFallback)
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.sm)
-      .background(
-        viewModel.isOfflineProfileFallback
-          ? Color.tidexSurfaceSecondary.opacity(0.5) : Color.tidexSurfaceSecondary
-      )
-      .cornerRadius(CornerRadius.sm)
-      .onChange(of: viewModel.displayName) { _, _ in
-        viewModel.onNameChanged()
-      }
-
-      if viewModel.isOfflineProfileFallback {
-        Text(.profileOfflineEditingUnavailable)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
-  }
-
   // MARK: - Email Field
-
-  private var usernameField: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      HStack {
-        Text(.profilePersonalInfoUsernameLabel)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-
-        Spacer()
-
-        if viewModel.isSavingUsername {
-          HStack(spacing: Spacing.xxs) {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
-              .scaleEffect(0.6)
-            Text(.commonSaving)
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexTextMuted)
-          }
-        }
-      }
-
-      TextField(
-        String(localized: .profilePersonalInfoUsernamePlaceholder),
-        text: $viewModel.username
-      )
-      .font(.tidexBody)
-      .foregroundColor(viewModel.isOfflineProfileFallback ? .tidexTextSecondary : .tidexTextPrimary)
-      .disabled(viewModel.isOfflineProfileFallback)
-      .textInputAutocapitalization(.never)
-      .autocorrectionDisabled()
-      .focused($focusedField, equals: .username)
-      .submitLabel(.done)
-      .onSubmit {
-        Task {
-          await viewModel.saveUsernameNow()
-          focusedField = nil
-        }
-      }
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.sm)
-      .background(
-        viewModel.isOfflineProfileFallback
-          ? Color.tidexSurfaceSecondary.opacity(0.5) : Color.tidexSurfaceSecondary
-      )
-      .cornerRadius(CornerRadius.sm)
-      .onChange(of: viewModel.username) { _, _ in
-        viewModel.onUsernameChanged()
-      }
-
-      Text(
-        viewModel.isOfflineProfileFallback
-          ? .profileOfflineEditingUnavailable : .profilePersonalInfoUsernameHint
-      )
-      .font(.tidexCaptionRegular)
-      .foregroundColor(.tidexTextMuted)
-
-      if let error = viewModel.usernameErrorMessage {
-        Text(error)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexError)
-      }
-    }
-  }
 
   private var emailField: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -628,6 +670,143 @@ struct ProfileSettingsView: View {
           .foregroundColor(.tidexTextMuted)
       }
     }
+  }
+
+  // MARK: - Account Access Section
+
+  private var accountAccessSection: some View {
+    TidexSettingsSection(
+      title: String(localized: .profileAccountAccessTitle),
+      contentPadding: 0
+    ) {
+      VStack(alignment: .leading, spacing: 0) {
+        settingsNavigationRow(
+          icon: "lock.shield",
+          title: String(localized: .settingsMenuSecurityLabel),
+          tint: .tidexBlue,
+          action: onOpenSecurity
+        )
+      }
+    }
+  }
+
+  // MARK: - Sessions Section
+
+  private var sessionsSection: some View {
+    TidexSettingsSection(
+      title: String(localized: .profileSessionsTitle),
+      contentPadding: 0
+    ) {
+      VStack(alignment: .leading, spacing: 0) {
+        signOutRow
+        compactSettingsDivider
+        signOutEverywhereRow
+      }
+    }
+  }
+
+  private var signOutRow: some View {
+    Button {
+      Task {
+        await signOut()
+      }
+    } label: {
+      HStack(spacing: Spacing.sm) {
+        TidexSettingsIcon(
+          systemName: "rectangle.portrait.and.arrow.right",
+          foregroundColor: .tidexError,
+          size: ProfileActionRowLayout.iconSize
+        )
+
+        if isSigningOut {
+          ProgressView()
+            .controlSize(.small)
+            .tint(.tidexError)
+          Text(String(localized: .userMenuLoggingOut))
+            .font(.tidexBody)
+            .foregroundColor(.tidexError)
+        } else {
+          Text(String(localized: .userMenuLogout))
+            .font(.tidexBody)
+            .foregroundColor(.tidexError)
+        }
+
+        Spacer()
+      }
+      .padding(.horizontal, ProfileActionRowLayout.horizontalPadding)
+      .frame(minHeight: ProfileActionRowLayout.rowHeight)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(isSigningOut || isSigningOutGlobal)
+  }
+
+  private var signOutEverywhereRow: some View {
+    Button {
+      showSignOutEverywhereAlert = true
+    } label: {
+      HStack(spacing: Spacing.sm) {
+        TidexSettingsIcon(
+          systemName: "rectangle.portrait.and.arrow.right.fill",
+          foregroundColor: .tidexError,
+          size: ProfileActionRowLayout.iconSize
+        )
+
+        if isSigningOutGlobal {
+          ProgressView()
+            .controlSize(.small)
+            .tint(.tidexError)
+          Text(String(localized: .userMenuLogoutEverywhereLoading))
+            .font(.tidexBody)
+            .foregroundColor(.tidexError)
+        } else {
+          Text(String(localized: .userMenuLogoutEverywhere))
+            .font(.tidexBody)
+            .foregroundColor(.tidexError)
+        }
+
+        Spacer()
+      }
+      .padding(.horizontal, ProfileActionRowLayout.horizontalPadding)
+      .frame(minHeight: ProfileActionRowLayout.rowHeight)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(isSigningOut || isSigningOutGlobal)
+  }
+
+  private func settingsNavigationRow(
+    icon: String,
+    title: String,
+    tint: Color,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      HStack(spacing: Spacing.sm) {
+        TidexSettingsIcon(
+          systemName: icon,
+          foregroundColor: tint,
+          size: ProfileActionRowLayout.iconSize
+        )
+
+        Text(title)
+          .font(.tidexBody)
+          .foregroundColor(.tidexTextPrimary)
+
+        Spacer()
+
+        Image(systemName: "chevron.right")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+      }
+      .padding(.horizontal, ProfileActionRowLayout.horizontalPadding)
+      .frame(minHeight: ProfileActionRowLayout.rowHeight)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
   }
 
   // MARK: - Danger Zone Section
@@ -688,6 +867,28 @@ struct ProfileSettingsView: View {
 
   private var settingsDivider: some View {
     TidexSettingsDivider()
+  }
+
+  private var compactSettingsDivider: some View {
+    Divider()
+      .background(Color.tidexBorderSubtle)
+      .padding(.leading, ProfileActionRowLayout.dividerLeadingPadding)
+  }
+
+  // MARK: - Actions
+
+  private func signOut() async {
+    isSigningOut = true
+    await coordinator.signOut()
+    dismiss()
+    isSigningOut = false
+  }
+
+  private func signOutGlobal() async {
+    isSigningOutGlobal = true
+    await coordinator.signOutGlobal()
+    dismiss()
+    isSigningOutGlobal = false
   }
 
   // MARK: - Photo Selection Handler
