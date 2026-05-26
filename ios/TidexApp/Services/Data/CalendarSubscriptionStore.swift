@@ -51,6 +51,7 @@ final class CalendarSubscriptionStore: ObservableObject {
     guard !isLoading else { return }
     isLoading = true
     errorMessage = nil
+    fallbackHTTPSURL = nil
     defer { isLoading = false }
 
     do {
@@ -103,12 +104,14 @@ final class CalendarSubscriptionStore: ObservableObject {
         tokenStore.deleteToken(userId: userId, metadata: previousMetadata)
       }
       state = .inactive
+      fallbackHTTPSURL = nil
       return ()
     }
   }
 
   func openCalendarApp() async {
     do {
+      fallbackHTTPSURL = nil
       let rawToken = try await rawTokenForActiveSubscription()
       guard let webcalURL = service.webcalURL(rawToken: rawToken) else {
         throw CalendarSubscriptionStoreError.invalidURL

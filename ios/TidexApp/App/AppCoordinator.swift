@@ -856,6 +856,7 @@ final class AppCoordinator: ObservableObject {
           settings.effectiveDefaultStartupTab,
           forKey: Self.startupTabCacheKey
         )
+        WageyViewModel.shared.refreshEntryState()
       }
 
     } catch {
@@ -912,7 +913,9 @@ final class AppCoordinator: ObservableObject {
       let settings = await MainActor.run { () -> UserSettings? in
         guard self.userId == userId else { return nil }
         self.initialSyncComplete = true
-        return SettingsRepository.shared.getSettings(for: userId)
+        let settings = SettingsRepository.shared.getSettings(for: userId)
+        WageyViewModel.shared.refreshEntryState()
+        return settings
       }
 
       if let settings {

@@ -42,6 +42,26 @@ struct ShiftEditResult {
   }
 }
 
+enum ShiftSaveError: Error, LocalizedError {
+  case alreadyInProgress
+  case invalidDate
+  case missingRecurringInfo
+  case unavailable
+
+  var errorDescription: String? {
+    switch self {
+    case .alreadyInProgress:
+      return String(localized: .shiftsSaveErrorInProgress)
+    case .invalidDate:
+      return String(localized: .shiftsSaveErrorInvalidDate)
+    case .missingRecurringInfo:
+      return String(localized: .shiftsSaveErrorMissingRecurringInfo)
+    case .unavailable:
+      return String(localized: .shiftsSaveErrorUnavailable)
+    }
+  }
+}
+
 enum ShiftPauseEditTarget: Equatable {
   case standalone(shiftId: String)
   case recurringOccurrence(recurringId: String, date: String)
@@ -59,7 +79,7 @@ struct ShiftDetailsSheet: View {
   /// Job color hex for the badge (e.g. "#3B82F6")
   let jobColorHex: String?
   let onDelete: (() -> Void)?
-  let onUpdate: ((ShiftEditResult) -> Void)?
+  let onUpdate: ((ShiftEditResult) async throws -> Void)?
   let onUpdatePause: ((ShiftPauseEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
   let showsCalendarSubscriptionCTA: Bool
@@ -170,7 +190,7 @@ struct ShiftDetailsSheet: View {
     jobName: String? = nil,
     jobColorHex: String? = nil,
     onDelete: (() -> Void)? = nil,
-    onUpdate: ((ShiftEditResult) -> Void)? = nil,
+    onUpdate: ((ShiftEditResult) async throws -> Void)? = nil,
     onUpdatePause: ((ShiftPauseEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
     showsCalendarSubscriptionCTA: Bool = false,
@@ -603,6 +623,11 @@ struct ShiftDetailsSheet: View {
           // If we're not already in edit mode, immediately save with just supplements
           // (Otherwise, wait for user to click Save in edit mode)
           if !isEditing {
+            guard let onUpdate else {
+              errorMessage = ShiftSaveError.unavailable.localizedDescription
+              return
+            }
+
             let editResult = ShiftEditResult(
               shiftId: shift.id,
               shiftDate: shift.shiftDate,
@@ -615,8 +640,16 @@ struct ShiftDetailsSheet: View {
               noteWasEdited: noteWasEdited,
               customSupplements: customSupplements
             )
-            onUpdate?(editResult)
-            dismiss()
+            isSaving = true
+            Task {
+              do {
+                try await onUpdate(editResult)
+                dismiss()
+              } catch {
+                errorMessage = ErrorTranslations.translate(error)
+              }
+              isSaving = false
+            }
           }
         },
         onCancel: {
@@ -834,6 +867,7 @@ struct ShiftDetailsSheet: View {
 
   /// Save changes
   private func saveChanges() {
+    guard !isSaving else { return }
     guard let startTime = editedStartTime, let endTime = editedEndTime else { return }
     // Validate times (basic validation)
     let newDate = formatDateToISO(editedDate)
@@ -847,46 +881,54 @@ struct ShiftDetailsSheet: View {
     isSaving = true
     impactHaptic.impactOccurred()
 
-    if let onUpdate = onUpdate {
-      let isNoteOnlySave =
-        newDate == shift.shiftDate
-        && newStartTime == String(shift.startTime.prefix(5))
-        && newEndTime == String(shift.endTime.prefix(5))
-        && !supplementsWereEdited
-        && noteWasEdited
-
-      // Create the edit result with all necessary information
-      let editResult = ShiftEditResult(
-        shiftId: shift.id,
-        shiftDate: newDate,
-        startTime: newStartTime,
-        endTime: newEndTime,
-        isVirtualShiftConversion: isVirtualShift,
-        recurringId: shift.shift.recurring_id,
-        originalDate: shift.shiftDate,
-        note: noteWasEdited ? trimmedEditedNote : nil,
-        noteWasEdited: noteWasEdited,
-        customSupplements: supplementsWereEdited ? editedSupplements : nil
-      )
-      onUpdate(editResult)
-
-      if isNoteOnlySave {
-        optimisticNoteOverride = trimmedEditedNote
-        hasOptimisticNoteOverride = true
-        editedNote = trimmedEditedNote ?? ""
-        noteWasEdited = false
-        isSaving = false
-        isNoteFieldFocused = false
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-          isEditing = false
-        }
-      } else {
-        // The parent will handle dismissing or showing errors
-        dismiss()
-      }
-    } else {
+    guard let onUpdate else {
       isSaving = false
-      errorMessage = "Update not available"
+      errorMessage = ShiftSaveError.unavailable.localizedDescription
+      return
+    }
+
+    let isNoteOnlySave =
+      newDate == shift.shiftDate
+      && newStartTime == String(shift.startTime.prefix(5))
+      && newEndTime == String(shift.endTime.prefix(5))
+      && !supplementsWereEdited
+      && noteWasEdited
+
+    // Create the edit result with all necessary information
+    let editResult = ShiftEditResult(
+      shiftId: shift.id,
+      shiftDate: newDate,
+      startTime: newStartTime,
+      endTime: newEndTime,
+      isVirtualShiftConversion: isVirtualShift,
+      recurringId: shift.shift.recurring_id,
+      originalDate: shift.shiftDate,
+      note: noteWasEdited ? trimmedEditedNote : nil,
+      noteWasEdited: noteWasEdited,
+      customSupplements: supplementsWereEdited ? editedSupplements : nil
+    )
+
+    Task {
+      do {
+        try await onUpdate(editResult)
+
+        if isNoteOnlySave {
+          optimisticNoteOverride = trimmedEditedNote
+          hasOptimisticNoteOverride = true
+          editedNote = trimmedEditedNote ?? ""
+          noteWasEdited = false
+          isNoteFieldFocused = false
+          withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            isEditing = false
+          }
+        } else {
+          dismiss()
+        }
+      } catch {
+        errorMessage = ErrorTranslations.translate(error)
+      }
+
+      isSaving = false
     }
   }
 

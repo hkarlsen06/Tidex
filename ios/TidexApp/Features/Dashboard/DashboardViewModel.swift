@@ -3299,7 +3299,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       customSupplements: nil
     )
 
-    await updateShift(editResult)
+    do {
+      try await updateShift(editResult)
+    } catch {
+      logger.error("❌ Failed to end active shift: \(error.localizedDescription)")
+    }
   }
 
   /// End a persisted (non-virtual) shift immediately.
@@ -3321,24 +3325,28 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       customSupplements: nil
     )
 
-    await updateShift(editResult)
+    do {
+      try await updateShift(editResult)
+    } catch {
+      logger.error("❌ Failed to end persisted shift: \(error.localizedDescription)")
+    }
   }
 
   /// Update a shift with new date/time values
   /// - Parameter editResult: The result from the shift edit form
-  func updateShift(_ editResult: ShiftEditResult) async {
+  func updateShift(_ editResult: ShiftEditResult) async throws {
     // Prevent duplicate taps
-    guard !isUpdatingShift else { return }
+    guard !isUpdatingShift else { throw ShiftSaveError.alreadyInProgress }
 
     isUpdatingShift = true
+    defer { isUpdatingShift = false }
     logger.info("📝 Updating shift \(editResult.shiftId)")
 
     do {
       // Parse the new date
       guard let newDate = Date.fromISODateString(editResult.shiftDate) else {
         logger.error("Invalid date format: \(editResult.shiftDate)")
-        isUpdatingShift = false
-        return
+        throw ShiftSaveError.invalidDate
       }
 
       let currentShift = displayedMonthShifts.first(where: { $0.id == editResult.shiftId })?.shift
@@ -3359,8 +3367,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
           let userId = cachedUserId
         else {
           logger.error("Missing recurringId or userId for virtual shift conversion")
-          isUpdatingShift = false
-          return
+          throw ShiftSaveError.missingRecurringInfo
         }
 
         let recurringShift =
@@ -3443,9 +3450,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     } catch {
       logger.error("❌ Failed to update shift: \(error.localizedDescription)")
+      throw error
     }
-
-    isUpdatingShift = false
   }
 
   func updateShiftPause(_ editResult: ShiftPauseEditResult) async {

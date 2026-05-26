@@ -725,12 +725,21 @@ private struct MFAEnrollmentSheet: View {
 
           TextField("000000", text: $verificationCode)
             .keyboardType(.numberPad)
+            .textContentType(.oneTimeCode)
             .multilineTextAlignment(.center)
             .font(.tidexMonoTitle)
             .frame(width: 160)
             .padding(Spacing.sm)
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
+            .onChange(of: verificationCode) { _, newValue in
+              let filtered = newValue.filter { $0.isNumber }
+              if filtered.count > 6 {
+                verificationCode = String(filtered.prefix(6))
+              } else if filtered != newValue {
+                verificationCode = filtered
+              }
+            }
         }
 
         Button(action: verifyCode) {
