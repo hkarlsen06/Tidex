@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Read-only calendar view for shared shifts
 /// Matches the visual style of ShiftsCalendarView but without selection/editing features
@@ -34,6 +35,9 @@ struct SharedShiftsCalendarView: View {
   var onShiftTapped: ((ShiftWithComputations) -> Void)?
 
   @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+  @State private var selectedDates: Set<String> = []
+  @State private var selectedEarningsByDate: [String: CalendarEarningsData] = [:]
+  private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
   private let calendar = Calendar.current
 
   /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
@@ -45,7 +49,7 @@ struct SharedShiftsCalendarView: View {
   }
 
   private struct CalendarMetrics {
-    let earningsByDate: [String: Double]
+    let earningsByDate: [String: CalendarEarningsData]
     let hoursByDate: [String: HoursData]
     let shiftsByDate: [String: [ShiftWithComputations]]
     let dayJobTimeColorsByDate: [String: DayJobTimeColors]
@@ -59,7 +63,9 @@ struct SharedShiftsCalendarView: View {
     let jobsById = Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
     let defaultJobId = jobs.first(where: { $0.is_default == true })?.id
     let hasMultipleActiveJobs = jobs.count > 1
-    var earningsByDate: [String: Double] = [:]
+    var netByDate: [String: Double] = [:]
+    var grossByDate: [String: Double] = [:]
+    var hasTaxByDate: [String: Bool] = [:]
     var shiftsByDate: [String: [ShiftWithComputations]] = [:]
     var monthlyGross = 0.0
     var monthlyNet = 0.0
@@ -67,7 +73,10 @@ struct SharedShiftsCalendarView: View {
 
     for shift in shifts {
       let net = shift.taxEnabled ? shift.netPay : shift.grossPay
-      earningsByDate[shift.shiftDate, default: 0] += net
+      netByDate[shift.shiftDate, default: 0] += net
+      grossByDate[shift.shiftDate, default: 0] += shift.grossPay
+      hasTaxByDate[shift.shiftDate, default: false] =
+        hasTaxByDate[shift.shiftDate, default: false] || shift.taxEnabled
       shiftsByDate[shift.shiftDate, default: []].append(shift)
 
       guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
@@ -81,6 +90,16 @@ struct SharedShiftsCalendarView: View {
 
     var hoursByDate: [String: HoursData] = [:]
     var dayJobTimeColorsByDate: [String: DayJobTimeColors] = [:]
+    var earningsByDate: [String: CalendarEarningsData] = [:]
+
+    for (date, net) in netByDate {
+      let gross = grossByDate[date] ?? net
+      earningsByDate[date] = CalendarEarningsData(
+        net: net,
+        gross: gross,
+        hasTaxEnabled: hasTaxByDate[date] ?? false
+      )
+    }
 
     for (date, shiftsOnDate) in shiftsByDate {
       var earliestStart: String?
@@ -169,15 +188,30 @@ struct SharedShiftsCalendarView: View {
       calendarGrid(metrics: metrics)
         .padding(.bottom, Spacing.sm)
 
-      // View mode toggle (hours/money)
+      // View mode toggle or selected-date actions
       if showEarnings {
-        CalendarViewModeToggle(
-          viewMode: $viewMode,
-          currency: currency
-        )
+        actionBar(metrics: metrics)
       }
     }
     .animation(.spring(duration: 0.4, bounce: 0.15), value: isSuperimposing)
+    .animation(.spring(response: 0.25, dampingFraction: 0.8), value: selectedDates.count)
+    .onAppear {
+      toggleHaptic.prepare()
+      syncSelectedEarnings(with: metrics)
+    }
+    .onChange(of: shifts) { _, _ in
+      syncSelectedEarnings(with: metrics)
+    }
+    .onChange(of: showEarnings) { _, canShowEarnings in
+      if !canShowEarnings {
+        clearSelection()
+      }
+    }
+    .onChange(of: isSuperimposing) { _, isSuperimposing in
+      if isSuperimposing {
+        clearSelection()
+      }
+    }
   }
 
   // MARK: - Header Row
@@ -186,7 +220,7 @@ struct SharedShiftsCalendarView: View {
     CalendarHeaderRow(
       monthName: monthName,
       year: year,
-      selectionCount: nil,
+      selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
       phase: phase,
       totals: headerTotals(metrics: metrics),
       trailingAccessory: nil
@@ -198,12 +232,177 @@ struct SharedShiftsCalendarView: View {
     guard showEarnings else { return nil }
 
     let displayTotals = metrics.monthlyTotals
-    let showTax = metrics.hasTaxEnabled
-    let displayAmount = showTax ? displayTotals.net : displayTotals.gross
-    let primaryAmount = displayTotals.gross > 0 ? displayAmount : nil
-    let secondaryAmount = (showTax && displayTotals.gross > 0) ? displayTotals.gross : nil
+    let showTax: Bool
+    let selectedTotals: (net: Double, gross: Double)?
+
+    if let selectedAggregate = selectedEarningsAggregate(metrics: metrics) {
+      showTax = selectedAggregate.hasTaxEnabled
+      selectedTotals = (net: selectedAggregate.net, gross: selectedAggregate.gross)
+    } else {
+      showTax = metrics.hasTaxEnabled
+      selectedTotals = nil
+    }
+
+    let totals = selectedTotals ?? displayTotals
+    let displayAmount = showTax ? totals.net : totals.gross
+    let primaryAmount = totals.gross > 0 ? displayAmount : nil
+    let secondaryAmount = (showTax && totals.gross > 0) ? totals.gross : nil
 
     return CalendarHeaderTotals(primary: primaryAmount, secondary: secondaryAmount)
+  }
+
+  // MARK: - Action Bar
+
+  @ViewBuilder
+  private func actionBar(metrics: CalendarMetrics) -> some View {
+    if selectedDates.isEmpty {
+      CalendarViewModeToggle(
+        viewMode: $viewMode,
+        currency: currency
+      )
+    } else if selectedDates.count == 1 {
+      singleSelectionBar(metrics: metrics)
+    } else {
+      multiSelectionBar
+    }
+  }
+
+  private func singleSelectionBar(metrics: CalendarMetrics) -> some View {
+    HStack(spacing: Spacing.xxs) {
+      Button {
+        toggleHaptic.impactOccurred()
+        if let selectedShift = selectedShift(metrics: metrics) {
+          onShiftTapped?(selectedShift)
+        }
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "info.circle")
+            .font(.tidexLabel)
+          Text(.shiftsDetails)
+            .font(.tidexLabelStrong)
+        }
+        .foregroundColor(.tidexTextPrimary)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, interactive: selectedShift(metrics: metrics) != nil)
+        )
+      }
+      .buttonStyle(.plain)
+      .disabled(selectedShift(metrics: metrics) == nil)
+
+      Button {
+        toggleHaptic.impactOccurred()
+        clearSelection()
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "xmark")
+            .font(.tidexLabel)
+          Text(.commonCancel)
+            .font(.tidexLabelStrong)
+        }
+        .foregroundColor(.tidexTextPrimary)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, interactive: true)
+        )
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel(Text(.commonCancel))
+    }
+    .padding(Spacing.xxs)
+    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+  }
+
+  private var multiSelectionBar: some View {
+    HStack(spacing: Spacing.xxs) {
+      HStack(spacing: Spacing.xxxs) {
+        Image(systemName: "checkmark.circle")
+          .font(.tidexLabel)
+        Text("\(selectedDates.count)")
+          .font(.tidexLabelStrong)
+      }
+      .foregroundColor(.tidexTextPrimary)
+      .frame(maxWidth: .infinity)
+      .frame(height: 44)
+      .background(
+        Capsule().fill(.clear)
+          .tidexGlass(shape: .capsule, interactive: false)
+      )
+
+      Button {
+        toggleHaptic.impactOccurred()
+        clearSelection()
+      } label: {
+        HStack(spacing: Spacing.xxxs) {
+          Image(systemName: "xmark")
+            .font(.tidexLabel)
+          Text(.commonCancel)
+            .font(.tidexLabelStrong)
+        }
+        .foregroundColor(.tidexTextPrimary)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .background(
+          Capsule().fill(.clear)
+            .tidexGlass(shape: .capsule, interactive: true)
+        )
+      }
+      .buttonStyle(.plain)
+    }
+    .padding(Spacing.xxs)
+    .background(Capsule().fill(Color.tidexSurfaceSecondary))
+  }
+
+  private func selectedShift(metrics: CalendarMetrics) -> ShiftWithComputations? {
+    guard selectedDates.count == 1, let dateISO = selectedDates.first else { return nil }
+    return metrics.shiftsByDate[dateISO]?.first
+  }
+
+  private func selectedEarningsAggregate(metrics: CalendarMetrics) -> (
+    net: Double, gross: Double, hasTaxEnabled: Bool
+  )? {
+    guard !selectedDates.isEmpty else { return nil }
+
+    var net = 0.0
+    var gross = 0.0
+    var hasTaxEnabled = false
+
+    for dateISO in selectedDates {
+      guard let earnings = metrics.earningsByDate[dateISO] ?? selectedEarningsByDate[dateISO]
+      else {
+        continue
+      }
+
+      net += earnings.net
+      gross += earnings.gross
+      hasTaxEnabled = hasTaxEnabled || earnings.hasTaxEnabled
+    }
+
+    return (net: net, gross: gross, hasTaxEnabled: hasTaxEnabled)
+  }
+
+  private func syncSelectedEarnings(with metrics: CalendarMetrics) {
+    guard !selectedDates.isEmpty else {
+      selectedEarningsByDate.removeAll()
+      return
+    }
+
+    selectedEarningsByDate = selectedEarningsByDate.filter { selectedDates.contains($0.key) }
+
+    for dateISO in selectedDates {
+      if let earnings = metrics.earningsByDate[dateISO] {
+        selectedEarningsByDate[dateISO] = earnings
+      }
+    }
+  }
+
+  private func clearSelection() {
+    selectedDates.removeAll()
+    selectedEarningsByDate.removeAll()
   }
 
   // MARK: - Superimpose Legend
@@ -275,9 +474,11 @@ struct SharedShiftsCalendarView: View {
   ) -> some View {
     let shiftsOnDay = dayInfo.dateISO.flatMap { metrics.shiftsByDate[$0] } ?? []
     let dayJobTimeColors = dayInfo.dateISO.flatMap { metrics.dayJobTimeColorsByDate[$0] }
+    let isSelected = dayInfo.dateISO.map { selectedDates.contains($0) } ?? false
     let shouldColorJobMetrics =
       metrics.hasMultipleActiveJobs
       && !dayInfo.isOutsideMonth
+      && !isSelected
       && !shiftsOnDay.isEmpty
       && dayJobTimeColors != nil
     let isToday = dayInfo.dateISO == metrics.todayISO
@@ -298,7 +499,7 @@ struct SharedShiftsCalendarView: View {
       if showHiddenFriendMetrics {
         CalendarDayCell(
           dayInfo: dayInfo,
-          style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
+          style: cellStyle(isToday: isToday, isHighlighted: isHighlighted, isSelected: isSelected),
           content: .custom,
           showOverlapIndicator: showOverlap,
           showSingleUserIndicator: showSingleUserIndicator,
@@ -309,7 +510,7 @@ struct SharedShiftsCalendarView: View {
       } else {
         CalendarDayCell(
           dayInfo: dayInfo,
-          style: cellStyle(isToday: isToday, isHighlighted: isHighlighted),
+          style: cellStyle(isToday: isToday, isHighlighted: isHighlighted, isSelected: isSelected),
           content: cellContent(
             for: dayInfo,
             dayJobTimeColors: dayJobTimeColors,
@@ -324,6 +525,9 @@ struct SharedShiftsCalendarView: View {
     }
     .onTapGesture {
       handleDayTap(dayInfo: dayInfo, metrics: metrics)
+    }
+    .onLongPressGesture {
+      handleDayLongPress(dayInfo: dayInfo, metrics: metrics)
     }
   }
 
@@ -346,15 +550,34 @@ struct SharedShiftsCalendarView: View {
   private func handleDayTap(dayInfo: CalendarDayInfo, metrics: CalendarMetrics) {
     guard !dayInfo.isOutsideMonth, let dateISO = dayInfo.dateISO else { return }
     let shiftsForDay = metrics.shiftsByDate[dateISO] ?? []
-    if let firstShift = shiftsForDay.first {
+    guard !shiftsForDay.isEmpty else { return }
+
+    if showEarnings && !isSuperimposing {
+      if selectedDates.contains(dateISO) {
+        selectedDates.remove(dateISO)
+        selectedEarningsByDate.removeValue(forKey: dateISO)
+      } else {
+        selectedDates.insert(dateISO)
+        if let earnings = metrics.earningsByDate[dateISO] {
+          selectedEarningsByDate[dateISO] = earnings
+        }
+      }
+    } else if let firstShift = shiftsForDay.first {
       onShiftTapped?(firstShift)
     }
   }
 
+  private func handleDayLongPress(dayInfo: CalendarDayInfo, metrics: CalendarMetrics) {
+    guard !dayInfo.isOutsideMonth, let dateISO = dayInfo.dateISO else { return }
+    guard let firstShift = metrics.shiftsByDate[dateISO]?.first else { return }
+    onShiftTapped?(firstShift)
+  }
+
   // MARK: - Cell Styling
 
-  private func cellStyle(isToday: Bool, isHighlighted: Bool) -> CalendarCellStyle {
-    // Priority: highlighted > today > default
+  private func cellStyle(isToday: Bool, isHighlighted: Bool, isSelected: Bool) -> CalendarCellStyle
+  {
+    // Priority: highlighted > selected > today > default
     if isHighlighted {
       return CalendarCellStyle(
         backgroundColor: Self.deepLinkHighlightColor.opacity(0.2),
@@ -362,6 +585,15 @@ struct SharedShiftsCalendarView: View {
         borderWidth: 2.5,
         dayNumberColor: .tidexTextPrimary,
         showsTodayBadge: false
+      )
+    }
+    if isSelected {
+      return CalendarCellStyle(
+        backgroundColor: isToday ? Color.tidexBlue.opacity(0.2) : .tidexSurfacePrimary,
+        borderColor: .tidexBlue,
+        borderWidth: 2,
+        dayNumberColor: .tidexTextPrimary,
+        showsTodayBadge: isToday
       )
     }
     if isToday {
@@ -393,11 +625,15 @@ struct SharedShiftsCalendarView: View {
     }
 
     // Otherwise show friend's shifts (normal behavior)
-    if effectiveViewMode == .money, let amount = metrics.earningsByDate[dateISO] {
+    if effectiveViewMode == .money, let earnings = metrics.earningsByDate[dateISO] {
       if shouldColorJobMetrics, let dayJobTimeColors {
-        return .earnings(amount, color: dayJobTimeColors.topColor)
+        return .earningsBreakdown(
+          earnings,
+          color: dayJobTimeColors.topColor,
+          beforeTaxColor: dayJobTimeColors.bottomColor.opacity(0.75)
+        )
       }
-      return .earnings(amount)
+      return .earningsBreakdown(earnings)
     } else if effectiveViewMode == .hours, let hoursData = metrics.hoursByDate[dateISO] {
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .hours(

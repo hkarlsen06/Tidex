@@ -76,7 +76,7 @@ struct SupplementRulesSnapshot: Codable, Equatable {
 /// A time period with associated wage rates after splitting by supplement rules
 /// Note: fromMin/toMin are Double (not Int) to support exact proportional break deductions
 /// as specified in lib/payroll/breaks.ts (TypeScript uses number which allows fractions)
-struct WagePeriod: Equatable {
+struct WagePeriod: Codable, Equatable {
   /// Start time in minutes from midnight (Double for precision in break deductions)
   let fromMin: Double
   /// End time in minutes from midnight (exclusive, Double for precision)

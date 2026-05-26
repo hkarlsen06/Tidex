@@ -304,6 +304,18 @@ struct ShiftDetailsSheet: View {
     canEditSupplements || canEditPauseWindows
   }
 
+  private var shouldShowNoteSection: Bool {
+    onUpdate != nil || displayedNote != nil
+  }
+
+  private var hasPrimaryViewModeActions: Bool {
+    onUpdate != nil || onDelete != nil || (isVirtualShift && onEditRecurring != nil)
+  }
+
+  private var shouldShowViewModeActionButtons: Bool {
+    hasPrimaryViewModeActions || showsCalendarSubscriptionCTA
+  }
+
   private var canEditSupplements: Bool {
     onUpdate != nil && !tariffRules.isEmpty
   }
@@ -466,7 +478,7 @@ struct ShiftDetailsSheet: View {
 
           if isEditing {
             noteEditorSection
-          } else {
+          } else if shouldShowNoteSection {
             noteSection
           }
 
@@ -496,7 +508,7 @@ struct ShiftDetailsSheet: View {
           // Action buttons
           if isEditing {
             editActionButtons
-          } else {
+          } else if shouldShowViewModeActionButtons {
             viewModeActionButtons
           }
 
@@ -1351,38 +1363,40 @@ struct ShiftDetailsSheet: View {
   @ViewBuilder
   private var viewModeActionButtons: some View {
     VStack(spacing: Spacing.md) {
-      EarningsBreakdownCard {
-        // Edit button (only show if onUpdate callback is provided)
-        if onUpdate != nil {
-          DetailSheetActionButton(
-            title: String(localized: .shiftsEditButton),
-            systemImage: "pencil",
-            style: .primary
-          ) {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-              isEditing = true
+      if hasPrimaryViewModeActions {
+        EarningsBreakdownCard {
+          // Edit button (only show if onUpdate callback is provided)
+          if onUpdate != nil {
+            DetailSheetActionButton(
+              title: String(localized: .shiftsEditButton),
+              systemImage: "pencil",
+              style: .primary
+            ) {
+              withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                isEditing = true
+              }
             }
           }
-        }
 
-        // Edit recurring shift button (only for virtual shifts)
-        if isVirtualShift, let recurringId = shift.shift.recurring_id, onEditRecurring != nil {
-          DetailSheetActionButton(
-            title: String(localized: .shiftsEditRecurringButton),
-            systemImage: "repeat",
-            style: .secondary
-          ) {
-            dismiss()
-            // Small delay to allow sheet to dismiss before opening editor
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-              onEditRecurring?(recurringId)
+          // Edit recurring shift button (only for virtual shifts)
+          if isVirtualShift, let recurringId = shift.shift.recurring_id, onEditRecurring != nil {
+            DetailSheetActionButton(
+              title: String(localized: .shiftsEditRecurringButton),
+              systemImage: "repeat",
+              style: .secondary
+            ) {
+              dismiss()
+              // Small delay to allow sheet to dismiss before opening editor
+              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                onEditRecurring?(recurringId)
+              }
             }
           }
-        }
 
-        // Delete button
-        if let onDelete = onDelete {
-          deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
+          // Delete button
+          if let onDelete = onDelete {
+            deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
+          }
         }
       }
 

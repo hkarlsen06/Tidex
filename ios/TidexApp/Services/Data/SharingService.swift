@@ -495,6 +495,8 @@ final class SharingService: ObservableObject {
         basePay: shift.computed.basePay,
         supplementPay: shift.computed.supplementPay,
         gross: shift.computed.gross,
+        wagePeriods: mapWagePeriods(shift.computed.wagePeriods),
+        originalWagePeriods: mapWagePeriods(shift.computed.originalWagePeriods),
         breakAudit: SharedBreakAudit(
           method: BreakMethod(rawValue: shift.computed.breakAudit.method.rawValue) ?? .none,
           thresholdHours: shift.computed.breakAudit.thresholdHours,
@@ -527,6 +529,19 @@ final class SharingService: ObservableObject {
         )
       }
     )
+  }
+
+  private nonisolated static func mapWagePeriods(_ periods: [SharingRPCWagePeriod])
+    -> [WagePeriod]
+  {
+    periods.map {
+      WagePeriod(
+        fromMin: $0.fromMin,
+        toMin: $0.toMin,
+        baseRate: $0.baseRate,
+        supplementRate: $0.supplementRate
+      )
+    }
   }
 
   private nonisolated static func computeSharedShiftsResponseOffMain(

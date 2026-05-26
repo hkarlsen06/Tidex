@@ -1705,7 +1705,7 @@
 		};
 		11923C202F16B98A0076AFD6 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/TidexHQ/GoogleSignIn-iOS.git";
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS.git";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 9.1.0;

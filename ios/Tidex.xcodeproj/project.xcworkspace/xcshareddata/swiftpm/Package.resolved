@@ -1,5 +1,5 @@
 {
-  "originHash" : "21612a9018d8e7cef8174337a95b29cb7d5f98907edead396faf92626057f569",
+  "originHash" : "b7009c5db94e594e60e0582b9aca5c0a1afd716cd82879055f0d888419c1a2d1",
   "pins" : [
     {
       "identity" : "activityindicatorview",
@@ -40,10 +40,10 @@
     {
       "identity" : "googlesignin-ios",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/TidexHQ/GoogleSignIn-iOS.git",
+      "location" : "https://github.com/google/GoogleSignIn-iOS.git",
       "state" : {
-        "revision" : "91e732c0137e2c7060deaa80964cfb630aa6c48c",
-        "version" : "9.1.2"
+        "revision" : "913b4005ea26aebe1c97d54e35ad82a515924c71",
+        "version" : "9.1.0"
       }
     },
     {

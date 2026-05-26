@@ -43,7 +43,31 @@ struct SharedShiftComputed: Codable, Equatable {
   let basePay: Double
   let supplementPay: Double
   let gross: Double
+  let wagePeriods: [WagePeriod]?
+  let originalWagePeriods: [WagePeriod]?
   let breakAudit: SharedBreakAudit
+
+  init(
+    id: String,
+    durationHours: Double,
+    paidHours: Double,
+    basePay: Double,
+    supplementPay: Double,
+    gross: Double,
+    wagePeriods: [WagePeriod]? = nil,
+    originalWagePeriods: [WagePeriod]? = nil,
+    breakAudit: SharedBreakAudit
+  ) {
+    self.id = id
+    self.durationHours = durationHours
+    self.paidHours = paidHours
+    self.basePay = basePay
+    self.supplementPay = supplementPay
+    self.gross = gross
+    self.wagePeriods = wagePeriods
+    self.originalWagePeriods = originalWagePeriods
+    self.breakAudit = breakAudit
+  }
 }
 
 struct SharedBreakAudit: Codable, Equatable {
@@ -110,8 +134,8 @@ extension SharedShiftData {
       basePay: computed.basePay,
       supplementPay: computed.supplementPay,
       gross: computed.gross,
-      wagePeriods: [],  // Not provided by API
-      originalWagePeriods: [],  // Not provided by API
+      wagePeriods: computed.wagePeriods ?? [],
+      originalWagePeriods: computed.originalWagePeriods ?? [],
       breakAudit: BreakAudit(
         method: computed.breakAudit.method,
         thresholdHours: computed.breakAudit.thresholdHours,
