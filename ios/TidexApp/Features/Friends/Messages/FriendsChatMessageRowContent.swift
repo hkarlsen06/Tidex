@@ -1953,17 +1953,22 @@ final class FriendsChatImageLoader: ObservableObject {
   }
 
   nonisolated private static func downsampleImage(from data: Data, pixelSize: CGSize) -> UIImage? {
-    let maxPixelSize = max(pixelSize.width, pixelSize.height)
+    let targetPixelSize = normalizedPixelSize(pixelSize)
+    let maxPixelSize = max(targetPixelSize.width, targetPixelSize.height)
     guard maxPixelSize > 0 else { return UIImage(data: data) }
     guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
       return UIImage(data: data)
     }
+    let thumbnailMaxPixelSize = thumbnailMaxPixelSize(
+      for: imageSource,
+      targetPixelSize: targetPixelSize
+    )
 
     let options: [CFString: Any] = [
       kCGImageSourceCreateThumbnailFromImageAlways: true,
       kCGImageSourceCreateThumbnailWithTransform: true,
       kCGImageSourceShouldCacheImmediately: true,
-      kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+      kCGImageSourceThumbnailMaxPixelSize: thumbnailMaxPixelSize,
     ]
 
     guard let cgImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, options as CFDictionary)
@@ -1988,26 +1993,110 @@ final class FriendsChatImageLoader: ObservableObject {
     -> UIImage
   {
     guard case .display(let pixelSize) = variant else { return image }
-    let maxPixelSize = max(pixelSize.width, pixelSize.height)
-    guard maxPixelSize > 0 else { return image }
+    let targetPixelSize = normalizedPixelSize(pixelSize)
+    guard max(targetPixelSize.width, targetPixelSize.height) > 0 else { return image }
 
     let sourcePixelWidth = image.size.width * image.scale
     let sourcePixelHeight = image.size.height * image.scale
-    let sourceMaxPixelSize = max(sourcePixelWidth, sourcePixelHeight)
-    guard sourceMaxPixelSize > maxPixelSize else { return image }
-
-    let scale = maxPixelSize / sourceMaxPixelSize
-    let targetSize = CGSize(
-      width: max(1, sourcePixelWidth * scale),
-      height: max(1, sourcePixelHeight * scale)
+    let sourcePixelSize = CGSize(width: sourcePixelWidth, height: sourcePixelHeight)
+    let resizedPixelSize = coverPixelSize(
+      for: sourcePixelSize,
+      targetPixelSize: targetPixelSize
     )
+    guard resizedPixelSize != sourcePixelSize else { return image }
+
     let format = UIGraphicsImageRendererFormat()
     format.scale = 1
     format.opaque = false
 
-    return UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
-      image.draw(in: CGRect(origin: .zero, size: targetSize))
+    return UIGraphicsImageRenderer(size: resizedPixelSize, format: format).image { _ in
+      image.draw(in: CGRect(origin: .zero, size: resizedPixelSize))
     }
+  }
+
+  nonisolated private static func normalizedPixelSize(_ pixelSize: CGSize) -> CGSize {
+    CGSize(
+      width: max(0, pixelSize.width.rounded(.up)),
+      height: max(0, pixelSize.height.rounded(.up))
+    )
+  }
+
+  nonisolated private static func thumbnailMaxPixelSize(
+    for imageSource: CGImageSource,
+    targetPixelSize: CGSize
+  ) -> Int {
+    guard
+      let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil)
+        as? [CFString: Any],
+      let pixelWidth = cgFloatProperty(kCGImagePropertyPixelWidth, in: properties),
+      let pixelHeight = cgFloatProperty(kCGImagePropertyPixelHeight, in: properties)
+    else {
+      return Int(max(1, max(targetPixelSize.width, targetPixelSize.height)).rounded(.up))
+    }
+
+    let sourcePixelSize = orientedPixelSize(
+      width: pixelWidth,
+      height: pixelHeight,
+      properties: properties
+    )
+    let resizedPixelSize = coverPixelSize(
+      for: sourcePixelSize,
+      targetPixelSize: targetPixelSize
+    )
+    return Int(max(resizedPixelSize.width, resizedPixelSize.height).rounded(.up))
+  }
+
+  nonisolated private static func orientedPixelSize(
+    width: CGFloat,
+    height: CGFloat,
+    properties: [CFString: Any]
+  ) -> CGSize {
+    let orientation = intProperty(kCGImagePropertyOrientation, in: properties)
+    if let orientation, [5, 6, 7, 8].contains(orientation) {
+      return CGSize(width: height, height: width)
+    }
+    return CGSize(width: width, height: height)
+  }
+
+  nonisolated private static func cgFloatProperty(
+    _ key: CFString,
+    in properties: [CFString: Any]
+  ) -> CGFloat? {
+    if let number = properties[key] as? NSNumber {
+      return CGFloat(truncating: number)
+    }
+    return properties[key] as? CGFloat
+  }
+
+  nonisolated private static func intProperty(
+    _ key: CFString,
+    in properties: [CFString: Any]
+  ) -> Int? {
+    if let number = properties[key] as? NSNumber {
+      return number.intValue
+    }
+    return properties[key] as? Int
+  }
+
+  nonisolated private static func coverPixelSize(
+    for sourcePixelSize: CGSize,
+    targetPixelSize: CGSize
+  ) -> CGSize {
+    let sourceWidth = sourcePixelSize.width
+    let sourceHeight = sourcePixelSize.height
+    let targetWidth = targetPixelSize.width
+    let targetHeight = targetPixelSize.height
+    guard sourceWidth > 0, sourceHeight > 0, targetWidth > 0, targetHeight > 0 else {
+      return sourcePixelSize
+    }
+
+    let scale = min(1, max(targetWidth / sourceWidth, targetHeight / sourceHeight))
+    guard scale < 1 else { return sourcePixelSize }
+
+    return CGSize(
+      width: max(1, (sourceWidth * scale).rounded(.up)),
+      height: max(1, (sourceHeight * scale).rounded(.up))
+    )
   }
 }
 
@@ -2039,7 +2128,7 @@ struct FriendsChatImageAttachmentCard: View {
     self.placeholderSymbolSize = placeholderSymbolSize
     self.onTap = onTap
     let resolvedDisplaySize = displaySize ?? attachment.friendsChatImageFrameSize()
-    let displayScale = UITraitCollection.current.displayScale
+    let displayScale = max(UITraitCollection.current.displayScale, 1)
     let pixelSize = CGSize(
       width: resolvedDisplaySize.width * displayScale,
       height: resolvedDisplaySize.height * displayScale

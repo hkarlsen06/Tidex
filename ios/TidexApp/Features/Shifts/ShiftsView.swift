@@ -379,15 +379,13 @@ struct ShiftsView: View {
             onUpdate: { editResult in
               let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
                 after: editResult, originalShift: shift)
-              Task {
-                await viewModel.updateShift(editResult)
-                if shouldKeepSheetOpen {
-                  if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
-                    selectedShift = refreshedShift
-                  }
-                } else {
-                  selectedShift = nil
+              try await viewModel.updateShift(editResult)
+              if shouldKeepSheetOpen {
+                if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+                  selectedShift = refreshedShift
                 }
+              } else {
+                selectedShift = nil
               }
             },
             onUpdatePause: { pauseResult in
@@ -431,15 +429,13 @@ struct ShiftsView: View {
             onUpdate: { editResult in
               let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
                 after: editResult, originalShift: shift)
-              Task {
-                await viewModel.updateShift(editResult)
-                if shouldKeepSheetOpen {
-                  if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
-                    shiftToEditDirectly = refreshedShift
-                  }
-                } else {
-                  shiftToEditDirectly = nil
+              try await viewModel.updateShift(editResult)
+              if shouldKeepSheetOpen {
+                if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+                  shiftToEditDirectly = refreshedShift
                 }
+              } else {
+                shiftToEditDirectly = nil
               }
             },
             onUpdatePause: { pauseResult in

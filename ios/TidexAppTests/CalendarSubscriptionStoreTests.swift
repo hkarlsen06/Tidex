@@ -62,6 +62,27 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
     }
   }
 
+  func testDisableClearsFallbackURL() async throws {
+    let metadata = makeMetadata()
+    let service = MockCalendarSubscriptionService(
+      state: CalendarSubscriptionState(metadata: metadata),
+      activeAfterDuplicate: .inactive,
+      createError: nil
+    )
+    let tokenStore = InMemoryCalendarSubscriptionTokenStore()
+    let store = CalendarSubscriptionStore(
+      service: service,
+      tokenStore: tokenStore,
+      userIdProvider: { "user-1" }
+    )
+    store.fallbackHTTPSURL = URL(
+      string: "https://identity.tidex.no/functions/v1/calendar-feed/old.ics")
+
+    try await store.disable()
+
+    XCTAssertNil(store.fallbackHTTPSURL)
+  }
+
   private func makeMetadata(
     id: String = "subscription-1",
     suffix: String = "aaaaaaaa"

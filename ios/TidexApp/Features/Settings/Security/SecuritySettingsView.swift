@@ -63,7 +63,10 @@ struct SecuritySettingsView: View {
     .navigationTitle(String(localized: .securityTitle))
     .navigationBarTitleDisplayMode(.inline)
     .onAppear {
-      aiDataSharingEnabled = WageyViewModel.shared.hasConsentedToAISharing
+      refreshAIDataSharingState()
+    }
+    .onChange(of: WageyViewModel.shared.hasConsentedToAISharing) { _, newValue in
+      aiDataSharingEnabled = newValue
     }
     .task {
       await viewModel.loadSecurityInfo()
@@ -72,7 +75,7 @@ struct SecuritySettingsView: View {
       WageyConsentView(
         onAgree: {
           WageyViewModel.shared.grantAIConsent()
-          aiDataSharingEnabled = true
+          refreshAIDataSharingState()
           showAIConsentSheet = false
         },
         onDecline: {
@@ -129,6 +132,12 @@ struct SecuritySettingsView: View {
 
   private var settingsDivider: some View {
     TidexSettingsDivider()
+  }
+
+  private func refreshAIDataSharingState() {
+    let wageyViewModel = WageyViewModel.shared
+    wageyViewModel.refreshEntryState()
+    aiDataSharingEnabled = wageyViewModel.hasConsentedToAISharing
   }
 
   // MARK: - AI Data Sharing Section
