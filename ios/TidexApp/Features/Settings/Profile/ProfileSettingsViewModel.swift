@@ -66,8 +66,6 @@ final class ProfileSettingsViewModel: ObservableObject {
   private var originalDisplayName: String = ""
   /// Original username (for detecting changes)
   private var originalUsername: String = ""
-  /// Debounce task for auto-saving name
-  private var nameSaveTask: Task<Void, Never>?
   // MARK: - Initialization
 
   init(
@@ -76,6 +74,7 @@ final class ProfileSettingsViewModel: ObservableObject {
   ) {
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    hydrateCachedProfileForImmediateDisplay()
   }
 
   // MARK: - Load Profile
@@ -174,11 +173,14 @@ final class ProfileSettingsViewModel: ObservableObject {
   }
 
   private func hydrateCachedProfileForImmediateDisplay() {
-    guard let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback() else {
+    guard
+      let cachedUserId = AppCoordinator.shared.getCurrentUserId()
+        ?? AuthSessionManager.shared.offlineUserIdFallback()
+    else {
       return
     }
 
-    applyCachedProfile(offlineUserId: offlineUserId)
+    applyCachedProfile(offlineUserId: cachedUserId)
   }
 
   private func loadOfflineProfileFallback() {
@@ -192,26 +194,6 @@ final class ProfileSettingsViewModel: ObservableObject {
   }
 
   // MARK: - Name Editing
-
-  /// Called when name changes - debounces and auto-saves
-  func onNameChanged() {
-    guard !isOfflineProfileFallback else { return }
-
-    // Cancel any pending save
-    nameSaveTask?.cancel()
-
-    // Don't save if unchanged
-    guard displayName != originalDisplayName else { return }
-
-    // Debounce save for 1 second
-    nameSaveTask = Task {
-      try? await Task.sleep(nanoseconds: 1_000_000_000)
-
-      guard !Task.isCancelled else { return }
-
-      await saveName()
-    }
-  }
 
   /// Save the display name
   private func saveName() async {
@@ -253,6 +235,10 @@ final class ProfileSettingsViewModel: ObservableObject {
     }
 
     isSavingName = false
+  }
+
+  func saveNameNow() async {
+    await saveName()
   }
 
   // MARK: - Username Editing
