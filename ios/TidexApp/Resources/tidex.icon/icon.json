@@ -62,8 +62,8 @@
             }
           ],
           "glass" : true,
-          "image-name" : "logo-outline-white.svg",
-          "name" : "logo-outline-white",
+          "image-name" : "logo-filled-white.svg",
+          "name" : "logo-filled-white",
           "position" : {
             "scale" : 1.26,
             "translation-in-points" : [
