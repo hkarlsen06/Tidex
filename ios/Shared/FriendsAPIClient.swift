@@ -787,6 +787,8 @@ struct SharingComputedShiftComputed: Equatable, Sendable {
   let basePay: Double
   let supplementPay: Double
   let gross: Double
+  let wagePeriods: [SharingRPCWagePeriod]
+  let originalWagePeriods: [SharingRPCWagePeriod]
   let breakAudit: SharingRPCBreakAudit
 }
 
@@ -828,7 +830,7 @@ enum SharingRPCBreakMethod: String, Codable, Equatable, Sendable {
   case none = "none"
 }
 
-private struct SharingRPCWagePeriod: Equatable, Sendable {
+struct SharingRPCWagePeriod: Equatable, Sendable {
   let fromMin: Double
   let toMin: Double
   let baseRate: Double
@@ -1059,6 +1061,8 @@ enum SharingComputeCore {
           basePay: 0,
           supplementPay: 0,
           gross: 0,
+          wagePeriods: [],
+          originalWagePeriods: [],
           breakAudit: shift.computed.breakAudit
         ),
         taxEnabled: false,
@@ -1191,6 +1195,8 @@ enum SharingComputeCore {
         basePay: 0,
         supplementPay: 0,
         gross: 0,
+        wagePeriods: [],
+        originalWagePeriods: [],
         breakAudit: computed.breakAudit
       )
     }
@@ -1286,6 +1292,7 @@ enum SharingComputeCore {
       baseRate: baseRate,
       rules: rules
     )
+    let originalPeriods = periods
 
     let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
     let durationHours = roundTo(totalMinutes / 60.0, decimals: 2)
@@ -1363,6 +1370,8 @@ enum SharingComputeCore {
       basePay: basePay,
       supplementPay: supplementPay,
       gross: gross,
+      wagePeriods: mode == .hidden ? [] : periods,
+      originalWagePeriods: mode == .hidden ? [] : originalPeriods,
       breakAudit: breakAudit
     )
   }
