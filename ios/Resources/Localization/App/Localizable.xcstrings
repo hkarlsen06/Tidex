@@ -470869,6 +470869,23 @@
           }
         }
       }
+    },
+    "security.phoneLinking.errors.phoneInUse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This phone number is already linked to another account."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette telefonnummeret er allerede knyttet til en annen konto."
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

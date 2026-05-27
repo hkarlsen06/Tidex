@@ -450,7 +450,9 @@ final class SecuritySettingsViewModel: ObservableObject {
 
     } catch {
       logger.error("Failed to initiate phone linking: \(error)")
-      errorMessage = String(localized: .securityPhoneLinkingErrorsSendFailed)
+      errorMessage = Self.isPhoneAlreadyInUseError(error)
+        ? String(localized: .securityPhoneLinkingErrorsPhoneInUse)
+        : String(localized: .securityPhoneLinkingErrorsSendFailed)
     }
 
     isLinkingPhone = false
@@ -505,6 +507,13 @@ final class SecuritySettingsViewModel: ObservableObject {
     phoneLinkInput = ""
     phoneLinkOtp = ""
     errorMessage = nil
+  }
+
+  private static func isPhoneAlreadyInUseError(_ error: Error) -> Bool {
+    let message = "\(error) \(error.localizedDescription)"
+    return message.contains("phone_exists")
+      || message.contains("A user with this phone number has already been registered")
+      || message.contains("Phone number already in use")
   }
 
   // MARK: - MFA Management
