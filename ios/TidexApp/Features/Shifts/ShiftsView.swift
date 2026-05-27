@@ -490,6 +490,21 @@ struct ShiftsView: View {
             initialDestination: .calendarSync(
               calendarSetupIntent: .setup(mode: .shiftsAndEvents, autoOpen: false)))
         }
+        .sheet(isPresented: $viewModel.showMonthLimitSheet) {
+          MonthLimitSheet(
+            existingMonths: viewModel.existingShiftMonths,
+            targetMonth: viewModel.targetMonth,
+            onDeleteShifts: {
+              await viewModel.deleteShiftsInOtherMonthsForCopy()
+            },
+            onDeleteComplete: {
+              viewModel.onCopyMonthLimitDeleteComplete()
+            },
+            onUpgradeComplete: {
+              viewModel.onCopyMonthLimitUpgradeComplete()
+            }
+          )
+        }
         // Delete confirmation alert
         .alert(
           shiftToDelete?.isVirtual == true

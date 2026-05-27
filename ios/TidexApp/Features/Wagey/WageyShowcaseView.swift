@@ -1,14 +1,28 @@
 import SwiftUI
+import UIKit
 
 /// Showcase view shown to free users on their first visit to Wagey
 /// Highlights features and provides a "Try Wagey" button
 struct WageyShowcaseView: View {
   private let showcaseCTAHeight: CGFloat = 56 + Spacing.md + Spacing.sm + 1
 
+  @StateObject private var orientationTracker = OrientationTracker.shared
   @EnvironmentObject private var coordinator: AppCoordinator
 
   /// Callback when user taps "Try Wagey"
   let onTryWagey: () -> Void
+
+  private var isIPadLandscape: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
+  }
+
+  private var heroTopContentSpacing: CGFloat {
+    isIPadLandscape ? 108 : 44
+  }
+
+  private var heroMinHeight: CGFloat {
+    isIPadLandscape ? 300 : 236
+  }
 
   private var userName: String {
     let name = coordinator.userDisplayName
@@ -27,6 +41,8 @@ struct WageyShowcaseView: View {
             VStack(spacing: Spacing.lg) {
               featuresSection
             }
+            .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, Spacing.lg)
             .padding(.top, Spacing.lg)
 
@@ -39,6 +55,8 @@ struct WageyShowcaseView: View {
           )
 
           examplesSection
+            .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, Spacing.lg)
             .padding(.top, Spacing.lg)
             .padding(.bottom, Spacing.lg)
@@ -53,6 +71,8 @@ struct WageyShowcaseView: View {
           .overlay(Color.tidexBorder.opacity(0.4))
 
         tryButton
+          .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+          .frame(maxWidth: .infinity)
           .padding(.horizontal, Spacing.lg)
           .padding(.top, Spacing.md)
           .padding(.bottom, Spacing.sm)
@@ -91,7 +111,7 @@ struct WageyShowcaseView: View {
       // Content
       VStack(spacing: Spacing.md) {
         Spacer()
-          .frame(height: 44)
+          .frame(height: heroTopContentSpacing)
 
         HStack(spacing: Spacing.md) {
           // Sparkles icon with glow
@@ -134,7 +154,7 @@ struct WageyShowcaseView: View {
           .frame(height: 20)
       }
     }
-    .frame(minHeight: 236)
+    .frame(minHeight: heroMinHeight)
   }
 
   // MARK: - Features Section

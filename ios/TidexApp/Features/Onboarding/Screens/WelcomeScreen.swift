@@ -47,7 +47,10 @@ struct WelcomeScreen: View {
 
   var body: some View {
     GeometryReader { geometry in
-      heroContent
+      let isIPadLandscape =
+        UIDevice.current.userInterfaceIdiom == .pad && geometry.size.width > geometry.size.height
+
+      heroContent(isIPadLandscape: isIPadLandscape)
         .frame(maxWidth: .infinity)
         .position(
           x: geometry.size.width / 2,
@@ -71,9 +74,9 @@ struct WelcomeScreen: View {
 
   // MARK: - Subviews
 
-  private var heroContent: some View {
+  private func heroContent(isIPadLandscape: Bool) -> some View {
     VStack(spacing: 0) {
-      textContent
+      textContent(isIPadLandscape: isIPadLandscape)
 
       ghostedPaycheckPreview
         .opacity(showCard ? 1 : 0)
@@ -171,16 +174,20 @@ struct WelcomeScreen: View {
   }
 
   @ViewBuilder
-  private var textContent: some View {
+  private func textContent(isIPadLandscape: Bool) -> some View {
+    let horizontalAlignment: HorizontalAlignment = isIPadLandscape ? .center : .leading
+    let frameAlignment: Alignment = isIPadLandscape ? .center : .leading
+    let textAlignment: TextAlignment = isIPadLandscape ? .center : .leading
+
     VStack(spacing: Spacing.sm) {
-      VStack(alignment: .leading, spacing: -10) {
+      VStack(alignment: horizontalAlignment, spacing: -10) {
         ForEach(Array(titleLines.enumerated()), id: \.offset) { _, line in
           Text(line)
             .font(heroTitleFont)
             .foregroundColor(.tidexTextPrimary)
             .lineLimit(1)
             .minimumScaleFactor(0.78)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: frameAlignment)
         }
       }
       .opacity(showHeadline ? 1 : 0)
@@ -189,17 +196,17 @@ struct WelcomeScreen: View {
       Text(.onboardingWelcomeSubtitle)
         .font(heroSubtitleFont)
         .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(.leading)
+        .multilineTextAlignment(textAlignment)
         .lineSpacing(2)
         .lineLimit(3)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: frameAlignment)
         .fixedSize(horizontal: false, vertical: true)
         .opacity(showSubheadline ? 1 : 0)
         .offset(y: showSubheadline ? 0 : 6)
     }
-    .frame(maxWidth: 350, alignment: .leading)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.leading, Spacing.xl)
+    .frame(maxWidth: 350, alignment: frameAlignment)
+    .frame(maxWidth: .infinity, alignment: frameAlignment)
+    .padding(.leading, isIPadLandscape ? 0 : Spacing.xl)
   }
 }
 

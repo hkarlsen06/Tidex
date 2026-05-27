@@ -38,6 +38,10 @@ private struct OAuthProviderButton<Icon: View>: View {
 
   @Environment(\.colorScheme) private var colorScheme
 
+  private var isIPad: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad
+  }
+
   var body: some View {
     Button {
       UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -53,8 +57,8 @@ private struct OAuthProviderButton<Icon: View>: View {
           .minimumScaleFactor(0.9)
       }
       .foregroundColor(colorScheme == .dark ? .black : .white)
-      .padding(.leading, 64)
-      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.leading, isIPad ? 0 : 64)
+      .frame(maxWidth: .infinity, alignment: isIPad ? .center : .leading)
       .frame(height: 50)
       .background(colorScheme == .dark ? Color.white : Color.black)
       .overlay {
