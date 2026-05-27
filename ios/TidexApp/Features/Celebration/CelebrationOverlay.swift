@@ -4,6 +4,7 @@ import UIKit
 /// Compact celebration overlay that slides up from the bottom
 struct CelebrationOverlay: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @StateObject private var orientationTracker = OrientationTracker.shared
 
   let data: CelebrationData
   let onDismiss: () -> Void
@@ -32,6 +33,14 @@ struct CelebrationOverlay: View {
 
   // Extra height when card is shown: top spacing + card (~140) + spacing + great job text
   private let expandedExtraHeight: CGFloat = 24 + 140 + 16 + 24 + 16
+
+  private var isIPadLandscape: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
+  }
+
+  private var contentMaxWidth: CGFloat {
+    isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity
+  }
 
   var body: some View {
     GeometryReader { geometry in
@@ -83,6 +92,8 @@ struct CelebrationOverlay: View {
               .foregroundColor(.tidexTextMuted)
           }
           .padding(.horizontal, Spacing.md)
+          .frame(maxWidth: contentMaxWidth)
+          .frame(maxWidth: .infinity)
 
           // Expandable content - card and "great job"
           if showCard {
@@ -103,6 +114,8 @@ struct CelebrationOverlay: View {
             }
             .padding(.horizontal, Spacing.md)
             .padding(.top, Spacing.xl)  // More gap to differentiate sections
+            .frame(maxWidth: contentMaxWidth)
+            .frame(maxWidth: .infinity)
             .transition(.opacity.combined(with: .move(edge: .bottom)))
           }
 
@@ -122,6 +135,8 @@ struct CelebrationOverlay: View {
               .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxxl, style: .continuous))
           }
           .buttonStyle(CelebrationButtonStyle())
+          .frame(maxWidth: contentMaxWidth)
+          .frame(maxWidth: .infinity)
           .padding(.horizontal, Spacing.md)
           .padding(.bottom, safeBottom + Spacing.sm)
         }

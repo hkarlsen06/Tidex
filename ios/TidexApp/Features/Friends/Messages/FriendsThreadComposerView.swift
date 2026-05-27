@@ -149,12 +149,17 @@ struct FriendsThreadComposerHostedView: View {
   let bridge: FriendsThreadComposerBridge
   let text: Binding<String>
   @StateObject private var attachmentController = FriendsComposerAttachmentController()
+  @StateObject private var orientationTracker = OrientationTracker.shared
   @State private var selectedPhotoItems: [PhotosPickerItem] = []
   @State private var isSubmitting = false
   @State private var composerFocusTrigger = 0
   @State private var isComposerFocused = false
 
   private let attachmentCollapseCharacterThreshold = 18
+
+  private var isIPadLandscape: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
+  }
 
   private var composerText: String {
     text.wrappedValue
@@ -321,6 +326,7 @@ struct FriendsThreadComposerHostedView: View {
       .spring(response: 0.26, dampingFraction: 0.86), value: attachmentController.isDrawerOpen
     )
     .fixedSize(horizontal: false, vertical: true)
+    .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
     .frame(maxWidth: .infinity, alignment: .bottom)
     .background(
       GeometryReader { geometry in

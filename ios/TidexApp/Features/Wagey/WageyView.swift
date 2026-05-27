@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Main Wagey chat view
 /// Composes the header, message list, input field, and conversation sidebar
@@ -6,6 +7,7 @@ struct WageyView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Binding private var selectedTab: MainTabView.Tab
+  @StateObject private var orientationTracker = OrientationTracker.shared
 
   /// Shared ViewModel for managing chat state
   /// Using shared instance ensures conversation persists when dismissing and reopening Wagey
@@ -48,6 +50,10 @@ struct WageyView: View {
       && !viewModel.isStreaming
       && !isChatScrolledToBottom
       && (!viewModel.messages.isEmpty || !viewModel.activeContentBlocks.isEmpty)
+  }
+
+  private var isIPadLandscape: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad && orientationTracker.isLandscape
   }
 
   private var startupTaskID: String {
@@ -266,6 +272,8 @@ struct WageyView: View {
         disabled: viewModel.limitReached
       )
     }
+    .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+    .frame(maxWidth: .infinity)
     .background(
       GeometryReader { geometry in
         Color.clear.preference(
