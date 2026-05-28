@@ -172,8 +172,36 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
     requestOptions.isNetworkAccessAllowed = false
 
     return await withCheckedContinuation { continuation in
+      let lock = NSLock()
       var didResume = false
       var degradedFallbackImage: UIImage?
+
+      func resumeOnce(returning image: UIImage?) {
+        lock.lock()
+        guard !didResume else {
+          lock.unlock()
+          return
+        }
+        didResume = true
+        lock.unlock()
+
+        continuation.resume(returning: image)
+      }
+
+      func storeDegradedFallbackIfNeeded(_ image: UIImage) {
+        lock.lock()
+        if !didResume, degradedFallbackImage == nil {
+          degradedFallbackImage = image
+        }
+        lock.unlock()
+      }
+
+      func currentDegradedFallback() -> UIImage? {
+        lock.lock()
+        let image = degradedFallbackImage
+        lock.unlock()
+        return image
+      }
 
       imageManager.requestImage(
         for: asset,
@@ -181,12 +209,9 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
         contentMode: .aspectFit,
         options: requestOptions
       ) { image, info in
-        guard !didResume else { return }
-
         let wasCancelled = (info?[PHImageCancelledKey] as? Bool) ?? false
         if wasCancelled {
-          didResume = true
-          continuation.resume(returning: degradedFallbackImage)
+          resumeOnce(returning: currentDegradedFallback())
           return
         }
 
@@ -194,8 +219,7 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
           if !Self.shouldSuppressThumbnailErrorLog(error) {
             debugPrint("FriendsComposerRecentPhotoProvider thumbnail load failed:", error)
           }
-          didResume = true
-          continuation.resume(returning: degradedFallbackImage)
+          resumeOnce(returning: currentDegradedFallback())
           return
         }
 
@@ -203,18 +227,16 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
 
         if let image {
           if isDegraded {
-            degradedFallbackImage = degradedFallbackImage ?? image
+            storeDegradedFallbackIfNeeded(image)
             return
           }
 
-          didResume = true
-          continuation.resume(returning: image)
+          resumeOnce(returning: image)
           return
         }
 
         if !isDegraded {
-          didResume = true
-          continuation.resume(returning: degradedFallbackImage)
+          resumeOnce(returning: currentDegradedFallback())
         }
       }
     }
@@ -246,7 +268,7 @@ final class FriendsComposerAttachmentController: ObservableObject {
   @Published private(set) var isProcessingAttachment = false
 
   private let recentPhotoProvider: any FriendsComposerRecentPhotoProviding
-  private let thumbnailDisplaySize = CGSize(width: 280, height: 500)
+  private let thumbnailDisplaySize = CGSize(width: 144, height: 192)
   private var hasMoreRecentPhotos = false
   private var nextRecentPhotoOffset = 0
 
