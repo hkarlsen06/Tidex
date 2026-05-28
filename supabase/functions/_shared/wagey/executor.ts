@@ -1381,9 +1381,7 @@ async function executeManageShift(
       });
       return {
         success: true,
-        message: result.inserted === 1
-          ? t(tr.createdShift, { count: result.inserted })
-          : t(tr.createdShifts, { count: result.inserted }),
+        message: formatCreateShiftsResultMessage(result),
         data: result,
       };
     }
@@ -1452,6 +1450,38 @@ async function executeManageShift(
         message: t(tr.unknownAction, { action: input.action }),
       };
   }
+}
+
+function formatCreateShiftsResultMessage(result: {
+  inserted: number;
+  updated?: number;
+  skipped?: number;
+}): string {
+  const parts: string[] = [];
+  if (result.inserted > 0) {
+    parts.push(
+      result.inserted === 1
+        ? t(tr.createdShift, { count: result.inserted })
+        : t(tr.createdShifts, { count: result.inserted }),
+    );
+  }
+  if ((result.updated ?? 0) > 0) {
+    parts.push(
+      result.updated === 1
+        ? "Updated 1 existing shift"
+        : `Updated ${result.updated} existing shifts`,
+    );
+  }
+  if ((result.skipped ?? 0) > 0) {
+    parts.push(
+      result.skipped === 1
+        ? "Skipped 1 unchanged shift"
+        : `Skipped ${result.skipped} unchanged shifts`,
+    );
+  }
+  return parts.length > 0
+    ? parts.join(", ")
+    : t(tr.createdShifts, { count: 0 });
 }
 
 async function executeQueryShifts(

@@ -1150,25 +1150,107 @@ export async function getUserEventsForApi(
 export async function createShifts(
   ctx: WageyRequestContext,
   input: { dates: string[]; start: string; end: string; jobId?: string },
-): Promise<{ inserted: number; shiftIds: string[]; dates: string[] }> {
-  const rows = input.dates.map((shift_date) => ({
-    user_id: ctx.user.id,
-    ...(input.jobId ? { job_id: input.jobId } : {}),
-    shift_date,
-    start_time: input.start,
-    end_time: input.end,
-  }));
+): Promise<{
+  inserted: number;
+  updated: number;
+  skipped: number;
+  shiftIds: string[];
+  dates: string[];
+  insertedDates: string[];
+  updatedDates: string[];
+  skippedDates: string[];
+}> {
+  const sortedDates = [...input.dates].sort();
+  const existingShifts = sortedDates.length === 0 ? [] : await getRawUserShifts(
+    ctx,
+    ctx.user.id,
+    {
+      startDate: sortedDates[0],
+      endDate: sortedDates[sortedDates.length - 1],
+    },
+  );
+  const requestedJobId = input.jobId ?? null;
+  const existingByDateAndJob = new Map<string, ShiftIdentityRow[]>();
 
-  const { data, error } = await ctx.supabase
-    .from("user_shifts")
-    .insert(rows)
-    .select("id, shift_date");
-  if (error) throw new Error(error.message);
+  for (const shift of existingShifts) {
+    const key = `${shift.shift_date}|${shift.job_id ?? ""}`;
+    existingByDateAndJob.set(key, [
+      ...(existingByDateAndJob.get(key) ?? []),
+      shift,
+    ]);
+  }
+
+  const shiftIds: string[] = [];
+  const dates: string[] = [];
+  const insertedDates: string[] = [];
+  const updatedDates: string[] = [];
+  const skippedDates: string[] = [];
+
+  for (const shift_date of input.dates) {
+    const key = `${shift_date}|${requestedJobId ?? ""}`;
+    const existingMatches = existingByDateAndJob.get(key) ?? [];
+
+    if (existingMatches.length === 1) {
+      const existing = existingMatches[0];
+      shiftIds.push(existing.id);
+      dates.push(existing.shift_date);
+
+      if (
+        existing.start_time.slice(0, 5) === input.start &&
+        existing.end_time.slice(0, 5) === input.end
+      ) {
+        skippedDates.push(existing.shift_date);
+        continue;
+      }
+
+      const { error } = await ctx.supabase
+        .from("user_shifts")
+        .update({
+          start_time: input.start,
+          end_time: input.end,
+        })
+        .eq("id", existing.id)
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null);
+      if (error) throw new Error(error.message);
+
+      existing.start_time = input.start;
+      existing.end_time = input.end;
+      updatedDates.push(existing.shift_date);
+      continue;
+    }
+
+    const { data, error } = await ctx.supabase
+      .from("user_shifts")
+      .insert({
+        user_id: ctx.user.id,
+        ...(input.jobId ? { job_id: input.jobId } : {}),
+        shift_date,
+        start_time: input.start,
+        end_time: input.end,
+      })
+      .select("id, shift_date, start_time, end_time, job_id")
+      .single();
+    if (error || !data) {
+      throw new Error(error?.message ?? "Failed to create shift");
+    }
+
+    const insertedShift = data as ShiftIdentityRow;
+    shiftIds.push(insertedShift.id);
+    dates.push(insertedShift.shift_date);
+    insertedDates.push(insertedShift.shift_date);
+    existingByDateAndJob.set(key, [...existingMatches, insertedShift]);
+  }
 
   return {
-    inserted: rows.length,
-    shiftIds: (data ?? []).map((row) => row.id),
-    dates: (data ?? []).map((row) => row.shift_date),
+    inserted: insertedDates.length,
+    updated: updatedDates.length,
+    skipped: skippedDates.length,
+    shiftIds,
+    dates,
+    insertedDates,
+    updatedDates,
+    skippedDates,
   };
 }
 

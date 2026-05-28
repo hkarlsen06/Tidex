@@ -336,6 +336,179 @@ function currentWeekRange(): { startDate: string; endDate: string } {
   };
 }
 
+Deno.test("manage_shift create inserts when no matching shifts exist", async () => {
+  const db: Partial<MockDb> = { user_shifts: [] };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-04-16", "2026-04-17"],
+      start: "09:00",
+      end: "17:00",
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 2);
+  assertEquals((result.data as Record<string, unknown>).inserted, 2);
+  assertEquals((result.data as Record<string, unknown>).updated, 0);
+  assertEquals((result.data as Record<string, unknown>).skipped, 0);
+});
+
+Deno.test("manage_shift create updates matching shift times instead of duplicating", async () => {
+  const db: Partial<MockDb> = {
+    user_shifts: [{
+      id: "11111000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: null,
+      shift_date: "2026-04-16",
+      start_time: "08:00",
+      end_time: "16:00",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-04-16"],
+      start: "09:00",
+      end: "17:00",
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 1);
+  assertEquals(db.user_shifts?.[0].start_time, "09:00");
+  assertEquals(db.user_shifts?.[0].end_time, "17:00");
+  assertEquals((result.data as Record<string, unknown>).inserted, 0);
+  assertEquals((result.data as Record<string, unknown>).updated, 1);
+  assertEquals((result.data as Record<string, unknown>).skipped, 0);
+});
+
+Deno.test("manage_shift create skips unchanged matching shift", async () => {
+  const db: Partial<MockDb> = {
+    user_shifts: [{
+      id: "22222000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: null,
+      shift_date: "2026-04-16",
+      start_time: "09:00",
+      end_time: "17:00",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-04-16"],
+      start: "09:00",
+      end: "17:00",
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 1);
+  assertEquals((result.data as Record<string, unknown>).inserted, 0);
+  assertEquals((result.data as Record<string, unknown>).updated, 0);
+  assertEquals((result.data as Record<string, unknown>).skipped, 1);
+});
+
+Deno.test("manage_shift create inserts when existing date and job match is ambiguous", async () => {
+  const db: Partial<MockDb> = {
+    user_shifts: [
+      {
+        id: "33333000-0000-0000-0000-000000000001",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-04-16",
+        start_time: "08:00",
+        end_time: "12:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+      {
+        id: "33333000-0000-0000-0000-000000000002",
+        user_id: USER_ID,
+        job_id: null,
+        shift_date: "2026-04-16",
+        start_time: "13:00",
+        end_time: "17:00",
+        custom_supplements: null,
+        deleted_at: null,
+      },
+    ],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-04-16"],
+      start: "09:00",
+      end: "17:00",
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 3);
+  assertEquals(db.user_shifts?.[2].start_time, "09:00");
+  assertEquals(db.user_shifts?.[2].end_time, "17:00");
+  assertEquals((result.data as Record<string, unknown>).inserted, 1);
+  assertEquals((result.data as Record<string, unknown>).updated, 0);
+});
+
+Deno.test("manage_shift create only matches existing shifts for the same job", async () => {
+  const firstJobId = "11111111-2222-4333-8444-555555555555";
+  const secondJobId = "66666666-7777-4888-8999-000000000000";
+  const db: Partial<MockDb> = {
+    user_shifts: [{
+      id: "44444000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: firstJobId,
+      shift_date: "2026-04-16",
+      start_time: "08:00",
+      end_time: "16:00",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-04-16"],
+      start: "09:00",
+      end: "17:00",
+      jobId: secondJobId,
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 2);
+  assertEquals(db.user_shifts?.[0].start_time, "08:00");
+  assertEquals(db.user_shifts?.[1].job_id, secondJobId);
+  assertEquals((result.data as Record<string, unknown>).inserted, 1);
+  assertEquals((result.data as Record<string, unknown>).updated, 0);
+});
+
 Deno.test("manage_wage_snapshots create copies current default workplace snapshot", async () => {
   const jobId = "11111111-2222-4333-8444-555555555555";
   const db: Partial<MockDb> = {
