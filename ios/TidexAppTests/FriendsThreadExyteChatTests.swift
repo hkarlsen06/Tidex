@@ -1011,6 +1011,60 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testViewportScrollDeferralResolverDefersInitialReplyScroll() {
+    XCTAssertTrue(
+      FriendsThreadChatViewportScrollDeferralResolver.shouldDefer(
+        kind: .reply,
+        hasDeferredInitialReplyScroll: false,
+        isUserInteracting: false
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsThreadChatViewportScrollDeferralResolver.shouldDefer(
+        kind: .reply,
+        hasDeferredInitialReplyScroll: true,
+        isUserInteracting: false
+      )
+    )
+  }
+
+  func testViewportScrollDeferralResolverDefersReplyWhileUserInteractionIsSettling() {
+    XCTAssertTrue(
+      FriendsThreadChatViewportScrollDeferralResolver.shouldDefer(
+        kind: .reply,
+        hasDeferredInitialReplyScroll: true,
+        isUserInteracting: true
+      )
+    )
+  }
+
+  func testViewportScrollDeferralResolverKeepsExistingRestoreAndLiveEdgeBehavior() {
+    XCTAssertTrue(
+      FriendsThreadChatViewportScrollDeferralResolver.shouldDefer(
+        kind: .restore,
+        hasDeferredInitialReplyScroll: false,
+        isUserInteracting: true
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsThreadChatViewportScrollDeferralResolver.shouldDefer(
+        kind: .restore,
+        hasDeferredInitialReplyScroll: false,
+        isUserInteracting: false
+      )
+    )
+
+    XCTAssertFalse(
+      FriendsThreadChatViewportScrollDeferralResolver.shouldDefer(
+        kind: .liveEdge,
+        hasDeferredInitialReplyScroll: false,
+        isUserInteracting: true
+      )
+    )
+  }
+
   func testVisibleMessageResolverIgnoresSyntheticTypingIndicatorRow() {
     XCTAssertNil(
       FriendsThreadVisibleMessageResolver.messageID(
