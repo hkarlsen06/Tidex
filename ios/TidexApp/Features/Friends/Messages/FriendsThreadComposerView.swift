@@ -714,7 +714,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
           }
         case .loaded:
           ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.sm) {
+            LazyHStack(spacing: Spacing.sm) {
               ForEach(recentPhotos) { photo in
                 Image(uiImage: photo.thumbnail)
                   .resizable()
