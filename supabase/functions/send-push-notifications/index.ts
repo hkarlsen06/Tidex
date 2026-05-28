@@ -196,6 +196,30 @@ function notificationDataString(
   return asNonEmptyString(notification.data_payload[key]);
 }
 
+export function publicNotificationDataPayload(
+  dataPayload: Record<string, unknown>,
+): Record<string, unknown> {
+  const publicPayload: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(dataPayload)) {
+    if (key.startsWith("_internal_")) continue;
+    publicPayload[key] = value;
+  }
+
+  return publicPayload;
+}
+
+export function hasDeliverableNotificationContent(
+  notification: OutboxNotification,
+): boolean {
+  if (notification.notification_type !== "shared_shift_added") {
+    return true;
+  }
+
+  const internalChanges = notification.data_payload._internal_changes;
+  return !Array.isArray(internalChanges) || internalChanges.length > 0;
+}
+
 function notificationMessageCount(notification: OutboxNotification): number {
   const rawCount = notification.data_payload.message_count;
   const count = typeof rawCount === "number"
@@ -324,6 +348,20 @@ export function coalesceNotifications(
       },
     };
   });
+}
+
+export function refreshDeliveryJobFromCurrentRows(
+  job: NotificationDeliveryJob,
+  currentNotifications: OutboxNotification[],
+): NotificationDeliveryJob | null {
+  const jobNotificationIds = new Set(
+    job.notifications.map((notification) => notification.id),
+  );
+  const freshNotifications = currentNotifications.filter((notification) =>
+    jobNotificationIds.has(notification.id) && notification.status === "sending"
+  );
+
+  return coalesceNotifications(freshNotifications)[0] ?? null;
 }
 
 export function buildApsPayload(
@@ -901,7 +939,10 @@ async function sendToFcm(
   notification: OutboxNotification,
   badgeCount: number,
 ): Promise<{ success: boolean; invalidToken?: boolean }> {
-  const { title, body, data_payload, notification_type } = notification;
+  const { title, body, notification_type } = notification;
+  const dataPayloadSource = publicNotificationDataPayload(
+    notification.data_payload,
+  );
 
   // Build data payload for deep linking
   // data_payload already contains type, owner_id, shift_dates, deeplink, etc.
@@ -910,7 +951,7 @@ async function sendToFcm(
   };
 
   // Flatten data_payload to strings for FCM (FCM data values must be strings)
-  for (const [key, value] of Object.entries(data_payload)) {
+  for (const [key, value] of Object.entries(dataPayloadSource)) {
     if (value !== null && value !== undefined) {
       if (Array.isArray(value)) {
         // Convert arrays to comma-separated strings (e.g., shift_dates)
@@ -1092,9 +1133,10 @@ async function sendToApns(
   environment?: ApnsEnvironment;
   latencyMs?: number;
 }> {
+  const dataPayload = publicNotificationDataPayload(notification.data_payload);
   const customData: Record<string, unknown> = {
     type: notification.notification_type,
-    ...notification.data_payload,
+    ...dataPayload,
   };
 
   return sendPayloadToApns(
@@ -1197,16 +1239,19 @@ async function markOutboxNotifications(
   }
 }
 
-async function filterSendingNotificationIds(
+async function refreshDeliverableDeliveryJob(
   supabase: any,
-  notificationIds: string[],
-): Promise<string[]> {
-  if (notificationIds.length === 0) return [];
+  job: NotificationDeliveryJob,
+): Promise<NotificationDeliveryJob | null> {
+  const notificationIds = job.notifications.map((notification) =>
+    notification.id
+  );
+  if (notificationIds.length === 0) return null;
 
   const { data, error } = await supabase
     .schema("internal")
     .from("notifications_outbox")
-    .select("id")
+    .select("*")
     .in("id", notificationIds)
     .eq("status", "sending");
 
@@ -1214,8 +1259,9 @@ async function filterSendingNotificationIds(
     throw error;
   }
 
-  return (data ?? []).flatMap((row: { id?: string | null }) =>
-    typeof row.id === "string" ? [row.id] : []
+  return refreshDeliveryJobFromCurrentRows(
+    job,
+    (data ?? []) as OutboxNotification[],
   );
 }
 
@@ -1432,33 +1478,61 @@ async function handleRequest(req: Request) {
       deliveryJobs,
       MAX_DELIVERY_CONCURRENCY,
       async (job) => {
-        const notification = job.notification;
         const notificationIds = job.notifications.map((entry) => entry.id);
+        const claimedNotification = job.notification;
         const sendStartedAt = performance.now();
-        const enqueueToClaimMs = notification.claimed_at
+        const enqueueToClaimMs = claimedNotification.claimed_at
           ? Math.max(
             0,
             Math.round(
-              Date.parse(notification.claimed_at) -
-                Date.parse(notification.created_at),
+              Date.parse(claimedNotification.claimed_at) -
+                Date.parse(claimedNotification.created_at),
             ),
           )
           : undefined;
-        const claimToSendMs = notification.claimed_at
+        const claimToSendMs = claimedNotification.claimed_at
           ? Math.max(
             0,
-            Math.round(Date.now() - Date.parse(notification.claimed_at)),
+            Math.round(Date.now() - Date.parse(claimedNotification.claimed_at)),
           )
           : undefined;
 
         try {
-          const deliverableNotificationIds = await filterSendingNotificationIds(
+          const deliverableJob = await refreshDeliverableDeliveryJob(
             supabase,
-            notificationIds,
+            job,
           );
+          if (!deliverableJob) {
+            console.log(
+              `[Push] Skipped notification ${claimedNotification.id} because it was superseded before delivery`,
+            );
+            return;
+          }
+
+          const notification = deliverableJob.notification;
+          const deliverableNotificationIds = deliverableJob.notifications.map((
+            entry,
+          ) => entry.id);
           if (deliverableNotificationIds.length === 0) {
             console.log(
-              `[Push] Skipped notification ${notification.id} because it was superseded before delivery`,
+              `[Push] Skipped notification ${claimedNotification.id} because it was superseded before delivery`,
+            );
+            return;
+          }
+
+          if (!hasDeliverableNotificationContent(notification)) {
+            await markOutboxNotifications(
+              supabase,
+              deliverableNotificationIds,
+              {
+                status: "skipped",
+                error_message:
+                  "No shared shift additions remained before delivery",
+                processed_at: new Date().toISOString(),
+              },
+            );
+            console.log(
+              `[Push] Skipped notification ${notification.id} because no shared shift additions remained`,
             );
             return;
           }
@@ -1569,7 +1643,7 @@ async function handleRequest(req: Request) {
           );
         } catch (error) {
           console.error(
-            `Error processing notification ${notification.id}:`,
+            `Error processing notification ${claimedNotification.id}:`,
             error,
           );
 

@@ -511,6 +511,23 @@ struct FriendsThreadChatViewportScrollRequest: Equatable {
   let presentedMessageID: String
 }
 
+enum FriendsThreadChatViewportScrollDeferralResolver {
+  static func shouldDefer(
+    kind: FriendsThreadChatViewportScrollRequest.Kind,
+    hasDeferredInitialReplyScroll: Bool,
+    isUserInteracting: Bool
+  ) -> Bool {
+    switch kind {
+    case .reply:
+      isUserInteracting || !hasDeferredInitialReplyScroll
+    case .restore:
+      isUserInteracting
+    case .liveEdge:
+      false
+    }
+  }
+}
+
 enum FriendsThreadChatViewportResolver {
   private static let pinnedToBottomThreshold: CGFloat = 1
 
@@ -1353,6 +1370,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var lastVisiblePresentedMessageID: String?
     private var lastReportedObservedPresentedMessageID: String?
     private var deferredScrollRequest: FriendsThreadChatViewportScrollRequest?
+    private var initiallyDeferredReplyScrollRequest: FriendsThreadChatViewportScrollRequest?
     private var onPinnedToBottomChanged: ((Bool) -> Void)?
     private var onLatestVisiblePresentedMessageIDChanged: ((String?) -> Void)?
     private var onObservedPresentedMessageVisible: ((String) -> Void)?
@@ -1379,6 +1397,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
       if input.scrollRequest == nil {
         handledScrollRequest = nil
+        initiallyDeferredReplyScrollRequest = nil
       }
 
       attachIfNeeded(from: view)
@@ -1490,7 +1509,15 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       guard let tableView, let scrollRequest else { return }
       guard handledScrollRequest != scrollRequest else { return }
 
-      if scrollRequest.kind == .restore && isUserInteracting(with: tableView) {
+      let hasDeferredInitialReplyScroll = initiallyDeferredReplyScrollRequest == scrollRequest
+      if FriendsThreadChatViewportScrollDeferralResolver.shouldDefer(
+        kind: scrollRequest.kind,
+        hasDeferredInitialReplyScroll: hasDeferredInitialReplyScroll,
+        isUserInteracting: isUserInteracting(with: tableView)
+      ) {
+        if scrollRequest.kind == .reply {
+          initiallyDeferredReplyScrollRequest = scrollRequest
+        }
         scheduleDeferredScroll(scrollRequest)
         return
       }

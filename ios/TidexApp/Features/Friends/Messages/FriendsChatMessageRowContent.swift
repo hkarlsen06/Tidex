@@ -202,7 +202,7 @@ struct FriendsChatMessageRowContent: View {
               }
 
               VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-                if !isShowingAttachmentReactionTarget, !hasMessageText, let quotedPreview {
+                if !isShowingAttachmentReactionTarget, let quotedPreview {
                   FriendsChatMessageReplyPreview(
                     preview: quotedPreview,
                     isCurrentUser: isCurrentUser,
@@ -300,22 +300,11 @@ struct FriendsChatMessageRowContent: View {
                     messageFrame: messageFrame,
                     replySwipe: textBubbleReplySwipeConfiguration(id: "text-\(message.id)")
                   ) {
-                    VStack(alignment: .leading, spacing: Spacing.xs) {
-                      if let quotedPreview {
-                        FriendsChatMessageReplyPreview(
-                          preview: quotedPreview,
-                          isCurrentUser: isCurrentUser,
-                          isHighlighted: false,
-                          onTap: onTapQuotedMessage
-                        )
-                      }
-
-                      Text(visibleMessageText)
-                        .font(.tidexBody)
-                        .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(visibleMessageText)
+                      .font(.tidexBody)
+                      .foregroundColor(isCurrentUser ? .tidexTextOnBrand : .tidexTextPrimary)
+                      .multilineTextAlignment(.leading)
+                      .fixedSize(horizontal: false, vertical: true)
                   } reaction: {
                     reactionStrip(for: message.reactions)
                   }

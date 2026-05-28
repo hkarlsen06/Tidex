@@ -6,7 +6,10 @@ import {
   buildPrefetchPayload,
   coalesceNotifications,
   didAnyDeliverySucceed,
+  hasDeliverableNotificationContent,
   type OutboxNotification,
+  publicNotificationDataPayload,
+  refreshDeliveryJobFromCurrentRows,
   usesMessagePrefetch,
   usesRichFormatting,
   usesThreadActions,
@@ -125,6 +128,96 @@ Deno.test("shared shift added notifications collapse per recipient and owner", (
   assert(Number.isFinite(expiration));
   assert(expiration >= Math.floor(Date.now() / 1000));
   assert(expiration <= Math.floor(Date.now() / 1000) + 60 * 60 * 24);
+});
+
+Deno.test("public notification payload strips internal shared shift state", () => {
+  const payload = publicNotificationDataPayload({
+    type: "shared_shift_added",
+    shift_count: 2,
+    changes: [{ shift_id: "visible-shift" }],
+    _internal_changes: [
+      { shift_id: "visible-shift" },
+      { shift_id: "hidden-shift" },
+    ],
+    _internal_debug: "hidden",
+  });
+
+  assertEquals(payload, {
+    type: "shared_shift_added",
+    shift_count: 2,
+    changes: [{ shift_id: "visible-shift" }],
+  });
+});
+
+Deno.test("empty internal shared shift batches are not deliverable", () => {
+  assertFalse(
+    hasDeliverableNotificationContent(
+      makeNotification("shared_shift_added", {
+        data_payload: {
+          type: "shared_shift_added",
+          _internal_changes: [],
+        },
+      }),
+    ),
+  );
+  assert(
+    hasDeliverableNotificationContent(
+      makeNotification("shared_shift_added", {
+        data_payload: {
+          type: "shared_shift_added",
+          _internal_changes: [{ shift_id: "shift-1" }],
+        },
+      }),
+    ),
+  );
+  assert(hasDeliverableNotificationContent(makeNotification("share_started")));
+});
+
+Deno.test("delivery refresh uses current shared shift payload before sending", () => {
+  const claimed = makeNotification("shared_shift_added", {
+    id: "notification-1",
+    status: "sending",
+    data_payload: {
+      type: "shared_shift_added",
+      _internal_changes: [{ shift_id: "deleted-shift" }],
+    },
+  });
+  const current = makeNotification("shared_shift_added", {
+    id: claimed.id,
+    status: "sending",
+    data_payload: {
+      type: "shared_shift_added",
+      _internal_changes: [],
+    },
+  });
+
+  const refreshed = refreshDeliveryJobFromCurrentRows(
+    { notifications: [claimed], notification: claimed },
+    [current],
+  );
+
+  assert(refreshed);
+  assertEquals(refreshed.notification.data_payload._internal_changes, []);
+  assertFalse(hasDeliverableNotificationContent(refreshed.notification));
+});
+
+Deno.test("delivery refresh drops notifications no longer sending", () => {
+  const claimed = makeNotification("shared_shift_added", {
+    id: "notification-1",
+    status: "sending",
+  });
+  const skipped = makeNotification("shared_shift_added", {
+    id: claimed.id,
+    status: "skipped",
+  });
+
+  assertEquals(
+    refreshDeliveryJobFromCurrentRows(
+      { notifications: [claimed], notification: claimed },
+      [skipped],
+    ),
+    null,
+  );
 });
 
 Deno.test("thread typing notifications route to the same thread without actions", () => {
