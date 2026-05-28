@@ -32,6 +32,7 @@ const REQUEST_ID_HEADER = "x-wagey-request-id";
 const SSE_HEARTBEAT_MS = 15_000;
 const SSE_FLUSH_PADDING = ": " + " ".repeat(2048) + "\n\n";
 const DEFAULT_WAGEY_MAX_TOKENS = 8_192;
+const MAX_WAGEY_AI_LOOP_ITERATIONS = 30;
 const TOOL_RESULT_DECIMAL_ARTIFACT_EPSILON = 1e-9;
 
 export type ChatChunk =
@@ -765,7 +766,6 @@ export async function handleWageyRequest(
         const openAIConfig = getOpenAIConfig();
 
         let iterationCount = 0;
-        const MAX_ITERATIONS = 10;
         let aiLoopFailed = false;
         let hasUserVisibleAssistantOutput = false;
         let latestCompactionContent: string | undefined;
@@ -813,7 +813,7 @@ export async function handleWageyRequest(
         };
 
         try {
-          while (iterationCount < MAX_ITERATIONS) {
+          while (iterationCount < MAX_WAGEY_AI_LOOP_ITERATIONS) {
             iterationCount += 1;
             sendChunk({ type: "status", status: "thinking" });
 
@@ -1182,7 +1182,7 @@ export async function handleWageyRequest(
           });
         }
 
-        if (iterationCount >= MAX_ITERATIONS) {
+        if (iterationCount >= MAX_WAGEY_AI_LOOP_ITERATIONS) {
           log("warn", requestId, "Max iterations reached", { iterationCount });
           if (!invocationConsumed) {
             const didConsume = await ensureInvocationConsumed();
