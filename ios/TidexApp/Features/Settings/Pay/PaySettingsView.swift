@@ -8,6 +8,7 @@ struct PaySettingsView: View {
   @StateObject private var viewModel: PaySettingsViewModel
   @State private var showingAddJobSheet = false
   @State private var showingEditJobSheet = false
+  @State private var paySetupJob: Job?
 
   init(initialJobId: String? = nil) {
     _viewModel = StateObject(wrappedValue: PaySettingsViewModel(initialSelectedJobId: initialJobId))
@@ -60,11 +61,27 @@ struct PaySettingsView: View {
       )
     }
     .sheet(isPresented: $showingAddJobSheet) {
-      AddJobSheet(
+      AddJobBasicsSheet(
         initialCurrency: viewModel.userCurrency,
-        existingJobNeedingSetup: viewModel.jobNeedingSetupBeforeAddingSecond
+        initialPayrollDay: viewModel.selectedJobPayrollDay,
+        initialHalfTaxMonth: viewModel.selectedJobHalfTaxMonth,
+        initialMonthlyGoal: viewModel.selectedJobMonthlyGoal
       ) { input in
-        await viewModel.createJob(input: input)
+        guard let createdJob = await viewModel.createJob(input: input) else {
+          return false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+          self.paySetupJob = createdJob
+        }
+        return true
+      }
+    }
+    .sheet(item: $paySetupJob) { job in
+      JobPaySetupSheet(
+        job: job,
+        initialCurrency: viewModel.userCurrency
+      ) { input in
+        await viewModel.completePaySetup(for: job, input: input)
       }
     }
     .sheet(isPresented: $showingEditJobSheet) {
@@ -182,41 +199,42 @@ struct PaySettingsView: View {
             .padding(.horizontal, Spacing.md)
         }
 
-        // Wage History Timeline
-        WageHistoryTimelineView(
-          entries: viewModel.timelineEntries,
-          currency: viewModel.userCurrency,
-          onAddNew: { viewModel.openCreateEditor() },
-          onEdit: { snapshot in viewModel.openEditEditor(snapshot: snapshot) }
-        )
-        .padding(.horizontal, Spacing.md)
-
-        // Tip box
-        tipBox
+        if viewModel.isSelectedJobConfigured {
+          WageHistoryTimelineView(
+            entries: viewModel.timelineEntries,
+            currency: viewModel.userCurrency,
+            onAddNew: { viewModel.openCreateEditor() },
+            onEdit: { snapshot in viewModel.openEditEditor(snapshot: snapshot) }
+          )
           .padding(.horizontal, Spacing.md)
 
-        // Divider
-        Divider()
-          .padding(.horizontal, Spacing.xl)
+          tipBox
+            .padding(.horizontal, Spacing.md)
 
-        // Global Pay Settings
-        GlobalPaySettingsCard(
-          jobId: viewModel.selectedJobId,
-          currency: viewModel.userCurrency,
-          monthlyGoal: viewModel.selectedJobMonthlyGoal,
-          payrollDay: viewModel.selectedJobPayrollDay,
-          halfTaxMonth: viewModel.selectedJobHalfTaxMonth,
-          canChangeCurrency: viewModel.canChangeCurrency,
-          onUpdateMonthlyGoal: { viewModel.updateMonthlyGoal($0) },
-          onUpdatePayrollDay: { viewModel.updatePayrollDay($0) },
-          onUpdateHalfTaxMonth: { value in
-            await viewModel.updateHalfTaxMonth(value)
-          },
-          onUpdateCurrency: { value in
-            await viewModel.updateCurrency(value)
-          }
-        )
-        .padding(.horizontal, Spacing.md)
+          Divider()
+            .padding(.horizontal, Spacing.xl)
+
+          GlobalPaySettingsCard(
+            jobId: viewModel.selectedJobId,
+            currency: viewModel.userCurrency,
+            monthlyGoal: viewModel.selectedJobMonthlyGoal,
+            payrollDay: viewModel.selectedJobPayrollDay,
+            halfTaxMonth: viewModel.selectedJobHalfTaxMonth,
+            canChangeCurrency: viewModel.canChangeCurrency,
+            onUpdateMonthlyGoal: { viewModel.updateMonthlyGoal($0) },
+            onUpdatePayrollDay: { viewModel.updatePayrollDay($0) },
+            onUpdateHalfTaxMonth: { value in
+              await viewModel.updateHalfTaxMonth(value)
+            },
+            onUpdateCurrency: { value in
+              await viewModel.updateCurrency(value)
+            }
+          )
+          .padding(.horizontal, Spacing.md)
+        } else {
+          finishPaySetupPanel
+            .padding(.horizontal, Spacing.md)
+        }
 
         // Bottom padding
         Spacer()
@@ -227,6 +245,40 @@ struct PaySettingsView: View {
     .refreshable {
       await viewModel.loadData()
     }
+  }
+
+  private var finishPaySetupPanel: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Image(systemName: "exclamationmark.circle.fill")
+        .font(.tidexTitle)
+        .foregroundColor(.tidexWarning)
+
+      Text(String(localized: "settings.pay.setup.finishTitle"))
+        .font(.tidexTitle)
+        .foregroundColor(.tidexTextPrimary)
+
+      Text(String(localized: "settings.pay.setup.finishDescription"))
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextSecondary)
+
+      Button {
+        paySetupJob = viewModel.selectedJob
+      } label: {
+        Text(String(localized: "settings.pay.setup.finishButton"))
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexTextOnBrand)
+          .frame(maxWidth: .infinity)
+          .padding(.vertical, Spacing.sm)
+          .background(Color.tidexBlue)
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+      }
+      .buttonStyle(.plain)
+      .disabled(viewModel.selectedJob == nil)
+    }
+    .padding(Spacing.md)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.tidexSurfacePrimary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 
   // MARK: - Tip Box

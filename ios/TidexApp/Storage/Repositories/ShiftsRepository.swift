@@ -30,10 +30,16 @@ final class ShiftsRepository: ObservableObject {
 
   private let localStore: LocalStore
   private let syncCoordinator: SyncCoordinator
+  private let jobPaySetupStatusService: JobPaySetupStatusService
 
-  private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
+  private init(
+    localStore: LocalStore? = nil,
+    syncCoordinator: SyncCoordinator? = nil,
+    jobPaySetupStatusService: JobPaySetupStatusService? = nil
+  ) {
     self.localStore = localStore ?? LocalStore.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    self.jobPaySetupStatusService = jobPaySetupStatusService ?? JobPaySetupStatusService.shared
   }
 
   // MARK: - Sync Helper
@@ -260,10 +266,15 @@ final class ShiftsRepository: ObservableObject {
     customPauseWindows: CustomPauseWindows? = nil,
     customSupplements: CustomSupplementsData? = nil
   ) async throws -> ShiftRow {
+    let configuredJob = try jobPaySetupStatusService.requireConfiguredActiveJob(
+      userId: userId,
+      requestedJobId: jobId
+    )
+
     let createdShift = try await localStore.storeActor.createUserShift(
       id: shiftId,
       userId: userId,
-      jobId: jobId,
+      jobId: configuredJob.id,
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,
@@ -540,6 +551,11 @@ final class ShiftsRepository: ObservableObject {
     customSupplements: CustomSupplementsData? = nil,
     tier: SubscriptionTier
   ) async throws -> ShiftRow {
+    let configuredJob = try jobPaySetupStatusService.requireConfiguredActiveJob(
+      userId: userId,
+      requestedJobId: jobId
+    )
+
     guard canCreateShift(userId: userId, targetDate: shiftDate, tier: tier) else {
       let existingMonths = getExistingShiftMonths(for: userId)
       throw ShiftCreationError.monthLimitReached(existingMonths: existingMonths)
@@ -547,7 +563,7 @@ final class ShiftsRepository: ObservableObject {
 
     return try await createShift(
       userId: userId,
-      jobId: jobId,
+      jobId: configuredJob.id,
       shiftDate: shiftDate,
       startTime: startTime,
       endTime: endTime,

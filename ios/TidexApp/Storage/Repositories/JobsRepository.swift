@@ -21,6 +21,7 @@ struct JobBaselineSnapshotInput {
 enum JobsRepositoryError: LocalizedError {
   case jobNameEmpty
   case jobNotFound
+  case jobDeleted
   case cannotChangeTariffJobCurrency
   case cannotArchiveLastActiveJob
   case cannotArchiveDefaultJob
@@ -34,6 +35,8 @@ enum JobsRepositoryError: LocalizedError {
       return "Job name cannot be empty."
     case .jobNotFound:
       return "Job not found."
+    case .jobDeleted:
+      return "Job has been deleted."
     case .cannotChangeTariffJobCurrency:
       return "Currency cannot be changed for jobs using tariff rates."
     case .cannotArchiveLastActiveJob:
@@ -82,6 +85,10 @@ final class JobsRepository: ObservableObject {
     snapshotsRepository.getSnapshots(for: userId, jobId: jobId).contains {
       $0.wage_level != nil || $0.tariff_type_id != nil
     }
+  }
+
+  private func usesTariffRates(_ snapshot: WageSnapshot) -> Bool {
+    snapshot.wage_level != nil || snapshot.tariff_type_id != nil
   }
 
   func getAllJobs(
@@ -326,6 +333,27 @@ final class JobsRepository: ObservableObject {
     }
   }
 
+  private func updateJobCurrencyDuringPaySetup(
+    userId: String,
+    jobId: String,
+    currency: String
+  ) async throws -> Job? {
+    do {
+      let updated = try await localStore.storeActor.updateJobCurrency(
+        id: jobId,
+        currency: currency
+      )
+      logger.info("Updated job currency during pay setup for job: \(jobId)")
+      triggerSync(userId: userId)
+      return updated
+    } catch LocalStoreWriteError.notFound {
+      logger.warning("Job not found for pay setup currency update: \(jobId)")
+      return nil
+    } catch {
+      throw error
+    }
+  }
+
   func updateJobPaySettings(
     userId: String,
     jobId: String,
@@ -349,6 +377,78 @@ final class JobsRepository: ObservableObject {
     } catch {
       throw error
     }
+  }
+
+  // swiftlint:disable:next function_parameter_count
+  func completePaySetup(
+    userId: String,
+    jobId: String,
+    currency: String,
+    payrollDay: Int,
+    halfTaxMonth: Int?,
+    monthlyGoal: Int?,
+    baselineSnapshot: JobBaselineSnapshotInput
+  ) async throws -> Job {
+    guard let existingJob = getJob(id: jobId), existingJob.user_id == userId else {
+      throw JobsRepositoryError.jobNotFound
+    }
+    guard existingJob.deleted_at == nil else {
+      throw JobsRepositoryError.jobDeleted
+    }
+
+    let existingBaseline = snapshotsRepository.getBaselineSnapshot(for: userId, jobId: jobId)
+    let requiresTariffCurrency = usesTariffRates(baselineSnapshot)
+      || existingBaseline.map(usesTariffRates) == true
+    let resolvedCurrency =
+      requiresTariffCurrency ? "kr" : currency
+
+    if existingJob.currency != resolvedCurrency {
+      if requiresTariffCurrency {
+        _ = try await updateJobCurrencyDuringPaySetup(
+          userId: userId,
+          jobId: jobId,
+          currency: resolvedCurrency
+        )
+      } else {
+        _ = try await updateJobCurrency(
+          userId: userId,
+          jobId: jobId,
+          currency: resolvedCurrency
+        )
+      }
+    }
+
+    _ = try await updateJobPaySettings(
+      userId: userId,
+      jobId: jobId,
+      payrollDay: payrollDay,
+      halfTaxMonth: halfTaxMonth,
+      monthlyGoal: monthlyGoal
+    )
+
+    if existingBaseline != nil {
+      return getJob(id: jobId) ?? existingJob
+    }
+
+    _ = try await snapshotsRepository.createSnapshot(
+      userId: userId,
+      jobId: jobId,
+      fromDate: nil,
+      hourlyWage: baselineSnapshot.hourlyWage,
+      wageLevel: baselineSnapshot.wageLevel,
+      tariffTypeId: baselineSnapshot.tariffTypeId,
+      supplements: baselineSnapshot.supplements,
+      taxEnabled: baselineSnapshot.taxEnabled,
+      taxPercentage: baselineSnapshot.taxPercentage,
+      breakEnabled: baselineSnapshot.breakEnabled,
+      breakMethod: baselineSnapshot.breakMethod,
+      breakThresholdHours: baselineSnapshot.breakThresholdHours,
+      breakDeductionMinutes: baselineSnapshot.breakDeductionMinutes
+    )
+
+    triggerSync(userId: userId)
+    logger.info("Completed pay setup for job: \(jobId)")
+    return getJob(id: jobId) ?? existingJob
   }
 
   func setDefaultJob(userId: String, jobId: String) async throws {

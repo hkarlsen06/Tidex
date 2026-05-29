@@ -55,6 +55,47 @@ final class WorkSetupStatusResolverTests: XCTestCase {
     XCTAssertEqual(status.activeSetupJobId, "job-default")
   }
 
+  func testJobPaySetupStatusRequiresActiveJobAndBaselineSnapshot() {
+    let activeJob = TestFixtures.job(id: "job-active", isDefault: true)
+
+    let missingBaselineStatus = JobPaySetupStatusResolver.status(
+      for: activeJob.id,
+      activeJobs: [activeJob]
+    ) { _ in false }
+
+    XCTAssertTrue(missingBaselineStatus.isActive)
+    XCTAssertFalse(missingBaselineStatus.hasBaselineSnapshot)
+    XCTAssertFalse(missingBaselineStatus.isConfigured)
+
+    let configuredStatus = JobPaySetupStatusResolver.status(
+      for: activeJob.id,
+      activeJobs: [activeJob]
+    ) { _ in true }
+
+    XCTAssertTrue(configuredStatus.isConfigured)
+
+    let inactiveStatus = JobPaySetupStatusResolver.status(
+      for: "job-archived",
+      activeJobs: [activeJob]
+    ) { _ in true }
+
+    XCTAssertFalse(inactiveStatus.isActive)
+    XCTAssertFalse(inactiveStatus.isConfigured)
+  }
+
+  func testConfiguredJobIdsOnlyIncludesActiveJobsWithBaselineSnapshots() {
+    let configuredJob = TestFixtures.job(id: "job-configured", isDefault: true)
+    let unconfiguredJob = TestFixtures.job(id: "job-unconfigured", isDefault: false)
+
+    let configuredIds = JobPaySetupStatusResolver.configuredJobIds(
+      activeJobs: [configuredJob, unconfiguredJob]
+    ) { jobId in
+      jobId == configuredJob.id || jobId == "job-archived"
+    }
+
+    XCTAssertEqual(configuredIds, [configuredJob.id])
+  }
+
   func testPresentationStateStaysLoadingWhileInitialSyncIsIncomplete() {
     let status = WorkSetupStatus(
       isWorkSetupComplete: false,

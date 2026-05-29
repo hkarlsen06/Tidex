@@ -15,10 +15,16 @@ final class RecurringShiftsRepository: ObservableObject {
 
   private let localStore: LocalStore
   private let syncCoordinator: SyncCoordinator
+  private let jobPaySetupStatusService: JobPaySetupStatusService
 
-  private init(localStore: LocalStore? = nil, syncCoordinator: SyncCoordinator? = nil) {
+  private init(
+    localStore: LocalStore? = nil,
+    syncCoordinator: SyncCoordinator? = nil,
+    jobPaySetupStatusService: JobPaySetupStatusService? = nil
+  ) {
     self.localStore = localStore ?? LocalStore.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    self.jobPaySetupStatusService = jobPaySetupStatusService ?? JobPaySetupStatusService.shared
   }
 
   // MARK: - Sync Helper
@@ -195,9 +201,14 @@ final class RecurringShiftsRepository: ObservableObject {
     dateSpecificSupplements: [String: CustomSupplementsData]? = nil,
     dateSpecificNotes: [String: String]? = nil
   ) async throws -> RecurringShiftRow {
+    let configuredJob = try jobPaySetupStatusService.requireConfiguredActiveJob(
+      userId: userId,
+      requestedJobId: jobId
+    )
+
     let createdShift = try await localStore.storeActor.createRecurringShift(
       userId: userId,
-      jobId: jobId,
+      jobId: configuredJob.id,
       startTime: startTime,
       endTime: endTime,
       repeatIntervalWeeks: repeatIntervalWeeks,

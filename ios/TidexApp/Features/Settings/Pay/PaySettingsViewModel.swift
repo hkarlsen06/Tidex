@@ -35,6 +35,8 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Selected job for this screen's wage timeline.
   @Published private(set) var selectedJobId: String?
+  /// Whether the selected active job has the required baseline wage snapshot.
+  @Published private(set) var isSelectedJobConfigured = false
   /// True when a previously selected entry job is no longer active and user must choose again.
   @Published private(set) var requiresJobReselection = false
 
@@ -134,6 +136,7 @@ final class PaySettingsViewModel: ObservableObject {
       } else {
         snapshots = []
       }
+      updateSelectedJobConfiguration()
       globalSettings = settingsRepository.getSettings(for: userId)
 
       // Process timeline entries
@@ -164,8 +167,13 @@ final class PaySettingsViewModel: ObservableObject {
     } else {
       snapshots = []
     }
+    updateSelectedJobConfiguration()
     globalSettings = settingsRepository.getSettings(for: userId)
     processTimelineEntries()
+  }
+
+  private func updateSelectedJobConfiguration() {
+    isSelectedJobConfigured = selectedJobId != nil && snapshots.contains { $0.isBaseline }
   }
 
   private func applySelection(from jobs: [Job]) {
@@ -277,31 +285,45 @@ final class PaySettingsViewModel: ObservableObject {
     refreshData()
   }
 
-  func createJob(input: AddJobSetupInput) async -> Bool {
+  func createJob(input: AddJobBasicsInput) async -> Job? {
+    guard let userId = currentLocalUserId() else {
+      errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
+      return nil
+    }
+
+    do {
+      let created = try await jobsRepository.createJob(
+        userId: userId,
+        name: input.name,
+        color: input.color,
+        currency: input.currency,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal
+      )
+      requiresJobReselection = false
+      selectedJobId = created.id
+      refreshData()
+      notifyDashboardDataChanged()
+      Haptics.play(.success)
+      return created
+    } catch {
+      logger.error("Failed to create job from pay settings: \(error.localizedDescription)")
+      errorMessage = error.localizedDescription
+      return nil
+    }
+  }
+
+  func completePaySetup(for job: Job, input: JobPaySetupInput) async -> Bool {
     guard let userId = currentLocalUserId() else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
       return false
     }
 
     do {
-      if let existingJobSetup = input.existingJobSetup {
-        guard
-          try await jobsRepository.updateJob(
-            userId: userId,
-            jobId: existingJobSetup.id,
-            name: existingJobSetup.name,
-            color: existingJobSetup.color
-          ) != nil
-        else {
-          errorMessage = String(localized: .settingsPayErrorLoadFailed)
-          return false
-        }
-      }
-
-      let created = try await jobsRepository.createJobWithBaselineSnapshot(
+      let configuredJob = try await jobsRepository.completePaySetup(
         userId: userId,
-        name: input.name,
-        color: input.color,
+        jobId: job.id,
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
@@ -309,13 +331,13 @@ final class PaySettingsViewModel: ObservableObject {
         baselineSnapshot: input.baselineSnapshot
       )
       requiresJobReselection = false
-      selectedJobId = created.id
+      selectedJobId = configuredJob.id
       refreshData()
       notifyDashboardDataChanged()
       Haptics.play(.success)
       return true
     } catch {
-      logger.error("Failed to create job from pay settings: \(error.localizedDescription)")
+      logger.error("Failed to complete job pay setup: \(error.localizedDescription)")
       errorMessage = error.localizedDescription
       return false
     }

@@ -16,6 +16,7 @@ struct AddShiftView: View {
   @State private var showStartFreshConfirmation = false
   @State private var showSingleSuccessBanner = false
   @State private var showAddConfetti = false
+  @State private var showAddJobBasicsSheet = false
   @State private var singleSuccessDismissTask: Task<Void, Never>?
   private let workSetupStatusService = WorkSetupStatusService.shared
 
@@ -338,13 +339,45 @@ struct AddShiftView: View {
     .sheet(isPresented: $viewModel.showSubmitJobChooser) {
       AddShiftJobChooserSheet(
         jobs: viewModel.submissionJobs,
+        configuredJobIds: viewModel.configuredJobIds,
         onSelect: { jobId in
           viewModel.selectJobForShiftCreation(jobId)
+        },
+        onAddJob: {
+          viewModel.dismissJobSelection()
+          showAddJobBasicsSheet = true
         },
         onCancel: {
           viewModel.dismissJobSelection()
         }
       )
+    }
+    .sheet(isPresented: $showAddJobBasicsSheet) {
+      AddJobBasicsSheet(
+        initialCurrency: viewModel.jobCreationInitialCurrency,
+        initialPayrollDay: viewModel.jobCreationInitialPayrollDay,
+        initialHalfTaxMonth: viewModel.jobCreationInitialHalfTaxMonth,
+        initialMonthlyGoal: viewModel.jobCreationInitialMonthlyGoal
+      ) { input in
+        guard let createdJob = await viewModel.createBasicJob(input: input) else {
+          return false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+          self.viewModel.paySetupRequest = AddShiftPaySetupRequest(
+            job: createdJob,
+            action: .selectJob
+          )
+        }
+        return true
+      }
+    }
+    .sheet(item: $viewModel.paySetupRequest) { request in
+      JobPaySetupSheet(
+        job: request.job,
+        initialCurrency: request.job.currency
+      ) { input in
+        await viewModel.completePaySetup(for: request.job, input: input)
+      }
     }
     .confirmationDialog(
       String(localized: .addShiftStartFreshConfirmTitle),
@@ -768,7 +801,7 @@ private struct AddShiftJobSelectionChip: View {
               .font(.tidexCaptionRegular)
               .foregroundColor(.tidexBlue)
 
-            Text(String(localized: "settings.pay.choose_workplace.title"))
+            Text(String(localized: "settings.pay.choose_job.title"))
               .font(.tidexMonoCaption)
               .foregroundColor(.tidexBlue)
           }
@@ -790,11 +823,13 @@ private struct AddShiftJobSelectionChip: View {
 
 private struct AddShiftJobChooserSheet: View {
   let jobs: [Job]
+  let configuredJobIds: Set<String>
   let onSelect: (String) -> Void
+  let onAddJob: () -> Void
   let onCancel: () -> Void
 
   private var detentHeight: CGFloat {
-    let visibleRows = max(1, min(jobs.count, 4))
+    let visibleRows = max(2, min(jobs.count + 1, 5))
     return CGFloat(visibleRows) * 70 + 120
   }
 
@@ -802,6 +837,30 @@ private struct AddShiftJobChooserSheet: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: Spacing.sm) {
+          Button {
+            onAddJob()
+          } label: {
+            HStack(spacing: Spacing.sm) {
+              Image(systemName: "plus.circle.fill")
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexBlue)
+
+              Text(String(localized: "settings.pay.add_job.cta"))
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexTextPrimary)
+
+              Spacer()
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.vertical, Spacing.md)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.tidexSurfaceSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+          }
+          .buttonStyle(.plain)
+          .frame(maxWidth: .infinity)
+
           ForEach(jobs, id: \.id) { job in
             Button {
               onSelect(job.id)
@@ -815,6 +874,16 @@ private struct AddShiftJobChooserSheet: View {
                 )
 
                 Spacer()
+
+                if !configuredJobIds.contains(job.id) {
+                  Text(String(localized: "settings.pay.setup.requiredBadge"))
+                    .font(.tidexFootnote)
+                    .foregroundColor(.tidexWarning)
+                    .padding(.horizontal, Spacing.xs)
+                    .padding(.vertical, Spacing.xxxs)
+                    .background(Color.tidexWarning.opacity(0.12))
+                    .clipShape(Capsule())
+                }
 
                 Image(systemName: "chevron.right")
                   .font(.tidexCaptionRegular)
@@ -838,7 +907,7 @@ private struct AddShiftJobChooserSheet: View {
       }
       .scrollIndicators(.hidden)
       .background(Color.tidexBackground)
-      .navigationTitle(String(localized: "settings.pay.choose_workplace.title"))
+      .navigationTitle(String(localized: "settings.pay.choose_job.title"))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {

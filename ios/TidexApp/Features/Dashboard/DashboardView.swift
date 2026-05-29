@@ -58,6 +58,8 @@ struct DashboardView: View {
   @State private var temporaryClockReviewSession: TemporaryClockSession?
   @State private var clockInJobOptions: [Job] = []
   @State private var showClockInJobChooser = false
+  @State private var clockPaySetupJob: Job?
+  @State private var pendingClockAction: PendingClockAction?
   @State private var temporarySessionReferenceDate = Date()
   @State private var showMixedCurrencyBreakdownPopover = false
   @State private var activeDashboardRefreshTask: Task<Void, Never>?
@@ -67,6 +69,11 @@ struct DashboardView: View {
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
   private let workSetupStatusService = WorkSetupStatusService.shared
+
+  private enum PendingClockAction {
+    case clockIn(jobId: String?)
+    case temporaryClockOut(start: Date, end: Date, jobId: String?)
+  }
 
   private func shouldKeepShiftDetailsOpen(
     after editResult: ShiftEditResult,
@@ -373,6 +380,13 @@ struct DashboardView: View {
           await viewModel.clockSelectableJobs()
         },
         initialSelectedJobId: viewModel.preferredClockJobId(for: session),
+        jobRequiringPaySetup: { jobId in
+          await viewModel.clockJobRequiringPaySetup(jobId: jobId)
+        },
+        onPaySetupRequired: { start, end, jobId, job in
+          pendingClockAction = .temporaryClockOut(start: start, end: end, jobId: jobId ?? job.id)
+          clockPaySetupJob = job
+        },
         onSave: { start, end, jobId in
           try await viewModel.commitTemporaryClockOut(start: start, end: end, jobId: jobId)
         },
@@ -392,13 +406,21 @@ struct DashboardView: View {
         onSelect: { jobId in
           showClockInJobChooser = false
           Task {
-            await viewModel.clockIn(jobId: jobId)
+            await handleClockIn(jobId: jobId)
           }
         },
         onCancel: {
           showClockInJobChooser = false
         }
       )
+    }
+    .sheet(item: $clockPaySetupJob) { job in
+      JobPaySetupSheet(
+        job: job,
+        initialCurrency: job.currency
+      ) { input in
+        await completeClockPaySetup(for: job, input: input)
+      }
     }
     // Shift details sheet with full edit/delete capabilities
     .sheet(item: $selectedShift) { shift in
@@ -1079,7 +1101,7 @@ struct DashboardView: View {
             return
           }
           if cachedJobs.count == 1 {
-            await viewModel.clockIn(jobId: cachedJobs.first?.id)
+            await handleClockIn(jobId: cachedJobs.first?.id)
             return
           }
           clockInJobOptions = []
@@ -1363,6 +1385,44 @@ struct DashboardView: View {
     temporaryClockReviewSession = session
   }
 
+  private func handleClockIn(jobId: String?) async {
+    if let job = await viewModel.clockJobRequiringPaySetup(jobId: jobId) {
+      pendingClockAction = .clockIn(jobId: job.id)
+      clockPaySetupJob = job
+      return
+    }
+
+    await viewModel.clockIn(jobId: jobId)
+  }
+
+  private func completeClockPaySetup(for job: Job, input: JobPaySetupInput) async -> Bool {
+    let didSave = await viewModel.completeClockPaySetup(for: job, input: input)
+    guard didSave else { return false }
+
+    let pendingAction = pendingClockAction
+    pendingClockAction = nil
+
+    switch pendingAction {
+    case .clockIn(let jobId):
+      Task {
+        await viewModel.clockIn(jobId: jobId)
+      }
+    case .temporaryClockOut(let start, let end, let jobId):
+      Task {
+        do {
+          try await viewModel.commitTemporaryClockOut(start: start, end: end, jobId: jobId)
+          temporaryClockReviewSession = nil
+        } catch {
+          // The review sheet remains dismissed; the repository guard prevents an invalid shift.
+        }
+      }
+    case .none:
+      break
+    }
+
+    return true
+  }
+
   // MARK: - Loading Skeleton View
 
   /// Skeleton cards with shimmer animation shown while loading
@@ -1485,6 +1545,8 @@ private struct DashboardClockButtonStyle: ButtonStyle {
 
 private struct ClockOutReviewSheet: View {
   let loadJobs: () async -> [Job]
+  let jobRequiringPaySetup: (String?) async -> Job?
+  let onPaySetupRequired: (Date, Date, String?, Job) -> Void
   let onSave: (Date, Date, String?) async throws -> Void
   let onDiscard: () async -> Void
 
@@ -1504,10 +1566,14 @@ private struct ClockOutReviewSheet: View {
     initialAvailableJobs: [Job],
     loadJobs: @escaping () async -> [Job],
     initialSelectedJobId: String?,
+    jobRequiringPaySetup: @escaping (String?) async -> Job?,
+    onPaySetupRequired: @escaping (Date, Date, String?, Job) -> Void,
     onSave: @escaping (Date, Date, String?) async throws -> Void,
     onDiscard: @escaping () async -> Void
   ) {
     self.loadJobs = loadJobs
+    self.jobRequiringPaySetup = jobRequiringPaySetup
+    self.onPaySetupRequired = onPaySetupRequired
     self.onSave = onSave
     self.onDiscard = onDiscard
 
@@ -1573,7 +1639,7 @@ private struct ClockOutReviewSheet: View {
             showJobChooser = true
           } label: {
             HStack(spacing: Spacing.sm) {
-              Text(String(localized: "settings.pay.choose_workplace.title"))
+              Text(String(localized: "settings.pay.choose_job.title"))
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
 
@@ -1710,6 +1776,13 @@ private struct ClockOutReviewSheet: View {
     errorMessage = nil
 
     do {
+      if let job = await jobRequiringPaySetup(selectedJobId) {
+        onPaySetupRequired(startTime, resolvedEndTime, selectedJobId, job)
+        isSaving = false
+        dismiss()
+        return
+      }
+
       try await onSave(startTime, resolvedEndTime, selectedJobId)
       dismiss()
     } catch {
@@ -1818,7 +1891,7 @@ private struct DashboardClockJobChooserSheet: View {
       }
       .scrollIndicators(.hidden)
       .background(Color.tidexBackground)
-      .navigationTitle(String(localized: "settings.pay.choose_workplace.title"))
+      .navigationTitle(String(localized: "settings.pay.choose_job.title"))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {

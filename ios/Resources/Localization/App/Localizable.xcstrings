@@ -309033,7 +309033,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pay and supplements"
+            "value" : "Jobs & Pay"
           }
         },
         "es" : {
@@ -309141,7 +309141,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lønn og tillegg"
+            "value" : "Jobber og lønn"
           }
         },
         "nl" : {
@@ -341900,7 +341900,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pay and supplements"
+            "value" : "Jobs & Pay"
           }
         },
         "es" : {
@@ -342008,7 +342008,7 @@
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lønn og tillegg"
+            "value" : "Jobber og lønn"
           }
         },
         "nl" : {
@@ -472782,6 +472782,125 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "👋"
+          }
+        }
+      }
+    },
+    "settings.pay.chooseJob.empty" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No jobs yet. Add a job to set up pay."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ingen jobber ennå. Legg til en jobb for å sette opp lønn."
+          }
+        }
+      }
+    },
+    "settings.pay.setup.requiredBadge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pay setup required"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lønnsoppsett kreves"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.titlePrefix" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set up pay for"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sett opp lønn for"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.scheduleTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pay schedule"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lønnsplan"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.finishTitle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish pay setup"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fullfør lønnsoppsett"
+          }
+        }
+      }
+    },
+    "settings.pay.setup.finishDescription" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add a baseline wage before creating shifts for this job."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Legg til en grunnlønn før du oppretter vakter for denne jobben."
+          }
+        }
+      }
+    },
+    "settings.pay.setup.finishButton" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finish pay setup"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fullfør lønnsoppsett"
           }
         }
       }
