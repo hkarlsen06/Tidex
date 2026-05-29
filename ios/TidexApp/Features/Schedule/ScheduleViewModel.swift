@@ -501,6 +501,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Shift reminder tap observer for deep linking
   private var shiftReminderObserver: NSObjectProtocol?
 
+  /// Cross-tab shift/event change observer.
+  private var shiftsDidChangeObserver: NSObjectProtocol?
+
   /// Track active navigation task to cancel stale fetches
   private var activeNavigationTask: Task<Void, Never>?
 
@@ -559,6 +562,22 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         self?.handleShiftReminderTap(notification)
       }
     }
+
+    // Local writes can happen from other tabs, including Wagey-driven event creation.
+    // Reload from local storage so cached month data reflects those writes immediately.
+    shiftsDidChangeObserver = NotificationCenter.default.addObserver(
+      forName: .shiftsDidChange,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      Task { @MainActor in
+        guard let self else { return }
+        if let sender = notification.object as AnyObject?, sender === self {
+          return
+        }
+        await self.reloadFromLocal()
+      }
+    }
   }
 
   /// Subscribe to SharedMonthContext changes to reload data when month changes
@@ -598,6 +617,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       NotificationCenter.default.removeObserver(observer)
     }
     if let observer = shiftReminderObserver {
+      NotificationCenter.default.removeObserver(observer)
+    }
+    if let observer = shiftsDidChangeObserver {
       NotificationCenter.default.removeObserver(observer)
     }
   }
