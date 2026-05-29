@@ -2347,6 +2347,130 @@ enum FriendsAPIClient {
     let canSeeOwnerEarnings: Bool
   }
 
+  struct ShareRecipientThreadSummary: Equatable, Sendable {
+    let counterpartUserId: String
+    let timestamp: Date
+    let hasUnread: Bool
+  }
+
+  enum ShareRecipientFeedOrdering {
+    static func sortedRecipients(
+      _ recipients: [ShareRecipient],
+      threads: [ShareRecipientThreadSummary],
+      shiftPreviews: [String: SharingComputedPreview]
+    ) -> [ShareRecipient] {
+      let threadDescriptorsByUserId = threads.reduce(into: [String: ShareRecipientThreadSummary]())
+      { result, thread in
+        if let existing = result[thread.counterpartUserId] {
+          if thread.timestamp > existing.timestamp {
+            result[thread.counterpartUserId] = thread
+          } else if thread.timestamp == existing.timestamp, thread.hasUnread && !existing.hasUnread
+          {
+            result[thread.counterpartUserId] = thread
+          }
+        } else {
+          result[thread.counterpartUserId] = thread
+        }
+      }
+
+      return recipients.sorted { lhs, rhs in
+        let lhsThread = threadDescriptorsByUserId[lhs.id]
+        let rhsThread = threadDescriptorsByUserId[rhs.id]
+
+        switch (lhsThread, rhsThread) {
+        case (let lhsThread?, let rhsThread?):
+          if lhsThread.timestamp != rhsThread.timestamp {
+            return lhsThread.timestamp > rhsThread.timestamp
+          }
+          if lhsThread.hasUnread != rhsThread.hasUnread {
+            return lhsThread.hasUnread
+          }
+        case (.some, .none):
+          return true
+        case (.none, .some):
+          return false
+        case (.none, .none):
+          break
+        }
+
+        return compareShiftFallback(
+          lhs: lhs,
+          rhs: rhs,
+          lhsPreview: shiftPreviews[lhs.id],
+          rhsPreview: shiftPreviews[rhs.id]
+        )
+      }
+    }
+
+    private static func compareShiftFallback(
+      lhs: ShareRecipient,
+      rhs: ShareRecipient,
+      lhsPreview: SharingComputedPreview?,
+      rhsPreview: SharingComputedPreview?
+    ) -> Bool {
+      let lhsPriority = shiftStatusPriority(lhsPreview?.status)
+      let rhsPriority = shiftStatusPriority(rhsPreview?.status)
+
+      if lhsPriority != rhsPriority {
+        return lhsPriority < rhsPriority
+      }
+
+      guard
+        let lhsDateTime = shiftDateTime(
+          shiftDate: lhsPreview?.shift?.shiftDate,
+          time: lhsPreview?.shift?.startTime
+        ),
+        let rhsDateTime = shiftDateTime(
+          shiftDate: rhsPreview?.shift?.shiftDate,
+          time: rhsPreview?.shift?.startTime
+        )
+      else {
+        return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+      }
+
+      switch lhsPreview?.status {
+      case .upcoming:
+        if lhsDateTime != rhsDateTime {
+          return lhsDateTime < rhsDateTime
+        }
+      case .past:
+        if lhsDateTime != rhsDateTime {
+          return lhsDateTime > rhsDateTime
+        }
+      default:
+        break
+      }
+
+      return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
+    }
+
+    private static func shiftStatusPriority(_ status: SharingPreviewStatus?) -> Int {
+      switch status {
+      case .active: return 0
+      case .upcoming: return 1
+      case .past: return 2
+      case .none: return 3
+      }
+    }
+
+    private static func shiftDateTime(shiftDate: String?, time: String?) -> Date? {
+      guard let shiftDate, let time else { return nil }
+      let dateParts = shiftDate.split(separator: "-").compactMap { Int($0) }
+      let timeParts = time.split(separator: ":").compactMap { Int($0) }
+      guard dateParts.count == 3, timeParts.count >= 2 else { return nil }
+
+      var components = DateComponents()
+      components.calendar = Calendar(identifier: .gregorian)
+      components.year = dateParts[0]
+      components.month = dateParts[1]
+      components.day = dateParts[2]
+      components.hour = timeParts[0]
+      components.minute = timeParts[1]
+      components.second = 0
+      return components.calendar?.date(from: components)
+    }
+  }
+
   enum ShareExtensionMessagingClient {
     private static let storageBucket = "message-attachments"
     private static let storageBaseURL = URL(string: "https://identity.tidex.no/storage/v1/object")
@@ -2357,13 +2481,36 @@ enum FriendsAPIClient {
         throw FriendsAPIError.noAccessToken
       }
 
-      let response = try await fetchFriends(accessToken: accessToken)
-      return response.friends
+      let now = Date()
+      let startDate = SharingComputeCore.isoDateString(
+        Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
+      let endDate = SharingComputeCore.isoDateString(
+        Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
+
+      async let friendsTask = fetchFriends(
+        accessToken: accessToken,
+        startDate: startDate,
+        endDate: endDate
+      )
+      async let threadsTask = fetchThreadSummaries(accessToken: accessToken)
+
+      let response = try await friendsTask
+      let threads = (try? await threadsTask) ?? []
+      let recipients = response.friends
         .filter(\.isMessageable)
         .map(\.shareRecipient)
-        .sorted {
-          $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
-        }
+      let shiftPreviews = makeShiftPreviews(
+        from: response.previewPayloads,
+        startDate: startDate,
+        endDate: endDate,
+        now: now
+      )
+
+      return ShareRecipientFeedOrdering.sortedRecipients(
+        recipients,
+        threads: threads,
+        shiftPreviews: shiftPreviews
+      )
     }
 
     static func sendSharedImage(
@@ -2427,15 +2574,61 @@ enum FriendsAPIClient {
       )
     }
 
-    private static func fetchFriends(accessToken: String) async throws -> ShareFriendsResponse {
+    private static func fetchFriends(
+      accessToken: String,
+      startDate: String,
+      endDate: String
+    ) async throws -> ShareFriendsResponse {
       try await FriendsAPIClient.callRPC(
         functionName: "get_friends_tab_bootstrap",
         body: [
-          "p_preview_start_date": NSNull(),
-          "p_preview_end_date": NSNull(),
+          "p_preview_start_date": startDate,
+          "p_preview_end_date": endDate,
         ],
         accessToken: accessToken,
         expectsSingleObject: true
+      )
+    }
+
+    private static func fetchThreadSummaries(accessToken: String) async throws
+      -> [ShareRecipientThreadSummary]
+    {
+      let rows: [ShareThreadSummaryRow] = try await FriendsAPIClient.callRPC(
+        functionName: "list_my_threads",
+        body: [
+          "p_limit": 100
+        ],
+        accessToken: accessToken,
+        expectsSingleObject: false
+      )
+
+      return rows.compactMap(\.shareRecipientThreadSummary)
+    }
+
+    private static func makeShiftPreviews(
+      from payloadRows: [SharingRPCPreviewPayloadRow],
+      startDate: String,
+      endDate: String,
+      now: Date
+    ) -> [String: SharingComputedPreview] {
+      Dictionary(
+        payloadRows.map { row in
+          let mode: SharingRPCMode = row.showEarnings ? .visible : .hidden
+          let shifts = SharingComputeCore.computeShiftsInRange(
+            payload: row.payloadInput,
+            startDate: startDate,
+            endDate: endDate,
+            mode: mode
+          )
+          let preview = SharingComputeCore.selectPreview(
+            sharerId: row.sharerId,
+            shifts: shifts,
+            showEarnings: row.showEarnings,
+            now: now
+          )
+          return (row.sharerId, preview)
+        },
+        uniquingKeysWith: { _, last in last }
       )
     }
 
@@ -2618,6 +2811,63 @@ enum FriendsAPIClient {
 
     private struct ShareFriendsResponse: Decodable {
       let friends: [ShareFriendRow]
+      let previewPayloads: [SharingRPCPreviewPayloadRow]
+
+      private enum CodingKeys: String, CodingKey {
+        case friends
+        case previewPayloads
+      }
+
+      init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        friends = try container.decodeIfPresent([ShareFriendRow].self, forKey: .friends) ?? []
+        previewPayloads =
+          try container.decodeIfPresent([SharingRPCPreviewPayloadRow].self, forKey: .previewPayloads)
+          ?? []
+      }
+    }
+
+    private struct ShareThreadSummaryRow: Decodable {
+      let kind: String
+      let counterpartUserId: String?
+      let lastMessageAt: String?
+      let unreadCount: Int
+      let createdAt: String
+
+      var shareRecipientThreadSummary: ShareRecipientThreadSummary? {
+        guard kind == "direct",
+          let counterpartUserId,
+          let timestamp = Self.parseTimestamp(lastMessageAt) ?? Self.parseTimestamp(createdAt)
+        else {
+          return nil
+        }
+
+        return ShareRecipientThreadSummary(
+          counterpartUserId: counterpartUserId,
+          timestamp: timestamp,
+          hasUnread: unreadCount > 0
+        )
+      }
+
+      private enum CodingKeys: String, CodingKey {
+        case kind
+        case counterpartUserId = "counterpart_user_id"
+        case lastMessageAt = "last_message_at"
+        case unreadCount = "unread_count"
+        case createdAt = "created_at"
+      }
+
+      private static func parseTimestamp(_ value: String?) -> Date? {
+        guard let value else { return nil }
+
+        let fractionalFormatter = ISO8601DateFormatter()
+        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractionalFormatter.date(from: value) {
+          return date
+        }
+
+        return ISO8601DateFormatter().date(from: value)
+      }
     }
 
     private struct ShareFriendRow: Decodable {

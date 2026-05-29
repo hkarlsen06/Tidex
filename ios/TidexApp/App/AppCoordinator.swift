@@ -454,6 +454,9 @@ final class AppCoordinator: ObservableObject {
       for await (event, session) in supabase.auth.authStateChanges {
         guard let self = self else { return }
         self.recordAuthStateEvent(event, session: session)
+        if let session {
+          AuthSessionManager.shared.publishSessionToSharedKeychain(session)
+        }
 
         switch event {
         case .initialSession:
@@ -627,6 +630,7 @@ final class AppCoordinator: ObservableObject {
       }
       let user = session.user
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
+      AuthSessionManager.shared.publishSessionToSharedKeychain(session)
 
       // Get terms_accepted_at from user metadata
       let termsAcceptedAt = user.userMetadata["terms_accepted_at"]?.value as? String

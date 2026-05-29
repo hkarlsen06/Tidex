@@ -20,6 +20,16 @@ enum AuthSessionManagerError: Error, LocalizedError {
   }
 }
 
+struct SharedKeychainAccessTokenPayload: Equatable {
+  let token: String
+  let expiresAt: Int
+
+  init(session: Session) {
+    self.token = session.accessToken
+    self.expiresAt = Int(session.expiresAt)
+  }
+}
+
 /// Manages auth session access with refresh serialization to prevent race conditions.
 ///
 /// ## Problem Solved
@@ -213,6 +223,15 @@ final class AuthSessionManager: ObservableObject {
     }
 
     return try await performRefresh()
+  }
+
+  /// Publish a known-valid Supabase session to shared keychain storage.
+  ///
+  /// Auth state events can provide a fresh session before any app service calls
+  /// `getSession()`. Publishing here keeps extensions/widgets from depending on
+  /// a later foreground fetch to receive an access token.
+  func publishSessionToSharedKeychain(_ session: Session) {
+    storeTokenInSharedKeychain(session)
   }
 
   /// Best-effort classification of revoked/invalid refresh-session errors.
@@ -475,10 +494,11 @@ final class AuthSessionManager: ObservableObject {
 
   /// Store the access token in shared keychain for widget/watch access
   private func storeTokenInSharedKeychain(_ session: Session) {
+    let payload = SharedKeychainAccessTokenPayload(session: session)
     do {
       try SharedKeychainStorage.storeAccessToken(
-        session.accessToken,
-        expiresAt: Int(session.expiresAt)
+        payload.token,
+        expiresAt: payload.expiresAt
       )
       logger.debug("Stored access token in shared keychain (expires: \(session.expiresAt))")
     } catch {

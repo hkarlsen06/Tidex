@@ -160,11 +160,11 @@ const DEFAULT_CURRENCY = "kr";
 const MIN_AMOUNT = 0.005;
 const LOCAL_TIME_ZONE = "Europe/Oslo";
 
-const RUN_CONFIG: RunConfig = {
+  const RUN_CONFIG: RunConfig = {
   json: false,
   strictTariffType: false,
   includeRecurring: true,
-  userId: null,
+  userId: Deno.env.get("TARIFF_BACKPAY_USER_ID") ?? null,
   jobId: null,
   fromDate: "2026-02-01",
   throughDate: "2026-05-31",
