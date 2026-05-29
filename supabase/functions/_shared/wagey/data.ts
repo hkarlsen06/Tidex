@@ -58,6 +58,29 @@ export type ShiftIdentityRow = {
   job_id: string | null;
 };
 
+export type JobPaySetupStatusCode =
+  | "configured"
+  | "pay_setup_required"
+  | "archived";
+
+export type JobPaySetupStatus = {
+  jobId: string;
+  jobName: string;
+  isActive: boolean;
+  hasBaselineSnapshot: boolean;
+  requiresPaySetup: boolean;
+  paySetupStatus: JobPaySetupStatusCode;
+};
+
+export type ShiftJobResolution =
+  | { ok: true; job: Job; status: JobPaySetupStatus }
+  | {
+    ok: false;
+    code: "job_not_available" | "job_pay_setup_required";
+    job?: Job;
+    status?: JobPaySetupStatus;
+  };
+
 export type EventRecord = {
   id: string;
   user_id: string;
@@ -322,6 +345,94 @@ export function resolveDefaultJob(jobs: readonly Job[]): Job | null {
       normalizedJobs[0] ??
       null
   );
+}
+
+function formatJobPaySetupStatus(
+  job: Job,
+  baselineJobIds: ReadonlySet<string>,
+): JobPaySetupStatus {
+  const isActive = job.deleted_at == null && job.archived_at == null;
+  const hasBaselineSnapshot = baselineJobIds.has(job.id);
+  const paySetupStatus: JobPaySetupStatusCode = !isActive
+    ? "archived"
+    : hasBaselineSnapshot
+    ? "configured"
+    : "pay_setup_required";
+
+  return {
+    jobId: job.id,
+    jobName: job.name,
+    isActive,
+    hasBaselineSnapshot,
+    requiresPaySetup: isActive && !hasBaselineSnapshot,
+    paySetupStatus,
+  };
+}
+
+export async function getJobPaySetupStatuses(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+  jobs?: Job[],
+): Promise<Map<string, JobPaySetupStatus>> {
+  const [resolvedJobs, baselineSnapshots] = await Promise.all([
+    jobs
+      ? Promise.resolve(jobs)
+      : getUserJobs(ctx, userId, { includeArchived: true }),
+    (async () => {
+      const { data, error } = await ctx.supabase
+        .from("wage_snapshots")
+        .select("id, job_id")
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .is("from_date", null);
+
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    })(),
+  ]);
+
+  const baselineJobIds = new Set(
+    baselineSnapshots
+      .map((snapshot) => (snapshot as { job_id?: string | null }).job_id)
+      .filter((jobId): jobId is string => typeof jobId === "string"),
+  );
+
+  return new Map(
+    resolvedJobs.map((job) => [
+      job.id,
+      formatJobPaySetupStatus(job, baselineJobIds),
+    ]),
+  );
+}
+
+export async function resolveShiftJobForMutation(
+  ctx: WageyRequestContext,
+  userId = ctx.user.id,
+  requestedJobId?: string | null,
+): Promise<ShiftJobResolution> {
+  const jobs = await getUserJobs(ctx, userId, { includeArchived: false });
+  const job = requestedJobId
+    ? jobs.find((candidate) => candidate.id === requestedJobId) ?? null
+    : resolveDefaultJob(jobs);
+
+  if (!job) {
+    return { ok: false, code: "job_not_available" };
+  }
+
+  const statuses = await getJobPaySetupStatuses(ctx, userId, jobs);
+  const status = statuses.get(job.id) ??
+    formatJobPaySetupStatus(job, new Set());
+
+  if (!status.hasBaselineSnapshot) {
+    return {
+      ok: false,
+      code: "job_pay_setup_required",
+      job,
+      status,
+    };
+  }
+
+  return { ok: true, job, status };
 }
 
 export function payrollDayForJob(
@@ -1259,6 +1370,7 @@ export async function createShifts(
       const { error } = await ctx.supabase
         .from("user_shifts")
         .update({
+          ...(requestedJobId ? { job_id: requestedJobId } : {}),
           start_time: input.start,
           end_time: input.end,
         })
@@ -1269,6 +1381,7 @@ export async function createShifts(
 
       existing.start_time = input.start;
       existing.end_time = input.end;
+      existing.job_id = requestedJobId;
       updatedDates.push(existing.shift_date);
       continue;
     }
@@ -1635,6 +1748,7 @@ export async function draftRecurringShift(
     selected_days: Record<string, string>;
     end_condition: unknown;
     exclusions: string[];
+    job_id?: string;
   },
 ): Promise<
   {
@@ -1643,14 +1757,21 @@ export async function draftRecurringShift(
     projectedShiftCount: number;
   }
 > {
-  const { data, error } = await ctx.supabase
-    .from("user_shifts")
-    .select("shift_date, start_time, end_time")
-    .eq("user_id", ctx.user.id)
-    .is("deleted_at", null);
+  const [{ data, error }, defaultJobId] = await Promise.all([
+    ctx.supabase
+      .from("user_shifts")
+      .select("shift_date, start_time, end_time, job_id")
+      .eq("user_id", ctx.user.id)
+      .is("deleted_at", null),
+    getDefaultJobIdForUser(ctx, ctx.user.id),
+  ]);
   if (error) throw new Error(error.message);
 
-  const existingShifts = (data ?? []) as ExistingShift[];
+  const targetJobId = draft.job_id ?? defaultJobId ?? null;
+  const existingShifts = ((data ?? []) as Array<
+    ExistingShift & { job_id?: string | null }
+  >)
+    .filter((shift) => (shift.job_id ?? defaultJobId ?? null) === targetJobId);
   const conflictDates = await detectAllRecurringConflicts(
     draft as never,
     existingShifts,

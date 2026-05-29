@@ -200,6 +200,7 @@ export const draftRecurringShiftSchema = z.object({
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7),
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
+  jobId: z.string().uuid().optional(),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]),
   endType: z.enum(["never", "after_months", "after_years", "on_date"]),
   endValue: z.union([
@@ -220,6 +221,7 @@ export const confirmRecurringShiftSchema = z.object({
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7),
   start: z.string().regex(/^\d{2}:\d{2}$/),
   end: z.string().regex(/^\d{2}:\d{2}$/),
+  jobId: z.string().uuid().optional(),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"]),
   endType: z.enum(["never", "after_months", "after_years", "on_date"]),
   endValue: z.union([
@@ -251,6 +253,7 @@ export const manageRecurringShiftSchema = z.object({
   weekdays: z.array(weekdayAnchorSchema).min(1).max(7).optional(),
   start: z.string().regex(/^\d{2}:\d{2}$/).optional(),
   end: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  jobId: z.string().uuid().optional(),
   frequency: z.enum(["weekly", "biweekly", "every_3_weeks", "every_4_weeks"])
     .optional(),
   endType: z.enum(["never", "after_months", "after_years", "on_date"])
@@ -683,7 +686,8 @@ Edge cases:
 - Cross-midnight shifts: If end time is before start time (e.g., 22:00-06:00), the shift spans to the next day
 - Multiple dates: Use dates array to create identical shifts on multiple days at once
 - Update requires ID: Always query_shifts first to get the shift ID before updating/deleting
-- Multiple workplaces: Use jobId (from list_workplaces) to assign a shift to a specific workplace. Omit for the user's default workplace.`,
+- Multiple jobs: Use jobId (from list_workplaces) to assign a shift to a specific job. Omit for the user's default job.
+- Pay setup required: The selected/default job must have paySetupStatus="configured" before a shift can be created. If list_workplaces shows requiresPaySetup=true, set up a baseline wage snapshot first.`,
     input_schema: {
       type: "object",
       properties: {
@@ -709,7 +713,7 @@ Edge cases:
         jobId: {
           type: "string",
           description:
-            "Workplace/job UUID from list_workplaces. Only for create. Omit to use the default workplace.",
+            "Job UUID from list_workplaces. Only for create. Omit to use the default configured job.",
         },
         shiftId: {
           type: "string",
@@ -1214,6 +1218,8 @@ Required parameters:
 - frequency: weekly, biweekly, every_3_weeks, or every_4_weeks
 - endType: never, after_months, after_years, or on_date (with endValue)
 
+Optional: jobId (UUID from list_workplaces). Omit to use the default configured job. The job must have paySetupStatus="configured" before recurring shifts can be created.
+
 IMPORTANT: Use weekdays array to create a SINGLE recurring shift with multiple weekdays (e.g., Mon/Wed/Fri). Do NOT create separate recurring shifts for each day.
 
 Anchor date offsets for alternating patterns:
@@ -1252,6 +1258,11 @@ Workflow: After this returns conflict info, ask user how to handle conflicts, th
         end: {
           type: "string",
           description: "End time (HH:mm)",
+        },
+        jobId: {
+          type: "string",
+          description:
+            "Job UUID from list_workplaces. Omit to use the default configured job.",
         },
         frequency: {
           type: "string",
@@ -1344,6 +1355,8 @@ IMPORTANT: Only call this AFTER draft_recurring_shift. Use identical parameters 
 Required: All the same parameters from draft_recurring_shift, PLUS:
 - conflictResolution: "keep_both" (recurring shift coexists with existing shifts) or "skip_conflicts" (recurring shift skips dates with existing shifts)
 
+Use the same jobId from the draft when the user selected a specific job. The job must have paySetupStatus="configured".
+
 The recurring shift will be created and shifts generated according to the pattern.`,
     input_schema: {
       type: "object",
@@ -1376,6 +1389,11 @@ The recurring shift will be created and shifts generated according to the patter
         end: {
           type: "string",
           description: "Same end time from draft (HH:mm)",
+        },
+        jobId: {
+          type: "string",
+          description:
+            "Same job UUID from draft. Omit to use the default configured job.",
         },
         frequency: {
           type: "string",
@@ -1448,14 +1466,15 @@ Actions:
 - ADD_EXCLUSION: action="add_exclusion", recurringId, date - Skip one occurrence
 - REMOVE_EXCLUSION: action="remove_exclusion", recurringId, date - Restore one skipped occurrence
 
-Create workflow: use draft_create first. If conflicts exist, ask how to handle them, then call confirm_create with the same pattern and conflictResolution.
+Create workflow: use draft_create first. If conflicts exist, ask how to handle them, then call confirm_create with the same pattern, jobId, and conflictResolution.
 Modify workflow: Always list first to get recurring shift IDs before update/delete/exclusions.
 
 Note: Recurring shifts are virtual (not stored individually). Deleting a recurring shift removes all future occurrences.
 Only standalone shifts (manually created or converted) remain after deletion.
 When updating weekdays, provide the complete weekdays array (replaces all existing weekdays).
 Use weekdays array to create a SINGLE recurring shift with multiple weekdays. Do NOT create separate recurring shifts for each day.
-For alternating biweekly/every_N_weeks patterns, offset anchorDates by one week to alternate days between weeks.`,
+For alternating biweekly/every_N_weeks patterns, offset anchorDates by one week to alternate days between weeks.
+Pay setup required: The selected/default job must have paySetupStatus="configured" before recurring shifts can be created.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1506,6 +1525,11 @@ For alternating biweekly/every_N_weeks patterns, offset anchorDates by one week 
         end: {
           type: "string",
           description: "New end time for update",
+        },
+        jobId: {
+          type: "string",
+          description:
+            "Job UUID from list_workplaces for draft_create/confirm_create. Omit to use the default configured job.",
         },
         frequency: {
           type: "string",
@@ -1939,19 +1963,20 @@ Note: Tax deduction enabled/percentage are per-snapshot — use get_wage_info in
   {
     name: "get_wage_info",
     description:
-      `Get wage configuration for a workplace (job): snapshot history plus pay settings.
+      `Get wage configuration for a job: snapshot history plus pay settings.
 
 Returns:
-- workplace: Selected workplace context (id, name, isDefault) when available
-- globalPaySettings: Pay configuration for the selected workplace when available (falls back to legacy/global settings)
-- tariffs: Distinct tariff agreements referenced by the workplace's wage snapshots (id, displayName, description, country, isDefault)
+- workplace: Selected job context (id, name, isDefault) when available
+- hasBaselineSnapshot / requiresPaySetup / paySetupStatus
+- globalPaySettings: Pay configuration for the selected job when available
+- tariffs: Distinct tariff agreements referenced by the job's wage snapshots (id, displayName, description, country, isDefault)
 - current: The wage that applies today (id, fromDate, usingTariff, wageLevel, tariffTypeId, tariff, hourlyWage, supplements, taxEnabled, taxPercentage)
 - upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields, includes id
 - history: Past wage entries for context (if any) - compact format showing only changed fields, includes id
 
 Input:
 - Optional jobId (UUID from list_workplaces)
-- If omitted, defaults to the user's default workplace
+- If omitted, defaults to the user's default job
 
 Use this when the user asks about their wage, hourly rate, tax settings, payroll day, or wage history.
 For display/preference settings (theme, defaultStartupTab, etc.), use manage_account instead.
@@ -1963,7 +1988,7 @@ To modify halfTaxMonth or payrollDay, use manage_account action="update_settings
         jobId: {
           type: "string",
           description:
-            "Optional workplace/job UUID from list_workplaces. Defaults to the default workplace.",
+            "Optional job UUID from list_workplaces. Defaults to the default job.",
         },
       },
     },
@@ -1993,7 +2018,8 @@ IMPORTANT - Dichotomy between tariff and custom rates:
 - You do NOT need to explicitly set wage_level to null when setting a custom hourly_wage
 
 Other notes:
-- Optional jobId for CREATE targets a specific workplace (UUID from list_workplaces). If omitted, default workplace is used.
+- Optional jobId for CREATE targets a specific job (UUID from list_workplaces). If omitted, default job is used.
+- Creating a baseline snapshot uses from_date=null and makes the job eligible for shift creation when the job is active.
 - Always call get_wage_info first to see current configuration and get snapshot IDs
 - For CREATE: ask for tax handling explicitly (tax_enabled and optionally tax_percentage) before calling
 - For UPDATE: only specify fields to change
@@ -2010,7 +2036,7 @@ Other notes:
         jobId: {
           type: "string",
           description:
-            "Optional workplace/job UUID from list_workplaces (CREATE only). Defaults to the default workplace.",
+            "Optional job UUID from list_workplaces (CREATE only). Defaults to the default job.",
         },
         snapshot_id: {
           type: "string",
@@ -2519,25 +2545,29 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
   // ---------------------------------------------------------------------------
   {
     name: "list_workplaces",
-    description: `List workplaces (jobs) configured by the user.
+    description: `List jobs configured by the user.
 
-By default, returns both active and archived workplaces.
-Set includeArchived=false to return active workplaces only.
+By default, returns both active and archived jobs.
+Set includeArchived=false to return active jobs only.
 
-Returns each workplace with:
+Returns each job with:
 - id (UUID)
 - name
 - color
 - isDefault
 - isArchived
 - archivedAt
+- hasBaselineSnapshot
+- requiresPaySetup
+- paySetupStatus ("configured", "pay_setup_required", or "archived")
 
 Use this tool when:
-- The user asks about their workplaces or jobs
-- You need a jobId to filter shifts/wages by workplace
-- You need to know which workplace is the default
-- You need to find archived workplaces before restoring them
-- Before creating a shift for a specific workplace
+- The user asks about their jobs
+- You need a jobId to filter shifts/wages by job
+- You need to know which job is the default
+- You need to find archived jobs before restoring them
+- Before creating a shift for a specific job
+- Before creating shifts, check paySetupStatus. If requiresPaySetup=true, create a baseline wage snapshot first.
 
 Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_statistics, and manage_shift.`,
     input_schema: {
@@ -2545,15 +2575,14 @@ Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_
       properties: {
         includeArchived: {
           type: "boolean",
-          description:
-            "Include archived workplaces in the result. Default: true",
+          description: "Include archived jobs in the result. Default: true",
         },
       },
     },
     input_examples: [
       // List active + archived workplaces (default)
       {},
-      // List active workplaces only
+      // List active jobs only
       { includeArchived: false },
     ],
   },
@@ -2561,10 +2590,10 @@ Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_
   {
     name: "manage_workplace",
     description:
-      `Create, update, set default, archive, unarchive, or delete workplaces (jobs).
+      `Create, update, set default, archive, unarchive, or delete jobs.
 
 Actions:
-- CREATE: action="create", name/payrollDay/monthlyGoal are required; optional color/halfTaxMonth
+- CREATE: action="create", name is required; optional color/payrollDay/monthlyGoal/halfTaxMonth
 - UPDATE: action="update", jobId (required), plus one or more fields to change
 - SET DEFAULT: action="set_default", jobId (required)
 - ARCHIVE: action="archive", jobId (required)
@@ -2572,11 +2601,12 @@ Actions:
 - DELETE: action="delete", jobId (required)
 
 Important:
-- To target an existing workplace, first call list_workplaces to get the jobId (UUID)
-- Archived workplaces cannot be used for new shifts until unarchived
-- Default workplaces cannot be archived or deleted
-- Last active workplace cannot be archived or deleted
-- After CREATE, offer to set up an initial wage snapshot for the new workplace (manage_wage_snapshots with action="create", jobId, from_date=null)`,
+- To target an existing job, first call list_workplaces to get the jobId (UUID)
+- Archived jobs cannot be used for new shifts until unarchived
+- Default jobs cannot be archived or deleted
+- Last active job cannot be archived or deleted
+- After CREATE, the job exists but requires pay setup before shifts can be added
+- To finish setup, create a baseline wage snapshot with manage_wage_snapshots action="create", jobId, from_date=null`,
     input_schema: {
       type: "object",
       properties: {
@@ -2595,11 +2625,11 @@ Important:
         jobId: {
           type: "string",
           description:
-            "Workplace/job UUID. Required for update, set_default, archive, unarchive, and delete",
+            "Job UUID. Required for update, set_default, archive, unarchive, and delete",
         },
         name: {
           type: "string",
-          description: "Workplace name (1-100 chars). Required for create",
+          description: "Job name (1-100 chars). Required for create",
         },
         color: {
           type: ["string", "null"],
@@ -2607,7 +2637,7 @@ Important:
         },
         payrollDay: {
           type: "integer",
-          description: "Payroll day of month (1-31). Required for create.",
+          description: "Payroll day of month (1-31). Optional for create.",
         },
         halfTaxMonth: {
           type: ["integer", "null"],
@@ -2616,7 +2646,7 @@ Important:
         monthlyGoal: {
           type: ["integer", "null"],
           description:
-            "Monthly goal amount (integer) or null. Required for create.",
+            "Monthly goal amount (integer) or null. Optional for create.",
         },
       },
       required: ["action"],
@@ -3090,6 +3120,7 @@ export type ToolName =
  */
 export type ToolResult = {
   success: boolean;
+  code?: string;
   message: string;
   action?: string;
   validationErrors?: Array<{ field: string; message: string }>;
