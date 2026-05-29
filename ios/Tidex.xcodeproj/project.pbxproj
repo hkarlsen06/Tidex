@@ -1690,6 +1690,13 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		11CD7FA32F63CFC700A987E7 /* XCLocalSwiftPackageReference "../../Chat" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ../../Chat;
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		11263D3A2F2FF22700233D63 /* XCRemoteSwiftPackageReference "TOCropViewController" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -1714,10 +1721,6 @@
 				branch = main;
 				kind = branch;
 			};
-		};
-		11CD7FA32F63CFC700A987E7 /* XCLocalSwiftPackageReference "../../Chat" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../../Chat;
 		};
 /* End XCRemoteSwiftPackageReference section */
 

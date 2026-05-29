@@ -213,8 +213,8 @@ struct CustomPauseWindowsEditorSheet: View {
                 Text("—")
               }
             }
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
           }
         }
         .padding(Spacing.md)
