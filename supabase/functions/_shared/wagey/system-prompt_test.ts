@@ -106,6 +106,10 @@ Deno.test("getSystemPrompt includes supported deeplink instructions", () => {
     "Do not send users to settings.recurring_shifts when they ask where to add a new recurring/fixed shift",
   );
   assertStringIncludes(prompt, "After creating or updating shifts");
+  assertStringIncludes(
+    prompt,
+    "After creating a job or when pay setup blocks shift creation",
+  );
   assertStringIncludes(prompt, "deeplink to Sharing");
   assertStringIncludes(prompt, "deeplink to the relevant admin destination");
   assertStringIncludes(
@@ -138,6 +142,11 @@ Deno.test("getSystemPrompt includes simple agent operating model", () => {
   assertStringIncludes(prompt, "Use the simplest reliable path");
   assertStringIncludes(prompt, "observe -> act -> verify loop");
   assertStringIncludes(prompt, "If tool output contradicts your assumption");
+  assertStringIncludes(prompt, "<jobs_and_pay>");
+  assertStringIncludes(
+    prompt,
+    "A job cannot be used for new shifts until it has a baseline wage snapshot",
+  );
   assertStringIncludes(
     prompt,
     'Use startDate "2000-01-01" and endDate equal to today\'s local date',

@@ -19,6 +19,7 @@ import {
   draftRecurringShift,
   getAllFriends,
   getComputedShiftsForApi,
+  getJobPaySetupStatuses,
   getLatestTariffVersion,
   getSharedUserShifts,
   getSharerShiftPreviews,
@@ -38,8 +39,10 @@ import {
   removeShare,
   removeSharer,
   resolveDefaultJob,
+  resolveShiftJobForMutation,
   resolveSnapshotForDate,
   shareBack,
+  type ShiftJobResolution,
   submitFeedback,
   toggleShareEarnings,
   toggleSharerMuted,
@@ -176,6 +179,34 @@ function normalizeStoredSupplementRules(rules: unknown): SupplementRule[] {
   return rules.map((rule) =>
     normalizeSupplementRuleInput(rule as WageSnapshotSupplementRuleInput)
   );
+}
+
+function jobSetupFailureResult(
+  resolution: Extract<ShiftJobResolution, { ok: false }>,
+): ToolResult {
+  if (resolution.code === "job_pay_setup_required" && resolution.status) {
+    return {
+      success: false,
+      code: "job_pay_setup_required",
+      message: t(tr.jobPaySetupRequired, {
+        name: resolution.status.jobName,
+      }),
+      data: {
+        jobId: resolution.status.jobId,
+        jobName: resolution.status.jobName,
+        paySetupStatus: resolution.status.paySetupStatus,
+        hasBaselineSnapshot: resolution.status.hasBaselineSnapshot,
+        requiresPaySetup: resolution.status.requiresPaySetup,
+        destination: "settings.pay",
+      },
+    };
+  }
+
+  return {
+    success: false,
+    code: "job_not_available",
+    message: tr.jobNotAvailable,
+  };
 }
 
 async function resolveCurrentSupplementRules(
@@ -1373,11 +1404,19 @@ async function executeManageShift(
           message: t(tr.missingFields, { fields: "dates, start, end" }),
         };
       }
+      const jobResolution = await resolveShiftJobForMutation(
+        ctx,
+        ctx.user.id,
+        input.jobId,
+      );
+      if (!jobResolution.ok) {
+        return jobSetupFailureResult(jobResolution);
+      }
       const result = await createShifts(ctx, {
         dates: input.dates,
         start: input.start,
         end: input.end,
-        jobId: input.jobId,
+        jobId: jobResolution.job.id,
       });
       return {
         success: true,
@@ -2360,6 +2399,7 @@ async function executeListWorkplaces(
   const jobs = await getUserJobs(ctx, ctx.user.id, {
     includeArchived: input.includeArchived,
   });
+  const setupStatuses = await getJobPaySetupStatuses(ctx, ctx.user.id, jobs);
   const archivedCount = jobs.filter((job) => job.archived_at).length;
   return {
     success: true,
@@ -2378,6 +2418,11 @@ async function executeListWorkplaces(
       isDefault: job.is_default,
       isArchived: Boolean(job.archived_at),
       archivedAt: job.archived_at ?? null,
+      hasBaselineSnapshot: setupStatuses.get(job.id)?.hasBaselineSnapshot ??
+        false,
+      requiresPaySetup: setupStatuses.get(job.id)?.requiresPaySetup ?? false,
+      paySetupStatus: setupStatuses.get(job.id)?.paySetupStatus ??
+        (job.archived_at ? "archived" : "pay_setup_required"),
     })),
   };
 }
@@ -2400,9 +2445,12 @@ async function executeManageWorkplace(
 
   switch (input.action) {
     case "create": {
+      if (!input.name?.trim()) {
+        return { success: false, message: tr.missingWorkplaceName };
+      }
       const activeJobs = jobs.filter((job) => !job.archived_at);
       const created = await createJob(ctx, ctx.user.id, {
-        name: input.name!.trim(),
+        name: input.name.trim(),
         color: input.color ?? null,
         payroll_day: input.payrollDay ?? null,
         half_tax_month: input.halfTaxMonth ?? null,
@@ -2421,6 +2469,9 @@ async function executeManageWorkplace(
           color: created.color ?? null,
           isDefault: created.is_default,
           isArchived: Boolean(created.archived_at),
+          hasBaselineSnapshot: false,
+          requiresPaySetup: true,
+          paySetupStatus: "pay_setup_required",
         },
       };
     }
@@ -3283,6 +3334,14 @@ async function executeDraftRecurringShift(
     };
   }
   const input = parsed.data as DraftRecurringShiftInput;
+  const jobResolution = await resolveShiftJobForMutation(
+    ctx,
+    ctx.user.id,
+    input.jobId,
+  );
+  if (!jobResolution.ok) {
+    return jobSetupFailureResult(jobResolution);
+  }
   const result = await draftRecurringShift(ctx, {
     selected_days: weekdaysArrayToSelectedDays(input.weekdays),
     start_time: input.start,
@@ -3290,6 +3349,7 @@ async function executeDraftRecurringShift(
     repeat_interval_weeks: frequencyToIntervalWeeks(input.frequency),
     end_condition: convertEndCondition(input.endType, input.endValue),
     exclusions: [],
+    job_id: jobResolution.job.id,
   });
   return {
     success: true,
@@ -3317,6 +3377,14 @@ async function executeConfirmRecurringShift(
     };
   }
   const input = parsed.data as ConfirmRecurringShiftInput;
+  const jobResolution = await resolveShiftJobForMutation(
+    ctx,
+    ctx.user.id,
+    input.jobId,
+  );
+  if (!jobResolution.ok) {
+    return jobSetupFailureResult(jobResolution);
+  }
   const result = await createRecurringShift(
     ctx,
     {
@@ -3326,6 +3394,7 @@ async function executeConfirmRecurringShift(
       repeat_interval_weeks: frequencyToIntervalWeeks(input.frequency),
       end_condition: convertEndCondition(input.endType, input.endValue),
       exclusions: [],
+      job_id: jobResolution.job.id,
     },
     {
       conflictResolution: input.conflictResolution === "skip_conflicts"
@@ -3362,6 +3431,7 @@ async function executeManageRecurringShift(
         weekdays: input.weekdays,
         start: input.start,
         end: input.end,
+        jobId: input.jobId,
         frequency: input.frequency,
         endType: input.endType,
         endValue: input.endValue,
@@ -3371,6 +3441,7 @@ async function executeManageRecurringShift(
         weekdays: input.weekdays,
         start: input.start,
         end: input.end,
+        jobId: input.jobId,
         frequency: input.frequency,
         endType: input.endType,
         endValue: input.endValue,
@@ -3801,17 +3872,21 @@ async function executeGetWageInfo(
       message: t(tr.workplaceNotFound, { id: input.jobId }),
     };
   }
+  const setupStatuses = await getJobPaySetupStatuses(ctx, ctx.user.id, jobs);
+  const setupStatus = selectedJob ? setupStatuses.get(selectedJob.id) : null;
   let scopedSnapshots = selectedJob
     ? snapshots.filter((snapshot) => snapshot.job_id === selectedJob.id)
     : snapshots;
-  if (selectedJob && scopedSnapshots.length === 0) {
-    scopedSnapshots = snapshots.filter((snapshot) => snapshot.job_id === null);
-  }
 
-  if (scopedSnapshots.length === 0) {
+  if (
+    scopedSnapshots.length === 0 ||
+    (selectedJob && setupStatus?.hasBaselineSnapshot === false)
+  ) {
     return {
       success: true,
-      message: tr.noWageConfigured,
+      message: selectedJob
+        ? t(tr.jobPaySetupRequired, { name: selectedJob.name })
+        : tr.noWageConfigured,
       data: {
         workplace: selectedJob
           ? {
@@ -3820,6 +3895,11 @@ async function executeGetWageInfo(
             isDefault: selectedJob.is_default,
           }
           : null,
+        hasBaselineSnapshot: setupStatus?.hasBaselineSnapshot ?? false,
+        requiresPaySetup: setupStatus?.requiresPaySetup ??
+          Boolean(selectedJob),
+        paySetupStatus: setupStatus?.paySetupStatus ??
+          (selectedJob ? "pay_setup_required" : null),
         globalPaySettings: {
           halfTaxMonth: selectedJob?.half_tax_month ??
             settings.half_tax_month ?? null,
@@ -3903,6 +3983,9 @@ async function executeGetWageInfo(
           isDefault: selectedJob.is_default,
         }
         : null,
+      hasBaselineSnapshot: setupStatus?.hasBaselineSnapshot ?? false,
+      requiresPaySetup: setupStatus?.requiresPaySetup ?? false,
+      paySetupStatus: setupStatus?.paySetupStatus ?? null,
       globalPaySettings: {
         halfTaxMonth: selectedJob?.half_tax_month ?? settings.half_tax_month ??
           null,
