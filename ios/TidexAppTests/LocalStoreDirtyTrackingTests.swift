@@ -728,6 +728,26 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set(JobField.allCases))
   }
 
+  func testCreateJobDoesNotCreateBaselineSnapshot() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createJob(
+      userId: userId,
+      name: "Store",
+      color: "#00AA00",
+      currency: "kr",
+      isDefault: true,
+      sortOrder: 0,
+      payrollDay: 25,
+      halfTaxMonth: 12,
+      monthlyGoal: 30000
+    )
+
+    let snapshots = try await store.getAllWageSnapshots(userId: userId)
+
+    XCTAssertTrue(snapshots.isEmpty)
+  }
+
   func testUpdateJobMetadataTracksChangedFieldsAfterClean() async throws {
     let store = try makeStoreActor()
 

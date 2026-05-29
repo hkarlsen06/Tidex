@@ -66,21 +66,22 @@ final class WorkSetupStatusService {
   static let shared = WorkSetupStatusService()
 
   private let jobsRepository: JobsRepository
-  private let snapshotsRepository: SnapshotsRepository
+  private let jobPaySetupStatusService: JobPaySetupStatusService
 
   init(
     jobsRepository: JobsRepository? = nil,
-    snapshotsRepository: SnapshotsRepository? = nil
+    jobPaySetupStatusService: JobPaySetupStatusService? = nil
   ) {
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
-    self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
+    self.jobPaySetupStatusService = jobPaySetupStatusService ?? JobPaySetupStatusService.shared
   }
 
   func status(for userId: String) -> WorkSetupStatus {
     let activeJobs = jobsRepository.getActiveJobs(for: userId)
+    let configuredJobIds = jobPaySetupStatusService.configuredJobIds(for: userId)
 
-    return WorkSetupStatusResolver.resolve(activeJobs: activeJobs) { [snapshotsRepository] jobId in
-      snapshotsRepository.getBaselineSnapshot(for: userId, jobId: jobId) != nil
+    return WorkSetupStatusResolver.resolve(activeJobs: activeJobs) { jobId in
+      configuredJobIds.contains(jobId)
     }
   }
 

@@ -835,6 +835,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
+  private let jobPaySetupStatusService: JobPaySetupStatusService
   private let payrollAdjustmentsRepository: PayrollAdjustmentsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
   private let monthlyPayrollReadService: MonthlyPayrollReadService
@@ -1588,6 +1589,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
+    jobPaySetupStatusService: JobPaySetupStatusService? = nil,
     payrollAdjustmentsRepository: PayrollAdjustmentsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
     monthlyPayrollReadService: MonthlyPayrollReadService? = nil,
@@ -1602,6 +1604,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
+    self.jobPaySetupStatusService = jobPaySetupStatusService ?? JobPaySetupStatusService.shared
     self.payrollAdjustmentsRepository =
       payrollAdjustmentsRepository ?? PayrollAdjustmentsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
@@ -3402,6 +3405,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       return
     }
     let resolvedJobId = jobId ?? defaultJobId(for: userId)
+    do {
+      _ = try jobPaySetupStatusService.requireConfiguredActiveJob(
+        userId: userId,
+        requestedJobId: resolvedJobId
+      )
+    } catch {
+      logger.info("Clock in requires pay setup before starting a temporary session")
+      return
+    }
 
     let alignedStart = Self.minuteAligned(now)
     let session = TemporaryClockSession(
@@ -3521,6 +3533,50 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   func clockSelectableJobsSnapshot() -> [Job] {
     sortClockJobs(displayJobs)
+  }
+
+  func clockJobRequiringPaySetup(jobId: String?) async -> Job? {
+    guard let userId = await ensureCachedUserId() else { return nil }
+    if displayJobs.isEmpty {
+      displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
+    }
+
+    let activeJobs = sortClockJobs(displayJobs)
+    let resolvedJob: Job?
+    if let jobId {
+      resolvedJob = activeJobs.first { $0.id == jobId }
+    } else {
+      resolvedJob = activeJobs.first(where: { $0.is_default }) ?? activeJobs.first
+    }
+
+    guard let resolvedJob else { return nil }
+    return jobPaySetupStatusService.isJobConfigured(userId: userId, jobId: resolvedJob.id)
+      ? nil
+      : resolvedJob
+  }
+
+  func completeClockPaySetup(for job: Job, input: JobPaySetupInput) async -> Bool {
+    guard let userId = await ensureCachedUserId() else { return false }
+
+    do {
+      _ = try await jobsRepository.completePaySetup(
+        userId: userId,
+        jobId: job.id,
+        currency: input.currency,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal,
+        baselineSnapshot: input.baselineSnapshot
+      )
+      displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
+      await reloadFromLocal()
+      notifyShiftsDidChange()
+      Haptics.play(.success)
+      return true
+    } catch {
+      logger.error("❌ Failed to complete clock pay setup: \(error.localizedDescription)")
+      return false
+    }
   }
 
   func preloadClockSelectableJobs() async {

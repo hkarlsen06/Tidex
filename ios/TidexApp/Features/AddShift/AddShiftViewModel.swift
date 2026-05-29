@@ -11,6 +11,22 @@ enum AddShiftCompletion {
   case event
 }
 
+struct AddShiftPaySetupRequest: Identifiable, Equatable {
+  enum Action: String, Equatable {
+    case selectJob
+    case submitSingle
+    case showRecurringPreview
+    case submitRecurring
+  }
+
+  let job: Job
+  let action: Action
+
+  var id: String {
+    "\(job.id)-\(action.rawValue)"
+  }
+}
+
 // MARK: - Calendar Display Data
 
 /// Pre-computed display data for calendar cells to avoid redundant computation
@@ -54,6 +70,7 @@ final class AddShiftViewModel: ObservableObject {
   private let jobsRepository: JobsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
+  private let jobPaySetupStatusService: JobPaySetupStatusService
   private let monthContext: SharedMonthContext
   private let addShiftCoordinator: AddShiftCoordinator
   private var eventRangeAnchorDate: Date?
@@ -204,6 +221,8 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Active (non-archived, non-deleted) jobs for the current user.
   @Published private(set) var activeJobs: [Job] = []
+  /// Active job IDs that have the required baseline wage snapshot.
+  @Published private(set) var configuredJobIds: Set<String> = []
 
   /// Number of distinct start/end time pairs the user has used across all shifts.
   @Published private(set) var distinctShiftTimePairCount: Int = 0
@@ -263,6 +282,7 @@ final class AddShiftViewModel: ObservableObject {
     let existingRecurringShifts: [RecurringShiftRow]
     let snapshots: [WageSnapshot]
     let jobs: [Job]
+    let configuredJobIds: Set<String>
     let settings: UserSettings?
   }
 
@@ -279,6 +299,7 @@ final class AddShiftViewModel: ObservableObject {
     let effectiveJobId: String?
     let snapshots: [WageSnapshot]
     let jobs: [Job]
+    let configuredJobIds: Set<String>
     let settings: UserSettings?
   }
 
@@ -394,6 +415,7 @@ final class AddShiftViewModel: ObservableObject {
   }
   @Published var showPreviewSheet = false
   @Published var showSubmitJobChooser = false
+  @Published var paySetupRequest: AddShiftPaySetupRequest?
 
   // MARK: - Cached Data
 
@@ -447,6 +469,7 @@ final class AddShiftViewModel: ObservableObject {
     jobsRepository: JobsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
+    jobPaySetupStatusService: JobPaySetupStatusService? = nil,
     monthContext: SharedMonthContext? = nil,
     addShiftCoordinator: AddShiftCoordinator? = nil
   ) {
@@ -456,6 +479,7 @@ final class AddShiftViewModel: ObservableObject {
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
+    self.jobPaySetupStatusService = jobPaySetupStatusService ?? JobPaySetupStatusService.shared
     self.monthContext = monthContext ?? SharedMonthContext.shared
     self.addShiftCoordinator = addShiftCoordinator ?? AddShiftCoordinator.shared
 
@@ -622,6 +646,22 @@ final class AddShiftViewModel: ObservableObject {
     return activeJobs.first(where: { $0.id == selectedJobId })
   }
 
+  var jobCreationInitialCurrency: String {
+    activeJobs.first(where: \.is_default)?.currency ?? cachedSettings?.currency ?? currency
+  }
+
+  var jobCreationInitialPayrollDay: Int {
+    activeJobs.first(where: \.is_default)?.payroll_day ?? cachedSettings?.effectivePayrollDay ?? 15
+  }
+
+  var jobCreationInitialHalfTaxMonth: Int? {
+    activeJobs.first(where: \.is_default)?.half_tax_month ?? cachedSettings?.half_tax_month
+  }
+
+  var jobCreationInitialMonthlyGoal: Int? {
+    activeJobs.first(where: \.is_default)?.monthly_goal ?? cachedSettings?.monthly_goal
+  }
+
   /// User must explicitly pick a job when multiple active jobs exist.
   private var requiresExplicitJobSelection: Bool {
     activeJobs.count > 1
@@ -640,8 +680,92 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   func selectJobForShiftCreation(_ jobId: String) {
+    guard configuredJobIds.contains(jobId) else {
+      requestPaySetup(for: jobId, action: .selectJob)
+      return
+    }
+
     selectedJobId = jobId
     showSubmitJobChooser = false
+  }
+
+  func requestPaySetup(for jobId: String, action: AddShiftPaySetupRequest.Action) {
+    guard let job = activeJobs.first(where: { $0.id == jobId }) else { return }
+    showSubmitJobChooser = false
+    paySetupRequest = AddShiftPaySetupRequest(job: job, action: action)
+  }
+
+  func isJobConfigured(_ jobId: String) -> Bool {
+    configuredJobIds.contains(jobId)
+  }
+
+  func createBasicJob(input: AddJobBasicsInput) async -> Job? {
+    guard let userId = AppCoordinator.shared.getCurrentUserId() else {
+      error = String(localized: .settingsPayErrorNotAuthenticated)
+      return nil
+    }
+
+    do {
+      let createdJob = try await jobsRepository.createJob(
+        userId: userId,
+        name: input.name,
+        color: input.color,
+        currency: input.currency,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal
+      )
+      await refreshData()
+      return createdJob
+    } catch {
+      logger.error("Failed to create job from Add Shift: \(error.localizedDescription)")
+      self.error = error.localizedDescription
+      return nil
+    }
+  }
+
+  func completePaySetup(for job: Job, input: JobPaySetupInput) async -> Bool {
+    guard let userId = AppCoordinator.shared.getCurrentUserId() else {
+      error = String(localized: .settingsPayErrorNotAuthenticated)
+      return false
+    }
+
+    let action = paySetupRequest?.action ?? .selectJob
+
+    do {
+      let configuredJob = try await jobsRepository.completePaySetup(
+        userId: userId,
+        jobId: job.id,
+        currency: input.currency,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal,
+        baselineSnapshot: input.baselineSnapshot
+      )
+      await refreshData()
+      paySetupRequest = nil
+
+      switch action {
+      case .selectJob:
+        selectedJobId = configuredJob.id
+      case .submitSingle:
+        selectedJobId = configuredJob.id
+        Task { await submitSingleShifts() }
+      case .showRecurringPreview:
+        selectedJobId = configuredJob.id
+        showPreview()
+      case .submitRecurring:
+        selectedJobId = configuredJob.id
+        Task { await submitRecurringShift() }
+      }
+
+      Haptics.play(.success)
+      return true
+    } catch {
+      logger.error("Failed to complete Add Shift pay setup: \(error.localizedDescription)")
+      self.error = error.localizedDescription
+      return false
+    }
   }
 
   func dismissJobSelection() {
@@ -910,6 +1034,7 @@ final class AddShiftViewModel: ObservableObject {
 
     // Load active jobs before snapshots/preview computations.
     activeJobs = jobsRepository.getActiveJobs(for: userId)
+    configuredJobIds = jobPaySetupStatusService.configuredJobIds(for: userId)
     reconcileSelectedJob()
 
     // Load snapshots
@@ -952,6 +1077,7 @@ final class AddShiftViewModel: ObservableObject {
     cachedSettings = settingsRepository.getSettings(for: userId)
     currency = cachedSettings?.currency ?? "kr"
     activeJobs = jobsRepository.getActiveJobs(for: userId)
+    configuredJobIds = jobPaySetupStatusService.configuredJobIds(for: userId)
     reconcileSelectedJob()
     cachedSnapshots = snapshotsRepository.getSnapshots(for: userId)
     cachedRecurringShifts = recurringRepository.getRecurringShifts(for: userId)
@@ -1126,6 +1252,11 @@ final class AddShiftViewModel: ObservableObject {
   /// Submit single shifts
   func submitSingleShifts() async {
     guard canSubmitSingle else { return }
+
+    if let job = jobRequiringPaySetupForCurrentSelection() {
+      paySetupRequest = AddShiftPaySetupRequest(job: job, action: .submitSingle)
+      return
+    }
 
     let userId: String
     do {
@@ -1313,6 +1444,11 @@ final class AddShiftViewModel: ObservableObject {
   func showPreview() {
     guard canSubmitRecurring else { return }
 
+    if let job = jobRequiringPaySetupForCurrentSelection() {
+      paySetupRequest = AddShiftPaySetupRequest(job: job, action: .showRecurringPreview)
+      return
+    }
+
     // Compute projected dates once when showing preview
     cachedProjectedDates = RecurringShiftProjector.generateDates(
       selectedDays: selectedDays,
@@ -1335,6 +1471,11 @@ final class AddShiftViewModel: ObservableObject {
   /// Submit recurring shift
   func submitRecurringShift() async {
     guard canSubmitRecurring else { return }
+
+    if let job = jobRequiringPaySetupForCurrentSelection() {
+      paySetupRequest = AddShiftPaySetupRequest(job: job, action: .submitRecurring)
+      return
+    }
 
     let userId: String
     do {
@@ -1471,6 +1612,12 @@ final class AddShiftViewModel: ObservableObject {
       ?? activeJobs.first?.id
   }
 
+  private func jobRequiringPaySetupForCurrentSelection() -> Job? {
+    guard let jobId = effectiveSelectedJobId else { return nil }
+    guard !configuredJobIds.contains(jobId) else { return nil }
+    return activeJobs.first { $0.id == jobId }
+  }
+
   private func snapshotsForJob(_ jobId: String?) -> [WageSnapshot] {
     guard let jobId else { return cachedSnapshots }
 
@@ -1515,6 +1662,9 @@ final class AddShiftViewModel: ObservableObject {
     }
 
     let jobId = effectiveSelectedJobId
+    guard let jobId, configuredJobIds.contains(jobId) else {
+      return nil
+    }
 
     // Wage/supplements from shift date
     let wageSnapshot = snapshotForDate(dateISO, jobId: jobId)
@@ -1734,6 +1884,7 @@ final class AddShiftViewModel: ObservableObject {
       effectiveJobId: input.effectiveJobId,
       snapshots: input.snapshots,
       jobs: input.jobs,
+      configuredJobIds: input.configuredJobIds,
       settings: input.settings
     )
 
@@ -1832,23 +1983,28 @@ final class AddShiftViewModel: ObservableObject {
     if context.requiresExplicitJobSelection && context.selectedJobId == nil {
       return nil
     }
+    guard let effectiveJobId = context.effectiveJobId,
+      context.configuredJobIds.contains(effectiveJobId)
+    else {
+      return nil
+    }
 
     let wageSnapshot = Self.snapshotForDate(
       dateISO,
-      jobId: context.effectiveJobId,
+      jobId: effectiveJobId,
       snapshots: context.snapshots,
       jobs: context.jobs
     )
 
     let payrollDay = Self.payrollDay(
-      for: context.effectiveJobId,
+      for: effectiveJobId,
       jobs: context.jobs,
       settings: context.settings
     )
     let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: dateISO, payrollDay: payrollDay)
     let taxSnapshot = Self.snapshotForDate(
       payoutDate,
-      jobId: context.effectiveJobId,
+      jobId: effectiveJobId,
       snapshots: context.snapshots,
       jobs: context.jobs
     )
@@ -1856,7 +2012,7 @@ final class AddShiftViewModel: ObservableObject {
     let shift = ShiftRow(
       id: "preview-\(dateISO)",
       user_id: nil,
-      job_id: context.effectiveJobId,
+      job_id: effectiveJobId,
       shift_date: dateISO,
       start_time: startTime,
       end_time: endTime,
@@ -2381,6 +2537,7 @@ final class AddShiftViewModel: ObservableObject {
       existingRecurringShifts: cachedRecurringShifts,
       snapshots: cachedSnapshots,
       jobs: activeJobs,
+      configuredJobIds: configuredJobIds,
       settings: cachedSettings
     )
 
