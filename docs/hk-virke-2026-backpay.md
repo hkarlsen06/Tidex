@@ -12,12 +12,13 @@ This runbook covers the one-off HK/Virke 2026 backpay adjustment and the later a
 - Adjustment marker: `hk_virke_2026_backpay`
 - Source page: `https://www.virke.no/tariff-og-lonn/finn-tariffavtale/landsoverenskomsten-hk/#sistenyttavtale`
 
-On `--apply`, the script writes:
+The script supports separate apply modes:
 
-- `public.payroll_adjustments` rows for historical backpay.
-- One new `public.wage_snapshots` row effective `2026-06-01` for each active job whose current snapshot uses the HK/Virke tariff.
+- `--apply-operational-wage-snapshots` writes or updates `public.wage_snapshots` rows effective `2026-06-01` for each active job whose current snapshot uses the HK/Virke tariff.
+- `--apply-backpay` writes `public.payroll_adjustments` rows for historical backpay.
+- `--apply` runs both apply modes, and is only valid once both guard dates have passed.
 
-It does not edit shifts, recurring shifts, jobs, existing wage snapshots, or historical tariff versions.
+It does not edit shifts, recurring shifts, jobs, historical wage snapshots, or historical tariff versions. If a `2026-06-01` wage snapshot already exists for an eligible tariff job, the operational apply updates only that row's tariff fields (`hourly_wage`, `wage_level`, `tariff_type_id`) and preserves tax, break, and supplement settings.
 
 ## Tariff Values
 
@@ -44,7 +45,7 @@ April increase from `2026-04-01`:
 
 ## Production Dry-Run Result
 
-Latest dry run against production on `2026-05-18`:
+Latest pre-apply dry run against production on `2026-05-18`:
 
 | Metric | Value |
 | --- | ---: |
@@ -60,9 +61,19 @@ Latest dry run against production on `2026-05-18`:
 | Operational wage snapshots skipped without an increase | 0 |
 | Existing marker rows before apply | 0 |
 
-Eligibility includes legacy HK/Virke snapshots where `tariff_type_id IS NULL`. Production currently has 19 eligible jobs: 2 explicit `hk_retail` and 17 legacy `NULL` tariff snapshots. All current trinn 6 jobs in this run are legacy `NULL` snapshots.
+Eligibility includes legacy HK/Virke snapshots where `tariff_type_id IS NULL`.
 
-All 19 eligible jobs are active, non-archived jobs whose current wage snapshot should receive a new `2026-06-01` wage entry with `tariff_type_id = 'hk_retail'` and the new stored hourly wage for the same tariff level. No production jobs currently have that operational wage snapshot.
+Operational snapshot apply status on `2026-05-29`:
+
+| Metric | Value |
+| --- | ---: |
+| `2026-06-01` HK/Virke wage snapshots inserted | 19 |
+| Existing `2026-06-01` HK/Virke wage snapshots updated | 1 |
+| Explicit `hk_retail` source snapshots | 3 |
+| Legacy `NULL` tariff source snapshots | 16 |
+| Existing backpay marker rows after operational apply | 0 |
+
+After the operational apply, dry runs should report `0` operational wage snapshots to create or update and `20` existing operational wage snapshots skipped.
 
 ## Adjustment Row Review
 
@@ -114,13 +125,16 @@ HK/Virke 2026 backpay dry-run
 Operational tariff effective date: 2026-06-01
 Backpay period: 2026-02-01..2026-05-31
 Payout date: 2026-06-15
-Eligible jobs: 19
+Backpay eligibility date: <today>
+Operational eligibility date: 2026-06-01
+Eligible backpay jobs: 19
+Eligible operational jobs: 19
 Adjustment groups: 6
 Total gross backpay: 3166.05 kr
-Operational wage snapshots for 2026-06-01: 19
-Existing operational wage snapshots skipped: 0
+Operational wage snapshots for 2026-06-01: 0
+Existing operational wage snapshots skipped: 20
 Operational wage snapshots skipped without an increase: 0
-No rows inserted. Re-run with --apply after approval.
+No rows inserted. Re-run with --apply, --apply-backpay, or --apply-operational-wage-snapshots after approval.
 ```
 
 Before apply, verify no previous run exists:
@@ -144,13 +158,21 @@ The generated adjustment rows should use Norwegian user-facing fields:
 | `curated_link` | `https://www.virke.no/tariff-og-lonn/finn-tariffavtale/landsoverenskomsten-hk/#sistenyttavtale` |
 | `curated_link_title` | `Se tariffavtalen hos Virke` |
 
-Apply after approval:
+Apply operational wage snapshots only after approval:
 
 ```bash
-pnpm tariff:hk-virke:backpay -- --apply
+pnpm tariff:hk-virke:backpay -- --apply-operational-wage-snapshots
 ```
 
-The script refuses `--apply` before `2026-05-27`.
+The script refuses operational wage snapshot apply before `2026-05-27`.
+
+Apply backpay after the backpay period is complete:
+
+```bash
+pnpm tariff:hk-virke:backpay -- --apply-backpay
+```
+
+The script refuses backpay apply before `2026-06-01`.
 
 After apply, verify that 6 adjustment rows exist:
 
@@ -166,7 +188,7 @@ where deleted_at is null
 order by amount desc;
 ```
 
-Also verify that 19 operational wage snapshots were created for active HK/Virke jobs:
+Also verify that 20 operational wage snapshots exist for active HK/Virke jobs:
 
 ```sql
 select ws.id, ws.user_id, ws.job_id, j.name as job_name,
@@ -182,9 +204,9 @@ where ws.deleted_at is null
 order by ws.user_id, j.name;
 ```
 
-Expected rows: 19.
+Expected rows: 20.
 
-These wage snapshots copy supplements, tax settings, and break settings from each job's current snapshot. They only replace the stored hourly wage and normalize legacy HK/Virke snapshots from `tariff_type_id IS NULL` to `tariff_type_id = 'hk_retail'`.
+Inserted wage snapshots copy supplements, tax settings, and break settings from each job's current snapshot. Existing `2026-06-01` snapshots keep their existing supplements, tax settings, and break settings. The operational apply only sets the new stored hourly wage for the same tariff level and normalizes legacy HK/Virke snapshots from `tariff_type_id IS NULL` to `tariff_type_id = 'hk_retail'`.
 
 ## Recovery
 

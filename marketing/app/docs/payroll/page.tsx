@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 // Comprehensive payroll documentation based on PAYROLL_ENGINE_SPEC.md
 const payrollDocs = {
-  badge: 'PAYROLL ENGINE SPECIFICATION V3.2',
+  badge: 'PAYROLL ENGINE SPECIFICATION V3.3',
   title: 'How Tidex calculates your pay',
   subtitle:
     'A transparent, auditable reference for every payroll rule we apply. This specification enables re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results.',
@@ -62,7 +62,7 @@ const payrollDocs = {
           list: [
             'Shift data: shift_date (ISO), start_time (HH:MM), end_time (HH:MM), optional custom pause windows, optional custom supplements, job_id',
             'Wage snapshot: Hourly wage, supplement rules, tax settings, break deduction settings — scoped to a job',
-            'Job: Name, color, payroll_day, half_tax_month, monthly_goal — primary source for payroll configuration',
+            'Job: Name, color, immutable currency, payroll_day, half_tax_month, monthly_goal — primary source for payroll configuration',
             'Payroll adjustments: Manual payout-level additions or corrections with amount, payout date, job scope, and tax treatment',
             'User settings: Global preferences; payroll_day/half_tax_month/monthly_goal kept as legacy fallback during compatibility window',
           ],
@@ -83,8 +83,8 @@ const payrollDocs = {
             'Cross-midnight support: Shifts spanning midnight are calculated as continuous time',
             'Dual-date snapshot logic: Wage/supplements/breaks use shift date; tax uses payout date',
             'Precision: 3 decimal places for hours, 2 decimal places for currency',
-            'Job-scoped snapshots: Each shift uses wage snapshots belonging to the same job; legacy (job-less) snapshots serve as fallback',
-            'Job-scoped payroll day: payroll_day is resolved from the shift\'s job first, then falls back to user settings',
+            'Job-scoped snapshots: Each shift uses wage snapshots belonging to the same job; local rollout fallbacks may use default-job or legacy job-less snapshots when no scoped rows exist',
+            'Job-scoped payroll day: payroll_day is resolved from the shift\'s job first, then the default job, then user settings',
           ],
         },
         {
@@ -105,7 +105,7 @@ const payrollDocs = {
               ['Payroll adjustment', 'A manual payout-level bonus, retro pay, correction, or other adjustment included in payroll totals'],
               ['Job', 'An employer/workplace entity that groups shifts and wage snapshots; owns payroll_day, half_tax_month, monthly_goal'],
               ['Default job', 'Each user has exactly one active default job; shifts without an explicit job_id are assigned here'],
-              ['Legacy snapshot', 'A wage_snapshot with job_id = NULL; used as fallback when no job-specific snapshot exists'],
+              ['Legacy snapshot', 'A wage_snapshot with job_id = NULL; used only as rollout fallback, primarily for the default job'],
             ],
           },
         },
@@ -190,8 +190,9 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['user_id', 'uuid', '-', 'Foreign key to auth.users'],
               ['job_id', 'uuid', '-', 'Foreign key to jobs (NOT NULL; controls which job\'s wage history applies)'],
               ['from_date', 'date', '-', 'Effective date (NULL = baseline snapshot for this job)'],
-              ['hourly_wage', 'numeric', '-', 'Base hourly wage in NOK'],
+              ['hourly_wage', 'numeric', '-', 'Base hourly wage in the job currency'],
               ['wage_level', 'integer', '-', 'Tariff level (1-9) or NULL for custom'],
+              ['tariff_type_id', 'text', '-', 'Tariff type identifier such as hk_retail, or NULL for custom wage'],
               ['supplements', 'jsonb', '[]', 'Array of SupplementRule objects'],
               ['tax_enabled', 'boolean', 'false', 'Whether tax deduction is enabled'],
               ['tax_percentage', 'numeric', '0', 'Tax percentage (0-100)'],
@@ -201,7 +202,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['break_deduction_minutes', 'integer', '30', 'Break duration in minutes'],
             ],
           },
-          note: 'Snapshots are job-scoped: one baseline (from_date = NULL) allowed per (user, job) pair. Snapshot selection uses shift date for wage/supplements/breaks, but payout date for tax settings — both lookups are job-scoped with fallback to legacy (job_id = NULL) snapshots.',
+          note: 'Snapshots are job-scoped: one baseline (from_date = NULL) allowed per (user, job) pair. Snapshot selection uses shift date for wage/supplements/breaks, but payout date for tax settings. The live database has backfilled snapshots to non-null job_id; job-less snapshots remain supported only as rollout/local compatibility fallback.',
         },
         {
           heading: 'user_settings - Global user preferences',
@@ -214,9 +215,11 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['payroll_day', 'integer', '15 (legacy mirror)', 'Kept in sync with default job\'s payroll_day for backwards compatibility'],
               ['half_tax_month', 'integer', '-', 'Kept in sync with default job\'s half_tax_month for backwards compatibility'],
               ['monthly_goal', 'integer', '20000 (legacy mirror)', 'Kept in sync with default job\'s monthly_goal for backwards compatibility'],
+              ['monthly_goals_by_month', 'jsonb', '{}', 'Sparse YYYY-MM goal overrides used by the dashboard goal display'],
+              ['currency', 'text', 'kr', 'Legacy display currency fallback when job currency is unavailable'],
             ],
           },
-          note: 'DB triggers keep user_settings and the default job in sync bidirectionally. The jobs table is the authoritative source for payroll_day, half_tax_month, and monthly_goal in job-aware clients. Resolution order for payroll_day: job value → user_settings.payroll_day → 1.',
+          note: 'DB triggers keep user_settings and the default job in sync bidirectionally. The jobs table is the authoritative source for payroll_day, half_tax_month, monthly_goal, and currency in job-aware clients. Resolution order for payroll_day: shift job value → default job value → user_settings.payroll_day → 1.',
         },
         {
           heading: 'payroll_adjustments - Manual payout corrections',
@@ -237,7 +240,9 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['description', 'text', 'Short user-visible explanation'],
               ['note', 'text', 'Private user note'],
               ['curated_note', 'text', 'Optional Wagey-authored explanation'],
+              ['curated_description', 'text', 'Optional longer curated explanation shown after tapping the CTA'],
               ['curated_link', 'text', 'Optional source link for the curated explanation'],
+              ['curated_link_title', 'text', 'Optional user-visible title for the curated source link'],
               ['earned_from_date / earned_to_date', 'date', 'Optional earned-period range for context'],
               ['payout_date', 'date', 'Payroll date whose totals include this adjustment'],
               ['revision / deleted_at', 'bigint / timestamptz', 'Sync conflict and soft-delete metadata'],
@@ -254,7 +259,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
   days: number[];    // 1-7 (1=Monday, 7=Sunday)
   from: string;      // "HH:MM" (inclusive)
   to: string;        // "HH:MM" (inclusive)
-  rate?: number;     // Fixed NOK per hour (mutually exclusive with percent)
+  rate?: number;     // Fixed amount per hour in the job currency (mutually exclusive with percent)
   percent?: number;  // Percentage of base rate (mutually exclusive with rate)
 };
 
@@ -323,6 +328,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['user_id', 'uuid', 'FK to auth.users'],
               ['name', 'text', 'Display name (1-100 chars)'],
               ['color', 'text', 'Hex color (#RRGGBB) for visual differentiation in shift views'],
+              ['currency', 'text', 'Immutable display currency for this job; used for dashboard grouping and payout variants'],
               ['is_default', 'boolean', 'Exactly one active default per user; auto-assigned to shifts from legacy clients'],
               ['sort_order', 'smallint', 'Display ordering'],
               ['payroll_day', 'integer', 'Day of month (1-31) payroll is received for this job'],
@@ -360,10 +366,10 @@ computeShift(shift, settings, presetRules, snapshot, job?)
         },
         {
           heading: 'Job-scoped snapshot buckets',
-          paragraphs: ['All wage snapshots are loaded once and grouped into buckets by job_id. Snapshot resolution tries the shift\'s own job bucket first, then falls back to the legacy bucket (snapshots with no job_id):'],
+          paragraphs: ['All wage snapshots are loaded once and grouped into buckets by job_id. The active iOS engine first chooses the snapshot scope for a shift, then resolves the latest dated snapshot or baseline inside that scope. The shared Wagey TypeScript helper keeps a bucket resolver for server-side tools:'],
           code: {
             language: 'typescript',
-            content: `// Fallback chain for snapshot lookup
+            content: `// Shared TypeScript fallback chain for snapshot lookup
 const preferredKeys = [shift.job_id ?? '__legacy__', '__legacy__'];
 
 for (const key of preferredKeys) {
@@ -375,6 +381,7 @@ for (const key of preferredKeys) {
   if (baseline) return baseline;
 }`,
           },
+          note: 'The active Swift path scopes snapshots as: explicit job bucket when present, otherwise default-job bucket when present, otherwise legacy nil-job rows, otherwise all loaded snapshots. Once a non-empty scope is chosen, SnapshotService resolves latest dated snapshot <= target date, then that scope\'s baseline.',
         },
       ],
     },
@@ -409,8 +416,8 @@ type ShiftComputed = {
   id: string;
   durationHours: number;      // Raw duration before break
   paidHours: number;          // Duration after break deduction
-  basePay: number;            // NOK from base rate
-  supplementPay: number;      // NOK from supplements
+  basePay: number;            // Job currency from base rate
+  supplementPay: number;      // Job currency from supplements
   gross: number;              // basePay + supplementPay
   wagePeriods: WagePeriod[];  // After break deduction
   originalWagePeriods: WagePeriod[];  // Before break deduction
@@ -420,8 +427,8 @@ type ShiftComputed = {
 type WagePeriod = {
   fromMin: number;      // Minutes from midnight (shift-relative)
   toMin: number;        // Minutes from midnight (exclusive)
-  baseRate: number;     // NOK per hour
-  supplementRate: number;  // NOK per hour supplement
+  baseRate: number;     // Job currency per hour
+  supplementRate: number;  // Job currency per hour supplement
   totalRate: number;    // baseRate + supplementRate
 };`,
           },
@@ -514,6 +521,7 @@ for (const bucket of buckets.values()) {
   const shiftJobId = shift.job_id ?? defaultJobId;
   const payrollDay =
     jobsById.get(shiftJobId)?.payroll_day
+    ?? defaultJob?.payroll_day
     ?? userSettings?.payroll_day
     ?? 1;
 
@@ -656,10 +664,11 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
         },
         {
           heading: 'Job-scoped snapshot selection algorithm',
-          paragraphs: ['Snapshots are grouped into buckets by job_id. The selection algorithm tries the shift\'s own job bucket first, then falls back to the legacy bucket (job_id = NULL):'],
+          paragraphs: ['The live iOS app scopes snapshots before date selection. The shared Wagey TypeScript path groups snapshots into buckets by job_id and uses an explicit job/legacy resolver for server-side tools. Both paths keep wage and tax lookup dates separate.'],
           code: {
             language: 'typescript',
-            content: `const resolveSnapshotForDate = (
+            content: `// Shared Wagey TypeScript resolver
+const resolveSnapshotForDate = (
   buckets: Map<string, SnapshotBucket>,
   snapshots: WageSnapshot[],
   date: string,
@@ -683,14 +692,14 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
   return snapshots.find(s => s.from_date === null) ?? null;
 };`,
           },
+          note: 'Active iOS scope selection differs slightly for local rollout compatibility: if the shift job has any scoped snapshots, only that scope is searched. If it has none, the default-job scope is tried before legacy nil-job snapshots. Legacy nil-job rows in the local repository are included only for the selected default job.',
         },
         {
           heading: 'Selection rules',
           list: [
-            'Job-specific bucket: find latest dated snapshot where from_date <= targetDate',
-            'If none, use job-specific baseline snapshot (from_date = NULL)',
-            'If none, fall back to legacy bucket (same search on job_id = NULL snapshots)',
-            'If still none, return null (calculation uses defaults)',
+            'Within a selected scope, find the latest dated snapshot where from_date <= targetDate',
+            'If none, use that scope\'s baseline snapshot (from_date = NULL)',
+            'If no usable scope exists, use rollout fallback snapshots; if still none, return null and calculation uses defaults',
             'Inclusive from_date: A snapshot with from_date = 2025-02-01 applies to target dates >= 2025-02-01',
           ],
         },
@@ -885,7 +894,7 @@ const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7 (Mon-Sun)`,
           code: {
             language: 'typescript',
             content: `function resolveSupplementRate(rule: SupplementRule, baseRate: number): number {
-  // Fixed rate (NOK per hour)
+  // Fixed amount per hour in the job currency
   if (rule.rate != null && Number.isFinite(rule.rate) && rule.rate >= 0) {
     return rule.rate;
   }
@@ -1261,59 +1270,66 @@ let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
           heading: 'Monthly totals (TotalCard)',
           code: {
             language: 'typescript',
-            content: `// Exclude higher-earning overlapping shifts first
-const excludedIds = buildExcludedShiftIds(shifts);
-const included = shifts.filter(s => !excludedIds.has(s.id));
+            content: `const primaryMonthShifts = shiftsMatchingPrimaryJobCurrencyBucket(monthShifts);
+
+// Exclude higher-earning overlapping shifts inside the primary bucket
+const excludedIds = buildExcludedShiftIds(primaryMonthShifts);
+const included = primaryMonthShifts.filter(s => !excludedIds.has(s.id));
 
 const shiftTotals = included.reduce((acc, shift) => ({
   totalHours: acc.totalHours + shift.computed.paidHours,
   totalEarnings: acc.totalEarnings + shift.computed.gross,
 }), { totalHours: 0, totalEarnings: 0 });`,
           },
-          note: 'Monthly shift totals remain shift-only. Payout cards add payroll adjustments separately so hours and average-hourly metrics are not distorted by non-shift money.',
+          note: 'The active iOS dashboard computes totals for the primary job/currency bucket selected by JobCurrencyAggregateResolver. Monthly shift totals remain shift-only. Payout cards add payroll adjustments separately so hours and average-hourly metrics are not distorted by non-shift money.',
         },
         {
-          heading: 'Next payroll (NextPayrollCard)',
-          paragraphs: ['Which shifts are included: Earnings month is the month before the payroll month currently in view.'],
+          heading: 'Payroll card (active iOS)',
+          paragraphs: ['Which shifts are included: earnings month is the month before the payroll month currently in view. Each job can have its own payroll day and currency, so the card is built from job-level payout variants.'],
           code: {
             language: 'typescript',
-            content: `const payoutDate = calculatePayoutDate(earningsYear, earningsMonth, payrollDay);
-const payoutTax = getTaxSettingsForPayoutDate(wageSnapshots, payoutDate);
+            content: `for (const job of jobsSortedByNextPayoutDate) {
+  const payoutDate = adjustPayrollDate(job.payroll_day, visiblePayoutMonth, visiblePayoutYear);
+  const jobShifts = previousMonthShifts.filter(s => effectiveJobId(s) === job.id);
+  const shiftTotals = summarizeShiftTotals(jobShifts, halfTaxMonth, earningsMonth);
 
-const grossAmount = summarizeShiftTotals({ shifts: earningsMonthShifts }).gross;
-const taxAmount = payoutTax?.enabled
-  ? grossAmount * (payoutTax.percentage / 100)
-  : 0;
-const netAmount = grossAmount - taxAmount;
+  const jobAdjustments = payoutAdjustments.filter(a => effectiveJobId(a) === job.id);
+  const adjustmentTotals = payrollAdjustmentTotals(
+    jobAdjustments,
+    adjustment => taxSettingsForAdjustment(adjustment),
+    halfTaxMonth,
+    visiblePayoutMonth
+  );
 
-const adjustmentTotals = payrollAdjustmentTotals(
-  payoutAdjustments,
-  () => payoutTax,
-  halfTaxMonth,
-  payoutMonth
-);
-
-const payoutGross = grossAmount + adjustmentTotals.gross;
-const payoutNet = netAmount + adjustmentTotals.net;`,
+  variants.push({
+    job,
+    payoutDate,
+    gross: shiftTotals.gross + adjustmentTotals.gross,
+    net: shiftTotals.net + adjustmentTotals.net,
+    currency: job.currency,
+  });
+}`,
           },
+          note: 'Only payable variants with non-zero gross are shown. If several jobs pay on the same next adjusted payout date, they are combined into one card with per-job breakdown rows; otherwise the next payable job variant is shown.',
         },
         {
           heading: 'Projected total',
           paragraphs: ['Total earnings including future planned shifts:'],
           code: {
             language: 'typescript',
-            content: `const totals = summarizeShiftTotals({
-  shifts: monthShifts,
+            content: `const primaryMonthShifts = shiftsMatchingPrimaryJobCurrencyBucket(monthShifts);
+const totals = summarizeShiftTotals({
+  shifts: primaryMonthShifts,
   now: new Date(),
-  month: payoutMonth,
-  halfTaxMonth,
-  payoutTaxOverride,
+  earningsMonth,
+  halfTaxMonth
 });
 
 const earnedToDate = taxEnabled ? totals.completedNet : totals.completedGross;
 const projectedTotal = taxEnabled ? totals.net : totals.gross;
-const hasFutureShifts = projectedTotal !== earnedToDate;`,
+const hasFutureShifts = plannedShiftCount > 0;`,
           },
+          note: 'Completed totals use Date.hasShiftEnded, so a shift on today only counts as completed after its end time. Planned count tracks future shifts in the primary job/currency bucket.',
         },
         {
           heading: 'Conflict exclusion (overlapping shifts)',

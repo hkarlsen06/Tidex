@@ -5,6 +5,27 @@ import XCTest
 @testable import Tidex
 
 final class FriendsThreadExyteChatTests: XCTestCase {
+  func testFriendsChatLinkifierDetectsTidexDeepLinks() {
+    let links = FriendsChatMessageLinkifier.links(in: "Open tidex://settings/pay when ready")
+
+    XCTAssertEqual(links.map(\.text), ["tidex://settings/pay"])
+    XCTAssertEqual(links.map(\.url.absoluteString), ["tidex://settings/pay"])
+  }
+
+  func testFriendsChatLinkifierDetectsBareWebDomains() {
+    let links = FriendsChatMessageLinkifier.links(in: "See www.tidex.no for details")
+
+    XCTAssertEqual(links.map(\.text), ["www.tidex.no"])
+    XCTAssertEqual(links.map(\.url.absoluteString), ["https://www.tidex.no"])
+  }
+
+  func testFriendsChatLinkifierTrimsTrailingSentencePunctuation() {
+    let links = FriendsChatMessageLinkifier.links(in: "Pay setup: tidex://settings/pay.")
+
+    XCTAssertEqual(links.map(\.text), ["tidex://settings/pay"])
+    XCTAssertEqual(links.map(\.url.absoluteString), ["tidex://settings/pay"])
+  }
+
   func testCurrentUserMenuItemsIncludeEditAndDeleteForTextMessage() {
     let message = Message(
       id: "message-1",
