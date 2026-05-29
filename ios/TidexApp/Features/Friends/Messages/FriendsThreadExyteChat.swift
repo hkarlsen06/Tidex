@@ -1255,6 +1255,190 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
   }
 }
 
+struct FriendsThreadTimestampRevealGestureBridge: UIViewRepresentable {
+  let isEnabled: Bool
+  let onChanged: (FriendsChatReplyDragValue) -> Void
+  let onEnded: (FriendsChatReplyDragValue) -> Void
+
+  func makeCoordinator() -> Coordinator {
+    Coordinator(onChanged: onChanged, onEnded: onEnded)
+  }
+
+  func makeUIView(context: Context) -> UIView {
+    let view = UIView(frame: .zero)
+    view.isUserInteractionEnabled = false
+    return view
+  }
+
+  func updateUIView(_ uiView: UIView, context: Context) {
+    context.coordinator.isEnabled = isEnabled
+    context.coordinator.onChanged = onChanged
+    context.coordinator.onEnded = onEnded
+
+    DispatchQueue.main.async {
+      context.coordinator.configure(from: uiView)
+    }
+  }
+
+  static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+    coordinator.restore()
+  }
+
+  final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+    var isEnabled = true
+    var onChanged: (FriendsChatReplyDragValue) -> Void
+    var onEnded: (FriendsChatReplyDragValue) -> Void
+    private weak var tableView: UITableView?
+    private var recognizer: UIPanGestureRecognizer?
+    private var hasPassedMinimumDistance = false
+
+    init(
+      onChanged: @escaping (FriendsChatReplyDragValue) -> Void,
+      onEnded: @escaping (FriendsChatReplyDragValue) -> Void
+    ) {
+      self.onChanged = onChanged
+      self.onEnded = onEnded
+    }
+
+    func configure(from view: UIView) {
+      guard isEnabled else {
+        restore()
+        return
+      }
+      guard let tableView = findChatTableView(from: view) else { return }
+      guard tableView !== self.tableView else { return }
+
+      restore()
+
+      let recognizer = FriendsChatDirectionalPanGestureRecognizer(
+        target: self,
+        action: #selector(handlePan(_:))
+      )
+      recognizer.targetKind = .timestampRevealGutter
+      recognizer.direction = .left
+      recognizer.cancelsTouchesInView = false
+      recognizer.delaysTouchesBegan = false
+      recognizer.delaysTouchesEnded = false
+      recognizer.delegate = self
+      tableView.addGestureRecognizer(recognizer)
+
+      self.tableView = tableView
+      self.recognizer = recognizer
+    }
+
+    func restore() {
+      if let recognizer, let tableView {
+        tableView.removeGestureRecognizer(recognizer)
+      }
+      recognizer = nil
+      tableView = nil
+      hasPassedMinimumDistance = false
+    }
+
+    @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
+      guard let tableView else { return }
+      let value = dragValue(from: recognizer, in: tableView)
+
+      switch recognizer.state {
+      case .began:
+        hasPassedMinimumDistance = false
+        handleChangedIfReady(value)
+      case .changed:
+        handleChangedIfReady(value)
+      case .ended:
+        handleChangedIfReady(value)
+        if hasPassedMinimumDistance {
+          onEnded(value)
+        }
+        hasPassedMinimumDistance = false
+      case .cancelled, .failed:
+        if hasPassedMinimumDistance {
+          onEnded(value)
+        }
+        hasPassedMinimumDistance = false
+      case .possible:
+        break
+      @unknown default:
+        if hasPassedMinimumDistance {
+          onEnded(value)
+        }
+        hasPassedMinimumDistance = false
+      }
+    }
+
+    private func handleChangedIfReady(_ value: FriendsChatReplyDragValue) {
+      if !hasPassedMinimumDistance {
+        guard
+          FriendsChatPanGestureResolver.hasPassedMinimumDistance(
+            translation: value.translation,
+            minimumDistance: FriendsChatTimestampRevealResolver.minimumDistance
+          )
+        else {
+          return
+        }
+        hasPassedMinimumDistance = true
+      }
+
+      onChanged(value)
+    }
+
+    private func dragValue(
+      from recognizer: UIPanGestureRecognizer,
+      in tableView: UITableView
+    ) -> FriendsChatReplyDragValue {
+      let coordinateView = tableView.window ?? tableView
+      let translation = recognizer.translation(in: coordinateView)
+      let velocity = recognizer.velocity(in: coordinateView)
+      let location = recognizer.location(in: coordinateView)
+      let startLocation = CGPoint(
+        x: location.x - translation.x,
+        y: location.y - translation.y
+      )
+
+      return FriendsChatReplyDragValue(
+        location: location,
+        startLocation: startLocation,
+        translation: CGSize(width: translation.x, height: translation.y),
+        velocity: CGSize(width: velocity.x, height: velocity.y)
+      )
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+      guard isEnabled else { return false }
+      guard let recognizer = gestureRecognizer as? UIPanGestureRecognizer, let tableView else {
+        return false
+      }
+
+      let location = recognizer.location(in: tableView)
+      guard tableView.bounds.contains(location) else { return false }
+      guard tableView.indexPathForRow(at: location) == nil else { return false }
+
+      let velocity = recognizer.velocity(in: tableView.window ?? tableView)
+      return FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
+        velocity: CGSize(width: velocity.x, height: velocity.y),
+        direction: .left
+      )
+    }
+
+    func gestureRecognizer(
+      _ gestureRecognizer: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+      true
+    }
+
+    private func findChatTableView(from view: UIView) -> UITableView? {
+      let searchRoot = view.window ?? view.nearestRootView()
+      let tableViews = searchRoot.descendantViews(ofType: UITableView.self)
+
+      return tableViews.first(where: { candidate in
+        guard let delegate = candidate.delegate else { return false }
+        return String(reflecting: type(of: delegate)).contains("UIList")
+      }) ?? tableViews.first
+    }
+  }
+}
+
 extension UIView {
   fileprivate func closestNavigationController() -> UINavigationController? {
     sequence(first: self as UIResponder?, next: { $0?.next })

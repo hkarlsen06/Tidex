@@ -5,6 +5,7 @@ import UIKit
 
 struct FriendsThreadView: View {
   private static let bottomMessageComposerClearance: CGFloat = 14
+  private static let timestampRevealResetAnimationDuration: TimeInterval = 0.18
 
   @MainActor
   private final class ChatListRuntime: ObservableObject {
@@ -609,6 +610,12 @@ struct FriendsThreadView: View {
         FriendsThreadNavigationGestureBridge {
           dismiss()
         }
+
+        FriendsThreadTimestampRevealGestureBridge(
+          isEnabled: !viewModel.messages.isEmpty,
+          onChanged: handleBackgroundTimestampRevealChanged,
+          onEnded: handleBackgroundTimestampRevealEnded
+        )
       }
       .allowsHitTesting(false)
     }
@@ -740,6 +747,28 @@ struct FriendsThreadView: View {
 
   private func canReply(to message: FriendMessage) -> Bool {
     message.messageType == .user && message.deletedAt == nil
+  }
+
+  private func handleBackgroundTimestampRevealChanged(_ value: FriendsChatReplyDragValue) {
+    guard
+      let newOffset = FriendsChatTimestampRevealResolver.clampedRevealOffset(
+        horizontal: value.translation.width,
+        vertical: value.translation.height
+      )
+    else {
+      return
+    }
+
+    timestampRevealOffset = newOffset
+  }
+
+  private func handleBackgroundTimestampRevealEnded(_ value: FriendsChatReplyDragValue) {
+    handleBackgroundTimestampRevealChanged(value)
+
+    guard timestampRevealOffset != 0 else { return }
+    withAnimation(.easeOut(duration: Self.timestampRevealResetAnimationDuration)) {
+      timestampRevealOffset = 0
+    }
   }
 
   @ViewBuilder
