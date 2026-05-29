@@ -308,19 +308,11 @@ struct WageSnapshotEditorSheet: View {
         tariffTypeName = types.first { $0.id == effectiveTariffTypeId }?.display_name
       }
 
-      // Determine the date to fetch version for
-      if mode == .edit, let snapshot = snapshot, let fromDateString = snapshot.from_date {
-        // Editing: use snapshot's from_date for historical version
-        tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
-          tariffType: effectiveTariffTypeId,
-          date: fromDateString
-        )
-      } else {
-        // Creating new: use latest version
-        tariffVersion = try await TariffVersionService.shared.getLatestTariffVersion(
-          tariffType: effectiveTariffTypeId
-        )
-      }
+      let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
+      tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
+        tariffType: effectiveTariffTypeId,
+        date: isoDate
+      )
 
       logger.info("Loaded tariff version: \(tariffVersion?.effective_date ?? "none")")
     } catch {
@@ -451,9 +443,10 @@ struct WageSnapshotEditorSheet: View {
       // Reset wage level when changing tariff type
       wageLevel = 1
 
-      // Load latest version for the new type
-      tariffVersion = try await TariffVersionService.shared.getLatestTariffVersion(
-        tariffType: typeId
+      let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
+      tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
+        tariffType: typeId,
+        date: isoDate
       )
       logger.info(
         "Loaded tariff version for type \(typeId): \(tariffVersion?.effective_date ?? "none")")
@@ -755,7 +748,8 @@ struct WageSnapshotEditorSheet: View {
 
     // Resolve tariff type ID: only set if using preset
     let resolvedTariffTypeId = effectiveUsePreset ? tariffTypeId : nil
-    let resolvedBreakMethod: BreakMethod = breakEnabled && breakMethod == .none ? .proportional : breakMethod
+    let resolvedBreakMethod: BreakMethod =
+      breakEnabled && breakMethod == .none ? .proportional : breakMethod
 
     let input = WageSnapshotEditorInput(
       fromDate: isBaseline ? nil : fromDate,

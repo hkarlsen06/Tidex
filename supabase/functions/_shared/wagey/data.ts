@@ -104,6 +104,7 @@ type DbRecurringShift = {
   exclusions: string[];
   date_specific_pause_windows?: Record<string, CustomPauseWindows> | null;
   date_specific_supplements?: Record<string, CustomSupplementsData> | null;
+  date_specific_notes?: Record<string, string> | null;
   created_at?: string;
   deleted_at?: string | null;
 };
@@ -203,7 +204,7 @@ const COMPUTED_SHIFT_SELECT =
 const COMPUTED_EVENT_SELECT =
   "id, user_id, start_date, end_date, is_all_day, start_time, end_time, note, notification_minutes_array, notification_anchor_time, created_at, updated_at, deleted_at";
 const COMPUTED_RECURRING_SELECT =
-  "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_pause_windows, date_specific_supplements, created_at, deleted_at";
+  "id, user_id, job_id, start_time, end_time, repeat_interval_weeks, selected_days, end_condition, exclusions, date_specific_pause_windows, date_specific_supplements, date_specific_notes, created_at, deleted_at";
 const FAR_FUTURE_DATE = "2100-12-31";
 
 function buildCacheKey(
@@ -689,6 +690,27 @@ async function getRawRecurringShifts(
   return (data ?? []) as DbRecurringShift[];
 }
 
+async function getDefaultJobIdForUser(
+  ctx: WageyRequestContext,
+  userId: string,
+): Promise<string | null> {
+  return await getCachedValue(
+    ctx,
+    buildCacheKey("default_job_id", { userId }),
+    async () => {
+      const { data, error } = await ctx.supabase
+        .from("jobs")
+        .select(COMPUTED_JOB_SELECT)
+        .eq("user_id", userId)
+        .is("deleted_at", null)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      if (error) throw new Error(error.message);
+      return resolveDefaultJob((data ?? []) as Job[])?.id ?? null;
+    },
+  );
+}
+
 async function loadShiftResources(
   ctx: WageyRequestContext,
   userId: string,
@@ -1161,22 +1183,37 @@ export async function createShifts(
   skippedDates: string[];
 }> {
   const sortedDates = [...input.dates].sort();
-  const existingShifts = sortedDates.length === 0 ? [] : await getRawUserShifts(
-    ctx,
-    ctx.user.id,
-    {
-      startDate: sortedDates[0],
-      endDate: sortedDates[sortedDates.length - 1],
-    },
-  );
-  const requestedJobId = input.jobId ?? null;
-  const existingByDateAndJob = new Map<string, ShiftIdentityRow[]>();
+  const [existingShifts, recurringShifts, defaultJobId] =
+    sortedDates.length === 0 ? [[], [], null] : await Promise.all([
+      getRawUserShifts(ctx, ctx.user.id, {
+        startDate: sortedDates[0],
+        endDate: sortedDates[sortedDates.length - 1],
+      }),
+      getRawRecurringShifts(ctx.supabase, ctx.user.id),
+      getDefaultJobIdForUser(ctx, ctx.user.id),
+    ]);
+  const requestedJobId = input.jobId ?? defaultJobId ?? null;
+  const existingByDateAndJob = new Map<string, ExistingShiftMatch[]>();
 
   for (const shift of existingShifts) {
-    const key = `${shift.shift_date}|${shift.job_id ?? ""}`;
+    const key = `${shift.shift_date}|${shift.job_id ?? defaultJobId ?? ""}`;
     existingByDateAndJob.set(key, [
       ...(existingByDateAndJob.get(key) ?? []),
-      shift,
+      { kind: "stored", shift },
+    ]);
+  }
+  for (
+    const recurring of projectRecurringShiftMatches(
+      recurringShifts,
+      sortedDates[0],
+      sortedDates[sortedDates.length - 1],
+      defaultJobId,
+    )
+  ) {
+    const key = `${recurring.shift.shift_date}|${recurring.shift.job_id ?? ""}`;
+    existingByDateAndJob.set(key, [
+      ...(existingByDateAndJob.get(key) ?? []),
+      recurring,
     ]);
   }
 
@@ -1190,16 +1227,32 @@ export async function createShifts(
     const key = `${shift_date}|${requestedJobId ?? ""}`;
     const existingMatches = existingByDateAndJob.get(key) ?? [];
 
+    if (existingMatches.length > 0) {
+      const exactMatch = existingMatches.find((match) =>
+        hasSameShiftTimes(match.shift, input.start, input.end)
+      );
+      if (exactMatch) {
+        shiftIds.push(exactMatch.shift.id);
+        dates.push(exactMatch.shift.shift_date);
+        skippedDates.push(exactMatch.shift.shift_date);
+        continue;
+      }
+    }
+
     if (existingMatches.length === 1) {
-      const existing = existingMatches[0];
+      const existing = existingMatches[0].shift;
       shiftIds.push(existing.id);
       dates.push(existing.shift_date);
 
-      if (
-        existing.start_time.slice(0, 5) === input.start &&
-        existing.end_time.slice(0, 5) === input.end
-      ) {
-        skippedDates.push(existing.shift_date);
+      if (existingMatches[0].kind === "recurring") {
+        const insertedShift = await convertRecurringShiftToStandalone(ctx, {
+          recurringId: existingMatches[0].recurringId,
+          shiftDate: existing.shift_date,
+          startTime: input.start,
+          endTime: input.end,
+        });
+        shiftIds[shiftIds.length - 1] = insertedShift.id;
+        updatedDates.push(existing.shift_date);
         continue;
       }
 
@@ -1235,11 +1288,17 @@ export async function createShifts(
       throw new Error(error?.message ?? "Failed to create shift");
     }
 
-    const insertedShift = data as ShiftIdentityRow;
+    const insertedShift = {
+      ...(data as ShiftIdentityRow),
+      job_id: (data as ShiftIdentityRow).job_id ?? requestedJobId,
+    };
     shiftIds.push(insertedShift.id);
     dates.push(insertedShift.shift_date);
     insertedDates.push(insertedShift.shift_date);
-    existingByDateAndJob.set(key, [...existingMatches, insertedShift]);
+    existingByDateAndJob.set(key, [
+      ...existingMatches,
+      { kind: "stored", shift: insertedShift },
+    ]);
   }
 
   return {
@@ -1252,6 +1311,87 @@ export async function createShifts(
     updatedDates,
     skippedDates,
   };
+}
+
+type ExistingShiftMatch =
+  | { kind: "stored"; shift: ShiftIdentityRow }
+  | { kind: "recurring"; recurringId: string; shift: ShiftIdentityRow };
+
+function hasSameShiftTimes(
+  shift: Pick<ShiftIdentityRow, "start_time" | "end_time">,
+  start: string,
+  end: string,
+): boolean {
+  return shift.start_time.slice(0, 5) === start &&
+    shift.end_time.slice(0, 5) === end;
+}
+
+function projectRecurringShiftMatches(
+  recurringShifts: DbRecurringShift[],
+  startDate: string,
+  endDate: string,
+  defaultJobId: string | null,
+): ExistingShiftMatch[] {
+  const start = parseDateAsUTC(startDate);
+  const end = parseDateAsUTC(endDate);
+  const matches: ExistingShiftMatch[] = [];
+
+  let currentYear = start.getUTCFullYear();
+  let currentMonth = start.getUTCMonth() + 1;
+  while (
+    currentYear < end.getUTCFullYear() ||
+    (currentYear === end.getUTCFullYear() &&
+      currentMonth <= end.getUTCMonth() + 1)
+  ) {
+    for (const recurring of recurringShifts) {
+      const generated = generateVirtualShiftsForMonth(
+        { year: currentYear, month: currentMonth },
+        {
+          start_time: cleanTime(recurring.start_time),
+          end_time: cleanTime(recurring.end_time),
+          repeat_interval_weeks: recurring.repeat_interval_weeks as
+            | 0
+            | 1
+            | 2
+            | 3
+            | 4
+            | 5
+            | 6
+            | 7
+            | 8,
+          selected_days: recurring.selected_days,
+          end_condition: recurring.end_condition as never,
+          exclusions: recurring.exclusions || [],
+        },
+      );
+
+      for (const generatedShift of generated) {
+        if (generatedShift.date < startDate || generatedShift.date > endDate) {
+          continue;
+        }
+
+        matches.push({
+          kind: "recurring",
+          recurringId: recurring.id,
+          shift: {
+            id: `virtual-${recurring.id}-${generatedShift.date}`,
+            shift_date: generatedShift.date,
+            start_time: cleanTime(recurring.start_time),
+            end_time: cleanTime(recurring.end_time),
+            job_id: recurring.job_id ?? defaultJobId,
+          },
+        });
+      }
+    }
+
+    currentMonth += 1;
+    if (currentMonth > 12) {
+      currentMonth = 1;
+      currentYear += 1;
+    }
+  }
+
+  return matches;
 }
 
 export async function updateShift(
@@ -1840,10 +1980,12 @@ export async function convertRecurringShiftToStandalone(
     startTime: string;
     endTime: string;
   },
-): Promise<void> {
+): Promise<ShiftIdentityRow> {
   const { data: recurring, error } = await ctx.supabase
     .from("recurring_shifts")
-    .select("exclusions, job_id")
+    .select(
+      "exclusions, job_id, date_specific_pause_windows, date_specific_supplements, date_specific_notes",
+    )
     .eq("id", input.recurringId)
     .eq("user_id", ctx.user.id)
     .is("deleted_at", null)
@@ -1855,23 +1997,40 @@ export async function convertRecurringShiftToStandalone(
   const exclusions = Array.from(
     new Set([...(recurring.exclusions ?? []), input.shiftDate]),
   ).sort();
-  const [{ error: updateError }, { error: insertError }] = await Promise.all([
-    ctx.supabase
-      .from("recurring_shifts")
-      .update({ exclusions })
-      .eq("id", input.recurringId)
-      .eq("user_id", ctx.user.id)
-      .is("deleted_at", null),
-    ctx.supabase.from("user_shifts").insert({
-      user_id: ctx.user.id,
-      ...(recurring.job_id ? { job_id: recurring.job_id } : {}),
-      shift_date: input.shiftDate,
-      start_time: input.startTime,
-      end_time: input.endTime,
-    }),
-  ]);
+  const customPauseWindows = normalizeCustomPauseWindows(
+    recurring.date_specific_pause_windows?.[input.shiftDate] ?? null,
+  );
+  const customSupplements =
+    recurring.date_specific_supplements?.[input.shiftDate] ?? null;
+  const note = recurring.date_specific_notes?.[input.shiftDate] ?? null;
+
+  const insertData: Record<string, unknown> = {
+    user_id: ctx.user.id,
+    ...(recurring.job_id ? { job_id: recurring.job_id } : {}),
+    shift_date: input.shiftDate,
+    start_time: input.startTime,
+    end_time: input.endTime,
+    ...(customPauseWindows ? { custom_pause_windows: customPauseWindows } : {}),
+    ...(customSupplements ? { custom_supplements: customSupplements } : {}),
+    ...(note ? { note } : {}),
+  };
+
+  const [{ error: updateError }, { data: insertedShift, error: insertError }] =
+    await Promise.all([
+      ctx.supabase
+        .from("recurring_shifts")
+        .update({ exclusions })
+        .eq("id", input.recurringId)
+        .eq("user_id", ctx.user.id)
+        .is("deleted_at", null),
+      ctx.supabase.from("user_shifts").insert(insertData).select(
+        "id, shift_date, start_time, end_time, job_id",
+      ).single(),
+    ]);
   if (updateError) throw new Error(updateError.message);
   if (insertError) throw new Error(insertError.message);
+  if (!insertedShift) throw new Error("Failed to create standalone shift");
+  return insertedShift as ShiftIdentityRow;
 }
 
 export async function moveRecurringShift(

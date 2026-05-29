@@ -80,10 +80,12 @@ type WageSnapshotInsert = {
 };
 
 type OperationalWageUpdate = {
+  action: "insert" | "update";
   jobId: string;
   userId: string;
   jobName: string;
   sourceSnapshotId: string;
+  existingSnapshotId: string | null;
   wageLevel: number;
   oldHourlyWage: number;
   newHourlyWage: number;
@@ -131,8 +133,14 @@ type RunConfig = {
   throughDate: string;
 };
 
+type RunMode = {
+  applyBackpay: boolean;
+  applyOperationalWageSnapshots: boolean;
+};
+
 const BACKPAY_MARKER = "hk_virke_2026_backpay";
-const APPROVAL_NOT_BEFORE = "2026-05-27";
+const OPERATIONAL_WAGE_SNAPSHOT_NOT_BEFORE = "2026-05-27";
+const BACKPAY_NOT_BEFORE = "2026-06-01";
 const JUNE_OPERATIONAL_TARIFF_DATE = "2026-06-01";
 const HK_VIRKE_SOURCE_URL =
   "https://www.virke.no/tariff-og-lonn/finn-tariffavtale/landsoverenskomsten-hk/#sistenyttavtale";
@@ -183,22 +191,34 @@ function usage(exitCode = 1): never {
   console.error(`Usage:
   pnpm tariff:hk-virke:backpay
   pnpm tariff:hk-virke:backpay -- --apply
+  pnpm tariff:hk-virke:backpay -- --apply-backpay
+  pnpm tariff:hk-virke:backpay -- --apply-operational-wage-snapshots
 
 This one-off script keeps dates, filters, and tariff values in RUN_CONFIG.
-Without --apply it only performs a dry run.
+Without an apply flag it only performs a dry run.
 `);
   Deno.exit(exitCode);
 }
 
-function parseRunMode(args: string[]): { apply: boolean } {
-  let apply = false;
+function parseRunMode(args: string[]): RunMode {
+  const mode: RunMode = {
+    applyBackpay: false,
+    applyOperationalWageSnapshots: false,
+  };
 
   for (const arg of args) {
     switch (arg) {
       case "--":
         break;
       case "--apply":
-        apply = true;
+        mode.applyBackpay = true;
+        mode.applyOperationalWageSnapshots = true;
+        break;
+      case "--apply-backpay":
+        mode.applyBackpay = true;
+        break;
+      case "--apply-operational-wage-snapshots":
+        mode.applyOperationalWageSnapshots = true;
         break;
       case "--help":
       case "-h":
@@ -210,10 +230,21 @@ function parseRunMode(args: string[]): { apply: boolean } {
     }
   }
 
-  return { apply };
+  return mode;
 }
 
-function validateRunConfig(config: RunConfig, apply: boolean): void {
+function shouldApply(mode: RunMode): boolean {
+  return mode.applyBackpay || mode.applyOperationalWageSnapshots;
+}
+
+function modeLabel(mode: RunMode): string {
+  if (mode.applyBackpay && mode.applyOperationalWageSnapshots) return "apply";
+  if (mode.applyBackpay) return "apply-backpay";
+  if (mode.applyOperationalWageSnapshots) return "apply-operational-wage-snapshots";
+  return "dry-run";
+}
+
+function validateRunConfig(config: RunConfig, mode: RunMode): void {
   if (
     !isISODate(config.payoutDate) || !isISODate(config.fromDate) ||
     !isISODate(config.throughDate)
@@ -225,11 +256,19 @@ function validateRunConfig(config: RunConfig, apply: boolean): void {
     throw new Error("RUN_CONFIG.throughDate must be on or after RUN_CONFIG.fromDate.");
   }
 
-  if (apply) {
-    const today = localISODate();
-    if (today < APPROVAL_NOT_BEFORE) {
+  const today = localISODate();
+  if (mode.applyOperationalWageSnapshots) {
+    if (today < OPERATIONAL_WAGE_SNAPSHOT_NOT_BEFORE) {
       throw new Error(
-        `Refusing --apply before ${APPROVAL_NOT_BEFORE}. Today is ${today}.`,
+        `Refusing operational wage snapshot apply before ${OPERATIONAL_WAGE_SNAPSHOT_NOT_BEFORE}. Today is ${today}.`,
+      );
+    }
+  }
+
+  if (mode.applyBackpay) {
+    if (today < BACKPAY_NOT_BEFORE) {
+      throw new Error(
+        `Refusing backpay apply before ${BACKPAY_NOT_BEFORE}. Today is ${today}.`,
       );
     }
   }
@@ -774,12 +813,11 @@ function buildOperationalWageUpdates(
       defaultJobByUserId.get(job.user_id) ?? null,
     );
 
-    if (jobSnapshots.some((snapshot) => snapshot.from_date === JUNE_OPERATIONAL_TARIFF_DATE)) {
-      skippedExisting += 1;
-      continue;
-    }
-
-    const currentSnapshot = snapshotForDate(eligibilityDate, jobSnapshots);
+    const existingOperationalSnapshot = jobSnapshots.find((snapshot) =>
+      snapshot.from_date === JUNE_OPERATIONAL_TARIFF_DATE
+    ) ?? null;
+    const currentSnapshot = existingOperationalSnapshot ??
+      snapshotForDate(eligibilityDate, jobSnapshots);
     if (!currentSnapshot || !isHkVirkeTariffSnapshot(currentSnapshot, false)) continue;
 
     const wageLevel = currentSnapshot.wage_level;
@@ -788,15 +826,21 @@ function buildOperationalWageUpdates(
     const targetRate = targetRateFor(wageLevel, JUNE_OPERATIONAL_TARIFF_DATE);
     if (targetRate === null) continue;
     if (targetRate <= currentSnapshot.hourly_wage) {
-      skippedNotIncreased += 1;
+      if (existingOperationalSnapshot) {
+        skippedExisting += 1;
+      } else {
+        skippedNotIncreased += 1;
+      }
       continue;
     }
 
     updates.push({
+      action: existingOperationalSnapshot ? "update" : "insert",
       jobId: job.id,
       userId: job.user_id,
       jobName: job.name,
       sourceSnapshotId: currentSnapshot.id,
+      existingSnapshotId: existingOperationalSnapshot?.id ?? null,
       wageLevel,
       oldHourlyWage: currentSnapshot.hourly_wage,
       newHourlyWage: targetRate,
@@ -823,8 +867,8 @@ function buildOperationalWageUpdates(
 }
 
 async function main() {
-  const { apply } = parseRunMode(Deno.args);
-  validateRunConfig(RUN_CONFIG, apply);
+  const runMode = parseRunMode(Deno.args);
+  validateRunConfig(RUN_CONFIG, runMode);
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ??
     Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
@@ -906,13 +950,23 @@ async function main() {
     snapshotsByUserId.set(snapshot.user_id, existing);
   }
 
-  const eligibilityDate = localISODate();
-  const eligibleJobKeys = buildEligibleJobKeys(
+  const backpayEligibilityDate = localISODate();
+  const operationalEligibilityDate = JUNE_OPERATIONAL_TARIFF_DATE;
+  const eligibleBackpayJobKeys = buildEligibleJobKeys(
     jobs,
     snapshotsByUserId,
     defaultJobByUserId,
     RUN_CONFIG.strictTariffType,
-    eligibilityDate,
+    backpayEligibilityDate,
+    RUN_CONFIG.userId,
+    RUN_CONFIG.jobId,
+  );
+  const eligibleOperationalJobKeys = buildEligibleJobKeys(
+    jobs,
+    snapshotsByUserId,
+    defaultJobByUserId,
+    RUN_CONFIG.strictTariffType,
+    operationalEligibilityDate,
     RUN_CONFIG.userId,
     RUN_CONFIG.jobId,
   );
@@ -920,7 +974,7 @@ async function main() {
   const actualShifts = shifts.map(makeShift).filter((shift) => {
     const effectiveJobId = effectiveJobIdFor(shift.user_id, shift.job_id, defaultJobByUserId);
     if (RUN_CONFIG.jobId && effectiveJobId !== RUN_CONFIG.jobId) return false;
-    return eligibleJobKeys.has(jobKey(shift.user_id, effectiveJobId));
+    return eligibleBackpayJobKeys.has(jobKey(shift.user_id, effectiveJobId));
   });
   const recurringVirtualShifts = RUN_CONFIG.includeRecurring
     ? makeRecurringShifts(
@@ -928,7 +982,7 @@ async function main() {
       RUN_CONFIG.fromDate,
       RUN_CONFIG.throughDate,
       defaultJobByUserId,
-      eligibleJobKeys,
+      eligibleBackpayJobKeys,
       RUN_CONFIG.jobId,
     )
     : [];
@@ -939,7 +993,7 @@ async function main() {
         shift,
         snapshotsByUserId.get(shift.user_id) ?? [],
         defaultJobByUserId.get(shift.user_id) ?? null,
-        eligibleJobKeys,
+        eligibleBackpayJobKeys,
         RUN_CONFIG.strictTariffType,
         "shift",
       )
@@ -951,7 +1005,7 @@ async function main() {
         shift,
         snapshotsByUserId.get(shift.user_id) ?? [],
         defaultJobByUserId.get(shift.user_id) ?? null,
-        eligibleJobKeys,
+        eligibleBackpayJobKeys,
         RUN_CONFIG.strictTariffType,
         "recurring",
       )
@@ -968,15 +1022,17 @@ async function main() {
     jobs,
     snapshotsByUserId,
     defaultJobByUserId,
-    eligibleJobKeys,
-    eligibilityDate,
+    eligibleOperationalJobKeys,
+    operationalEligibilityDate,
   );
 
   let inserted = 0;
   let skippedExisting = 0;
   let wageSnapshotsInserted = 0;
+  let wageSnapshotsUpdated = 0;
+  let wageSnapshotsSkippedExistingAtApply = 0;
 
-  if (apply && adjustments.length > 0) {
+  if (runMode.applyBackpay && adjustments.length > 0) {
     for (const adjustment of adjustments) {
       let existingQuery = supabase
         .from("payroll_adjustments")
@@ -1005,24 +1061,81 @@ async function main() {
     }
   }
 
-  if (apply && operationalWages.updates.length > 0) {
-    const { error } = await supabase.from("wage_snapshots").insert(
-      operationalWages.updates.map((update) => update.insert),
-    );
-    if (error) throw new Error(error.message);
-    wageSnapshotsInserted = operationalWages.updates.length;
+  if (runMode.applyOperationalWageSnapshots && operationalWages.updates.length > 0) {
+    for (const update of operationalWages.updates) {
+      if (update.action === "update" && update.existingSnapshotId) {
+        const { data: existing, error: existingError } = await supabase
+          .from("wage_snapshots")
+          .select("id,hourly_wage,wage_level,tariff_type_id")
+          .eq("id", update.existingSnapshotId)
+          .is("deleted_at", null)
+          .limit(1);
+
+        if (existingError) throw new Error(existingError.message);
+        const existingSnapshot = existing?.[0] as
+          | { hourly_wage: number; wage_level: number | null; tariff_type_id: string | null }
+          | undefined;
+        if (!existingSnapshot) {
+          wageSnapshotsSkippedExistingAtApply += 1;
+          continue;
+        }
+
+        if (
+          existingSnapshot.wage_level === update.wageLevel &&
+          Number(existingSnapshot.hourly_wage) >= update.newHourlyWage &&
+          existingSnapshot.tariff_type_id === "hk_retail"
+        ) {
+          wageSnapshotsSkippedExistingAtApply += 1;
+          continue;
+        }
+
+        const { error } = await supabase
+          .from("wage_snapshots")
+          .update({
+            hourly_wage: update.newHourlyWage,
+            wage_level: update.wageLevel,
+            tariff_type_id: "hk_retail",
+          })
+          .eq("id", update.existingSnapshotId)
+          .is("deleted_at", null);
+        if (error) throw new Error(error.message);
+        wageSnapshotsUpdated += 1;
+        continue;
+      }
+
+      const { data: existing, error: existingError } = await supabase
+        .from("wage_snapshots")
+        .select("id")
+        .eq("user_id", update.insert.user_id)
+        .eq("job_id", update.insert.job_id)
+        .eq("from_date", JUNE_OPERATIONAL_TARIFF_DATE)
+        .is("deleted_at", null)
+        .limit(1);
+
+      if (existingError) throw new Error(existingError.message);
+      if ((existing ?? []).length > 0) {
+        wageSnapshotsSkippedExistingAtApply += 1;
+        continue;
+      }
+
+      const { error } = await supabase.from("wage_snapshots").insert(update.insert);
+      if (error) throw new Error(error.message);
+      wageSnapshotsInserted += 1;
+    }
   }
 
   const totalAmount = roundCurrency(groups.reduce((sum, group) => sum + group.amount, 0));
   const result = {
-    mode: apply ? "apply" : "dry-run",
+    mode: modeLabel(runMode),
     tariff: "hk_retail",
     operationalTariffEffectiveDate: JUNE_OPERATIONAL_TARIFF_DATE,
     backpayStart: RUN_CONFIG.fromDate,
     throughDate: RUN_CONFIG.throughDate,
     payoutDate: RUN_CONFIG.payoutDate,
-    eligibilityDate,
-    eligibleJobs: eligibleJobKeys.size,
+    backpayEligibilityDate,
+    operationalEligibilityDate,
+    eligibleBackpayJobs: eligibleBackpayJobKeys.size,
+    eligibleOperationalJobs: eligibleOperationalJobKeys.size,
     users: new Set(groups.map((group) => group.userId)).size,
     groups: groups.length,
     shifts: lines.filter((line) => line.source === "shift").length,
@@ -1033,13 +1146,17 @@ async function main() {
     skippedExisting,
     operationalWageSnapshots: operationalWages.updates.length,
     operationalWageSnapshotsInserted: wageSnapshotsInserted,
+    operationalWageSnapshotsUpdated: wageSnapshotsUpdated,
     operationalWageSnapshotsSkippedExisting: operationalWages.skippedExisting,
+    operationalWageSnapshotsSkippedExistingAtApply: wageSnapshotsSkippedExistingAtApply,
     operationalWageSnapshotsSkippedNotIncreased: operationalWages.skippedNotIncreased,
     operationalWageUpdates: operationalWages.updates.map((update) => ({
       userId: update.userId,
       jobId: update.jobId,
       jobName: update.jobName,
+      action: update.action,
       sourceSnapshotId: update.sourceSnapshotId,
+      existingSnapshotId: update.existingSnapshotId,
       wageLevel: update.wageLevel,
       oldHourlyWage: update.oldHourlyWage,
       newHourlyWage: update.newHourlyWage,
@@ -1057,8 +1174,10 @@ async function main() {
   console.log(`Operational tariff effective date: ${JUNE_OPERATIONAL_TARIFF_DATE}`);
   console.log(`Backpay period: ${RUN_CONFIG.fromDate}..${RUN_CONFIG.throughDate}`);
   console.log(`Payout date: ${RUN_CONFIG.payoutDate}`);
-  console.log(`Eligibility date: ${eligibilityDate}`);
-  console.log(`Eligible jobs: ${result.eligibleJobs}`);
+  console.log(`Backpay eligibility date: ${backpayEligibilityDate}`);
+  console.log(`Operational eligibility date: ${operationalEligibilityDate}`);
+  console.log(`Eligible backpay jobs: ${result.eligibleBackpayJobs}`);
+  console.log(`Eligible operational jobs: ${result.eligibleOperationalJobs}`);
   console.log(`Users: ${result.users}`);
   console.log(`Adjustment groups: ${result.groups}`);
   console.log(`Shifts included: ${result.shifts}`);
@@ -1072,14 +1191,20 @@ async function main() {
     `Existing operational wage snapshots skipped: ${result.operationalWageSnapshotsSkippedExisting}`,
   );
   console.log(
+    `Existing operational wage snapshots skipped at apply: ${result.operationalWageSnapshotsSkippedExistingAtApply}`,
+  );
+  console.log(
     `Operational wage snapshots skipped without an increase: ${result.operationalWageSnapshotsSkippedNotIncreased}`,
   );
-  if (apply) {
+  if (shouldApply(runMode)) {
     console.log(`Inserted: ${inserted}`);
     console.log(`Skipped existing: ${skippedExisting}`);
     console.log(`Wage snapshots inserted: ${wageSnapshotsInserted}`);
+    console.log(`Wage snapshots updated: ${wageSnapshotsUpdated}`);
   } else {
-    console.log("No rows inserted. Re-run with --apply after approval.");
+    console.log(
+      "No rows inserted. Re-run with --apply, --apply-backpay, or --apply-operational-wage-snapshots after approval.",
+    );
   }
 }
 

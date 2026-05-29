@@ -509,6 +509,201 @@ Deno.test("manage_shift create only matches existing shifts for the same job", a
   assertEquals((result.data as Record<string, unknown>).updated, 0);
 });
 
+Deno.test("manage_shift create skips unchanged recurring virtual shifts", async () => {
+  const jobId = "00ba829d-fcd1-4997-9da8-80e879d0e1b8";
+  const db: Partial<MockDb> = {
+    user_shifts: [],
+    recurring_shifts: [{
+      id: "05f93000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: jobId,
+      start_time: "16:00",
+      end_time: "23:15",
+      repeat_interval_weeks: 0,
+      selected_days: { "3": "2026-06-03" },
+      end_condition: null,
+      exclusions: [],
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-06-03"],
+      start: "16:00",
+      end: "23:15",
+      jobId,
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 0);
+  assertEquals(db.recurring_shifts?.[0].exclusions, []);
+  assertEquals((result.data as Record<string, unknown>).inserted, 0);
+  assertEquals((result.data as Record<string, unknown>).updated, 0);
+  assertEquals((result.data as Record<string, unknown>).skipped, 1);
+});
+
+Deno.test("manage_shift create matches default-job recurring shifts when jobId is omitted", async () => {
+  const defaultJobId = "00ba829d-fcd1-4997-9da8-80e879d0e1b8";
+  const db: Partial<MockDb> = {
+    jobs: [{
+      id: defaultJobId,
+      user_id: USER_ID,
+      name: "Default",
+      color: null,
+      is_default: true,
+      sort_order: 0,
+      payroll_day: 15,
+      half_tax_month: null,
+      monthly_goal: 20_000,
+      archived_at: null,
+      deleted_at: null,
+      created_at: "2026-01-01T00:00:00Z",
+    }],
+    user_shifts: [],
+    recurring_shifts: [{
+      id: "06f93000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: defaultJobId,
+      start_time: "16:00",
+      end_time: "23:15",
+      repeat_interval_weeks: 0,
+      selected_days: { "3": "2026-06-03" },
+      end_condition: null,
+      exclusions: [],
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-06-03"],
+      start: "16:00",
+      end: "23:15",
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 0);
+  assertEquals(db.recurring_shifts?.[0].exclusions, []);
+  assertEquals((result.data as Record<string, unknown>).inserted, 0);
+  assertEquals((result.data as Record<string, unknown>).updated, 0);
+  assertEquals((result.data as Record<string, unknown>).skipped, 1);
+});
+
+Deno.test("manage_shift create materializes recurring virtual shifts when times differ", async () => {
+  const jobId = "00ba829d-fcd1-4997-9da8-80e879d0e1b8";
+  const customPauseWindows = { windows: [{ start: "19:00", end: "19:30" }] };
+  const customSupplements = {
+    rules: [{
+      days: [1],
+      from: "20:00",
+      to: "23:15",
+      amount: 42,
+    }],
+  };
+  const db: Partial<MockDb> = {
+    user_shifts: [],
+    recurring_shifts: [{
+      id: "61f37000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: jobId,
+      start_time: "16:00",
+      end_time: "23:15",
+      repeat_interval_weeks: 0,
+      selected_days: { "1": "2026-06-08" },
+      end_condition: null,
+      exclusions: [],
+      date_specific_pause_windows: { "2026-06-08": customPauseWindows },
+      date_specific_supplements: { "2026-06-08": customSupplements },
+      date_specific_notes: { "2026-06-08": "Inventory shift" },
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-06-08"],
+      start: "17:00",
+      end: "23:15",
+      jobId,
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 1);
+  assertEquals(db.user_shifts?.[0].shift_date, "2026-06-08");
+  assertEquals(db.user_shifts?.[0].start_time, "17:00");
+  assertEquals(db.user_shifts?.[0].end_time, "23:15");
+  assertEquals(db.user_shifts?.[0].custom_pause_windows, customPauseWindows);
+  assertEquals(db.user_shifts?.[0].custom_supplements, customSupplements);
+  assertEquals(db.user_shifts?.[0].note, "Inventory shift");
+  assertEquals(db.recurring_shifts?.[0].exclusions, ["2026-06-08"]);
+  assertEquals((result.data as Record<string, unknown>).inserted, 0);
+  assertEquals((result.data as Record<string, unknown>).updated, 1);
+  assertEquals((result.data as Record<string, unknown>).skipped, 0);
+});
+
+Deno.test("manage_shift create skips exact match when stored and virtual duplicates already exist", async () => {
+  const jobId = "00ba829d-fcd1-4997-9da8-80e879d0e1b8";
+  const db: Partial<MockDb> = {
+    user_shifts: [{
+      id: "55555000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: jobId,
+      shift_date: "2026-06-03",
+      start_time: "16:00",
+      end_time: "23:15",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+    recurring_shifts: [{
+      id: "05f93000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: jobId,
+      start_time: "16:00",
+      end_time: "23:15",
+      repeat_interval_weeks: 0,
+      selected_days: { "3": "2026-06-03" },
+      end_condition: null,
+      exclusions: [],
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-06-03"],
+      start: "16:00",
+      end: "23:15",
+      jobId,
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 1);
+  assertEquals((result.data as Record<string, unknown>).inserted, 0);
+  assertEquals((result.data as Record<string, unknown>).updated, 0);
+  assertEquals((result.data as Record<string, unknown>).skipped, 1);
+});
+
 Deno.test("manage_wage_snapshots create copies current default workplace snapshot", async () => {
   const jobId = "11111111-2222-4333-8444-555555555555";
   const db: Partial<MockDb> = {
