@@ -142,10 +142,6 @@ struct FeaturedShiftCard: View {
     hasProgress(progress) && !showTimeRangeEndSkeleton
   }
 
-  private var shouldShowLiveEarningsIndicator: Bool {
-    hasProgress(progress)
-  }
-
   private var cardShape: RoundedRectangle {
     RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
   }
@@ -201,10 +197,6 @@ struct FeaturedShiftCard: View {
           )
           .font(.tidexTitle)
           .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
-          if shouldShowLiveEarningsIndicator {
-            LiveTypingDots()
-              .padding(.leading, 1)
-          }
         }
       } trailingBottom: {
         if shouldRenderJobBadge, let jobName, !jobName.isEmpty {
