@@ -50,7 +50,7 @@ struct AddJobSheet: View {
   @State private var validationError: String?
   @State private var showSaveError = false
 
-  private let payrollDayOptions = [1, 10, 15, 20, 25, 28]
+  private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
   private let monthlyGoalPresets = [15000, 20000, 25000]
 
   init(
@@ -280,7 +280,7 @@ struct AddJobSheet: View {
               ForEach(payrollDayOptions, id: \.self) { day in
                 AddJobPaydayButton(
                   day: day,
-                  isLast: day == 28,
+                  isLast: day == 31,
                   isSelected: payrollDay == day && !showingPaydayInput,
                   action: {
                     showingPaydayInput = false
@@ -690,7 +690,7 @@ struct AddJobSheet: View {
 
   private func applyPaydayInput() {
     if let parsed = Int(paydayInputText) {
-      payrollDay = min(max(parsed, 1), 28)
+      payrollDay = min(max(parsed, 1), 31)
     }
     showingPaydayInput = false
     isPaydayInputFocused = false

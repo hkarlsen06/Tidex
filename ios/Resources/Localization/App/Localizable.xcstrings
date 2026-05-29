@@ -76089,6 +76089,52 @@
         }
       }
     },
+    "dashboard.earlierPayout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Earlier payout"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidligere utbetaling"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidlegare utbetaling"
+          }
+        }
+      }
+    },
+    "dashboard.futurePayout" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Future payout"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fremtidig utbetaling"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Framtidig utbetaling"
+          }
+        }
+      }
+    },
     "dashboard.nextPayout" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -470883,6 +470929,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Dette telefonnummeret er allerede knyttet til en annen konto."
+          }
+        }
+      }
+    },
+    "settings.pay.payrollDayLastDay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last day of each month"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste dag hver måned"
           }
         }
       }

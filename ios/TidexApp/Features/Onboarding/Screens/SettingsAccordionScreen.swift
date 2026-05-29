@@ -23,7 +23,7 @@ struct SettingsAccordionScreen: View {
     case payday = 2
   }
 
-  private let payrollDayOptions = [1, 10, 15, 20, 25, 28]
+  private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
   private let taxPresets: [Double] = [22, 25, 30, 40]
 
   var body: some View {
@@ -356,7 +356,7 @@ struct SettingsAccordionScreen: View {
               ForEach(payrollDayOptions, id: \.self) { day in
                 PaydayButton(
                   day: day,
-                  isLast: day == 28,
+                  isLast: day == 31,
                   isSelected: data.payrollDay == day && !showingPaydayInput,
                   action: {
                     showingPaydayInput = false
@@ -473,7 +473,7 @@ struct SettingsAccordionScreen: View {
   }
 
   private var paydaySummary: String {
-    if data.payrollDay == 28 {
+    if data.payrollDay == 31 {
       return String(localized: .onboardingPersonalizePaydayLastDay)
     } else {
       return "\(data.payrollDay)."
@@ -523,8 +523,8 @@ struct SettingsAccordionScreen: View {
 
   private func applyPaydayInput() {
     if let parsed = Int(paydayInputText) {
-      // Clamp to valid range (1-28)
-      let clamped = min(max(parsed, 1), 28)
+      // Clamp to valid range (1-31)
+      let clamped = min(max(parsed, 1), 31)
       data.payrollDay = clamped
     }
     showingPaydayInput = false

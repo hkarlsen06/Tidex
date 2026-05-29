@@ -29,10 +29,13 @@ enum PayrollDateAdjuster {
   ///   adjustPayrollDate(payrollDay: 17, month: 2, year: 2025) // Returns Friday, Feb 14, 2025
   ///   ```
   static func adjustPayrollDate(payrollDay: Int, month: Int, year: Int) -> Date {
+    let daysInMonth = Date.daysInMonth(year: year, month: month)
+    let effectivePayrollDay = min(max(payrollDay, 1), daysInMonth)
+
     var components = DateComponents()
     components.year = year
     components.month = month
-    components.day = payrollDay
+    components.day = effectivePayrollDay
     components.timeZone = TimeZone.current
 
     guard var date = Calendar.current.date(from: components) else {

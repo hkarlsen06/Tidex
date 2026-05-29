@@ -189,6 +189,10 @@ struct CurrencyCountUpText: View {
     CurrencyConfig.format(displayedAmount ?? amount, currency: currency)
   }
 
+  private func formattedText(for amount: Double) -> String {
+    CurrencyConfig.format(amount, currency: currency)
+  }
+
   var body: some View {
     Text(formattedText)
       .contentTransition(.numericText(value: displayedAmount ?? amount))
@@ -212,6 +216,15 @@ struct CurrencyCountUpText: View {
         }
       }
       .onChange(of: amount) { _, newValue in
+        guard formattedText(for: displayedAmount ?? amount) != formattedText(for: newValue) else {
+          var transaction = Transaction()
+          transaction.animation = nil
+          withTransaction(transaction) {
+            displayedAmount = newValue
+          }
+          return
+        }
+
         if animateChanges {
           withAnimation(.spring(duration: duration, bounce: 0)) {
             displayedAmount = newValue

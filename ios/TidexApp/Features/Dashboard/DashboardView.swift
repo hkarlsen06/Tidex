@@ -181,15 +181,6 @@ struct DashboardView: View {
           }
         }
       }
-      .contentShape(Rectangle())
-      .highPriorityGesture(
-        TapGesture(count: 2).onEnded {
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-          guard !viewModel.isCurrentMonth else { return }
-          Haptics.play(.light)
-          viewModel.goToCurrentMonth()
-        }
-      )
       .navigationBarTitleDisplayMode(.inline)
       .toolbarBackground(.hidden, for: .navigationBar)
       .toolbar {
@@ -822,11 +813,25 @@ struct DashboardView: View {
     let now = Date()
     let calendar = Calendar.current
     let isViewingCurrentMonth = data.isViewingCurrentMonth
-    let payrollDayStart = calendar.startOfDay(for: data.payrollDate)
+    let preliminaryPayrollVariants = viewModel.payrollCardVariants(
+      fallback: data,
+      defaultTitle: String(localized: .dashboardPayroll)
+    )
+    let selectedPayoutDate = preliminaryPayrollVariants.first?.payoutDate ?? data.payrollDate
+    let payrollDayStart = calendar.startOfDay(for: selectedPayoutDate)
     let payrollDayEnd =
       calendar.date(byAdding: .day, value: 1, to: payrollDayStart) ?? payrollDayStart
     let isOnOrBeforePayrollDay = now < payrollDayEnd
-    let canManuallySetPayrollStatus = isViewingCurrentMonth && isOnOrBeforePayrollDay
+    let selectedPayoutYM = selectedPayoutDate.yearMonth()
+    let current = Date.currentYearMonth()
+    let selectedPayoutIsInCurrentMonth =
+      selectedPayoutYM.year == current.year && selectedPayoutYM.month == current.month
+    let canManuallySetPayrollStatus =
+      isViewingCurrentMonth && selectedPayoutIsInCurrentMonth && isOnOrBeforePayrollDay
+    let isCurrentAdvancedNextPayout =
+      !isViewingCurrentMonth
+      && viewModel.isCurrentMonthAdvancedNextPayoutDate(selectedPayoutDate, now: now)
+    let shouldShowLivePayrollProgress = isViewingCurrentMonth || isCurrentAdvancedNextPayout
 
     let payrollOverrideUserId = coordinator.getCurrentUserId()
     let payrollMarkedReceived = viewModel.isPayrollReceivedOverrideForDisplayedMonth(
@@ -834,10 +839,10 @@ struct DashboardView: View {
     )
     let effectivePayrollHasPassed: Bool = {
       guard isViewingCurrentMonth else { return data.payrollHasPassed }
-      if isOnOrBeforePayrollDay {
+      if calendar.isDate(selectedPayoutDate, inSameDayAs: now) {
         return payrollMarkedReceived
       }
-      return true
+      return !isOnOrBeforePayrollDay
     }()
 
     // Determine payroll label based on whether viewing current month
@@ -846,16 +851,38 @@ struct DashboardView: View {
         return effectivePayrollHasPassed
           ? String(localized: .dashboardPreviousPayout)
           : String(localized: .dashboardNextPayout)
-      } else {
-        // For non-current months, show generic "Payroll" label
-        return String(localized: .dashboardPayroll)
       }
+
+      if selectedPayoutYM.year < current.year
+        || (selectedPayoutYM.year == current.year && selectedPayoutYM.month < current.month)
+      {
+        return String(localized: "dashboard.earlierPayout")
+      }
+
+      if isCurrentAdvancedNextPayout {
+        return String(localized: .dashboardNextPayout)
+      }
+
+      if selectedPayoutYM.year > current.year
+        || (selectedPayoutYM.year == current.year && selectedPayoutYM.month > current.month)
+      {
+        return String(localized: "dashboard.futurePayout")
+      }
+
+      if effectivePayrollHasPassed {
+        return String(localized: .dashboardPreviousPayout)
+      }
+
+      // Fallback for non-current month views that resolve to the real current payout month.
+      // This should be uncommon, but keeps the label neutral instead of implying today-relative
+      // "next payout" semantics while browsing months.
+      return String(localized: .dashboardPayroll)
     }()
 
     // Calculate progress through the month until payroll (matches Next.js behavior)
     // Only show for current month when payroll hasn't passed yet
     let defaultPayrollProgress: Double? = {
-      guard isViewingCurrentMonth && !effectivePayrollHasPassed else { return nil }
+      guard shouldShowLivePayrollProgress && !effectivePayrollHasPassed else { return nil }
 
       // Get start of the current month
       guard
@@ -877,10 +904,7 @@ struct DashboardView: View {
       return max(1, min(100, progress))
     }()
 
-    let payrollVariants = viewModel.payrollCardVariants(
-      fallback: data,
-      defaultTitle: payrollLabel
-    )
+    let payrollVariants = viewModel.payrollCardVariants(fallback: data, defaultTitle: payrollLabel)
     if let selectedPayrollVariant = payrollVariants.first {
       let showsMultiWorkplacePayroll = !selectedPayrollVariant.badges.isEmpty
       let selectedPayrollProgress: Double? = {
@@ -888,7 +912,7 @@ struct DashboardView: View {
           return defaultPayrollProgress
         }
 
-        guard isViewingCurrentMonth else { return nil }
+        guard shouldShowLivePayrollProgress else { return nil }
 
         let selectedPayrollDayStart = calendar.startOfDay(for: selectedPayrollVariant.payoutDate)
         let selectedPayrollDayEnd =
@@ -1176,15 +1200,18 @@ struct DashboardView: View {
       progress: payrollProgress
     )
 
-    card
+    let interactiveCard =
+      card
       .userCurrency(selectedVariant.currency)
       .contentShape(Rectangle())
       .onTapGesture {
         impactHaptic.impactOccurred()
         selectedPayrollDetailsVariant = selectedVariant
       }
-      .contextMenu {
-        if canManuallySetPayrollStatus {
+
+    if canManuallySetPayrollStatus {
+      interactiveCard
+        .contextMenu {
           Button {
             impactHaptic.impactOccurred()
             viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
@@ -1206,7 +1233,9 @@ struct DashboardView: View {
             )
           }
         }
-      }
+    } else {
+      interactiveCard
+    }
   }
 
   // MARK: - Featured Shift Section

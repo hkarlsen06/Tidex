@@ -187,33 +187,34 @@ struct GlobalPaySettingsCard: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack {
-        Text(formatPayrollDay(selectedPayrollDay))
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        Picker("", selection: $selectedPayrollDay) {
-          ForEach(1...31, id: \.self) { day in
-            Text("\(day)").tag(day)
-          }
-        }
-        .pickerStyle(.menu)
-        .tint(.tidexBlue)
-        .onChange(of: selectedPayrollDay) { _, newValue in
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
-          onUpdatePayrollDay(newValue)
+      Picker("", selection: $selectedPayrollDay) {
+        ForEach(1...31, id: \.self) { day in
+          Text(payrollDayOptionTitle(day)).tag(day)
         }
       }
+      .pickerStyle(.menu)
+      .tint(.tidexBlue)
+      .frame(maxWidth: .infinity, alignment: .leading)
       .padding(Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+      .onChange(of: selectedPayrollDay) { _, newValue in
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        onUpdatePayrollDay(newValue)
+      }
 
       Text(.settingsPayGlobalPayrollDayHelper)
         .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
     }
+  }
+
+  private func payrollDayOptionTitle(_ day: Int) -> String {
+    if day == 31 {
+      return String(localized: .settingsPayPayrollDayLastDay)
+    }
+
+    return formatPayrollDay(day)
   }
 
   private func formatPayrollDay(_ day: Int) -> String {

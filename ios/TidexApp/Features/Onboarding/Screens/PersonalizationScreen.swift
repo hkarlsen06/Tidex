@@ -10,7 +10,7 @@ struct PersonalizationScreen: View {
   @State private var hasInitializedWage = false
   @State private var payrollDay: Int = 15
 
-  private let payrollDayOptions = [1, 10, 15, 20, 25, 28]
+  private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
 
   /// Default hourly wage based on locale
   /// Norwegian: 200 kr/hour, English/German: $25/hour
@@ -103,7 +103,7 @@ struct PersonalizationScreen: View {
                 payrollDay = day
               }
             } label: {
-              Text(day == 28 ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
+              Text(day == 31 ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
                 .font(payrollDay == day ? .tidexButton : .tidexBodyMedium)
                 .foregroundColor(payrollDay == day ? .white : .tidexTextSecondary)
                 .frame(minWidth: 56, minHeight: 44)

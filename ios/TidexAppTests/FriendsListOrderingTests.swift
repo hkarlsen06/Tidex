@@ -577,6 +577,68 @@ final class FriendsListOrderingTests: XCTestCase {
     )
   }
 
+  func testShareExtensionRecipientOrderingMatchesFeedMessageThenShiftFallback() {
+    let recipients = [
+      ShareRecipient(
+        id: "active-shift",
+        displayName: "Active Shift",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      ),
+      ShareRecipient(
+        id: "older-thread",
+        displayName: "Older Thread",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      ),
+      ShareRecipient(
+        id: "newer-thread",
+        displayName: "Newer Thread",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      ),
+      ShareRecipient(
+        id: "no-activity",
+        displayName: "No Activity",
+        avatarURL: nil,
+        statusText: nil,
+        canSeeOwnerEarnings: false
+      ),
+    ]
+
+    let ordered = ShareRecipientFeedOrdering.sortedRecipients(
+      recipients,
+      threads: [
+        ShareRecipientThreadSummary(
+          counterpartUserId: "older-thread",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_100),
+          hasUnread: true
+        ),
+        ShareRecipientThreadSummary(
+          counterpartUserId: "newer-thread",
+          timestamp: Date(timeIntervalSince1970: 1_700_000_300),
+          hasUnread: false
+        ),
+      ],
+      shiftPreviews: [
+        "active-shift": SharingComputedPreview(
+          sharerId: "active-shift",
+          shift: nil,
+          status: .active,
+          showEarnings: false
+        )
+      ]
+    )
+
+    XCTAssertEqual(
+      ordered.map(\.id),
+      ["newer-thread", "older-thread", "active-shift", "no-activity"]
+    )
+  }
+
   func testSendAttachmentRecipientResolverFallsBackToLocalThreadsAndCachedFriends() {
     let cachedFriends = SharedShiftsRepository.CachedFriendsSnapshot(
       sharers: [

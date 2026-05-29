@@ -627,7 +627,7 @@ struct PayrollDetailsSheet: View {
   }
 
   private func preDirectPayoutAmount(for breakdown: PayrollCardJobBreakdown) -> Double {
-    displayAmount(for: breakdown) - adjustmentTotal(for: directPayoutAdjustments(for: breakdown))
+    breakdown.gross - adjustmentTotal(for: directPayoutAdjustments(for: breakdown))
   }
 
   private func adjustmentTotal(for adjustments: [PayrollAdjustment]) -> Double {
