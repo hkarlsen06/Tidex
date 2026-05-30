@@ -13,6 +13,7 @@ struct StatsView: View {
   }
 
   @StateObject private var viewModel = StatsViewModel()
+  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
   @State private var isJobFilterDialogPresented = false
   @State private var showMixedCurrencyBreakdownPopover = false
@@ -20,7 +21,6 @@ struct StatsView: View {
 
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
-  private let workSetupStatusService = WorkSetupStatusService.shared
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
   private func refreshStatsContent() async {
@@ -33,16 +33,23 @@ struct StatsView: View {
       ?? StatsData.empty(year: viewModel.displayYear, month: viewModel.displayMonth)
   }
 
-  private var workSetupPresentationState: WorkSetupPresentationState? {
-    guard let userId = coordinator.getCurrentUserId() else { return nil }
-    return workSetupStatusService.presentationState(
-      for: userId,
+  @discardableResult
+  private func refreshWorkSetupPresentationState() -> Bool {
+    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder
+    workSetupPresentationViewModel.refresh(
+      userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
+    return wasShowingPlaceholder && !shouldShowWorkSetupRequiredPlaceholder
   }
 
   private var shouldShowWorkSetupRequiredPlaceholder: Bool {
-    workSetupPresentationState?.shouldShowPlaceholder == true
+    workSetupPresentationViewModel.shouldShowPlaceholder
+  }
+
+  private func loadStatsContent() async {
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    await viewModel.loadStats()
   }
 
   var body: some View {
@@ -108,11 +115,29 @@ struct StatsView: View {
         .presentationDragIndicator(.visible)
     }
     .task {
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      await viewModel.loadStats()
+      refreshWorkSetupPresentationState()
+      await loadStatsContent()
     }
     .onAppear {
+      refreshWorkSetupPresentationState()
       selectionHaptic.prepare()
+    }
+    .onChange(of: coordinator.initialSyncComplete) { _, _ in
+      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
+      guard shouldLoadAfterSetupCompleted else { return }
+      Task {
+        await loadStatsContent()
+      }
+    }
+    .onChange(of: coordinator.userId) { _, _ in
+      refreshWorkSetupPresentationState()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
+      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
+      guard shouldLoadAfterSetupCompleted else { return }
+      Task {
+        await loadStatsContent()
+      }
     }
     .onChange(of: viewModel.stats?.focusMonth) { _, _ in
       showMixedCurrencyBreakdownPopover = false

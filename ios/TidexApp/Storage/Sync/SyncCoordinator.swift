@@ -387,6 +387,7 @@ final class SyncCoordinator: ObservableObject {
     await MainActor.run {
       isSyncing = false
     }
+    await notifyWorkSetupDataChangedIfNeeded(for: result)
 
     if needsFollowUpSync {
       logger.info("Running coalesced follow-up sync after concurrent local changes")
@@ -396,6 +397,30 @@ final class SyncCoordinator: ObservableObject {
     }
 
     return result
+  }
+
+  private func notifyWorkSetupDataChangedIfNeeded(for result: SyncResult) async {
+    guard result.success else { return }
+
+    let workSetupTables: Set<SyncTable> = [.jobs, .wageSnapshots]
+    let pulledWorkSetupData = result.tableResults.contains { tableResult in
+      workSetupTables.contains(tableResult.table)
+        && (tableResult.rowsProcessed > 0
+          || tableResult.newConflicts > 0
+          || tableResult.autoMerged > 0)
+    }
+    let pushedWorkSetupData = result.pushResults.contains { tableResult in
+      workSetupTables.contains(tableResult.table)
+        && (tableResult.rowsPushed > 0
+          || tableResult.newConflicts > 0
+          || tableResult.rebased > 0)
+    }
+
+    guard pulledWorkSetupData || pushedWorkSetupData else { return }
+
+    await MainActor.run {
+      NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
+    }
   }
 
   /// Performs the actual sync work (locale update, pull, push, widget update).

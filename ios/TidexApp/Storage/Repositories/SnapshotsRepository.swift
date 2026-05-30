@@ -25,6 +25,7 @@ final class SnapshotsRepository: ObservableObject {
 
   /// Trigger sync after a mutation (fire-and-forget)
   private func triggerSync(userId: String) {
+    NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
     Task {
       _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
     }

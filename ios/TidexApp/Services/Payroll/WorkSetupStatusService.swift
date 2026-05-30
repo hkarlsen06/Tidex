@@ -1,4 +1,9 @@
+import Combine
 import Foundation
+
+extension Notification.Name {
+  static let workSetupDataDidChange = Notification.Name("com.tidex.workSetupDataDidChange")
+}
 
 struct WorkSetupStatus: Equatable {
   let isWorkSetupComplete: Bool
@@ -66,22 +71,21 @@ final class WorkSetupStatusService {
   static let shared = WorkSetupStatusService()
 
   private let jobsRepository: JobsRepository
-  private let jobPaySetupStatusService: JobPaySetupStatusService
+  private let snapshotsRepository: SnapshotsRepository
 
   init(
     jobsRepository: JobsRepository? = nil,
-    jobPaySetupStatusService: JobPaySetupStatusService? = nil
+    snapshotsRepository: SnapshotsRepository? = nil
   ) {
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
-    self.jobPaySetupStatusService = jobPaySetupStatusService ?? JobPaySetupStatusService.shared
+    self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
   }
 
   func status(for userId: String) -> WorkSetupStatus {
     let activeJobs = jobsRepository.getActiveJobs(for: userId)
-    let configuredJobIds = jobPaySetupStatusService.configuredJobIds(for: userId)
 
-    return WorkSetupStatusResolver.resolve(activeJobs: activeJobs) { jobId in
-      configuredJobIds.contains(jobId)
+    return WorkSetupStatusResolver.resolve(activeJobs: activeJobs) { [snapshotsRepository] jobId in
+      snapshotsRepository.getBaselineSnapshot(for: userId, jobId: jobId) != nil
     }
   }
 
@@ -93,5 +97,37 @@ final class WorkSetupStatusService {
       status: status(for: userId),
       initialSyncComplete: initialSyncComplete
     )
+  }
+}
+
+@MainActor
+final class WorkSetupPresentationViewModel: ObservableObject {
+  @Published private(set) var presentationState: WorkSetupPresentationState?
+
+  private let workSetupStatusService: WorkSetupStatusService
+
+  init(workSetupStatusService: WorkSetupStatusService? = nil) {
+    self.workSetupStatusService = workSetupStatusService ?? .shared
+  }
+
+  var shouldShowPlaceholder: Bool {
+    presentationState?.shouldShowPlaceholder == true
+  }
+
+  func refresh(userId: String?, initialSyncComplete: Bool) {
+    guard let userId else {
+      if presentationState != nil {
+        presentationState = nil
+      }
+      return
+    }
+
+    let updatedState = workSetupStatusService.presentationState(
+      for: userId,
+      initialSyncComplete: initialSyncComplete
+    )
+    if presentationState != updatedState {
+      presentationState = updatedState
+    }
   }
 }

@@ -29,6 +29,7 @@ struct DashboardView: View {
   @StateObject private var viewModel = DashboardViewModel()
   @StateObject private var countdownManager = CountdownManager()
   @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared
+  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   @ObservedObject private var pushManager = PushNotificationManager.shared
 
   /// State for showing push notification failure alert
@@ -68,7 +69,6 @@ struct DashboardView: View {
 
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
-  private let workSetupStatusService = WorkSetupStatusService.shared
 
   private enum PendingClockAction {
     case clockIn(jobId: String?)
@@ -99,16 +99,41 @@ struct DashboardView: View {
   private let temporarySessionTicker = Timer.publish(every: 1, on: .main, in: .common)
     .autoconnect()
 
-  private var workSetupPresentationState: WorkSetupPresentationState? {
-    guard let userId = coordinator.getCurrentUserId() else { return nil }
-    return workSetupStatusService.presentationState(
-      for: userId,
+  @discardableResult
+  private func refreshWorkSetupPresentationState() -> Bool {
+    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder
+    workSetupPresentationViewModel.refresh(
+      userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
+    return wasShowingPlaceholder && !shouldShowWorkSetupRequiredPlaceholder
   }
 
   private var shouldShowWorkSetupRequiredPlaceholder: Bool {
-    workSetupPresentationState?.shouldShowPlaceholder == true
+    workSetupPresentationViewModel.shouldShowPlaceholder
+  }
+
+  private var operationErrorPresented: Binding<Bool> {
+    Binding(
+      get: { operationErrorMessage != nil },
+      set: { isPresented in
+        if !isPresented {
+          operationErrorMessage = nil
+        }
+      }
+    )
+  }
+
+  private func loadDashboardContent() async {
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    await calendarSubscriptionStore.refreshIfNeeded()
+    await viewModel.loadDashboard()
+
+    // If sync already completed before view appeared, reload to pick up synced data
+    // This handles the race condition where sync finishes before .onChange is registered
+    if coordinator.initialSyncComplete && viewModel.dashboardData == nil {
+      await viewModel.reloadFromLocal()
+    }
   }
 
   private func refreshActiveDashboardStateIfNeeded() {
@@ -123,6 +148,65 @@ struct DashboardView: View {
       await viewModel.refreshClockState()
       guard !Task.isCancelled else { return }
       await viewModel.preloadClockSelectableJobs()
+    }
+  }
+
+  private func handleInitialSyncCompleteChange(completed: Bool) {
+    let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    if shouldLoadAfterSetupCompleted {
+      Task {
+        await loadDashboardContent()
+      }
+    }
+
+    // When initial sync completes after login, reload dashboard to show synced data
+    if completed {
+      // Set loading state SYNCHRONOUSLY before starting async task
+      // This prevents the empty state from flashing while data loads
+      viewModel.prepareForReload()
+      Task {
+        await viewModel.reloadFromLocal()
+
+        // Play release haptic if coming from MFA verification
+        if coordinator.didJustCompleteMFA {
+          Haptics.play(.release)
+          coordinator.didJustCompleteMFA = false
+        }
+      }
+    }
+  }
+
+  private func handleWorkSetupDataDidChange() {
+    let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
+    guard shouldLoadAfterSetupCompleted else { return }
+    Task {
+      await loadDashboardContent()
+    }
+  }
+
+  private func handleDashboardDataChange(_ data: DashboardData?) {
+    configureCountdown(with: data)
+    showMixedCurrencyBreakdownPopover = false
+  }
+
+  private func handleDashboardAppear() {
+    refreshWorkSetupPresentationState()
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    // Reconfigure timers when returning to the dashboard after a disappear cycle.
+    configureCountdown(with: viewModel.dashboardData)
+    refreshActiveDashboardStateIfNeeded()
+  }
+
+  private func handleSelectedTabChange(oldTab: MainTabView.Tab, newTab: MainTabView.Tab) {
+    guard oldTab != newTab else { return }
+    if newTab == .home {
+      refreshWorkSetupPresentationState()
+      configureCountdown(with: viewModel.dashboardData)
+      refreshActiveDashboardStateIfNeeded()
+    } else {
+      activeDashboardRefreshTask?.cancel()
+      activeDashboardRefreshTask = nil
     }
   }
 
@@ -153,7 +237,7 @@ struct DashboardView: View {
     .presentationDragIndicator(.visible)
   }
 
-  var body: some View {
+  private var navigationContent: some View {
     NavigationStack {
       ZStack {
         // Background that fills entire screen including safe areas.
@@ -207,416 +291,397 @@ struct DashboardView: View {
       }
       .iPadToolbarTransaction()
     }
-    .task {
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      await calendarSubscriptionStore.refreshIfNeeded()
-      await viewModel.loadDashboard()
+  }
 
-      // If sync already completed before view appeared, reload to pick up synced data
-      // This handles the race condition where sync finishes before .onChange is registered
-      if coordinator.initialSyncComplete && viewModel.dashboardData == nil {
-        await viewModel.reloadFromLocal()
-      }
-    }
-    .onChange(of: coordinator.initialSyncComplete) { _, completed in
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      // When initial sync completes after login, reload dashboard to show synced data
-      if completed {
-        // Set loading state SYNCHRONOUSLY before starting async task
-        // This prevents the empty state from flashing while data loads
-        viewModel.prepareForReload()
-        Task {
-          await viewModel.reloadFromLocal()
+  private var bodyWithLifecycle: AnyView {
+    AnyView(
+      navigationContent
+        .task {
+          refreshWorkSetupPresentationState()
+          await loadDashboardContent()
+        }
+        .onChange(of: coordinator.initialSyncComplete) { _, completed in
+          handleInitialSyncCompleteChange(completed: completed)
+        }
+        .onChange(of: coordinator.userId) { _, _ in
+          refreshWorkSetupPresentationState()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
+          handleWorkSetupDataDidChange()
+        }
+        .onChange(of: viewModel.dashboardData) { _, newData in
+          handleDashboardDataChange(newData)
+        }
+        .onChange(of: showFeaturedShiftActions) { _, isPresented in
+          if !isPresented {
+            featuredShiftActionTarget = nil
+          }
+        }
+        .onAppear {
+          handleDashboardAppear()
+        }
+        .onDisappear {
+          activeDashboardRefreshTask?.cancel()
+          activeDashboardRefreshTask = nil
+          countdownManager.stop()
+        }
+        .onChange(of: selectedTab) { oldTab, newTab in
+          handleSelectedTabChange(oldTab: oldTab, newTab: newTab)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { notification in
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard (notification.object as AnyObject?) !== viewModel else { return }
+          // Reload dashboard when shifts change (e.g., after adding a shift)
+          Task {
+            await viewModel.reloadFromLocal()
+          }
+        }
+        .onReceive(
+          NotificationCenter.default.publisher(for: .dashboardClockButtonsVisibilityDidChange)
+        ) { notification in
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          if let isVisible = notification.userInfo?["isVisible"] as? Bool {
+            viewModel.applyDashboardClockButtonsVisibility(isVisible)
+          }
+        }
+        .onReceive(clockStateRefreshTicker) { _ in
+          guard selectedTab == .home else { return }
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          Task {
+            await viewModel.refreshClockState()
+          }
+        }
+        .onReceive(temporarySessionTicker) { now in
+          guard selectedTab == .home else { return }
+          guard case .temporary = viewModel.activeClockState else { return }
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          temporarySessionReferenceDate = now
+        }
+        .onChange(of: viewModel.activeClockState) { _, state in
+          if case .temporary = state {
+            temporarySessionReferenceDate = Date()
+          }
+        }
+        .onChange(of: pushManager.shouldShowAlert) { _, shouldShow in
+          // Show alert when push registration fails
+          if shouldShow {
+            showPushFailureAlert = true
+          }
+        }
+    )
+  }
 
-          // Play release haptic if coming from MFA verification
-          if coordinator.didJustCompleteMFA {
-            Haptics.play(.release)
-            coordinator.didJustCompleteMFA = false
-          }
-        }
-      }
-    }
-    .onChange(of: viewModel.dashboardData) { _, newData in
-      configureCountdown(with: newData)
-      showMixedCurrencyBreakdownPopover = false
-    }
-    .onChange(of: showFeaturedShiftActions) { _, isPresented in
-      if !isPresented {
-        featuredShiftActionTarget = nil
-      }
-    }
-    .onAppear {
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      // Reconfigure timers when returning to the dashboard after a disappear cycle.
-      configureCountdown(with: viewModel.dashboardData)
-      refreshActiveDashboardStateIfNeeded()
-    }
-    .onDisappear {
-      activeDashboardRefreshTask?.cancel()
-      activeDashboardRefreshTask = nil
-      countdownManager.stop()
-    }
-    .onChange(of: selectedTab) { oldTab, newTab in
-      guard oldTab != newTab else { return }
-      if newTab == .home {
-        configureCountdown(with: viewModel.dashboardData)
-        refreshActiveDashboardStateIfNeeded()
-      } else {
-        activeDashboardRefreshTask?.cancel()
-        activeDashboardRefreshTask = nil
-      }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { notification in
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      guard (notification.object as AnyObject?) !== viewModel else { return }
-      // Reload dashboard when shifts change (e.g., after adding a shift)
-      Task {
-        await viewModel.reloadFromLocal()
-      }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .dashboardClockButtonsVisibilityDidChange))
-    { notification in
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      if let isVisible = notification.userInfo?["isVisible"] as? Bool {
-        viewModel.applyDashboardClockButtonsVisibility(isVisible)
-      }
-    }
-    .onReceive(clockStateRefreshTicker) { _ in
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      guard selectedTab == .home else { return }
-      Task {
-        await viewModel.refreshClockState()
-      }
-    }
-    .onReceive(temporarySessionTicker) { now in
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      guard selectedTab == .home else { return }
-      guard case .temporary = viewModel.activeClockState else { return }
-      temporarySessionReferenceDate = now
-    }
-    .onChange(of: viewModel.activeClockState) { _, state in
-      if case .temporary = state {
-        temporarySessionReferenceDate = Date()
-      }
-    }
-    .onChange(of: pushManager.shouldShowAlert) { _, shouldShow in
-      // Show alert when push registration fails
-      if shouldShow {
-        showPushFailureAlert = true
-      }
-    }
-    .alert(
-      String(localized: .pushFailureTitle),
-      isPresented: $showPushFailureAlert
-    ) {
-      Button(String(localized: .pushFailureSettingsButton)) {
-        pushManager.openSettings()
-        pushManager.dismissAlert()
-      }
-      Button(String(localized: .pushFailureLaterButton), role: .cancel) {
-        pushManager.dismissAlert()
-      }
-    } message: {
-      Text(.pushFailureMessage)
-    }
-    .alert(
-      String(localized: .commonError),
-      isPresented: .init(
-        get: { operationErrorMessage != nil },
-        set: { if !$0 { operationErrorMessage = nil } }
-      )
-    ) {
-      Button(String(localized: .commonOk), role: .cancel) {
-        operationErrorMessage = nil
-      }
-    } message: {
-      if let operationErrorMessage {
-        Text(operationErrorMessage)
-      }
-    }
-    .confirmationDialog(
-      "",
-      isPresented: $showFeaturedShiftActions,
-      titleVisibility: .hidden,
-      presenting: featuredShiftActionTarget
-    ) { shift in
-      Button(String(localized: .shiftsDetails)) {
-        guard !viewModel.isUpdatingShift else { return }
-        featuredShiftActionTarget = nil
-        selectedShift = shift
-      }
-      Button(String(localized: .dashboardFeaturedShiftActionsEndNow)) {
-        guard !viewModel.isUpdatingShift else { return }
-        featuredShiftActionTarget = nil
-        Task {
-          await viewModel.endShiftNow(shift)
-        }
-      }
-      Button(String(localized: .commonCancel), role: .cancel) {
-        featuredShiftActionTarget = nil
-      }
-    }
-    .sheet(item: $monthlyGoalEditContext) { context in
-      MonthlyGoalEditSheet(
-        monthDate: context.monthDate,
-        baselineGoal: context.baselineGoal,
-        initialGoal: context.initialGoal,
-        showsAdjustmentPercentageFootnote: context.showsAdjustmentPercentageFootnote
-      ) { value in
-        try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
-      }
-      .presentationDetents([.fraction(0.35), .medium])
-      .presentationDragIndicator(.visible)
-    }
-    .sheet(item: $selectedPayrollDetailsVariant) { variant in
-      payrollDetailsSheet(for: variant)
-    }
-    .sheet(item: $temporaryClockReviewSession) { session in
-      let clockJobs = viewModel.clockSelectableJobsSnapshot()
-      ClockOutReviewSheet(
-        session: session,
-        initialAvailableJobs: clockJobs,
-        loadJobs: {
-          await viewModel.clockSelectableJobs()
-        },
-        initialSelectedJobId: viewModel.preferredClockJobId(for: session),
-        jobRequiringPaySetup: { jobId in
-          await viewModel.clockJobRequiringPaySetup(jobId: jobId)
-        },
-        onPaySetupRequired: { start, end, jobId, job in
-          pendingClockAction = .temporaryClockOut(start: start, end: end, jobId: jobId ?? job.id)
-          clockPaySetupJob = job
-        },
-        onSave: { start, end, jobId in
-          try await viewModel.commitTemporaryClockOut(start: start, end: end, jobId: jobId)
-        },
-        onDiscard: {
-          await viewModel.discardTemporaryClockSession()
-        }
-      )
-      .presentationDetents([.medium])
-      .presentationDragIndicator(.visible)
-    }
-    .sheet(isPresented: $showClockInJobChooser) {
-      DashboardClockJobChooserSheet(
-        initialJobs: clockInJobOptions,
-        loadJobs: {
-          await viewModel.clockSelectableJobs()
-        },
-        onSelect: { jobId in
-          showClockInJobChooser = false
-          Task {
-            await handleClockIn(jobId: jobId)
-          }
-        },
-        onCancel: {
-          showClockInJobChooser = false
-        }
-      )
-    }
-    .sheet(item: $clockPaySetupJob) { job in
-      JobPaySetupSheet(
-        job: job,
-        initialCurrency: job.currency
-      ) { input in
-        await completeClockPaySetup(for: job, input: input)
-      }
-    }
-    // Shift details sheet with full edit/delete capabilities
-    .sheet(item: $selectedShift) { shift in
-      let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
-      ShiftDetailsSheet(
-        shift: shift,
-        jobName: shiftJob?.name,
-        jobColorHex: shiftJob?.color,
-        onDelete: {
-          selectedShift = nil
-          // Small delay before showing delete confirmation
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            shiftToDelete = shift
-            showDeleteConfirmation = true
-          }
-        },
-        onUpdate: { editResult in
-          let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
-            after: editResult, originalShift: shift)
-          try await viewModel.updateShift(editResult)
-          if shouldKeepSheetOpen {
-            if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
-              selectedShift = refreshedShift
-            }
-          } else {
-            selectedShift = nil
-          }
-        },
-        onUpdatePause: { pauseResult in
-          selectedShift = nil
-          Task {
-            await viewModel.updateShiftPause(pauseResult)
-          }
-        },
-        onEditRecurring: { recurringId in
-          selectedShift = nil
-          // Small delay to allow sheet to dismiss
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if let recurring = viewModel.getRecurringShift(id: recurringId) {
-              recurringShiftToEdit = recurring
-            }
-          }
-        },
-        showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
-        onShowInCalendarRequested: {
-          openCalendarSubscriptionSetupFromDashboard()
-        },
-        tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
-      )
-      .presentationDetents([.medium, .large])
-      .presentationDragIndicator(.visible)
-    }
-    .sheet(item: $shiftToEditDirectly) { shift in
-      let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
-      ShiftDetailsSheet(
-        shift: shift,
-        jobName: shiftJob?.name,
-        jobColorHex: shiftJob?.color,
-        onDelete: {
-          shiftToEditDirectly = nil
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            shiftToDelete = shift
-            showDeleteConfirmation = true
-          }
-        },
-        onUpdate: { editResult in
-          let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
-            after: editResult, originalShift: shift)
-          try await viewModel.updateShift(editResult)
-          if shouldKeepSheetOpen {
-            if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
-              shiftToEditDirectly = refreshedShift
-            }
-          } else {
-            shiftToEditDirectly = nil
-          }
-        },
-        onUpdatePause: { pauseResult in
-          shiftToEditDirectly = nil
-          Task {
-            await viewModel.updateShiftPause(pauseResult)
-          }
-        },
-        onEditRecurring: { recurringId in
-          shiftToEditDirectly = nil
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if let recurring = viewModel.getRecurringShift(id: recurringId) {
-              recurringShiftToEdit = recurring
-            }
-          }
-        },
-        showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
-        onShowInCalendarRequested: {
-          openCalendarSubscriptionSetupFromDashboard()
-        },
-        startInEditMode: true,
-        tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
-      )
-      .presentationDetents([.medium, .large])
-      .presentationDragIndicator(.visible)
-    }
-    .sheet(item: $selectedEvent) { selection in
-      EventDetailsSheet(
-        event: selection.event,
-        onDelete: {
-          selectedEvent = nil
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            eventToDelete = selection.event
-            showEventDeleteConfirmation = true
-          }
-        },
-        onUpdate: { editResult in
-          try await viewModel.updateEvent(editResult)
-          selectedEvent = nil
-        },
-        onInlineReminderUpdate: { editResult in
-          try await viewModel.updateEvent(editResult)
-        },
-        showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
-        onShowInCalendarRequested: {
-          openCalendarSubscriptionSetupFromDashboard()
-        },
-        startInEditMode: selection.startInEditMode
-      )
-      .presentationDetents([.medium, .large])
-      .presentationDragIndicator(.visible)
-    }
-    .sheet(isPresented: $showCalendarSubscriptionSettings) {
-      SettingsView(
-        initialDestination: .calendarSync(
-          calendarSetupIntent: .setup(mode: .shiftsAndEvents, autoOpen: false)))
-    }
-    // Delete confirmation alert
-    .alert(
-      shiftToDelete?.isVirtual == true
-        ? String(localized: .shiftsExcludeConfirmTitle)
-        : String(localized: .shiftsDeleteConfirmTitle),
-      isPresented: $showDeleteConfirmation,
-      presenting: shiftToDelete
-    ) { shift in
-      Button(String(localized: .commonCancel), role: .cancel) {
-        shiftToDelete = nil
-      }
-      Button(
-        shift.isVirtual
-          ? String(localized: .shiftsExcludeButton)
-          : String(localized: .shiftsDeleteButton),
-        role: .destructive
+  var body: some View {
+    bodyWithLifecycle
+      .alert(
+        String(localized: .pushFailureTitle),
+        isPresented: $showPushFailureAlert
       ) {
-        Task {
-          await deleteShift(shift)
+        Button(String(localized: .pushFailureSettingsButton)) {
+          pushManager.openSettings()
+          pushManager.dismissAlert()
+        }
+        Button(String(localized: .pushFailureLaterButton), role: .cancel) {
+          pushManager.dismissAlert()
+        }
+      } message: {
+        Text(.pushFailureMessage)
+      }
+      .alert(
+        String(localized: .commonError),
+        isPresented: operationErrorPresented
+      ) {
+        Button(String(localized: .commonOk), role: .cancel) {
+          operationErrorMessage = nil
+        }
+      } message: {
+        if let operationErrorMessage {
+          Text(operationErrorMessage)
         }
       }
-    } message: { shift in
-      Text(
-        shift.isVirtual
-          ? String(localized: .shiftsExcludeConfirmMessage)
-          : String(localized: .shiftsDeleteConfirmMessage))
-    }
-    .alert(
-      String(localized: .eventsDeleteConfirmTitle),
-      isPresented: $showEventDeleteConfirmation,
-      presenting: eventToDelete
-    ) { event in
-      Button(String(localized: .commonCancel), role: .cancel) {
-        eventToDelete = nil
-      }
-      Button(String(localized: .eventsDeleteButton), role: .destructive) {
-        Task {
-          await deleteEvent(event)
+      .confirmationDialog(
+        "",
+        isPresented: $showFeaturedShiftActions,
+        titleVisibility: .hidden,
+        presenting: featuredShiftActionTarget
+      ) { shift in
+        Button(String(localized: .shiftsDetails)) {
+          guard !viewModel.isUpdatingShift else { return }
+          featuredShiftActionTarget = nil
+          selectedShift = shift
         }
-      }
-    } message: { _ in
-      Text(.eventsDeleteConfirmMessage)
-    }
-    // Recurring shift editor sheet
-    .sheet(item: $recurringShiftToEdit) { recurring in
-      RecurringShiftEditorSheet(
-        recurringShift: recurring,
-        onSave: { editResult in
-          recurringShiftToEdit = nil
+        Button(String(localized: .dashboardFeaturedShiftActionsEndNow)) {
+          guard !viewModel.isUpdatingShift else { return }
+          featuredShiftActionTarget = nil
           Task {
-            await updateRecurringShift(editResult)
-          }
-        },
-        onDelete: {
-          let recurringId = recurring.id
-          recurringShiftToEdit = nil
-          Task {
-            await deleteRecurringShift(recurringId)
+            await viewModel.endShiftNow(shift)
           }
         }
-      )
-      .presentationDetents([.large])
-      .presentationDragIndicator(.visible)
-    }
+        Button(String(localized: .commonCancel), role: .cancel) {
+          featuredShiftActionTarget = nil
+        }
+      }
+      .sheet(item: $monthlyGoalEditContext) { context in
+        MonthlyGoalEditSheet(
+          monthDate: context.monthDate,
+          baselineGoal: context.baselineGoal,
+          initialGoal: context.initialGoal,
+          showsAdjustmentPercentageFootnote: context.showsAdjustmentPercentageFootnote
+        ) { value in
+          try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
+        }
+        .presentationDetents([.fraction(0.35), .medium])
+        .presentationDragIndicator(.visible)
+      }
+      .sheet(item: $selectedPayrollDetailsVariant) { variant in
+        payrollDetailsSheet(for: variant)
+      }
+      .sheet(item: $temporaryClockReviewSession) { session in
+        let clockJobs = viewModel.clockSelectableJobsSnapshot()
+        ClockOutReviewSheet(
+          session: session,
+          initialAvailableJobs: clockJobs,
+          loadJobs: {
+            await viewModel.clockSelectableJobs()
+          },
+          initialSelectedJobId: viewModel.preferredClockJobId(for: session),
+          jobRequiringPaySetup: { jobId in
+            await viewModel.clockJobRequiringPaySetup(jobId: jobId)
+          },
+          onPaySetupRequired: { start, end, jobId, job in
+            pendingClockAction = .temporaryClockOut(start: start, end: end, jobId: jobId ?? job.id)
+            clockPaySetupJob = job
+          },
+          onSave: { start, end, jobId in
+            try await viewModel.commitTemporaryClockOut(start: start, end: end, jobId: jobId)
+          },
+          onDiscard: {
+            await viewModel.discardTemporaryClockSession()
+          }
+        )
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+      }
+      .sheet(isPresented: $showClockInJobChooser) {
+        DashboardClockJobChooserSheet(
+          initialJobs: clockInJobOptions,
+          loadJobs: {
+            await viewModel.clockSelectableJobs()
+          },
+          onSelect: { jobId in
+            showClockInJobChooser = false
+            Task {
+              await handleClockIn(jobId: jobId)
+            }
+          },
+          onCancel: {
+            showClockInJobChooser = false
+          }
+        )
+      }
+      .sheet(item: $clockPaySetupJob) { job in
+        JobPaySetupSheet(
+          job: job,
+          initialCurrency: job.currency
+        ) { input in
+          await completeClockPaySetup(for: job, input: input)
+        }
+      }
+      // Shift details sheet with full edit/delete capabilities
+      .sheet(item: $selectedShift) { shift in
+        let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
+        ShiftDetailsSheet(
+          shift: shift,
+          jobName: shiftJob?.name,
+          jobColorHex: shiftJob?.color,
+          onDelete: {
+            selectedShift = nil
+            // Small delay before showing delete confirmation
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+              shiftToDelete = shift
+              showDeleteConfirmation = true
+            }
+          },
+          onUpdate: { editResult in
+            let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
+              after: editResult, originalShift: shift)
+            try await viewModel.updateShift(editResult)
+            if shouldKeepSheetOpen {
+              if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+                selectedShift = refreshedShift
+              }
+            } else {
+              selectedShift = nil
+            }
+          },
+          onUpdatePause: { pauseResult in
+            selectedShift = nil
+            Task {
+              await viewModel.updateShiftPause(pauseResult)
+            }
+          },
+          onEditRecurring: { recurringId in
+            selectedShift = nil
+            // Small delay to allow sheet to dismiss
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+              if let recurring = viewModel.getRecurringShift(id: recurringId) {
+                recurringShiftToEdit = recurring
+              }
+            }
+          },
+          showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+          onShowInCalendarRequested: {
+            openCalendarSubscriptionSetupFromDashboard()
+          },
+          tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
+        )
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+      }
+      .sheet(item: $shiftToEditDirectly) { shift in
+        let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil
+        ShiftDetailsSheet(
+          shift: shift,
+          jobName: shiftJob?.name,
+          jobColorHex: shiftJob?.color,
+          onDelete: {
+            shiftToEditDirectly = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+              shiftToDelete = shift
+              showDeleteConfirmation = true
+            }
+          },
+          onUpdate: { editResult in
+            let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(
+              after: editResult, originalShift: shift)
+            try await viewModel.updateShift(editResult)
+            if shouldKeepSheetOpen {
+              if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
+                shiftToEditDirectly = refreshedShift
+              }
+            } else {
+              shiftToEditDirectly = nil
+            }
+          },
+          onUpdatePause: { pauseResult in
+            shiftToEditDirectly = nil
+            Task {
+              await viewModel.updateShiftPause(pauseResult)
+            }
+          },
+          onEditRecurring: { recurringId in
+            shiftToEditDirectly = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+              if let recurring = viewModel.getRecurringShift(id: recurringId) {
+                recurringShiftToEdit = recurring
+              }
+            }
+          },
+          showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+          onShowInCalendarRequested: {
+            openCalendarSubscriptionSetupFromDashboard()
+          },
+          startInEditMode: true,
+          tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
+        )
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+      }
+      .sheet(item: $selectedEvent) { selection in
+        EventDetailsSheet(
+          event: selection.event,
+          onDelete: {
+            selectedEvent = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+              eventToDelete = selection.event
+              showEventDeleteConfirmation = true
+            }
+          },
+          onUpdate: { editResult in
+            try await viewModel.updateEvent(editResult)
+            selectedEvent = nil
+          },
+          onInlineReminderUpdate: { editResult in
+            try await viewModel.updateEvent(editResult)
+          },
+          showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
+          onShowInCalendarRequested: {
+            openCalendarSubscriptionSetupFromDashboard()
+          },
+          startInEditMode: selection.startInEditMode
+        )
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+      }
+      .sheet(isPresented: $showCalendarSubscriptionSettings) {
+        SettingsView(
+          initialDestination: .calendarSync(
+            calendarSetupIntent: .setup(mode: .shiftsAndEvents, autoOpen: false)))
+      }
+      // Delete confirmation alert
+      .alert(
+        shiftToDelete?.isVirtual == true
+          ? String(localized: .shiftsExcludeConfirmTitle)
+          : String(localized: .shiftsDeleteConfirmTitle),
+        isPresented: $showDeleteConfirmation,
+        presenting: shiftToDelete
+      ) { shift in
+        Button(String(localized: .commonCancel), role: .cancel) {
+          shiftToDelete = nil
+        }
+        Button(
+          shift.isVirtual
+            ? String(localized: .shiftsExcludeButton)
+            : String(localized: .shiftsDeleteButton),
+          role: .destructive
+        ) {
+          Task {
+            await deleteShift(shift)
+          }
+        }
+      } message: { shift in
+        Text(
+          shift.isVirtual
+            ? String(localized: .shiftsExcludeConfirmMessage)
+            : String(localized: .shiftsDeleteConfirmMessage))
+      }
+      .alert(
+        String(localized: .eventsDeleteConfirmTitle),
+        isPresented: $showEventDeleteConfirmation,
+        presenting: eventToDelete
+      ) { event in
+        Button(String(localized: .commonCancel), role: .cancel) {
+          eventToDelete = nil
+        }
+        Button(String(localized: .eventsDeleteButton), role: .destructive) {
+          Task {
+            await deleteEvent(event)
+          }
+        }
+      } message: { _ in
+        Text(.eventsDeleteConfirmMessage)
+      }
+      // Recurring shift editor sheet
+      .sheet(item: $recurringShiftToEdit) { recurring in
+        RecurringShiftEditorSheet(
+          recurringShift: recurring,
+          onSave: { editResult in
+            recurringShiftToEdit = nil
+            Task {
+              await updateRecurringShift(editResult)
+            }
+          },
+          onDelete: {
+            let recurringId = recurring.id
+            recurringShiftToEdit = nil
+            Task {
+              await deleteRecurringShift(recurringId)
+            }
+          }
+        )
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+      }
   }
 
   // MARK: - Shift Operations

@@ -90,6 +90,7 @@ struct ShiftsView: View {
 
   @StateObject private var viewModel = ShiftsViewModel()
   @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared
+  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   @ObservedObject private var celebrationManager = CelebrationManager.shared
   @ObservedObject private var syncStatusManager = SyncStatusManager.shared
   @State private var operationErrorMessage: String?
@@ -148,7 +149,6 @@ struct ShiftsView: View {
   // Haptic feedback
   private let selectionHaptic = UISelectionFeedbackGenerator()
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
-  private let workSetupStatusService = WorkSetupStatusService.shared
 
   private func shouldKeepShiftDetailsOpen(
     after editResult: ShiftEditResult,
@@ -182,16 +182,24 @@ struct ShiftsView: View {
     UIDevice.current.userInterfaceIdiom == .phone
   }
 
-  private var workSetupPresentationState: WorkSetupPresentationState? {
-    guard let userId = coordinator.getCurrentUserId() else { return nil }
-    return workSetupStatusService.presentationState(
-      for: userId,
+  @discardableResult
+  private func refreshWorkSetupPresentationState() -> Bool {
+    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder
+    workSetupPresentationViewModel.refresh(
+      userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
+    return wasShowingPlaceholder && !shouldShowWorkSetupRequiredPlaceholder
   }
 
   private var shouldShowWorkSetupRequiredPlaceholder: Bool {
-    workSetupPresentationState?.shouldShowPlaceholder == true
+    workSetupPresentationViewModel.shouldShowPlaceholder
+  }
+
+  private func loadShiftsContent() async {
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    await calendarSubscriptionStore.refreshIfNeeded()
+    await viewModel.loadShifts()
   }
 
   // MARK: - Body
@@ -287,15 +295,30 @@ struct ShiftsView: View {
     AnyView(
       baseBody
         .task {
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-          await calendarSubscriptionStore.refreshIfNeeded()
-          await viewModel.loadShifts()
+          refreshWorkSetupPresentationState()
+          await loadShiftsContent()
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
+          let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          if shouldLoadAfterSetupCompleted {
+            Task {
+              await loadShiftsContent()
+            }
+          }
           guard completed else { return }
           Task {
             await viewModel.reloadFromLocal()
+          }
+        }
+        .onChange(of: coordinator.userId) { _, _ in
+          refreshWorkSetupPresentationState()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
+          let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
+          guard shouldLoadAfterSetupCompleted else { return }
+          Task {
+            await loadShiftsContent()
           }
         }
         .onChange(of: syncStatusManager.lastSuccessfulSync) { oldValue, newValue in
@@ -316,6 +339,8 @@ struct ShiftsView: View {
         }
         .onChange(of: selectedTab) { oldTab, newTab in
           guard newTab == .shifts, oldTab != .shifts else { return }
+          refreshWorkSetupPresentationState()
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           Task {
             await viewModel.reloadFromLocal()
           }
@@ -329,6 +354,7 @@ struct ShiftsView: View {
           }
         }
         .onAppear {
+          refreshWorkSetupPresentationState()
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           recomputeListDerivedDataIfNeeded()
         }
