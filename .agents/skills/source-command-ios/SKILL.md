@@ -64,7 +64,7 @@ The iOS project has 3 targets inside `ios/`:
 
 You may run xcodebuild with simulator destination and reasonable timeout:
 ```bash
-cd /Users/hjalmarsamuelkristensen-karlsen/Lokalt/Cloned-Repos/tidex/ios && xcodebuild -project Tidex.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' build
+cd /Users/hjalmarsamuelkarlsen/Lokalt/Cloned-Repos/tidex/ios && xcodebuild -project Tidex.xcodeproj -scheme App -destination 'generic/platform=iOS Simulator' build
 ```
 If a build hangs or takes too long, stop and report.
 
