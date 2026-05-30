@@ -1071,7 +1071,6 @@ private struct SharedShiftsDetailView: View {
 
   @Environment(\.dismiss) private var dismiss
   @Environment(\.userCurrency) private var fallbackCurrency
-  @Environment(\.layoutDirection) private var layoutDirection
   @AppStorage("shiftsViewMode") private var showListView = false
   @State private var showProfile = false
   @State private var shouldNavigateBack = false
@@ -1081,49 +1080,45 @@ private struct SharedShiftsDetailView: View {
     UIDevice.current.userInterfaceIdiom == .phone
   }
 
-  private let swipeThreshold: CGFloat = 50
-  private let verticalLimit: CGFloat = 50
-  private let edgeExclusion: CGFloat = 24
-  private let monthSwipeHaptic = UIImpactFeedbackGenerator(style: .medium)
-
   private var effectiveCurrency: String {
     viewModel.sharedCurrency ?? fallbackCurrency
   }
 
   var body: some View {
-    GeometryReader { geometry in
-      ZStack {
-        Color.tidexBackground
-          .ignoresSafeArea()
+    ZStack {
+      Color.tidexBackground
+        .ignoresSafeArea()
 
-        SharedShiftsListView(
-          sharer: sharer,
-          shifts: viewModel.sharedShifts,
-          jobs: viewModel.sharedJobs,
-          year: viewModel.committedYear,
-          month: viewModel.committedMonth,
-          phase: viewModel.transitionPhase,
-          isLoading: viewModel.isLoadingShifts,
-          isContentReady: viewModel.hasResolvedSelectedSharerShifts,
-          highlightDates: highlightDates,
-          highlightShiftIds: highlightShiftIds,
-          isSuperimposing: viewModel.isSuperimposing,
-          userHoursByDate: viewModel.userHoursByDate,
-          userShiftsByDate: viewModel.userShiftsByDate,
-          userEarningsByDate: viewModel.userEarningsByDate,
-          onSendToChatCompleted: { result in
-            onSendToChatCompleted(result)
-          }
-        )
-        .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-        .frame(maxWidth: .infinity)
-        .environment(\.userCurrency, effectiveCurrency)
-      }
-      .contentShape(Rectangle())
-      .simultaneousGesture(monthSwipeDragGesture(containerWidth: geometry.size.width))
+      SharedShiftsListView(
+        sharer: sharer,
+        shifts: viewModel.sharedShifts,
+        jobs: viewModel.sharedJobs,
+        year: viewModel.committedYear,
+        month: viewModel.committedMonth,
+        phase: viewModel.transitionPhase,
+        isLoading: viewModel.isLoadingShifts,
+        isContentReady: viewModel.hasResolvedSelectedSharerShifts,
+        highlightDates: highlightDates,
+        highlightShiftIds: highlightShiftIds,
+        isSuperimposing: viewModel.isSuperimposing,
+        userHoursByDate: viewModel.userHoursByDate,
+        userShiftsByDate: viewModel.userShiftsByDate,
+        userEarningsByDate: viewModel.userEarningsByDate,
+        onPreviousMonth: {
+          viewModel.goToPreviousMonth()
+        },
+        onNextMonth: {
+          viewModel.goToNextMonth()
+        },
+        onSendToChatCompleted: { result in
+          onSendToChatCompleted(result)
+        }
+      )
+      .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
+      .frame(maxWidth: .infinity)
+      .environment(\.userCurrency, effectiveCurrency)
     }
     .onAppear {
-      monthSwipeHaptic.prepare()
       SensitiveContentPresentationState.shared.setVisibleContext(
         .sharedCalendar(ownerId: sharer.id, ownerToken: visibleContextOwnerToken)
       )
@@ -1209,36 +1204,6 @@ private struct SharedShiftsDetailView: View {
     return Text(localized)
   }
 
-  private func monthSwipeDragGesture(containerWidth: CGFloat) -> some Gesture {
-    DragGesture(minimumDistance: 10)
-      .onEnded { value in
-        let horizontal = value.translation.width
-        let vertical = abs(value.translation.height)
-        guard vertical <= verticalLimit else { return }
-        guard abs(horizontal) >= swipeThreshold else { return }
-
-        // Leave edge swipes to NavigationStack interactive pop gesture.
-        let startX = value.startLocation.x
-        guard startX > edgeExclusion && startX < (containerWidth - edgeExclusion) else { return }
-
-        AppearanceTracker.shared.reset()
-        monthSwipeHaptic.impactOccurred()
-        monthSwipeHaptic.prepare()
-
-        let swipeLeft = horizontal < 0
-        if swipeLeft {
-          if layoutDirection == .rightToLeft {
-            viewModel.goToPreviousMonth()
-          } else {
-            viewModel.goToNextMonth()
-          }
-        } else if layoutDirection == .rightToLeft {
-          viewModel.goToNextMonth()
-        } else {
-          viewModel.goToPreviousMonth()
-        }
-      }
-  }
 }
 
 #Preview {
