@@ -554,7 +554,7 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   private func notifyDashboardDataChanged() {
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    NotificationCenter.default.postShiftsDidChange(context: .fullReload)
   }
 
   // MARK: - Snapshot CRUD

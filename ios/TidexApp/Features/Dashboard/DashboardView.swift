@@ -125,6 +125,7 @@ struct DashboardView: View {
   }
 
   private func loadDashboardContent() async {
+    guard selectedTab == .home else { return }
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }
     await calendarSubscriptionStore.refreshIfNeeded()
     await viewModel.loadDashboard()
@@ -162,6 +163,8 @@ struct DashboardView: View {
 
     // When initial sync completes after login, reload dashboard to show synced data
     if completed {
+      viewModel.markLocalDataStale()
+      guard selectedTab == .home else { return }
       // Set loading state SYNCHRONOUSLY before starting async task
       // This prevents the empty state from flashing while data loads
       viewModel.prepareForReload()
@@ -179,9 +182,18 @@ struct DashboardView: View {
 
   private func handleWorkSetupDataDidChange() {
     let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
-    guard shouldLoadAfterSetupCompleted else { return }
+    viewModel.markLocalDataStale()
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    if shouldLoadAfterSetupCompleted {
+      guard selectedTab == .home else { return }
+      Task {
+        await loadDashboardContent()
+      }
+      return
+    }
+    guard selectedTab == .home else { return }
     Task {
-      await loadDashboardContent()
+      await viewModel.reloadFromLocal()
     }
   }
 
@@ -191,7 +203,9 @@ struct DashboardView: View {
   }
 
   private func handleDashboardAppear() {
+    viewModel.setActiveTabVisible(selectedTab == .home)
     refreshWorkSetupPresentationState()
+    guard selectedTab == .home else { return }
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }
     // Reconfigure timers when returning to the dashboard after a disappear cycle.
     configureCountdown(with: viewModel.dashboardData)
@@ -200,6 +214,7 @@ struct DashboardView: View {
 
   private func handleSelectedTabChange(oldTab: MainTabView.Tab, newTab: MainTabView.Tab) {
     guard oldTab != newTab else { return }
+    viewModel.setActiveTabVisible(newTab == .home)
     if newTab == .home {
       refreshWorkSetupPresentationState()
       configureCountdown(with: viewModel.dashboardData)
@@ -297,6 +312,7 @@ struct DashboardView: View {
     AnyView(
       navigationContent
         .task {
+          viewModel.setActiveTabVisible(selectedTab == .home)
           refreshWorkSetupPresentationState()
           await loadDashboardContent()
         }
@@ -305,6 +321,12 @@ struct DashboardView: View {
         }
         .onChange(of: coordinator.userId) { _, _ in
           refreshWorkSetupPresentationState()
+          viewModel.markLocalDataStale()
+          guard selectedTab == .home else { return }
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          Task {
+            await viewModel.reloadFromLocal()
+          }
         }
         .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
           handleWorkSetupDataDidChange()
@@ -331,9 +353,8 @@ struct DashboardView: View {
         .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { notification in
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           guard (notification.object as AnyObject?) !== viewModel else { return }
-          // Reload dashboard when shifts change (e.g., after adding a shift)
           Task {
-            await viewModel.reloadFromLocal()
+            await viewModel.handleExternalShiftsDidChange(notification.shiftChangeContext)
           }
         }
         .onReceive(
@@ -706,7 +727,9 @@ struct DashboardView: View {
       }
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(
+        context: .affecting(isoDate: shift.shiftDate)
+      )
 
     } catch {
       operationErrorMessage = ErrorTranslations.translate(error)
@@ -741,7 +764,7 @@ struct DashboardView: View {
       )
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
 
     } catch {
       operationErrorMessage = ErrorTranslations.translate(error)
@@ -754,7 +777,7 @@ struct DashboardView: View {
       try await RecurringShiftsRepository.shared.deleteRecurringShift(id: recurringId)
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
 
     } catch {
       operationErrorMessage = ErrorTranslations.translate(error)

@@ -10,8 +10,6 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "DashboardView
 // MARK: - Notification Names
 
 extension Notification.Name {
-  /// Posted when shifts are created/modified and dashboard should refresh
-  static let shiftsDidChange = Notification.Name("com.tidex.shiftsDidChange")
   /// Posted when dashboard clock button visibility changes in appearance settings.
   static let dashboardClockButtonsVisibilityDidChange = Notification.Name(
     "com.tidex.dashboardClockButtonsVisibilityDidChange")
@@ -663,8 +661,8 @@ final class ClockSessionReconciler {
   private let shiftsRepository: ShiftsRepository
   private var isReconciling = false
 
-  private func notifyShiftsDidChange() {
-    NotificationCenter.default.post(name: .shiftsDidChange, object: self)
+  private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {
+    NotificationCenter.default.postShiftsDidChange(object: self, context: context)
   }
 
   init(
@@ -689,7 +687,7 @@ final class ClockSessionReconciler {
 
     if Self.hasExceededEndOfDayLimit(temporarySession, at: referenceDate) {
       cancelTemporarySession(temporarySession)
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: .affecting(date: temporarySession.startedAt))
       ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
         .checkAndStartLiveActivityIfNeeded()
       return
@@ -724,7 +722,7 @@ final class ClockSessionReconciler {
 
     cancelTemporarySession(temporarySession)
 
-    notifyShiftsDidChange()
+    notifyShiftsDidChange(context: .affecting(isoDate: sessionDate))
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
       .checkAndStartLiveActivityIfNeeded()
   }
@@ -906,8 +904,41 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     let now: Date
   }
 
-  private func notifyShiftsDidChange() {
-    NotificationCenter.default.post(name: .shiftsDidChange, object: self)
+  private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {
+    NotificationCenter.default.postShiftsDidChange(object: self, context: context)
+  }
+
+  private func shiftChangeContext(
+    for editResult: ShiftEditResult,
+    existingShift: ShiftRow?
+  ) -> ShiftChangeContext {
+    var dates = [editResult.shiftDate, editResult.originalDate]
+
+    if let existingShift {
+      dates.append(existingShift.shift_date)
+    }
+
+    return .affecting(isoDates: dates)
+  }
+
+  private func eventChangeContext(
+    for editResult: EventEditResult,
+    existingEvent: EventRow?
+  ) -> ShiftChangeContext {
+    var context = ShiftChangeContext.affecting(
+      isoDateRangeStart: editResult.startDate,
+      end: editResult.endDate
+    )
+
+    if let existingEvent {
+      context = context.merging(
+        .affecting(
+          isoDateRangeStart: existingEvent.start_date,
+          end: existingEvent.end_date
+        ))
+    }
+
+    return context
   }
 
   private func applyDashboardData(_ data: DashboardData) {
@@ -1684,6 +1715,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private var recurringShifts: [RecurringShiftRow] = []
   private var cachedUserId: String?
   private var activePayrollCardTask: Task<Void, Never>?
+  private var isActiveTabVisible = true
+  private var localDataNeedsReload = false
+  private var displayedMonthLoadPending = false
 
   /// Subscription to SharedMonthContext changes
   private var monthContextCancellable: AnyCancellable?
@@ -1700,8 +1734,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// Maximum number of months to keep in cache (prevents unbounded memory growth)
   private static let maxCacheSize = 12
 
-  /// Background prefetch tasks (to avoid duplicate fetches)
-  private var prefetchTasks: Set<String> = []
+  /// Background prefetch tasks keyed by month cache key and invalidation token
+  /// (to avoid duplicate fetches and stale writes after invalidation).
+  private var prefetchTasks: [String: Int] = [:]
+
+  /// Per-month invalidation tokens used to discard stale background prefetch results.
+  private var monthCacheInvalidationTokens: [String: Int] = [:]
+
+  /// Tracks initial-sync transitions so the first post-sync local reload remains a full reset.
+  private var hasObservedInitialSyncCompletion = false
 
   /// Memory warning observer
   private var memoryWarningObserver: NSObjectProtocol?
@@ -1741,6 +1782,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       monthlyPayrollReadService
       ?? MonthlyPayrollReadService(
         shiftsRepository: self.shiftsRepository,
+        eventsRepository: self.eventsRepository,
         settingsRepository: self.settingsRepository,
         snapshotsRepository: self.snapshotsRepository,
         recurringShiftsRepository: self.recurringShiftsRepository,
@@ -1753,6 +1795,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     // Initialize tracking to current month context values
     self.lastObservedYear = self.monthContext.displayYear
     self.lastObservedMonth = self.monthContext.displayMonth
+    self.hasObservedInitialSyncCompletion = AppCoordinator.shared.initialSyncComplete
 
     seedLayoutPreferencesFromLocalSettings()
 
@@ -1828,6 +1871,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         // Sync navigation direction from context
         self.navigationDirection = self.monthContext.navigationDirection
 
+        guard self.isActiveTabVisible else {
+          self.displayedMonthLoadPending = true
+          logger.info("⏸️ Deferring dashboard month load while Home tab is hidden")
+          return
+        }
+
         // Trigger data reload for new month
         self.loadDashboardForDisplayedMonthNonBlocking()
       }
@@ -1858,8 +1907,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private func handleMemoryWarning() {
     logger.warning(
       "⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries)")
-    monthCache.removeAll()
-    prefetchTasks.removeAll()
+    clearAllMonthCache(reason: "memory-warning")
   }
 
   /// Invalidate cache entries for the real current month.
@@ -1867,11 +1915,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// dashboard values are recomputed on next access.
   private func invalidateCurrentMonthCache(reason: String) {
     let current = Date.currentYearMonth()
-    let key = "\(current.year)-\(current.month)"
-    guard monthCache.removeValue(forKey: key) != nil else { return }
+    let key = monthCacheKey(year: current.year, month: current.month)
+    let removedCount = invalidateMonthCacheEntries(for: [key], reason: reason)
+    guard removedCount > 0 else { return }
 
-    // Also allow background prefetch for this key again after invalidation.
-    prefetchTasks.remove(key)
     logger.info("♻️ Invalidated current-month cache (\(reason)): \(key)")
 
     // If the user is viewing the invalidated month, trigger a background
@@ -1879,6 +1926,93 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     if displayYear == current.year && displayMonth == current.month {
       loadDashboardForDisplayedMonthNonBlocking()
     }
+  }
+
+  private func monthCacheKey(year: Int, month: Int) -> String {
+    "\(year)-\(month)"
+  }
+
+  private func monthCacheKey(_ yearMonth: (year: Int, month: Int)) -> String {
+    monthCacheKey(year: yearMonth.year, month: yearMonth.month)
+  }
+
+  private func movingWindowCacheKeys(around displayYM: (year: Int, month: Int)) -> Set<String> {
+    let previousYM = Date.previousYearMonth(from: displayYM)
+    let nextYM = nextYearMonth(from: displayYM)
+    let previousPreviousYM = Date.previousYearMonth(from: previousYM)
+    let nextPreviousYM = Date.previousYearMonth(from: nextYM)
+
+    return Set([
+      monthCacheKey(displayYM),
+      monthCacheKey(previousYM),
+      monthCacheKey(nextYM),
+      monthCacheKey(previousPreviousYM),
+      monthCacheKey(nextPreviousYM),
+    ])
+  }
+
+  @discardableResult
+  private func invalidateMonthCacheEntries(for keys: Set<String>, reason: String) -> Int {
+    guard !keys.isEmpty else { return 0 }
+
+    incrementMonthCacheInvalidationTokens(for: keys)
+
+    var removedCount = 0
+    for key in keys {
+      if monthCache.removeValue(forKey: key) != nil {
+        removedCount += 1
+      }
+      prefetchTasks.removeValue(forKey: key)
+    }
+
+    if removedCount > 0 {
+      logger.info("♻️ Invalidated \(removedCount) dashboard cache entries (\(reason))")
+    }
+
+    return removedCount
+  }
+
+  private func invalidateMovingWindowCache(reason: String) {
+    let keys = movingWindowCacheKeys(around: (year: displayYear, month: displayMonth))
+    let removedCount = invalidateMonthCacheEntries(for: keys, reason: reason)
+    logger.info(
+      "♻️ Local dashboard reload invalidated \(removedCount)/\(keys.count) moving-window cache entries"
+    )
+  }
+
+  private func clearAllMonthCache(reason: String) {
+    let keys = Set(monthCache.keys).union(Set(prefetchTasks.keys))
+    incrementMonthCacheInvalidationTokens(for: keys)
+
+    let removedCount = monthCache.count
+    let prefetchCount = prefetchTasks.count
+    monthCache.removeAll()
+    prefetchTasks.removeAll()
+
+    if removedCount > 0 || prefetchCount > 0 {
+      logger.info(
+        "♻️ Cleared dashboard month cache (\(reason)): \(removedCount) entries, \(prefetchCount) prefetches"
+      )
+    }
+  }
+
+  private func incrementMonthCacheInvalidationTokens(for keys: Set<String>) {
+    for key in keys {
+      monthCacheInvalidationTokens[key, default: 0] += 1
+    }
+  }
+
+  private func monthCacheInvalidationToken(for key: String) -> Int {
+    monthCacheInvalidationTokens[key] ?? 0
+  }
+
+  private func isPrefetchCurrent(for key: String, token: Int) -> Bool {
+    prefetchTasks[key] == token && monthCacheInvalidationToken(for: key) == token
+  }
+
+  private func finishPrefetch(for key: String, token: Int) {
+    guard prefetchTasks[key] == token else { return }
+    prefetchTasks.removeValue(forKey: key)
   }
 
   /// Evict least recently used cache entries if over limit
@@ -1920,6 +2054,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// Non-blocking month data loader
   /// Uses cache for instant display, fetches in background if needed
   private func loadDashboardForDisplayedMonthNonBlocking() {
+    guard isActiveTabVisible else {
+      displayedMonthLoadPending = true
+      logger.info("⏸️ Deferring dashboard month load while Home tab is hidden")
+      return
+    }
+
     let targetYear = displayYear
     let targetMonth = displayMonth
     let displayKey = "\(targetYear)-\(targetMonth)"
@@ -2078,18 +2218,105 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Public Methods
 
+  func setActiveTabVisible(_ isVisible: Bool) {
+    guard isActiveTabVisible != isVisible else { return }
+
+    isActiveTabVisible = isVisible
+
+    if !isVisible {
+      activeNavigationTask?.cancel()
+      activePayrollCardTask?.cancel()
+      incrementMonthCacheInvalidationTokens(for: Set(prefetchTasks.keys))
+      prefetchTasks.removeAll()
+      isLoading = false
+      return
+    }
+
+    let dashboardMatchesDisplayed =
+      dashboardData?.displayedYear == displayYear && dashboardData?.displayedMonth == displayMonth
+    if localDataNeedsReload || displayedMonthLoadPending || !dashboardMatchesDisplayed {
+      Task {
+        await reloadFromLocalIfStale()
+      }
+    }
+  }
+
+  func markLocalDataStale() {
+    localDataNeedsReload = true
+    displayedMonthLoadPending = true
+  }
+
+  func handleExternalShiftsDidChange(_ context: ShiftChangeContext) async {
+    guard context.canUseTargetedInvalidation else {
+      markLocalDataStale()
+      guard isActiveTabVisible else { return }
+      await reloadFromLocal(showLoadingState: dashboardData == nil)
+      return
+    }
+
+    let affectedKeys = Set(
+      context.affectedMonths.map { monthCacheKey(year: $0.year, month: $0.month) }
+    )
+    invalidateMonthCacheEntries(for: affectedKeys, reason: "shift-change")
+
+    guard
+      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
+        on: context.affectedMonths,
+        displayYear: displayYear,
+        displayMonth: displayMonth
+      )
+    else {
+      return
+    }
+
+    displayedMonthLoadPending = true
+    guard isActiveTabVisible else { return }
+
+    displayedMonthLoadPending = false
+    loadDashboardForDisplayedMonthNonBlocking()
+  }
+
+  /// Reloads data that was deferred while Home was hidden.
+  /// Uses cached month data when only the displayed month changed.
+  func reloadFromLocalIfStale() async {
+    guard isActiveTabVisible else {
+      displayedMonthLoadPending = true
+      return
+    }
+
+    if localDataNeedsReload {
+      await reloadFromLocal(showLoadingState: dashboardData == nil)
+      return
+    }
+
+    if dashboardData == nil {
+      await loadDashboard()
+      return
+    }
+
+    let dashboardMatchesDisplayed =
+      dashboardData?.displayedYear == displayYear && dashboardData?.displayedMonth == displayMonth
+    guard displayedMonthLoadPending || !dashboardMatchesDisplayed else { return }
+    displayedMonthLoadPending = false
+    loadDashboardForDisplayedMonthNonBlocking()
+  }
+
   /// Load all dashboard data for current month (initial load)
   /// Reads from local repositories only - sync is triggered by AppCoordinator
   /// Also prefetches neighboring months for instant navigation
   func loadDashboard() async {
+    guard isActiveTabVisible else {
+      displayedMonthLoadPending = true
+      return
+    }
+
     // Sync tracking with current month context values
     lastObservedYear = monthContext.displayYear
     lastObservedMonth = monthContext.displayMonth
     navigationDirection = nil
 
     // Clear cache on full reload (including cachedUserId for impersonation support)
-    monthCache.removeAll()
-    prefetchTasks.removeAll()
+    clearAllMonthCache(reason: "full-load")
     activePayrollCardTask?.cancel()
     payrollCardSnapshot = nil
     cachedUserId = nil
@@ -2098,6 +2325,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     payrollAdjustmentsByPayoutMonth.removeAll()
 
     await loadDashboardFromLocal()
+    localDataNeedsReload = false
+    displayedMonthLoadPending = false
 
     // Prefetch neighboring months in the background
     prefetchNeighboringMonths()
@@ -2145,8 +2374,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       }
 
       // Clear in-memory caches so we pick up synced data
-      monthCache.removeAll()
-      prefetchTasks.removeAll()
+      clearAllMonthCache(reason: "manual-refresh")
       settings = nil  // Force reload from local
       snapshots = []
       recurringShifts = []
@@ -2184,11 +2412,67 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     let context = monthlyPayrollReadService.loadContext(for: userId)
+    applyDashboardDependencies(context)
+  }
+
+  private func applyDashboardDependencies(_ context: PayrollReadContext) {
     settings = context.settings
     snapshots = context.snapshots
     recurringShifts = context.recurringShifts
     displayJobs = context.jobs
     shouldShowDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+  }
+
+  private func resetDashboardDependencies() {
+    settings = nil
+    snapshots = []
+    recurringShifts = []
+    displayJobs = []
+  }
+
+  private func dashboardDependenciesDiffer(from context: PayrollReadContext) -> Bool {
+    settings != context.settings
+      || snapshots != context.snapshots
+      || recurringShifts != context.recurringShifts
+      || displayJobs != context.jobs
+  }
+
+  private func consumeInitialSyncCompletionTransition() -> Bool {
+    let initialSyncComplete = AppCoordinator.shared.initialSyncComplete
+    defer {
+      hasObservedInitialSyncCompletion = initialSyncComplete
+    }
+
+    return initialSyncComplete && !hasObservedInitialSyncCompletion
+  }
+
+  private func fullCacheInvalidationReasonForLocalReload(
+    previousUserId: String?,
+    currentUserId: String?,
+    initialSyncJustCompleted: Bool,
+    dependenciesChanged: Bool
+  ) -> String? {
+    guard let currentUserId, !currentUserId.isEmpty else {
+      return "local-reload-user-unavailable"
+    }
+
+    guard let previousUserId, !previousUserId.isEmpty else {
+      return "local-reload-user-uncached"
+    }
+
+    guard previousUserId == currentUserId else {
+      return "local-reload-user-changed"
+    }
+
+    if initialSyncJustCompleted {
+      return "initial-sync-complete"
+    }
+
+    if dependenciesChanged {
+      return "local-reload-dependencies-changed"
+    }
+
+    return nil
   }
 
   private func fetchShiftRows(
@@ -2203,48 +2487,30 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     )
   }
 
-  private func fetchMonthShiftRows(
+  private func fetchMonthRawWindows(
     for userId: String,
     displayYM: (year: Int, month: Int),
     previousYM: (year: Int, month: Int)
-  ) async -> (display: [ShiftRow], previous: [ShiftRow]) {
-    let months = [
-      PayrollReadMonth(year: displayYM.year, month: displayYM.month),
-      PayrollReadMonth(year: previousYM.year, month: previousYM.month),
-    ]
-    let rowsByMonth = await monthlyPayrollReadService.loadShiftRows(
-      for: userId,
-      months: months
-    )
-    let displayRows =
-      rowsByMonth[PayrollReadMonth(year: displayYM.year, month: displayYM.month)] ?? []
-    let previousRows =
-      rowsByMonth[PayrollReadMonth(year: previousYM.year, month: previousYM.month)] ?? []
-    return (displayRows, previousRows)
-  }
+  ) async -> (display: PayrollRawWindowData, previous: PayrollRawWindowData) {
+    let displayMonth = PayrollReadMonth(year: displayYM.year, month: displayYM.month)
+    let previousMonth = PayrollReadMonth(year: previousYM.year, month: previousYM.month)
+    let displayWindow = PayrollReadWindow.month(year: displayYM.year, month: displayYM.month)
+    let previousWindow = PayrollReadWindow.month(year: previousYM.year, month: previousYM.month)
 
-  private func fetchMonthEvents(
-    for userId: String,
-    displayYM: (year: Int, month: Int),
-    previousYM: (year: Int, month: Int)
-  ) async -> (display: [EventRow], previous: [EventRow]) {
-    let displayStartDate = Date.firstDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-    let displayEndDate = Date.lastDayOfMonthDate(year: displayYM.year, month: displayYM.month)
-    let previousStartDate = Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-    let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-
-    async let displayEvents = eventsRepository.getEventsOffMain(
+    let dataByMonth = await monthlyPayrollReadService.loadRawWindows(
       for: userId,
-      startDate: displayStartDate,
-      endDate: displayEndDate
-    )
-    async let previousEvents = eventsRepository.getEventsOffMain(
-      for: userId,
-      startDate: previousStartDate,
-      endDate: previousEndDate
+      windows: [
+        displayMonth: displayWindow,
+        previousMonth: previousWindow,
+      ]
     )
 
-    return await (displayEvents, previousEvents)
+    return (
+      dataByMonth[displayMonth]
+        ?? PayrollRawWindowData(window: displayWindow, shifts: [], events: []),
+      dataByMonth[previousMonth]
+        ?? PayrollRawWindowData(window: previousWindow, shifts: [], events: [])
+    )
   }
 
   private func fetchPayrollAdjustmentsForPayoutMonth(
@@ -2454,6 +2720,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
   /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
   func reloadFromLocal(showLoadingState: Bool = true) async {
+    guard isActiveTabVisible else {
+      markLocalDataStale()
+      return
+    }
+
     logger.info("🔄 Reloading dashboard from local data")
 
     // Set loading state if not already set (e.g., by prepareForReload)
@@ -2461,20 +2732,35 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       isLoading = true
     }
 
-    // Clear ALL in-memory caches to pick up new data from sync
-    // This is critical after initial sync completes - settings/snapshots may now exist
-    // Also critical for impersonation: cachedUserId must be refreshed from current session
-    monthCache.removeAll()
-    prefetchTasks.removeAll()
+    let previousUserId = cachedUserId
+    let currentUserId = try? await getCurrentUserId()
+    let initialSyncJustCompleted = consumeInitialSyncCompletionTransition()
+    let refreshedContext = currentUserId.map { monthlyPayrollReadService.loadContext(for: $0) }
+    let dependenciesChanged = refreshedContext.map(dashboardDependenciesDiffer(from:)) ?? true
+
+    if let fullInvalidationReason = fullCacheInvalidationReasonForLocalReload(
+      previousUserId: previousUserId,
+      currentUserId: currentUserId,
+      initialSyncJustCompleted: initialSyncJustCompleted,
+      dependenciesChanged: dependenciesChanged
+    ) {
+      clearAllMonthCache(reason: fullInvalidationReason)
+    } else {
+      invalidateMovingWindowCache(reason: "local-reload")
+    }
+
     activePayrollCardTask?.cancel()
-    cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
-    displayJobs = []
-    settings = nil  // Force re-read settings from repository
-    snapshots = []  // Force re-read snapshots from repository
-    recurringShifts = []  // Force re-read recurring shifts from repository
+    cachedUserId = currentUserId  // Refreshed from session for impersonation correctness.
+    if let refreshedContext {
+      applyDashboardDependencies(refreshedContext)
+    } else {
+      resetDashboardDependencies()
+    }
 
     // Reload from local repositories (pass false since we already set loading state)
     await loadDashboardFromLocal(showLoadingState: false)
+    localDataNeedsReload = false
+    displayedMonthLoadPending = false
 
     // Prefetch neighboring months after launch animations settle
     Task {
@@ -2559,22 +2845,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let previousYM = Date.previousYearMonth(from: displayYM)
 
       // Load shifts through the repository/DAL path (after settings retry to avoid stale empty reads)
-      let fetchedShiftRows = await fetchMonthShiftRows(
+      let fetchedRawWindows = await fetchMonthRawWindows(
         for: userId,
         displayYM: displayYM,
         previousYM: previousYM
       )
-      let fetchedEvents = await fetchMonthEvents(
-        for: userId,
-        displayYM: displayYM,
-        previousYM: previousYM
-      )
-      let displayShifts = fetchedShiftRows.display
+      let displayShifts = fetchedRawWindows.display.shifts
       logger.info(
         "📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
-      let fetchedPreviousShifts = fetchedShiftRows.previous
-      let displayEvents = fetchedEvents.display
-      let previousEvents = fetchedEvents.previous
+      let fetchedPreviousShifts = fetchedRawWindows.previous.shifts
+      let displayEvents = fetchedRawWindows.display.events
+      let previousEvents = fetchedRawWindows.previous.events
       let fetchedPayrollAdjustmentsByMonth = fetchPayrollAdjustmentsForPayoutMonths(
         userId: userId,
         months: payrollPayoutMonthsToLoad(displayYM: displayYM)
@@ -2751,20 +3032,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let previousYM = Date.previousYearMonth(from: displayYM)
 
       // Load shifts through the repository/DAL path
-      let fetchedShiftRows = await fetchMonthShiftRows(
+      let fetchedRawWindows = await fetchMonthRawWindows(
         for: userId,
         displayYM: displayYM,
         previousYM: previousYM
       )
-      let fetchedEvents = await fetchMonthEvents(
-        for: userId,
-        displayYM: displayYM,
-        previousYM: previousYM
-      )
-      let displayShifts = fetchedShiftRows.display
-      let fetchedPreviousShifts = fetchedShiftRows.previous
-      let displayEvents = fetchedEvents.display
-      let previousEvents = fetchedEvents.previous
+      let displayShifts = fetchedRawWindows.display.shifts
+      let fetchedPreviousShifts = fetchedRawWindows.previous.shifts
+      let displayEvents = fetchedRawWindows.display.events
+      let previousEvents = fetchedRawWindows.previous.events
       let fetchedPayrollAdjustmentsByMonth = fetchPayrollAdjustmentsForPayoutMonths(
         userId: userId,
         months: payrollPayoutMonthsToLoad(displayYM: displayYM)
@@ -2910,6 +3186,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// Prefetch neighboring months in the background
   /// This enables instant navigation when the user swipes
   private func prefetchNeighboringMonths() {
+    guard isActiveTabVisible else { return }
+
     let displayYM = (year: displayYear, month: displayMonth)
 
     // Calculate previous and next months
@@ -2929,7 +3207,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Prefetch a single month's data in the background from local repository
   private func prefetchMonthInBackground(year: Int, month: Int) {
-    let key = "\(year)-\(month)"
+    let key = monthCacheKey(year: year, month: month)
 
     // Skip if already cached and valid
     if let cached = monthCache[key], cached.isValid {
@@ -2937,42 +3215,39 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     // Skip if already prefetching
-    if prefetchTasks.contains(key) {
+    let token = monthCacheInvalidationToken(for: key)
+    if prefetchTasks[key] == token {
       return
     }
 
-    prefetchTasks.insert(key)
+    prefetchTasks[key] = token
 
     // Local reads are fast, but we run in a Task to not block UI
     Task {
-      guard let userId = cachedUserId else {
-        prefetchTasks.remove(key)
-        return
+      defer {
+        self.finishPrefetch(for: key, token: token)
       }
 
-      let startDate = Date.firstDayOfMonthDate(year: year, month: month)
-      let endDate = Date.lastDayOfMonthDate(year: year, month: month)
-
-      // Read from the repository/DAL path off the main actor
-      async let fetchedShifts = shiftsRepository.getShiftsOffMain(
-        for: userId,
-        startDate: startDate,
-        endDate: endDate
-      )
-      async let fetchedEvents = eventsRepository.getEventsOffMain(
-        for: userId,
-        startDate: startDate,
-        endDate: endDate
-      )
+      guard let userId = cachedUserId else {
+        return
+      }
 
       // Compute shifts with payroll
       guard let settings = self.settings else {
-        prefetchTasks.remove(key)
         return
       }
 
-      let monthShifts = await fetchedShifts
-      let monthEvents = await fetchedEvents
+      let fetchedWindow = await monthlyPayrollReadService.loadRawWindow(
+        for: userId,
+        window: .month(year: year, month: month)
+      )
+
+      guard self.isPrefetchCurrent(for: key, token: token) else {
+        return
+      }
+
+      let monthShifts = fetchedWindow.shifts
+      let monthEvents = fetchedWindow.events
       let capturedRecurring = recurringShifts
       let capturedSnapshots = snapshots
       let capturedJobs = displayJobs
@@ -2991,6 +3266,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         )
       }.value
 
+      guard self.isPrefetchCurrent(for: key, token: token) else {
+        return
+      }
+
       // Store in cache
       let entry = MonthCacheEntry(
         year: year,
@@ -3000,7 +3279,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         timestamp: Date()
       )
       self.monthCache[key] = entry
-      self.prefetchTasks.remove(key)
 
       // Evict old cache entries if over limit
       self.evictCacheIfNeeded()
@@ -3725,7 +4003,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     cancelTemporarySession(session)
 
     await reloadFromLocal()
-    notifyShiftsDidChange()
+    notifyShiftsDidChange(context: .affecting(date: shiftDate))
     await refreshClockActiveState(referenceDate: Date())
   }
 
@@ -3736,7 +4014,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     guard case .temporary(let session) = activeClockState else { return }
 
     cancelTemporarySession(session)
-    notifyShiftsDidChange()
+    notifyShiftsDidChange(context: .affecting(date: session.startedAt))
     await refreshClockActiveState(referenceDate: Date())
   }
 
@@ -3789,7 +4067,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       )
       displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: .fullReload)
       Haptics.play(.success)
       return true
     } catch {
@@ -3837,6 +4115,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     isUpdatingEvent = true
     defer { isUpdatingEvent = false }
+    let existingEvent = displayedMonthEvents.first(where: { $0.id == editResult.eventId })
 
     guard
       let startDate = Date.fromISODateString(editResult.startDate),
@@ -3862,7 +4141,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     }
 
     await reloadFromLocal()
-    notifyShiftsDidChange()
+    notifyShiftsDidChange(
+      context: eventChangeContext(
+        for: editResult,
+        existingEvent: existingEvent
+      ))
   }
 
   func deleteEvent(_ event: EventRow) async throws {
@@ -3873,7 +4156,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     try await eventsRepository.deleteEvent(id: event.id)
     await reloadFromLocal()
-    notifyShiftsDidChange()
+    notifyShiftsDidChange(
+      context: .affecting(
+        isoDateRangeStart: event.start_date,
+        end: event.end_date
+      ))
   }
 
   /// End an active shift immediately using the current local device time.
@@ -4045,7 +4332,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(
+        context: shiftChangeContext(
+          for: editResult,
+          existingShift: currentShift
+        ))
 
     } catch {
       logger.error("❌ Failed to update shift: \(error.localizedDescription)")
@@ -4060,6 +4351,18 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     defer { isUpdatingShift = false }
 
     logger.info("⏸️ Updating shift pause windows")
+    let changeContext: ShiftChangeContext
+
+    switch editResult.target {
+    case .standalone(let shiftId):
+      if let shift = displayedMonthShifts.first(where: { $0.id == shiftId }) {
+        changeContext = .affecting(isoDate: shift.shiftDate)
+      } else {
+        changeContext = .fullReload
+      }
+    case .recurringOccurrence(_, let date):
+      changeContext = .affecting(isoDate: date)
+    }
 
     do {
       switch editResult.target {
@@ -4091,7 +4394,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       }
 
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: changeContext)
     } catch {
       logger.error("❌ Failed to update shift pause windows: \(error.localizedDescription)")
     }

@@ -1335,7 +1335,7 @@ final class WageyViewModel {
       return
     }
 
-    NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+    NotificationCenter.default.postShiftsDidChange(context: .fullReload)
   }
 
   private func processChunkBatch(_ chunks: [ChatChunk]) {
