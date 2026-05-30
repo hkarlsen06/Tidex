@@ -1191,7 +1191,7 @@ private struct UserActionSheet: View {
           }
         }
 
-        if !user.isAdmin {
+        if !user.isAdmin || (viewModel.isSuperAdmin && !user.isSuperAdmin) {
           Section("Impersonation") {
             TextField("Reason (minimum 5 characters)", text: $impersonationReason)
               .textInputAutocapitalization(.sentences)

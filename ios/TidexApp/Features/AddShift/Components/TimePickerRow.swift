@@ -513,6 +513,8 @@ struct TimeRangePicker: View {
   var focusedFieldBinding: Binding<TimeInputField?>?
   /// Optional preset chip ranges (used by onboarding simulator).
   var presetRanges: [TimeRangeCount]? = nil
+  /// Whether to show recent/preset time chips below the inputs.
+  var showsRecentTimeChips = true
   /// Optional accessory displayed to the left of recent time chips.
   var leadingChipAccessory: AnyView? = nil
   @State private var focusController = TimeInputFocusController()
@@ -557,23 +559,25 @@ struct TimeRangePicker: View {
       }
       .frame(maxWidth: .infinity, alignment: .center)
 
-      HStack(spacing: Spacing.xs) {
-        if let leadingChipAccessory {
-          leadingChipAccessory
-            .fixedSize(horizontal: true, vertical: false)
-        }
+      if showsRecentTimeChips {
+        HStack(spacing: Spacing.xs) {
+          if let leadingChipAccessory {
+            leadingChipAccessory
+              .fixedSize(horizontal: true, vertical: false)
+          }
 
-        RecentTimesChips(
-          onSelect: { range in
-            applyTimeRange(range)
-          },
-          activeRangeId: activeRangeId,
-          presetRanges: presetRanges
-        )
-        .frame(maxWidth: .infinity, alignment: .leading)
+          RecentTimesChips(
+            onSelect: { range in
+              applyTimeRange(range)
+            },
+            activeRangeId: activeRangeId,
+            presetRanges: presetRanges
+          )
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
       }
     }
-    .frame(height: compactInputHeight + Spacing.xs + chipRowHeight, alignment: .top)
+    .frame(height: pickerHeight, alignment: .top)
     .id(scrollId)
     .onAppear {
       focusController.onFocusChange = { (focused: TimeInputField?) in
@@ -588,6 +592,10 @@ struct TimeRangePicker: View {
         focusController.focus(newValue)
       }
     }
+  }
+
+  private var pickerHeight: CGFloat {
+    showsRecentTimeChips ? compactInputHeight + Spacing.xs + chipRowHeight : compactInputHeight
   }
 
   /// ID of the currently active time range chip, if start/end match a chip's times

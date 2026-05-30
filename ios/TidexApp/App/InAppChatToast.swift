@@ -5,6 +5,11 @@ extension Notification.Name {
 }
 
 struct InAppChatToastPayload: Equatable, Sendable {
+  enum Destination: Equatable, Sendable {
+    case friendChat
+    case none
+  }
+
   let threadId: String
   let messageId: String?
   let senderUserId: String?
@@ -12,6 +17,7 @@ struct InAppChatToastPayload: Equatable, Sendable {
   let senderName: String
   let senderAvatarUrl: String?
   let previewText: String
+  let destination: Destination
 
   init(
     threadId: String,
@@ -29,6 +35,7 @@ struct InAppChatToastPayload: Equatable, Sendable {
     self.senderName = senderName
     self.senderAvatarUrl = senderAvatarUrl
     self.previewText = previewText
+    self.destination = .friendChat
   }
 
   init?(
@@ -38,8 +45,11 @@ struct InAppChatToastPayload: Equatable, Sendable {
   ) {
     guard let type = userInfo["type"] as? String,
       type == "thread_message" || type == "thread_typing" || type == "thread_reaction"
+        || type == "thread_screenshot" || type == "shifts_screenshotted"
     else { return nil }
-    guard let threadId = userInfo["thread_id"] as? String, !threadId.isEmpty else { return nil }
+
+    let threadId = (userInfo["thread_id"] as? String) ?? ""
+    guard type == "shifts_screenshotted" || !threadId.isEmpty else { return nil }
 
     self.threadId = threadId
     self.messageId = userInfo["message_id"] as? String
@@ -51,6 +61,7 @@ struct InAppChatToastPayload: Equatable, Sendable {
       ?? notificationTitle
     self.senderAvatarUrl = userInfo["sender_avatar_url"] as? String
     self.previewText = notificationBody.trimmingCharacters(in: .whitespacesAndNewlines)
+    self.destination = type == "shifts_screenshotted" ? .none : .friendChat
   }
 }
 

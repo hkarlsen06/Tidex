@@ -147,6 +147,12 @@ private struct RootContent: View {
                     payload: activeChatToast,
                     onTap: {
                       dismissChatToast()
+                      guard activeChatToast.destination == .friendChat,
+                        !activeChatToast.threadId.isEmpty
+                      else {
+                        return
+                      }
+
                       coordinator.pendingDeepLink = .friendChat(
                         threadId: activeChatToast.threadId,
                         messageId: activeChatToast.messageId,

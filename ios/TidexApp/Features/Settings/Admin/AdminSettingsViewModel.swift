@@ -1506,6 +1506,11 @@ final class AdminSettingsViewModel: ObservableObject {
       return
     }
 
+    guard !targetUser.isAdmin || isSuperAdmin else {
+      errorMessage = "Only the superadmin can impersonate admin users"
+      return
+    }
+
     let reason = impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines)
     guard reason.count >= 5 else {
       errorMessage = "Reason must be at least 5 characters"
