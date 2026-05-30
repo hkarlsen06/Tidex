@@ -31,6 +31,7 @@ struct DashboardView: View {
   @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared
   @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   @ObservedObject private var pushManager = PushNotificationManager.shared
+  @ObservedObject private var syncStatusManager = SyncStatusManager.shared
 
   /// State for showing push notification failure alert
   @State private var showPushFailureAlert = false
@@ -180,7 +181,14 @@ struct DashboardView: View {
     }
   }
 
-  private func handleWorkSetupDataDidChange() {
+  private func handleWorkSetupDataDidChange(_ notification: Notification) {
+    if notification.userInfo?["syncReason"] as? String == SyncReason.manualRefresh.rawValue,
+      notification.userInfo?["userId"] as? String == coordinator.userId,
+      selectedTab == .home
+    {
+      return
+    }
+
     let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
     viewModel.markLocalDataStale()
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }
@@ -194,6 +202,23 @@ struct DashboardView: View {
     guard selectedTab == .home else { return }
     Task {
       await viewModel.reloadFromLocal()
+    }
+  }
+
+  private func handleSuccessfulSyncSummary(_ summary: SyncCompletionSummary?) {
+    guard let summary, summary.userId == coordinator.userId else { return }
+    guard summary.reason != .appLaunch else { return }
+    guard let context = summary.dashboardChangeContext else { return }
+
+    guard !shouldShowWorkSetupRequiredPlaceholder else {
+      viewModel.markLocalDataStale()
+      return
+    }
+
+    guard !(summary.reason == .manualRefresh && selectedTab == .home) else { return }
+
+    Task {
+      await viewModel.handleExternalShiftsDidChange(context)
     }
   }
 
@@ -328,8 +353,12 @@ struct DashboardView: View {
             await viewModel.reloadFromLocal()
           }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
-          handleWorkSetupDataDidChange()
+        .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) {
+          notification in
+          handleWorkSetupDataDidChange(notification)
+        }
+        .onChange(of: syncStatusManager.lastSuccessfulSyncSummary) { _, summary in
+          handleSuccessfulSyncSummary(summary)
         }
         .onChange(of: viewModel.dashboardData) { _, newData in
           handleDashboardDataChange(newData)

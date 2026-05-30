@@ -156,4 +156,80 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
     XCTAssertEqual(affectedDisplayMonths, [april, may, june])
   }
+
+  func testSyncSummaryIgnoresUnrelatedAndPushOnlyChanges() throws {
+    let unrelatedPull = syncSummary(
+      tableResults: [pullResult(table: .notificationPreferences, rowsProcessed: 1)]
+    )
+    XCTAssertNil(unrelatedPull.dashboardChangeContext)
+    XCTAssertNil(unrelatedPull.scheduleChangeContext)
+
+    let pushOnly = syncSummary(
+      pushResults: [TablePushResult(table: .userShifts, rowsPushed: 1, newConflicts: 0, rebased: 0)]
+    )
+    XCTAssertNil(pushOnly.dashboardChangeContext)
+    XCTAssertNil(pushOnly.scheduleChangeContext)
+  }
+
+  func testSyncSummaryBuildsTargetedContextsForDatedTables() throws {
+    let may = try XCTUnwrap(ShiftChangeAffectedMonth(year: 2026, month: 5))
+    let summary = syncSummary(
+      tableResults: [
+        pullResult(table: .userShifts, rowsProcessed: 1, affectedMonths: [may])
+      ]
+    )
+
+    XCTAssertEqual(summary.dashboardChangeContext, .affecting(months: [may]))
+    XCTAssertEqual(summary.scheduleChangeContext, .affecting(months: [may]))
+  }
+
+  func testSyncSummaryFallsBackToFullReloadForBroadRelevantTables() {
+    let summary = syncSummary(
+      tableResults: [pullResult(table: .userSettings, rowsProcessed: 1)]
+    )
+
+    XCTAssertEqual(summary.dashboardChangeContext, .fullReload)
+    XCTAssertEqual(summary.scheduleChangeContext, .fullReload)
+  }
+
+  func testSyncSummaryScopesPayrollAdjustmentsToDashboard() throws {
+    let may = try XCTUnwrap(ShiftChangeAffectedMonth(year: 2026, month: 5))
+    let summary = syncSummary(
+      tableResults: [
+        pullResult(table: .payrollAdjustments, rowsProcessed: 1, affectedMonths: [may])
+      ]
+    )
+
+    XCTAssertEqual(summary.dashboardChangeContext, .affecting(months: [may]))
+    XCTAssertNil(summary.scheduleChangeContext)
+  }
+
+  private func syncSummary(
+    tableResults: [TablePullResult] = [],
+    pushResults: [TablePushResult] = []
+  ) -> SyncCompletionSummary {
+    SyncCompletionSummary(
+      reason: .foreground,
+      userId: "user-1",
+      tableResults: tableResults,
+      pushResults: pushResults
+    )
+  }
+
+  private func pullResult(
+    table: SyncTable,
+    rowsProcessed: Int,
+    affectedMonths: Set<ShiftChangeAffectedMonth> = []
+  ) -> TablePullResult {
+    TablePullResult(
+      table: table,
+      rowsProcessed: rowsProcessed,
+      lastUpdatedAt: nil,
+      lastUpdatedAtTieId: nil,
+      maxRevision: 0,
+      newConflicts: 0,
+      autoMerged: 0,
+      affectedMonths: affectedMonths
+    )
+  }
 }

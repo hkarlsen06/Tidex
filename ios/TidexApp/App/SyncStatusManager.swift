@@ -32,6 +32,7 @@ final class SyncStatusManager: ObservableObject {
 
   @Published private(set) var status: SyncIndicatorStatus = .synced
   @Published private(set) var lastSuccessfulSync: Date?
+  @Published private(set) var lastSuccessfulSyncSummary: SyncCompletionSummary?
 
   private init() {}
 
@@ -43,8 +44,10 @@ final class SyncStatusManager: ObservableObject {
   }
 
   /// Called when sync completes successfully
-  func syncSucceeded() {
-    lastSuccessfulSync = Date()
+  func syncSucceeded(summary: SyncCompletionSummary? = nil) {
+    let completedAt = summary?.completedAt ?? Date()
+    lastSuccessfulSync = completedAt
+    lastSuccessfulSyncSummary = summary
     status = .synced
   }
 
@@ -69,5 +72,6 @@ final class SyncStatusManager: ObservableObject {
   func reset() {
     status = .synced
     lastSuccessfulSync = nil
+    lastSuccessfulSyncSummary = nil
   }
 }

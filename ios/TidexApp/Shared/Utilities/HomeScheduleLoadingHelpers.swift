@@ -322,6 +322,54 @@ extension NotificationCenter {
   }
 }
 
+extension SyncCompletionSummary {
+  // Jobs and wage snapshots are handled through `.workSetupDataDidChange` so sync summaries do not
+  // trigger a second Home/Schedule reload for the same sync.
+  private static let dashboardRelevantTables: Set<SyncTable> = [
+    .userShifts,
+    .events,
+    .recurringShifts,
+    .payrollAdjustments,
+    .userSettings,
+  ]
+
+  private static let scheduleRelevantTables: Set<SyncTable> = [
+    .userShifts,
+    .events,
+    .recurringShifts,
+    .userSettings,
+  ]
+
+  private static let targetedMonthTables: Set<SyncTable> = [
+    .userShifts,
+    .events,
+    .payrollAdjustments,
+  ]
+
+  var dashboardChangeContext: ShiftChangeContext? {
+    changeContext(relevantTables: Self.dashboardRelevantTables)
+  }
+
+  var scheduleChangeContext: ShiftChangeContext? {
+    changeContext(relevantTables: Self.scheduleRelevantTables)
+  }
+
+  private func changeContext(relevantTables: Set<SyncTable>) -> ShiftChangeContext? {
+    let relevantChanges = localReadModelChanges.filter { relevantTables.contains($0.table) }
+    guard !relevantChanges.isEmpty else { return nil }
+
+    guard
+      relevantChanges.allSatisfy({
+        Self.targetedMonthTables.contains($0.table) && !$0.affectedMonths.isEmpty
+      })
+    else {
+      return .fullReload
+    }
+
+    return .affecting(months: Set(relevantChanges.flatMap(\.affectedMonths)))
+  }
+}
+
 enum HomeScheduleMonthLoadDecision: Equatable {
   case none
   case loadNow(ShiftChangeAffectedMonth)

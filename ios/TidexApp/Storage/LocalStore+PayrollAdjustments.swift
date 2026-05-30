@@ -267,17 +267,19 @@ extension LocalStoreActor {
   }
 
   func markMissingCleanPayrollAdjustmentsDeleted(userId: String, serverIds: Set<String>) throws
-    -> Int
+    -> (count: Int, affectedMonths: Set<ShiftChangeAffectedMonth>)
   {
     let adjustments = try getAllPayrollAdjustments(userId: userId)
     let deletedAt = Date()
     var deletedCount = 0
+    var affectedMonths: Set<ShiftChangeAffectedMonth> = []
 
     for adjustment in adjustments
     where adjustment.syncStatus == .clean
       && adjustment.serverDeletedAt == nil
       && !serverIds.contains(adjustment.id)
     {
+      affectedMonths.insert(ShiftChangeAffectedMonth(date: adjustment.payoutDate))
       adjustment.serverDeletedAt = deletedAt
       adjustment.syncStatus = .clean
       adjustment.dirtyFieldKeys = []
@@ -289,7 +291,7 @@ extension LocalStoreActor {
       try modelContext.save()
     }
 
-    return deletedCount
+    return (deletedCount, affectedMonths)
   }
 
   func markPayrollAdjustmentConflict(
