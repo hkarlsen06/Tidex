@@ -168,6 +168,13 @@ struct SharedShiftsListView: View {
         await reportScreenshot()
       }
     }
+    .background {
+      ScreenCaptureDetectionView {
+        Task {
+          await reportScreenshot()
+        }
+      }
+    }
   }
 
   private func monthSwipeDragGesture(containerWidth: CGFloat) -> some Gesture {
@@ -297,9 +304,9 @@ struct SharedShiftsListView: View {
 
   // MARK: - Screenshot Detection
 
-  /// Reports to the sharer that their shifts were screenshotted
+  /// Reports to the sharer that their shifts were captured
   private func reportScreenshot() async {
-    logger.info("Screenshot detected while viewing \(sharer.firstName ?? "friend")'s shifts")
+    logger.info("Screen capture detected while viewing \(sharer.firstName ?? "friend")'s shifts")
 
     screenshotFeedback.showBubble()
 

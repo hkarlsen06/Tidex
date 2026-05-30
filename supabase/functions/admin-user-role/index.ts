@@ -122,8 +122,8 @@ export default {
         });
       }
 
-      const { data: targetUserData, error: targetUserError } =
-        await ctx.supabaseAdmin.auth.admin.getUserById(targetUserId);
+      const { data: targetUserData, error: targetUserError } = await ctx
+        .supabaseAdmin.auth.admin.getUserById(targetUserId);
 
       if (targetUserError || !targetUserData.user) {
         await logAction(
@@ -154,24 +154,37 @@ export default {
       if (grant) {
         nextAppMetadata.role = "admin";
       } else {
-        delete nextAppMetadata.role;
+        // Supabase Auth merges app_metadata updates, so omitting `role` does not
+        // remove an existing admin role. Store JSON null to clear the claim.
+        nextAppMetadata.role = null;
       }
 
-      const { error: updateError } =
-        await ctx.supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+      const { error: updateError } = await ctx.supabaseAdmin.auth.admin
+        .updateUserById(targetUserId, {
           app_metadata: nextAppMetadata,
         });
 
-      if (updateError) {
+      const { data: verifiedUserData, error: verifyError } = updateError
+        ? { data: null, error: updateError }
+        : await ctx.supabaseAdmin.auth.admin.getUserById(targetUserId);
+
+      const verifiedRole = verifiedUserData?.user?.app_metadata?.role;
+      const updateSucceeded = grant
+        ? verifiedRole === "admin"
+        : verifiedRole !== "admin";
+
+      if (updateError || verifyError || !updateSucceeded) {
         await logAction(
           ctx.supabase,
           "admin_action_failed",
           targetUserId,
           targetEmail,
           {
-            error: updateError.message,
+            error: updateError?.message ?? verifyError?.message ??
+              "Role update verification failed",
             intended_action: grant ? "grant_admin" : "revoke_admin",
             old_value: { role: currentRole ?? null },
+            observed_value: { role: verifiedRole ?? null },
           },
         );
         return jsonResponse(500, {

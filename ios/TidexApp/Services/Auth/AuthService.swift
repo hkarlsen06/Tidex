@@ -123,6 +123,17 @@ final class AuthService: ObservableObject {
     return session
   }
 
+  /// Record that the current authenticated user accepted the current terms.
+  func recordTermsAcceptance() async throws {
+    _ = try await supabase.auth.update(
+      user: UserAttributes(
+        data: ["terms_accepted_at": .string(Date().toISO8601String())]
+      ))
+
+    // Refresh session to make updated user metadata visible to coordinator checks.
+    _ = try await AuthSessionManager.shared.forceRefresh()
+  }
+
   // MARK: - Password Reset
 
   /// Send password reset email

@@ -286,32 +286,73 @@ struct SupplementRuleEditor: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack(spacing: Spacing.md) {
-        TimePickerField(
-          label: String(localized: .onboardingSupplementsFrom),
-          time: $editedRule.fromTime,
-          onChange: {
-            if currentStep == .time {
-              withAnimation {
-                currentStep = .type
-              }
-            }
-          }
-        )
-
-        TimePickerField(
-          label: String(localized: .onboardingSupplementsTo),
-          time: $editedRule.toTime,
-          onChange: {
-            if currentStep == .time {
-              withAnimation {
-                currentStep = .type
-              }
-            }
-          }
-        )
+      TimeRangePicker(
+        startTime: supplementStartTimeBinding,
+        endTime: supplementEndTimeBinding,
+        showsRecentTimeChips: false
+      )
+      .onChange(of: editedRule.fromTime) { _, _ in
+        advanceFromTimeStepIfReady()
+      }
+      .onChange(of: editedRule.toTime) { _, _ in
+        advanceFromTimeStepIfReady()
       }
     }
+  }
+
+  private var supplementStartTimeBinding: Binding<Date?> {
+    Binding(
+      get: { parseSupplementTime(editedRule.fromTime) },
+      set: { newValue in
+        editedRule.fromTime = formatSupplementTime(newValue)
+      }
+    )
+  }
+
+  private var supplementEndTimeBinding: Binding<Date?> {
+    Binding(
+      get: { parseSupplementTime(editedRule.toTime) },
+      set: { newValue in
+        editedRule.toTime = formatSupplementTime(newValue)
+      }
+    )
+  }
+
+  private func advanceFromTimeStepIfReady() {
+    guard currentStep == .time,
+      !editedRule.fromTime.isEmpty,
+      !editedRule.toTime.isEmpty
+    else { return }
+
+    withAnimation {
+      currentStep = .type
+    }
+  }
+
+  private func parseSupplementTime(_ time: String) -> Date? {
+    let parts = time.split(separator: ":")
+    guard parts.count == 2,
+      let hours = Int(parts[0]),
+      let minutes = Int(parts[1]),
+      hours >= 0,
+      hours <= 24,
+      minutes >= 0,
+      minutes <= 59
+    else {
+      return nil
+    }
+
+    if hours == 24 && minutes != 0 { return nil }
+
+    var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+    components.hour = hours == 24 ? 0 : hours
+    components.minute = minutes
+    return Calendar.current.date(from: components)
+  }
+
+  private func formatSupplementTime(_ date: Date?) -> String {
+    guard let date else { return "" }
+    return FormatterCache.hourMinuteFormatter(timeZone: Date.localTimeZone).string(from: date)
   }
 
   // MARK: - Type Section
@@ -584,53 +625,6 @@ private struct QuickSelectButton: View {
         .clipShape(Capsule())
     }
     .buttonStyle(.plain)
-  }
-}
-
-// MARK: - Time Picker Field
-
-private struct TimePickerField: View {
-  let label: String
-  @Binding var time: String
-  let onChange: () -> Void
-
-  @State private var selectedDate: Date = Date()
-
-  init(label: String, time: Binding<String>, onChange: @escaping () -> Void) {
-    self.label = label
-    self._time = time
-    self.onChange = onChange
-
-    // Parse initial time
-    let formatter = FormatterCache.hourMinuteFormatter(timeZone: Date.localTimeZone)
-    if let date = formatter.date(from: time.wrappedValue) {
-      self._selectedDate = State(initialValue: date)
-    }
-  }
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.xxs) {
-      Text(label)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-
-      DatePicker(
-        "",
-        selection: $selectedDate,
-        displayedComponents: .hourAndMinute
-      )
-      .datePickerStyle(.compact)
-      .labelsHidden()
-      .onChange(of: selectedDate) { _, newValue in
-        let formatter = FormatterCache.hourMinuteFormatter(timeZone: Date.localTimeZone)
-        time = formatter.string(from: newValue)
-        onChange()
-      }
-    }
-    .frame(maxWidth: .infinity)
-    .padding(Spacing.sm)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
   }
 }
 

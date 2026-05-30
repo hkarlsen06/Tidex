@@ -41,6 +41,7 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 // Site URL for redirects (the actual app URL, not Supabase project URL)
 // Falls back to a placeholder since redirectTo is not actually used for impersonation
 const SITE_URL = Deno.env.get("SITE_URL") ?? "https://tidex.app";
+const SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
 
 // Encryption key (same as Next.js, must be synced)
 const IMPERSONATION_ENC_KEY = Deno.env.get("IMPERSONATION_ENC_KEY") ?? "";
@@ -98,9 +99,11 @@ function encryptAndSerialize(plaintext: string): string {
   const authTag = cipher.getAuthTag();
 
   // Format: ver:kid:iv:ciphertext:authTag (base64url)
-  return `1:${CURRENT_KEY_ID}:${iv.toString("base64url")}:${encrypted.toString(
-    "base64url",
-  )}:${authTag.toString("base64url")}`;
+  return `1:${CURRENT_KEY_ID}:${iv.toString("base64url")}:${
+    encrypted.toString(
+      "base64url",
+    )
+  }:${authTag.toString("base64url")}`;
 }
 
 function parseAndDecrypt(serialized: string): string {
@@ -360,8 +363,9 @@ async function validateTargetUser(targetUserId: string): Promise<{
     return { exists: false, isAdmin: false, email: null, displayName: null };
   }
 
-  const { data, error } =
-    await supabaseAdmin.auth.admin.getUserById(targetUserId);
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(
+    targetUserId,
+  );
 
   if (error || !data.user) {
     return { exists: false, isAdmin: false, email: null, displayName: null };
@@ -369,8 +373,8 @@ async function validateTargetUser(targetUserId: string): Promise<{
 
   const user = data.user;
   const isAdmin = user.app_metadata?.role === "admin";
-  const displayName =
-    user.user_metadata?.full_name || user.user_metadata?.name || null;
+  const displayName = user.user_metadata?.full_name ||
+    user.user_metadata?.name || null;
 
   return {
     exists: true,
@@ -500,14 +504,14 @@ async function handleStart(req: Request, caller: User): Promise<Response> {
     await endImpersonationSession(activeSession.id, caller.id);
   }
 
-  // 7. Validate target user exists and is not an admin
+  // 7. Validate target user exists and only superadmin can impersonate admins
   const targetValidation = await validateTargetUser(targetUserId);
   if (!targetValidation.exists) {
     await recordAttempt(caller.id, false);
     return json({ ok: false, error: "Target user not found" }, 404);
   }
 
-  if (targetValidation.isAdmin) {
+  if (targetValidation.isAdmin && caller.id !== SUPERADMIN_USER_ID) {
     await recordAttempt(caller.id, false);
     return json({ ok: false, error: "Cannot impersonate admin users" }, 403);
   }
@@ -526,8 +530,8 @@ async function handleStart(req: Request, caller: User): Promise<Response> {
 
   // 9. Mint a session for the target user using Admin API
   // Generate a magic link (server-side only, email not sent)
-  const { data: linkData, error: linkError } =
-    await authClient.auth.admin.generateLink({
+  const { data: linkData, error: linkError } = await authClient.auth.admin
+    .generateLink({
       type: "magiclink",
       email: targetValidation.email,
       options: {
@@ -547,8 +551,8 @@ async function handleStart(req: Request, caller: User): Promise<Response> {
   }
 
   // Verify the token to create a session (bypasses MFA)
-  const { data: verifyData, error: verifyError } =
-    await authClient.auth.verifyOtp({
+  const { data: verifyData, error: verifyError } = await authClient.auth
+    .verifyOtp({
       token_hash: linkData.properties.hashed_token,
       type: "magiclink",
     });
@@ -563,8 +567,7 @@ async function handleStart(req: Request, caller: User): Promise<Response> {
   }
 
   // 10. Create impersonation session record in database
-  const adminIp =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+  const adminIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     null;
   const adminUserAgent = req.headers.get("user-agent") || null;
@@ -591,10 +594,9 @@ async function handleStart(req: Request, caller: User): Promise<Response> {
       .signOut(verifyData.session.access_token)
       .catch(() => {});
 
-    const errorMessage =
-      error instanceof Error
-        ? error.message
-        : "Failed to create session record";
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Failed to create session record";
     return json({ ok: false, error: errorMessage }, 500);
   }
 
@@ -680,8 +682,7 @@ async function handleStop(req: Request, caller: User): Promise<Response> {
   await endImpersonationSession(sessionId, caller.id);
 
   // 6. Insert audit log
-  const adminIp =
-    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+  const adminIp = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     null;
   const adminUserAgent = req.headers.get("user-agent") || null;
@@ -695,8 +696,9 @@ async function handleStop(req: Request, caller: User): Promise<Response> {
     adminUserAgent,
     metadata: {
       ended_by_user_id: caller.id,
-      ended_by_type:
-        caller.id === dbSession.admin_user_id ? "admin" : "impersonated_user",
+      ended_by_type: caller.id === dbSession.admin_user_id
+        ? "admin"
+        : "impersonated_user",
     },
   });
 

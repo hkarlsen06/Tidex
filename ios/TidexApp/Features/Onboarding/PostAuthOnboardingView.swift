@@ -430,6 +430,16 @@ struct PostAuthOnboardingView: View {
       activeJobs = jobsRepository.getActiveJobs(for: userId)
     }
 
+    if activeJobs.isEmpty && entryMode == .initial {
+      do {
+        let primaryJob = try await createPrimaryOnboardingJob(userId: userId)
+        activeJobs = [primaryJob]
+      } catch {
+        multiJobErrorMessage = error.localizedDescription
+        return
+      }
+    }
+
     if activeJobs.isEmpty && entryMode == .reentry {
       do {
         let placeholderJob = try await jobsRepository.createJob(
@@ -453,6 +463,30 @@ struct PostAuthOnboardingView: View {
     onboardingJobNeedingSetup = incompleteSetupJob(from: activeJobs)
     addJobSheetPresentationID = UUID()
     showAddJobSheet = true
+  }
+
+  private func createPrimaryOnboardingJob(userId: String) async throws -> Job {
+    try await jobsRepository.createJobWithBaselineSnapshot(
+      userId: userId,
+      name: onboardingData.resolvedJobName(),
+      color: onboardingData.jobColor,
+      currency: onboardingData.currency.isEmpty ? "kr" : onboardingData.currency,
+      payrollDay: onboardingData.payrollDay,
+      halfTaxMonth: nil,
+      monthlyGoal: nil,
+      baselineSnapshot: JobBaselineSnapshotInput(
+        hourlyWage: onboardingData.resolvedHourlyWage,
+        wageLevel: onboardingData.resolvedWageLevel,
+        tariffTypeId: onboardingData.resolvedTariffTypeId,
+        supplements: onboardingData.resolvedSupplements,
+        taxEnabled: onboardingData.taxEnabled,
+        taxPercentage: onboardingData.taxEnabled ? onboardingData.taxPercentage : nil,
+        breakEnabled: onboardingData.breakEnabled,
+        breakMethod: "proportional",
+        breakThresholdHours: 5.5,
+        breakDeductionMinutes: 30
+      )
+    )
   }
 
   private func createOnboardingJob(input: AddJobSetupInput) async -> Bool {

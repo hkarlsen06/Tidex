@@ -2075,11 +2075,13 @@ actor LocalStoreActor {
     jobId: String? = nil,
     hourlyWage: Double?,
     wageLevel: Int?,
+    updateWageLevel: Bool = false,
     tariffTypeId: String?,
     updateTariffTypeId: Bool = false,
     supplements: SupplementRulesSnapshot?,
     taxEnabled: Bool?,
     taxPercentage: Double?,
+    updateTaxPercentage: Bool = false,
     breakEnabled: Bool?,
     breakMethod: String?,
     breakThresholdHours: Double?,
@@ -2106,8 +2108,8 @@ actor LocalStoreActor {
       newDirtyFields.insert(.hourlyWage)
     }
 
-    if let newLevel = wageLevel, newLevel != localSnapshot.wageLevel {
-      localSnapshot.wageLevel = newLevel
+    if updateWageLevel && wageLevel != localSnapshot.wageLevel {
+      localSnapshot.wageLevel = wageLevel
       newDirtyFields.insert(.wageLevel)
     }
 
@@ -2129,8 +2131,8 @@ actor LocalStoreActor {
       newDirtyFields.insert(.taxEnabled)
     }
 
-    if let newTaxPct = taxPercentage, newTaxPct != localSnapshot.taxPercentage {
-      localSnapshot.taxPercentage = newTaxPct
+    if updateTaxPercentage && taxPercentage != localSnapshot.taxPercentage {
+      localSnapshot.taxPercentage = taxPercentage
       newDirtyFields.insert(.taxPercentage)
     }
 

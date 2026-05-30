@@ -313,10 +313,12 @@ final class SnapshotsRepository: ObservableObject {
   ///   - id: Snapshot ID
   ///   - hourlyWage: New hourly wage (optional)
   ///   - wageLevel: New wage level (optional)
+  ///   - updateWageLevel: Whether to apply `wageLevel`, including nil clears
   ///   - updateTariffTypeId: Whether to apply `tariffTypeId`, including nil clears
   ///   - supplements: New supplements (optional)
   ///   - taxEnabled: New tax enabled flag (optional)
   ///   - taxPercentage: New tax percentage (optional)
+  ///   - updateTaxPercentage: Whether to apply `taxPercentage`, including nil clears
   ///   - breakEnabled: New break enabled flag (optional)
   ///   - breakMethod: New break method (optional)
   ///   - breakThresholdHours: New break threshold (optional)
@@ -327,11 +329,13 @@ final class SnapshotsRepository: ObservableObject {
     jobId: String? = nil,
     hourlyWage: Double? = nil,
     wageLevel: Int? = nil,
+    updateWageLevel: Bool = false,
     tariffTypeId: String? = nil,
     updateTariffTypeId: Bool = false,
     supplements: SupplementRulesSnapshot? = nil,
     taxEnabled: Bool? = nil,
     taxPercentage: Double? = nil,
+    updateTaxPercentage: Bool = false,
     breakEnabled: Bool? = nil,
     breakMethod: String? = nil,
     breakThresholdHours: Double? = nil,
@@ -343,11 +347,13 @@ final class SnapshotsRepository: ObservableObject {
         jobId: jobId,
         hourlyWage: hourlyWage,
         wageLevel: wageLevel,
+        updateWageLevel: updateWageLevel,
         tariffTypeId: tariffTypeId,
         updateTariffTypeId: updateTariffTypeId,
         supplements: supplements,
         taxEnabled: taxEnabled,
         taxPercentage: taxPercentage,
+        updateTaxPercentage: updateTaxPercentage,
         breakEnabled: breakEnabled,
         breakMethod: breakMethod,
         breakThresholdHours: breakThresholdHours,

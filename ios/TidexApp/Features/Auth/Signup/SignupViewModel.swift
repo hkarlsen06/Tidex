@@ -19,6 +19,7 @@ final class SignupViewModel: ObservableObject {
   @Published var emailOrPhone: String = ""
   @Published var password: String = ""
   @Published var confirmPassword: String = ""
+  @Published var hasAcceptedTerms = false
 
   @Published var isLoading = false
   @Published var showEmailForm = false
@@ -39,6 +40,7 @@ final class SignupViewModel: ObservableObject {
     var emailOrPhone: String?
     var password: String?
     var confirmPassword: String?
+    var terms: String?
 
     mutating func clear() {
       firstName = nil
@@ -46,6 +48,7 @@ final class SignupViewModel: ObservableObject {
       emailOrPhone = nil
       password = nil
       confirmPassword = nil
+      terms = nil
     }
   }
 
@@ -96,12 +99,17 @@ final class SignupViewModel: ObservableObject {
   /// Sign up with Google
   func signUpWithGoogle() async {
     clearMessages()
+    fieldErrors.clear()
+
+    guard validateTermsAgreement() else { return }
+
     isLoading = true
     defer { isLoading = false }
 
     do {
       let idToken = try await googleAuthProvider.signIn()
       let _ = try await authService.signInWithGoogle(idToken: idToken)
+      try await authService.recordTermsAcceptance()
       await handleSuccessfulSignup()
     } catch let error as GoogleAuthError where error.isCancellation {
       // User cancelled - do nothing
@@ -113,6 +121,10 @@ final class SignupViewModel: ObservableObject {
   /// Sign up with Apple
   func signUpWithApple() async {
     clearMessages()
+    fieldErrors.clear()
+
+    guard validateTermsAgreement() else { return }
+
     isLoading = true
     defer { isLoading = false }
 
@@ -122,6 +134,7 @@ final class SignupViewModel: ObservableObject {
         idToken: result.idToken,
         fullName: result.fullName
       )
+      try await authService.recordTermsAcceptance()
       await handleSuccessfulSignup()
     } catch let error as AppleAuthError where error.isCancellation {
       // User cancelled - do nothing
@@ -183,7 +196,17 @@ final class SignupViewModel: ObservableObject {
       isValid = false
     }
 
-    return isValid
+    return validateTermsAgreement() && isValid
+  }
+
+  private func validateTermsAgreement() -> Bool {
+    guard hasAcceptedTerms else {
+      fieldErrors.terms = String(localized: .acceptTermsDescription)
+      return false
+    }
+
+    fieldErrors.terms = nil
+    return true
   }
 
   private func handleSuccessfulSignup() async {

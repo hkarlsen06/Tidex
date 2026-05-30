@@ -298,6 +298,13 @@ struct FriendsThreadView: View {
           await reportScreenshot()
         }
       }
+      .background {
+        ScreenCaptureDetectionView {
+          Task {
+            await reportScreenshot()
+          }
+        }
+      }
       .onReceive(
         NotificationCenter.default.publisher(for: .tidexDidBecomeActive)
       ) { _ in

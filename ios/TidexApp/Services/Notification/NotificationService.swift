@@ -6,7 +6,7 @@ import os.log
 private let logger = Logger(subsystem: "no.tidex.app", category: "Notifications")
 
 /// Handles push notification permission and registration
-/// Call `requestPermissionAndRegister()` after successful authentication
+/// Call `requestPermissionAndRegister()` only after the user explicitly opts in.
 @MainActor
 final class NotificationService {
   static let shared = NotificationService()
@@ -39,6 +39,24 @@ final class NotificationService {
       logger.info("Permission denied by user")
       PushNotificationManager.shared.permissionDenied()
 
+    @unknown default:
+      break
+    }
+  }
+
+  /// Register for APNs only when the user has already granted notification permission.
+  /// Use during sign-in/startup so first-run onboarding is not interrupted by a system prompt.
+  func registerIfPermissionAlreadyGranted() async {
+    let center = UNUserNotificationCenter.current()
+    let settings = await center.notificationSettings()
+
+    switch settings.authorizationStatus {
+    case .authorized, .provisional, .ephemeral:
+      registerForRemoteNotifications()
+    case .denied:
+      PushNotificationManager.shared.permissionDenied()
+    case .notDetermined:
+      break
     @unknown default:
       break
     }

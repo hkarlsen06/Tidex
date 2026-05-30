@@ -745,8 +745,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
     }
 
     guard
-      type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
-        || type == "thread_reaction",
+      type == "thread_message" || type == "thread_typing" || type == "thread_reaction",
       let threadId = userInfo["thread_id"] as? String
     else {
       return false

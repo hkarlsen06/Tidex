@@ -210,7 +210,7 @@ final class OnboardingSaveManager: ObservableObject {
     data: OnboardingData
   ) async throws -> WageSnapshot {
     if let existingSnapshot = snapshotsRepository.getBaselineSnapshot(for: userId, jobId: job.id) {
-      return existingSnapshot
+      return try await updateBaselineSnapshot(existingSnapshot, data: data) ?? existingSnapshot
     }
 
     if let legacyBaselineSnapshot = snapshotsRepository.getBaselineSnapshot(for: userId),
@@ -223,7 +223,8 @@ final class OnboardingSaveManager: ObservableObject {
       logger.info(
         "Attached legacy onboarding baseline snapshot \(legacyBaselineSnapshot.id) to job \(job.id)"
       )
-      return updatedLegacySnapshot
+      return try await updateBaselineSnapshot(updatedLegacySnapshot, data: data)
+        ?? updatedLegacySnapshot
     }
 
     return try await snapshotsRepository.createSnapshot(
@@ -236,6 +237,27 @@ final class OnboardingSaveManager: ObservableObject {
       supplements: data.resolvedSupplements,
       taxEnabled: data.taxEnabled,
       taxPercentage: data.taxEnabled ? data.taxPercentage : nil,
+      breakEnabled: data.breakEnabled,
+      breakMethod: "proportional",
+      breakThresholdHours: 5.5,
+      breakDeductionMinutes: 30
+    )
+  }
+
+  private func updateBaselineSnapshot(_ snapshot: WageSnapshot, data: OnboardingData) async throws
+    -> WageSnapshot?
+  {
+    try await snapshotsRepository.updateSnapshot(
+      id: snapshot.id,
+      hourlyWage: data.resolvedHourlyWage,
+      wageLevel: data.resolvedWageLevel,
+      updateWageLevel: true,
+      tariffTypeId: data.resolvedTariffTypeId,
+      updateTariffTypeId: true,
+      supplements: data.resolvedSupplements,
+      taxEnabled: data.taxEnabled,
+      taxPercentage: data.taxEnabled ? data.taxPercentage : nil,
+      updateTaxPercentage: true,
       breakEnabled: data.breakEnabled,
       breakMethod: "proportional",
       breakThresholdHours: 5.5,

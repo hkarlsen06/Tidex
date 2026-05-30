@@ -833,8 +833,9 @@ final class AppCoordinator: ObservableObject {
       // Configure StoreKit and load entitlements
       await configureStoreKitAndEntitlements(userId: currentUserId)
 
-      // Request notification permission and register for APNs
-      await NotificationService.shared.requestPermissionAndRegister()
+      // Register only if permission already exists. First-run onboarding should not be
+      // interrupted by the system notification prompt.
+      await NotificationService.shared.registerIfPermissionAlreadyGranted()
 
       // Trigger initial sync in background after authentication
       triggerInitialSync(userId: currentUserId)
@@ -1412,8 +1413,8 @@ final class AppCoordinator: ObservableObject {
       // Configure StoreKit and load entitlements
       await configureStoreKitAndEntitlements(userId: currentUserId)
 
-      // Request notification permission
-      await NotificationService.shared.requestPermissionAndRegister()
+      // Register only if permission already exists. Do not prompt during account switching.
+      await NotificationService.shared.registerIfPermissionAlreadyGranted()
 
       // Load cached avatar
       if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
