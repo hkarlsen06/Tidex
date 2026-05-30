@@ -394,6 +394,7 @@ struct FriendsChatMessageRowContent: View {
                         canReact: message.canReact,
                         isHighlighted: false,
                         onOpenImageAttachment: onOpenImageAttachment,
+                        onShowReactionMenu: onShowReactionMenu,
                         onReactionPressChanged: onImageReactionPressChanged,
                         onPrepareReaction: onPrepareImageReaction
                       )
@@ -440,6 +441,7 @@ struct FriendsChatMessageRowContent: View {
                       reactionStrip(for: message.reactions)
                     }
                   }
+                  .highPriorityGesture(messageMenuDoubleTapGesture)
                 }
 
                 if showsFallbackBubble, let fallbackPreviewText {
@@ -459,6 +461,7 @@ struct FriendsChatMessageRowContent: View {
                   } reaction: {
                     reactionStrip(for: message.reactions)
                   }
+                  .highPriorityGesture(messageMenuDoubleTapGesture)
                 }
 
                 if hasMessageText {
@@ -477,6 +480,7 @@ struct FriendsChatMessageRowContent: View {
                   } reaction: {
                     reactionStrip(for: message.reactions)
                   }
+                  .highPriorityGesture(messageMenuDoubleTapGesture)
                 }
               }
 
@@ -625,6 +629,13 @@ struct FriendsChatMessageRowContent: View {
 
   private var timestampRevealSurfaceHeight: CGFloat {
     max(rowFrame.height, 1)
+  }
+
+  private var messageMenuDoubleTapGesture: some Gesture {
+    TapGesture(count: 2)
+      .onEnded {
+        onShowReactionMenu(nil)
+      }
   }
 
   private static func unionFrame(_ frames: Dictionary<String, CGRect>.Values) -> CGRect {
@@ -1568,6 +1579,7 @@ private struct FriendsChatImageView: View {
   let canReact: Bool
   let isHighlighted: Bool
   let onOpenImageAttachment: (FriendMessageAttachment) -> Void
+  let onShowReactionMenu: (String?) -> Void
   let onReactionPressChanged: (FriendMessageAttachment, Bool) -> Void
   let onPrepareReaction: (FriendMessageAttachment) -> Void
 
@@ -1581,6 +1593,12 @@ private struct FriendsChatImageView: View {
       isCurrentUser: isCurrentUser,
       isHighlighted: isHighlighted,
       onTap: onImageTap
+    )
+    .highPriorityGesture(
+      TapGesture(count: 2)
+        .onEnded {
+          showAttachmentReactionMenu()
+        }
     )
     .onLongPressGesture(
       minimumDuration: FriendsThreadAttachmentTapGuard.messageMenuRecognitionDuration,
@@ -1645,6 +1663,17 @@ private struct FriendsChatImageView: View {
     )
     onReactionPressChanged(attachment, false)
     onOpenImageAttachment(attachment)
+  }
+
+  private func showAttachmentReactionMenu() {
+    shouldSuppressNextTap = true
+    guard canReact else { return }
+    FriendsThreadAttachmentReactionMenuTarget.set(
+      messageId: messageId,
+      attachmentId: attachment.id
+    )
+    onPrepareReaction(attachment)
+    onShowReactionMenu(attachment.id)
   }
 }
 
