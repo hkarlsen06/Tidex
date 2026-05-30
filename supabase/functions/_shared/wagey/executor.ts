@@ -6,6 +6,7 @@ import {
   calculatePayoutDate,
   convertRecurringShiftToStandalone,
   copyShifts,
+  countJobDeleteDependencies,
   countShiftsAffectedBySnapshot,
   createEvent,
   createJob,
@@ -2634,6 +2635,18 @@ async function executeManageWorkplace(
         !target.archived_at
       ) {
         return { success: false, message: tr.cannotDeleteLastActiveWorkplace };
+      }
+      const dependencyCounts = await countJobDeleteDependencies(
+        ctx,
+        ctx.user.id,
+        input.jobId,
+      );
+      if (dependencyCounts.total > 0) {
+        return {
+          success: false,
+          message: tr.cannotDeleteWorkplaceWithHistory,
+          data: dependencyCounts,
+        };
       }
       await deleteJob(ctx, ctx.user.id, input.jobId);
       return {

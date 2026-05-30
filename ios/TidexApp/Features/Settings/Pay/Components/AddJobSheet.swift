@@ -30,21 +30,24 @@ struct AddJobSheet: View {
 
   let initialCurrency: String
   let existingJobNeedingSetup: Job?
+  let setupDismissTitle: String
+  let onSaveBasics: ((AddJobBasicsInput) async -> Job?)?
   let onSave: (AddJobSetupInput) async -> Bool
 
   @State private var step: Step = .jobDetails
   @State private var onboardingData = OnboardingData()
+  @State private var savedBasicJob: Job?
 
   @State private var name = ""
   @State private var selectedColor = Color(red: 59 / 255, green: 130 / 255, blue: 246 / 255)
   @State private var existingJobName = ""
   @State private var existingJobColor = Color(red: 59 / 255, green: 130 / 255, blue: 246 / 255)
-  @State private var payrollDay = 15
+  @State private var payrollDay: Int
   @State private var showingPaydayInput = false
   @State private var paydayInputText = ""
   @FocusState private var isPaydayInputFocused: Bool
   @State private var halfTaxMonth: Int?
-  @State private var monthlyGoal = "20000"
+  @State private var monthlyGoal: String
 
   @State private var isSaving = false
   @State private var validationError: String?
@@ -55,12 +58,22 @@ struct AddJobSheet: View {
 
   init(
     initialCurrency: String,
+    initialPayrollDay: Int = 15,
+    initialHalfTaxMonth: Int? = nil,
+    initialMonthlyGoal: Int? = 20000,
     existingJobNeedingSetup: Job? = nil,
+    setupDismissTitle: String = String(localized: .commonCancel),
+    onSaveBasics: ((AddJobBasicsInput) async -> Job?)? = nil,
     onSave: @escaping (AddJobSetupInput) async -> Bool
   ) {
     self.initialCurrency = initialCurrency
     self.existingJobNeedingSetup = existingJobNeedingSetup
+    self.setupDismissTitle = setupDismissTitle
+    self.onSaveBasics = onSaveBasics
     self.onSave = onSave
+    _payrollDay = State(initialValue: initialPayrollDay)
+    _halfTaxMonth = State(initialValue: initialHalfTaxMonth)
+    _monthlyGoal = State(initialValue: initialMonthlyGoal.map(String.init) ?? "")
   }
 
   var body: some View {
@@ -172,7 +185,7 @@ struct AddJobSheet: View {
             title: String(localized: .commonContinue),
             isEnabled: !isSaving && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             action: {
-              goToWageSetup()
+              Task { await goToWageSetup() }
             }
           )
           .padding(.horizontal, Spacing.lg)
@@ -340,21 +353,15 @@ struct AddJobSheet: View {
                   .padding(.horizontal, Spacing.xs)
                   .background(
                     !payrollDayOptions.contains(payrollDay)
-                      ? Color.tidexBrandPrimary : Color.tidexBackground
+                      ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76)
                   )
                   .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-                  .overlay(
-                    RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-                      .stroke(
-                        !payrollDayOptions.contains(payrollDay)
-                          ? Color.clear : Color.tidexBorder,
-                        lineWidth: 1
-                      )
-                  )
                 }
                 .buttonStyle(.plain)
               }
             }
+            .padding(.horizontal, Spacing.micro)
+            .padding(.vertical, Spacing.xxs)
             .padding(.trailing, Spacing.lg)
           }
 
@@ -496,22 +503,27 @@ struct AddJobSheet: View {
   }
 
   private var wageStep: some View {
-    ZStack(alignment: .topTrailing) {
-      WageScreen(
-        data: onboardingData,
-        onContinue: {
-          if onboardingData.wageType == .custom {
-            step = .supplements
-          } else {
-            proceedFromWageConfiguration()
-          }
-        },
-        onBack: {
-          step = .jobDetails
+    WageScreen(
+      data: onboardingData,
+      onContinue: {
+        if onboardingData.wageType == .custom {
+          step = .supplements
+        } else {
+          proceedFromWageConfiguration()
         }
-      )
+      },
+      onBack: wageBackAction,
+      topTrailingTitle: dismissTitle,
+      onTopTrailingAction: {
+        dismiss()
+      }
+    )
+  }
 
-      dismissButton
+  private var wageBackAction: (() -> Void)? {
+    guard savedBasicJob == nil else { return nil }
+    return {
+      step = .jobDetails
     }
   }
 
@@ -634,11 +646,27 @@ struct AddJobSheet: View {
   }
 
   private var dismissButton: some View {
-    Button(String(localized: .commonCancel)) {
+    Button(dismissTitle) {
       dismiss()
     }
+    .font(.tidexBodyMedium)
+    .foregroundColor(.tidexBlue)
+    .lineLimit(1)
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.xs)
+    .background(.thinMaterial, in: Capsule())
+    .overlay(
+      Capsule()
+        .stroke(Color.tidexBorder.opacity(0.75), lineWidth: 1)
+    )
+    .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 3)
     .padding(.top, Spacing.md)
-    .padding(.trailing, Spacing.md)
+    .padding(.trailing, Spacing.lg)
+    .disabled(isSaving)
+  }
+
+  private var dismissTitle: String {
+    savedBasicJob == nil ? String(localized: .commonCancel) : setupDismissTitle
   }
 
   private var savingOverlay: some View {
@@ -659,7 +687,7 @@ struct AddJobSheet: View {
     }
   }
 
-  private func goToWageSetup() {
+  private func goToWageSetup() async {
     validationError = nil
 
     if showingPaydayInput {
@@ -673,6 +701,29 @@ struct AddJobSheet: View {
     }
 
     onboardingData.payrollDay = payrollDay
+    guard savedBasicJob == nil, let onSaveBasics else {
+      step = .wage
+      return
+    }
+
+    isSaving = true
+    let createdJob = await onSaveBasics(
+      AddJobBasicsInput(
+        name: trimmedName,
+        color: normalizedHex(from: selectedColor),
+        currency: resolvedCurrency,
+        payrollDay: payrollDay,
+        halfTaxMonth: halfTaxMonth,
+        monthlyGoal: monthlyGoalValue
+      ))
+    isSaving = false
+
+    guard let createdJob else {
+      showSaveError = true
+      return
+    }
+
+    savedBasicJob = createdJob
     step = .wage
   }
 
@@ -700,7 +751,13 @@ struct AddJobSheet: View {
     validationError = nil
 
     var existingJobSetupInput: ExistingJobSetupInput?
-    if let existingJobNeedingSetup {
+    if let savedBasicJob {
+      existingJobSetupInput = ExistingJobSetupInput(
+        id: savedBasicJob.id,
+        name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+        color: normalizedHex(from: selectedColor)
+      )
+    } else if let existingJobNeedingSetup {
       let trimmedExistingName = existingJobName.trimmingCharacters(in: .whitespacesAndNewlines)
       guard !trimmedExistingName.isEmpty else {
         step = .existingJobSetup
@@ -722,11 +779,7 @@ struct AddJobSheet: View {
     }
 
     let monthlyGoalValue: Int?
-    if monthlyGoal.isEmpty {
-      monthlyGoalValue = nil
-    } else {
-      monthlyGoalValue = Int(monthlyGoal)
-    }
+    monthlyGoalValue = self.monthlyGoalValue
 
     let snapshotInput = JobBaselineSnapshotInput(
       hourlyWage: onboardingData.resolvedHourlyWage,
@@ -747,7 +800,7 @@ struct AddJobSheet: View {
         existingJobSetup: existingJobSetupInput,
         name: trimmedName,
         color: normalizedHex(from: selectedColor),
-        currency: onboardingData.currency.isEmpty ? "kr" : onboardingData.currency,
+        currency: resolvedCurrency,
         payrollDay: payrollDay,
         halfTaxMonth: halfTaxMonth,
         monthlyGoal: monthlyGoalValue,
@@ -761,6 +814,21 @@ struct AddJobSheet: View {
     } else {
       showSaveError = true
     }
+  }
+
+  private var resolvedCurrency: String {
+    if !onboardingData.currency.isEmpty {
+      return onboardingData.currency
+    }
+    if !initialCurrency.isEmpty {
+      return initialCurrency
+    }
+    return "kr"
+  }
+
+  private var monthlyGoalValue: Int? {
+    guard !monthlyGoal.isEmpty else { return nil }
+    return Int(monthlyGoal)
   }
 
   private func normalizedHex(from color: Color) -> String? {
@@ -813,12 +881,8 @@ private struct AddJobPaydayButton: View {
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .frame(minWidth: 56, minHeight: 44)
-        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
+        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-        .overlay(
-          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-            .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
-        )
     }
     .buttonStyle(.plain)
   }
@@ -836,12 +900,8 @@ private struct MonthlyGoalPresetButton: View {
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
-        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
+        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76))
         .clipShape(Capsule())
-        .overlay(
-          Capsule()
-            .stroke(isSelected ? Color.clear : Color.tidexBorder, lineWidth: 1)
-        )
     }
     .buttonStyle(.plain)
   }

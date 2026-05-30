@@ -72,6 +72,13 @@ export type JobPaySetupStatus = {
   paySetupStatus: JobPaySetupStatusCode;
 };
 
+export type JobDeleteDependencyCounts = {
+  userShifts: number;
+  recurringShifts: number;
+  payrollAdjustments: number;
+  total: number;
+};
+
 export type ShiftJobResolution =
   | { ok: true; job: Job; status: JobPaySetupStatus }
   | {
@@ -1737,6 +1744,49 @@ export async function deleteJob(
     .eq("user_id", userId)
     .is("deleted_at", null);
   if (error) throw new Error(error.message);
+}
+
+export async function countJobDeleteDependencies(
+  ctx: WageyRequestContext,
+  userId: string,
+  jobId: string,
+): Promise<JobDeleteDependencyCounts> {
+  const [userShifts, recurringShifts, payrollAdjustments] = await Promise.all([
+    ctx.supabase
+      .from("user_shifts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("job_id", jobId)
+      .is("deleted_at", null),
+    ctx.supabase
+      .from("recurring_shifts")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("job_id", jobId)
+      .is("deleted_at", null),
+    ctx.supabase
+      .from("payroll_adjustments")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("job_id", jobId)
+      .is("deleted_at", null),
+  ]);
+
+  for (const result of [userShifts, recurringShifts, payrollAdjustments]) {
+    if (result.error) throw new Error(result.error.message);
+  }
+
+  const counts = {
+    userShifts: userShifts.count ?? 0,
+    recurringShifts: recurringShifts.count ?? 0,
+    payrollAdjustments: payrollAdjustments.count ?? 0,
+  };
+
+  return {
+    ...counts,
+    total: counts.userShifts + counts.recurringShifts +
+      counts.payrollAdjustments,
+  };
 }
 
 export async function draftRecurringShift(

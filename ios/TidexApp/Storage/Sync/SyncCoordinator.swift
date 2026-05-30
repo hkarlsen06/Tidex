@@ -2423,7 +2423,7 @@ final class SyncCoordinator: ObservableObject {
       profilePictureUrl: serverRow.profile_picture_url,
       payrollDay: serverRow.payroll_day,
       theme: serverRow.theme,
-      calendarAnimationStyle: serverRow.calendar_animation_style,
+      calendarContentColorStyle: serverRow.calendar_content_color_style ?? "workplace",
       showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
       aiDataSharingEnabled: serverRow.ai_data_sharing_enabled ?? false,
       halfTaxMonth: serverRow.half_tax_month,
@@ -4953,8 +4953,9 @@ final class SyncCoordinator: ObservableObject {
     if dirtyFields.contains(.theme) {
       updateData["theme"] = .string(settings.theme)
     }
-    if dirtyFields.contains(.calendarAnimationStyle) {
-      updateData["calendar_animation_style"] = .string(settings.effectiveCalendarAnimationStyle)
+    if dirtyFields.contains(.calendarContentColorStyle) {
+      updateData["calendar_content_color_style"] = .string(
+        settings.effectiveCalendarContentColorStyle)
     }
     if dirtyFields.contains(.showDashboardClockButtons) {
       updateData["show_dashboard_clock_buttons"] = .bool(
@@ -5054,7 +5055,7 @@ final class SyncCoordinator: ObservableObject {
     var insertData: [String: AnyJSON] = [
       "user_id": .string(userId),
       "theme": .string(settings.theme),
-      "calendar_animation_style": .string(settings.effectiveCalendarAnimationStyle),
+      "calendar_content_color_style": .string(settings.effectiveCalendarContentColorStyle),
       "show_dashboard_clock_buttons": .bool(settings.effectiveShowDashboardClockButtons),
       "ai_data_sharing_enabled": .bool(settings.aiDataSharingEnabled ?? false),
     ]

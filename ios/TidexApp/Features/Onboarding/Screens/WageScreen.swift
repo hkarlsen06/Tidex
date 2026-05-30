@@ -7,9 +7,16 @@ struct WageScreen: View {
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
   var onBack: (() -> Void)? = nil
+  var topTrailingTitle: String? = nil
+  var onTopTrailingAction: (() -> Void)? = nil
 
   @State private var isLoadingTariffData = false
   @State private var showingTariffDisabledInfoAlert = false
+  @State private var isKeyboardVisible = false
+
+  private var showsTopBar: Bool {
+    onBack != nil || topTrailingTitle != nil
+  }
 
   var body: some View {
     ZStack {
@@ -20,23 +27,32 @@ struct WageScreen: View {
       VStack(spacing: 0) {
         ScrollView {
           VStack(spacing: 0) {
-            // Back button (if not first screen)
-            if let onBack = onBack {
+            // Top actions (if provided)
+            if showsTopBar {
               HStack {
-                Button(action: {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                  onBack()
-                }) {
-                  HStack(spacing: Spacing.xxs) {
-                    Image(systemName: "chevron.left")
-                      .font(.tidexButton)
-                    Text(.commonBack)
-                      .font(.tidexBody)
+                if let onBack = onBack {
+                  Button(action: {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    onBack()
+                  }) {
+                    HStack(spacing: Spacing.xxs) {
+                      Image(systemName: "chevron.left")
+                        .font(.tidexButton)
+                      Text(.commonBack)
+                        .font(.tidexBody)
+                    }
+                    .foregroundColor(.tidexBlue)
                   }
-                  .foregroundColor(.tidexBlue)
+                  .buttonStyle(.plain)
+                } else {
+                  Spacer(minLength: 0)
                 }
-                .buttonStyle(.plain)
+
                 Spacer()
+
+                if let topTrailingTitle, let onTopTrailingAction {
+                  WageGlassActionButton(title: topTrailingTitle, action: onTopTrailingAction)
+                }
               }
               .padding(.horizontal, Spacing.lg)
               .padding(.top, Spacing.md)
@@ -44,7 +60,7 @@ struct WageScreen: View {
             }
 
             Spacer()
-              .frame(height: onBack != nil ? 24 : 60)
+              .frame(height: showsTopBar ? 24 : 60)
 
             // Header
             VStack(spacing: Spacing.sm) {
@@ -102,10 +118,15 @@ struct WageScreen: View {
           .frame(height: 24)
 
           OnboardingButton(
-            title: String(localized: .commonContinue),
+            title: isKeyboardVisible
+              ? String(localized: .commonDone) : String(localized: .commonContinue),
             action: {
-              UINotificationFeedbackGenerator().notificationOccurred(.success)
-              onContinue()
+              if isKeyboardVisible {
+                dismissKeyboard()
+              } else {
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                onContinue()
+              }
             }
           )
           .padding(.horizontal, Spacing.lg)
@@ -163,6 +184,27 @@ struct WageScreen: View {
         data.customHourlyWage = newTier.defaultValue
       }
     }
+    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification))
+    { _ in
+      withAnimation(.easeOut(duration: 0.18)) {
+        isKeyboardVisible = true
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification))
+    { _ in
+      withAnimation(.easeOut(duration: 0.18)) {
+        isKeyboardVisible = false
+      }
+    }
+  }
+
+  private func dismissKeyboard() {
+    UIApplication.shared.sendAction(
+      #selector(UIResponder.resignFirstResponder),
+      to: nil,
+      from: nil,
+      for: nil
+    )
   }
 
   // MARK: - Wage Type Toggle
@@ -360,6 +402,29 @@ struct WageScreen: View {
       // Silently fail - will use static fallback rates
       print("Failed to load tariff version: \(error)")
     }
+  }
+}
+
+private struct WageGlassActionButton: View {
+  let title: String
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      Text(title)
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexBlue)
+        .lineLimit(1)
+        .padding(.horizontal, Spacing.md)
+        .padding(.vertical, Spacing.xs)
+        .background(.thinMaterial, in: Capsule())
+        .overlay(
+          Capsule()
+            .stroke(Color.tidexBorder.opacity(0.75), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 3)
+    }
+    .buttonStyle(.plain)
   }
 }
 

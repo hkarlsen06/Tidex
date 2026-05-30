@@ -298,7 +298,7 @@ struct SyncUserSettingsRow: Codable {
   let profile_picture_url: String?
   let payroll_day: Int?
   let theme: String
-  let calendar_animation_style: String
+  let calendar_content_color_style: String?
   let show_dashboard_clock_buttons: Bool?
   let ai_data_sharing_enabled: Bool?
   let half_tax_month: Int?
@@ -319,7 +319,7 @@ struct SyncUserSettingsRow: Codable {
       profile_picture_url: profile_picture_url,
       payroll_day: payroll_day,
       theme: theme,
-      calendar_animation_style: calendar_animation_style,
+      calendar_content_color_style: calendar_content_color_style ?? "workplace",
       show_dashboard_clock_buttons: show_dashboard_clock_buttons,
       ai_data_sharing_enabled: ai_data_sharing_enabled,
       half_tax_month: half_tax_month,

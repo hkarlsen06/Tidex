@@ -9,6 +9,7 @@ struct AddShiftView: View {
   @StateObject private var viewModel = AddShiftViewModel()
   @Binding var selectedTab: MainTabView.Tab
   @Binding var isKeyboardVisible: Bool
+  var onOpenJobsAndPaySettings: () -> Void = {}
   @State private var focusedTimeField: TimeInputField?
   @State private var keyboardHeight: CGFloat = 0
   @State private var tabTransitionOffset: CGFloat = 0
@@ -16,7 +17,7 @@ struct AddShiftView: View {
   @State private var showStartFreshConfirmation = false
   @State private var showSingleSuccessBanner = false
   @State private var showAddConfetti = false
-  @State private var showAddJobBasicsSheet = false
+  @State private var showAddJobSheet = false
   @State private var singleSuccessDismissTask: Task<Void, Never>?
   private let workSetupStatusService = WorkSetupStatusService.shared
 
@@ -345,36 +346,38 @@ struct AddShiftView: View {
         },
         onAddJob: {
           viewModel.dismissJobSelection()
-          showAddJobBasicsSheet = true
+          showAddJobSheet = true
+        },
+        onOpenSettings: {
+          viewModel.dismissJobSelection()
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            onOpenJobsAndPaySettings()
+          }
         },
         onCancel: {
           viewModel.dismissJobSelection()
         }
       )
     }
-    .sheet(isPresented: $showAddJobBasicsSheet) {
-      AddJobBasicsSheet(
+    .sheet(isPresented: $showAddJobSheet) {
+      AddJobSheet(
         initialCurrency: viewModel.jobCreationInitialCurrency,
         initialPayrollDay: viewModel.jobCreationInitialPayrollDay,
         initialHalfTaxMonth: viewModel.jobCreationInitialHalfTaxMonth,
-        initialMonthlyGoal: viewModel.jobCreationInitialMonthlyGoal
+        initialMonthlyGoal: viewModel.jobCreationInitialMonthlyGoal,
+        setupDismissTitle: String(localized: "settings.pay.setup.laterButton"),
+        onSaveBasics: { input in
+          await viewModel.createBasicJobForSetup(input: input)
+        }
       ) { input in
-        guard let createdJob = await viewModel.createBasicJob(input: input) else {
-          return false
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-          self.viewModel.paySetupRequest = AddShiftPaySetupRequest(
-            job: createdJob,
-            action: .selectJob
-          )
-        }
-        return true
+        await viewModel.createConfiguredJob(input: input)
       }
     }
     .sheet(item: $viewModel.paySetupRequest) { request in
       JobPaySetupSheet(
         job: request.job,
-        initialCurrency: request.job.currency
+        initialCurrency: request.job.currency,
+        dismissTitle: String(localized: "settings.pay.setup.laterButton")
       ) { input in
         await viewModel.completePaySetup(for: request.job, input: input)
       }
@@ -520,7 +523,6 @@ private struct SingleShiftContent: View {
   @Binding var focusedTimeField: TimeInputField?
 
   private var leadingJobAccessory: AnyView? {
-    guard viewModel.submissionJobs.count > 1 else { return nil }
     return AnyView(
       AddShiftJobSelectionChip(
         selectedJob: viewModel.selectedJob,
@@ -565,7 +567,6 @@ private struct RecurringShiftContent: View {
   @Binding var focusedTimeField: TimeInputField?
 
   private var leadingJobAccessory: AnyView? {
-    guard viewModel.submissionJobs.count > 1 else { return nil }
     return AnyView(
       AddShiftJobSelectionChip(
         selectedJob: viewModel.selectedJob,
@@ -783,18 +784,17 @@ private struct AddShiftJobSelectionChip: View {
 
   var body: some View {
     Button(action: onTap) {
-      HStack(spacing: Spacing.xxxs) {
+      HStack(spacing: Spacing.xxs) {
         if let selectedJob {
           WorkplaceNameText(
             name: selectedJob.name,
             colorHex: selectedJob.color,
             font: .tidexMonoCaption,
             fallbackBadgeColor: .tidexBlue,
+            maxTextWidth: 122,
             badgeHorizontalPadding: Spacing.xs,
             badgeVerticalPadding: 2
           )
-          .lineLimit(1)
-          .truncationMode(.tail)
         } else {
           HStack(spacing: Spacing.xxxs) {
             Image(systemName: "building.2")
@@ -814,8 +814,10 @@ private struct AddShiftJobSelectionChip: View {
         Image(systemName: "chevron.down")
           .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
+          .fixedSize()
       }
       .frame(height: 36)
+      .fixedSize(horizontal: true, vertical: false)
     }
     .buttonStyle(.plain)
   }
@@ -826,11 +828,12 @@ private struct AddShiftJobChooserSheet: View {
   let configuredJobIds: Set<String>
   let onSelect: (String) -> Void
   let onAddJob: () -> Void
+  let onOpenSettings: () -> Void
   let onCancel: () -> Void
 
   private var detentHeight: CGFloat {
     let visibleRows = max(2, min(jobs.count + 1, 5))
-    return CGFloat(visibleRows) * 70 + 120
+    return CGFloat(visibleRows) * 78 + 128
   }
 
   var body: some View {
@@ -870,24 +873,26 @@ private struct AddShiftJobChooserSheet: View {
                   name: job.name,
                   colorHex: job.color,
                   font: .tidexBodyMedium,
-                  fallbackBadgeColor: .tidexBlue
+                  fallbackBadgeColor: .tidexBlue,
+                  maxTextWidth: 178,
+                  badgeCornerRadius: CornerRadius.md,
+                  badgeHorizontalPadding: Spacing.sm,
+                  badgeVerticalPadding: Spacing.xs
                 )
+                .layoutPriority(1)
 
-                Spacer()
+                Spacer(minLength: Spacing.xs)
 
-                if !configuredJobIds.contains(job.id) {
-                  Text(String(localized: "settings.pay.setup.requiredBadge"))
-                    .font(.tidexFootnote)
-                    .foregroundColor(.tidexWarning)
-                    .padding(.horizontal, Spacing.xs)
-                    .padding(.vertical, Spacing.xxxs)
-                    .background(Color.tidexWarning.opacity(0.12))
-                    .clipShape(Capsule())
-                }
+                AddShiftJobStatusBadges(
+                  isDefault: job.is_default,
+                  requiresPaySetup: !configuredJobIds.contains(job.id)
+                )
+                .layoutPriority(2)
 
                 Image(systemName: "chevron.right")
                   .font(.tidexCaptionRegular)
                   .foregroundColor(.tidexTextMuted)
+                  .fixedSize()
               }
               .padding(.horizontal, Spacing.md)
               .padding(.vertical, Spacing.md)
@@ -915,10 +920,64 @@ private struct AddShiftJobChooserSheet: View {
             onCancel()
           }
         }
+
+        ToolbarItem(placement: .topBarTrailing) {
+          Button {
+            onOpenSettings()
+          } label: {
+            Image(systemName: "gearshape")
+          }
+          .accessibilityLabel(Text(String(localized: .settingsMenuPayLabel)))
+        }
       }
     }
     .presentationDetents([.height(detentHeight)])
     .presentationDragIndicator(.visible)
+  }
+}
+
+private struct AddShiftJobStatusBadges: View {
+  let isDefault: Bool
+  let requiresPaySetup: Bool
+
+  var body: some View {
+    HStack(spacing: Spacing.xs) {
+      if isDefault {
+        AddShiftJobStatusBadge(
+          title: String(localized: "settings.pay.choose_job.default_badge"),
+          foregroundColor: .tidexBlue,
+          backgroundColor: .tidexBlue.opacity(0.14)
+        )
+      }
+
+      if requiresPaySetup {
+        AddShiftJobStatusBadge(
+          title: String(localized: "settings.pay.setup.requiredBadge"),
+          foregroundColor: .tidexWarning,
+          backgroundColor: .tidexWarning.opacity(0.14)
+        )
+      }
+    }
+    .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
+private struct AddShiftJobStatusBadge: View {
+  let title: String
+  let foregroundColor: Color
+  let backgroundColor: Color
+
+  var body: some View {
+    Text(title)
+      .font(.tidexCaptionStrong)
+      .foregroundColor(foregroundColor)
+      .lineLimit(1)
+      .truncationMode(.tail)
+      .fixedSize(horizontal: true, vertical: false)
+      .padding(.horizontal, Spacing.xsm)
+      .padding(.vertical, Spacing.xxs)
+      .background(backgroundColor)
+      .clipShape(Capsule())
   }
 }
 

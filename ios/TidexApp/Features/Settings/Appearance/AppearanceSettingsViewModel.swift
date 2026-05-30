@@ -27,11 +27,11 @@ final class AppearanceSettingsViewModel: ObservableObject {
     }
   }
 
-  /// The currently selected calendar animation style
-  @Published var selectedCalendarAnimationStyle: CalendarAnimationStyle = .horizontal {
+  /// The currently selected calendar content color style
+  @Published var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace {
     didSet {
-      if oldValue != selectedCalendarAnimationStyle && !isInitialLoad {
-        updateCalendarAnimationStyle()
+      if oldValue != selectedCalendarContentColorStyle && !isInitialLoad {
+        updateCalendarContentColorStyle()
       }
     }
   }
@@ -98,16 +98,13 @@ final class AppearanceSettingsViewModel: ObservableObject {
       selectedTheme = .system
     }
 
-    // Load calendar animation style from settings (synced from server)
-    if let styleString = settings?.calendar_animation_style,
-      let style = CalendarAnimationStyle(rawValue: styleString)
-    {
-      selectedCalendarAnimationStyle = style
-      // Also update AppearanceManager to match
-      appearanceManager.setCalendarAnimationStyle(style)
-    } else {
-      selectedCalendarAnimationStyle = .horizontal
-    }
+    let calendarContentStyleRaw =
+      settings?.effectiveCalendarContentColorStyle
+      ?? appearanceManager.calendarContentColorStyle.rawValue
+    let calendarContentStyle =
+      CalendarContentColorStyle(rawValue: calendarContentStyleRaw) ?? .workplace
+    selectedCalendarContentColorStyle = calendarContentStyle
+    appearanceManager.setCalendarContentColorStyle(calendarContentStyle)
 
     showDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
 
@@ -176,26 +173,25 @@ final class AppearanceSettingsViewModel: ObservableObject {
     }
   }
 
-  /// Update calendar animation style in repository and apply to app
-  private func updateCalendarAnimationStyle() {
+  /// Update calendar content color style in repository and apply to app
+  private func updateCalendarContentColorStyle() {
     guard !isInitialLoad, let userId = userId else { return }
 
-    // Apply immediately to AppearanceManager
-    appearanceManager.setCalendarAnimationStyle(selectedCalendarAnimationStyle)
+    appearanceManager.setCalendarContentColorStyle(selectedCalendarContentColorStyle)
 
-    // Save to repository (automatically triggers sync)
     Task {
       do {
         _ = try await settingsRepository.updateSettings(
           for: userId,
-          calendarAnimationStyle: selectedCalendarAnimationStyle.rawValue
+          calendarContentColorStyle: selectedCalendarContentColorStyle.rawValue
         )
 
         logger.info(
-          "Updated calendar animation style to: \(self.selectedCalendarAnimationStyle.rawValue)")
+          "Updated calendar content color style to: \(self.selectedCalendarContentColorStyle.rawValue)"
+        )
       } catch {
-        logger.error("Failed to save calendar animation style: \(error.localizedDescription)")
-        errorMessage = "Failed to save animation preference"
+        logger.error("Failed to save calendar content color style: \(error.localizedDescription)")
+        errorMessage = String(localized: .appearanceCalendarContentColorSaveError)
       }
     }
   }

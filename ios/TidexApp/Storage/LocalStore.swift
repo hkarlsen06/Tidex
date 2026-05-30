@@ -2272,7 +2272,7 @@ actor LocalStoreActor {
       existing.profilePictureUrl = settings.profilePictureUrl
       existing.payrollDay = settings.payrollDay
       existing.theme = settings.theme
-      existing.calendarAnimationStyle = settings.calendarAnimationStyle
+      existing.calendarContentColorStyle = settings.calendarContentColorStyle
       existing.showDashboardClockButtons = settings.showDashboardClockButtons
       existing.aiDataSharingEnabled = settings.aiDataSharingEnabled
       existing.halfTaxMonth = settings.halfTaxMonth
@@ -2336,7 +2336,7 @@ actor LocalStoreActor {
     payrollDay: Int? = nil,
     currency: String? = nil,
     theme: String = "system",
-    calendarAnimationStyle: String = "horizontal",
+    calendarContentColorStyle: String = "workplace",
     showDashboardClockButtons: Bool = true,
     aiDataSharingEnabled: Bool = false,
     monthlyGoal: Int? = nil,
@@ -2355,7 +2355,7 @@ actor LocalStoreActor {
       profilePictureUrl: nil,
       payrollDay: payrollDay,
       theme: theme,
-      calendarAnimationStyle: calendarAnimationStyle,
+      calendarContentColorStyle: calendarContentColorStyle,
       showDashboardClockButtons: showDashboardClockButtons,
       aiDataSharingEnabled: aiDataSharingEnabled,
       halfTaxMonth: halfTaxMonth,
@@ -2368,7 +2368,7 @@ actor LocalStoreActor {
 
     // Track all non-nil fields as dirty so they get pushed to server
     var dirtyFields: [UserSettingsField] = [
-      .theme, .calendarAnimationStyle, .showDashboardClockButtons, .lastActive,
+      .theme, .calendarContentColorStyle, .showDashboardClockButtons, .lastActive,
     ]
     if aiDataSharingEnabled {
       dirtyFields.append(.aiDataSharingEnabled)
@@ -2393,7 +2393,7 @@ actor LocalStoreActor {
       profilePictureUrl: nil,
       payrollDay: payrollDay,
       theme: theme,
-      calendarAnimationStyle: calendarAnimationStyle,
+      calendarContentColorStyle: calendarContentColorStyle,
       showDashboardClockButtons: showDashboardClockButtons,
       aiDataSharingEnabled: aiDataSharingEnabled,
       halfTaxMonth: halfTaxMonth,
@@ -2447,7 +2447,7 @@ actor LocalStoreActor {
     profilePictureUrl: String?,
     payrollDay: Int?,
     theme: String?,
-    calendarAnimationStyle: String?,
+    calendarContentColorStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
     aiDataSharingEnabled: Bool? = nil,
     halfTaxMonth: Int?,
@@ -2500,10 +2500,9 @@ actor LocalStoreActor {
       newDirtyFields.insert(.theme)
     }
 
-    // Calendar animation style: Same treatment as theme
-    if let newStyle = calendarAnimationStyle {
-      localSettings.calendarAnimationStyle = newStyle
-      newDirtyFields.insert(.calendarAnimationStyle)
+    if let newStyle = calendarContentColorStyle {
+      localSettings.calendarContentColorStyle = newStyle
+      newDirtyFields.insert(.calendarContentColorStyle)
     }
 
     if let newShowDashboardClockButtons = showDashboardClockButtons {
@@ -2640,7 +2639,7 @@ actor LocalStoreActor {
     localSettings.profilePictureUrl = serverSnapshot.profilePictureUrl
     localSettings.payrollDay = serverSnapshot.payrollDay
     localSettings.theme = serverSnapshot.theme
-    localSettings.calendarAnimationStyle = serverSnapshot.calendarAnimationStyle
+    localSettings.calendarContentColorStyle = serverSnapshot.calendarContentColorStyle
     localSettings.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
     localSettings.aiDataSharingEnabled = serverSnapshot.aiDataSharingEnabled
     localSettings.halfTaxMonth = serverSnapshot.halfTaxMonth
@@ -3350,7 +3349,7 @@ actor LocalStoreActor {
     existing.profilePictureUrl = serverRow.profile_picture_url
     existing.payrollDay = serverRow.payroll_day
     existing.theme = serverRow.theme
-    existing.calendarAnimationStyle = serverRow.calendar_animation_style
+    existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
@@ -3421,8 +3420,8 @@ actor LocalStoreActor {
     if !localDirtyFields.contains(.theme) {
       existing.theme = serverRow.theme
     }
-    if !localDirtyFields.contains(.calendarAnimationStyle) {
-      existing.calendarAnimationStyle = serverRow.calendar_animation_style
+    if !localDirtyFields.contains(.calendarContentColorStyle) {
+      existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
     }
     if !localDirtyFields.contains(.showDashboardClockButtons) {
       existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
@@ -4141,7 +4140,7 @@ actor LocalStoreActor {
     existing.profilePictureUrl = serverRow.profile_picture_url
     existing.payrollDay = serverRow.payroll_day
     existing.theme = serverRow.theme
-    existing.calendarAnimationStyle = serverRow.calendar_animation_style
+    existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
@@ -4203,7 +4202,7 @@ actor LocalStoreActor {
     existing.profilePictureUrl = serverSnapshot.profilePictureUrl
     existing.payrollDay = serverSnapshot.payrollDay
     existing.theme = serverSnapshot.theme
-    existing.calendarAnimationStyle = serverSnapshot.calendarAnimationStyle
+    existing.calendarContentColorStyle = serverSnapshot.calendarContentColorStyle
     existing.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
     existing.aiDataSharingEnabled = serverSnapshot.aiDataSharingEnabled
     existing.halfTaxMonth = serverSnapshot.halfTaxMonth

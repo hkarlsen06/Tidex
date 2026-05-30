@@ -125,7 +125,7 @@ final class SettingsRepository: ObservableObject {
   ///   - profilePictureUrl: New profile picture URL (optional)
   ///   - payrollDay: New payroll day (optional)
   ///   - theme: New theme (optional)
-  ///   - calendarAnimationStyle: New calendar animation style (optional)
+  ///   - calendarContentColorStyle: New calendar content color style (optional)
   ///   - showDashboardClockButtons: Whether dashboard clock buttons are visible (optional)
   ///   - aiDataSharingEnabled: Whether Wagey AI data sharing is enabled (optional)
   ///   - halfTaxMonth: New half tax month (optional)
@@ -141,7 +141,7 @@ final class SettingsRepository: ObservableObject {
     profilePictureUrl: String? = nil,
     payrollDay: Int? = nil,
     theme: String? = nil,
-    calendarAnimationStyle: String? = nil,
+    calendarContentColorStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
     aiDataSharingEnabled: Bool? = nil,
     halfTaxMonth: Int? = nil,
@@ -158,7 +158,7 @@ final class SettingsRepository: ObservableObject {
         profilePictureUrl: profilePictureUrl,
         payrollDay: payrollDay,
         theme: theme,
-        calendarAnimationStyle: calendarAnimationStyle,
+        calendarContentColorStyle: calendarContentColorStyle,
         showDashboardClockButtons: showDashboardClockButtons,
         aiDataSharingEnabled: aiDataSharingEnabled,
         halfTaxMonth: halfTaxMonth,
@@ -218,7 +218,7 @@ final class SettingsRepository: ObservableObject {
       profilePictureUrl: nil,
       payrollDay: nil,
       theme: nil,
-      calendarAnimationStyle: nil,
+      calendarContentColorStyle: nil,
       showDashboardClockButtons: nil,
       aiDataSharingEnabled: nil,
       halfTaxMonth: nil,

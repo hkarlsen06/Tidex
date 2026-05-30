@@ -310,7 +310,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       profilePictureUrl: nil,
       payrollDay: 25,
       theme: "system",
-      calendarAnimationStyle: "horizontal",
+      calendarContentColorStyle: "workplace",
       showDashboardClockButtons: true,
       aiDataSharingEnabled: false,
       halfTaxMonth: nil,
@@ -328,7 +328,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       profilePictureUrl: nil,
       payrollDay: 25,
       theme: "dark",
-      calendarAnimationStyle: "horizontal",
+      calendarContentColorStyle: "monochrome",
       showDashboardClockButtons: false,
       aiDataSharingEnabled: true,
       halfTaxMonth: nil,
@@ -346,6 +346,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
         .monthlyGoalsByMonth,
         .defaultShiftsView,
         .theme,
+        .calendarContentColorStyle,
         .showDashboardClockButtons,
         .aiDataSharingEnabled,
       ])
@@ -360,7 +361,6 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
         "profilePictureUrl": null,
         "payrollDay": 15,
         "theme": "system",
-        "calendarAnimationStyle": "horizontal",
         "halfTaxMonth": null,
         "currency": "NOK",
         "defaultStartupTab": "home",
@@ -374,6 +374,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     let decoded = try syncJSONDecoder.decode(UserSettingsServerSnapshot.self, from: jsonData)
 
     XCTAssertEqual(decoded.monthlyGoalsByMonth, [:])
+    XCTAssertEqual(decoded.calendarContentColorStyle, "workplace")
     XCTAssertTrue(decoded.showDashboardClockButtons)
     XCTAssertFalse(decoded.aiDataSharingEnabled)
   }

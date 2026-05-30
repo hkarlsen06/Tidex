@@ -126,6 +126,8 @@ export const toolResults = {
   cannotDeleteDefaultWorkplace:
     "Cannot delete the default job. Set another job as default first.",
   cannotDeleteLastActiveWorkplace: "Cannot delete the last active job.",
+  cannotDeleteWorkplaceWithHistory:
+    "This workplace has shifts or payroll adjustments. Archive it instead, or move or delete them first.",
   friendNoAccess: "No access to this friend's shifts",
   friendMustShareWithMeFirst:
     "This user must share with you before share_back is allowed.",

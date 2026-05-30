@@ -916,6 +916,49 @@ Deno.test("manage_workplace create allows minimal job and marks setup required",
   assertEquals((result.data as Record<string, unknown>).requiresPaySetup, true);
 });
 
+Deno.test("manage_workplace delete blocks jobs with active shifts", async () => {
+  const defaultJobId = makeValidUuid(1);
+  const targetJobId = makeValidUuid(2);
+  const db: Partial<MockDb> = {
+    jobs: [
+      jobRow({ id: defaultJobId, is_default: true, sort_order: 0 }),
+      jobRow({
+        id: targetJobId,
+        name: "Bookshop",
+        is_default: false,
+        sort_order: 1,
+      }),
+    ],
+    user_shifts: [{
+      id: makeUuid(20),
+      user_id: USER_ID,
+      job_id: targetJobId,
+      shift_date: "2026-04-16",
+      start_time: "09:00",
+      end_time: "17:00",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_workplace",
+    JSON.stringify({ action: "delete", jobId: targetJobId }),
+  );
+
+  assertEquals(result.success, false);
+  assertEquals(
+    result.message,
+    "This workplace has shifts or payroll adjustments. Archive it instead, or move or delete them first.",
+  );
+  assertEquals(
+    db.jobs?.find((job) => job.id === targetJobId)?.deleted_at,
+    null,
+  );
+});
+
 Deno.test("get_wage_info does not use legacy snapshot as job setup", async () => {
   const jobId = makeValidUuid(13);
   const ctx = createContext({

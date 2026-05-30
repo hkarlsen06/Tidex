@@ -23,6 +23,7 @@ private enum SingleSelectionActionMode: Equatable {
 /// Supports multi-date selection via long-press + drag
 struct ShiftsCalendarView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @ObservedObject private var appearanceManager = AppearanceManager.shared
 
   let shifts: [ShiftWithComputations]
   let eventCoverageByDate: [String: [EventPresentation]]
@@ -334,8 +335,12 @@ struct ShiftsCalendarView: View {
     jobs.count > 1
   }
 
+  private var shouldUseWorkplaceCalendarColors: Bool {
+    appearanceManager.calendarContentColorStyle.usesWorkplaceColors
+  }
+
   private var dayJobTimeColorsByDate: [String: DayJobTimeColors] {
-    guard hasMultipleActiveJobs else { return [:] }
+    guard shouldUseWorkplaceCalendarColors, hasMultipleActiveJobs else { return [:] }
 
     var result: [String: DayJobTimeColors] = [:]
 
@@ -584,7 +589,8 @@ struct ShiftsCalendarView: View {
         ?? false
       let dayJobTimeColors = dayInfo.dateISO.flatMap { dayJobTimeColorsByDate[$0] }
       let shouldColorJobMetrics =
-        hasMultipleActiveJobs
+        shouldUseWorkplaceCalendarColors
+        && hasMultipleActiveJobs
         && !dayInfo.isOutsideMonth
         && !isSelected
         && !isInDragPreview

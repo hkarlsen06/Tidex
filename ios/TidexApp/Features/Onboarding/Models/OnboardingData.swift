@@ -5,6 +5,16 @@ import Observation
 /// Used to gather wage, supplement, break, tax, and payroll settings during onboarding
 @Observable
 final class OnboardingData {
+  static let defaultJobColor = "#3B82F6"
+
+  // MARK: - Job Settings
+
+  /// Name for the first job created during onboarding.
+  var jobName: String = ""
+
+  /// Color used to identify the first job in job pickers.
+  var jobColor: String? = defaultJobColor
+
   // MARK: - Wage Settings
 
   /// Type of wage: tariff (preset rates) or custom (user-defined)
@@ -59,6 +69,15 @@ final class OnboardingData {
   var currency: String = "kr"
 
   // MARK: - Computed Properties
+
+  /// User-facing job name, falling back only when older drafts did not collect one.
+  func resolvedJobName(locale: Locale? = nil) -> String {
+    let trimmedName = jobName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedName.isEmpty else {
+      return OnboardingSaveManager.defaultJobName(locale: locale)
+    }
+    return trimmedName
+  }
 
   /// Resolved hourly wage based on wage type
   /// Returns tariff rate for tariff users, custom rate for custom users
@@ -131,6 +150,8 @@ final class OnboardingData {
   /// Save current state to UserDefaults for persistence across app restarts
   func save(currentScreen: String) {
     let persistedData = PersistedOnboardingData(
+      jobName: jobName,
+      jobColor: jobColor,
       wageType: wageType,
       selectedTariffLevel: selectedTariffLevel,
       customHourlyWage: customHourlyWage,
@@ -161,6 +182,8 @@ final class OnboardingData {
     }
 
     self.wageType = persisted.wageType
+    self.jobName = persisted.jobName ?? ""
+    self.jobColor = persisted.jobColor ?? Self.defaultJobColor
     self.selectedTariffLevel = persisted.selectedTariffLevel
     self.customHourlyWage = persisted.customHourlyWage
     self.hasInitializedWageForLocale = persisted.hasInitializedWageForLocale
@@ -191,6 +214,8 @@ final class OnboardingData {
 
 /// Codable wrapper for OnboardingData persistence
 private struct PersistedOnboardingData: Codable {
+  let jobName: String?
+  let jobColor: String?
   let wageType: OnboardingData.WageType
   let selectedTariffLevel: Int
   let customHourlyWage: Double

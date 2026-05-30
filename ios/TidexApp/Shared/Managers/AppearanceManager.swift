@@ -39,10 +39,14 @@ enum AppTheme: String, CaseIterable {
   }
 }
 
-/// Calendar animation style options
-enum CalendarAnimationStyle: String, CaseIterable {
-  case horizontal
-  case vertical
+/// Calendar content color options
+enum CalendarContentColorStyle: String, CaseIterable {
+  case workplace
+  case monochrome
+
+  var usesWorkplaceColors: Bool {
+    self == .workplace
+  }
 }
 
 /// Manager for app-wide appearance settings
@@ -59,8 +63,8 @@ final class AppearanceManager: ObservableObject {
   /// The current theme preference
   @Published private(set) var theme: AppTheme = .system
 
-  /// The current calendar animation style
-  @Published private(set) var calendarAnimationStyle: CalendarAnimationStyle = .horizontal
+  /// The current calendar content color style
+  @Published private(set) var calendarContentColorStyle: CalendarContentColorStyle = .workplace
 
   /// The color scheme to apply (nil means follow system)
   var colorScheme: ColorScheme? {
@@ -72,8 +76,8 @@ final class AppearanceManager: ObservableObject {
   /// UserDefaults key for caching theme locally
   private let themeKey = "cachedTheme"
 
-  /// UserDefaults key for calendar animation style
-  private let calendarAnimationStyleKey = "calendarAnimationStyle"
+  /// UserDefaults key for calendar content color style
+  private let calendarContentColorStyleKey = "calendarContentColorStyle"
 
   // MARK: - Initialization
 
@@ -86,12 +90,11 @@ final class AppearanceManager: ObservableObject {
       logger.debug("Loaded cached theme: \(cachedTheme)")
     }
 
-    // Load cached calendar animation style
-    if let cachedStyle = UserDefaults.standard.string(forKey: calendarAnimationStyleKey),
-      let style = CalendarAnimationStyle(rawValue: cachedStyle)
+    if let cachedStyle = UserDefaults.standard.string(forKey: calendarContentColorStyleKey),
+      let style = CalendarContentColorStyle(rawValue: cachedStyle)
     {
-      self.calendarAnimationStyle = style
-      logger.debug("Loaded cached calendar animation style: \(cachedStyle)")
+      self.calendarContentColorStyle = style
+      logger.debug("Loaded cached calendar content color style: \(cachedStyle)")
     }
   }
 
@@ -113,17 +116,15 @@ final class AppearanceManager: ObservableObject {
     logger.info("Theme updated to: \(theme.rawValue)")
   }
 
-  /// Update the calendar animation style
-  /// - Parameter style: The new animation style to apply
-  func setCalendarAnimationStyle(_ style: CalendarAnimationStyle) {
-    guard self.calendarAnimationStyle != style else { return }
+  /// Update the calendar content color style
+  /// - Parameter style: The new color style to apply
+  func setCalendarContentColorStyle(_ style: CalendarContentColorStyle) {
+    guard self.calendarContentColorStyle != style else { return }
 
-    self.calendarAnimationStyle = style
+    self.calendarContentColorStyle = style
+    UserDefaults.standard.set(style.rawValue, forKey: calendarContentColorStyleKey)
 
-    // Cache in UserDefaults
-    UserDefaults.standard.set(style.rawValue, forKey: calendarAnimationStyleKey)
-
-    logger.info("Calendar animation style updated to: \(style.rawValue)")
+    logger.info("Calendar content color style updated to: \(style.rawValue)")
   }
 
   /// Apply the current theme to all app windows and their root view controllers
@@ -174,27 +175,26 @@ final class AppearanceManager: ObservableObject {
     applyToWindows()
   }
 
-  /// Load calendar animation style from user settings
+  /// Load calendar content color style from user settings
   /// Called when settings are loaded from the repository
-  /// - Parameter styleString: The animation style string from user settings
-  func loadCalendarAnimationStyleFromSettings(_ styleString: String?) {
-    // Check if we already have a locally cached preference
-    let hasCachedPreference = UserDefaults.standard.string(forKey: calendarAnimationStyleKey) != nil
+  /// - Parameter styleString: The color style string from user settings
+  func loadCalendarContentColorStyleFromSettings(_ styleString: String?) {
+    let hasCachedPreference =
+      UserDefaults.standard.string(forKey: calendarContentColorStyleKey) != nil
 
     if !hasCachedPreference {
-      // No local cache - use the server value
-      let newStyle: CalendarAnimationStyle
+      let newStyle: CalendarContentColorStyle
       if let styleString = styleString,
-        let parsed = CalendarAnimationStyle(rawValue: styleString)
+        let parsed = CalendarContentColorStyle(rawValue: styleString)
       {
         newStyle = parsed
       } else {
-        newStyle = .horizontal
+        newStyle = .workplace
       }
 
-      self.calendarAnimationStyle = newStyle
-      UserDefaults.standard.set(newStyle.rawValue, forKey: calendarAnimationStyleKey)
-      logger.info("Calendar animation style loaded from settings: \(newStyle.rawValue)")
+      self.calendarContentColorStyle = newStyle
+      UserDefaults.standard.set(newStyle.rawValue, forKey: calendarContentColorStyleKey)
+      logger.info("Calendar content color style loaded from settings: \(newStyle.rawValue)")
     }
   }
 }

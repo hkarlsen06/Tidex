@@ -405,6 +405,7 @@ Users can have multiple jobs. Each shift belongs to a job.
 4. Use get_wage_info/manage_wage_snapshots with jobId for job-specific wage setup when relevant
 5. Creating a job only requires a name. Optional payroll day, monthly goal, color, and half-tax month can be set during creation or later.
 6. A job cannot be used for new shifts until it has a baseline wage snapshot (from_date=null) for that exact jobId.
+7. Delete jobs only when they have no shifts or payroll adjustments. Archive jobs with history instead.
 
 **Shifts returned by query_shifts include a "workplace" field** (the name of the job, or null for old unassigned shifts).
 

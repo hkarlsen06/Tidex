@@ -518,6 +518,7 @@ struct TimeRangePicker: View {
   @State private var focusController = TimeInputFocusController()
   @ScaledMetric(relativeTo: .body) private var compactInputWidth: CGFloat = 156
   @ScaledMetric(relativeTo: .body) private var compactInputHeight: CGFloat = 58
+  private let chipRowHeight: CGFloat = 36
 
   /// Shortened label for start time field
   private var startLabel: String {
@@ -572,7 +573,7 @@ struct TimeRangePicker: View {
         .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
-    .frame(height: compactInputHeight + Spacing.xs + 28, alignment: .top)
+    .frame(height: compactInputHeight + Spacing.xs + chipRowHeight, alignment: .top)
     .id(scrollId)
     .onAppear {
       focusController.onFocusChange = { (focused: TimeInputField?) in

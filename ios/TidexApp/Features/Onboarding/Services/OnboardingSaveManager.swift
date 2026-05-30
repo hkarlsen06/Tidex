@@ -16,7 +16,7 @@ enum OnboardingCompletionMode: Equatable {
 final class OnboardingSaveManager: ObservableObject {
   private static let startupTabCacheKey = "defaultStartupTab"
 
-  static func defaultJobName(locale: Locale? = nil) -> String {
+  nonisolated static func defaultJobName(locale: Locale? = nil) -> String {
     guard let locale else {
       return String(
         localized: String.LocalizationValue("jobs.defaultPlaceholderName"),
@@ -148,9 +148,14 @@ final class OnboardingSaveManager: ObservableObject {
       ?? jobsRepository.getActiveJobs(for: userId).first
 
     if let activeSetupJob {
-      return try await ensureBaselineSnapshot(
+      let preparedJob = try await ensureJobMetadata(
         userId: userId,
         job: activeSetupJob,
+        data: data
+      )
+      return try await ensureBaselineSnapshot(
+        userId: userId,
+        job: preparedJob,
         data: data
       )
     }
@@ -162,8 +167,8 @@ final class OnboardingSaveManager: ObservableObject {
     // complete on the first post-onboarding render.
     let createdJob = try await jobsRepository.createJob(
       userId: userId,
-      name: Self.defaultJobName(),
-      color: nil,
+      name: data.resolvedJobName(),
+      color: data.jobColor,
       currency: resolvedJobCurrency(for: data),
       payrollDay: data.payrollDay,
       halfTaxMonth: nil,
@@ -177,6 +182,26 @@ final class OnboardingSaveManager: ObservableObject {
       job: createdJob,
       data: data
     )
+  }
+
+  private func ensureJobMetadata(
+    userId: String,
+    job: Job,
+    data: OnboardingData
+  ) async throws -> Job {
+    let resolvedName = data.resolvedJobName()
+    let resolvedColor = data.jobColor
+
+    guard job.name != resolvedName || job.color != resolvedColor else {
+      return job
+    }
+
+    return try await jobsRepository.updateJob(
+      userId: userId,
+      jobId: job.id,
+      name: resolvedName,
+      color: resolvedColor
+    ) ?? job
   }
 
   private func ensureBaselineSnapshot(

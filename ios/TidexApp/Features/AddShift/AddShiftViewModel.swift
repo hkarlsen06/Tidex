@@ -642,8 +642,8 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Selected job object for display and contextual calculations.
   var selectedJob: Job? {
-    guard let selectedJobId else { return nil }
-    return activeJobs.first(where: { $0.id == selectedJobId })
+    guard let jobId = effectiveSelectedJobId else { return nil }
+    return activeJobs.first(where: { $0.id == jobId })
   }
 
   var jobCreationInitialCurrency: String {
@@ -699,7 +699,60 @@ final class AddShiftViewModel: ObservableObject {
     configuredJobIds.contains(jobId)
   }
 
-  func createBasicJob(input: AddJobBasicsInput) async -> Job? {
+  func createConfiguredJob(input: AddJobSetupInput) async -> Bool {
+    guard let userId = AppCoordinator.shared.getCurrentUserId() else {
+      error = String(localized: .settingsPayErrorNotAuthenticated)
+      return false
+    }
+
+    do {
+      let createdJob: Job
+      if let existingJobSetup = input.existingJobSetup {
+        guard
+          try await jobsRepository.updateJob(
+            userId: userId,
+            jobId: existingJobSetup.id,
+            name: input.name,
+            color: input.color
+          ) != nil
+        else {
+          throw JobsRepositoryError.jobNotFound
+        }
+
+        createdJob = try await jobsRepository.completePaySetup(
+          userId: userId,
+          jobId: existingJobSetup.id,
+          currency: input.currency,
+          payrollDay: input.payrollDay,
+          halfTaxMonth: input.halfTaxMonth,
+          monthlyGoal: input.monthlyGoal,
+          baselineSnapshot: input.baselineSnapshot
+        )
+      } else {
+        createdJob = try await jobsRepository.createJobWithBaselineSnapshot(
+          userId: userId,
+          name: input.name,
+          color: input.color,
+          currency: input.currency,
+          payrollDay: input.payrollDay,
+          halfTaxMonth: input.halfTaxMonth,
+          monthlyGoal: input.monthlyGoal,
+          baselineSnapshot: input.baselineSnapshot
+        )
+      }
+
+      selectedJobId = createdJob.id
+      await refreshData()
+      Haptics.play(.success)
+      return true
+    } catch {
+      logger.error("Failed to create configured job from Add Shift: \(error.localizedDescription)")
+      self.error = error.localizedDescription
+      return false
+    }
+  }
+
+  func createBasicJobForSetup(input: AddJobBasicsInput) async -> Job? {
     guard let userId = AppCoordinator.shared.getCurrentUserId() else {
       error = String(localized: .settingsPayErrorNotAuthenticated)
       return nil
@@ -715,10 +768,11 @@ final class AddShiftViewModel: ObservableObject {
         halfTaxMonth: input.halfTaxMonth,
         monthlyGoal: input.monthlyGoal
       )
+      selectedJobId = createdJob.id
       await refreshData()
       return createdJob
     } catch {
-      logger.error("Failed to create job from Add Shift: \(error.localizedDescription)")
+      logger.error("Failed to create basic job from Add Shift: \(error.localizedDescription)")
       self.error = error.localizedDescription
       return nil
     }
@@ -773,7 +827,7 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   func presentJobSelection() {
-    guard requiresExplicitJobSelection else { return }
+    guard !activeJobs.isEmpty else { return }
     showSubmitJobChooser = true
   }
 
