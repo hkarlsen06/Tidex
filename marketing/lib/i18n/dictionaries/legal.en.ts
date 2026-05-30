@@ -17,14 +17,14 @@ export const legalEn = {
     },
     title: 'Terms of use',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-03-08',
+    lastUpdatedDate: '2026-05-30',
     dateLocale: 'en-US',
     sections: [
       {
         heading: '1. Acceptance of terms',
         paragraphs: [
           'By creating an account and using this service, you accept these terms.',
-          'The service is provided by Tidex / Hjalmar Samuel Kristensen-Karlsen.',
+          'The service is provided by Tidex / Hjalmar Karlsen.',
         ],
       },
       {
@@ -181,7 +181,7 @@ export const legalEn = {
           'For questions, complaints, or claims regarding Tidex, contact us at:',
         ],
         list: [
-          { boldLabel: 'Developer:', text: 'Tidex / Hjalmar Samuel Kristensen-Karlsen' },
+          { boldLabel: 'Developer:', text: 'Tidex / Hjalmar Karlsen' },
           { boldLabel: 'Address:', text: 'Lensmannsveien 8, 9515 Alta, Norway' },
           { boldLabel: 'Email:', text: 'contact@tidex.no' },
         ],
@@ -195,13 +195,13 @@ export const legalEn = {
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-05-17',
+    lastUpdatedDate: '2026-05-30',
     dateLocale: 'en-US',
     sections: [
       {
         heading: '1. Controller',
         paragraphs: [
-          'Tidex / Hjalmar Samuel Kristensen-Karlsen',
+          'Tidex / Hjalmar Karlsen',
           'Contact: contact@tidex.no',
         ],
       },

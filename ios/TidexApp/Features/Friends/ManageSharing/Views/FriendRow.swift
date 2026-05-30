@@ -335,7 +335,7 @@ struct FriendRow: View {
           email: "ole@example.com",
           phone: nil,
           username: "ole",
-          firstName: "Ole Hansen Kristensen-Karlsen",
+          firstName: "Ole Karlsen",
           profilePictureUrl: nil,
           oauthAvatarUrl: nil,
           sharesWithMe: Friend.SharesWithMe(
