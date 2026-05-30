@@ -927,6 +927,7 @@ struct DashboardView: View {
     }()
 
     let payrollVariants = viewModel.payrollCardVariants(fallback: data, defaultTitle: payrollLabel)
+    let isPayrollCardLoading = viewModel.payrollCardSnapshot == nil
     if let selectedPayrollVariant = payrollVariants.first {
       let showsMultiWorkplacePayroll = !selectedPayrollVariant.badges.isEmpty
       let selectedPayrollProgress: Double? = {
@@ -972,7 +973,9 @@ struct DashboardView: View {
           canManuallySetPayrollStatus: canManuallySetPayrollStatus,
           payrollMarkedReceived: payrollMarkedReceived,
           payrollOverrideUserId: payrollOverrideUserId,
-          payrollProgress: selectedPayrollProgress
+          payrollProgress: isPayrollCardLoading ? nil : selectedPayrollProgress,
+          isLoading: isPayrollCardLoading,
+          showsLoadingShimmer: false
         )
         .frame(
           minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
@@ -1203,7 +1206,9 @@ struct DashboardView: View {
     canManuallySetPayrollStatus: Bool,
     payrollMarkedReceived: Bool,
     payrollOverrideUserId: String?,
-    payrollProgress: Double?
+    payrollProgress: Double?,
+    isLoading: Bool = false,
+    showsLoadingShimmer: Bool = true
   ) -> some View {
     let showsWorkplaceVariants = variantCount > 1
     let showsGroupedWorkplaces = !selectedVariant.badges.isEmpty
@@ -1219,19 +1224,24 @@ struct DashboardView: View {
       tax: selectedVariant.tax,
       taxEnabled: selectedVariant.taxEnabled,
       hasPayrollAdjustments: selectedVariant.hasPayrollAdjustments,
-      progress: payrollProgress
+      progress: payrollProgress,
+      isLoading: isLoading,
+      showsLoadingShimmer: showsLoadingShimmer
     )
 
+    let displayedCard = card.userCurrency(selectedVariant.currency)
+
     let interactiveCard =
-      card
-      .userCurrency(selectedVariant.currency)
+      displayedCard
       .contentShape(Rectangle())
       .onTapGesture {
         impactHaptic.impactOccurred()
         selectedPayrollDetailsVariant = selectedVariant
       }
 
-    if canManuallySetPayrollStatus {
+    if isLoading {
+      displayedCard
+    } else if canManuallySetPayrollStatus {
       interactiveCard
         .contextMenu {
           Button {

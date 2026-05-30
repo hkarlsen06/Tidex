@@ -19,6 +19,8 @@ struct PayrollCard: View {
   var progress: Double?
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false
+  /// Allows transition placeholders to use the loading layout without starting shimmer.
+  var showsLoadingShimmer: Bool = true
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -184,7 +186,7 @@ struct PayrollCard: View {
     }
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
     .tidexCardShadow()
-    .shimmer(isActive: isLoading)
+    .shimmer(isActive: isLoading && showsLoadingShimmer)
     .onChange(of: progress) { _, newValue in
       // Animate to new progress value
       withAnimation(.linear(duration: 1.0)) {
