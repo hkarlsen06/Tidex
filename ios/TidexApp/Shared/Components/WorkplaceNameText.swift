@@ -9,6 +9,8 @@ struct WorkplaceNameText: View {
   var font: Font = .tidexBody
   var fallbackBadgeColor: Color? = nil
   var lineLimit: Int? = 1
+  var maxTextWidth: CGFloat?
+  var maxTextAlignment: Alignment = .leading
   var badgeCornerRadius: CGFloat = CornerRadius.sm
   var badgeHorizontalPadding: CGFloat = Spacing.xs
   var badgeVerticalPadding: CGFloat = Spacing.xxxs
@@ -20,17 +22,21 @@ struct WorkplaceNameText: View {
         .font(font)
         .foregroundColor(badgeForegroundColor(for: badgeColor))
         .lineLimit(lineLimit)
+        .truncationMode(.tail)
         .padding(.horizontal, badgeHorizontalPadding)
         .padding(.vertical, badgeVerticalPadding)
         .background(
           RoundedRectangle(cornerRadius: badgeCornerRadius, style: .continuous)
             .fill(Color(uiColor: badgeColor))
         )
+        .frame(maxWidth: maxTextWidth, alignment: maxTextAlignment)
     } else {
       Text(name)
         .font(font)
         .foregroundColor(.tidexTextPrimary)
         .lineLimit(lineLimit)
+        .truncationMode(.tail)
+        .frame(maxWidth: maxTextWidth, alignment: maxTextAlignment)
     }
   }
 
@@ -50,6 +56,11 @@ struct WorkplaceNameText: View {
     let luminance = Self.relativeLuminance(for: resolvedColor)
     let contrastWithWhite = Self.contrastRatio(luminance, 1)
     let contrastWithBlack = Self.contrastRatio(luminance, 0)
+
+    if Self.shouldPreferWhiteBadgeText(for: resolvedColor, contrastWithWhite: contrastWithWhite) {
+      return .white
+    }
+
     return contrastWithWhite >= contrastWithBlack ? .white : .black
   }
 
@@ -76,6 +87,29 @@ struct WorkplaceNameText: View {
     return 0.2126 * linearizedSRGB(red)
       + 0.7152 * linearizedSRGB(green)
       + 0.0722 * linearizedSRGB(blue)
+  }
+
+  private static func shouldPreferWhiteBadgeText(
+    for color: UIColor,
+    contrastWithWhite: CGFloat
+  ) -> Bool {
+    var hue: CGFloat = 0
+    var saturation: CGFloat = 0
+    var brightness: CGFloat = 0
+    var alpha: CGFloat = 0
+
+    guard color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+    else {
+      return false
+    }
+
+    let isRedOrRose = hue <= 0.08 || hue >= 0.88
+    let isBlueOrPurple = hue >= 0.55 && hue <= 0.88
+    return alpha > 0.1
+      && brightness >= 0.35
+      && saturation >= 0.45
+      && contrastWithWhite >= 2.2
+      && (isRedOrRose || isBlueOrPurple)
   }
 
   private static func linearizedSRGB(_ component: CGFloat) -> CGFloat {

@@ -1129,7 +1129,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       payrollDay: 25,
       currency: "NOK",
       theme: "dark",
-      calendarAnimationStyle: "vertical",
+      calendarContentColorStyle: "monochrome",
       showDashboardClockButtons: false,
       monthlyGoal: 30000,
       monthlyGoalsByMonth: ["2026-03": 32000],
@@ -1144,7 +1144,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     let expected: Set<UserSettingsField> = [
       .theme,
-      .calendarAnimationStyle,
+      .calendarContentColorStyle,
       .showDashboardClockButtons,
       .lastActive,
       .payrollDay,
@@ -1181,7 +1181,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       profilePictureUrl: nil,
       payrollDay: nil,
       theme: "dark",
-      calendarAnimationStyle: nil,
+      calendarContentColorStyle: nil,
       showDashboardClockButtons: nil,
       halfTaxMonth: nil,
       currency: nil,
@@ -1196,6 +1196,42 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.theme]))
   }
 
+  func testUpdateUserSettingsMarksCalendarContentColorStyleDirty() async throws {
+    let store = try makeStoreActor()
+
+    _ = try await store.createUserSettings(
+      userId: userId,
+      payrollDay: nil,
+      currency: nil,
+      calendarContentColorStyle: "workplace"
+    )
+
+    await store.markUserSettingsClean(userId: userId)
+    try await store.save()
+
+    _ = try await store.updateUserSettings(
+      userId: userId,
+      monthlyGoal: nil,
+      monthlyGoalsByMonth: nil,
+      defaultShiftsView: nil,
+      profilePictureUrl: nil,
+      payrollDay: nil,
+      theme: nil,
+      calendarContentColorStyle: "monochrome",
+      showDashboardClockButtons: nil,
+      halfTaxMonth: nil,
+      currency: nil,
+      defaultStartupTab: nil
+    )
+
+    let localRecord = try await store.getUserSettings(userId: userId)
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.calendarContentColorStyle, "monochrome")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.calendarContentColorStyle]))
+  }
+
   func testResolveStoredUserSettingsConflictKeepServerOverwritesLocal() async throws {
     let store = try makeStoreActor()
 
@@ -1204,7 +1240,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       payrollDay: 25,
       currency: "NOK",
       theme: "dark",
-      calendarAnimationStyle: "vertical",
+      calendarContentColorStyle: "monochrome",
       showDashboardClockButtons: false,
       monthlyGoal: 30000,
       monthlyGoalsByMonth: ["2026-03": 32000],
@@ -1221,7 +1257,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       profilePictureUrl: "https://tidex.no/avatar.png",
       payrollDay: 20,
       theme: "light",
-      calendarAnimationStyle: "horizontal",
+      calendarContentColorStyle: "workplace",
       showDashboardClockButtons: true,
       aiDataSharingEnabled: false,
       halfTaxMonth: nil,
@@ -1247,7 +1283,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.profilePictureUrl, "https://tidex.no/avatar.png")
     XCTAssertEqual(local.payrollDay, 20)
     XCTAssertEqual(local.theme, "light")
-    XCTAssertEqual(local.calendarAnimationStyle, "horizontal")
+    XCTAssertEqual(local.calendarContentColorStyle, "workplace")
     XCTAssertEqual(local.showDashboardClockButtons, true)
     XCTAssertNil(local.halfTaxMonth)
     XCTAssertEqual(local.currency, "SEK")
@@ -1286,7 +1322,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       profilePictureUrl: nil,
       payrollDay: nil,
       theme: "dark",
-      calendarAnimationStyle: nil,
+      calendarContentColorStyle: nil,
       showDashboardClockButtons: nil,
       halfTaxMonth: nil,
       currency: "NOK",
@@ -1301,7 +1337,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       profilePictureUrl: nil,
       payrollDay: 20,
       theme: "light",
-      calendarAnimationStyle: "horizontal",
+      calendarContentColorStyle: "workplace",
       showDashboardClockButtons: true,
       aiDataSharingEnabled: false,
       halfTaxMonth: nil,

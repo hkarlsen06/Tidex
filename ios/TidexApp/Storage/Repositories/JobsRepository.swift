@@ -27,6 +27,7 @@ enum JobsRepositoryError: LocalizedError {
   case cannotArchiveDefaultJob
   case cannotDeleteLastActiveJob
   case cannotDeleteDefaultJob
+  case cannotDeleteJobWithHistory
   case cannotSetArchivedOrDeletedDefault
 
   var errorDescription: String? {
@@ -47,9 +48,47 @@ enum JobsRepositoryError: LocalizedError {
       return "Cannot delete the last active job."
     case .cannotDeleteDefaultJob:
       return "Set another job as default before deleting this one."
+    case .cannotDeleteJobWithHistory:
+      return String(
+        localized: "settings.pay.error.cannotDeleteWorkplaceWithHistory.message"
+      )
     case .cannotSetArchivedOrDeletedDefault:
       return "Cannot set archived or deleted job as default."
     }
+  }
+
+  var alertTitle: String? {
+    switch self {
+    case .cannotDeleteJobWithHistory:
+      return String(localized: "settings.pay.error.cannotDeleteWorkplaceWithHistory.title")
+    default:
+      return nil
+    }
+  }
+}
+
+struct JobDeletionDependencyCounts: Equatable {
+  let userShifts: Int
+  let recurringShifts: Int
+  let payrollAdjustments: Int
+
+  var total: Int {
+    userShifts + recurringShifts + payrollAdjustments
+  }
+}
+
+enum JobDeletionPolicy {
+  static func shouldBlockDeletion(dependencyCounts: JobDeletionDependencyCounts) -> Bool {
+    dependencyCounts.total > 0
+  }
+
+  static func shouldCountBlockingDependency(
+    syncStatusRaw: String,
+    serverRevision: Int64,
+    serverDeletedAt: Date?
+  ) -> Bool {
+    guard serverDeletedAt == nil else { return false }
+    return syncStatusRaw != SyncStatus.pendingDelete.rawValue || serverRevision > 0
   }
 }
 
@@ -84,6 +123,64 @@ final class JobsRepository: ObservableObject {
   private func jobUsesTariffRates(userId: String, jobId: String) -> Bool {
     snapshotsRepository.getSnapshots(for: userId, jobId: jobId).contains {
       $0.wage_level != nil || $0.tariff_type_id != nil
+    }
+  }
+
+  private func deletionDependencyCounts(
+    userId: String,
+    jobId: String
+  ) throws -> JobDeletionDependencyCounts {
+    let context = localStore.mainContext
+
+    do {
+      let userShiftDescriptor = FetchDescriptor<LocalUserShift>(
+        predicate: #Predicate { shift in
+          shift.userId == userId && shift.jobId == jobId && shift.serverDeletedAt == nil
+        }
+      )
+      let userShiftCount = try context.fetch(userShiftDescriptor).filter {
+        JobDeletionPolicy.shouldCountBlockingDependency(
+          syncStatusRaw: $0.syncStatusRaw,
+          serverRevision: $0.serverRevision,
+          serverDeletedAt: $0.serverDeletedAt
+        )
+      }.count
+
+      let recurringShiftDescriptor = FetchDescriptor<LocalRecurringShift>(
+        predicate: #Predicate { shift in
+          shift.userId == userId && shift.jobId == jobId && shift.serverDeletedAt == nil
+        }
+      )
+      let recurringShiftCount = try context.fetch(recurringShiftDescriptor).filter {
+        JobDeletionPolicy.shouldCountBlockingDependency(
+          syncStatusRaw: $0.syncStatusRaw,
+          serverRevision: $0.serverRevision,
+          serverDeletedAt: $0.serverDeletedAt
+        )
+      }.count
+
+      let payrollAdjustmentDescriptor = FetchDescriptor<LocalPayrollAdjustment>(
+        predicate: #Predicate { adjustment in
+          adjustment.userId == userId && adjustment.jobId == jobId
+            && adjustment.serverDeletedAt == nil
+        }
+      )
+      let payrollAdjustmentCount = try context.fetch(payrollAdjustmentDescriptor).filter {
+        JobDeletionPolicy.shouldCountBlockingDependency(
+          syncStatusRaw: $0.syncStatusRaw,
+          serverRevision: $0.serverRevision,
+          serverDeletedAt: $0.serverDeletedAt
+        )
+      }.count
+
+      return JobDeletionDependencyCounts(
+        userShifts: userShiftCount,
+        recurringShifts: recurringShiftCount,
+        payrollAdjustments: payrollAdjustmentCount
+      )
+    } catch {
+      logger.error("Failed to count job dependencies: \(error.localizedDescription)")
+      throw error
     }
   }
 
@@ -397,7 +494,8 @@ final class JobsRepository: ObservableObject {
     }
 
     let existingBaseline = snapshotsRepository.getBaselineSnapshot(for: userId, jobId: jobId)
-    let requiresTariffCurrency = usesTariffRates(baselineSnapshot)
+    let requiresTariffCurrency =
+      usesTariffRates(baselineSnapshot)
       || existingBaseline.map(usesTariffRates) == true
     let resolvedCurrency =
       requiresTariffCurrency ? "kr" : currency
@@ -514,6 +612,11 @@ final class JobsRepository: ObservableObject {
       throw JobsRepositoryError.cannotDeleteDefaultJob
     }
 
+    let dependencyCounts = try deletionDependencyCounts(userId: userId, jobId: jobId)
+    if JobDeletionPolicy.shouldBlockDeletion(dependencyCounts: dependencyCounts) {
+      throw JobsRepositoryError.cannotDeleteJobWithHistory
+    }
+
     let affectedUserId = try await localStore.storeActor.markJobPendingDelete(id: jobId)
     logger.info("Marked job pending delete: \(jobId)")
     triggerSync(userId: affectedUserId)
@@ -527,6 +630,8 @@ final class JobsRepository: ObservableObject {
 
   func discardIncompleteJob(userId: String, jobId: String) async throws {
     guard snapshotsRepository.getSnapshots(for: userId, jobId: jobId).isEmpty else { return }
+    let dependencyCounts = try deletionDependencyCounts(userId: userId, jobId: jobId)
+    guard !JobDeletionPolicy.shouldBlockDeletion(dependencyCounts: dependencyCounts) else { return }
 
     let affectedUserId = try await localStore.storeActor.markJobPendingDelete(id: jobId)
     logger.info("Discarded incomplete job: \(jobId)")

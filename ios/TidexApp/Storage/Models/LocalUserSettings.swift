@@ -35,9 +35,9 @@ final class LocalUserSettings {
   /// Theme preference (NOT NULL in DB, defaults to "system")
   var theme: String
 
-  /// Calendar animation style preference (defaults to "horizontal")
+  /// Calendar content color style preference (defaults to "workplace")
   /// Optional to support migration from older versions without this field
-  var calendarAnimationStyle: String?
+  var calendarContentColorStyle: String?
 
   /// Whether dashboard clock in/out buttons are visible
   /// Optional to support migration from older versions without this field
@@ -132,9 +132,15 @@ final class LocalUserSettings {
     defaultShiftsView ?? "calendar"
   }
 
-  /// Effective calendar animation style
-  var effectiveCalendarAnimationStyle: String {
-    calendarAnimationStyle ?? "horizontal"
+  /// Effective calendar content color style
+  var effectiveCalendarContentColorStyle: String {
+    guard let style = calendarContentColorStyle else { return "workplace" }
+    switch style {
+    case "workplace", "monochrome":
+      return style
+    default:
+      return "workplace"
+    }
   }
 
   /// Effective dashboard clock button visibility
@@ -188,7 +194,7 @@ final class LocalUserSettings {
     profilePictureUrl: String? = nil,
     payrollDay: Int? = nil,
     theme: String = "system",
-    calendarAnimationStyle: String? = "horizontal",
+    calendarContentColorStyle: String? = "workplace",
     showDashboardClockButtons: Bool? = true,
     aiDataSharingEnabled: Bool? = nil,
     halfTaxMonth: Int? = nil,
@@ -211,7 +217,7 @@ final class LocalUserSettings {
     self.profilePictureUrl = profilePictureUrl
     self.payrollDay = payrollDay
     self.theme = theme
-    self.calendarAnimationStyle = calendarAnimationStyle
+    self.calendarContentColorStyle = calendarContentColorStyle
     self.showDashboardClockButtons = showDashboardClockButtons
     self.aiDataSharingEnabled = aiDataSharingEnabled
     self.halfTaxMonth = halfTaxMonth
@@ -244,7 +250,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   let profilePictureUrl: String?
   let payrollDay: Int?
   let theme: String
-  let calendarAnimationStyle: String
+  let calendarContentColorStyle: String
   let showDashboardClockButtons: Bool
   let aiDataSharingEnabled: Bool
   let halfTaxMonth: Int?
@@ -261,7 +267,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     case profilePictureUrl
     case payrollDay
     case theme
-    case calendarAnimationStyle
+    case calendarContentColorStyle
     case showDashboardClockButtons
     case aiDataSharingEnabled
     case halfTaxMonth
@@ -287,7 +293,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
       profilePictureUrl: row.profile_picture_url,
       payrollDay: row.payroll_day,
       theme: row.theme,
-      calendarAnimationStyle: row.calendar_animation_style,
+      calendarContentColorStyle: row.effectiveCalendarContentColorStyle,
       showDashboardClockButtons: row.effectiveShowDashboardClockButtons,
       aiDataSharingEnabled: row.effectiveAIDataSharingEnabled,
       halfTaxMonth: row.half_tax_month,
@@ -338,8 +344,8 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     if theme != other.theme {
       changed.insert(.theme)
     }
-    if calendarAnimationStyle != other.calendarAnimationStyle {
-      changed.insert(.calendarAnimationStyle)
+    if calendarContentColorStyle != other.calendarContentColorStyle {
+      changed.insert(.calendarContentColorStyle)
     }
     if showDashboardClockButtons != other.showDashboardClockButtons {
       changed.insert(.showDashboardClockButtons)
@@ -376,7 +382,8 @@ extension UserSettingsServerSnapshot {
     profilePictureUrl = try container.decodeIfPresent(String.self, forKey: .profilePictureUrl)
     payrollDay = try container.decodeIfPresent(Int.self, forKey: .payrollDay)
     theme = try container.decode(String.self, forKey: .theme)
-    calendarAnimationStyle = try container.decode(String.self, forKey: .calendarAnimationStyle)
+    calendarContentColorStyle =
+      try container.decodeIfPresent(String.self, forKey: .calendarContentColorStyle) ?? "workplace"
     showDashboardClockButtons =
       try container.decodeIfPresent(Bool.self, forKey: .showDashboardClockButtons) ?? true
     aiDataSharingEnabled =
@@ -408,7 +415,7 @@ extension LocalUserSettings {
       profile_picture_url: profilePictureUrl,
       payroll_day: payrollDay,
       theme: theme,
-      calendar_animation_style: effectiveCalendarAnimationStyle,
+      calendar_content_color_style: effectiveCalendarContentColorStyle,
       show_dashboard_clock_buttons: effectiveShowDashboardClockButtons,
       ai_data_sharing_enabled: aiDataSharingEnabled,
       half_tax_month: halfTaxMonth,
@@ -445,7 +452,7 @@ extension LocalUserSettings {
       profilePictureUrl: serverRow.profile_picture_url,
       payrollDay: serverRow.payroll_day,
       theme: serverRow.theme,
-      calendarAnimationStyle: serverRow.calendar_animation_style,
+      calendarContentColorStyle: serverRow.effectiveCalendarContentColorStyle,
       showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
       aiDataSharingEnabled: serverRow.ai_data_sharing_enabled ?? false,
       halfTaxMonth: serverRow.half_tax_month,

@@ -27,6 +27,11 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Error message to display
   @Published var errorMessage: String?
+  /// Optional specific title for the current error alert.
+  @Published var errorTitle: String?
+
+  /// Whether a job-level action is currently being applied.
+  @Published private(set) var isProcessingJobAction = false
 
   /// Active jobs for job-scoped timeline filtering.
   @Published private(set) var activeJobs: [Job] = []
@@ -118,7 +123,7 @@ final class PaySettingsViewModel: ObservableObject {
   /// Load all data for the pay settings screen
   func loadData() async {
     isLoading = true
-    errorMessage = nil
+    clearError()
 
     do {
       let userId = try await resolveUserIdForLocalData()
@@ -223,6 +228,47 @@ final class PaySettingsViewModel: ObservableObject {
     return activeJobs.first(where: { $0.id == selectedJobId })
   }
 
+  var isSelectedJobDefault: Bool {
+    selectedJob?.is_default == true
+  }
+
+  var shouldShowUseAsStandardAction: Bool {
+    guard let selectedJob else { return false }
+    return !selectedJob.is_default
+  }
+
+  var canSetSelectedJobAsDefault: Bool {
+    shouldShowUseAsStandardAction && isSelectedJobConfigured
+  }
+
+  var canArchiveSelectedJob: Bool {
+    guard let selectedJob else { return false }
+    return !selectedJob.is_default && activeJobs.count > 1
+  }
+
+  var canDeleteSelectedJob: Bool {
+    guard let selectedJob else { return false }
+    return !selectedJob.is_default && activeJobs.count > 1
+  }
+
+  var selectedJobManagementHint: String? {
+    guard let selectedJob else { return nil }
+
+    if !isSelectedJobConfigured && !selectedJob.is_default {
+      return String(localized: "settings.pay.jobActions.setupHint")
+    }
+
+    if activeJobs.count <= 1 {
+      return String(localized: "settings.pay.jobActions.lastJobHint")
+    }
+
+    if selectedJob.is_default {
+      return String(localized: "settings.pay.jobActions.defaultHint")
+    }
+
+    return nil
+  }
+
   private func currentLocalUserId() -> String? {
     if let userId {
       return userId
@@ -285,32 +331,97 @@ final class PaySettingsViewModel: ObservableObject {
     refreshData()
   }
 
-  func createJob(input: AddJobBasicsInput) async -> Job? {
+  func setSelectedJobAsDefault() async {
     guard let userId = currentLocalUserId() else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
-      return nil
+      return
+    }
+    guard let selectedJob else {
+      errorMessage = String(localized: .settingsPayErrorLoadFailed)
+      return
+    }
+    guard canSetSelectedJobAsDefault else {
+      if let selectedJobManagementHint {
+        errorMessage = selectedJobManagementHint
+      }
+      return
     }
 
+    isProcessingJobAction = true
+    defer { isProcessingJobAction = false }
+
     do {
-      let created = try await jobsRepository.createJob(
-        userId: userId,
-        name: input.name,
-        color: input.color,
-        currency: input.currency,
-        payrollDay: input.payrollDay,
-        halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal
-      )
-      requiresJobReselection = false
-      selectedJobId = created.id
+      try await jobsRepository.setDefaultJob(userId: userId, jobId: selectedJob.id)
       refreshData()
       notifyDashboardDataChanged()
       Haptics.play(.success)
-      return created
     } catch {
-      logger.error("Failed to create job from pay settings: \(error.localizedDescription)")
+      logger.error("Failed to set selected job as default: \(error.localizedDescription)")
       errorMessage = error.localizedDescription
-      return nil
+    }
+  }
+
+  func archiveSelectedJob() async {
+    guard let userId = currentLocalUserId() else {
+      errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
+      return
+    }
+    guard let selectedJob else {
+      errorMessage = String(localized: .settingsPayErrorLoadFailed)
+      return
+    }
+    guard canArchiveSelectedJob else {
+      if let selectedJobManagementHint {
+        errorMessage = selectedJobManagementHint
+      }
+      return
+    }
+
+    isProcessingJobAction = true
+    defer { isProcessingJobAction = false }
+
+    do {
+      try await jobsRepository.archiveJob(userId: userId, jobId: selectedJob.id)
+      refreshData()
+      notifyDashboardDataChanged()
+      Haptics.play(.success)
+    } catch {
+      logger.error("Failed to archive selected job: \(error.localizedDescription)")
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  func deleteSelectedJob() async {
+    guard let userId = currentLocalUserId() else {
+      errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
+      return
+    }
+    guard let selectedJob else {
+      errorMessage = String(localized: .settingsPayErrorLoadFailed)
+      return
+    }
+    guard canDeleteSelectedJob else {
+      if let selectedJobManagementHint {
+        errorMessage = selectedJobManagementHint
+      }
+      return
+    }
+
+    isProcessingJobAction = true
+    defer { isProcessingJobAction = false }
+
+    do {
+      try await jobsRepository.deleteJob(
+        userId: userId,
+        jobId: selectedJob.id
+      )
+      refreshData()
+      notifyDashboardDataChanged()
+      Haptics.play(.success)
+    } catch {
+      logger.error("Failed to delete selected job: \(error.localizedDescription)")
+      errorTitle = (error as? JobsRepositoryError)?.alertTitle
+      errorMessage = error.localizedDescription
     }
   }
 
@@ -764,6 +875,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   func clearError() {
     errorMessage = nil
+    errorTitle = nil
   }
 }
 

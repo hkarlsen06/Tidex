@@ -19,6 +19,7 @@ struct JobPaySetupSheet: View {
 
   let job: Job
   let initialCurrency: String
+  let dismissTitle: String
   let onSave: (JobPaySetupInput) async -> Bool
 
   @State private var step: Step = .schedule
@@ -29,15 +30,15 @@ struct JobPaySetupSheet: View {
   @State private var isSaving = false
   @State private var saveError: String?
 
-  private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
-
   init(
     job: Job,
     initialCurrency: String,
+    dismissTitle: String = String(localized: .commonCancel),
     onSave: @escaping (JobPaySetupInput) async -> Bool
   ) {
     self.job = job
     self.initialCurrency = initialCurrency
+    self.dismissTitle = dismissTitle
     self.onSave = onSave
     _payrollDay = State(initialValue: job.payroll_day ?? 15)
     _halfTaxMonth = State(initialValue: job.half_tax_month)
@@ -66,91 +67,46 @@ struct JobPaySetupSheet: View {
   }
 
   private var scheduleStep: some View {
-    NavigationStack {
-      Form {
-        Section {
-          Picker(String(localized: "settings.pay.add_job.payroll_day"), selection: $payrollDay) {
-            ForEach(payrollDayOptions, id: \.self) { day in
-              Text(
-                day == 31
-                  ? String(localized: .onboardingPersonalizePaydayLastDay)
-                  : "\(day)"
-              )
-              .tag(day)
-            }
-          }
-
-          Picker(String(localized: "settings.pay.add_job.half_tax_month"), selection: $halfTaxMonth)
-          {
-            Text(String(localized: "settings.pay.add_job.half_tax_off"))
-              .tag(Int?.none)
-            Text(String(localized: "settings.pay.add_job.half_tax_nov"))
-              .tag(Int?.some(11))
-            Text(String(localized: "settings.pay.add_job.half_tax_dec"))
-              .tag(Int?.some(12))
-          }
-
-          TextField(
-            String(localized: "settings.pay.add_job.monthly_goal"),
-            text: $monthlyGoal
-          )
-          .keyboardType(.numberPad)
-          .onChange(of: monthlyGoal) { _, newValue in
-            let filtered = newValue.filter { $0.isNumber }
-            if filtered != newValue {
-              monthlyGoal = filtered
-            }
-          }
-        } header: {
-          Text(String(localized: "settings.pay.setup.scheduleTitle"))
-        }
-
-        if let saveError {
-          Section {
-            Text(saveError)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-          }
-        }
+    JobPayScheduleSetupScreen(
+      job: job,
+      currency: Binding(
+        get: { onboardingData.currency.isEmpty ? initialCurrency : onboardingData.currency },
+        set: { onboardingData.currency = $0 }
+      ),
+      payrollDay: $payrollDay,
+      halfTaxMonth: $halfTaxMonth,
+      monthlyGoalText: $monthlyGoal,
+      dismissTitle: dismissTitle,
+      isSaving: isSaving,
+      saveError: saveError,
+      onCancel: {
+        dismiss()
+      },
+      onContinue: {
+        onboardingData.payrollDay = payrollDay
+        step = .wage
       }
-      .navigationTitle("\(String(localized: "settings.pay.setup.titlePrefix")) \(job.name)")
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            dismiss()
-          }
-          .disabled(isSaving)
-        }
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonContinue)) {
-            onboardingData.payrollDay = payrollDay
-            step = .wage
-          }
-          .disabled(isSaving)
-        }
-      }
-    }
+    )
   }
 
   private var wageStep: some View {
-    ZStack(alignment: .topTrailing) {
-      WageScreen(
-        data: onboardingData,
-        onContinue: {
-          if onboardingData.wageType == .custom {
-            step = .supplements
-          } else {
-            Task { await submit() }
-          }
-        },
-        onBack: {
-          step = .schedule
+    WageScreen(
+      data: onboardingData,
+      onContinue: {
+        if onboardingData.wageType == .custom {
+          step = .supplements
+        } else {
+          Task { await submit() }
         }
-      )
-
-      dismissButton
-    }
+      },
+      onBack: {
+        step = .schedule
+      },
+      topTrailingTitle: dismissTitle,
+      onTopTrailingAction: {
+        dismiss()
+      }
+    )
   }
 
   private var supplementsStep: some View {
@@ -173,11 +129,22 @@ struct JobPaySetupSheet: View {
   }
 
   private var dismissButton: some View {
-    Button(String(localized: .commonCancel)) {
+    Button(dismissTitle) {
       dismiss()
     }
+    .font(.tidexBodyMedium)
+    .foregroundColor(.tidexBlue)
+    .lineLimit(1)
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.xs)
+    .background(.thinMaterial, in: Capsule())
+    .overlay(
+      Capsule()
+        .stroke(Color.tidexBorder.opacity(0.75), lineWidth: 1)
+    )
+    .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 3)
     .padding(.top, Spacing.md)
-    .padding(.trailing, Spacing.md)
+    .padding(.trailing, Spacing.lg)
     .disabled(isSaving)
   }
 
@@ -238,6 +205,142 @@ struct JobPaySetupSheet: View {
     } else {
       saveError = String(localized: .settingsPayErrorSaveFailed)
       step = .schedule
+    }
+  }
+}
+
+private struct JobPayScheduleSetupScreen: View {
+  let job: Job
+  @Binding var currency: String
+  @Binding var payrollDay: Int
+  @Binding var halfTaxMonth: Int?
+  @Binding var monthlyGoalText: String
+  let dismissTitle: String
+  let isSaving: Bool
+  let saveError: String?
+  let onCancel: () -> Void
+  let onContinue: () -> Void
+
+  private var monthlyGoalValue: Int? {
+    guard !monthlyGoalText.isEmpty else { return nil }
+    return Int(monthlyGoalText)
+  }
+
+  var body: some View {
+    ZStack {
+      Color.tidexBackground
+        .ignoresSafeArea()
+
+      VStack(spacing: 0) {
+        ScrollView {
+          VStack(spacing: 0) {
+            HStack {
+              Button(dismissTitle) {
+                onCancel()
+              }
+              .font(.tidexBody)
+              .foregroundColor(.tidexBlue)
+              .disabled(isSaving)
+
+              Spacer()
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.md)
+            .adaptiveContentWidth()
+
+            Spacer()
+              .frame(height: 24)
+
+            VStack(spacing: Spacing.sm) {
+              Image(systemName: "calendar.badge.clock")
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexBlue)
+
+              Text(String(localized: "settings.pay.setup.scheduleTitle"))
+                .font(.tidexScreenTitle)
+                .foregroundColor(.tidexTextPrimary)
+                .multilineTextAlignment(.center)
+
+              WorkplaceNameText(
+                name: job.name,
+                colorHex: job.color,
+                font: .tidexFootnote,
+                fallbackBadgeColor: .tidexBlue,
+                maxTextWidth: 220,
+                maxTextAlignment: .center
+              )
+            }
+            .padding(.horizontal, Spacing.xl)
+            .adaptiveContentWidth()
+
+            Spacer()
+              .frame(height: 28)
+
+            GlobalPaySettingsCard(
+              jobId: job.id,
+              currency: currency,
+              monthlyGoal: monthlyGoalValue,
+              payrollDay: payrollDay,
+              halfTaxMonth: halfTaxMonth,
+              canChangeCurrency: true,
+              onUpdateMonthlyGoal: { value in
+                monthlyGoalText = value.map(String.init) ?? ""
+              },
+              onUpdatePayrollDay: { value in
+                payrollDay = value
+              },
+              onUpdateHalfTaxMonth: { value in
+                await MainActor.run {
+                  halfTaxMonth = value
+                }
+              },
+              onUpdateCurrency: { value in
+                await MainActor.run {
+                  currency = value
+                }
+              }
+            )
+            .padding(.horizontal, Spacing.lg)
+            .adaptiveContentWidth()
+
+            if let saveError {
+              Text(saveError)
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexError)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.sm)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .adaptiveContentWidth()
+            }
+
+            Spacer()
+              .frame(height: 120)
+          }
+        }
+        .scrollDismissesKeyboard(.interactively)
+
+        VStack(spacing: 0) {
+          LinearGradient(
+            colors: [Color.tidexBackground.opacity(0), Color.tidexBackground],
+            startPoint: .top,
+            endPoint: .bottom
+          )
+          .frame(height: 24)
+
+          OnboardingButton(
+            title: String(localized: .commonContinue),
+            isEnabled: !isSaving,
+            action: {
+              UINotificationFeedbackGenerator().notificationOccurred(.success)
+              onContinue()
+            }
+          )
+          .padding(.horizontal, Spacing.lg)
+          .padding(.bottom, Spacing.xl)
+          .adaptiveContentWidth()
+          .background(Color.tidexBackground)
+        }
+      }
     }
   }
 }

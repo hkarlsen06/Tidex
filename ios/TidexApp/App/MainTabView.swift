@@ -200,7 +200,14 @@ struct MainTabView: View {
               role: .search
             ) {
               tabHost(for: .add) {
-                AddShiftView(selectedTab: tabSelection, isKeyboardVisible: $isKeyboardVisible)
+                AddShiftView(
+                  selectedTab: tabSelection,
+                  isKeyboardVisible: $isKeyboardVisible,
+                  onOpenJobsAndPaySettings: {
+                    settingsSheetInitialDestination = .pay(jobId: nil)
+                    showSettingsSheet = true
+                  }
+                )
               }
             }
 

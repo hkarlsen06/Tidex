@@ -6,9 +6,14 @@ import UIKit
 /// Main pay settings screen displaying wage history timeline and global settings
 struct PaySettingsView: View {
   @StateObject private var viewModel: PaySettingsViewModel
-  @State private var showingAddJobSheet = false
   @State private var showingEditJobSheet = false
   @State private var paySetupJob: Job?
+  @State private var pendingJobAction: JobManagementAction?
+
+  private enum JobManagementAction {
+    case archive
+    case delete
+  }
 
   init(initialJobId: String? = nil) {
     _viewModel = StateObject(wrappedValue: PaySettingsViewModel(initialSelectedJobId: initialJobId))
@@ -29,15 +34,6 @@ struct PaySettingsView: View {
     }
     .navigationTitle(String(localized: .settingsPayTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        Button {
-          showingAddJobSheet = true
-        } label: {
-          Text(String(localized: "settings.pay.add_job.cta"))
-        }
-      }
-    }
     .sheet(isPresented: $viewModel.showingEditor) {
       WageSnapshotEditorSheet(
         mode: viewModel.editorMode,
@@ -59,22 +55,6 @@ struct PaySettingsView: View {
           viewModel.closeEditor()
         }
       )
-    }
-    .sheet(isPresented: $showingAddJobSheet) {
-      AddJobBasicsSheet(
-        initialCurrency: viewModel.userCurrency,
-        initialPayrollDay: viewModel.selectedJobPayrollDay,
-        initialHalfTaxMonth: viewModel.selectedJobHalfTaxMonth,
-        initialMonthlyGoal: viewModel.selectedJobMonthlyGoal
-      ) { input in
-        guard let createdJob = await viewModel.createJob(input: input) else {
-          return false
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-          self.paySetupJob = createdJob
-        }
-        return true
-      }
     }
     .sheet(item: $paySetupJob) { job in
       JobPaySetupSheet(
@@ -122,8 +102,42 @@ struct PaySettingsView: View {
     } message: {
       Text(deleteConfirmationMessage)
     }
+    .confirmationDialog(
+      jobActionConfirmationTitle,
+      isPresented: Binding(
+        get: { pendingJobAction != nil },
+        set: { if !$0 { pendingJobAction = nil } }
+      ),
+      titleVisibility: .visible
+    ) {
+      if pendingJobAction == .archive {
+        Button(String(localized: "settings.pay.jobActions.archive")) {
+          Task {
+            await viewModel.archiveSelectedJob()
+            pendingJobAction = nil
+          }
+        }
+      }
+
+      if pendingJobAction == .delete {
+        Button(String(localized: "settings.pay.jobActions.delete"), role: .destructive) {
+          Task {
+            await viewModel.deleteSelectedJob()
+            pendingJobAction = nil
+          }
+        }
+      }
+
+      Button(role: .cancel) {
+        pendingJobAction = nil
+      } label: {
+        Text(.commonCancel)
+      }
+    } message: {
+      Text(jobActionConfirmationMessage)
+    }
     .alert(
-      String(localized: .commonError),
+      viewModel.errorTitle ?? String(localized: .commonError),
       isPresented: .init(
         get: { viewModel.errorMessage != nil },
         set: { if !$0 { viewModel.clearError() } }
@@ -236,6 +250,10 @@ struct PaySettingsView: View {
             .padding(.horizontal, Spacing.md)
         }
 
+        jobActionsPanel
+          .padding(.horizontal, Spacing.md)
+          .padding(.top, Spacing.md)
+
         // Bottom padding
         Spacer()
           .frame(height: Spacing.xxl)
@@ -281,33 +299,151 @@ struct PaySettingsView: View {
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
   }
 
+  @ViewBuilder
+  private var jobActionsPanel: some View {
+    if viewModel.selectedJob != nil {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        Text(String(localized: "settings.pay.jobActions.title"))
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextSecondary)
+
+        if viewModel.isSelectedJobDefault {
+          jobStatusRow
+        } else {
+          Button {
+            Task {
+              await viewModel.setSelectedJobAsDefault()
+            }
+          } label: {
+            jobActionRow(
+              icon: "checkmark.circle",
+              title: String(localized: "settings.pay.jobActions.setDefault"),
+              tint: .tidexBlue,
+              isEnabled: viewModel.canSetSelectedJobAsDefault
+                && !viewModel.isProcessingJobAction
+            )
+          }
+          .buttonStyle(.plain)
+          .disabled(!viewModel.canSetSelectedJobAsDefault || viewModel.isProcessingJobAction)
+        }
+
+        Button {
+          pendingJobAction = .archive
+        } label: {
+          jobActionRow(
+            icon: "archivebox",
+            title: String(localized: "settings.pay.jobActions.archive"),
+            tint: .tidexTextSecondary,
+            isEnabled: viewModel.canArchiveSelectedJob && !viewModel.isProcessingJobAction
+          )
+        }
+        .buttonStyle(.plain)
+        .disabled(!viewModel.canArchiveSelectedJob || viewModel.isProcessingJobAction)
+
+        Button {
+          pendingJobAction = .delete
+        } label: {
+          jobActionRow(
+            icon: "trash",
+            title: String(localized: "settings.pay.jobActions.delete"),
+            tint: .tidexError,
+            isEnabled: viewModel.canDeleteSelectedJob && !viewModel.isProcessingJobAction
+          )
+        }
+        .buttonStyle(.plain)
+        .disabled(!viewModel.canDeleteSelectedJob || viewModel.isProcessingJobAction)
+
+        if let hint = viewModel.selectedJobManagementHint {
+          Text(hint)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  private var jobStatusRow: some View {
+    HStack(spacing: Spacing.sm) {
+      Image(systemName: "checkmark.circle.fill")
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexBlue)
+        .frame(width: 22)
+
+      Text(String(localized: "settings.pay.jobActions.standardStatus"))
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextSecondary)
+
+      Spacer()
+    }
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.md)
+    .background(Color.tidexSurfaceSecondary.opacity(0.62))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+  }
+
+  private func jobActionRow(
+    icon: String,
+    title: String,
+    tint: Color,
+    isEnabled: Bool = true
+  ) -> some View {
+    HStack(spacing: Spacing.sm) {
+      Image(systemName: icon)
+        .font(.tidexBodyMedium)
+        .foregroundColor(tint)
+        .frame(width: 22)
+
+      Text(title)
+        .font(.tidexBodyMedium)
+        .foregroundColor(tint)
+
+      Spacer()
+    }
+    .padding(.horizontal, Spacing.md)
+    .padding(.vertical, Spacing.md)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.tidexSurfaceSecondary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .opacity(isEnabled ? 1 : 0.45)
+  }
+
   // MARK: - Tip Box
 
   @ViewBuilder
   private var currentWorkplaceTitle: some View {
     Group {
       if let selectedJobName = viewModel.selectedJobName {
-        HStack(spacing: Spacing.xs) {
+        ZStack {
           WorkplaceNameText(
             name: selectedJobName,
             colorHex: viewModel.selectedJob?.color,
             font: .tidexScreenTitle,
             fallbackBadgeColor: .tidexBlue,
             lineLimit: 2,
+            maxTextWidth: 260,
+            maxTextAlignment: .center,
             badgeCornerRadius: CornerRadius.md,
             badgeHorizontalPadding: Spacing.sm
           )
-          .frame(maxWidth: .infinity, alignment: .leading)
+          .multilineTextAlignment(.center)
+          .frame(maxWidth: .infinity, alignment: .center)
 
-          Button {
-            showingEditJobSheet = true
-          } label: {
-            Image(systemName: "pencil")
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexBlue)
+          HStack {
+            Spacer()
+
+            Button {
+              showingEditJobSheet = true
+            } label: {
+              Image(systemName: "pencil")
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexBlue)
+                .frame(width: 44, height: 44)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(String(localized: "settings.pay.edit_job.title")))
           }
-          .buttonStyle(.plain)
-          .accessibilityLabel(Text(String(localized: "settings.pay.edit_job.title")))
         }
       }
     }
@@ -347,6 +483,28 @@ struct PaySettingsView: View {
       return String(localized: .settingsPayDeleteConfirmation)
     } else {
       return String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
+    }
+  }
+
+  private var jobActionConfirmationTitle: String {
+    switch pendingJobAction {
+    case .archive:
+      return String(localized: "settings.pay.jobActions.archiveConfirmTitle")
+    case .delete:
+      return String(localized: "settings.pay.jobActions.deleteConfirmTitle")
+    case .none:
+      return ""
+    }
+  }
+
+  private var jobActionConfirmationMessage: String {
+    switch pendingJobAction {
+    case .archive:
+      return String(localized: "settings.pay.jobActions.archiveConfirmMessage")
+    case .delete:
+      return String(localized: "settings.pay.jobActions.deleteConfirmMessage")
+    case .none:
+      return ""
     }
   }
 }

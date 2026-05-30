@@ -41,6 +41,7 @@ struct PostAuthOnboardingView: View {
     case purpose
     case wage
     case supplements
+    case jobBasics
     case settingsAccordion
     case multiJobPrompt
     case mfaSetup
@@ -89,13 +90,25 @@ struct PostAuthOnboardingView: View {
           SupplementsScreen(
             data: onboardingData,
             onContinue: {
-              navigateTo(.settingsAccordion)
+              navigateTo(.jobBasics)
             },
             onSkip: {
-              navigateTo(.settingsAccordion)
+              navigateTo(.jobBasics)
             },
             onBack: {
               navigateBack(to: .wage)
+            }
+          )
+          .transition(screenTransition)
+
+        case .jobBasics:
+          JobBasicsOnboardingScreen(
+            data: onboardingData,
+            onContinue: {
+              navigateTo(.settingsAccordion)
+            },
+            onBack: {
+              navigateBackFromJobBasics()
             }
           )
           .transition(screenTransition)
@@ -107,7 +120,7 @@ struct PostAuthOnboardingView: View {
               navigateTo(.multiJobPrompt)
             },
             onBack: {
-              navigateBackFromSettings()
+              navigateBack(to: .jobBasics)
             }
           )
           .transition(screenTransition)
@@ -255,6 +268,16 @@ struct PostAuthOnboardingView: View {
         saveProgress()
       }
     }
+    .onChange(of: onboardingData.jobName) { _, _ in
+      if currentScreen != .success && currentScreen != .loading {
+        saveProgress()
+      }
+    }
+    .onChange(of: onboardingData.jobColor) { _, _ in
+      if currentScreen != .success && currentScreen != .loading {
+        saveProgress()
+      }
+    }
     .onChange(of: onboardingData.wageType) { _, _ in
       if currentScreen != .success && currentScreen != .loading {
         saveProgress()
@@ -341,7 +364,7 @@ struct PostAuthOnboardingView: View {
     // Only show supplements screen for custom wage users
     switch onboardingData.wageType {
     case .tariff:
-      navigateTo(.settingsAccordion)
+      navigateTo(.jobBasics)
     case .custom:
       navigateTo(.supplements)
     }
@@ -361,7 +384,7 @@ struct PostAuthOnboardingView: View {
     }
   }
 
-  private func navigateBackFromSettings() {
+  private func navigateBackFromJobBasics() {
     // Go back to supplements for custom wage, otherwise to wage
     switch onboardingData.wageType {
     case .custom:
@@ -411,8 +434,8 @@ struct PostAuthOnboardingView: View {
       do {
         let placeholderJob = try await jobsRepository.createJob(
           userId: userId,
-          name: OnboardingSaveManager.defaultJobName(),
-          color: nil,
+          name: onboardingData.resolvedJobName(),
+          color: onboardingData.jobColor,
           currency: onboardingData.currency.isEmpty ? "kr" : onboardingData.currency,
           payrollDay: onboardingData.payrollDay,
           halfTaxMonth: nil,

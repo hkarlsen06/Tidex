@@ -2605,6 +2605,7 @@ Important:
 - Archived jobs cannot be used for new shifts until unarchived
 - Default jobs cannot be archived or deleted
 - Last active job cannot be archived or deleted
+- Jobs with shifts or payroll adjustments should be archived, not deleted
 - After CREATE, the job exists but requires pay setup before shifts can be added
 - To finish setup, create a baseline wage snapshot with manage_wage_snapshots action="create", jobId, from_date=null`,
     input_schema: {

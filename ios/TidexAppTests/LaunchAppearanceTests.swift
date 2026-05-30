@@ -17,6 +17,11 @@ final class LaunchAppearanceTests: XCTestCase {
   func testResolvedColorSchemeIgnoresSystemSchemeWhenThemeIsDark() {
     XCTAssertEqual(AppTheme.dark.resolvedColorScheme(fallback: .light), .dark)
   }
+
+  func testCalendarContentColorStyleOnlyUsesWorkplaceColorsForWorkplaceMode() {
+    XCTAssertTrue(CalendarContentColorStyle.workplace.usesWorkplaceColors)
+    XCTAssertFalse(CalendarContentColorStyle.monochrome.usesWorkplaceColors)
+  }
 }
 
 final class SemanticColorContrastTests: XCTestCase {
@@ -76,8 +81,11 @@ final class SemanticColorContrastTests: XCTestCase {
     }
   }
 
-  private func resolvedColor(named name: String, compatibleWith traits: UITraitCollection) -> UIColor {
-    guard let color = UIColor(named: name, in: Bundle(for: AppDelegate.self), compatibleWith: traits)
+  private func resolvedColor(named name: String, compatibleWith traits: UITraitCollection)
+    -> UIColor
+  {
+    guard
+      let color = UIColor(named: name, in: Bundle(for: AppDelegate.self), compatibleWith: traits)
     else {
       XCTFail("Missing semantic color asset named \(name)")
       return .clear
@@ -92,8 +100,8 @@ private struct ContrastPair {
   let background: String
 }
 
-private extension UIUserInterfaceStyle {
-  var name: String {
+extension UIUserInterfaceStyle {
+  fileprivate var name: String {
     switch self {
     case .dark:
       return "dark"
@@ -107,8 +115,8 @@ private extension UIUserInterfaceStyle {
   }
 }
 
-private extension UIColor {
-  func contrastRatio(against other: UIColor) -> Double {
+extension UIColor {
+  fileprivate func contrastRatio(against other: UIColor) -> Double {
     let firstLuminance = relativeLuminance
     let secondLuminance = other.relativeLuminance
     let lighter = max(firstLuminance, secondLuminance)

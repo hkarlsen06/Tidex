@@ -4,6 +4,8 @@ import UIKit
 /// Read-only calendar view for shared shifts
 /// Matches the visual style of ShiftsCalendarView but without selection/editing features
 struct SharedShiftsCalendarView: View {
+  @ObservedObject private var appearanceManager = AppearanceManager.shared
+
   let shifts: [ShiftWithComputations]
   let jobs: [SharedJob]
   let year: Int
@@ -62,7 +64,8 @@ struct SharedShiftsCalendarView: View {
   private var calendarMetrics: CalendarMetrics {
     let jobsById = Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
     let defaultJobId = jobs.first(where: { $0.is_default == true })?.id
-    let hasMultipleActiveJobs = jobs.count > 1
+    let hasMultipleActiveJobs =
+      appearanceManager.calendarContentColorStyle.usesWorkplaceColors && jobs.count > 1
     var netByDate: [String: Double] = [:]
     var grossByDate: [String: Double] = [:]
     var hasTaxByDate: [String: Bool] = [:]

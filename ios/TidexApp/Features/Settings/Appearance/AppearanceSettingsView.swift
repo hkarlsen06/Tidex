@@ -17,14 +17,14 @@ struct AppearanceSettingsView: View {
         // Theme selection
         themeSelectionSection
 
-        // Calendar animation selection
-        calendarAnimationSection
-
         // Startup tab selection
         startupTabSection
 
         // Dashboard controls
         dashboardControlsSection
+
+        // Calendar content color selection
+        calendarContentColorSection
       }
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.lg)
@@ -174,43 +174,40 @@ struct AppearanceSettingsView: View {
     }
   }
 
-  // MARK: - Calendar Animation Section
+  // MARK: - Calendar Content Color Section
 
-  private var calendarAnimationSection: some View {
-    TidexSettingsSection(title: String(localized: .appearanceCalendarAnimationSectionTitle)) {
-      ForEach(CalendarAnimationStyle.allCases, id: \.self) { style in
-        animationStyleOptionRow(style)
-        if style != CalendarAnimationStyle.allCases.last {
+  private var calendarContentColorSection: some View {
+    TidexSettingsSection(title: String(localized: .appearanceCalendarContentColorSectionTitle)) {
+      ForEach(CalendarContentColorStyle.allCases, id: \.self) { style in
+        calendarContentColorOptionRow(style)
+        if style != CalendarContentColorStyle.allCases.last {
           settingsDivider
         }
       }
     }
   }
 
-  private func animationStyleOptionRow(_ style: CalendarAnimationStyle) -> some View {
-    let isSelected = viewModel.selectedCalendarAnimationStyle == style
+  private func calendarContentColorOptionRow(_ style: CalendarContentColorStyle) -> some View {
+    let isSelected = viewModel.selectedCalendarContentColorStyle == style
 
     return Button {
-      viewModel.selectedCalendarAnimationStyle = style
+      viewModel.selectedCalendarContentColorStyle = style
     } label: {
       HStack(spacing: Spacing.md) {
-        // Animation style preview
-        animationStylePreview(style)
+        calendarContentColorPreview(style)
 
-        // Style info
         VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(animationStyleTitle(style))
+          Text(calendarContentColorTitle(style))
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
-          Text(animationStyleDescription(style))
+          Text(calendarContentColorDescription(style))
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }
 
         Spacer()
 
-        // Selection indicator
         Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
           .font(.system(size: 24))
           .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
@@ -220,42 +217,60 @@ struct AppearanceSettingsView: View {
     .buttonStyle(.plain)
   }
 
-  private func animationStylePreview(_ style: CalendarAnimationStyle) -> some View {
+  private func calendarContentColorPreview(_ style: CalendarContentColorStyle) -> some View {
     ZStack {
       RoundedRectangle(cornerRadius: CornerRadius.sm)
-        .fill(Color.tidexBlue.opacity(0.1))
+        .fill(calendarContentColorPreviewBackground(style))
         .frame(width: 48, height: 48)
 
-      Image(systemName: animationStyleIcon(style))
+      Image(systemName: calendarContentColorIcon(style))
         .font(.tidexBodyLarge)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(calendarContentColorPreviewForeground(style))
     }
   }
 
-  private func animationStyleIcon(_ style: CalendarAnimationStyle) -> String {
+  private func calendarContentColorPreviewBackground(_ style: CalendarContentColorStyle) -> Color {
     switch style {
-    case .horizontal:
-      return "arrow.left.arrow.right"
-    case .vertical:
-      return "arrow.up.arrow.down"
+    case .workplace:
+      return Color.tidexPurple.opacity(0.12)
+    case .monochrome:
+      return Color.tidexSurfaceSecondary
     }
   }
 
-  private func animationStyleTitle(_ style: CalendarAnimationStyle) -> String {
+  private func calendarContentColorPreviewForeground(_ style: CalendarContentColorStyle) -> Color {
     switch style {
-    case .horizontal:
-      return String(localized: .appearanceCalendarAnimationHorizontal)
-    case .vertical:
-      return String(localized: .appearanceCalendarAnimationVertical)
+    case .workplace:
+      return .tidexPurple
+    case .monochrome:
+      return .tidexTextPrimary
     }
   }
 
-  private func animationStyleDescription(_ style: CalendarAnimationStyle) -> String {
+  private func calendarContentColorIcon(_ style: CalendarContentColorStyle) -> String {
     switch style {
-    case .horizontal:
-      return String(localized: .appearanceCalendarAnimationHorizontalDescription)
-    case .vertical:
-      return String(localized: .appearanceCalendarAnimationVerticalDescription)
+    case .workplace:
+      return "paintpalette.fill"
+    case .monochrome:
+      return "circle.lefthalf.filled"
+    }
+  }
+
+  private func calendarContentColorTitle(_ style: CalendarContentColorStyle) -> String {
+    switch style {
+    case .workplace:
+      return String(localized: .appearanceCalendarContentColorWorkplace)
+    case .monochrome:
+      return String(localized: .appearanceCalendarContentColorMonochrome)
+    }
+  }
+
+  private func calendarContentColorDescription(_ style: CalendarContentColorStyle) -> String {
+    switch style {
+    case .workplace:
+      return String(localized: .appearanceCalendarContentColorWorkplaceDescription)
+    case .monochrome:
+      return String(localized: .appearanceCalendarContentColorMonochromeDescription)
     }
   }
 

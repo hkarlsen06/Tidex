@@ -25,8 +25,8 @@ struct UserSettings: Codable, Equatable {
   let payroll_day: Int?
   /// Theme preference (NOT NULL in DB, defaults to "system")
   let theme: String
-  /// Calendar animation style preference (NOT NULL in DB, defaults to "horizontal")
-  let calendar_animation_style: String
+  /// Calendar content color style preference (defaults to "workplace")
+  let calendar_content_color_style: String?
   /// Whether dashboard clock in/out buttons are visible
   let show_dashboard_clock_buttons: Bool?
   /// Whether the user has consented to Wagey AI data sharing
@@ -49,7 +49,7 @@ struct UserSettings: Codable, Equatable {
     profile_picture_url: String?,
     payroll_day: Int?,
     theme: String,
-    calendar_animation_style: String,
+    calendar_content_color_style: String? = "workplace",
     show_dashboard_clock_buttons: Bool?,
     ai_data_sharing_enabled: Bool? = nil,
     half_tax_month: Int?,
@@ -66,7 +66,7 @@ struct UserSettings: Codable, Equatable {
     self.profile_picture_url = profile_picture_url
     self.payroll_day = payroll_day
     self.theme = theme
-    self.calendar_animation_style = calendar_animation_style
+    self.calendar_content_color_style = calendar_content_color_style
     self.show_dashboard_clock_buttons = show_dashboard_clock_buttons
     self.ai_data_sharing_enabled = ai_data_sharing_enabled
     self.half_tax_month = half_tax_month
@@ -82,6 +82,17 @@ struct UserSettings: Codable, Equatable {
   /// Effective default view
   var effectiveDefaultView: String {
     default_shifts_view ?? "calendar"
+  }
+
+  /// Effective calendar content color style
+  var effectiveCalendarContentColorStyle: String {
+    guard let style = calendar_content_color_style else { return "workplace" }
+    switch style {
+    case "workplace", "monochrome":
+      return style
+    default:
+      return "workplace"
+    }
   }
 
   /// Effective dashboard clock button visibility
@@ -132,7 +143,7 @@ struct UserSettings: Codable, Equatable {
       profile_picture_url: nil,
       payroll_day: 1,
       theme: "system",
-      calendar_animation_style: "horizontal",
+      calendar_content_color_style: "workplace",
       show_dashboard_clock_buttons: true,
       ai_data_sharing_enabled: false,
       half_tax_month: nil,

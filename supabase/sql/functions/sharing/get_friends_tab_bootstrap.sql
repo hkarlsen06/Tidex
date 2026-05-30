@@ -193,7 +193,6 @@ BEGIN
                 'profile_picture_url', us.profile_picture_url,
                 'payroll_day', us.payroll_day,
                 'theme', us.theme,
-                'calendar_animation_style', us.calendar_animation_style,
                 'half_tax_month', us.half_tax_month,
                 'currency', us.currency
               )

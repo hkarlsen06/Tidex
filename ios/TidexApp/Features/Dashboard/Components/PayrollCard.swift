@@ -245,7 +245,7 @@ struct PayrollCard: View {
         badgeVerticalPadding: labelIsWorkplace ? 1 : Spacing.xxxs
       )
     } else {
-      HStack(spacing: Spacing.xxs) {
+      HStack(spacing: Spacing.micro) {
         ForEach(workplaceBadges) { badge in
           WorkplaceNameText(
             name: badge.title,
@@ -255,8 +255,6 @@ struct PayrollCard: View {
             badgeHorizontalPadding: Spacing.xs,
             badgeVerticalPadding: 1
           )
-          .frame(maxWidth: 112, alignment: .leading)
-          .fixedSize(horizontal: false, vertical: true)
         }
       }
       .lineLimit(1)

@@ -23,6 +23,8 @@ struct JobCurrencyAggregateResolution: Codable, Equatable {
 }
 
 enum JobCurrencyAggregateResolver {
+  private static let currencyAggregateKeyPrefix = "__currency__|"
+
   static func resolve(
     shifts: [ShiftWithComputations],
     jobs: [Job],
@@ -91,7 +93,7 @@ enum JobCurrencyAggregateResolver {
     let primary = selectPrimaryEntry(from: entries, context: context)
     let secondary =
       entries
-      .filter { $0.key != primary.key && $0.grossAmount > 0 }
+      .filter { $0.currency != primary.currency && $0.grossAmount > 0 }
       .sorted { lhs, rhs in
         if lhs.grossAmount != rhs.grossAmount {
           return lhs.grossAmount > rhs.grossAmount
@@ -119,8 +121,30 @@ enum JobCurrencyAggregateResolver {
 
     return shifts.filter { shift in
       guard let identity = identity(for: shift, context: context) else { return false }
+      if entry.key.hasPrefix(currencyAggregateKeyPrefix) {
+        return identity.currency == entry.currency
+      }
       return identity.key == entry.key
     }
+  }
+
+  static func matches(
+    entry: JobCurrencyAggregateEntry,
+    jobId: String?,
+    jobs: [Job],
+    fallbackCurrency: String,
+    defaultJobId: String? = nil
+  ) -> Bool {
+    let context = ResolutionContext(jobs: jobs, fallbackCurrency: fallbackCurrency)
+    let effectiveJobId = jobId ?? defaultJobId ?? context.defaultJobId
+    guard !effectiveJobId.isEmpty else { return false }
+
+    let jobCurrency = context.jobsById[effectiveJobId]?.currency ?? fallbackCurrency
+    if entry.key.hasPrefix(currencyAggregateKeyPrefix) {
+      return jobCurrency == entry.currency
+    }
+
+    return effectiveJobId == entry.jobId && jobCurrency == entry.currency
   }
 
   private static func selectPrimaryEntry(
@@ -130,11 +154,11 @@ enum JobCurrencyAggregateResolver {
     if let defaultEntry = entries.first(where: {
       $0.jobId == context.defaultJobId && $0.grossAmount > 0
     }) {
-      return defaultEntry
+      return aggregatePrimaryCurrencyEntry(defaultEntry, entries: entries)
     }
 
     if let highestGross = entries.first(where: { $0.grossAmount > 0 }) {
-      return highestGross
+      return aggregatePrimaryCurrencyEntry(highestGross, entries: entries)
     }
 
     return JobCurrencyAggregateEntry(
@@ -149,6 +173,50 @@ enum JobCurrencyAggregateResolver {
       completedShiftCount: 0,
       plannedShiftCount: 0,
       hasTaxEnabled: false
+    )
+  }
+
+  private static func aggregatePrimaryCurrencyEntry(
+    _ representative: JobCurrencyAggregateEntry,
+    entries: [JobCurrencyAggregateEntry]
+  ) -> JobCurrencyAggregateEntry {
+    let currency = representative.currency
+    let currencyEntries = entries.filter { $0.currency == currency }
+    guard currencyEntries.count > 1 else {
+      return currencyEntries.first
+        ?? entries.first(where: { $0.currency == currency })
+        ?? entries.first
+        ?? JobCurrencyAggregateEntry(
+          key: "\(currencyAggregateKeyPrefix)\(currency)",
+          jobId: "",
+          jobName: "",
+          currency: currency,
+          grossAmount: 0,
+          netAmount: 0,
+          displayAmount: 0,
+          shiftCount: 0,
+          completedShiftCount: 0,
+          plannedShiftCount: 0,
+          hasTaxEnabled: false
+        )
+    }
+
+    let gross = currencyEntries.reduce(0) { $0 + $1.grossAmount }
+    let net = currencyEntries.reduce(0) { $0 + $1.netAmount }
+    let hasTaxEnabled = currencyEntries.contains { $0.hasTaxEnabled }
+
+    return JobCurrencyAggregateEntry(
+      key: "\(currencyAggregateKeyPrefix)\(currency)",
+      jobId: representative.jobId,
+      jobName: representative.jobName,
+      currency: currency,
+      grossAmount: gross,
+      netAmount: net,
+      displayAmount: hasTaxEnabled ? net : gross,
+      shiftCount: currencyEntries.reduce(0) { $0 + $1.shiftCount },
+      completedShiftCount: currencyEntries.reduce(0) { $0 + $1.completedShiftCount },
+      plannedShiftCount: currencyEntries.reduce(0) { $0 + $1.plannedShiftCount },
+      hasTaxEnabled: hasTaxEnabled
     )
   }
 
