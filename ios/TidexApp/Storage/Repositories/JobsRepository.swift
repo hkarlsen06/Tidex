@@ -111,6 +111,7 @@ final class JobsRepository: ObservableObject {
   }
 
   private func triggerSync(userId: String) {
+    NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
     Task {
       _ = await syncCoordinator.sync(reason: .localChange, userId: userId)
     }

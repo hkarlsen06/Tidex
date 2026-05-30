@@ -7,6 +7,7 @@ struct AddShiftView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @StateObject private var viewModel = AddShiftViewModel()
+  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   @Binding var selectedTab: MainTabView.Tab
   @Binding var isKeyboardVisible: Bool
   var onOpenJobsAndPaySettings: () -> Void = {}
@@ -19,7 +20,6 @@ struct AddShiftView: View {
   @State private var showAddConfetti = false
   @State private var showAddJobSheet = false
   @State private var singleSuccessDismissTask: Task<Void, Never>?
-  private let workSetupStatusService = WorkSetupStatusService.shared
 
   /// Whether running on iPhone-sized idiom.
   private var isIPhone: Bool {
@@ -38,16 +38,47 @@ struct AddShiftView: View {
     }
   }
 
-  private var workSetupPresentationState: WorkSetupPresentationState? {
-    guard let userId = coordinator.getCurrentUserId() else { return nil }
-    return workSetupStatusService.presentationState(
-      for: userId,
+  @discardableResult
+  private func refreshWorkSetupPresentationState() -> Bool {
+    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder
+    workSetupPresentationViewModel.refresh(
+      userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
+    return wasShowingPlaceholder && !shouldShowWorkSetupRequiredPlaceholder
   }
 
   private var shouldShowWorkSetupRequiredPlaceholder: Bool {
-    workSetupPresentationState?.shouldShowPlaceholder == true
+    workSetupPresentationViewModel.shouldShowPlaceholder
+  }
+
+  private func loadAddShiftContent() async {
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    await viewModel.loadData()
+  }
+
+  private func prepareVisibleAddShiftContent() {
+    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    viewModel.onShiftsCreated = { completion in
+      switch completion {
+      case .single(let dates):
+        coordinator.pendingDeepLink = .shifts(
+          dates: dates.sorted(),
+          shiftIds: nil,
+          action: .highlight
+        )
+        selectedTab = .shifts
+      case .recurring:
+        selectedTab = .shifts
+      case .event:
+        selectedTab = .shifts
+      }
+    }
+
+    // Check for pre-selected date when tab becomes visible
+    // (e.g., when user taps empty day in Shifts calendar)
+    applyPendingPreselectedDateWithoutAnimation()
+    handleDeepLink(coordinator.pendingDeepLink)
   }
 
   var body: some View {
@@ -250,31 +281,31 @@ struct AddShiftView: View {
       .userCurrency(viewModel.currency)
     }
     .task {
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      await viewModel.loadData()
+      refreshWorkSetupPresentationState()
+      await loadAddShiftContent()
     }
     .onAppear {
-      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-      viewModel.onShiftsCreated = { completion in
-        switch completion {
-        case .single(let dates):
-          coordinator.pendingDeepLink = .shifts(
-            dates: dates.sorted(),
-            shiftIds: nil,
-            action: .highlight
-          )
-          selectedTab = .shifts
-        case .recurring:
-          selectedTab = .shifts
-        case .event:
-          selectedTab = .shifts
-        }
+      refreshWorkSetupPresentationState()
+      prepareVisibleAddShiftContent()
+    }
+    .onChange(of: coordinator.initialSyncComplete) { _, _ in
+      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
+      guard shouldLoadAfterSetupCompleted else { return }
+      prepareVisibleAddShiftContent()
+      Task {
+        await loadAddShiftContent()
       }
-
-      // Check for pre-selected date when tab becomes visible
-      // (e.g., when user taps empty day in Shifts calendar)
-      applyPendingPreselectedDateWithoutAnimation()
-      handleDeepLink(coordinator.pendingDeepLink)
+    }
+    .onChange(of: coordinator.userId) { _, _ in
+      refreshWorkSetupPresentationState()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
+      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
+      guard shouldLoadAfterSetupCompleted else { return }
+      prepareVisibleAddShiftContent()
+      Task {
+        await loadAddShiftContent()
+      }
     }
     .onChange(of: viewModel.error) { _, newError in
       if newError != nil {

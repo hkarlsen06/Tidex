@@ -77,6 +77,7 @@ struct WorkSetupRequiredPlaceholder: View {
     )
 
     coordinator.objectWillChange.send()
+    NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
 
     let status = workSetupStatusService.status(for: userId)
     guard !status.isWorkSetupComplete else { return }
