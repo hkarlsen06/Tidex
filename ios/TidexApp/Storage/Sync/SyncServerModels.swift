@@ -364,6 +364,7 @@ struct TablePullResult {
   let maxRevision: Int64
   let newConflicts: Int
   let autoMerged: Int
+  let affectedMonths: Set<ShiftChangeAffectedMonth>
 }
 
 /// Overall sync result
@@ -391,6 +392,68 @@ struct TablePushResult {
   let rowsPushed: Int
   let newConflicts: Int
   let rebased: Int
+  let affectedMonths: Set<ShiftChangeAffectedMonth> = []
+}
+
+// MARK: - Sync Completion Summary
+
+struct SyncTableChange: Equatable {
+  let table: SyncTable
+  let pulledRows: Int
+  let pushedRows: Int
+  let newConflicts: Int
+  let autoMerged: Int
+  let rebased: Int
+  let affectedMonths: Set<ShiftChangeAffectedMonth>
+
+  var changesLocalReadModels: Bool {
+    pulledRows > 0 || newConflicts > 0 || autoMerged > 0 || rebased > 0
+  }
+}
+
+struct SyncCompletionSummary: Equatable {
+  let reason: SyncReason
+  let userId: String
+  let completedAt: Date
+  let tableChanges: [SyncTableChange]
+
+  init(
+    reason: SyncReason,
+    userId: String,
+    completedAt: Date = Date(),
+    tableResults: [TablePullResult],
+    pushResults: [TablePushResult]
+  ) {
+    self.reason = reason
+    self.userId = userId
+    self.completedAt = completedAt
+
+    let pullResultsByTable = Dictionary(uniqueKeysWithValues: tableResults.map { ($0.table, $0) })
+    let pushResultsByTable = Dictionary(uniqueKeysWithValues: pushResults.map { ($0.table, $0) })
+    let tables = Set(pullResultsByTable.keys).union(pushResultsByTable.keys)
+
+    self.tableChanges = tables.sorted { $0.rawValue < $1.rawValue }.map { table in
+      let pullResult = pullResultsByTable[table]
+      let pushResult = pushResultsByTable[table]
+      return SyncTableChange(
+        table: table,
+        pulledRows: pullResult?.rowsProcessed ?? 0,
+        pushedRows: pushResult?.rowsPushed ?? 0,
+        newConflicts: (pullResult?.newConflicts ?? 0) + (pushResult?.newConflicts ?? 0),
+        autoMerged: pullResult?.autoMerged ?? 0,
+        rebased: pushResult?.rebased ?? 0,
+        affectedMonths: (pullResult?.affectedMonths ?? []).union(pushResult?.affectedMonths ?? [])
+      )
+    }
+  }
+
+  var localReadModelChanges: [SyncTableChange] {
+    tableChanges.filter(\.changesLocalReadModels)
+  }
+
+  var hasLocalReadModelChanges: Bool {
+    !localReadModelChanges.isEmpty
+  }
 }
 
 /// Result of pushing a single record

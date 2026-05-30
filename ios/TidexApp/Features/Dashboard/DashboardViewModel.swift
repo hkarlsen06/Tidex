@@ -1713,6 +1713,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private var settings: UserSettings?
   private var snapshots: [WageSnapshot] = []
   private var recurringShifts: [RecurringShiftRow] = []
+  private var dashboardDependenciesLoaded = false
   private var cachedUserId: String?
   private var activePayrollCardTask: Task<Void, Never>?
   private var isActiveTabVisible = true
@@ -2244,9 +2245,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   func markLocalDataStale() {
     localDataNeedsReload = true
     displayedMonthLoadPending = true
+    dashboardDependenciesLoaded = false
+    invalidateSharedPayrollReadCache()
   }
 
   func handleExternalShiftsDidChange(_ context: ShiftChangeContext) async {
+    invalidateSharedPayrollReadCache()
+
     guard context.canUseTargetedInvalidation else {
       markLocalDataStale()
       guard isActiveTabVisible else { return }
@@ -2320,7 +2325,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     activePayrollCardTask?.cancel()
     payrollCardSnapshot = nil
     cachedUserId = nil
-    displayJobs = []
+    resetDashboardDependencies()
     previousPayrollAdjustments = []
     payrollAdjustmentsByPayoutMonth.removeAll()
 
@@ -2375,9 +2380,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       // Clear in-memory caches so we pick up synced data
       clearAllMonthCache(reason: "manual-refresh")
-      settings = nil  // Force reload from local
-      snapshots = []
-      recurringShifts = []
+      invalidateSharedPayrollReadCache(for: userId)
+      resetDashboardDependencies()
 
       // Reload from local repositories
       await loadDashboardFromLocal()
@@ -2407,7 +2411,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     for userId: String,
     forceReload: Bool = false
   ) {
-    guard forceReload || settings == nil || snapshots.isEmpty || recurringShifts.isEmpty else {
+    guard forceReload || !dashboardDependenciesLoaded else {
       return
     }
 
@@ -2421,6 +2425,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     recurringShifts = context.recurringShifts
     displayJobs = context.jobs
     shouldShowDashboardClockButtons = settings?.effectiveShowDashboardClockButtons ?? true
+    dashboardDependenciesLoaded = true
   }
 
   private func resetDashboardDependencies() {
@@ -2428,10 +2433,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     snapshots = []
     recurringShifts = []
     displayJobs = []
+    dashboardDependenciesLoaded = false
+  }
+
+  private func invalidateSharedPayrollReadCache(for userId: String? = nil) {
+    monthlyPayrollReadService.invalidateSharedCache(for: userId ?? cachedUserId)
   }
 
   private func dashboardDependenciesDiffer(from context: PayrollReadContext) -> Bool {
-    settings != context.settings
+    guard dashboardDependenciesLoaded else { return true }
+
+    return settings != context.settings
       || snapshots != context.snapshots
       || recurringShifts != context.recurringShifts
       || displayJobs != context.jobs
@@ -2492,25 +2504,19 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     displayYM: (year: Int, month: Int),
     previousYM: (year: Int, month: Int)
   ) async -> (display: PayrollRawWindowData, previous: PayrollRawWindowData) {
-    let displayMonth = PayrollReadMonth(year: displayYM.year, month: displayYM.month)
-    let previousMonth = PayrollReadMonth(year: previousYM.year, month: previousYM.month)
     let displayWindow = PayrollReadWindow.month(year: displayYM.year, month: displayYM.month)
     let previousWindow = PayrollReadWindow.month(year: previousYM.year, month: previousYM.month)
 
-    let dataByMonth = await monthlyPayrollReadService.loadRawWindows(
+    async let displayData = monthlyPayrollReadService.loadRawWindow(
       for: userId,
-      windows: [
-        displayMonth: displayWindow,
-        previousMonth: previousWindow,
-      ]
+      window: displayWindow
+    )
+    async let previousData = monthlyPayrollReadService.loadRawWindow(
+      for: userId,
+      window: previousWindow
     )
 
-    return (
-      dataByMonth[displayMonth]
-        ?? PayrollRawWindowData(window: displayWindow, shifts: [], events: []),
-      dataByMonth[previousMonth]
-        ?? PayrollRawWindowData(window: previousWindow, shifts: [], events: [])
-    )
+    return await (displayData, previousData)
   }
 
   private func fetchPayrollAdjustmentsForPayoutMonth(
@@ -2734,6 +2740,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     let previousUserId = cachedUserId
     let currentUserId = try? await getCurrentUserId()
+    invalidateSharedPayrollReadCache(for: currentUserId)
     let initialSyncJustCompleted = consumeInitialSyncCompletionTransition()
     let refreshedContext = currentUserId.map { monthlyPayrollReadService.loadContext(for: $0) }
     let dependenciesChanged = refreshedContext.map(dashboardDependenciesDiffer(from:)) ?? true
@@ -2793,13 +2800,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         throw DashboardError.notAuthenticated
       }
 
-      displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
-
       // Load settings from repositories
-      if settings == nil {
-        loadDashboardDependencies(for: userId)
-        logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
-      }
+      loadDashboardDependencies(for: userId)
+      logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
 
       // Check if we have any data to show
       // Note: Empty shifts is OK, but missing settings means we can't compute payroll
@@ -3013,13 +3016,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
         throw DashboardError.notAuthenticated
       }
 
-      displayJobs = jobsRepository.getNonDeletedJobs(for: userId)
-
       // Load settings and cached payroll inputs through repositories if needed
-      if settings == nil || snapshots.isEmpty || recurringShifts.isEmpty {
-        loadDashboardDependencies(for: userId)
-        updateUserAvatarFromSettings()
-      }
+      loadDashboardDependencies(for: userId)
+      updateUserAvatarFromSettings()
 
       // Calculate date ranges for displayed month
       let displayYM = (year: displayYear, month: displayMonth)

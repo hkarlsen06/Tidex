@@ -40,12 +40,36 @@ struct PayrollRawWindowData {
 final class MonthlyPayrollReadService {
   static let shared = MonthlyPayrollReadService()
 
+  private struct ContextCacheKey: Hashable {
+    let userId: String
+    let jobId: String?
+  }
+
+  private struct RawWindowCacheKey: Hashable {
+    let userId: String
+    let jobId: String?
+    let startDate: Date
+    let endDate: Date
+  }
+
+  private struct CacheEntry<Value> {
+    let value: Value
+    let createdAt: Date
+  }
+
+  private static let cacheTTL: TimeInterval = 30
+  private static let cacheLock = NSLock()
+  private static var cacheGeneration = 0
+  private static var contextCache: [ContextCacheKey: CacheEntry<PayrollReadContext>] = [:]
+  private static var rawWindowCache: [RawWindowCacheKey: CacheEntry<PayrollRawWindowData>] = [:]
+
   private let shiftsRepository: ShiftsRepository
   private let eventsRepository: EventsRepository
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
   private let jobsRepository: JobsRepository
+  private let usesSharedCache: Bool
 
   init(
     shiftsRepository: ShiftsRepository? = nil,
@@ -61,16 +85,48 @@ final class MonthlyPayrollReadService {
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
+    self.usesSharedCache =
+      self.shiftsRepository === ShiftsRepository.shared
+      && self.eventsRepository === EventsRepository.shared
+      && self.settingsRepository === SettingsRepository.shared
+      && self.snapshotsRepository === SnapshotsRepository.shared
+      && self.recurringShiftsRepository === RecurringShiftsRepository.shared
+      && self.jobsRepository === JobsRepository.shared
+  }
+
+  func invalidateSharedCache(for userId: String? = nil) {
+    Self.cacheLock.lock()
+    defer { Self.cacheLock.unlock() }
+    Self.cacheGeneration += 1
+
+    guard let userId else {
+      Self.contextCache.removeAll()
+      Self.rawWindowCache.removeAll()
+      return
+    }
+
+    Self.contextCache = Self.contextCache.filter { $0.key.userId != userId }
+    Self.rawWindowCache = Self.rawWindowCache.filter { $0.key.userId != userId }
   }
 
   func loadContext(for userId: String, jobId: String? = nil) -> PayrollReadContext {
-    PayrollReadContext(
+    let key = ContextCacheKey(userId: userId, jobId: jobId)
+    if usesSharedCache, let cached = Self.cachedContext(for: key) {
+      return cached.value
+    }
+    let generation = Self.cacheGenerationSnapshot()
+
+    let context = PayrollReadContext(
       userId: userId,
       settings: settingsRepository.getSettings(for: userId),
       snapshots: snapshotsRepository.getSnapshots(for: userId, jobId: jobId),
       recurringShifts: recurringShiftsRepository.getRecurringShifts(for: userId, jobId: jobId),
       jobs: jobsRepository.getNonDeletedJobs(for: userId)
     )
+    if usesSharedCache {
+      Self.storeContext(context, for: key, generation: generation)
+    }
+    return context
   }
 
   func loadShiftRows(
@@ -128,6 +184,17 @@ final class MonthlyPayrollReadService {
     window: PayrollReadWindow,
     jobId: String? = nil
   ) async -> PayrollRawWindowData {
+    let key = RawWindowCacheKey(
+      userId: userId,
+      jobId: jobId,
+      startDate: window.startDate,
+      endDate: window.endDate
+    )
+    if usesSharedCache, let cached = Self.cachedRawWindow(for: key) {
+      return cached.value
+    }
+    let generation = Self.cacheGenerationSnapshot()
+
     async let shifts = shiftsRepository.getShiftsOffMain(
       for: userId,
       startDate: window.startDate,
@@ -140,24 +207,71 @@ final class MonthlyPayrollReadService {
       endDate: window.endDate
     )
 
-    return await PayrollRawWindowData(window: window, shifts: shifts, events: events)
+    let data = await PayrollRawWindowData(window: window, shifts: shifts, events: events)
+    if usesSharedCache {
+      Self.storeRawWindow(data, for: key, generation: generation)
+    }
+    return data
   }
 
-  func loadRawWindows(
-    for userId: String,
-    windows: [PayrollReadMonth: PayrollReadWindow],
-    jobId: String? = nil
-  ) async -> [PayrollReadMonth: PayrollRawWindowData] {
-    var results: [PayrollReadMonth: PayrollRawWindowData] = [:]
+  private static func cacheGenerationSnapshot() -> Int {
+    cacheLock.lock()
+    defer { cacheLock.unlock() }
 
-    for (month, window) in windows {
-      results[month] = await loadRawWindow(
-        for: userId,
-        window: window,
-        jobId: jobId
-      )
+    return cacheGeneration
+  }
+
+  private static func cachedContext(for key: ContextCacheKey) -> CacheEntry<PayrollReadContext>? {
+    cacheLock.lock()
+    defer { cacheLock.unlock() }
+
+    guard let cached = contextCache[key] else { return nil }
+    guard isFresh(cached.createdAt) else {
+      contextCache.removeValue(forKey: key)
+      return nil
     }
+    return cached
+  }
 
-    return results
+  private static func storeContext(
+    _ context: PayrollReadContext,
+    for key: ContextCacheKey,
+    generation: Int
+  ) {
+    cacheLock.lock()
+    defer { cacheLock.unlock() }
+
+    guard generation == cacheGeneration else { return }
+    contextCache[key] = CacheEntry(value: context, createdAt: Date())
+  }
+
+  private static func cachedRawWindow(for key: RawWindowCacheKey) -> CacheEntry<
+    PayrollRawWindowData
+  >? {
+    cacheLock.lock()
+    defer { cacheLock.unlock() }
+
+    guard let cached = rawWindowCache[key] else { return nil }
+    guard isFresh(cached.createdAt) else {
+      rawWindowCache.removeValue(forKey: key)
+      return nil
+    }
+    return cached
+  }
+
+  private static func storeRawWindow(
+    _ data: PayrollRawWindowData,
+    for key: RawWindowCacheKey,
+    generation: Int
+  ) {
+    cacheLock.lock()
+    defer { cacheLock.unlock() }
+
+    guard generation == cacheGeneration else { return }
+    rawWindowCache[key] = CacheEntry(value: data, createdAt: Date())
+  }
+
+  private static func isFresh(_ createdAt: Date) -> Bool {
+    Date().timeIntervalSince(createdAt) < cacheTTL
   }
 }

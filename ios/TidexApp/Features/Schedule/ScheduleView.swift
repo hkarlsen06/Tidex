@@ -203,6 +203,29 @@ struct ShiftsView: View {
     await viewModel.loadShifts()
   }
 
+  private func handleSuccessfulSyncSummary(_ summary: SyncCompletionSummary?) {
+    guard let summary, summary.userId == coordinator.userId else { return }
+    guard summary.reason != .appLaunch else { return }
+    guard let context = summary.scheduleChangeContext else { return }
+
+    guard !shouldShowWorkSetupRequiredPlaceholder else {
+      viewModel.markLocalDataStale()
+      return
+    }
+
+    guard !(summary.reason == .manualRefresh && selectedTab == .shifts) else { return }
+
+    Task {
+      await viewModel.handleExternalShiftsDidChange(context)
+    }
+  }
+
+  private func shouldIgnoreWorkSetupNotification(_ notification: Notification) -> Bool {
+    notification.userInfo?["syncReason"] as? String == SyncReason.manualRefresh.rawValue
+      && notification.userInfo?["userId"] as? String == coordinator.userId
+      && selectedTab == .shifts
+  }
+
   // MARK: - Body
 
   @ViewBuilder
@@ -324,7 +347,9 @@ struct ShiftsView: View {
             await viewModel.reloadFromLocal()
           }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) {
+          notification in
+          guard !shouldIgnoreWorkSetupNotification(notification) else { return }
           let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
           viewModel.markLocalDataStale()
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
@@ -339,14 +364,8 @@ struct ShiftsView: View {
             await viewModel.reloadFromLocal()
           }
         }
-        .onChange(of: syncStatusManager.lastSuccessfulSync) { oldValue, newValue in
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-          guard oldValue != nil, newValue != nil else { return }
-          viewModel.markLocalDataStale()
-          guard selectedTab == .shifts else { return }
-          Task {
-            await viewModel.reloadFromLocal()
-          }
+        .onChange(of: syncStatusManager.lastSuccessfulSyncSummary) { _, summary in
+          handleSuccessfulSyncSummary(summary)
         }
         .onChange(of: selectedTab) { oldTab, newTab in
           viewModel.setActiveTabVisible(newTab == .shifts)
@@ -1256,6 +1275,7 @@ struct ShiftsView: View {
             ShiftsCalendarView(
               shifts: viewModel.shifts,
               eventCoverageByDate: viewModel.eventCoverageByDate,
+              presentation: viewModel.calendarPresentation,
               month: displayedMonthDate,
               year: viewModel.committedYear,
               monthNumber: viewModel.committedMonth,
@@ -1476,6 +1496,7 @@ struct ShiftsView: View {
             ShiftsCalendarView(
               shifts: viewModel.shifts,
               eventCoverageByDate: viewModel.eventCoverageByDate,
+              presentation: viewModel.calendarPresentation,
               month: displayedMonthDate,
               year: viewModel.committedYear,
               monthNumber: viewModel.committedMonth,

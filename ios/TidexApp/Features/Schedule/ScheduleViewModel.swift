@@ -95,6 +95,111 @@ private struct SelectionSummary {
   let currencyAggregate: JobCurrencyAggregateResolution?
 }
 
+struct CalendarPayTotals {
+  let net: Double
+  let gross: Double
+}
+
+struct ShiftsCalendarPresentation {
+  let shiftsByDate: [String: [ShiftWithComputations]]
+  let earningsByDate: [String: CalendarEarningsData]
+  let hoursByDate: [String: HoursData]
+  let monthlyTotals: CalendarPayTotals
+  let monthlyCurrencyAggregate: JobCurrencyAggregateResolution
+  let jobsById: [String: Job]
+  let defaultJobId: String?
+  let hasMultipleActiveJobs: Bool
+
+  static func empty(currency: String = "kr") -> ShiftsCalendarPresentation {
+    ShiftsCalendarPresentation(
+      shiftsByDate: [:],
+      earningsByDate: [:],
+      hoursByDate: [:],
+      monthlyTotals: CalendarPayTotals(net: 0, gross: 0),
+      monthlyCurrencyAggregate: JobCurrencyAggregateResolver.resolve(
+        shifts: [],
+        jobs: [],
+        fallbackCurrency: currency
+      ),
+      jobsById: [:],
+      defaultJobId: nil,
+      hasMultipleActiveJobs: false
+    )
+  }
+
+  static func build(
+    shifts: [ShiftWithComputations],
+    year: Int,
+    month: Int,
+    jobs: [Job],
+    currency: String,
+    excludedFromTotalIds: Set<String>
+  ) -> ShiftsCalendarPresentation {
+    let shiftsByDate = Dictionary(grouping: shifts, by: \.shiftDate)
+    var earningsByDate: [String: CalendarEarningsData] = [:]
+    var hoursByDate: [String: HoursData] = [:]
+    var monthlyIncludedShifts: [ShiftWithComputations] = []
+    var monthlyNet: Double = 0
+    var monthlyGross: Double = 0
+    var calendar = Calendar.current
+    calendar.timeZone = Date.localTimeZone
+
+    for (date, shiftsOnDate) in shiftsByDate {
+      let includedShifts = shiftsOnDate.filter { !excludedFromTotalIds.contains($0.id) }
+
+      if !includedShifts.isEmpty {
+        let gross = includedShifts.reduce(0) { $0 + $1.grossPay }
+        let net = includedShifts.reduce(0) {
+          $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay)
+        }
+        earningsByDate[date] = CalendarEarningsData(
+          net: net,
+          gross: gross,
+          hasTaxEnabled: includedShifts.contains { $0.taxEnabled }
+        )
+      }
+
+      let sorted = shiftsOnDate.sorted { $0.startTime < $1.startTime }
+      let earliestStart = sorted.first?.startTime ?? ""
+      let latestEnd = sorted.map(\.endTime).max() ?? ""
+      let crossesMidnight = shiftsOnDate.contains { shift in
+        let startMinutes = CalendarGridHelper.timeToMinutes(shift.startTime)
+        let endMinutes = CalendarGridHelper.timeToMinutes(shift.endTime)
+        return endMinutes <= startMinutes
+      }
+      hoursByDate[date] = HoursData(
+        start: CalendarGridHelper.formatTime(earliestStart),
+        end: CalendarGridHelper.formatTime(latestEnd),
+        crossesMidnight: crossesMidnight
+      )
+
+      guard let shiftDate = Date.fromISODateString(date) else { continue }
+      let components = calendar.dateComponents([.year, .month], from: shiftDate)
+      guard components.year == year, components.month == month else { continue }
+      monthlyIncludedShifts.append(contentsOf: includedShifts)
+      monthlyGross += includedShifts.reduce(0) { $0 + $1.grossPay }
+      monthlyNet += includedShifts.reduce(0) {
+        $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay)
+      }
+    }
+
+    return ShiftsCalendarPresentation(
+      shiftsByDate: shiftsByDate,
+      earningsByDate: earningsByDate,
+      hoursByDate: hoursByDate,
+      monthlyTotals: CalendarPayTotals(net: monthlyNet, gross: monthlyGross),
+      monthlyCurrencyAggregate: JobCurrencyAggregateResolver.resolve(
+        shifts: monthlyIncludedShifts,
+        jobs: jobs,
+        fallbackCurrency: currency
+      ),
+      jobsById: Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) }),
+      defaultJobId: jobs.first(where: { $0.is_default })?.id,
+      hasMultipleActiveJobs: jobs.count > 1
+    )
+  }
+}
+
 private struct MonthComputationInput {
   let year: Int
   let month: Int
@@ -126,21 +231,25 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   // MARK: - Published State
 
   /// All shifts for the displayed month (computed with payroll)
-  @Published private(set) var shifts: [ShiftWithComputations] = []
+  private(set) var shifts: [ShiftWithComputations] = []
   /// Private events overlapping the currently visible calendar range.
-  @Published private(set) var events: [EventRow] = []
+  private(set) var events: [EventRow] = []
+  /// Event presentations keyed by covered ISO date for the displayed calendar range.
+  private(set) var eventCoverageByDate: [String: [EventPresentation]] = [:]
+  /// Precomputed calendar maps and totals for the displayed month.
+  private(set) var calendarPresentation = ShiftsCalendarPresentation.empty()
   /// Shifts grouped by ISO week
-  @Published private(set) var weekGroups: [WeekGroup] = []
+  private(set) var weekGroups: [WeekGroup] = []
   /// Whether data is currently loading
   @Published private(set) var isLoading = false
   /// Error if data loading failed
   @Published private(set) var error: Error?
   /// Set of shift IDs that have conflicts (overlapping with other shifts)
-  @Published private(set) var conflictingShiftIds: Set<String> = []
+  private(set) var conflictingShiftIds: Set<String> = []
   /// Set of shift IDs excluded from totals (higher-earning overlapping shifts are excluded)
-  @Published private(set) var excludedFromTotalIds: Set<String> = []
+  private(set) var excludedFromTotalIds: Set<String> = []
   /// Set of dates (ISO strings) that have conflicts
-  @Published private(set) var conflictDates: Set<String> = []
+  private(set) var conflictDates: Set<String> = []
 
   /// Direction of last navigation (for animations) - synced from SharedMonthContext
   @Published private(set) var navigationDirection: MonthNavigationDirection?
@@ -150,10 +259,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   // The calendar uses these to avoid showing the new month structure before data arrives
 
   /// The year that is actually ready to display (data loaded)
-  @Published private(set) var committedYear: Int
+  private(set) var committedYear: Int
 
   /// The month that is actually ready to display (data loaded)
-  @Published private(set) var committedMonth: Int
+  private(set) var committedMonth: Int
 
   /// Currently displayed year - synced from SharedMonthContext
   var displayYear: Int { monthContext.displayYear }
@@ -199,7 +308,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   @Published private(set) var currency: String = "kr"
 
   /// Next upcoming shift (for countdown display)
-  @Published private(set) var nextUpcomingShift: ShiftWithComputations?
+  private(set) var nextUpcomingShift: ShiftWithComputations?
 
   /// All non-deleted jobs for metadata rendering (badges/colors in shift cards).
   @Published private(set) var activeJobs: [Job] = []
@@ -336,25 +445,27 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     Dictionary(uniqueKeysWithValues: activeJobs.map { ($0.id, $0) })
   }
 
-  private var committedVisibleRange: (start: Date, end: Date) {
-    Date.visibleCalendarRange(year: committedYear, month: committedMonth)
-  }
-
   func jobForShift(_ shift: ShiftWithComputations) -> Job? {
     guard let jobId = shift.shift.job_id else { return nil }
     return activeJobsById[jobId]
   }
 
-  private func visibleRangeContains(_ dateISO: String) -> Bool {
+  private static func visibleRange(
+    _ visibleRange: (start: Date, end: Date), contains dateISO: String
+  )
+    -> Bool
+  {
     guard let date = Date.fromISODateString(dateISO) else {
       return false
     }
 
-    let range = committedVisibleRange
-    return date >= range.start && date <= range.end
+    return date >= visibleRange.start && date <= visibleRange.end
   }
 
-  var eventCoverageByDate: [String: [EventPresentation]] {
+  private static func buildEventCoverageByDate(
+    events: [EventRow],
+    visibleRange: (start: Date, end: Date)
+  ) -> [String: [EventPresentation]] {
     var result: [String: [EventPresentation]] = [:]
     for event in events {
       if event.is_all_day {
@@ -367,12 +478,12 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
             continue
           }
           let coveredDateISO = coveredDate.toISODateString()
-          guard visibleRangeContains(coveredDateISO) else { continue }
+          guard Self.visibleRange(visibleRange, contains: coveredDateISO) else { continue }
           result[coveredDateISO, default: []].append(
             EventPresentation(event: event, coveredDateISO: coveredDateISO)
           )
         }
-      } else if visibleRangeContains(event.start_date) {
+      } else if Self.visibleRange(visibleRange, contains: event.start_date) {
         result[event.start_date, default: []].append(
           EventPresentation(event: event, coveredDateISO: event.start_date)
         )
@@ -456,6 +567,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   private var settings: UserSettings?
   private var snapshots: [WageSnapshot] = []
   private var recurringShifts: [RecurringShiftRow] = []
+  private var scheduleDependenciesLoaded = false
   private var cachedUserId: String?
   private var isActiveTabVisible = true
   private var displayedMonthLoadPending = false
@@ -1167,6 +1279,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Clear recurring shifts cache so changes are picked up
       recurringShifts = []
+      scheduleDependenciesLoaded = false
 
       // Reload to show the changes
       await reloadFromLocal()
@@ -1197,6 +1310,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Clear recurring shifts cache so changes are picked up
       recurringShifts = []
+      scheduleDependenciesLoaded = false
 
       // Reload to show the changes
       await reloadFromLocal()
@@ -1484,11 +1598,36 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     year: Int,
     month: Int
   ) {
+    let visibleRange = Date.visibleCalendarRange(year: year, month: month)
+    let currentMonth = Date.currentYearMonth()
+    let nextUpcomingShift =
+      currentMonth.year == year && currentMonth.month == month
+      ? findNextUpcomingShift(in: computedShifts)
+      : nil
+
+    objectWillChange.send()
+    updateConflictDetection(for: computedShifts)
     self.shifts = computedShifts
     self.events = displayEvents
+    self.eventCoverageByDate = Self.buildEventCoverageByDate(
+      events: displayEvents,
+      visibleRange: visibleRange
+    )
     self.weekGroups = self.groupShiftsByWeek(computedShifts)
+    self.calendarPresentation = ShiftsCalendarPresentation.build(
+      shifts: computedShifts,
+      year: year,
+      month: month,
+      jobs: activeJobs,
+      currency: currency,
+      excludedFromTotalIds: excludedFromTotalIds
+    )
     self.committedYear = year
     self.committedMonth = month
+    self.nextUpcomingShift = nextUpcomingShift
+    if !selectedDates.isEmpty {
+      updateSelectionSummary()
+    }
   }
 
   private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {
@@ -1538,9 +1677,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     logger.info("📦 Using cached computed data for \(displayKey)")
 
-    // Calculate conflict detection first (needed for week totals)
-    updateConflictDetection(for: displayCache.shifts)
-
     // ATOMIC UPDATE: Set shifts and committed state together
     // This ensures the calendar structure and event data update in the same render pass.
     applyCommittedMonthSnapshot(
@@ -1549,10 +1685,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       year: year,
       month: month
     )
-
-    if self.isCurrentMonth {
-      updateNextUpcomingShift(for: displayCache.shifts)
-    }
 
     // Update last accessed time for LRU tracking
     displayCache.lastAccessed = Date()
@@ -1648,7 +1780,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     monthCache.removeAll()
     cancelPrefetchTasks()
     cachedUserId = nil
-    activeJobs = []
+    resetScheduleDependencies()
 
     if await loadShiftsFromLocal() {
       localDataNeedsReload = false
@@ -1704,10 +1836,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Clear in-memory caches so we pick up synced data
       monthCache.removeAll()
       cancelPrefetchTasks()
-      settings = nil
-      snapshots = []
-      recurringShifts = []
-      activeJobs = []
+      invalidateSharedPayrollReadCache(for: userId)
+      resetScheduleDependencies()
 
       // Reload from local repositories
       if await loadShiftsFromLocal() {
@@ -1723,6 +1853,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       logger.error("❌ Pull-to-refresh failed: \(error.localizedDescription)")
 
       // Restore previous data so UI doesn't break
+      objectWillChange.send()
       self.shifts = previousShifts
       self.weekGroups = previousWeekGroups
 
@@ -1760,11 +1891,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // Also critical for impersonation: cachedUserId must be refreshed from current session
     monthCache.removeAll()
     cancelPrefetchTasks()
+    invalidateSharedPayrollReadCache()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
-    activeJobs = []
-
-    // Also clear in-memory recurring shifts cache so exclusions are picked up
-    recurringShifts = []
+    resetScheduleDependencies()
 
     // Reload from local repositories
     let didReload = await loadShiftsFromLocal()
@@ -1788,9 +1917,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   func markLocalDataStale() {
     localDataNeedsReload = true
     displayedMonthLoadPending = true
+    scheduleDependenciesLoaded = false
+    invalidateSharedPayrollReadCache()
   }
 
   func handleExternalShiftsDidChange(_ context: ShiftChangeContext) async {
+    invalidateSharedPayrollReadCache()
+
     guard context.canUseTargetedInvalidation else {
       markLocalDataStale()
       guard isActiveTabVisible else { return }
@@ -1909,33 +2042,35 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   // MARK: - Private Loading Methods
 
   private func loadScheduleDependencies(for userId: String, forceReload: Bool = false) {
-    guard
-      forceReload || settings == nil || snapshots.isEmpty || recurringShifts.isEmpty
-        || activeJobs.isEmpty
-    else {
+    guard forceReload || !scheduleDependenciesLoaded else {
       return
     }
 
     let context = monthlyPayrollReadService.loadContext(for: userId)
+    applyScheduleDependencies(context)
+  }
 
-    if forceReload || settings == nil {
-      settings = context.settings
-      if let userSettings = settings {
-        currency = userSettings.currency ?? "kr"
-      }
+  private func applyScheduleDependencies(_ context: PayrollReadContext) {
+    settings = context.settings
+    if let userSettings = settings {
+      currency = userSettings.currency ?? "kr"
     }
+    snapshots = context.snapshots
+    recurringShifts = context.recurringShifts
+    activeJobs = context.jobs
+    scheduleDependenciesLoaded = true
+  }
 
-    if forceReload || snapshots.isEmpty {
-      snapshots = context.snapshots
-    }
+  private func resetScheduleDependencies() {
+    settings = nil
+    snapshots = []
+    recurringShifts = []
+    activeJobs = []
+    scheduleDependenciesLoaded = false
+  }
 
-    if forceReload || recurringShifts.isEmpty {
-      recurringShifts = context.recurringShifts
-    }
-
-    if forceReload || activeJobs.isEmpty {
-      activeJobs = context.jobs
-    }
+  private func invalidateSharedPayrollReadCache(for userId: String? = nil) {
+    monthlyPayrollReadService.invalidateSharedCache(for: userId ?? cachedUserId)
   }
 
   /// Load shifts data from local repositories
@@ -2016,9 +2151,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Evict old cache entries if over limit
       evictCacheIfNeeded()
 
-      // Calculate conflict detection first (needed for week totals)
-      updateConflictDetection(for: computedShifts)
-
       // ATOMIC UPDATE: Set shifts, events, and committed state together.
       applyCommittedMonthSnapshot(
         shifts: computedShifts,
@@ -2026,11 +2158,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         year: displayYM.year,
         month: displayYM.month
       )
-
-      // Find next upcoming shift (only on current month)
-      if isCurrentMonth {
-        updateNextUpcomingShift(for: computedShifts)
-      }
 
       self.isLoading = false
 
@@ -2133,9 +2260,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Evict old cache entries if over limit
       evictCacheIfNeeded()
 
-      // Calculate conflict detection first (needed for week totals)
-      updateConflictDetection(for: computedShifts)
-
       // ATOMIC UPDATE: Set shifts, events, and committed state together.
       applyCommittedMonthSnapshot(
         shifts: computedShifts,
@@ -2143,11 +2267,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         year: loadYear,
         month: loadMonth
       )
-
-      // Find next upcoming shift (only on current month)
-      if isCurrentMonth {
-        updateNextUpcomingShift(for: computedShifts)
-      }
 
       self.isLoading = false
 
@@ -2162,8 +2281,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Next Upcoming Shift
 
-  /// Find and update the next upcoming shift from the current shifts
-  private func updateNextUpcomingShift(for shifts: [ShiftWithComputations]) {
+  /// Find the next upcoming shift from the current shifts.
+  private func findNextUpcomingShift(in shifts: [ShiftWithComputations]) -> ShiftWithComputations? {
     let now = Date()
     let calendar = Calendar.current
 
@@ -2216,7 +2335,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       return startA < startB
     }
 
-    self.nextUpcomingShift = sorted.first
+    return sorted.first
   }
 
   private func parseTime(_ time: String) -> Date? {

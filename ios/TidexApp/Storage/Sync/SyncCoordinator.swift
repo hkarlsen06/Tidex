@@ -349,6 +349,7 @@ final class SyncCoordinator: ObservableObject {
     let result: SyncResult = await withTaskGroup(of: SyncResult?.self) { group in
       group.addTask {
         await self.performSyncWork(
+          reason: reason,
           userId: userId,
           startTime: startTime,
           tables: uniqueTables,
@@ -387,7 +388,7 @@ final class SyncCoordinator: ObservableObject {
     await MainActor.run {
       isSyncing = false
     }
-    await notifyWorkSetupDataChangedIfNeeded(for: result)
+    await notifyWorkSetupDataChangedIfNeeded(for: result, reason: reason, userId: userId)
 
     if needsFollowUpSync {
       logger.info("Running coalesced follow-up sync after concurrent local changes")
@@ -399,7 +400,11 @@ final class SyncCoordinator: ObservableObject {
     return result
   }
 
-  private func notifyWorkSetupDataChangedIfNeeded(for result: SyncResult) async {
+  private func notifyWorkSetupDataChangedIfNeeded(
+    for result: SyncResult,
+    reason: SyncReason,
+    userId: String
+  ) async {
     guard result.success else { return }
 
     let workSetupTables: Set<SyncTable> = [.jobs, .wageSnapshots]
@@ -419,13 +424,21 @@ final class SyncCoordinator: ObservableObject {
     guard pulledWorkSetupData || pushedWorkSetupData else { return }
 
     await MainActor.run {
-      NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
+      NotificationCenter.default.post(
+        name: .workSetupDataDidChange,
+        object: nil,
+        userInfo: [
+          "syncReason": reason.rawValue,
+          "userId": userId,
+        ]
+      )
     }
   }
 
   /// Performs the actual sync work (locale update, pull, push, widget update).
   /// Extracted so it can be raced against a timeout in `sync()`.
   private func performSyncWork(
+    reason: SyncReason,
     userId: String,
     startTime: Date,
     tables: [SyncTable],
@@ -480,11 +493,17 @@ final class SyncCoordinator: ObservableObject {
       }
 
       let conflicts = try await storeActor.countConflicts(userId: userId)
+      let completionSummary = SyncCompletionSummary(
+        reason: reason,
+        userId: userId,
+        tableResults: tableResults,
+        pushResults: pushResults
+      )
 
       await MainActor.run {
         lastSyncedAt = Date()
         conflictCount = conflicts
-        SyncStatusManager.shared.syncSucceeded()
+        SyncStatusManager.shared.syncSucceeded(summary: completionSummary)
       }
 
       // Note: lastAutoSyncAt is now updated at the START of sync (for interval-guarded syncs)
@@ -582,6 +601,7 @@ final class SyncCoordinator: ObservableObject {
     var totalRows = 0
     var newConflicts = 0
     var autoMerged = 0
+    var affectedMonths: Set<ShiftChangeAffectedMonth> = []
     var maxRevision: Int64 = syncState.cursor(for: table)  // Legacy, for debugging
 
     logger.debug("Pulling \(table.displayName) from \(cursor.description)")
@@ -612,6 +632,7 @@ final class SyncCoordinator: ObservableObject {
       totalRows += result.rowsProcessed
       newConflicts += result.newConflicts
       autoMerged += result.autoMerged
+      affectedMonths.formUnion(result.affectedMonths)
 
       // Track legacy max revision for debugging
       if result.maxRevision > maxRevision {
@@ -640,8 +661,9 @@ final class SyncCoordinator: ObservableObject {
     }
 
     if table == .payrollAdjustments {
-      let deletedCount = try await reconcilePayrollAdjustmentHardDeletes(userId: userId)
-      totalRows += deletedCount
+      let reconciliation = try await reconcilePayrollAdjustmentHardDeletes(userId: userId)
+      totalRows += reconciliation.count
+      affectedMonths.formUnion(reconciliation.affectedMonths)
     }
 
     let finalCursor = cursor.updatedAt.map { formatSupabaseTimestamp($0) } ?? "initial"
@@ -654,11 +676,14 @@ final class SyncCoordinator: ObservableObject {
       lastUpdatedAtTieId: cursor.tieId,
       maxRevision: maxRevision,
       newConflicts: newConflicts,
-      autoMerged: autoMerged
+      autoMerged: autoMerged,
+      affectedMonths: affectedMonths
     )
   }
 
-  private func reconcilePayrollAdjustmentHardDeletes(userId: String) async throws -> Int {
+  private func reconcilePayrollAdjustmentHardDeletes(userId: String) async throws
+    -> (count: Int, affectedMonths: Set<ShiftChangeAffectedMonth>)
+  {
     let serverRows: [SyncRowId] =
       try await supabase
       .from("payroll_adjustments")
@@ -687,6 +712,52 @@ final class SyncCoordinator: ObservableObject {
     let newConflicts: Int
     let autoMerged: Int
     let hasMore: Bool
+    let affectedMonths: Set<ShiftChangeAffectedMonth>
+
+    init(
+      rowsProcessed: Int,
+      lastUpdatedAt: Date?,
+      lastTieId: String,
+      maxRevision: Int64,
+      newConflicts: Int,
+      autoMerged: Int,
+      hasMore: Bool,
+      affectedMonths: Set<ShiftChangeAffectedMonth> = []
+    ) {
+      self.rowsProcessed = rowsProcessed
+      self.lastUpdatedAt = lastUpdatedAt
+      self.lastTieId = lastTieId
+      self.maxRevision = maxRevision
+      self.newConflicts = newConflicts
+      self.autoMerged = autoMerged
+      self.hasMore = hasMore
+      self.affectedMonths = affectedMonths
+    }
+  }
+
+  private static func affectedMonths(forShiftRows rows: [SyncShiftRow])
+    -> Set<ShiftChangeAffectedMonth>
+  {
+    Set(rows.compactMap { ShiftChangeAffectedMonth(dateISO: $0.shift_date) })
+  }
+
+  private static func affectedMonths(forEventRows rows: [SyncEventRow])
+    -> Set<ShiftChangeAffectedMonth>
+  {
+    rows.reduce(into: Set<ShiftChangeAffectedMonth>()) { result, row in
+      result.formUnion(
+        ShiftChangeContext.affecting(
+          isoDateRangeStart: row.start_date,
+          end: row.end_date
+        ).affectedMonths
+      )
+    }
+  }
+
+  private static func affectedMonths(forPayrollAdjustmentRows rows: [SyncPayrollAdjustmentRow])
+    -> Set<ShiftChangeAffectedMonth>
+  {
+    Set(rows.compactMap { ShiftChangeAffectedMonth(dateISO: $0.payout_date) })
   }
 
   // MARK: - Jobs Pull
@@ -934,9 +1005,14 @@ final class SyncCoordinator: ObservableObject {
     var newConflicts = 0
     var autoMerged = 0
     var maxRevision: Int64 = 0
+    var affectedMonths = Self.affectedMonths(forShiftRows: rows)
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
+      if let existing = try await storeActor.getUserShift(id: row.id) {
+        affectedMonths.insert(ShiftChangeAffectedMonth(date: existing.shiftDate))
+      }
+
       let result = try await applyShiftRow(row, storeActor: storeActor)
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
@@ -984,7 +1060,8 @@ final class SyncCoordinator: ObservableObject {
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize
+      hasMore: rows.count == pageSize,
+      affectedMonths: affectedMonths
     )
   }
 
@@ -1210,9 +1287,19 @@ final class SyncCoordinator: ObservableObject {
     var newConflicts = 0
     var autoMerged = 0
     var maxRevision: Int64 = 0
+    var affectedMonths = Self.affectedMonths(forEventRows: rows)
     let pageStartTime = Date()
 
     for (index, row) in rows.enumerated() {
+      if let existing = try await storeActor.getEvent(id: row.id) {
+        affectedMonths.formUnion(
+          ShiftChangeContext.affecting(
+            dateRangeStart: existing.startDate,
+            end: existing.endDate
+          ).affectedMonths
+        )
+      }
+
       let result = try await applyEventRow(row, storeActor: storeActor)
       if result == .conflict { newConflicts += 1 }
       if result == .autoMerged { autoMerged += 1 }
@@ -1255,7 +1342,8 @@ final class SyncCoordinator: ObservableObject {
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: autoMerged,
-      hasMore: rows.count == pageSize
+      hasMore: rows.count == pageSize,
+      affectedMonths: affectedMonths
     )
   }
 
@@ -2148,8 +2236,13 @@ final class SyncCoordinator: ObservableObject {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     var newConflicts = 0
     var maxRevision: Int64 = 0
+    var affectedMonths = Self.affectedMonths(forPayrollAdjustmentRows: rows)
 
     for row in rows {
+      if let existing = try await storeActor.getPayrollAdjustment(id: row.id) {
+        affectedMonths.insert(ShiftChangeAffectedMonth(date: existing.payoutDate))
+      }
+
       let result = try await applyPayrollAdjustmentRow(row, storeActor: storeActor)
       if result == .conflict { newConflicts += 1 }
       if row.revision > maxRevision { maxRevision = row.revision }
@@ -2178,7 +2271,8 @@ final class SyncCoordinator: ObservableObject {
       maxRevision: maxRevision,
       newConflicts: newConflicts,
       autoMerged: 0,
-      hasMore: rows.count == pageSize
+      hasMore: rows.count == pageSize,
+      affectedMonths: affectedMonths
     )
   }
 

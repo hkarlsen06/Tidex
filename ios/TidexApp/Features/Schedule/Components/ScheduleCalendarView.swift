@@ -27,6 +27,7 @@ struct ShiftsCalendarView: View {
 
   let shifts: [ShiftWithComputations]
   let eventCoverageByDate: [String: [EventPresentation]]
+  let presentation: ShiftsCalendarPresentation
   let month: Date
   let year: Int
   let monthNumber: Int  // 1-12
@@ -141,6 +142,7 @@ struct ShiftsCalendarView: View {
   init(
     shifts: [ShiftWithComputations],
     eventCoverageByDate: [String: [EventPresentation]] = [:],
+    presentation: ShiftsCalendarPresentation = .empty(),
     month: Date,
     year: Int,
     monthNumber: Int,
@@ -188,6 +190,7 @@ struct ShiftsCalendarView: View {
   ) {
     self.shifts = shifts
     self.eventCoverageByDate = eventCoverageByDate
+    self.presentation = presentation
     self.month = month
     self.year = year
     self.monthNumber = monthNumber
@@ -238,101 +241,34 @@ struct ShiftsCalendarView: View {
 
   /// Earnings by ISO date string (excludes conflicting shifts)
   private var earningsByDate: [String: CalendarEarningsData] {
-    var netByDate: [String: Double] = [:]
-    var grossByDate: [String: Double] = [:]
-    var hasTaxByDate: [String: Bool] = [:]
-
-    for shift in shifts {
-      // Skip shifts excluded from totals
-      guard !excludedFromTotalIds.contains(shift.id) else { continue }
-      let net = shift.taxEnabled ? shift.netPay : shift.grossPay
-      netByDate[shift.shiftDate, default: 0] += net
-      grossByDate[shift.shiftDate, default: 0] += shift.grossPay
-      hasTaxByDate[shift.shiftDate, default: false] =
-        hasTaxByDate[shift.shiftDate, default: false] || shift.taxEnabled
-    }
-
-    var result: [String: CalendarEarningsData] = [:]
-    for (date, net) in netByDate {
-      let gross = grossByDate[date] ?? net
-      result[date] = CalendarEarningsData(
-        net: net,
-        gross: gross,
-        hasTaxEnabled: hasTaxByDate[date] ?? false
-      )
-    }
-    return result
+    presentation.earningsByDate
   }
 
   /// Hours by ISO date string
   private var hoursByDate: [String: HoursData] {
-    var shiftsByDateDict: [String: [ShiftWithComputations]] = [:]
-    for shift in shifts {
-      shiftsByDateDict[shift.shiftDate, default: []].append(shift)
-    }
-
-    var result: [String: HoursData] = [:]
-    for (date, shiftsOnDate) in shiftsByDateDict {
-      let sorted = shiftsOnDate.sorted { $0.startTime < $1.startTime }
-      let earliestStart = sorted.first?.startTime ?? ""
-      let latestEnd = sorted.map(\.endTime).max() ?? ""
-
-      let crossesMidnight = shiftsOnDate.contains { shift in
-        let startMinutes = CalendarGridHelper.timeToMinutes(shift.startTime)
-        let endMinutes = CalendarGridHelper.timeToMinutes(shift.endTime)
-        return endMinutes <= startMinutes
-      }
-
-      result[date] = HoursData(
-        start: CalendarGridHelper.formatTime(earliestStart),
-        end: CalendarGridHelper.formatTime(latestEnd),
-        crossesMidnight: crossesMidnight
-      )
-    }
-    return result
+    presentation.hoursByDate
   }
 
   /// Monthly totals (net and gross, excludes conflicting shifts)
   private var monthlyTotals: (net: Double, gross: Double) {
-    let filteredShifts = shifts.filter { shift in
-      // Skip shifts excluded from totals
-      guard !excludedFromTotalIds.contains(shift.id) else { return false }
-      guard let date = Date.fromISODateString(shift.shiftDate) else { return false }
-      let components = calendar.dateComponents([.year, .month], from: date)
-      return components.year == year && components.month == monthNumber
-    }
-
-    let gross = filteredShifts.reduce(0) { $0 + $1.grossPay }
-    let net = filteredShifts.reduce(0) {
-      $0 + ($1.taxEnabled ? $1.netPay : $1.grossPay)
-    }
-    return (net: net, gross: gross)
-  }
-
-  /// Whether tax is enabled for any shift
-  private var hasTaxEnabled: Bool {
-    shifts.contains { $0.taxEnabled }
+    (net: presentation.monthlyTotals.net, gross: presentation.monthlyTotals.gross)
   }
 
   /// Shifts grouped by ISO date string
   private var shiftsByDate: [String: [ShiftWithComputations]] {
-    var result: [String: [ShiftWithComputations]] = [:]
-    for shift in shifts {
-      result[shift.shiftDate, default: []].append(shift)
-    }
-    return result
+    presentation.shiftsByDate
   }
 
   private var jobsById: [String: Job] {
-    Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
+    presentation.jobsById
   }
 
   private var defaultJobId: String? {
-    jobs.first(where: { $0.is_default })?.id
+    presentation.defaultJobId
   }
 
   private var hasMultipleActiveJobs: Bool {
-    jobs.count > 1
+    presentation.hasMultipleActiveJobs
   }
 
   private var shouldUseWorkplaceCalendarColors: Bool {
@@ -520,21 +456,8 @@ struct ShiftsCalendarView: View {
     return components.year == year && components.month == monthNumber
   }
 
-  private var monthlyIncludedShifts: [ShiftWithComputations] {
-    shifts.filter { shift in
-      guard !excludedFromTotalIds.contains(shift.id) else { return false }
-      guard let date = Date.fromISODateString(shift.shiftDate) else { return false }
-      let components = calendar.dateComponents([.year, .month], from: date)
-      return components.year == year && components.month == monthNumber
-    }
-  }
-
   private var monthlyCurrencyAggregate: JobCurrencyAggregateResolution {
-    JobCurrencyAggregateResolver.resolve(
-      shifts: monthlyIncludedShifts,
-      jobs: jobs,
-      fallbackCurrency: currency
-    )
+    presentation.monthlyCurrencyAggregate
   }
 
   private var canShowMixedCurrencyBreakdown: Bool {
