@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsListView")
@@ -32,8 +33,12 @@ struct SharedShiftsListView: View {
   /// User's own earnings by date (for superimpose feature in earnings mode)
   var userEarningsByDate: [String: CalendarEarningsData]?
 
+  var onPreviousMonth: (() -> Void)?
+  var onNextMonth: (() -> Void)?
+
   var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
 
+  @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.userCurrency) private var currency
 
   // View mode toggle (synced with Shifts tab)
@@ -58,8 +63,13 @@ struct SharedShiftsListView: View {
     UIDevice.current.userInterfaceIdiom == .phone
   }
 
+  private let swipeThreshold: CGFloat = 50
+  private let verticalLimit: CGFloat = 50
+  private let edgeExclusion: CGFloat = 24
+  private let monthSwipeHaptic = UIImpactFeedbackGenerator(style: .medium)
+
   var body: some View {
-    GeometryReader { _ in
+    GeometryReader { geometry in
       ZStack {
         TidexAppBackground()
 
@@ -94,6 +104,7 @@ struct SharedShiftsListView: View {
             )
             .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+            .simultaneousGesture(monthSwipeDragGesture(containerWidth: geometry.size.width))
             Spacer()
           }
           // Offset for month picker overlay so content centers in available space
@@ -121,6 +132,9 @@ struct SharedShiftsListView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .animation(.none, value: showListView)
+    .onAppear {
+      monthSwipeHaptic.prepare()
+    }
     // Using .sheet(item:) guarantees data availability when sheet presents
     .sheet(
       item: $selectedShift,
@@ -154,6 +168,35 @@ struct SharedShiftsListView: View {
         await reportScreenshot()
       }
     }
+  }
+
+  private func monthSwipeDragGesture(containerWidth: CGFloat) -> some Gesture {
+    DragGesture(minimumDistance: 10)
+      .onEnded { value in
+        let horizontal = value.translation.width
+        let vertical = abs(value.translation.height)
+        guard vertical <= verticalLimit else { return }
+        guard abs(horizontal) >= swipeThreshold else { return }
+
+        // Leave edge swipes to NavigationStack interactive pop gesture.
+        let startX = value.startLocation.x
+        guard startX > edgeExclusion && startX < (containerWidth - edgeExclusion) else { return }
+
+        let swipeLeft = horizontal < 0
+        let action: (() -> Void)?
+        if swipeLeft {
+          action = layoutDirection == .rightToLeft ? onPreviousMonth : onNextMonth
+        } else {
+          action = layoutDirection == .rightToLeft ? onNextMonth : onPreviousMonth
+        }
+
+        guard let action else { return }
+
+        AppearanceTracker.shared.reset()
+        monthSwipeHaptic.impactOccurred()
+        monthSwipeHaptic.prepare()
+        action()
+      }
   }
 
   // MARK: - List View
