@@ -1,5 +1,4 @@
--- Function: queue_thread_message_notification
--- Description: Enqueues push notifications for newly inserted thread messages
+-- Remove duplicated sender names from image-only message push bodies.
 
 CREATE OR REPLACE FUNCTION public.queue_thread_message_notification()
 RETURNS trigger

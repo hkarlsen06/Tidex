@@ -56,7 +56,8 @@ struct ProfileSettingsView: View {
 
   /// Prevent conflicting avatar modal presentations from rapid repeated taps
   private var isAvatarActionInProgress: Bool {
-    viewModel.isUploadingAvatar || showAvatarActionDialog || showImageSourcePicker || showGalleryPicker
+    viewModel.isUploadingAvatar || showAvatarActionDialog || showImageSourcePicker
+      || showGalleryPicker
       || showCamera || showCropSheet
   }
 
@@ -814,7 +815,7 @@ struct ProfileSettingsView: View {
   private var dangerZoneSection: some View {
     settingsSection(
       title: String(localized: .profileDangerZoneTitle),
-      titleColor: .tidexError
+      titleColor: .tidexTextSecondary
     ) {
       Text(.profileDangerZoneSubtitle)
         .font(.tidexFootnote)
@@ -840,14 +841,19 @@ struct ProfileSettingsView: View {
           viewModel.showDeleteConfirmation = true
         } label: {
           Text(.profileDangerZoneDeleteAccountButton)
-            .font(.tidexLabelStrong)
-            .foregroundColor(.tidexTextOnDanger)
+            .font(.tidexLabel)
+            .foregroundColor(.tidexError)
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.sm)
-            .background(Color.tidexError)
-            .cornerRadius(CornerRadius.sm)
+            .background(Color.tidexError.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+            .overlay {
+              RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+                .stroke(Color.tidexError.opacity(0.18), lineWidth: 1)
+            }
         }
         .disabled(viewModel.isDeletingAccount)
+        .opacity(viewModel.isDeletingAccount ? 0.55 : 1)
       }
     }
   }
