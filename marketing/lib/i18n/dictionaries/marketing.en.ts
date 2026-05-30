@@ -108,6 +108,6 @@ export const marketingEn = {
     payrollDocs: 'Payroll Documentation',
     privacy: 'Privacy policy',
     terms: 'Terms of use',
-    copyright: '© 2026 Hjalmar Kristensen-Karlsen',
+    copyright: '© 2026 Hjalmar Karlsen',
   },
 } as const;

@@ -70,7 +70,7 @@ final class ShiftSnapshotBuilderTests: XCTestCase {
       jobColorHex: "#FFAA00",
       currency: "kr",
       ownerUserId: ownerUserId,
-      ownerDisplayName: "Hjalmar Samuel",
+      ownerDisplayName: "Hjalmar",
       ownerAvatarUrl: nil
     )
 

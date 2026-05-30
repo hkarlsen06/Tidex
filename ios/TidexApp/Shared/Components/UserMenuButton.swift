@@ -103,7 +103,7 @@ struct UserMenuButton: View {
 
       // Shows "Hjalmar"
       UserMenuButton(
-        displayName: "Hjalmar Samuelsson-Kristensen",
+        displayName: "Hjalmar Karlsen",
         avatarUrl: nil
       )
 
