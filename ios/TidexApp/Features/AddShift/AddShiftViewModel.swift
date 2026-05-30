@@ -1368,7 +1368,9 @@ final class AddShiftViewModel: ObservableObject {
       Haptics.playShiftCreationSuccess()
 
       // Notify that shifts changed (for dashboard refresh)
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(
+        context: .affecting(isoDates: sortedDates)
+      )
 
       // Notify completion
       onShiftsCreated?(.single(dates: Set(sortedDates)))
@@ -1438,7 +1440,9 @@ final class AddShiftViewModel: ObservableObject {
 
       clearForm()
       Haptics.playShiftCreationSuccess()
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(
+        context: .affecting(dateRangeStart: startDate, end: endDate)
+      )
       onShiftsCreated?(.event)
     } catch {
       logger.error("Failed to create event: \(error.localizedDescription)")
@@ -1584,7 +1588,7 @@ final class AddShiftViewModel: ObservableObject {
       Haptics.playShiftCreationSuccess()
 
       // Notify that shifts changed (for dashboard refresh)
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
 
       // Notify completion
       onShiftsCreated?(.recurring)
@@ -1624,7 +1628,7 @@ final class AddShiftViewModel: ObservableObject {
       refreshDistinctShiftTimePairCount(for: userId)
 
       // Notify that shifts changed (for other views like dashboard)
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
 
       return true
     } catch {

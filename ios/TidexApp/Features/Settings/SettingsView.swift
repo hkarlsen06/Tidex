@@ -1310,7 +1310,7 @@ private struct RecurringShiftsSettingsView: View {
       )
 
       await loadRecurringShifts()
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
       Haptics.play(.success)
     } catch {
       logger.error("Failed to update recurring shift from settings: \(error.localizedDescription)")
@@ -1322,7 +1322,7 @@ private struct RecurringShiftsSettingsView: View {
     do {
       try await RecurringShiftsRepository.shared.deleteRecurringShift(id: recurringId)
       await loadRecurringShifts()
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
       Haptics.play(.success)
     } catch {
       logger.error("Failed to delete recurring shift from settings: \(error.localizedDescription)")

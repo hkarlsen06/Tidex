@@ -87,22 +87,6 @@ private struct MonthCacheEntry {
   }
 }
 
-/// Lightweight prefetch cache entry - stores raw shift data without payroll computation
-/// This allows fast prefetching without expensive PayrollEngine calls
-private struct PrefetchCacheEntry {
-  let year: Int
-  let month: Int
-  let rawShifts: [ShiftRow]
-  let timestamp: Date
-
-  var key: String { "\(year)-\(month)" }
-
-  /// Check if prefetch entry is still valid (within 10 minutes)
-  var isValid: Bool {
-    Date().timeIntervalSince(timestamp) < 600  // 10 minutes
-  }
-}
-
 /// Cached selection summary for quick header rendering.
 private struct SelectionSummary {
   let net: Double
@@ -135,6 +119,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   private let settingsRepository: SettingsRepository
   private let snapshotsRepository: SnapshotsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
+  private let monthlyPayrollReadService: MonthlyPayrollReadService
   private let syncCoordinator: SyncCoordinator
   private let monthContext: SharedMonthContext
 
@@ -472,6 +457,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   private var snapshots: [WageSnapshot] = []
   private var recurringShifts: [RecurringShiftRow] = []
   private var cachedUserId: String?
+  private var isActiveTabVisible = true
+  private var displayedMonthLoadPending = false
 
   /// Subscription to SharedMonthContext changes
   private var monthContextCancellable: AnyCancellable?
@@ -485,10 +472,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Cache of computed shifts by month key (e.g., "2025-1")
   private var monthCache: [String: MonthCacheEntry] = [:]
 
-  /// Lightweight prefetch cache - stores raw shifts without payroll computation
-  /// Payroll is computed lazily when the month becomes visible
-  private var prefetchCache: [String: PrefetchCacheEntry] = [:]
-
   /// Maximum number of months to keep in cache (prevents unbounded memory growth)
   private static let maxCacheSize = 12
 
@@ -501,8 +484,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Shift reminder tap observer for deep linking
   private var shiftReminderObserver: NSObjectProtocol?
 
+  /// Whether cached month data must be rebuilt from local storage before reuse.
+  private var localDataNeedsReload = false
+
   /// Cross-tab shift/event change observer.
   private var shiftsDidChangeObserver: NSObjectProtocol?
+
+  /// In-flight local reload shared by notification and tab-entry callers.
+  private var localReloadTask: Task<Void, Never>?
+  private var localReloadID: UUID?
 
   /// Track active navigation task to cancel stale fetches
   private var activeNavigationTask: Task<Void, Never>?
@@ -516,6 +506,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
+    monthlyPayrollReadService: MonthlyPayrollReadService? = nil,
     syncCoordinator: SyncCoordinator? = nil,
     monthContext: SharedMonthContext? = nil
   ) {
@@ -526,6 +517,16 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
+    self.monthlyPayrollReadService =
+      monthlyPayrollReadService
+      ?? MonthlyPayrollReadService(
+        shiftsRepository: self.shiftsRepository,
+        eventsRepository: self.eventsRepository,
+        settingsRepository: self.settingsRepository,
+        snapshotsRepository: self.snapshotsRepository,
+        recurringShiftsRepository: self.recurringShiftsRepository,
+        jobsRepository: self.jobsRepository
+      )
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
     self.monthContext = monthContext ?? SharedMonthContext.shared
 
@@ -575,7 +576,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         if let sender = notification.object as AnyObject?, sender === self {
           return
         }
-        await self.reloadFromLocal()
+        await self.handleExternalShiftsDidChange(notification.shiftChangeContext)
       }
     }
   }
@@ -600,6 +601,12 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         // Sync navigation direction from context
         self.navigationDirection = self.monthContext.navigationDirection
 
+        guard self.isActiveTabVisible else {
+          self.displayedMonthLoadPending = true
+          logger.info("⏸️ Deferring schedule month load while Schedule tab is hidden")
+          return
+        }
+
         // Trigger data reload for new month
         self.loadShiftsForDisplayedMonthNonBlocking()
       }
@@ -608,6 +615,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   deinit {
     // Cancel Combine subscriptions to prevent memory leaks
     monthContextCancellable?.cancel()
+    localReloadTask?.cancel()
     activeNavigationTask?.cancel()
     for task in prefetchTasks.values {
       task.cancel()
@@ -629,10 +637,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Handle memory warning by clearing the cache
   private func handleMemoryWarning() {
     logger.warning(
-      "⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries) and prefetch cache (\(self.prefetchCache.count) entries)"
+      "⚠️ Memory warning received - clearing month cache (\(self.monthCache.count) entries)"
     )
     monthCache.removeAll()
-    prefetchCache.removeAll()
     cancelPrefetchTasks()
   }
 
@@ -799,7 +806,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       clearSelection()
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(
+        context: .affecting(
+          isoDates: shiftsToDelete.map(\.shiftDate)
+        ))
 
       // Play deletion feedback
       Haptics.playShiftDeleted()
@@ -939,7 +949,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Reload to show the new shift
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: .affecting(isoDates: sortedTargetDates))
 
     } catch ShiftCreationError.monthLimitReached(let months) {
       existingShiftMonths = months
@@ -995,7 +1005,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       logger.info("Deleted \(deletedCount) shifts in other months before copying")
       existingShiftMonths.removeAll()
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: .fullReload)
       return true
     } catch {
       logger.error("Failed to delete shifts in other months: \(error.localizedDescription)")
@@ -1119,7 +1129,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Reload to show the moved shift
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(
+        context: .affecting(
+          isoDates: [sourceShift.shiftDate, targetDateISO]
+        ))
 
     } catch {
       logger.error("Failed to move shift: \(error.localizedDescription)")
@@ -1159,7 +1172,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: .fullReload)
 
     } catch {
       logger.error("❌ Failed to update recurring shift: \(error.localizedDescription)")
@@ -1189,7 +1202,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: .fullReload)
 
     } catch {
       logger.error("❌ Failed to delete recurring shift: \(error.localizedDescription)")
@@ -1217,6 +1230,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     isUpdatingEvent = true
     defer { isUpdatingEvent = false }
     logger.info("📝 Updating event \(editResult.eventId)")
+    let existingEvent = events.first(where: { $0.id == editResult.eventId })
 
     guard
       let startDate = Date.fromISODateString(editResult.startDate),
@@ -1247,7 +1261,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       }
 
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(
+        context: eventChangeContext(
+          for: editResult,
+          existingEvent: existingEvent
+        ))
     } catch {
       logger.error("❌ Failed to update event: \(error.localizedDescription)")
       throw error
@@ -1264,7 +1282,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     try await eventsRepository.deleteEvent(id: event.id)
     await reloadFromLocal()
-    notifyShiftsDidChange()
+    notifyShiftsDidChange(
+      context: .affecting(
+        isoDateRangeStart: event.start_date,
+        end: event.end_date
+      ))
   }
 
   // MARK: - Shift Editing
@@ -1385,7 +1407,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
 
       // Post notification for other views
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(
+        context: shiftChangeContext(
+          for: editResult,
+          existingShift: currentShift
+        ))
 
     } catch {
       logger.error("❌ Failed to update shift: \(error.localizedDescription)")
@@ -1400,6 +1426,18 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     defer { isUpdatingShift = false }
 
     logger.info("⏸️ Updating shift pause windows")
+    let changeContext: ShiftChangeContext
+
+    switch editResult.target {
+    case .standalone(let shiftId):
+      if let shift = shifts.first(where: { $0.id == shiftId }) {
+        changeContext = .affecting(isoDate: shift.shiftDate)
+      } else {
+        changeContext = .fullReload
+      }
+    case .recurringOccurrence(_, let date):
+      changeContext = .affecting(isoDate: date)
+    }
 
     do {
       switch editResult.target {
@@ -1431,7 +1469,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       }
 
       await reloadFromLocal()
-      notifyShiftsDidChange()
+      notifyShiftsDidChange(context: changeContext)
     } catch {
       logger.error("❌ Failed to update shift pause windows: \(error.localizedDescription)")
     }
@@ -1453,40 +1491,89 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     self.committedMonth = month
   }
 
-  private func notifyShiftsDidChange() {
-    NotificationCenter.default.post(name: .shiftsDidChange, object: self)
+  private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {
+    NotificationCenter.default.postShiftsDidChange(object: self, context: context)
+  }
+
+  private func shiftChangeContext(
+    for editResult: ShiftEditResult,
+    existingShift: ShiftRow?
+  ) -> ShiftChangeContext {
+    var dates = [editResult.shiftDate, editResult.originalDate]
+
+    if let existingShift {
+      dates.append(existingShift.shift_date)
+    }
+
+    return .affecting(isoDates: dates)
+  }
+
+  private func eventChangeContext(
+    for editResult: EventEditResult,
+    existingEvent: EventRow?
+  ) -> ShiftChangeContext {
+    var context = ShiftChangeContext.affecting(
+      isoDateRangeStart: editResult.startDate,
+      end: editResult.endDate
+    )
+
+    if let existingEvent {
+      context = context.merging(
+        .affecting(
+          isoDateRangeStart: existingEvent.start_date,
+          end: existingEvent.end_date
+        ))
+    }
+
+    return context
+  }
+
+  @discardableResult
+  private func applyCachedDisplayedMonthIfValid(year: Int, month: Int) -> Bool {
+    let displayKey = "\(year)-\(month)"
+
+    guard var displayCache = monthCache[displayKey], displayCache.isValid else {
+      return false
+    }
+
+    logger.info("📦 Using cached computed data for \(displayKey)")
+
+    // Calculate conflict detection first (needed for week totals)
+    updateConflictDetection(for: displayCache.shifts)
+
+    // ATOMIC UPDATE: Set shifts and committed state together
+    // This ensures the calendar structure and event data update in the same render pass.
+    applyCommittedMonthSnapshot(
+      shifts: displayCache.shifts,
+      events: displayCache.events,
+      year: year,
+      month: month
+    )
+
+    if self.isCurrentMonth {
+      updateNextUpcomingShift(for: displayCache.shifts)
+    }
+
+    // Update last accessed time for LRU tracking
+    displayCache.lastAccessed = Date()
+    monthCache[displayKey] = displayCache
+
+    return true
   }
 
   private func loadShiftsForDisplayedMonthNonBlocking() {
+    guard isActiveTabVisible else {
+      displayedMonthLoadPending = true
+      logger.info("⏸️ Deferring schedule month load while Schedule tab is hidden")
+      return
+    }
+
     let targetYear = displayYear
     let targetMonth = displayMonth
     let displayKey = "\(targetYear)-\(targetMonth)"
 
     // Check if we have valid computed cache for displayed month
-    if var displayCache = monthCache[displayKey], displayCache.isValid {
-      // Use cached computed data - instant navigation!
-      logger.info("📦 Using cached computed data for \(displayKey)")
-
-      // Calculate conflict detection first (needed for week totals)
-      updateConflictDetection(for: displayCache.shifts)
-
-      // ATOMIC UPDATE: Set shifts and committed state together
-      // This ensures the calendar structure and event data update in the same render pass.
-      applyCommittedMonthSnapshot(
-        shifts: displayCache.shifts,
-        events: displayCache.events,
-        year: targetYear,
-        month: targetMonth
-      )
-
-      if self.isCurrentMonth {
-        updateNextUpcomingShift(for: displayCache.shifts)
-      }
-
-      // Update last accessed time for LRU tracking
-      displayCache.lastAccessed = Date()
-      monthCache[displayKey] = displayCache
-
+    if applyCachedDisplayedMonthIfValid(year: targetYear, month: targetMonth) {
       // Still prefetch neighbors in background
       prefetchNeighboringMonths()
       return
@@ -1547,6 +1634,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Load all shifts data for current month (initial load)
   /// Reads from local repositories only - sync is triggered by AppCoordinator
   func loadShifts() async {
+    guard isActiveTabVisible else {
+      displayedMonthLoadPending = true
+      return
+    }
+
     // Sync tracking with current month context values
     lastObservedYear = monthContext.displayYear
     lastObservedMonth = monthContext.displayMonth
@@ -1554,12 +1646,17 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     // Clear all caches on full reload (including cachedUserId for impersonation support)
     monthCache.removeAll()
-    prefetchCache.removeAll()
     cancelPrefetchTasks()
     cachedUserId = nil
     activeJobs = []
 
-    await loadShiftsFromLocal()
+    if await loadShiftsFromLocal() {
+      localDataNeedsReload = false
+      displayedMonthLoadPending = false
+    }
+
+    // Seed adjacent months after the initial local load so first navigation can use cache.
+    prefetchNeighboringMonths()
   }
 
   /// Refresh shifts data via sync then local reload
@@ -1606,7 +1703,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
       // Clear in-memory caches so we pick up synced data
       monthCache.removeAll()
-      prefetchCache.removeAll()
       cancelPrefetchTasks()
       settings = nil
       snapshots = []
@@ -1614,7 +1710,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       activeJobs = []
 
       // Reload from local repositories
-      await loadShiftsFromLocal()
+      if await loadShiftsFromLocal() {
+        localDataNeedsReload = false
+      }
 
       // Prefetch neighboring months
       prefetchNeighboringMonths()
@@ -1635,12 +1733,32 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Reload shifts from local data without triggering sync
   /// Called when shifts change locally (e.g., after adding a shift)
   func reloadFromLocal() async {
+    guard isActiveTabVisible else {
+      markLocalDataStale()
+      return
+    }
+
+    let reloadID = UUID()
+    let task: Task<Void, Never> = Task { @MainActor [weak self] in
+      guard let self else { return }
+      await self.performReloadFromLocal()
+    }
+
+    localReloadTask = task
+    localReloadID = reloadID
+    await task.value
+    if localReloadID == reloadID {
+      localReloadTask = nil
+      localReloadID = nil
+    }
+  }
+
+  private func performReloadFromLocal() async {
     logger.info("🔄 Reloading shifts from local data")
 
     // Clear all caches to pick up new data
     // Also critical for impersonation: cachedUserId must be refreshed from current session
     monthCache.removeAll()
-    prefetchCache.removeAll()
     cancelPrefetchTasks()
     cachedUserId = nil  // Force re-fetch user ID from session (critical for impersonation)
     activeJobs = []
@@ -1649,18 +1767,180 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     recurringShifts = []
 
     // Reload from local repositories
-    await loadShiftsFromLocal()
+    let didReload = await loadShiftsFromLocal()
+    localDataNeedsReload = !didReload
+    if didReload {
+      displayedMonthLoadPending = false
+    }
 
     // Prefetch neighboring months
-    prefetchNeighboringMonths()
+    if didReload {
+      prefetchNeighboringMonths()
+    }
 
-    logger.info("✅ Shifts reloaded from local")
+    if didReload {
+      logger.info("✅ Shifts reloaded from local")
+    } else {
+      logger.warning("⚠️ Shifts local reload did not complete")
+    }
+  }
+
+  func markLocalDataStale() {
+    localDataNeedsReload = true
+    displayedMonthLoadPending = true
+  }
+
+  func handleExternalShiftsDidChange(_ context: ShiftChangeContext) async {
+    guard context.canUseTargetedInvalidation else {
+      markLocalDataStale()
+      guard isActiveTabVisible else { return }
+      await reloadFromLocal()
+      return
+    }
+
+    let affectedKeys = scheduleCacheKeysAffected(by: context.affectedMonths)
+    invalidateMonthCacheEntries(for: affectedKeys, reason: "shift-change")
+
+    let currentDisplayKey = monthCacheKey(year: displayYear, month: displayMonth)
+    guard affectedKeys.contains(currentDisplayKey) else {
+      return
+    }
+
+    displayedMonthLoadPending = true
+    guard isActiveTabVisible else { return }
+    await reloadFromLocalIfStale()
+  }
+
+  private func monthCacheKey(year: Int, month: Int) -> String {
+    "\(year)-\(month)"
+  }
+
+  private func monthCacheKey(_ month: ShiftChangeAffectedMonth) -> String {
+    monthCacheKey(year: month.year, month: month.month)
+  }
+
+  private func scheduleCacheKeysAffected(
+    by affectedMonths: Set<ShiftChangeAffectedMonth>
+  ) -> Set<String> {
+    Set(
+      HomeScheduleAffectedMonthResolver.scheduleDisplayMonthsAffected(by: affectedMonths)
+        .map(monthCacheKey)
+    )
+  }
+
+  private func invalidateMonthCacheEntries(for keys: Set<String>, reason: String) {
+    guard !keys.isEmpty else { return }
+
+    var removedCount = 0
+    for key in keys {
+      if monthCache.removeValue(forKey: key) != nil {
+        removedCount += 1
+      }
+      prefetchTasks.removeValue(forKey: key)?.cancel()
+    }
+
+    if removedCount > 0 {
+      logger.info("♻️ Invalidated \(removedCount) schedule cache entries (\(reason))")
+    }
+  }
+
+  func setActiveTabVisible(_ isVisible: Bool) {
+    guard isActiveTabVisible != isVisible else { return }
+
+    isActiveTabVisible = isVisible
+
+    if !isVisible {
+      activeNavigationTask?.cancel()
+      cancelPrefetchTasks()
+      isLoading = false
+      return
+    }
+
+    let displayKey = "\(displayYear)-\(displayMonth)"
+    let hasValidDisplayedCache = monthCache[displayKey]?.isValid == true
+    let committedMatchesDisplayed = committedYear == displayYear && committedMonth == displayMonth
+    if localDataNeedsReload || displayedMonthLoadPending || !hasValidDisplayedCache
+      || !committedMatchesDisplayed
+    {
+      Task {
+        await reloadFromLocalIfStale()
+      }
+    }
+  }
+
+  /// Reload local storage only when an external change made cached month data stale.
+  /// Used on Schedule tab re-entry to preserve hot month cache when nothing changed.
+  func reloadFromLocalIfStale() async {
+    guard isActiveTabVisible else {
+      displayedMonthLoadPending = true
+      return
+    }
+
+    if let localReloadTask {
+      await localReloadTask.value
+      return
+    }
+
+    guard localDataNeedsReload else {
+      let targetYear = displayYear
+      let targetMonth = displayMonth
+
+      if applyCachedDisplayedMonthIfValid(year: targetYear, month: targetMonth) {
+        logger.info("📦 Preserved valid schedule cache on tab re-entry")
+        displayedMonthLoadPending = false
+        prefetchNeighboringMonths()
+        return
+      }
+
+      logger.info("🔄 Schedule cache unavailable on tab re-entry, loading displayed month")
+      await loadShiftsForDisplayedMonth(
+        showLoadingState: false,
+        targetYear: targetYear,
+        targetMonth: targetMonth
+      )
+      displayedMonthLoadPending = false
+      prefetchNeighboringMonths()
+      return
+    }
+
+    await reloadFromLocal()
   }
 
   // MARK: - Private Loading Methods
 
+  private func loadScheduleDependencies(for userId: String, forceReload: Bool = false) {
+    guard
+      forceReload || settings == nil || snapshots.isEmpty || recurringShifts.isEmpty
+        || activeJobs.isEmpty
+    else {
+      return
+    }
+
+    let context = monthlyPayrollReadService.loadContext(for: userId)
+
+    if forceReload || settings == nil {
+      settings = context.settings
+      if let userSettings = settings {
+        currency = userSettings.currency ?? "kr"
+      }
+    }
+
+    if forceReload || snapshots.isEmpty {
+      snapshots = context.snapshots
+    }
+
+    if forceReload || recurringShifts.isEmpty {
+      recurringShifts = context.recurringShifts
+    }
+
+    if forceReload || activeJobs.isEmpty {
+      activeJobs = context.jobs
+    }
+  }
+
   /// Load shifts data from local repositories
-  private func loadShiftsFromLocal() async {
+  @discardableResult
+  private func loadShiftsFromLocal() async -> Bool {
     isLoading = true
     error = nil
 
@@ -1677,44 +1957,22 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         throw ShiftsError.notAuthenticated
       }
 
-      activeJobs = jobsRepository.getNonDeletedJobs(for: userId)
-
-      // Load settings from local store
-      if settings == nil {
-        settings = settingsRepository.getSettings(for: userId)
-        logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
-        if let userSettings = settings {
-          currency = userSettings.currency ?? "kr"
-        }
-      }
-
-      // Load snapshots from local store
-      if snapshots.isEmpty {
-        snapshots = snapshotsRepository.getSnapshots(for: userId)
-        logger.info("📋 Loaded snapshots: \(self.snapshots.count)")
-      }
-
-      // Load recurring shifts from local store
-      if recurringShifts.isEmpty {
-        recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId)
-        logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
-      }
+      loadScheduleDependencies(for: userId)
+      logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
+      logger.info("📋 Loaded snapshots: \(self.snapshots.count)")
+      logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
 
       // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
       let displayYM = (year: displayYear, month: displayMonth)
       let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
-      // Load shifts for the full visible calendar range (so out-of-month days show shift data)
-      let displayShifts = await shiftsRepository.getShiftsOffMain(
+      // Load raw data for the full visible calendar range (so out-of-month days show data)
+      let displayWindowData = await monthlyPayrollReadService.loadRawWindow(
         for: userId,
-        startDate: visibleRange.start,
-        endDate: visibleRange.end
+        window: .visibleCalendarMonth(year: displayYM.year, month: displayYM.month)
       )
-      let displayEvents = await eventsRepository.getEventsOffMain(
-        for: userId,
-        startDate: visibleRange.start,
-        endDate: visibleRange.end
-      )
+      let displayShifts = displayWindowData.shifts
+      let displayEvents = displayWindowData.events
       logger.info(
         "📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")
       logger.info(
@@ -1724,7 +1982,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       guard let currentSettings = self.settings else {
         logger.info("📭 No local settings yet - waiting for sync (userId: \(userId))")
         self.isLoading = false
-        return
+        return false
       }
 
       let recurringSnapshot = recurringShifts
@@ -1780,12 +2038,16 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         "📊 Loaded shifts from local: \(computedShifts.count) shifts, \(self.weekGroups.count) weeks"
       )
 
+      return true
+
     } catch is CancellationError {
       logger.info("⏭️ Load cancelled (user navigated away)")
+      return false
     } catch {
       logger.error("❌ Shifts local load failed: \(error.localizedDescription)")
       self.error = ShiftsError.dataLoadFailed(underlying: error)
       self.isLoading = false
+      return false
     }
   }
 
@@ -1819,39 +2081,19 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         throw ShiftsError.notAuthenticated
       }
 
-      activeJobs = jobsRepository.getNonDeletedJobs(for: userId)
-
-      // Load settings and snapshots from local if not cached
-      if settings == nil {
-        settings = settingsRepository.getSettings(for: userId)
-        if let userSettings = settings {
-          currency = userSettings.currency ?? "kr"
-        }
-      }
-
-      if snapshots.isEmpty {
-        snapshots = snapshotsRepository.getSnapshots(for: userId)
-      }
-
-      if recurringShifts.isEmpty {
-        recurringShifts = recurringShiftsRepository.getRecurringShifts(for: userId)
-      }
+      loadScheduleDependencies(for: userId)
 
       // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
       let displayYM = (year: loadYear, month: loadMonth)
       let visibleRange = Date.visibleCalendarRange(year: displayYM.year, month: displayYM.month)
 
-      // Load shifts for the full visible calendar range (so out-of-month days show shift data)
-      let displayShifts = await shiftsRepository.getShiftsOffMain(
+      // Load raw data for the full visible calendar range (so out-of-month days show data)
+      let displayWindowData = await monthlyPayrollReadService.loadRawWindow(
         for: userId,
-        startDate: visibleRange.start,
-        endDate: visibleRange.end
+        window: .visibleCalendarMonth(year: displayYM.year, month: displayYM.month)
       )
-      let displayEvents = await eventsRepository.getEventsOffMain(
-        for: userId,
-        startDate: visibleRange.start,
-        endDate: visibleRange.end
-      )
+      let displayShifts = displayWindowData.shifts
+      let displayEvents = displayWindowData.events
 
       // Ensure settings are available
       guard let currentSettings = self.settings else {
@@ -2008,6 +2250,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   /// Prefetch neighboring months in the background
   private func prefetchNeighboringMonths() {
+    guard isActiveTabVisible else { return }
+
     let displayYM = (year: displayYear, month: displayMonth)
 
     // Calculate previous and next months
@@ -2047,16 +2291,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       // Get visible calendar range (includes out-of-month padding days)
       let visibleRange = Date.visibleCalendarRange(year: year, month: month)
 
-      // Read shifts for the full visible calendar range
-      let fetchedShifts = await shiftsRepository.getShiftsOffMain(
+      // Read raw data for the full visible calendar range
+      let fetchedWindow = await monthlyPayrollReadService.loadRawWindow(
         for: userId,
-        startDate: visibleRange.start,
-        endDate: visibleRange.end
-      )
-      let fetchedEvents = await eventsRepository.getEventsOffMain(
-        for: userId,
-        startDate: visibleRange.start,
-        endDate: visibleRange.end
+        window: .visibleCalendarMonth(year: year, month: month)
       )
 
       let recurringSnapshot = self.recurringShifts
@@ -2069,7 +2307,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           MonthComputationInput(
             year: year,
             month: month,
-            shifts: fetchedShifts,
+            shifts: fetchedWindow.shifts,
             recurringShifts: recurringSnapshot,
             snapshots: snapshotsSnapshot,
             settings: currentSettings,
@@ -2088,7 +2326,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           year: year,
           month: month,
           shifts: computedShifts,
-          events: fetchedEvents,
+          events: fetchedWindow.events,
           visibleRange: visibleRange,
           timestamp: Date()
         )

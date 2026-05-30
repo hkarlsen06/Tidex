@@ -197,6 +197,7 @@ struct ShiftsView: View {
   }
 
   private func loadShiftsContent() async {
+    guard selectedTab == .shifts else { return }
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }
     await calendarSubscriptionStore.refreshIfNeeded()
     await viewModel.loadShifts()
@@ -295,6 +296,7 @@ struct ShiftsView: View {
     AnyView(
       baseBody
         .task {
+          viewModel.setActiveTabVisible(selectedTab == .shifts)
           refreshWorkSetupPresentationState()
           await loadShiftsContent()
         }
@@ -307,43 +309,50 @@ struct ShiftsView: View {
             }
           }
           guard completed else { return }
+          viewModel.markLocalDataStale()
+          guard selectedTab == .shifts else { return }
           Task {
             await viewModel.reloadFromLocal()
           }
         }
         .onChange(of: coordinator.userId) { _, _ in
           refreshWorkSetupPresentationState()
+          viewModel.markLocalDataStale()
+          guard selectedTab == .shifts else { return }
+          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          Task {
+            await viewModel.reloadFromLocal()
+          }
         }
         .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
           let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
-          guard shouldLoadAfterSetupCompleted else { return }
-          Task {
-            await loadShiftsContent()
-          }
-        }
-        .onChange(of: syncStatusManager.lastSuccessfulSync) { oldValue, newValue in
+          viewModel.markLocalDataStale()
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-          guard oldValue != nil, newValue != nil else { return }
+          if shouldLoadAfterSetupCompleted {
+            Task {
+              await loadShiftsContent()
+            }
+            return
+          }
           guard selectedTab == .shifts else { return }
           Task {
             await viewModel.reloadFromLocal()
           }
         }
-        .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { notification in
+        .onChange(of: syncStatusManager.lastSuccessfulSync) { oldValue, newValue in
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-          guard (notification.object as AnyObject?) !== viewModel else { return }
-          // Reload shifts when they change (e.g., after adding a shift)
+          guard oldValue != nil, newValue != nil else { return }
+          viewModel.markLocalDataStale()
+          guard selectedTab == .shifts else { return }
           Task {
             await viewModel.reloadFromLocal()
           }
         }
         .onChange(of: selectedTab) { oldTab, newTab in
+          viewModel.setActiveTabVisible(newTab == .shifts)
           guard newTab == .shifts, oldTab != .shifts else { return }
           refreshWorkSetupPresentationState()
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
-          Task {
-            await viewModel.reloadFromLocal()
-          }
           if oldTab == .add {
             tabTransitionOffset = -28
             tabTransitionOpacity = 0.92
@@ -354,7 +363,9 @@ struct ShiftsView: View {
           }
         }
         .onAppear {
+          viewModel.setActiveTabVisible(selectedTab == .shifts)
           refreshWorkSetupPresentationState()
+          guard selectedTab == .shifts else { return }
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }
           recomputeListDerivedDataIfNeeded()
         }
@@ -1073,7 +1084,9 @@ struct ShiftsView: View {
       }
 
       // Post notification for other views
-      NotificationCenter.default.post(name: .shiftsDidChange, object: nil)
+      NotificationCenter.default.postShiftsDidChange(
+        context: .affecting(isoDate: shift.shiftDate)
+      )
 
       shiftToDelete = nil
     } catch {
