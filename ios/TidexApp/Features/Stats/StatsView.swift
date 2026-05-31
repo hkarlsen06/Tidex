@@ -150,33 +150,29 @@ struct StatsView: View {
   private func statsContent(stats: StatsData) -> some View {
     ScrollViewReader { _ in
       ScrollView {
-        VStack(spacing: Spacing.md) {
+        VStack(spacing: Spacing.lg) {
           Color.clear.frame(height: 0).id("stats-top")
 
           if viewModel.shouldShowJobFilter {
             statsJobFilterRow
           }
 
-          sectionHeader(.statsSectionOverview)
-
-          // Monthly Earnings Card (large)
           let currentMonthAggregate = stats.currentMonthCurrencyAggregate
           let usesMixedCurrency = currentMonthAggregate?.hasMixedCurrency == true
           let breakdownEntries = currentMonthAggregate?.secondary ?? []
           let monthlyCardCurrency = currentMonthAggregate?.primary.currency ?? viewModel.currency
 
-          MonthlyEarningsCard(
-            grossEarnings: stats.currentMonth.totalEarnings,
-            netEarnings: stats.currentMonth.totalEarningsNet,
-            taxEnabled: stats.tax.enabled,
-            percentageChange: stats.percentageChange,
-            onTap: {
+          StatsOverviewLedger(
+            stats: stats,
+            showsCurrencyBreakdown: usesMixedCurrency && !breakdownEntries.isEmpty,
+            onEarningsTap: {
               if usesMixedCurrency && !breakdownEntries.isEmpty {
                 selectionHaptic.selectionChanged()
                 showMixedCurrencyBreakdownPopover.toggle()
-              } else {
-                openMonthlyGoalEditor()
               }
+            },
+            onGoalTap: {
+              openMonthlyGoalEditor()
             }
           )
           .userCurrency(monthlyCardCurrency)
@@ -185,56 +181,39 @@ struct StatsView: View {
               .presentationCompactAdaptation(.popover)
           }
 
-          // Hours and Shifts cards (side by side)
-          HStack(spacing: Spacing.sm) {
-            HoursStatCard(hours: stats.currentMonth.totalHours)
-            ShiftsStatCard(count: stats.currentMonth.shiftCount)
-          }
-
-          // Monthly Goal Card
-          Group {
-            if stats.monthlyGoal.enabled {
-              MonthlyGoalCard(
-                goal: stats.monthlyGoal,
-                onTap: { openMonthlyGoalEditor() }
-              )
-            } else {
-              MonthlyGoalEmptyCard(onTap: { openMonthlyGoalEditor() })
-            }
-          }
-          .frame(minHeight: 140, alignment: .top)
-
           sectionHeader(.statsSectionCharts)
 
-          // Weekly Chart (This Week or Best Week)
-          weeklyChartSection(stats: stats)
-            .frame(minHeight: 260, alignment: .top)
+          VStack(spacing: Spacing.md) {
+            // Weekly Chart (This Week or Best Week)
+            weeklyChartSection(stats: stats)
+              .frame(minHeight: 260, alignment: .top)
 
-          // Monthly Progress Chart
-          Group {
-            if !stats.thisMonthCumulative.isEmpty {
-              MonthlyProgressChart(data: stats.thisMonthCumulative)
-            } else {
-              MonthlyProgressChartEmpty()
+            // Monthly Progress Chart
+            Group {
+              if !stats.thisMonthCumulative.isEmpty {
+                MonthlyProgressChart(data: stats.thisMonthCumulative)
+              } else {
+                MonthlyProgressChartEmpty()
+              }
             }
-          }
-          .frame(minHeight: 280, alignment: .top)
-
-          // Yearly Income Chart
-          yearlyIncomeChartSection(stats: stats)
             .frame(minHeight: 280, alignment: .top)
 
-          // Employment Percentage Chart
-          Group {
-            if let employment = stats.employment,
-              employment.monthlyData.contains(where: { $0.averagePercentage > 0 })
-            {
-              EmploymentPercentageChart(data: employment)
-            } else {
-              EmploymentPercentageChartEmpty()
+            // Yearly Income Chart
+            yearlyIncomeChartSection(stats: stats)
+              .frame(minHeight: 280, alignment: .top)
+
+            // Employment Percentage Chart
+            Group {
+              if let employment = stats.employment,
+                employment.monthlyData.contains(where: { $0.averagePercentage > 0 })
+              {
+                EmploymentPercentageChart(data: employment)
+              } else {
+                EmploymentPercentageChartEmpty()
+              }
             }
+            .frame(minHeight: 280, alignment: .top)
           }
-          .frame(minHeight: 280, alignment: .top)
 
           PrimaryButton(title: String(localized: .dataExportPdfButton)) {
             showExportSettings = true
@@ -326,6 +305,11 @@ struct StatsView: View {
         Button(String(localized: .commonCancel), role: .cancel) {}
       }
     }
+    .statsPanelSurface(
+      padding: Spacing.sm,
+      cornerRadius: CornerRadius.xxl,
+      shadowLevel: .subtle
+    )
     // Keep filter control styling stable while stats cards animate numeric transitions.
     .transaction { transaction in
       transaction.disablesAnimations = true
@@ -484,6 +468,317 @@ struct StatsView: View {
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .padding()
+  }
+}
+
+private struct StatsOverviewLedger: View {
+  let stats: StatsData
+  let showsCurrencyBreakdown: Bool
+  let onEarningsTap: () -> Void
+  let onGoalTap: () -> Void
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.userCurrency) private var currency
+
+  private var mainDisplayValue: Double {
+    stats.tax.enabled ? stats.currentMonth.totalEarningsNet : stats.currentMonth.totalEarnings
+  }
+
+  private var showBeforeTaxRow: Bool {
+    stats.tax.enabled && stats.currentMonth.totalEarnings != stats.currentMonth.totalEarningsNet
+  }
+
+  private var hasChange: Bool {
+    stats.percentageChange != nil && stats.percentageChange != 0
+  }
+
+  private var isPositiveChange: Bool {
+    (stats.percentageChange ?? 0) >= 0
+  }
+
+  private var changeText: String {
+    let change = stats.percentageChange ?? 0
+    let prefix: String
+
+    if change > 0 {
+      prefix = "+"
+    } else if change < 0 {
+      prefix = "-"
+    } else {
+      prefix = ""
+    }
+
+    return
+      "\(prefix)\(Int(abs(change)))% \(String(localized: .statsFromPreviousMonth))"
+  }
+
+  private var clampedGoalPercentage: Double {
+    min(max(stats.monthlyGoal.percentage, 0), 100)
+  }
+
+  private var goalReached: Bool {
+    stats.monthlyGoal.progress >= stats.monthlyGoal.target && stats.monthlyGoal.enabled
+  }
+
+  private var goalStatusText: String {
+    guard stats.monthlyGoal.enabled else {
+      return String(localized: .statsMonthlyGoalNotEnabled)
+    }
+
+    let overAmount = max(stats.monthlyGoal.progress - stats.monthlyGoal.target, 0)
+    if overAmount > 0 {
+      return String(localized: .statsMonthlyGoalOverTarget(formatCurrency(overAmount)))
+    }
+
+    if goalReached {
+      return String(localized: .statsMonthlyGoalGoalReached)
+    }
+
+    return String(
+      localized: .statsMonthlyGoalRemaining(formatCurrency(stats.monthlyGoal.remaining)))
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.mlg) {
+      earningsHeader
+
+      Divider()
+        .overlay(Color.tidexBorderSubtle.opacity(0.55))
+
+      metricStrip
+
+      Divider()
+        .overlay(Color.tidexBorderSubtle.opacity(0.55))
+
+      goalPanel
+    }
+    .statsPanelSurface(
+      padding: Spacing.lg,
+      cornerRadius: CornerRadius.card,
+      shadowLevel: .card
+    )
+  }
+
+  @ViewBuilder
+  private var earningsHeader: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      HStack(alignment: .top, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+          Text(.statsMonthlyEarnings)
+            .font(.tidexLabelStrong)
+            .foregroundColor(.tidexTextSecondary)
+
+          CurrencyCountUpText(
+            amount: mainDisplayValue,
+            animateOnAppear: false,
+            animateChanges: false
+          )
+          .font(.tidexAmountDisplay)
+          .foregroundColor(.tidexTextPrimary)
+          .minimumScaleFactor(0.45)
+          .lineLimit(1)
+
+          if stats.tax.enabled {
+            Text(String(localized: .statsAfterTax).lowercased())
+              .font(.tidexSubheadline)
+              .foregroundColor(.tidexTextSecondary)
+          }
+        }
+
+        Spacer(minLength: Spacing.sm)
+
+        if showsCurrencyBreakdown {
+          Button(action: onEarningsTap) {
+            Image(systemName: "ellipsis.circle")
+              .font(.tidexTitle2)
+              .foregroundColor(.tidexTextMuted)
+              .frame(width: 44, height: 44)
+              .contentShape(Rectangle())
+          }
+          .buttonStyle(.plain)
+          .accessibilityLabel(Text(.statsMonthlyEarnings))
+        }
+      }
+
+      VStack(alignment: .leading, spacing: Spacing.xs) {
+        if showBeforeTaxRow {
+          StatsLedgerValueRow(
+            label: .statsBeforeTax,
+            value: formatCurrency(stats.currentMonth.totalEarnings)
+          )
+        }
+
+        if hasChange {
+          HStack(spacing: Spacing.xs) {
+            Image(
+              systemName: isPositiveChange
+                ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis"
+            )
+            .font(.tidexCaptionStrong)
+
+            Text(changeText)
+              .font(.tidexFootnoteMedium)
+          }
+          .foregroundColor(isPositiveChange ? .tidexSuccess : .tidexError)
+          .padding(.horizontal, Spacing.xs)
+          .padding(.vertical, Spacing.xxxs)
+          .background(
+            Capsule(style: .continuous)
+              .fill((isPositiveChange ? Color.tidexSuccess : Color.tidexError).opacity(0.12))
+          )
+        }
+      }
+    }
+  }
+
+  private var metricStrip: some View {
+    HStack(spacing: 0) {
+      StatsLedgerMetric(
+        label: .statsHours,
+        value: formatHours(stats.currentMonth.totalHours),
+        systemImage: "clock"
+      )
+
+      Rectangle()
+        .fill(Color.tidexBorderSubtle.opacity(0.55))
+        .frame(width: 1, height: 44)
+
+      StatsLedgerMetric(
+        label: .statsShifts,
+        value: "\(stats.currentMonth.shiftCount)",
+        systemImage: "calendar"
+      )
+      .padding(.leading, Spacing.md)
+    }
+  }
+
+  private var goalPanel: some View {
+    Button(action: onGoalTap) {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        HStack(alignment: .center, spacing: Spacing.xs) {
+          Label {
+            Text(.statsMonthlyGoalTitle)
+              .font(.tidexLabelStrong)
+          } icon: {
+            Image(systemName: "target")
+              .font(.tidexLabelStrong)
+          }
+          .foregroundColor(.tidexTextPrimary)
+
+          Spacer(minLength: Spacing.sm)
+
+          Image(systemName: "gearshape")
+            .font(.tidexFootnoteMedium)
+            .foregroundColor(.tidexTextMuted)
+        }
+
+        if stats.monthlyGoal.enabled {
+          HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+            Text("\(Int(clampedGoalPercentage.rounded()))%")
+              .font(.tidexMonoTitle)
+              .foregroundColor(goalReached ? .tidexSuccess : .tidexTextPrimary)
+
+            Text(
+              String(
+                localized: .statsMonthlyGoalProgressTargetSuffix(
+                  formatCurrency(stats.monthlyGoal.target)
+                ))
+            )
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+          }
+
+          goalProgressBar
+        }
+
+        Text(goalStatusText)
+          .font(.tidexSubheadline)
+          .foregroundColor(goalReached ? .tidexSuccess : .tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+  }
+
+  private var goalProgressBar: some View {
+    GeometryReader { geometry in
+      ZStack(alignment: .leading) {
+        Capsule(style: .continuous)
+          .fill(Color.tidexBackgroundSecondary)
+          .frame(height: 10)
+
+        Capsule(style: .continuous)
+          .fill(goalReached ? Color.tidexSuccess : Color.tidexBlue)
+          .frame(
+            width: max(0, geometry.size.width * (clampedGoalPercentage / 100)),
+            height: 10
+          )
+          .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: clampedGoalPercentage)
+      }
+    }
+    .frame(height: 10)
+  }
+
+  private func formatCurrency(_ amount: Double) -> String {
+    CurrencyConfig.format(amount, currency: currency)
+  }
+
+  private func formatHours(_ hours: Double) -> String {
+    hours.formatted(.number.precision(.fractionLength(0...1)).locale(Locale.appLocale))
+  }
+}
+
+private struct StatsLedgerMetric: View {
+  let label: LocalizedStringResource
+  let value: String
+  let systemImage: String
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
+      HStack(spacing: Spacing.xxs) {
+        Image(systemName: systemImage)
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextMuted)
+
+        Text(label)
+          .font(.tidexCaptionStrong)
+          .foregroundColor(.tidexTextSecondary)
+      }
+
+      Text(value)
+        .font(.tidexTitle)
+        .foregroundColor(.tidexTextPrimary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, Spacing.xxs)
+  }
+}
+
+private struct StatsLedgerValueRow: View {
+  let label: LocalizedStringResource
+  let value: String
+
+  var body: some View {
+    HStack(spacing: Spacing.sm) {
+      Text(label)
+        .font(.tidexFootnoteMedium)
+        .foregroundColor(.tidexTextSecondary)
+
+      Spacer(minLength: Spacing.sm)
+
+      Text(value)
+        .font(.tidexMonoLabel)
+        .foregroundColor(.tidexTextPrimary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+    }
+    .padding(.vertical, Spacing.xxxs)
   }
 }
 

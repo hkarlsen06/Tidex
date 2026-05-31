@@ -23,7 +23,7 @@ final class PaySettingsViewModel: ObservableObject {
   @Published private(set) var globalSettings: UserSettings?
 
   /// Loading state
-  @Published var isLoading = false
+  @Published var isLoading = true
 
   /// Error message to display
   @Published var errorMessage: String?

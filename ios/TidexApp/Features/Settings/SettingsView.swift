@@ -10,6 +10,8 @@ struct SettingsView: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.layoutDirection) private var layoutDirection
   private let initialDestination: SettingsDestination?
+  private let sheetPresentationDetent: Binding<PresentationDetent>?
+  private let directPayManagerCompactDetent: PresentationDetent
 
   /// Whether the current user can access admin settings
   /// Requires both admin role and AAL2 assurance level.
@@ -18,6 +20,10 @@ struct SettingsView: View {
   @State private var showPayJobChooser = false
   /// Whether to show quick add-job sheet from the pay chooser.
   @State private var showPayAddJobSheet = false
+  /// Current presentation size for the pay job chooser sheet.
+  @State private var payChooserPresentationDetent: PresentationDetent = .medium
+  /// Job detail currently presented from the pay job chooser.
+  @State private var payChooserDetailRoute: PayChooserDetailRoute?
   /// Active jobs used in pay chooser.
   @State private var payChooserJobs: [Job] = []
   /// Archived jobs for optional display in the job picker.
@@ -28,8 +34,6 @@ struct SettingsView: View {
   @State private var payChooserCurrency: String = "kr"
   /// Payroll day inherited by newly created basic jobs.
   @State private var payChooserPayrollDay = 15
-  /// Half-tax month inherited by newly created basic jobs.
-  @State private var payChooserHalfTaxMonth: Int?
   /// Monthly goal inherited by newly created basic jobs.
   @State private var payChooserMonthlyGoal: Int?
   /// User ID for the current pay chooser session.
@@ -44,6 +48,8 @@ struct SettingsView: View {
   @State private var payChooserErrorAlert: PayChooserErrorAlert?
   /// Job currently processing a row action.
   @State private var payJobManagementLoadingJobId: String?
+  /// Job awaiting destructive delete confirmation from the pay chooser.
+  @State private var pendingPayChooserDeleteJob: Job?
   /// Job currently being configured with a baseline wage snapshot.
   @State private var paySetupJob: Job?
   /// Follow-up action after a pay setup sheet succeeds.
@@ -61,6 +67,12 @@ struct SettingsView: View {
   private enum PaySetupAction: Equatable {
     case openPay
     case setDefault
+  }
+
+  private struct PayChooserDetailRoute: Identifiable, Hashable {
+    let jobId: String
+
+    var id: String { jobId }
   }
 
   private struct PayChooserErrorAlert: Identifiable {
@@ -96,159 +108,73 @@ struct SettingsView: View {
     return String(coordinator.userDisplayName.prefix(1)).uppercased()
   }
 
-  init(initialDestination: SettingsDestination? = nil) {
+  init(
+    initialDestination: SettingsDestination? = nil,
+    sheetPresentationDetent: Binding<PresentationDetent>? = nil,
+    directPayManagerCompactDetent: PresentationDetent = .medium
+  ) {
     self.initialDestination = initialDestination
+    self.sheetPresentationDetent = sheetPresentationDetent
+    self.directPayManagerCompactDetent = directPayManagerCompactDetent
   }
 
   var body: some View {
+    Group {
+      if presentsPayChooserDirectly {
+        payJobChooserDirectView
+      } else {
+        settingsRootView
+      }
+    }
+    .task {
+      await checkAdminStatus()
+    }
+    .sheet(isPresented: $showPayJobChooser) {
+      payJobChooserSheet
+    }
+    .sheet(isPresented: $showPayAddJobSheet) {
+      AddJobSheet(
+        initialCurrency: payChooserCurrency,
+        initialPayrollDay: payChooserPayrollDay,
+        initialMonthlyGoal: payChooserMonthlyGoal,
+        setupDismissTitle: String(localized: "settings.pay.setup.laterButton"),
+        onSaveBasics: { input in
+          await createBasicPayJobForSetup(input: input)
+        }
+      ) { input in
+        await completeConfiguredPayJob(input: input)
+      }
+    }
+    .sheet(item: $paySetupJob) { job in
+      JobPaySetupSheet(
+        job: job,
+        initialCurrency: job.currency,
+        dismissTitle: String(localized: "settings.pay.setup.laterButton")
+      ) { input in
+        await completePaySetup(for: job, input: input)
+      }
+    }
+    .onAppear {
+      applyInitialDestinationIfNeeded()
+    }
+  }
+
+  private var presentsPayChooserDirectly: Bool {
+    guard case .pay(let jobId)? = initialDestination else { return false }
+    return jobId == nil
+  }
+
+  private var settingsRootView: some View {
     NavigationStack(path: $navigationPath) {
       ScrollView {
-        // MARK: - Profile Card
         VStack(alignment: .leading, spacing: Spacing.lg) {
-          Button {
-            navigationPath.append(SettingsDestination.profile)
-          } label: {
-            HStack(spacing: Spacing.sm) {
-              AvatarView(
-                url: coordinator.userAvatarUrl,
-                initials: userInitials,
-                size: AvatarView.Size.large
-              )
-
-              Text(coordinator.userDisplayName)
-                .font(.tidexTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .layoutPriority(1)
-
-              Spacer(minLength: Spacing.xs)
-
-              Image(
-                systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right"
-              )
-              .font(.tidexFootnoteMedium)
-              .foregroundStyle(.tertiary)
-            }
-            .padding(.vertical, Spacing.sm)
-            .padding(.horizontal, Spacing.md)
-            .frame(minHeight: 84, alignment: .leading)
-            .contentShape(Rectangle())
-          }
-          .buttonStyle(.plain)
-          .settingsCardSurface()
-
-          // MARK: - Account
-          settingsMenuSection(title: String(localized: .settingsMenuAccountLabel)) {
-            SettingsMenuItem(
-              icon: "lock.shield",
-              title: String(localized: .settingsMenuSecurityLabel)
-            ) {
-              navigationPath.append(SettingsDestination.security)
-            }
-
-            settingsMenuDivider
-
-            SettingsMenuItem(
-              icon: "creditcard",
-              title: String(localized: .settingsMenuSubscriptionLabel)
-            ) {
-              navigationPath.append(SettingsDestination.subscription)
-            }
-          }
-
-          // MARK: - Preferences
-          settingsMenuSection(title: String(localized: .settingsGroupPreferences)) {
-            SettingsMenuItem(
-              icon: "bell",
-              title: String(localized: .settingsMenuNotificationsLabel)
-            ) {
-              navigationPath.append(SettingsDestination.notifications)
-            }
-
-            settingsMenuDivider
-
-            SettingsMenuItem(
-              icon: "paintpalette",
-              title: String(localized: .settingsMenuAppearanceLabel)
-            ) {
-              navigationPath.append(SettingsDestination.appearance)
-            }
-          }
-
-          // MARK: - Work
-          settingsMenuSection(title: String(localized: .settingsGroupWork)) {
-            SettingsMenuItem(
-              icon: "banknote",
-              title: String(localized: .settingsMenuPayLabel),
-              isLoading: isOpeningPaySettings
-            ) {
-              Task {
-                await openPaySettings()
-              }
-            }
-
-            settingsMenuDivider
-
-            SettingsMenuItem(
-              icon: "repeat.circle",
-              title: String(localized: .settingsMenuRecurringShiftsLabel)
-            ) {
-              navigationPath.append(SettingsDestination.recurringShifts)
-            }
-
-            settingsMenuDivider
-
-            SettingsMenuItem(
-              icon: "calendar.badge.clock",
-              title: String(localized: "calendar.subscription.title")
-            ) {
-              navigationPath.append(SettingsDestination.calendarSync())
-            }
-          }
-
-          // MARK: - Support & Data
-          settingsMenuSection(title: String(localized: .settingsGroupSupportData)) {
-            SettingsMenuItem(
-              icon: "message",
-              title: String(localized: .settingsMenuFeedbackLabel)
-            ) {
-              navigationPath.append(SettingsDestination.feedback)
-            }
-
-            settingsMenuDivider
-
-            SettingsMenuItem(
-              icon: "externaldrive",
-              title: String(localized: .settingsMenuDataLabel)
-            ) {
-              navigationPath.append(SettingsDestination.data)
-            }
-          }
-
-          // MARK: - Admin
-          if canAccessAdminSettings {
-            settingsMenuSection(title: String(localized: .settingsGroupAdmin)) {
-              SettingsMenuItem(
-                icon: "shield.lefthalf.filled.badge.checkmark",
-                title: String(localized: .settingsMenuAdminLabel)
-              ) {
-                navigationPath.append(SettingsDestination.admin)
-              }
-            }
-          }
-
-          // MARK: - Debug (DEBUG builds only)
-          #if DEBUG
-            settingsMenuSection(title: "Debug") {
-              SettingsMenuItem(
-                icon: "ladybug",
-                title: "Debug"
-              ) {
-                navigationPath.append(SettingsDestination.debug)
-              }
-            }
-          #endif
+          profileCard
+          accountSection
+          preferencesSection
+          workSection
+          supportSection
+          adminSection
+          debugSection
         }
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.lg)
@@ -299,38 +225,166 @@ struct SettingsView: View {
         .toolbarRole(.editor)
       }
     }
-    .task {
-      await checkAdminStatus()
+  }
+
+  private var payJobChooserDirectView: some View {
+    payJobChooserNavigationStack(isPresentedAsNestedSheet: false)
+      .task {
+        await openPaySettings(presentAsSheet: false)
+      }
+  }
+
+  private var profileCard: some View {
+    Button {
+      navigationPath.append(SettingsDestination.profile)
+    } label: {
+      HStack(spacing: Spacing.sm) {
+        AvatarView(
+          url: coordinator.userAvatarUrl,
+          initials: userInitials,
+          size: AvatarView.Size.large
+        )
+
+        Text(coordinator.userDisplayName)
+          .font(.tidexTitle)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
+          .layoutPriority(1)
+
+        Spacer(minLength: Spacing.xs)
+
+        Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
+          .font(.tidexFootnoteMedium)
+          .foregroundStyle(.tertiary)
+      }
+      .padding(.vertical, Spacing.sm)
+      .padding(.horizontal, Spacing.md)
+      .frame(minHeight: 84, alignment: .leading)
+      .contentShape(Rectangle())
     }
-    .sheet(isPresented: $showPayJobChooser) {
-      payJobChooserSheet
+    .buttonStyle(.plain)
+    .settingsCardSurface()
+  }
+
+  private var accountSection: some View {
+    settingsMenuSection(title: String(localized: .settingsMenuAccountLabel)) {
+      SettingsMenuItem(
+        icon: "lock.shield",
+        title: String(localized: .settingsMenuSecurityLabel)
+      ) {
+        navigationPath.append(SettingsDestination.security)
+      }
+
+      settingsMenuDivider
+
+      SettingsMenuItem(
+        icon: "creditcard",
+        title: String(localized: .settingsMenuSubscriptionLabel)
+      ) {
+        navigationPath.append(SettingsDestination.subscription)
+      }
     }
-    .sheet(isPresented: $showPayAddJobSheet) {
-      AddJobSheet(
-        initialCurrency: payChooserCurrency,
-        initialPayrollDay: payChooserPayrollDay,
-        initialHalfTaxMonth: payChooserHalfTaxMonth,
-        initialMonthlyGoal: payChooserMonthlyGoal,
-        setupDismissTitle: String(localized: "settings.pay.setup.laterButton"),
-        onSaveBasics: { input in
-          await createBasicPayJobForSetup(input: input)
+  }
+
+  private var preferencesSection: some View {
+    settingsMenuSection(title: String(localized: .settingsGroupPreferences)) {
+      SettingsMenuItem(
+        icon: "bell",
+        title: String(localized: .settingsMenuNotificationsLabel)
+      ) {
+        navigationPath.append(SettingsDestination.notifications)
+      }
+
+      settingsMenuDivider
+
+      SettingsMenuItem(
+        icon: "paintpalette",
+        title: String(localized: .settingsMenuAppearanceLabel)
+      ) {
+        navigationPath.append(SettingsDestination.appearance)
+      }
+    }
+  }
+
+  private var workSection: some View {
+    settingsMenuSection(title: String(localized: .settingsGroupWork)) {
+      SettingsMenuItem(
+        icon: "banknote",
+        title: String(localized: .settingsMenuPayLabel),
+        isLoading: isOpeningPaySettings
+      ) {
+        Task {
+          await openPaySettings()
         }
-      ) { input in
-        await completeConfiguredPayJob(input: input)
+      }
+
+      settingsMenuDivider
+
+      SettingsMenuItem(
+        icon: "repeat.circle",
+        title: String(localized: .settingsMenuRecurringShiftsLabel)
+      ) {
+        navigationPath.append(SettingsDestination.recurringShifts)
+      }
+
+      settingsMenuDivider
+
+      SettingsMenuItem(
+        icon: "calendar.badge.clock",
+        title: String(localized: "calendar.subscription.title")
+      ) {
+        navigationPath.append(SettingsDestination.calendarSync())
       }
     }
-    .sheet(item: $paySetupJob) { job in
-      JobPaySetupSheet(
-        job: job,
-        initialCurrency: job.currency,
-        dismissTitle: String(localized: "settings.pay.setup.laterButton")
-      ) { input in
-        await completePaySetup(for: job, input: input)
+  }
+
+  private var supportSection: some View {
+    settingsMenuSection(title: String(localized: .settingsGroupSupportData)) {
+      SettingsMenuItem(
+        icon: "message",
+        title: String(localized: .settingsMenuFeedbackLabel)
+      ) {
+        navigationPath.append(SettingsDestination.feedback)
+      }
+
+      settingsMenuDivider
+
+      SettingsMenuItem(
+        icon: "externaldrive",
+        title: String(localized: .settingsMenuDataLabel)
+      ) {
+        navigationPath.append(SettingsDestination.data)
       }
     }
-    .onAppear {
-      applyInitialDestinationIfNeeded()
+  }
+
+  @ViewBuilder
+  private var adminSection: some View {
+    if canAccessAdminSettings {
+      settingsMenuSection(title: String(localized: .settingsGroupAdmin)) {
+        SettingsMenuItem(
+          icon: "shield.lefthalf.filled.badge.checkmark",
+          title: String(localized: .settingsMenuAdminLabel)
+        ) {
+          navigationPath.append(SettingsDestination.admin)
+        }
+      }
     }
+  }
+
+  @ViewBuilder
+  private var debugSection: some View {
+    #if DEBUG
+      settingsMenuSection(title: "Debug") {
+        SettingsMenuItem(
+          icon: "ladybug",
+          title: "Debug"
+        ) {
+          navigationPath.append(SettingsDestination.debug)
+        }
+      }
+    #endif
   }
 
   @ViewBuilder
@@ -371,8 +425,9 @@ struct SettingsView: View {
     case .pay(let jobId):
       if let jobId {
         navigationPath.append(SettingsDestination.pay(jobId: jobId))
-      } else {
+      } else if !presentsPayChooserDirectly {
         Task {
+          try? await Task.sleep(nanoseconds: 350_000_000)
           await openPaySettings()
         }
       }
@@ -401,7 +456,7 @@ struct SettingsView: View {
     }
   }
 
-  private func openPaySettings() async {
+  private func openPaySettings(presentAsSheet: Bool = true) async {
     guard !isOpeningPaySettings else { return }
     isOpeningPaySettings = true
     defer { isOpeningPaySettings = false }
@@ -413,12 +468,35 @@ struct SettingsView: View {
       refreshPayChooserDefaults(for: userId)
       clearPayChooserError()
       showArchivedPayJobs = false
-      showPayJobChooser = true
+      payChooserDetailRoute = nil
+      applyPayChooserDetent(archivedVisible: false)
+      if presentAsSheet {
+        showPayJobChooser = true
+      }
     } catch {
       logger.error("Failed to prepare pay settings: \(error.localizedDescription)")
       presentPayChooserError(error)
-      showPayJobChooser = true
+      if presentAsSheet {
+        showPayJobChooser = true
+      }
     }
+  }
+
+  private func applyPayChooserDetent(
+    archivedVisible: Bool? = nil
+  ) {
+    let isArchivedVisible = archivedVisible ?? showArchivedPayJobs
+    let targetDetent: PresentationDetent = isArchivedVisible ? .large : compactPayChooserDetent
+
+    if presentsPayChooserDirectly {
+      sheetPresentationDetent?.wrappedValue = targetDetent
+    } else {
+      payChooserPresentationDetent = targetDetent
+    }
+  }
+
+  private var compactPayChooserDetent: PresentationDetent {
+    presentsPayChooserDirectly ? directPayManagerCompactDetent : .medium
   }
 
   private func createBasicPayJobForSetup(input: AddJobBasicsInput) async -> Job? {
@@ -498,7 +576,7 @@ struct SettingsView: View {
       refreshPayChooserDefaults(for: userId)
 
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-        self.navigationPath.append(SettingsDestination.pay(jobId: configuredJob.id))
+        self.presentPayChooserPayScreen(jobId: configuredJob.id)
       }
 
       Haptics.play(.success)
@@ -517,8 +595,7 @@ struct SettingsView: View {
       return
     }
 
-    showPayJobChooser = false
-    navigationPath.append(SettingsDestination.pay(jobId: job.id))
+    presentPayChooserPayScreen(jobId: job.id)
   }
 
   private func openAddPayJob() {
@@ -559,7 +636,6 @@ struct SettingsView: View {
 
     payChooserCurrency = defaultJob?.currency ?? settings?.currency ?? "kr"
     payChooserPayrollDay = defaultJob?.payroll_day ?? settings?.effectivePayrollDay ?? 15
-    payChooserHalfTaxMonth = defaultJob?.half_tax_month ?? settings?.half_tax_month
     payChooserMonthlyGoal = defaultJob?.monthly_goal ?? settings?.monthly_goal
   }
 
@@ -720,7 +796,7 @@ struct SettingsView: View {
         selectedPayChooserJobId = configuredJob.id
         pendingPaySetupAction = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-          self.navigationPath.append(SettingsDestination.pay(jobId: configuredJob.id))
+          self.presentPayChooserPayScreen(jobId: configuredJob.id)
         }
       }
 
@@ -733,11 +809,25 @@ struct SettingsView: View {
     }
   }
 
+  private func presentPayChooserPayScreen(jobId: String) {
+    if !presentsPayChooserDirectly {
+      showPayJobChooser = true
+    }
+
+    payChooserDetailRoute = PayChooserDetailRoute(jobId: jobId)
+  }
+
   @ViewBuilder
   private var payJobChooserSheet: some View {
+    payJobChooserNavigationStack(isPresentedAsNestedSheet: true)
+      .presentationDetents([.medium, .large], selection: $payChooserPresentationDetent)
+      .presentationDragIndicator(.visible)
+  }
+
+  private func payJobChooserNavigationStack(isPresentedAsNestedSheet: Bool) -> some View {
     let defaultJob = payChooserJobs.first(where: { $0.is_default })
 
-    NavigationStack {
+    return NavigationStack {
       ScrollView {
         VStack(spacing: Spacing.sm) {
           Button {
@@ -757,8 +847,7 @@ struct SettingsView: View {
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+            .tidexRowSurface(cornerRadius: CornerRadius.lg)
             .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           }
           .buttonStyle(.plain)
@@ -793,12 +882,19 @@ struct SettingsView: View {
       .padding(.top, Spacing.sm)
       .padding(.bottom, Spacing.md)
       .background(Color.tidexBackground)
-      .navigationTitle(String(localized: "settings.pay.choose_job.title"))
+      .navigationTitle(String(localized: "settings.pay.manage_jobs.title"))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            showPayJobChooser = false
+          Button(
+            isPresentedAsNestedSheet
+              ? String(localized: .commonCancel) : String(localized: .commonDone)
+          ) {
+            if isPresentedAsNestedSheet {
+              showPayJobChooser = false
+            } else {
+              dismiss()
+            }
           }
         }
       }
@@ -817,17 +913,89 @@ struct SettingsView: View {
           Text(payChooserErrorAlert.message)
         }
       }
+      .confirmationDialog(
+        String(localized: "settings.pay.jobActions.deleteConfirmTitle"),
+        isPresented: .init(
+          get: { pendingPayChooserDeleteJob != nil },
+          set: { if !$0 { pendingPayChooserDeleteJob = nil } }
+        ),
+        titleVisibility: .visible
+      ) {
+        Button(String(localized: "settings.pay.jobActions.delete"), role: .destructive) {
+          guard let job = pendingPayChooserDeleteJob else { return }
+          pendingPayChooserDeleteJob = nil
+          Task {
+            await deletePayJob(job.id)
+          }
+        }
+
+        Button(role: .cancel) {
+          pendingPayChooserDeleteJob = nil
+        } label: {
+          Text(.commonCancel)
+        }
+      } message: {
+        Text(String(localized: "settings.pay.jobActions.deleteConfirmMessage"))
+      }
+      .sheet(item: $payChooserDetailRoute) { route in
+        payChooserDetailSheet(route)
+      }
+      .simultaneousGesture(
+        payChooserManagementExitGesture(isEnabled: !isPresentedAsNestedSheet)
+      )
     }
-    .presentationDetents([.medium, .large])
+  }
+
+  private func payChooserDetailSheet(_ route: PayChooserDetailRoute) -> some View {
+    NavigationStack {
+      PaySettingsView(initialJobId: route.jobId)
+        .toolbarRole(.editor)
+    }
+    .contentShape(Rectangle())
+    .simultaneousGesture(payChooserDetailExitGesture)
+    .presentationDetents([.large])
     .presentationDragIndicator(.visible)
+  }
+
+  private var payChooserDetailExitGesture: some Gesture {
+    DragGesture(minimumDistance: 24, coordinateSpace: .local)
+      .onEnded { value in
+        guard isLayoutDirectionExitSwipe(value) else { return }
+
+        payChooserDetailRoute = nil
+      }
+  }
+
+  private func payChooserManagementExitGesture(isEnabled: Bool) -> some Gesture {
+    DragGesture(minimumDistance: 24, coordinateSpace: .local)
+      .onEnded { value in
+        guard isEnabled, isLayoutDirectionExitSwipe(value) else { return }
+
+        dismiss()
+      }
+  }
+
+  private func isLayoutDirectionExitSwipe(_ value: DragGesture.Value) -> Bool {
+    let horizontalDistance = value.translation.width
+    let verticalDistance = abs(value.translation.height)
+    let predictedHorizontalDistance = value.predictedEndTranslation.width
+    let directionMultiplier: CGFloat = layoutDirection == .rightToLeft ? -1 : 1
+    let exitDistance = horizontalDistance * directionMultiplier
+    let predictedExitDistance = predictedHorizontalDistance * directionMultiplier
+
+    return exitDistance > 64
+      && predictedExitDistance > 110
+      && exitDistance > verticalDistance * 1.4
   }
 
   @ViewBuilder
   private var archivedPayJobsSection: some View {
     VStack(spacing: Spacing.sm) {
       Button {
+        let shouldShowArchivedPayJobs = !showArchivedPayJobs
         withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-          showArchivedPayJobs.toggle()
+          showArchivedPayJobs = shouldShowArchivedPayJobs
+          applyPayChooserDetent(archivedVisible: shouldShowArchivedPayJobs)
         }
       } label: {
         HStack(spacing: Spacing.sm) {
@@ -860,12 +1028,12 @@ struct SettingsView: View {
         .padding(.horizontal, Spacing.md)
         .padding(.vertical, Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.tidexSurfaceSecondary.opacity(0.62))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .tidexRowSurface(cornerRadius: CornerRadius.lg)
         .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(String(localized: "settings.pay.manage_jobs.archived_title"))
+      .accessibilityLabel(archivedPayJobsToggleAccessibilityLabel)
+      .accessibilityValue(Text("\(payArchivedJobs.count)"))
 
       if showArchivedPayJobs {
         VStack(spacing: Spacing.sm) {
@@ -899,7 +1067,7 @@ struct SettingsView: View {
             colorHex: job.color,
             font: .tidexBodyMedium,
             fallbackBadgeColor: .tidexBlue,
-            maxTextWidth: 172,
+            lineLimit: 2,
             badgeCornerRadius: CornerRadius.md,
             badgeHorizontalPadding: Spacing.sm,
             badgeVerticalPadding: Spacing.xs
@@ -920,32 +1088,35 @@ struct SettingsView: View {
       if payJobManagementLoadingJobId == job.id {
         ProgressView()
           .controlSize(.small)
+          .frame(width: 44, height: 44)
       } else if hasActivePayJobActions(for: job) {
         Menu {
           activePayJobActions(job)
         } label: {
-          Image(systemName: "ellipsis.circle")
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
+          Label {
+            Text(payJobActionsAccessibilityLabel(for: job))
+          } icon: {
+            Image(systemName: "ellipsis.circle")
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextMuted)
+          }
+          .labelStyle(.iconOnly)
+          .frame(width: 44, height: 44)
+          .contentShape(Rectangle())
         }
+        .accessibilityLabel(payJobActionsAccessibilityLabel(for: job))
       }
 
-      Button {
-        openPayForSelectedJob(job)
-      } label: {
-        Image(systemName: "chevron.right")
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-          .fixedSize()
-      }
-      .buttonStyle(.plain)
-      .accessibilityHidden(true)
+      Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+        .fixedSize()
+        .accessibilityHidden(true)
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .tidexRowSurface(cornerRadius: CornerRadius.lg)
     .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .contextMenu {
       activePayJobActions(job)
@@ -964,10 +1135,9 @@ struct SettingsView: View {
         name: job.name,
         colorHex: job.color,
         font: .tidexBodyMedium,
-        fallbackBadgeColor: .tidexBlue
+        fallbackBadgeColor: .tidexBlue,
+        lineLimit: 2
       )
-      .lineLimit(1)
-      .truncationMode(.tail)
       .opacity(0.72)
       .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -976,6 +1146,7 @@ struct SettingsView: View {
       if payJobManagementLoadingJobId == job.id {
         ProgressView()
           .controlSize(.small)
+          .frame(width: 44, height: 44)
       } else {
         Button {
           Task {
@@ -985,17 +1156,18 @@ struct SettingsView: View {
           Image(systemName: "arrow.uturn.backward.circle")
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexBlue)
-            .frame(width: 32, height: 32)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(String(localized: "settings.pay.manage_jobs.restore"))
+        .accessibilityValue(Text(job.name))
       }
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.tidexSurfaceSecondary.opacity(0.44))
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .tidexRowSurface(cornerRadius: CornerRadius.lg)
     .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .contextMenu {
       archivedPayJobActions(job)
@@ -1045,6 +1217,18 @@ struct SettingsView: View {
     !job.is_default
   }
 
+  private func payJobActionsAccessibilityLabel(for job: Job) -> String {
+    "\(String(localized: "settings.pay.jobActions.title")): \(job.name)"
+  }
+
+  private var archivedPayJobsToggleAccessibilityLabel: String {
+    if showArchivedPayJobs {
+      return String(localized: "settings.pay.manage_jobs.hide_archived")
+    }
+
+    return String(localized: "settings.pay.manage_jobs.show_archived")
+  }
+
   @ViewBuilder
   private func activePayJobActions(_ job: Job) -> some View {
     if !job.is_default {
@@ -1054,7 +1238,7 @@ struct SettingsView: View {
         }
       } label: {
         Label(
-          String(localized: "settings.pay.choose_job.default_badge"),
+          String(localized: "settings.pay.jobActions.setDefault"),
           systemImage: "checkmark.circle"
         )
       }
@@ -1067,7 +1251,7 @@ struct SettingsView: View {
         }
       } label: {
         Label(
-          String(localized: "settings.pay.manage_jobs.archive"),
+          String(localized: "settings.pay.jobActions.archive"),
           systemImage: "archivebox"
         )
       }
@@ -1075,12 +1259,10 @@ struct SettingsView: View {
 
     if !job.is_default {
       Button(role: .destructive) {
-        Task {
-          await deletePayJob(job.id)
-        }
+        pendingPayChooserDeleteJob = job
       } label: {
         Label(
-          String(localized: .commonDelete),
+          String(localized: "settings.pay.jobActions.delete"),
           systemImage: "trash"
         )
       }
@@ -1101,12 +1283,10 @@ struct SettingsView: View {
     }
 
     Button(role: .destructive) {
-      Task {
-        await deletePayJob(job.id)
-      }
+      pendingPayChooserDeleteJob = job
     } label: {
       Label(
-        String(localized: .commonDelete),
+        String(localized: "settings.pay.jobActions.delete"),
         systemImage: "trash"
       )
     }

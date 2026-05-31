@@ -137,12 +137,14 @@ struct JobPaySetupSheet: View {
     .lineLimit(1)
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
+    .frame(minWidth: 44, minHeight: 44)
     .background(.thinMaterial, in: Capsule())
     .overlay(
       Capsule()
         .stroke(Color.tidexBorder.opacity(0.75), lineWidth: 1)
     )
-    .shadow(color: .black.opacity(0.16), radius: 8, x: 0, y: 3)
+    .contentShape(Capsule())
+    .shadow(color: .tidexDarkBackgroundColor.opacity(0.16), radius: 8, x: 0, y: 3)
     .padding(.top, Spacing.md)
     .padding(.trailing, Spacing.lg)
     .disabled(isSaving)
@@ -150,7 +152,7 @@ struct JobPaySetupSheet: View {
 
   private var savingOverlay: some View {
     ZStack {
-      Color.black.opacity(0.35)
+      Color.tidexDarkBackgroundColor.opacity(0.35)
         .ignoresSafeArea()
 
       VStack(spacing: Spacing.sm) {
@@ -240,6 +242,9 @@ private struct JobPayScheduleSetupScreen: View {
               }
               .font(.tidexBody)
               .foregroundColor(.tidexBlue)
+              .lineLimit(1)
+              .frame(minWidth: 44, minHeight: 44, alignment: .leading)
+              .contentShape(Rectangle())
               .disabled(isSaving)
 
               Spacer()
@@ -266,8 +271,10 @@ private struct JobPayScheduleSetupScreen: View {
                 colorHex: job.color,
                 font: .tidexFootnote,
                 fallbackBadgeColor: .tidexBlue,
-                maxTextWidth: 220,
-                maxTextAlignment: .center
+                lineLimit: 2,
+                maxTextWidth: .infinity,
+                maxTextAlignment: .center,
+                multilineTextAlignment: .center
               )
             }
             .padding(.horizontal, Spacing.xl)

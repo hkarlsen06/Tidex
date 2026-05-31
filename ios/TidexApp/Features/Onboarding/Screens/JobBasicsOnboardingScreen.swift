@@ -48,18 +48,7 @@ struct JobBasicsOnboardingScreen: View {
               .frame(height: 32)
 
             VStack(alignment: .leading, spacing: Spacing.lg) {
-              TidexTextField(
-                label: String(localized: "settings.pay.add_job.name", table: "Localizable"),
-                placeholder: String(
-                  localized: "onboarding.jobBasics.namePlaceholder",
-                  table: "Localizable"
-                ),
-                text: $data.jobName,
-                autocapitalization: .words,
-                onSubmit: {
-                  continueIfReady()
-                }
-              )
+              jobNameField
 
               VStack(alignment: .leading, spacing: Spacing.xs) {
                 Text(String(localized: "settings.pay.add_job.color_label", table: "Localizable"))
@@ -134,6 +123,38 @@ struct JobBasicsOnboardingScreen: View {
     .padding(.horizontal, Spacing.lg)
     .padding(.top, Spacing.md)
     .adaptiveContentWidth()
+  }
+
+  private var jobNameField: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      Text(String(localized: "settings.pay.add_job.name", table: "Localizable"))
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextSecondary)
+
+      TextField(
+        "",
+        text: $data.jobName,
+        prompt: Text(
+          String(localized: "onboarding.jobBasics.namePlaceholder", table: "Localizable")
+        )
+        .foregroundColor(.tidexTextMuted.opacity(0.62))
+      )
+      .font(.tidexBody)
+      .foregroundColor(.tidexTextPrimary)
+      .textInputAutocapitalization(.words)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.sm)
+      .background(Color.tidexSurfaceSecondary)
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.md)
+          .stroke(Color.tidexBorder, lineWidth: 1)
+      )
+      .cornerRadius(CornerRadius.md)
+      .contentShape(Rectangle())
+      .onSubmit {
+        continueIfReady()
+      }
+    }
   }
 
   private func continueIfReady() {

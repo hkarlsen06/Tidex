@@ -34,6 +34,14 @@ struct PaySettingsView: View {
     }
     .navigationTitle(String(localized: .settingsPayTitle))
     .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      ToolbarItem(placement: .principal) {
+        Text(String(localized: .settingsPayTitle))
+          .font(.headline)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1)
+      }
+    }
     .sheet(isPresented: $viewModel.showingEditor) {
       WageSnapshotEditorSheet(
         mode: viewModel.editorMode,
@@ -415,36 +423,32 @@ struct PaySettingsView: View {
   private var currentWorkplaceTitle: some View {
     Group {
       if let selectedJobName = viewModel.selectedJobName {
-        ZStack {
+        HStack(spacing: Spacing.xxs) {
           WorkplaceNameText(
             name: selectedJobName,
             colorHex: viewModel.selectedJob?.color,
             font: .tidexScreenTitle,
             fallbackBadgeColor: .tidexBlue,
             lineLimit: 2,
-            maxTextWidth: 260,
-            maxTextAlignment: .center,
+            maxTextAlignment: .leading,
             badgeCornerRadius: CornerRadius.md,
             badgeHorizontalPadding: Spacing.sm
           )
-          .multilineTextAlignment(.center)
-          .frame(maxWidth: .infinity, alignment: .center)
+          .multilineTextAlignment(.leading)
+          .layoutPriority(1)
 
-          HStack {
-            Spacer()
-
-            Button {
-              showingEditJobSheet = true
-            } label: {
-              Image(systemName: "pencil")
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexBlue)
-                .frame(width: 44, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text(String(localized: "settings.pay.edit_job.title")))
+          Button {
+            showingEditJobSheet = true
+          } label: {
+            Image(systemName: "pencil")
+              .font(.system(size: 28, weight: .semibold))
+              .foregroundColor(.tidexBlue)
+              .frame(width: 44, height: 44, alignment: .leading)
           }
+          .buttonStyle(.plain)
+          .accessibilityLabel(Text(String(localized: "settings.pay.edit_job.title")))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
     }
   }

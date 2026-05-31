@@ -11,6 +11,22 @@ extension Notification.Name {
   static let screenshotPromptUseShareButton = Notification.Name("screenshotPromptUseShareButton")
 }
 
+private struct SettingsSheetRoute: Identifiable {
+  static let payManagerCompactDetent: PresentationDetent = .height(395)
+
+  let id = UUID()
+  let initialDestination: SettingsView.SettingsDestination?
+
+  var opensPayManager: Bool {
+    guard case .pay(let jobId)? = initialDestination else { return false }
+    return jobId == nil
+  }
+
+  var compactDetent: PresentationDetent {
+    opensPayManager ? Self.payManagerCompactDetent : .large
+  }
+}
+
 /// Main tab view for authenticated users
 /// This is the home screen after successful login
 /// Currently a placeholder - will be expanded with full dashboard functionality
@@ -38,8 +54,8 @@ struct MainTabView: View {
   @State private var sharingHasSelectedSharer = false
 
   // State for feedback deep link sheets
-  @State private var showSettingsSheet = false
-  @State private var settingsSheetInitialDestination: SettingsView.SettingsDestination?
+  @State private var settingsSheetRoute: SettingsSheetRoute?
+  @State private var settingsSheetDetent: PresentationDetent = .large
   @State private var showFeedbackSheet = false
   @State private var showAdminFeedbackSheet = false
   @State private var adminSheetInitialTab: AdminTab = .feedback
@@ -204,8 +220,7 @@ struct MainTabView: View {
                   selectedTab: tabSelection,
                   isKeyboardVisible: $isKeyboardVisible,
                   onOpenJobsAndPaySettings: {
-                    settingsSheetInitialDestination = .pay(jobId: nil)
-                    showSettingsSheet = true
+                    presentSettingsSheet(initialDestination: .pay(jobId: nil))
                   }
                 )
               }
@@ -335,10 +350,17 @@ struct MainTabView: View {
         FeedbackSettingsView()
       }
     }
-    .sheet(isPresented: $showSettingsSheet) {
-      SettingsView(initialDestination: settingsSheetInitialDestination)
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+    .sheet(item: $settingsSheetRoute) { route in
+      SettingsView(
+        initialDestination: route.initialDestination,
+        sheetPresentationDetent: $settingsSheetDetent,
+        directPayManagerCompactDetent: route.compactDetent
+      )
+      .presentationDetents(
+        route.opensPayManager ? [route.compactDetent, .large] : [.large],
+        selection: $settingsSheetDetent
+      )
+      .presentationDragIndicator(.visible)
     }
     .sheet(isPresented: $showAdminFeedbackSheet) {
       AdminSettingsView(
@@ -358,6 +380,12 @@ struct MainTabView: View {
 
   private var friendsTabIcon: String {
     unreadFriendsCount > 0 ? "person.2.badge.fill" : Tab.sharing.icon
+  }
+
+  private func presentSettingsSheet(initialDestination: SettingsView.SettingsDestination?) {
+    let route = SettingsSheetRoute(initialDestination: initialDestination)
+    settingsSheetDetent = route.compactDetent
+    settingsSheetRoute = route
   }
 
   private func refreshUnreadFriendsCount() async {
@@ -667,8 +695,7 @@ struct MainTabView: View {
       }
       coordinator.clearPendingDeepLink()
     case .settings(let destination):
-      settingsSheetInitialDestination = destination?.settingsDestination
-      showSettingsSheet = true
+      presentSettingsSheet(initialDestination: destination?.settingsDestination)
       coordinator.clearPendingDeepLink()
     case .feedback:
       // Open feedback sheet for users viewing their feedback responses
