@@ -23,11 +23,11 @@ struct PostAuthOnboardingView: View {
   @State private var showAddJobSheet = false
   @State private var addJobSheetPresentationID = UUID()
   @State private var isPreparingJobSheet = false
-  @State private var navigateToMFAAfterJobSheet = false
   @State private var onboardingActiveJobs: [Job] = []
   @State private var onboardingJobNeedingSetup: Job?
   @State private var temporaryPlaceholderJobId: String?
   @State private var multiJobErrorMessage: String?
+  @State private var didAddOnboardingJob = false
   @State private var isNavigatingBack = false
   @State private var successCompletionMode: OnboardingCompletionMode = .fullSetup
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -65,7 +65,7 @@ struct PostAuthOnboardingView: View {
         case .purpose:
           PurposeScreen(
             onSelectPaySetup: {
-              navigateTo(.wage)
+              navigateTo(.jobBasics)
             },
             onSelectFriendsOnly: {
               startSaveAndNavigateToSuccess(completionMode: .friendOnlySkip)
@@ -81,7 +81,7 @@ struct PostAuthOnboardingView: View {
             },
             onBack: entryMode == .initial
               ? {
-                navigateBack(to: .purpose)
+                navigateBack(to: .jobBasics)
               } : nil
           )
           .transition(screenTransition)
@@ -90,10 +90,10 @@ struct PostAuthOnboardingView: View {
           SupplementsScreen(
             data: onboardingData,
             onContinue: {
-              navigateTo(.jobBasics)
+              navigateTo(.settingsAccordion)
             },
             onSkip: {
-              navigateTo(.jobBasics)
+              navigateTo(.settingsAccordion)
             },
             onBack: {
               navigateBack(to: .wage)
@@ -105,7 +105,7 @@ struct PostAuthOnboardingView: View {
           JobBasicsOnboardingScreen(
             data: onboardingData,
             onContinue: {
-              navigateTo(.settingsAccordion)
+              navigateTo(.wage)
             },
             onBack: {
               navigateBackFromJobBasics()
@@ -120,7 +120,7 @@ struct PostAuthOnboardingView: View {
               navigateTo(.multiJobPrompt)
             },
             onBack: {
-              navigateBack(to: .jobBasics)
+              navigateBackFromSettings()
             }
           )
           .transition(screenTransition)
@@ -128,6 +128,7 @@ struct PostAuthOnboardingView: View {
         case .multiJobPrompt:
           MultiJobPromptScreen(
             isLoading: isPreparingJobSheet,
+            didAddJob: didAddOnboardingJob,
             onAddNow: {
               isPreparingJobSheet = true
               Task {
@@ -222,18 +223,14 @@ struct PostAuthOnboardingView: View {
     .sheet(
       isPresented: $showAddJobSheet,
       onDismiss: {
-        if navigateToMFAAfterJobSheet {
-          navigateToMFAAfterJobSheet = false
-          navigateTo(.mfaSetup)
-        } else {
-          Task {
-            await discardTemporaryPlaceholderIfNeeded()
-          }
+        Task {
+          await discardTemporaryPlaceholderIfNeeded()
         }
       }
     ) {
       AddJobSheet(
         initialCurrency: onboardingData.currency,
+        initialMonthlyGoal: inheritedMonthlyGoal,
         existingJobNeedingSetup: nil
       ) { input in
         await createOnboardingJob(input: input)
@@ -364,7 +361,7 @@ struct PostAuthOnboardingView: View {
     // Only show supplements screen for custom wage users
     switch onboardingData.wageType {
     case .tariff:
-      navigateTo(.jobBasics)
+      navigateTo(.settingsAccordion)
     case .custom:
       navigateTo(.supplements)
     }
@@ -385,7 +382,15 @@ struct PostAuthOnboardingView: View {
   }
 
   private func navigateBackFromJobBasics() {
-    // Go back to supplements for custom wage, otherwise to wage
+    if entryMode == .initial {
+      navigateBack(to: .purpose)
+      return
+    }
+
+    navigateBack(to: .wage)
+  }
+
+  private func navigateBackFromSettings() {
     switch onboardingData.wageType {
     case .custom:
       navigateBack(to: .supplements)
@@ -422,6 +427,7 @@ struct PostAuthOnboardingView: View {
     }
 
     multiJobErrorMessage = nil
+    didAddOnboardingJob = false
     var activeJobs = jobsRepository.getActiveJobs(for: userId)
 
     if activeJobs.isEmpty {
@@ -518,7 +524,8 @@ struct PostAuthOnboardingView: View {
       onboardingActiveJobs = jobsRepository.getActiveJobs(for: userId)
       onboardingJobNeedingSetup = incompleteSetupJob(from: onboardingActiveJobs)
       multiJobErrorMessage = nil
-      navigateToMFAAfterJobSheet = true
+      didAddOnboardingJob = true
+      UINotificationFeedbackGenerator().notificationOccurred(.success)
       return true
     } catch {
       multiJobErrorMessage = error.localizedDescription
@@ -591,6 +598,11 @@ struct PostAuthOnboardingView: View {
     }
 
     return activeJobs.first(where: { $0.id == activeSetupJobId })
+  }
+
+  private var inheritedMonthlyGoal: Int? {
+    onboardingActiveJobs.first(where: \.is_default)?.monthly_goal
+      ?? onboardingActiveJobs.first?.monthly_goal
   }
 
   private var shouldShowCloseButton: Bool {

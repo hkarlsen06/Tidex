@@ -654,10 +654,6 @@ final class AddShiftViewModel: ObservableObject {
     activeJobs.first(where: \.is_default)?.payroll_day ?? cachedSettings?.effectivePayrollDay ?? 15
   }
 
-  var jobCreationInitialHalfTaxMonth: Int? {
-    activeJobs.first(where: \.is_default)?.half_tax_month ?? cachedSettings?.half_tax_month
-  }
-
   var jobCreationInitialMonthlyGoal: Int? {
     activeJobs.first(where: \.is_default)?.monthly_goal ?? cachedSettings?.monthly_goal
   }

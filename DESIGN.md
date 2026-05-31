@@ -242,6 +242,7 @@ Cards should read as ledger sections: grouped, calm, and close to the calculatio
 - **Corner Style:** Standard cards use 24pt for primary shift cards, 16pt for calculation cards, 12pt for small panels, and 8-10pt for fields and chips.
 - **Background:** Primary cards use Night Surface or Paper Surface. Detail cards use Night Surface Raised or Paper Surface Muted at reduced emphasis.
 - **Shadow Strategy:** Use the Elevation vocabulary. Avoid stacking shadows on nested cards.
+- **No Nested Cards:** Do not place card-like rounded panels inside another card. Inside a card, use inline rows, dividers, typography, icons, chips, progress bars, or unframed tonal bands instead.
 - **Border:** Use 1pt semantic borders for fields, warning banners, and focused states.
 - **Internal Padding:** 16pt for dense calculation cards, 24pt for primary cards, 8-12pt for nested detail rows.
 

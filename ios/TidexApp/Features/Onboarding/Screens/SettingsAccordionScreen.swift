@@ -8,7 +8,7 @@ struct SettingsAccordionScreen: View {
   let onContinue: () -> Void
   var onBack: (() -> Void)? = nil
 
-  @State private var currentSection: SettingsSection = .breakDeduction
+  @State private var currentSection: SettingsSection? = .breakDeduction
   @State private var completedSections: Set<SettingsSection> = []
   @State private var showingTaxInput = false
   @State private var taxInputText = ""
@@ -493,8 +493,8 @@ struct SettingsAccordionScreen: View {
       case .tax:
         currentSection = .payday
       case .payday:
-        // All done - button will appear
-        break
+        // All done - collapse the final section so its completed state is visible.
+        currentSection = nil
       }
     }
   }

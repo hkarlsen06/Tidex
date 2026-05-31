@@ -19,6 +19,7 @@ struct AddShiftView: View {
   @State private var showSingleSuccessBanner = false
   @State private var showAddConfetti = false
   @State private var showAddJobSheet = false
+  @State private var openJobsAndPaySettingsAfterPickerDismiss = false
   @State private var singleSuccessDismissTask: Task<Void, Never>?
 
   /// Whether running on iPhone-sized idiom.
@@ -368,22 +369,28 @@ struct AddShiftView: View {
         }
       )
     }
-    .sheet(isPresented: $viewModel.showSubmitJobChooser) {
+    .sheet(
+      isPresented: $viewModel.showSubmitJobChooser,
+      onDismiss: {
+        guard openJobsAndPaySettingsAfterPickerDismiss else { return }
+        openJobsAndPaySettingsAfterPickerDismiss = false
+        onOpenJobsAndPaySettings()
+      }
+    ) {
       AddShiftJobChooserSheet(
         jobs: viewModel.submissionJobs,
         configuredJobIds: viewModel.configuredJobIds,
         onSelect: { jobId in
           viewModel.selectJobForShiftCreation(jobId)
+          viewModel.dismissJobSelection()
         },
         onAddJob: {
           viewModel.dismissJobSelection()
           showAddJobSheet = true
         },
         onOpenSettings: {
+          openJobsAndPaySettingsAfterPickerDismiss = true
           viewModel.dismissJobSelection()
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            onOpenJobsAndPaySettings()
-          }
         },
         onCancel: {
           viewModel.dismissJobSelection()
@@ -394,7 +401,6 @@ struct AddShiftView: View {
       AddJobSheet(
         initialCurrency: viewModel.jobCreationInitialCurrency,
         initialPayrollDay: viewModel.jobCreationInitialPayrollDay,
-        initialHalfTaxMonth: viewModel.jobCreationInitialHalfTaxMonth,
         initialMonthlyGoal: viewModel.jobCreationInitialMonthlyGoal,
         setupDismissTitle: String(localized: "settings.pay.setup.laterButton"),
         onSaveBasics: { input in
@@ -815,42 +821,138 @@ private struct AddShiftJobSelectionChip: View {
 
   var body: some View {
     Button(action: onTap) {
-      HStack(spacing: Spacing.xxs) {
-        if let selectedJob {
-          WorkplaceNameText(
-            name: selectedJob.name,
-            colorHex: selectedJob.color,
-            font: .tidexMonoCaption,
-            fallbackBadgeColor: .tidexBlue,
-            maxTextWidth: 122,
-            badgeHorizontalPadding: Spacing.xs,
-            badgeVerticalPadding: 2
+      Group {
+        if let job = selectedJob {
+          AddShiftSelectedJobBadge(
+            name: job.name,
+            colorHex: job.color,
+            fallbackBadgeColor: .tidexBlue
           )
         } else {
-          HStack(spacing: Spacing.xxxs) {
+          HStack(spacing: Spacing.xxs) {
             Image(systemName: "building.2")
               .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexBlue)
 
             Text(String(localized: "settings.pay.choose_job.title"))
               .font(.tidexMonoCaption)
-              .foregroundColor(.tidexBlue)
+
+            Image(systemName: "chevron.down")
+              .font(.tidexMicro)
+              .fixedSize()
           }
+          .foregroundColor(.tidexBlue)
           .padding(.horizontal, Spacing.sm)
           .padding(.vertical, Spacing.xs)
           .background(Color.tidexBlue.opacity(0.12))
           .clipShape(Capsule())
         }
-
-        Image(systemName: "chevron.down")
-          .font(.tidexMicro)
-          .foregroundColor(.tidexTextMuted)
-          .fixedSize()
       }
       .frame(height: 36)
       .fixedSize(horizontal: true, vertical: false)
     }
     .buttonStyle(.plain)
+  }
+}
+
+private struct AddShiftSelectedJobBadge: View {
+  let name: String
+  let colorHex: String?
+  let fallbackBadgeColor: Color
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    let badgeColor = resolvedBadgeColor
+    HStack(spacing: Spacing.xxs) {
+      Text(name)
+        .font(.tidexMonoCaption)
+        .lineLimit(1)
+        .truncationMode(.tail)
+        .frame(maxWidth: 122, alignment: .leading)
+
+      Image(systemName: "chevron.down")
+        .font(.tidexMicro)
+        .fixedSize()
+    }
+    .foregroundColor(badgeForegroundColor(for: badgeColor))
+    .padding(.horizontal, Spacing.xs)
+    .padding(.vertical, 2)
+    .background(
+      RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
+        .fill(Color(uiColor: badgeColor))
+    )
+  }
+
+  private var resolvedBadgeColor: UIColor {
+    WorkplaceColor.hexToUIColor(colorHex) ?? UIColor(fallbackBadgeColor)
+  }
+
+  private func badgeForegroundColor(for badgeColor: UIColor) -> Color {
+    let resolvedColor = badgeColor.resolvedColor(
+      with: UITraitCollection(userInterfaceStyle: userInterfaceStyle))
+    let luminance = Self.relativeLuminance(for: resolvedColor)
+    let contrastWithWhite = Self.contrastRatio(luminance, 1)
+    let contrastWithBlack = Self.contrastRatio(luminance, 0)
+
+    if Self.shouldPreferWhiteBadgeText(for: resolvedColor, contrastWithWhite: contrastWithWhite) {
+      return .white
+    }
+
+    return contrastWithWhite >= contrastWithBlack ? .white : .black
+  }
+
+  private var userInterfaceStyle: UIUserInterfaceStyle {
+    colorScheme == .dark ? .dark : .light
+  }
+
+  private static func contrastRatio(_ firstLuminance: CGFloat, _ secondLuminance: CGFloat)
+    -> CGFloat
+  {
+    (max(firstLuminance, secondLuminance) + 0.05) / (min(firstLuminance, secondLuminance) + 0.05)
+  }
+
+  private static func relativeLuminance(for color: UIColor) -> CGFloat {
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    var alpha: CGFloat = 0
+
+    guard color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+      return 0
+    }
+
+    return 0.2126 * linearizedSRGB(red)
+      + 0.7152 * linearizedSRGB(green)
+      + 0.0722 * linearizedSRGB(blue)
+  }
+
+  private static func shouldPreferWhiteBadgeText(
+    for color: UIColor,
+    contrastWithWhite: CGFloat
+  ) -> Bool {
+    var hue: CGFloat = 0
+    var saturation: CGFloat = 0
+    var brightness: CGFloat = 0
+    var alpha: CGFloat = 0
+
+    guard color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
+    else {
+      return false
+    }
+
+    let isRedOrRose = hue <= 0.08 || hue >= 0.88
+    let isBlueOrPurple = hue >= 0.55 && hue <= 0.88
+    return alpha > 0.1
+      && brightness >= 0.35
+      && saturation >= 0.45
+      && contrastWithWhite >= 2.2
+      && (isRedOrRose || isBlueOrPurple)
+  }
+
+  private static func linearizedSRGB(_ component: CGFloat) -> CGFloat {
+    component <= 0.03928
+      ? component / 12.92
+      : pow((component + 0.055) / 1.055, 2.4)
   }
 }
 
@@ -888,8 +990,7 @@ private struct AddShiftJobChooserSheet: View {
             .padding(.horizontal, Spacing.md)
             .padding(.vertical, Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.tidexSurfaceSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+            .tidexRowSurface(cornerRadius: CornerRadius.lg)
             .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           }
           .buttonStyle(.plain)
@@ -928,8 +1029,7 @@ private struct AddShiftJobChooserSheet: View {
               .padding(.horizontal, Spacing.md)
               .padding(.vertical, Spacing.md)
               .frame(maxWidth: .infinity, alignment: .leading)
-              .background(Color.tidexSurfaceSecondary)
-              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+              .tidexRowSurface(cornerRadius: CornerRadius.lg)
               .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
             }
             .buttonStyle(.plain)

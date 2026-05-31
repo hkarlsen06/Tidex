@@ -134,10 +134,7 @@ struct YearlyIncomeChart: View {
       .frame(height: 200)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(Spacing.mlg)
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.card)
-    .tidexCardShadow()
+    .statsPanelSurface()
   }
 
   // MARK: - Helpers
@@ -365,10 +362,7 @@ struct YearlyIncomeChartEmpty: View {
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(Spacing.mlg)
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.card)
-    .tidexCardShadow()
+    .statsPanelSurface()
   }
 }
 

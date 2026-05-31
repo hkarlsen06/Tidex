@@ -74,8 +74,8 @@ extension Color {
   /// Dark mode surface primary - same navy hue family as the app background (#151F32)
   static let tidexDarkSurfacePrimary = Color(red: 0.082, green: 0.122, blue: 0.196)
 
-  /// Light mode surface secondary - Very light gray (#F7F8F8)
-  static let tidexLightSurfaceSecondary = Color(red: 0.965, green: 0.969, blue: 0.973)
+  /// Light mode surface secondary - lifted blue-gray for contrast against app backgrounds (#EAF0F7)
+  static let tidexLightSurfaceSecondary = Color(red: 0.918, green: 0.941, blue: 0.969)
 
   /// Dark mode surface secondary - lifted navy for nested controls (#1B2942)
   static let tidexDarkSurfaceSecondary = Color(red: 0.106, green: 0.161, blue: 0.259)
@@ -305,10 +305,47 @@ extension View {
     modifier(TidexCardShadowModifier(level: level, customCornerRadius: cornerRadius))
   }
 
+  /// Applies the standard contained row surface for custom lists and sheets.
+  func tidexRowSurface(
+    cornerRadius: CGFloat,
+    fillColor: Color = .tidexSurfacePrimary,
+    shadowLevel: TidexShadowLevel = .subtle
+  ) -> some View {
+    modifier(
+      TidexRowSurfaceModifier(
+        cornerRadius: cornerRadius,
+        fillColor: fillColor,
+        shadowLevel: shadowLevel
+      ))
+  }
+
   /// Applies a subtle shadow for small chips and status badges
   /// Creates consistent 3D appearance across all chip styles
   func tidexChipShadow() -> some View {
     modifier(TidexChipShadowModifier())
+  }
+}
+
+struct TidexRowSurfaceModifier: ViewModifier {
+  @Environment(\.colorScheme) private var colorScheme
+  let cornerRadius: CGFloat
+  let fillColor: Color
+  let shadowLevel: TidexShadowLevel
+
+  func body(content: Content) -> some View {
+    let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+
+    content
+      .background(shape.fill(fillColor))
+      .clipShape(shape)
+      .overlay(
+        shape.strokeBorder(Color.tidexBorderSubtle.opacity(borderOpacity), lineWidth: 1)
+      )
+      .tidexCardShadow(shadowLevel, cornerRadius: cornerRadius)
+  }
+
+  private var borderOpacity: Double {
+    colorScheme == .dark ? 0.48 : 0.28
   }
 }
 

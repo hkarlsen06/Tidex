@@ -11,6 +11,7 @@ struct WorkplaceNameText: View {
   var lineLimit: Int? = 1
   var maxTextWidth: CGFloat?
   var maxTextAlignment: Alignment = .leading
+  var multilineTextAlignment: TextAlignment = .leading
   var badgeCornerRadius: CGFloat = CornerRadius.sm
   var badgeHorizontalPadding: CGFloat = Spacing.xs
   var badgeVerticalPadding: CGFloat = Spacing.xxxs
@@ -21,6 +22,7 @@ struct WorkplaceNameText: View {
       Text(name)
         .font(font)
         .foregroundColor(badgeForegroundColor(for: badgeColor))
+        .multilineTextAlignment(multilineTextAlignment)
         .lineLimit(lineLimit)
         .truncationMode(.tail)
         .padding(.horizontal, badgeHorizontalPadding)
@@ -34,6 +36,7 @@ struct WorkplaceNameText: View {
       Text(name)
         .font(font)
         .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(multilineTextAlignment)
         .lineLimit(lineLimit)
         .truncationMode(.tail)
         .frame(maxWidth: maxTextWidth, alignment: maxTextAlignment)
@@ -58,10 +61,10 @@ struct WorkplaceNameText: View {
     let contrastWithBlack = Self.contrastRatio(luminance, 0)
 
     if Self.shouldPreferWhiteBadgeText(for: resolvedColor, contrastWithWhite: contrastWithWhite) {
-      return .white
+      return .tidexTextOnBrand
     }
 
-    return contrastWithWhite >= contrastWithBlack ? .white : .black
+    return contrastWithWhite >= contrastWithBlack ? .tidexTextOnBrand : .tidexLightTextPrimary
   }
 
   private var userInterfaceStyle: UIUserInterfaceStyle {
@@ -124,6 +127,10 @@ struct WorkplaceColorCarousel: View {
   let selectedHex: String?
   let onSelect: (String) -> Void
 
+  private static let swatchControlSize: CGFloat = 44
+  private static let swatchSize: CGFloat = 32
+  private static let selectedRingSize: CGFloat = 36
+
   private var normalizedSelectedHex: String? {
     guard var selectedHex else { return nil }
     selectedHex = selectedHex.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -151,29 +158,22 @@ struct WorkplaceColorCarousel: View {
           ZStack {
             Circle()
               .fill(selectedSwatchColor)
-              .frame(width: 32, height: 32)
+              .frame(width: Self.swatchSize, height: Self.swatchSize)
 
-            Circle()
-              .stroke(Color.white.opacity(0.98), lineWidth: 2)
-              .frame(width: 36, height: 36)
-              .overlay {
-                Circle()
-                  .stroke(Color.black.opacity(0.25), lineWidth: 1)
-                  .frame(width: 36, height: 36)
-              }
+            selectedRing
 
             Image(systemName: "checkmark")
               .font(.system(size: 11, weight: .bold))
-              .foregroundColor(.white)
-              .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
+              .foregroundColor(swatchForegroundColor(for: normalizedSelectedHex))
           }
         } else {
           Circle()
             .stroke(Color.tidexBorder, style: StrokeStyle(lineWidth: 1.5, dash: [4, 3]))
-            .frame(width: 32, height: 32)
+            .frame(width: Self.swatchSize, height: Self.swatchSize)
         }
       }
-      .frame(width: 40, height: 36)
+      .frame(width: Self.swatchControlSize, height: Self.swatchControlSize)
+      .accessibilityHidden(true)
 
       ScrollView(.horizontal, showsIndicators: false) {
         HStack(spacing: Spacing.xs) {
@@ -187,28 +187,52 @@ struct WorkplaceColorCarousel: View {
               ZStack {
                 Circle()
                   .fill(swatchColor)
-                  .frame(width: 32, height: 32)
+                  .frame(width: Self.swatchSize, height: Self.swatchSize)
 
                 if isSelected {
-                  Circle()
-                    .stroke(Color.white.opacity(0.98), lineWidth: 2)
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                      Circle()
-                        .stroke(Color.black.opacity(0.25), lineWidth: 1)
-                        .frame(width: 36, height: 36)
-                    }
+                  selectedRing
+
+                  Image(systemName: "checkmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(swatchForegroundColor(for: hex))
                 }
               }
+              .frame(width: Self.swatchControlSize, height: Self.swatchControlSize)
+              .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text(String(localized: "settings.pay.add_job.color_label")))
+            .accessibilityValue(Text(hex))
+            .accessibilityAddTraits(isSelected ? .isSelected : [])
           }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 1)
         .padding(.horizontal, 1)
       }
     }
-    .accessibilityLabel(Text(String(localized: "settings.pay.add_job.color_picker_accessibility")))
+    .accessibilityElement(children: .contain)
+  }
+
+  private var selectedRing: some View {
+    Circle()
+      .stroke(Color.tidexSurfacePrimary.opacity(0.98), lineWidth: 2)
+      .frame(width: Self.selectedRingSize, height: Self.selectedRingSize)
+      .overlay {
+        Circle()
+          .stroke(Color.tidexTextPrimary.opacity(0.28), lineWidth: 1)
+          .frame(width: Self.selectedRingSize, height: Self.selectedRingSize)
+      }
+  }
+
+  private func swatchForegroundColor(for hex: String?) -> Color {
+    guard
+      let uiColor = WorkplaceColor.hexToUIColor(hex),
+      WorkplaceColor.relativeLuminance(for: uiColor) > 0.42
+    else {
+      return .tidexTextOnBrand
+    }
+
+    return .tidexLightTextPrimary
   }
 }
 
@@ -255,5 +279,26 @@ enum WorkplaceColor {
     let green = CGFloat((value >> 8) & 0xFF) / 255
     let blue = CGFloat(value & 0xFF) / 255
     return UIColor(red: red, green: green, blue: blue, alpha: 1)
+  }
+
+  static func relativeLuminance(for color: UIColor) -> CGFloat {
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    var alpha: CGFloat = 0
+
+    guard color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+      return 0
+    }
+
+    return 0.2126 * linearizedSRGB(red)
+      + 0.7152 * linearizedSRGB(green)
+      + 0.0722 * linearizedSRGB(blue)
+  }
+
+  private static func linearizedSRGB(_ component: CGFloat) -> CGFloat {
+    component <= 0.03928
+      ? component / 12.92
+      : pow((component + 0.055) / 1.055, 2.4)
   }
 }

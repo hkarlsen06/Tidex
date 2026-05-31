@@ -4,6 +4,7 @@ import UIKit
 /// Optional post-auth onboarding step for setting up an additional workplace/job.
 struct MultiJobPromptScreen: View {
   var isLoading: Bool = false
+  var didAddJob: Bool = false
   let onAddNow: () -> Void
   let onContinueLater: () -> Void
   let onBack: () -> Void
@@ -73,6 +74,28 @@ struct MultiJobPromptScreen: View {
         .padding(.horizontal, Spacing.xl)
         .adaptiveContentWidth()
 
+        if didAddJob {
+          HStack(spacing: Spacing.xs) {
+            Image(systemName: "checkmark.circle.fill")
+              .font(.tidexSubheadline)
+              .foregroundColor(.tidexSuccess)
+
+            Text(String(localized: "onboarding.multi_job.added_title", table: "Localizable"))
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextPrimary)
+          }
+          .padding(.horizontal, Spacing.md)
+          .padding(.vertical, Spacing.sm)
+          .background(Color.tidexSuccess.opacity(0.12))
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+          .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+              .stroke(Color.tidexSuccess.opacity(0.35), lineWidth: 1)
+          )
+          .padding(.top, Spacing.md)
+          .transition(.scale(scale: 0.96).combined(with: .opacity))
+        }
+
         if let errorMessage, !errorMessage.isEmpty {
           Text(errorMessage)
             .font(.tidexFootnote)
@@ -99,7 +122,7 @@ struct MultiJobPromptScreen: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onContinueLater()
           }) {
-            Text(.onboardingMfaSkip)
+            Text(didAddJob ? .commonContinue : .onboardingMfaSkip)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextSecondary)
           }

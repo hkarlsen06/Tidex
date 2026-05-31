@@ -46,7 +46,6 @@ struct AddJobSheet: View {
   @State private var showingPaydayInput = false
   @State private var paydayInputText = ""
   @FocusState private var isPaydayInputFocused: Bool
-  @State private var halfTaxMonth: Int?
   @State private var monthlyGoal: String
 
   @State private var isSaving = false
@@ -54,13 +53,10 @@ struct AddJobSheet: View {
   @State private var showSaveError = false
 
   private let payrollDayOptions = [1, 10, 15, 20, 25, 31]
-  private let monthlyGoalPresets = [15000, 20000, 25000]
-
   init(
     initialCurrency: String,
     initialPayrollDay: Int = 15,
-    initialHalfTaxMonth: Int? = nil,
-    initialMonthlyGoal: Int? = 20000,
+    initialMonthlyGoal: Int? = nil,
     existingJobNeedingSetup: Job? = nil,
     setupDismissTitle: String = String(localized: .commonCancel),
     onSaveBasics: ((AddJobBasicsInput) async -> Job?)? = nil,
@@ -72,7 +68,6 @@ struct AddJobSheet: View {
     self.onSaveBasics = onSaveBasics
     self.onSave = onSave
     _payrollDay = State(initialValue: initialPayrollDay)
-    _halfTaxMonth = State(initialValue: initialHalfTaxMonth)
     _monthlyGoal = State(initialValue: initialMonthlyGoal.map(String.init) ?? "")
   }
 
@@ -381,74 +376,6 @@ struct AddJobSheet: View {
         }
       }
 
-      Divider()
-        .background(Color.tidexBorder)
-
-      payDetailsRow(
-        title: String(localized: "settings.pay.add_job.half_tax_month"),
-        value: halfTaxLabel,
-        options: [
-          (
-            label: String(localized: "settings.pay.add_job.half_tax_off"),
-            action: { halfTaxMonth = nil }
-          ),
-          (
-            label: String(localized: "settings.pay.add_job.half_tax_nov"),
-            action: { halfTaxMonth = 11 }
-          ),
-          (
-            label: String(localized: "settings.pay.add_job.half_tax_dec"),
-            action: { halfTaxMonth = 12 }
-          ),
-        ]
-      )
-
-      Divider()
-        .background(Color.tidexBorder)
-
-      VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(String(localized: "settings.pay.add_job.monthly_goal"))
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-
-        HStack(spacing: Spacing.xs) {
-          TextField("", text: $monthlyGoal)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
-            .keyboardType(.numberPad)
-            .onChange(of: monthlyGoal) { _, newValue in
-              let filtered = newValue.filter { $0.isNumber }
-              if filtered != newValue {
-                monthlyGoal = filtered
-              }
-            }
-          if !onboardingData.currency.isEmpty {
-            Text(onboardingData.currency)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextMuted)
-          }
-        }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(Color.tidexBackground)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-
-        ScrollView(.horizontal, showsIndicators: false) {
-          HStack(spacing: Spacing.xs) {
-            ForEach(monthlyGoalPresets, id: \.self) { goalPreset in
-              MonthlyGoalPresetButton(
-                value: goalPreset,
-                isSelected: Int(monthlyGoal) == goalPreset,
-                action: {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                  monthlyGoal = "\(goalPreset)"
-                }
-              )
-            }
-          }
-        }
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfaceSecondary)
@@ -457,49 +384,6 @@ struct AddJobSheet: View {
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(Color.tidexBorder, lineWidth: 1)
     )
-  }
-
-  private func payDetailsRow(
-    title: String,
-    value: String,
-    options: [(label: String, action: () -> Void)]
-  ) -> some View {
-    HStack {
-      Text(title)
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextPrimary)
-
-      Spacer()
-
-      Menu {
-        ForEach(Array(options.enumerated()), id: \.offset) { item in
-          Button(item.element.label) {
-            item.element.action()
-          }
-        }
-      } label: {
-        HStack(spacing: Spacing.xxxs) {
-          Text(value)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexBlue)
-          Image(systemName: "chevron.up.chevron.down")
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexBlue)
-        }
-      }
-    }
-    .padding(.vertical, Spacing.sm)
-  }
-
-  private var halfTaxLabel: String {
-    switch halfTaxMonth {
-    case 11:
-      return String(localized: "settings.pay.add_job.half_tax_nov")
-    case 12:
-      return String(localized: "settings.pay.add_job.half_tax_dec")
-    default:
-      return String(localized: "settings.pay.add_job.half_tax_off")
-    }
   }
 
   private var wageStep: some View {
@@ -713,7 +597,7 @@ struct AddJobSheet: View {
         color: normalizedHex(from: selectedColor),
         currency: resolvedCurrency,
         payrollDay: payrollDay,
-        halfTaxMonth: halfTaxMonth,
+        halfTaxMonth: nil,
         monthlyGoal: monthlyGoalValue
       ))
     isSaving = false
@@ -802,7 +686,7 @@ struct AddJobSheet: View {
         color: normalizedHex(from: selectedColor),
         currency: resolvedCurrency,
         payrollDay: payrollDay,
-        halfTaxMonth: halfTaxMonth,
+        halfTaxMonth: nil,
         monthlyGoal: monthlyGoalValue,
         baselineSnapshot: snapshotInput
       )
@@ -883,25 +767,6 @@ private struct AddJobPaydayButton: View {
         .frame(minWidth: 56, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-    }
-    .buttonStyle(.plain)
-  }
-}
-
-private struct MonthlyGoalPresetButton: View {
-  let value: Int
-  let isSelected: Bool
-  let action: () -> Void
-
-  var body: some View {
-    Button(action: action) {
-      Text("\(value)")
-        .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.xs)
-        .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary.opacity(0.76))
-        .clipShape(Capsule())
     }
     .buttonStyle(.plain)
   }

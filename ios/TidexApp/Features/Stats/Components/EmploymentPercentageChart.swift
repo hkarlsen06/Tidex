@@ -86,9 +86,7 @@ struct EmploymentPercentageChart: View {
       // Chart
       chartView
     }
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.card)
-    .tidexCardShadow()
+    .statsPanelSurface(padding: 0)
   }
 
   // MARK: - Header View
@@ -492,10 +490,7 @@ struct EmploymentPercentageChartEmpty: View {
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(Spacing.mlg)
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.card)
-    .tidexCardShadow()
+    .statsPanelSurface()
   }
 }
 

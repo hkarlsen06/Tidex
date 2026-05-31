@@ -110,10 +110,7 @@ struct WeeklyBarChart: View {
       .frame(height: 200)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(Spacing.mlg)
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.card)
-    .tidexCardShadow()
+    .statsPanelSurface()
   }
 
   // MARK: - Helpers
@@ -348,10 +345,7 @@ struct WeeklyBarChartEmpty: View {
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(Spacing.mlg)
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.card)
-    .tidexCardShadow()
+    .statsPanelSurface()
   }
 }
 
