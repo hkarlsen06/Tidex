@@ -2329,10 +2329,13 @@ function payoutRangeForEarningsRange(
     calculatePayoutDate(input.startDate, payrollDay),
     calculatePayoutDate(input.endDate, payrollDay),
   ]);
+  const payoutMonthStarts = payoutDates.map(monthStartForDate);
 
   return {
-    start: payoutDates.reduce((min, date) => date < min ? date : min),
-    end: payoutDates.reduce((max, date) => date > max ? date : max),
+    start: payoutMonthStarts.reduce((min, date) => date < min ? date : min),
+    end: monthEndForDate(
+      payoutMonthStarts.reduce((max, date) => date > max ? date : max),
+    ),
   };
 }
 
@@ -4283,6 +4286,10 @@ function monthEndForDate(isoDate: string): string {
   return `${year}-${String(month).padStart(2, "0")}-${
     String(day).padStart(2, "0")
   }`;
+}
+
+function monthStartForDate(isoDate: string): string {
+  return `${isoDate.slice(0, 7)}-01`;
 }
 
 function payrollAdjustmentTaxSnapshots(

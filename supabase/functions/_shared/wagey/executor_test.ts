@@ -2872,6 +2872,21 @@ Deno.test("calculate_wages includes adjustments in the following payout month", 
         deleted_at: null,
       },
       {
+        id: "44444444-4444-4444-8444-444444444444",
+        user_id: USER_ID,
+        job_id: null,
+        amount: 300,
+        currency: "NOK",
+        category: "correction",
+        tax_treatment: "net_manual",
+        description: "End of month correction",
+        note: null,
+        earned_from_date: null,
+        earned_to_date: null,
+        payout_date: "2026-07-31",
+        deleted_at: null,
+      },
+      {
         id: "33333333-3333-4333-8333-333333333333",
         user_id: USER_ID,
         job_id: null,
@@ -2902,12 +2917,12 @@ Deno.test("calculate_wages includes adjustments in the following payout month", 
   const data = result.data as Record<string, unknown>;
   assertEquals(data.totalShifts, 1);
   assertEquals(data.shiftGross, 800);
-  assertEquals(data.adjustmentCount, 1);
-  assertEquals(data.adjustmentGross, 2000);
-  assertEquals(data.totalGross, 2800);
-  assertEquals(data.totalNet, 2800);
-  assertEquals(data.payoutStart, "2026-07-10");
-  assertEquals(data.payoutEnd, "2026-07-10");
+  assertEquals(data.adjustmentCount, 2);
+  assertEquals(data.adjustmentGross, 2300);
+  assertEquals(data.totalGross, 3100);
+  assertEquals(data.totalNet, 3100);
+  assertEquals(data.payoutStart, "2026-07-01");
+  assertEquals(data.payoutEnd, "2026-07-31");
   const adjustments = data.adjustments as Array<Record<string, unknown>>;
   assertEquals(adjustments[0].description, "Bonus");
 });
