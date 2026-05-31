@@ -425,6 +425,29 @@ enum DashboardPayrollSelector {
     )
   }
 
+  static func previousPayoutStartDate(
+    for selection: DashboardPayrollSelection,
+    jobs: [Job],
+    fallbackPayrollDay: Int
+  ) -> Date? {
+    let previousPayoutYM = Date.previousYearMonth(
+      from: (year: selection.payoutYear, month: selection.payoutMonth)
+    )
+    let selectedJobIds = Set(selection.jobIds)
+    let selectedJobs = jobs.filter { selectedJobIds.contains($0.id) }
+
+    return
+      selectedJobs
+      .map { job in
+        PayrollDateAdjuster.adjustPayrollDate(
+          payrollDay: job.payroll_day ?? fallbackPayrollDay,
+          month: previousPayoutYM.month,
+          year: previousPayoutYM.year
+        )
+      }
+      .min()
+  }
+
   private static func makeSelections(
     payoutYM: (year: Int, month: Int),
     candidates: [PayoutCandidate],
@@ -524,10 +547,13 @@ enum DashboardPayrollAdjustmentFilter {
     calendar: Calendar = .current
   ) -> Bool {
     guard let adjustmentDate = Date.fromISODateString(adjustment.payout_date) else {
-      return adjustment.payout_date == payoutDate.toISODateString()
+      return adjustment.payout_date.prefix(7) == payoutDate.toISODateString().prefix(7)
     }
 
-    return calendar.isDate(adjustmentDate, inSameDayAs: payoutDate)
+    let adjustmentComponents = calendar.dateComponents([.year, .month], from: adjustmentDate)
+    let payoutComponents = calendar.dateComponents([.year, .month], from: payoutDate)
+    return adjustmentComponents.year == payoutComponents.year
+      && adjustmentComponents.month == payoutComponents.month
   }
 }
 
@@ -946,6 +972,16 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     dashboardData = data
   }
 
+  private func applyDashboardData(
+    _ data: DashboardData,
+    payrollCardSnapshot snapshot: DashboardPayrollCardSnapshot
+  ) {
+    if payrollCardSnapshot != snapshot {
+      payrollCardSnapshot = snapshot
+    }
+    applyDashboardData(data)
+  }
+
   // MARK: - Published State
 
   @Published private(set) var dashboardData: DashboardData?
@@ -1056,9 +1092,48 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     return Calendar.current.isDate(currentSelection.payoutDate, inSameDayAs: payoutDate)
   }
 
+  func currentPayrollProgressStartDate(
+    for payoutDate: Date,
+    now: Date = Date()
+  ) -> Date? {
+    let current = now.yearMonth()
+    let jobs = currentPayrollSelectionJobs()
+    guard !jobs.isEmpty else { return nil }
+
+    let fallbackPayrollDay = settings?.effectivePayrollDay ?? 15
+    let sortedJobs = sortedPayrollSelectionJobs(jobs, displayYM: current)
+    let selections = DashboardPayrollSelector.selections(
+      displayYM: current,
+      jobs: sortedJobs,
+      fallbackPayrollDay: fallbackPayrollDay,
+      isViewingCurrentMonth: true,
+      now: now
+    )
+
+    guard
+      let selection = selections.first(where: {
+        Calendar.current.isDate($0.payoutDate, inSameDayAs: payoutDate)
+      })
+    else {
+      return nil
+    }
+
+    return DashboardPayrollSelector.previousPayoutStartDate(
+      for: selection,
+      jobs: sortedJobs,
+      fallbackPayrollDay: fallbackPayrollDay
+    )
+  }
+
   func payrollCardVariants(fallback: DashboardData, defaultTitle: String) -> [PayrollCardVariant] {
+    let matchingSnapshot = payrollCardSnapshot.flatMap { snapshot in
+      snapshot.displayedYear == fallback.displayedYear
+        && snapshot.displayedMonth == fallback.displayedMonth
+        ? snapshot
+        : nil
+    }
     let variants =
-      payrollCardSnapshot?.variants
+      matchingSnapshot?.variants
       ?? Self.fallbackPayrollCardVariants(fallback: fallback)
     return variants.map { $0.resolvingDefaultTitle(defaultTitle) }
   }
@@ -1324,31 +1399,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     ]
   }
 
-  private func schedulePayrollCardSnapshotBuild(_ input: PayrollCardVariantBuildInput) {
-    activePayrollCardTask?.cancel()
-
-    activePayrollCardTask = Task.detached(priority: .utility) { [weak self] in
-      let variants = Self.buildPayrollCardVariants(input)
-      guard !Task.isCancelled else { return }
-
-      await MainActor.run { [weak self] in
-        guard let self else { return }
-        guard self.displayYear == input.displayYM.year,
-          self.displayMonth == input.displayYM.month
-        else {
-          logger.info("⏭️ Skipping stale payroll card payload")
-          return
-        }
-
-        let snapshot = DashboardPayrollCardSnapshot(
-          displayedYear: input.displayYM.year,
-          displayedMonth: input.displayYM.month,
-          variants: variants
-        )
-        guard self.payrollCardSnapshot != snapshot else { return }
-        self.payrollCardSnapshot = snapshot
-      }
-    }
+  nonisolated private static func buildPayrollCardSnapshot(
+    _ input: PayrollCardVariantBuildInput
+  ) -> DashboardPayrollCardSnapshot {
+    DashboardPayrollCardSnapshot(
+      displayedYear: input.displayYM.year,
+      displayedMonth: input.displayYM.month,
+      variants: buildPayrollCardVariants(input)
+    )
   }
 
   func createPayrollAdjustment(_ draft: PayrollAdjustmentDraft) async throws -> PayrollAdjustment {
@@ -1715,7 +1773,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   private var recurringShifts: [RecurringShiftRow] = []
   private var dashboardDependenciesLoaded = false
   private var cachedUserId: String?
-  private var activePayrollCardTask: Task<Void, Never>?
   private var isActiveTabVisible = true
   private var localDataNeedsReload = false
   private var displayedMonthLoadPending = false
@@ -1889,7 +1946,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // Cancel any active navigation task to prevent orphaned operations
     activeNavigationTask?.cancel()
-    activePayrollCardTask?.cancel()
 
     if let observer = memoryWarningObserver {
       NotificationCenter.default.removeObserver(observer)
@@ -2126,32 +2182,32 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
               currency: capturedCurrency,
               jobs: capturedJobs
             ))
+          let payrollCardSnapshot = Self.buildPayrollCardSnapshot(
+            .init(
+              displayedMonthShifts: capturedDisplay,
+              previousMonthShifts: capturedPrevious,
+              payrollAdjustmentsByPayoutMonth: capturedAdjustmentsByPayoutMonth,
+              previousPayrollAdjustments: capturedAdjustments,
+              snapshots: capturedSnapshots,
+              settings: currentSettings,
+              jobs: capturedJobs,
+              displayYM: displayYM,
+              fallbackCurrency: data.currency,
+              fallbackPayrollDate: data.payrollDate,
+              fallbackPreviousGross: data.previousMonthGross,
+              fallbackPreviousNet: data.previousMonthNet,
+              fallbackPreviousTax: data.previousMonthTax,
+              fallbackPreviousTaxEnabled: data.previousMonthTaxEnabled,
+              fallbackPreviousHasPayrollAdjustments: data.previousMonthHasPayrollAdjustments,
+              now: Date()
+            ))
           await MainActor.run {
             guard self.displayYear == targetYear, self.displayMonth == targetMonth else {
               logger.info("⏭️ Skipping stale cached dashboard payload for \(displayKey)")
               return
             }
-            self.applyDashboardData(data)
+            self.applyDashboardData(data, payrollCardSnapshot: payrollCardSnapshot)
             self.maybeTriggerCelebration()
-            self.schedulePayrollCardSnapshotBuild(
-              .init(
-                displayedMonthShifts: capturedDisplay,
-                previousMonthShifts: capturedPrevious,
-                payrollAdjustmentsByPayoutMonth: capturedAdjustmentsByPayoutMonth,
-                previousPayrollAdjustments: capturedAdjustments,
-                snapshots: capturedSnapshots,
-                settings: currentSettings,
-                jobs: capturedJobs,
-                displayYM: displayYM,
-                fallbackCurrency: data.currency,
-                fallbackPayrollDate: data.payrollDate,
-                fallbackPreviousGross: data.previousMonthGross,
-                fallbackPreviousNet: data.previousMonthNet,
-                fallbackPreviousTax: data.previousMonthTax,
-                fallbackPreviousTaxEnabled: data.previousMonthTaxEnabled,
-                fallbackPreviousHasPayrollAdjustments: data.previousMonthHasPayrollAdjustments,
-                now: Date()
-              ))
           }
         }
       } else {
@@ -2226,7 +2282,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     if !isVisible {
       activeNavigationTask?.cancel()
-      activePayrollCardTask?.cancel()
       incrementMonthCacheInvalidationTokens(for: Set(prefetchTasks.keys))
       prefetchTasks.removeAll()
       isLoading = false
@@ -2322,8 +2377,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
     // Clear cache on full reload (including cachedUserId for impersonation support)
     clearAllMonthCache(reason: "full-load")
-    activePayrollCardTask?.cancel()
-    payrollCardSnapshot = nil
+    if dashboardData == nil {
+      payrollCardSnapshot = nil
+    }
     cachedUserId = nil
     resetDashboardDependencies()
     previousPayrollAdjustments = []
@@ -2756,7 +2812,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       invalidateMovingWindowCache(reason: "local-reload")
     }
 
-    activePayrollCardTask?.cancel()
     cachedUserId = currentUserId  // Refreshed from session for impersonation correctness.
     if let refreshedContext {
       applyDashboardDependencies(refreshedContext)
@@ -2873,6 +2928,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let capturedCurrency = currentSettings.currency ?? "kr"
       let capturedJobs = displayJobs
       let capturedPayrollAdjustments = fetchedPayrollAdjustments
+      let capturedPayrollAdjustmentsByPayoutMonth = fetchedPayrollAdjustmentsByMonth
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
@@ -2913,12 +2969,33 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             jobs: capturedJobs
           ))
 
+        let payrollCardSnapshot = Self.buildPayrollCardSnapshot(
+          .init(
+            displayedMonthShifts: displayComputed,
+            previousMonthShifts: previousComputed,
+            payrollAdjustmentsByPayoutMonth: capturedPayrollAdjustmentsByPayoutMonth,
+            previousPayrollAdjustments: capturedPayrollAdjustments,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs,
+            displayYM: displayYM,
+            fallbackCurrency: dashboardData.currency,
+            fallbackPayrollDate: dashboardData.payrollDate,
+            fallbackPreviousGross: dashboardData.previousMonthGross,
+            fallbackPreviousNet: dashboardData.previousMonthNet,
+            fallbackPreviousTax: dashboardData.previousMonthTax,
+            fallbackPreviousTaxEnabled: dashboardData.previousMonthTaxEnabled,
+            fallbackPreviousHasPayrollAdjustments: dashboardData.previousMonthHasPayrollAdjustments,
+            now: Date()
+          ))
+
         return (
           display: displayComputed,
           displayEvents: displayEvents,
           previous: previousComputed,
           previousEvents: previousEvents,
-          dashboardData: dashboardData
+          dashboardData: dashboardData,
+          payrollCardSnapshot: payrollCardSnapshot
         )
       }.value
 
@@ -2951,28 +3028,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
       // Build dashboard data and clear loading state
       // Always clear isLoading on success since we have data to show
-      applyDashboardData(result.dashboardData)
+      applyDashboardData(result.dashboardData, payrollCardSnapshot: result.payrollCardSnapshot)
       self.maybeTriggerCelebration()
-      schedulePayrollCardSnapshotBuild(
-        .init(
-          displayedMonthShifts: result.display,
-          previousMonthShifts: result.previous,
-          payrollAdjustmentsByPayoutMonth: fetchedPayrollAdjustmentsByMonth,
-          previousPayrollAdjustments: fetchedPayrollAdjustments,
-          snapshots: capturedSnapshots,
-          settings: currentSettings,
-          jobs: capturedJobs,
-          displayYM: displayYM,
-          fallbackCurrency: result.dashboardData.currency,
-          fallbackPayrollDate: result.dashboardData.payrollDate,
-          fallbackPreviousGross: result.dashboardData.previousMonthGross,
-          fallbackPreviousNet: result.dashboardData.previousMonthNet,
-          fallbackPreviousTax: result.dashboardData.previousMonthTax,
-          fallbackPreviousTaxEnabled: result.dashboardData.previousMonthTaxEnabled,
-          fallbackPreviousHasPayrollAdjustments: result.dashboardData
-            .previousMonthHasPayrollAdjustments,
-          now: Date()
-        ))
       await refreshClockActiveState(referenceDate: Date())
       self.isLoading = false
 
@@ -3062,6 +3119,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       let capturedCurrency = currentSettings.currency ?? "kr"
       let capturedJobs = displayJobs
       let capturedPayrollAdjustments = fetchedPayrollAdjustments
+      let capturedPayrollAdjustmentsByPayoutMonth = fetchedPayrollAdjustmentsByMonth
 
       let result = await Task.detached(priority: .userInitiated) {
         let displayComputed = PayrollEngine.computeShiftsForMonth(
@@ -3102,12 +3160,33 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
             jobs: capturedJobs
           ))
 
+        let payrollCardSnapshot = Self.buildPayrollCardSnapshot(
+          .init(
+            displayedMonthShifts: displayComputed,
+            previousMonthShifts: previousComputed,
+            payrollAdjustmentsByPayoutMonth: capturedPayrollAdjustmentsByPayoutMonth,
+            previousPayrollAdjustments: capturedPayrollAdjustments,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs,
+            displayYM: displayYM,
+            fallbackCurrency: dashboardData.currency,
+            fallbackPayrollDate: dashboardData.payrollDate,
+            fallbackPreviousGross: dashboardData.previousMonthGross,
+            fallbackPreviousNet: dashboardData.previousMonthNet,
+            fallbackPreviousTax: dashboardData.previousMonthTax,
+            fallbackPreviousTaxEnabled: dashboardData.previousMonthTaxEnabled,
+            fallbackPreviousHasPayrollAdjustments: dashboardData.previousMonthHasPayrollAdjustments,
+            now: Date()
+          ))
+
         return (
           display: displayComputed,
           displayEvents: displayEvents,
           previous: previousComputed,
           previousEvents: previousEvents,
-          dashboardData: dashboardData
+          dashboardData: dashboardData,
+          payrollCardSnapshot: payrollCardSnapshot
         )
       }.value
 
@@ -3146,28 +3225,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       self.payrollAdjustmentsByPayoutMonth = fetchedPayrollAdjustmentsByMonth
 
       // Build dashboard data and clear loading state
-      applyDashboardData(result.dashboardData)
+      applyDashboardData(result.dashboardData, payrollCardSnapshot: result.payrollCardSnapshot)
       self.maybeTriggerCelebration()
-      schedulePayrollCardSnapshotBuild(
-        .init(
-          displayedMonthShifts: result.display,
-          previousMonthShifts: result.previous,
-          payrollAdjustmentsByPayoutMonth: fetchedPayrollAdjustmentsByMonth,
-          previousPayrollAdjustments: fetchedPayrollAdjustments,
-          snapshots: capturedSnapshots,
-          settings: currentSettings,
-          jobs: capturedJobs,
-          displayYM: displayYM,
-          fallbackCurrency: result.dashboardData.currency,
-          fallbackPayrollDate: result.dashboardData.payrollDate,
-          fallbackPreviousGross: result.dashboardData.previousMonthGross,
-          fallbackPreviousNet: result.dashboardData.previousMonthNet,
-          fallbackPreviousTax: result.dashboardData.previousMonthTax,
-          fallbackPreviousTaxEnabled: result.dashboardData.previousMonthTaxEnabled,
-          fallbackPreviousHasPayrollAdjustments: result.dashboardData
-            .previousMonthHasPayrollAdjustments,
-          now: Date()
-        ))
       await refreshClockActiveState(referenceDate: Date())
       self.isLoading = false
 

@@ -24,6 +24,7 @@ struct PayrollCard: View {
 
   @Environment(\.userCurrency) private var currency
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(\.colorScheme) private var colorScheme
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
@@ -180,7 +181,7 @@ struct PayrollCard: View {
       // when navigating away from the current month
       GeometryReader { geometry in
         Rectangle()
-          .fill(Color.tidexBlue.opacity(0.1))
+          .fill(progressFillColor)
           .frame(width: geometry.size.width * (animatedProgress / 100))
       }
     }
@@ -233,6 +234,10 @@ struct PayrollCard: View {
 
   private var adjustmentMarker: Text {
     Text("*")
+  }
+
+  private var progressFillColor: Color {
+    colorScheme == .light ? Color.tidexBlue.opacity(0.035) : Color.tidexBlue.opacity(0.1)
   }
 
   @ViewBuilder

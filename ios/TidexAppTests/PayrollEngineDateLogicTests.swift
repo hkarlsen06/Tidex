@@ -109,6 +109,67 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
 
+  func testDashboardPayrollSelectorAdvancesWhenAdjustedMonthEndPayoutPassed() throws {
+    let selection = try XCTUnwrap(
+      DashboardPayrollSelector.select(
+        displayYM: (year: 2026, month: 5),
+        jobs: [payrollJob(id: "job-1", payrollDay: 31)],
+        fallbackPayrollDay: 15,
+        isViewingCurrentMonth: true,
+        now: try date("2026-05-31")
+      ))
+
+    XCTAssertEqual(selection.payoutYear, 2026)
+    XCTAssertEqual(selection.payoutMonth, 6)
+    XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-30")
+    XCTAssertEqual(selection.earningsYear, 2026)
+    XCTAssertEqual(selection.earningsMonth, 5)
+    XCTAssertEqual(selection.jobIds, ["job-1"])
+  }
+
+  func testDashboardPayrollPreviousPayoutStartUsesAdjustedPriorPayrollDate() throws {
+    let job = payrollJob(id: "job-1", payrollDay: 31)
+    let selection = try XCTUnwrap(
+      DashboardPayrollSelector.select(
+        displayYM: (year: 2026, month: 5),
+        jobs: [job],
+        fallbackPayrollDay: 15,
+        isViewingCurrentMonth: true,
+        now: try date("2026-05-31")
+      ))
+
+    let startDate = try XCTUnwrap(
+      DashboardPayrollSelector.previousPayoutStartDate(
+        for: selection,
+        jobs: [job],
+        fallbackPayrollDay: 15
+      ))
+
+    XCTAssertEqual(startDate.toISODateString(), "2026-05-29")
+  }
+
+  func testDashboardPayrollPreviousPayoutStartStillUsesPriorPayoutInPayoutMonth() throws {
+    let job = payrollJob(id: "job-1", payrollDay: 10)
+    let selection = try XCTUnwrap(
+      DashboardPayrollSelector.select(
+        displayYM: (year: 2026, month: 6),
+        jobs: [job],
+        fallbackPayrollDay: 15,
+        isViewingCurrentMonth: true,
+        now: try date("2026-06-01")
+      ))
+
+    let startDate = try XCTUnwrap(
+      DashboardPayrollSelector.previousPayoutStartDate(
+        for: selection,
+        jobs: [job],
+        fallbackPayrollDay: 15
+      ))
+
+    XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-10")
+    XCTAssertEqual(startDate.toISODateString(), "2026-05-08")
+  }
+
   func testDashboardPayrollSelectorUsesLaterCurrentMonthJobWhenEarlierJobPassed() throws {
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
@@ -186,16 +247,23 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(selected.first?.payoutDate.toISODateString(), "2026-05-20")
   }
 
-  func testDashboardPayrollAdjustmentFilterMatchesOnlyShownPayoutDate() throws {
-    let passedAdjustment = payrollAdjustment(id: "passed", payoutDate: "2026-05-08")
+  func testDashboardPayrollAdjustmentFilterMatchesPayoutMonthIgnoringDay() throws {
+    let earlierAdjustment = payrollAdjustment(id: "earlier", payoutDate: "2026-05-08")
     let selectedAdjustment = payrollAdjustment(id: "selected", payoutDate: "2026-05-20")
+    let nextMonthAdjustment = payrollAdjustment(id: "next-month", payoutDate: "2026-06-01")
     let selectedPayoutDate = try date("2026-05-20")
 
-    XCTAssertFalse(
-      DashboardPayrollAdjustmentFilter.matches(passedAdjustment, payoutDate: selectedPayoutDate)
+    XCTAssertTrue(
+      DashboardPayrollAdjustmentFilter.matches(earlierAdjustment, payoutDate: selectedPayoutDate)
     )
     XCTAssertTrue(
       DashboardPayrollAdjustmentFilter.matches(selectedAdjustment, payoutDate: selectedPayoutDate)
+    )
+    XCTAssertFalse(
+      DashboardPayrollAdjustmentFilter.matches(
+        nextMonthAdjustment,
+        payoutDate: selectedPayoutDate
+      )
     )
   }
 
