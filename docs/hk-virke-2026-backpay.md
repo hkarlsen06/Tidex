@@ -7,7 +7,8 @@ This runbook covers the one-off HK/Virke 2026 backpay adjustment and the later a
 - Backpay and operational wage-update script: `scripts/hk-virke-backpay.ts`
 - Package command: `pnpm tariff:hk-virke:backpay`
 - Backpay period: `2026-02-01` through `2026-05-31`
-- Payout date: `2026-06-15`
+- Payout month seed: `2026-06-15`
+- Adjustment payout dates: each job's adjusted June 2026 payroll date, using the same Tuesday-Friday/non-holiday adjustment as the app
 - Operational tariff effective date for the app: `2026-06-01`
 - Adjustment marker: `hk_virke_2026_backpay`
 - Source page: `https://www.virke.no/tariff-og-lonn/finn-tariffavtale/landsoverenskomsten-hk/#sistenyttavtale`
@@ -19,6 +20,8 @@ The script supports separate apply modes:
 - `--apply` runs both apply modes, and is only valid once both guard dates have passed.
 
 It does not edit shifts, recurring shifts, jobs, historical wage snapshots, or historical tariff versions. If a `2026-06-01` wage snapshot already exists for an eligible tariff job, the operational apply updates only that row's tariff fields (`hourly_wage`, `wage_level`, `tariff_type_id`) and preserves tax, break, and supplement settings.
+
+Backpay adjustment rows must use the app-visible payout date for the job, not the raw 15th. For June 2026 this means payroll-day 10 jobs use `2026-06-10`, while payroll-day 15 jobs use `2026-06-12` because `2026-06-15` is a Monday and the app adjusts payroll dates backwards.
 
 ## Tariff Values
 
@@ -45,19 +48,19 @@ April increase from `2026-04-01`:
 
 ## Production Dry-Run Result
 
-Latest pre-apply dry run against production on `2026-05-18`:
+Corrected pre-apply dry run against production data on `2026-06-01` after fixing conflict exclusion scope:
 
 | Metric | Value |
 | --- | ---: |
-| Eligible jobs | 19 |
-| Users with adjustments | 6 |
-| Adjustment rows | 6 |
-| Actual shifts included | 46 |
-| Generated recurring shifts included | 12 |
-| Conflicting entries excluded | 17 |
-| Total gross backpay | 3166.05 kr |
-| Operational wage snapshots to create | 19 |
-| Existing `2026-06-01` wage snapshots | 0 |
+| Eligible jobs | 18 |
+| Users with adjustments | 7 |
+| Adjustment rows | 7 |
+| Actual shifts included | 119 |
+| Generated recurring shifts included | 19 |
+| Conflicting entries excluded | 0 |
+| Total gross backpay | 8942.96 kr |
+| Operational wage snapshots to create | 0 |
+| Existing `2026-06-01` wage snapshots | 18 |
 | Operational wage snapshots skipped without an increase | 0 |
 | Existing marker rows before apply | 0 |
 
@@ -73,26 +76,27 @@ Operational snapshot apply status on `2026-05-29`:
 | Legacy `NULL` tariff source snapshots | 16 |
 | Existing backpay marker rows after operational apply | 0 |
 
-After the operational apply, dry runs should report `0` operational wage snapshots to create or update and `20` existing operational wage snapshots skipped.
+After the operational apply, dry runs should report `0` operational wage snapshots to create or update. The current active-job count is `18`; older notes expected `20` before two job-state/default-snapshot details were reconciled.
 
 ## Adjustment Row Review
 
-The dry run produces 6 adjustment rows, not 4.
+The corrected dry run produces 7 adjustment rows.
 
 | User | Job | Level | Dates | Sources | Paid hours | Rate delta | Amount | Assessment |
 | --- | --- | ---: | --- | --- | ---: | ---: | ---: | --- |
+| Deltid i butikk user | Deltid i butikk | 6 | 2026-04-02..2026-05-30 | 37 shifts | 239.50 | 15.50 | 3712.25 | Corrected from cross-user conflict exclusion. Payroll date `2026-06-12`. |
+| Hjalmar Karlsen | Coop | 3 | 2026-04-01..2026-05-30 | 18 shifts, 6 recurring | 152.00 | 10.50 | 1595.91 | Matches the Wagey April-May paid-hour total; includes generated recurring shifts with no same-job actual conflict. Payroll date `2026-06-10`. |
+| Ask Hoaas | Jobb | 1 | 2026-04-08..2026-05-30 | 22 shifts, 4 recurring | 137.90 | 10.50 | 1447.93 | Corrected from cross-user conflict exclusion. Payroll date `2026-06-10`. |
 | FERDIN KHAWAJA | Job | 6 | 2026-02-02..2026-02-28 | 20 shifts | 163.11 | 5.00 | 815.55 | Matches trinn 6 February guarantee exactly: `163.11 * 5.00`. |
 | Ibsen | Rema | 6 | 2026-04-08..2026-05-01 | 5 shifts | 41.50 | 15.50 | 643.32 | All 5 actual shifts are included, including 2026-04-08. Difference from simple hours math is 0.07 kr rounding through payroll engine. |
-| Øyvind Hansen | Rema | -1 | 2026-05-09..2026-05-16 | 3 shifts | 16.50 | 6.50 | 107.25 | Matches simple hourly delta exactly. |
-| isak | Job | -2 | 2026-04-04..2026-05-21 | 5 shifts, 4 recurring | 35.75 | 6.50 | 232.37 | The 2026-04-04 Påskeaften shift had a custom `percent: 100` supplement. Since that is not an automatic HK/Virke Landsoverenskomsten rule, it was changed to a fixed `132.90 kr` supplement. Historical gross for the shift stays 1329.00 kr, while the backpay line is no longer doubled. |
-| Hjalmar Karlsen | Extra | 3 | 2026-04-01..2026-05-25 | 9 shifts, 5 recurring | 89.50 | 10.50 | 939.69 | Matches simple hourly delta within 0.06 kr rounding. |
-| Ask Hoaas | Jobb | 1 | 2026-05-02..2026-05-30 | 4 shifts, 3 recurring | 40.75 | 10.50 | 427.87 | Matches simple hourly delta within 0.01 kr rounding. |
+| Øyvind Hansen | Rema | -1 | 2026-04-29..2026-05-31 | 11 shifts, 1 recurring | 57.75 | 6.50 | 375.38 | Corrected from cross-user conflict exclusion. Payroll date `2026-06-10`. |
+| isak | Job | -2 | 2026-04-04..2026-05-21 | 6 shifts, 8 recurring | 54.25 | 6.50 | 352.62 | Corrected from cross-user conflict exclusion. Payroll date `2026-06-10`. |
 
 The rows make sense under the chosen rules:
 
 - Trinn 6 has separate February/March treatment, then April treatment.
 - Other levels only receive April/May backpay.
-- Actual shifts are preferred over generated recurring shifts when they overlap.
+- Actual shifts are preferred over generated recurring shifts when they overlap for the same user/job/date.
 - Generated recurring shifts are included when no actual conflicting shift exists.
 - Amounts use `computeShift`, so percentage/custom supplements can change when base hourly wage changes.
 - Isak's Påskeaften custom supplement was changed from `percent: 100` to fixed `rate: 132.90` because a percentage supplement would otherwise increase with the new tariff rate and overpay backpay unless a local agreement explicitly required that.
@@ -126,15 +130,18 @@ Expected dry-run shape before apply:
 HK/Virke 2026 backpay dry-run
 Operational tariff effective date: 2026-06-01
 Backpay period: 2026-02-01..2026-05-31
-Payout date: 2026-06-15
+Payout month seed: 2026-06-15
 Backpay eligibility date: <today>
 Operational eligibility date: 2026-06-01
-Eligible backpay jobs: 19
-Eligible operational jobs: 19
-Adjustment groups: 6
-Total gross backpay: 3166.05 kr
+Eligible backpay jobs: 18
+Eligible operational jobs: 18
+Adjustment groups: 7
+Shifts included: 119
+Recurring shifts included: 19
+Conflicting entries excluded: 0
+Total gross backpay: 8942.96 kr
 Operational wage snapshots for 2026-06-01: 0
-Existing operational wage snapshots skipped: 20
+Existing operational wage snapshots skipped: 18
 Operational wage snapshots skipped without an increase: 0
 No rows inserted. Re-run with --apply, --apply-backpay, or --apply-operational-wage-snapshots after approval.
 ```
@@ -145,7 +152,6 @@ Before apply, verify no previous run exists:
 select id, user_id, job_id, amount, payout_date, note
 from public.payroll_adjustments
 where deleted_at is null
-  and payout_date = date '2026-06-15'
   and category = 'retro_pay'
   and note ilike '%hk_virke_2026_backpay%';
 ```
@@ -176,7 +182,7 @@ pnpm tariff:hk-virke:backpay -- --apply-backpay
 
 The script refuses backpay apply before `2026-06-01`.
 
-After apply, verify that 6 adjustment rows exist:
+After apply, verify that 7 adjustment rows exist:
 
 ```sql
 select user_id, job_id, amount, currency, description,
@@ -184,13 +190,12 @@ select user_id, job_id, amount, currency, description,
        earned_from_date, earned_to_date, payout_date
 from public.payroll_adjustments
 where deleted_at is null
-  and payout_date = date '2026-06-15'
   and category = 'retro_pay'
   and note ilike '%hk_virke_2026_backpay%'
 order by amount desc;
 ```
 
-Also verify that 20 operational wage snapshots exist for active HK/Virke jobs:
+Also verify that 18 direct operational wage snapshots exist for active HK/Virke jobs:
 
 ```sql
 select ws.id, ws.user_id, ws.job_id, j.name as job_name,
@@ -206,7 +211,7 @@ where ws.deleted_at is null
 order by ws.user_id, j.name;
 ```
 
-Expected rows: 20.
+Expected rows: 18 active direct rows. Two additional active jobs can inherit a default-job June snapshot; do not use this verification query alone as eligibility proof.
 
 Inserted wage snapshots copy supplements, tax settings, and break settings from each job's current snapshot. Existing `2026-06-01` snapshots keep their existing supplements, tax settings, and break settings. The operational apply only sets the new stored hourly wage for the same tariff level and normalizes legacy HK/Virke snapshots from `tariff_type_id IS NULL` to `tariff_type_id = 'hk_retail'`.
 
@@ -218,7 +223,6 @@ If an applied run is wrong, soft-delete the generated rows and rerun after fixin
 update public.payroll_adjustments
 set deleted_at = now()
 where deleted_at is null
-  and payout_date = date '2026-06-15'
   and category = 'retro_pay'
   and note ilike '%hk_virke_2026_backpay%';
 ```

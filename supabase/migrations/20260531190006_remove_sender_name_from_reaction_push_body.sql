@@ -1,5 +1,4 @@
--- Function: queue_message_reaction_notification
--- Description: Enqueues push notifications when a direct-message reaction is added
+-- Remove duplicated sender names from reaction push notification bodies.
 
 CREATE OR REPLACE FUNCTION public.queue_message_reaction_notification()
 RETURNS trigger

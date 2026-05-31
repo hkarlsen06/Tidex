@@ -1260,7 +1260,7 @@ async function main() {
   console.log(`HK/Virke 2026 backpay ${result.mode}`);
   console.log(`Operational tariff effective date: ${JUNE_OPERATIONAL_TARIFF_DATE}`);
   console.log(`Backpay period: ${RUN_CONFIG.fromDate}..${RUN_CONFIG.throughDate}`);
-  console.log(`Payout date: ${RUN_CONFIG.payoutDate}`);
+  console.log(`Payout month seed: ${RUN_CONFIG.payoutDate}`);
   console.log(`Backpay eligibility date: ${backpayEligibilityDate}`);
   console.log(`Operational eligibility date: ${operationalEligibilityDate}`);
   console.log(`Eligible backpay jobs: ${result.eligibleBackpayJobs}`);
