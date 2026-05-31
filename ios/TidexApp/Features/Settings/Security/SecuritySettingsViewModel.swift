@@ -10,6 +10,7 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "SecuritySettin
 final class SecuritySettingsViewModel: ObservableObject {
 
   // MARK: - Dependencies
+  private let passkeyAuthService: PasskeyAuthService
 
   // MARK: - Published State
 
@@ -32,6 +33,8 @@ final class SecuritySettingsViewModel: ObservableObject {
 
   /// MFA factors
   @Published var mfaFactors: [MFAFactor] = []
+  /// Passkeys registered for this account
+  @Published var passkeys: [PasskeyAuthService.Passkey] = []
 
   /// Loading states
   @Published private(set) var isLoading = false
@@ -40,6 +43,9 @@ final class SecuritySettingsViewModel: ObservableObject {
   @Published private(set) var isEnrollingMFA = false
   @Published private(set) var isVerifyingMFA = false
   @Published private(set) var isUnenrollingMFA = false
+  @Published private(set) var isRegisteringPasskey = false
+  @Published private(set) var isDeletingPasskey = false
+  @Published private(set) var isRenamingPasskey = false
 
   /// Error message to display
   @Published var errorMessage: String?
@@ -65,6 +71,13 @@ final class SecuritySettingsViewModel: ObservableObject {
   @Published var showUnenrollConfirmation = false
   @Published var factorToUnenroll: MFAFactor?
 
+  /// Passkey deletion confirmation
+  @Published var showDeletePasskeyConfirmation = false
+  @Published var passkeyToDelete: PasskeyAuthService.Passkey?
+  @Published var showRenamePasskeyAlert = false
+  @Published var passkeyToRename: PasskeyAuthService.Passkey?
+  @Published var passkeyNameDraft = ""
+
   /// Phone linking state
   @Published var showPhoneLinkingSheet = false
   @Published var phoneLinkStep: PhoneLinkStep = .input
@@ -79,7 +92,14 @@ final class SecuritySettingsViewModel: ObservableObject {
 
   // MARK: - Initialization
 
-  init() {}
+  init(passkeyAuthService: PasskeyAuthService? = nil) {
+    self.passkeyAuthService = passkeyAuthService ?? PasskeyAuthService.shared
+  }
+
+  var canSavePasskeyName: Bool {
+    let trimmedName = passkeyNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+    return !trimmedName.isEmpty && trimmedName.count <= 120 && !isRenamingPasskey
+  }
 
   // MARK: - Load Security Info
 
@@ -114,10 +134,14 @@ final class SecuritySettingsViewModel: ObservableObject {
       hasAppleConnected = providers.contains("apple")
       hasPhoneConnected = providers.contains("phone")
 
+      // Load passkeys before calculating disconnect safety because passkeys count as a login method.
+      await loadPasskeys()
+
       // Count total auth methods (password only counts if user has an email identifier)
       let passwordCountsAsMethod = hasPassword && !email.isEmpty
       let authMethodCount = [
         passwordCountsAsMethod, hasGoogleConnected, hasAppleConnected, hasPhoneConnected,
+        !passkeys.isEmpty,
       ].filter { $0 }.count
 
       // Can only disconnect if there's more than one auth method
@@ -126,7 +150,9 @@ final class SecuritySettingsViewModel: ObservableObject {
       canUnlinkPhone = hasPhoneConnected && authMethodCount > 1
 
       // OAuth-only: has OAuth but no password/phone
-      isOAuthOnly = (hasGoogleConnected || hasAppleConnected) && !hasPassword && !hasPhoneConnected
+      isOAuthOnly =
+        (hasGoogleConnected || hasAppleConnected) && !hasPassword && !hasPhoneConnected
+        && passkeys.isEmpty
 
       // Load MFA factors
       await loadMFAFactors()
@@ -163,6 +189,116 @@ final class SecuritySettingsViewModel: ObservableObject {
     } catch {
       logger.error("Failed to load MFA factors: \(error)")
     }
+  }
+
+  /// Load registered passkeys.
+  private func loadPasskeys() async {
+    do {
+      passkeys = try await passkeyAuthService.list()
+    } catch {
+      logger.error("Failed to load passkeys: \(error)")
+      passkeys = []
+    }
+  }
+
+  // MARK: - Passkey Management
+
+  /// Register a passkey for the current account.
+  func registerPasskey() async {
+    isRegisteringPasskey = true
+    errorMessage = nil
+
+    do {
+      let passkey = try await passkeyAuthService.register()
+      Haptics.play(.success)
+      passkeys.insert(passkey, at: 0)
+      await loadPasskeys()
+    } catch let error as PasskeyAuthError where error.isCancellation {
+      // User cancelled - do nothing
+    } catch let error as PasskeyAuthError where error.isPasskeyDisabled {
+      logger.error("Passkey registration failed because passkeys are disabled: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsDisabled)
+    } catch {
+      logger.error("Failed to register passkey: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsRegisterFailed)
+    }
+
+    isRegisteringPasskey = false
+  }
+
+  /// Delete a registered passkey.
+  func deletePasskey(_ passkey: PasskeyAuthService.Passkey) async {
+    isDeletingPasskey = true
+    errorMessage = nil
+
+    do {
+      try await passkeyAuthService.delete(passkeyId: passkey.id)
+      Haptics.play(.success)
+      passkeys.removeAll { $0.id == passkey.id }
+      showDeletePasskeyConfirmation = false
+      passkeyToDelete = nil
+    } catch {
+      logger.error("Failed to delete passkey: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsDeleteFailed)
+    }
+
+    isDeletingPasskey = false
+  }
+
+  /// Prepare the rename dialog for a passkey.
+  func startRenamingPasskey(_ passkey: PasskeyAuthService.Passkey) {
+    guard !isOfflineLimited else { return }
+    passkeyToRename = passkey
+    passkeyNameDraft = passkey.displayName
+    showRenamePasskeyAlert = true
+  }
+
+  /// Cancel passkey renaming and clear the draft.
+  func cancelRenamingPasskey() {
+    showRenamePasskeyAlert = false
+    passkeyToRename = nil
+    passkeyNameDraft = ""
+  }
+
+  /// Rename the selected passkey.
+  func renameSelectedPasskey() async {
+    guard let passkey = passkeyToRename else { return }
+
+    let trimmedName = passkeyNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmedName.isEmpty else {
+      errorMessage = String(localized: .securityPasskeysErrorsNameRequired)
+      return
+    }
+
+    guard trimmedName.count <= 120 else {
+      errorMessage = String(localized: .securityPasskeysErrorsRenameFailed)
+      return
+    }
+
+    if trimmedName == passkey.displayName {
+      cancelRenamingPasskey()
+      return
+    }
+
+    isRenamingPasskey = true
+    errorMessage = nil
+
+    do {
+      let updatedPasskey = try await passkeyAuthService.update(
+        passkeyId: passkey.id,
+        friendlyName: trimmedName
+      )
+      if let index = passkeys.firstIndex(where: { $0.id == passkey.id }) {
+        passkeys[index] = updatedPasskey
+      }
+      Haptics.play(.success)
+      cancelRenamingPasskey()
+    } catch {
+      logger.error("Failed to rename passkey: \(error)")
+      errorMessage = String(localized: .securityPasskeysErrorsRenameFailed)
+    }
+
+    isRenamingPasskey = false
   }
 
   // MARK: - Password Management
@@ -450,7 +586,8 @@ final class SecuritySettingsViewModel: ObservableObject {
 
     } catch {
       logger.error("Failed to initiate phone linking: \(error)")
-      errorMessage = Self.isPhoneAlreadyInUseError(error)
+      errorMessage =
+        Self.isPhoneAlreadyInUseError(error)
         ? String(localized: .securityPhoneLinkingErrorsPhoneInUse)
         : String(localized: .securityPhoneLinkingErrorsSendFailed)
     }

@@ -9,6 +9,7 @@ final class LoginViewModel: ObservableObject {
   // MARK: - Dependencies
 
   private let authService: AuthService
+  private let passkeyAuthService: PasskeyAuthService
   private let appleAuthProvider: AppleAuthProvider
   private let googleAuthProvider: GoogleAuthProvider
 
@@ -69,10 +70,12 @@ final class LoginViewModel: ObservableObject {
 
   init(
     authService: AuthService? = nil,
+    passkeyAuthService: PasskeyAuthService? = nil,
     appleAuthProvider: AppleAuthProvider? = nil,
     googleAuthProvider: GoogleAuthProvider? = nil,
   ) {
     self.authService = authService ?? AuthService.shared
+    self.passkeyAuthService = passkeyAuthService ?? PasskeyAuthService.shared
     self.appleAuthProvider = appleAuthProvider ?? AppleAuthProvider.shared
     self.googleAuthProvider = googleAuthProvider ?? GoogleAuthProvider.shared
   }
@@ -146,6 +149,28 @@ final class LoginViewModel: ObservableObject {
       await handleSuccessfulLogin()
     } catch let error as GoogleAuthError where error.isCancellation {
       // User cancelled - do nothing
+    } catch {
+      handleError(error)
+    }
+  }
+
+  /// Sign in with Passkey
+  func signInWithPasskey() async {
+    clearMessages()
+    isLoading = true
+    defer { isLoading = false }
+
+    do {
+      let _ = try await passkeyAuthService.signIn()
+      await handleSuccessfulLogin()
+    } catch let error as PasskeyAuthError where error.isCancellation {
+      // User cancelled - do nothing
+    } catch let error as PasskeyAuthError where error.isPasskeyDisabled {
+      errorMessage = String(localized: .loginPasskeyErrorsDisabled)
+      Haptics.play(.error)
+    } catch let error as PasskeyAuthError where error.isVerificationFailed {
+      errorMessage = String(localized: .loginPasskeyErrorsVerificationFailed)
+      Haptics.play(.error)
     } catch {
       handleError(error)
     }

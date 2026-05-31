@@ -17,19 +17,20 @@ struct TermsAgreementView: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      HStack(alignment: .top, spacing: Spacing.sm) {
+    VStack(alignment: .center, spacing: Spacing.xs) {
+      HStack(alignment: .center, spacing: Spacing.xs) {
         checkboxButton
         termsLabel
       }
 
-      // Error message
-      if let error = error, !error.isEmpty {
+      if let error, !error.isEmpty {
         Text(error)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
+          .multilineTextAlignment(.center)
       }
     }
+    .frame(maxWidth: .infinity, alignment: .center)
     .fullScreenCover(item: $safariURL) { url in
       SafariView(url: url)
         .ignoresSafeArea()
@@ -53,7 +54,7 @@ struct TermsAgreementView: View {
             .foregroundColor(.tidexTextOnBrand)
         }
       }
-      .frame(minWidth: 44, minHeight: 44, alignment: .topLeading)
+      .frame(width: 24, height: 24)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
@@ -80,6 +81,7 @@ struct TermsAgreementView: View {
     Text(termsAttributedString)
       .font(.tidexSubheadline)
       .fixedSize(horizontal: false, vertical: true)
+      .multilineTextAlignment(.center)
       .environment(
         \.openURL,
         OpenURLAction { url in
@@ -110,8 +112,7 @@ struct TermsAgreementView: View {
     }
     result.append(termsPart)
 
-    // Newline + "and " - force second line
-    var andPart = AttributedString("\n" + andText + " ")
+    var andPart = AttributedString(" " + andText + " ")
     andPart.foregroundColor = .tidexTextSecondary
     result.append(andPart)
 

@@ -53,6 +53,9 @@ struct SecuritySettingsView: View {
         // Connected accounts section
         connectedAccountsSection
 
+        // Passkeys section
+        passkeysSection
+
         // MFA section
         mfaSection
       }
@@ -109,6 +112,44 @@ struct SecuritySettingsView: View {
       }
     } message: {
       Text(.securityMfaUnenrollDialogDescription)
+    }
+    .alert(
+      String(localized: .securityPasskeysRenameDialogTitle),
+      isPresented: $viewModel.showRenamePasskeyAlert
+    ) {
+      TextField(
+        String(localized: .securityPasskeysRenameDialogPlaceholder),
+        text: $viewModel.passkeyNameDraft
+      )
+      .textInputAutocapitalization(.words)
+
+      Button(String(localized: .commonCancel), role: .cancel) {
+        viewModel.cancelRenamingPasskey()
+      }
+
+      Button(String(localized: .commonSave)) {
+        Task {
+          await viewModel.renameSelectedPasskey()
+        }
+      }
+      .disabled(!viewModel.canSavePasskeyName || viewModel.isOfflineLimited)
+    }
+    .alert(
+      String(localized: .securityPasskeysDeleteDialogTitle),
+      isPresented: $viewModel.showDeletePasskeyConfirmation
+    ) {
+      Button(String(localized: .commonCancel), role: .cancel) {
+        viewModel.passkeyToDelete = nil
+      }
+      Button(String(localized: .securityPasskeysDeleteDialogConfirm), role: .destructive) {
+        if let passkey = viewModel.passkeyToDelete {
+          Task {
+            await viewModel.deletePasskey(passkey)
+          }
+        }
+      }
+    } message: {
+      Text(.securityPasskeysDeleteDialogDescription)
     }
   }
 
@@ -374,6 +415,115 @@ struct SecuritySettingsView: View {
         }
         .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
       }
+    }
+  }
+
+  // MARK: - Passkeys Section
+
+  private var passkeysSection: some View {
+    settingsSection(
+      title: String(localized: .securityPasskeysSectionTitle),
+      footer: String(localized: .securityPasskeysSectionSubtitle)
+    ) {
+      if viewModel.passkeys.isEmpty {
+        HStack(spacing: Spacing.sm) {
+          TidexSettingsIcon(systemName: "key.slash", foregroundColor: .tidexBlue, size: 29)
+
+          Text(.securityPasskeysNoPasskeys)
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextSecondary)
+
+          Spacer()
+        }
+
+        settingsDivider
+      } else {
+        ForEach(viewModel.passkeys) { passkey in
+          passkeyRow(passkey)
+          settingsDivider
+        }
+      }
+
+      Button {
+        Task {
+          await viewModel.registerPasskey()
+        }
+      } label: {
+        HStack(spacing: Spacing.xs) {
+          if viewModel.isRegisteringPasskey {
+            ProgressView()
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+              .scaleEffect(0.8)
+          } else {
+            Image(systemName: "plus.circle.fill")
+              .font(.tidexHeadline)
+          }
+
+          Text(
+            viewModel.isRegisteringPasskey
+              ? String(localized: .securityPasskeysAdding)
+              : String(localized: .securityPasskeysAdd)
+          )
+          .font(.tidexLabel)
+        }
+        .foregroundColor(.tidexBlue)
+        .frame(maxWidth: .infinity)
+      }
+      .disabled(viewModel.isRegisteringPasskey || viewModel.isOfflineLimited)
+      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
+    }
+  }
+
+  @ViewBuilder
+  private func passkeyRow(_ passkey: PasskeyAuthService.Passkey) -> some View {
+    HStack(spacing: Spacing.sm) {
+      TidexSettingsIcon(systemName: "person.badge.key.fill", foregroundColor: .tidexBlue, size: 29)
+
+      VStack(alignment: .leading, spacing: Spacing.micro) {
+        Text(passkey.displayName)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexTextPrimary)
+
+        Text(String(localized: .securityMfaAddedOn(passkey.formattedCreatedAt)))
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+      }
+
+      Spacer()
+
+      if viewModel.isRenamingPasskey && viewModel.passkeyToRename?.id == passkey.id {
+        ProgressView()
+          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
+          .scaleEffect(0.75)
+          .padding(Spacing.xs)
+      } else {
+        Button {
+          viewModel.startRenamingPasskey(passkey)
+        } label: {
+          Image(systemName: "pencil")
+            .font(.tidexBody)
+            .foregroundColor(.tidexTextPrimary)
+            .padding(Spacing.xs)
+        }
+        .disabled(
+          viewModel.isRenamingPasskey || viewModel.isDeletingPasskey || viewModel.isOfflineLimited
+        )
+        .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
+      }
+
+      Button {
+        viewModel.passkeyToDelete = passkey
+        viewModel.showDeletePasskeyConfirmation = true
+      } label: {
+        Image(systemName: "trash")
+          .font(.tidexBody)
+          .foregroundColor(.tidexError)
+          .padding(Spacing.xs)
+      }
+      .disabled(
+        viewModel.isDeletingPasskey || viewModel.isRenamingPasskey || viewModel.isOfflineLimited
+      )
+      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
     }
   }
 

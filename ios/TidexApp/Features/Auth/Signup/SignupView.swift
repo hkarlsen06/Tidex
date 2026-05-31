@@ -33,14 +33,15 @@ struct SignupView: View {
         ScrollViewReader { scrollProxy in
           ScrollView {
             VStack(spacing: 0) {
-              Spacer(minLength: Spacing.xxl)
+              Spacer(minLength: authTopSpacing)
 
-              VStack(spacing: Spacing.xl) {
+              VStack(spacing: authSectionSpacing) {
                 AuthHeroVisual(
                   logoSize: 132,
                   currency: currency,
                   onLogoTap: restartOnboarding
                 )
+                .padding(.bottom, heroControlsGap)
                 .signupEntranceStep(isVisible: hasPlayedEntrance, delay: 0.00)
 
                 messageStack
@@ -54,7 +55,7 @@ struct SignupView: View {
               }
               .frame(maxWidth: 420)
               .padding(.horizontal, Spacing.xl)
-              .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
+              .padding(.bottom, bottomPadding(for: geometry))
               .frame(maxWidth: .infinity)
 
               Color.clear
@@ -203,6 +204,22 @@ struct SignupView: View {
   }
 
   // MARK: - Footer
+
+  private var authTopSpacing: CGFloat {
+    viewModel.showEmailForm ? Spacing.lg : Spacing.sm
+  }
+
+  private var heroControlsGap: CGFloat {
+    viewModel.showEmailForm ? 0 : Spacing.huge + Spacing.lg
+  }
+
+  private var authSectionSpacing: CGFloat {
+    viewModel.showEmailForm ? Spacing.lg : Spacing.mlg
+  }
+
+  private func bottomPadding(for geometry: GeometryProxy) -> CGFloat {
+    max(geometry.safeAreaInsets.bottom + Spacing.xs, Spacing.lg)
+  }
 
   private var footerView: some View {
     Button(action: {

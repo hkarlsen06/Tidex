@@ -1,13 +1,25 @@
 import SwiftUI
 
-/// OAuth sign-in buttons for Google and Apple
+/// Sign-in provider buttons.
 struct OAuthButtonsView: View {
   let onGoogleTap: () -> Void
   let onAppleTap: () -> Void
+  var onPasskeyTap: (() -> Void)?
   var isLoading: Bool = false
 
   var body: some View {
     VStack(spacing: Spacing.sm) {
+      if let onPasskeyTap {
+        OAuthProviderButton(
+          title: String(localized: .loginPasskeyContinue),
+          action: onPasskeyTap,
+          isLoading: isLoading
+        ) {
+          Image(systemName: "person.badge.key.fill")
+            .font(.system(size: 19, weight: .medium))
+        }
+      }
+
       OAuthProviderButton(
         title: String(localized: .oauthContinueWithApple),
         action: onAppleTap,

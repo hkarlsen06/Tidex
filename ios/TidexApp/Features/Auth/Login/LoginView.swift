@@ -37,14 +37,15 @@ struct LoginView: View {
         ScrollViewReader { scrollProxy in
           ScrollView {
             VStack(spacing: 0) {
-              Spacer(minLength: Spacing.xxl)
+              Spacer(minLength: authTopSpacing)
 
-              VStack(spacing: Spacing.xl) {
+              VStack(spacing: authSectionSpacing) {
                 AuthHeroVisual(
                   logoSize: 132,
                   currency: currency,
                   onLogoTap: restartOnboarding
                 )
+                .padding(.bottom, heroControlsGap)
 
                 messageStack
 
@@ -63,7 +64,7 @@ struct LoginView: View {
               }
               .frame(maxWidth: 420)
               .padding(.horizontal, Spacing.xl)
-              .padding(.bottom, max(geometry.safeAreaInsets.bottom + Spacing.sm, Spacing.xxl))
+              .padding(.bottom, bottomPadding(for: geometry))
               .frame(maxWidth: .infinity)
 
               Color.clear
@@ -127,6 +128,7 @@ struct LoginView: View {
       OAuthButtonsView(
         onGoogleTap: { Task { await viewModel.signInWithGoogle() } },
         onAppleTap: { Task { await viewModel.signInWithApple() } },
+        onPasskeyTap: { Task { await viewModel.signInWithPasskey() } },
         isLoading: viewModel.isLoading
       )
 
@@ -309,6 +311,22 @@ struct LoginView: View {
 
   // MARK: - Footer
 
+  private var authTopSpacing: CGFloat {
+    viewModel.showEmailForm || viewModel.currentStep != .input ? Spacing.lg : Spacing.sm
+  }
+
+  private var heroControlsGap: CGFloat {
+    viewModel.showEmailForm || viewModel.currentStep != .input ? 0 : Spacing.huge + Spacing.xs
+  }
+
+  private var authSectionSpacing: CGFloat {
+    viewModel.showEmailForm || viewModel.currentStep != .input ? Spacing.lg : Spacing.mlg
+  }
+
+  private func bottomPadding(for geometry: GeometryProxy) -> CGFloat {
+    max(geometry.safeAreaInsets.bottom + Spacing.xs, Spacing.lg)
+  }
+
   private var footerView: some View {
     HStack(spacing: 0) {
       footerLink(title: Text(.loginCreateAccount)) {
@@ -349,10 +367,15 @@ struct AuthHeroVisual: View {
   var onLogoTap: (() -> Void)?
 
   var body: some View {
-    VStack(spacing: Spacing.sm) {
+    VStack(spacing: Spacing.xxs) {
       logoSection
+        .hidden()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
 
       ghostedPaycheckPreview
+        .padding(.top, -Spacing.huge)
+        .offset(y: -Spacing.md)
     }
   }
 
@@ -400,17 +423,17 @@ struct AuthHeroVisual: View {
 
   @ViewBuilder
   private var ghostedPaycheckPreview: some View {
-    ZStack {
+    let card = ZStack {
       VStack(spacing: Spacing.xs) {
         RoundedRectangle(cornerRadius: CornerRadius.xxs)
-          .fill(Color.tidexTextSecondary)
+          .fill(heroAccentGradient(opacity: 0.55))
           .frame(width: 80, height: 8)
 
         Spacer().frame(height: 4)
 
         Text(ghostedAmountText)
           .font(.tidexAmountLarge)
-          .foregroundColor(.tidexBlue)
+          .foregroundStyle(heroAccentGradient(opacity: 0.55))
 
         Spacer().frame(height: 8)
 
@@ -447,11 +470,11 @@ struct AuthHeroVisual: View {
       .padding(.horizontal, Spacing.lg)
       .padding(.vertical, Spacing.mlg)
       .frame(width: 280)
-      .background(Color.tidexSurfacePrimary)
+      .background(heroCardBackground)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-          .stroke(Color.tidexBorder, lineWidth: 1)
+          .stroke(heroBorderGradient, lineWidth: 1)
       )
 
       LinearGradient(
@@ -470,6 +493,57 @@ struct AuthHeroVisual: View {
     }
     .opacity(0.9)
     .blur(radius: 0.5)
+
+    if let onLogoTap {
+      card
+        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+        .onTapGesture(perform: onLogoTap)
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityHint(Text(.authRestartPreAuthOnboarding))
+    } else {
+      card.accessibilityHidden(true)
+    }
+  }
+
+  private var heroCardBackground: some View {
+    ZStack {
+      Color.tidexSurfacePrimary
+
+      LinearGradient(
+        colors: [
+          Color.logoGradientColors[0].opacity(0.08),
+          Color.clear,
+          Color.logoGradientColors[2].opacity(0.06),
+        ],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+    }
+  }
+
+  private func heroAccentGradient(opacity: Double = 1) -> LinearGradient {
+    LinearGradient(
+      colors: [
+        Color.logoGradientColors[0].opacity(opacity),
+        Color.logoGradientColors[1].opacity(opacity),
+        Color.logoGradientColors[2].opacity(opacity),
+      ],
+      startPoint: .leading,
+      endPoint: .trailing
+    )
+  }
+
+  private var heroBorderGradient: LinearGradient {
+    LinearGradient(
+      colors: [
+        Color.logoGradientColors[0].opacity(0.28),
+        Color.tidexBorder.opacity(0.65),
+        Color.logoGradientColors[2].opacity(0.28),
+      ],
+      startPoint: .topLeading,
+      endPoint: .bottomTrailing
+    )
   }
 }
 
