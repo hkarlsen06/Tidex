@@ -38,6 +38,7 @@ struct FriendCard: View {
   var surfaceStyle: SurfaceStyle = .standard
 
   private let actionButtonSize: CGFloat = 44
+  private let cardCornerRadius = CornerRadius.xxxl
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
@@ -118,15 +119,20 @@ struct FriendCard: View {
       }
     }
     .background(
-      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+      RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
         .fill(backgroundFillColor)
     )
     .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+      RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous)
         .strokeBorder(borderColor, style: borderStyle)
     )
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-    .modifier(FriendCardShadowModifier(isEnabled: surfaceStyle == .standard))
+    .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
+    .modifier(
+      FriendCardShadowModifier(
+        isEnabled: surfaceStyle == .standard,
+        cornerRadius: cardCornerRadius
+      )
+    )
   }
 
   private var backgroundFillColor: Color {
@@ -185,10 +191,11 @@ struct FriendCard: View {
 
 private struct FriendCardShadowModifier: ViewModifier {
   let isEnabled: Bool
+  let cornerRadius: CGFloat
 
   func body(content: Content) -> some View {
     if isEnabled {
-      content.tidexCardShadow()
+      content.tidexCardShadow(cornerRadius: cornerRadius)
     } else {
       content
     }

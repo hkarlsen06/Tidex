@@ -102,38 +102,46 @@ private struct FriendCardMessagePreviewRow: View {
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 60)) { context in
-      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-        HStack(alignment: .firstTextBaseline, spacing: 3) {
-          Text(stateLabel)
-            .font(.tidexFootnote.weight(.semibold))
-            .foregroundColor(statusColor)
-            .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-
-          Text(
-            FriendCardMessagePreviewTimestampFormatter.relativeTimestamp(
-              messageDate: messagePreview.timestamp,
-              referenceDate: context.date
-            )
-          )
-          .font(.tidexCaptionRegular)
-          .foregroundColor(statusColor)
-          .monospacedDigit()
-          .fixedSize(horizontal: true, vertical: false)
-        }
-
-        Text(messagePreview.text)
+      HStack(alignment: .firstTextBaseline, spacing: 0) {
+        Text(contentText)
           .font(.tidexFootnote)
-          .foregroundColor(.tidexTextMuted.opacity(0.75))
+          .foregroundColor(contentColor)
           .lineLimit(1)
           .truncationMode(.tail)
+          .layoutPriority(0)
+
+        Text(" · \(trailingText(referenceDate: context.date))")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(trailingColor)
+          .lineLimit(1)
+          .monospacedDigit()
+          .fixedSize(horizontal: true, vertical: false)
+          .layoutPriority(1)
 
         Spacer(minLength: 0)
       }
     }
   }
 
-  private var statusColor: Color {
+  private var contentText: String {
+    switch messagePreview.state {
+    case .outgoingSending, .outgoingSent, .outgoingOpened, .outgoingFailed:
+      "\(String(localized: .friendsChatPreviewYou)): \(messagePreview.text)"
+    case .incomingUnread, .incomingOpened:
+      messagePreview.text
+    }
+  }
+
+  private var contentColor: Color {
+    switch messagePreview.state {
+    case .incomingUnread:
+      .tidexBlue
+    case .outgoingSending, .outgoingSent, .outgoingOpened, .outgoingFailed, .incomingOpened:
+      .tidexTextMuted.opacity(0.75)
+    }
+  }
+
+  private var trailingColor: Color {
     switch messagePreview.state {
     case .incomingUnread:
       .tidexBlue
@@ -141,6 +149,20 @@ private struct FriendCardMessagePreviewRow: View {
       .tidexTextMuted
     case .outgoingFailed:
       .tidexError
+    }
+  }
+
+  private func trailingText(referenceDate: Date) -> String {
+    let timestamp = FriendCardMessagePreviewTimestampFormatter.relativeTimestamp(
+      messageDate: messagePreview.timestamp,
+      referenceDate: referenceDate
+    )
+
+    switch messagePreview.state {
+    case .incomingUnread, .incomingOpened:
+      return timestamp
+    case .outgoingSending, .outgoingSent, .outgoingOpened, .outgoingFailed:
+      return "\(String(localized: stateLabel)) \(timestamp)"
     }
   }
 
