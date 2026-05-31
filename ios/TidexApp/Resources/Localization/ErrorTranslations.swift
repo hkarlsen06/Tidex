@@ -72,6 +72,12 @@ enum ErrorTranslations {
   /// - Parameter message: The error message to translate
   /// - Returns: The translated message, or the original if no translation exists
   static func translate(_ message: String) -> String {
+    if message.contains("webauthn_verification_failed")
+      || message.contains("Credential verification failed")
+    {
+      return String(localized: .loginPasskeyErrorsVerificationFailed)
+    }
+
     if message.contains("Error sending confirmation OTP to provider")
       || message.contains("twilio.com/docs/errors/20003")
       || message.contains("sms_send_failed")
