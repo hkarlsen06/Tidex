@@ -339,6 +339,13 @@ struct FriendsChatMessageRowContent: View {
     let showsFallbackBubble =
       !hasMessageText && imageAttachments.isEmpty && shiftSnapshot == nil
       && fallbackPreviewText != nil
+    let showsReplyPreview = !isShowingAttachmentReactionTarget && quotedPreview != nil
+    let showsBubblePayload = showsFallbackBubble || hasMessageText
+    let payloadCount =
+      (showsReplyPreview ? 1 : 0) + imageAttachments.count + (showsBubblePayload ? 1 : 0)
+    let usesStandalonePayloadGrouping = showsReplyPreview || !imageAttachments.isEmpty
+    let imagePayloadStartIndex = showsReplyPreview ? 1 : 0
+    let bubblePayloadIndex = imagePayloadStartIndex + imageAttachments.count
     let showsMetadataRow =
       !isShowingAttachmentReactionTarget && (inlineMetadataStatus != nil || message.editedAt != nil)
     let topPadding = groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
@@ -372,10 +379,15 @@ struct FriendsChatMessageRowContent: View {
               }
 
               VStack(alignment: isCurrentUser ? .trailing : .leading, spacing: Spacing.xxs) {
-                if !isShowingAttachmentReactionTarget, let quotedPreview {
+                if showsReplyPreview, let quotedPreview {
                   FriendsChatMessageReplyPreview(
                     preview: quotedPreview,
                     isCurrentUser: isCurrentUser,
+                    groupContext: payloadGroupContext(
+                      index: 0,
+                      count: payloadCount,
+                      usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
+                    ),
                     isHighlighted: false,
                     maxWidth: resolvedMaximumTextBubbleWidth,
                     onTap: onTapQuotedMessage
@@ -390,6 +402,11 @@ struct FriendsChatMessageRowContent: View {
                         messageId: message.id,
                         attachment: attachment,
                         isCurrentUser: isCurrentUser,
+                        groupContext: payloadGroupContext(
+                          index: imagePayloadStartIndex + index,
+                          count: payloadCount,
+                          usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
+                        ),
                         canOpenAttachment: messageFrame == nil,
                         canReact: message.canReact,
                         isHighlighted: false,
@@ -447,7 +464,11 @@ struct FriendsChatMessageRowContent: View {
                 if showsFallbackBubble, let fallbackPreviewText {
                   FriendsChatReactionAnchoredBubbleCard(
                     isCurrentUser: isCurrentUser,
-                    groupContext: groupContext,
+                    groupContext: payloadGroupContext(
+                      index: bubblePayloadIndex,
+                      count: payloadCount,
+                      usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
+                    ),
                     minWidth: Self.minimumBubbleWidthForTimestamp,
                     maxWidth: resolvedMaximumTextBubbleWidth,
                     messageFrame: messageFrame,
@@ -467,7 +488,11 @@ struct FriendsChatMessageRowContent: View {
                 if hasMessageText {
                   FriendsChatReactionAnchoredBubbleCard(
                     isCurrentUser: isCurrentUser,
-                    groupContext: groupContext,
+                    groupContext: payloadGroupContext(
+                      index: bubblePayloadIndex,
+                      count: payloadCount,
+                      usesStandalonePayloadGrouping: usesStandalonePayloadGrouping
+                    ),
                     minWidth: Self.minimumBubbleWidthForTimestamp,
                     maxWidth: resolvedMaximumTextBubbleWidth,
                     messageFrame: messageFrame,
@@ -539,6 +564,31 @@ struct FriendsChatMessageRowContent: View {
       baseWidth: Self.maximumTextBubbleWidth,
       isCurrentUser: isCurrentUser
     )
+  }
+
+  private func payloadGroupContext(
+    index: Int,
+    count: Int,
+    usesStandalonePayloadGrouping: Bool
+  ) -> FriendsChatMessageGroupContext {
+    guard usesStandalonePayloadGrouping else { return groupContext }
+
+    let joinsPrevious = groupContext.joinsPrevious || index > 0
+    let joinsNext = index < count - 1 || groupContext.joinsNext
+
+    let position: FriendsChatMessageGroupPosition =
+      switch (joinsPrevious, joinsNext) {
+      case (false, false):
+        .standalone
+      case (false, true):
+        .leading
+      case (true, true):
+        .middle
+      case (true, false):
+        .trailing
+      }
+
+    return FriendsChatMessageGroupContext(position: position, isCurrentUser: isCurrentUser)
   }
 
   private func timestampRevealContainer<Content: View>(
@@ -1155,40 +1205,66 @@ struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View, Stat
   }
 
   private var bubbleShape: some InsettableShape {
+    FriendsChatMessageBubbleShapeResolver.shape(for: groupContext)
+  }
+}
+
+private enum FriendsChatMessageBubbleShapeResolver {
+  static func shape(for groupContext: FriendsChatMessageGroupContext) -> UnevenRoundedRectangle {
     UnevenRoundedRectangle(
       cornerRadii: RectangleCornerRadii(
-        topLeading: topLeadingRadius,
-        bottomLeading: bottomLeadingRadius,
-        bottomTrailing: bottomTrailingRadius,
-        topTrailing: topTrailingRadius
+        topLeading: topLeadingRadius(for: groupContext),
+        bottomLeading: bottomLeadingRadius(for: groupContext),
+        bottomTrailing: bottomTrailingRadius(for: groupContext),
+        topTrailing: topTrailingRadius(for: groupContext)
       ),
       style: .continuous
     )
   }
 
-  private var topLeadingRadius: CGFloat {
-    if !isCurrentUser && groupContext.joinsPrevious {
+  static func uniformShape(cornerRadius: CGFloat) -> UnevenRoundedRectangle {
+    UnevenRoundedRectangle(
+      cornerRadii: RectangleCornerRadii(
+        topLeading: cornerRadius,
+        bottomLeading: cornerRadius,
+        bottomTrailing: cornerRadius,
+        topTrailing: cornerRadius
+      ),
+      style: .continuous
+    )
+  }
+
+  private static func topLeadingRadius(for groupContext: FriendsChatMessageGroupContext)
+    -> CGFloat
+  {
+    if !groupContext.isCurrentUser && groupContext.joinsPrevious {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
   }
 
-  private var bottomLeadingRadius: CGFloat {
-    if !isCurrentUser && groupContext.joinsNext {
+  private static func bottomLeadingRadius(for groupContext: FriendsChatMessageGroupContext)
+    -> CGFloat
+  {
+    if groupContext.showsIncomingBottomTail {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
   }
 
-  private var bottomTrailingRadius: CGFloat {
-    if isCurrentUser && groupContext.joinsNext {
+  private static func bottomTrailingRadius(for groupContext: FriendsChatMessageGroupContext)
+    -> CGFloat
+  {
+    if groupContext.showsOutgoingBottomTail {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
   }
 
-  private var topTrailingRadius: CGFloat {
-    if isCurrentUser && groupContext.joinsPrevious {
+  private static func topTrailingRadius(for groupContext: FriendsChatMessageGroupContext)
+    -> CGFloat
+  {
+    if groupContext.isCurrentUser && groupContext.joinsPrevious {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
@@ -1283,6 +1359,7 @@ private struct FriendsChatDateSeparator: View {
 private struct FriendsChatMessageReplyPreview: View {
   let preview: FriendsChatReplyPreviewModel
   let isCurrentUser: Bool
+  let groupContext: FriendsChatMessageGroupContext
   let isHighlighted: Bool
   var maxWidth: CGFloat? = nil
   let onTap: () -> Void
@@ -1308,11 +1385,11 @@ private struct FriendsChatMessageReplyPreview: View {
       .padding(.vertical, Spacing.xs)
       .fixedSize(horizontal: false, vertical: true)
       .background(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        replyShape
           .fill(replyBackgroundColor)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+        replyShape
           .stroke(borderColor, lineWidth: 1)
       )
     }
@@ -1346,6 +1423,10 @@ private struct FriendsChatMessageReplyPreview: View {
       return isHighlighted ? Color.white.opacity(0.32) : Color.white.opacity(0.18)
     }
     return isHighlighted ? Color.tidexBlue.opacity(0.45) : Color.tidexBorder.opacity(0.4)
+  }
+
+  private var replyShape: UnevenRoundedRectangle {
+    FriendsChatMessageBubbleShapeResolver.shape(for: groupContext)
   }
 }
 
@@ -1575,6 +1656,7 @@ private struct FriendsChatImageView: View {
   let messageId: String
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let groupContext: FriendsChatMessageGroupContext
   let canOpenAttachment: Bool
   let canReact: Bool
   let isHighlighted: Bool
@@ -1591,6 +1673,7 @@ private struct FriendsChatImageView: View {
     FriendsChatImageAttachmentCard(
       attachment: attachment,
       isCurrentUser: isCurrentUser,
+      groupContext: groupContext,
       isHighlighted: isHighlighted,
       onTap: onImageTap
     )
@@ -2290,6 +2373,7 @@ final class FriendsChatImageLoader: ObservableObject {
 struct FriendsChatImageAttachmentCard: View {
   let attachment: FriendMessageAttachment
   let isCurrentUser: Bool
+  let groupContext: FriendsChatMessageGroupContext?
   let isHighlighted: Bool
   let displaySize: CGSize?
   let cornerRadius: CGFloat
@@ -2301,6 +2385,7 @@ struct FriendsChatImageAttachmentCard: View {
   init(
     attachment: FriendMessageAttachment,
     isCurrentUser: Bool,
+    groupContext: FriendsChatMessageGroupContext? = nil,
     isHighlighted: Bool = false,
     displaySize: CGSize? = nil,
     cornerRadius: CGFloat = CornerRadius.lg,
@@ -2309,6 +2394,7 @@ struct FriendsChatImageAttachmentCard: View {
   ) {
     self.attachment = attachment
     self.isCurrentUser = isCurrentUser
+    self.groupContext = groupContext
     self.isHighlighted = isHighlighted
     self.displaySize = displaySize
     self.cornerRadius = cornerRadius
@@ -2385,8 +2471,11 @@ struct FriendsChatImageAttachmentCard: View {
       .contentShape(imageShape)
   }
 
-  private var imageShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+  private var imageShape: UnevenRoundedRectangle {
+    if let groupContext {
+      return FriendsChatMessageBubbleShapeResolver.shape(for: groupContext)
+    }
+    return FriendsChatMessageBubbleShapeResolver.uniformShape(cornerRadius: cornerRadius)
   }
 
   private var imageBorderColor: Color {

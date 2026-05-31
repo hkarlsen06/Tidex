@@ -90,6 +90,30 @@ final class FriendsChatMessageGroupingTests: XCTestCase {
     XCTAssertFalse(context.showsSenderLabel)
   }
 
+  func testStandaloneOutgoingContextDoesNotShowBottomTail() {
+    let context = FriendsChatMessageGroupContext(position: .standalone, isCurrentUser: true)
+
+    XCTAssertFalse(context.showsOutgoingBottomTail)
+  }
+
+  func testIncomingContextDoesNotShowOutgoingBottomTail() {
+    let context = FriendsChatMessageGroupContext(position: .standalone, isCurrentUser: false)
+
+    XCTAssertFalse(context.showsOutgoingBottomTail)
+  }
+
+  func testStandaloneIncomingContextDoesNotShowBottomTail() {
+    let context = FriendsChatMessageGroupContext(position: .standalone, isCurrentUser: false)
+
+    XCTAssertFalse(context.showsIncomingBottomTail)
+  }
+
+  func testOutgoingContextDoesNotShowIncomingBottomTail() {
+    let context = FriendsChatMessageGroupContext(position: .standalone, isCurrentUser: true)
+
+    XCTAssertFalse(context.showsIncomingBottomTail)
+  }
+
   func testShiftSnapshotMessagesDoNotJoinAdjacentMessages() {
     let previous = makeMessage(
       id: "message-1",
@@ -122,6 +146,84 @@ final class FriendsChatMessageGroupingTests: XCTestCase {
     XCTAssertTrue(context.showsSenderLabel)
   }
 
+  func testReplyMessagesDoNotJoinAdjacentMessages() {
+    let previous = makeMessage(
+      id: "message-1",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_000
+    )
+    let reply = makeMessage(
+      id: "message-2",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_030,
+      replyToMessageId: "message-0"
+    )
+    let next = makeMessage(
+      id: "message-3",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_060
+    )
+
+    let context = FriendsChatMessageGrouping.context(
+      for: reply,
+      previous: previous,
+      next: next,
+      viewerUserId: "viewer-1"
+    )
+
+    XCTAssertFalse(FriendsChatMessageGrouping.shouldGroup(previous, reply))
+    XCTAssertFalse(FriendsChatMessageGrouping.shouldGroup(reply, next))
+    XCTAssertEqual(context.position, .standalone)
+  }
+
+  func testMessagesWithAttachmentsStartTheirOwnGroupFromPreviousMessages() {
+    let previous = makeMessage(
+      id: "message-1",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_000
+    )
+    let attachmentMessage = makeMessage(
+      id: "message-2",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_030,
+      body: nil,
+      attachments: [makeImageAttachment(id: "image-1")]
+    )
+    let next = makeMessage(
+      id: "message-3",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_060
+    )
+
+    let context = FriendsChatMessageGrouping.context(
+      for: attachmentMessage,
+      previous: previous,
+      next: next,
+      viewerUserId: "viewer-1"
+    )
+
+    XCTAssertFalse(FriendsChatMessageGrouping.shouldGroup(previous, attachmentMessage))
+    XCTAssertTrue(FriendsChatMessageGrouping.shouldGroup(attachmentMessage, next))
+    XCTAssertEqual(context.position, .leading)
+  }
+
+  func testCaptionedAttachmentMessagesDoNotJoinFollowingMessages() {
+    let attachmentMessage = makeMessage(
+      id: "message-1",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_000,
+      body: "Caption",
+      attachments: [makeImageAttachment(id: "image-1")]
+    )
+    let next = makeMessage(
+      id: "message-2",
+      senderUserId: "friend-1",
+      timestamp: 1_700_000_030
+    )
+
+    XCTAssertFalse(FriendsChatMessageGrouping.shouldGroup(attachmentMessage, next))
+  }
+
   func testInitialsUseFirstTwoWordsWhenAvailable() {
     XCTAssertEqual(FriendsChatMessageGrouping.initials(from: "Ada Lovelace"), "AL")
     XCTAssertEqual(FriendsChatMessageGrouping.initials(from: "Friend"), "FR")
@@ -132,21 +234,39 @@ final class FriendsChatMessageGroupingTests: XCTestCase {
     id: String,
     senderUserId: String,
     timestamp: TimeInterval,
-    metadataData: Data? = nil
+    body: String? = "Hello",
+    metadataData: Data? = nil,
+    replyToMessageId: String? = nil,
+    attachments: [FriendMessageAttachment] = []
   ) -> FriendMessage {
     FriendMessage(
       id: id,
       threadId: "thread-1",
       senderUserId: senderUserId,
       messageType: .user,
-      body: "Hello",
+      body: body,
       clientId: "client-\(id)",
-      replyToMessageId: nil,
+      replyToMessageId: replyToMessageId,
       createdAt: Date(timeIntervalSince1970: timestamp),
       editedAt: nil,
       deletedAt: nil,
       metadataData: metadataData,
-      attachments: []
+      attachments: attachments
+    )
+  }
+
+  private func makeImageAttachment(id: String) -> FriendMessageAttachment {
+    FriendMessageAttachment(
+      id: id,
+      attachmentIndex: 0,
+      kind: .image,
+      storageBucket: "message-attachments",
+      storagePath: "thread-1/\(id).jpeg",
+      mimeType: "image/jpeg",
+      byteSize: 1_024,
+      width: 1_200,
+      height: 900,
+      createdAt: Date(timeIntervalSince1970: 1_700_000_030)
     )
   }
 
