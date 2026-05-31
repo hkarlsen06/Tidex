@@ -965,6 +965,12 @@ struct DashboardView: View {
     let current = Date.currentYearMonth()
     let selectedPayoutIsInCurrentMonth =
       selectedPayoutYM.year == current.year && selectedPayoutYM.month == current.month
+    let currentMonthStart = calendar.date(
+      from: calendar.dateComponents([.year, .month], from: now))
+    let payrollProgressStartDate: (Date) -> Date? = { payoutDate in
+      return viewModel.currentPayrollProgressStartDate(for: payoutDate, now: now)
+        ?? currentMonthStart
+    }
     let canManuallySetPayrollStatus =
       isViewingCurrentMonth && selectedPayoutIsInCurrentMonth && isOnOrBeforePayrollDay
     let isCurrentAdvancedNextPayout =
@@ -1018,20 +1024,16 @@ struct DashboardView: View {
       return String(localized: .dashboardPayroll)
     }()
 
-    // Calculate progress through the month until payroll (matches Next.js behavior)
-    // Only show for current month when payroll hasn't passed yet
+    // Calculate progress from the previous payroll date to the selected payout.
     let defaultPayrollProgress: Double? = {
       guard shouldShowLivePayrollProgress && !effectivePayrollHasPassed else { return nil }
 
-      // Get start of the current month
-      guard
-        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))
-      else {
+      guard let progressStartDate = payrollProgressStartDate(payrollDayStart) else {
         return nil
       }
 
-      let totalDuration = payrollDayStart.timeIntervalSince(monthStart)
-      let elapsed = now.timeIntervalSince(monthStart)
+      let totalDuration = payrollDayStart.timeIntervalSince(progressStartDate)
+      let elapsed = now.timeIntervalSince(progressStartDate)
 
       guard totalDuration > 0 else {
         // Edge case: payroll is on the 1st
@@ -1060,14 +1062,12 @@ struct DashboardView: View {
           ?? selectedPayrollDayStart
         guard now < selectedPayrollDayEnd else { return nil }
 
-        guard
-          let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now))
-        else {
+        guard let progressStartDate = payrollProgressStartDate(selectedPayrollDayStart) else {
           return nil
         }
 
-        let totalDuration = selectedPayrollDayStart.timeIntervalSince(monthStart)
-        let elapsed = now.timeIntervalSince(monthStart)
+        let totalDuration = selectedPayrollDayStart.timeIntervalSince(progressStartDate)
+        let elapsed = now.timeIntervalSince(progressStartDate)
         guard totalDuration > 0 else { return 100 }
 
         let progress = (elapsed / totalDuration) * 100
