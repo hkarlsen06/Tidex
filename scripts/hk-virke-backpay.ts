@@ -21,6 +21,7 @@ type JobRow = {
   user_id: string;
   name: string;
   is_default: boolean;
+  payroll_day: number | null;
   currency: string | null;
   archived_at: string | null;
   deleted_at: string | null;
@@ -297,6 +298,85 @@ function localISODate(): string {
 
 function roundCurrency(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function formatISODate(year: number, month: number, day: number): string {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function addDays(date: string, days: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const value = new Date(Date.UTC(year, month - 1, day + days));
+  return formatISODate(value.getUTCFullYear(), value.getUTCMonth() + 1, value.getUTCDate());
+}
+
+function easterSunday(year: number): string {
+  const a = year % 19;
+  const b = Math.floor(year / 100);
+  const c = year % 100;
+  const d = Math.floor(b / 4);
+  const e = b % 4;
+  const f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4);
+  const k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return formatISODate(year, month, day);
+}
+
+function norwegianPublicHolidays(year: number): Set<string> {
+  const easter = easterSunday(year);
+  return new Set([
+    `${year}-01-01`,
+    `${year}-05-01`,
+    `${year}-05-17`,
+    `${year}-12-25`,
+    `${year}-12-26`,
+    addDays(easter, -3),
+    addDays(easter, -2),
+    easter,
+    addDays(easter, 1),
+    addDays(easter, 39),
+    addDays(easter, 49),
+    addDays(easter, 50),
+  ]);
+}
+
+function isInvalidPayrollDate(date: string): boolean {
+  const [year, month, day] = date.split("-").map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return weekday === 0 || weekday === 1 || weekday === 6 ||
+    norwegianPublicHolidays(year).has(date);
+}
+
+function adjustedPayrollDate(payrollDay: number, payoutMonthDate: string): string {
+  const [year, month] = payoutMonthDate.split("-").map(Number);
+  const day = Math.min(Math.max(payrollDay, 1), daysInMonth(year, month));
+  let date = formatISODate(year, month, day);
+
+  for (let attempts = 0; attempts < 10 && isInvalidPayrollDate(date); attempts += 1) {
+    date = addDays(date, -1);
+  }
+
+  return date;
+}
+
+function payoutDateForGroup(
+  group: BackpayGroup,
+  jobsById: Map<string, JobRow>,
+  fallbackPayoutDate: string,
+): string {
+  const job = group.jobId ? jobsById.get(group.jobId) : null;
+  if (!job?.payroll_day) return fallbackPayoutDate;
+  return adjustedPayrollDate(job.payroll_day, fallbackPayoutDate);
 }
 
 function normalizeSnapshot(row: Record<string, unknown>): WageSnapshot {
@@ -631,12 +711,13 @@ function shiftsOverlap(a: BackpayLine, b: BackpayLine): boolean {
 
 function buildExcludedShiftIds(lines: BackpayLine[]): Set<string> {
   const excludedIds = new Set<string>();
-  const linesByDate = new Map<string, BackpayLine[]>();
+  const linesByDateAndJob = new Map<string, BackpayLine[]>();
   for (const line of lines) {
-    linesByDate.set(line.shiftDate, [...(linesByDate.get(line.shiftDate) ?? []), line]);
+    const key = `${line.userId}:${line.jobId ?? ""}:${line.shiftDate}`;
+    linesByDateAndJob.set(key, [...(linesByDateAndJob.get(key) ?? []), line]);
   }
 
-  for (const linesOnDate of linesByDate.values()) {
+  for (const linesOnDate of linesByDateAndJob.values()) {
     if (linesOnDate.length < 2) continue;
 
     const parent = new Map(linesOnDate.map((line) => [line.shiftId, line.shiftId]));
@@ -759,13 +840,18 @@ async function fetchAll<T>(
   return rows;
 }
 
-function toAdjustment(group: BackpayGroup, payoutDate: string): AdjustmentInsert {
+function toAdjustment(
+  group: BackpayGroup,
+  jobsById: Map<string, JobRow>,
+  fallbackPayoutDate: string,
+): AdjustmentInsert {
   const levelSummary = [...new Set(group.lines.map((line) => line.wageLevel))]
     .sort((a, b) => a - b)
     .join(", ");
   const hours = roundCurrency(group.lines.reduce((sum, line) => sum + line.paidHours, 0));
   const recurringCount = group.lines.filter((line) => line.source === "recurring").length;
   const shiftCount = group.lines.length - recurringCount;
+  const payoutDate = payoutDateForGroup(group, jobsById, fallbackPayoutDate);
 
   return {
     user_id: group.userId,
@@ -871,15 +957,16 @@ async function main() {
   validateRunConfig(RUN_CONFIG, runMode);
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ??
     Deno.env.get("NEXT_PUBLIC_SUPABASE_URL") ?? "";
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+  const adminApiKey = Deno.env.get("SUPABASE_SECRET_KEY") ??
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
     Deno.env.get("SUPABASE_SERVICE_KEY") ??
     Deno.env.get("SUPABASE_SERVICE_ROLE") ?? "";
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !adminApiKey) {
+    throw new Error("Missing SUPABASE_URL or SUPABASE_SECRET_KEY/SUPABASE_SERVICE_ROLE_KEY");
   }
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  const supabase = createClient(supabaseUrl, adminApiKey, {
     auth: { persistSession: false },
   });
 
@@ -893,7 +980,7 @@ async function main() {
     fetchAll<JobRow>((from, to) =>
       supabase
         .from("jobs")
-        .select("id,user_id,name,is_default,currency,archived_at,deleted_at")
+        .select("id,user_id,name,is_default,payroll_day,currency,archived_at,deleted_at")
         .is("deleted_at", null)
         .range(from, to)
     ),
@@ -1016,7 +1103,7 @@ async function main() {
   const lines = applyConflictExclusion(candidateLines);
 
   const groups = groupLines(lines, jobsById, settingsByUserId);
-  const adjustments = groups.map((group) => toAdjustment(group, RUN_CONFIG.payoutDate));
+  const adjustments = groups.map((group) => toAdjustment(group, jobsById, RUN_CONFIG.payoutDate));
   adjustments.forEach(validateAdjustmentPayload);
   const operationalWages = buildOperationalWageUpdates(
     jobs,
