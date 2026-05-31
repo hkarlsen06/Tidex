@@ -99,12 +99,14 @@ The rows make sense under the chosen rules:
 
 ## How To Run
 
-Use a service role key only in the shell environment. Do not commit or paste the key into files.
+Use a Supabase secret/admin key only in the shell environment. Do not commit or paste the key into files.
 
 ```bash
-export SUPABASE_URL="https://identity.tidex.no"
-export SUPABASE_SERVICE_ROLE_KEY="..."
+export SUPABASE_URL="https://iuwjdacxbirhmsglcbxp.supabase.co"
+export SUPABASE_SECRET_KEY="..."
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY` is still accepted for legacy environments, but this project has legacy API keys disabled.
 
 Check the script:
 
