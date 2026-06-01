@@ -973,7 +973,7 @@ struct ShiftsCalendarView: View {
 
         Text(
           isCopyMode
-            ? String(localized: "shifts.chooseDates")
+            ? String(localized: .shiftsChooseDates)
             : String(localized: .shiftsSelectMoveTarget)
         )
         .font(.tidexLabel)
@@ -1003,7 +1003,7 @@ struct ShiftsCalendarView: View {
           toggleHaptic.impactOccurred()
           onFinishCopy?()
         } label: {
-          Text("common.copy")
+          Text(.commonCopy)
             .font(.tidexLabelStrong)
             .foregroundColor(copyTargetDates.isEmpty ? .tidexTextMuted : .tidexTextOnBrand)
             .padding(.horizontal, Spacing.md)
@@ -1124,7 +1124,7 @@ struct ShiftsCalendarView: View {
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "doc.on.doc")
             .font(.tidexLabel)
-          Text("common.copy")
+          Text(.commonCopy)
             .font(.tidexLabelStrong)
         }
         .foregroundColor(.tidexBlue)
@@ -1274,7 +1274,7 @@ struct ShiftsCalendarView: View {
     }
     .buttonStyle(.plain)
     .disabled(isDeleting)
-    .accessibilityLabel(Text(String(localized: "common.delete")))
+    .accessibilityLabel(Text(.commonDelete))
   }
 
   @ViewBuilder

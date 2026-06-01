@@ -38,12 +38,12 @@ struct PurposeScreen: View {
   @ViewBuilder
   private var header: some View {
     VStack(spacing: Spacing.sm) {
-      Text(String(localized: "onboarding.post_auth.purpose.title", table: "Localizable"))
+      Text(.onboardingPostAuthPurposeTitle)
         .font(.tidexScreenTitle)
         .foregroundColor(.tidexTextPrimary)
         .multilineTextAlignment(.center)
 
-      Text(String(localized: "onboarding.post_auth.purpose.subtitle", table: "Localizable"))
+      Text(.onboardingPostAuthPurposeSubtitle)
         .font(.tidexBody)
         .foregroundColor(.tidexTextSecondary)
         .multilineTextAlignment(.center)

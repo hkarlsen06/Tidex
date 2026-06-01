@@ -215,7 +215,7 @@ struct PaywallView: View {
 
   private var miniPaycheck: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text("29 430 kr")
+      Text(verbatim: "29 430 kr")
         .font(.tidexHeadline)
         .foregroundColor(Color.tidexLightTextPrimary)
 
@@ -294,9 +294,11 @@ struct PaywallView: View {
         if period == .yearly,
           let savings = viewModel.yearlySavingsPercent(for: .pro)
         {
-          Text(String(localized: .paywallSavePercent(Int32(savings))))
-            .font(.tidexMicro.bold())
-            .foregroundColor(isSelected ? .tidexBlue : Color.tidexLightTextMuted)
+          Text(
+            String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double(savings))))
+          )
+          .font(.tidexMicro.bold())
+          .foregroundColor(isSelected ? .tidexBlue : Color.tidexLightTextMuted)
         }
       }
       .frame(maxWidth: .infinity)

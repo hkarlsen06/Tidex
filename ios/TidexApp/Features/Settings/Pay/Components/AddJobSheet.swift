@@ -112,7 +112,7 @@ struct AddJobSheet: View {
     .alert(String(localized: .commonError), isPresented: $showSaveError) {
       Button(String(localized: .commonOk), role: .cancel) {}
     } message: {
-      Text(String(localized: .settingsPayErrorSaveFailed))
+      Text(.settingsPayErrorSaveFailed)
     }
   }
 
@@ -144,7 +144,7 @@ struct AddJobSheet: View {
               Image(systemName: "building.2")
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexBlue)
-              Text(String(localized: "settings.pay.add_job.title"))
+              Text(.settingsPayAddJobTitle)
                 .font(.tidexScreenTitle)
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
@@ -209,26 +209,26 @@ struct AddJobSheet: View {
 
   private var existingJobSetupCard: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(String(localized: "settings.pay.add_job.current_workplace_title"))
+      Text(.settingsPayAddJobCurrentWorkplaceTitle)
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
       VStack(alignment: .leading, spacing: Spacing.xs) {
-        Text(String(localized: "settings.pay.add_job.name"))
+        Text(.settingsPayAddJobName)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
         TextField(
           "",
           text: $existingJobName,
-          prompt: Text(String(localized: "settings.pay.add_job.name"))
+          prompt: Text(.settingsPayAddJobName)
         )
         .textInputAutocapitalization(.words)
         .foregroundColor(.tidexTextPrimary)
       }
 
       VStack(alignment: .leading, spacing: Spacing.xs) {
-        Text(String(localized: "settings.pay.add_job.color_label"))
+        Text(.settingsPayAddJobColorLabel)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
@@ -246,11 +246,11 @@ struct AddJobSheet: View {
 
   private var jobNameCard: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(String(localized: "settings.pay.add_job.name"))
+      Text(.settingsPayAddJobName)
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      TextField("", text: $name, prompt: Text(String(localized: "settings.pay.add_job.name")))
+      TextField("", text: $name, prompt: Text(.settingsPayAddJobName))
         .textInputAutocapitalization(.words)
         .foregroundColor(.tidexTextPrimary)
     }
@@ -265,7 +265,7 @@ struct AddJobSheet: View {
 
   private var colorCard: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(String(localized: "settings.pay.add_job.color_label"))
+      Text(.settingsPayAddJobColorLabel)
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
@@ -289,7 +289,7 @@ struct AddJobSheet: View {
   private var payDetailsCard: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
       VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(String(localized: "settings.pay.add_job.payroll_day"))
+        Text(.settingsPayAddJobPayrollDay)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
@@ -483,7 +483,7 @@ struct AddJobSheet: View {
               Image(systemName: "pencil.and.list.clipboard")
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexBlue)
-              Text(String(localized: "settings.pay.add_job.one_last_thing_title"))
+              Text(.settingsPayAddJobOneLastThingTitle)
                 .font(.tidexScreenTitle)
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)
@@ -591,7 +591,7 @@ struct AddJobSheet: View {
 
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else {
-      validationError = String(localized: "settings.pay.add_job.error_name")
+      validationError = String(localized: .settingsPayAddJobErrorName)
       return
     }
 
@@ -656,7 +656,7 @@ struct AddJobSheet: View {
       let trimmedExistingName = existingJobName.trimmingCharacters(in: .whitespacesAndNewlines)
       guard !trimmedExistingName.isEmpty else {
         step = .existingJobSetup
-        validationError = String(localized: "settings.pay.add_job.error_current_name")
+        validationError = String(localized: .settingsPayAddJobErrorCurrentName)
         return
       }
       existingJobSetupInput = ExistingJobSetupInput(
@@ -669,7 +669,7 @@ struct AddJobSheet: View {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else {
       step = .jobDetails
-      validationError = String(localized: "settings.pay.add_job.error_name")
+      validationError = String(localized: .settingsPayAddJobErrorName)
       return
     }
 

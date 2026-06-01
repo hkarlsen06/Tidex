@@ -3841,6 +3841,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
 
   /// Whether a shift update is in progress
   @Published private(set) var isUpdatingShift = false
+  private var isUpdatingRecurringShift = false
   private var isUpdatingEvent = false
   private var isDeletingEvent = false
 
@@ -4164,6 +4165,22 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
   /// - Returns: The recurring shift if found
   func getRecurringShift(id: String) -> RecurringShiftRow? {
     recurringShiftsRepository.getRecurringShift(id: id)
+  }
+
+  func stopRecurringShiftAfterDate(recurringId: String, occurrenceDate: String) async throws {
+    guard !isUpdatingRecurringShift else { throw ShiftSaveError.alreadyInProgress }
+
+    isUpdatingRecurringShift = true
+    defer { isUpdatingRecurringShift = false }
+
+    _ = try await recurringShiftsRepository.updateRecurringShift(
+      id: recurringId,
+      endCondition: .endDate(date: occurrenceDate)
+    )
+
+    resetDashboardDependencies(preservingDisplayJobs: true)
+    await reloadFromLocal()
+    notifyShiftsDidChange(context: .fullReload)
   }
 
   func getDisplayedShift(id: String) -> ShiftWithComputations? {

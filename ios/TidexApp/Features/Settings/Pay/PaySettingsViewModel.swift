@@ -255,15 +255,15 @@ final class PaySettingsViewModel: ObservableObject {
     guard let selectedJob else { return nil }
 
     if !isSelectedJobConfigured && !selectedJob.is_default {
-      return String(localized: "settings.pay.jobActions.setupHint")
+      return String(localized: .settingsPayJobActionsSetupHint)
     }
 
     if activeJobs.count <= 1 {
-      return String(localized: "settings.pay.jobActions.lastJobHint")
+      return String(localized: .settingsPayJobActionsLastJobHint)
     }
 
     if selectedJob.is_default {
-      return String(localized: "settings.pay.jobActions.defaultHint")
+      return String(localized: .settingsPayJobActionsDefaultHint)
     }
 
     return nil

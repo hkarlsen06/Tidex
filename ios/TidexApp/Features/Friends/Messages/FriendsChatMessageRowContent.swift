@@ -517,14 +517,14 @@ struct FriendsChatMessageRowContent: View {
                     }
 
                     if message.editedAt != nil {
-                      Text(String(localized: "friends.chat.edited", table: "Localizable"))
+                      Text(.friendsChatEdited)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                     }
 
                   } else {
                     if message.editedAt != nil {
-                      Text(String(localized: "friends.chat.edited", table: "Localizable"))
+                      Text(.friendsChatEdited)
                         .lineLimit(1)
                         .fixedSize(horizontal: true, vertical: false)
                     }
@@ -2616,7 +2616,7 @@ struct FriendsChatImageGalleryOverlay: View {
           )
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(Text(String(localized: .commonCancel)))
+      .accessibilityLabel(Text(.commonCancel))
     }
     .padding(.vertical, Spacing.xs)
   }
@@ -2651,9 +2651,9 @@ struct FriendsChatImageGalleryOverlay: View {
 
   private var saveButtonAccessibilityLabel: String {
     if selectedImageIsSaved {
-      return String(localized: "friends.chat.image.saved", table: "Localizable")
+      return String(localized: .friendsChatImageSaved)
     }
-    return String(localized: "friends.chat.action.save_image", table: "Localizable")
+    return String(localized: .friendsChatActionSaveImage)
   }
 
   private var selectedIndex: Int? {
@@ -2737,7 +2737,7 @@ struct FriendsChatImageGalleryUnavailableOverlay: View {
           )
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(Text(String(localized: .commonCancel)))
+      .accessibilityLabel(Text(.commonCancel))
       .padding(.top, Spacing.mlg)
       .padding(.horizontal, Spacing.mlg)
     }

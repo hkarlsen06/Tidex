@@ -459,6 +459,13 @@ struct ShiftsView: View {
                 }
               }
             },
+            onStopRecurringAfterDate: { recurringId, occurrenceDate in
+              try await viewModel.stopRecurringShiftAfterDate(
+                recurringId: recurringId,
+                occurrenceDate: occurrenceDate
+              )
+              selectedShift = nil
+            },
             showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
             onShowInCalendarRequested: {
               openCalendarSubscriptionSetupFromShifts()
@@ -507,6 +514,13 @@ struct ShiftsView: View {
                   recurringShiftToEdit = recurring
                 }
               }
+            },
+            onStopRecurringAfterDate: { recurringId, occurrenceDate in
+              try await viewModel.stopRecurringShiftAfterDate(
+                recurringId: recurringId,
+                occurrenceDate: occurrenceDate
+              )
+              shiftToEditDirectly = nil
             },
             showsCalendarSubscriptionCTA: false,
             startInEditMode: true,
@@ -917,7 +931,7 @@ struct ShiftsView: View {
     case unableToPrepareImage
 
     var errorDescription: String? {
-      String(localized: "friends.chat.send_to_chat.prepare_image_failed", table: "Localizable")
+      String(localized: .friendsChatSendToChatPrepareImageFailed)
     }
   }
 

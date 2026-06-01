@@ -308,7 +308,7 @@ struct AppearanceSettingsView: View {
   private var startupTabSection: some View {
     TidexSettingsSection(
       title: String(localized: .appearanceStartupTabSectionTitle),
-      footer: { Text(String(localized: .appearanceStartupTabSectionDescription)) }
+      footer: { Text(.appearanceStartupTabSectionDescription) }
     ) {
       ForEach(StartupTabOption.allCases, id: \.self) { tab in
         startupTabRow(tab)
@@ -387,11 +387,11 @@ struct AppearanceSettingsView: View {
     TidexSettingsSection(title: String(localized: .appearanceDashboardSectionTitle)) {
       Toggle(isOn: $viewModel.showDashboardClockButtons) {
         VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(String(localized: .appearanceDashboardClockButtonsTitle))
+          Text(.appearanceDashboardClockButtonsTitle)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
 
-          Text(String(localized: .appearanceDashboardClockButtonsDescription))
+          Text(.appearanceDashboardClockButtonsDescription)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
         }

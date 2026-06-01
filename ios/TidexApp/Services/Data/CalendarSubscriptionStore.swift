@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import UIKit
 import os.log
@@ -120,7 +121,7 @@ final class CalendarSubscriptionStore: ObservableObject {
       let opened = await UIApplication.shared.open(webcalURL)
       if !opened, let httpsURL = service.httpsURL(rawToken: rawToken) {
         fallbackHTTPSURL = httpsURL
-        errorMessage = String(localized: "calendar.subscription.open_fallback.message")
+        errorMessage = String(localized: .calendarSubscriptionOpenFallbackMessage)
       }
     } catch {
       errorMessage = ErrorTranslations.translate(error)
@@ -198,15 +199,15 @@ enum CalendarSubscriptionStoreError: Error, LocalizedError, Equatable {
   var errorDescription: String? {
     switch self {
     case .operationInProgress:
-      return String(localized: "calendar.subscription.error.operation_in_progress")
+      return String(localized: .calendarSubscriptionErrorOperationInProgress)
     case .noActiveSubscription:
-      return String(localized: "calendar.subscription.error.no_active")
+      return String(localized: .calendarSubscriptionErrorNoActive)
     case .missingLocalToken:
-      return String(localized: "calendar.subscription.error.missing_token")
+      return String(localized: .calendarSubscriptionErrorMissingToken)
     case .invalidURL:
-      return String(localized: "calendar.subscription.error.invalid_url")
+      return String(localized: .calendarSubscriptionErrorInvalidUrl)
     case .subscriptionAlreadyActive:
-      return String(localized: "calendar.subscription.error.already_active")
+      return String(localized: .calendarSubscriptionErrorAlreadyActive)
     }
   }
 }

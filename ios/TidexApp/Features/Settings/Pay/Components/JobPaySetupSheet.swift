@@ -261,7 +261,7 @@ private struct JobPayScheduleSetupScreen: View {
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexBlue)
 
-              Text(String(localized: "settings.pay.setup.scheduleTitle"))
+              Text(.settingsPaySetupScheduleTitle)
                 .font(.tidexScreenTitle)
                 .foregroundColor(.tidexTextPrimary)
                 .multilineTextAlignment(.center)

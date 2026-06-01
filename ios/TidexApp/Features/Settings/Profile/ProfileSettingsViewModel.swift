@@ -202,7 +202,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
     let normalizedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
     if UserGeneratedContentFilter.containsBlockedText(normalizedDisplayName) {
-      errorMessage = String(localized: "profile.errors.nameSafetyFilter", table: "Localizable")
+      errorMessage = String(localized: .profileErrorsNameSafetyFilter)
       return
     }
 
@@ -277,7 +277,7 @@ final class ProfileSettingsViewModel: ObservableObject {
     }
 
     if UserGeneratedContentFilter.containsBlockedText(normalizedUsername) {
-      setUsernameError(String(localized: "profile.errors.nameSafetyFilter", table: "Localizable"))
+      setUsernameError(String(localized: .profileErrorsNameSafetyFilter))
       return
     }
 
@@ -303,7 +303,7 @@ final class ProfileSettingsViewModel: ObservableObject {
       if Self.isUsernameTaken(error) {
         setUsernameError(String(localized: .profileErrorsUsernameTaken))
       } else if Self.isUsernameSafetyFilterViolation(error) {
-        setUsernameError(String(localized: "profile.errors.nameSafetyFilter", table: "Localizable"))
+        setUsernameError(String(localized: .profileErrorsNameSafetyFilter))
       } else if Self.isUsernameCheckConstraintViolation(error) {
         setUsernameError(String(localized: .profileErrorsUsernameInvalid))
       } else {

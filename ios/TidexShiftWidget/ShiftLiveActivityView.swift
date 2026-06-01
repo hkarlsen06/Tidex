@@ -104,7 +104,7 @@ struct LockScreenLiveActivityView: View {
       // Right side: Earnings
       VStack(alignment: .trailing, spacing: 2) {
         if isTemporaryClock {
-          Text(String(localized: .widgetActive))
+          Text(.widgetActive)
             .font(.system(size: 20, weight: .bold, design: .rounded))
             .foregroundColor(tidexBlue)
         } else {
@@ -164,7 +164,7 @@ struct CompactTrailingView: View {
 
   var body: some View {
     if isTemporaryClock {
-      Text(String(localized: .widgetActive))
+      Text(.widgetActive)
         .font(.system(size: 13, weight: .semibold, design: .rounded))
         .foregroundColor(tidexBlue)
     } else {
@@ -230,7 +230,7 @@ struct ExpandedView: View {
       // Right column: Net (top), Before tax (bottom)
       VStack(alignment: .trailing, spacing: 4) {
         if isTemporaryClock {
-          Text(String(localized: .widgetActive))
+          Text(.widgetActive)
             .font(.system(size: 16, weight: .bold, design: .rounded))
             .foregroundColor(tidexBlue)
         } else {

@@ -116,7 +116,7 @@ struct FriendsComposerShiftCalendarPicker: View {
         )
       }
       .navigationTitle(
-        LocalizedStringResource("friends.chat.composer.shift_picker.title", table: "Localizable")
+        .friendsChatComposerShiftPickerTitle
       )
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

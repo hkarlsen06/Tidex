@@ -38,13 +38,13 @@ struct JobBasicsOnboardingScreen: View {
                 .frame(height: headerTopSpacing)
 
               VStack(alignment: .leading, spacing: Spacing.sm) {
-                Text(String(localized: "onboarding.jobBasics.title", table: "Localizable"))
+                Text(.onboardingJobBasicsTitle)
                   .font(.tidexScreenTitle)
                   .foregroundColor(.tidexTextPrimary)
                   .multilineTextAlignment(.leading)
                   .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(String(localized: "onboarding.jobBasics.subtitle", table: "Localizable"))
+                Text(.onboardingJobBasicsSubtitle)
                   .font(.tidexBody)
                   .foregroundColor(.tidexTextSecondary)
                   .multilineTextAlignment(.leading)
@@ -59,7 +59,7 @@ struct JobBasicsOnboardingScreen: View {
                 jobNameField
 
                 VStack(alignment: .leading, spacing: Spacing.xs) {
-                  Text(String(localized: "settings.pay.add_job.color_label", table: "Localizable"))
+                  Text(.settingsPayAddJobColorLabel)
                     .font(.tidexLabel)
                     .foregroundColor(.tidexTextSecondary)
 
@@ -137,7 +137,7 @@ struct JobBasicsOnboardingScreen: View {
 
   private var jobNameField: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(String(localized: "settings.pay.add_job.name", table: "Localizable"))
+      Text(.settingsPayAddJobName)
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
@@ -145,7 +145,7 @@ struct JobBasicsOnboardingScreen: View {
         "",
         text: $data.jobName,
         prompt: Text(
-          String(localized: "onboarding.jobBasics.namePlaceholder", table: "Localizable")
+          String(localized: .onboardingJobBasicsNamePlaceholder)
         )
         .foregroundColor(.tidexTextMuted.opacity(0.62))
       )

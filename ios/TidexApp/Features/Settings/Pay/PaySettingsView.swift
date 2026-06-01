@@ -36,7 +36,7 @@ struct PaySettingsView: View {
     .navigationBarTitleDisplayMode(.inline)
     .toolbar {
       ToolbarItem(placement: .principal) {
-        Text(String(localized: .settingsPayTitle))
+        Text(.settingsPayTitle)
           .font(.headline)
           .foregroundColor(.tidexTextPrimary)
           .lineLimit(1)
@@ -119,7 +119,7 @@ struct PaySettingsView: View {
       titleVisibility: .visible
     ) {
       if pendingJobAction == .archive {
-        Button(String(localized: "settings.pay.jobActions.archive")) {
+        Button(String(localized: .settingsPayJobActionsArchive)) {
           Task {
             await viewModel.archiveSelectedJob()
             pendingJobAction = nil
@@ -128,7 +128,7 @@ struct PaySettingsView: View {
       }
 
       if pendingJobAction == .delete {
-        Button(String(localized: "settings.pay.jobActions.delete"), role: .destructive) {
+        Button(String(localized: .settingsPayJobActionsDelete), role: .destructive) {
           Task {
             await viewModel.deleteSelectedJob()
             pendingJobAction = nil
@@ -186,7 +186,7 @@ struct PaySettingsView: View {
             Image(systemName: "building.2")
               .font(.tidexCaptionRegular)
               .foregroundColor(.tidexBlue)
-            Text(String(localized: "settings.pay.choose_job.title"))
+            Text(.settingsPayChooseJobTitle)
           }
           .textCase(nil)
         }
@@ -279,18 +279,18 @@ struct PaySettingsView: View {
         .font(.tidexTitle)
         .foregroundColor(.tidexWarning)
 
-      Text(String(localized: "settings.pay.setup.finishTitle"))
+      Text(.settingsPaySetupFinishTitle)
         .font(.tidexTitle)
         .foregroundColor(.tidexTextPrimary)
 
-      Text(String(localized: "settings.pay.setup.finishDescription"))
+      Text(.settingsPaySetupFinishDescription)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
       Button {
         paySetupJob = viewModel.selectedJob
       } label: {
-        Text(String(localized: "settings.pay.setup.finishButton"))
+        Text(.settingsPaySetupFinishButton)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextOnBrand)
           .frame(maxWidth: .infinity)
@@ -311,7 +311,7 @@ struct PaySettingsView: View {
   private var jobActionsPanel: some View {
     if viewModel.selectedJob != nil {
       VStack(alignment: .leading, spacing: Spacing.sm) {
-        Text(String(localized: "settings.pay.jobActions.title"))
+        Text(.settingsPayJobActionsTitle)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
 
@@ -325,7 +325,7 @@ struct PaySettingsView: View {
           } label: {
             jobActionRow(
               icon: "checkmark.circle",
-              title: String(localized: "settings.pay.jobActions.setDefault"),
+              title: String(localized: .settingsPayJobActionsSetDefault),
               tint: .tidexBlue,
               isEnabled: viewModel.canSetSelectedJobAsDefault
                 && !viewModel.isProcessingJobAction
@@ -340,7 +340,7 @@ struct PaySettingsView: View {
         } label: {
           jobActionRow(
             icon: "archivebox",
-            title: String(localized: "settings.pay.jobActions.archive"),
+            title: String(localized: .settingsPayJobActionsArchive),
             tint: .tidexTextSecondary,
             isEnabled: viewModel.canArchiveSelectedJob && !viewModel.isProcessingJobAction
           )
@@ -353,7 +353,7 @@ struct PaySettingsView: View {
         } label: {
           jobActionRow(
             icon: "trash",
-            title: String(localized: "settings.pay.jobActions.delete"),
+            title: String(localized: .settingsPayJobActionsDelete),
             tint: .tidexError,
             isEnabled: viewModel.canDeleteSelectedJob && !viewModel.isProcessingJobAction
           )
@@ -379,7 +379,7 @@ struct PaySettingsView: View {
         .foregroundColor(.tidexBlue)
         .frame(width: 22)
 
-      Text(String(localized: "settings.pay.jobActions.standardStatus"))
+      Text(.settingsPayJobActionsStandardStatus)
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
 
@@ -446,7 +446,7 @@ struct PaySettingsView: View {
               .frame(width: 44, height: 44, alignment: .leading)
           }
           .buttonStyle(.plain)
-          .accessibilityLabel(Text(String(localized: "settings.pay.edit_job.title")))
+          .accessibilityLabel(Text(.settingsPayEditJobTitle))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       }
@@ -493,9 +493,9 @@ struct PaySettingsView: View {
   private var jobActionConfirmationTitle: String {
     switch pendingJobAction {
     case .archive:
-      return String(localized: "settings.pay.jobActions.archiveConfirmTitle")
+      return String(localized: .settingsPayJobActionsArchiveConfirmTitle)
     case .delete:
-      return String(localized: "settings.pay.jobActions.deleteConfirmTitle")
+      return String(localized: .settingsPayJobActionsDeleteConfirmTitle)
     case .none:
       return ""
     }
@@ -504,9 +504,9 @@ struct PaySettingsView: View {
   private var jobActionConfirmationMessage: String {
     switch pendingJobAction {
     case .archive:
-      return String(localized: "settings.pay.jobActions.archiveConfirmMessage")
+      return String(localized: .settingsPayJobActionsArchiveConfirmMessage)
     case .delete:
-      return String(localized: "settings.pay.jobActions.deleteConfirmMessage")
+      return String(localized: .settingsPayJobActionsDeleteConfirmMessage)
     case .none:
       return ""
     }
@@ -540,11 +540,11 @@ private struct EditWorkplaceSheet: View {
     NavigationStack {
       Form {
         Section {
-          TextField(String(localized: "settings.pay.add_job.name"), text: $name)
+          TextField(String(localized: .settingsPayAddJobName), text: $name)
             .textInputAutocapitalization(.words)
 
           VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(String(localized: "settings.pay.add_job.color_label"))
+            Text(.settingsPayAddJobColorLabel)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
 
@@ -562,7 +562,7 @@ private struct EditWorkplaceSheet: View {
           }
         }
       }
-      .navigationTitle(String(localized: "settings.pay.edit_job.title"))
+      .navigationTitle(String(localized: .settingsPayEditJobTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -586,7 +586,7 @@ private struct EditWorkplaceSheet: View {
   private func save() async {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else {
-      saveError = String(localized: "settings.pay.add_job.error_name")
+      saveError = String(localized: .settingsPayAddJobErrorName)
       return
     }
 

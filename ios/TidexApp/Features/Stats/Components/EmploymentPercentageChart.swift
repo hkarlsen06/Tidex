@@ -22,13 +22,10 @@ struct EmploymentPercentageChart: View {
 
   private var completedAverageSubtitle: String {
     guard let rangeLabel = data.completedAverageRangeLabel() else {
-      return String(localized: "stats.charts.employment.completedAverage.empty")
+      return String(localized: .statsChartsEmploymentCompletedAverageEmpty)
     }
 
-    return String(
-      format: String(localized: "stats.charts.employment.completedAverage.range"),
-      rangeLabel
-    )
+    return String(localized: .statsChartsEmploymentCompletedAverageRange(rangeLabel))
   }
 
   /// Filter out leading and trailing months that are neither worked nor contextually relevant.

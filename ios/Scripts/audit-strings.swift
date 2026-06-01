@@ -1,13 +1,11 @@
-#!/usr/bin/env swift
-// swiftlint:disable file_length
-
+#!/usr/bin/env swift  // swiftlint:disable file_length
 import Foundation
 
 // MARK: - Config
 
 private struct Config {
   let searchPath: String
-  let catalogPath: String
+  let catalogPaths: [String]
   let strict: Bool
   let checkHardcoded: Bool
   let checkOrphaned: Bool
@@ -29,8 +27,15 @@ private struct Violation: CustomStringConvertible {
 }
 
 private struct OrphanedKey {
+  let catalogPath: String
   let key: String
   let symbolName: String
+  let reason: String
+}
+
+private struct CatalogEntry {
+  let key: String
+  let extractionState: String?
 }
 
 // MARK: - Patterns to detect hardcoded strings
@@ -142,6 +147,24 @@ private let allowedPatterns: [NSRegularExpression] = {
   return patterns.compactMap { try? NSRegularExpression(pattern: $0, options: [.caseInsensitive]) }
 }()
 
+private let rawLocalizationKeyPatterns: [(regex: NSRegularExpression, name: String)] = {
+  let patterns: [(String, String)] = [
+    (#"String\(localized:\s*"[^"]+""#, "String(localized: \"...\")"),
+    (#"LocalizedStringResource\(\s*"[^"]+""#, "LocalizedStringResource(\"...\")"),
+    (#"LocalizedStringKey\("#, "LocalizedStringKey(...)"),
+    (#"NSLocalizedString\(\s*"[^"]+""#, "NSLocalizedString(\"...\")"),
+    (#"Text\(\s*"[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_:-]+)+"\s*\)"#, "Text(\"dot.key\")"),
+    (#"Text\(\s*"[^"]+"\s*,\s*tableName:"#, "Text(\"...\", tableName:)"),
+  ]
+
+  return patterns.compactMap { pattern, name -> (NSRegularExpression, String)? in
+    guard let regex = try? NSRegularExpression(pattern: pattern, options: []) else {
+      return nil
+    }
+    return (regex, name)
+  }
+}()
+
 // Files/directories to skip
 private let skipPaths = [
   "/Preview Content/",
@@ -185,6 +208,24 @@ private func keyToSymbolName(_ key: String) -> String {
 // MARK: - String Catalog Parsing
 
 private func loadStringCatalogKeys(from path: String) -> Set<String> {
+  Set(loadStringCatalogEntries(from: path).map(\.key))
+}
+
+private func findStringCatalogs(in directory: String) -> [String] {
+  let fileManager = FileManager.default
+  guard let enumerator = fileManager.enumerator(atPath: directory) else {
+    return []
+  }
+
+  var catalogs: [String] = []
+  while let file = enumerator.nextObject() as? String {
+    guard file.hasSuffix(".xcstrings") else { continue }
+    catalogs.append((directory as NSString).appendingPathComponent(file))
+  }
+  return catalogs.sorted()
+}
+
+private func loadStringCatalogEntries(from path: String) -> [CatalogEntry] {
   guard let data = FileManager.default.contents(atPath: path),
     let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
     let strings = json["strings"] as? [String: Any]
@@ -193,12 +234,15 @@ private func loadStringCatalogKeys(from path: String) -> Set<String> {
     return []
   }
 
-  return Set(strings.keys)
+  return strings.map { key, value in
+    let entry = value as? [String: Any]
+    return CatalogEntry(key: key, extractionState: entry?["extractionState"] as? String)
+  }
 }
 
 // MARK: - File Scanning
 
-private func findSwiftFiles(in directory: String) -> [String] {
+private func findSwiftFiles(in directory: String, includeSkippedPaths: Bool = false) -> [String] {
   let fileManager = FileManager.default
   var swiftFiles: [String] = []
 
@@ -212,7 +256,7 @@ private func findSwiftFiles(in directory: String) -> [String] {
     let fullPath = (directory as NSString).appendingPathComponent(file)
 
     // Skip excluded paths
-    if skipPaths.contains(where: { fullPath.contains($0) }) {
+    if !includeSkippedPaths && skipPaths.contains(where: { fullPath.contains($0) }) {
       continue
     }
 
@@ -289,6 +333,36 @@ private func scanFileForHardcodedStrings(_ path: String) -> [Violation] {
   return violations
 }
 
+private func scanFileForRawLocalizationKeys(_ path: String) -> [Violation] {
+  guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
+    return []
+  }
+
+  var violations: [Violation] = []
+  let lines = content.components(separatedBy: .newlines)
+
+  for (index, line) in lines.enumerated() {
+    let trimmed = line.trimmingCharacters(in: .whitespaces)
+    guard !trimmed.hasPrefix("//") else { continue }
+
+    let range = NSRange(line.startIndex..., in: line)
+    for (regex, patternName) in rawLocalizationKeyPatterns
+    where regex.firstMatch(in: line, options: [], range: range) != nil {
+      let relativePath = path.components(separatedBy: "/ios/").last ?? path
+      violations.append(
+        Violation(
+          file: relativePath,
+          line: index + 1,
+          code: line,
+          pattern: patternName
+        ))
+      break
+    }
+  }
+
+  return violations
+}
+
 /// Result of scanning for localization references
 private struct LocalizationReferences {
   var symbols: Set<String>  // Symbol names like "dashboardTitle"
@@ -315,7 +389,7 @@ private func extractCaptures(from content: String, using regexes: [NSRegularExpr
 
 /// Returns all localization references found in Swift files
 private func findLocalizationReferences(in directory: String) -> LocalizationReferences {
-  let swiftFiles = findSwiftFiles(in: directory)
+  let swiftFiles = findSwiftFiles(in: directory, includeSkippedPaths: true)
   var result = LocalizationReferences(symbols: [], directKeys: [], dynamicPrefixes: [])
 
   let symbolRegexes = [
@@ -323,14 +397,22 @@ private func findLocalizationReferences(in directory: String) -> LocalizationRef
     #"String\(localized:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
     #"\.([a-zA-Z][a-zA-Z0-9_]*)\("#,
     #"Key:\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+    #"\?\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
+    #"\s[:?]\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
     #"return\s+\.([a-zA-Z][a-zA-Z0-9_]*)"#,
     #":\s+\.([a-zA-Z][a-zA-Z0-9_]*)\s*[,\)]"#,
     #"=\s*\.([a-zA-Z][a-zA-Z0-9_]*)"#,
     #"\(\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*\)"#,
+    #"(?:^|\n)\s*\.([a-zA-Z][a-zA-Z0-9_]*)\s*(?:\n|$)"#,
   ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
   let directKeyRegexes = [
-    #"NSLocalizedString\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#
+    #"NSLocalizedString\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#,
+    #"String\(localized:\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#,
+    #"Text\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)"\s*,\s*tableName:"#,
+    #"LocalizedStringResource\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#,
+    #"LocalizedStringKey\(\s*"([a-zA-Z][a-zA-Z0-9_.]+)""#,
+    #""([a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z0-9_]+)+)""#,
   ].compactMap { try? NSRegularExpression(pattern: $0, options: []) }
 
   let dynamicKeyRegexes = [
@@ -350,13 +432,29 @@ private func findLocalizationReferences(in directory: String) -> LocalizationRef
 
 // MARK: - Orphaned Key Detection
 
-private func findOrphanedKeys(catalogKeys: Set<String>, references: LocalizationReferences)
+private func findOrphanedKeys(
+  catalogPath: String,
+  catalogEntries: [CatalogEntry],
+  references: LocalizationReferences
+)
   -> [OrphanedKey]
 {
   var orphaned: [OrphanedKey] = []
 
-  for key in catalogKeys {
+  for entry in catalogEntries {
+    let key = entry.key
     let symbolName = keyToSymbolName(key)
+
+    if entry.extractionState == "stale" {
+      orphaned.append(
+        OrphanedKey(
+          catalogPath: catalogPath,
+          key: key,
+          symbolName: symbolName,
+          reason: "stale"
+        ))
+      continue
+    }
 
     // Skip keys that are just numbers or very short (likely placeholders or format strings)
     if key.allSatisfy({ $0.isNumber || $0 == "." || $0 == " " }) {
@@ -368,11 +466,20 @@ private func findOrphanedKeys(catalogKeys: Set<String>, references: Localization
       continue
     }
 
-    // Skip keys without dots - these are likely:
+    // Skip keys that are not dot-notation identifiers. These are likely:
     // - Single-word keys that are placeholders/symbols ("+", "---", "OK")
+    // - Sentence-style legacy keys that contain punctuation periods
     // - Debug strings that don't need localization
     // Real localization keys use dot notation: "feature.subfeature.key"
-    if !key.contains(".") {
+    let keyParts = key.split(separator: ".", omittingEmptySubsequences: false)
+    if keyParts.count < 2
+      || keyParts.contains(where: {
+        $0.isEmpty
+          || !$0.allSatisfy { character in
+            character == "_" || character.isLetter || character.isNumber
+          }
+      })
+    {
       continue
     }
 
@@ -403,7 +510,13 @@ private func findOrphanedKeys(catalogKeys: Set<String>, references: Localization
       continue
     }
 
-    orphaned.append(OrphanedKey(key: key, symbolName: symbolName))
+    orphaned.append(
+      OrphanedKey(
+        catalogPath: catalogPath,
+        key: key,
+        symbolName: symbolName,
+        reason: "missing reference"
+      ))
   }
 
   return orphaned.sorted { $0.key < $1.key }
@@ -460,14 +573,14 @@ private func parseArgs() -> Config {
     .appendingPathComponent("..")
     .standardizedFileURL
     .path
-  let defaultCatalogPath =
+  let defaultCatalogRoot =
     scriptsDir
-    .appendingPathComponent("../Resources/Localization/App/Localizable.xcstrings")
+    .appendingPathComponent("../Resources/Localization")
     .standardizedFileURL
     .path
 
   var searchPath = defaultSearchPath
-  var catalogPath = defaultCatalogPath
+  var catalogPaths: [String] = []
   var strict = false
   var checkHardcoded = true
   var checkOrphaned = true
@@ -480,7 +593,9 @@ private func parseArgs() -> Config {
     case "--path", "-p":
       searchPath = iterator.next() ?? searchPath
     case "--catalog", "-c":
-      catalogPath = iterator.next() ?? catalogPath
+      if let catalogPath = iterator.next() {
+        catalogPaths.append(catalogPath)
+      }
     case "--strict", "-s": strict = true
     case "--hardcoded-only": checkOrphaned = false
     case "--orphaned-only": checkHardcoded = false
@@ -495,9 +610,13 @@ private func parseArgs() -> Config {
     }
   }
 
+  if catalogPaths.isEmpty {
+    catalogPaths = findStringCatalogs(in: defaultCatalogRoot)
+  }
+
   return Config(
     searchPath: searchPath,
-    catalogPath: catalogPath,
+    catalogPaths: catalogPaths,
     strict: strict,
     checkHardcoded: checkHardcoded,
     checkOrphaned: checkOrphaned,
@@ -515,7 +634,8 @@ private func printHelp() {
 
     Options:
       --path, -p <path>      Directory to scan (default: ios/)
-      --catalog, -c <path>   String Catalog path (default: App/Localizable.xcstrings)
+      --catalog, -c <path>   String Catalog path. May be repeated.
+                              Default: every .xcstrings file under Resources/Localization.
       --strict, -s           Exit with error code if issues found
       --hardcoded-only       Only check for hardcoded strings
       --orphaned-only        Only check for orphaned keys
@@ -553,14 +673,18 @@ private func checkHardcodedStrings(config: Config) -> Bool {
 
   let allViolations = findSwiftFiles(in: config.searchPath)
     .flatMap { scanFileForHardcodedStrings($0) }
+  let rawLocalizationViolations = findSwiftFiles(in: config.searchPath, includeSkippedPaths: true)
+    .filter { !$0.contains("/Scripts/") }
+    .flatMap { scanFileForRawLocalizationKeys($0) }
+  let allFindings = allViolations + rawLocalizationViolations
 
-  guard !allViolations.isEmpty else {
+  guard !allFindings.isEmpty else {
     print("✓ No hardcoded strings found!\n")
     return false
   }
 
-  let grouped = Dictionary(grouping: allViolations) { $0.file }
-  print("Found \(allViolations.count) potential hardcoded strings:\n")
+  let grouped = Dictionary(grouping: allFindings) { $0.file }
+  print("Found \(allFindings.count) potential hardcoded strings:\n")
   for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
     print("  \(file):")
     for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
@@ -573,9 +697,16 @@ private func checkHardcodedStrings(config: Config) -> Bool {
   return true
 }
 
-private func printOrphanedKeysHumanReadable(_ orphaned: [OrphanedKey]) {
-  print("Found \(orphaned.count) potentially orphaned keys:\n")
+private func printOrphanedKeysHumanReadable(
+  _ orphaned: [OrphanedKey],
+  catalogPath: String
+) {
+  print("\(catalogPath)")
+  print("Found \(orphaned.count) potentially orphaned or stale keys:\n")
   let grouped = Dictionary(grouping: orphaned) { key -> String in
+    if key.reason == "stale" {
+      return "stale"
+    }
     let parts = key.key.split(separator: ".")
     return parts.first.map(String.init) ?? "other"
   }
@@ -585,7 +716,8 @@ private func printOrphanedKeysHumanReadable(_ orphaned: [OrphanedKey]) {
     if keys.count > 10 { print("    ... and \(keys.count - 10) more") }
     print("")
   }
-  print("These keys exist in the String Catalog but weren't found in code.")
+  print(
+    "These keys exist in the String Catalog but weren't found in code, or Xcode marked them stale.")
   print("They may be unused and can potentially be removed.")
   print("\nNote: Some keys may be used dynamically or in other targets.")
   print("Verify before removing!")
@@ -593,36 +725,70 @@ private func printOrphanedKeysHumanReadable(_ orphaned: [OrphanedKey]) {
 
 private func checkOrphanedKeys(config: Config) -> Bool {
   if !config.jsonOutput && !config.removeOrphaned {
-    print("Checking for orphaned keys in String Catalog...\n")
+    print("Checking for orphaned keys in String Catalogs...\n")
   }
 
-  let catalogKeys = loadStringCatalogKeys(from: config.catalogPath)
-  guard !catalogKeys.isEmpty else {
-    print("Warning: Could not load String Catalog or it's empty")
+  guard !config.catalogPaths.isEmpty else {
+    print("Warning: Could not find any String Catalogs")
     return false
   }
 
   let references = findLocalizationReferences(in: config.searchPath)
-  let orphaned = findOrphanedKeys(catalogKeys: catalogKeys, references: references)
+  var orphanedByCatalog: [(catalogPath: String, orphaned: [OrphanedKey])] = []
+  for catalogPath in config.catalogPaths {
+    let catalogEntries = loadStringCatalogEntries(from: catalogPath)
+    guard !catalogEntries.isEmpty else {
+      print("Warning: Could not load String Catalog or it's empty: \(catalogPath)")
+      continue
+    }
 
-  guard !orphaned.isEmpty else {
+    let orphaned = findOrphanedKeys(
+      catalogPath: catalogPath,
+      catalogEntries: catalogEntries,
+      references: references
+    )
+    orphanedByCatalog.append((catalogPath: catalogPath, orphaned: orphaned))
+  }
+
+  let allOrphaned = orphanedByCatalog.flatMap(\.orphaned)
+
+  guard !allOrphaned.isEmpty else {
     print(config.jsonOutput ? "[]" : "✓ No orphaned keys found!")
     return false
   }
 
-  let orphanedKeys = orphaned.map { $0.key }
   if config.jsonOutput {
+    let jsonObject: Any
+    if config.catalogPaths.count == 1 {
+      jsonObject = allOrphaned.map(\.key)
+    } else {
+      jsonObject = allOrphaned.map { key in
+        [
+          "catalog": key.catalogPath,
+          "key": key.key,
+          "reason": key.reason,
+        ]
+      }
+    }
+
     if let jsonData = try? JSONSerialization.data(
-      withJSONObject: orphanedKeys, options: [.prettyPrinted]),
-      let jsonString = String(data: jsonData, encoding: .utf8)
+      withJSONObject: jsonObject,
+      options: [
+        .prettyPrinted, .sortedKeys,
+      ]), let jsonString = String(data: jsonData, encoding: .utf8)
     {
       print(jsonString)
     }
   } else if config.removeOrphaned {
-    print("Removing \(orphaned.count) orphaned keys from String Catalog...")
-    _ = removeKeysFromCatalog(keys: orphanedKeys, catalogPath: config.catalogPath)
+    print("Removing \(allOrphaned.count) orphaned keys from String Catalogs...")
+    for (catalogPath, orphaned) in orphanedByCatalog where !orphaned.isEmpty {
+      _ = removeKeysFromCatalog(keys: orphaned.map(\.key), catalogPath: catalogPath)
+    }
   } else {
-    printOrphanedKeysHumanReadable(orphaned)
+    for (catalogPath, orphaned) in orphanedByCatalog where !orphaned.isEmpty {
+      printOrphanedKeysHumanReadable(orphaned, catalogPath: catalogPath)
+      print("")
+    }
   }
   return true
 }

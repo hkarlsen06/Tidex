@@ -81,11 +81,11 @@ extension CurrencyGroup {
   var localizedLabel: String {
     switch label {
     case "Krone":
-      return String(localized: "common.currency_group_krone", table: "Localizable")
+      return String(localized: .commonCurrencyGroupKrone)
     case "Popular":
-      return String(localized: "common.currency_group_popular", table: "Localizable")
+      return String(localized: .commonCurrencyGroupPopular)
     case "Other":
-      return String(localized: "common.currency_group_other", table: "Localizable")
+      return String(localized: .commonCurrencyGroupOther)
     default:
       return label
     }

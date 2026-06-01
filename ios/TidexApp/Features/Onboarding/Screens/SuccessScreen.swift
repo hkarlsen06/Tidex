@@ -203,8 +203,7 @@ struct SuccessScreen: View {
     case .fullSetup:
       return .onboardingSuccessReassurance
     case .friendOnlySkip:
-      return LocalizedStringResource(
-        "onboarding.success.friend_only.reassurance", table: "Localizable")
+      return .onboardingSuccessFriendOnlyReassurance
     }
   }
 
@@ -213,7 +212,7 @@ struct SuccessScreen: View {
     case .fullSetup:
       return String(localized: .onboardingSuccessButton)
     case .friendOnlySkip:
-      return String(localized: "onboarding.success.friend_only.button", table: "Localizable")
+      return String(localized: .onboardingSuccessFriendOnlyButton)
     }
   }
 

@@ -23,8 +23,8 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     cropViewController.aspectRatioPickerButtonHidden = true
 
     // Customize button titles
-    cropViewController.doneButtonTitle = NSLocalizedString("profile.imageCrop.confirm", comment: "")
-    cropViewController.cancelButtonTitle = NSLocalizedString("common.cancel", comment: "")
+    cropViewController.doneButtonTitle = String(localized: .profileImageCropConfirm)
+    cropViewController.cancelButtonTitle = String(localized: .commonCancel)
 
     // Wrap in navigation controller for proper presentation
     let navigationController = UINavigationController(rootViewController: cropViewController)

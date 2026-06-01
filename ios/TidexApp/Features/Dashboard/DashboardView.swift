@@ -579,6 +579,13 @@ struct DashboardView: View {
               }
             }
           },
+          onStopRecurringAfterDate: { recurringId, occurrenceDate in
+            try await viewModel.stopRecurringShiftAfterDate(
+              recurringId: recurringId,
+              occurrenceDate: occurrenceDate
+            )
+            selectedShift = nil
+          },
           showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
           onShowInCalendarRequested: {
             openCalendarSubscriptionSetupFromDashboard()
@@ -626,6 +633,13 @@ struct DashboardView: View {
                 recurringShiftToEdit = recurring
               }
             }
+          },
+          onStopRecurringAfterDate: { recurringId, occurrenceDate in
+            try await viewModel.stopRecurringShiftAfterDate(
+              recurringId: recurringId,
+              occurrenceDate: occurrenceDate
+            )
+            shiftToEditDirectly = nil
           },
           showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
           onShowInCalendarRequested: {
@@ -1001,7 +1015,7 @@ struct DashboardView: View {
       if selectedPayoutYM.year < current.year
         || (selectedPayoutYM.year == current.year && selectedPayoutYM.month < current.month)
       {
-        return String(localized: "dashboard.earlierPayout")
+        return String(localized: .dashboardEarlierPayout)
       }
 
       if isCurrentAdvancedNextPayout {
@@ -1011,7 +1025,7 @@ struct DashboardView: View {
       if selectedPayoutYM.year > current.year
         || (selectedPayoutYM.year == current.year && selectedPayoutYM.month > current.month)
       {
-        return String(localized: "dashboard.futurePayout")
+        return String(localized: .dashboardFuturePayout)
       }
 
       if effectivePayrollHasPassed {
@@ -1759,7 +1773,7 @@ private struct ClockOutReviewSheet: View {
             showJobChooser = true
           } label: {
             HStack(spacing: Spacing.sm) {
-              Text(String(localized: "settings.pay.choose_job.title"))
+              Text(.settingsPayChooseJobTitle)
                 .font(.tidexSubheadline)
                 .foregroundColor(.tidexTextSecondary)
 
@@ -2011,7 +2025,7 @@ private struct DashboardClockJobChooserSheet: View {
       }
       .scrollIndicators(.hidden)
       .background(Color.tidexBackground)
-      .navigationTitle(String(localized: "settings.pay.choose_job.title"))
+      .navigationTitle(String(localized: .settingsPayChooseJobTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {

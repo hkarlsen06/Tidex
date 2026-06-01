@@ -302,7 +302,7 @@ struct ChatMessageList: View {
         .buttonStyle(.plain)
         .padding(.top, Spacing.sm)
         .padding(.trailing, Spacing.sm)
-        .accessibilityLabel(Text("Conversation history"))
+        .accessibilityLabel(Text(.wageyChatConversationHistory))
       }
     }
   }

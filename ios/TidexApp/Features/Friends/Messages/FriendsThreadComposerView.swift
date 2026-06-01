@@ -388,8 +388,8 @@ struct FriendsThreadComposerHostedView: View {
       isSending: isSubmitting,
       canPerformAction: canSend,
       actionAccessibilityLabel: configuration.mode == .edit
-        ? String(localized: "friends.chat.composer.save_edit", table: "Localizable")
-        : String(localized: "Send message"),
+        ? String(localized: .friendsChatComposerSaveEdit)
+        : String(localized: .commonSendMessage),
       textFieldAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.textField,
       actionButtonAccessibilityIdentifier: FriendsThreadComposerAccessibilityID.sendButton,
       submitLabel: .return,
@@ -1049,7 +1049,7 @@ private struct FriendsThreadComposerReplyBanner: View {
           )
       }
       .buttonStyle(.plain)
-      .accessibilityLabel(Text(String(localized: .commonCancel)))
+      .accessibilityLabel(Text(.commonCancel))
       .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyCancelButton)
       .padding(Spacing.xs)
     }
@@ -1123,7 +1123,7 @@ private struct FriendsThreadComposerEditBanner: View {
           .foregroundColor(.tidexBlue)
 
         Text(
-          String(localized: "friends.chat.composer.editing_message", table: "Localizable")
+          String(localized: .friendsChatComposerEditingMessage)
         )
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextPrimary)
@@ -1153,7 +1153,7 @@ private struct FriendsThreadComposerEditBanner: View {
       }
       .buttonStyle(.plain)
       .accessibilityLabel(
-        Text(String(localized: "friends.chat.composer.cancel_edit", table: "Localizable"))
+        Text(.friendsChatComposerCancelEdit)
       )
     }
     .padding(.horizontal, Spacing.sm)

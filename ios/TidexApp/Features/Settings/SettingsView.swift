@@ -137,7 +137,7 @@ struct SettingsView: View {
         initialCurrency: payChooserCurrency,
         initialPayrollDay: payChooserPayrollDay,
         initialMonthlyGoal: payChooserMonthlyGoal,
-        setupDismissTitle: String(localized: "settings.pay.setup.laterButton"),
+        setupDismissTitle: String(localized: .settingsPaySetupLaterButton),
         onSaveBasics: { input in
           await createBasicPayJobForSetup(input: input)
         }
@@ -149,7 +149,7 @@ struct SettingsView: View {
       JobPaySetupSheet(
         job: job,
         initialCurrency: job.currency,
-        dismissTitle: String(localized: "settings.pay.setup.laterButton")
+        dismissTitle: String(localized: .settingsPaySetupLaterButton)
       ) { input in
         await completePaySetup(for: job, input: input)
       }
@@ -332,7 +332,7 @@ struct SettingsView: View {
 
       SettingsMenuItem(
         icon: "calendar.badge.clock",
-        title: String(localized: "calendar.subscription.title")
+        title: String(localized: .calendarSubscriptionTitle)
       ) {
         navigationPath.append(SettingsDestination.calendarSync())
       }
@@ -539,7 +539,7 @@ struct SettingsView: View {
     }
 
     guard let userId = resolvedUserId else {
-      presentPayChooserError(String(localized: "settings.pay.choose_job.error_not_authenticated"))
+      presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return false
     }
 
@@ -671,7 +671,7 @@ struct SettingsView: View {
 
   private func archivePayJob(_ jobId: String) async {
     guard let payChooserUserId else {
-      presentPayChooserError(String(localized: "settings.pay.choose_job.error_not_authenticated"))
+      presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return
     }
 
@@ -689,7 +689,7 @@ struct SettingsView: View {
 
   private func restorePayJob(_ jobId: String) async {
     guard let payChooserUserId else {
-      presentPayChooserError(String(localized: "settings.pay.choose_job.error_not_authenticated"))
+      presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return
     }
 
@@ -707,7 +707,7 @@ struct SettingsView: View {
 
   private func deletePayJob(_ jobId: String) async {
     guard let payChooserUserId else {
-      presentPayChooserError(String(localized: "settings.pay.choose_job.error_not_authenticated"))
+      presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return
     }
 
@@ -725,7 +725,7 @@ struct SettingsView: View {
 
   private func setDefaultPayJob(_ jobId: String) async {
     guard let payChooserUserId else {
-      presentPayChooserError(String(localized: "settings.pay.choose_job.error_not_authenticated"))
+      presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return
     }
 
@@ -766,7 +766,7 @@ struct SettingsView: View {
     }
 
     guard let userId = resolvedUserId else {
-      presentPayChooserError(String(localized: "settings.pay.choose_job.error_not_authenticated"))
+      presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return false
     }
 
@@ -838,7 +838,7 @@ struct SettingsView: View {
                 .font(.tidexBodyMedium)
                 .foregroundColor(.tidexBlue)
 
-              Text(String(localized: "settings.pay.add_job.cta"))
+              Text(.settingsPayAddJobCta)
                 .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
 
@@ -854,7 +854,7 @@ struct SettingsView: View {
           .frame(maxWidth: .infinity)
 
           if payChooserJobs.isEmpty {
-            Text(String(localized: "settings.pay.chooseJob.empty"))
+            Text(.settingsPayChooseJobEmpty)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
               .frame(maxWidth: .infinity, alignment: .leading)
@@ -882,7 +882,7 @@ struct SettingsView: View {
       .padding(.top, Spacing.sm)
       .padding(.bottom, Spacing.md)
       .background(Color.tidexBackground)
-      .navigationTitle(String(localized: "settings.pay.manage_jobs.title"))
+      .navigationTitle(String(localized: .settingsPayManageJobsTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -914,14 +914,14 @@ struct SettingsView: View {
         }
       }
       .confirmationDialog(
-        String(localized: "settings.pay.jobActions.deleteConfirmTitle"),
+        String(localized: .settingsPayJobActionsDeleteConfirmTitle),
         isPresented: .init(
           get: { pendingPayChooserDeleteJob != nil },
           set: { if !$0 { pendingPayChooserDeleteJob = nil } }
         ),
         titleVisibility: .visible
       ) {
-        Button(String(localized: "settings.pay.jobActions.delete"), role: .destructive) {
+        Button(String(localized: .settingsPayJobActionsDelete), role: .destructive) {
           guard let job = pendingPayChooserDeleteJob else { return }
           pendingPayChooserDeleteJob = nil
           Task {
@@ -935,7 +935,7 @@ struct SettingsView: View {
           Text(.commonCancel)
         }
       } message: {
-        Text(String(localized: "settings.pay.jobActions.deleteConfirmMessage"))
+        Text(.settingsPayJobActionsDeleteConfirmMessage)
       }
       .sheet(item: $payChooserDetailRoute) { route in
         payChooserDetailSheet(route)
@@ -1004,7 +1004,7 @@ struct SettingsView: View {
             .foregroundColor(.tidexTextMuted)
             .frame(width: 22)
 
-          Text(String(localized: "settings.pay.manage_jobs.archived_title"))
+          Text(.settingsPayManageJobsArchivedTitle)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextSecondary)
             .lineLimit(1)
@@ -1038,7 +1038,7 @@ struct SettingsView: View {
       if showArchivedPayJobs {
         VStack(spacing: Spacing.sm) {
           if payArchivedJobs.isEmpty {
-            Text(String(localized: "settings.pay.manage_jobs.archived_empty"))
+            Text(.settingsPayManageJobsArchivedEmpty)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextMuted)
               .frame(maxWidth: .infinity, alignment: .leading)
@@ -1160,7 +1160,7 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "settings.pay.manage_jobs.restore"))
+        .accessibilityLabel(String(localized: .settingsPayManageJobsRestore))
         .accessibilityValue(Text(job.name))
       }
     }
@@ -1179,7 +1179,7 @@ struct SettingsView: View {
     HStack(spacing: Spacing.xs) {
       if isDefault {
         payJobBadge(
-          title: String(localized: "settings.pay.choose_job.default_badge"),
+          title: String(localized: .settingsPayChooseJobDefaultBadge),
           foregroundColor: .tidexBlue,
           backgroundColor: .tidexBlue.opacity(0.14)
         )
@@ -1187,7 +1187,7 @@ struct SettingsView: View {
 
       if !payConfiguredJobIds.contains(job.id) {
         payJobBadge(
-          title: String(localized: "settings.pay.setup.requiredBadge"),
+          title: String(localized: .settingsPaySetupRequiredBadge),
           foregroundColor: .tidexWarning,
           backgroundColor: .tidexWarning.opacity(0.14)
         )
@@ -1218,15 +1218,15 @@ struct SettingsView: View {
   }
 
   private func payJobActionsAccessibilityLabel(for job: Job) -> String {
-    "\(String(localized: "settings.pay.jobActions.title")): \(job.name)"
+    "\(String(localized: .settingsPayJobActionsTitle)): \(job.name)"
   }
 
   private var archivedPayJobsToggleAccessibilityLabel: String {
     if showArchivedPayJobs {
-      return String(localized: "settings.pay.manage_jobs.hide_archived")
+      return String(localized: .settingsPayManageJobsHideArchived)
     }
 
-    return String(localized: "settings.pay.manage_jobs.show_archived")
+    return String(localized: .settingsPayManageJobsShowArchived)
   }
 
   @ViewBuilder
@@ -1238,7 +1238,7 @@ struct SettingsView: View {
         }
       } label: {
         Label(
-          String(localized: "settings.pay.jobActions.setDefault"),
+          String(localized: .settingsPayJobActionsSetDefault),
           systemImage: "checkmark.circle"
         )
       }
@@ -1251,7 +1251,7 @@ struct SettingsView: View {
         }
       } label: {
         Label(
-          String(localized: "settings.pay.jobActions.archive"),
+          String(localized: .settingsPayJobActionsArchive),
           systemImage: "archivebox"
         )
       }
@@ -1262,7 +1262,7 @@ struct SettingsView: View {
         pendingPayChooserDeleteJob = job
       } label: {
         Label(
-          String(localized: "settings.pay.jobActions.delete"),
+          String(localized: .settingsPayJobActionsDelete),
           systemImage: "trash"
         )
       }
@@ -1277,7 +1277,7 @@ struct SettingsView: View {
       }
     } label: {
       Label(
-        String(localized: "settings.pay.manage_jobs.restore"),
+        String(localized: .settingsPayManageJobsRestore),
         systemImage: "arrow.uturn.backward.circle"
       )
     }
@@ -1286,7 +1286,7 @@ struct SettingsView: View {
       pendingPayChooserDeleteJob = job
     } label: {
       Label(
-        String(localized: "settings.pay.jobActions.delete"),
+        String(localized: .settingsPayJobActionsDelete),
         systemImage: "trash"
       )
     }

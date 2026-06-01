@@ -464,7 +464,7 @@ struct PostAuthOnboardingView: View {
   ) async {
     guard !userId.isEmpty else {
       if showsAuthenticationError {
-        multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+        multiJobErrorMessage = String(localized: .settingsPayChooseJobErrorNotAuthenticated)
       }
       return
     }
@@ -538,7 +538,7 @@ struct PostAuthOnboardingView: View {
 
   private func createOnboardingJob(input: AddJobSetupInput) async -> Bool {
     guard !userId.isEmpty else {
-      multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      multiJobErrorMessage = String(localized: .settingsPayChooseJobErrorNotAuthenticated)
       return false
     }
 
@@ -576,7 +576,7 @@ struct PostAuthOnboardingView: View {
 
   private func createOnboardingJobBasics(input: AddJobBasicsInput) async -> Job? {
     guard !userId.isEmpty else {
-      multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      multiJobErrorMessage = String(localized: .settingsPayChooseJobErrorNotAuthenticated)
       return nil
     }
 

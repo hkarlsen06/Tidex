@@ -455,7 +455,7 @@ struct ImageViewerOverlay: View {
                 )
             }
             .accessibilityLabel(
-              Text(String(localized: "friends.chat.action.save_image", table: "Localizable"))
+              Text(.friendsChatActionSaveImage)
             )
           }
 

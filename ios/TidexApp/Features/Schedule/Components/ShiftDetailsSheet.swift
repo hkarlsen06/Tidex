@@ -72,6 +72,28 @@ struct ShiftPauseEditResult: Equatable {
   let customPauseWindows: CustomPauseWindows?
 }
 
+struct ShiftDetailsPresentationPolicy: Equatable {
+  let snapshotShareContext: ShiftSnapshotShareContext
+
+  var showsEarningsDetails: Bool {
+    switch snapshotShareContext {
+    case .own:
+      return true
+    case .shared(let owner):
+      return owner.showEarnings
+    }
+  }
+
+  var automaticBreakOwnerName: String? {
+    guard case .shared(let owner) = snapshotShareContext, owner.showEarnings else {
+      return nil
+    }
+
+    let ownerName = owner.firstNameOnly.trimmingCharacters(in: .whitespacesAndNewlines)
+    return ownerName.isEmpty ? nil : ownerName
+  }
+}
+
 struct ShiftDetailsSheet: View {
   let shift: ShiftWithComputations
   /// Job name to display in the header badge (only set when user has multiple jobs)
@@ -82,6 +104,7 @@ struct ShiftDetailsSheet: View {
   let onUpdate: ((ShiftEditResult) async throws -> Void)?
   let onUpdatePause: ((ShiftPauseEditResult) -> Void)?
   let onEditRecurring: ((String) -> Void)?  // Callback with recurring shift ID
+  let onStopRecurringAfterDate: ((String, String) async throws -> Void)?
   let showsCalendarSubscriptionCTA: Bool
   let onShowInCalendarRequested: (() -> Void)?
   var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
@@ -162,6 +185,8 @@ struct ShiftDetailsSheet: View {
   /// Whether showing the send-to-chat recipient picker
   @State private var showingSendToChatSheet = false
   @State private var showingCalendarSubscriptionConfirmation = false
+  @State private var showingStopRecurringConfirmation = false
+  @State private var isStoppingRecurringAfterDate = false
 
   /// Image to share (rendered from ShareableShiftCard)
   @State private var shareImage: UIImage?
@@ -193,6 +218,7 @@ struct ShiftDetailsSheet: View {
     onUpdate: ((ShiftEditResult) async throws -> Void)? = nil,
     onUpdatePause: ((ShiftPauseEditResult) -> Void)? = nil,
     onEditRecurring: ((String) -> Void)? = nil,
+    onStopRecurringAfterDate: ((String, String) async throws -> Void)? = nil,
     showsCalendarSubscriptionCTA: Bool = false,
     onShowInCalendarRequested: (() -> Void)? = nil,
     onSendToChatCompleted: ((SendShiftToChatResult) -> Void)? = nil,
@@ -207,6 +233,7 @@ struct ShiftDetailsSheet: View {
     self.onUpdate = onUpdate
     self.onUpdatePause = onUpdatePause
     self.onEditRecurring = onEditRecurring
+    self.onStopRecurringAfterDate = onStopRecurringAfterDate
     self.showsCalendarSubscriptionCTA = showsCalendarSubscriptionCTA
     self.onShowInCalendarRequested = onShowInCalendarRequested
     self.onSendToChatCompleted = onSendToChatCompleted
@@ -224,6 +251,18 @@ struct ShiftDetailsSheet: View {
     formatter.locale = Locale.appLocale
     formatter.dateFormat = "EEEE, d. MMMM yyyy"
     return formatter.string(from: date).sentenceCased()
+  }
+
+  private var formattedStopRecurringDate: String {
+    guard let date = Date.fromISODateString(shift.shiftDate) else {
+      return shift.shiftDate
+    }
+
+    let formatter = DateFormatter()
+    formatter.locale = Locale.appLocale
+    formatter.dateStyle = .long
+    formatter.timeStyle = .none
+    return formatter.string(from: date)
   }
 
   private var formattedTimeRange: String {
@@ -246,6 +285,14 @@ struct ShiftDetailsSheet: View {
 
   private var showTaxBreakdown: Bool {
     shift.taxEnabled && shift.taxAmount > 0
+  }
+
+  private var presentationPolicy: ShiftDetailsPresentationPolicy {
+    ShiftDetailsPresentationPolicy(snapshotShareContext: snapshotShareContext)
+  }
+
+  private var showsEarningsDetails: Bool {
+    presentationPolicy.showsEarningsDetails
   }
 
   /// Whether this shift has supplement pay to show breakdown
@@ -297,7 +344,9 @@ struct ShiftDetailsSheet: View {
   }
 
   private var shouldShowBreakSection: Bool {
-    onUpdatePause != nil || hasCustomPauseWindows || shift.computed.breakAudit.deductedHours > 0
+    showsEarningsDetails
+      && (onUpdatePause != nil || hasCustomPauseWindows
+        || shift.computed.breakAudit.deductedHours > 0)
   }
 
   private var shouldShowEditOptionsSection: Bool {
@@ -309,7 +358,8 @@ struct ShiftDetailsSheet: View {
   }
 
   private var hasPrimaryViewModeActions: Bool {
-    onUpdate != nil || onDelete != nil || (isVirtualShift && onEditRecurring != nil)
+    onUpdate != nil || onDelete != nil
+      || (isVirtualShift && (onEditRecurring != nil || onStopRecurringAfterDate != nil))
   }
 
   private var shouldShowViewModeActionButtons: Bool {
@@ -385,12 +435,20 @@ struct ShiftDetailsSheet: View {
     case .customPauseWindows:
       return String(localized: .shiftsPauseSectionSummaryCustomOverride)
     case .automaticBreak:
-      return String(localized: .shiftsPauseSectionSummaryAutomaticApplied)
+      return automaticBreakSummaryText
     case .none:
       return hasCustomPauseWindows
         ? String(localized: .shiftsPauseSectionSummarySavedOnShift)
         : String(localized: .shiftsPauseSectionSummaryAddHint)
     }
+  }
+
+  private var automaticBreakSummaryText: String {
+    if let ownerName = presentationPolicy.automaticBreakOwnerName {
+      return String(localized: .shiftsPauseSectionSummaryAutomaticAppliedOwner(ownerName))
+    }
+
+    return String(localized: .shiftsPauseSectionSummaryAutomaticApplied)
   }
 
   private func pauseEditTarget() -> ShiftPauseEditTarget? {
@@ -496,7 +554,7 @@ struct ShiftDetailsSheet: View {
           }
 
           // Earnings breakdown (hidden in edit mode)
-          if !isEditing {
+          if !isEditing, showsEarningsDetails {
             earningsSection
           }
 
@@ -708,7 +766,7 @@ struct ShiftDetailsSheet: View {
       }
     }
     .confirmationDialog(
-      String(localized: "calendar.subscription.detail.confirmation.title"),
+      String(localized: .calendarSubscriptionDetailConfirmationTitle),
       isPresented: $showingCalendarSubscriptionConfirmation,
       titleVisibility: .visible
     ) {
@@ -717,7 +775,23 @@ struct ShiftDetailsSheet: View {
       }
       Button(String(localized: .commonCancel), role: .cancel) {}
     } message: {
-      Text("calendar.subscription.detail.confirmation.message")
+      Text(.calendarSubscriptionDetailConfirmationMessage)
+    }
+    .confirmationDialog(
+      String(localized: .shiftsRecurringStopAfterDateConfirmTitle),
+      isPresented: $showingStopRecurringConfirmation,
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .shiftsRecurringStopAfterDateButton), role: .destructive) {
+        stopRecurringAfterCurrentDate()
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {}
+    } message: {
+      Text(
+        String(
+          localized: .shiftsRecurringStopAfterDateConfirmMessage(formattedStopRecurringDate)
+        )
+      )
     }
   }
 
@@ -941,6 +1015,29 @@ struct ShiftDetailsSheet: View {
       }
 
       isSaving = false
+    }
+  }
+
+  private func stopRecurringAfterCurrentDate() {
+    guard !isStoppingRecurringAfterDate else { return }
+    guard let recurringId = shift.shift.recurring_id, let onStopRecurringAfterDate else {
+      errorMessage = ShiftSaveError.missingRecurringInfo.localizedDescription
+      return
+    }
+
+    errorMessage = nil
+    isStoppingRecurringAfterDate = true
+    impactHaptic.impactOccurred()
+
+    Task {
+      do {
+        try await onStopRecurringAfterDate(recurringId, shift.shiftDate)
+        dismiss()
+      } catch {
+        errorMessage = ErrorTranslations.translate(error)
+      }
+
+      isStoppingRecurringAfterDate = false
     }
   }
 
@@ -1364,7 +1461,7 @@ struct ShiftDetailsSheet: View {
   private var viewModeActionButtons: some View {
     VStack(spacing: Spacing.md) {
       if hasPrimaryViewModeActions {
-        EarningsBreakdownCard {
+        VStack(spacing: Spacing.sm) {
           // Edit button (only show if onUpdate callback is provided)
           if onUpdate != nil {
             DetailSheetActionButton(
@@ -1378,15 +1475,24 @@ struct ShiftDetailsSheet: View {
             }
           }
 
-          // Edit recurring shift button (only for virtual shifts)
+          if isVirtualShift, shift.shift.recurring_id != nil, onStopRecurringAfterDate != nil {
+            DetailSheetActionButton(
+              title: String(localized: .shiftsRecurringStopAfterDateButton),
+              systemImage: "calendar.badge.minus",
+              style: .secondary
+            ) {
+              showingStopRecurringConfirmation = true
+            }
+            .disabled(isStoppingRecurringAfterDate)
+          }
+
           if isVirtualShift, let recurringId = shift.shift.recurring_id, onEditRecurring != nil {
             DetailSheetActionButton(
-              title: String(localized: .shiftsEditRecurringButton),
+              title: String(localized: .shiftsRecurringManageButton),
               systemImage: "repeat",
               style: .secondary
             ) {
               dismiss()
-              // Small delay to allow sheet to dismiss before opening editor
               DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 onEditRecurring?(recurringId)
               }
@@ -1398,11 +1504,12 @@ struct ShiftDetailsSheet: View {
             deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
           }
         }
+        .padding(.top, Spacing.xs)
       }
 
       if showsCalendarSubscriptionCTA {
         DetailSheetActionButton(
-          title: String(localized: "calendar.subscription.detail.cta"),
+          title: String(localized: .calendarSubscriptionDetailCta),
           systemImage: "calendar.badge.clock",
           style: .primary
         ) {
@@ -1759,7 +1866,6 @@ struct ShiftDetailsSheet: View {
     ) {
       onDelete()
     }
-    .padding(.top, Spacing.xs)
   }
 
   /// Footer showing when the shift was added and, when applicable, last edited.
@@ -1767,7 +1873,7 @@ struct ShiftDetailsSheet: View {
   private func shiftTimestampFooter(createdAt: Date?, updatedAt: Date?) -> some View {
     if let createdAt {
       VStack(spacing: Spacing.xxs) {
-        Text(String(localized: "shifts.added") + " " + formattedShiftTimestamp(createdAt))
+        Text(String(localized: .shiftsAdded) + " " + formattedShiftTimestamp(createdAt))
 
         if let updatedAt, !timestampsMatch(createdAt, updatedAt) {
           Text(String(localized: .shiftsLastEdited) + " " + formattedShiftTimestamp(updatedAt))
@@ -1945,7 +2051,7 @@ struct ShareDestinationSheet: View {
               .font(.tidexTitle2)
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
-            Text(LocalizedStringResource("friends.chat.send_to_chat", table: "Localizable"))
+            Text(.friendsChatSendToChat)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Spacer()
@@ -1965,7 +2071,7 @@ struct ShareDestinationSheet: View {
               .font(.tidexTitle2)
               .foregroundColor(.tidexBlue)
               .frame(width: 28)
-            Text(LocalizedStringResource("shifts.share_as_image", table: "Localizable"))
+            Text(.shiftsShareAsImage)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextPrimary)
             Spacer()

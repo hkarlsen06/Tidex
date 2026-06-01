@@ -152,7 +152,7 @@ struct ChatInputField: View {
       return String(localized: .commonCancel)
     }
 
-    return String(localized: "Send message")
+    return String(localized: .commonSendMessage)
   }
 
   private var actionSystemImage: String {
@@ -293,17 +293,17 @@ struct ChatInputField: View {
       .ignoresSafeArea()
     }
     .confirmationDialog(
-      String(localized: "profile.personalInfo.chooseImageSource"),
+      String(localized: .profilePersonalInfoChooseImageSource),
       isPresented: $showAttachmentSourcePicker,
       titleVisibility: .visible
     ) {
       if shouldShowAttachmentSourcePicker {
-        Button(String(localized: "profile.personalInfo.takePhoto")) {
+        Button(String(localized: .profilePersonalInfoTakePhoto)) {
           showCamera = true
         }
       }
 
-      Button(String(localized: "profile.personalInfo.chooseFromLibrary")) {
+      Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
         showLibrary = true
       }
 
@@ -347,7 +347,7 @@ struct ChatInputField: View {
     .disabled(attachmentControlsDisabled || isProcessingImage)
     .frame(width: 50, height: 50)
     .contentShape(Rectangle())
-    .accessibilityLabel(Text(String(localized: .profilePersonalInfoUploadImage)))
+    .accessibilityLabel(Text(.profilePersonalInfoUploadImage))
   }
 
   // MARK: - Image Preview
@@ -386,7 +386,7 @@ struct ChatInputField: View {
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
         }
-        .accessibilityLabel(Text(String(localized: "profile.personalInfo.removeImage")))
+        .accessibilityLabel(Text(.profilePersonalInfoRemoveImage))
         .offset(x: 6, y: -6)
       }
 
@@ -426,7 +426,7 @@ struct ChatInputField: View {
           .frame(minWidth: 44, minHeight: 44)
           .contentShape(Rectangle())
       }
-      .accessibilityLabel(Text(String(localized: "screenshotShare.dismiss")))
+      .accessibilityLabel(Text(.screenshotShareDismiss))
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)

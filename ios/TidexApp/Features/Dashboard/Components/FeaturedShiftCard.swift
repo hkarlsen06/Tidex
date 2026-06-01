@@ -357,7 +357,7 @@ struct FeaturedShiftCard: View {
       Text(startTimeText)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextPrimary)
-      Text("-")
+      Text(verbatim: "-")
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
       RoundedRectangle(cornerRadius: CornerRadius.xxs)

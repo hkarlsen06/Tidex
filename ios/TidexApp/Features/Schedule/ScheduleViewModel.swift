@@ -1294,6 +1294,30 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     isUpdatingRecurring = false
   }
 
+  func stopRecurringShiftAfterDate(recurringId: String, occurrenceDate: String) async throws {
+    guard !isUpdatingRecurring else { throw ShiftSaveError.alreadyInProgress }
+
+    isUpdatingRecurring = true
+    defer { isUpdatingRecurring = false }
+    logger.info("📝 Ending recurring shift \(recurringId) after \(occurrenceDate)")
+
+    do {
+      _ = try await recurringShiftsRepository.updateRecurringShift(
+        id: recurringId,
+        endCondition: .endDate(date: occurrenceDate)
+      )
+
+      recurringShifts = []
+      scheduleDependenciesLoaded = false
+
+      await reloadFromLocal()
+      notifyShiftsDidChange(context: .fullReload)
+    } catch {
+      logger.error("❌ Failed to end recurring shift: \(error.localizedDescription)")
+      throw error
+    }
+  }
+
   /// Delete a recurring shift pattern
   /// - Parameter recurringId: The ID of the recurring shift to delete
   func deleteRecurringShift(_ recurringId: String) async {

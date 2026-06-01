@@ -46,7 +46,7 @@ final class ManageSharingViewModel: ObservableObject {
   /// Inline offline message for server-backed sharing management controls.
   var offlineActionsUnavailableMessage: String? {
     areServerActionsUnavailable
-      ? String(localized: "sharing.offline.actionsUnavailable", table: "Localizable")
+      ? String(localized: .sharingOfflineActionsUnavailable)
       : nil
   }
 
@@ -729,7 +729,7 @@ final class ManageSharingViewModel: ObservableObject {
   private func userFacingActionError(for error: Error, fallback: String) -> String {
     if isOfflineFallbackEligible(error) {
       areServerActionsUnavailable = true
-      return String(localized: "sharing.offline.actionFailed", table: "Localizable")
+      return String(localized: .sharingOfflineActionFailed)
     }
 
     return fallback

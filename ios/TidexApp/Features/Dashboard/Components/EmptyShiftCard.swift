@@ -22,7 +22,7 @@ struct EmptyShiftCard: View {
       ShiftCardContentLayout(rowSpacing: 4, centerTrailing: true) {
         // Placeholder day name and date
         ZStack(alignment: .leading) {
-          Text("Monday · 31 Dec")
+          Text(verbatim: "Monday · 31 Dec")
             .font(.tidexBodyMedium)
             .opacity(0)
 
@@ -37,7 +37,7 @@ struct EmptyShiftCard: View {
             Image(systemName: "clock")
               .font(.tidexSubheadline)
               .opacity(0)
-            Text("00:00 - 00:00")
+            Text(verbatim: "00:00 - 00:00")
               .font(.tidexSubheadline)
               .opacity(0)
           }
@@ -48,7 +48,7 @@ struct EmptyShiftCard: View {
         }
       } trailingTop: {
         ZStack {
-          Text("00 000")
+          Text(verbatim: "00 000")
             .font(.tidexTitle)
             .opacity(0)
 
@@ -58,7 +58,7 @@ struct EmptyShiftCard: View {
         }
       } trailingBottom: {
         ZStack(alignment: .trailing) {
-          Text("00 000 − 00 000")
+          Text(verbatim: "00 000 − 00 000")
             .font(.tidexSubheadline)
             .opacity(0)
 

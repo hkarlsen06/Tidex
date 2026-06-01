@@ -20,7 +20,7 @@ struct ImpersonationBanner: View {
 
       // Info text
       VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(String(format: String(localized: "Impersonating: %@"), targetName))
+        Text(.impersonationBannerImpersonatingUser(targetName))
           .font(.tidexLabelStrong)
           .foregroundStyle(Color.tidexTextPrimary)
 
@@ -41,7 +41,7 @@ struct ImpersonationBanner: View {
             .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnDanger))
             .frame(width: 16, height: 16)
         } else {
-          Text(String(localized: "Stop"))
+          Text(.commonStop)
             .font(.tidexLabelStrong)
         }
       }
@@ -88,7 +88,7 @@ private struct ExpirationText: View {
     let remaining = expiresAt.timeIntervalSinceNow
 
     if remaining <= 0 {
-      timeRemaining = String(localized: "impersonation.banner.sessionExpiredState")
+      timeRemaining = String(localized: .impersonationBannerSessionExpiredState)
       return
     }
 
@@ -98,18 +98,12 @@ private struct ExpirationText: View {
 
     if hours > 0 {
       timeRemaining =
-        "\(String(localized: "impersonation.banner.expiresInPrefix")) \(hours)\(String(localized: .commonHoursShort)) \(minutes)\(String(localized: .commonMinutesShort))"
+        "\(String(localized: .impersonationBannerExpiresInPrefix)) \(hours)\(String(localized: .commonHoursShort)) \(minutes)\(String(localized: .commonMinutesShort))"
     } else if minutes > 0 {
       timeRemaining = String(
-        format: String(localized: "impersonation.banner.expiresInMinutesSeconds"),
-        minutes,
-        seconds
-      )
+        localized: .impersonationBannerExpiresInMinutesSeconds(Int32(minutes), Int32(seconds)))
     } else {
-      timeRemaining = String(
-        format: String(localized: "impersonation.banner.expiresInSeconds"),
-        seconds
-      )
+      timeRemaining = String(localized: .impersonationBannerExpiresInSeconds(Int32(seconds)))
     }
   }
 }

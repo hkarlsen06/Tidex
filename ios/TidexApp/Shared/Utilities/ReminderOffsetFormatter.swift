@@ -59,11 +59,11 @@ enum ReminderOffsetFormatter {
   static func localizedAllDayEventDayLabel(daysBefore: Int) -> String {
     switch daysBefore {
     case 0:
-      return String(localized: "events.notifications.same_day")
+      return String(localized: .eventsNotificationsSameDay)
     case 1:
-      return String(localized: "events.notifications.one_day_before")
+      return String(localized: .eventsNotificationsOneDayBefore)
     case 2:
-      return String(localized: "events.notifications.two_days_before")
+      return String(localized: .eventsNotificationsTwoDaysBefore)
     default:
       return localizedString(for: daysBefore * 1440)
     }

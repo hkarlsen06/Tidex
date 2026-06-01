@@ -18,11 +18,11 @@ enum CalendarSubscriptionContentMode: String, CaseIterable, Identifiable, Codabl
   var localizedTitle: String {
     switch self {
     case .eventsOnly:
-      return String(localized: "calendar.subscription.mode.events_only")
+      return String(localized: .calendarSubscriptionModeEventsOnly)
     case .shiftsOnly:
-      return String(localized: "calendar.subscription.mode.shifts_only")
+      return String(localized: .calendarSubscriptionModeShiftsOnly)
     case .shiftsAndEvents:
-      return String(localized: "calendar.subscription.mode.shifts_and_events")
+      return String(localized: .calendarSubscriptionModeShiftsAndEvents)
     }
   }
 }

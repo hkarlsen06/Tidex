@@ -20,11 +20,11 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
     case .copy:
       return String(localized: .commonCopy)
     case .edit:
-      return String(localized: "friends.chat.action.edit", table: "Localizable")
+      return String(localized: .friendsChatActionEdit)
     case .forward:
-      return String(localized: "friends.chat.action.forward", table: "Localizable")
+      return String(localized: .friendsChatActionForward)
     case .delete:
-      return String(localized: "friends.chat.action.delete", table: "Localizable")
+      return String(localized: .friendsChatActionDelete)
     case .report:
       return String(localized: .friendsChatReportMessage)
     }

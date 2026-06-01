@@ -74,7 +74,7 @@ private final class ShareExtensionViewModel: ObservableObject {
       self.sharedImageData = imagePayload.data
 
       if recipients.isEmpty {
-        errorMessage = String(localized: "share.error.no_recipients")
+        errorMessage = String(localized: .shareErrorNoRecipients)
       }
     } catch {
       errorMessage = error.localizedDescription
@@ -137,9 +137,9 @@ private final class ShareExtensionViewModel: ObservableObject {
     var errorDescription: String? {
       switch self {
       case .missingInputItems:
-        return String(localized: "share.error.missing_input")
+        return String(localized: .shareErrorMissingInput)
       case .noSupportedImage:
-        return String(localized: "share.error.no_supported_image")
+        return String(localized: .shareErrorNoSupportedImage)
       }
     }
   }
@@ -188,7 +188,7 @@ private struct ShareRootView: View {
 
   private var topBar: some View {
     HStack(spacing: 12) {
-      Button(String(localized: "share.action.dismiss")) {
+      Button(String(localized: .shareActionDismiss)) {
         viewModel.dismiss()
       }
       .font(.body)
@@ -196,7 +196,7 @@ private struct ShareRootView: View {
 
       Spacer()
 
-      Text(String(localized: "share.title"))
+      Text(.shareTitle)
         .font(.headline.weight(.semibold))
 
       Spacer()
@@ -205,7 +205,7 @@ private struct ShareRootView: View {
         ProgressView()
           .frame(width: 56, alignment: .trailing)
       } else {
-        Button(String(localized: "share.action.send")) {
+        Button(String(localized: .shareActionSend)) {
           Task {
             await viewModel.send()
           }
@@ -247,7 +247,7 @@ private struct ShareRootView: View {
 
   private var messageField: some View {
     TextField(
-      String(localized: "share.placeholder.message"), text: $viewModel.messageText, axis: .vertical
+      String(localized: .sharePlaceholderMessage), text: $viewModel.messageText, axis: .vertical
     )
     .textInputAutocapitalization(.sentences)
     .autocorrectionDisabled(false)

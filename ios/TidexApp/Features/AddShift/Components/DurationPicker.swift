@@ -32,7 +32,7 @@ struct DurationPicker: View {
     VStack(spacing: Spacing.md) {
       // Duration type selector
       HStack(spacing: Spacing.xs) {
-        Text(String(localized: .addShiftDuration))
+        Text(.addShiftDuration)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextMuted)
           .textCase(.uppercase)

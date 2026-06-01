@@ -138,15 +138,23 @@ struct SharingView: View {
             }
           },
           onSendToChatCompleted: { result in
+            let recipientAvatarUrl = result.recipient.avatarURL?.absoluteString
+            let threadDisplayName = result.thread.counterpartDisplayName?
+              .trimmingCharacters(in: .whitespacesAndNewlines)
+            let fallbackDisplayName =
+              if let threadDisplayName, !threadDisplayName.isEmpty {
+                threadDisplayName
+              } else {
+                result.recipient.displayName
+              }
             let route = FriendChatRoute(
               thread: result.thread,
-              fallbackDisplayName: result.thread.counterpartDisplayName
-                ?? String(localized: .sharingFriendsTitle),
-              fallbackAvatarUrl: result.thread.counterpartAvatarUrl
+              fallbackDisplayName: fallbackDisplayName,
+              fallbackAvatarUrl: result.thread.counterpartAvatarUrl ?? recipientAvatarUrl
             )
             navigateToChatRoute(
               route,
-              highlightedUserId: result.thread.counterpartUserId,
+              highlightedUserId: result.thread.counterpartUserId ?? result.recipient.id,
               resetNavigationFirst: true
             )
           },
@@ -745,10 +753,10 @@ struct SharingView: View {
     pendingChatNavigationTask?.cancel()
 
     let normalizedHighlightUserId = Self.normalizedIdentifier(highlightedUserId)
-    viewModel.deselectSharer()
-    hasSelectedSharer = false
 
     guard resetNavigationFirst else {
+      viewModel.deselectSharer()
+      hasSelectedSharer = false
       pendingChatRoute = nil
       pendingChatHighlightUserId = nil
       pushChatRoute(route, highlightedUserId: normalizedHighlightUserId)
@@ -776,6 +784,8 @@ struct SharingView: View {
       let highlightUserId = pendingChatHighlightUserId
       pendingChatRoute = nil
       pendingChatHighlightUserId = nil
+      viewModel.deselectSharer()
+      hasSelectedSharer = false
       isChatTabBarHidden = true
       activeChatHighlightUserId = highlightUserId
       navigationPath.append(route)

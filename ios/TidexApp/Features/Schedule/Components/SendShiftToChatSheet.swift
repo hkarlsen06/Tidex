@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SendShiftToChatResult {
   let thread: FriendThread
+  let recipient: ShareRecipient
 
   var threadId: String {
     thread.id
@@ -223,7 +224,7 @@ private final class SendAttachmentToChatViewModel: ObservableObject {
         threadId: thread.id,
         viewerUserId: viewerUserId
       )
-      return SendShiftToChatResult(thread: thread)
+      return SendShiftToChatResult(thread: thread, recipient: recipient)
     } catch {
       errorMessage = error.localizedDescription
       return nil
@@ -271,7 +272,7 @@ struct SendAttachmentToChatSheet: View {
           .padding(.horizontal, Spacing.mlg)
           .padding(.vertical, Spacing.md)
       }
-      .navigationTitle(String(localized: "friends.chat.send_to_chat", table: "Localizable"))
+      .navigationTitle(String(localized: .friendsChatSendToChat))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
@@ -298,7 +299,7 @@ struct SendAttachmentToChatSheet: View {
     if viewModel.isLoading {
       VStack(spacing: Spacing.md) {
         ProgressView()
-        Text(LocalizedStringResource("friends.chat.send_to_chat.loading", table: "Localizable"))
+        Text(.friendsChatSendToChatLoading)
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
       }
@@ -309,12 +310,12 @@ struct SendAttachmentToChatSheet: View {
           .font(.system(size: 32, weight: .medium))
           .foregroundColor(.tidexTextMuted)
 
-        Text(LocalizedStringResource("friends.chat.send_to_chat.empty_title", table: "Localizable"))
+        Text(.friendsChatSendToChatEmptyTitle)
           .font(.tidexHeadline)
           .foregroundColor(.tidexTextPrimary)
 
         Text(
-          LocalizedStringResource("friends.chat.send_to_chat.empty_message", table: "Localizable")
+          .friendsChatSendToChatEmptyMessage
         )
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
@@ -323,7 +324,7 @@ struct SendAttachmentToChatSheet: View {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else {
       VStack(alignment: .leading, spacing: Spacing.md) {
-        Text(LocalizedStringResource("friends.chat.send_to_chat.prompt", table: "Localizable"))
+        Text(.friendsChatSendToChatPrompt)
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
 

@@ -12,18 +12,18 @@ struct EventAllDayReminderPickerSheet: View {
     NavigationStack {
       VStack(spacing: Spacing.md) {
         VStack(spacing: Spacing.sm) {
-          Text(String(localized: "events.notifications.all_day_picker.description"))
+          Text(.eventsNotificationsAllDayPickerDescription)
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
 
           HStack(spacing: Spacing.sm) {
             Picker("", selection: $daysBefore) {
-              Text(String(localized: "events.notifications.same_day"))
+              Text(.eventsNotificationsSameDay)
                 .tag(0)
-              Text(String(localized: "events.notifications.one_day_before"))
+              Text(.eventsNotificationsOneDayBefore)
                 .tag(1)
-              Text(String(localized: "events.notifications.two_days_before"))
+              Text(.eventsNotificationsTwoDaysBefore)
                 .tag(2)
             }
             .pickerStyle(.wheel)

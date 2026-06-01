@@ -150,7 +150,7 @@ struct ReminderTimePickerSheet: View {
     case .shift:
       return String(localized: .notificationsTimePickerDescription)
     case .event:
-      return String(localized: "events.notifications.timed_picker.description")
+      return String(localized: .eventsNotificationsTimedPickerDescription)
     }
   }
 

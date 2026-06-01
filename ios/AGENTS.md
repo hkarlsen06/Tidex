@@ -152,6 +152,8 @@ ios/Scripts/validate-localization.sh
 ### Rules
 
 - Use Xcode-generated `LocalizedStringResource` symbols, not raw string keys
+- Never call localization APIs with raw string keys such as `String(localized: "settings.saveButton")`, `Text("settings.saveButton", tableName: "Localizable")`, `LocalizedStringResource("settings.saveButton", table: "Localizable")`, or `NSLocalizedString("settings.saveButton", ...)`.
+- If a key has no generated symbol, add or rename the catalog entry to a dot-notation key that does generate one, then use the symbol.
 - `%lld` format specifiers generate `Int32` parameters - wrap `Int` with `Int32()`
 - Use system locale; do not override `.environment(\.locale, ...)`
 - Prefer `FormatStyle` for numbers/dates/currency instead of `String(format:)`

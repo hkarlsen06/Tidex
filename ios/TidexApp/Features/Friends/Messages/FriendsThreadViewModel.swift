@@ -135,7 +135,7 @@ final class FriendsThreadViewModel: ObservableObject {
       case .missingPendingAttachment:
         return String(localized: .friendsChatSendFailed)
       case .offlineServerAction:
-        return String(localized: "friends.chat.waitingForNetwork", table: "Localizable")
+        return String(localized: .friendsChatWaitingForNetwork)
       }
     }
   }
@@ -1875,7 +1875,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private var shiftSnapshotSendUnavailableMessage: String {
-    String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+    String(localized: .friendsChatShiftSnapshotSendUnavailable)
   }
 
   private var shiftSnapshotOfflineUnavailableMessage: String {
@@ -1887,7 +1887,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private var waitingForNetworkMessage: String {
-    String(localized: "friends.chat.waitingForNetwork", table: "Localizable")
+    String(localized: .friendsChatWaitingForNetwork)
   }
 
   private var sendMessageFailedMessage: String {
@@ -1895,20 +1895,20 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private var messageTooLongMessage: String {
-    String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
+    String(localized: .friendsChatComposerMessageTooLong)
       .replacingOccurrences(of: "{limit}", with: "\(MessageBody.characterLimit)")
   }
 
   private var messageBlockedBySafetyFilterMessage: String {
-    String(localized: "friends.chat.composer.safetyFilter", table: "Localizable")
+    String(localized: .friendsChatComposerSafetyFilter)
   }
 
   private var editMessageFailedMessage: String {
-    String(localized: "friends.chat.edit_failed", table: "Localizable")
+    String(localized: .friendsChatEditFailed)
   }
 
   private var deleteMessageFailedMessage: String {
-    String(localized: "friends.chat.delete_failed", table: "Localizable")
+    String(localized: .friendsChatDeleteFailed)
   }
 
   private func canSendShiftSnapshotAttachments(_ attachments: [FriendsComposerAttachmentDraft])

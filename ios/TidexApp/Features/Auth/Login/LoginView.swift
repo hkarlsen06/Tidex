@@ -242,7 +242,7 @@ struct LoginView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(String(localized: "screenshotShare.dismiss")))
+        .accessibilityLabel(Text(.screenshotShareDismiss))
       }
 
       PrimaryButton(

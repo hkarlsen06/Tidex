@@ -19,9 +19,17 @@ struct FriendChatRoute: Hashable {
     navigationRequestId: UUID? = nil
   ) {
     self.threadId = thread.id
-    self.counterpartUserId = thread.counterpartUserId ?? notificationSenderUserId ?? ""
-    self.displayName = thread.counterpartDisplayName ?? fallbackDisplayName
-    self.avatarUrl = thread.counterpartAvatarUrl ?? fallbackAvatarUrl
+    self.counterpartUserId =
+      Self.nonEmptyString(thread.counterpartUserId)
+      ?? Self.nonEmptyString(notificationSenderUserId)
+      ?? ""
+    self.displayName =
+      Self.nonEmptyString(thread.counterpartDisplayName)
+      ?? Self.nonEmptyString(fallbackDisplayName)
+      ?? fallbackDisplayName
+    self.avatarUrl =
+      Self.nonEmptyString(thread.counterpartAvatarUrl)
+      ?? Self.nonEmptyString(fallbackAvatarUrl)
     let normalizedMessageId = initialMessageId?.trimmingCharacters(in: .whitespacesAndNewlines)
     let effectiveMessageId: String? =
       if let normalizedMessageId, !normalizedMessageId.isEmpty {
@@ -45,5 +53,11 @@ struct FriendChatRoute: Hashable {
         || notificationSenderUserId != nil
         || self.notificationTypingUserId != nil
         ? UUID() : nil)
+  }
+
+  private static func nonEmptyString(_ value: String?) -> String? {
+    guard let value else { return nil }
+    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
   }
 }

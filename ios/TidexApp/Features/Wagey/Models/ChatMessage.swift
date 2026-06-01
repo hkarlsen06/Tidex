@@ -304,14 +304,10 @@ struct ThoughtStatus: Identifiable, Codable, Equatable {
 
   var localizedLabel: String {
     guard durationSeconds > 1 else {
-      return String(localized: "wagey.streaming.thought_short")
+      return String(localized: .wageyStreamingThoughtShort)
     }
 
-    return String(
-      format: String(localized: "wagey.streaming.thought_duration"),
-      locale: Locale.current,
-      Int64(durationSeconds)
-    )
+    return String(localized: .wageyStreamingThoughtDuration(durationSeconds))
   }
 }
 
