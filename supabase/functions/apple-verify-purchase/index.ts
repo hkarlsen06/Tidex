@@ -10,8 +10,8 @@ import * as jose from "https://deno.land/x/jose@v5.2.2/index.ts";
 
 // ---------- Environment ----------
 // Apple App Store Server API credentials
-const APPLE_APP_BUNDLE_ID =
-  Deno.env.get("APPLE_APP_BUNDLE_ID") ?? "no.tidex.app";
+const APPLE_APP_BUNDLE_ID = Deno.env.get("APPLE_APP_BUNDLE_ID") ??
+  "no.tidex.app";
 const APPLE_KEY_ID = Deno.env.get("APPLE_KEY_ID") ?? "";
 const APPLE_ISSUER_ID = Deno.env.get("APPLE_ISSUER_ID") ?? "";
 const APPLE_PRIVATE_KEY_RAW = Deno.env.get("APPLE_PRIVATE_KEY");
@@ -96,9 +96,11 @@ async function generateAppleJWT(): Promise<string> {
 
     // Debug: Check what we're dealing with
     console.log(
-      `[apple-verify] Raw key has literal backslash-n: ${keyPem.includes(
-        "\\n",
-      )}`,
+      `[apple-verify] Raw key has literal backslash-n: ${
+        keyPem.includes(
+          "\\n",
+        )
+      }`,
     );
     console.log(
       `[apple-verify] Raw key has actual newlines: ${keyPem.includes("\n")}`,
@@ -109,9 +111,11 @@ async function generateAppleJWT(): Promise<string> {
     keyPem = keyPem.replace(/\\n/g, "\n");
 
     console.log(
-      `[apple-verify] After replacement, key has newlines: ${keyPem.includes(
-        "\n",
-      )}`,
+      `[apple-verify] After replacement, key has newlines: ${
+        keyPem.includes(
+          "\n",
+        )
+      }`,
     );
     console.log(`[apple-verify] Key line count: ${keyPem.split("\n").length}`);
     console.log(`[apple-verify] Key starts with: ${keyPem.substring(0, 30)}`);
@@ -213,13 +217,16 @@ async function fetchWithTimeout(
 async function verifyTransactionWithApple(
   transactionId: string,
   environment: "Production" | "Sandbox" = "Sandbox", // Default to Sandbox for testing
-): Promise<{
-  transactionInfo: AppleTransactionInfo;
-  renewalInfo?: AppleRenewalInfo;
-} | null> {
+): Promise<
+  {
+    transactionInfo: AppleTransactionInfo;
+    renewalInfo?: AppleRenewalInfo;
+  } | null
+> {
   const jwt = await generateAppleJWT();
-  const baseUrl =
-    environment === "Sandbox" ? APPLE_SANDBOX_URL : APPLE_PRODUCTION_URL;
+  const baseUrl = environment === "Sandbox"
+    ? APPLE_SANDBOX_URL
+    : APPLE_PRODUCTION_URL;
 
   console.log(
     `[apple-verify] Calling Apple API: ${baseUrl}/inApps/v1/transactions/${transactionId}`,
@@ -449,8 +456,9 @@ async function assertTransactionBelongsToUser(
 ): Promise<{ ok: boolean; error?: string; status?: number }> {
   const appAccountToken = transactionInfo.appAccountToken ?? null;
   if (!appAccountToken) {
-    const existingOwner =
-      await lookupExistingOwnerForLegacyTransaction(transactionInfo);
+    const existingOwner = await lookupExistingOwnerForLegacyTransaction(
+      transactionInfo,
+    );
     if (existingOwner === userId) {
       return { ok: true };
     }
@@ -522,6 +530,9 @@ function determineSubscriptionStatus(
       // Check for billing retry
       if (renewalInfo?.isInBillingRetryPeriod) {
         return { status: "past_due", isEntitled: true };
+      }
+      if (transactionInfo.offerType === 1) {
+        return { status: "trialing", isEntitled: true };
       }
       return { status: "active", isEntitled: true };
     } else {
@@ -840,9 +851,9 @@ export default {
           error: authError,
         } = await ctx.supabase.auth.getUser();
         console.log(
-          `[apple-verify] getUser result - user: ${user?.id ?? "null"}, error: ${
-            authError?.message ?? "none"
-          }`,
+          `[apple-verify] getUser result - user: ${
+            user?.id ?? "null"
+          }, error: ${authError?.message ?? "none"}`,
         );
 
         if (authError || !user) {
@@ -902,8 +913,8 @@ export default {
 
         // Use Apple's signed StoreKit JWS transaction ID when present; client transaction IDs are
         // only a legacy fallback and must still pass appAccountToken ownership binding below.
-        const txnToVerify =
-          signedTransactionId ?? transactionId ?? originalTransactionId;
+        const txnToVerify = signedTransactionId ?? transactionId ??
+          originalTransactionId;
         const environmentToVerify = normalizeAppleEnvironment(
           uploadedTransactionInfo?.environment ?? environment,
         );
