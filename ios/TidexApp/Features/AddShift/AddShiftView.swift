@@ -354,7 +354,7 @@ struct AddShiftView: View {
     .sheet(isPresented: $viewModel.showPreviewSheet) {
       RecurringPreviewSheet(viewModel: viewModel)
     }
-    .sheet(isPresented: $viewModel.showMonthLimitSheet) {
+    .fullScreenCover(isPresented: $viewModel.showMonthLimitSheet) {
       MonthLimitSheet(
         existingMonths: viewModel.existingShiftMonths,
         targetMonth: viewModel.targetMonth,

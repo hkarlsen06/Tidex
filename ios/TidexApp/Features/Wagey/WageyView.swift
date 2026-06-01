@@ -153,7 +153,7 @@ struct WageyView: View {
     .sheet(isPresented: $showHistory) {
       conversationHistorySheet
     }
-    .sheet(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
+    .fullScreenCover(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
       PaywallView(contextType: .wageyLimit)
         .interactiveDismissDisabled()
     }
