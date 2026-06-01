@@ -25,6 +25,7 @@ final class StoreKitManager: ObservableObject {
 
   private var transactionListener: Task<Void, Never>?
   private var userId: String?
+  private var cachedAppAccountToken: UUID?
 
   private init() {}
 
@@ -34,6 +35,11 @@ final class StoreKitManager: ObservableObject {
   /// Must be called before any purchase operations
   /// - Parameter userId: The authenticated user's ID
   func configure(userId: String) {
+    if self.userId != userId {
+      cachedAppAccountToken = nil
+      setCurrentEntitlement(tier: .free, productId: nil)
+    }
+
     self.userId = userId
     logger.info("Configured StoreKitManager for user \(userId.prefix(8))")
   }
@@ -50,6 +56,9 @@ final class StoreKitManager: ObservableObject {
   func stopListening() {
     transactionListener?.cancel()
     transactionListener = nil
+    userId = nil
+    cachedAppAccountToken = nil
+    setCurrentEntitlement(tier: .free, productId: nil)
     logger.info("Stopped transaction listener")
   }
 
@@ -258,6 +267,8 @@ final class StoreKitManager: ObservableObject {
 
     logger.info("Restoring purchases...")
 
+    let expectedAppAccountToken = try await appAccountToken(for: userId)
+
     try await AppStore.sync()
     await updateCurrentEntitlements()
     EntitlementService.shared.updateEffectiveTier()
@@ -272,6 +283,15 @@ final class StoreKitManager: ObservableObject {
       }
 
       guard let productId = ProductID(rawValue: transaction.productID) else {
+        continue
+      }
+
+      guard
+        transactionBelongsToCurrentUser(
+          transaction,
+          expectedAppAccountToken: expectedAppAccountToken
+        )
+      else {
         continue
       }
 
@@ -332,11 +352,34 @@ final class StoreKitManager: ObservableObject {
   /// This reflects what StoreKit says the user is entitled to, independent of server
   /// Notifies EntitlementService when tier changes for proper synchronization
   func updateCurrentEntitlements() async {
+    guard let userId else {
+      setCurrentEntitlement(tier: .free, productId: nil)
+      return
+    }
+
+    let expectedAppAccountToken: UUID
+    do {
+      expectedAppAccountToken = try await appAccountToken(for: userId)
+    } catch {
+      logger.error("Unable to verify StoreKit entitlement owner: \(error.localizedDescription)")
+      setCurrentEntitlement(tier: .free, productId: nil)
+      return
+    }
+
     var highestTier: SubscriptionTier = .free
     var highestProductId: String?
 
     for await result in Transaction.currentEntitlements {
       guard case .verified(let transaction) = result else {
+        continue
+      }
+
+      guard
+        transactionBelongsToCurrentUser(
+          transaction,
+          expectedAppAccountToken: expectedAppAccountToken
+        )
+      else {
         continue
       }
 
@@ -351,18 +394,10 @@ final class StoreKitManager: ObservableObject {
       }
     }
 
-    let previousTier = currentTier
-    currentTier = highestTier
-    currentProductId = highestProductId
+    setCurrentEntitlement(tier: highestTier, productId: highestProductId)
     logger.debug(
       "StoreKit entitlements updated: tier=\(highestTier.rawValue), productId=\(highestProductId ?? "none")"
     )
-
-    // Notify EntitlementService of tier change for proper synchronization
-    // This ensures EntitlementService always uses the freshest tier value
-    if previousTier != highestTier {
-      EntitlementService.shared.handleStoreKitTierChange(highestTier)
-    }
   }
 
   // MARK: - Transaction Listener
@@ -386,7 +421,13 @@ final class StoreKitManager: ObservableObject {
 
         // Queue JWS upload even if products aren't loaded
         // priceDisplay can be nil - server doesn't require it
-        if let userId = await self?.userId {
+        if let userId = await self?.userId,
+          let expectedAppAccountToken = try? await self?.appAccountToken(for: userId),
+          await self?.transactionBelongsToCurrentUser(
+            transaction,
+            expectedAppAccountToken: expectedAppAccountToken
+          ) == true
+        {
           // Try to find product for display price, but don't skip if not found
           let displayPrice = await self?.products.first(where: { $0.id == transaction.productID })?
             .displayPrice
@@ -445,7 +486,43 @@ final class StoreKitManager: ObservableObject {
     }
   }
 
+  private func setCurrentEntitlement(tier: SubscriptionTier, productId: String?) {
+    let previousTier = currentTier
+    currentTier = tier
+    currentProductId = productId
+
+    // Notify EntitlementService of tier change for proper synchronization.
+    if previousTier != tier {
+      EntitlementService.shared.handleStoreKitTierChange(tier)
+    }
+  }
+
+  private func transactionBelongsToCurrentUser(
+    _ transaction: Transaction,
+    expectedAppAccountToken: UUID
+  ) -> Bool {
+    guard let transactionAppAccountToken = transaction.appAccountToken else {
+      logger.info(
+        "Ignoring StoreKit entitlement without appAccountToken: \(transaction.productID), id=\(transaction.id)"
+      )
+      return false
+    }
+
+    guard transactionAppAccountToken == expectedAppAccountToken else {
+      logger.info(
+        "Ignoring StoreKit entitlement for a different app account: \(transaction.productID), id=\(transaction.id)"
+      )
+      return false
+    }
+
+    return true
+  }
+
   private func appAccountToken(for userId: String) async throws -> UUID {
+    if let cachedAppAccountToken {
+      return cachedAppAccountToken
+    }
+
     guard UUID(uuidString: userId) != nil else {
       throw PurchaseError.networkError(
         underlying: NSError(
@@ -470,6 +547,7 @@ final class StoreKitManager: ObservableObject {
         )
       }
 
+      cachedAppAccountToken = uuid
       return uuid
     } catch {
       logger.error("Failed to get app account token: \(error.localizedDescription)")
