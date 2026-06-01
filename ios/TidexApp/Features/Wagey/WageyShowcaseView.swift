@@ -4,7 +4,13 @@ import UIKit
 /// Showcase view shown to free users on their first visit to Wagey
 /// Highlights features and provides a "Try Wagey" button
 struct WageyShowcaseView: View {
-  private let showcaseCTAHeight: CGFloat = 56 + Spacing.md + Spacing.sm + 1
+  private let ctaButtonHeight: CGFloat = 56
+  private let ctaFadeStartOffset: CGFloat = Spacing.xl
+  private let ctaBottomPadding: CGFloat = Spacing.sm
+
+  private var showcaseCTAHeight: CGFloat {
+    ctaButtonHeight + ctaFadeStartOffset + ctaBottomPadding
+  }
 
   @StateObject private var orientationTracker = OrientationTracker.shared
   @EnvironmentObject private var coordinator: AppCoordinator
@@ -20,10 +26,6 @@ struct WageyShowcaseView: View {
     isIPadLandscape ? 108 : 44
   }
 
-  private var heroMinHeight: CGFloat {
-    isIPadLandscape ? 300 : 236
-  }
-
   private var userName: String {
     let name = coordinator.userDisplayName
     return name.isEmpty
@@ -33,57 +35,102 @@ struct WageyShowcaseView: View {
 
   var body: some View {
     GeometryReader { geometry in
-      ScrollView {
-        VStack(spacing: 0) {
+      ZStack(alignment: .bottom) {
+        ScrollView {
           VStack(spacing: 0) {
-            heroSection
+            VStack(spacing: 0) {
+              heroSection(height: heroHeight(for: geometry))
 
-            VStack(spacing: Spacing.lg) {
-              featuresSection
+              examplesSection
+                .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.lg)
+
+              Spacer(minLength: Spacing.lg)
             }
-            .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
+            .frame(
+              minHeight: firstScreenContentMinHeight(for: geometry),
+              alignment: .top
+            )
 
-            Spacer(minLength: Spacing.lg)
+            featuresSection
+              .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
+              .frame(maxWidth: .infinity)
+              .padding(.horizontal, Spacing.lg)
+              .padding(.top, Spacing.lg)
+              .padding(.bottom, Spacing.lg + showcaseCTAHeight)
           }
-          .frame(
-            minHeight: max(
-              geometry.size.height - geometry.safeAreaInsets.bottom - showcaseCTAHeight, 0),
-            alignment: .top
-          )
-
-          examplesSection
-            .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, Spacing.lg)
-            .padding(.top, Spacing.lg)
-            .padding(.bottom, Spacing.lg)
         }
-      }
-    }
-    .background(Color.tidexBackground)
-    .ignoresSafeArea(edges: .top)
-    .safeAreaInset(edge: .bottom, spacing: 0) {
-      VStack(spacing: 0) {
-        Divider()
-          .overlay(Color.tidexBorder.opacity(0.4))
+
+        bottomFadeOverlay(for: geometry)
 
         tryButton
           .frame(maxWidth: isIPadLandscape ? AdaptiveMaxWidth.tabContent : .infinity)
           .frame(maxWidth: .infinity)
           .padding(.horizontal, Spacing.lg)
-          .padding(.top, Spacing.md)
-          .padding(.bottom, Spacing.sm)
-          .background(Color.tidexBackground.opacity(0.96))
+          .padding(.bottom, ctaBottomPadding)
       }
     }
+    .background(Color.tidexBackground)
+    .ignoresSafeArea(edges: .top)
+  }
+
+  private func bottomFadeOverlay(for geometry: GeometryProxy) -> some View {
+    let bottomInset = geometry.safeAreaInsets.bottom
+
+    return LinearGradient(
+      stops: [
+        .init(color: Color.tidexBackground.opacity(0), location: 0),
+        .init(color: Color.tidexBackground.opacity(0.82), location: 0.42),
+        .init(color: Color.tidexBackground.opacity(0.98), location: 0.68),
+        .init(color: Color.tidexBackground, location: 1),
+      ],
+      startPoint: .top,
+      endPoint: .bottom
+    )
+    .frame(height: showcaseCTAHeight + bottomInset + Spacing.xl)
+    .frame(maxWidth: .infinity)
+    .offset(y: bottomInset)
+    .ignoresSafeArea(edges: .bottom)
+    .allowsHitTesting(false)
+  }
+
+  private func heroHeight(for geometry: GeometryProxy) -> CGFloat {
+    let windowMetrics = activeWindowMetrics
+    let screenBounds = windowMetrics.screenBounds
+    let screenInsets = windowMetrics.safeAreaInsets
+    let screenHeight = max(screenBounds.height, geometry.size.height)
+    let topInset = screenInsets.top
+    let bottomChromeHeight = showcaseCTAHeight + screenInsets.bottom + tabBarReservedHeight
+    let availableHeight = max(screenHeight - topInset - bottomChromeHeight, 0)
+
+    return topInset + availableHeight * 0.40
+  }
+
+  private var activeWindowMetrics: (screenBounds: CGRect, safeAreaInsets: UIEdgeInsets) {
+    let keyWindow = UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .flatMap(\.windows)
+      .first(where: \.isKeyWindow)
+
+    return (
+      screenBounds: keyWindow?.windowScene?.screen.bounds ?? .zero,
+      safeAreaInsets: keyWindow?.safeAreaInsets ?? .zero
+    )
+  }
+
+  private var tabBarReservedHeight: CGFloat {
+    UIDevice.current.userInterfaceIdiom == .pad ? 0 : 49
+  }
+
+  private func firstScreenContentMinHeight(for geometry: GeometryProxy) -> CGFloat {
+    max(geometry.size.height - geometry.safeAreaInsets.bottom + ctaButtonHeight, 0)
   }
 
   // MARK: - Hero Section
 
-  private var heroSection: some View {
+  private func heroSection(height: CGFloat) -> some View {
     ZStack {
       // Gradient background
       LinearGradient(
@@ -154,7 +201,7 @@ struct WageyShowcaseView: View {
           .frame(height: 20)
       }
     }
-    .frame(minHeight: heroMinHeight)
+    .frame(height: height)
   }
 
   // MARK: - Features Section
@@ -322,7 +369,7 @@ struct WageyShowcaseView: View {
           .font(.tidexHeadline)
       }
       .frame(maxWidth: .infinity)
-      .frame(height: 56)
+      .frame(height: ctaButtonHeight)
       .foregroundStyle(.white)
       .background(
         LinearGradient(

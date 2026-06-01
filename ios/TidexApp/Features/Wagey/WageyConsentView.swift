@@ -4,6 +4,20 @@ import SwiftUI
 /// Consent view shown before first use of Wagey
 /// Explains what data is shared with OpenAI and requires explicit user consent
 struct WageyConsentView: View {
+  private let ctaButtonHeight: CGFloat = 56
+  private let ctaBottomPadding: CGFloat = Spacing.sm
+  private let ctaStackSpacing: CGFloat = Spacing.md
+  private let ctaFadeStartOffset: CGFloat = Spacing.xl
+  private let declineButtonHeight: CGFloat = 24
+
+  private var bottomCTAHeight: CGFloat {
+    ctaButtonHeight + ctaStackSpacing + declineButtonHeight + ctaBottomPadding
+  }
+
+  private var bottomCTAReservedHeight: CGFloat {
+    bottomCTAHeight + ctaFadeStartOffset
+  }
+
   /// Callback when user agrees to data sharing
   let onAgree: () -> Void
 
@@ -34,21 +48,31 @@ struct WageyConsentView: View {
   )
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: 0) {
-        heroSection
+    GeometryReader { geometry in
+      ZStack(alignment: .bottom) {
+        ScrollView {
+          VStack(spacing: 0) {
+            heroSection
 
-        VStack(spacing: Spacing.xl) {
-          descriptionSection
-          dataSharedSection
-          recipientSection
-          linksSection
-          withdrawNote
-          actionButtons
+            VStack(spacing: Spacing.xl) {
+              descriptionSection
+              dataSharedSection
+              recipientSection
+              linksSection
+              withdrawNote
+            }
+            .padding(.horizontal, Spacing.lg)
+            .padding(.top, Spacing.xl)
+            .padding(.bottom, Spacing.xxxl + bottomCTAReservedHeight)
+          }
         }
-        .padding(.horizontal, Spacing.lg)
-        .padding(.top, Spacing.xl)
-        .padding(.bottom, Spacing.xxxl)
+
+        bottomFadeOverlay(for: geometry)
+
+        actionButtons
+          .frame(maxWidth: .infinity)
+          .padding(.horizontal, Spacing.lg)
+          .padding(.bottom, ctaBottomPadding)
       }
     }
     .background(Color.tidexBackground)
@@ -57,6 +81,26 @@ struct WageyConsentView: View {
       SafariViewConsent(url: url)
         .ignoresSafeArea()
     }
+  }
+
+  private func bottomFadeOverlay(for geometry: GeometryProxy) -> some View {
+    let bottomInset = geometry.safeAreaInsets.bottom
+
+    return LinearGradient(
+      stops: [
+        .init(color: Color.tidexBackground.opacity(0), location: 0),
+        .init(color: Color.tidexBackground.opacity(0.82), location: 0.42),
+        .init(color: Color.tidexBackground.opacity(0.98), location: 0.68),
+        .init(color: Color.tidexBackground, location: 1),
+      ],
+      startPoint: .top,
+      endPoint: .bottom
+    )
+    .frame(height: bottomCTAReservedHeight + bottomInset + Spacing.xl)
+    .frame(maxWidth: .infinity)
+    .offset(y: bottomInset)
+    .ignoresSafeArea(edges: .bottom)
+    .allowsHitTesting(false)
   }
 
   // MARK: - Hero Section
@@ -242,7 +286,7 @@ struct WageyConsentView: View {
   // MARK: - Action Buttons
 
   private var actionButtons: some View {
-    VStack(spacing: Spacing.md) {
+    VStack(spacing: ctaStackSpacing) {
       Button {
         Haptics.play(.success)
         onAgree()
@@ -255,7 +299,7 @@ struct WageyConsentView: View {
             .font(.tidexHeadline)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 56)
+        .frame(height: ctaButtonHeight)
         .foregroundStyle(.white)
         .background(Self.brandGradient)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
@@ -268,6 +312,7 @@ struct WageyConsentView: View {
         Text(.wageyConsentDeclineButton)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
+          .frame(height: declineButtonHeight)
       }
       .buttonStyle(.plain)
     }
