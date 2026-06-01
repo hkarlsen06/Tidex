@@ -18,6 +18,10 @@ struct WageScreen: View {
     onBack != nil || topTrailingTitle != nil
   }
 
+  private enum ScrollTarget: Hashable {
+    case customWageContent
+  }
+
   var body: some View {
     ZStack {
       // Background
@@ -25,87 +29,94 @@ struct WageScreen: View {
         .ignoresSafeArea()
 
       VStack(spacing: 0) {
-        ScrollView {
-          VStack(spacing: 0) {
-            // Top actions (if provided)
-            if showsTopBar {
-              HStack {
-                if let onBack = onBack {
-                  Button(action: {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    onBack()
-                  }) {
-                    HStack(spacing: Spacing.xxs) {
-                      Image(systemName: "chevron.left")
-                        .font(.tidexButton)
-                      Text(.commonBack)
-                        .font(.tidexBody)
+        ScrollViewReader { scrollProxy in
+          ScrollView {
+            VStack(spacing: 0) {
+              // Top actions (if provided)
+              if showsTopBar {
+                HStack {
+                  if let onBack = onBack {
+                    Button(action: {
+                      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                      onBack()
+                    }) {
+                      HStack(spacing: Spacing.xxs) {
+                        Image(systemName: "chevron.left")
+                          .font(.tidexButton)
+                        Text(.commonBack)
+                          .font(.tidexBody)
+                      }
+                      .foregroundColor(.tidexBlue)
                     }
-                    .foregroundColor(.tidexBlue)
+                    .buttonStyle(.plain)
+                  } else {
+                    Spacer(minLength: 0)
                   }
-                  .buttonStyle(.plain)
-                } else {
-                  Spacer(minLength: 0)
+
+                  Spacer()
+
+                  if let topTrailingTitle, let onTopTrailingAction {
+                    WageGlassActionButton(title: topTrailingTitle, action: onTopTrailingAction)
+                  }
                 }
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.md)
+                .adaptiveContentWidth()
+              }
 
-                Spacer()
+              Spacer()
+                .frame(height: showsTopBar ? 24 : 60)
 
-                if let topTrailingTitle, let onTopTrailingAction {
-                  WageGlassActionButton(title: topTrailingTitle, action: onTopTrailingAction)
+              // Header
+              VStack(spacing: Spacing.sm) {
+                Text(.onboardingWageTitle)
+                  .font(.tidexScreenTitle)
+                  .foregroundColor(.tidexTextPrimary)
+                  .multilineTextAlignment(.center)
+
+                Text(.onboardingWageSubtitle)
+                  .font(.tidexBody)
+                  .foregroundColor(.tidexTextSecondary)
+                  .multilineTextAlignment(.center)
+              }
+              .padding(.horizontal, Spacing.xl)
+              .adaptiveContentWidth()
+
+              Spacer()
+                .frame(height: 32)
+
+              // Wage type toggle
+              wageTypeToggle
+                .padding(.horizontal, Spacing.lg)
+                .adaptiveContentWidth()
+
+              Spacer()
+                .frame(height: 24)
+
+              // Content based on wage type
+              Group {
+                switch data.wageType {
+                case .tariff:
+                  tariffSelector
+                case .custom:
+                  customWageContent
+                    .id(ScrollTarget.customWageContent)
                 }
               }
               .padding(.horizontal, Spacing.lg)
-              .padding(.top, Spacing.md)
-              .adaptiveContentWidth()
-            }
-
-            Spacer()
-              .frame(height: showsTopBar ? 24 : 60)
-
-            // Header
-            VStack(spacing: Spacing.sm) {
-              Text(.onboardingWageTitle)
-                .font(.tidexScreenTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
-
-              Text(.onboardingWageSubtitle)
-                .font(.tidexBody)
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, Spacing.xl)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: 32)
-
-            // Wage type toggle
-            wageTypeToggle
-              .padding(.horizontal, Spacing.lg)
               .adaptiveContentWidth()
 
-            Spacer()
-              .frame(height: 24)
-
-            // Content based on wage type
-            Group {
-              switch data.wageType {
-              case .tariff:
-                tariffSelector
-              case .custom:
-                customWageContent
-              }
+              // Bottom padding to account for fixed button
+              Spacer()
+                .frame(height: isKeyboardVisible ? 88 : 120)
             }
-            .padding(.horizontal, Spacing.lg)
-            .adaptiveContentWidth()
-
-            // Bottom padding to account for fixed button
-            Spacer()
-              .frame(height: 120)
+          }
+          .scrollDismissesKeyboard(.interactively)
+          .onChange(of: isKeyboardVisible) { _, visible in
+            guard visible, data.wageType == .custom else { return }
+            scrollCustomWageInputIntoView(scrollProxy)
           }
         }
-        .scrollDismissesKeyboard(.interactively)
 
         // Fixed continue button at bottom
         VStack(spacing: 0) {
@@ -115,7 +126,7 @@ struct WageScreen: View {
             startPoint: .top,
             endPoint: .bottom
           )
-          .frame(height: 24)
+          .frame(height: isKeyboardVisible ? 12 : 24)
 
           OnboardingButton(
             title: isKeyboardVisible
@@ -133,7 +144,7 @@ struct WageScreen: View {
           .adaptiveContentWidth()
 
           Spacer()
-            .frame(height: Spacing.xl)
+            .frame(height: isKeyboardVisible ? Spacing.md : Spacing.xl)
         }
         .background(Color.tidexBackground)
       }
@@ -205,6 +216,14 @@ struct WageScreen: View {
       from: nil,
       for: nil
     )
+  }
+
+  private func scrollCustomWageInputIntoView(_ scrollProxy: ScrollViewProxy) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.22) {
+      withAnimation(.easeOut(duration: 0.2)) {
+        scrollProxy.scrollTo(ScrollTarget.customWageContent, anchor: .bottom)
+      }
+    }
   }
 
   // MARK: - Wage Type Toggle

@@ -5,6 +5,7 @@ import UIKit
 struct MultiJobPromptScreen: View {
   var isLoading: Bool = false
   var didAddJob: Bool = false
+  var jobs: [Job] = []
   let onAddNow: () -> Void
   let onContinueLater: () -> Void
   let onBack: () -> Void
@@ -74,26 +75,10 @@ struct MultiJobPromptScreen: View {
         .padding(.horizontal, Spacing.xl)
         .adaptiveContentWidth()
 
-        if didAddJob {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "checkmark.circle.fill")
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexSuccess)
-
-            Text(String(localized: "onboarding.multi_job.added_title", table: "Localizable"))
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-          }
-          .padding(.horizontal, Spacing.md)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexSuccess.opacity(0.12))
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-          .overlay(
-            RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-              .stroke(Color.tidexSuccess.opacity(0.35), lineWidth: 1)
-          )
-          .padding(.top, Spacing.md)
-          .transition(.scale(scale: 0.96).combined(with: .opacity))
+        if !jobs.isEmpty {
+          addedJobsSummary
+            .padding(.top, Spacing.md)
+            .transition(.scale(scale: 0.96).combined(with: .opacity))
         }
 
         if let errorMessage, !errorMessage.isEmpty {
@@ -108,7 +93,7 @@ struct MultiJobPromptScreen: View {
 
         Spacer()
 
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.lg) {
           OnboardingButton(
             title: String(localized: "settings.pay.add_job.cta", table: "Localizable"),
             action: {
@@ -122,7 +107,7 @@ struct MultiJobPromptScreen: View {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             onContinueLater()
           }) {
-            Text(didAddJob ? .commonContinue : .onboardingMfaSkip)
+            Text(!jobs.isEmpty ? .commonContinue : .onboardingMfaSkip)
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexTextSecondary)
           }
@@ -132,6 +117,93 @@ struct MultiJobPromptScreen: View {
         .adaptiveContentWidth()
       }
     }
+  }
+
+  @ViewBuilder
+  private var addedJobsSummary: some View {
+    OnboardingJobBadgeFlowLayout(spacing: Spacing.sm) {
+      ForEach(jobs) { job in
+        addedJobBadge(job)
+      }
+    }
+    .padding(.horizontal, Spacing.xl)
+    .adaptiveContentWidth()
+  }
+
+  private func addedJobBadge(_ job: Job) -> some View {
+    ZStack(alignment: .trailing) {
+      WorkplaceNameText(
+        name: job.name,
+        colorHex: job.color,
+        font: .tidexBodyMedium,
+        fallbackBadgeColor: .tidexBlue,
+        lineLimit: 1
+      )
+      .padding(.trailing, Spacing.lg)
+
+      Image(systemName: "checkmark.circle.fill")
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexSuccess)
+        .background(Color.tidexBackground, in: Circle())
+        .accessibilityHidden(true)
+    }
+    .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
+private struct OnboardingJobBadgeFlowLayout: Layout {
+  var spacing: CGFloat
+
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    computeLayout(proposal: proposal, subviews: subviews).size
+  }
+
+  func placeSubviews(
+    in bounds: CGRect,
+    proposal: ProposedViewSize,
+    subviews: Subviews,
+    cache: inout ()
+  ) {
+    let layout = computeLayout(proposal: proposal, subviews: subviews)
+    for (index, position) in layout.positions.enumerated() {
+      subviews[index].place(
+        at: CGPoint(x: bounds.minX + position.x, y: bounds.minY + position.y),
+        proposal: .unspecified
+      )
+    }
+  }
+
+  private func computeLayout(proposal: ProposedViewSize, subviews: Subviews) -> (
+    size: CGSize,
+    positions: [CGPoint]
+  ) {
+    let maxWidth = proposal.width ?? 0
+    var positions: [CGPoint] = []
+    var currentX: CGFloat = 0
+    var currentY: CGFloat = 0
+    var lineHeight: CGFloat = 0
+    var contentWidth: CGFloat = 0
+
+    for subview in subviews {
+      let size = subview.sizeThatFits(.unspecified)
+      let shouldWrap = maxWidth > 0 && currentX > 0 && currentX + size.width > maxWidth
+
+      if shouldWrap {
+        currentX = 0
+        currentY += lineHeight + spacing
+        lineHeight = 0
+      }
+
+      positions.append(CGPoint(x: currentX, y: currentY))
+      lineHeight = max(lineHeight, size.height)
+      contentWidth = max(contentWidth, currentX + size.width)
+      currentX += size.width + spacing
+    }
+
+    return (
+      CGSize(width: maxWidth > 0 ? maxWidth : contentWidth, height: currentY + lineHeight),
+      positions
+    )
   }
 }
 

@@ -78,7 +78,7 @@ struct MFASetupScreen: View {
         Spacer()
 
         // Bottom buttons
-        VStack(spacing: Spacing.sm) {
+        VStack(spacing: Spacing.lg) {
           OnboardingButton(
             title: String(localized: .onboardingMfaSetup),
             action: {

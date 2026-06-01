@@ -28,7 +28,7 @@ struct SuccessScreen: View {
         statusAnimation
 
         Spacer()
-          .frame(height: 32)
+          .frame(height: Spacing.xl)
 
         // Header and content - constrained for iPad
         VStack(spacing: Spacing.sm) {
@@ -109,8 +109,12 @@ struct SuccessScreen: View {
       if newStatus == .success {
         // Play success haptic when save completes
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+        startAnimations()
       } else if newStatus == .error {
         UINotificationFeedbackGenerator().notificationOccurred(.error)
+        withAnimation(.easeOut(duration: 0.2)) {
+          contentVisible = true
+        }
       }
     }
   }
@@ -237,6 +241,9 @@ struct SuccessScreen: View {
   // MARK: - Animation Sequence
 
   private func startAnimations() {
+    checkmarkScale = 0
+    checkmarkOpacity = 0
+
     // Only animate checkmark for idle/success states
     if saveStatus == .idle || saveStatus == .success {
       // Checkmark draw and scale animation

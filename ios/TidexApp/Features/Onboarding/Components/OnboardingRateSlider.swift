@@ -371,15 +371,6 @@ struct OnboardingRateSlider: View {
             applyCustomValue()
           }
         }
-        .toolbar {
-          ToolbarItemGroup(placement: .keyboard) {
-            Spacer()
-            Button(String(localized: .commonDone)) {
-              applyCustomValue()
-            }
-            .fontWeight(.semibold)
-          }
-        }
     }
   }
 
@@ -407,15 +398,6 @@ struct OnboardingRateSlider: View {
         .onChange(of: isInputFocused) { _, focused in
           if !focused {
             applyCustomValue()
-          }
-        }
-        .toolbar {
-          ToolbarItemGroup(placement: .keyboard) {
-            Spacer()
-            Button(String(localized: .commonDone)) {
-              applyCustomValue()
-            }
-            .fontWeight(.semibold)
           }
         }
     }

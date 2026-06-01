@@ -129,6 +129,7 @@ struct PostAuthOnboardingView: View {
           MultiJobPromptScreen(
             isLoading: isPreparingJobSheet,
             didAddJob: didAddOnboardingJob,
+            jobs: onboardingActiveJobs,
             onAddNow: {
               isPreparingJobSheet = true
               Task {
@@ -231,7 +232,10 @@ struct PostAuthOnboardingView: View {
       AddJobSheet(
         initialCurrency: onboardingData.currency,
         initialMonthlyGoal: inheritedMonthlyGoal,
-        existingJobNeedingSetup: nil
+        existingJobNeedingSetup: onboardingJobNeedingSetup,
+        onSaveBasics: { input in
+          await createOnboardingJobBasics(input: input)
+        }
       ) { input in
         await createOnboardingJob(input: input)
       }
@@ -315,6 +319,15 @@ struct PostAuthOnboardingView: View {
         saveProgress()
       }
     }
+    .onChange(of: userId) { _, newUserId in
+      guard !newUserId.isEmpty, currentScreen == .multiJobPrompt else { return }
+      Task {
+        await prepareMultiJobPromptState(
+          createPrimaryIfNeeded: entryMode == .initial,
+          showsAuthenticationError: false
+        )
+      }
+    }
   }
 
   // MARK: - Initialization
@@ -327,6 +340,14 @@ struct PostAuthOnboardingView: View {
         savedScreen != .success && savedScreen != .loading
       {
         currentScreen = savedScreen
+        if savedScreen == .multiJobPrompt {
+          Task {
+            await prepareMultiJobPromptState(
+              createPrimaryIfNeeded: true,
+              showsAuthenticationError: false
+            )
+          }
+        }
         return
       }
     } else {
@@ -371,6 +392,14 @@ struct PostAuthOnboardingView: View {
     isNavigatingBack = false
     MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
       currentScreen = screen
+    }
+    if screen == .multiJobPrompt {
+      Task {
+        await prepareMultiJobPromptState(
+          createPrimaryIfNeeded: entryMode == .initial,
+          showsAuthenticationError: false
+        )
+      }
     }
   }
 
@@ -421,8 +450,22 @@ struct PostAuthOnboardingView: View {
   private func prepareJobsForOnboardingAdd() async {
     defer { isPreparingJobSheet = false }
 
+    await prepareMultiJobPromptState(createPrimaryIfNeeded: true, showsAuthenticationError: true)
+    guard multiJobErrorMessage == nil else { return }
+    guard currentScreen == .multiJobPrompt else { return }
+
+    addJobSheetPresentationID = UUID()
+    showAddJobSheet = true
+  }
+
+  private func prepareMultiJobPromptState(
+    createPrimaryIfNeeded: Bool,
+    showsAuthenticationError: Bool
+  ) async {
     guard !userId.isEmpty else {
-      multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      if showsAuthenticationError {
+        multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      }
       return
     }
 
@@ -436,7 +479,7 @@ struct PostAuthOnboardingView: View {
       activeJobs = jobsRepository.getActiveJobs(for: userId)
     }
 
-    if activeJobs.isEmpty && entryMode == .initial {
+    if activeJobs.isEmpty && entryMode == .initial && createPrimaryIfNeeded {
       do {
         let primaryJob = try await createPrimaryOnboardingJob(userId: userId)
         activeJobs = [primaryJob]
@@ -467,8 +510,6 @@ struct PostAuthOnboardingView: View {
 
     onboardingActiveJobs = activeJobs
     onboardingJobNeedingSetup = incompleteSetupJob(from: activeJobs)
-    addJobSheetPresentationID = UUID()
-    showAddJobSheet = true
   }
 
   private func createPrimaryOnboardingJob(userId: String) async throws -> Job {
@@ -530,6 +571,35 @@ struct PostAuthOnboardingView: View {
     } catch {
       multiJobErrorMessage = error.localizedDescription
       return false
+    }
+  }
+
+  private func createOnboardingJobBasics(input: AddJobBasicsInput) async -> Job? {
+    guard !userId.isEmpty else {
+      multiJobErrorMessage = String(localized: "settings.pay.choose_job.error_not_authenticated")
+      return nil
+    }
+
+    do {
+      let createdJob = try await jobsRepository.createJob(
+        userId: userId,
+        name: input.name,
+        color: input.color,
+        currency: input.currency,
+        payrollDay: input.payrollDay,
+        halfTaxMonth: input.halfTaxMonth,
+        monthlyGoal: input.monthlyGoal
+      )
+
+      onboardingActiveJobs = jobsRepository.getActiveJobs(for: userId)
+      onboardingJobNeedingSetup = incompleteSetupJob(from: onboardingActiveJobs)
+      multiJobErrorMessage = nil
+      didAddOnboardingJob = true
+      saveProgress()
+      return createdJob
+    } catch {
+      multiJobErrorMessage = error.localizedDescription
+      return nil
     }
   }
 

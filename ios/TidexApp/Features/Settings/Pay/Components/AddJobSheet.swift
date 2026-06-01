@@ -29,6 +29,7 @@ struct AddJobSheet: View {
   @Environment(\.dismiss) private var dismiss
 
   let initialCurrency: String
+  let prefilledBasicJob: Job?
   let existingJobNeedingSetup: Job?
   let setupDismissTitle: String
   let onSaveBasics: ((AddJobBasicsInput) async -> Job?)?
@@ -57,18 +58,23 @@ struct AddJobSheet: View {
     initialCurrency: String,
     initialPayrollDay: Int = 15,
     initialMonthlyGoal: Int? = nil,
+    prefilledBasicJob: Job? = nil,
     existingJobNeedingSetup: Job? = nil,
     setupDismissTitle: String = String(localized: .commonCancel),
     onSaveBasics: ((AddJobBasicsInput) async -> Job?)? = nil,
     onSave: @escaping (AddJobSetupInput) async -> Bool
   ) {
     self.initialCurrency = initialCurrency
+    self.prefilledBasicJob = prefilledBasicJob
     self.existingJobNeedingSetup = existingJobNeedingSetup
     self.setupDismissTitle = setupDismissTitle
     self.onSaveBasics = onSaveBasics
     self.onSave = onSave
-    _payrollDay = State(initialValue: initialPayrollDay)
-    _monthlyGoal = State(initialValue: initialMonthlyGoal.map(String.init) ?? "")
+    _savedBasicJob = State(initialValue: prefilledBasicJob)
+    _name = State(initialValue: prefilledBasicJob?.name ?? "")
+    _payrollDay = State(initialValue: prefilledBasicJob?.payroll_day ?? initialPayrollDay)
+    _monthlyGoal = State(
+      initialValue: (prefilledBasicJob?.monthly_goal ?? initialMonthlyGoal).map(String.init) ?? "")
   }
 
   var body: some View {
@@ -89,8 +95,13 @@ struct AddJobSheet: View {
       }
     }
     .onAppear {
-      onboardingData.currency = initialCurrency
+      onboardingData.currency =
+        prefilledBasicJob?.currency ?? existingJobNeedingSetup?.currency
+        ?? initialCurrency
       onboardingData.payrollDay = payrollDay
+      if let color = prefilledBasicJob?.color {
+        selectedColor = colorFromHex(color)
+      }
       if let existingJobNeedingSetup {
         existingJobName = existingJobNeedingSetup.name
         if let color = existingJobNeedingSetup.color {
@@ -585,7 +596,7 @@ struct AddJobSheet: View {
     }
 
     onboardingData.payrollDay = payrollDay
-    guard savedBasicJob == nil, let onSaveBasics else {
+    guard savedBasicJob == nil, !shouldSetupExistingJob, let onSaveBasics else {
       step = .wage
       return
     }

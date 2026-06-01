@@ -7,6 +7,8 @@ struct JobBasicsOnboardingScreen: View {
   let onContinue: () -> Void
   var onBack: (() -> Void)? = nil
 
+  @FocusState private var isJobNameFocused: Bool
+
   private var trimmedJobName: String {
     data.jobName.trimmingCharacters(in: .whitespacesAndNewlines)
   }
@@ -15,61 +17,69 @@ struct JobBasicsOnboardingScreen: View {
     !trimmedJobName.isEmpty
   }
 
+  private var headerTopSpacing: CGFloat {
+    onBack != nil ? Spacing.huge : Spacing.huge + Spacing.huge + Spacing.sm
+  }
+
   var body: some View {
     ZStack {
       Color.tidexBackground
         .ignoresSafeArea()
 
       VStack(spacing: 0) {
-        ScrollView {
-          VStack(spacing: 0) {
-            if let onBack {
-              backButton(onBack)
-            }
+        GeometryReader { geometry in
+          ScrollView {
+            VStack(spacing: 0) {
+              if let onBack {
+                backButton(onBack)
+              }
 
-            Spacer()
-              .frame(height: onBack != nil ? 24 : 60)
+              Spacer()
+                .frame(height: headerTopSpacing)
 
-            VStack(spacing: Spacing.sm) {
-              Text(String(localized: "onboarding.jobBasics.title", table: "Localizable"))
-                .font(.tidexScreenTitle)
-                .foregroundColor(.tidexTextPrimary)
-                .multilineTextAlignment(.center)
+              VStack(alignment: .leading, spacing: Spacing.sm) {
+                Text(String(localized: "onboarding.jobBasics.title", table: "Localizable"))
+                  .font(.tidexScreenTitle)
+                  .foregroundColor(.tidexTextPrimary)
+                  .multilineTextAlignment(.leading)
+                  .frame(maxWidth: .infinity, alignment: .leading)
 
-              Text(String(localized: "onboarding.jobBasics.subtitle", table: "Localizable"))
-                .font(.tidexBody)
-                .foregroundColor(.tidexTextSecondary)
-                .multilineTextAlignment(.center)
-            }
-            .padding(.horizontal, Spacing.xl)
-            .adaptiveContentWidth()
-
-            Spacer()
-              .frame(height: 32)
-
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-              jobNameField
-
-              VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(String(localized: "settings.pay.add_job.color_label", table: "Localizable"))
-                  .font(.tidexLabel)
+                Text(String(localized: "onboarding.jobBasics.subtitle", table: "Localizable"))
+                  .font(.tidexBody)
                   .foregroundColor(.tidexTextSecondary)
+                  .multilineTextAlignment(.leading)
+                  .frame(maxWidth: .infinity, alignment: .leading)
+              }
+              .padding(.horizontal, Spacing.xl)
+              .adaptiveContentWidth()
 
-                WorkplaceColorCarousel(
-                  selectedHex: data.jobColor ?? OnboardingData.defaultJobColor
-                ) { hex in
-                  data.jobColor = hex
+              Spacer(minLength: Spacing.xl)
+
+              VStack(alignment: .leading, spacing: Spacing.lg) {
+                jobNameField
+
+                VStack(alignment: .leading, spacing: Spacing.xs) {
+                  Text(String(localized: "settings.pay.add_job.color_label", table: "Localizable"))
+                    .font(.tidexLabel)
+                    .foregroundColor(.tidexTextSecondary)
+
+                  WorkplaceColorCarousel(
+                    selectedHex: data.jobColor ?? OnboardingData.defaultJobColor
+                  ) { hex in
+                    data.jobColor = hex
+                  }
                 }
               }
-            }
-            .padding(.horizontal, Spacing.lg)
-            .adaptiveContentWidth()
+              .padding(.horizontal, Spacing.lg)
+              .adaptiveContentWidth()
 
-            Spacer()
-              .frame(height: 120)
+              Spacer()
+                .frame(height: Spacing.md)
+            }
+            .frame(minHeight: geometry.size.height, alignment: .top)
           }
+          .scrollDismissesKeyboard(.interactively)
         }
-        .scrollDismissesKeyboard(.interactively)
 
         VStack(spacing: 0) {
           LinearGradient(
@@ -142,6 +152,8 @@ struct JobBasicsOnboardingScreen: View {
       .font(.tidexBody)
       .foregroundColor(.tidexTextPrimary)
       .textInputAutocapitalization(.words)
+      .submitLabel(.done)
+      .focused($isJobNameFocused)
       .padding(.horizontal, Spacing.md)
       .padding(.vertical, Spacing.sm)
       .background(Color.tidexSurfaceSecondary)
@@ -152,7 +164,7 @@ struct JobBasicsOnboardingScreen: View {
       .cornerRadius(CornerRadius.md)
       .contentShape(Rectangle())
       .onSubmit {
-        continueIfReady()
+        isJobNameFocused = false
       }
     }
   }
