@@ -119,6 +119,7 @@ interface AppleTransactionInfo {
   revocationReason?: number;
   environment: "Production" | "Sandbox";
   appAccountToken?: string;
+  offerType?: number;
   type: string;
 }
 
@@ -303,19 +304,28 @@ function determineStatusFromNotification(
   transactionInfo: AppleTransactionInfo | null,
   renewalInfo: AppleRenewalInfo | null,
 ): { status: string; cancelAtPeriodEnd: boolean } {
+  const activeStatus = (cancelAtPeriodEnd = false) => ({
+    status: transactionInfo?.offerType === 1 &&
+        !!transactionInfo.expiresDate &&
+        transactionInfo.expiresDate > Date.now()
+      ? "trialing"
+      : "active",
+    cancelAtPeriodEnd,
+  });
+
   // Handle based on notification type
   switch (notificationType) {
     case "SUBSCRIBED":
       if (subtype === "INITIAL_BUY" || subtype === "RESUBSCRIBE") {
-        return { status: "active", cancelAtPeriodEnd: false };
+        return activeStatus(false);
       }
-      return { status: "active", cancelAtPeriodEnd: false };
+      return activeStatus(false);
 
     case "DID_RENEW":
       if (subtype === "BILLING_RECOVERY") {
-        return { status: "active", cancelAtPeriodEnd: false };
+        return activeStatus(false);
       }
-      return { status: "active", cancelAtPeriodEnd: false };
+      return activeStatus(false);
 
     case "DID_FAIL_TO_RENEW":
       if (subtype === "GRACE_PERIOD") {
@@ -325,15 +335,12 @@ function determineStatusFromNotification(
 
     case "DID_CHANGE_RENEWAL_STATUS":
       if (subtype === "AUTO_RENEW_DISABLED") {
-        return { status: "active", cancelAtPeriodEnd: true };
+        return activeStatus(true);
       }
       if (subtype === "AUTO_RENEW_ENABLED") {
-        return { status: "active", cancelAtPeriodEnd: false };
+        return activeStatus(false);
       }
-      return {
-        status: "active",
-        cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0,
-      };
+      return activeStatus(renewalInfo?.autoRenewStatus === 0);
 
     case "EXPIRED":
       if (subtype === "VOLUNTARY") {
@@ -353,21 +360,18 @@ function determineStatusFromNotification(
 
     case "REFUND_REVERSED":
       // Refund was reversed - restore active status
-      return { status: "active", cancelAtPeriodEnd: false };
+      return activeStatus(false);
 
     case "RENEWAL_EXTENDED":
     case "RENEWAL_EXTENSION":
-      return { status: "active", cancelAtPeriodEnd: false };
+      return activeStatus(false);
 
     case "DID_CHANGE_RENEWAL_PREF":
       // User changed product (upgrade/downgrade) - still active
-      return {
-        status: "active",
-        cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0,
-      };
+      return activeStatus(renewalInfo?.autoRenewStatus === 0);
 
     case "OFFER_REDEEMED":
-      return { status: "active", cancelAtPeriodEnd: false };
+      return activeStatus(false);
 
     case "TEST":
       // Test notification - don't change anything
@@ -383,10 +387,7 @@ function determineStatusFromNotification(
       ) {
         return { status: "expired", cancelAtPeriodEnd: true };
       }
-      return {
-        status: "active",
-        cancelAtPeriodEnd: renewalInfo?.autoRenewStatus === 0,
-      };
+      return activeStatus(renewalInfo?.autoRenewStatus === 0);
   }
 }
 
