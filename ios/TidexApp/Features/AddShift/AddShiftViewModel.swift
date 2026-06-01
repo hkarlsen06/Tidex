@@ -352,7 +352,7 @@ final class AddShiftViewModel: ObservableObject {
   private var lastObservedMonth: Int = 0
 
   /// Direction of last navigation (for animations) - synced from SharedMonthContext
-  @Published private(set) var navigationDirection: MonthNavigationDirection?
+  private(set) var navigationDirection: MonthNavigationDirection?
 
   // MARK: - Display Properties (from SharedMonthContext)
 
@@ -523,10 +523,7 @@ final class AddShiftViewModel: ObservableObject {
         // Sync navigation direction from context (for animations)
         self.navigationDirection = self.monthContext.navigationDirection
 
-        // Trigger objectWillChange to refresh calendar views
-        self.objectWillChange.send()
-
-        // Reload shifts for conflict detection in the new month
+        // Reload shifts and publish the new month's cell data together.
         self.reloadShiftsForDisplayedMonth()
       }
   }
@@ -1208,7 +1205,18 @@ final class AddShiftViewModel: ObservableObject {
 
     cachedShifts = shiftsRepository.getShifts(for: userId, startDate: startDate, endDate: endDate)
 
-    // Rebuild display data and previews asynchronously to avoid blocking UI
+    let displayInput = CalendarDisplayComputationInput(
+      year: year,
+      month: month,
+      shifts: cachedShifts,
+      recurringShifts: cachedRecurringShifts,
+      snapshots: cachedSnapshots,
+      jobs: activeJobs,
+      settings: cachedSettings
+    )
+    cachedDisplayData = Self.makeImmediateCalendarDisplayData(displayInput)
+
+    // Rebuild full display data and previews asynchronously to avoid blocking UI
     scheduleCalendarDisplayRebuild()
     scheduleConflictsAndPreviewsRecompute()
 
@@ -1756,6 +1764,45 @@ final class AddShiftViewModel: ObservableObject {
     }.value
   }
 
+  private nonisolated static func makeImmediateCalendarDisplayData(
+    _ input: CalendarDisplayComputationInput
+  ) -> CalendarDisplayData {
+    var existingDates = Set<String>()
+    var shiftTimesByDate: [String: [(start: String, end: String)]] = [:]
+
+    for shift in input.shifts {
+      existingDates.insert(shift.shift_date)
+      shiftTimesByDate[shift.shift_date, default: []].append(
+        (start: shift.start_time, end: shift.end_time)
+      )
+    }
+
+    for recurring in input.recurringShifts {
+      let virtualShifts = RecurringShiftGenerator.generateVirtualShiftsForMonth(
+        year: input.year,
+        month: input.month,
+        recurring: recurring
+      )
+
+      for virtualShift in virtualShifts {
+        existingDates.insert(virtualShift.date)
+        shiftTimesByDate[virtualShift.date, default: []].append(
+          (start: recurring.cleanStartTime, end: recurring.cleanEndTime)
+        )
+      }
+    }
+
+    return CalendarDisplayData(
+      existingShiftDates: existingDates,
+      existingShiftEarnings: [:],
+      existingShiftHours: buildExistingShiftHours(from: shiftTimesByDate),
+      virtualShifts: [],
+      year: input.year,
+      month: input.month,
+      timestamp: Date()
+    )
+  }
+
   private nonisolated static func buildCalendarDisplayData(
     _ input: CalendarDisplayComputationInput
   ) -> CalendarDisplayData {
@@ -1879,6 +1926,22 @@ final class AddShiftViewModel: ObservableObject {
       )
     }
 
+    let existingHours = buildExistingShiftHours(from: shiftTimesByDate)
+
+    return CalendarDisplayData(
+      existingShiftDates: existingDates,
+      existingShiftEarnings: existingEarnings,
+      existingShiftHours: existingHours,
+      virtualShifts: virtualShiftsWithEarnings,
+      year: input.year,
+      month: input.month,
+      timestamp: Date()
+    )
+  }
+
+  private nonisolated static func buildExistingShiftHours(
+    from shiftTimesByDate: [String: [(start: String, end: String)]]
+  ) -> [String: HoursData] {
     var existingHours: [String: HoursData] = [:]
     for (date, shiftsOnDate) in shiftTimesByDate {
       guard !shiftsOnDate.isEmpty else { continue }
@@ -1910,15 +1973,7 @@ final class AddShiftViewModel: ObservableObject {
       )
     }
 
-    return CalendarDisplayData(
-      existingShiftDates: existingDates,
-      existingShiftEarnings: existingEarnings,
-      existingShiftHours: existingHours,
-      virtualShifts: virtualShiftsWithEarnings,
-      year: input.year,
-      month: input.month,
-      timestamp: Date()
-    )
+    return existingHours
   }
 
   private nonisolated static func computeConflictsAndPreviewsOffMain(

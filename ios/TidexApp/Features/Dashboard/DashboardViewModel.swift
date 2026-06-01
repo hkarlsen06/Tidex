@@ -2381,7 +2381,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       payrollCardSnapshot = nil
     }
     cachedUserId = nil
-    resetDashboardDependencies()
+    resetDashboardDependencies(preservingDisplayJobs: dashboardData != nil)
     previousPayrollAdjustments = []
     payrollAdjustmentsByPayoutMonth.removeAll()
 
@@ -2437,7 +2437,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
       // Clear in-memory caches so we pick up synced data
       clearAllMonthCache(reason: "manual-refresh")
       invalidateSharedPayrollReadCache(for: userId)
-      resetDashboardDependencies()
+      resetDashboardDependencies(preservingDisplayJobs: dashboardData != nil)
 
       // Reload from local repositories
       await loadDashboardFromLocal()
@@ -2484,11 +2484,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {
     dashboardDependenciesLoaded = true
   }
 
-  private func resetDashboardDependencies() {
+  /// Invalidates dependency reads. Preserve displayed jobs while existing dashboard data remains
+  /// visible so workplace badges do not flicker during local reloads.
+  private func resetDashboardDependencies(preservingDisplayJobs: Bool = false) {
     settings = nil
     snapshots = []
     recurringShifts = []
-    displayJobs = []
+    if !preservingDisplayJobs {
+      displayJobs = []
+    }
     dashboardDependenciesLoaded = false
   }
 
