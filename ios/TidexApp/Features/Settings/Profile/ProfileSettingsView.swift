@@ -11,6 +11,12 @@ private enum ProfileActionRowLayout {
   static var dividerLeadingPadding: CGFloat { horizontalPadding + iconSize + Spacing.sm }
 }
 
+private enum ProfileAvatarLayout {
+  static let size: CGFloat = 80
+  static let cameraBadgeSize: CGFloat = 30
+  static let cameraIconSize: CGFloat = 10
+}
+
 /// Profile settings view
 /// Displays profile picture, name, email, and danger zone (delete account)
 struct ProfileSettingsView: View {
@@ -247,6 +253,9 @@ struct ProfileSettingsView: View {
       Text(.profileEmailChangeInstructions)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
+        .lineLimit(nil)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
 
       // Current email (read-only)
       VStack(alignment: .leading, spacing: Spacing.xxxs) {
@@ -374,26 +383,36 @@ struct ProfileSettingsView: View {
 
   private var avatarSection: some View {
     HStack(spacing: Spacing.md) {
-      Button {
-        guard !viewModel.isOfflineProfileFallback else { return }
-        showAvatarActionDialog = true
-      } label: {
-        ZStack(alignment: .bottomTrailing) {
+      ZStack(alignment: .bottomTrailing) {
+        Button {
+          presentAvatarActionDialog()
+        } label: {
           avatarView
-            .frame(width: 80, height: 80)
+            .frame(width: ProfileAvatarLayout.size, height: ProfileAvatarLayout.size)
+        }
+        .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(.profilePersonalInfoProfilePicture))
+        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
 
-          if viewModel.isUploadingAvatar {
-            RoundedRectangle(cornerRadius: CornerRadius.xxl)
-              .fill(Color.tidexTextPrimary.opacity(0.28))
-              .frame(width: 80, height: 80)
+        if viewModel.isUploadingAvatar {
+          RoundedRectangle(cornerRadius: CornerRadius.xxl)
+            .fill(Color.tidexTextPrimary.opacity(0.28))
+            .frame(width: ProfileAvatarLayout.size, height: ProfileAvatarLayout.size)
 
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .white))
-          } else {
+          ProgressView()
+            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+        } else {
+          Button {
+            presentImageSourcePicker()
+          } label: {
             Image(systemName: "camera.fill")
-              .font(.system(size: 12, weight: .semibold))
+              .font(.system(size: ProfileAvatarLayout.cameraIconSize, weight: .semibold))
               .foregroundColor(.tidexTextOnBrand)
-              .frame(width: 26, height: 26)
+              .frame(
+                width: ProfileAvatarLayout.cameraBadgeSize,
+                height: ProfileAvatarLayout.cameraBadgeSize
+              )
               .background(Color.tidexBlue)
               .clipShape(Circle())
               .overlay(
@@ -401,12 +420,11 @@ struct ProfileSettingsView: View {
                   .stroke(Color.tidexSurfacePrimary, lineWidth: 2)
               )
           }
+          .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
+          .buttonStyle(.plain)
+          .accessibilityLabel(Text(uploadButtonText))
         }
-        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
       }
-      .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
-      .buttonStyle(.plain)
-      .accessibilityLabel(Text(uploadButtonText))
       .confirmationDialog(
         String(localized: .profilePersonalInfoProfilePicture),
         isPresented: $showAvatarActionDialog,
@@ -416,7 +434,7 @@ struct ProfileSettingsView: View {
           showAvatarActionDialog = false
           Task { @MainActor in
             await Task.yield()
-            showImageSourcePicker = true
+            presentImageSourcePicker()
           }
         }
 
@@ -882,6 +900,27 @@ struct ProfileSettingsView: View {
   }
 
   // MARK: - Actions
+
+  private func presentAvatarActionDialog() {
+    guard !isAvatarActionInProgress, !viewModel.isOfflineProfileFallback else { return }
+
+    if viewModel.profilePictureUrl == nil {
+      presentImageSourcePicker()
+    } else {
+      showAvatarActionDialog = true
+    }
+  }
+
+  private func presentImageSourcePicker() {
+    guard !viewModel.isOfflineProfileFallback, !viewModel.isUploadingAvatar,
+      !showImageSourcePicker, !showGalleryPicker, !showCamera, !showCropSheet
+    else {
+      return
+    }
+
+    showAvatarActionDialog = false
+    showImageSourcePicker = true
+  }
 
   private func signOut() async {
     isSigningOut = true
