@@ -224,9 +224,8 @@ struct CalendarMonthGrid<DayContent: View>: View {
 
   var body: some View {
     if let monthTransitionPhase {
-      StaggeredCardsContainer(phase: monthTransitionPhase, config: monthTransitionConfig) {
-        grid
-      }
+      grid
+        .cardTransition(phase: monthTransitionPhase, config: monthTransitionConfig)
     } else {
       grid
     }
