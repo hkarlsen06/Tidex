@@ -42,7 +42,7 @@ struct GetStartedScreen: View {
       Spacer()
 
       // CTAs - constrained for iPad
-      VStack(spacing: Spacing.sm) {
+      VStack(spacing: Spacing.lg) {
         OnboardingButton(
           title: String(localized: .onboardingGetstartedSignup),
           action: onCreateAccount
