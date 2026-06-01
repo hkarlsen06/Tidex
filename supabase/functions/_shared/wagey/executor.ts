@@ -35,6 +35,7 @@ import {
   getUsersByIds,
   getUserSettings,
   halfTaxMonthForJob,
+  isShiftMonthLimitError,
   moveRecurringShift,
   payrollDayForJob,
   removeShare,
@@ -207,6 +208,27 @@ function jobSetupFailureResult(
     success: false,
     code: "job_not_available",
     message: tr.jobNotAvailable,
+  };
+}
+
+function shiftMonthLimitFailureResult(error: unknown): ToolResult {
+  const monthLimitError = isShiftMonthLimitError(error) ? error : null;
+  const existingMonths = Array.isArray(monthLimitError?.existingMonths)
+    ? monthLimitError.existingMonths
+    : [];
+  const targetMonths = Array.isArray(monthLimitError?.targetMonths)
+    ? monthLimitError.targetMonths
+    : [];
+
+  return {
+    success: false,
+    code: "shift_month_limit_reached",
+    message: tr.shiftMonthLimitReached,
+    data: {
+      existingMonths,
+      targetMonths,
+      destination: "paywall.monthLimit",
+    },
   };
 }
 
@@ -1372,6 +1394,10 @@ export async function executeTool(
         };
     }
   } catch (error) {
+    if (isShiftMonthLimitError(error)) {
+      return shiftMonthLimitFailureResult(error);
+    }
+
     return {
       success: false,
       message: t(tr.failedAfterAttempts, {

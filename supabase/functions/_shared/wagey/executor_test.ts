@@ -345,6 +345,19 @@ function createMockClient(db: MockDb, userId: string) {
           return { data: [], error: null };
         case "get_tariff_versions":
           return { data: [{ rates: { "3": 195.25 } }], error: null };
+        case "get_wagey_access_context":
+          return {
+            data: [{
+              before_paywall: false,
+              wagey_invocations: null,
+              status: null,
+              product_id: null,
+              current_period_end: null,
+              price_id: null,
+              provider: null,
+            }],
+            error: null,
+          };
         default:
           throw new Error(`Unexpected rpc: ${name}`);
       }
@@ -490,6 +503,58 @@ Deno.test("manage_shift create skips unchanged matching shift", async () => {
   assertEquals((result.data as Record<string, unknown>).inserted, 0);
   assertEquals((result.data as Record<string, unknown>).updated, 0);
   assertEquals((result.data as Record<string, unknown>).skipped, 1);
+});
+
+Deno.test("manage_shift create rejects free user adding shifts in a new month", async () => {
+  const db: Partial<MockDb> = {
+    ...configuredDefaultJobDb(),
+    user_shifts: [{
+      id: "f1111000-0000-0000-0000-000000000001",
+      user_id: USER_ID,
+      job_id: makeUuid(1),
+      shift_date: "2026-06-18",
+      start_time: "09:00",
+      end_time: "17:00",
+      custom_supplements: null,
+      deleted_at: null,
+    }],
+  };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2026-07-01"],
+      start: "12:00",
+      end: "16:00",
+    }),
+  );
+
+  assertEquals(result.success, false);
+  assertEquals(result.code, "shift_month_limit_reached");
+  assertEquals(db.user_shifts?.length, 1);
+});
+
+Deno.test("manage_shift create allows free user to choose any first shift month", async () => {
+  const db: Partial<MockDb> = { ...configuredDefaultJobDb(), user_shifts: [] };
+  const ctx = createContext(db);
+
+  const result = await executeTool(
+    ctx,
+    "manage_shift",
+    JSON.stringify({
+      action: "create",
+      dates: ["2028-11-08"],
+      start: "12:00",
+      end: "16:00",
+    }),
+  );
+
+  assert(result.success, result.message);
+  assertEquals(db.user_shifts?.length, 1);
+  assertEquals(db.user_shifts?.[0].shift_date, "2028-11-08");
 });
 
 Deno.test("manage_shift create inserts when existing date and job match is ambiguous", async () => {

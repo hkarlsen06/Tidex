@@ -223,6 +223,31 @@ const FALLBACK_WAGEY_INVOCATION: WageyInvocationResult = {
   remaining: 0,
   bonus: 0,
 };
+
+export class ShiftMonthLimitError extends Error {
+  readonly code = "shift_month_limit_reached";
+
+  constructor(
+    readonly existingMonths: string[],
+    readonly targetMonths: string[],
+  ) {
+    super("Free users can only add shifts within one month.");
+    this.name = "ShiftMonthLimitError";
+  }
+}
+
+export function isShiftMonthLimitError(
+  error: unknown,
+): error is ShiftMonthLimitError {
+  return error instanceof ShiftMonthLimitError ||
+    (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "shift_month_limit_reached"
+    );
+}
+
 const COMPUTED_SETTINGS_SELECT =
   "user_id, half_tax_month, payroll_day, monthly_goal, monthly_goals_by_month, currency";
 const COMPUTED_JOB_SELECT =
@@ -322,6 +347,55 @@ function getDefaultStartDate(): string {
 function getDefaultEndDate(): string {
   const { year, month } = getCurrentYearMonth();
   return getMonthEnd(year, month);
+}
+
+function monthKeyForDate(isoDate: string): string {
+  return isoDate.slice(0, 7);
+}
+
+async function getExistingActiveShiftMonths(
+  ctx: WageyRequestContext,
+  userId: string,
+): Promise<Set<string>> {
+  const { data, error } = await ctx.supabase
+    .from("user_shifts")
+    .select("shift_date")
+    .eq("user_id", userId)
+    .is("deleted_at", null);
+  if (error) throw new Error(error.message);
+
+  return new Set(
+    ((data ?? []) as Array<{ shift_date: string }>)
+      .map((shift) => monthKeyForDate(shift.shift_date)),
+  );
+}
+
+export async function assertCanMutateShiftMonths(
+  ctx: WageyRequestContext,
+  dates: string[],
+): Promise<void> {
+  const targetMonths = Array.from(
+    new Set(dates.filter(Boolean).map(monthKeyForDate)),
+  ).sort();
+  if (targetMonths.length === 0) return;
+
+  const { profile, subscription } = await getProfileAndSubscription(
+    ctx,
+    ctx.user.id,
+  );
+  if (getUserTier(subscription, profile) !== "free") return;
+
+  const existingMonths = await getExistingActiveShiftMonths(ctx, ctx.user.id);
+  const isAllowed = existingMonths.size === 0
+    ? targetMonths.length === 1
+    : targetMonths.every((month) => existingMonths.has(month));
+
+  if (!isAllowed) {
+    throw new ShiftMonthLimitError(
+      Array.from(existingMonths).sort(),
+      targetMonths,
+    );
+  }
 }
 
 export function calculatePayoutDate(
@@ -1300,6 +1374,8 @@ export async function createShifts(
   updatedDates: string[];
   skippedDates: string[];
 }> {
+  await assertCanMutateShiftMonths(ctx, input.dates);
+
   const sortedDates = [...input.dates].sort();
   const [existingShifts, recurringShifts, defaultJobId] =
     sortedDates.length === 0 ? [[], [], null] : await Promise.all([
@@ -1525,6 +1601,8 @@ export async function updateShift(
     recurring_id?: string;
   },
 ): Promise<{ updated: number }> {
+  await assertCanMutateShiftMonths(ctx, [input.shift_date]);
+
   if (input.recurring_id) {
     await convertRecurringShiftToStandalone(ctx, {
       recurringId: input.recurring_id,
@@ -1958,6 +2036,8 @@ export async function copyShifts(
   ctx: WageyRequestContext,
   input: { shiftIds: string[]; targetDate: string },
 ): Promise<{ copied: number }> {
+  await assertCanMutateShiftMonths(ctx, [input.targetDate]);
+
   const sourceShifts: Array<
     { start_time: string; end_time: string; job_id?: string | null }
   > = [];
@@ -2151,7 +2231,12 @@ export async function convertRecurringShiftToStandalone(
     startTime: string;
     endTime: string;
   },
+  options: { skipMonthLimit?: boolean } = {},
 ): Promise<ShiftIdentityRow> {
+  if (!options.skipMonthLimit) {
+    await assertCanMutateShiftMonths(ctx, [input.shiftDate]);
+  }
+
   const { data: recurring, error } = await ctx.supabase
     .from("recurring_shifts")
     .select(
@@ -2214,11 +2299,15 @@ export async function moveRecurringShift(
     endTime: string;
   },
 ): Promise<void> {
+  await assertCanMutateShiftMonths(ctx, [input.targetDate]);
+
   await convertRecurringShiftToStandalone(ctx, {
     recurringId: input.recurringId,
     shiftDate: input.sourceDate,
     startTime: cleanTime(input.startTime),
     endTime: cleanTime(input.endTime),
+  }, {
+    skipMonthLimit: true,
   });
 
   const { error } = await ctx.supabase
