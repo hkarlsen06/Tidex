@@ -52,19 +52,19 @@ struct MultiJobPromptScreen: View {
         .padding(.bottom, Spacing.xl)
 
         VStack(spacing: Spacing.sm) {
-          Text(String(localized: "onboarding.multi_job.title", table: "Localizable"))
+          Text(.onboardingMultiJobTitle)
             .font(.tidexScreenTitle)
             .foregroundColor(.tidexTextPrimary)
             .multilineTextAlignment(.center)
 
-          Text(String(localized: "settings.pay.add_job.setup_subtitle", table: "Localizable"))
+          Text(.settingsPayAddJobSetupSubtitle)
             .font(.tidexBody)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
 
-          Text(String(localized: "onboarding.multi_job.later_hint", table: "Localizable"))
+          Text(.onboardingMultiJobLaterHint)
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextSecondary)
             .multilineTextAlignment(.center)
@@ -95,7 +95,7 @@ struct MultiJobPromptScreen: View {
 
         VStack(spacing: Spacing.lg) {
           OnboardingButton(
-            title: String(localized: "settings.pay.add_job.cta", table: "Localizable"),
+            title: String(localized: .settingsPayAddJobCta),
             action: {
               UINotificationFeedbackGenerator().notificationOccurred(.success)
               onAddNow()

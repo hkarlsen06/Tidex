@@ -361,6 +361,63 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.exclusions]))
   }
 
+  func testUpdateRecurringShiftEndConditionPreservesOverrides() async throws {
+    let store = try makeStoreActor()
+    let supplements = [
+      "2026-03-16": CustomSupplementsData(
+        rules: [
+          CustomSupplementRule(
+            from: "18:00",
+            to: "22:00",
+            rate: 45,
+            percent: nil,
+            isCustom: true
+          )
+        ]
+      )
+    ]
+    let notes = ["2026-03-16": "Late shift"]
+
+    let created = try await store.createRecurringShift(
+      userId: userId,
+      jobId: "job-1",
+      startTime: "09:00",
+      endTime: "17:00",
+      repeatIntervalWeeks: 1,
+      selectedDays: ["1": "2026-03-02"],
+      endCondition: nil,
+      exclusions: ["2026-03-09"],
+      dateSpecificPauseWindows: nil,
+      dateSpecificSupplements: supplements,
+      dateSpecificNotes: notes
+    )
+
+    await store.markRecurringShiftClean(id: created.id)
+    try await store.save()
+
+    _ = try await store.updateRecurringShift(
+      id: created.id,
+      jobId: nil,
+      startTime: nil,
+      endTime: nil,
+      repeatIntervalWeeks: nil,
+      selectedDays: nil,
+      endCondition: .endDate(date: "2026-03-16"),
+      exclusions: nil,
+      dateSpecificSupplements: nil
+    )
+
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.decodedEndCondition, .endDate(date: "2026-03-16"))
+    XCTAssertEqual(local.decodedExclusions, ["2026-03-09"])
+    XCTAssertEqual(local.decodedDateSpecificSupplements, supplements)
+    XCTAssertEqual(local.decodedDateSpecificNotes, notes)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.endCondition]))
+    XCTAssertNil(local.serverDeletedAt)
+  }
+
   func testUpdateRecurringShiftDateSpecificNotesMarksOnlyNoteFieldDirty() async throws {
     let store = try makeStoreActor()
 

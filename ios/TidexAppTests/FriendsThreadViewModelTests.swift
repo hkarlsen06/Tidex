@@ -215,7 +215,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.draftCharacterCount, 5001)
     XCTAssertEqual(
       viewModel.composerValidationMessage,
-      String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
+      String(localized: .friendsChatComposerMessageTooLong)
         .replacingOccurrences(of: "{limit}", with: "5000")
     )
 
@@ -425,7 +425,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.draftCharacterCount, expectedBackendCount)
     XCTAssertEqual(
       viewModel.composerValidationMessage,
-      String(localized: "friends.chat.composer.message_too_long", table: "Localizable")
+      String(localized: .friendsChatComposerMessageTooLong)
         .replacingOccurrences(of: "{limit}", with: "5000")
     )
 
@@ -855,7 +855,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
     XCTAssertEqual(
       viewModel.sendErrorMessage,
-      String(localized: "friends.chat.edit_failed", table: "Localizable")
+      String(localized: .friendsChatEditFailed)
     )
     XCTAssertEqual(viewModel.composerMode, .edit)
     XCTAssertEqual(viewModel.draft, "Updated message")
@@ -1011,7 +1011,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
     XCTAssertEqual(
       viewModel.sendErrorMessage,
-      String(localized: "friends.chat.delete_failed", table: "Localizable")
+      String(localized: .friendsChatDeleteFailed)
     )
   }
 
@@ -2758,7 +2758,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(viewModel.stagedComposerAttachment, snapshotDraft)
     XCTAssertEqual(
       viewModel.sendErrorMessage,
-      String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+      String(localized: .friendsChatShiftSnapshotSendUnavailable)
     )
     XCTAssertNil(mockService.lastSentMetadataData)
   }
@@ -2815,7 +2815,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
 
     XCTAssertEqual(
       viewModel.sendErrorMessage,
-      String(localized: "friends.chat.shift_snapshot_send_unavailable", table: "Localizable")
+      String(localized: .friendsChatShiftSnapshotSendUnavailable)
     )
     XCTAssertNil(mockService.lastSentMetadataData)
     XCTAssertEqual(

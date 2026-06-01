@@ -22,13 +22,13 @@ struct WorkSetupRequiredPlaceholder: View {
           setupPreview
 
           VStack(spacing: Spacing.xs) {
-            Text("settings.pay.setup.scheduleTitle", tableName: "Localizable")
+            Text(.settingsPaySetupScheduleTitle)
               .font(.tidexTitle)
               .foregroundColor(.tidexTextPrimary)
               .multilineTextAlignment(.center)
               .fixedSize(horizontal: false, vertical: true)
 
-            Text("work_setup.required.description", tableName: "Localizable")
+            Text(.workSetupRequiredDescription)
               .font(.tidexSubheadline)
               .foregroundColor(.tidexTextSecondary)
               .multilineTextAlignment(.center)
@@ -54,7 +54,7 @@ struct WorkSetupRequiredPlaceholder: View {
         initialPayrollDay: setupInitialPayrollDay,
         initialMonthlyGoal: setupInitialMonthlyGoal,
         prefilledBasicJob: jobNeedingSetup,
-        setupDismissTitle: String(localized: "settings.pay.setup.laterButton"),
+        setupDismissTitle: String(localized: .settingsPaySetupLaterButton),
         onSaveBasics: { input in
           await createBasicJobForSetup(input: input)
         }
@@ -78,13 +78,13 @@ struct WorkSetupRequiredPlaceholder: View {
         .frame(width: 52, height: 52)
 
         VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text("settings.pay.setup.requiredBadge", tableName: "Localizable")
+          Text(.settingsPaySetupRequiredBadge)
             .font(.tidexCaptionStrong)
             .foregroundColor(.tidexBlue)
             .lineLimit(1)
             .minimumScaleFactor(0.85)
 
-          Text("settings.pay.setup.finishTitle", tableName: "Localizable")
+          Text(.settingsPaySetupFinishTitle)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
             .lineLimit(1)
@@ -101,15 +101,15 @@ struct WorkSetupRequiredPlaceholder: View {
       VStack(spacing: Spacing.xs) {
         WorkSetupPreviewRow(
           icon: "banknote.fill",
-          title: LocalizedStringResource("settings.pay.editor.wageSource", table: "Localizable")
+          title: .settingsPayEditorWageSource
         )
         WorkSetupPreviewRow(
           icon: "calendar",
-          title: LocalizedStringResource("tabs.shifts", table: "Localizable")
+          title: .tabsShifts
         )
         WorkSetupPreviewRow(
           icon: "chart.bar.xaxis",
-          title: LocalizedStringResource("tabs.stats", table: "Localizable")
+          title: .tabsStats
         )
       }
     }
@@ -134,7 +134,7 @@ struct WorkSetupRequiredPlaceholder: View {
             .scaleEffect(0.8)
         }
 
-        Text("work_setup.required.cta", tableName: "Localizable")
+        Text(.workSetupRequiredCta)
           .font(.tidexButton)
           .lineLimit(1)
           .minimumScaleFactor(0.85)

@@ -145,7 +145,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
           .foregroundColor(Color.tidexTextOnBrand.opacity(0.72))
           .textCase(.uppercase)
 
-        Text("50 000 kr")
+        Text(verbatim: "50 000 kr")
           .font(.system(size: 40, weight: .bold, design: .rounded))
           .foregroundColor(.tidexTextOnBrand)
           .lineLimit(1)
@@ -246,10 +246,10 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
 
   private var proFeatureList: some View {
     VStack(spacing: Spacing.xs) {
-      proFeatureRow(icon: "calendar.badge.plus", title: String(localized: "paywall.pro.feature1"))
-      proFeatureRow(icon: "sparkles", title: String(localized: "paywall.pro.feature2"))
-      proFeatureRow(icon: "person.2.fill", title: String(localized: "paywall.pro.feature3"))
-      proFeatureRow(icon: "bolt.heart.fill", title: String(localized: "paywall.pro.feature4"))
+      proFeatureRow(icon: "calendar.badge.plus", title: String(localized: .paywallProFeature1))
+      proFeatureRow(icon: "sparkles", title: String(localized: .paywallProFeature2))
+      proFeatureRow(icon: "person.2.fill", title: String(localized: .paywallProFeature3))
+      proFeatureRow(icon: "bolt.heart.fill", title: String(localized: .paywallProFeature4))
     }
   }
 
@@ -297,9 +297,11 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
         if period == .yearly,
           let savings = viewModel.yearlySavingsPercent(for: .pro)
         {
-          Text(String(localized: .paywallSavePercent(Int32(savings))))
-            .font(.tidexMicro.bold())
-            .foregroundColor(isSelected ? .tidexBlue : Color.tidexLightTextMuted)
+          Text(
+            String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double(savings))))
+          )
+          .font(.tidexMicro.bold())
+          .foregroundColor(isSelected ? .tidexBlue : Color.tidexLightTextMuted)
         }
       }
       .frame(maxWidth: .infinity)
@@ -559,13 +561,13 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   private func heroSeasonName(for monthIndex: Int) -> String {
     switch monthIndex {
     case 2...4:
-      return String(localized: "monthLimit.hero.season.spring")
+      return String(localized: .monthLimitHeroSeasonSpring)
     case 5...7:
-      return String(localized: "monthLimit.hero.season.summer")
+      return String(localized: .monthLimitHeroSeasonSummer)
     case 8...10:
-      return String(localized: "monthLimit.hero.season.autumn")
+      return String(localized: .monthLimitHeroSeasonAutumn)
     default:
-      return String(localized: "monthLimit.hero.season.winter")
+      return String(localized: .monthLimitHeroSeasonWinter)
     }
   }
 

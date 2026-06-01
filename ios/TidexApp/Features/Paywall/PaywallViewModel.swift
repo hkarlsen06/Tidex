@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import StoreKit
 import os.log
@@ -13,8 +14,8 @@ enum BillingPeriod: String, CaseIterable {
 
   var displayName: String {
     switch self {
-    case .monthly: return String(localized: "paywall.monthly")
-    case .yearly: return String(localized: "paywall.yearly")
+    case .monthly: return String(localized: .paywallMonthly)
+    case .yearly: return String(localized: .paywallYearly)
     }
   }
 }
@@ -138,7 +139,7 @@ final class PaywallViewModel: ObservableObject {
     await storeKitManager.loadProducts()
 
     if storeKitManager.products.isEmpty {
-      error = String(localized: "paywall.errors.loadProductsFailed")
+      error = String(localized: .paywallErrorsLoadProductsFailed)
     }
 
     isLoading = false
@@ -257,11 +258,11 @@ final class PaywallViewModel: ObservableObject {
         purchaseSucceeded = true
       } else {
         logger.info("No purchases to restore")
-        error = String(localized: "subscription.restore.noPurchases")
+        error = String(localized: .subscriptionRestoreNoPurchases)
       }
     } catch {
       logger.error("Restore failed: \(error.localizedDescription)")
-      self.error = String(localized: "subscription.errors.restoreFailed")
+      self.error = String(localized: .subscriptionErrorsRestoreFailed)
     }
 
     isLoading = false

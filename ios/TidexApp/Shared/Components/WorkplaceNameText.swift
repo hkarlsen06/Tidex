@@ -201,7 +201,7 @@ struct WorkplaceColorCarousel: View {
               .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(Text(String(localized: "settings.pay.add_job.color_label")))
+            .accessibilityLabel(Text(.settingsPayAddJobColorLabel))
             .accessibilityValue(Text(hex))
             .accessibilityAddTraits(isSelected ? .isSelected : [])
           }

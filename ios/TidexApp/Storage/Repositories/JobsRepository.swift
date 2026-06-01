@@ -60,7 +60,7 @@ enum JobsRepositoryError: LocalizedError {
   var alertTitle: String? {
     switch self {
     case .cannotDeleteJobWithHistory:
-      return String(localized: "settings.pay.error.cannotDeleteWorkplaceWithHistory.title")
+      return String(localized: .settingsPayErrorCannotDeleteWorkplaceWithHistoryTitle)
     default:
       return nil
     }

@@ -204,7 +204,7 @@ struct SecuritySettingsView: View {
         HStack(spacing: Spacing.sm) {
           TidexSettingsIcon(systemName: "sparkles", foregroundColor: .tidexBlue, size: 29)
 
-          Text(String(localized: .settingsWageyAiDataSharing))
+          Text(.settingsWageyAiDataSharing)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
         }

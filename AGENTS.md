@@ -56,6 +56,12 @@ Use these skills for specialized tasks:
 
 Located in `ios/Scripts/`. Use `pnpm` commands from repo root as the default interface.
 
+**Localization key usage:**
+
+- Always use generated `LocalizedStringResource` symbols in Swift code, for example `Text(.settingsSaveButton)` or `String(localized: .settingsSaveButton)`.
+- Never call localization APIs with raw string keys such as `String(localized: "settings.saveButton")`, `Text("settings.saveButton", tableName: "Localizable")`, `LocalizedStringResource("settings.saveButton", table: "Localizable")`, or `NSLocalizedString("settings.saveButton", ...)`.
+- If a key has no generated symbol, add or rename the catalog entry to a dot-notation key that does generate one, then use the symbol.
+
 **Commands:**
 
 ```bash

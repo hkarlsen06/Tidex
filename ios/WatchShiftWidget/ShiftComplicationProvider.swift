@@ -134,8 +134,8 @@ struct ShiftCalculator {
     if daysRemaining > 1 {
       let dayLabel =
         daysRemaining == 1
-        ? String(localized: "watch.day")
-        : String(localized: "watch.days")
+        ? String(localized: .watchDay)
+        : String(localized: .watchDays)
       return "\(daysRemaining) \(dayLabel)"
     }
 

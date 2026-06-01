@@ -214,7 +214,7 @@ struct FriendRow: View {
   private var notificationSection: some View {
     Section(String(localized: .sharingNotificationsTitle)) {
       if areServerActionsUnavailable {
-        Text(String(localized: "sharing.offline.actionsUnavailable", table: "Localizable"))
+        Text(.sharingOfflineActionsUnavailable)
       }
 
       if sectionType == .mutual || sectionType == .incoming {

@@ -402,7 +402,7 @@ struct AddShiftView: View {
         initialCurrency: viewModel.jobCreationInitialCurrency,
         initialPayrollDay: viewModel.jobCreationInitialPayrollDay,
         initialMonthlyGoal: viewModel.jobCreationInitialMonthlyGoal,
-        setupDismissTitle: String(localized: "settings.pay.setup.laterButton"),
+        setupDismissTitle: String(localized: .settingsPaySetupLaterButton),
         onSaveBasics: { input in
           await viewModel.createBasicJobForSetup(input: input)
         }
@@ -414,7 +414,7 @@ struct AddShiftView: View {
       JobPaySetupSheet(
         job: request.job,
         initialCurrency: request.job.currency,
-        dismissTitle: String(localized: "settings.pay.setup.laterButton")
+        dismissTitle: String(localized: .settingsPaySetupLaterButton)
       ) { input in
         await viewModel.completePaySetup(for: request.job, input: input)
       }
@@ -686,7 +686,7 @@ private struct EventContent: View {
         .foregroundColor(.tidexTextPrimary)
 
       TextField(
-        String(localized: "addShift.submitRequirements.eventNote", table: "Localizable"),
+        String(localized: .addShiftSubmitRequirementsEventNote),
         text: $viewModel.eventNote,
         axis: .vertical
       )
@@ -833,7 +833,7 @@ private struct AddShiftJobSelectionChip: View {
             Image(systemName: "building.2")
               .font(.tidexCaptionRegular)
 
-            Text(String(localized: "settings.pay.choose_job.title"))
+            Text(.settingsPayChooseJobTitle)
               .font(.tidexMonoCaption)
 
             Image(systemName: "chevron.down")
@@ -981,7 +981,7 @@ private struct AddShiftJobChooserSheet: View {
                 .font(.tidexBodyMedium)
                 .foregroundColor(.tidexBlue)
 
-              Text(String(localized: "settings.pay.add_job.cta"))
+              Text(.settingsPayAddJobCta)
                 .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
 
@@ -1043,7 +1043,7 @@ private struct AddShiftJobChooserSheet: View {
       }
       .scrollIndicators(.hidden)
       .background(Color.tidexBackground)
-      .navigationTitle(String(localized: "settings.pay.choose_job.title"))
+      .navigationTitle(String(localized: .settingsPayChooseJobTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -1058,7 +1058,7 @@ private struct AddShiftJobChooserSheet: View {
           } label: {
             Image(systemName: "gearshape")
           }
-          .accessibilityLabel(Text(String(localized: .settingsMenuPayLabel)))
+          .accessibilityLabel(Text(.settingsMenuPayLabel))
         }
       }
     }
@@ -1075,7 +1075,7 @@ private struct AddShiftJobStatusBadges: View {
     HStack(spacing: Spacing.xs) {
       if isDefault {
         AddShiftJobStatusBadge(
-          title: String(localized: "settings.pay.choose_job.default_badge"),
+          title: String(localized: .settingsPayChooseJobDefaultBadge),
           foregroundColor: .tidexBlue,
           backgroundColor: .tidexBlue.opacity(0.14)
         )
@@ -1083,7 +1083,7 @@ private struct AddShiftJobStatusBadges: View {
 
       if requiresPaySetup {
         AddShiftJobStatusBadge(
-          title: String(localized: "settings.pay.setup.requiredBadge"),
+          title: String(localized: .settingsPaySetupRequiredBadge),
           foregroundColor: .tidexWarning,
           backgroundColor: .tidexWarning.opacity(0.14)
         )

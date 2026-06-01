@@ -28,11 +28,11 @@ struct AddJobBasicsSheet: View {
     NavigationStack {
       Form {
         Section {
-          TextField(String(localized: "settings.pay.add_job.name"), text: $name)
+          TextField(String(localized: .settingsPayAddJobName), text: $name)
             .textInputAutocapitalization(.words)
 
           VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(String(localized: "settings.pay.add_job.color_label"))
+            Text(.settingsPayAddJobColorLabel)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
 
@@ -50,7 +50,7 @@ struct AddJobBasicsSheet: View {
           }
         }
       }
-      .navigationTitle(String(localized: "settings.pay.add_job.title"))
+      .navigationTitle(String(localized: .settingsPayAddJobTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
@@ -74,7 +74,7 @@ struct AddJobBasicsSheet: View {
   private func save() async {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else {
-      saveError = String(localized: "settings.pay.add_job.error_name")
+      saveError = String(localized: .settingsPayAddJobErrorName)
       return
     }
 

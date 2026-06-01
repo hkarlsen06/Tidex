@@ -316,7 +316,7 @@ struct EventDetailsSheet: View {
         scheduleInlineReminderSaveIfNeeded()
       }
       .confirmationDialog(
-        String(localized: "calendar.subscription.detail.confirmation.title"),
+        String(localized: .calendarSubscriptionDetailConfirmationTitle),
         isPresented: $showingCalendarSubscriptionConfirmation,
         titleVisibility: .visible
       ) {
@@ -325,7 +325,7 @@ struct EventDetailsSheet: View {
         }
         Button(String(localized: .commonCancel), role: .cancel) {}
       } message: {
-        Text("calendar.subscription.detail.confirmation.message")
+        Text(.calendarSubscriptionDetailConfirmationMessage)
       }
     }
   }
@@ -399,7 +399,7 @@ struct EventDetailsSheet: View {
         .foregroundColor(.tidexTextPrimary)
 
       TextField(
-        String(localized: "addShift.submitRequirements.eventNote", table: "Localizable"),
+        String(localized: .addShiftSubmitRequirementsEventNote),
         text: $editedNote,
         axis: .vertical
       )
@@ -502,7 +502,7 @@ struct EventDetailsSheet: View {
 
         if showsCalendarSubscriptionCTA {
           DetailSheetActionButton(
-            title: String(localized: "calendar.subscription.detail.cta"),
+            title: String(localized: .calendarSubscriptionDetailCta),
             systemImage: "calendar.badge.clock",
             style: .primary
           ) {

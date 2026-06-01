@@ -264,7 +264,7 @@ struct TotalCard: View {
             .contentTransition(.numericText(value: displayPercentage))
 
           if percentageIncludesPayrollAdjustments {
-            Text("*")
+            Text(verbatim: "*")
               .font(.tidexFootnote.weight(.semibold))
               .offset(y: -4)
               .accessibilityHidden(true)
@@ -367,7 +367,7 @@ struct TotalCard: View {
 
         ZStack(alignment: .trailing) {
           // Always present - anchors both the width and height to the real font metrics.
-          Text("999%")
+          Text(verbatim: "999%")
             .font(.tidexLabel)
             .monospacedDigit()
             .hidden()

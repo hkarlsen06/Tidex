@@ -31,9 +31,18 @@ struct DetailSheetActionButton: View {
       case .primary:
         return .tidexBlue
       case .secondary:
-        return .tidexSurfacePrimary
+        return .tidexBlue.opacity(0.08)
       case .destructive:
         return .tidexError
+      }
+    }
+
+    var borderColor: Color {
+      switch self {
+      case .secondary:
+        return .tidexBlue.opacity(0.14)
+      case .primary, .destructive:
+        return .clear
       }
     }
   }
@@ -65,11 +74,18 @@ struct DetailSheetActionButton: View {
 
         Text(title)
           .font(.tidexLabelStrong)
+          .multilineTextAlignment(.leading)
+          .lineLimit(2)
+          .minimumScaleFactor(0.86)
       }
       .foregroundColor(style.foregroundColor)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(style.backgroundColor)
+      .overlay(
+        RoundedRectangle(cornerRadius: CornerRadius.lg)
+          .stroke(style.borderColor, lineWidth: 1)
+      )
       .cornerRadius(CornerRadius.lg)
     }
     .buttonStyle(.plain)

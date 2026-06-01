@@ -37,7 +37,7 @@ struct EventReminderEditorSection: View {
       }
 
       if showsPastEventHint {
-        Text(String(localized: "events.notifications.past_event_hint"))
+        Text(.eventsNotificationsPastEventHint)
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
       }
@@ -71,18 +71,18 @@ struct EventReminderEditorSection: View {
 
   private var header: some View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
-      Text(String(localized: "events.notifications.section_title"))
+      Text(.eventsNotificationsSectionTitle)
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
 
-      Text(String(localized: "events.notifications.section_description"))
+      Text(.eventsNotificationsSectionDescription)
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
     }
   }
 
   private var emptyState: some View {
-    Text(String(localized: "events.notifications.none"))
+    Text(.eventsNotificationsNone)
       .font(.tidexSubheadline)
       .foregroundColor(.tidexTextMuted)
   }

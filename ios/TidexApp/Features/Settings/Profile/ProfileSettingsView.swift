@@ -741,11 +741,11 @@ struct ProfileSettingsView: View {
           ProgressView()
             .controlSize(.small)
             .tint(.tidexError)
-          Text(String(localized: .userMenuLoggingOut))
+          Text(.userMenuLoggingOut)
             .font(.tidexBody)
             .foregroundColor(.tidexError)
         } else {
-          Text(String(localized: .userMenuLogout))
+          Text(.userMenuLogout)
             .font(.tidexBody)
             .foregroundColor(.tidexError)
         }
@@ -776,11 +776,11 @@ struct ProfileSettingsView: View {
           ProgressView()
             .controlSize(.small)
             .tint(.tidexError)
-          Text(String(localized: .userMenuLogoutEverywhereLoading))
+          Text(.userMenuLogoutEverywhereLoading)
             .font(.tidexBody)
             .foregroundColor(.tidexError)
         } else {
-          Text(String(localized: .userMenuLogoutEverywhere))
+          Text(.userMenuLogoutEverywhere)
             .font(.tidexBody)
             .foregroundColor(.tidexError)
         }

@@ -2640,7 +2640,7 @@ enum FriendsAPIClient {
     ) async throws -> ShareOutgoingAttachment {
       guard let storageBaseURL else {
         throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.invalid_storage_base_url"))
+          underlying: String(localized: .shareErrorInvalidStorageBaseUrl))
       }
 
       let path = "\(threadId)/\(senderUserId)/\(image.id).\(image.fileExtension)"
@@ -2661,7 +2661,7 @@ enum FriendsAPIClient {
           for: request, from: image.data)
         guard let httpResponse = response as? HTTPURLResponse else {
           throw FriendsAPIError.networkError(
-            underlying: String(localized: "share.error.invalid_storage_response"))
+            underlying: String(localized: .shareErrorInvalidStorageResponse))
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -2687,7 +2687,7 @@ enum FriendsAPIClient {
       let components = accessToken.split(separator: ".")
       guard components.count >= 2 else {
         throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.invalid_access_token"))
+          underlying: String(localized: .shareErrorInvalidAccessToken))
       }
 
       var payload = String(components[1])
@@ -2701,7 +2701,7 @@ enum FriendsAPIClient {
 
       guard let payloadData = Data(base64Encoded: payload) else {
         throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.invalid_token_payload"))
+          underlying: String(localized: .shareErrorInvalidTokenPayload))
       }
 
       let jsonObject = try JSONSerialization.jsonObject(with: payloadData)
@@ -2711,7 +2711,7 @@ enum FriendsAPIClient {
         !subject.isEmpty
       else {
         throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.missing_token_subject"))
+          underlying: String(localized: .shareErrorMissingTokenSubject))
       }
 
       return subject.lowercased()
@@ -2720,7 +2720,7 @@ enum FriendsAPIClient {
     private static func prepareImage(from data: Data) throws -> PreparedSharedImage {
       guard let originalImage = UIImage(data: data) else {
         throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.unable_to_read_image"))
+          underlying: String(localized: .shareErrorUnableToReadImage))
       }
 
       let resizedImage = resizeImageIfNeeded(originalImage)
@@ -2768,12 +2768,12 @@ enum FriendsAPIClient {
 
       guard let fallbackData = image.jpegData(compressionQuality: 0.45) else {
         throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.unable_to_encode_image"))
+          underlying: String(localized: .shareErrorUnableToEncodeImage))
       }
 
       guard fallbackData.count <= maxUploadBytes else {
         throw FriendsAPIError.networkError(
-          underlying: String(localized: "share.error.image_too_large"))
+          underlying: String(localized: .shareErrorImageTooLarge))
       }
 
       return fallbackData
@@ -2822,7 +2822,8 @@ enum FriendsAPIClient {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         friends = try container.decodeIfPresent([ShareFriendRow].self, forKey: .friends) ?? []
         previewPayloads =
-          try container.decodeIfPresent([SharingRPCPreviewPayloadRow].self, forKey: .previewPayloads)
+          try container.decodeIfPresent(
+            [SharingRPCPreviewPayloadRow].self, forKey: .previewPayloads)
           ?? []
       }
     }
@@ -2904,7 +2905,7 @@ enum FriendsAPIClient {
         if let phone, !phone.isEmpty {
           return phone
         }
-        return String(localized: "share.recipient.unknown")
+        return String(localized: .shareRecipientUnknown)
       }
 
       private var contactInfo: String? {

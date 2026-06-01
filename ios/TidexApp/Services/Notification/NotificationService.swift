@@ -90,7 +90,7 @@ final class NotificationService {
 
   func registerNotificationCategories() {
     let center = UNUserNotificationCenter.current()
-    let replyTitle = String(localized: "friends.chat.action.reply", table: "Localizable")
+    let replyTitle = String(localized: .friendsChatActionReply)
     let replyPlaceholder = String(
       localized: "notifications.chat.action.reply_placeholder",
       table: "Localizable"

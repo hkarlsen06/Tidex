@@ -44,7 +44,7 @@ struct OTPInputField: View {
           .accentColor(.clear)
           .frame(maxWidth: .infinity)
           .frame(height: 56)
-          .accessibilityLabel(Text(String(localized: "security.password.otpLabel")))
+          .accessibilityLabel(Text(.securityPasswordOtpLabel))
           .onChange(of: code) { _, newValue in
             handleCodeChange(newValue)
           }

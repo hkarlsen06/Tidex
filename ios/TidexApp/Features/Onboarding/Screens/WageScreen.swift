@@ -150,13 +150,13 @@ struct WageScreen: View {
       }
     }
     .alert(
-      String(localized: "onboarding.wage.tariff_disabled_info.title", table: "Localizable"),
+      String(localized: .onboardingWageTariffDisabledInfoTitle),
       isPresented: $showingTariffDisabledInfoAlert
     ) {
       Button(String(localized: .alertsOk), role: .cancel) {}
     } message: {
       Text(
-        String(localized: "onboarding.wage.tariff_disabled_info.message", table: "Localizable")
+        String(localized: .onboardingWageTariffDisabledInfoMessage)
       )
     }
     .onAppear {

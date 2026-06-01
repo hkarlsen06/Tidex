@@ -71,14 +71,14 @@ struct AddFriendForm: View {
                   .contentShape(Rectangle())
               }
               .buttonStyle(PlainButtonStyle())
-              .accessibilityLabel(Text(String(localized: "sharing.addFriend")))
+              .accessibilityLabel(Text(.sharingAddFriend))
             }
           }
         }
       }
 
       if isOfflineUnavailable {
-        Text(String(localized: "sharing.offline.addFriendUnavailable", table: "Localizable"))
+        Text(.sharingOfflineAddFriendUnavailable)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
           .frame(maxWidth: .infinity, alignment: .leading)

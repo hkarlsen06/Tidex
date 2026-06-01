@@ -964,12 +964,12 @@ struct FriendsThreadView: View {
   private var chatLocalization: ChatLocalization {
     ChatLocalization(
       inputPlaceholder: String(localized: .friendsChatPlaceholder),
-      signatureText: String(localized: "friends.chat.signatureText", table: "Localizable"),
+      signatureText: String(localized: .friendsChatSignatureText),
       cancelButtonText: String(localized: .commonCancel),
-      recentToggleText: String(localized: "friends.chat.recentToggle", table: "Localizable"),
-      waitingForNetwork: String(localized: "friends.chat.waitingForNetwork", table: "Localizable"),
-      recordingText: String(localized: "friends.chat.recording", table: "Localizable"),
-      replyToText: String(localized: "friends.chat.replyTo", table: "Localizable")
+      recentToggleText: String(localized: .friendsChatRecentToggle),
+      waitingForNetwork: String(localized: .friendsChatWaitingForNetwork),
+      recordingText: String(localized: .friendsChatRecording),
+      replyToText: String(localized: .friendsChatReplyTo)
     )
   }
 
@@ -1381,7 +1381,7 @@ struct FriendsThreadView: View {
       Haptics.play(.error)
       alertState = AlertState(
         title: String(localized: .commonError),
-        message: String(localized: "friends.chat.image.save_failed", table: "Localizable")
+        message: String(localized: .friendsChatImageSaveFailed)
       )
       return false
     }
@@ -1405,7 +1405,7 @@ struct FriendsThreadView: View {
           table: "Localizable"
         )
       case .saveFailed:
-        return String(localized: "friends.chat.image.save_failed", table: "Localizable")
+        return String(localized: .friendsChatImageSaveFailed)
       }
     }
   }
@@ -1672,19 +1672,19 @@ extension FriendAbuseReportReason {
   fileprivate var localizedTitle: String {
     switch self {
     case .harassmentOrBullying:
-      return String(localized: "friends.chat.reason.harassment", table: "Localizable")
+      return String(localized: .friendsChatReasonHarassment)
     case .sexualContent:
-      return String(localized: "friends.chat.reason.sexual", table: "Localizable")
+      return String(localized: .friendsChatReasonSexual)
     case .hateOrDiscriminatoryContent:
-      return String(localized: "friends.chat.reason.hate", table: "Localizable")
+      return String(localized: .friendsChatReasonHate)
     case .violenceOrThreats:
-      return String(localized: "friends.chat.reason.violence", table: "Localizable")
+      return String(localized: .friendsChatReasonViolence)
     case .spam:
-      return String(localized: "friends.chat.reason.spam", table: "Localizable")
+      return String(localized: .friendsChatReasonSpam)
     case .inappropriateProfileOrConduct:
-      return String(localized: "friends.chat.reason.inappropriateProfile", table: "Localizable")
+      return String(localized: .friendsChatReasonInappropriateProfile)
     case .other:
-      return String(localized: "friends.chat.reason.other", table: "Localizable")
+      return String(localized: .friendsChatReasonOther)
     }
   }
 }

@@ -49,19 +49,19 @@ struct PreAuthAddShiftSimulatorScreen: View {
   }
 
   private var simulatorSubtitle: String {
-    String(localized: "onboarding.add_simulator.subtitle", table: "Localizable")
+    String(localized: .onboardingAddSimulatorSubtitle)
   }
 
   private var simulatorHint: String {
     switch focusStage {
     case .calendar:
-      return String(localized: "onboarding.add_simulator.focus.calendar", table: "Localizable")
+      return String(localized: .onboardingAddSimulatorFocusCalendar)
     case .times:
-      return String(localized: "onboarding.add_simulator.focus.times", table: "Localizable")
+      return String(localized: .onboardingAddSimulatorFocusTimes)
     case .totals:
-      return String(localized: "onboarding.add_simulator.focus.totals", table: "Localizable")
+      return String(localized: .onboardingAddSimulatorFocusTotals)
     case .add:
-      return String(localized: "onboarding.add_simulator.focus.add", table: "Localizable")
+      return String(localized: .onboardingAddSimulatorFocusAdd)
     }
   }
 
@@ -364,7 +364,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
       handleTotalsAcknowledged()
     } label: {
       Text(
-        String(localized: "onboarding.add_simulator.acknowledge_totals", table: "Localizable")
+        String(localized: .onboardingAddSimulatorAcknowledgeTotals)
       )
       .font(.tidexBodyMedium)
       .foregroundColor(.tidexBlue)

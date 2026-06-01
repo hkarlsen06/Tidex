@@ -128,6 +128,36 @@ final class FriendsThreadExyteChatTests: XCTestCase {
     )
   }
 
+  func testFriendChatRouteUsesFallbackMetadataWhenThreadSummaryIsBlank() {
+    let route = FriendChatRoute(
+      thread: FriendThread(
+        id: "thread-1",
+        kind: .direct,
+        title: nil,
+        avatarUrl: nil,
+        metadataData: nil,
+        counterpartUserId: " friend-1 ",
+        counterpartDisplayName: "   ",
+        counterpartProfilePictureUrl: nil,
+        counterpartOAuthAvatarUrl: nil,
+        lastMessageId: nil,
+        lastMessageSenderId: nil,
+        lastMessageAt: nil,
+        lastMessageBody: nil,
+        lastMessageHasImage: false,
+        unreadCount: 0,
+        muted: false,
+        createdAt: Date(timeIntervalSince1970: 1_700_000_000)
+      ),
+      fallbackDisplayName: "Recipient",
+      fallbackAvatarUrl: "https://example.com/avatar.jpg"
+    )
+
+    XCTAssertEqual(route.counterpartUserId, "friend-1")
+    XCTAssertEqual(route.displayName, "Recipient")
+    XCTAssertEqual(route.avatarUrl, "https://example.com/avatar.jpg")
+  }
+
   func testShiftSnapshotNavigationRoutesOwnSnapshotToShiftsHighlight() {
     let deepLink = FriendsThreadShiftSnapshotNavigationResolver.deepLink(
       for: makeShiftSnapshot(ownerUserId: "viewer-1", shiftDate: "2026-04-04"),

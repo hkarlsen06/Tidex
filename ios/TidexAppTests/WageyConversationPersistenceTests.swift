@@ -164,7 +164,7 @@ final class WageyConversationPersistenceTests: XCTestCase {
   func testThoughtStatusUsesShortLabelForOneSecond() {
     let status = ThoughtStatus(durationSeconds: 1)
 
-    XCTAssertEqual(status.localizedLabel, String(localized: "wagey.streaming.thought_short"))
+    XCTAssertEqual(status.localizedLabel, String(localized: .wageyStreamingThoughtShort))
   }
 
   func testLocalConversationStoresCompactionSummary() {

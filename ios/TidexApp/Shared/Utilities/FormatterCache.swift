@@ -50,6 +50,18 @@ enum FormatterCache {
     }
   }
 
+  static func percentagePoints(
+    _ value: Double,
+    fractionDigits: Int = 0,
+    locale: Locale = Locale.appLocale
+  ) -> String {
+    (value / 100).formatted(
+      .percent
+        .precision(.fractionLength(fractionDigits))
+        .locale(locale)
+    )
+  }
+
   static func monthNameFormatter(locale: Locale = .current) -> DateFormatter {
     cached("tidex.monthNameFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()

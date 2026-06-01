@@ -23,7 +23,9 @@ struct BillingToggle: View {
       // Yearly option with savings badge
       toggleOption(
         title: String(localized: .paywallYearly),
-        badge: yearlySavingsPercent.map { String(localized: .paywallSavePercent(Int32($0))) },
+        badge: yearlySavingsPercent.map {
+          String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double($0))))
+        },
         isSelected: selection == .yearly
       ) {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {

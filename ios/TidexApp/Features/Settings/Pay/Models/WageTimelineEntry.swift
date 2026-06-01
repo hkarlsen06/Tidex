@@ -268,7 +268,8 @@ enum WageTimelineProcessor {
         WageChange(
           description: String(
             localized: .timelineTaxChange(
-              Int32(previous.effectiveTaxPercentage), Int32(current.effectiveTaxPercentage))),
+              FormatterCache.percentagePoints(previous.effectiveTaxPercentage),
+              FormatterCache.percentagePoints(current.effectiveTaxPercentage))),
           type: .tax
         ))
     }

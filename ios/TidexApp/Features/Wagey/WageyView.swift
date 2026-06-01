@@ -466,7 +466,7 @@ struct WageyView: View {
         .shadow(color: Color.tidexTextPrimary.opacity(0.16), radius: 12, y: 4)
     }
     .buttonStyle(.plain)
-    .accessibilityLabel(Text(String(localized: "wagey.chat.jump_to_latest")))
+    .accessibilityLabel(Text(.wageyChatJumpToLatest))
   }
 }
 

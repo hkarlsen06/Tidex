@@ -19,6 +19,14 @@ final class AppDeepLinkResolverTests: XCTestCase {
     XCTAssertEqual(deepLink, .settings(destination: .pay(jobId: nil)))
   }
 
+  func testResolvesSettingsRecurringShiftsDeepLink() throws {
+    let url = try XCTUnwrap(URL(string: "tidex://settings/recurring-shifts"))
+
+    let deepLink = AppDeepLinkResolver.resolve(url)
+
+    XCTAssertEqual(deepLink, .settings(destination: .recurringShifts))
+  }
+
   func testResolvesHttpsSettingsAlias() throws {
     let url = try XCTUnwrap(URL(string: "https://app.tidex.no/no/settings/recurring-shifts"))
 

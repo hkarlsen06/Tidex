@@ -171,13 +171,13 @@ private struct FriendCardMessagePreviewRow: View {
     case .outgoingSending:
       .friendsChatStatusSending
     case .outgoingSent:
-      LocalizedStringResource("friends.chat.preview_label.sent", table: "Localizable")
+      .friendsChatPreviewLabelSent
     case .outgoingOpened, .incomingOpened:
-      LocalizedStringResource("friends.chat.preview_label.opened", table: "Localizable")
+      .friendsChatPreviewLabelOpened
     case .outgoingFailed:
       .friendsChatStatusFailed
     case .incomingUnread:
-      LocalizedStringResource("friends.chat.preview_label.received", table: "Localizable")
+      .friendsChatPreviewLabelReceived
     }
   }
 

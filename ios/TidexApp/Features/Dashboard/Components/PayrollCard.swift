@@ -134,7 +134,7 @@ struct PayrollCard: View {
         .offset(y: shouldCenterTrailingAmount ? Self.centeredTrailingAmountOffset : 0)
       } else {
         ZStack {
-          Text("00 000")
+          Text(verbatim: "00 000")
             .font(.tidexTitle)
             .opacity(0)
 
@@ -159,7 +159,7 @@ struct PayrollCard: View {
         .animation(.spring(duration: 0.8, bounce: 0), value: tax)
       } else if !showPayout {
         ZStack {
-          Text("00 000 − 00 000")
+          Text(verbatim: "00 000 − 00 000")
             .font(.tidexSubheadline)
             .opacity(0)
 
@@ -233,7 +233,7 @@ struct PayrollCard: View {
   }
 
   private var adjustmentMarker: Text {
-    Text("*")
+    Text(verbatim: "*")
   }
 
   private var progressFillColor: Color {

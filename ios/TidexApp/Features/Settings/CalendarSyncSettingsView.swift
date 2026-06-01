@@ -27,7 +27,7 @@ struct CalendarSyncSettingsView: View {
       }
     }
     .background(Color.tidexBackground)
-    .navigationTitle(String(localized: "calendar.subscription.title"))
+    .navigationTitle(String(localized: .calendarSubscriptionTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
       await viewModel.loadSettings()
@@ -64,18 +64,18 @@ struct CalendarSyncSettingsView: View {
       }
     }
     .confirmationDialog(
-      String(localized: "calendar.subscription.disable.title"),
+      String(localized: .calendarSubscriptionDisableTitle),
       isPresented: $showDisableCalendarConfirmation,
       titleVisibility: .visible
     ) {
-      Button(String(localized: "calendar.subscription.disable.button"), role: .destructive) {
+      Button(String(localized: .calendarSubscriptionDisableButton), role: .destructive) {
         Task {
           await viewModel.disableCalendarSubscription()
         }
       }
       Button(String(localized: .commonCancel), role: .cancel) {}
     } message: {
-      Text("calendar.subscription.disable.message")
+      Text(.calendarSubscriptionDisableMessage)
     }
   }
 
@@ -92,11 +92,9 @@ struct CalendarSyncSettingsView: View {
 
       VStack(alignment: .leading, spacing: Spacing.xxxs) {
         Text(
-          LocalizedStringKey(
-            viewModel.calendarSubscriptionState.isActive
-              ? "calendar.subscription.active.description"
-              : "calendar.subscription.inactive.description"
-          )
+          viewModel.calendarSubscriptionState.isActive
+            ? .calendarSubscriptionActiveDescription
+            : .calendarSubscriptionInactiveDescription
         )
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
@@ -111,7 +109,7 @@ struct CalendarSyncSettingsView: View {
     HStack(spacing: Spacing.sm) {
       ProgressView()
         .scaleEffect(0.8)
-      Text("calendar.subscription.loading")
+      Text(.calendarSubscriptionLoading)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
     }
@@ -121,7 +119,7 @@ struct CalendarSyncSettingsView: View {
     metadata: CalendarSubscriptionMetadata
   ) -> some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text("calendar.subscription.include.label")
+      Text(.calendarSubscriptionIncludeLabel)
         .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextSecondary)
         .textCase(.uppercase)
@@ -142,7 +140,7 @@ struct CalendarSyncSettingsView: View {
 
   private var setupCalendarModeOptions: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text("calendar.subscription.include.label")
+      Text(.calendarSubscriptionIncludeLabel)
         .font(.tidexFootnoteMedium)
         .foregroundColor(.tidexTextSecondary)
         .textCase(.uppercase)
@@ -172,7 +170,7 @@ struct CalendarSyncSettingsView: View {
       } label: {
         HStack(spacing: Spacing.xs) {
           Image(systemName: "arrow.clockwise")
-          Text("calendar.subscription.rotate.button")
+          Text(.calendarSubscriptionRotateButton)
         }
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexBlue)
@@ -191,7 +189,7 @@ struct CalendarSyncSettingsView: View {
       } label: {
         HStack(spacing: Spacing.xs) {
           Image(systemName: "stop.circle")
-          Text("calendar.subscription.disable.button")
+          Text(.calendarSubscriptionDisableButton)
         }
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexTextSecondary)
@@ -214,7 +212,7 @@ struct CalendarSyncSettingsView: View {
       }
     } label: {
       calendarSubscriptionButtonLabel(
-        title: String(localized: "calendar.subscription.open.button"),
+        title: String(localized: .calendarSubscriptionOpenButton),
         systemImage: "arrow.up.forward.app",
         isLoading: viewModel.isUpdatingCalendarSubscription
       )
@@ -230,7 +228,7 @@ struct CalendarSyncSettingsView: View {
       }
     } label: {
       calendarSubscriptionButtonLabel(
-        title: String(localized: "calendar.subscription.setup.button"),
+        title: String(localized: .calendarSubscriptionSetupButton),
         systemImage: "calendar.badge.plus",
         isLoading: viewModel.isUpdatingCalendarSubscription
       )
@@ -241,7 +239,7 @@ struct CalendarSyncSettingsView: View {
 
   private var fallbackLinkSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text("calendar.subscription.fallback.description")
+      Text(.calendarSubscriptionFallbackDescription)
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
 
@@ -250,7 +248,7 @@ struct CalendarSyncSettingsView: View {
       } label: {
         HStack(spacing: Spacing.xs) {
           Image(systemName: "doc.on.doc")
-          Text("calendar.subscription.copy_link.button")
+          Text(.calendarSubscriptionCopyLinkButton)
         }
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexBlue)
