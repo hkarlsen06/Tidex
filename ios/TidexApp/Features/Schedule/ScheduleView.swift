@@ -546,7 +546,7 @@ struct ShiftsView: View {
             initialDestination: .calendarSync(
               calendarSetupIntent: .setup(mode: .shiftsAndEvents, autoOpen: false)))
         }
-        .sheet(isPresented: $viewModel.showMonthLimitSheet) {
+        .fullScreenCover(isPresented: $viewModel.showMonthLimitSheet) {
           MonthLimitSheet(
             existingMonths: viewModel.existingShiftMonths,
             targetMonth: viewModel.targetMonth,

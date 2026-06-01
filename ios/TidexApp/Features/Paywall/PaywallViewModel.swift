@@ -33,6 +33,7 @@ final class PaywallViewModel: ObservableObject {
   @Published private(set) var isPurchasing = false
   @Published private(set) var error: String?
   @Published private(set) var purchaseSucceeded = false
+  @Published private(set) var paywallConfig = PaywallConfig.fallback
 
   // MARK: - Dependencies
 
@@ -83,6 +84,18 @@ final class PaywallViewModel: ObservableObject {
     currentTier != .free
   }
 
+  var hasConfiguredTrial: Bool {
+    paywallConfig.hasFreeTrial
+  }
+
+  var trialDurationDays: Int {
+    paywallConfig.freeTrialDurationDays
+  }
+
+  var trialReminderDay: Int {
+    paywallConfig.reminderDay
+  }
+
   /// Calculate yearly savings percentage for a tier
   /// Returns nil if products aren't loaded
   func yearlySavingsPercent(for tier: SubscriptionTier) -> Int? {
@@ -121,6 +134,7 @@ final class PaywallViewModel: ObservableObject {
     isLoading = true
     error = nil
 
+    await loadPaywallConfig()
     await storeKitManager.loadProducts()
 
     if storeKitManager.products.isEmpty {
@@ -128,6 +142,25 @@ final class PaywallViewModel: ObservableObject {
     }
 
     isLoading = false
+  }
+
+  private func loadPaywallConfig() async {
+    do {
+      let config: PaywallConfig =
+        try await supabase
+        .rpc("get_paywall_config")
+        .single()
+        .execute()
+        .value
+
+      paywallConfig = config.normalized
+      logger.info(
+        "Loaded paywall config: trialEnabled=\(config.freeTrialEnabled), durationDays=\(config.freeTrialDurationDays)"
+      )
+    } catch {
+      paywallConfig = PaywallConfig.fallback
+      logger.error("Failed to load paywall config: \(error.localizedDescription)")
+    }
   }
 
   /// Purchase a product

@@ -97,6 +97,46 @@ struct ServerEntitlement: Codable {
   }
 }
 
+// MARK: - Paywall Config
+
+/// Backend-controlled paywall offer metadata.
+struct PaywallConfig: Codable, Equatable {
+  let freeTrialEnabled: Bool
+  let freeTrialDurationDays: Int
+  let freeTrialReminderDaysBeforeEnd: Int
+
+  static let fallback = PaywallConfig(
+    freeTrialEnabled: true,
+    freeTrialDurationDays: 14,
+    freeTrialReminderDaysBeforeEnd: 2
+  )
+
+  var normalized: PaywallConfig {
+    let durationDays = max(freeTrialDurationDays, 1)
+    let reminderDays = min(max(freeTrialReminderDaysBeforeEnd, 1), durationDays)
+
+    return PaywallConfig(
+      freeTrialEnabled: freeTrialEnabled,
+      freeTrialDurationDays: durationDays,
+      freeTrialReminderDaysBeforeEnd: reminderDays
+    )
+  }
+
+  var hasFreeTrial: Bool {
+    freeTrialEnabled && freeTrialDurationDays > 0
+  }
+
+  var reminderDay: Int {
+    max(freeTrialDurationDays - freeTrialReminderDaysBeforeEnd, 1)
+  }
+
+  enum CodingKeys: String, CodingKey {
+    case freeTrialEnabled = "free_trial_enabled"
+    case freeTrialDurationDays = "free_trial_duration_days"
+    case freeTrialReminderDaysBeforeEnd = "free_trial_reminder_days_before_end"
+  }
+}
+
 // MARK: - Errors
 
 /// Errors that can occur during purchase flow

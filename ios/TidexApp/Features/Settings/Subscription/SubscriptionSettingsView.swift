@@ -54,7 +54,7 @@ struct SubscriptionSettingsView: View {
     .task {
       await viewModel.loadSubscriptionInfo()
     }
-    .sheet(isPresented: $viewModel.showPaywall) {
+    .fullScreenCover(isPresented: $viewModel.showPaywall) {
       PaywallView(contextType: .upgrade)
         .onDisappear {
           // Reload subscription info after paywall closes

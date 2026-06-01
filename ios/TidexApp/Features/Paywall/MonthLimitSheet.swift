@@ -1,11 +1,13 @@
+import Foundation
 import SwiftUI
 
-// MARK: - Month Limit Sheet
+// MARK: - Month Limit Paywall
 
-/// Sheet presented when free tier users try to add shifts to a new month
-/// Offers two options: upgrade to Pro/Max, or delete shifts in other months
+/// Paywall presented when free tier users try to add shifts to a new month
+/// Offers two options: start Pro, or delete shifts in other months.
 struct MonthLimitSheet: View {
   @Environment(\.dismiss) private var dismiss
+  @StateObject private var viewModel = PaywallViewModel()
 
   /// Existing months that have shifts (for display and deletion)
   let existingMonths: Set<DateComponents>
@@ -22,238 +24,31 @@ struct MonthLimitSheet: View {
   /// Callback when user upgrades successfully - auto-retry the action
   let onUpgradeComplete: () -> Void
 
-  @State private var showPaywall = false
-  @State private var tierBeforePaywall: SubscriptionTier = .free
   @State private var showDeleteSection = false
   @State private var showConfirmDelete = false
   @State private var isDeleting = false
   @State private var error: String?
 
   var body: some View {
-    ZStack(alignment: .topTrailing) {
-      // Full background
-      Color.tidexBackground
-        .ignoresSafeArea()
-
-      ScrollView {
-        VStack(spacing: 0) {
-          // Hero section with gradient
-          heroSection
-
-          // Content section
-          contentSection
+    TrialPaywallScaffold(
+      viewModel: viewModel,
+      isAlternativeBusy: isDeleting,
+      onStartSubscription: { product in
+        Task {
+          await viewModel.purchase(product)
         }
       }
-
-      // Close button overlay
-      Button(action: { dismiss() }) {
-        Image(systemName: "xmark.circle.fill")
-          .font(.system(size: 30))
-          .symbolRenderingMode(.hierarchical)
-          .foregroundStyle(.white.opacity(0.9))
-      }
-      .padding(.top, Spacing.md)
-      .padding(.trailing, Spacing.mlg)
-    }
-    .sheet(isPresented: $showPaywall, onDismiss: handlePaywallDismiss) {
-      PaywallView(contextType: .monthLimit)
-        .interactiveDismissDisabled()
-    }
-  }
-
-  // MARK: - Hero Section
-
-  private var heroSection: some View {
-    ZStack {
-      // Gradient background extending to edges
-      LinearGradient(
-        colors: [
-          Color(red: 0.35, green: 0.45, blue: 0.95),
-          Color(red: 0.55, green: 0.35, blue: 0.9),
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-
-      // Decorative blurred circles
-      Circle()
-        .fill(Color.white.opacity(0.15))
-        .frame(width: 180, height: 180)
-        .blur(radius: 40)
-        .offset(x: -120, y: -20)
-
-      Circle()
-        .fill(Color.white.opacity(0.1))
-        .frame(width: 140, height: 140)
-        .blur(radius: 30)
-        .offset(x: 130, y: 60)
-
-      // Content
-      VStack(spacing: Spacing.mlg) {
-        Spacer()
-          .frame(height: Spacing.mlg)
-
-        // Icon with glow effect
-        ZStack {
-          // Glow
-          Circle()
-            .fill(Color.white.opacity(0.3))
-            .frame(width: 90, height: 90)
-            .blur(radius: 20)
-
-          // Icon background
-          Circle()
-            .fill(
-              LinearGradient(
-                colors: [.white.opacity(0.3), .white.opacity(0.15)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-              )
-            )
-            .frame(width: 72, height: 72)
-
-          Image(systemName: "sparkles")
-            .font(.tidexAmountMedium)
-            .foregroundStyle(.white)
-        }
-
-        // Title
-        Text(.monthLimitUpgradeHeadline)
-          .font(.tidexLargeTitle)
-          .foregroundStyle(.white)
-          .multilineTextAlignment(.center)
-
-        // Subtitle
-        Text(.monthLimitUpgradeSubheadline)
-          .font(.tidexBody)
-          .foregroundStyle(.white.opacity(0.85))
-          .multilineTextAlignment(.center)
-
-        Spacer()
-          .frame(height: 24)
-      }
-      .padding(.horizontal, Spacing.xl)
-    }
-    .frame(height: 280)
-  }
-
-  // MARK: - Content Section
-
-  private var contentSection: some View {
-    VStack(spacing: 28) {
-      // Features list in a card
-      featuresSection
-        .padding(.top, Spacing.xs)
-
-      // Primary CTA - View Plans
-      Button(action: {
-        // Capture current tier before showing paywall
-        tierBeforePaywall = EntitlementService.shared.effectiveTier
-        showPaywall = true
-      }) {
-        HStack(spacing: Spacing.xs) {
-          Text(.monthLimitViewPlansButton)
-            .font(.tidexHeadline)
-
-          Image(systemName: "arrow.right")
-            .font(.tidexLabelStrong)
-        }
-        .frame(maxWidth: .infinity)
-      }
-      .frame(height: 56)
-      .foregroundStyle(.white)
-      .background(
-        LinearGradient(
-          colors: [
-            Color(red: 0.35, green: 0.45, blue: 0.95),
-            Color(red: 0.55, green: 0.35, blue: 0.9),
-          ],
-          startPoint: .leading,
-          endPoint: .trailing
-        )
-      )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-      .shadow(color: Color(red: 0.45, green: 0.4, blue: 0.9).opacity(0.3), radius: 12, y: 6)
-      .disabled(isDeleting)
-
-      // Divider with "or"
-      dividerWithOr
-
-      // Delete section
+    ) {
       deleteSection
     }
-    .padding(.horizontal, Spacing.lg)
-    .padding(.top, 28)
-    .padding(.bottom, Spacing.xl)
-  }
-
-  // MARK: - Features Section
-
-  private var featuresSection: some View {
-    VStack(spacing: Spacing.md) {
-      featureRow(
-        icon: "calendar.badge.plus",
-        text: String(localized: .monthLimitFeature1)
-      )
-      featureRow(
-        icon: "chart.bar.fill",
-        text: String(localized: .monthLimitFeature2)
-      )
-      featureRow(
-        icon: "square.and.arrow.up",
-        text: String(localized: .monthLimitFeature3)
-      )
+    .task {
+      await viewModel.loadProducts()
     }
-    .padding(Spacing.mlg)
-    .background(Color.tidexSurfaceSecondary.opacity(0.5))
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-        .strokeBorder(Color.tidexBorder.opacity(0.5), lineWidth: 1)
-    )
-  }
-
-  private func featureRow(icon: String, text: String) -> some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: icon)
-        .font(.tidexHeadline)
-        .foregroundStyle(
-          LinearGradient(
-            colors: [
-              Color(red: 0.35, green: 0.45, blue: 0.95),
-              Color(red: 0.55, green: 0.35, blue: 0.9),
-            ],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          )
-        )
-        .frame(width: 28)
-
-      Text(text)
-        .font(.tidexLabel)
-        .foregroundStyle(Color.tidexTextPrimary)
-
-      Spacer()
-    }
-  }
-
-  // MARK: - Divider
-
-  private var dividerWithOr: some View {
-    HStack(spacing: Spacing.md) {
-      Rectangle()
-        .fill(Color.tidexBorder.opacity(0.5))
-        .frame(height: 1)
-
-      Text(.monthLimitOr)
-        .font(.tidexCaptionStrong)
-        .foregroundStyle(Color.tidexTextMuted)
-        .textCase(.uppercase)
-        .tracking(0.5)
-
-      Rectangle()
-        .fill(Color.tidexBorder.opacity(0.5))
-        .frame(height: 1)
+    .onChange(of: viewModel.purchaseSucceeded) { _, succeeded in
+      if succeeded {
+        dismiss()
+        onUpgradeComplete()
+      }
     }
   }
 
@@ -488,18 +283,6 @@ struct MonthLimitSheet: View {
   }
 
   // MARK: - Actions
-
-  /// Called when paywall sheet dismisses - check if user upgraded
-  private func handlePaywallDismiss() {
-    let currentTier = EntitlementService.shared.effectiveTier
-
-    // If tier changed from free to paid, user successfully upgraded
-    if tierBeforePaywall == .free && currentTier != .free {
-      // Dismiss this sheet and trigger the retry
-      dismiss()
-      onUpgradeComplete()
-    }
-  }
 
   private func handleDeleteConfirm() {
     isDeleting = true
