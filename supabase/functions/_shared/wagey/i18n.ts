@@ -38,6 +38,8 @@ export const toolResults = {
   jobPaySetupRequired:
     'Finish pay setup for "{name}" in Jobs & Pay before adding shifts.',
   jobNotAvailable: "Choose an active job before adding shifts.",
+  shiftMonthLimitReached:
+    "Free users can only add shifts within one month. Upgrade or delete shifts from other months first.",
   foundFriend: "Found {count} friend",
   foundFriends: "Found {count} friends",
   foundFriendShift: "Found {count} friend shift",
