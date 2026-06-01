@@ -1346,21 +1346,16 @@ struct DashboardView: View {
       showsLoadingShimmer: showsLoadingShimmer
     )
 
-    let displayedCard = card.userCurrency(selectedVariant.currency)
-
-    let interactiveCard =
-      displayedCard
+    card
+      .userCurrency(selectedVariant.currency)
       .contentShape(Rectangle())
       .onTapGesture {
+        guard !isLoading else { return }
         impactHaptic.impactOccurred()
         selectedPayrollDetailsVariant = selectedVariant
       }
-
-    if isLoading {
-      displayedCard
-    } else if canManuallySetPayrollStatus {
-      interactiveCard
-        .contextMenu {
+      .contextMenu {
+        if canManuallySetPayrollStatus && !isLoading {
           Button {
             impactHaptic.impactOccurred()
             viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
@@ -1382,9 +1377,7 @@ struct DashboardView: View {
             )
           }
         }
-    } else {
-      interactiveCard
-    }
+      }
   }
 
   // MARK: - Featured Shift Section
