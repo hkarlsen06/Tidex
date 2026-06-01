@@ -29,6 +29,7 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
   let displayYear: Int
   let displayMonthNumber: Int
   let presetTimeRanges: [TimeRangeCount]
+  let navigationDirection: MonthNavigationDirection? = nil
 
   private let payrollDay: Int = 15
   private var snapshots: [WageSnapshot]

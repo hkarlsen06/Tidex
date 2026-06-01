@@ -200,23 +200,39 @@ enum CalendarGridHelper {
 /// consistent cell sizing for all calendar variants.
 struct CalendarMonthGrid<DayContent: View>: View {
   let days: [CalendarDayInfo]
+  var monthTransitionPhase: MonthTransitionPhase?
+  var monthTransitionConfig: MonthTransitionConfig
   var spacing: CGFloat = CalendarGridHelper.cellSpacing
   var cellAspectRatio: CGFloat = CalendarGridHelper.cellAspectRatio
   let dayContent: (CalendarDayInfo) -> DayContent
 
   init(
     days: [CalendarDayInfo],
+    monthTransitionPhase: MonthTransitionPhase? = nil,
+    monthTransitionConfig: MonthTransitionConfig = .default,
     spacing: CGFloat = CalendarGridHelper.cellSpacing,
     cellAspectRatio: CGFloat = CalendarGridHelper.cellAspectRatio,
     @ViewBuilder dayContent: @escaping (CalendarDayInfo) -> DayContent
   ) {
     self.days = days
+    self.monthTransitionPhase = monthTransitionPhase
+    self.monthTransitionConfig = monthTransitionConfig
     self.spacing = spacing
     self.cellAspectRatio = cellAspectRatio
     self.dayContent = dayContent
   }
 
   var body: some View {
+    if let monthTransitionPhase {
+      StaggeredCardsContainer(phase: monthTransitionPhase, config: monthTransitionConfig) {
+        grid
+      }
+    } else {
+      grid
+    }
+  }
+
+  private var grid: some View {
     LazyVGrid(columns: CalendarGridHelper.columns, spacing: spacing) {
       ForEach(days, id: \.id) { dayInfo in
         dayContent(dayInfo)
