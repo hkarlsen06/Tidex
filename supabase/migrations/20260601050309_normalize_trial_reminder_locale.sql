@@ -1,6 +1,4 @@
--- Function: queue_subscription_trial_reminders
--- Description: Queues one push reminder before an Apple free trial renews.
--- Used by: queue-subscription-trial-reminders cron job
+-- Normalize locale tags before choosing subscription trial reminder copy.
 
 CREATE OR REPLACE FUNCTION internal.queue_subscription_trial_reminders(p_batch_size integer DEFAULT 500)
 RETURNS integer
