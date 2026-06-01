@@ -34,6 +34,7 @@ struct RecurringAnchorCalendar: View {
   let existingShiftDates: Set<String>
   let conflictDates: Set<String>
   let existingShiftHours: [String: HoursData]
+  let monthTransitionPhase: MonthTransitionPhase?
   let showsInstructionsWhenEmpty: Bool
   let anchorEarnings: (String) -> CalendarEarningsData?
   let onToggleAnchorDate: (String) -> Void
@@ -45,6 +46,7 @@ struct RecurringAnchorCalendar: View {
     existingShiftDates: Set<String>,
     conflictDates: Set<String> = [],
     existingShiftHours: [String: HoursData] = [:],
+    monthTransitionPhase: MonthTransitionPhase? = nil,
     showsInstructionsWhenEmpty: Bool = false,
     anchorEarnings: @escaping (String) -> CalendarEarningsData? = { _ in nil },
     onToggleAnchorDate: @escaping (String) -> Void
@@ -55,6 +57,7 @@ struct RecurringAnchorCalendar: View {
     self.existingShiftDates = existingShiftDates
     self.conflictDates = conflictDates
     self.existingShiftHours = existingShiftHours
+    self.monthTransitionPhase = monthTransitionPhase
     self.showsInstructionsWhenEmpty = showsInstructionsWhenEmpty
     self.anchorEarnings = anchorEarnings
     self.onToggleAnchorDate = onToggleAnchorDate
@@ -79,7 +82,7 @@ struct RecurringAnchorCalendar: View {
     let days = CalendarGridHelper.daysInMonth(for: displayMonth)
     let projectedDatesSet = Set(projectedDates)
 
-    CalendarMonthGrid(days: days) { dayInfo in
+    CalendarMonthGrid(days: days, monthTransitionPhase: monthTransitionPhase) { dayInfo in
       let dateISO = dayInfo.dateISO
       let isAnchor = dateISO.map { selectedDays.values.contains($0) } ?? false
       let isProjected = dateISO.map { projectedDatesSet.contains($0) } ?? false

@@ -15,8 +15,17 @@ struct RecurringCalendarView: View {
       existingShiftDates: viewModel.existingShiftDates,
       conflictDates: viewModel.conflictDates,
       existingShiftHours: viewModel.existingShiftHours,
+      monthTransitionPhase: monthTransitionPhase,
       anchorEarnings: { viewModel.earningsForRecurringDate($0) },
       onToggleAnchorDate: viewModel.toggleAnchorDate
+    )
+  }
+
+  private var monthTransitionPhase: MonthTransitionPhase {
+    MonthTransitionPhase(
+      year: viewModel.displayYear,
+      month: viewModel.displayMonthNumber,
+      direction: viewModel.navigationDirection
     )
   }
 }

@@ -355,12 +355,7 @@ struct ShiftsCalendarView: View {
       CalendarWeekdayHeader()
         .padding(.bottom, Spacing.xs)
 
-      if let phase {
-        calendarGrid
-          .cardTransition(phase: phase, config: .default)
-      } else {
-        calendarGrid
-      }
+      calendarGrid
 
       if showsActionBar {
         actionBar
@@ -497,7 +492,7 @@ struct ShiftsCalendarView: View {
     let dayJobTimeColorsByDate = self.dayJobTimeColorsByDate
     let currentTodayISO = todayISO()
 
-    CalendarMonthGrid(days: days) { dayInfo in
+    CalendarMonthGrid(days: days, monthTransitionPhase: phase) { dayInfo in
       let shiftsOnDay = dayInfo.dateISO.flatMap { shiftsByDate[$0] } ?? []
       let eventsOnDay = dayInfo.dateISO.flatMap { eventCoverageByDate[$0] } ?? []
       let isSelected =

@@ -9,6 +9,7 @@ protocol AddShiftCalendarViewModeling: AnyObject {
   var existingShiftHours: [String: HoursData] { get }
   var previewEarnings: [String: CalendarEarningsData] { get }
   var displayMonth: Date { get }
+  var navigationDirection: MonthNavigationDirection? { get }
 
   func toggleDate(_ dateISO: String)
 }
@@ -48,7 +49,7 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
   private var calendarGrid: some View {
     let days = daysInMonth()
 
-    CalendarMonthGrid(days: days) { dayInfo in
+    CalendarMonthGrid(days: days, monthTransitionPhase: monthTransitionPhase) { dayInfo in
       AddShiftCalendarDayCell(
         dayInfo: dayInfo,
         isToday: dayInfo.dateISO == todayISO(),
@@ -77,6 +78,17 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
 
   private var resolvedPreviewEarnings: [String: CalendarEarningsData] {
     previewEarningsOverride ?? viewModel.previewEarnings
+  }
+
+  private var monthTransitionPhase: MonthTransitionPhase? {
+    let components = calendar.dateComponents([.year, .month], from: viewModel.displayMonth)
+    guard let year = components.year, let month = components.month else { return nil }
+
+    return MonthTransitionPhase(
+      year: year,
+      month: month,
+      direction: viewModel.navigationDirection
+    )
   }
 
   // MARK: - Calendar Helpers
