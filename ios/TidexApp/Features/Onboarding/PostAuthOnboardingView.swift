@@ -92,9 +92,6 @@ struct PostAuthOnboardingView: View {
             onContinue: {
               navigateTo(.settingsAccordion)
             },
-            onSkip: {
-              navigateTo(.settingsAccordion)
-            },
             onBack: {
               navigateBack(to: .wage)
             }

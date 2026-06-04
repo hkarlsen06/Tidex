@@ -429,9 +429,6 @@ struct AddJobSheet: View {
         onContinue: {
           proceedFromWageConfiguration()
         },
-        onSkip: {
-          proceedFromWageConfiguration()
-        },
         onBack: {
           step = .wage
         }
