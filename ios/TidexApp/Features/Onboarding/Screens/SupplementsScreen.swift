@@ -6,11 +6,14 @@ import UIKit
 struct SupplementsScreen: View {
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
-  let onSkip: () -> Void
   var onBack: (() -> Void)? = nil
 
   @State private var showingRuleEditor = false
   @State private var editingRule: OnboardingSupplementRule?
+
+  private var primaryButtonTitle: LocalizedStringResource {
+    data.supplementRules.isEmpty ? .onboardingSupplementsSkip : .commonContinue
+  }
 
   var body: some View {
     ZStack {
@@ -136,25 +139,14 @@ struct SupplementsScreen: View {
           }
         }
 
-        // Bottom buttons
-        VStack(spacing: Spacing.sm) {
-          OnboardingButton(
-            title: String(localized: .commonContinue),
-            action: {
-              UINotificationFeedbackGenerator().notificationOccurred(.success)
-              onContinue()
-            }
-          )
-
-          Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            onSkip()
-          }) {
-            Text(.onboardingSupplementsSkip)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextSecondary)
+        // Bottom action
+        OnboardingButton(
+          title: String(localized: primaryButtonTitle),
+          action: {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            onContinue()
           }
-        }
+        )
         .padding(.horizontal, Spacing.lg)
         .padding(.bottom, Spacing.xl)
         .adaptiveContentWidth()
@@ -258,7 +250,6 @@ private struct SupplementRuleCard: View {
 #Preview {
   SupplementsScreen(
     data: OnboardingData(),
-    onContinue: {},
-    onSkip: {}
+    onContinue: {}
   )
 }

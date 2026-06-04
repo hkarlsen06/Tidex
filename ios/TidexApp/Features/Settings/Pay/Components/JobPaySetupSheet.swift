@@ -116,9 +116,6 @@ struct JobPaySetupSheet: View {
         onContinue: {
           Task { await submit() }
         },
-        onSkip: {
-          Task { await submit() }
-        },
         onBack: {
           step = .wage
         }
