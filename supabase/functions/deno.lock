@@ -460,7 +460,8 @@
     "https://deno.land/x/jose@v5.2.2/util/decode_jwt.ts": "a7ea5eaf0a2fb99252eda082e9d25bc47181962fb42806b28a12723197bc7814",
     "https://deno.land/x/jose@v5.2.2/util/decode_protected_header.ts": "546eac15dd97d267373cb3d8d9a94ad03481f1328c4457560ffde9a5a595ebe8",
     "https://deno.land/x/jose@v5.2.2/util/errors.ts": "ca227b0dfbc2464bd0940969d2fbffcb80803d25b1dba6385dfe486e2aa0a089",
-    "https://deno.land/x/jose@v5.2.2/util/runtime.ts": "088cae7df0d285065f141d880c5c21a572234997082337d1125d7f1603059642"
+    "https://deno.land/x/jose@v5.2.2/util/runtime.ts": "088cae7df0d285065f141d880c5c21a572234997082337d1125d7f1603059642",
+    "https://esm.sh/standardwebhooks@1.0.0": "b8cafcb7e9a890c14c0eb74cb093f36333000122e2276cc204818f6a680c8ba9"
   },
   "workspace": {
     "dependencies": [

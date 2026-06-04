@@ -7,20 +7,23 @@ Cleans up old processed notification data to prevent table bloat.
 ## Schedule
 
 ```
-0 4 * * *
+0 4 * * 0
 ```
 
-**Translation:** Every day at 4:00 AM UTC
+**Translation:** Every Sunday at 4:00 AM UTC
 
 ## SQL Command
 
 ```sql
-DELETE FROM internal.notifications_outbox WHERE status = 'sent' AND created_at < NOW() - INTERVAL '3 days';
+DELETE FROM internal.notifications_outbox
+WHERE (status = 'sent' AND created_at < NOW() - INTERVAL '30 days')
+   OR (status <> 'sent' AND due_at < NOW() - INTERVAL '6 weeks');
 ```
 
 ## What It Does
 
-1. **Deletes sent outbox notifications** - Removes entries from `internal.notifications_outbox` that have been sent and are older than 3 days
+1. **Deletes sent outbox notifications** - Removes entries from `internal.notifications_outbox` that have been sent and are older than 30 days
+2. **Deletes stale unsent outbox notifications** - Removes entries with any other status when their `due_at` is older than 6 weeks
 
 ## Tables Affected
 

@@ -424,7 +424,7 @@ curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notificat
 
 | Job | Schedule | Purpose |
 |-----|----------|---------|
-| `cleanup-shift-notification-events` | `0 4 * * *` | Clean sent outbox entries |
+| `cleanup-shift-notification-events` | `0 4 * * 0` | Clean sent entries older than 30 days and stale unsent entries due over 6 weeks ago |
 
 ---
 
