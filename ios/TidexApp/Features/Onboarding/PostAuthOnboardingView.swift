@@ -540,7 +540,20 @@ struct PostAuthOnboardingView: View {
     }
 
     do {
-      if let jobNeedingSetup = onboardingJobNeedingSetup {
+      if let existingJobSetup = input.existingJobSetup {
+        guard
+          let existingJob = jobsRepository.getJob(id: existingJobSetup.id),
+          existingJob.user_id == userId
+        else {
+          throw JobsRepositoryError.jobNotFound
+        }
+
+        try await completeOnboardingSetup(for: existingJob, input: input)
+
+        if existingJob.id == temporaryPlaceholderJobId {
+          temporaryPlaceholderJobId = nil
+        }
+      } else if let jobNeedingSetup = onboardingJobNeedingSetup {
         try await completeOnboardingSetup(for: jobNeedingSetup, input: input)
 
         if jobNeedingSetup.id == temporaryPlaceholderJobId {
