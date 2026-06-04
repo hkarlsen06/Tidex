@@ -197,11 +197,5 @@ When an API route IS needed:
 See `ios/docs/` for more details:
 - `ARCHITECTURE.md` - App architecture overview
 - `DATA_FLOW.md` - Data flow patterns
-- `DESIGN_DECISIONS.md` - Design decisions and rationale
 - `LOCALIZATION.md` - Localization details
-- `NATIVE_MIGRATION.md` - Migration notes
-- `PATTERNS.md` - Code patterns
-- `PAYROLL_SYSTEM.md` - Payroll calculation system
-- `QUICK_REFERENCE.md` - Quick reference guide
-- `APPLE_IAP_SETUP.md` - Apple In-App Purchase setup
-- `APP_STORE_WRAPPER.md` - App Store wrapper
+- `LIQUID_GLASS_FINDINGS.md` - iOS 26 Liquid Glass findings

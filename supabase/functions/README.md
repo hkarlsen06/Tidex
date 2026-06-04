@@ -42,8 +42,11 @@ supabase/functions/
 
 4. **Deploy to production:**
    ```bash
-   npx supabase functions deploy your-function-name
+   supabase functions deploy your-function-name --no-verify-jwt
    ```
+
+   Keep per-function JWT behavior in `supabase/config.toml`. This repository's CLI
+   deploy workflow always includes `--no-verify-jwt`.
 
 ## Calling Functions from Your App
 

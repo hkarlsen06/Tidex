@@ -1,0 +1,50 @@
+name: Smoke
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  checks:
+    name: Checks
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.30.3 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install SwiftLint
+        run: |
+          if ! command -v swiftlint >/dev/null 2>&1; then
+            brew install swiftlint
+          fi
+
+      - name: Check Chat package source
+        run: pnpm ios:chat-package:check
+
+      - name: Type-check web surfaces
+        run: pnpm lint
+
+      - name: Lint Swift
+        run: pnpm swiftlint -- --quiet
+
+      - name: Validate iOS localization
+        run: pnpm ios:l10n:validate
+
+      - name: Audit iOS localization
+        run: pnpm ios:l10n:audit
