@@ -8,6 +8,7 @@ private struct Config {
   let catalogPaths: [String]
   let strict: Bool
   let checkHardcoded: Bool
+  let checkErrorDescriptions: Bool
   let checkOrphaned: Bool
   let jsonOutput: Bool
   let removeOrphaned: Bool
@@ -164,6 +165,11 @@ private let rawLocalizationKeyPatterns: [(regex: NSRegularExpression, name: Stri
     return (regex, name)
   }
 }()
+
+private let rawErrorDescriptionReturnPattern = try? NSRegularExpression(
+  pattern: #"\breturn\s+"[^"]*[A-Za-z][^"]*""#,
+  options: []
+)
 
 // Files/directories to skip
 private let skipPaths = [
@@ -357,6 +363,47 @@ private func scanFileForRawLocalizationKeys(_ path: String) -> [Violation] {
           pattern: patternName
         ))
       break
+    }
+  }
+
+  return violations
+}
+
+private func scanFileForRawErrorDescriptions(_ path: String) -> [Violation] {
+  guard let content = try? String(contentsOfFile: path, encoding: .utf8) else {
+    return []
+  }
+
+  var violations: [Violation] = []
+  let lines = content.components(separatedBy: .newlines)
+  var isInsideErrorDescription = false
+  var braceDepth = 0
+
+  for (index, line) in lines.enumerated() {
+    if !isInsideErrorDescription && line.contains("var errorDescription: String?") {
+      isInsideErrorDescription = true
+      braceDepth = 0
+    }
+
+    guard isInsideErrorDescription else { continue }
+
+    braceDepth += line.filter { $0 == "{" }.count
+    braceDepth -= line.filter { $0 == "}" }.count
+
+    let range = NSRange(line.startIndex..., in: line)
+    if rawErrorDescriptionReturnPattern?.firstMatch(in: line, options: [], range: range) != nil {
+      let relativePath = path.components(separatedBy: "/ios/").last ?? path
+      violations.append(
+        Violation(
+          file: relativePath,
+          line: index + 1,
+          code: line,
+          pattern: "LocalizedError.errorDescription raw string"
+        ))
+    }
+
+    if braceDepth <= 0 && line.contains("}") {
+      isInsideErrorDescription = false
     }
   }
 
@@ -583,6 +630,7 @@ private func parseArgs() -> Config {
   var catalogPaths: [String] = []
   var strict = false
   var checkHardcoded = true
+  var checkErrorDescriptions = false
   var checkOrphaned = true
   var jsonOutput = false
   var removeOrphaned = false
@@ -598,6 +646,10 @@ private func parseArgs() -> Config {
       }
     case "--strict", "-s": strict = true
     case "--hardcoded-only": checkOrphaned = false
+    case "--error-descriptions":
+      checkHardcoded = false
+      checkErrorDescriptions = true
+      checkOrphaned = false
     case "--orphaned-only": checkHardcoded = false
     case "--json": jsonOutput = true
     case "--remove":
@@ -619,6 +671,7 @@ private func parseArgs() -> Config {
     catalogPaths: catalogPaths,
     strict: strict,
     checkHardcoded: checkHardcoded,
+    checkErrorDescriptions: checkErrorDescriptions,
     checkOrphaned: checkOrphaned,
     jsonOutput: jsonOutput,
     removeOrphaned: removeOrphaned
@@ -638,6 +691,7 @@ private func printHelp() {
                               Default: every .xcstrings file under Resources/Localization.
       --strict, -s           Exit with error code if issues found
       --hardcoded-only       Only check for hardcoded strings
+      --error-descriptions   Only check raw LocalizedError.errorDescription strings
       --orphaned-only        Only check for orphaned keys
       --json                 Output orphaned keys as JSON array
       --remove               Remove orphaned keys from the String Catalog
@@ -666,6 +720,29 @@ private func printHelp() {
       audit-strings --remove           # Remove orphaned keys from catalog
       audit-strings --strict           # Exit with code 1 if issues found
     """)
+}
+
+private func checkRawErrorDescriptions(config: Config) -> Bool {
+  print("Scanning for raw LocalizedError.errorDescription strings in: \(config.searchPath)\n")
+
+  let findings = findSwiftFiles(in: config.searchPath)
+    .flatMap { scanFileForRawErrorDescriptions($0) }
+
+  guard !findings.isEmpty else {
+    print("✓ No raw LocalizedError.errorDescription strings found!\n")
+    return false
+  }
+
+  let grouped = Dictionary(grouping: findings) { $0.file }
+  print("Found \(findings.count) raw LocalizedError.errorDescription strings:\n")
+  for (file, violations) in grouped.sorted(by: { $0.key < $1.key }) {
+    print("  \(file):")
+    for violation in violations { print("    L\(violation.line): \(violation.pattern)") }
+    print("")
+  }
+  print("To fix: return localized symbols from user-facing error descriptions.")
+  print("  Example: return String(localized: .commonNetworkError)\n")
+  return true
 }
 
 private func checkHardcodedStrings(config: Config) -> Bool {
@@ -799,6 +876,9 @@ private func run() {
 
   if config.checkHardcoded {
     hasIssues = checkHardcodedStrings(config: config) || hasIssues
+  }
+  if config.checkErrorDescriptions {
+    hasIssues = checkRawErrorDescriptions(config: config) || hasIssues
   }
   if config.checkOrphaned {
     hasIssues = checkOrphanedKeys(config: config) || hasIssues

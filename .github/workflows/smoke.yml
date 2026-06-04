@@ -37,6 +37,9 @@ jobs:
       - name: Check Chat package source
         run: pnpm ios:chat-package:check
 
+      - name: Report size hotspots
+        run: pnpm maint:size-hotspots
+
       - name: Type-check web surfaces
         run: pnpm lint
 
