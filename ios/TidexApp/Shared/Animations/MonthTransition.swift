@@ -33,10 +33,10 @@ enum MonthPickerLayout {
   static let bottomPadding: CGFloat = 8
 
   /// Height of the MonthPicker pill
-  static let height: CGFloat = 56
+  static let height: CGFloat = 50
 
   /// Corner radius for the glass effect
-  static let cornerRadius: CGFloat = 30
+  static let cornerRadius: CGFloat = height / 2
 
   /// Total inset needed to keep content above the floating month picker
   static let totalBottomInset: CGFloat = height + bottomPadding

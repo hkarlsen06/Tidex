@@ -1284,15 +1284,13 @@ struct DashboardView: View {
           ? .tidexTextPrimary
           : .tidexTextMuted
       )
-      .tidexGlass(
-        shape: .rect(cornerRadius: CornerRadius.card),
-        clear: true,
-        interactive: isEnabled,
-        fallbackOpacity: isEnabled ? 0.5 : 0.42
+      .background(
+        RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous)
+          .fill(Color.tidexSurfacePrimary)
       )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
       .contentShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-      .tidexCardShadow(cornerRadius: CornerRadius.card)
+      .tidexCardShadow()
     }
     .buttonStyle(DashboardClockButtonStyle())
     .disabled(!isEnabled)
@@ -1302,27 +1300,15 @@ struct DashboardView: View {
   private func clockButtonsSkeletonSection() -> some View {
     HStack(spacing: Spacing.sm) {
       RoundedRectangle(cornerRadius: CornerRadius.card)
+        .fill(Color.tidexSurfacePrimary)
         .frame(height: 44)
-        .tidexGlass(
-          shape: .rect(cornerRadius: CornerRadius.card),
-          tint: Color.tidexBlue.opacity(0.03),
-          clear: true,
-          fallbackOpacity: 0.5
-        )
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-        .tidexCardShadow(cornerRadius: CornerRadius.card)
+        .tidexCardShadow()
         .shimmer(isActive: true)
 
       RoundedRectangle(cornerRadius: CornerRadius.card)
+        .fill(Color.tidexSurfacePrimary)
         .frame(height: 44)
-        .tidexGlass(
-          shape: .rect(cornerRadius: CornerRadius.card),
-          tint: Color.tidexBlue.opacity(0.03),
-          clear: true,
-          fallbackOpacity: 0.5
-        )
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-        .tidexCardShadow(cornerRadius: CornerRadius.card)
+        .tidexCardShadow()
         .shimmer(isActive: true)
     }
     .padding(.horizontal, Spacing.mlg)

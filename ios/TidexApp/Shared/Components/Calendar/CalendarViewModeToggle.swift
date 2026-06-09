@@ -29,8 +29,7 @@ struct CalendarViewModeToggle: View {
   var body: some View {
     ZStack {
       Capsule()
-        .fill(.clear)
-        .glassEffect(.clear, in: .capsule)
+        .fill(Color.tidexSurfaceSecondary.opacity(0.55))
 
       GeometryReader { geometry in
         let innerWidth = max(0, geometry.size.width - (controlInset * 2))
@@ -39,7 +38,6 @@ struct CalendarViewModeToggle: View {
         let selectedIndex: CGFloat = viewMode == .money && showMoneyOption ? 1 : 0
 
         Capsule()
-          .fill(.clear)
           .glassEffect(
             .regular.interactive(),
             in: .capsule
