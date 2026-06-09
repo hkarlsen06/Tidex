@@ -1731,8 +1731,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/TidexHQ/Chat.git";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.3;
+				kind = revision;
+				revision = ebd451b27813fb2a714bb36c61ccc99e4bbc1dc3;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */

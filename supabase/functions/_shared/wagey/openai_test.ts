@@ -3,6 +3,7 @@ import { assertEquals } from "jsr:@std/assert";
 import type { StreamChunk } from "./ai-types.ts";
 import {
   DEFAULT_OPENAI_MODEL,
+  DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS,
   resolveOpenAIModel,
   streamOpenAIChat,
 } from "./openai.ts";
@@ -414,6 +415,59 @@ Deno.test("resolveOpenAIModel defaults to GPT-5.5", () => {
   assertEquals(resolveOpenAIModel("gpt-5.5"), "gpt-5.5");
   assertEquals(resolveOpenAIModel("gpt-5.5-2026-05-01"), "gpt-5.5-2026-05-01");
   assertEquals(resolveOpenAIModel(""), DEFAULT_OPENAI_MODEL);
+});
+
+Deno.test("streamOpenAIChat allows long reasoning pauses", () => {
+  assertEquals(DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS, 120_000);
+});
+
+Deno.test("streamOpenAIChat sanitizes idle timeout errors", async () => {
+  const originalFetch = globalThis.fetch;
+
+  globalThis.fetch = async () =>
+    new Response(
+      new ReadableStream<Uint8Array>({
+        start() {
+          // Keep the upstream response open without emitting SSE events.
+        },
+      }),
+      { status: 200 },
+    );
+
+  try {
+    let caught: Error | null = null;
+
+    try {
+      for await (
+        const _chunk of streamOpenAIChat({
+          apiKey: "test-key",
+          model: DEFAULT_OPENAI_MODEL,
+          messages: [{ role: "user", content: "Hei" }],
+          idleTimeoutMs: 5,
+        })
+      ) {
+        // No chunks expected.
+      }
+    } catch (error) {
+      caught = error as Error;
+    }
+
+    if (!caught) {
+      throw new Error("Expected idle timeout error");
+    }
+
+    assertEquals(caught.name, "OpenAIProviderError");
+    assertEquals(
+      (caught as Error & { providerType?: string }).providerType,
+      "stream_idle_timeout",
+    );
+    assertEquals(
+      (caught as Error & { publicMessage?: string }).publicMessage,
+      "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 Deno.test("streamOpenAIChat sanitizes provider errors", async () => {

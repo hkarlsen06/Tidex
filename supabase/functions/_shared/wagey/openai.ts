@@ -12,7 +12,7 @@ import type {
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
 export const DEFAULT_OPENAI_MODEL = "gpt-5.5";
 const DEFAULT_REASONING_EFFORT = "medium";
-const OPENAI_STREAM_IDLE_TIMEOUT_MS = 30_000;
+export const DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS = 120_000;
 const GENERIC_PROVIDER_ERROR_MESSAGE =
   "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.";
 
@@ -363,7 +363,12 @@ async function readWithIdleTimeout(
       new Promise<ReadableStreamReadResult<Uint8Array>>((_, reject) => {
         timeoutId = setTimeout(() => {
           reject(
-            new Error(`OpenAI stream was idle for more than ${timeoutMs}ms`),
+            new OpenAIProviderError({
+              status: 504,
+              providerType: "stream_idle_timeout",
+              providerMessage:
+                `OpenAI stream was idle for more than ${timeoutMs}ms`,
+            }),
           );
         }, timeoutMs);
       }),
@@ -431,7 +436,7 @@ export async function* streamOpenAIChat(options: {
     tools,
     maxTokens = 4096,
     signal,
-    idleTimeoutMs = OPENAI_STREAM_IDLE_TIMEOUT_MS,
+    idleTimeoutMs = DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS,
   } = options;
 
   if (!apiKey.trim()) {
@@ -712,6 +717,7 @@ export async function* streamOpenAIChat(options: {
       }
     }
   } finally {
+    await reader.cancel().catch(() => undefined);
     reader.releaseLock();
   }
 }
