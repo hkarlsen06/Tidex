@@ -42,8 +42,8 @@ private struct TidexGlassModifier: ViewModifier {
 
   private var glassEffect: Glass {
     var effect: Glass = clear ? .clear : .regular
-    if let resolvedTint {
-      effect = effect.tint(resolvedTint)
+    if let tint {
+      effect = effect.tint(tint)
     }
     if interactive {
       effect = effect.interactive()
@@ -53,7 +53,7 @@ private struct TidexGlassModifier: ViewModifier {
 
   func body(content: Content) -> some View {
     let fallbackBase = Color.tidexGlassSurface.opacity(fallbackOpacity)
-    let fallbackTint = resolvedTint?.opacity(colorScheme == .dark ? 0.24 : 0.16) ?? .clear
+    let fallbackTint = tint?.opacity(colorScheme == .dark ? 0.24 : 0.16) ?? .clear
 
     if reduceTransparency || disabled {
       switch shape {
@@ -104,28 +104,14 @@ private struct TidexGlassModifier: ViewModifier {
       switch shape {
       case .rect(let cornerRadius):
         content
-          .background(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-              .fill(glassBaseFill)
-          )
           .glassEffect(glassEffect, in: .rect(cornerRadius: cornerRadius))
       case .capsule:
         content
-          .background(Capsule().fill(glassBaseFill))
           .glassEffect(glassEffect, in: .capsule)
       case .circle:
         content
-          .background(Circle().fill(glassBaseFill))
           .glassEffect(glassEffect, in: .circle)
       }
     }
-  }
-
-  private var resolvedTint: Color? {
-    tint ?? Color.tidexGlassSurface.opacity(colorScheme == .dark ? 0.86 : 0.42)
-  }
-
-  private var glassBaseFill: Color {
-    Color.tidexGlassSurface.opacity(colorScheme == .dark ? (clear ? 0.34 : 0.26) : 0.10)
   }
 }
