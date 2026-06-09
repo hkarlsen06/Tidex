@@ -120,24 +120,14 @@ struct MainTabView: View {
     }
 
     static let orderedTabs: [Tab] = [.home, .shifts, .add, .wagey, .sharing]
-    static let splitTabBarOrderedTabs: [Tab] = [.home, .shifts, .wagey, .sharing, .add]
 
     var index: Int {
       Self.orderedTabs.firstIndex(of: self) ?? 0
     }
 
-    var splitTabBarIndex: Int {
-      Self.splitTabBarOrderedTabs.firstIndex(of: self) ?? 0
-    }
-
     init?(index: Int) {
       guard Self.orderedTabs.indices.contains(index) else { return nil }
       self = Self.orderedTabs[index]
-    }
-
-    init?(splitTabBarIndex: Int) {
-      guard Self.splitTabBarOrderedTabs.indices.contains(splitTabBarIndex) else { return nil }
-      self = Self.splitTabBarOrderedTabs[splitTabBarIndex]
     }
   }
 
@@ -212,8 +202,7 @@ struct MainTabView: View {
             SwiftUI.Tab(
               String(localized: Tab.add.localizationKey),
               systemImage: Tab.add.icon,
-              value: Tab.add,
-              role: .search
+              value: Tab.add
             ) {
               tabHost(for: .add) {
                 AddShiftView(
@@ -248,9 +237,8 @@ struct MainTabView: View {
             }
           }
           .background(
-            TabBarTapObserver(selectedIndex: selectedTab.splitTabBarIndex) { tappedIndex in
-              guard let tappedTab = Tab(splitTabBarIndex: tappedIndex), tappedTab == selectedTab
-              else {
+            TabBarTapObserver(selectedIndex: selectedTab.index) { tappedIndex in
+              guard let tappedTab = Tab(index: tappedIndex), tappedTab == selectedTab else {
                 return
               }
               selectionHaptic.selectionChanged()

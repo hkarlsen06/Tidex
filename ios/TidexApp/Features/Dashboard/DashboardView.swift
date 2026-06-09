@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 private struct EventSheetSelection: Identifiable {
@@ -1285,9 +1286,6 @@ struct DashboardView: View {
       )
       .tidexGlass(
         shape: .rect(cornerRadius: CornerRadius.card),
-        tint: isEnabled
-          ? Color.tidexBlue.opacity(0.04)
-          : Color.tidexSurfaceSecondary.opacity(0.04),
         clear: true,
         interactive: isEnabled,
         fallbackOpacity: isEnabled ? 0.5 : 0.42

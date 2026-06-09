@@ -1694,7 +1694,7 @@ final class AdminSettingsViewModel: ObservableObject {
     }
   }
 
-  private func rpcRequest<T: Decodable>(
+  private func rpcRequest<T: Decodable & Sendable>(
     _ functionName: String,
     params: [String: AnyJSON] = [:]
   ) async throws -> T {
@@ -1710,7 +1710,7 @@ final class AdminSettingsViewModel: ObservableObject {
     }
   }
 
-  private func edgeRequest<T: Decodable>(
+  private func edgeRequest<T: Decodable & Sendable>(
     _ functionName: String,
     body: [String: Any]? = nil
   ) async throws -> T {

@@ -33,9 +33,9 @@ final class GoogleAuthProvider {
     }
 
     guard
-      let idToken = try await performRequest(start: { requestID in
+      let idToken = try await performRequest(start: { [weak self] requestID in
         GIDSignIn.sharedInstance.signIn(withPresenting: viewController) { result, error in
-          Task { @MainActor [weak self] in
+          Task { @MainActor in
             self?.completeRequest(
               id: requestID,
               result: Self.signInResult(result: result, error: error)
@@ -128,9 +128,9 @@ final class GoogleAuthProvider {
   func restorePreviousSignIn() async throws -> String? {
     guard hasPreviousSignIn() else { return nil }
 
-    return try await performRequest(start: { requestID in
+    return try await performRequest(start: { [weak self] requestID in
       GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
-        Task { @MainActor [weak self] in
+        Task { @MainActor in
           if let error = error {
             self?.completeRequest(
               id: requestID,
