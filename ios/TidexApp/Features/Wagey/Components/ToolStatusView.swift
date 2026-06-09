@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 
 /// Displays the status of a tool call execution

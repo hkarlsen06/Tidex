@@ -153,8 +153,8 @@ final class OAuthWebAuthSession: NSObject {
     let session = ASWebAuthenticationSession(
       url: url,
       callbackURLScheme: "tidex"
-    ) { callbackURL, error in
-      Task { @MainActor [weak self] in
+    ) { [weak self] callbackURL, error in
+      Task { @MainActor in
         self?.completeWebAuthSession(
           id: sessionID,
           result: Self.webAuthResult(callbackURL: callbackURL, error: error)
