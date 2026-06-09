@@ -101,11 +101,20 @@ struct MainTabView: View {
 
     var icon: String {
       switch self {
-      case .home: return "speedometer"
-      case .shifts: return "calendar"
-      case .add: return "calendar.badge.plus"
-      case .wagey: return "sparkles"
-      case .sharing: return "person.2.fill"
+      case .home:
+        return "speedometer"
+
+      case .shifts:
+        return "calendar"
+
+      case .add:
+        return "plus"
+
+      case .wagey:
+        return "sparkles"
+
+      case .sharing:
+        return "person.2.fill"
       }
     }
 
@@ -441,11 +450,10 @@ struct MainTabView: View {
         }
         .buttonStyle(.plain)
         .contentTransition(.symbolEffect(.replace))
-        .background(
-          RoundedRectangle(cornerRadius: MonthPickerLayout.cornerRadius, style: .continuous)
-            .fill(Color.tidexSurfacePrimary)
+        .tidexGlass(
+          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+          interactive: true
         )
-        .tidexCardShadow()
         .transition(.opacity)
         .accessibilityLabel(Text(showHomeStats ? .commonBack : .tabsStats))
       }
@@ -461,17 +469,21 @@ struct MainTabView: View {
             .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexBlue)
             .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
             .contentShape(Rectangle())
+            .accessibilityHidden(true)
         }
         .buttonStyle(.plain)
         .contentTransition(.symbolEffect(.replace))
-        .background(
-          RoundedRectangle(cornerRadius: MonthPickerLayout.cornerRadius, style: .continuous)
-            .fill(Color.tidexSurfacePrimary)
+        .tidexGlass(
+          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+          interactive: true
         )
-        .tidexCardShadow()
         .transition(.opacity)
         .motionAnimation(
-          .feedback, value: monthContext.hasConflictsInMonth, reduceMotion: shouldReduceEffects)
+          .feedback,
+          value: monthContext.hasConflictsInMonth,
+          reduceMotion: shouldReduceEffects
+        )
+        .accessibilityLabel(Text(.tabsShifts))
       }
 
       // Month picker
@@ -496,11 +508,10 @@ struct MainTabView: View {
       )
       .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
       .frame(height: MonthPickerLayout.height)
-      .background(
-        RoundedRectangle(cornerRadius: MonthPickerLayout.cornerRadius, style: .continuous)
-          .fill(Color.tidexSurfacePrimary)
+      .tidexGlass(
+        shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+        interactive: true
       )
-      .tidexCardShadow()
 
       // Submit button - only on Add tab
       if selectedTab == .add {
@@ -511,11 +522,12 @@ struct MainTabView: View {
             if addShiftCoordinator.isLoading {
               ProgressView()
                 .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                .scaleEffect(0.9)
+                .scaleEffect(MonthPickerLayout.progressIndicatorScale)
             } else {
               Image(systemName: "checkmark.circle.badge.plus.fill")
                 .font(.tidexHeadline)
                 .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
+                .accessibilityHidden(true)
             }
           }
           .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
@@ -523,23 +535,35 @@ struct MainTabView: View {
         }
         .buttonStyle(.plain)
         .disabled(addShiftCoordinator.isLoading)
-        .background(
-          RoundedRectangle(cornerRadius: MonthPickerLayout.cornerRadius, style: .continuous)
-            .fill(Color.tidexSurfacePrimary)
+        .tidexGlass(
+          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+          interactive: true
         )
-        .tidexCardShadow()
-        .opacity(addShiftCoordinator.canSubmit ? 1.0 : 0.6)
+        .opacity(
+          addShiftCoordinator.canSubmit
+            ? MonthPickerLayout.enabledOpacity
+            : MonthPickerLayout.disabledOpacity
+        )
         .transition(.opacity)
         .accessibilityLabel(Text(.commonSave))
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
     .frame(maxWidth: .infinity)  // Fill screen width, then constrain to tabContent max
-    .padding(.horizontal, MonthPickerLayout.horizontalPadding)
+    .padding(
+      .horizontal,
+      isIPad
+        ? MonthPickerLayout.horizontalPadding
+        : MonthPickerLayout.tabBarAlignedHorizontalPadding
+    )
     // Position above tab bar (49pt on iPhone) + original bottom padding (8pt)
     // On iPad, tab bar is at top so no extra padding needed
     .padding(
-      .bottom, isIPad ? MonthPickerLayout.bottomPadding : 49 + MonthPickerLayout.bottomPadding)
+      .bottom,
+      isIPad
+        ? MonthPickerLayout.bottomPadding
+        : MonthPickerLayout.iPhoneTabBarHeight + MonthPickerLayout.bottomPadding
+    )
   }
 
   private var monthPickerTransition: AnyTransition {

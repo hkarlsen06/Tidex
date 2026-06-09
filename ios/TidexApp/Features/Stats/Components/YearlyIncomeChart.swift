@@ -120,7 +120,7 @@ struct YearlyIncomeChart: View {
         AxisMarks(position: .leading, values: yAxisScale.ticks) { value in
           AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
             .foregroundStyle(Color.tidexBorderSubtle)
-          AxisValueLabel(anchor: .trailing) {
+          AxisValueLabel {
             if let amount = value.as(Double.self) {
               Text(formatAxisValue(amount))
                 .font(.tidexSubheadline)
