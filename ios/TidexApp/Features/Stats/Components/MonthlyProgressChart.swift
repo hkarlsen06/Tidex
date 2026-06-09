@@ -131,7 +131,7 @@ struct MonthlyProgressChart: View {
         AxisMarks(position: .leading, values: yAxisTicks) { value in
           AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))
             .foregroundStyle(Color.tidexBorderSubtle)
-          AxisValueLabel(anchor: .trailing) {
+          AxisValueLabel {
             if let amount = value.as(Double.self) {
               Text(formatAxisValue(amount))
                 .font(.tidexSubheadline)

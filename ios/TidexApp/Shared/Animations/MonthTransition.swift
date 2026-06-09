@@ -24,22 +24,34 @@ extension EnvironmentValues {
 
 /// Layout constants for the floating MonthPicker above the tab bar
 enum MonthPickerLayout {
+  private static let cornerRadiusDivisor: CGFloat = 2
+
+  internal static let enabledOpacity: Double = 1
+  internal static let disabledOpacity: Double = 0.6
+  internal static let progressIndicatorScale: CGFloat = 0.9
+
   /// Horizontal padding for the MonthPicker pill
   /// This value is calculated so the edges of the MonthPicker align with
   /// where a 30pt corner radius "flattens out" on a full-width element
-  static let horizontalPadding: CGFloat = 40
+  internal static let horizontalPadding: CGFloat = 40
+
+  /// Aligns the floating month controls with the native iPhone tab bar capsule.
+  internal static let tabBarAlignedHorizontalPadding: CGFloat = 24
 
   /// Bottom padding between MonthPicker and tab bar
-  static let bottomPadding: CGFloat = 8
+  internal static let bottomPadding: CGFloat = 8
+
+  /// Height of the native iPhone tab bar.
+  internal static let iPhoneTabBarHeight: CGFloat = 49
 
   /// Height of the MonthPicker pill
-  static let height: CGFloat = 50
+  internal static let height: CGFloat = 50
 
   /// Corner radius for the glass effect
-  static let cornerRadius: CGFloat = height / 2
+  internal static let cornerRadius: CGFloat = height / cornerRadiusDivisor
 
   /// Total inset needed to keep content above the floating month picker
-  static let totalBottomInset: CGFloat = height + bottomPadding
+  internal static let totalBottomInset: CGFloat = height + bottomPadding
 }
 
 // MARK: - Month Transition Configuration
