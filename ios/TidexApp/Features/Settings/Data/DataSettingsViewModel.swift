@@ -5,24 +5,27 @@ import PDFKit
 import Supabase
 import UIKit
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "DataSettingsViewModel")
+private let kLogger: Logger = Logger(
+  subsystem: "com.tidex.app",
+  category: "DataSettingsViewModel"
+)
 
 // MARK: - Period Preset
 
 /// Period preset options for export
-enum ExportPeriodPreset: String, CaseIterable, Identifiable {
-  case lastMonth = "last_month"
+internal enum ExportPeriodPreset: String, CaseIterable, Identifiable {
   case currentMonth = "current_month"
-  case lastYear = "last_year"
   case currentYear = "current_year"
   case custom = "custom"
+  case lastMonth = "last_month"
+  case lastYear = "last_year"
 
-  var id: String { rawValue }
+  internal var id: String { rawValue }
 
   /// Resolve the date range for this preset
-  func resolveDateRange() -> (from: String, to: String)? {
-    let now = Date()
-    let calendar = Calendar.current
+  internal func resolveDateRange() -> (from: String, to: String)? {
+    let now: Date = Date()
+    let calendar: Calendar = Calendar.current
 
     switch self {
     case .currentMonth:
@@ -44,7 +47,7 @@ enum ExportPeriodPreset: String, CaseIterable, Identifiable {
       return (toISODate(start), toISODate(end))
 
     case .currentYear:
-      let year = calendar.component(.year, from: now)
+      let year: Int = calendar.component(.year, from: now)
       guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
         let end = calendar.date(from: DateComponents(year: year, month: 12, day: 31))
       else {
@@ -53,7 +56,7 @@ enum ExportPeriodPreset: String, CaseIterable, Identifiable {
       return (toISODate(start), toISODate(end))
 
     case .lastYear:
-      let year = calendar.component(.year, from: now) - 1
+      let year: Int = calendar.component(.year, from: now) - 1
       guard let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
         let end = calendar.date(from: DateComponents(year: year, month: 12, day: 31))
       else {
@@ -70,33 +73,33 @@ enum ExportPeriodPreset: String, CaseIterable, Identifiable {
 // MARK: - Export Types
 
 /// Export format options
-enum ExportFormat {
-  case pdf
+internal enum ExportFormat {
   case csv
+  case pdf
 }
 
 /// Response from the export API
-struct ExportResponse: Codable, Sendable {
-  let generatedAt: String
-  let shifts: [ExportedShift]
+internal struct ExportResponse: Codable, Sendable {
+  internal let generatedAt: String
+  internal let shifts: [ExportedShift]
 }
 
 /// A shift in the export response
-struct ExportedShift: Codable, Sendable {
-  let id: String
-  let date: String
-  let startTime: String
-  let endTime: String
-  let type: Int  // 0 = weekday, 1 = saturday, 2 = sunday
-  let recurringId: String?
-  let calc: ShiftCalculation
-
-  struct ShiftCalculation: Codable, Sendable {
-    let hours: Double
-    let baseWage: Double
-    let supplement: Double
-    let total: Double
+internal struct ExportedShift: Codable, Sendable {
+  internal struct ShiftCalculation: Codable, Sendable {
+    internal let hours: Double
+    internal let baseWage: Double
+    internal let supplement: Double
+    internal let total: Double
   }
+
+  internal let id: String
+  internal let date: String
+  internal let startTime: String
+  internal let endTime: String
+  internal let type: Int  // 0 = weekday, 1 = saturday, 2 = sunday
+  internal let recurringId: String?
+  internal let calc: ShiftCalculation
 }
 
 // MARK: - View Model
@@ -110,8 +113,8 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
   @Published var selectedPreset: ExportPeriodPreset?  // swiftlint:disable:this explicit_acl
 
   /// Custom date range (when preset is .custom)
-  @Published var customFromDate = Date()  // swiftlint:disable:this explicit_acl explicit_type_interface
-  @Published var customToDate = Date()  // swiftlint:disable:this explicit_acl explicit_type_interface
+  @Published var customFromDate: Date = Date()  // swiftlint:disable:this explicit_acl
+  @Published var customToDate: Date = Date()  // swiftlint:disable:this explicit_acl
 
   /// Loading state for PDF export
   @Published var isExportingPdf = false
@@ -155,7 +158,9 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
 
   /// The resolved date range based on preset or custom dates
   var resolvedDateRange: (from: String, to: String)? {
-    guard let preset = selectedPreset else { return nil }
+    guard let preset = selectedPreset else {
+      return nil
+    }
 
     if preset == .custom {
       // Validate custom range
@@ -189,7 +194,9 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
 
   /// Export shifts in the specified format
   func exportShifts(format: ExportFormat, locale: Locale) async {
-    guard let range = resolvedDateRange, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    guard let range = resolvedDateRange, let userId else {
+      return
+    }
 
     // Set loading state
     switch format {
@@ -215,12 +222,12 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       // PDF/CSV export is generated from local synced data.
       // Sync first to ensure local changes are pushed to the server
       isSyncing = true
-      logger.info("Syncing before export...")
+      kLogger.info("Syncing before export...")
       let syncResult = await SyncCoordinator.shared.sync(reason: .localChange, userId: userId)
       isSyncing = false
 
       if !syncResult.success, let error = syncResult.error {
-        logger.warning("Sync had issues before export: \(error)")
+        kLogger.warning("Sync had issues before export: \(error)")
         // Continue with export anyway - user might want old data
       }
 
@@ -256,7 +263,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       }
 
     } catch {
-      logger.error("Export failed: \(error.localizedDescription)")
+      kLogger.error("Export failed: \(error.localizedDescription)")
       errorMessage = error.localizedDescription
     }
   }
@@ -316,7 +323,8 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
 
     do {
       _ = try await calendarSubscriptionStore.rotate(
-        mode: calendarSubscriptionState.metadata?.contentMode)
+        mode: calendarSubscriptionState.metadata?.contentMode
+      )
       await calendarSubscriptionStore.openCalendarApp()
       calendarSubscriptionFallbackURL = calendarSubscriptionStore.fallbackHTTPSURL
       errorMessage = calendarSubscriptionStore.errorMessage
@@ -360,11 +368,11 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       if AuthSessionManager.shared.isTransientSessionResolutionError(error),
         let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
       {
-        logger.info("Using offline user id fallback for data exports")
+        kLogger.info("Using offline user id fallback for data exports")
         return offlineUserId
       }
 
-      logger.error("Failed to get user session: \(error.localizedDescription)")
+      kLogger.error("Failed to get user session: \(error.localizedDescription)")
       return nil
     }
   }
@@ -393,12 +401,16 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
   }
 
   private func handleCalendarSetupIntentIfNeeded() async {
-    guard !didHandleCalendarSetupIntent, let calendarSetupIntent else { return }
+    guard !didHandleCalendarSetupIntent, let calendarSetupIntent else {
+      return
+    }
     didHandleCalendarSetupIntent = true
 
     switch calendarSetupIntent {
-    case .setup(let mode, let autoOpen):
-      guard autoOpen else { return }
+    case let .setup(mode, autoOpen):
+      guard autoOpen else {
+        return
+      }
       await setupCalendarSubscription(mode: mode)
     }
   }
@@ -412,7 +424,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       throw ExportError.invalidDateRange
     }
 
-    logger.info("Building export data locally for \(from) to \(to)")
+    kLogger.info("Building export data locally for \(from) to \(to)")
 
     let regularShifts = await ShiftsRepository.shared.getShiftsOffMain(
       for: userId,
@@ -486,11 +498,11 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       }
     }
 
-    exportedShifts.sort {
-      if $0.date == $1.date {
-        return $0.startTime < $1.startTime
+    exportedShifts.sort { firstShift, secondShift in
+      if firstShift.date == secondShift.date {
+        return firstShift.startTime < secondShift.startTime
       }
-      return $0.date < $1.date
+      return firstShift.date < secondShift.date
     }
 
     return ExportResponse(
@@ -519,14 +531,21 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
   }
 
   private func getShiftType(dateISO: String) -> Int {
-    guard let date = parseISODate(dateISO) else { return 0 }
-    let calendar = Calendar.current
-    let weekday = calendar.component(.weekday, from: date)
+    guard let date = parseISODate(dateISO) else {
+      return 0
+    }
+    let calendar: Calendar = Calendar.current
+    let weekday: Int = calendar.component(.weekday, from: date)
 
     switch weekday {
-    case 1: return 2
-    case 7: return 1
-    default: return 0
+    case 1:
+      return 2
+
+    case 7:
+      return 1
+
+    default:
+      return 0
     }
   }
 
@@ -1334,37 +1353,37 @@ private struct PDFLabelValueRowStyle {
 
 // MARK: - Export Errors
 
-enum ExportError: LocalizedError {
-  case invalidURL
-  case invalidDateRange
-  case networkError
-  case unauthorized
-  case serverError(code: Int, message: String)
-  case pdfGenerationFailed
+internal enum ExportError: LocalizedError {
   case csvGenerationFailed
+  case invalidDateRange
+  case invalidURL
+  case networkError
+  case pdfGenerationFailed
+  case serverError(code: Int, message: String)
+  case unauthorized
 
-  var errorDescription: String? {
+  internal var errorDescription: String? {
     switch self {
-    case .invalidURL:
-      return "Invalid URL"
+    case .csvGenerationFailed:
+      return "Failed to generate CSV"
 
     case .invalidDateRange:
       return "Invalid date range"
 
+    case .invalidURL:
+      return "Invalid URL"
+
     case .networkError:
       return "Network error"
-
-    case .unauthorized:
-      return "Not authenticated"
-
-    case .serverError(let code, let message):
-      return "Server error (\(code)): \(message)"
 
     case .pdfGenerationFailed:
       return "Failed to generate PDF"
 
-    case .csvGenerationFailed:
-      return "Failed to generate CSV"
+    case let .serverError(code, message):
+      return "Server error (\(code)): \(message)"
+
+    case .unauthorized:
+      return "Not authenticated"
     }
   }
 }
