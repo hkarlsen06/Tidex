@@ -69,8 +69,8 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
 
   // MARK: - Private Properties
 
-  private let settingsRepository = SettingsRepository.shared
-  private let appearanceManager = AppearanceManager.shared
+  private let settingsRepository: SettingsRepository = SettingsRepository.shared
+  private let appearanceManager: AppearanceManager = AppearanceManager.shared
   private var userId: String?
   private var isInitialLoad: Bool = true
 
@@ -183,7 +183,8 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
         AppearanceSettingsConstants.logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
       } catch {
         AppearanceSettingsConstants.logger.error(
-          "Failed to save theme: \(error.localizedDescription)")
+          "Failed to save theme: \(error.localizedDescription)"
+        )
         errorMessage = "Failed to save theme preference"
       }
     }
