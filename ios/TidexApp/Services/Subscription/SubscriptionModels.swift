@@ -136,7 +136,10 @@ internal struct PaywallConfig: Codable, Equatable {
 
   internal var normalized: Self {
     let durationDays: Int = max(freeTrialDurationDays, Self.minimumTrialDays)
-    let reminderDays: Int = min(max(freeTrialReminderDaysBeforeEnd, Self.minimumTrialDays), durationDays)
+    let reminderDays: Int = min(
+      max(freeTrialReminderDaysBeforeEnd, Self.minimumTrialDays),
+      durationDays
+    )
 
     return Self(
       freeTrialEnabled: freeTrialEnabled,

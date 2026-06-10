@@ -2,11 +2,11 @@ import XCTest
 
 @testable import Tidex
 
-final class PauseWindowSupportTests: XCTestCase {
-  func testIsWithinShiftRejectsPauseOutsideSameDayShift() {
-    let pauseWindow = PauseWindow(start: "12:00", end: "12:30")
+internal final class PauseWindowSupportTests: XCTestCase {
+  internal func testIsWithinShiftRejectsPauseOutsideSameDayShift() {
+    let pauseWindow: PauseWindow = PauseWindow(start: "12:00", end: "12:30")
 
-    let isWithinShift = PauseWindowSupport.isWithinShift(
+    let isWithinShift: Bool = PauseWindowSupport.isWithinShift(
       pauseWindow,
       shiftStartTime: "16:00",
       shiftEndTime: "23:15"
@@ -15,15 +15,19 @@ final class PauseWindowSupportTests: XCTestCase {
     XCTAssertFalse(isWithinShift)
   }
 
-  func testIsWithinShiftAllowsPauseInsideOvernightShift() {
-    let pauseWindow = PauseWindow(start: "01:00", end: "01:30")
+  internal func testIsWithinShiftAllowsPauseInsideOvernightShift() {
+    let pauseWindow: PauseWindow = PauseWindow(start: "01:00", end: "01:30")
 
-    let isWithinShift = PauseWindowSupport.isWithinShift(
+    let isWithinShift: Bool = PauseWindowSupport.isWithinShift(
       pauseWindow,
       shiftStartTime: "22:00",
       shiftEndTime: "06:00"
     )
 
     XCTAssertTrue(isWithinShift)
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

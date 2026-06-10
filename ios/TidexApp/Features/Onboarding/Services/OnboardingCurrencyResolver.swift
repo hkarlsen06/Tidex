@@ -1,7 +1,7 @@
 import Foundation
 
 /// Resolves onboarding currency defaults and wage presets from locale.
-enum OnboardingCurrencyResolver {
+internal enum OnboardingCurrencyResolver {
   /// ISO 4217 currency codes mapped to supported Tidex display symbols.
   private static let currencyCodeToSymbol: [String: String] = [
     "NOK": "kr",
@@ -72,7 +72,7 @@ enum OnboardingCurrencyResolver {
     "TH": "฿",
   ]
 
-  static func detectDefaultCurrency(locale: Locale = .current) -> String {
+  internal static func detectDefaultCurrency(locale: Locale = .current) -> String {
     if let currencyCode = locale.currency?.identifier.uppercased(),
       let currencySymbol = currencyCodeToSymbol[currencyCode],
       isSupportedCurrency(currencySymbol)
@@ -87,7 +87,7 @@ enum OnboardingCurrencyResolver {
       return regionCurrency
     }
 
-    let languageCode = locale.language.languageCode?.identifier ?? ""
+    let languageCode: String = locale.language.languageCode?.identifier ?? ""
 
     if ["nb", "nn", "no"].contains(languageCode) {
       return "kr"
@@ -96,11 +96,11 @@ enum OnboardingCurrencyResolver {
     return "$"
   }
 
-  static func defaultHourlyWage(for currency: String) -> Double {
+  internal static func defaultHourlyWage(for currency: String) -> Double {
     CurrencyConfig.get(currency).wageRangeTier.defaultValue
   }
 
-  static func isSupportedCurrency(_ symbol: String) -> Bool {
+  internal static func isSupportedCurrency(_ symbol: String) -> Bool {
     CurrencyConfig.all.contains(where: { $0.value == symbol })
   }
 }

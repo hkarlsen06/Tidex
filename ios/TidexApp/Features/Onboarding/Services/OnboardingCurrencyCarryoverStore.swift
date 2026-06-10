@@ -1,10 +1,10 @@
 import Foundation
 
 /// Stores the preferred pre-auth onboarding currency for post-auth bootstrap.
-enum OnboardingCurrencyCarryoverStore {
-  private static let key = "preAuthPreferredCurrency"
+internal enum OnboardingCurrencyCarryoverStore {
+  private static let key: String = "preAuthPreferredCurrency"
 
-  static func readValidPreferredCurrency() -> String? {
+  internal static func readValidPreferredCurrency() -> String? {
     guard let symbol = UserDefaults.standard.string(forKey: key) else {
       return nil
     }
@@ -17,12 +17,14 @@ enum OnboardingCurrencyCarryoverStore {
     return symbol
   }
 
-  static func writePreferredCurrency(_ symbol: String) {
-    guard OnboardingCurrencyResolver.isSupportedCurrency(symbol) else { return }
+  internal static func writePreferredCurrency(_ symbol: String) {
+    guard OnboardingCurrencyResolver.isSupportedCurrency(symbol) else {
+      return
+    }
     UserDefaults.standard.set(symbol, forKey: key)
   }
 
-  static func clearPreferredCurrency() {
+  internal static func clearPreferredCurrency() {
     UserDefaults.standard.removeObject(forKey: key)
   }
 }

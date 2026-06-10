@@ -479,7 +479,9 @@ private struct SubscriptionSafariView: UIViewControllerRepresentable {
     SFSafariViewController(url: url)
   }
 
-  func updateUIViewController(_: SFSafariViewController, context _: Context) {}  // swiftlint:disable:this no_empty_block
+  func updateUIViewController(_: SFSafariViewController, context _: Context) {
+    // Required UIViewControllerRepresentable hook.
+  }
 }
 
 // MARK: - Preview

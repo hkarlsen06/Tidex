@@ -62,7 +62,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
     let upperBound = max(ceil(maxPercentage / 10) * 10, 20)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
 
     // Create ticks at 20% intervals, or 10% if upper bound is small
-    let tickInterval = upperBound <= 40 ? 10.0 : 20.0  // swiftlint:disable:this explicit_type_interface no_magic_numbers
+    let tickInterval: Double = upperBound <= 40 ? 10.0 : 20.0  // swiftlint:disable:this no_magic_numbers
     var ticks: [Double] = []
     var tick = 0.0  // swiftlint:disable:this explicit_type_interface
     while tick <= upperBound {

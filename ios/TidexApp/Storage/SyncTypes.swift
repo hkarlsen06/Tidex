@@ -129,7 +129,7 @@ internal enum NotificationPreferencesField: String, Codable, CaseIterable {
 // MARK: - JSON Coding Helpers
 
 /// Canonical JSON encoder for stable encoding (sorted keys, no extra whitespace)
-internal let canonicalJSONEncoder: JSONEncoder = { () -> JSONEncoder in
+internal let kCanonicalJSONEncoder: JSONEncoder = { () -> JSONEncoder in
   let encoder: JSONEncoder = .init()
   encoder.outputFormatting = [.sortedKeys]
   encoder.dateEncodingStrategy = .iso8601
@@ -137,7 +137,7 @@ internal let canonicalJSONEncoder: JSONEncoder = { () -> JSONEncoder in
 }()
 
 /// JSON decoder for sync data
-internal let syncJSONDecoder: JSONDecoder = { () -> JSONDecoder in
+internal let kSyncJSONDecoder: JSONDecoder = { () -> JSONDecoder in
   let decoder: JSONDecoder = .init()
   decoder.dateDecodingStrategy = .iso8601
   return decoder
@@ -157,10 +157,10 @@ internal enum SyncEncodingError: LocalizedError {
     case .emptyUpdatePayload(let type):
       return "Empty update payload for \(type)"
 
-    case let .payloadDecodingFailed(type, error):
+    case .payloadDecodingFailed(let type, let error):
       return "Failed to decode \(type): \(error.localizedDescription)"
 
-    case let .snapshotEncodingFailed(type, error):
+    case .snapshotEncodingFailed(let type, let error):
       return "Failed to encode \(type): \(error.localizedDescription)"
     }
   }
@@ -181,7 +181,7 @@ internal enum SyncEncodingError: LocalizedError {
 /// Use this for critical paths where empty Data would corrupt sync state
 internal func requireEncode<T: Encodable>(_ value: T, typeName: String) throws -> Data {
   do {
-    return try canonicalJSONEncoder.encode(value)
+    return try kCanonicalJSONEncoder.encode(value)
   } catch {
     let logger: SyncLoggerImpl = SyncLogger.shared
     logger.log("Encoding failed for \(typeName): \(error.localizedDescription)", level: .error)

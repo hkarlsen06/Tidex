@@ -34,7 +34,8 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// The currently selected calendar content color style
-  @Published internal var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace {
+  @Published internal var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace
+  {
     didSet {
       if oldValue != selectedCalendarContentColorStyle, !isInitialLoad {
         updateCalendarContentColorStyle()
@@ -149,11 +150,15 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
       if AuthSessionManager.shared.isTransientSessionResolutionError(error),
         let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
       {
-        AppearanceSettingsConstants.logger.info("Using offline user id fallback for appearance settings")
+        AppearanceSettingsConstants.logger.info(
+          "Using offline user id fallback for appearance settings"
+        )
         return offlineUserId
       }
 
-      AppearanceSettingsConstants.logger.error("Failed to get user session: \(error.localizedDescription)")
+      AppearanceSettingsConstants.logger.error(
+        "Failed to get user session: \(error.localizedDescription)"
+      )
       return nil
     }
   }
@@ -177,7 +182,8 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
 
         AppearanceSettingsConstants.logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
       } catch {
-        AppearanceSettingsConstants.logger.error("Failed to save theme: \(error.localizedDescription)")
+        AppearanceSettingsConstants.logger.error(
+          "Failed to save theme: \(error.localizedDescription)")
         errorMessage = "Failed to save theme preference"
       }
     }
@@ -255,11 +261,19 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
         )
         UserDefaults.standard.set(selectedStartupTab.rawValue, forKey: Self.startupTabCacheKey)
 
-        AppearanceSettingsConstants.logger.info("Updated default startup tab to: \(self.selectedStartupTab.rawValue)")
+        AppearanceSettingsConstants.logger.info(
+          "Updated default startup tab to: \(self.selectedStartupTab.rawValue)"
+        )
       } catch {
-        AppearanceSettingsConstants.logger.error("Failed to save default startup tab: \(error.localizedDescription)")
+        AppearanceSettingsConstants.logger.error(
+          "Failed to save default startup tab: \(error.localizedDescription)"
+        )
         errorMessage = "Failed to save startup tab preference"
       }
     }
+  }
+
+  deinit {
+    // Required by SwiftLint.
   }
 }

@@ -96,7 +96,7 @@ final class LocalRecurringShift {
       }
 
       do {
-        let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+        let keys = try kSyncJSONDecoder.decode([String].self, from: dirtyFields)
         return Set(keys.compactMap { RecurringShiftField(rawValue: $0) })
       } catch {
         // If decode fails, treat as fully dirty to ensure data is pushed to server
@@ -110,21 +110,21 @@ final class LocalRecurringShift {
     }
     set {
       let keys = newValue.map(\.rawValue)
-      dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
+      dirtyFields = (try? kCanonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
 
   /// Decoded selected days
   var decodedSelectedDays: SelectedDays {
     get {
-      if let decoded = try? syncJSONDecoder.decode(SelectedDays.self, from: selectedDays),
+      if let decoded = try? kSyncJSONDecoder.decode(SelectedDays.self, from: selectedDays),
         !decoded.isEmpty
       {
         return decoded
       }
 
       if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
-        let fallback = try? syncJSONDecoder.decode(SelectedDays.self, from: snapshot.selectedDays),
+        let fallback = try? kSyncJSONDecoder.decode(SelectedDays.self, from: snapshot.selectedDays),
         !fallback.isEmpty
       {
         SyncLogger.shared.log(
@@ -137,7 +137,7 @@ final class LocalRecurringShift {
       return [:]
     }
     set {
-      selectedDays = (try? canonicalJSONEncoder.encode(newValue)) ?? Data()
+      selectedDays = (try? kCanonicalJSONEncoder.encode(newValue)) ?? Data()
     }
   }
 
@@ -145,13 +145,13 @@ final class LocalRecurringShift {
   var decodedEndCondition: EndCondition? {
     get {
       guard let data = endCondition else { return nil }
-      if let decoded = try? syncJSONDecoder.decode(EndCondition.self, from: data) {
+      if let decoded = try? kSyncJSONDecoder.decode(EndCondition.self, from: data) {
         return decoded
       }
 
       if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
         let fallback = snapshot.endCondition.flatMap({
-          try? syncJSONDecoder.decode(EndCondition.self, from: $0)
+          try? kSyncJSONDecoder.decode(EndCondition.self, from: $0)
         })
       {
         SyncLogger.shared.log(
@@ -164,7 +164,7 @@ final class LocalRecurringShift {
       return nil
     }
     set {
-      endCondition = newValue.flatMap { try? canonicalJSONEncoder.encode($0) }
+      endCondition = newValue.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
   }
 
@@ -172,13 +172,13 @@ final class LocalRecurringShift {
   var decodedExclusions: [String] {
     get {
       guard let data = exclusions else { return [] }
-      if let decoded = try? syncJSONDecoder.decode([String].self, from: data) {
+      if let decoded = try? kSyncJSONDecoder.decode([String].self, from: data) {
         return decoded
       }
 
       if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
         let fallback = snapshot.exclusions.flatMap({
-          try? syncJSONDecoder.decode([String].self, from: $0)
+          try? kSyncJSONDecoder.decode([String].self, from: $0)
         })
       {
         SyncLogger.shared.log(
@@ -191,7 +191,7 @@ final class LocalRecurringShift {
       return []
     }
     set {
-      exclusions = newValue.isEmpty ? nil : (try? canonicalJSONEncoder.encode(newValue))
+      exclusions = newValue.isEmpty ? nil : (try? kCanonicalJSONEncoder.encode(newValue))
     }
   }
 
@@ -199,14 +199,14 @@ final class LocalRecurringShift {
   var decodedDateSpecificSupplements: [String: CustomSupplementsData] {
     get {
       guard let data = dateSpecificSupplements else { return [:] }
-      if let decoded = try? syncJSONDecoder.decode([String: CustomSupplementsData].self, from: data)
+      if let decoded = try? kSyncJSONDecoder.decode([String: CustomSupplementsData].self, from: data)
       {
         return decoded
       }
 
       if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
         let fallback = snapshot.dateSpecificSupplements.flatMap({
-          try? syncJSONDecoder.decode([String: CustomSupplementsData].self, from: $0)
+          try? kSyncJSONDecoder.decode([String: CustomSupplementsData].self, from: $0)
         })
       {
         SyncLogger.shared.log(
@@ -222,7 +222,7 @@ final class LocalRecurringShift {
     }
     set {
       dateSpecificSupplements =
-        newValue.isEmpty ? nil : (try? canonicalJSONEncoder.encode(newValue))
+        newValue.isEmpty ? nil : (try? kCanonicalJSONEncoder.encode(newValue))
     }
   }
 
@@ -230,7 +230,7 @@ final class LocalRecurringShift {
   var decodedDateSpecificPauseWindows: DateSpecificPauseWindows {
     get {
       guard let data = dateSpecificPauseWindows else { return [:] }
-      if let decoded = try? syncJSONDecoder.decode(DateSpecificPauseWindows.self, from: data),
+      if let decoded = try? kSyncJSONDecoder.decode(DateSpecificPauseWindows.self, from: data),
         let normalized = PauseWindowSupport.normalize(decoded)
       {
         return normalized
@@ -238,7 +238,7 @@ final class LocalRecurringShift {
 
       if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
         let fallback = snapshot.dateSpecificPauseWindows.flatMap({
-          try? syncJSONDecoder.decode(DateSpecificPauseWindows.self, from: $0)
+          try? kSyncJSONDecoder.decode(DateSpecificPauseWindows.self, from: $0)
         }),
         let normalized = PauseWindowSupport.normalize(fallback)
       {
@@ -255,7 +255,7 @@ final class LocalRecurringShift {
     }
     set {
       dateSpecificPauseWindows = PauseWindowSupport.normalize(newValue).flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     }
   }
@@ -264,7 +264,7 @@ final class LocalRecurringShift {
   var decodedDateSpecificNotes: [String: String] {
     get {
       guard let data = dateSpecificNotes else { return [:] }
-      if let decoded = try? syncJSONDecoder.decode([String: String].self, from: data),
+      if let decoded = try? kSyncJSONDecoder.decode([String: String].self, from: data),
         let normalized = ShiftNoteSupport.normalizeDateSpecificNotes(decoded)
       {
         return normalized
@@ -272,7 +272,7 @@ final class LocalRecurringShift {
 
       if let snapshot = RecurringShiftServerSnapshot.decode(from: lastSyncedSnapshot),
         let fallback = snapshot.dateSpecificNotes.flatMap({
-          try? syncJSONDecoder.decode([String: String].self, from: $0)
+          try? kSyncJSONDecoder.decode([String: String].self, from: $0)
         }),
         let normalized = ShiftNoteSupport.normalizeDateSpecificNotes(fallback)
       {
@@ -289,7 +289,7 @@ final class LocalRecurringShift {
     }
     set {
       dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(newValue).flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     }
   }
@@ -347,7 +347,7 @@ final class LocalRecurringShift {
 
   /// Initialize empty dirty fields array
   static func emptyDirtyFields() -> Data {
-    (try? canonicalJSONEncoder.encode([String]())) ?? Data()
+    (try? kCanonicalJSONEncoder.encode([String]())) ?? Data()
   }
 }
 
@@ -381,18 +381,18 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
       startTime: row.cleanStartTime,
       endTime: row.cleanEndTime,
       repeatIntervalWeeks: row.repeat_interval_weeks,
-      selectedDays: (try? canonicalJSONEncoder.encode(row.selected_days)) ?? Data(),
-      endCondition: row.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) },
-      exclusions: row.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) },
+      selectedDays: (try? kCanonicalJSONEncoder.encode(row.selected_days)) ?? Data(),
+      endCondition: row.end_condition.flatMap { try? kCanonicalJSONEncoder.encode($0) },
+      exclusions: row.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) },
       dateSpecificPauseWindows: PauseWindowSupport.normalize(row.date_specific_pause_windows)
         .flatMap {
-          try? canonicalJSONEncoder.encode($0)
+          try? kCanonicalJSONEncoder.encode($0)
         },
       dateSpecificSupplements: row.date_specific_supplements.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
       dateSpecificNotes: ShiftNoteSupport.normalizeDateSpecificNotes(row.date_specific_notes)
-        .flatMap { try? canonicalJSONEncoder.encode($0) },
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) },
       updatedAt: updatedAt,
       revision: revision,
       deletedAt: deletedAt
@@ -408,12 +408,12 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
   /// Encode to Data (returns empty Data on failure - use only for non-critical paths)
   /// DEPRECATED: Prefer encodedOrThrow() for new code
   func encoded() -> Data {
-    (try? canonicalJSONEncoder.encode(self)) ?? Data()
+    (try? kCanonicalJSONEncoder.encode(self)) ?? Data()
   }
 
   /// Decode from Data
   static func decode(from data: Data) -> Self? {
-    try? syncJSONDecoder.decode(Self.self, from: data)
+    try? kSyncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
@@ -500,16 +500,16 @@ extension LocalRecurringShift {
       startTime: serverRow.cleanStartTime,
       endTime: serverRow.cleanEndTime,
       repeatIntervalWeeks: serverRow.repeat_interval_weeks,
-      selectedDays: (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data(),
-      endCondition: serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) },
-      exclusions: serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) },
+      selectedDays: (try? kCanonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data(),
+      endCondition: serverRow.end_condition.flatMap { try? kCanonicalJSONEncoder.encode($0) },
+      exclusions: serverRow.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) },
       dateSpecificPauseWindows: PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
-        .flatMap { try? canonicalJSONEncoder.encode($0) },
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) },
       dateSpecificSupplements: serverRow.date_specific_supplements.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
       dateSpecificNotes: ShiftNoteSupport.normalizeDateSpecificNotes(serverRow.date_specific_notes)
-        .flatMap { try? canonicalJSONEncoder.encode($0) },
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) },
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
       serverDeletedAt: serverDeletedAt,

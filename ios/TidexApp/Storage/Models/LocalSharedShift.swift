@@ -220,10 +220,10 @@ final class LocalSharedShift {
       startTime: apiShift.start_time,
       endTime: apiShift.end_time,
       customPauseWindows: apiShift.custom_pause_windows.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
       customSupplements: apiShift.custom_supplements.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
       durationHours: apiShift.computed.durationHours,
       paidHours: apiShift.computed.paidHours,
@@ -235,9 +235,9 @@ final class LocalSharedShift {
       breakDeductedHours: apiShift.computed.breakAudit.deductedHours,
       breakSourceRaw: apiShift.computed.breakAudit.source.rawValue,
       appliedPauseWindows: apiShift.computed.breakAudit.appliedPauseWindows.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
-      breakNotes: try? canonicalJSONEncoder.encode(apiShift.computed.breakAudit.notes),
+      breakNotes: try? kCanonicalJSONEncoder.encode(apiShift.computed.breakAudit.notes),
       taxEnabled: apiShift.tax_enabled ?? false,
       taxPercentage: apiShift.tax_percentage ?? 0,
       showEarnings: showEarnings,
@@ -252,11 +252,11 @@ final class LocalSharedShift {
 extension LocalSharedShift {
   private var storedBreakAudit: BreakAudit {
     let decodedPauseWindows = appliedPauseWindows.flatMap {
-      try? syncJSONDecoder.decode([PauseWindow].self, from: $0)
+      try? kSyncJSONDecoder.decode([PauseWindow].self, from: $0)
     }
     let decodedNotes =
       breakNotes.flatMap {
-        try? syncJSONDecoder.decode([String].self, from: $0)
+        try? kSyncJSONDecoder.decode([String].self, from: $0)
       } ?? []
 
     return BreakAudit(
@@ -279,10 +279,10 @@ extension LocalSharedShift {
       start_time: startTime,
       end_time: endTime,
       custom_pause_windows: customPauseWindows.flatMap {
-        try? syncJSONDecoder.decode(CustomPauseWindows.self, from: $0)
+        try? kSyncJSONDecoder.decode(CustomPauseWindows.self, from: $0)
       },
       custom_supplements: customSupplements.flatMap {
-        try? syncJSONDecoder.decode(CustomSupplementsData.self, from: $0)
+        try? kSyncJSONDecoder.decode(CustomSupplementsData.self, from: $0)
       },
       created_at: nil,
       recurring_id: recurringId,
@@ -611,10 +611,10 @@ final class LocalShiftPreview {
       startTime: preview.shift?.start_time,
       endTime: preview.shift?.end_time,
       customPauseWindows: preview.shift?.custom_pause_windows.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
       customSupplements: preview.shift?.custom_supplements.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
       durationHours: preview.shift?.computed.durationHours,
       paidHours: preview.shift?.computed.paidHours,
@@ -626,10 +626,10 @@ final class LocalShiftPreview {
       breakDeductedHours: preview.shift?.computed.breakAudit.deductedHours,
       breakSourceRaw: preview.shift?.computed.breakAudit.source.rawValue,
       appliedPauseWindows: preview.shift.flatMap {
-        $0.computed.breakAudit.appliedPauseWindows.flatMap { try? canonicalJSONEncoder.encode($0) }
+        $0.computed.breakAudit.appliedPauseWindows.flatMap { try? kCanonicalJSONEncoder.encode($0) }
       },
       breakNotes: preview.shift.flatMap {
-        try? canonicalJSONEncoder.encode($0.computed.breakAudit.notes)
+        try? kCanonicalJSONEncoder.encode($0.computed.breakAudit.notes)
       },
       currency: preview.currency,
       taxEnabled: preview.shift?.tax_enabled,
@@ -676,10 +676,10 @@ final class LocalShiftPreview {
         deductedHours: breakDeductedHours ?? 0,
         source: breakSourceRaw.flatMap(BreakAuditSource.init(rawValue:)) ?? .none,
         appliedPauseWindows: appliedPauseWindows.flatMap {
-          try? syncJSONDecoder.decode([PauseWindow].self, from: $0)
+          try? kSyncJSONDecoder.decode([PauseWindow].self, from: $0)
         },
         notes: breakNotes.flatMap {
-          try? syncJSONDecoder.decode([String].self, from: $0)
+          try? kSyncJSONDecoder.decode([String].self, from: $0)
         } ?? []
       )
     )
@@ -697,10 +697,10 @@ final class LocalShiftPreview {
       tax_enabled: taxEnabled,
       tax_percentage: taxPercentage,
       custom_pause_windows: customPauseWindows.flatMap {
-        try? syncJSONDecoder.decode(CustomPauseWindows.self, from: $0)
+        try? kSyncJSONDecoder.decode(CustomPauseWindows.self, from: $0)
       },
       custom_supplements: customSupplements.flatMap {
-        try? syncJSONDecoder.decode(CustomSupplementsData.self, from: $0)
+        try? kSyncJSONDecoder.decode(CustomSupplementsData.self, from: $0)
       },
       recurring_id: recurringId,
       recurring_anchor_weekday: recurringAnchorWeekday

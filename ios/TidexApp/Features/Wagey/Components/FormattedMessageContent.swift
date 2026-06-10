@@ -41,8 +41,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
   @ViewBuilder
   private func markdownText(_ text: String) -> some View {  // swiftlint:disable:this type_contents_order
     if let attributedString = try? AttributedString(
-      markdown: text,
-      options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+      markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
     ) {
       Text(attributedString)
         .font(.tidexBody)
@@ -68,7 +67,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
 
       ScrollView(.horizontal, showsIndicators: false) {  // swiftlint:disable:this closure_body_length
         // Use Grid for proper column alignment
-        Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {  // swiftlint:disable:this closure_body_length line_length
+        Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
           // Header row
           GridRow {
             ForEach(0..<columnCount, id: \.self) { colIndex in
@@ -78,7 +77,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
                 .frame(
                   minWidth: minColumnWidth(rows: rows, column: colIndex),
                   alignment: columnAlignment(column: colIndex, numericColumns: numericColumns)
-                )  // swiftlint:disable:this line_length multiline_arguments_brackets
+                )
                 .padding(.horizontal, Spacing.sm)
                 .padding(.vertical, Spacing.xs)
             }
@@ -94,16 +93,13 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
                   .foregroundColor(colIndex == 0 ? .tidexTextPrimary : .tidexTextSecondary)
                   .frame(
                     minWidth: minColumnWidth(rows: rows, column: colIndex),
-                    alignment: columnAlignment(
-                      column: colIndex, numericColumns: numericColumns)
-                  )  // swiftlint:disable:this line_length multiline_arguments_brackets
+                    alignment: columnAlignment(column: colIndex, numericColumns: numericColumns)
+                  )
                   .padding(.horizontal, Spacing.sm)
                   .padding(.vertical, Spacing.xxxs)
               }
             }
-            .background(
-              rowIndex % 2 == 1 ? Color.tidexSurfaceSecondary.opacity(0.2) : Color.clear  // swiftlint:disable:this line_length no_magic_numbers
-            )
+            .background(rowBackground(for: rowIndex))
           }
         }
         .background(Color.tidexSurfaceSecondary.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
@@ -135,9 +131,11 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
     )
   }
 
+  private func rowBackground(for rowIndex: Int) -> Color { rowIndex.isMultiple(of: 2) ? .clear : Color.tidexSurfaceSecondary.opacity(0.2) }  // swiftlint:disable:this line_length no_magic_numbers type_contents_order
+
   private func minColumnWidth(rows: [[String]], column: Int) -> CGFloat {  // swiftlint:disable:this type_contents_order
-    let maxCharacters =
-      rows  // swiftlint:disable:this explicit_type_interface
+    let maxCharacters: Int =
+      rows
       .compactMap { row in
         guard column < row.count else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
         return row[column].count
@@ -202,7 +200,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
     let remainingContent = content  // swiftlint:disable:this explicit_type_interface
 
     // First, extract code blocks with tab-separated content
-    let codeBlockPattern = "```(?:[A-Za-z0-9_+-]+)?\\n([\\s\\S]*?)```"  // swiftlint:disable:this explicit_type_interface
+    let codeBlockPattern: String = #"```(?:[A-Za-z0-9_+-]+)?\n([\s\S]*?)```"#
     if let regex = try? NSRegularExpression(pattern: codeBlockPattern, options: []) {
       var lastEnd = remainingContent.startIndex  // swiftlint:disable:this explicit_type_interface
       let nsRange = NSRange(remainingContent.startIndex..., in: remainingContent)  // swiftlint:disable:this explicit_type_interface line_length
@@ -309,7 +307,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
         if !inTable {
           // Starting a potential table
           if !currentTextLines.isEmpty {
-            let textContent = currentTextLines.joined(separator: "\n")  // swiftlint:disable:this explicit_type_interface
+            let textContent: String = currentTextLines.joined(separator: "\n")
             if !textContent.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
               segments.append(.text(textContent))
             }
@@ -360,11 +358,16 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
     let lines = content.components(separatedBy: "\n")  // swiftlint:disable:this explicit_type_interface
       .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
 
-    guard lines.count >= 2 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline no_magic_numbers
+    let minimumTableLineCount: Int = 2
+    guard lines.count >= minimumTableLineCount else {
+      return nil
+    }
 
     // Check if lines have tabs
     let hasTabLines = lines.filter { $0.contains("\t") }  // swiftlint:disable:this explicit_type_interface
-    guard hasTabLines.count >= 2 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length no_magic_numbers
+    guard hasTabLines.count >= minimumTableLineCount else {
+      return nil
+    }
 
     return lines.map { line in
       line.components(separatedBy: "\t")
@@ -374,10 +377,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
 
   /// Parse both tab-separated and fixed-width (multi-space) tables.
   private func parseTableContent(_ content: String) -> [[String]]? {  // swiftlint:disable:this discouraged_optional_collection line_length type_contents_order
-    if let tabRows = parseTabSeparatedContent(content) {
-      return tabRows
-    }
-    return parseFixedWidthTableContent(content)
+    parseTabSeparatedContent(content) ?? parseFixedWidthTableContent(content)
   }
 
   /// Parse tables that use 2+ spaces as column separators.
@@ -387,20 +387,23 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
       .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
       .filter { !$0.isEmpty }
 
-    guard lines.count >= 2 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline no_magic_numbers
+    let minimumTableLineCount: Int = 2
+    guard lines.count >= minimumTableLineCount else {
+      return nil
+    }
 
     let rows = lines.map(splitByMultiSpaces)  // swiftlint:disable:this explicit_type_interface
 
     let columnCounts = rows.map(\.count)  // swiftlint:disable:this explicit_type_interface
-    guard let firstCount = columnCounts.first, firstCount >= 3 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length no_magic_numbers
+    let minimumColumnCount: Int = 3
+    guard let firstCount = columnCounts.first, firstCount >= minimumColumnCount else {
+      return nil
+    }
     guard columnCounts.filter({ $0 == firstCount }).count >= 2 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length no_magic_numbers
     guard columnCounts.allSatisfy({ abs($0 - firstCount) <= 1 }) else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
 
     return rows.map { row in
-      if row.count == firstCount {
-        return row
-      }
-      return row + Array(repeating: "", count: firstCount - row.count)
+      row.count == firstCount ? row : row + Array(repeating: "", count: firstCount - row.count)
     }
   }
 
@@ -413,7 +416,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
     }
 
     let nsRange = NSRange(line.startIndex..<line.endIndex, in: line)  // swiftlint:disable:this explicit_type_interface
-    let matches = regex.matches(in: line, options: [], range: nsRange)  // swiftlint:disable:this explicit_type_interface
+    let matches: [NSTextCheckingResult] = regex.matches(in: line, options: [], range: nsRange)
 
     guard !matches.isEmpty else {
       return [line]
@@ -432,7 +435,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
       lastIndex = range.upperBound
     }
 
-    let tail = line[lastIndex...].trimmingCharacters(in: .whitespaces)  // swiftlint:disable:this explicit_type_interface
+    let tail: String = line[lastIndex...].trimmingCharacters(in: .whitespaces)
     if !tail.isEmpty {
       result.append(tail)
     }

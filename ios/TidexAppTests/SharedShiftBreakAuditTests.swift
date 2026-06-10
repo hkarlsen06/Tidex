@@ -2,11 +2,11 @@ import XCTest
 
 @testable import Tidex
 
-final class SharedShiftBreakAuditTests: XCTestCase {
-  func testSharedShiftDataConversionPreservesBreakAudit() {
-    let sharedShift = makeSharedShift()
+internal final class SharedShiftBreakAuditTests: XCTestCase {
+  internal func testSharedShiftDataConversionPreservesBreakAudit() {
+    let sharedShift: SharedShiftData = makeSharedShift()
 
-    let converted = sharedShift.toShiftWithComputations()
+    let converted: ShiftWithComputations = sharedShift.toShiftWithComputations()
 
     XCTAssertEqual(converted.computed.breakAudit.source, .customPauseWindows)
     XCTAssertEqual(converted.computed.breakAudit.deductedHours, 0.5, accuracy: 0.001)
@@ -16,15 +16,15 @@ final class SharedShiftBreakAuditTests: XCTestCase {
     )
   }
 
-  func testLocalSharedShiftConversionPreservesBreakAudit() {
-    let local = LocalSharedShift.from(
+  internal func testLocalSharedShiftConversionPreservesBreakAudit() {
+    let local: LocalSharedShift = LocalSharedShift.from(
       apiShift: makeSharedShift(),
       ownerId: "owner-1",
       viewerId: "viewer-1",
       showEarnings: true
     )
 
-    let converted = local.toShiftWithComputations()
+    let converted: ShiftWithComputations = local.toShiftWithComputations()
 
     XCTAssertEqual(converted.computed.breakAudit.source, .customPauseWindows)
     XCTAssertEqual(converted.computed.breakAudit.deductedHours, 0.5, accuracy: 0.001)
@@ -69,5 +69,9 @@ final class SharedShiftBreakAuditTests: XCTestCase {
       recurring_id: nil,
       recurring_anchor_weekday: nil
     )
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

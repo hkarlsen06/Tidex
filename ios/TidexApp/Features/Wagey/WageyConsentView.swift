@@ -328,7 +328,10 @@ private struct SafariViewConsent: UIViewControllerRepresentable {
     SFSafariViewController(url: url)
   }
 
-  func updateUIViewController(_: SFSafariViewController, context _: Context) {}  // swiftlint:disable:this no_empty_block
+  func updateUIViewController(
+    _: SFSafariViewController,
+    context _: Context
+  ) {}  // swiftlint:disable:this no_empty_block
 }
 
 // MARK: - Preview

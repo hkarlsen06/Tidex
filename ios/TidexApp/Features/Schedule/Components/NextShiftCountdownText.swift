@@ -77,11 +77,12 @@ internal struct NextShiftCountdownText: View {
   }
 
   private func updateCountdown() {
-    countdownText = CountdownFormatter.formatShiftCountdown(
-      shiftDate: shift.shiftDate,
-      startTime: shift.startTime,
-      endTime: shift.endTime
-    ).text
+    countdownText =
+      CountdownFormatter.formatShiftCountdown(
+        shiftDate: shift.shiftDate,
+        startTime: shift.startTime,
+        endTime: shift.endTime
+      ).text
   }
 }
 

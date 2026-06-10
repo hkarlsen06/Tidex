@@ -2,16 +2,16 @@ import XCTest
 
 @testable import Tidex
 
-final class ShiftDetailsPresentationPolicyTests: XCTestCase {
-  func testOwnShiftShowsEarningsDetails() {
-    let policy = ShiftDetailsPresentationPolicy(snapshotShareContext: .own)
+internal final class ShiftDetailsPresentationPolicyTests: XCTestCase {
+  internal func testOwnShiftShowsEarningsDetails() {
+    let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(snapshotShareContext: .own)
 
     XCTAssertTrue(policy.showsEarningsDetails)
     XCTAssertNil(policy.automaticBreakOwnerName)
   }
 
-  func testSharedShiftHidesEarningsDetailsWhenOwnerDoesNotShareEarnings() {
-    let policy = ShiftDetailsPresentationPolicy(
+  internal func testSharedShiftHidesEarningsDetailsWhenOwnerDoesNotShareEarnings() {
+    let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(
       snapshotShareContext: .shared(owner: makeSharedUser(showEarnings: false))
     )
 
@@ -19,8 +19,8 @@ final class ShiftDetailsPresentationPolicyTests: XCTestCase {
     XCTAssertNil(policy.automaticBreakOwnerName)
   }
 
-  func testSharedShiftUsesOwnerNameForAutomaticBreakSummaryWhenEarningsAreVisible() {
-    let policy = ShiftDetailsPresentationPolicy(
+  internal func testSharedShiftUsesOwnerNameForAutomaticBreakSummaryWhenEarningsAreVisible() {
+    let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(
       snapshotShareContext: .shared(owner: makeSharedUser(firstName: "Ask Karlsen"))
     )
 
@@ -43,5 +43,9 @@ final class ShiftDetailsPresentationPolicyTests: XCTestCase {
       showEarnings: showEarnings,
       hidden: false
     )
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

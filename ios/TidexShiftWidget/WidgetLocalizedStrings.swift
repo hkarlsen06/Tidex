@@ -5,64 +5,64 @@ import Foundation
 
 extension LocalizedStringResource {
   // MARK: - Common Labels
-  static var widgetDays: LocalizedStringResource { "days" }
-  static var widgetDay: LocalizedStringResource { "day" }
-  static var widgetAgo: LocalizedStringResource { "ago" }
-  static var widgetDone: LocalizedStringResource { "done" }
-  static var widgetDoneCapitalized: LocalizedStringResource { "Done" }
-  static var widgetLeft: LocalizedStringResource { "left" }
-  static var widgetStart: LocalizedStringResource { "start" }
-  static var widgetEnd: LocalizedStringResource { "end" }
-  static var widgetEnds: LocalizedStringResource { "Ends" }
-  static var widgetHours: LocalizedStringResource { "hours" }
-  static var widgetActive: LocalizedStringResource { "Active" }
+  internal static var widgetDays: LocalizedStringResource { "days" }
+  internal static var widgetDay: LocalizedStringResource { "day" }
+  internal static var widgetAgo: LocalizedStringResource { "ago" }
+  internal static var widgetDone: LocalizedStringResource { "done" }
+  internal static var widgetDoneCapitalized: LocalizedStringResource { "Done" }
+  internal static var widgetLeft: LocalizedStringResource { "left" }
+  internal static var widgetStart: LocalizedStringResource { "start" }
+  internal static var widgetEnd: LocalizedStringResource { "end" }
+  internal static var widgetEnds: LocalizedStringResource { "Ends" }
+  internal static var widgetHours: LocalizedStringResource { "hours" }
+  internal static var widgetActive: LocalizedStringResource { "Active" }
 
   // MARK: - Date Labels
-  static var widgetToday: LocalizedStringResource { "Today" }
-  static var widgetYesterday: LocalizedStringResource { "Yesterday" }
-  static var widgetTomorrow: LocalizedStringResource { "Tomorrow" }
+  internal static var widgetToday: LocalizedStringResource { "Today" }
+  internal static var widgetYesterday: LocalizedStringResource { "Yesterday" }
+  internal static var widgetTomorrow: LocalizedStringResource { "Tomorrow" }
 
   // MARK: - Shift Labels
-  static var widgetNoShift: LocalizedStringResource { "No shift" }
-  static var widgetNoShifts: LocalizedStringResource { "No shifts" }
-  static var widgetShift: LocalizedStringResource { "shift" }
-  static var widgetShifts: LocalizedStringResource { "shifts" }
-  static var widgetShiftPlanned: LocalizedStringResource { "shift planned" }
-  static var widgetShiftsPlanned: LocalizedStringResource { "shifts planned" }
+  internal static var widgetNoShift: LocalizedStringResource { "No shift" }
+  internal static var widgetNoShifts: LocalizedStringResource { "No shifts" }
+  internal static var widgetShift: LocalizedStringResource { "shift" }
+  internal static var widgetShifts: LocalizedStringResource { "shifts" }
+  internal static var widgetShiftPlanned: LocalizedStringResource { "shift planned" }
+  internal static var widgetShiftsPlanned: LocalizedStringResource { "shifts planned" }
 
   // MARK: - Friend Labels
-  static var widgetFriend: LocalizedStringResource { "Friend" }
-  static var widgetSelectAFriend: LocalizedStringResource { "Select a friend" }
-  static var widgetAddFriendsToSeeTheirShifts: LocalizedStringResource {
+  internal static var widgetFriend: LocalizedStringResource { "Friend" }
+  internal static var widgetSelectAFriend: LocalizedStringResource { "Select a friend" }
+  internal static var widgetAddFriendsToSeeTheirShifts: LocalizedStringResource {
     "Add friends to see their shifts"
   }
 
   // MARK: - Widget Names
-  static var widgetNameShift: LocalizedStringResource { "Shift" }
-  static var widgetNameNextShift: LocalizedStringResource { "Next Shift" }
-  static var widgetNameFriendsShift: LocalizedStringResource { "Friend's Shift" }
-  static var widgetNameFriendsShifts: LocalizedStringResource { "Friends' Shifts" }
-  static var widgetNameMonthlyTotal: LocalizedStringResource { "Monthly Total" }
+  internal static var widgetNameShift: LocalizedStringResource { "Shift" }
+  internal static var widgetNameNextShift: LocalizedStringResource { "Next Shift" }
+  internal static var widgetNameFriendsShift: LocalizedStringResource { "Friend's Shift" }
+  internal static var widgetNameFriendsShifts: LocalizedStringResource { "Friends' Shifts" }
+  internal static var widgetNameMonthlyTotal: LocalizedStringResource { "Monthly Total" }
 
   // MARK: - Widget Descriptions
-  static var widgetDescLockScreen: LocalizedStringResource {
+  internal static var widgetDescLockScreen: LocalizedStringResource {
     "See your next shift on the lock screen"
   }
-  static var widgetDescNextShift: LocalizedStringResource { "See your next shift at a glance" }
-  static var widgetDescFriendsShift: LocalizedStringResource { "See a friend's next shift" }
-  static var widgetDescFriendsShifts: LocalizedStringResource {
+  internal static var widgetDescNextShift: LocalizedStringResource { "See your next shift at a glance" }
+  internal static var widgetDescFriendsShift: LocalizedStringResource { "See a friend's next shift" }
+  internal static var widgetDescFriendsShifts: LocalizedStringResource {
     "See your friends' upcoming shifts"
   }
-  static var widgetDescMonthlyTotal: LocalizedStringResource {
+  internal static var widgetDescMonthlyTotal: LocalizedStringResource {
     "See your monthly total at a glance"
   }
 
   // MARK: - TotalCard Labels
-  static var widgetToDate: LocalizedStringResource { "to date" }
-  static var widgetBeforeTax: LocalizedStringResource { "before tax" }
+  internal static var widgetToDate: LocalizedStringResource { "to date" }
+  internal static var widgetBeforeTax: LocalizedStringResource { "before tax" }
 
   // MARK: - Motivational Salutes
-  static let widgetSaluteKeys: [LocalizedStringResource] = [
+  internal static let widgetSaluteKeys: [LocalizedStringResource] = [
     "salute.01",
     "salute.02",
     "salute.03",

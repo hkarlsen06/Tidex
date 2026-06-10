@@ -394,8 +394,8 @@ final class FriendsComposerDraftStore {
 
     pruneAttachmentFiles(
       keeping: Set(
-        persistedDrafts.compactMap {
-          guard case .image(let imageDraft) = $0 else {
+        persistedDrafts.compactMap { persistedDraft in
+          guard case .image(let imageDraft) = persistedDraft else {
             return nil
           }
           return imageDraft.relativePath

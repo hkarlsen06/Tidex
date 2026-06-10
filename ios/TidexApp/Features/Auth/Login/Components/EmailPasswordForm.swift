@@ -1,50 +1,18 @@
 import SwiftUI
 
 /// Email/phone and password input form
-struct EmailPasswordForm: View {
-  @ObservedObject var viewModel: LoginViewModel
-  var onForgotPassword: (() -> Void)?
+internal struct EmailPasswordForm: View {
+  @ObservedObject internal var viewModel: LoginViewModel
+  internal var onForgotPassword: (() -> Void)?
 
-  var body: some View {
+  internal var body: some View {
     VStack(spacing: Spacing.md) {
-      // Email/Phone field
-      TidexTextField(
-        label: String(localized: .loginEmailOrPhoneLabel),
-        placeholder: String(localized: .loginEmailOrPhonePlaceholder),
-        text: $viewModel.emailOrPhone,
-        error: viewModel.fieldErrors.emailOrPhone,
-        keyboardType: .emailAddress,
-        textContentType: .emailAddress,
-        autocapitalization: .never,
-        autocorrection: false
-      )
-
-      // Password field (always visible for AutoFill, optional for phone login)
-      SecureTextField(
-        label: viewModel.inputType == .phone
-          ? String(localized: .loginPasswordOptionalLabel)
-          : String(localized: .loginPasswordLabel),
-        placeholder: String(localized: .loginPasswordPlaceholder),
-        text: $viewModel.password,
-        error: viewModel.fieldErrors.password,
-        onSubmit: {
-          Task { await viewModel.signIn() }
-        }
-      )
+      identityField
+      passwordField
 
       // Forgot password link (only for email login)
       if viewModel.inputType == .email {
-        HStack {
-          Spacer()
-          Button(action: {
-            onForgotPassword?()
-          }) {
-            Text(.loginForgotPassword)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexBlue)
-          }
-          .buttonStyle(.plain)
-        }
+        forgotPasswordLink
       }
 
       // Phone hint - password is optional for OTP flow
@@ -63,6 +31,47 @@ struct EmailPasswordForm: View {
         },
         isLoading: viewModel.isLoading
       )
+    }
+  }
+
+  private var identityField: some View {
+    TidexTextField(
+      label: String(localized: .loginEmailOrPhoneLabel),
+      placeholder: String(localized: .loginEmailOrPhonePlaceholder),
+      text: $viewModel.emailOrPhone,
+      error: viewModel.fieldErrors.emailOrPhone,
+      keyboardType: .emailAddress,
+      textContentType: .emailAddress,
+      autocapitalization: .never,
+      autocorrection: false
+    )
+  }
+
+  private var passwordField: some View {
+    SecureTextField(
+      label: viewModel.inputType == .phone
+        ? String(localized: .loginPasswordOptionalLabel)
+        : String(localized: .loginPasswordLabel),
+      placeholder: String(localized: .loginPasswordPlaceholder),
+      text: $viewModel.password,
+      error: viewModel.fieldErrors.password,
+      onSubmit: {
+        Task { await viewModel.signIn() }
+      }
+    )
+  }
+
+  private var forgotPasswordLink: some View {
+    HStack {
+      Spacer()
+      Button(action: {
+        onForgotPassword?()
+      }) {
+        Text(.loginForgotPassword)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexBlue)
+      }
+      .buttonStyle(.plain)
     }
   }
 }

@@ -890,8 +890,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     )
   }
 
-  func payrollCardVariants(fallback: DashboardData, defaultTitle: String) -> [PayrollCardVariant]
-  {  // swiftlint:disable:this explicit_acl line_length type_contents_order
+  func payrollCardVariants(  // swiftlint:disable:this explicit_acl type_contents_order
+    fallback: DashboardData,
+    defaultTitle: String
+  ) -> [PayrollCardVariant] {
     let matchingSnapshot = payrollCardSnapshot.flatMap { snapshot in  // swiftlint:disable:this explicit_type_interface
       snapshot.displayedYear == fallback.displayedYear
         && snapshot.displayedMonth == fallback.displayedMonth
@@ -1054,14 +1056,15 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           halfTaxMonth: halfTaxMonth,
           payoutMonth: selection.payoutMonth
         )
-        let taxEnabled = jobShifts.contains(where: \.taxEnabled) || adjustmentTotals.taxEnabled  // swiftlint:disable:this explicit_type_interface line_length
+        let taxEnabled: Bool =
+          jobShifts.contains(where: \.taxEnabled) || adjustmentTotals.taxEnabled
         let shiftBasePay = jobShifts.reduce(0) { total, shift in  // swiftlint:disable:this explicit_type_interface
           total + displayedBasePay(for: shift)
         }
-        let shiftSupplementPay = jobShifts.reduce(0) { total, shift in  // swiftlint:disable:this explicit_type_interface
+        let shiftSupplementPay: Double = jobShifts.reduce(0) { total, shift in
           total + displayedSupplementPay(for: shift)
         }
-        let supplementBreakdowns = payrollSupplementBreakdowns(for: jobShifts)  // swiftlint:disable:this explicit_type_interface line_length
+        let supplementBreakdowns: [SupplementBreakdown] = payrollSupplementBreakdowns(for: jobShifts)
         let shiftPostDeductions = jobShifts.reduce(0) { total, shift in  // swiftlint:disable:this explicit_type_interface line_length
           total + breakDeductionAmount(for: shift)
         }
@@ -1175,8 +1178,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     )
   }
 
-  func createPayrollAdjustment(_ draft: PayrollAdjustmentDraft) async throws -> PayrollAdjustment
-  {  // swiftlint:disable:this explicit_acl line_length type_contents_order
+  func createPayrollAdjustment(  // swiftlint:disable:this explicit_acl type_contents_order
+    _ draft: PayrollAdjustmentDraft
+  ) async throws -> PayrollAdjustment {
     guard let userId = resolveUserIdForPayrollVariants() else {
       throw PayrollAdjustmentCreationError.missingUser
     }
@@ -1339,23 +1343,28 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     return []
   }
 
-  nonisolated private static func displayedBasePay(for shift: ShiftWithComputations) -> Double {  // swiftlint:disable:this line_length type_contents_order
+  nonisolated private static func displayedBasePay(  // swiftlint:disable:this type_contents_order
+    for shift: ShiftWithComputations
+  ) -> Double {
     breakDeductionAmount(for: shift) > 0
       ? BreakDeductionBreakdown.basePay(for: shift.computed.originalWagePeriods)
       : shift.computed.basePay
   }
 
-  nonisolated private static func displayedSupplementPay(for shift: ShiftWithComputations)
-    -> Double  // swiftlint:disable:this line_length type_contents_order
-  {
+  nonisolated private static func displayedSupplementPay(  // swiftlint:disable:this type_contents_order
+    for shift: ShiftWithComputations
+  ) -> Double {
     breakDeductionAmount(for: shift) > 0
       ? BreakDeductionBreakdown.supplementPay(for: shift.computed.originalWagePeriods)
       : shift.computed.supplementPay
   }
 
-  nonisolated private static func breakDeductionAmount(for shift: ShiftWithComputations) -> Double
-  {  // swiftlint:disable:this line_length type_contents_order
-    guard shift.computed.breakAudit.deductedHours > 0 else { return 0 }  // swiftlint:disable:this conditional_returns_on_newline line_length
+  nonisolated private static func breakDeductionAmount(  // swiftlint:disable:this type_contents_order
+    for shift: ShiftWithComputations
+  ) -> Double {
+    guard shift.computed.breakAudit.deductedHours > 0 else {
+      return 0
+    }
     return BreakDeductionBreakdown.make(
       originalPeriods: shift.computed.originalWagePeriods,
       adjustedPeriods: shift.computed.wagePeriods
@@ -2245,7 +2254,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     applyDashboardDependencies(context)
   }
 
-  private func applyDashboardDependencies(_ context: PayrollReadContext) {  // swiftlint:disable:this type_contents_order
+  private func applyDashboardDependencies(  // swiftlint:disable:this type_contents_order
+    _ context: PayrollReadContext
+  ) {
     settings = context.settings
     snapshots = context.snapshots
     recurringShifts = context.recurringShifts
@@ -2555,7 +2566,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   /// Reload dashboard from local data without triggering sync
   /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
   /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
-  func reloadFromLocal(showLoadingState: Bool = true) async {  // swiftlint:disable:this explicit_acl type_contents_order
+  func reloadFromLocal(  // swiftlint:disable:this explicit_acl type_contents_order
+    showLoadingState: Bool = true
+  ) async {
     guard isActiveTabVisible else {
       markLocalDataStale()
       return
@@ -3292,7 +3305,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     // Percentage change vs previous month (same currency scope as the primary bucket)
     let previousComparisonGross: Double
     if currentMonthAggregate.hasMixedCurrency {
-      let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface
+      let previousPrimaryShifts: [ShiftWithComputations] = JobCurrencyAggregateResolver.shifts(
         matching: currentMonthAggregate.primary,
         in: previousMonthShifts,
         jobs: displayJobs,
@@ -3471,7 +3484,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
     let previousComparisonGross: Double
     if currentMonthAggregate.hasMixedCurrency {
-      let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface
+      let previousPrimaryShifts: [ShiftWithComputations] = JobCurrencyAggregateResolver.shifts(
         matching: currentMonthAggregate.primary,
         in: previousMonthShifts,
         jobs: jobs,

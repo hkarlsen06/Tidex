@@ -2,22 +2,24 @@ import Foundation
 import os.log
 import Supabase
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "SettingsService")
+private let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "SettingsService")
 
 /// Service for fetching user settings from Supabase
 @MainActor
-final class SettingsService: ObservableObject {
-  static let shared = SettingsService()
+internal final class SettingsService: ObservableObject {
+  internal static let shared: SettingsService = SettingsService()
 
-  @Published private(set) var settings: UserSettings?
-  @Published private(set) var isLoading = false
-  @Published private(set) var error: Error?
+  @Published internal private(set) var settings: UserSettings?
+  @Published internal private(set) var isLoading: Bool = false
+  @Published internal private(set) var error: Error?
 
-  private init() {}
+  private init() {
+    // Singleton.
+  }
 
   /// Fetch settings for the current authenticated user
   /// - Returns: User settings or nil if not found
-  func fetchSettings() async throws -> UserSettings? {
+  internal func fetchSettings() async throws -> UserSettings? {
     guard let userId = try await getCurrentUserId() else {
       return nil
     }
@@ -27,7 +29,7 @@ final class SettingsService: ObservableObject {
   /// Fetch settings for a specific user ID
   /// - Parameter userId: User ID to fetch settings for
   /// - Returns: User settings or nil if not found
-  func fetchSettings(for userId: String) async throws -> UserSettings? {
+  internal func fetchSettings(for userId: String) async throws -> UserSettings? {
     isLoading = true
     error = nil
     defer { isLoading = false }
@@ -54,7 +56,7 @@ final class SettingsService: ObservableObject {
         settings = response
         return response
       } catch is CancellationError {
-        logger.info("Settings fetch was cancelled")
+        kLogger.info("Settings fetch was cancelled")
         throw CancellationError()
       } catch {
         // Check if error is "no rows returned" - return nil instead of throwing
@@ -69,14 +71,18 @@ final class SettingsService: ObservableObject {
         throw error
       }
     } onCancel: {
-      logger.info("Settings fetch cancellation requested")
+      kLogger.info("Settings fetch cancellation requested")
     }
   }
 
   /// Get current authenticated user ID
   private func getCurrentUserId() async throws -> String? {
     // Use AuthSessionManager to prevent concurrent refresh race conditions
-    let session = try await AuthSessionManager.shared.getSession()
+    let session: Session = try await AuthSessionManager.shared.getSession()
     return session.normalizedUserId
+  }
+
+  deinit {
+    // Singleton.
   }
 }

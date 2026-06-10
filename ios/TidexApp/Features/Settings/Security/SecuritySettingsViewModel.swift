@@ -598,7 +598,9 @@ final class SecuritySettingsViewModel: ObservableObject {
   /// Verify the OTP and complete phone linking
   func verifyPhoneLinkOTP() async {
     // Validate OTP
-    guard phoneLinkOtp.count == 6, phoneLinkOtp.allSatisfy(\.isNumber) else {  // swiftlint:disable:this no_magic_numbers
+    guard phoneLinkOtp.count == 6,  // swiftlint:disable:this no_magic_numbers
+      phoneLinkOtp.allSatisfy(\.isNumber)
+    else {
       errorMessage = String(localized: .securityPhoneLinkingErrorsOtpInvalid)
       return
     }

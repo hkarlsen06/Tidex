@@ -3,7 +3,8 @@ import UIKit
 
 /// Main Wagey chat view
 /// Composes the header, message list, input field, and conversation sidebar
-struct WageyView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length
+struct WageyView: View {
+  // swiftlint:disable:previous explicit_acl explicit_top_level_acl file_types_order type_body_length
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
   @Binding private var selectedTab: MainTabView.Tab
@@ -332,8 +333,10 @@ struct WageyView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
 
   /// Handle sending a message with an image, showing paywall if limit reached
-  private func handleSendMessageWithImage(_ content: String, image: ImageAttachment?) async
-    -> Bool  // swiftlint:disable:this line_length type_contents_order
+  private func handleSendMessageWithImage(  // swiftlint:disable:this type_contents_order
+    _ content: String,
+    image: ImageAttachment?
+  ) async -> Bool
   {
     if viewModel.limitReached {
       if viewModel.remainingMessagesCount > 0 {

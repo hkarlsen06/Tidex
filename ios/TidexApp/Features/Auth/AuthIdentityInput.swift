@@ -1,16 +1,18 @@
 import Foundation
 
-enum AuthIdentityInputType: Equatable {
+internal enum AuthIdentityInputType: Equatable {
   case email
   case phone
   case unknown
 }
 
-enum AuthIdentityInput {
-  private static let phoneCharacters = CharacterSet(charactersIn: "+0123456789 -")
+internal enum AuthIdentityInput {
+  private static let phoneCharacters: CharacterSet = CharacterSet(charactersIn: "+0123456789 -")
+  private static let norwegianPhoneDigitCount: Int = 8
+  private static let internationalPrefixLength: Int = 2
 
-  static func detectType(_ value: String) -> AuthIdentityInputType {
-    let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+  internal static func detectType(_ value: String) -> AuthIdentityInputType {
+    let trimmed: String = value.trimmingCharacters(in: .whitespacesAndNewlines)
 
     if trimmed.contains("@"), trimmed.contains(".") {
       return .email
@@ -19,8 +21,8 @@ enum AuthIdentityInput {
     if trimmed.hasPrefix("+")
       || trimmed.allSatisfy({ String($0).rangeOfCharacter(from: phoneCharacters) != nil })
     {
-      let digits = trimmed.filter(\.isNumber)
-      if digits.count >= 8 {
+      let digits: String = trimmed.filter(\.isNumber)
+      if digits.count >= norwegianPhoneDigitCount {
         return .phone
       }
     }
@@ -28,21 +30,21 @@ enum AuthIdentityInput {
     return .unknown
   }
 
-  static func normalizedPhone(
+  internal static func normalizedPhone(
     _ value: String,
     defaultCountryCode: String = "+47"
   ) -> String {
-    let cleaned = value.filter { $0.isNumber || $0 == "+" }
+    let cleaned: String = value.filter { $0.isNumber || $0 == "+" }
 
     if cleaned.hasPrefix("+") {
       return cleaned
     }
 
     if cleaned.hasPrefix("00") {
-      return "+" + cleaned.dropFirst(2)
+      return "+" + cleaned.dropFirst(internationalPrefixLength)
     }
 
-    if cleaned.count == 8 {
+    if cleaned.count == norwegianPhoneDigitCount {
       return defaultCountryCode + cleaned
     }
 

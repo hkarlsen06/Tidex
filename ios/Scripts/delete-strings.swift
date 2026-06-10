@@ -1,4 +1,5 @@
 #!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable:next blanket_disable_command
 // swiftlint:disable closure_body_length cyclomatic_complexity
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable discouraged_optional_collection

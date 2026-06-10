@@ -101,7 +101,7 @@ final class LocalWageSnapshot {
       }
 
       do {
-        let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+        let keys = try kSyncJSONDecoder.decode([String].self, from: dirtyFields)
         return Set(keys.compactMap { WageSnapshotField(rawValue: $0) })
       } catch {
         // If decode fails, treat as fully dirty to ensure data is pushed to server
@@ -115,18 +115,18 @@ final class LocalWageSnapshot {
     }
     set {
       let keys = newValue.map(\.rawValue)
-      dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
+      dirtyFields = (try? kCanonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
 
   /// Decoded supplement rules
   var decodedSupplements: SupplementRulesSnapshot {
     get {
-      (try? syncJSONDecoder.decode(SupplementRulesSnapshot.self, from: supplements))
+      (try? kSyncJSONDecoder.decode(SupplementRulesSnapshot.self, from: supplements))
         ?? SupplementRulesSnapshot(rules: [])
     }
     set {
-      supplements = (try? canonicalJSONEncoder.encode(newValue)) ?? Data()
+      supplements = (try? kCanonicalJSONEncoder.encode(newValue)) ?? Data()
     }
   }
 
@@ -239,7 +239,7 @@ final class LocalWageSnapshot {
 
   /// Initialize empty dirty fields array
   static func emptyDirtyFields() -> Data {
-    (try? canonicalJSONEncoder.encode([String]())) ?? Data()
+    (try? kCanonicalJSONEncoder.encode([String]())) ?? Data()
   }
 }
 
@@ -276,7 +276,7 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
       hourlyWage: row.hourly_wage,
       wageLevel: row.wage_level,
       tariffTypeId: row.tariff_type_id,
-      supplements: (try? canonicalJSONEncoder.encode(row.supplements)) ?? Data(),
+      supplements: (try? kCanonicalJSONEncoder.encode(row.supplements)) ?? Data(),
       taxEnabled: row.tax_enabled,
       taxPercentage: row.tax_percentage,
       breakEnabled: row.break_enabled,
@@ -298,12 +298,12 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
   /// Encode to Data (returns empty Data on failure - use only for non-critical paths)
   /// DEPRECATED: Prefer encodedOrThrow() for new code
   func encoded() -> Data {
-    (try? canonicalJSONEncoder.encode(self)) ?? Data()
+    (try? kCanonicalJSONEncoder.encode(self)) ?? Data()
   }
 
   /// Decode from Data
   static func decode(from data: Data) -> Self? {
-    try? syncJSONDecoder.decode(Self.self, from: data)
+    try? kSyncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
@@ -402,7 +402,7 @@ extension LocalWageSnapshot {
       hourlyWage: serverRow.hourly_wage,
       wageLevel: serverRow.wage_level,
       tariffTypeId: serverRow.tariff_type_id,
-      supplements: (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
+      supplements: (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
       taxEnabled: serverRow.tax_enabled,
       taxPercentage: serverRow.tax_percentage,
       breakEnabled: serverRow.break_enabled,

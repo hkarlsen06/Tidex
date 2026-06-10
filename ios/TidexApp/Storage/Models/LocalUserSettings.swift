@@ -106,7 +106,7 @@ final class LocalUserSettings {
       }
 
       do {
-        let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+        let keys = try kSyncJSONDecoder.decode([String].self, from: dirtyFields)
         return Set(keys.compactMap { UserSettingsField(rawValue: $0) })
       } catch {
         // If decode fails, treat as fully dirty to ensure data is pushed to server
@@ -120,7 +120,7 @@ final class LocalUserSettings {
     }
     set {
       let keys = newValue.map(\.rawValue)
-      dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
+      dirtyFields = (try? kCanonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
 
@@ -170,7 +170,7 @@ final class LocalUserSettings {
       }
 
       do {
-        return try syncJSONDecoder.decode([String: Int].self, from: monthlyGoalsByMonthData)
+        return try kSyncJSONDecoder.decode([String: Int].self, from: monthlyGoalsByMonthData)
       } catch {
         SyncLogger.shared.log(
           "Corrupted monthlyGoalsByMonthData for user settings \(userId): \(error.localizedDescription)",
@@ -181,7 +181,7 @@ final class LocalUserSettings {
     }
     set {
       monthlyGoalsByMonthData =
-        (try? canonicalJSONEncoder.encode(
+        (try? kCanonicalJSONEncoder.encode(
           newValue.sorted { $0.key < $1.key }.reduce(into: [String: Int]()) {
             $0[$1.key] = $1.value
           })) ?? Data()
@@ -240,7 +240,7 @@ final class LocalUserSettings {
 
   /// Initialize empty dirty fields array
   static func emptyDirtyFields() -> Data {
-    (try? canonicalJSONEncoder.encode([String]())) ?? Data()
+    (try? kCanonicalJSONEncoder.encode([String]())) ?? Data()
   }
 }
 
@@ -318,12 +318,12 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   /// Encode to Data (returns empty Data on failure - use only for non-critical paths)
   /// DEPRECATED: Prefer encodedOrThrow() for new code
   func encoded() -> Data {
-    (try? canonicalJSONEncoder.encode(self)) ?? Data()
+    (try? kCanonicalJSONEncoder.encode(self)) ?? Data()
   }
 
   /// Decode from Data
   static func decode(from data: Data) -> Self? {
-    try? syncJSONDecoder.decode(Self.self, from: data)
+    try? kSyncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
@@ -449,7 +449,7 @@ extension LocalUserSettings {
     return LocalUserSettings(
       userId: serverRow.user_id,
       monthlyGoal: serverRow.monthly_goal,
-      monthlyGoalsByMonthData: (try? canonicalJSONEncoder.encode(
+      monthlyGoalsByMonthData: (try? kCanonicalJSONEncoder.encode(
         serverRow.monthly_goals_by_month ?? [:]))
         ?? Data(),
       defaultShiftsView: serverRow.default_shifts_view,

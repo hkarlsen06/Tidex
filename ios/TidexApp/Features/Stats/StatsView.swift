@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Stats tab view - displays statistics and analytics
 /// Shows monthly earnings, hours, shifts, and goal progress
-struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length
+struct StatsView: View {
+  // swiftlint:disable:previous explicit_acl explicit_top_level_acl file_types_order type_body_length
   @EnvironmentObject private var coordinator: AppCoordinator  // swiftlint:disable:this type_contents_order
 
   private struct MonthlyGoalEditContext: Identifiable {
@@ -35,7 +36,7 @@ struct StatsView: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   @discardableResult
   private func refreshWorkSetupPresentationState() -> Bool {  // swiftlint:disable:this type_contents_order
-    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder  // swiftlint:disable:this explicit_type_interface
+    let wasShowingPlaceholder: Bool = shouldShowWorkSetupRequiredPlaceholder
     workSetupPresentationViewModel.refresh(
       userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete

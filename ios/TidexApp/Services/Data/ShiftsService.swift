@@ -2,19 +2,21 @@ import Foundation
 import os.log
 import Supabase
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsService")
+private let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "ShiftsService")
 
 /// Service for fetching shifts and recurring shifts from Supabase
 @MainActor
-final class ShiftsService: ObservableObject {
-  static let shared = ShiftsService()
+internal final class ShiftsService: ObservableObject {
+  internal static let shared: ShiftsService = ShiftsService()
 
-  @Published private(set) var shifts: [ShiftRow] = []
-  @Published private(set) var recurringShifts: [RecurringShiftRow] = []
-  @Published private(set) var isLoading = false
-  @Published private(set) var error: Error?
+  @Published internal private(set) var shifts: [ShiftRow] = []
+  @Published internal private(set) var recurringShifts: [RecurringShiftRow] = []
+  @Published internal private(set) var isLoading: Bool = false
+  @Published internal private(set) var error: Error?
 
-  private init() {}
+  private init() {
+    // Singleton.
+  }
 
   // MARK: - Public API
 
@@ -25,7 +27,7 @@ final class ShiftsService: ObservableObject {
   ///   - endDate: End date (YYYY-MM-DD)
   ///   - limit: Maximum number of shifts to fetch
   /// - Returns: Array of shift rows
-  func fetchShifts(
+  internal func fetchShifts(
     for userId: String,
     startDate: String,
     endDate: String,
@@ -58,21 +60,21 @@ final class ShiftsService: ObservableObject {
         shifts = response
         return response
       } catch is CancellationError {
-        logger.info("Shifts fetch was cancelled")
+        kLogger.info("Shifts fetch was cancelled")
         throw CancellationError()
       } catch {
         self.error = error
         throw error
       }
     } onCancel: {
-      logger.info("Shifts fetch cancellation requested")
+      kLogger.info("Shifts fetch cancellation requested")
     }
   }
 
   /// Fetch all recurring shifts for a user
   /// - Parameter userId: User ID to fetch recurring shifts for
   /// - Returns: Array of recurring shift rows
-  func fetchRecurringShifts(for userId: String) async throws -> [RecurringShiftRow] {
+  internal func fetchRecurringShifts(for userId: String) async throws -> [RecurringShiftRow] {
     return try await withTaskCancellationHandler {
       do {
         // Check for cancellation before making network request
@@ -92,14 +94,14 @@ final class ShiftsService: ObservableObject {
         recurringShifts = response
         return response
       } catch is CancellationError {
-        logger.info("Recurring shifts fetch was cancelled")
+        kLogger.info("Recurring shifts fetch was cancelled")
         throw CancellationError()
       } catch {
         self.error = error
         throw error
       }
     } onCancel: {
-      logger.info("Recurring shifts fetch cancellation requested")
+      kLogger.info("Recurring shifts fetch cancellation requested")
     }
   }
 
@@ -109,16 +111,20 @@ final class ShiftsService: ObservableObject {
   ///   - startDate: Start date (YYYY-MM-DD)
   ///   - endDate: End date (YYYY-MM-DD)
   /// - Returns: Tuple of (shifts, recurringShifts)
-  func fetchAllShifts(
+  internal func fetchAllShifts(
     for userId: String,
     startDate: String,
     endDate: String
   ) async throws -> (shifts: [ShiftRow], recurring: [RecurringShiftRow]) {
     // Fetch both in parallel
-    async let shiftsTask = fetchShifts(for: userId, startDate: startDate, endDate: endDate)
-    async let recurringTask = fetchRecurringShifts(for: userId)
+    async let shiftsTask: [ShiftRow] = fetchShifts(for: userId, startDate: startDate, endDate: endDate)
+    async let recurringTask: [RecurringShiftRow] = fetchRecurringShifts(for: userId)
 
-    let (fetchedShifts, fetchedRecurring) = try await (shiftsTask, recurringTask)
+    let (fetchedShifts, fetchedRecurring): ([ShiftRow], [RecurringShiftRow]) = try await (shiftsTask, recurringTask)
     return (shifts: fetchedShifts, recurring: fetchedRecurring)
+  }
+
+  deinit {
+    // Singleton.
   }
 }

@@ -3,11 +3,11 @@ import XCTest
 @testable import Tidex
 
 @MainActor
-final class FriendsThreadComposerBridgeTests: XCTestCase {
-  func testAddImageAttachmentsDropsDuplicatePayloads() {
-    let bridge = FriendsThreadComposerBridge()
+internal final class FriendsThreadComposerBridgeTests: XCTestCase {
+  internal func testAddImageAttachmentsDropsDuplicatePayloads() {
+    let bridge: FriendsThreadComposerBridge = FriendsThreadComposerBridge()
 
-    let attachments = bridge.addImageAttachments(
+    let attachments: [FriendsComposerAttachmentDraft] = bridge.addImageAttachments(
       [
         ImageAttachment(id: "image-1", data: Data([0x01, 0x02]), mediaType: "image/jpeg"),
         ImageAttachment(id: "image-2", data: Data([0x01, 0x02]), mediaType: "image/jpeg"),
@@ -25,8 +25,8 @@ final class FriendsThreadComposerBridgeTests: XCTestCase {
     )
   }
 
-  func testCurrentStagedAttachmentsReflectsLatestProviderValue() {
-    let bridge = FriendsThreadComposerBridge()
+  internal func testCurrentStagedAttachmentsReflectsLatestProviderValue() {
+    let bridge: FriendsThreadComposerBridge = FriendsThreadComposerBridge()
     var stagedAttachments: [FriendsComposerAttachmentDraft] = [
       .image(ImageAttachment(id: "image-1", data: Data([0x01]), mediaType: "image/jpeg"))
     ]
@@ -41,5 +41,9 @@ final class FriendsThreadComposerBridgeTests: XCTestCase {
     )
 
     XCTAssertEqual(bridge.currentStagedAttachments(), stagedAttachments)
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

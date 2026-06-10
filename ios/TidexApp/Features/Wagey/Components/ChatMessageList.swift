@@ -159,8 +159,10 @@ struct ChatMessageList: View {  // swiftlint:disable:this explicit_acl explicit_
     }
   }
 
-  private func groupContext(for index: Int, in messages: [ChatMessage]) -> ChatMessageGroupContext
-  {  // swiftlint:disable:this line_length type_contents_order
+  private func groupContext(  // swiftlint:disable:this type_contents_order
+    for index: Int,
+    in messages: [ChatMessage]
+  ) -> ChatMessageGroupContext {
     WageyChatMessageGrouping.context(
       for: messages[index],
       previous: index > 0 ? messages[index - 1] : nil,

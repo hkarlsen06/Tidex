@@ -463,7 +463,9 @@ extension ChatChunk: Decodable {  // swiftlint:disable:this file_types_order no_
     case items  // swiftlint:disable:this explicit_enum_raw_value
   }
 
-  init(from decoder: Decoder) throws {  // swiftlint:disable:this cyclomatic_complexity explicit_acl function_body_length
+  init(  // swiftlint:disable:this cyclomatic_complexity explicit_acl function_body_length
+    from decoder: Decoder
+  ) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)  // swiftlint:disable:this explicit_type_interface
     let type = try container.decode(String.self, forKey: .type)  // swiftlint:disable:this explicit_type_interface
 
