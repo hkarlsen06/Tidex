@@ -1064,7 +1064,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         let shiftSupplementPay: Double = jobShifts.reduce(0) { total, shift in
           total + displayedSupplementPay(for: shift)
         }
-        let supplementBreakdowns: [SupplementBreakdown] = payrollSupplementBreakdowns(
+        let supplementBreakdowns: [PayrollSupplementBreakdown] = payrollSupplementBreakdowns(
           for: jobShifts
         )
         let shiftPostDeductions = jobShifts.reduce(0) { total, shift in  // swiftlint:disable:this explicit_type_interface line_length

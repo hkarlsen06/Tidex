@@ -564,13 +564,13 @@ extension Friend {
       id: id,
       email: email,
       phone: phone,
-      username: username,
       firstName: firstName,
       profilePictureUrl: profilePictureUrl,
       oauthAvatarUrl: oauthAvatarUrl,
       sharedAt: incomingShare?.sharedAt ?? outgoingShare?.sharedAt ?? "",
       showEarnings: incomingShare?.showEarningsToMe ?? false,
-      hidden: hidden
+      hidden: hidden,
+      username: username
     )
   }
 }

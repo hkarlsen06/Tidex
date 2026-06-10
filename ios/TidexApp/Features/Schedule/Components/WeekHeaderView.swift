@@ -7,7 +7,7 @@ internal struct WeekHeaderView: View {
   internal let totalGross: Double
   internal let totalGrossTextOverride: String?
 
-  @Environment(\.userCurrency) private var currency: CurrencyConfig
+  @Environment(\.userCurrency) private var currency: String
 
   // MARK: - Computed Properties
 

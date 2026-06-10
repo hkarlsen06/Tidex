@@ -8,14 +8,18 @@ private let kAcceptTermsLogger: Logger = Logger(subsystem: "no.tidex.app", categ
 // MARK: - Safari View (local copy to avoid import issues)
 
 /// Wrapper for presenting SFSafariViewController in SwiftUI
-private struct SafariViewAcceptTerms: UIViewControllerRepresentable {
+internal struct SafariViewAcceptTerms: UIViewControllerRepresentable {
   private let url: URL
 
-  func makeUIViewController(context _: Context) -> SFSafariViewController {
+  internal init(url: URL) {
+    self.url = url
+  }
+
+  internal func makeUIViewController(context _: Context) -> SFSafariViewController {
     SFSafariViewController(url: url)
   }
 
-  func updateUIViewController(_: SFSafariViewController, context _: Context) {
+  internal func updateUIViewController(_: SFSafariViewController, context _: Context) {
     _ = url
   }
 }

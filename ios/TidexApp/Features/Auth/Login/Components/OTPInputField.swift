@@ -4,7 +4,7 @@ import UIKit
 // MARK: - Digit Box
 
 /// Individual digit display box - extracted for performance
-private struct DigitBox: View {
+internal struct DigitBox: View {
   private let cursorWidth: CGFloat = 2
   private let cursorHeight: CGFloat = 24
   private let activeBorderWidth: CGFloat = 2
@@ -18,7 +18,7 @@ private struct DigitBox: View {
   private let isFilled: Bool
   private let cursorVisible: Bool
 
-  private var body: some View {
+  internal var body: some View {
     ZStack {
       // Background
       RoundedRectangle(cornerRadius: CornerRadius.sm)
@@ -54,6 +54,20 @@ private struct DigitBox: View {
       return .tidexBorder
     }
     return .tidexBorderSubtle
+  }
+
+  internal init(
+    digit: String?,
+    isCurrentPosition: Bool,
+    hasError: Bool,
+    isFilled: Bool,
+    cursorVisible: Bool
+  ) {
+    self.digit = digit
+    self.isCurrentPosition = isCurrentPosition
+    self.hasError = hasError
+    self.isFilled = isFilled
+    self.cursorVisible = cursorVisible
   }
 }
 

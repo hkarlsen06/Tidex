@@ -4,9 +4,9 @@ import SwiftUI
 private enum NextShiftCountdownPreviewData {
   private static let durationHours: Double = 8.0
   private static let paidHours: Double = 7.5
-  private static let basePay: Decimal = 1_500
-  private static let supplementPay: Decimal = 200
-  private static let gross: Decimal = 1_700
+  private static let basePay: Double = 1_500
+  private static let supplementPay: Double = 200
+  private static let gross: Double = 1_700
   private static let thresholdHours: Double = 5.0
   private static let deductedHours: Double = 0.5
 
