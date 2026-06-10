@@ -1,7 +1,9 @@
+// swiftlint:disable explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 #if DEBUG
   import Foundation
-  import SwiftData
   import os.log
+  import SwiftData
 
   private let logger = Logger(subsystem: "com.tidex.app", category: "SyncTestHelper")
 
@@ -77,7 +79,7 @@
 
       // Also log to console
       logger.info("[\(category.rawValue)] \(message)")
-      if let details = details {
+      if let details {
         logger.debug("  Details: \(details)")
       }
     }
@@ -125,9 +127,9 @@
       let userSettings = try? context.fetch(settingsDescriptor).first
 
       // Categorize by sync status
-      let shiftsByStatus = categorizeByStatus(shifts.map { $0.syncStatus })
-      let recurringByStatus = categorizeByStatus(recurringShifts.map { $0.syncStatus })
-      let snapshotsByStatus = categorizeByStatus(wageSnapshots.map { $0.syncStatus })
+      let shiftsByStatus = categorizeByStatus(shifts.map(\.syncStatus))
+      let recurringByStatus = categorizeByStatus(recurringShifts.map(\.syncStatus))
+      let snapshotsByStatus = categorizeByStatus(wageSnapshots.map(\.syncStatus))
 
       return SyncStateSummary(
         userId: userId,
@@ -139,7 +141,7 @@
           dirty: shiftsByStatus[.dirty] ?? 0,
           pendingDelete: shiftsByStatus[.pendingDelete] ?? 0,
           conflict: shiftsByStatus[.conflict] ?? 0,
-          deleted: shifts.filter { $0.isDeleted }.count
+          deleted: shifts.filter(\.isDeleted).count
         ),
         recurringShiftCount: ShiftCounts(
           total: recurringShifts.count,
@@ -190,7 +192,7 @@
       }
 
       // Check if local data exists
-      if summary.shiftCount.total == 0 && summary.recurringShiftCount.total == 0 {
+      if summary.shiftCount.total == 0, summary.recurringShiftCount.total == 0 {
         issues.append("No shifts found in local store")
       }
 
@@ -350,7 +352,7 @@
       results.append(await validateConflicts(userId: userId))
       results.append(await validateSoftDeleteSync(userId: userId))
 
-      let passed = results.filter { $0.passed }.count
+      let passed = results.filter(\.passed).count
       let total = results.count
 
       log(.validation, "=== Validation Suite Complete ===", details: "Passed: \(passed)/\(total)")

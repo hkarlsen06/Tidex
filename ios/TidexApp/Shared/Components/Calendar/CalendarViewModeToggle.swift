@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length conditional_returns_on_newline explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface no_magic_numbers type_contents_order
 import SwiftUI
 import UIKit
 

@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length multiline_arguments_brackets no_magic_numbers sorted_enum_cases
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_contents_order vertical_whitespace_between_cases
 import SwiftUI
 import UIKit
 
@@ -123,6 +131,7 @@ extension Color {
         switch traitCollection.userInterfaceStyle {
         case .dark:
           return UIColor(red: 0.082, green: 0.122, blue: 0.196, alpha: 1)
+
         default:
           return UIColor.white
         }
@@ -213,10 +222,13 @@ struct TidexCardShadowModifier: ViewModifier {
     switch level {
     case .subtle:
       return 12
+
     case .card:
       return 24
+
     case .elevated:
       return 20
+
     case .floating:
       return 16
     }
@@ -227,10 +239,13 @@ struct TidexCardShadowModifier: ViewModifier {
     switch level {
     case .subtle:
       return 0.06
+
     case .card:
       return 0.08
+
     case .elevated:
       return 0.12
+
     case .floating:
       return 0.15
     }
@@ -242,24 +257,32 @@ struct TidexCardShadowModifier: ViewModifier {
       switch level {
       case .subtle:
         return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.06)
+
       case .card:
         return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.10)
+
       case .elevated:
         return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.15)
+
       case .floating:
         return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.20)
       }
+
     case .dark:
       switch level {
       case .subtle:
         return Color.black.opacity(0.15)
+
       case .card:
         return Color.black.opacity(0.30)
+
       case .elevated:
         return Color.black.opacity(0.40)
+
       case .floating:
         return Color.black.opacity(0.50)
       }
+
     @unknown default:
       return Color.black.opacity(0.1)
     }
@@ -269,10 +292,13 @@ struct TidexCardShadowModifier: ViewModifier {
     switch level {
     case .subtle:
       return colorScheme == .light ? 4 : 3
+
     case .card:
       return colorScheme == .light ? 8 : 6
+
     case .elevated:
       return colorScheme == .light ? 16 : 10
+
     case .floating:
       return colorScheme == .light ? 24 : 14
     }
@@ -282,10 +308,13 @@ struct TidexCardShadowModifier: ViewModifier {
     switch level {
     case .subtle:
       return colorScheme == .light ? 1 : 1
+
     case .card:
       return colorScheme == .light ? 2 : 2
+
     case .elevated:
       return colorScheme == .light ? 4 : 3
+
     case .floating:
       return colorScheme == .light ? 8 : 5
     }

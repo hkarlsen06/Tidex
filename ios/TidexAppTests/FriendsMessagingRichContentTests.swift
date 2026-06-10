@@ -1,10 +1,16 @@
 import Foundation
+import Nimble
 import XCTest
 
 @testable import Tidex
 
+private enum FriendsMessagingRichContentTestValues {
+  static let grossPay: Double = 1_200
+  static let netPay: Double = 1_050
+}
+
 final class FriendsMessagingRichContentTests: XCTestCase {
-  func testFriendMessageDecodesShiftSnapshotRichContent() throws {
+  internal func testFriendMessageDecodesShiftSnapshotRichContent() {
     let message = FriendMessage(
       id: "message-1",
       threadId: "thread-1",
@@ -210,9 +216,9 @@ final class FriendsMessagingRichContentTests: XCTestCase {
       )
     )
 
-    XCTAssertTrue(draft.snapshot.includesEarnings)
-    XCTAssertEqual(draft.snapshot.grossPay, 1200)
-    XCTAssertEqual(draft.snapshot.netPay, 1050)
+    expect(draft.snapshot.includesEarnings) == true
+    expect(draft.snapshot.grossPay) == FriendsMessagingRichContentTestValues.grossPay
+    expect(draft.snapshot.netPay) == FriendsMessagingRichContentTestValues.netPay
     XCTAssertTrue(draft.snapshot.taxEnabled)
   }
 
@@ -308,8 +314,8 @@ private func makeShiftSnapshot(
     paidHours: 7.5,
     currency: "kr",
     includesEarnings: includesEarnings,
-    grossPay: includesEarnings ? 1200.0 : nil,
-    netPay: includesEarnings ? 1050.0 : nil,
+    grossPay: includesEarnings ? FriendsMessagingRichContentTestValues.grossPay : nil,
+    netPay: includesEarnings ? FriendsMessagingRichContentTestValues.netPay : nil,
     taxEnabled: includesEarnings,
     source: "shift_details_sheet"
   )

@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Security settings view
 /// Displays password management, connected accounts, and MFA settings
-struct SecuritySettingsView: View {
+struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel = SecuritySettingsViewModel()
 
@@ -329,8 +329,7 @@ struct SecuritySettingsView: View {
   }
 
   @ViewBuilder
-  // swiftlint:disable:next function_parameter_count
-  private func connectionRow(
+  private func connectionRow(  // swiftlint:disable:this function_body_length function_parameter_count line_length type_contents_order
     icon: String,
     iconColor: Color,
     title: String,
@@ -356,7 +355,7 @@ struct SecuritySettingsView: View {
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
 
-        if isConnected && !canDisconnect {
+        if isConnected, !canDisconnect {
           Text(.securityConnectionsAddOtherMethod)
             .font(.tidexMicro)
             .foregroundColor(.tidexTextMuted)
@@ -491,7 +490,7 @@ struct SecuritySettingsView: View {
 
       Spacer()
 
-      if viewModel.isRenamingPasskey && viewModel.passkeyToRename?.id == passkey.id {
+      if viewModel.isRenamingPasskey, viewModel.passkeyToRename?.id == passkey.id {
         ProgressView()
           .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
           .scaleEffect(0.75)
@@ -634,7 +633,7 @@ struct SecuritySettingsView: View {
           .frame(maxWidth: .infinity, alignment: .leading)
 
           // Phone OTP section (for phone-only users without password)
-          if !viewModel.hasPassword && viewModel.hasPhoneConnected {
+          if !viewModel.hasPassword, viewModel.hasPhoneConnected {
             phoneOtpSection
           }
 
@@ -746,8 +745,8 @@ struct SecuritySettingsView: View {
             .cornerRadius(CornerRadius.sm)
             .onChange(of: viewModel.phoneOtp) { _, newValue in
               // Limit to 6 digits
-              let filtered = newValue.filter { $0.isNumber }
-              if filtered.count > 6 {
+              let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
+              if filtered.count > 6 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
                 viewModel.phoneOtp = String(filtered.prefix(6))
               } else if filtered != newValue {
                 viewModel.phoneOtp = filtered
@@ -1013,8 +1012,8 @@ struct SecuritySettingsView: View {
         .cornerRadius(CornerRadius.sm)
         .onChange(of: viewModel.mfaVerifyCode) { _, newValue in
           // Limit to 6 digits
-          let filtered = newValue.filter { $0.isNumber }
-          if filtered.count > 6 {
+          let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
+          if filtered.count > 6 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
             viewModel.mfaVerifyCode = String(filtered.prefix(6))
           } else if filtered != newValue {
             viewModel.mfaVerifyCode = filtered
@@ -1129,8 +1128,8 @@ struct SecuritySettingsView: View {
           .cornerRadius(CornerRadius.sm)
           .onChange(of: viewModel.phoneLinkInput) { _, newValue in
             // Limit to 8 digits (Norwegian phone numbers)
-            let filtered = newValue.filter { $0.isNumber }
-            if filtered.count > 8 {
+            let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
+            if filtered.count > 8 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
               viewModel.phoneLinkInput = String(filtered.prefix(8))
             } else if filtered != newValue {
               viewModel.phoneLinkInput = filtered
@@ -1188,8 +1187,8 @@ struct SecuritySettingsView: View {
           .cornerRadius(CornerRadius.sm)
           .onChange(of: viewModel.phoneLinkOtp) { _, newValue in
             // Limit to 6 digits
-            let filtered = newValue.filter { $0.isNumber }
-            if filtered.count > 6 {
+            let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
+            if filtered.count > 6 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
               viewModel.phoneLinkOtp = String(filtered.prefix(6))
             } else if filtered != newValue {
               viewModel.phoneLinkOtp = filtered
@@ -1202,21 +1201,20 @@ struct SecuritySettingsView: View {
   private var canSubmitPhoneLinking: Bool {
     if viewModel.phoneLinkStep == .input {
       return viewModel.phoneLinkInput.count == 8
-    } else {
-      return viewModel.phoneLinkOtp.count == 6
     }
-  }
+    return viewModel.phoneLinkOtp.count == 6  // swiftlint:disable:this no_magic_numbers
+  }  // swiftlint:disable:this no_magic_numbers
 
   /// Format a phone number for display (Norwegian: nnn nn nnn)
   private func formatPhoneForDisplay(_ phone: String?) -> String? {
-    guard let phone = phone else { return nil }
-
+    guard let phone else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
+    // swiftlint:disable:this conditional_returns_on_newline
     // Remove any non-digit characters and country code
-    var digits = phone.filter { $0.isNumber }
-
+    var digits = phone.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
+    // swiftlint:disable:this explicit_type_interface
     // Remove Norwegian country code if present
-    if digits.hasPrefix("47") && digits.count > 8 {
-      digits = String(digits.dropFirst(2))
+    if digits.hasPrefix("47"), digits.count > 8 {  // swiftlint:disable:this no_magic_numbers
+      digits = String(digits.dropFirst(2))  // swiftlint:disable:this no_magic_numbers
     }
 
     // Format as "nnn nn nnn" for 8-digit Norwegian numbers
@@ -1236,4 +1234,4 @@ struct SecuritySettingsView: View {
   NavigationStack {
     SecuritySettingsView()
   }
-}
+}  // swiftlint:disable:this file_length

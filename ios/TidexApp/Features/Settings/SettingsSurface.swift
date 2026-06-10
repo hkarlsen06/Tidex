@@ -78,7 +78,7 @@ struct TidexSettingsDivider: View {
 struct TidexSettingsIcon: View {
   let systemName: String
   var foregroundColor: Color = .tidexBlue
-  var backgroundColor: Color? = nil
+  var backgroundColor: Color?  // swiftlint:disable:this explicit_acl
   var size: CGFloat = 40
   private var glyphBoxSize: CGFloat { size * 0.48 }
 

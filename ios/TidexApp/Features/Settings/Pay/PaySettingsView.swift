@@ -24,7 +24,7 @@ struct PaySettingsView: View {
       Color.tidexBackground
         .ignoresSafeArea()
 
-      if viewModel.isLoading && viewModel.snapshots.isEmpty {
+      if viewModel.isLoading, viewModel.snapshots.isEmpty {
         // Initial loading state
         loadingView
       } else {
@@ -51,7 +51,8 @@ struct PaySettingsView: View {
         onSave: { input in
           if viewModel.editorMode == .create {
             return await viewModel.createSnapshot(input: input)
-          } else if let snapshot = viewModel.selectedSnapshot {
+          }
+          if let snapshot = viewModel.selectedSnapshot {
             return await viewModel.updateSnapshot(id: snapshot.id, input: input)
           }
           return false
@@ -485,17 +486,18 @@ struct PaySettingsView: View {
 
     if count == 0 {
       return String(localized: .settingsPayDeleteConfirmation)
-    } else {
-      return String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
     }
+    return String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
   }
 
   private var jobActionConfirmationTitle: String {
     switch pendingJobAction {
     case .archive:
       return String(localized: .settingsPayJobActionsArchiveConfirmTitle)
+
     case .delete:
       return String(localized: .settingsPayJobActionsDeleteConfirmTitle)
+
     case .none:
       return ""
     }
@@ -505,8 +507,10 @@ struct PaySettingsView: View {
     switch pendingJobAction {
     case .archive:
       return String(localized: .settingsPayJobActionsArchiveConfirmMessage)
+
     case .delete:
       return String(localized: .settingsPayJobActionsDeleteConfirmMessage)
+
     case .none:
       return ""
     }

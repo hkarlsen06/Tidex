@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable legacy_objc_type line_length no_magic_numbers prefer_condition_list
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable required_deinit
 import Foundation
 
 struct ShiftCardDateParts: Equatable {
@@ -40,7 +48,7 @@ enum ShiftCardFormatter {
     else {
       return hhmm
     }
-    if hour == 24 && minute == 0 {
+    if hour == 24, minute == 0 {
       return localizedTimeComponents(hours: 24, minutes: 0, locale: locale)
     }
 

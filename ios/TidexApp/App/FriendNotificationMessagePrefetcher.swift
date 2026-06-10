@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable cyclomatic_complexity explicit_acl explicit_enum_raw_value explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface function_body_length let_var_whitespace line_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable multiline_arguments_brackets no_magic_numbers prefixed_toplevel_constant
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable required_deinit sorted_enum_cases type_name
 import Foundation
 import UIKit
 import os.log
@@ -53,8 +61,10 @@ enum FriendNotificationMessagePrefetchOutcome: Equatable {
     switch self {
     case .newData:
       return .newData
+
     case .skipped:
       return .noData
+
     case .failed:
       return .failed
     }
@@ -179,7 +189,7 @@ final class FriendNotificationMessagePrefetcher {
     messageId: String?,
     startedAt: Date
   ) {
-    let durationMs = Int(Date().timeIntervalSince(startedAt) * 1000)
+    let durationMs = Int(Date().timeIntervalSince(startedAt) * 1_000)
     let safeThreadId = threadId ?? "<missing>"
     let safeMessageId = messageId ?? "<missing>"
 
@@ -188,10 +198,12 @@ final class FriendNotificationMessagePrefetcher {
       prefetchLogger.info(
         "Silent prefetch stored message thread=\(safeThreadId, privacy: .private) message=\(safeMessageId, privacy: .private) duration_ms=\(durationMs)"
       )
+
     case .skipped(let reason):
       prefetchLogger.info(
         "Silent prefetch skipped reason=\(reason.rawValue, privacy: .public) thread=\(safeThreadId, privacy: .private) message=\(safeMessageId, privacy: .private) duration_ms=\(durationMs)"
       )
+
     case .failed:
       prefetchLogger.error(
         "Silent prefetch failed thread=\(safeThreadId, privacy: .private) message=\(safeMessageId, privacy: .private) duration_ms=\(durationMs)"

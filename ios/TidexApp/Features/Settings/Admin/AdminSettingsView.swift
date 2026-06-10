@@ -42,7 +42,7 @@ struct AdminSettingsView: View {
     .navigationBarTitleDisplayMode(.inline)
     .task {
       // Set initial tab if provided (for deep linking)
-      if let initialTab = initialTab {
+      if let initialTab {
         viewModel.selectedTab = initialTab
       }
       viewModel.setInitialReportSelection(initialReportId)
@@ -140,7 +140,7 @@ private struct UsersTabView: View {
   @ObservedObject var viewModel: AdminSettingsViewModel
 
   var body: some View {
-    VStack(spacing: 0) {
+    VStack(spacing: 0) {  // swiftlint:disable:this closure_body_length
       SearchBar(
         text: $viewModel.usersSearchQuery, placeholder: "Search users...",
         isSearching: viewModel.usersIsLoading
@@ -148,7 +148,7 @@ private struct UsersTabView: View {
         viewModel.searchUsers()
       }
 
-      if viewModel.usersIsLoading && viewModel.users.isEmpty {
+      if viewModel.usersIsLoading, viewModel.users.isEmpty {
         AdminLoadingView()
       } else if viewModel.users.isEmpty {
         EmptyStateView(icon: "person.3", message: "No users found")
@@ -163,15 +163,15 @@ private struct UsersTabView: View {
               UserCard(user: user) { viewModel.selectedUser = user }
                 .onAppear {
                   // Trigger infinite scroll when last user appears
-                  if user.id == viewModel.users.last?.id && viewModel.usersHasMore
-                    && !viewModel.usersIsLoading
+                  if user.id == viewModel.users.last?.id, viewModel.usersHasMore,
+                    !viewModel.usersIsLoading
                   {
                     Task { await viewModel.loadMoreUsers() }
                   }
                 }
             }
 
-            if viewModel.usersIsLoading && !viewModel.users.isEmpty {
+            if viewModel.usersIsLoading, !viewModel.users.isEmpty {
               ProgressView()
                 .padding()
             }
@@ -631,13 +631,13 @@ private struct NotificationsTabView: View {
 private struct FlowLayout: Layout {
   var spacing: CGFloat = 8
 
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
     let result = computeLayout(proposal: proposal, subviews: subviews)
     return result.size
   }
 
   func placeSubviews(
-    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()
   ) {
     let result = computeLayout(proposal: proposal, subviews: subviews)
     for (index, position) in result.positions.enumerated() {
@@ -658,7 +658,7 @@ private struct FlowLayout: Layout {
 
     for subview in subviews {
       let size = subview.sizeThatFits(.unspecified)
-      if currentX + size.width > maxWidth && currentX > 0 {
+      if currentX + size.width > maxWidth, currentX > 0 {
         currentX = 0
         currentY += lineHeight + spacing
         lineHeight = 0
@@ -1157,7 +1157,7 @@ private struct UserActionSheet: View {
             .foregroundColor(user.isBanned ? .tidexSuccess : .tidexError)
           }
 
-          if viewModel.isSuperAdmin && !user.isSuperAdmin {
+          if viewModel.isSuperAdmin, !user.isSuperAdmin {
             Button(user.isAdmin ? "Revoke Admin" : "Grant Admin") {
               Task {
                 await viewModel.toggleAdmin(user: user)
@@ -1675,4 +1675,4 @@ private struct UserSearchResultRow: View {
   NavigationStack {
     AdminSettingsView()
   }
-}
+}  // swiftlint:disable:this file_length

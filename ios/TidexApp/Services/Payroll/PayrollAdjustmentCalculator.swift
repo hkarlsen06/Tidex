@@ -41,10 +41,12 @@ enum PayrollAdjustmentCalculator {
             payoutMonth: payoutMonth
           )
           usesTaxEstimate = settings.enabled
+
         case .netManual:
           grossContribution = adjustment.amount
           netContribution = adjustment.amount
           usesTaxEstimate = false
+
         case .excludedFromTaxEstimate:
           grossContribution = adjustment.amount
           netContribution = adjustment.amount

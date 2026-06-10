@@ -3,6 +3,11 @@ import XCTest
 
 @testable import Tidex
 
+private enum FriendsComposerDraftStoreTestValues {
+  static let grossPay: Double = 1_200
+  static let netPay: Double = 1_050
+}
+
 @MainActor
 final class FriendsComposerDraftStoreTests: XCTestCase {
   func testLoadAndClearTextDraft() async throws {
@@ -145,8 +150,8 @@ private func makeShiftSnapshot() -> FriendShiftSnapshot {
     paidHours: 7.5,
     currency: "kr",
     includesEarnings: true,
-    grossPay: 1200,
-    netPay: 1050,
+    grossPay: FriendsComposerDraftStoreTestValues.grossPay,
+    netPay: FriendsComposerDraftStoreTestValues.netPay,
     taxEnabled: true,
     source: "tests"
   )

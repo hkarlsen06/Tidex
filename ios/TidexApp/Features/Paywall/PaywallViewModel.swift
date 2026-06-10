@@ -107,9 +107,11 @@ final class PaywallViewModel: ObservableObject {
     case .pro:
       monthlyId = .proMonthly
       yearlyId = .proYearly
+
     case .max:
       monthlyId = .maxMonthly
       yearlyId = .maxYearly
+
     case .free:
       return nil
     }
@@ -197,21 +199,19 @@ final class PaywallViewModel: ObservableObject {
           isPurchasing = false
           Haptics.playSubscriptionSuccess()
           return true
-        } else {
-          // Transaction completed but entitlement not granted yet
-          // This can happen in sandbox - don't auto-dismiss
-          logger.warning(
-            "Transaction completed but tier unchanged: expected \(targetTier.rawValue), got \(tierAfterPurchase.rawValue)"
-          )
-          isPurchasing = false
-          return false
         }
-      } else {
-        // User cancelled or pending
-        logger.info("Purchase was cancelled or is pending for \(product.id)")
+        // Transaction completed but entitlement not granted yet
+        // This can happen in sandbox - don't auto-dismiss
+        logger.warning(
+          "Transaction completed but tier unchanged: expected \(targetTier.rawValue), got \(tierAfterPurchase.rawValue)"
+        )
         isPurchasing = false
         return false
       }
+      // User cancelled or pending
+      logger.info("Purchase was cancelled or is pending for \(product.id)")
+      isPurchasing = false
+      return false
     } catch {
       logger.error("Purchase failed: \(error.localizedDescription)")
       self.error = error.localizedDescription

@@ -34,24 +34,33 @@ enum JobsRepositoryError: LocalizedError {
     switch self {
     case .jobNameEmpty:
       return "Job name cannot be empty."
+
     case .jobNotFound:
       return "Job not found."
+
     case .jobDeleted:
       return "Job has been deleted."
+
     case .cannotChangeTariffJobCurrency:
       return "Currency cannot be changed for jobs using tariff rates."
+
     case .cannotArchiveLastActiveJob:
       return "Cannot archive the last active job."
+
     case .cannotArchiveDefaultJob:
       return "Set another job as default before archiving this one."
+
     case .cannotDeleteLastActiveJob:
       return "Cannot delete the last active job."
+
     case .cannotDeleteDefaultJob:
       return "Set another job as default before deleting this one."
+
     case .cannotDeleteJobWithHistory:
       return String(
         localized: "settings.pay.error.cannotDeleteWorkplaceWithHistory.message"
       )
+
     case .cannotSetArchivedOrDeletedDefault:
       return "Cannot set archived or deleted job as default."
     }
@@ -61,6 +70,7 @@ enum JobsRepositoryError: LocalizedError {
     switch self {
     case .cannotDeleteJobWithHistory:
       return String(localized: .settingsPayErrorCannotDeleteWorkplaceWithHistoryTitle)
+
     default:
       return nil
     }
@@ -208,10 +218,10 @@ final class JobsRepository: ObservableObject {
           if job.syncStatusRaw == "pendingDelete" {
             return false
           }
-          if !includeDeleted && job.deletedAt != nil {
+          if !includeDeleted, job.deletedAt != nil {
             return false
           }
-          if !includeArchived && job.archivedAt != nil {
+          if !includeArchived, job.archivedAt != nil {
             return false
           }
           return true
@@ -606,7 +616,7 @@ final class JobsRepository: ObservableObject {
 
     let activeJobs = getActiveJobs(for: userId)
     let isActiveTarget = target.archived_at == nil
-    if isActiveTarget && activeJobs.count <= 1 {
+    if isActiveTarget, activeJobs.count <= 1 {
       throw JobsRepositoryError.cannotDeleteLastActiveJob
     }
     if target.is_default {

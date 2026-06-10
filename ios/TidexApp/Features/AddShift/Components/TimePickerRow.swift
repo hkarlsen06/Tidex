@@ -22,6 +22,7 @@ final class TimeInputFocusController {
     switch field {
     case .start:
       startField = textField
+
     case .end:
       endField = textField
     }
@@ -37,12 +38,14 @@ final class TimeInputFocusController {
         setCursorToEnd(startField)
       }
       endField?.resignFirstResponder()
+
     case .end:
       if let endField {
         endField.becomeFirstResponder()
         setCursorToEnd(endField)
       }
       startField?.resignFirstResponder()
+
     case .none:
       startField?.resignFirstResponder()
       endField?.resignFirstResponder()
@@ -61,6 +64,7 @@ final class TimeInputFocusController {
     switch field {
     case .start:
       return startField
+
     case .end:
       return endField
     }
@@ -170,11 +174,11 @@ private struct TimeTextField: UIViewRepresentable {
       }
     }
 
-    func textFieldDidBeginEditing(_ textField: UITextField) {
+    func textFieldDidBeginEditing(_: UITextField) {
       parent.focusController.focus(parent.field)
     }
 
-    func textFieldDidEndEditing(_ textField: UITextField) {
+    func textFieldDidEndEditing(_: UITextField) {
       if parent.focusController.currentFocus == parent.field {
         parent.focusController.focus(nil)
       }
@@ -185,13 +189,15 @@ private struct TimeTextField: UIViewRepresentable {
       replacementString string: String
     ) -> Bool {
       let currentText = textField.text ?? ""
-      let currentDigits = currentText.filter { $0.isNumber }
+      // swiftlint:disable:next explicit_type_interface
+      let currentDigits = currentText.filter(\.isNumber)
 
       let adjustedRange = adjustRangeForColonBackspace(range, in: currentText, replacement: string)
       let proposedText = (currentText as NSString).replacingCharacters(
         in: adjustedRange, with: string)
 
-      let proposedDigits = proposedText.filter { $0.isNumber }
+      // swiftlint:disable:next explicit_type_interface
+      let proposedDigits = proposedText.filter(\.isNumber)
       let limitedDigits = String(proposedDigits.prefix(4))
       let formatted = formatTimeInput(limitedDigits)
 
@@ -207,7 +213,8 @@ private struct TimeTextField: UIViewRepresentable {
       setCursor(textField, position: caretPosition)
 
       let didInsert = string.rangeOfCharacter(from: .decimalDigits) != nil
-      let insertedDigits = string.filter { $0.isNumber }
+      // swiftlint:disable:next explicit_type_interface
+      let insertedDigits = string.filter(\.isNumber)
       let didDelete = string.isEmpty && adjustedRange.length > 0
       let caretAtEnd = caretPosition == formatted.count
       let caretAtStart = caretPosition == 0
@@ -231,7 +238,8 @@ private struct TimeTextField: UIViewRepresentable {
     private func handleDeleteBackward() -> Bool {
       guard let textField else { return false }
       let currentText = textField.text ?? ""
-      let currentDigits = currentText.filter { $0.isNumber }
+      // swiftlint:disable:next explicit_type_interface
+      let currentDigits = currentText.filter(\.isNumber)
       let caretOffset = currentCaretOffset(in: textField)
 
       guard currentDigits.count <= 2, caretOffset == 0 else { return false }
@@ -271,7 +279,7 @@ private struct TimeTextField: UIViewRepresentable {
       let nsText = text as NSString
       let safePosition = min(position, nsText.length)
       let prefix = nsText.substring(to: safePosition)
-      return prefix.filter { $0.isNumber }.count
+      return prefix.filter(\.isNumber).count
     }
 
     private func caretIndex(forDigitsBefore digitsBefore: Int, digitsCount: Int) -> Int {
@@ -351,7 +359,7 @@ struct NumericTimeInput: View {
       }
       .onChange(of: isFocused) { wasFocused, nowFocused in
         // When focus is lost, auto-complete partial hour input
-        if wasFocused && !nowFocused {
+        if wasFocused, !nowFocused {
           autoCompletePartialInput()
         }
       }
@@ -374,10 +382,12 @@ struct NumericTimeInput: View {
   /// Auto-completes partial input when user taps away
   /// e.g., "9" → "09:00", "14" → "14:00", "930" → "09:30"
   private func autoCompletePartialInput() {
-    let digits = inputValue.filter { $0.isNumber }
+    // swiftlint:disable:next explicit_type_interface
+    let digits = inputValue.filter(\.isNumber)
 
     // Only process if we have 1-3 digits (incomplete input)
-    guard digits.count >= 1 && digits.count < 4 else { return }
+    // swiftlint:disable:next conditional_returns_on_newline no_magic_numbers
+    guard digits.count >= 1, digits.count < 4 else { return }
 
     let completed: String
     switch digits.count {
@@ -385,10 +395,12 @@ struct NumericTimeInput: View {
       // Single digit: treat as hour, pad with zero and add :00
       // "9" → "09:00"
       completed = "0\(digits):00"
+
     case 2:
       // Two digits: treat as hour, add :00
       // "14" → "14:00", "09" → "09:00"
       completed = "\(digits):00"
+
     case 3:
       // Three digits: interpret based on first digits
       // "930" → "09:30" (single-digit hour + 2-digit minutes)
@@ -408,6 +420,7 @@ struct NumericTimeInput: View {
         let minutes = String(digits.dropFirst())
         completed = "\(hour):\(minutes)"
       }
+
     default:
       return
     }
@@ -472,7 +485,8 @@ struct NumericTimeInput: View {
     }
 
     // 24:00 is only valid as exactly end-of-day (24:01+ is invalid)
-    if hours == 24 && minutes != 0 { return nil }
+    // swiftlint:disable:next conditional_returns_on_newline no_magic_numbers
+    if hours == 24, minutes != 0 { return nil }
 
     let calendar = Calendar.current
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
@@ -486,7 +500,7 @@ struct NumericTimeInput: View {
   /// Format Date for display, showing "24:00" for midnight in the end field
   private func displayString(for date: Date) -> String {
     let formatted = formatDateToHHMM(date)
-    if field == .end && formatted == "00:00" {
+    if field == .end, formatted == "00:00" {
       return "24:00"
     }
     return formatted
@@ -512,11 +526,11 @@ struct TimeRangePicker: View {
   /// Optional binding to expose/control which field is focused (for keyboard accessory)
   var focusedFieldBinding: Binding<TimeInputField?>?
   /// Optional preset chip ranges (used by onboarding simulator).
-  var presetRanges: [TimeRangeCount]? = nil
+  var presetRanges: [TimeRangeCount]?  // swiftlint:disable:this discouraged_optional_collection explicit_acl
   /// Whether to show recent/preset time chips below the inputs.
   var showsRecentTimeChips = true
   /// Optional accessory displayed to the left of recent time chips.
-  var leadingChipAccessory: AnyView? = nil
+  var leadingChipAccessory: AnyView?  // swiftlint:disable:this explicit_acl
   @State private var focusController = TimeInputFocusController()
   @ScaledMetric(relativeTo: .body) private var compactInputWidth: CGFloat = 156
   @ScaledMetric(relativeTo: .body) private var compactInputHeight: CGFloat = 58
@@ -654,7 +668,8 @@ struct TimeRangePicker: View {
       return nil
     }
 
-    if hours == 24 && minutes != 0 { return nil }
+    // swiftlint:disable:next conditional_returns_on_newline no_magic_numbers
+    if hours == 24, minutes != 0 { return nil }
 
     let calendar = Calendar.current
     var components = calendar.dateComponents([.year, .month, .day], from: Date())

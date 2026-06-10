@@ -1,3 +1,4 @@
+import Nimble
 import XCTest
 
 @testable import Tidex
@@ -448,9 +449,9 @@ final class FriendsListOrderingTests: XCTestCase {
           endTime: "16:00",
           status: .past
         ),
-        current: (year: 2026, month: 4)
+        current: (year: 2_026, month: 4)
       )?.year,
-      2025
+      2_025
     )
     XCTAssertEqual(
       FriendInitialMonthResolver.targetYearMonth(
@@ -462,7 +463,7 @@ final class FriendsListOrderingTests: XCTestCase {
           endTime: "16:00",
           status: .past
         ),
-        current: (year: 2026, month: 4)
+        current: (year: 2_026, month: 4)
       )?.month,
       8
     )
@@ -480,10 +481,10 @@ final class FriendsListOrderingTests: XCTestCase {
     let targetMonth = FriendInitialMonthResolver.targetYearMonth(
       sharer: sharer,
       preview: nil,
-      current: (year: 2026, month: 4)
+      current: (year: 2_026, month: 4)
     )
 
-    XCTAssertEqual(targetMonth?.year, 2025)
+    expect(targetMonth?.year) == 2_025
     XCTAssertEqual(targetMonth?.month, 8)
   }
 
@@ -500,7 +501,7 @@ final class FriendsListOrderingTests: XCTestCase {
       FriendInitialMonthResolver.targetYearMonth(
         sharer: sharer,
         preview: nil,
-        current: (year: 2026, month: 4)
+        current: (year: 2_026, month: 4)
       )
     )
   }
@@ -854,4 +855,4 @@ final class FriendSharingRemovalActionTests: XCTestCase {
       String(localized: .sharingRelationshipIncomingOnly)
     )
   }
-}
+}  // swiftlint:disable:this file_length

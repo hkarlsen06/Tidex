@@ -9,7 +9,8 @@ private enum FriendShiftPreviewStatusCardStyle {
 struct CompactFriendIdentityRow: View {
   let sharer: SharedUser
   var unreadMessageCount = 0
-  var messagePreview: FriendCardMessagePreview? = nil
+  // swiftlint:disable:next explicit_acl
+  var messagePreview: FriendCardMessagePreview?
   var isTyping = false
   var showsContactInfo = true
   var avatarSize: CGFloat = AvatarView.Size.large
@@ -127,6 +128,7 @@ private struct FriendCardMessagePreviewRow: View {
     switch messagePreview.state {
     case .outgoingSending, .outgoingSent, .outgoingOpened, .outgoingFailed:
       "\(String(localized: .friendsChatPreviewYou)): \(messagePreview.text)"
+
     case .incomingUnread, .incomingOpened:
       messagePreview.text
     }
@@ -136,6 +138,7 @@ private struct FriendCardMessagePreviewRow: View {
     switch messagePreview.state {
     case .incomingUnread:
       .tidexBlue
+
     case .outgoingSending, .outgoingSent, .outgoingOpened, .outgoingFailed, .incomingOpened:
       .tidexTextMuted.opacity(0.75)
     }
@@ -145,8 +148,10 @@ private struct FriendCardMessagePreviewRow: View {
     switch messagePreview.state {
     case .incomingUnread:
       .tidexBlue
+
     case .outgoingSending, .outgoingSent, .outgoingOpened, .incomingOpened:
       .tidexTextMuted
+
     case .outgoingFailed:
       .tidexError
     }
@@ -161,6 +166,7 @@ private struct FriendCardMessagePreviewRow: View {
     switch messagePreview.state {
     case .incomingUnread, .incomingOpened:
       return timestamp
+
     case .outgoingSending, .outgoingSent, .outgoingOpened, .outgoingFailed:
       return "\(String(localized: stateLabel)) \(timestamp)"
     }
@@ -170,12 +176,16 @@ private struct FriendCardMessagePreviewRow: View {
     switch messagePreview.state {
     case .outgoingSending:
       .friendsChatStatusSending
+
     case .outgoingSent:
       .friendsChatPreviewLabelSent
+
     case .outgoingOpened, .incomingOpened:
       .friendsChatPreviewLabelOpened
+
     case .outgoingFailed:
       .friendsChatStatusFailed
+
     case .incomingUnread:
       .friendsChatPreviewLabelReceived
     }
@@ -320,9 +330,11 @@ struct FriendShiftPreviewStatusCard: View {
     case .card:
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .fill(Color.tidexSurfacePrimary)
+
     case .embedded:
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .fill(Color.clear)
+
     case .toolbarExtension:
       RoundedRectangle(cornerRadius: 22, style: .continuous)
         .fill(Color.tidexSurfacePrimary.opacity(0.94))
@@ -339,9 +351,11 @@ struct FriendShiftPreviewStatusCard: View {
     case .card:
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(Color.clear, lineWidth: 0)
+
     case .embedded:
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(Color.clear, lineWidth: 0)
+
     case .toolbarExtension:
       RoundedRectangle(cornerRadius: 22, style: .continuous)
         .stroke(Color.tidexBorderSubtle, lineWidth: 1)
@@ -389,7 +403,7 @@ struct FriendShiftPreviewStatusCard: View {
     let start = schedule.start
     let end = schedule.end
 
-    if now >= start && now <= end {
+    if now >= start, now <= end {
       currentStatus = .active
       let totalDuration = end.timeIntervalSince(start)
       let elapsed = now.timeIntervalSince(start)
@@ -470,6 +484,7 @@ struct FriendShiftPreviewStatusCard: View {
     switch computed.status {
     case .active:
       return String(localized: .sharingStatusActive)
+
     case .upcoming, .past:
       return computed.relativeText
     }
@@ -625,7 +640,7 @@ private struct CompactFriendShiftPreviewTextRow: View {
     let currentStatus: ShiftPreviewStatus
     let secondsUntilEnd: Int
 
-    if now >= start && now <= end {
+    if now >= start, now <= end {
       currentStatus = .active
       secondsUntilEnd = Int(ceil(end.timeIntervalSince(now)))
     } else if now < start {
@@ -654,6 +669,7 @@ private struct CompactFriendShiftPreviewTextRow: View {
     switch computed.status {
     case .active:
       return String(localized: .sharingStatusActive)
+
     case .upcoming, .past:
       return computed.relativeText
     }
@@ -667,8 +683,10 @@ private struct FriendShiftPreviewShadowModifier: ViewModifier {
     switch style {
     case .card:
       content.tidexCardShadow(.subtle, cornerRadius: CornerRadius.lg)
+
     case .embedded:
       content
+
     case .toolbarExtension:
       content
     }

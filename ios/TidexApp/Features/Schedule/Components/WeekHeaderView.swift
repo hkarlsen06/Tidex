@@ -58,8 +58,8 @@ struct WeekHeaderView: View {
 
 #Preview {
   VStack(spacing: Spacing.md) {
-    WeekHeaderView(weekNumber: 3, totalGross: 12500)
-    WeekHeaderView(weekNumber: 4, totalGross: 8750.50)
+    WeekHeaderView(weekNumber: 3, totalGross: 12_500)
+    WeekHeaderView(weekNumber: 4, totalGross: 8_750.50)
   }
   .padding()
   .background(Color.tidexBackground)

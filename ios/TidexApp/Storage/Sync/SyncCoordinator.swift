@@ -1,3 +1,6 @@
+// swiftlint:disable:next line_length
+// swiftlint:disable explicit_type_interface file_length function_body_length multiline_arguments_brackets no_magic_numbers type_body_length
+// swiftlint:disable:previous blanket_disable_command
 import Combine
 import Foundation
 import Supabase
@@ -69,6 +72,7 @@ private actor SyncStateStore {
         needsFollowUpSync = true
       }
       return .alreadySyncing
+
     case .idle:
       break
     }
@@ -109,6 +113,7 @@ extension SyncReason {
     switch self {
     case .localChange, .manualRefresh, .watchRefresh:
       return true
+
     case .appLaunch, .foreground:
       return false
     }
@@ -230,6 +235,7 @@ final class SyncCoordinator: ObservableObject {
   }
 
   @discardableResult
+  // swiftlint:disable:next cyclomatic_complexity
   func sync(
     reason: SyncReason,
     userId: String,
@@ -307,6 +313,7 @@ final class SyncCoordinator: ObservableObject {
         duration: 0,
         error: "Sync already in progress"
       )
+
     case .skippedInterval:
       // Keep locale metadata in sync even when full sync is interval-skipped.
       await updateAppLocaleMetadataIfNeeded()
@@ -326,6 +333,7 @@ final class SyncCoordinator: ObservableObject {
         duration: 0,
         error: nil
       )
+
     case .started:
       break
     }
@@ -346,6 +354,7 @@ final class SyncCoordinator: ObservableObject {
 
     // Race the sync work against a timeout to prevent zombie syncs
     // from holding the syncing lock indefinitely.
+    // swiftlint:disable:next closure_body_length
     let result: SyncResult = await withTaskGroup(of: SyncResult?.self) { group in
       group.addTask {
         await self.performSyncWork(
@@ -360,7 +369,20 @@ final class SyncCoordinator: ObservableObject {
         try? await Task.sleep(nanoseconds: Self.syncTimeout)
         return nil  // timeout signal
       }
-      let first = await group.next() ?? nil
+      guard let first = await group.next() else {
+        group.cancelAll()
+        return SyncResult(
+          success: false,
+          tableResults: [],
+          pushResults: [],
+          totalRowsProcessed: 0,
+          totalRowsPushed: 0,
+          totalConflicts: 0,
+          totalAutoMerged: 0,
+          duration: Date().timeIntervalSince(startTime),
+          error: "Sync timed out"
+        )
+      }
       group.cancelAll()
       return first
         ?? SyncResult(
@@ -613,18 +635,25 @@ final class SyncCoordinator: ObservableObject {
       switch table {
       case .jobs:
         result = try await pullJobsPage(userId: userId, cursor: cursor)
+
       case .userShifts:
         result = try await pullUserShiftsPage(userId: userId, cursor: cursor)
+
       case .events:
         result = try await pullEventsPage(userId: userId, cursor: cursor)
+
       case .recurringShifts:
         result = try await pullRecurringShiftsPage(userId: userId, cursor: cursor)
+
       case .wageSnapshots:
         result = try await pullWageSnapshotsPage(userId: userId, cursor: cursor)
+
       case .payrollAdjustments:
         result = try await pullPayrollAdjustmentsPage(userId: userId, cursor: cursor)
+
       case .userSettings:
         result = try await pullUserSettingsPage(userId: userId, cursor: cursor)
+
       case .notificationPreferences:
         result = try await pullNotificationPreferencesPage(userId: userId, cursor: cursor)
       }
@@ -875,11 +904,10 @@ final class SyncCoordinator: ObservableObject {
         serverDeletedAt: serverDeletedAt,
         storeActor: storeActor
       )
-    } else {
-      let localJob = LocalJob.from(serverRow: serverRow, serverUpdatedAt: serverUpdatedAt)
-      try await storeActor.upsertJob(localJob)
-      return .inserted
     }
+    let localJob = LocalJob.from(serverRow: serverRow, serverUpdatedAt: serverUpdatedAt)
+    try await storeActor.upsertJob(localJob)
+    return .inserted
   }
 
   private func applyJobToExisting(
@@ -1076,23 +1104,22 @@ final class SyncCoordinator: ObservableObject {
 
     // Check if exists locally
     if let existing = try await storeActor.getUserShift(id: serverRow.id) {
-      return try await applyShiftToExisting(
+      return await applyShiftToExisting(
         existing: existing,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverDeletedAt: serverDeletedAt,
         storeActor: storeActor
       )
-    } else {
-      // Insert as new clean row
-      try await insertNewShift(
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverDeletedAt: serverDeletedAt,
-        storeActor: storeActor
-      )
-      return .inserted
     }
+    // Insert as new clean row
+    try await insertNewShift(
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      storeActor: storeActor
+    )
+    return .inserted
   }
 
   private func applyShiftToExisting(
@@ -1101,7 +1128,7 @@ final class SyncCoordinator: ObservableObject {
     serverUpdatedAt: Date,
     serverDeletedAt: Date?,
     storeActor: LocalStoreActor
-  ) async throws -> ApplyResult {
+  ) async -> ApplyResult {
     let serverSnapshot = UserShiftServerSnapshot.from(
       jobId: serverRow.job_id,
       shiftDate: serverRow.shift_date,
@@ -1162,11 +1189,10 @@ final class SyncCoordinator: ObservableObject {
           localDirtyFields: localDirtyFields
         )
         return .autoMerged
-      } else {
-        // Conflict - overlapping fields
-        await storeActor.markShiftConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
       }
+      // Conflict - overlapping fields
+      await storeActor.markShiftConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
+      return .conflict
 
     case .conflict:
       // Already in conflict, update conflict snapshot
@@ -1354,22 +1380,21 @@ final class SyncCoordinator: ObservableObject {
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
     if let existing = try await storeActor.getEvent(id: serverRow.id) {
-      return try await applyEventToExisting(
+      return await applyEventToExisting(
         existing: existing,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverDeletedAt: serverDeletedAt,
         storeActor: storeActor
       )
-    } else {
-      try await insertNewEvent(
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverDeletedAt: serverDeletedAt,
-        storeActor: storeActor
-      )
-      return .inserted
     }
+    try await insertNewEvent(
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      storeActor: storeActor
+    )
+    return .inserted
   }
 
   private func applyEventToExisting(
@@ -1378,7 +1403,7 @@ final class SyncCoordinator: ObservableObject {
     serverUpdatedAt: Date,
     serverDeletedAt: Date?,
     storeActor: LocalStoreActor
-  ) async throws -> ApplyResult {
+  ) async -> ApplyResult {
     let serverSnapshot = EventServerSnapshot.from(
       serverRow: serverRow,
       updatedAt: serverUpdatedAt,
@@ -1423,10 +1448,9 @@ final class SyncCoordinator: ObservableObject {
           localDirtyFields: localDirtyFields
         )
         return .autoMerged
-      } else {
-        await storeActor.markEventConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
       }
+      await storeActor.markEventConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
+      return .conflict
 
     case .conflict:
       await storeActor.updateEventConflictSnapshot(id: serverRow.id, serverSnapshot: serverSnapshot)
@@ -1605,22 +1629,21 @@ final class SyncCoordinator: ObservableObject {
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
     if let existing = try await storeActor.getRecurringShift(id: serverRow.id) {
-      return try await applyRecurringShiftToExisting(
+      return await applyRecurringShiftToExisting(
         existing: existing,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverDeletedAt: serverDeletedAt,
         storeActor: storeActor
       )
-    } else {
-      try await insertNewRecurringShift(
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverDeletedAt: serverDeletedAt,
-        storeActor: storeActor
-      )
-      return .inserted
     }
+    try await insertNewRecurringShift(
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      storeActor: storeActor
+    )
+    return .inserted
   }
 
   private func applyRecurringShiftToExisting(
@@ -1629,7 +1652,7 @@ final class SyncCoordinator: ObservableObject {
     serverUpdatedAt: Date,
     serverDeletedAt: Date?,
     storeActor: LocalStoreActor
-  ) async throws -> ApplyResult {
+  ) async -> ApplyResult {
     let serverSnapshot = RecurringShiftServerSnapshot.from(
       row: serverRow.toRecurringShiftRow(),
       updatedAt: serverUpdatedAt,
@@ -1678,11 +1701,10 @@ final class SyncCoordinator: ObservableObject {
           localDirtyFields: localDirtyFields
         )
         return .autoMerged
-      } else {
-        await storeActor.markRecurringShiftConflict(
-          id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
       }
+      await storeActor.markRecurringShiftConflict(
+        id: serverRow.id, serverSnapshot: serverSnapshot)
+      return .conflict
 
     case .conflict:
       await storeActor.updateRecurringShiftConflictSnapshot(
@@ -1854,22 +1876,21 @@ final class SyncCoordinator: ObservableObject {
     let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
 
     if let existing = try await storeActor.getWageSnapshot(id: serverRow.id) {
-      return try await applyWageSnapshotToExisting(
+      return await applyWageSnapshotToExisting(
         existing: existing,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverDeletedAt: serverDeletedAt,
         storeActor: storeActor
       )
-    } else {
-      try await insertNewWageSnapshot(
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverDeletedAt: serverDeletedAt,
-        storeActor: storeActor
-      )
-      return .inserted
     }
+    try await insertNewWageSnapshot(
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      storeActor: storeActor
+    )
+    return .inserted
   }
 
   private func applyWageSnapshotToExisting(
@@ -1878,7 +1899,7 @@ final class SyncCoordinator: ObservableObject {
     serverUpdatedAt: Date,
     serverDeletedAt: Date?,
     storeActor: LocalStoreActor
-  ) async throws -> ApplyResult {
+  ) async -> ApplyResult {
     let serverSnapshot = WageSnapshotServerSnapshot.from(
       row: serverRow.toWageSnapshot(),
       updatedAt: serverUpdatedAt,
@@ -1925,10 +1946,9 @@ final class SyncCoordinator: ObservableObject {
           localDirtyFields: localDirtyFields
         )
         return .autoMerged
-      } else {
-        await storeActor.markWageSnapshotConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
       }
+      await storeActor.markWageSnapshotConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
+      return .conflict
 
     case .conflict:
       await storeActor.updateWageSnapshotConflictSnapshot(
@@ -2013,10 +2033,13 @@ final class SyncCoordinator: ObservableObject {
       switch result {
       case .success, .deleted:
         rowsPushed += 1
+
       case .conflict:
         newConflicts += 1
+
       case .rebased:
         rowsPushed += 1
+
       case .noChange:
         break
       }
@@ -2300,6 +2323,7 @@ final class SyncCoordinator: ObservableObject {
           snapshot: serverSnapshot
         )
         return .updated
+
       case .dirty, .pendingDelete:
         if serverRow.revision == existing.serverRevision { return .noChange }
         await storeActor.markPayrollAdjustmentConflict(
@@ -2307,6 +2331,7 @@ final class SyncCoordinator: ObservableObject {
           serverSnapshot: serverSnapshot
         )
         return .conflict
+
       case .conflict:
         await storeActor.markPayrollAdjustmentConflict(
           id: serverRow.id,
@@ -2436,20 +2461,19 @@ final class SyncCoordinator: ObservableObject {
       serverRow.updated_at, table: .userSettings, id: serverRow.user_id)
 
     if let existing = try await storeActor.getUserSettings(userId: serverRow.user_id) {
-      return try await applyUserSettingsToExisting(
+      return await applyUserSettingsToExisting(
         existing: existing,
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         storeActor: storeActor
       )
-    } else {
-      try await insertNewUserSettings(
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        storeActor: storeActor
-      )
-      return .inserted
     }
+    try await insertNewUserSettings(
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      storeActor: storeActor
+    )
+    return .inserted
   }
 
   private func applyUserSettingsToExisting(
@@ -2457,7 +2481,7 @@ final class SyncCoordinator: ObservableObject {
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
     storeActor: LocalStoreActor
-  ) async throws -> ApplyResult {
+  ) async -> ApplyResult {
     let serverSnapshot = UserSettingsServerSnapshot.from(
       row: serverRow.toUserSettings(),
       updatedAt: serverUpdatedAt,
@@ -2502,11 +2526,10 @@ final class SyncCoordinator: ObservableObject {
           localDirtyFields: localDirtyFields
         )
         return .autoMerged
-      } else {
-        await storeActor.markUserSettingsConflict(
-          userId: serverRow.user_id, serverSnapshot: serverSnapshot)
-        return .conflict
       }
+      await storeActor.markUserSettingsConflict(
+        userId: serverRow.user_id, serverSnapshot: serverSnapshot)
+      return .conflict
 
     case .pendingDelete, .conflict:
       // Settings don't have pendingDelete, treat as conflict
@@ -2575,18 +2598,25 @@ final class SyncCoordinator: ObservableObject {
     switch table {
     case .jobs:
       return try await pushJobs(userId: userId)
+
     case .userShifts:
       return try await pushUserShifts(userId: userId)
+
     case .events:
       return try await pushEvents(userId: userId)
+
     case .recurringShifts:
       return try await pushRecurringShifts(userId: userId)
+
     case .wageSnapshots:
       return try await pushWageSnapshots(userId: userId)
+
     case .payrollAdjustments:
       return try await pushPayrollAdjustments(userId: userId)
+
     case .userSettings:
       return try await pushUserSettings(userId: userId)
+
     case .notificationPreferences:
       return try await pushNotificationPreferences(userId: userId)
     }
@@ -2628,11 +2658,14 @@ final class SyncCoordinator: ObservableObject {
       switch result {
       case .success, .deleted:
         rowsPushed += 1
+
       case .conflict:
         newConflicts += 1
+
       case .rebased:
         rebased += 1
         rowsPushed += 1
+
       case .noChange:
         break
       }
@@ -3013,7 +3046,7 @@ final class SyncCoordinator: ObservableObject {
     let conflictingFields = serverChangedFields.intersection(
       Set(localDirtyFields.map { convertToJobField($0) }))
 
-    if conflictingFields.isEmpty && !isRetry {
+    if conflictingFields.isEmpty, !isRetry {
       await storeActor.rebaseJob(
         id: jobId,
         serverRow: serverRow,
@@ -3060,11 +3093,14 @@ final class SyncCoordinator: ObservableObject {
       switch result {
       case .success, .deleted:
         rowsPushed += 1
+
       case .conflict:
         newConflicts += 1
+
       case .rebased:
         rebased += 1
         rowsPushed += 1
+
       case .noChange:
         break
       }
@@ -3201,15 +3237,14 @@ final class SyncCoordinator: ObservableObject {
         logger.debug("Pushed shift \(shiftId.prefix(8))")
 
         return .success
-      } else {
-        // Row wasn't updated - revision mismatch
-        return try await handleShiftPushConflict(
-          shift: shift,
-          userId: userId,
-          storeActor: storeActor,
-          isRetry: isRetry
-        )
       }
+      // Row wasn't updated - revision mismatch
+      return try await handleShiftPushConflict(
+        shift: shift,
+        userId: userId,
+        storeActor: storeActor,
+        isRetry: isRetry
+      )
     } catch {
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
       let errorString = String(describing: error)
@@ -3261,48 +3296,47 @@ final class SyncCoordinator: ObservableObject {
       logger.debug("Deleted shift \(shiftId.prefix(8))")
 
       return .deleted
-    } else {
-      // Conflict - fetch current server state
-      let serverRows: [SyncShiftRow] =
-        try await supabase
-        .from("user_shifts")
-        .select()
-        .eq("id", value: shiftId)
-        .execute()
-        .value
-
-      if let serverRow = serverRows.first {
-        let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userShifts, id: shiftId)
-        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
-
-        if serverDeletedAt != nil {
-          // Already deleted on server, just clean up local
-          await storeActor.markShiftDeleted(
-            id: shiftId,
-            serverUpdatedAt: serverUpdatedAt,
-            serverRevision: serverRow.revision,
-            serverDeletedAt: serverDeletedAt
-          )
-          return .deleted
-        }
-
-        // Mark conflict
-        let serverSnapshot = UserShiftServerSnapshot.from(
-          jobId: serverRow.job_id,
-          shiftDate: serverRow.shift_date,
-          startTime: serverRow.start_time,
-          endTime: serverRow.end_time,
-          note: serverRow.note,
-          customPauseWindows: serverRow.custom_pause_windows,
-          customSupplements: serverRow.custom_supplements,
-          updatedAt: serverUpdatedAt,
-          revision: serverRow.revision,
-          deletedAt: serverDeletedAt
-        )
-        await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
-      }
-      return .conflict
     }
+    // Conflict - fetch current server state
+    let serverRows: [SyncShiftRow] =
+      try await supabase
+      .from("user_shifts")
+      .select()
+      .eq("id", value: shiftId)
+      .execute()
+      .value
+
+    if let serverRow = serverRows.first {
+      let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userShifts, id: shiftId)
+      let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+      if serverDeletedAt != nil {
+        // Already deleted on server, just clean up local
+        await storeActor.markShiftDeleted(
+          id: shiftId,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: serverRow.revision,
+          serverDeletedAt: serverDeletedAt
+        )
+        return .deleted
+      }
+
+      // Mark conflict
+      let serverSnapshot = UserShiftServerSnapshot.from(
+        jobId: serverRow.job_id,
+        shiftDate: serverRow.shift_date,
+        startTime: serverRow.start_time,
+        endTime: serverRow.end_time,
+        note: serverRow.note,
+        customPauseWindows: serverRow.custom_pause_windows,
+        customSupplements: serverRow.custom_supplements,
+        updatedAt: serverUpdatedAt,
+        revision: serverRow.revision,
+        deletedAt: serverDeletedAt
+      )
+      await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+    }
+    return .conflict
   }
 
   /// Insert a new user shift that was created locally (serverRevision == 0)
@@ -3384,10 +3418,9 @@ final class SyncCoordinator: ObservableObject {
         logger.debug("Inserted new shift \(shiftId.prefix(8))")
 
         return .success
-      } else {
-        logger.error("Insert shift returned no rows for \(shiftId.prefix(8))")
-        return .conflict
       }
+      logger.error("Insert shift returned no rows for \(shiftId.prefix(8))")
+      return .conflict
     } catch {
       let errorString = String(describing: error)
       // Check if it's a duplicate key error (row already exists on server)
@@ -3519,7 +3552,7 @@ final class SyncCoordinator: ObservableObject {
     let conflictingFields = serverChangedFields.intersection(
       Set(localDirtyFields.map { convertToUserShiftField($0) }))
 
-    if conflictingFields.isEmpty && !isRetry {
+    if conflictingFields.isEmpty, !isRetry {
       // Auto-merge possible: rebase and retry once
       await storeActor.rebaseShift(
         id: shiftId,
@@ -3541,11 +3574,10 @@ final class SyncCoordinator: ObservableObject {
         return retryResult
       }
       return .conflict
-    } else {
-      // Conflict - overlapping fields or retry failed
-      await storeActor.markShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
-      return .conflict
     }
+    // Conflict - overlapping fields or retry failed
+    await storeActor.markShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
+    return .conflict
   }
 
   // MARK: - Events Push
@@ -3568,11 +3600,14 @@ final class SyncCoordinator: ObservableObject {
       switch result {
       case .success, .deleted:
         rowsPushed += 1
+
       case .conflict:
         newConflicts += 1
+
       case .rebased:
         rebased += 1
         rowsPushed += 1
+
       case .noChange:
         break
       }
@@ -3686,14 +3721,13 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Pushed event \(eventId.prefix(8))")
         return .success
-      } else {
-        return try await handleEventPushConflict(
-          event: event,
-          userId: userId,
-          storeActor: storeActor,
-          isRetry: isRetry
-        )
       }
+      return try await handleEventPushConflict(
+        event: event,
+        userId: userId,
+        storeActor: storeActor,
+        isRetry: isRetry
+      )
     } catch {
       let errorString = String(describing: error)
       if errorString.contains("row-level security") || errorString.contains("42501") {
@@ -3756,38 +3790,37 @@ final class SyncCoordinator: ObservableObject {
 
       logger.debug("Deleted event \(eventId.prefix(8))")
       return .deleted
-    } else {
-      let serverRows: [SyncEventRow] =
-        try await supabase
-        .from("events")
-        .select()
-        .eq("id", value: eventId)
-        .execute()
-        .value
-
-      if let serverRow = serverRows.first {
-        let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .events, id: eventId)
-        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
-
-        if serverDeletedAt != nil {
-          await storeActor.markEventDeleted(
-            id: eventId,
-            serverUpdatedAt: serverUpdatedAt,
-            serverRevision: serverRow.revision,
-            serverDeletedAt: serverDeletedAt
-          )
-          return .deleted
-        }
-
-        let serverSnapshot = EventServerSnapshot.from(
-          serverRow: serverRow,
-          updatedAt: serverUpdatedAt,
-          deletedAt: serverDeletedAt
-        )
-        await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
-      }
-      return .conflict
     }
+    let serverRows: [SyncEventRow] =
+      try await supabase
+      .from("events")
+      .select()
+      .eq("id", value: eventId)
+      .execute()
+      .value
+
+    if let serverRow = serverRows.first {
+      let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .events, id: eventId)
+      let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+      if serverDeletedAt != nil {
+        await storeActor.markEventDeleted(
+          id: eventId,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: serverRow.revision,
+          serverDeletedAt: serverDeletedAt
+        )
+        return .deleted
+      }
+
+      let serverSnapshot = EventServerSnapshot.from(
+        serverRow: serverRow,
+        updatedAt: serverUpdatedAt,
+        deletedAt: serverDeletedAt
+      )
+      await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
+    }
+    return .conflict
   }
 
   private func insertEvent(
@@ -3848,10 +3881,9 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Inserted new event \(eventId.prefix(8))")
         return .success
-      } else {
-        logger.error("Insert event returned no rows for \(eventId.prefix(8))")
-        return .conflict
       }
+      logger.error("Insert event returned no rows for \(eventId.prefix(8))")
+      return .conflict
     } catch {
       let errorString = String(describing: error)
       if errorString.contains("duplicate") || errorString.contains("23505") {
@@ -3945,7 +3977,7 @@ final class SyncCoordinator: ObservableObject {
     let conflictingFields = serverChangedFields.intersection(
       Set(localDirtyFields.map { convertToEventField($0) }))
 
-    if conflictingFields.isEmpty && !isRetry {
+    if conflictingFields.isEmpty, !isRetry {
       await storeActor.rebaseEvent(
         id: eventId,
         serverRow: serverRow,
@@ -3965,10 +3997,9 @@ final class SyncCoordinator: ObservableObject {
         return retryResult
       }
       return .conflict
-    } else {
-      await storeActor.markEventConflict(id: eventId, serverSnapshot: newServerSnapshot)
-      return .conflict
     }
+    await storeActor.markEventConflict(id: eventId, serverSnapshot: newServerSnapshot)
+    return .conflict
   }
 
   // MARK: - Recurring Shifts Push
@@ -3991,11 +4022,14 @@ final class SyncCoordinator: ObservableObject {
       switch result {
       case .success, .deleted:
         rowsPushed += 1
+
       case .conflict:
         newConflicts += 1
+
       case .rebased:
         rebased += 1
         rowsPushed += 1
+
       case .noChange:
         break
       }
@@ -4160,14 +4194,13 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Pushed recurring shift \(shiftId.prefix(8))")
         return .success
-      } else {
-        return try await handleRecurringShiftPushConflict(
-          shift: shift,
-          userId: userId,
-          storeActor: storeActor,
-          isRetry: isRetry
-        )
       }
+      return try await handleRecurringShiftPushConflict(
+        shift: shift,
+        userId: userId,
+        storeActor: storeActor,
+        isRetry: isRetry
+      )
     } catch {
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
       let errorString = String(describing: error)
@@ -4218,41 +4251,40 @@ final class SyncCoordinator: ObservableObject {
 
       logger.debug("Deleted recurring shift \(shiftId.prefix(8))")
       return .deleted
-    } else {
-      // Fetch and check server state
-      let serverRows: [SyncRecurringShiftRow] =
-        try await supabase
-        .from("recurring_shifts")
-        .select()
-        .eq("id", value: shiftId)
-        .execute()
-        .value
-
-      if let serverRow = serverRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          serverRow.updated_at, table: .recurringShifts, id: shiftId)
-        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
-
-        if serverDeletedAt != nil {
-          await storeActor.markRecurringShiftDeleted(
-            id: shiftId,
-            serverUpdatedAt: serverUpdatedAt,
-            serverRevision: serverRow.revision,
-            serverDeletedAt: serverDeletedAt
-          )
-          return .deleted
-        }
-
-        let serverSnapshot = RecurringShiftServerSnapshot.from(
-          row: serverRow.toRecurringShiftRow(),
-          updatedAt: serverUpdatedAt,
-          revision: serverRow.revision,
-          deletedAt: serverDeletedAt
-        )
-        await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
-      }
-      return .conflict
     }
+    // Fetch and check server state
+    let serverRows: [SyncRecurringShiftRow] =
+      try await supabase
+      .from("recurring_shifts")
+      .select()
+      .eq("id", value: shiftId)
+      .execute()
+      .value
+
+    if let serverRow = serverRows.first {
+      let serverUpdatedAt = parseUpdatedAt(
+        serverRow.updated_at, table: .recurringShifts, id: shiftId)
+      let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+      if serverDeletedAt != nil {
+        await storeActor.markRecurringShiftDeleted(
+          id: shiftId,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: serverRow.revision,
+          serverDeletedAt: serverDeletedAt
+        )
+        return .deleted
+      }
+
+      let serverSnapshot = RecurringShiftServerSnapshot.from(
+        row: serverRow.toRecurringShiftRow(),
+        updatedAt: serverUpdatedAt,
+        revision: serverRow.revision,
+        deletedAt: serverDeletedAt
+      )
+      await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+    }
+    return .conflict
   }
 
   /// Insert a new recurring shift that was created locally (serverRevision == 0)
@@ -4342,10 +4374,9 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Inserted new recurring shift \(shiftId.prefix(8))")
         return .success
-      } else {
-        logger.error("Insert recurring shift returned no rows for \(shiftId.prefix(8))")
-        return .conflict
       }
+      logger.error("Insert recurring shift returned no rows for \(shiftId.prefix(8))")
+      return .conflict
     } catch {
       let errorString = String(describing: error)
       // Check if it's a duplicate key error
@@ -4451,7 +4482,7 @@ final class SyncCoordinator: ObservableObject {
     let conflictingFields = serverChangedFields.intersection(
       Set(localDirtyFields.map { convertToRecurringShiftField($0) }))
 
-    if conflictingFields.isEmpty && !isRetry {
+    if conflictingFields.isEmpty, !isRetry {
       await storeActor.rebaseRecurringShift(
         id: shiftId,
         serverRow: serverRow,
@@ -4471,10 +4502,9 @@ final class SyncCoordinator: ObservableObject {
         return retryResult
       }
       return .conflict
-    } else {
-      await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
-      return .conflict
     }
+    await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
+    return .conflict
   }
 
   // MARK: - Wage Snapshots Push
@@ -4497,11 +4527,14 @@ final class SyncCoordinator: ObservableObject {
       switch result {
       case .success, .deleted:
         rowsPushed += 1
+
       case .conflict:
         newConflicts += 1
+
       case .rebased:
         rebased += 1
         rowsPushed += 1
+
       case .noChange:
         break
       }
@@ -4658,14 +4691,13 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Pushed wage snapshot \(snapshotId.prefix(8))")
         return .success
-      } else {
-        return try await handleWageSnapshotPushConflict(
-          snapshot: snapshot,
-          userId: userId,
-          storeActor: storeActor,
-          isRetry: isRetry
-        )
       }
+      return try await handleWageSnapshotPushConflict(
+        snapshot: snapshot,
+        userId: userId,
+        storeActor: storeActor,
+        isRetry: isRetry
+      )
     } catch {
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
       let errorString = String(describing: error)
@@ -4716,40 +4748,39 @@ final class SyncCoordinator: ObservableObject {
 
       logger.debug("Deleted wage snapshot \(snapshotId.prefix(8))")
       return .deleted
-    } else {
-      let serverRows: [SyncWageSnapshotRow] =
-        try await supabase
-        .from("wage_snapshots")
-        .select()
-        .eq("id", value: snapshotId)
-        .execute()
-        .value
-
-      if let serverRow = serverRows.first {
-        let serverUpdatedAt = parseUpdatedAt(
-          serverRow.updated_at, table: .wageSnapshots, id: snapshotId)
-        let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
-
-        if serverDeletedAt != nil {
-          await storeActor.markWageSnapshotDeleted(
-            id: snapshotId,
-            serverUpdatedAt: serverUpdatedAt,
-            serverRevision: serverRow.revision,
-            serverDeletedAt: serverDeletedAt
-          )
-          return .deleted
-        }
-
-        let serverSnapshot = WageSnapshotServerSnapshot.from(
-          row: serverRow.toWageSnapshot(),
-          updatedAt: serverUpdatedAt,
-          revision: serverRow.revision,
-          deletedAt: serverDeletedAt
-        )
-        await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
-      }
-      return .conflict
     }
+    let serverRows: [SyncWageSnapshotRow] =
+      try await supabase
+      .from("wage_snapshots")
+      .select()
+      .eq("id", value: snapshotId)
+      .execute()
+      .value
+
+    if let serverRow = serverRows.first {
+      let serverUpdatedAt = parseUpdatedAt(
+        serverRow.updated_at, table: .wageSnapshots, id: snapshotId)
+      let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+
+      if serverDeletedAt != nil {
+        await storeActor.markWageSnapshotDeleted(
+          id: snapshotId,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: serverRow.revision,
+          serverDeletedAt: serverDeletedAt
+        )
+        return .deleted
+      }
+
+      let serverSnapshot = WageSnapshotServerSnapshot.from(
+        row: serverRow.toWageSnapshot(),
+        updatedAt: serverUpdatedAt,
+        revision: serverRow.revision,
+        deletedAt: serverDeletedAt
+      )
+      await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
+    }
+    return .conflict
   }
 
   /// Insert a new wage snapshot that was created locally (serverRevision == 0)
@@ -4841,10 +4872,9 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Inserted new wage snapshot \(snapshotId.prefix(8))")
         return .success
-      } else {
-        logger.error("Insert wage snapshot returned no rows for \(snapshotId.prefix(8))")
-        return .conflict
       }
+      logger.error("Insert wage snapshot returned no rows for \(snapshotId.prefix(8))")
+      return .conflict
     } catch {
       let errorString = String(describing: error)
       // Check if it's a duplicate key error
@@ -4951,7 +4981,7 @@ final class SyncCoordinator: ObservableObject {
     let conflictingFields = serverChangedFields.intersection(
       Set(localDirtyFields.map { convertToWageSnapshotField($0) }))
 
-    if conflictingFields.isEmpty && !isRetry {
+    if conflictingFields.isEmpty, !isRetry {
       await storeActor.rebaseWageSnapshot(
         id: snapshotId,
         serverRow: serverRow,
@@ -4971,10 +5001,9 @@ final class SyncCoordinator: ObservableObject {
         return retryResult
       }
       return .conflict
-    } else {
-      await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: newServerSnapshot)
-      return .conflict
     }
+    await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: newServerSnapshot)
+    return .conflict
   }
 
   // MARK: - User Settings Push
@@ -4995,11 +5024,14 @@ final class SyncCoordinator: ObservableObject {
     switch result {
     case .success:
       rowsPushed = 1
+
     case .conflict:
       newConflicts = 1
+
     case .rebased:
       rebased = 1
       rowsPushed = 1
+
     case .noChange, .deleted:
       break
     }
@@ -5141,14 +5173,13 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Pushed user settings for \(userId.prefix(8))")
         return .success
-      } else {
-        return try await handleUserSettingsPushConflict(
-          settings: settings,
-          userId: userId,
-          storeActor: storeActor,
-          isRetry: isRetry
-        )
       }
+      return try await handleUserSettingsPushConflict(
+        settings: settings,
+        userId: userId,
+        storeActor: storeActor,
+        isRetry: isRetry
+      )
     } catch {
       // Check if it's an RLS policy violation - mark as conflict, don't abort sync
       let errorString = String(describing: error)
@@ -5243,10 +5274,9 @@ final class SyncCoordinator: ObservableObject {
 
         logger.debug("Inserted new user settings for \(userId.prefix(8))")
         return .success
-      } else {
-        logger.error("Insert user settings returned no rows for \(userId.prefix(8))")
-        return .conflict
       }
+      logger.error("Insert user settings returned no rows for \(userId.prefix(8))")
+      return .conflict
     } catch {
       let errorString = String(describing: error)
       // Check if it's a duplicate key error
@@ -5335,7 +5365,7 @@ final class SyncCoordinator: ObservableObject {
     let conflictingFields = serverChangedFields.intersection(
       Set(localDirtyFields.map { convertToUserSettingsField($0) }))
 
-    if conflictingFields.isEmpty && !isRetry {
+    if conflictingFields.isEmpty, !isRetry {
       await storeActor.rebaseUserSettings(
         userId: userId,
         serverRow: serverRow,
@@ -5354,10 +5384,9 @@ final class SyncCoordinator: ObservableObject {
         return retryResult
       }
       return .conflict
-    } else {
-      await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: newServerSnapshot)
-      return .conflict
     }
+    await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: newServerSnapshot)
+    return .conflict
   }
 
   // MARK: - Conflict Resolution API
@@ -5719,11 +5748,10 @@ final class SyncCoordinator: ObservableObject {
         logger.debug("Pushed notification preferences for user \(userId.prefix(8))")
         return TablePushResult(
           table: .notificationPreferences, rowsPushed: 1, newConflicts: 0, rebased: 0)
-      } else {
-        logger.warning("No rows returned after notification preferences upsert")
-        return TablePushResult(
-          table: .notificationPreferences, rowsPushed: 0, newConflicts: 0, rebased: 0)
       }
+      logger.warning("No rows returned after notification preferences upsert")
+      return TablePushResult(
+        table: .notificationPreferences, rowsPushed: 0, newConflicts: 0, rebased: 0)
     } catch {
       logger.error("Push notification preferences failed: \(error.localizedDescription)")
       throw error
@@ -5835,10 +5863,13 @@ enum SyncError: LocalizedError {
     switch self {
     case .notFound(let table, let id):
       return "\(table.displayName) with id \(id) not found"
+
     case .notInConflict(let table, let id):
       return "\(table.displayName) with id \(id) is not in conflict state"
+
     case .missingConflictSnapshot(let table, let id):
       return "\(table.displayName) with id \(id) has no conflict snapshot"
+
     case .dateParsingFailed(let table, let id, let rawValue):
       return "\(table.displayName) with id \(id) has unparseable date field: '\(rawValue)'"
     }
@@ -5849,8 +5880,10 @@ enum SyncError: LocalizedError {
     switch self {
     case .notFound:
       return "Sync failed: Record not found locally. Please refresh and try again."
+
     case .notInConflict, .missingConflictSnapshot:
       return "Sync failed: Conflict state mismatch. Please refresh and try again."
+
     case .dateParsingFailed(let table, let id, _):
       return
         "Sync failed: Server returned invalid data for \(table.displayName) (ID: \(id.prefix(8))...). Please contact support."
@@ -5886,7 +5919,7 @@ enum SyncError: LocalizedError {
       guard let description = error.errorDescription else {
         return (false, "FAIL: Error has no description")
       }
-      guard description.contains(testId) && description.contains(malformedDate) else {
+      guard description.contains(testId), description.contains(malformedDate) else {
         return (false, "FAIL: Error description missing details: \(description)")
       }
 

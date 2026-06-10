@@ -1,3 +1,5 @@
+// swiftlint:disable explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import UIKit
 import WidgetKit
@@ -198,7 +200,7 @@ enum NativeWidgetStorage {
 
     // Combine regular and virtual shifts, removing duplicates
     // (A real shift on a date takes precedence over a virtual one)
-    let regularDates = Set(regularShifts.map { $0.shift_date })
+    let regularDates = Set(regularShifts.map(\.shift_date))
     let dedupedVirtualShifts = virtualShifts.filter { !regularDates.contains($0.shift_date) }
     let allShifts = regularShifts + dedupedVirtualShifts
 

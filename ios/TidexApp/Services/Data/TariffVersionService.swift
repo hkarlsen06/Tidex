@@ -182,9 +182,9 @@ actor TariffVersionService {
   /// - Throws: Error if the fetch fails
   func getDefaultTariffType() async throws -> TariffType? {
     let types = try await getTariffTypes()
-    let defaultType = types.first { $0.is_default }
+    let defaultType: TariffType? = types.first(where: \.is_default)
 
-    if let defaultType = defaultType {
+    if let defaultType {
       logger.debug("Default tariff type: \(defaultType.id)")
     } else {
       logger.warning("No default tariff type found")
@@ -237,6 +237,7 @@ enum TariffVersionServiceError: Error, LocalizedError {
     switch self {
     case .noVersionsFound(let tariffType):
       return "No tariff versions found for type: \(tariffType)"
+
     case .networkError(let error):
       return "Network error: \(error.localizedDescription)"
     }

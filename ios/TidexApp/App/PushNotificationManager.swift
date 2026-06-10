@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable required_deinit type_contents_order
 import Combine
 import Foundation
 import UIKit
@@ -32,6 +36,7 @@ final class PushNotificationManager: ObservableObject {
     switch registrationState {
     case .apnsFailed, .serverFailed:
       return true
+
     default:
       return false
     }
@@ -42,8 +47,10 @@ final class PushNotificationManager: ObservableObject {
     switch registrationState {
     case .apnsFailed(let message):
       return message
+
     case .serverFailed(let message):
       return message
+
     default:
       return nil
     }

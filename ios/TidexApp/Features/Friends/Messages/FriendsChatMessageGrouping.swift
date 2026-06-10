@@ -11,18 +11,21 @@ struct FriendsChatMessageGroupContext: Equatable {
   let position: FriendsChatMessageGroupPosition
   let isCurrentUser: Bool
 
-  func joiningNext() -> FriendsChatMessageGroupContext {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  func joiningNext() -> Self {
     let updatedPosition: FriendsChatMessageGroupPosition
     switch position {
     case .standalone:
       updatedPosition = .leading
+
     case .trailing:
       updatedPosition = .middle
+
     case .leading, .middle:
       updatedPosition = position
     }
 
-    return FriendsChatMessageGroupContext(
+    return Self(
       position: updatedPosition,
       isCurrentUser: isCurrentUser
     )
@@ -32,6 +35,7 @@ struct FriendsChatMessageGroupContext: Equatable {
     switch position {
     case .middle, .trailing:
       return true
+
     case .standalone, .leading:
       return false
     }
@@ -41,6 +45,7 @@ struct FriendsChatMessageGroupContext: Equatable {
     switch position {
     case .leading, .middle:
       return true
+
     case .standalone, .trailing:
       return false
     }
@@ -79,10 +84,13 @@ enum FriendsChatMessageGrouping {
     switch (joinsPrevious, joinsNext) {
     case (false, false):
       position = .standalone
+
     case (false, true):
       position = .leading
+
     case (true, true):
       position = .middle
+
     case (true, false):
       position = .trailing
     }

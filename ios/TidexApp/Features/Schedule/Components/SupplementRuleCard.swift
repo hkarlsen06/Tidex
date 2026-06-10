@@ -193,8 +193,8 @@ struct SupplementRuleEditorSheet: View {
   let onSave: (CustomSupplementRuleWithId) -> Void
   let onCancel: () -> Void
 
-  @State private var fromTime: Date = Date()
-  @State private var toTime: Date = Date()
+  @State private var fromTime = Date()  // swiftlint:disable:this explicit_type_interface
+  @State private var toTime = Date()  // swiftlint:disable:this explicit_type_interface
   @State private var supplementType: CustomSupplementRuleWithId.SupplementType = .fixed
   @State private var value: Double = 45
   @State private var valueInputText: String = ""
@@ -261,6 +261,7 @@ struct SupplementRuleEditorSheet: View {
       case .low: return 50
       case .veryLow: return 500
       }
+
     case .percent:
       return 50
     }
@@ -567,13 +568,17 @@ struct SupplementRuleEditorSheet: View {
       switch currencyConfig.wageRangeTier {
       case .high:
         return [22, 45, 55, 110, 115]
+
       case .medium:
         return [2, 5, 10, 15, 20]
+
       case .low:
         return [10, 25, 50, 75, 100]
+
       case .veryLow:
-        return [100, 250, 500, 750, 1000]
+        return [100, 250, 500, 750, 1_000]  // swiftlint:disable:this no_magic_numbers
       }
+
     case .percent:
       return [25, 50, 100, 150]
     }
@@ -586,8 +591,9 @@ struct SupplementRuleEditorSheet: View {
       case .high: return 1...200
       case .medium: return 1...50
       case .low: return 1...500
-      case .veryLow: return 1...2000
+      case .veryLow: return 1...2_000  // swiftlint:disable:this no_magic_numbers switch_case_on_newline
       }
+
     case .percent:
       return 1...200
     }

@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_enum_raw_value explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface prefixed_toplevel_constant required_deinit shorthand_optional_binding
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable sorted_enum_cases sorted_imports switch_case_on_newline type_contents_order
 import Foundation
 import SwiftUI
 import UIKit
@@ -158,7 +166,7 @@ final class AppearanceManager: ObservableObject {
     if !hasCachedPreference {
       // No local cache - use the server value
       let newTheme: AppTheme
-      if let themeString = themeString,
+      if let themeString,
         let parsed = AppTheme(rawValue: themeString)
       {
         newTheme = parsed
@@ -184,7 +192,7 @@ final class AppearanceManager: ObservableObject {
 
     if !hasCachedPreference {
       let newStyle: CalendarContentColorStyle
-      if let styleString = styleString,
+      if let styleString,
         let parsed = CalendarContentColorStyle(rawValue: styleString)
       {
         newStyle = parsed

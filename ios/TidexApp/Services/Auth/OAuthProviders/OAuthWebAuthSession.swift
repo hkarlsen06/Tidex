@@ -169,18 +169,17 @@ final class OAuthWebAuthSession: NSObject {
   }
 
   private static func webAuthResult(callbackURL: URL?, error: Error?) -> Result<URL, Error> {
-    if let error = error {
+    if let error {
       let nsError = error as NSError
       if nsError.domain == ASWebAuthenticationSessionErrorDomain,
         nsError.code == ASWebAuthenticationSessionError.canceledLogin.rawValue
       {
         return .failure(OAuthWebAuthError.userCancelled)
-      } else {
-        return .failure(OAuthWebAuthError.failed(error.localizedDescription))
       }
+      return .failure(OAuthWebAuthError.failed(error.localizedDescription))
     }
 
-    guard let callbackURL = callbackURL else {
+    guard let callbackURL else {
       return .failure(OAuthWebAuthError.noCallback)
     }
 
@@ -235,11 +234,11 @@ private final class RedirectCaptureDelegate: NSObject, URLSessionTaskDelegate {
   var redirectURL: URL?
 
   func urlSession(
-    _ session: URLSession,
-    task: URLSessionTask,
-    willPerformHTTPRedirection response: HTTPURLResponse,
+    _: URLSession,
+    task _: URLSessionTask,
+    willPerformHTTPRedirection _: HTTPURLResponse,
     newRequest request: URLRequest,
-    completionHandler: @escaping (URLRequest?) -> Void
+    completionHandler: (URLRequest?) -> Void
   ) {
     // Capture the redirect URL
     redirectURL = request.url
@@ -278,7 +277,7 @@ extension OAuthWebAuthSession {
       throw OAuthWebAuthError.stateMismatch
     }
 
-    guard let returnedState = returnedState else {
+    guard let returnedState else {
       // State parameter missing from callback
       throw OAuthWebAuthError.stateMismatch
     }
@@ -295,7 +294,7 @@ extension OAuthWebAuthSession {
 // MARK: - ASWebAuthenticationPresentationContextProviding
 
 extension OAuthWebAuthSession: ASWebAuthenticationPresentationContextProviding {
-  nonisolated func presentationAnchor(for session: ASWebAuthenticationSession)
+  internal nonisolated func presentationAnchor(for _: ASWebAuthenticationSession)
     -> ASPresentationAnchor
   {
     MainActor.assumeIsolated {
@@ -326,20 +325,28 @@ enum OAuthWebAuthError: Error, LocalizedError {
     switch self {
     case .userCancelled:
       return "OAuth was cancelled"
+
     case .invalidURL:
       return "Invalid OAuth URL"
+
     case .noCallback:
       return "No callback received from OAuth"
+
     case .sessionStartFailed:
       return "Failed to start OAuth session"
+
     case .stateMismatch:
       return "OAuth state validation failed - possible CSRF attack"
+
     case .presentationAnchorUnavailable:
       return "Unable to present OAuth"
+
     case .requestInProgress:
       return "OAuth is already in progress"
+
     case .timedOut:
       return "OAuth timed out"
+
     case .failed(let message):
       return "OAuth failed: \(message)"
     }

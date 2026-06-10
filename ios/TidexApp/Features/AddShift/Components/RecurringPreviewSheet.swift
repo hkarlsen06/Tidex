@@ -93,11 +93,11 @@ private struct SummaryHeader: View {
   private var titleText: String {
     if isIndefinite {
       return String(localized: .previewOngoingShifts)
-    } else if totalCount == 1 {
-      return String(localized: .previewShiftSingular)
-    } else {
-      return String(localized: .previewShiftsCount(totalCount))
     }
+    if totalCount == 1 {
+      return String(localized: .previewShiftSingular)
+    }
+    return String(localized: .previewShiftsCount(totalCount))
   }
 
   /// Subtitle text - shows "Repeats indefinitely" for indefinite, time for limited
@@ -110,9 +110,8 @@ private struct SummaryHeader: View {
     )
     if isIndefinite {
       return "\(timeRange) · " + String(localized: .previewOngoingHint)
-    } else {
-      return timeRange
     }
+    return timeRange
   }
 
   var body: some View {
@@ -182,9 +181,8 @@ private struct ConflictWarning: View {
   private var warningText: String {
     if count == 1 {
       return String(localized: .previewConflictWarningSingular)
-    } else {
-      return String(localized: .previewConflictWarningPlural(count))
     }
+    return String(localized: .previewConflictWarningPlural(count))
   }
 
   var body: some View {
@@ -273,9 +271,8 @@ private struct MoreShiftsIndicator: View {
   private var displayText: String {
     if isIndefinite {
       return String(localized: .previewContinuesIndefinitely)
-    } else {
-      return String(localized: .previewMoreShifts(remainingCount))
     }
+    return String(localized: .previewMoreShifts(remainingCount))
   }
 
   var body: some View {

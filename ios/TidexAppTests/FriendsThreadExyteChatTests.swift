@@ -799,9 +799,9 @@ final class FriendsThreadExyteChatTests: XCTestCase {
           id: "shift-1",
           durationHours: 8,
           paidHours: 8,
-          basePay: 1200,
+          basePay: 1_200,
           supplementPay: 0,
-          gross: 1200,
+          gross: 1_200,
           breakAudit: SharedBreakAudit(
             method: .none,
             thresholdHours: 0,

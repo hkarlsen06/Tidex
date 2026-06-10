@@ -161,21 +161,29 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
         switch authError.code {
         case .canceled:
           appleError = .userCancelled
+
         case .failed:
           appleError = .failed(authError.localizedDescription)
+
         case .invalidResponse:
           appleError = .invalidResponse
+
         case .notHandled:
           appleError = .notHandled
+
         case .notInteractive:
           appleError = .notInteractive
+
         case .unknown:
           appleError = .unknown
+
         case .matchedExcludedCredential:
           appleError = .matchedExcludedCredential
+
         case .credentialImport, .credentialExport, .preferSignInWithApple,
           .deviceNotConfiguredForPasskeyCreation:
           appleError = .unknown
+
         @unknown default:
           appleError = .unknown
         }
@@ -190,7 +198,7 @@ extension AppleAuthProvider: ASAuthorizationControllerDelegate {
 // MARK: - ASAuthorizationControllerPresentationContextProviding
 
 extension AppleAuthProvider: ASAuthorizationControllerPresentationContextProviding {
-  nonisolated func presentationAnchor(for controller: ASAuthorizationController)
+  internal nonisolated func presentationAnchor(for _: ASAuthorizationController)
     -> ASPresentationAnchor
   {
     MainActor.assumeIsolated {
@@ -223,24 +231,34 @@ enum AppleAuthError: Error, LocalizedError {
     switch self {
     case .userCancelled:
       return "Apple Sign-In was cancelled"
+
     case .failed(let message):
       return "Apple Sign-In failed: \(message)"
+
     case .invalidResponse:
       return "Invalid response from Apple"
+
     case .invalidCredentials:
       return "Invalid credentials from Apple Sign-In"
+
     case .notHandled:
       return "Apple Sign-In request was not handled"
+
     case .notInteractive:
       return "Apple Sign-In requires user interaction"
+
     case .matchedExcludedCredential:
       return "Apple Sign-In credential was excluded"
+
     case .presentationAnchorUnavailable:
       return "Unable to present Apple Sign-In"
+
     case .requestInProgress:
       return "Apple Sign-In is already in progress"
+
     case .timedOut:
       return "Apple Sign-In timed out"
+
     case .unknown:
       return "An unknown error occurred during Apple Sign-In"
     }

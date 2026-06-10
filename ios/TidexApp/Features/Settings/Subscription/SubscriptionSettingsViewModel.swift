@@ -69,8 +69,10 @@ final class SubscriptionSettingsViewModel: ObservableObject {
     switch effectiveTier {
     case .free:
       return String(localized: .paywallTierFree)
+
     case .pro:
       return String(localized: .paywallTierPro)
+
     case .max:
       return String(localized: .paywallTierMax)
     }
@@ -227,8 +229,10 @@ final class SubscriptionSettingsViewModel: ObservableObject {
       switch effectiveTier {
       case .pro:
         targetProductIds = isYearlySubscription ? [.proYearly] : [.proMonthly]
+
       case .max:
         targetProductIds = isYearlySubscription ? [.maxYearly] : [.maxMonthly]
+
       case .free:
         targetProductIds = []
       }
@@ -286,7 +290,7 @@ final class SubscriptionSettingsViewModel: ObservableObject {
       await loadSubscriptionInfo()
 
       // Determine feedback based on what StoreKit actually found
-      if storeKitTierAfter != .free && storeKitTierAfter != storeKitTierBefore {
+      if storeKitTierAfter != .free, storeKitTierAfter != storeKitTierBefore {
         // StoreKit found a new subscription
         logger.info("Purchases restored from Apple, StoreKit tier: \(storeKitTierAfter.rawValue)")
         Haptics.playSubscriptionSuccess()

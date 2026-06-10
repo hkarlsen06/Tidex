@@ -371,13 +371,13 @@ final class LocalSharer {
   // MARK: - Computed Properties
 
   var displayName: String {
-    if let firstName = firstName, !firstName.isEmpty {
+    if let firstName, !firstName.isEmpty {
       return firstName
     }
-    if let email = email, !email.isEmpty {
+    if let email, !email.isEmpty {
       return email.components(separatedBy: "@").first ?? email
     }
-    if let phone = phone, !phone.isEmpty {
+    if let phone, !phone.isEmpty {
       return phone
     }
     return "Unknown"
@@ -655,10 +655,10 @@ final class LocalShiftPreview {
 
   /// Helper to build SharedShiftData (separated to help compiler type-checking)
   private func buildShiftData() -> SharedShiftData? {
-    guard let shiftId = shiftId,
-      let shiftDate = shiftDate,
-      let startTime = startTime,
-      let endTime = endTime
+    guard let shiftId,
+      let shiftDate,
+      let startTime,
+      let endTime
     else {
       return nil
     }

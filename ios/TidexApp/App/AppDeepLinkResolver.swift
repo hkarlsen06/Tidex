@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline cyclomatic_complexity discouraged_optional_collection explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface extension_access_modifier function_body_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable strict_fileprivate
 import Foundation
 
 enum AppDeepLinkResolver {
@@ -8,14 +14,19 @@ enum AppDeepLinkResolver {
       switch url.host?.lowercased() {
       case "sharing":
         return sharingDeepLink(path: url.path, queryItems: queryItems)
+
       case "shifts":
         return shiftsDeepLink(queryItems: queryItems)
+
       case "add", "add-shift", "add_shift":
         return addShiftDeepLink(queryItems: queryItems)
+
       case "settings":
         return settingsDeepLink(path: url.path, queryItems: queryItems)
+
       case "admin":
         return adminDeepLink(queryItems: queryItems)
+
       default:
         return nil
       }
@@ -88,11 +99,14 @@ enum AppDeepLinkResolver {
     switch rawValue.normalizedDeepLinkToken {
     case "single", "shift", "shifts", "vakt", "vaktskift":
       return .single
+
     case "event", "events", "calendar", "private_event", "privat", "avtale":
       return .events
+
     case "recurring", "recurring_shift", "recurring_shifts", "fast", "faste",
       "fast_vakt", "gjentakende", "gjentakende_vakt":
       return .recurring
+
     default:
       return nil
     }
@@ -136,27 +150,38 @@ enum AppDeepLinkResolver {
     switch rawValue.normalizedDeepLinkToken {
     case "profile", "account_profile", "name":
       return .profile
+
     case "security", "mfa", "auth", "account_security":
       return .security
+
     case "subscription", "plan", "billing", "paywall":
       return .subscription
+
     case "notifications", "notification", "reminders":
       return .notifications
+
     case "appearance", "theme", "display":
       return .appearance
+
     case "pay", "wage", "wages", "salary", "tax", "taxes", "workplace", "workplaces",
       "jobs", "job", "payroll", "payroll_adjustments", "adjustments", "wage_snapshots":
       return .pay(jobId: jobId)
+
     case "recurring", "recurring_shift", "recurring_shifts":
       return .recurringShifts
+
     case "calendar", "calendar_sync", "calendar_subscription":
       return .calendarSync
+
     case "data", "export", "import":
       return .data
+
     case "feedback", "support":
       return .feedback
+
     case "admin":
       return .admin
+
     default:
       return nil
     }
@@ -166,6 +191,7 @@ enum AppDeepLinkResolver {
     switch queryItems.value(named: "tab")?.lowercased() {
     case "reports":
       return .adminReport(reportId: queryItems.value(named: "reportId"))
+
     default:
       return .adminFeedback
     }

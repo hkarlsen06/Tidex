@@ -712,6 +712,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
             ProgressView()
             Spacer()
           }
+
         case .loaded:
           ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: Spacing.sm) {
@@ -760,6 +761,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
             FriendsChatGestureTargetSurface(targetKind: .attachmentPhotoCarousel)
               .allowsHitTesting(false)
           }
+
         case .empty:
           drawerMessage(
             String(
@@ -767,6 +769,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
               table: "Localizable"
             )
           )
+
         case .denied:
           drawerMessage(
             String(
@@ -774,6 +777,7 @@ private struct FriendsThreadComposerAttachmentDrawer: View {
               table: "Localizable"
             )
           )
+
         case .failed:
           drawerMessage(
             String(
@@ -855,6 +859,7 @@ private struct FriendsThreadComposerAttachmentPreview: View {
               isCurrentUser: false
             )
           }
+
         case .image:
           EmptyView()
         }
@@ -1060,7 +1065,7 @@ private struct FriendsThreadComposerReplyBanner: View {
 private struct FriendsThreadComposerDismissibleCard<Content: View>: View {
   let onDismiss: () -> Void
   let accessibilityLabel: String
-  var dismissAccessibilityIdentifier: String? = nil
+  var dismissAccessibilityIdentifier: String?
   @ViewBuilder let content: () -> Content
 
   var body: some View {

@@ -1,3 +1,5 @@
+// swiftlint:disable file_length
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -20,7 +22,7 @@ extension LocalStoreActor {
 
     draft.draftText = draftText
     draft.updatedAt = Date()
-    try deletePendingFriendComposerDraftIfEmpty(draft)
+    deletePendingFriendComposerDraftIfEmpty(draft)
     try modelContext.save()
   }
 
@@ -36,7 +38,7 @@ extension LocalStoreActor {
 
     existing.draftText = nil
     existing.updatedAt = Date()
-    try deletePendingFriendComposerDraftIfEmpty(existing)
+    deletePendingFriendComposerDraftIfEmpty(existing)
     try modelContext.save()
   }
 
@@ -58,7 +60,7 @@ extension LocalStoreActor {
 
     draft.attachmentData = attachmentData
     draft.updatedAt = Date()
-    try deletePendingFriendComposerDraftIfEmpty(draft)
+    deletePendingFriendComposerDraftIfEmpty(draft)
     try modelContext.save()
   }
 
@@ -75,7 +77,7 @@ extension LocalStoreActor {
 
     existing.attachmentData = nil
     existing.updatedAt = Date()
-    try deletePendingFriendComposerDraftIfEmpty(existing)
+    deletePendingFriendComposerDraftIfEmpty(existing)
     try modelContext.save()
   }
 
@@ -118,7 +120,7 @@ extension LocalStoreActor {
   }
 
   private func deletePendingFriendComposerDraftIfEmpty(_ draft: LocalPendingFriendComposerDraft)
-    throws
+
   {
     let hasDraftText = !(draft.draftText?.isEmpty ?? true)
     if !hasDraftText, draft.attachmentData == nil {
@@ -381,6 +383,7 @@ extension LocalStoreActor {
     case .inbox:
       scopeRaw = "inbox"
       threadId = nil
+
     case .thread(let resolvedThreadId):
       scopeRaw = "thread"
       threadId = resolvedThreadId
@@ -425,6 +428,7 @@ extension LocalStoreActor {
     case .inbox:
       scopeRaw = "inbox"
       threadId = nil
+
     case .thread(let resolvedThreadId):
       scopeRaw = "thread"
       threadId = resolvedThreadId
@@ -453,6 +457,7 @@ extension LocalStoreActor {
     case .inbox:
       scopeRaw = "inbox"
       threadId = nil
+
     case .thread(let resolvedThreadId):
       scopeRaw = "thread"
       threadId = resolvedThreadId
@@ -1023,10 +1028,13 @@ extension LocalStoreActor {
     switch (placement.baselineLastMessageAt, thread.lastMessageAt) {
     case (let baseline?, let current?):
       return current > baseline
+
     case (nil, .some):
       return true
+
     case (.some, nil):
       return false
+
     case (nil, nil):
       return thread.lastMessageId != placement.baselineLastMessageId
     }

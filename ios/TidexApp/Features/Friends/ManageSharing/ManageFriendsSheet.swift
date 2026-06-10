@@ -102,7 +102,7 @@ struct ManageSharingSheet: View {
               loadingView
             }
             .listRowBackground(Color.clear)
-          } else if viewModel.friends.isEmpty && viewModel.blockedFriends.isEmpty {
+          } else if viewModel.friends.isEmpty, viewModel.blockedFriends.isEmpty {
             Section {
               emptyState
             }
@@ -195,6 +195,7 @@ struct ManageSharingSheet: View {
             switch action {
             case .stopSharingMyShifts:
               await viewModel.removeShare(for: friend)
+
             case .stopSeeingTheirShifts:
               await viewModel.removeSharer(for: friend)
               onVisibilityChange?()
@@ -532,7 +533,7 @@ struct ManageSharingSheet: View {
 
   /// Scroll to the highlighted user if present
   private func scrollToHighlightedUserIfNeeded(scrollProxy: ScrollViewProxy, friends: [Friend]) {
-    guard let highlightUserId = highlightUserId,
+    guard let highlightUserId,
       friends.contains(where: { $0.id == highlightUserId })
     else {
       return

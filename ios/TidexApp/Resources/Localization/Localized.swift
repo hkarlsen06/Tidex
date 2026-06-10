@@ -22,6 +22,7 @@ extension Locale {
     switch code {
     case "nb", "nn", "no":
       return "no"
+
     default:
       return code
     }

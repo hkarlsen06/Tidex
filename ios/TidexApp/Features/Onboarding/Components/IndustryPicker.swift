@@ -14,30 +14,32 @@ enum SampleIndustry: String, CaseIterable, Identifiable {
     switch self {
     case .retail:
       return SamplePaycheckData(
-        gross: 24650,
-        basePay: 21000,
-        eveningSupplements: 2400,
-        weekendBonus: 1250,
-        taxDeducted: 4920,
-        netPay: 19730
+        gross: 24_650,  // swiftlint:disable:this no_magic_numbers
+        basePay: 21_000,  // swiftlint:disable:this no_magic_numbers
+        eveningSupplements: 2_400,  // swiftlint:disable:this no_magic_numbers
+        weekendBonus: 1_250,  // swiftlint:disable:this no_magic_numbers
+        taxDeducted: 4_920,  // swiftlint:disable:this no_magic_numbers
+        netPay: 19_730  // swiftlint:disable:this no_magic_numbers
       )
+
     case .restaurant:
       return SamplePaycheckData(
-        gross: 27800,
-        basePay: 23500,
-        eveningSupplements: 3100,
-        weekendBonus: 1200,
-        taxDeducted: 5560,
-        netPay: 22240
+        gross: 27_800,  // swiftlint:disable:this no_magic_numbers
+        basePay: 23_500,  // swiftlint:disable:this no_magic_numbers
+        eveningSupplements: 3_100,  // swiftlint:disable:this no_magic_numbers
+        weekendBonus: 1_200,  // swiftlint:disable:this no_magic_numbers
+        taxDeducted: 5_560,  // swiftlint:disable:this no_magic_numbers
+        netPay: 22_240  // swiftlint:disable:this no_magic_numbers
       )
+
     case .healthcare:
       return SamplePaycheckData(
-        gross: 31200,
-        basePay: 26000,
-        eveningSupplements: 3800,
-        weekendBonus: 1400,
-        taxDeducted: 6240,
-        netPay: 24960
+        gross: 31_200,  // swiftlint:disable:this no_magic_numbers
+        basePay: 26_000,  // swiftlint:disable:this no_magic_numbers
+        eveningSupplements: 3_800,  // swiftlint:disable:this no_magic_numbers
+        weekendBonus: 1_400,  // swiftlint:disable:this no_magic_numbers
+        taxDeducted: 6_240,  // swiftlint:disable:this no_magic_numbers
+        netPay: 24_960  // swiftlint:disable:this no_magic_numbers
       )
     }
   }

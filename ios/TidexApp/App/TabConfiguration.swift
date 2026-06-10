@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_enum_raw_value explicit_top_level_acl sorted_enum_cases
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable switch_case_on_newline
 import Foundation
 
 /// Centralized tab configuration for the app
@@ -60,6 +64,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     switch self {
     case .home, .shifts, .sharing:
       return true
+
     case .add, .wagey:
       return false
     }

@@ -28,7 +28,7 @@ final class GoogleAuthProvider {
   func signIn(presenting presentingViewController: UIViewController? = nil) async throws -> String {
     let viewController = presentingViewController ?? getTopViewController()
 
-    guard let viewController = viewController else {
+    guard let viewController else {
       throw GoogleAuthError.noPresenter
     }
 
@@ -54,18 +54,19 @@ final class GoogleAuthProvider {
     result: GIDSignInResult?,
     error: Error?
   ) -> Result<String?, Error> {
-    if let error = error {
+    if let error {
       let nsError = error as NSError
 
       // Check for user cancellation
-      if nsError.domain == "com.google.GIDSignIn" && nsError.code == -5 {
+      // swiftlint:disable:next no_magic_numbers
+      if nsError.domain == "com.google.GIDSignIn", nsError.code == -5 {
         return .failure(GoogleAuthError.userCancelled)
       }
 
       return .failure(GoogleAuthError.failed(error.localizedDescription))
     }
 
-    guard let result = result else {
+    guard let result else {
       return .failure(GoogleAuthError.noResult)
     }
 
@@ -131,7 +132,7 @@ final class GoogleAuthProvider {
     return try await performRequest(start: { [weak self] requestID in
       GIDSignIn.sharedInstance.restorePreviousSignIn { user, error in
         Task { @MainActor in
-          if let error = error {
+          if let error {
             self?.completeRequest(
               id: requestID,
               result: .failure(GoogleAuthError.failed(error.localizedDescription))
@@ -157,7 +158,7 @@ final class GoogleAuthProvider {
       let windowScene = UIApplication.shared.connectedScenes
         .compactMap({ $0 as? UIWindowScene })
         .first(where: { $0.activationState == .foregroundActive }),
-      let rootViewController = windowScene.windows.first(where: { $0.isKeyWindow })?
+      let rootViewController = windowScene.windows.first(where: \.isKeyWindow)?
         .rootViewController
     else {
       return nil
@@ -199,16 +200,22 @@ enum GoogleAuthError: Error, LocalizedError {
     switch self {
     case .userCancelled:
       return "Google Sign-In was cancelled"
+
     case .noPresenter:
       return "No view controller available to present Google Sign-In"
+
     case .noResult:
       return "No result received from Google Sign-In"
+
     case .noIDToken:
       return "No ID token received from Google"
+
     case .requestInProgress:
       return "Google Sign-In is already in progress"
+
     case .timedOut:
       return "Google Sign-In timed out"
+
     case .failed(let message):
       return "Google Sign-In failed: \(message)"
     }

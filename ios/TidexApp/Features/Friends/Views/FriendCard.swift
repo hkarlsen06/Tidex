@@ -70,7 +70,7 @@ struct FriendCard: View {
         .padding(.top, Spacing.sm)
         .padding(.bottom, Spacing.sm + 2)
 
-        if let preview = preview, let shift = preview.shift, let status = preview.status {
+        if let preview, let shift = preview.shift, let status = preview.status {
           VStack(spacing: 0) {
             Rectangle()
               .fill(Color.tidexBorderSubtle.opacity(0.7))
@@ -139,6 +139,7 @@ struct FriendCard: View {
     switch surfaceStyle {
     case .standard:
       isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary
+
     case .example:
       .clear
     }
@@ -148,6 +149,7 @@ struct FriendCard: View {
     switch surfaceStyle {
     case .standard:
       isSelected ? .tidexBlue : .clear
+
     case .example:
       .tidexBorder
     }
@@ -157,6 +159,7 @@ struct FriendCard: View {
     switch surfaceStyle {
     case .standard:
       StrokeStyle(lineWidth: 2)
+
     case .example:
       StrokeStyle(lineWidth: 1.5, dash: [7, 5])
     }
@@ -289,7 +292,7 @@ struct FriendsListEmptyState: View {
       preview: nil,
       messagePreview: FriendCardMessagePreview(
         text: "I opened the shift snapshot",
-        timestamp: Date().addingTimeInterval(-7200),
+        timestamp: Date().addingTimeInterval(-7_200),
         state: .outgoingOpened
       ),
       isTyping: false,

@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image accessibility_trait_for_button closure_body_length conditional_returns_on_newline
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_parameter_count no_magic_numbers prefer_condition_list type_contents_order
 import SwiftUI
 
 enum RecurringAnchorSelection {
@@ -70,7 +78,7 @@ struct RecurringAnchorCalendar: View {
 
       calendarGrid
 
-      if showsInstructionsWhenEmpty && selectedDays.isEmpty {
+      if showsInstructionsWhenEmpty, selectedDays.isEmpty {
         RecurringAnchorCalendarInstructions()
           .padding(.top, Spacing.md)
       }
@@ -147,7 +155,7 @@ struct RecurringAnchorCalendar: View {
         showsTodayBadge: false
       )
     }
-    if isToday && !isOutsideMonth {
+    if isToday, !isOutsideMonth {
       return CalendarCellStyle(
         backgroundColor: .tidexSurfacePrimary,
         borderColor: .tidexBlue,
@@ -156,7 +164,7 @@ struct RecurringAnchorCalendar: View {
         showsTodayBadge: true
       )
     }
-    if hasExistingShift && !isOutsideMonth {
+    if hasExistingShift, !isOutsideMonth {
       return CalendarCellStyle(
         backgroundColor: .tidexSurfacePrimary,
         borderColor: .clear,

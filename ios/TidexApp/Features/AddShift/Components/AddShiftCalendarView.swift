@@ -24,9 +24,12 @@ enum AddShiftCalendarSelectionEmphasis {
 /// Supports tap to toggle date selection with existing shift and conflict indicators
 struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & ObservableObject>: View {
   @ObservedObject var viewModel: ViewModel
-  var selectedDatesOverride: Set<String>? = nil
-  var previewEarningsOverride: [String: CalendarEarningsData]? = nil
-  var onToggleDateOverride: ((String) -> Void)? = nil
+  // swiftlint:disable:next discouraged_optional_collection explicit_acl
+  var selectedDatesOverride: Set<String>?
+  // swiftlint:disable:next discouraged_optional_collection explicit_acl
+  var previewEarningsOverride: [String: CalendarEarningsData]?
+  // swiftlint:disable:next explicit_acl
+  var onToggleDateOverride: ((String) -> Void)?
   var showSelectionCheckmark: Bool = true
   var selectionEmphasis: AddShiftCalendarSelectionEmphasis = .standard
 
@@ -125,7 +128,8 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
 
       days.append(
         .outsideMonth(
-          id: -1000 + i,
+          // swiftlint:disable:next no_magic_numbers
+          id: -1_000 + i,
           dayNumber: day,
           dateISO: dateISO,
           weekNumber: weekNum
@@ -163,7 +167,8 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
 
         days.append(
           .outsideMonth(
-            id: 1000 + i,
+            // swiftlint:disable:next no_magic_numbers
+            id: 1_000 + i,
             dayNumber: i + 1,
             dateISO: dateISO,
             weekNumber: weekNum
@@ -224,7 +229,7 @@ private struct AddShiftCalendarDayCell: View {
       let opacity = selectionEmphasis == .subtle ? 0.08 : 0.15
       return hasConflict ? Color.tidexWarning.opacity(opacity) : Color.tidexBlue.opacity(opacity)
     }
-    if isToday && !dayInfo.isOutsideMonth {
+    if isToday, !dayInfo.isOutsideMonth {
       return Color.tidexBlue.opacity(0.2)
     }
     return Color.tidexSurfacePrimary
@@ -242,10 +247,10 @@ private struct AddShiftCalendarDayCell: View {
   }
 
   private var dayNumberColor: Color {
-    if hasConflict && isSelected {
+    if hasConflict, isSelected {
       return .tidexWarning
     }
-    if isToday && !dayInfo.isOutsideMonth {
+    if isToday, !dayInfo.isOutsideMonth {
       return .tidexTextPrimary
     }
     return .tidexTextPrimary
@@ -260,9 +265,11 @@ private struct AddShiftCalendarDayCell: View {
         color: hasConflict ? .tidexWarning : .tidexBlue,
         beforeTaxColor: .tidexTextMuted
       )
-    } else if isSelected {
+    }
+    if isSelected {
       return .custom
-    } else if let existingHours, !dayInfo.isOutsideMonth {
+    }
+    if let existingHours, !dayInfo.isOutsideMonth {
       return .hours(existingHours, color: .tidexTextMuted)
     }
     return .empty
@@ -271,7 +278,7 @@ private struct AddShiftCalendarDayCell: View {
   @ViewBuilder
   private var addShiftContent: some View {
     VStack(spacing: 0) {
-      if showSelectionCheckmark && isSelected && previewEarnings == nil {
+      if showSelectionCheckmark, isSelected, previewEarnings == nil {
         // Selected but no preview earnings yet (need times)
         Image(systemName: "checkmark")
           .font(.tidexButton)

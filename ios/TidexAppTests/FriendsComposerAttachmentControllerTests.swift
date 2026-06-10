@@ -159,7 +159,7 @@ private final class MockRecentPhotoProvider: FriendsComposerRecentPhotoProviding
     return authorizationStateValue
   }
 
-  func loadRecentPhotos(limit: Int, offset: Int, targetSize: CGSize) async
+  func loadRecentPhotos(limit: Int, offset: Int, targetSize _: CGSize) async
     -> FriendsComposerRecentPhotoPage
   {
     if loadDelayNanoseconds > 0 {
@@ -176,7 +176,7 @@ private final class MockRecentPhotoProvider: FriendsComposerRecentPhotoProviding
     )
   }
 
-  func loadImageData(localIdentifier: String) async -> Data? {
+  func loadImageData(localIdentifier _: String) async -> Data? {
     await Task.yield()
     return nil
   }

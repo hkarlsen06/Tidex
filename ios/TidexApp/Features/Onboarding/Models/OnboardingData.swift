@@ -92,6 +92,7 @@ final class OnboardingData {
         return rate
       }
       return PayrollCalculator.presetWageRates[String(selectedTariffLevel)] ?? 184.54
+
     case .custom:
       return customHourlyWage
     }
@@ -102,6 +103,7 @@ final class OnboardingData {
     switch wageType {
     case .tariff:
       return selectedTariffTypeId
+
     case .custom:
       return nil
     }
@@ -112,6 +114,7 @@ final class OnboardingData {
     switch wageType {
     case .tariff:
       return selectedTariffLevel
+
     case .custom:
       return nil
     }
@@ -128,6 +131,7 @@ final class OnboardingData {
         return version.supplements
       }
       return SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
+
     case .custom:
       let rules = supplementRules.map { $0.toSupplementRule() }
       return SupplementRulesSnapshot(rules: rules)
@@ -312,9 +316,11 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
     // Check for consecutive ranges
     if sortedDays == [1, 2, 3, 4, 5] {
       return String(localized: .onboardingSupplementsWeekdaysLong)
-    } else if sortedDays == [6, 7] {
+    }
+    if sortedDays == [6, 7] {  // swiftlint:disable:this no_magic_numbers
       return String(localized: .onboardingSupplementsWeekendLong)
-    } else if sortedDays == Array(1...7) {
+    }
+    if sortedDays == Array(1...7) {  // swiftlint:disable:this no_magic_numbers
       return String(localized: .onboardingSupplementsAllDaysLong)
     }
 
@@ -327,7 +333,7 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
   }
 
   /// Human-readable value with localization and currency
-  func valueDescription(locale: Locale, currency: String = "kr") -> String {
+  func valueDescription(locale _: Locale, currency: String = "kr") -> String {  // swiftlint:disable:this explicit_acl
     switch type {
     case .fixed:
       let currencyConfig = CurrencyConfig.get(currency)
@@ -337,6 +343,7 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
         ? "\(currencyConfig.value)\(hourPart)"
         : "\(currencyConfig.value)\(hourPart)"
       return "+\(Int(value)) \(suffix)"
+
     case .percent:
       return "+\(Int(value))%"
     }
@@ -365,15 +372,15 @@ struct TariffLevel: Identifiable {
   }
 
   /// All available tariff levels from PayrollCalculator (fallback for offline)
-  static let all: [TariffLevel] = [
-    TariffLevel(level: -1, rate: 129.91, displayName: "Under 16"),
-    TariffLevel(level: -2, rate: 132.90, displayName: "16 - 18"),
-    TariffLevel(level: 1, rate: 184.54, displayName: "Lønnstrinn 1"),
-    TariffLevel(level: 2, rate: 185.38, displayName: "Lønnstrinn 2"),
-    TariffLevel(level: 3, rate: 187.46, displayName: "Lønnstrinn 3"),
-    TariffLevel(level: 4, rate: 193.05, displayName: "Lønnstrinn 4"),
-    TariffLevel(level: 5, rate: 210.81, displayName: "Lønnstrinn 5"),
-    TariffLevel(level: 6, rate: 256.14, displayName: "Lønnstrinn 6"),
+  static let all: [Self] = [  // swiftlint:disable:this explicit_acl
+    Self(level: -1, rate: 129.91, displayName: "Under 16"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: -2, rate: 132.90, displayName: "16 - 18"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 1, rate: 184.54, displayName: "Lønnstrinn 1"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 2, rate: 185.38, displayName: "Lønnstrinn 2"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 3, rate: 187.46, displayName: "Lønnstrinn 3"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 4, rate: 193.05, displayName: "Lønnstrinn 4"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 5, rate: 210.81, displayName: "Lønnstrinn 5"),  // swiftlint:disable:this no_magic_numbers
+    Self(level: 6, rate: 256.14, displayName: "Lønnstrinn 6"),  // swiftlint:disable:this no_magic_numbers
   ]
 
   /// Standard level display names by level number
@@ -391,14 +398,14 @@ struct TariffLevel: Identifiable {
   /// Build tariff levels dynamically from a TariffVersion
   /// - Parameter tariffVersion: The tariff version containing rates
   /// - Returns: Array of TariffLevel built from version rates
-  static func from(tariffVersion: TariffVersion) -> [TariffLevel] {
+  static func from(tariffVersion: TariffVersion) -> [Self] {  // swiftlint:disable:this explicit_acl
     // Define the expected order of levels
     let levelOrder = [-1, -2, 1, 2, 3, 4, 5, 6]
 
     return levelOrder.compactMap { level in
       guard let rate = tariffVersion.rate(forLevel: level) else { return nil }
       let displayName = levelDisplayNames[level] ?? "Level \(level)"
-      return TariffLevel(level: level, rate: rate, displayName: displayName)
+      return Self(level: level, rate: rate, displayName: displayName)
     }
   }
 }

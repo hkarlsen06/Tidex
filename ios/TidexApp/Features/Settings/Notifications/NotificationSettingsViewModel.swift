@@ -101,7 +101,7 @@ final class NotificationSettingsViewModel: ObservableObject {
       return
     }
 
-    guard let userId = userId else {
+    guard let userId else {
       isLoading = false
       return
     }
@@ -244,7 +244,7 @@ final class NotificationSettingsViewModel: ObservableObject {
   /// Handle picker dismissal (cancel)
   func handlePickerDismiss() {
     // If we were adding from empty toggle and user cancelled, reset toggle
-    if addingFromEmptyToggle && reminderTimes.isEmpty {
+    if addingFromEmptyToggle, reminderTimes.isEmpty {
       // Use isInitialLoad to prevent triggering the auto-open picker again
       isInitialLoad = true
       shiftRemindersEnabled = false
@@ -252,7 +252,7 @@ final class NotificationSettingsViewModel: ObservableObject {
       addingFromEmptyToggle = false
 
       // Manually update the repository since we bypassed the didSet
-      if let userId = userId {
+      if let userId {
         preferencesRepository.updatePreferences(
           for: userId,
           remindersEnabled: false
@@ -281,14 +281,14 @@ final class NotificationSettingsViewModel: ObservableObject {
     guard !isInitialLoad else { return }
 
     // If turning ON with no reminders, auto-open the picker
-    if shiftRemindersEnabled && reminderTimes.isEmpty {
+    if shiftRemindersEnabled, reminderTimes.isEmpty {
       addingFromEmptyToggle = true
       prepareForAddingTime()
       return
     }
 
     // Otherwise, update the preference
-    guard let userId = userId else { return }
+    guard let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     preferencesRepository.updatePreferences(
       for: userId,
@@ -305,7 +305,7 @@ final class NotificationSettingsViewModel: ObservableObject {
 
   /// Update reminder times preference
   private func updateReminderTimes() {
-    guard !isInitialLoad, let userId = userId else { return }
+    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     let minutesArray = reminderTimes.sorted(by: >)
 
@@ -325,7 +325,7 @@ final class NotificationSettingsViewModel: ObservableObject {
 
   /// Update shared shifts preference
   private func updateSharedShifts() {
-    guard !isInitialLoad, let userId = userId else { return }
+    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     preferencesRepository.updatePreferences(
       for: userId,
@@ -337,7 +337,7 @@ final class NotificationSettingsViewModel: ObservableObject {
 
   /// Update smart notifications preference
   private func updateSmartNotifications() {
-    guard !isInitialLoad, let userId = userId else { return }
+    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     preferencesRepository.updatePreferences(
       for: userId,

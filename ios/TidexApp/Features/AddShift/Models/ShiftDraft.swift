@@ -52,7 +52,7 @@ struct ShiftDraft: Codable {
   var lastModified: Date
 
   /// Default expiry duration (1 hour)
-  static let expiryDuration: TimeInterval = 3600
+  static let expiryDuration: TimeInterval = 3_600  // swiftlint:disable:this explicit_acl
 
   /// UserDefaults key for storing the draft
   static let userDefaultsKey = "shift_draft"
@@ -67,8 +67,10 @@ struct ShiftDraft: Codable {
     switch mode {
     case .single:
       return !selectedDates.isEmpty || startTime != nil || endTime != nil || jobId != nil
+
     case .recurring:
       return !selectedDays.isEmpty || startTime != nil || endTime != nil || jobId != nil
+
     case .events:
       let defaultEventDate = Date().toISODateString()
       return !eventNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

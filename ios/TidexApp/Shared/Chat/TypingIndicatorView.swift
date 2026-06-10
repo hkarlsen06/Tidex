@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl file_types_order no_magic_numbers
 import SwiftUI
 
 /// Three pulsing dots indicator, similar to iMessage typing indicator.

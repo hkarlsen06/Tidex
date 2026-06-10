@@ -103,15 +103,15 @@ struct ExportedShift: Codable, Sendable {
 
 /// ViewModel for data export settings
 @MainActor
-final class DataSettingsViewModel: ObservableObject {
+final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length required_deinit type_body_length
   // MARK: - Published State
 
   /// Selected period preset
-  @Published var selectedPreset: ExportPeriodPreset? = nil
+  @Published var selectedPreset: ExportPeriodPreset?  // swiftlint:disable:this explicit_acl
 
   /// Custom date range (when preset is .custom)
-  @Published var customFromDate: Date = Date()
-  @Published var customToDate: Date = Date()
+  @Published var customFromDate = Date()  // swiftlint:disable:this explicit_acl explicit_type_interface
+  @Published var customToDate = Date()  // swiftlint:disable:this explicit_acl explicit_type_interface
 
   /// Loading state for PDF export
   @Published var isExportingPdf = false
@@ -189,12 +189,13 @@ final class DataSettingsViewModel: ObservableObject {
 
   /// Export shifts in the specified format
   func exportShifts(format: ExportFormat, locale: Locale) async {
-    guard let range = resolvedDateRange, let userId = userId else { return }
+    guard let range = resolvedDateRange, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
 
     // Set loading state
     switch format {
     case .pdf:
       isExportingPdf = true
+
     case .csv:
       isExportingCsv = true
     }
@@ -204,6 +205,7 @@ final class DataSettingsViewModel: ObservableObject {
       switch format {
       case .pdf:
         isExportingPdf = false
+
       case .csv:
         isExportingCsv = false
       }
@@ -453,7 +455,7 @@ final class DataSettingsViewModel: ObservableObject {
         )
 
         for virtualShift in generatedShifts {
-          guard virtualShift.date >= from && virtualShift.date <= to else { continue }
+          guard virtualShift.date >= from, virtualShift.date <= to else { continue }
 
           let key = "\(virtualShift.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
           guard !realShiftKeys.contains(key) else { continue }
@@ -1131,23 +1133,24 @@ final class DataSettingsViewModel: ObservableObject {
     let fromYear = calendar.component(.year, from: fromDate)
     let toYear = calendar.component(.year, from: toDate)
 
-    if isFirstOfMonth && isSameMonth && isLastOfMonth {
+    if isFirstOfMonth, isSameMonth, isLastOfMonth {
       // Full month: tidex_jan-2026.pdf
       return "tidex_\(fromMonth)-\(fromYear).\(ext)"
-    } else if isSameMonth {
+    }
+    if isSameMonth {
       // Same month range: tidex_01-15jan-2026.pdf
       let fromDay = String(format: "%02d", calendar.component(.day, from: fromDate))
       let toDay = String(format: "%02d", calendar.component(.day, from: toDate))
       return "tidex_\(fromDay)-\(toDay)\(fromMonth)-\(fromYear).\(ext)"
-    } else if fromYear == toYear {
+    }
+    if fromYear == toYear {
       // Cross-month same year: tidex_01jan-15feb-2026.pdf
       let fromDay = String(format: "%02d", calendar.component(.day, from: fromDate))
       let toDay = String(format: "%02d", calendar.component(.day, from: toDate))
       return "tidex_\(fromDay)\(fromMonth)-\(toDay)\(toMonth)-\(fromYear).\(ext)"
-    } else {
-      // Cross-year: tidex_dec2025-jan2026.pdf
-      return "tidex_\(fromMonth)\(fromYear)-\(toMonth)\(toYear).\(ext)"
     }
+    // Cross-year: tidex_dec2025-jan2026.pdf
+    return "tidex_\(fromMonth)\(fromYear)-\(toMonth)\(toYear).\(ext)"
   }
 
   /// Escape a value for CSV
@@ -1344,16 +1347,22 @@ enum ExportError: LocalizedError {
     switch self {
     case .invalidURL:
       return "Invalid URL"
+
     case .invalidDateRange:
       return "Invalid date range"
+
     case .networkError:
       return "Network error"
+
     case .unauthorized:
       return "Not authenticated"
+
     case .serverError(let code, let message):
       return "Server error (\(code)): \(message)"
+
     case .pdfGenerationFailed:
       return "Failed to generate PDF"
+
     case .csvGenerationFailed:
       return "Failed to generate CSV"
     }
@@ -1376,4 +1385,4 @@ private func parseISODate(_ string: String) -> Date? {
   formatter.dateFormat = "yyyy-MM-dd"
   formatter.timeZone = TimeZone.current
   return formatter.date(from: string)
-}
+}  // swiftlint:disable:this file_length

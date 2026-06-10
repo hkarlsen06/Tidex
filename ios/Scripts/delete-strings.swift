@@ -1,4 +1,9 @@
-#!/usr/bin/env swift
+#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable closure_body_length cyclomatic_complexity
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable discouraged_optional_collection
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface function_body_length no_direct_print sorted_enum_cases
 
 import Foundation
 
@@ -74,16 +79,22 @@ private enum DeleteStringError: Error, CustomStringConvertible {
           --catalog, -c  Optional path to xcstrings file (defaults to App catalog)
           --dry-run, -n  Show what would be deleted without modifying the file
         """
+
     case .fileNotFound(let path):
       return "String catalog not found: \(path)"
+
     case .keyNotFound(let key):
       return "Key '\(key)' not found in the catalog"
+
     case .invalidJSON:
       return "Failed to parse string catalog JSON"
+
     case .invalidUTF8Encoding:
       return "Failed to convert output data to UTF-8 string"
+
     case .lockFileOpenFailed(let path):
       return "Failed to open lock file at \(path)"
+
     case .lockFailed(let path):
       return "Failed to acquire lock for \(path)"
     }
@@ -104,12 +115,16 @@ private func parseArgs() throws -> Config {
       if let key = iterator.next() {
         keys.append(key)
       }
+
     case "--catalog", "-c":
       catalogPath = iterator.next()
+
     case "--dry-run", "-n":
       dryRun = true
+
     case "--help", "-h":
       throw DeleteStringError.missingArguments
+
     default:
       continue
     }

@@ -168,15 +168,14 @@ struct BreakDeductionSection: View {
   private func formatThreshold(_ hours: Double) -> String {
     if hours == floor(hours) {
       return String(localized: .settingsPayBreakHours(Int32(Int(hours))))
-    } else {
-      let formatter = NumberFormatter()
-      formatter.numberStyle = .decimal
-      formatter.minimumFractionDigits = 1
-      formatter.maximumFractionDigits = 1
-      formatter.locale = Locale(identifier: Locale.current.identifier)
-      let formatted = formatter.string(from: NSNumber(value: hours)) ?? "\(hours)"
-      return String(localized: .settingsPayBreakHoursDecimal(formatted))
     }
+    let formatter = NumberFormatter()  // swiftlint:disable:this explicit_type_interface
+    formatter.numberStyle = .decimal
+    formatter.minimumFractionDigits = 1
+    formatter.maximumFractionDigits = 1
+    formatter.locale = Locale(identifier: Locale.current.identifier)
+    let formatted = formatter.string(from: NSNumber(value: hours)) ?? "\(hours)"  // swiftlint:disable:this explicit_type_interface legacy_objc_type line_length
+    return String(localized: .settingsPayBreakHoursDecimal(formatted))
   }
 
   // MARK: - Deduction Input
@@ -212,10 +211,13 @@ struct BreakDeductionSection: View {
     switch method {
     case .proportional:
       return String(localized: .settingsPayBreakMethodProportional)
+
     case .baseOnly:
       return String(localized: .settingsPayBreakMethodBaseOnly)
+
     case .endOfShift:
       return String(localized: .settingsPayBreakMethodEndOfShift)
+
     case .none:
       return String(localized: .settingsPayBreakMethodNone)
     }
@@ -278,10 +280,13 @@ private struct BreakMethodRow: View {
     switch method {
     case .proportional:
       return String(localized: .settingsPayBreakMethodProportional)
+
     case .baseOnly:
       return String(localized: .settingsPayBreakMethodBaseOnly)
+
     case .endOfShift:
       return String(localized: .settingsPayBreakMethodEndOfShift)
+
     case .none:
       return String(localized: .settingsPayBreakMethodNone)
     }
@@ -291,10 +296,13 @@ private struct BreakMethodRow: View {
     switch method {
     case .proportional:
       return String(localized: .settingsPayBreakMethodDescProportional)
+
     case .baseOnly:
       return String(localized: .settingsPayBreakMethodDescBaseOnly)
+
     case .endOfShift:
       return String(localized: .settingsPayBreakMethodDescEndOfShift)
+
     case .none:
       return String(localized: .settingsPayBreakMethodDescNone)
     }

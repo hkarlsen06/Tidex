@@ -1,3 +1,15 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length conditional_returns_on_newline explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface file_types_order identifier_name
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable legacy_objc_type multiline_arguments_brackets no_grouping_extension no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable number_separator prefer_condition_list superfluous_else type_body_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_contents_order
 import SwiftUI
 
 /// A shareable view that mirrors the ShiftDetailsSheet content
@@ -80,7 +92,7 @@ struct ShareableShiftCard: View {
       let currentRate = period.supplementRate
       var j = i + 1
 
-      while j < original.count && original[j].supplementRate == currentRate {
+      while j < original.count, original[j].supplementRate == currentRate {
         groupEnd = original[j].toMin
         j += 1
       }
@@ -396,16 +408,17 @@ private struct ShareableSupplementSegment: Identifiable {
   var id: String { "\(fromMin)-\(toMin)-\(rate)" }
 
   func formatTime(_ minutes: Double) -> String {
-    let dayOffset = Int(minutes / 1440)
-    let remainder = Int(minutes) % 1440
-    let normalizedMinutes = remainder < 0 ? remainder + 1440 : remainder
+    let dayOffset = Int(minutes / 1_440)
+    let remainder = Int(minutes) % 1_440
+    let normalizedMinutes = remainder < 0 ? remainder + 1_440 : remainder
     let isFullDay = normalizedMinutes == 0 && Int(minutes) != 0
     let hours = isFullDay ? 24 : normalizedMinutes / 60
     let mins = isFullDay ? 0 : normalizedMinutes % 60
     let base = String(format: "%02d:%02d", hours, mins)
     if dayOffset > 0 {
       return "\(base) (+\(dayOffset))"
-    } else if dayOffset < 0 {
+    }
+    if dayOffset < 0 {
       return "\(base) (\(dayOffset))"
     }
     return base

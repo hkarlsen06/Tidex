@@ -161,7 +161,7 @@ final class PasskeyAuthService: NSObject {
     path: String,
     accessToken: String? = nil,
     body: Body?,
-    responseType: Response.Type
+    responseType _: Response.Type
   ) async throws -> Response {
     let url = authURL.appendingPathComponents(path)
     var request = URLRequest(url: url)
@@ -421,8 +421,10 @@ final class PasskeyAuthService: NSObject {
     switch value {
     case "required":
       return .required
+
     case "discouraged":
       return .discouraged
+
     default:
       return .preferred
     }
@@ -434,10 +436,13 @@ final class PasskeyAuthService: NSObject {
     switch value {
     case "direct":
       return .direct
+
     case "indirect":
       return .indirect
+
     case "enterprise":
       return .enterprise
+
     default:
       return .none
     }
@@ -466,21 +471,29 @@ extension PasskeyAuthService: ASAuthorizationControllerDelegate {
         switch authError.code {
         case .canceled:
           passkeyError = .userCancelled
+
         case .failed:
           passkeyError = .failed(authError.localizedDescription)
+
         case .invalidResponse:
           passkeyError = .invalidCredentialResponse
+
         case .notHandled:
           passkeyError = .notHandled
+
         case .notInteractive:
           passkeyError = .notInteractive
+
         case .unknown:
           passkeyError = .unknown
+
         case .matchedExcludedCredential:
           passkeyError = .matchedExcludedCredential
+
         case .credentialImport, .credentialExport, .preferSignInWithApple,
           .deviceNotConfiguredForPasskeyCreation:
           passkeyError = .unknown
+
         @unknown default:
           passkeyError = .unknown
         }
@@ -495,7 +508,7 @@ extension PasskeyAuthService: ASAuthorizationControllerDelegate {
 // MARK: - ASAuthorizationControllerPresentationContextProviding
 
 extension PasskeyAuthService: ASAuthorizationControllerPresentationContextProviding {
-  nonisolated func presentationAnchor(for controller: ASAuthorizationController)
+  internal nonisolated func presentationAnchor(for _: ASAuthorizationController)
     -> ASPresentationAnchor
   {
     MainActor.assumeIsolated {
@@ -708,12 +721,12 @@ private struct SupabaseAuthErrorResponse: Decodable {
 
   init(from decoder: Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
-    code = try container.decodeFlexibleStringIfPresent(forKey: .code)
-    errorCode = try container.decodeFlexibleStringIfPresent(forKey: .errorCode)
-    message = try container.decodeFlexibleStringIfPresent(forKey: .message)
-    msg = try container.decodeFlexibleStringIfPresent(forKey: .msg)
-    error = try container.decodeFlexibleStringIfPresent(forKey: .error)
-    errorDescription = try container.decodeFlexibleStringIfPresent(forKey: .errorDescription)
+    code = container.decodeFlexibleStringIfPresent(forKey: .code)
+    errorCode = container.decodeFlexibleStringIfPresent(forKey: .errorCode)
+    message = container.decodeFlexibleStringIfPresent(forKey: .message)
+    msg = container.decodeFlexibleStringIfPresent(forKey: .msg)
+    error = container.decodeFlexibleStringIfPresent(forKey: .error)
+    errorDescription = container.decodeFlexibleStringIfPresent(forKey: .errorDescription)
   }
 }
 
@@ -739,30 +752,43 @@ enum PasskeyAuthError: Error, LocalizedError {
     switch self {
     case .userCancelled:
       return nil
+
     case .api(_, let message):
       return message
+
     case .invalidBase64URL:
       return "Invalid WebAuthn challenge encoding."
+
     case .invalidServerResponse:
       return "Invalid Supabase Auth response."
+
     case .invalidCredentialResponse:
       return "Invalid passkey credential response."
+
     case .decodingFailed(let error):
       return error.localizedDescription
+
     case .presentationAnchorUnavailable:
       return "No active window was available for passkey authentication."
+
     case .requestInProgress:
       return "A passkey request is already in progress."
+
     case .timedOut:
       return "Passkey authentication timed out."
+
     case .failed(let message):
       return message
+
     case .notHandled:
       return "No passkey provider handled this request."
+
     case .notInteractive:
       return "Passkey authentication is not interactive right now."
+
     case .matchedExcludedCredential:
       return "This passkey is already registered."
+
     case .unknown:
       return "Passkey authentication failed."
     }
@@ -795,7 +821,7 @@ enum PasskeyAuthError: Error, LocalizedError {
 // MARK: - Helpers
 
 extension KeyedDecodingContainer {
-  fileprivate func decodeFlexibleStringIfPresent(forKey key: Key) throws -> String? {
+  internal func decodeFlexibleStringIfPresent(forKey key: Key) -> String? {
     if let value = try? decodeIfPresent(String.self, forKey: key) {
       return value
     }
@@ -852,8 +878,10 @@ extension ASAuthorizationPublicKeyCredentialAttachment {
     switch self {
     case .platform:
       return "platform"
+
     case .crossPlatform:
       return "cross-platform"
+
     @unknown default:
       return "platform"
     }

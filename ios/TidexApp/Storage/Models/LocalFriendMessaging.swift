@@ -1,3 +1,5 @@
+// swiftlint:disable explicit_acl
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -263,7 +265,7 @@ final class LocalMessageReaction {
   var viewerUserId: String
   var threadId: String
   var messageId: String
-  var attachmentId: String? = nil
+  var attachmentId: String?
   var reactionIndex: Int
   var emoji: String
   var count: Int

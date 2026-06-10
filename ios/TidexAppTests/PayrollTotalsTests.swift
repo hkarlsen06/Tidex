@@ -1,3 +1,4 @@
+import Nimble
 import XCTest
 
 @testable import Tidex
@@ -9,7 +10,7 @@ final class PayrollTotalsTests: XCTestCase {
       shiftDate: "2026-10-01",
       startTime: "08:00",
       endTime: "16:00",
-      gross: 1000,
+      gross: 1_000,
       taxEnabled: true,
       taxPercentage: 20
     )
@@ -18,7 +19,7 @@ final class PayrollTotalsTests: XCTestCase {
       shiftDate: "2026-10-02",
       startTime: "08:00",
       endTime: "16:00",
-      gross: 1000,
+      gross: 1_000,
       taxEnabled: true,
       taxPercentage: 20
     )
@@ -32,10 +33,10 @@ final class PayrollTotalsTests: XCTestCase {
       now: now
     )
 
-    XCTAssertEqual(totals.gross, 2000, accuracy: 0.01)
-    XCTAssertEqual(totals.net, 1800, accuracy: 0.01)
-    XCTAssertEqual(totals.completedGross, 2000, accuracy: 0.01)
-    XCTAssertEqual(totals.completedNet, 1800, accuracy: 0.01)
+    expect(totals.gross).to(beCloseTo(2_000, within: 0.01))
+    expect(totals.net).to(beCloseTo(1_800, within: 0.01))
+    expect(totals.completedGross).to(beCloseTo(2_000, within: 0.01))
+    expect(totals.completedNet).to(beCloseTo(1_800, within: 0.01))
   }
 
   func testSummarizeShiftTotalsRespectsExcludedShiftIds() {
@@ -44,7 +45,7 @@ final class PayrollTotalsTests: XCTestCase {
       shiftDate: "2026-10-01",
       startTime: "08:00",
       endTime: "16:00",
-      gross: 1000,
+      gross: 1_000,
       taxEnabled: false
     )
     let second = TestFixtures.computedShift(
@@ -66,8 +67,8 @@ final class PayrollTotalsTests: XCTestCase {
       now: now
     )
 
-    XCTAssertEqual(totals.gross, 1000, accuracy: 0.01)
-    XCTAssertEqual(totals.net, 1000, accuracy: 0.01)
+    expect(totals.gross).to(beCloseTo(1_000, within: 0.01))
+    expect(totals.net).to(beCloseTo(1_000, within: 0.01))
   }
 
   func testSummarizeShiftTotalsClampsInvalidTaxPercentages() {
@@ -76,7 +77,7 @@ final class PayrollTotalsTests: XCTestCase {
       shiftDate: "2026-10-01",
       startTime: "08:00",
       endTime: "16:00",
-      gross: 1000,
+      gross: 1_000,
       taxEnabled: true,
       taxPercentage: 150
     )
@@ -85,7 +86,7 @@ final class PayrollTotalsTests: XCTestCase {
       shiftDate: "2026-10-02",
       startTime: "08:00",
       endTime: "16:00",
-      gross: 1000,
+      gross: 1_000,
       taxEnabled: true,
       taxPercentage: -20
     )
@@ -99,7 +100,7 @@ final class PayrollTotalsTests: XCTestCase {
       now: now
     )
 
-    XCTAssertEqual(totals.gross, 2000, accuracy: 0.01)
-    XCTAssertEqual(totals.net, 1000, accuracy: 0.01)
+    expect(totals.gross).to(beCloseTo(2_000, within: 0.01))
+    expect(totals.net).to(beCloseTo(1_000, within: 0.01))
   }
 }

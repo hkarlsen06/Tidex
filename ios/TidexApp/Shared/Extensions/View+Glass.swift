@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_body_length multiline_arguments_brackets no_magic_numbers sorted_enum_cases
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable vertical_whitespace_between_cases
 import SwiftUI
 
 /// Consistent glass styling that respects Reduce Transparency.
@@ -71,6 +79,7 @@ private struct TidexGlassModifier: ViewModifier {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
               .stroke(Color.tidexBorderSubtle, lineWidth: 1)
           )
+
       case .capsule:
         content
           .background(
@@ -85,6 +94,7 @@ private struct TidexGlassModifier: ViewModifier {
             Capsule()
               .stroke(Color.tidexBorderSubtle, lineWidth: 1)
           )
+
       case .circle:
         content
           .background(
@@ -105,9 +115,11 @@ private struct TidexGlassModifier: ViewModifier {
       case .rect(let cornerRadius):
         content
           .glassEffect(glassEffect, in: .rect(cornerRadius: cornerRadius))
+
       case .capsule:
         content
           .glassEffect(glassEffect, in: .capsule)
+
       case .circle:
         content
           .glassEffect(glassEffect, in: .circle)

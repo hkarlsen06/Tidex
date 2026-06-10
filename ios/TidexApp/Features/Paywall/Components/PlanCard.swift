@@ -37,13 +37,13 @@ struct PlanCard: View {
 
         Spacer()
 
-        if let product = product {
+        if let product {
           priceView(for: product)
         }
       }
 
       // Product description from App Store Connect
-      if let product = product {
+      if let product {
         Text(product.description)
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextSecondary)
@@ -112,8 +112,10 @@ struct PlanCard: View {
       switch tier {
       case .pro:
         Image(systemName: "star.fill")
+
       case .max:
         Image(systemName: "crown.fill")
+
       case .free:
         Image(systemName: "person.fill")
       }
@@ -145,9 +147,8 @@ struct PlanCard: View {
     // Determine period from product ID
     if product.id.contains(".year") {
       return String(localized: .paywallPerYear)
-    } else {
-      return String(localized: .paywallPerMonth)
     }
+    return String(localized: .paywallPerMonth)
   }
 }
 

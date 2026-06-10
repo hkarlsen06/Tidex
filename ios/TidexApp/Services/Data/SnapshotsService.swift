@@ -75,7 +75,7 @@ final class SnapshotsService: ObservableObject {
     // Binary search: find the latest snapshot where from_date <= date
     var left = 0
     var right = dated.count - 1
-    var result: WageSnapshot? = nil
+    var result: WageSnapshot?
 
     while left <= right {
       let mid = (left + right) / 2

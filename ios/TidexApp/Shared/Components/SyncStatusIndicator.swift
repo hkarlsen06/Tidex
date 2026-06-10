@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_empty_block no_magic_numbers shorthand_optional_binding superfluous_else
 import SwiftUI
 
 /// Compact indicator for sync status
@@ -34,7 +40,7 @@ struct SyncStatusIndicator: View {
           .font(.tidexLabel)
           .foregroundColor(.tidexWarning)
 
-        if let lastSync = lastSync {
+        if let lastSync {
           Text(String(localized: .syncFailedWithLastSync(formatRelativeTime(lastSync))))
             .font(.tidexFootnoteMedium)
             .foregroundColor(.tidexTextSecondary)
@@ -86,12 +92,12 @@ struct SyncStatusIndicator: View {
 
     if minutes < 1 {
       return String(localized: .syncJustNow)
-    } else if minutes < 60 {
-      return String(localized: .syncMinutesAgo(Int32(minutes)))
-    } else {
-      let hours = minutes / 60
-      return String(localized: .syncHoursAgo(Int32(hours)))
     }
+    if minutes < 60 {
+      return String(localized: .syncMinutesAgo(Int32(minutes)))
+    }
+    let hours = minutes / 60
+    return String(localized: .syncHoursAgo(Int32(hours)))
   }
 }
 

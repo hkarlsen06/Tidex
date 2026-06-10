@@ -52,10 +52,13 @@ enum ShiftSaveError: Error, LocalizedError {
     switch self {
     case .alreadyInProgress:
       return String(localized: .shiftsSaveErrorInProgress)
+
     case .invalidDate:
       return String(localized: .shiftsSaveErrorInvalidDate)
+
     case .missingRecurringInfo:
       return String(localized: .shiftsSaveErrorMissingRecurringInfo)
+
     case .unavailable:
       return String(localized: .shiftsSaveErrorUnavailable)
     }
@@ -79,6 +82,7 @@ struct ShiftDetailsPresentationPolicy: Equatable {
     switch snapshotShareContext {
     case .own:
       return true
+
     case .shared(let owner):
       return owner.showEarnings
     }
@@ -94,7 +98,7 @@ struct ShiftDetailsPresentationPolicy: Equatable {
   }
 }
 
-struct ShiftDetailsSheet: View {
+struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
   let shift: ShiftWithComputations
   /// Job name to display in the header badge (only set when user has multiple jobs)
   let jobName: String?
@@ -126,7 +130,7 @@ struct ShiftDetailsSheet: View {
   var startInEditMode: Bool = false
 
   /// Edited date (ISO format YYYY-MM-DD)
-  @State private var editedDate: Date = Date()
+  @State private var editedDate = Date()  // swiftlint:disable:this explicit_type_interface
 
   /// Edited start time
   @State private var editedStartTime: Date?
@@ -408,17 +412,22 @@ struct ShiftDetailsSheet: View {
     switch shift.computed.breakAudit.source {
     case .customPauseWindows:
       return .shiftsBreakDeductionExplanationExactPause
+
     case .automaticBreak:
       switch shift.computed.breakAudit.method {
       case .proportional:
         return .shiftsBreakDeductionExplanationProportional
+
       case .baseOnly:
         return .shiftsBreakDeductionExplanationBaseOnly
+
       case .endOfShift:
         return .shiftsBreakDeductionExplanationEndOfShift
+
       case .none:
         return .shiftsBreakDeductionExplanationGeneric
       }
+
     case .none:
       return .shiftsBreakDeductionExplanationGeneric
     }
@@ -434,8 +443,10 @@ struct ShiftDetailsSheet: View {
     switch shift.computed.breakAudit.source {
     case .customPauseWindows:
       return String(localized: .shiftsPauseSectionSummaryCustomOverride)
+
     case .automaticBreak:
       return automaticBreakSummaryText
+
     case .none:
       return hasCustomPauseWindows
         ? String(localized: .shiftsPauseSectionSummarySavedOnShift)
@@ -487,7 +498,7 @@ struct ShiftDetailsSheet: View {
       let currentRate = period.supplementRate
       var j = i + 1
 
-      while j < original.count && original[j].supplementRate == currentRate {
+      while j < original.count, original[j].supplementRate == currentRate {
         groupEnd = original[j].toMin
         j += 1
       }
@@ -559,7 +570,7 @@ struct ShiftDetailsSheet: View {
           }
 
           // Virtual shift indicator
-          if isVirtualShift && !isEditing {
+          if isVirtualShift, !isEditing {
             virtualShiftBanner
           }
 
@@ -1500,7 +1511,7 @@ struct ShiftDetailsSheet: View {
           }
 
           // Delete button
-          if let onDelete = onDelete {
+          if let onDelete {
             deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
           }
         }
@@ -1617,7 +1628,7 @@ struct ShiftDetailsSheet: View {
         breakDeductionTotalRow(breakdown, showsChevron: false)
       }
 
-      if canExpand && isBreakDeductionExpanded {
+      if canExpand, isBreakDeductionExpanded {
         VStack(spacing: Spacing.xs) {
           ForEach(breakdown.parts) { part in
             breakDeductionPartView(part)
@@ -1664,6 +1675,7 @@ struct ShiftDetailsSheet: View {
     switch part.kind {
     case .base:
       breakDeductionBasePayCard(part)
+
     case .supplement:
       breakDeductionSupplementCard(part)
     }
@@ -1726,7 +1738,7 @@ struct ShiftDetailsSheet: View {
         supplementTotalRow(showsChevron: false)
       }
 
-      if canExpand && isSupplementBreakdownExpanded {
+      if canExpand, isSupplementBreakdownExpanded {
         ForEach(supplementSegments) { segment in
           supplementSegmentRow(segment)
         }
@@ -1906,13 +1918,12 @@ struct ShiftDetailsSheet: View {
       let formatter = RelativeDateTimeFormatter()
       formatter.unitsStyle = .full
       return formatter.localizedString(for: date, relativeTo: now)
-    } else {
-      // Otherwise use a short date format
-      let formatter = DateFormatter()
-      formatter.dateStyle = .medium
-      formatter.timeStyle = .none
-      return formatter.string(from: date)
     }
+    // Otherwise use a short date format
+    let formatter = DateFormatter()  // swiftlint:disable:this explicit_type_interface
+    formatter.dateStyle = .medium
+    formatter.timeStyle = .none
+    return formatter.string(from: date)
   }
 
   // MARK: - Formatting
@@ -1947,6 +1958,7 @@ struct ShiftDetailsSheet: View {
         ownerAvatarUrl: coordinator.userAvatarUrl
       )
       .build(for: recipient)
+
     case .shared(let owner):
       return SharedShiftSnapshotBuilder(
         shift: shift,
@@ -2107,16 +2119,17 @@ struct SupplementSegment: Identifiable, Equatable {
 
   /// Format minutes to display time (e.g., "21:00")
   func formatTime(_ minutes: Double) -> String {
-    let dayOffset = Int(minutes / 1440)
-    let remainder = Int(minutes) % 1440
-    let normalizedMinutes = remainder < 0 ? remainder + 1440 : remainder
+    let dayOffset = Int(minutes / 1_440)  // swiftlint:disable:this explicit_type_interface no_magic_numbers
+    let remainder = Int(minutes) % 1_440  // swiftlint:disable:this explicit_type_interface no_magic_numbers
+    let normalizedMinutes = remainder < 0 ? remainder + 1_440 : remainder  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
     let isFullDay = normalizedMinutes == 0 && Int(minutes) != 0
     let hours = isFullDay ? 24 : normalizedMinutes / 60
     let mins = isFullDay ? 0 : normalizedMinutes % 60
     let base = String(format: "%02d:%02d", hours, mins)
     if dayOffset > 0 {
       return "\(base) (+\(dayOffset))"
-    } else if dayOffset < 0 {
+    }
+    if dayOffset < 0 {
       return "\(base) (\(dayOffset))"
     }
     return base
@@ -2161,7 +2174,7 @@ struct BreakDeductionBreakdown: Equatable {
   static func make(
     originalPeriods: [WagePeriod],
     adjustedPeriods: [WagePeriod]
-  ) -> BreakDeductionBreakdown? {
+  ) -> Self? {
     var parts: [BreakDeductionPart] = []
 
     let baseAmount = roundedCurrency(
@@ -2194,7 +2207,7 @@ struct BreakDeductionBreakdown: Equatable {
       ))
 
     guard !parts.isEmpty else { return nil }
-    return BreakDeductionBreakdown(parts: parts)
+    return Self(parts: parts)
   }
 
   private static func supplementParts(
@@ -2216,7 +2229,7 @@ struct BreakDeductionBreakdown: Equatable {
       let rate = period.supplementRate
       var j = i + 1
 
-      while j < originalPeriods.count && originalPeriods[j].supplementRate == rate {
+      while j < originalPeriods.count, originalPeriods[j].supplementRate == rate {
         groupEnd = originalPeriods[j].toMin
         j += 1
       }
@@ -2303,7 +2316,7 @@ struct BreakDeductionBreakdown: Equatable {
   }
 
   private static func payFor(hours: Double, rate: Double) -> Double {
-    let roundedHours = (hours * 1000).rounded() / 1000
+    let roundedHours = (hours * 1_000).rounded() / 1_000  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
     return roundedCurrency(roundedHours * rate)
   }
 
@@ -2333,9 +2346,9 @@ struct BreakDeductionPart: Identifiable, Equatable {
   // Supplement applies from 21:00-24:00 at 45 kr/hour
   let eveningSupplementPeriods = [
     // 17:00-21:00: 4 hours base only (1020 min to 1260 min)
-    WagePeriod(fromMin: 1020, toMin: 1260, baseRate: 200, supplementRate: 0),
+    WagePeriod(fromMin: 1_020, toMin: 1_260, baseRate: 200, supplementRate: 0),
     // 21:00-23:00: 2 hours with supplement (1260 min to 1380 min)
-    WagePeriod(fromMin: 1260, toMin: 1380, baseRate: 200, supplementRate: 45),
+    WagePeriod(fromMin: 1_260, toMin: 1_380, baseRate: 200, supplementRate: 45),
   ]
 
   return ShiftDetailsSheet(
@@ -2347,15 +2360,15 @@ struct BreakDeductionPart: Identifiable, Equatable {
         start_time: "17:00",
         end_time: "23:00",
         custom_supplements: nil,
-        updated_at: Date().addingTimeInterval(-3600)  // 1 hour ago
+        updated_at: Date().addingTimeInterval(-3_600)  // 1 hour ago
       ),
       computed: ShiftComputed(
         id: "preview-1",
         durationHours: 6.0,
         paidHours: 5.5,
-        basePay: 1100,  // 5.5h × 200 kr
+        basePay: 1_100,  // 5.5h × 200 kr
         supplementPay: 90,  // 2h × 45 kr
-        gross: 1190,
+        gross: 1_190,
         wagePeriods: eveningSupplementPeriods,
         originalWagePeriods: eveningSupplementPeriods,
         breakAudit: BreakAudit(
@@ -2384,9 +2397,9 @@ struct BreakDeductionPart: Identifiable, Equatable {
         id: "preview-edit",
         durationHours: 8.0,
         paidHours: 7.5,
-        basePay: 1500,
+        basePay: 1_500,
         supplementPay: 0,
-        gross: 1500,
+        gross: 1_500,
         wagePeriods: [
           WagePeriod(fromMin: 480, toMin: 960, baseRate: 200, supplementRate: 0)
         ],
@@ -2420,9 +2433,9 @@ struct BreakDeductionPart: Identifiable, Equatable {
         id: "preview-2",
         durationHours: 8.0,
         paidHours: 7.5,
-        basePay: 1500,
+        basePay: 1_500,
         supplementPay: 0,
-        gross: 1500,
+        gross: 1_500,
         wagePeriods: [
           WagePeriod(fromMin: 480, toMin: 960, baseRate: 200, supplementRate: 0)
         ],

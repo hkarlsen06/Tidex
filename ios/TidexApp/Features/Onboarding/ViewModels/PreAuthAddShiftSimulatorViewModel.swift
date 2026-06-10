@@ -6,11 +6,11 @@ import UIKit
 /// Mirrors single-shift interactions without persisting or requiring auth.
 @MainActor
 final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalendarViewModeling {
-  @Published var startTime: Date? = nil {
+  @Published var startTime: Date? {  // swiftlint:disable:this explicit_acl
     didSet { updateConflictsAndPreviews() }
   }
 
-  @Published var endTime: Date? = nil {
+  @Published var endTime: Date? {  // swiftlint:disable:this explicit_acl
     didSet { updateConflictsAndPreviews() }
   }
 

@@ -282,7 +282,7 @@ private struct ReasonInputField: View {
         .background(Color.tidexSurfaceSecondary)
         .cornerRadius(CornerRadius.sm)
 
-      if !viewModel.impersonationReason.isEmpty && !isValidReason {
+      if !viewModel.impersonationReason.isEmpty, !isValidReason {
         Text("Reason must be at least 5 characters")
           .font(.caption)
           .foregroundStyle(Color.tidexError)

@@ -6,7 +6,7 @@ import UIKit
 struct SupplementsScreen: View {
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
-  var onBack: (() -> Void)? = nil
+  var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl
 
   @State private var showingRuleEditor = false
   @State private var editingRule: OnboardingSupplementRule?
@@ -25,7 +25,7 @@ struct SupplementsScreen: View {
         ScrollView {
           VStack(spacing: 0) {
             // Back button (if provided)
-            if let onBack = onBack {
+            if let onBack {
               HStack {
                 Button(action: {
                   UIImpactFeedbackGenerator(style: .light).impactOccurred()

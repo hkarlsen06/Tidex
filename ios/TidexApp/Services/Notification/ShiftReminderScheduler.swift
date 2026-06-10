@@ -210,7 +210,7 @@ final class ShiftReminderScheduler {
 
     let shiftReminderIds =
       pendingRequests
-      .map { $0.identifier }
+      .map(\.identifier)
       .filter { $0.hasPrefix(Self.identifierPrefix) }
 
     if !shiftReminderIds.isEmpty {
@@ -227,7 +227,7 @@ final class ShiftReminderScheduler {
 
     let matchingIds =
       pendingRequests
-      .map { $0.identifier }
+      .map(\.identifier)
       .filter { $0.hasPrefix("\(Self.identifierPrefix)\(shiftId)-") }
 
     if !matchingIds.isEmpty {
@@ -364,10 +364,12 @@ final class ShiftReminderScheduler {
     let mins = minutes % 60
 
     // Handle special day cases
-    if minutes == 1440 {  // 24 hours
+    // swiftlint:disable:next no_magic_numbers
+    if minutes == 1_440 {  // 24 hours
       return String(localized: .notificationReminderOneDay)
     }
-    if minutes == 2880 {  // 48 hours
+    // swiftlint:disable:next no_magic_numbers
+    if minutes == 2_880 {  // 48 hours
       return String(localized: .notificationReminderTwoDays)
     }
 

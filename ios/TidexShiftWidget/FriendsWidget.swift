@@ -42,8 +42,8 @@ struct FriendsWidgetEntry: TimelineEntry {
 
   // MARK: - Factory Methods
 
-  static func placeholder() -> FriendsWidgetEntry {
-    FriendsWidgetEntry(
+  internal static func placeholder() -> Self {
+    Self(
       date: Date(),
       friends: [
         FriendPreview(
@@ -81,8 +81,8 @@ struct FriendsWidgetEntry: TimelineEntry {
     )
   }
 
-  static func empty() -> FriendsWidgetEntry {
-    FriendsWidgetEntry(
+  internal static func empty() -> Self {
+    Self(
       date: Date(),
       friends: [],
       hasAnyFriends: false
@@ -105,15 +105,15 @@ struct FriendsWidgetProvider: TimelineProvider {
     return UserDefaults(suiteName: appGroupId)
   }
 
-  func placeholder(in _: Context) -> FriendsWidgetEntry {
+  internal func placeholder(in _: Context) -> FriendsWidgetEntry {
     FriendsWidgetEntry.placeholder()
   }
 
-  func getSnapshot(in _: Context, completion: @escaping (FriendsWidgetEntry) -> Void) {
+  internal func getSnapshot(in _: Context, completion: (FriendsWidgetEntry) -> Void) {
     completion(FriendsWidgetEntry.placeholder())
   }
 
-  func getTimeline(in _: Context, completion: @escaping (Timeline<FriendsWidgetEntry>) -> Void) {
+  internal func getTimeline(in _: Context, completion: (Timeline<FriendsWidgetEntry>) -> Void) {
     let entry = createEntry()
 
     // Refresh every 15 minutes
@@ -149,7 +149,7 @@ struct FriendsWidgetProvider: TimelineProvider {
       // Find shift for this sharer
       let shift = shifts.first { $0.sharerId == sharer.id }
 
-      if let shift = shift {
+      if let shift {
         // Calculate layout state
         let (status, daysRemaining) = determineStatus(
           shiftDateString: shift.shiftDate,
@@ -192,26 +192,38 @@ struct FriendsWidgetProvider: TimelineProvider {
     // 4. No shifts (alphabetical)
     previews.sort { lhs, rhs in
       // Active first
-      if lhs.status == .active && rhs.status != .active { return true }
-      if rhs.status == .active && lhs.status != .active { return false }
+      if lhs.status == .active, rhs.status != .active {
+        return true
+      }
+      if rhs.status == .active, lhs.status != .active {
+        return false
+      }
 
       // Upcoming by days remaining
-      if lhs.status == .upcoming && rhs.status == .upcoming {
+      if lhs.status == .upcoming, rhs.status == .upcoming {
         return (lhs.daysRemaining ?? 999) < (rhs.daysRemaining ?? 999)
       }
 
       // Upcoming before past/none
-      if lhs.status == .upcoming && rhs.status != .upcoming { return true }
-      if rhs.status == .upcoming && lhs.status != .upcoming { return false }
+      if lhs.status == .upcoming, rhs.status != .upcoming {
+        return true
+      }
+      if rhs.status == .upcoming, lhs.status != .upcoming {
+        return false
+      }
 
       // Past by recency (closest to today first)
-      if lhs.status == .past && rhs.status == .past {
+      if lhs.status == .past, rhs.status == .past {
         return abs(lhs.daysRemaining ?? 0) < abs(rhs.daysRemaining ?? 0)
       }
 
       // Past before none
-      if lhs.status == .past && rhs.status == .none { return true }
-      if rhs.status == .past && lhs.status == .none { return false }
+      if lhs.status == .past, rhs.status == .none {
+        return true
+      }
+      if rhs.status == .past, lhs.status == .none {
+        return false
+      }
 
       // Alphabetical for none
       return lhs.displayName < rhs.displayName
@@ -318,12 +330,11 @@ struct FriendsWidgetProvider: TimelineProvider {
       let daysAgo = abs(daysRemaining)
       if daysAgo == 1 {
         return String(localized: .widgetYesterday)
-      } else {
-        let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = appLocale()
-        weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
-        return sentenceCased(weekdayFormatter.string(from: shiftDate))
       }
+      let weekdayFormatter: DateFormatter = .init()
+      weekdayFormatter.locale = appLocale()
+      weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
+      return sentenceCased(weekdayFormatter.string(from: shiftDate))
     }
 
     // Today
@@ -340,7 +351,7 @@ struct FriendsWidgetProvider: TimelineProvider {
 
     // Within a week: weekday only
     if daysRemaining <= 7 {
-      let weekdayFormatter = DateFormatter()
+      let weekdayFormatter: DateFormatter = .init()
       weekdayFormatter.locale = appLocale()
       weekdayFormatter.setLocalizedDateFormatFromTemplate("EEEE")
       return sentenceCased(weekdayFormatter.string(from: shiftDate))
@@ -412,8 +423,10 @@ struct FriendsWidgetView: View {
     switch renderingMode {
     case .accented:
       return .clear
+
     case .vibrant:
       return Color.black.opacity(0.4)
+
     default:
       return isLightMode
         ? Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
@@ -425,6 +438,7 @@ struct FriendsWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .primary
+
     default:
       return isLightMode ? .black : .white
     }
@@ -434,6 +448,7 @@ struct FriendsWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return isLightMode ? .black.opacity(0.6) : .white.opacity(0.6)
     }
@@ -443,6 +458,7 @@ struct FriendsWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return isLightMode ? .black.opacity(0.4) : .white.opacity(0.4)
     }
@@ -452,6 +468,7 @@ struct FriendsWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary.opacity(0.2)
+
     default:
       return tidexBlue.opacity(0.2)
     }
@@ -461,6 +478,7 @@ struct FriendsWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .primary
+
     default:
       return tidexBlue
     }
@@ -490,7 +508,7 @@ struct FriendsWidgetView: View {
     ZStack {
       backgroundColor
 
-      if entry.hasAnyFriends && !entry.friends.isEmpty {
+      if entry.hasAnyFriends, !entry.friends.isEmpty {
         contentView
       } else {
         emptyStateView

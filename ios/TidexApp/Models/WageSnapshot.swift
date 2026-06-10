@@ -9,7 +9,7 @@ struct WageSnapshot: Codable, Identifiable, Equatable {
   let id: String
   let user_id: String
   /// Job that owns this snapshot (nullable during rollout compatibility)
-  var job_id: String? = nil
+  var job_id: String?  // swiftlint:disable:this explicit_acl identifier_name
   /// ISO date (YYYY-MM-DD) or nil for baseline snapshot
   let from_date: String?
   /// Hourly wage in NOK

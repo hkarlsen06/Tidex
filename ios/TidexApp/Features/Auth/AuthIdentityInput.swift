@@ -12,7 +12,7 @@ enum AuthIdentityInput {
   static func detectType(_ value: String) -> AuthIdentityInputType {
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
 
-    if trimmed.contains("@") && trimmed.contains(".") {
+    if trimmed.contains("@"), trimmed.contains(".") {
       return .email
     }
 

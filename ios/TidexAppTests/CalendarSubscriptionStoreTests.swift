@@ -125,7 +125,7 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
   }
 
   // swiftlint:disable:next async_without_await
-  func getSubscription() async throws -> CalendarSubscriptionState {
+  func getSubscription() async -> CalendarSubscriptionState {
     if createError != nil {
       state = activeAfterDuplicate
     }
@@ -177,7 +177,7 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
   }
 
   // swiftlint:disable:next async_without_await
-  func disableSubscription() async throws -> Bool {
+  func disableSubscription() async -> Bool {
     state = .inactive
     return true
   }
@@ -200,7 +200,7 @@ private final class InMemoryCalendarSubscriptionTokenStore: CalendarSubscription
     tokens[key(userId: userId, subscriptionId: metadata.id)]
   }
 
-  func saveToken(_ token: CalendarSubscriptionKeychainToken) throws {
+  func saveToken(_ token: CalendarSubscriptionKeychainToken) {
     tokens[key(userId: token.userId, subscriptionId: token.subscriptionId)] = token
   }
 

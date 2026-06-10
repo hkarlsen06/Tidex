@@ -17,14 +17,19 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
     switch self {
     case .reply:
       return String(localized: .friendsChatActionReply)
+
     case .copy:
       return String(localized: .commonCopy)
+
     case .edit:
       return String(localized: .friendsChatActionEdit)
+
     case .forward:
       return String(localized: .friendsChatActionForward)
+
     case .delete:
       return String(localized: .friendsChatActionDelete)
+
     case .report:
       return String(localized: .friendsChatReportMessage)
     }
@@ -34,14 +39,19 @@ enum FriendsThreadMessageMenuAction: MessageMenuAction, Sendable {
     switch self {
     case .reply:
       return Image(systemName: "arrowshape.turn.up.left")
+
     case .copy:
       return Image(systemName: "doc.on.doc")
+
     case .edit:
       return Image(systemName: "pencil")
+
     case .forward:
       return Image(systemName: "arrowshape.turn.up.right")
+
     case .delete:
       return Image(systemName: "trash")
+
     case .report:
       return Image(systemName: "flag")
     }
@@ -117,8 +127,10 @@ enum FriendsThreadMessageStatusResolver {
     switch message.sendState {
     case .sending:
       return .sending
+
     case .failed:
       return .failed
+
     case .sent:
       if readReceiptMessageId == message.id {
         return .read
@@ -141,8 +153,10 @@ enum FriendsThreadMessageStatusResolver {
     switch messageStatus {
     case .sending, .failed:
       return false
+
     case .delivered, .read:
       return true
+
     case .none:
       return message.sendState == .sent
     }
@@ -213,6 +227,7 @@ enum FriendsChatPanGestureResolver {
     switch direction {
     case .left:
       return velocity.width < 0
+
     case .right:
       return velocity.width > 0
     }
@@ -242,6 +257,7 @@ enum FriendsChatReplySwipeResolver {
     switch allowedDirection {
     case .left:
       guard horizontal < 0 else { return 0 }
+
     case .right:
       guard horizontal > 0 else { return 0 }
     }
@@ -269,6 +285,7 @@ enum FriendsChatReplySwipeResolver {
       return offset < 0 && (crossedThreshold(offset: offset) || velocity < -velocityThreshold)
         ? .trigger
         : .reset
+
     case .right:
       return offset > 0 && (crossedThreshold(offset: offset) || velocity > velocityThreshold)
         ? .trigger
@@ -520,8 +537,10 @@ enum FriendsThreadChatViewportScrollDeferralResolver {
     switch kind {
     case .reply:
       isUserInteracting || !hasDeferredInitialReplyScroll
+
     case .restore:
       isUserInteracting
+
     case .liveEdge:
       false
     }
@@ -795,7 +814,8 @@ struct FriendsThreadChatProjection {
     }
   }
 
-  static let empty = FriendsThreadChatProjection(
+  // swiftlint:disable:next explicit_acl explicit_type_interface
+  static let empty = Self(
     messages: [],
     exyteMessages: [],
     presentedMessageLookup: [:],
@@ -815,7 +835,8 @@ struct FriendsThreadChatProjection {
   let rowProjectionsByPresentedMessageID: [String: FriendsThreadMessageRowProjection]
   let typingIndicatorJoinsPrevious: Bool
 
-  static func make(input: Input) -> FriendsThreadChatProjection {
+  // swiftlint:disable:next explicit_acl function_body_length
+  static func make(input: Input) -> Self {
     guard !input.messages.isEmpty || input.showsTypingIndicator else {
       return empty
     }
@@ -909,7 +930,7 @@ struct FriendsThreadChatProjection {
       )
     }
 
-    return FriendsThreadChatProjection(
+    return Self(
       messages: input.messages,
       exyteMessages: exyteMessages,
       presentedMessageLookup: presentedMessageLookup,
@@ -1002,7 +1023,8 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
     Coordinator(onNavigateBack: onNavigateBack)
   }
 
-  func makeUIView(context: Context) -> UIView {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  func makeUIView(context _: Context) -> UIView {
     let view = UIView(frame: .zero)
     view.isUserInteractionEnabled = false
     return view
@@ -1015,7 +1037,8 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
     }
   }
 
-  static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  static func dismantleUIView(_: UIView, coordinator: Coordinator) {
     coordinator.restore()
   }
 
@@ -1246,8 +1269,10 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
       switch targetKind {
       case .replyPayload(direction: .right), .attachmentPhotoCarousel:
         return true
+
       case .replyPayload(direction: .left):
         return false
+
       case .timestampRevealGutter, .none:
         return false
       }
@@ -1264,7 +1289,8 @@ struct FriendsThreadTimestampRevealGestureBridge: UIViewRepresentable {
     Coordinator(onChanged: onChanged, onEnded: onEnded)
   }
 
-  func makeUIView(context: Context) -> UIView {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  func makeUIView(context _: Context) -> UIView {
     let view = UIView(frame: .zero)
     view.isUserInteractionEnabled = false
     return view
@@ -1280,7 +1306,8 @@ struct FriendsThreadTimestampRevealGestureBridge: UIViewRepresentable {
     }
   }
 
-  static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  static func dismantleUIView(_: UIView, coordinator: Coordinator) {
     coordinator.restore()
   }
 
@@ -1343,21 +1370,26 @@ struct FriendsThreadTimestampRevealGestureBridge: UIViewRepresentable {
       case .began:
         hasPassedMinimumDistance = false
         handleChangedIfReady(value)
+
       case .changed:
         handleChangedIfReady(value)
+
       case .ended:
         handleChangedIfReady(value)
         if hasPassedMinimumDistance {
           onEnded(value)
         }
         hasPassedMinimumDistance = false
+
       case .cancelled, .failed:
         if hasPassedMinimumDistance {
           onEnded(value)
         }
         hasPassedMinimumDistance = false
+
       case .possible:
         break
+
       @unknown default:
         if hasPassedMinimumDistance {
           onEnded(value)
@@ -1421,8 +1453,8 @@ struct FriendsThreadTimestampRevealGestureBridge: UIViewRepresentable {
     }
 
     func gestureRecognizer(
-      _ gestureRecognizer: UIGestureRecognizer,
-      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+      _: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer
     ) -> Bool {
       true
     }
@@ -1504,7 +1536,8 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     Coordinator()
   }
 
-  func makeUIView(context: Context) -> UIView {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  func makeUIView(context _: Context) -> UIView {
     let view = UIView(frame: .zero)
     view.backgroundColor = .clear
     view.isUserInteractionEnabled = false
@@ -1603,10 +1636,10 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       guard let tableView = findChatTableView(from: view) else {
         DispatchQueue.main.async { [weak self, weak view] in
           guard let self, let view, view.window != nil else { return }
-          self.attachIfNeeded(from: view)
-          self.reportPinnedToBottomIfNeeded()
-          self.attemptPendingScroll()
-          self.reportObservedPresentedMessageVisibleIfNeeded()
+          attachIfNeeded(from: view)
+          reportPinnedToBottomIfNeeded()
+          attemptPendingScroll()
+          reportObservedPresentedMessageVisibleIfNeeded()
         }
         return
       }
@@ -1618,7 +1651,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         [weak self] tableView, _ in
         Task { @MainActor [weak self] in
           guard let self else { return }
-          self.handleContentOffsetChange(for: tableView)
+          handleContentOffsetChange(for: tableView)
         }
       }
       contentSizeObservation = tableView.observe(\.contentSize, options: [.new]) {
@@ -1722,8 +1755,10 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         switch scrollRequest.kind {
         case .reply:
           .middle
+
         case .restore:
           .top
+
         case .liveEdge:
           .top
         }
@@ -1757,9 +1792,10 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
         guard let self else { return }
-        guard self.deferredScrollRequest == scrollRequest else { return }
-        self.deferredScrollRequest = nil
-        self.attemptPendingScroll()
+        // swiftlint:disable:next conditional_returns_on_newline
+        guard deferredScrollRequest == scrollRequest else { return }
+        deferredScrollRequest = nil
+        attemptPendingScroll()
       }
     }
 
@@ -1783,7 +1819,8 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         )
       else { return }
 
-      let candidateIndexPaths = Set([previousIndexPath, currentIndexPath].compactMap { $0 })
+      // swiftlint:disable:next explicit_type_interface
+      let candidateIndexPaths = Set([previousIndexPath, currentIndexPath].compactMap(\.self))
       let validIndexPaths = candidateIndexPaths.filter { indexPath in
         tableView.numberOfSections > indexPath.section
           && tableView.numberOfRows(inSection: indexPath.section) > indexPath.row
@@ -2096,10 +2133,13 @@ enum FriendsThreadExyteMessageFactory {
     ) {
     case .sending:
       return .sending
+
     case .delivered:
       return .delivered
+
     case .read:
       return .read
+
     case .failed:
       return .error(
         DraftMessage(
@@ -2112,6 +2152,7 @@ enum FriendsThreadExyteMessageFactory {
           createdAt: message.createdAt
         )
       )
+
     case .none:
       return nil
     }

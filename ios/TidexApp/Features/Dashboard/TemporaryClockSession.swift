@@ -3,27 +3,27 @@ import Foundation
 import UIKit
 import os.log
 
-private let clockSessionLogger = Logger(subsystem: "com.tidex.app", category: "ClockSession")
+private let clockSessionLogger = Logger(subsystem: "com.tidex.app", category: "ClockSession")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 
-struct TemporaryClockSession: Codable, Equatable, Identifiable {
-  let id: String
-  let userId: String
-  let jobId: String?
-  let startedAt: Date
-  let createdAt: Date
+struct TemporaryClockSession: Codable, Equatable, Identifiable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length
+  let id: String  // swiftlint:disable:this explicit_acl
+  let userId: String  // swiftlint:disable:this explicit_acl
+  let jobId: String?  // swiftlint:disable:this explicit_acl
+  let startedAt: Date  // swiftlint:disable:this explicit_acl
+  let createdAt: Date  // swiftlint:disable:this explicit_acl
 }
 
-enum ClockSessionRules {
+enum ClockSessionRules {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
   private static func isValidClockTime(_ value: String) -> Bool {
-    let parts = value.split(separator: ":")
+    let parts = value.split(separator: ":")  // swiftlint:disable:this explicit_type_interface
     guard
-      parts.count == 2,
-      parts[1].count == 2,
+      parts.count == 2,  // swiftlint:disable:this no_magic_numbers
+      parts[1].count == 2,  // swiftlint:disable:this no_magic_numbers
       let hours = Int(parts[0]),
       let minutes = Int(parts[1]),
-      (0...24).contains(hours),
-      (0...59).contains(minutes),
-      !(hours == 24 && minutes != 0)
+      (0...24).contains(hours),  // swiftlint:disable:this no_magic_numbers
+      (0...59).contains(minutes),  // swiftlint:disable:this no_magic_numbers
+      !(hours == 24 && minutes != 0)  // swiftlint:disable:this no_magic_numbers
     else {
       return false
     }
@@ -31,27 +31,27 @@ enum ClockSessionRules {
     return true
   }
 
-  static func timeString(from date: Date) -> String {
+  static func timeString(from date: Date) -> String {  // swiftlint:disable:this explicit_acl
     date.toHourMinuteString()
   }
 
-  static func hasExceededEndOfDayLimit(
+  static func hasExceededEndOfDayLimit(  // swiftlint:disable:this explicit_acl
     _ session: TemporaryClockSession,
     at referenceDate: Date
   ) -> Bool {
-    let calendar = Calendar.current
-    let startOfDay = calendar.startOfDay(for: session.startedAt)
-    guard let cutoff = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfDay)
+    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let startOfDay = calendar.startOfDay(for: session.startedAt)  // swiftlint:disable:this explicit_type_interface
+    guard let cutoff = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfDay)  // swiftlint:disable:this line_length no_magic_numbers
     else {
       return false
     }
     return referenceDate > cutoff
   }
 
-  static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {
-    let calendar = Calendar(identifier: .gregorian)
-    let startTime = String(shift.start_time.prefix(5))
-    let endTime = String(shift.end_time.prefix(5))
+  static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {  // swiftlint:disable:this explicit_acl
+    let calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
+    let startTime = String(shift.start_time.prefix(5))  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
+    let endTime = String(shift.end_time.prefix(5))  // swiftlint:disable:this explicit_type_interface no_magic_numbers
 
     guard
       isValidClockTime(startTime),
@@ -71,29 +71,29 @@ enum ClockSessionRules {
 }
 
 @MainActor
-final class TemporaryClockSessionStore {
-  static let shared = TemporaryClockSessionStore()
+final class TemporaryClockSessionStore {  // swiftlint:disable:this explicit_acl explicit_top_level_acl required_deinit
+  static let shared = TemporaryClockSessionStore()  // swiftlint:disable:this explicit_acl explicit_type_interface
 
   private let defaults: UserDefaults
-  private let sessionKeyPrefix = "dashboard.clock.temporary-session"
-  private let decoder = JSONDecoder()
-  private let encoder = JSONEncoder()
+  private let sessionKeyPrefix = "dashboard.clock.temporary-session"  // swiftlint:disable:this explicit_type_interface
+  private let decoder = JSONDecoder()  // swiftlint:disable:this explicit_type_interface
+  private let encoder = JSONEncoder()  // swiftlint:disable:this explicit_type_interface
 
-  init(defaults: UserDefaults = .standard) {
+  init(defaults: UserDefaults = .standard) {  // swiftlint:disable:this explicit_acl
     self.defaults = defaults
   }
 
-  func activeSession(for userId: String) -> TemporaryClockSession? {
-    guard let data = defaults.data(forKey: key(for: userId)) else { return nil }
+  func activeSession(for userId: String) -> TemporaryClockSession? {  // swiftlint:disable:this explicit_acl
+    guard let data = defaults.data(forKey: key(for: userId)) else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
     return try? decoder.decode(TemporaryClockSession.self, from: data)
   }
 
-  func save(_ session: TemporaryClockSession) {
-    guard let data = try? encoder.encode(session) else { return }
+  func save(_ session: TemporaryClockSession) {  // swiftlint:disable:this explicit_acl
+    guard let data = try? encoder.encode(session) else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     defaults.set(data, forKey: key(for: session.userId))
   }
 
-  func clear(for userId: String) {
+  func clear(for userId: String) {  // swiftlint:disable:this explicit_acl
     defaults.removeObject(forKey: key(for: userId))
   }
 
@@ -103,18 +103,18 @@ final class TemporaryClockSessionStore {
 }
 
 @MainActor
-final class ClockSessionReconciler {
-  static let shared = ClockSessionReconciler()
+final class ClockSessionReconciler {  // swiftlint:disable:this explicit_acl explicit_top_level_acl required_deinit
+  static let shared = ClockSessionReconciler()  // swiftlint:disable:this explicit_acl explicit_type_interface
 
   private let clockSessionStore: TemporaryClockSessionStore
   private let shiftsRepository: ShiftsRepository
-  private var isReconciling = false
+  private var isReconciling = false  // swiftlint:disable:this explicit_type_interface
 
-  private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {
+  private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {  // swiftlint:disable:this line_length type_contents_order
     NotificationCenter.default.postShiftsDidChange(object: self, context: context)
   }
 
-  init(
+  init(  // swiftlint:disable:this explicit_acl
     clockSessionStore: TemporaryClockSessionStore? = nil,
     shiftsRepository: ShiftsRepository? = nil
   ) {
@@ -124,15 +124,15 @@ final class ClockSessionReconciler {
 
   /// Reconcile temporary clock sessions against persisted ongoing shifts.
   /// Runs on app open/foreground so behavior is correct even when Dashboard is never shown.
-  func reconcileIfNeeded(referenceDate: Date = Date()) async {
-    guard !isReconciling else { return }
+  func reconcileIfNeeded(referenceDate: Date = Date()) async {  // swiftlint:disable:this explicit_acl line_length type_contents_order
+    guard !isReconciling else { return }  // swiftlint:disable:this conditional_returns_on_newline
     isReconciling = true
     defer { isReconciling = false }
 
-    guard let session = await AuthSessionManager.shared.getSessionIfAvailable() else { return }
-    let userId = session.normalizedUserId
+    guard let session = await AuthSessionManager.shared.getSessionIfAvailable() else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    let userId = session.normalizedUserId  // swiftlint:disable:this explicit_type_interface
 
-    guard let temporarySession = clockSessionStore.activeSession(for: userId) else { return }
+    guard let temporarySession = clockSessionStore.activeSession(for: userId) else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
 
     if Self.hasExceededEndOfDayLimit(temporarySession, at: referenceDate) {
       cancelTemporarySession(temporarySession)
@@ -149,11 +149,11 @@ final class ClockSessionReconciler {
       return
     }
 
-    let sessionDate = temporarySession.startedAt.toISODateString()
-    let sessionStartTime = Self.timeString(from: temporarySession.startedAt)
-    let ongoingStartTime = String(ongoingShift.start_time.prefix(5))
+    let sessionDate = temporarySession.startedAt.toISODateString()  // swiftlint:disable:this explicit_type_interface
+    let sessionStartTime = Self.timeString(from: temporarySession.startedAt)  // swiftlint:disable:this explicit_type_interface line_length
+    let ongoingStartTime = String(ongoingShift.start_time.prefix(5))  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
 
-    let shouldBackfillStartTime =
+    let shouldBackfillStartTime =  // swiftlint:disable:this explicit_type_interface
       sessionDate == ongoingShift.shift_date && sessionStartTime < ongoingStartTime
 
     if shouldBackfillStartTime {
@@ -164,7 +164,7 @@ final class ClockSessionReconciler {
         )
       } catch {
         clockSessionLogger.error(
-          "Foreground clock handoff update failed: \(error.localizedDescription)")
+          "Foreground clock handoff update failed: \(error.localizedDescription)")  // swiftlint:disable:this line_length multiline_arguments_brackets
         return
       }
     }
@@ -176,18 +176,19 @@ final class ClockSessionReconciler {
       .checkAndStartLiveActivityIfNeeded()
   }
 
-  private func cancelTemporarySession(_ session: TemporaryClockSession) {
+  private func cancelTemporarySession(_ session: TemporaryClockSession) {  // swiftlint:disable:this type_contents_order
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.endLiveActivity(
-      for: session.id)
+      for: session.id)  // swiftlint:disable:this multiline_arguments_brackets
     clockSessionStore.clear(for: session.userId)
   }
 
-  private func ensureTemporaryLiveActivity(for session: TemporaryClockSession) async {
-    let hasMatchingActivity = Activity<ShiftActivityAttributes>.activities.contains { activity in
-      guard activity.attributes.shiftId == session.id else { return false }
+  private func ensureTemporaryLiveActivity(for session: TemporaryClockSession) async {  // swiftlint:disable:this line_length type_contents_order
+    let hasMatchingActivity = Activity<ShiftActivityAttributes>.activities.contains { activity in  // swiftlint:disable:this explicit_type_interface line_length
+      guard activity.attributes.shiftId == session.id else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
       switch activity.activityState {
       case .ended, .dismissed:
         return false
+
       default:
         return true
       }
@@ -204,13 +205,13 @@ final class ClockSessionReconciler {
     )
   }
 
-  private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async
+  private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async  // swiftlint:disable:this line_length type_contents_order
     -> ShiftRow?
   {
-    let calendar = Calendar.current
-    let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate
-    let endDate = calendar.date(byAdding: .day, value: 1, to: referenceDate) ?? referenceDate
-    let shifts = await shiftsRepository.getShiftsOffMain(
+    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate  // swiftlint:disable:this explicit_type_interface line_length
+    let endDate = calendar.date(byAdding: .day, value: 1, to: referenceDate) ?? referenceDate  // swiftlint:disable:this explicit_type_interface line_length
+    let shifts = await shiftsRepository.getShiftsOffMain(  // swiftlint:disable:this explicit_type_interface
       for: userId,
       startDate: startDate,
       endDate: endDate

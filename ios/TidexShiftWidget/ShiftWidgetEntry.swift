@@ -51,8 +51,8 @@ struct ShiftWidgetEntry: TimelineEntry {
   let deepLinkURL: URL?
 
   /// Placeholder entry for widget gallery and loading states
-  static func placeholder() -> ShiftWidgetEntry {
-    ShiftWidgetEntry(
+  internal static func placeholder() -> Self {
+    Self(
       date: Date(),
       shiftDate: String(localized: .widgetToday),
       startTime: "07:00",
@@ -72,17 +72,17 @@ struct ShiftWidgetEntry: TimelineEntry {
   /// Shows placeholder values for each element instead of a single message
   /// - Parameters:
   ///   - currency: User's currency symbol (e.g., "kr", "$"). If nil, shows "---" without currency
-  static func empty(currency: String? = nil) -> ShiftWidgetEntry {
+  internal static func empty(currency: String? = nil) -> Self {
     // Format empty earnings based on currency
     // If no currency is known, just show "---"
     let emptyEarnings: String
-    if let currency = currency {
+    if let currency {
       emptyEarnings = WidgetCurrencyFormatter.formatEmpty(currency: currency)
     } else {
       emptyEarnings = "---"
     }
 
-    return ShiftWidgetEntry(
+    return Self(
       date: Date(),
       shiftDate: "---",
       startTime: "--:--",

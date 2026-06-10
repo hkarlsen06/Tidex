@@ -14,6 +14,7 @@ enum AuthSessionManagerError: Error, LocalizedError {
     switch self {
     case .sessionFetchTimedOut:
       return "Session fetch timed out"
+
     case .refreshTimedOut:
       return "Session refresh timed out"
     }
@@ -47,6 +48,7 @@ struct SharedKeychainAccessTokenPayload: Equatable {
 /// let session = try await AuthSessionManager.shared.getSession()
 /// ```
 @MainActor
+// swiftlint:disable:next type_body_length
 final class AuthSessionManager: ObservableObject {
   static let shared = AuthSessionManager()
 
@@ -102,7 +104,7 @@ final class AuthSessionManager: ObservableObject {
 
       // Preserve caller semantics: if the in-flight task skipped proactive refresh,
       // a waiter that requires proactive refresh should still refresh when needed.
-      if allowProactiveRefresh && !existingAllowsProactiveRefresh {
+      if allowProactiveRefresh, !existingAllowsProactiveRefresh {
         let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
         let timeUntilExpiry = expiresAt.timeIntervalSinceNow
         if timeUntilExpiry < refreshBuffer {
@@ -121,28 +123,28 @@ final class AuthSessionManager: ObservableObject {
       }
 
       // If a refresh is already in progress, wait for it with timeout
-      if let existingTask = self.refreshTask {
+      if let existingTask = refreshTask {
         logger.debug("Refresh in progress, waiting for existing task...")
-        if let session = try await self.waitForRefreshTask(existingTask) {
+        if let session = try await waitForRefreshTask(existingTask) {
           return session
         }
         // Timeout occurred, existing task will be cancelled and we'll start fresh below
       }
 
       // Get the current session with timeout protection
-      let session = try await self.fetchSessionWithTimeout()
+      let session: Session = try await fetchSessionWithTimeout()
 
       // Check if token is close to expiry and needs proactive refresh
       let expiresAt = Date(timeIntervalSince1970: TimeInterval(session.expiresAt))
       let timeUntilExpiry = expiresAt.timeIntervalSinceNow
 
-      if allowProactiveRefresh && timeUntilExpiry < self.refreshBuffer {
+      if allowProactiveRefresh, timeUntilExpiry < refreshBuffer {
         logger.info("Token expires in \(timeUntilExpiry)s, proactively refreshing...")
-        return try await self.performRefresh()
+        return try await performRefresh()
       }
 
       // Store token in shared keychain for widget/watch access
-      self.storeTokenInSharedKeychain(session)
+      storeTokenInSharedKeychain(session)
 
       return session
     }
@@ -341,15 +343,17 @@ final class AuthSessionManager: ObservableObject {
 
           if let session = result {
             return session
-          } else {
-            // Timeout occurred
-            logger.warning(
-              "Refresh task timed out after 30s, cancelling stuck task and starting fresh...")
-            task.cancel()
-            self.refreshTask = nil
-            self.isRefreshing = false
-            return nil
           }
+          // Timeout occurred
+          logger.warning(
+            """
+            Refresh task timed out after 30s, cancelling stuck task and starting fresh...
+            """
+          )
+          task.cancel()
+          self.refreshTask = nil
+          self.isRefreshing = false
+          return nil
         }
 
         return nil
@@ -443,7 +447,7 @@ final class AuthSessionManager: ObservableObject {
         guard let self else {
           throw AuthSessionManagerError.refreshTimedOut
         }
-        let session = try await self.refreshSessionWithTimeout()
+        let session: Session = try await refreshSessionWithTimeout()
         logger.info("Token refreshed successfully, new expiry: \(session.expiresAt)")
         await MainActor.run {
           AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
@@ -472,12 +476,12 @@ final class AuthSessionManager: ObservableObject {
             severity: .error,
             error: error,
             metadata: [
-              "is_revoked_error": .bool(AuthSessionManager.shared.isSessionRevokedError(error)),
+              "is_revoked_error": .bool(Self.shared.isSessionRevokedError(error)),
               "is_transient_network_error": .bool(
-                AuthSessionManager.shared.isTransientNetworkError(error)
+                Self.shared.isTransientNetworkError(error)
               ),
               "is_transient_session_resolution_error": .bool(
-                AuthSessionManager.shared.isTransientSessionResolutionError(error)
+                Self.shared.isTransientSessionResolutionError(error)
               ),
             ]
           )

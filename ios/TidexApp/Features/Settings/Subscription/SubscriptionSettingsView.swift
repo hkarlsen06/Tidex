@@ -19,7 +19,7 @@ struct SubscriptionSettingsView: View {
         }
 
         // Grandfathered banner (early supporter)
-        if viewModel.isGrandfathered && viewModel.hasPremiumAccess {
+        if viewModel.isGrandfathered, viewModel.hasPremiumAccess {
           grandfatheredBanner
         }
 
@@ -235,8 +235,10 @@ struct SubscriptionSettingsView: View {
     switch viewModel.effectiveTier {
     case .free:
       return .tidexTextMuted
+
     case .pro:
       return .tidexBlue
+
     case .max:
       return .tidexWarning
     }
@@ -246,8 +248,10 @@ struct SubscriptionSettingsView: View {
     switch viewModel.effectiveTier {
     case .free:
       return "person.circle"
+
     case .pro:
       return "star.circle.fill"
+
     case .max:
       return "crown.fill"
     }
@@ -307,6 +311,7 @@ struct SubscriptionSettingsView: View {
         String(localized: .paywallFreeFeature1),
         String(localized: .paywallFreeFeature2),
       ]
+
     case .pro:
       return [
         String(localized: .paywallProFeature1),
@@ -314,6 +319,7 @@ struct SubscriptionSettingsView: View {
         String(localized: .paywallProFeature3),
         String(localized: .paywallProFeature4),
       ]
+
     case .max:
       return [
         String(localized: .paywallMaxFeature1),
@@ -410,13 +416,11 @@ struct SubscriptionSettingsView: View {
   // MARK: - Legal Links
 
   private var termsURL: URL {
-    // swiftlint:disable:next force_unwrapping
-    URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/terms")!
+    URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/terms")!  // swiftlint:disable:this force_unwrapping
   }
 
   private var privacyURL: URL {
-    // swiftlint:disable:next force_unwrapping
-    URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/privacy")!
+    URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/privacy")!  // swiftlint:disable:this force_unwrapping
   }
 
   private var legalLinks: some View {
@@ -471,11 +475,11 @@ struct SubscriptionSettingsView: View {
 private struct SubscriptionSafariView: UIViewControllerRepresentable {
   let url: URL
 
-  func makeUIViewController(context: Context) -> SFSafariViewController {
+  func makeUIViewController(context _: Context) -> SFSafariViewController {
     SFSafariViewController(url: url)
   }
 
-  func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+  func updateUIViewController(_: SFSafariViewController, context _: Context) {}  // swiftlint:disable:this no_empty_block
 }
 
 // MARK: - Preview

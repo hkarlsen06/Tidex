@@ -90,10 +90,13 @@ final class SnapshotsRepository: ObservableObject {
             switch (lhs.fromDate, rhs.fromDate) {
             case (let l?, let r?):
               return l > r
+
             case (_?, nil):
               return true
+
             case (nil, _?):
               return false
+
             case (nil, nil):
               return lhs.localUpdatedAt > rhs.localUpdatedAt
             }
@@ -385,7 +388,7 @@ final class SnapshotsRepository: ObservableObject {
       logger.info("Marked snapshot for deletion: \(id)")
 
       // Trigger sync to upload immediately
-      if let userId = userId {
+      if let userId {
         triggerSync(userId: userId)
       }
     } catch LocalStoreWriteError.notFound {

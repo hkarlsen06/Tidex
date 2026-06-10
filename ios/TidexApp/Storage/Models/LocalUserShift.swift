@@ -1,3 +1,5 @@
+// swiftlint:disable explicit_acl explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -101,7 +103,7 @@ final class LocalUserShift {
       }
     }
     set {
-      let keys = newValue.map { $0.rawValue }
+      let keys = newValue.map(\.rawValue)
       dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
@@ -227,12 +229,12 @@ struct UserShiftServerSnapshot: Codable, Equatable {
     updatedAt: Date,
     revision: Int64,
     deletedAt: Date?
-  ) -> UserShiftServerSnapshot {
+  ) -> Self {
     let pauseWindowsData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
       try? canonicalJSONEncoder.encode($0)
     }
     let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
-    return UserShiftServerSnapshot(
+    return Self(
       jobId: jobId,
       shiftDate: shiftDate,
       startTime: startTime,
@@ -259,12 +261,12 @@ struct UserShiftServerSnapshot: Codable, Equatable {
   }
 
   /// Decode from Data
-  static func decode(from data: Data) -> UserShiftServerSnapshot? {
-    try? syncJSONDecoder.decode(UserShiftServerSnapshot.self, from: data)
+  static func decode(from data: Data) -> Self? {
+    try? syncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
-  func changedFields(from other: UserShiftServerSnapshot) -> Set<UserShiftField> {
+  func changedFields(from other: Self) -> Set<UserShiftField> {
     var changed: Set<UserShiftField> = []
 
     if jobId != other.jobId {
@@ -322,7 +324,7 @@ extension LocalUserShift {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    context: ModelContext
+    context _: ModelContext
   ) -> LocalUserShift {
     let shiftDate =
       FormatterCache

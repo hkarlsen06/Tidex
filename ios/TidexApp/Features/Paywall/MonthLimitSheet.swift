@@ -144,7 +144,7 @@ struct MonthLimitSheet: View {
         }
 
         // Error display
-        if let error = error {
+        if let error {
           HStack(spacing: Spacing.xs) {
             Image(systemName: "exclamationmark.triangle.fill")
               .font(.tidexSubheadline)
@@ -260,9 +260,8 @@ struct MonthLimitSheet: View {
   private var confirmDeleteButtonText: String {
     if deleteCount == 1 {
       return String(localized: .monthLimitConfirmDeleteButton(deleteCount))
-    } else {
-      return String(localized: .monthLimitConfirmDeleteButtonPlural(deleteCount))
     }
+    return String(localized: .monthLimitConfirmDeleteButtonPlural(deleteCount))
   }
 
   // MARK: - Helpers
@@ -311,10 +310,10 @@ struct MonthLimitSheet: View {
 #Preview {
   MonthLimitSheet(
     existingMonths: [
-      DateComponents(year: 2025, month: 1),
-      DateComponents(year: 2025, month: 2),
+      DateComponents(year: 2_025, month: 1),
+      DateComponents(year: 2_025, month: 2),
     ],
-    targetMonth: DateComponents(year: 2025, month: 3),
+    targetMonth: DateComponents(year: 2_025, month: 3),
     onDeleteShifts: { true },
     onDeleteComplete: {},
     onUpgradeComplete: {}

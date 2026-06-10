@@ -174,8 +174,10 @@ struct ShiftHomeWidgetView: View {
     switch renderingMode {
     case .accented:
       return .clear
+
     case .vibrant:
       return Color.black.opacity(0.4)
+
     default:
       return tidexDarkBackground
     }
@@ -186,6 +188,7 @@ struct ShiftHomeWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .primary
+
     default:
       return .white
     }
@@ -196,6 +199,7 @@ struct ShiftHomeWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return .white.opacity(0.6)
     }
@@ -206,6 +210,7 @@ struct ShiftHomeWidgetView: View {
     switch renderingMode {
     case .accented:
       return .primary  // Will receive user's tint via widgetAccentable
+
     default:
       return tidexBlue
     }
@@ -216,6 +221,7 @@ struct ShiftHomeWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return .white.opacity(0.4)
     }
@@ -313,9 +319,11 @@ struct ShiftHomeWidgetView: View {
       switch entry.layoutState {
       case .countdown:
         countdownLayout
+
       case .pastShift, .todayOrTomorrow:
         // Past shifts use the same layout as today/tomorrow
         todayTomorrowLayout
+
       case .empty:
         emptyStateLayout
       }
@@ -578,6 +586,7 @@ enum WidgetCurrencyFormatter {
     // Suffix currencies
     case "kr", "zł", "Kč", "₽":
       return .suffix
+
     // Prefix currencies (default)
     default:
       return .prefix
@@ -597,6 +606,7 @@ enum WidgetCurrencyFormatter {
     switch display(for: currency) {
     case .prefix:
       return "\(currency)\(formatted)"
+
     case .suffix:
       return "\(formatted) \(currency)"
     }
@@ -607,6 +617,7 @@ enum WidgetCurrencyFormatter {
     switch display(for: currency) {
     case .prefix:
       return "\(currency)---"
+
     case .suffix:
       return "--- \(currency)"
     }
@@ -617,9 +628,10 @@ enum WidgetCurrencyFormatter {
     let absAmount = abs(amount)
     let formatted: String
 
-    if absAmount >= 1000 {
+    let compactThreshold: Double = 1_000.0
+    if absAmount >= compactThreshold {
       // Format as "Xk" or "X.Xk"
-      let thousands = amount / 1000
+      let thousands: Double = amount / compactThreshold
       if thousands.truncatingRemainder(dividingBy: 1) == 0 {
         formatted = "\(Int(thousands))k"
       } else {
@@ -633,6 +645,7 @@ enum WidgetCurrencyFormatter {
     switch display(for: currency) {
     case .prefix:
       return "\(currency)\(formatted)"
+
     case .suffix:
       return "\(formatted) \(currency)"
     }
@@ -642,35 +655,20 @@ enum WidgetCurrencyFormatter {
 // MARK: - Widget Provider
 
 struct ShiftWidgetProvider: TimelineProvider {
-  private let appGroupId = "group.no.tidex.app"
-  private let shiftsKey = "upcoming_shifts"
-  private let currencyKey = "user_currency"
+  private let helper: ShiftWidgetProviderHelper = .init()
 
-  private func sharedUserDefaults() -> UserDefaults? {
-    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
-    else {
-      return nil
-    }
-    return UserDefaults(suiteName: appGroupId)
-  }
-
-  /// Get the user's stored currency symbol, or nil if not set
-  private func getStoredCurrency() -> String? {
-    sharedUserDefaults()?.string(forKey: currencyKey)
-  }
-
-  func placeholder(in _: Context) -> ShiftWidgetEntry {
+  internal func placeholder(in _: Context) -> ShiftWidgetEntry {
     ShiftWidgetEntry.placeholder()
   }
 
-  func getSnapshot(in _: Context, completion: @escaping (ShiftWidgetEntry) -> Void) {
+  internal func getSnapshot(in _: Context, completion: (ShiftWidgetEntry) -> Void) {
     completion(ShiftWidgetEntry.placeholder())
   }
 
-  func getTimeline(in _: Context, completion: @escaping (Timeline<ShiftWidgetEntry>) -> Void) {
+  internal func getTimeline(in _: Context, completion: (Timeline<ShiftWidgetEntry>) -> Void) {
     let now = Date()
     let calendar = Calendar.current
-    let entry = createEntry(at: now)
+    let entry: ShiftWidgetEntry = helper.createEntry(at: now)
 
     var entries = [entry]
 
@@ -690,7 +688,7 @@ struct ShiftWidgetProvider: TimelineProvider {
         sc.minute = startComponents[1]
         sc.second = 0
         if let shiftStart = calendar.date(from: sc), shiftStart > now {
-          entries.append(createEntry(at: shiftStart))
+          entries.append(helper.createEntry(at: shiftStart))
         }
       }
 
@@ -708,7 +706,7 @@ struct ShiftWidgetProvider: TimelineProvider {
             shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
           }
           if shiftEnd > now {
-            entries.append(createEntry(at: shiftEnd))
+            entries.append(helper.createEntry(at: shiftEnd))
           }
         }
       }
@@ -721,7 +719,27 @@ struct ShiftWidgetProvider: TimelineProvider {
     completion(timeline)
   }
 
-  // MARK: - Private Helpers
+}
+
+// MARK: - Provider Helpers
+
+internal struct ShiftWidgetProviderHelper {
+  private let appGroupId = "group.no.tidex.app"
+  private let shiftsKey = "upcoming_shifts"
+  private let currencyKey = "user_currency"
+
+  private func sharedUserDefaults() -> UserDefaults? {
+    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
+    else {
+      return nil
+    }
+    return UserDefaults(suiteName: appGroupId)
+  }
+
+  /// Get the user's stored currency symbol, or nil if not set
+  private func getStoredCurrency() -> String? {
+    sharedUserDefaults()?.string(forKey: currencyKey)
+  }
 
   /// Parse ISO date (YYYY-MM-DD) in a stable, locale-agnostic way.
   private func parseShiftDate(_ dateString: String) -> Date? {
@@ -868,12 +886,11 @@ struct ShiftWidgetProvider: TimelineProvider {
     // State B: more than 1 day away (2+)
     if daysRemaining <= 1 {
       return (.todayOrTomorrow, daysRemaining)
-    } else {
-      return (.countdown, daysRemaining)
     }
+    return (.countdown, daysRemaining)
   }
 
-  private func createEntry(at now: Date) -> ShiftWidgetEntry {
+  internal func createEntry(at now: Date) -> ShiftWidgetEntry {
     // Get stored currency (may be nil if never set)
     let storedCurrency = getStoredCurrency()
 
@@ -942,12 +959,16 @@ struct ShiftWidgetProvider: TimelineProvider {
     if shiftActive {
       layoutState = .todayOrTomorrow
       daysRemaining = 0
-    } else if layoutState != .pastShift && (shiftStarted || shiftEnded) {
+    } else if layoutState != .pastShift, shiftStarted || shiftEnded {
       layoutState = .todayOrTomorrow
     }
 
     // Format date (pass daysRemaining for past shift formatting)
-    let formattedDate = formatShiftDate(shift.shiftDate, daysRemaining: daysRemaining)
+    let formattedDate: String = formatShiftDate(
+      shift.shiftDate,
+      daysRemaining: daysRemaining,
+      parseDate: parseShiftDate
+    )
 
     // Get random salute
     let salute = MotivationalSalutes.random()
@@ -1026,48 +1047,50 @@ struct ShiftWidgetProvider: TimelineProvider {
     return sortedShifts.last
   }
 
-  private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
-    guard let shiftDate = parseShiftDate(dateString) else { return dateString }
+}
 
-    let calendar = Calendar.current
-    let today = calendar.startOfDay(for: Date())
-    let shiftDay = calendar.startOfDay(for: shiftDate)
+// MARK: - App Locale Helper
 
-    // Past shift - show "Yesterday" or weekday+date for older shifts
-    if daysRemaining < 0 {
-      let daysAgo = abs(daysRemaining)
-      if daysAgo == 1 {
-        return String(localized: .widgetYesterday)
-      } else {
-        // 2+ days ago: show weekday + day format (e.g., "Mon 12.")
-        let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = appLocale()
-        weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-        return sentenceCased(weekdayFormatter.string(from: shiftDate))
-      }
+private func formatShiftDate(
+  _ dateString: String,
+  daysRemaining: Int,
+  parseDate: (String) -> Date?
+) -> String {
+  guard let shiftDate = parseDate(dateString) else {
+    return dateString
+  }
+
+  let calendar: Calendar = .current
+  let today: Date = calendar.startOfDay(for: Date())
+  let shiftDay: Date = calendar.startOfDay(for: shiftDate)
+
+  if daysRemaining < 0 {
+    let daysAgo: Int = abs(daysRemaining)
+    if daysAgo == 1 {
+      return String(localized: .widgetYesterday)
     }
 
-    // Today
-    if calendar.isDate(shiftDay, inSameDayAs: today) {
-      return String(localized: .widgetToday)
-    }
-
-    // Tomorrow
-    if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
-      calendar.isDate(shiftDay, inSameDayAs: tomorrow)
-    {
-      return String(localized: .widgetTomorrow)
-    }
-
-    // Weekday + day: "Mon 12."
-    let weekdayFormatter = DateFormatter()
+    let weekdayFormatter: DateFormatter = .init()
     weekdayFormatter.locale = appLocale()
     weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
     return sentenceCased(weekdayFormatter.string(from: shiftDate))
   }
-}
 
-// MARK: - App Locale Helper
+  if calendar.isDate(shiftDay, inSameDayAs: today) {
+    return String(localized: .widgetToday)
+  }
+
+  if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
+    calendar.isDate(shiftDay, inSameDayAs: tomorrow)
+  {
+    return String(localized: .widgetTomorrow)
+  }
+
+  let weekdayFormatter: DateFormatter = .init()
+  weekdayFormatter.locale = appLocale()
+  weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
+  return sentenceCased(weekdayFormatter.string(from: shiftDate))
+}
 
 private func sentenceCased(_ text: String) -> String {
   guard !text.isEmpty else { return text }

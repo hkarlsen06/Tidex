@@ -1,3 +1,6 @@
+// swiftlint:disable file_length
+
+import Nimble
 import SwiftData
 import XCTest
 
@@ -210,9 +213,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
       realtimeCoordinator: realtimeCoordinator
     )
 
-    viewModel.draft = String(repeating: "a", count: 5001)
+    viewModel.draft = String(repeating: "a", count: 5_001)
 
-    XCTAssertEqual(viewModel.draftCharacterCount, 5001)
+    expect(viewModel.draftCharacterCount) == 5_001
     XCTAssertEqual(
       viewModel.composerValidationMessage,
       String(localized: .friendsChatComposerMessageTooLong)
@@ -221,9 +224,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
 
     let didSend = await viewModel.sendDraft()
 
-    XCTAssertFalse(didSend)
-    XCTAssertEqual(mockService.sendMessageCallCount, 0)
-    XCTAssertEqual(viewModel.draft, String(repeating: "a", count: 5001))
+    expect(didSend) == false
+    expect(mockService.sendMessageCallCount) == 0
+    expect(viewModel.draft) == String(repeating: "a", count: 5_001)
     XCTAssertTrue(
       repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").isEmpty)
   }
@@ -418,7 +421,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
       .trimmingCharacters(in: .whitespacesAndNewlines)
       .unicodeScalars.count
 
-    XCTAssertTrue(expectedBackendCount > 5000)
+    expect(expectedBackendCount) > 5_000
 
     viewModel.draft = draft
 
@@ -2584,7 +2587,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
           storageBucket: "message-attachments",
           storagePath: "thread-1/viewer-1/uploaded-1.jpg",
           mimeType: "image/jpeg",
-          byteSize: 1024,
+          byteSize: 1_024,
           width: 320,
           height: 240,
           createdAt: Date(timeIntervalSince1970: 1_700_000_011)
@@ -2596,7 +2599,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
           storageBucket: "message-attachments",
           storagePath: "thread-1/viewer-1/uploaded-2.jpg",
           mimeType: "image/jpeg",
-          byteSize: 2048,
+          byteSize: 2_048,
           width: 640,
           height: 480,
           createdAt: Date(timeIntervalSince1970: 1_700_000_011)
@@ -2608,7 +2611,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
         attachmentId: "uploaded-1",
         storagePath: "thread-1/viewer-1/uploaded-1.jpg",
         mimeType: "image/jpeg",
-        byteSize: 1024,
+        byteSize: 1_024,
         width: 320,
         height: 240
       ),
@@ -2616,7 +2619,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
         attachmentId: "uploaded-2",
         storagePath: "thread-1/viewer-1/uploaded-2.jpg",
         mimeType: "image/jpeg",
-        byteSize: 2048,
+        byteSize: 2_048,
         width: 640,
         height: 480
       ),
@@ -2846,9 +2849,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
           id: "shared-shift-1",
           durationHours: 8,
           paidHours: 7.5,
-          basePay: 1000,
+          basePay: 1_000,
           supplementPay: 200,
-          gross: 1200,
+          gross: 1_200,
           breakAudit: SharedBreakAudit(
             method: .none,
             thresholdHours: 0,
@@ -2978,9 +2981,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
           id: "shared-shift-cold",
           durationHours: 8,
           paidHours: 7.5,
-          basePay: 1000,
+          basePay: 1_000,
           supplementPay: 200,
-          gross: 1200,
+          gross: 1_200,
           breakAudit: SharedBreakAudit(
             method: .none,
             thresholdHours: 0,
@@ -3048,9 +3051,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
           id: "shared-shift-refresh",
           durationHours: 8,
           paidHours: 7.5,
-          basePay: 1000,
+          basePay: 1_000,
           supplementPay: 200,
-          gross: 1200,
+          gross: 1_200,
           breakAudit: SharedBreakAudit(
             method: .none,
             thresholdHours: 0,
@@ -3204,8 +3207,8 @@ private func makeShiftSnapshot() -> FriendShiftSnapshot {
     paidHours: 7.5,
     currency: "kr",
     includesEarnings: true,
-    grossPay: 1200,
-    netPay: 1050,
+    grossPay: FriendsThreadViewModelTestValues.grossPay,
+    netPay: FriendsThreadViewModelTestValues.netPay,
     taxEnabled: true,
     source: "tests"
   )
@@ -3229,7 +3232,7 @@ private final class MockSharingPreviewService: SharingPreviewProviding {
     self.previews = previews
   }
 
-  func fetchShiftPreviews(sharerIds: [String], forceRefresh: Bool) async throws
+  func fetchShiftPreviews(sharerIds: [String], forceRefresh: Bool) async
     -> [SharerShiftPreview]
   {
     await Task.yield()
@@ -3321,7 +3324,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     throw TestError.failed
   }
 
-  func listMyThreads(limit _: Int, before _: FriendThreadCursor?) async throws -> [FriendThread] {
+  func listMyThreads(limit _: Int, before _: FriendThreadCursor?) async -> [FriendThread] {
     await Task.yield()
     []
   }
@@ -3394,7 +3397,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     return markThreadReadResult
   }
 
-  func setThreadMuted(threadId _: String, muted _: Bool) async throws -> FriendThreadState {
+  func setThreadMuted(threadId _: String, muted _: Bool) async -> FriendThreadState {
     await Task.yield()
     FriendThreadState(
       threadId: "thread-1",
@@ -3421,7 +3424,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     try XCTUnwrap(threadSummary)
   }
 
-  func fetchThreadState(threadId _: String, userId _: String) async throws -> FriendThreadState? {
+  func fetchThreadState(threadId _: String, userId _: String) async -> FriendThreadState? {
     await Task.yield()
     if let fetchThreadStateDelay {
       try? await Task.sleep(for: fetchThreadStateDelay)
@@ -3429,7 +3432,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     return nil
   }
 
-  func listThreadStates(threadId _: String) async throws -> [FriendThreadState] {
+  func listThreadStates(threadId _: String) async -> [FriendThreadState] {
     await Task.yield()
     if let fetchThreadStateDelay {
       try? await Task.sleep(for: fetchThreadStateDelay)
@@ -3462,17 +3465,17 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     reportedUserId: String,
     messageId: String?,
     reason: FriendAbuseReportReason
-  ) async throws {
+  ) async {
     await Task.yield()
     createdReport = (threadId, reportedUserId, messageId, reason)
   }
 
-  func blockUserPair(otherUserId: String) async throws {
+  func blockUserPair(otherUserId: String) async {
     await Task.yield()
     blockedUserId = otherUserId
   }
 
-  func uploadImageAttachment(threadId _: String, image _: ImageAttachment) async throws
+  func uploadImageAttachment(threadId _: String, image _: ImageAttachment) async
     -> FriendOutgoingAttachment
   {
     await Task.yield()
@@ -3484,13 +3487,13 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
         attachmentId: UUID().uuidString,
         storagePath: "thread-1/viewer-1/test.jpg",
         mimeType: "image/jpeg",
-        byteSize: 1024,
+        byteSize: FriendsThreadViewModelTestValues.uploadedAttachmentByteSize,
         width: 200,
         height: 200
       )
   }
 
-  func downloadAttachmentData(path _: String) async throws -> Data {
+  func downloadAttachmentData(path _: String) async -> Data {
     await Task.yield()
     return Data()
   }
@@ -3560,3 +3563,11 @@ private final class MockFriendsRealtimeCoordinator: FriendsMessagingRealtimeCoor
     return canBroadcastTyping
   }
 }
+
+private enum FriendsThreadViewModelTestValues {
+  static let grossPay: Double = 1_200
+  static let netPay: Double = 1_050
+  static let uploadedAttachmentByteSize: Int = 1_024
+}
+
+// swiftlint:enable file_length

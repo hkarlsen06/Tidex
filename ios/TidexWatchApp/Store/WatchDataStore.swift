@@ -53,7 +53,9 @@ final class WatchDataStore {
 
   /// Formatted "Updated X ago" text
   var updatedAgoText: String? {
-    guard let lastUpdated = lastUpdated else { return nil }
+    guard let lastUpdated else {
+      return nil
+    }
     let formatter = RelativeDateTimeFormatter()
     formatter.unitsStyle = .abbreviated
     return formatter.localizedString(for: lastUpdated, relativeTo: Date())
@@ -170,13 +172,13 @@ final class WatchDataStore {
       return shift.status
     }
 
-    if now >= start && now < end {
+    if now >= start, now < end {
       return .active
-    } else if now < start {
-      return .upcoming
-    } else {
-      return .past
     }
+    if now < start {
+      return .upcoming
+    }
+    return .past
   }
 
   func startDate(for shift: WatchShiftDTO) -> Date? {
@@ -253,10 +255,13 @@ final class WatchDataStore {
         return lhsDate > rhsDate ? .orderedAscending : .orderedDescending
       }
       return lhsDate < rhsDate ? .orderedAscending : .orderedDescending
+
     case (.some, .none):
       return .orderedAscending
+
     case (.none, .some):
       return .orderedDescending
+
     case (.none, .none):
       return lhs.personName.localizedStandardCompare(rhs.personName)
     }
@@ -266,8 +271,10 @@ final class WatchDataStore {
     switch status {
     case .active:
       return 0
+
     case .upcoming:
       return 1
+
     case .past:
       return 2
     }

@@ -35,6 +35,7 @@ enum FriendsComposerRecentPhotosState: Equatable {
     switch self {
     case .loaded, .empty:
       return true
+
     case .idle, .loading, .denied, .failed:
       return false
     }
@@ -54,7 +55,8 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
 
   private enum PhotoKitErrorCode {
     static let unknown = -1
-    static let resourceUnavailable = 3164
+    // swiftlint:disable:next explicit_type_interface
+    static let resourceUnavailable = 3_164
   }
 
   private let imageManager = PHCachingImageManager()
@@ -148,14 +150,19 @@ final class FriendsComposerRecentPhotoProvider: FriendsComposerRecentPhotoProvid
     switch status {
     case .notDetermined:
       return .notDetermined
+
     case .authorized:
       return .authorized
+
     case .limited:
       return .limited
+
     case .denied:
       return .denied
+
     case .restricted:
       return .restricted
+
     @unknown default:
       return .denied
     }
@@ -456,7 +463,8 @@ final class FriendsComposerAttachmentController: ObservableObject {
     return await recentPhotoProvider.requestAuthorization()
   }
 
-  private func processAttachment(_ loader: @escaping () async -> ImageAttachment?) async
+  // swiftlint:disable:next type_contents_order
+  private func processAttachment(_ loader: () async -> ImageAttachment?) async
     -> ImageAttachment?
   {
     guard beginProcessingAttachment() else { return nil }

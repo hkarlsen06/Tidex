@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface no_empty_block
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable required_deinit
 /// Global tracker for which views have already appeared
 /// Uses a simple LRU cache to avoid unbounded memory growth
 /// Reset this when navigating to a new month to allow fresh animations

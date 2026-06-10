@@ -348,7 +348,7 @@ final class RecurringShiftsRepository: ObservableObject {
         logger.info("Added \(addedCount) exclusion(s) to recurring shift: \(id)")
 
         // Trigger sync to upload immediately
-        if let userId = userId {
+        if let userId {
           triggerSync(userId: userId)
         }
       }
@@ -370,7 +370,7 @@ final class RecurringShiftsRepository: ObservableObject {
       logger.info("Marked recurring shift for deletion: \(id)")
 
       // Trigger sync to upload immediately
-      if let userId = userId {
+      if let userId {
         triggerSync(userId: userId)
       }
     } catch LocalStoreWriteError.notFound {

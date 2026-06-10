@@ -154,7 +154,7 @@ struct MultiJobPromptScreen: View {
 private struct OnboardingJobBadgeFlowLayout: Layout {
   var spacing: CGFloat
 
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
     computeLayout(proposal: proposal, subviews: subviews).size
   }
 
@@ -162,7 +162,7 @@ private struct OnboardingJobBadgeFlowLayout: Layout {
     in bounds: CGRect,
     proposal: ProposedViewSize,
     subviews: Subviews,
-    cache: inout ()
+    cache _: inout ()
   ) {
     let layout = computeLayout(proposal: proposal, subviews: subviews)
     for (index, position) in layout.positions.enumerated() {

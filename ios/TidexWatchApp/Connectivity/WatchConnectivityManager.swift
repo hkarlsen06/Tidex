@@ -286,7 +286,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     error: Error?
   ) {
     Task { @MainActor [weak self] in
-      if let error = error {
+      if let error {
         logger.error("Activation failed: \(error.localizedDescription)")
       } else {
         logger.info("Activated: \(activationState.rawValue)")
@@ -302,7 +302,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
   }
 
   nonisolated func session(
-    _ session: WCSession,
+    _: WCSession,
     didReceiveApplicationContext applicationContext: [String: Any]
   ) {
     Task { @MainActor [weak self] in
@@ -316,7 +316,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
   }
 
-  nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+  internal nonisolated func session(_: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
     Task { @MainActor [weak self] in
       guard let key = self?.shiftDataKey,
         let data = userInfo[key] as? Data

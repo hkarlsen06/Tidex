@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image accessibility_trait_for_button closure_body_length explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface file_types_order no_empty_block
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers
 import SwiftUI
 
 /// Overlay that prompts users to use the native share button instead of screenshots

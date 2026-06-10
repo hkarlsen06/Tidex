@@ -203,7 +203,7 @@ enum JobCurrencyAggregateResolver {
 
     let gross = currencyEntries.reduce(0) { $0 + $1.grossAmount }
     let net = currencyEntries.reduce(0) { $0 + $1.netAmount }
-    let hasTaxEnabled = currencyEntries.contains { $0.hasTaxEnabled }
+    let hasTaxEnabled: Bool = currencyEntries.contains(where: \.hasTaxEnabled)
 
     return JobCurrencyAggregateEntry(
       key: "\(currencyAggregateKeyPrefix)\(currency)",
@@ -275,9 +275,9 @@ enum JobCurrencyAggregateResolver {
 
       let activeJobs = jobs.filter { $0.deleted_at == nil && $0.archived_at == nil }
       let fallbackDefaultJob =
-        activeJobs.first(where: { $0.is_default })
+        activeJobs.first(where: \.is_default)
         ?? activeJobs.first
-        ?? jobs.first(where: { $0.is_default })
+        ?? jobs.first(where: \.is_default)
         ?? jobs.first
 
       self.defaultJobId = fallbackDefaultJob?.id ?? "default"

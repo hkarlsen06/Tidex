@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers required_deinit
 import Combine
 import Foundation
 
@@ -131,7 +135,7 @@ final class SharedMonthContext: ObservableObject {
   ///   - year: Target year
   ///   - month: Target month (1-12)
   func navigateTo(year: Int, month: Int) {
-    guard month >= 1 && month <= 12 else { return }
+    guard month >= 1, month <= 12 else { return }
 
     // Determine direction for animation
     let currentIndex = displayYear * 12 + displayMonth

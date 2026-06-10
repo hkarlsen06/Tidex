@@ -49,23 +49,23 @@ struct ProfileImageCropSheet: UIViewControllerRepresentable {
     }
 
     func cropViewController(
-      _ cropViewController: CropViewController, didCropToImage image: UIImage,
-      withRect cropRect: CGRect,
-      angle: Int
+      _: CropViewController, didCropToImage image: UIImage,
+      withRect _: CGRect,
+      angle _: Int
     ) {
       onCrop(image)
     }
 
     func cropViewController(
-      _ cropViewController: CropViewController, didCropToCircularImage image: UIImage,
-      withRect cropRect: CGRect,
-      angle: Int
+      _: CropViewController, didCropToCircularImage image: UIImage,
+      withRect _: CGRect,
+      angle _: Int
     ) {
       onCrop(image)
     }
 
     func cropViewController(
-      _ cropViewController: CropViewController, didFinishCancelled cancelled: Bool
+      _: CropViewController, didFinishCancelled cancelled: Bool
     ) {
       if cancelled {
         onCancel()

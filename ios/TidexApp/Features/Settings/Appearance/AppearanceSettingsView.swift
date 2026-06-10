@@ -119,8 +119,10 @@ struct AppearanceSettingsView: View {
       switch theme {
       case .system:
         return systemColorScheme
+
       case .light:
         return .light
+
       case .dark:
         return .dark
       }
@@ -145,8 +147,10 @@ struct AppearanceSettingsView: View {
     switch theme {
     case .system:
       return "circle.lefthalf.filled"
+
     case .light:
       return "sun.max.fill"
+
     case .dark:
       return "moon.fill"
     }
@@ -156,8 +160,10 @@ struct AppearanceSettingsView: View {
     switch theme {
     case .system:
       return String(localized: .appearanceThemeSystem)
+
     case .light:
       return String(localized: .appearanceThemeLight)
+
     case .dark:
       return String(localized: .appearanceThemeDark)
     }
@@ -167,8 +173,10 @@ struct AppearanceSettingsView: View {
     switch theme {
     case .system:
       return String(localized: .appearanceThemeSystemDescription)
+
     case .light:
       return String(localized: .appearanceThemeLightDescription)
+
     case .dark:
       return String(localized: .appearanceThemeDarkDescription)
     }
@@ -233,6 +241,7 @@ struct AppearanceSettingsView: View {
     switch style {
     case .workplace:
       return Color.tidexPurple.opacity(0.12)
+
     case .monochrome:
       return Color.tidexSurfaceSecondary
     }
@@ -242,6 +251,7 @@ struct AppearanceSettingsView: View {
     switch style {
     case .workplace:
       return .tidexPurple
+
     case .monochrome:
       return .tidexTextPrimary
     }
@@ -251,6 +261,7 @@ struct AppearanceSettingsView: View {
     switch style {
     case .workplace:
       return "paintpalette.fill"
+
     case .monochrome:
       return "circle.lefthalf.filled"
     }
@@ -260,6 +271,7 @@ struct AppearanceSettingsView: View {
     switch style {
     case .workplace:
       return String(localized: .appearanceCalendarContentColorWorkplace)
+
     case .monochrome:
       return String(localized: .appearanceCalendarContentColorMonochrome)
     }
@@ -269,6 +281,7 @@ struct AppearanceSettingsView: View {
     switch style {
     case .workplace:
       return String(localized: .appearanceCalendarContentColorWorkplaceDescription)
+
     case .monochrome:
       return String(localized: .appearanceCalendarContentColorMonochromeDescription)
     }
@@ -296,8 +309,10 @@ struct AppearanceSettingsView: View {
         ? String(localized: .appearanceInfoDark)
         : String(localized: .appearanceInfoLight)
       return String(localized: .appearanceInfoSystemActive(currentMode))
+
     case .light:
       return String(localized: .appearanceInfoLightActive)
+
     case .dark:
       return String(localized: .appearanceInfoDarkActive)
     }
@@ -355,12 +370,16 @@ struct AppearanceSettingsView: View {
     switch tab {
     case .home:
       return String(localized: .tabsHome)
+
     case .shifts:
       return String(localized: .tabsShifts)
+
     case .add:
       return String(localized: .tabsAdd)
+
     case .wagey:
       return String(localized: .tabsWagey)
+
     case .sharing:
       return String(localized: .tabsSharing)
     }
@@ -370,12 +389,16 @@ struct AppearanceSettingsView: View {
     switch tab {
     case .home:
       return "speedometer"
+
     case .shifts:
       return "calendar"
+
     case .add:
       return "plus.circle.fill"
+
     case .wagey:
       return "sparkles"
+
     case .sharing:
       return "person.2.fill"
     }

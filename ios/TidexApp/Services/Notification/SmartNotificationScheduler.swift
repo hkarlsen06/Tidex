@@ -53,13 +53,16 @@ final class SmartNotificationScheduler {
     switch analysisResult {
     case .noShifts:
       return .noShifts
+
     case .insufficientData(let weeksFound):
       return .insufficientData(
         weeksFound: weeksFound,
         weeksRequired: WorkPatternAnalyzer.WorkPattern.minimumWeeksRequired
       )
+
     case .noPatternDetected:
       return .noPatternDetected
+
     case .success(let pattern):
       let pendingRequests = await center.pendingNotificationRequests()
       let scheduledCount = pendingRequests.filter { request in
@@ -159,7 +162,7 @@ final class SmartNotificationScheduler {
 
     let smartIds =
       pendingRequests
-      .map { $0.identifier }
+      .map(\.identifier)
       .filter {
         $0.hasPrefix(Self.morningIdentifierPrefix) || $0.hasPrefix(Self.eveningIdentifierPrefix)
       }
@@ -358,7 +361,7 @@ final class SmartNotificationScheduler {
     startDate: Date,
     endDate: Date
   ) -> Set<String> {
-    let realDates = Set(realShifts.map { $0.shift_date })
+    let realDates: Set<String> = Set(realShifts.map(\.shift_date))
     let monthsInRange = getMonthsInRange(startDate: startDate, endDate: endDate)
 
     var virtualDates: [String] = []
@@ -425,6 +428,7 @@ final class SmartNotificationScheduler {
       case .morning:
         content = buildMorningContent(date: now)
         identifier = "smart-test-morning-\(Int(now.timeIntervalSince1970))"
+
       case .evening:
         content = buildEveningContent(for: now, dateISO: dateISO, fireDate: now)
         identifier = "smart-test-evening-\(Int(now.timeIntervalSince1970))"

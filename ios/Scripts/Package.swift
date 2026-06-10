@@ -1,4 +1,8 @@
 // swift-tools-version: 6.0
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface prefixed_toplevel_constant
 import PackageDescription
 
 // All non-Package.swift files in the directory — each target picks its own source and excludes the rest

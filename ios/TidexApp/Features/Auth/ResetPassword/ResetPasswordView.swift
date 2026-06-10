@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Reset password screen with native iOS styling
 /// Step 1: Enter email/phone -> Step 2: OTP verification (phone only) -> Step 3: New password
-struct ResetPasswordView: View {
+internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_length
   @StateObject private var viewModel: ResetPasswordViewModel
   var onNavigateToLogin: (() -> Void)?
 
@@ -47,10 +47,13 @@ struct ResetPasswordView: View {
             switch viewModel.currentStep {
             case .input:
               inputStepContent
+
             case .otp:
               otpStepContent
+
             case .newPassword:
               newPasswordStepContent
+
             case .success:
               successStepContent
             }
@@ -327,9 +330,8 @@ struct ResetPasswordView: View {
   private var successMessage: String {
     if viewModel.inputType == .email {
       return String(localized: .resetPasswordSuccessEmailInstructions)
-    } else {
-      return String(localized: .resetPasswordSuccessPasswordUpdatedInstructions)
     }
+    return String(localized: .resetPasswordSuccessPasswordUpdatedInstructions)
   }
 
   // MARK: - Back Button

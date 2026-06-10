@@ -8,7 +8,8 @@ struct DurationPicker: View {
   @State private var durationType: DurationType = .months
   @State private var monthsValue: Int = 6
   @State private var yearsValue: Int = 1
-  @State private var endDate: Date = Date().addingTimeInterval(180 * 24 * 60 * 60)  // 6 months ahead
+  // swiftlint:disable:next explicit_type_interface no_magic_numbers type_contents_order
+  @State private var endDate = Date().addingTimeInterval(180 * 24 * 60 * 60)  // 6 months ahead
 
   private enum DurationType: String, CaseIterable, Identifiable {
     case indefinite
@@ -83,12 +84,15 @@ struct DurationPicker: View {
     switch endCondition {
     case .none:
       durationType = .indefinite
+
     case .months(let value):
       durationType = .months
       monthsValue = value
+
     case .years(let value):
       durationType = .years
       yearsValue = value
+
     case .endDate(let dateString):
       durationType = .endDate
       if let date = Date.fromISODateString(dateString) {
@@ -101,10 +105,13 @@ struct DurationPicker: View {
     switch durationType {
     case .indefinite:
       endCondition = nil
+
     case .months:
       endCondition = .months(value: monthsValue)
+
     case .years:
       endCondition = .years(value: yearsValue)
+
     case .endDate:
       endCondition = .endDate(date: endDate.toISODateString())
     }

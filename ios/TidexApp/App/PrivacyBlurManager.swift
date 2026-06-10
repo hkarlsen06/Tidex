@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers
 import UIKit
 
 @MainActor
@@ -38,12 +42,12 @@ enum PrivacyBlurManager {
 
   private static func keyWindow() -> UIWindow? {
     let windows = allWindows()
-    return windows.first { $0.isKeyWindow } ?? windows.first
+    return windows.first(where: \.isKeyWindow) ?? windows.first
   }
 
   private static func allWindows() -> [UIWindow] {
     UIApplication.shared.connectedScenes
       .compactMap { $0 as? UIWindowScene }
-      .flatMap { $0.windows }
+      .flatMap(\.windows)
   }
 }

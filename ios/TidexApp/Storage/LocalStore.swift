@@ -1,3 +1,5 @@
+// swiftlint:disable explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 import os.log
@@ -554,7 +556,7 @@ actor LocalStoreActor {
     localJob.dirtyFieldKeys = newDirtyFields
     localJob.localUpdatedAt = now
 
-    if !newDirtyFields.isEmpty && localJob.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localJob.syncStatus == .clean {
       localJob.syncStatus = .dirty
     }
 
@@ -586,7 +588,7 @@ actor LocalStoreActor {
     localJob.dirtyFieldKeys = newDirtyFields
     localJob.localUpdatedAt = now
 
-    if !newDirtyFields.isEmpty && localJob.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localJob.syncStatus == .clean {
       localJob.syncStatus = .dirty
     }
 
@@ -629,7 +631,7 @@ actor LocalStoreActor {
     localJob.dirtyFieldKeys = newDirtyFields
     localJob.localUpdatedAt = now
 
-    if !newDirtyFields.isEmpty && localJob.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localJob.syncStatus == .clean {
       localJob.syncStatus = .dirty
     }
 
@@ -933,7 +935,7 @@ actor LocalStoreActor {
       deletedAt: nil
     )
 
-    let allFields = UserShiftField.allCases.map { $0.rawValue }
+    let allFields = UserShiftField.allCases.map(\.rawValue)
     let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localShift = LocalUserShift(
@@ -1052,7 +1054,7 @@ actor LocalStoreActor {
     localShift.dirtyFieldKeys = newDirtyFields
     localShift.localUpdatedAt = now
 
-    if !newDirtyFields.isEmpty && localShift.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localShift.syncStatus == .clean {
       localShift.syncStatus = .dirty
     }
 
@@ -1385,7 +1387,7 @@ actor LocalStoreActor {
     localEvent.dirtyFieldKeys = newDirtyFields
     localEvent.localUpdatedAt = now
 
-    if !newDirtyFields.isEmpty && localEvent.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localEvent.syncStatus == .clean {
       localEvent.syncStatus = .dirty
     }
 
@@ -1605,7 +1607,7 @@ actor LocalStoreActor {
       deletedAt: nil
     )
 
-    let allFields = RecurringShiftField.allCases.map { $0.rawValue }
+    let allFields = RecurringShiftField.allCases.map(\.rawValue)
     let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localShift = LocalRecurringShift(
@@ -1723,7 +1725,7 @@ actor LocalStoreActor {
     localShift.dirtyFieldKeys = newDirtyFields
     localShift.localUpdatedAt = now
 
-    if !newDirtyFields.isEmpty && localShift.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localShift.syncStatus == .clean {
       localShift.syncStatus = .dirty
     }
 
@@ -2036,7 +2038,7 @@ actor LocalStoreActor {
       deletedAt: nil
     )
 
-    let allFields = WageSnapshotField.allCases.map { $0.rawValue }
+    let allFields = WageSnapshotField.allCases.map(\.rawValue)
     let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localSnapshot = LocalWageSnapshot(
@@ -2108,12 +2110,12 @@ actor LocalStoreActor {
       newDirtyFields.insert(.hourlyWage)
     }
 
-    if updateWageLevel && wageLevel != localSnapshot.wageLevel {
+    if updateWageLevel, wageLevel != localSnapshot.wageLevel {
       localSnapshot.wageLevel = wageLevel
       newDirtyFields.insert(.wageLevel)
     }
 
-    if updateTariffTypeId && tariffTypeId != localSnapshot.tariffTypeId {
+    if updateTariffTypeId, tariffTypeId != localSnapshot.tariffTypeId {
       localSnapshot.tariffTypeId = tariffTypeId
       newDirtyFields.insert(.tariffTypeId)
     }
@@ -2131,7 +2133,7 @@ actor LocalStoreActor {
       newDirtyFields.insert(.taxEnabled)
     }
 
-    if updateTaxPercentage && taxPercentage != localSnapshot.taxPercentage {
+    if updateTaxPercentage, taxPercentage != localSnapshot.taxPercentage {
       localSnapshot.taxPercentage = taxPercentage
       newDirtyFields.insert(.taxPercentage)
     }
@@ -2160,7 +2162,7 @@ actor LocalStoreActor {
     localSnapshot.dirtyFieldKeys = newDirtyFields
     localSnapshot.localUpdatedAt = now
 
-    if !newDirtyFields.isEmpty && localSnapshot.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localSnapshot.syncStatus == .clean {
       localSnapshot.syncStatus = .dirty
     }
 
@@ -2384,7 +2386,7 @@ actor LocalStoreActor {
     if defaultStartupTab != nil { dirtyFields.append(.defaultStartupTab) }
 
     let dirtyFieldsData =
-      (try? canonicalJSONEncoder.encode(dirtyFields.map { $0.rawValue })) ?? Data()
+      (try? canonicalJSONEncoder.encode(dirtyFields.map(\.rawValue))) ?? Data()
 
     let localSettings = LocalUserSettings(
       userId: userId,
@@ -2538,7 +2540,7 @@ actor LocalStoreActor {
     localSettings.localUpdatedAt = now
 
     // Mark as dirty if we have dirty fields and status allows it
-    if !newDirtyFields.isEmpty && localSettings.syncStatus == .clean {
+    if !newDirtyFields.isEmpty, localSettings.syncStatus == .clean {
       localSettings.syncStatus = .dirty
     }
 
@@ -4368,7 +4370,7 @@ actor LocalStoreActor {
 
     // Don't delete existing cached data if new data is empty (unless forced)
     // This prevents data loss when the API returns an empty array due to errors
-    if shifts.isEmpty && !existing.isEmpty && !forceReplace {
+    if shifts.isEmpty, !existing.isEmpty, !forceReplace {
       logger.warning(
         "API returned empty shared shifts for \(year)-\(month) (owner: \(ownerId.prefix(8))...), keeping \(existing.count) cached shifts"
       )

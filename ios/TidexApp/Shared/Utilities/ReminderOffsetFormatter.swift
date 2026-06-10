@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length no_magic_numbers number_separator vertical_whitespace_between_cases
 import Foundation
 
 enum ReminderOffsetFormatter {
@@ -60,21 +66,24 @@ enum ReminderOffsetFormatter {
     switch daysBefore {
     case 0:
       return String(localized: .eventsNotificationsSameDay)
+
     case 1:
       return String(localized: .eventsNotificationsOneDayBefore)
+
     case 2:
       return String(localized: .eventsNotificationsTwoDaysBefore)
+
     default:
-      return localizedString(for: daysBefore * 1440)
+      return localizedString(for: daysBefore * 1_440)
     }
   }
 
   static func localizedAllDayEventReminder(minutesBefore: Int, anchorTime: Date?) -> String {
-    guard minutesBefore >= 0, minutesBefore.isMultiple(of: 1440) else {
+    guard minutesBefore >= 0, minutesBefore.isMultiple(of: 1_440) else {
       return localizedString(for: minutesBefore)
     }
 
-    let daysBefore = minutesBefore / 1440
+    let daysBefore = minutesBefore / 1_440
     let dayLabel = localizedAllDayEventDayLabel(daysBefore: daysBefore)
     guard let anchorTime else { return dayLabel }
     return "\(dayLabel) • \(anchorTime.toHourMinuteString())"

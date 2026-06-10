@@ -80,8 +80,10 @@ struct ShiftModeToggle: View {
     switch mode {
     case .single:
       return "banknote"
+
     case .recurring:
       return "repeat"
+
     case .events:
       return "calendar.and.person"
     }
@@ -91,8 +93,10 @@ struct ShiftModeToggle: View {
     switch mode {
     case .single:
       return String(localized: .addShiftModeSingle)
+
     case .recurring:
       return String(localized: .addShiftModeRecurring)
+
     case .events:
       return String(localized: .addShiftModeEvents)
     }

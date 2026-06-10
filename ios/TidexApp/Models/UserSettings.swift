@@ -90,6 +90,7 @@ struct UserSettings: Codable, Equatable {
     switch style {
     case "workplace", "monochrome":
       return style
+
     default:
       return "workplace"
     }
@@ -111,6 +112,7 @@ struct UserSettings: Codable, Equatable {
     switch tab {
     case "home", "shifts", "add", "stats", "sharing":
       return tab
+
     default:
       return "home"
     }
@@ -118,7 +120,7 @@ struct UserSettings: Codable, Equatable {
 
   /// Resolve goal for a specific month with override-first fallback to baseline.
   func effectiveMonthlyGoal(year: Int, month: Int) -> Int? {
-    let monthKey = UserSettings.monthKey(year: year, month: month)
+    let monthKey: String = Self.monthKey(year: year, month: month)
     if let override = monthly_goals_by_month?[monthKey], override > 0 {
       return override
     }
@@ -131,8 +133,8 @@ struct UserSettings: Codable, Equatable {
   }
 
   /// Static default settings for when user has no settings
-  static func defaults(for userId: String) -> UserSettings {
-    UserSettings(
+  internal static func defaults(for userId: String) -> Self {
+    Self(
       user_id: userId,
       created_at: nil,
       updated_at: nil,

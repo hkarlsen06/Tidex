@@ -5,10 +5,10 @@ import XCTest
 final class EmploymentDataCompletedAverageTests: XCTestCase {
   func testCompletedMonthsAverageExcludesCurrentAndFutureMonths() {
     let data = makeEmploymentData(
-      year: 2026,
+      year: 2_026,
       percentages: [10, 20, 30, 40, 100, 100, 100, 100, 100, 100, 100, 100]
     )
-    let now = makeDate(year: 2026, month: 5, day: 17)
+    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
 
     XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 25)
     XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "jan.-apr.")
@@ -16,10 +16,10 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
 
   func testCompletedMonthsAverageExcludesEmptyCompletedMonths() {
     let data = makeEmploymentData(
-      year: 2026,
+      year: 2_026,
       percentages: [0, 20, 0, 40, 100, 100, 100, 100, 100, 100, 100, 100]
     )
-    let now = makeDate(year: 2026, month: 5, day: 17)
+    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
 
     XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 30)
     XCTAssertNil(data.completedAverageRangeLabel(now: now, calendar: calendar))
@@ -27,10 +27,10 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
 
   func testCompletedMonthsAverageExcludesLeadingEmptyMonths() {
     let data = makeEmploymentData(
-      year: 2026,
+      year: 2_026,
       percentages: [0, 0, 30, 40, 100, 100, 100, 100, 100, 100, 100, 100]
     )
-    let now = makeDate(year: 2026, month: 5, day: 17)
+    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
 
     XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 35)
     XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "mar.-apr.")
@@ -38,10 +38,10 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
 
   func testCompletedMonthsAverageExcludesTrailingEmptyMonthsForPastYear() {
     let data = makeEmploymentData(
-      year: 2025,
+      year: 2_025,
       percentages: [10, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     )
-    let now = makeDate(year: 2026, month: 5, day: 17)
+    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
 
     XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 15)
     XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "jan.-feb.")
@@ -49,10 +49,10 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
 
   func testCompletedMonthsAverageIsNilWhenOnlyCurrentMonthHasShifts() {
     let data = makeEmploymentData(
-      year: 2026,
+      year: 2_026,
       percentages: [0, 0, 0, 0, 10, 100, 100, 100, 100, 100, 100, 100]
     )
-    let now = makeDate(year: 2026, month: 5, day: 17)
+    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
 
     XCTAssertNil(data.completedMonthsAverage(now: now, calendar: calendar))
     XCTAssertNil(data.completedAverageRangeLabel(now: now, calendar: calendar))
@@ -60,10 +60,10 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
 
   func testCompletedMonthsAverageUsesAllMonthsForPastYear() {
     let data = makeEmploymentData(
-      year: 2025,
+      year: 2_025,
       percentages: Array(repeating: 12, count: 12)
     )
-    let now = makeDate(year: 2026, month: 5, day: 17)
+    let now: Date = makeDate(year: 2_026, month: 5, day: 17)
 
     XCTAssertEqual(data.completedMonthsAverage(now: now, calendar: calendar), 12)
     XCTAssertEqual(data.completedAverageRangeLabel(now: now, calendar: calendar), "jan.-des.")
@@ -71,10 +71,10 @@ final class EmploymentDataCompletedAverageTests: XCTestCase {
 
   func testCompletedMonthsAverageIsNilBeforeAnyMonthHasCompleted() {
     let data = makeEmploymentData(
-      year: 2026,
+      year: 2_026,
       percentages: Array(repeating: 50, count: 12)
     )
-    let now = makeDate(year: 2026, month: 1, day: 17)
+    let now: Date = makeDate(year: 2_026, month: 1, day: 17)
 
     XCTAssertNil(data.completedMonthsAverage(now: now, calendar: calendar))
     XCTAssertNil(data.completedAverageRangeLabel(now: now, calendar: calendar))

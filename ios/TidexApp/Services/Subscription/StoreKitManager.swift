@@ -117,7 +117,7 @@ final class StoreKitManager: ObservableObject {
   /// - Returns: The verified Transaction if successful, nil if cancelled/pending
   /// - Throws: PurchaseError on failure
   func purchase(_ product: Product) async throws -> Transaction? {
-    guard let userId = userId else {
+    guard let userId else {
       throw PurchaseError.userNotConfigured
     }
 
@@ -199,7 +199,7 @@ final class StoreKitManager: ObservableObject {
   /// - Returns: Whether JWS upload succeeded immediately
   /// - Throws: PurchaseError on failure
   func purchaseConsumable(_ product: Product) async throws -> Bool {
-    guard let userId = userId else {
+    guard let userId else {
       throw PurchaseError.userNotConfigured
     }
 
@@ -261,7 +261,7 @@ final class StoreKitManager: ObservableObject {
   /// Restore previous purchases from the App Store
   /// - Throws: Error if sync fails
   func restorePurchases() async throws {
-    guard let userId = userId else {
+    guard let userId else {
       throw PurchaseError.userNotConfigured
     }
 
@@ -300,7 +300,7 @@ final class StoreKitManager: ObservableObject {
         bestTransaction.map { $0.verification.unsafePayloadValue.environment != .sandbox } ?? false
 
       // Prefer Production over Sandbox
-      if isProduction && !currentIsProduction {
+      if isProduction, !currentIsProduction {
         bestTransaction = (result, productId.tier)
       } else if isProduction == currentIsProduction {
         // Same environment, prefer higher tier
@@ -388,7 +388,7 @@ final class StoreKitManager: ObservableObject {
         if productId.tier > highestTier {
           highestTier = productId.tier
           highestProductId = transaction.productID
-        } else if productId.tier == highestTier && highestProductId == nil {
+        } else if productId.tier == highestTier, highestProductId == nil {
           highestProductId = transaction.productID
         }
       }

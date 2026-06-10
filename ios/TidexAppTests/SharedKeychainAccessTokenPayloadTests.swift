@@ -7,7 +7,8 @@ final class SharedKeychainAccessTokenPayloadTests: XCTestCase {
   func testPayloadCopiesAccessTokenAndIntegerExpiryFromSession() {
     let timestamp = TimeInterval(1_800_000_000)
     guard let userId = UUID(uuidString: "032d8c2a-9af6-4777-99f0-24e2c4058bf3") else {
-      return XCTFail("Expected fixture user ID to be valid")
+      XCTFail("Expected fixture user ID to be valid")
+      return
     }
 
     let session = Session(

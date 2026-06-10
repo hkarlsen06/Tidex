@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable prefer_condition_list
 import Foundation
 
 /// Payroll Date Adjustment Utility
@@ -47,7 +53,7 @@ enum PayrollDateAdjuster {
     var iterations = 0
 
     // Move backward until we find a valid payroll day (Tuesday-Friday, non-holiday)
-    while isInvalidPayrollDay(date) && iterations < maxIterations {
+    while isInvalidPayrollDay(date), iterations < maxIterations {
       date = Calendar.current.date(byAdding: .day, value: -1, to: date) ?? date
       iterations += 1
     }

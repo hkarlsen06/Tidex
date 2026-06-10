@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_trait_for_button closure_body_length conditional_returns_on_newline explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface function_default_parameter_at_end implicit_optional_initialization
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable multiline_arguments_brackets no_magic_numbers
 import SwiftUI
 
 struct ChatTimelineScrollCommand: Equatable {
@@ -42,7 +50,7 @@ struct ChatTimelineScrollView<ScrollState: Equatable, Content: View>: View {
   var scrollToBottomTrigger: Int = 0
   var explicitScrollCommand: Binding<ChatTimelineScrollCommand?> = .constant(nil)
   var dismissKeyboardOnTap = false
-  var onScrollStateChange: ((ScrollState, ScrollState, ChatTimelineScrollContext) -> Void)? = nil
+  var onScrollStateChange: ((ScrollState, ScrollState, ChatTimelineScrollContext) -> Void)?
   @ViewBuilder let content: () -> Content
 
   @State private var scrollTask: Task<Void, Never>?

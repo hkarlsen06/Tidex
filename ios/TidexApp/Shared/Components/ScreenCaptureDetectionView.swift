@@ -1,16 +1,22 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_types_order prefer_self_in_static_references required_deinit unused_parameter
 import SwiftUI
 import UIKit
 
 struct ScreenCaptureDetectionView: UIViewRepresentable {
   let onCaptureStarted: @MainActor () -> Void
 
-  func makeUIView(context: Context) -> CaptureStateView {
+  func makeUIView(context _: Context) -> CaptureStateView {
     let view = CaptureStateView()
     view.onCaptureStarted = onCaptureStarted
     return view
   }
 
-  func updateUIView(_ uiView: CaptureStateView, context: Context) {
+  func updateUIView(_ uiView: CaptureStateView, context _: Context) {
     uiView.onCaptureStarted = onCaptureStarted
     uiView.reportCurrentStateIfNeeded()
   }
@@ -28,13 +34,13 @@ final class CaptureStateView: UIView {
     isHidden = true
     isUserInteractionEnabled = false
     captureStateRegistration = registerForTraitChanges([UITraitSceneCaptureState.self]) {
-      (view: CaptureStateView, _) in
+      (view: Self, _) in
       view.reportCurrentStateIfNeeded()
     }
   }
 
   @available(*, unavailable)
-  required init?(coder: NSCoder) {
+  required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 

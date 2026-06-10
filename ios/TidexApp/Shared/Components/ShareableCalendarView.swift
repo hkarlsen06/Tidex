@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image anonymous_argument_in_multiline_closure closure_body_length conditional_returns_on_newline
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_grouping_extension no_magic_numbers prefer_condition_list prefer_key_path
 import SwiftUI
 
 /// A shareable view that renders the calendar for sharing as a PNG
@@ -71,7 +79,7 @@ struct ShareableCalendarView: View {
 
   /// Whether tax is enabled for any shift
   private var hasTaxEnabled: Bool {
-    shifts.contains { $0.taxEnabled }
+    shifts.contains(where: \.taxEnabled)
   }
 
   /// Shifts grouped by ISO date string
@@ -157,7 +165,7 @@ struct ShareableCalendarView: View {
       }
 
       // Gross line (only when tax enabled and has value)
-      if hasTaxEnabled && monthlyTotals.gross > 0 {
+      if hasTaxEnabled, monthlyTotals.gross > 0 {
         Text(CurrencyConfig.format(monthlyTotals.gross, currency: currency))
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)

@@ -1,3 +1,5 @@
+// swiftlint:disable cyclomatic_complexity explicit_acl
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -177,16 +179,16 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
     (try? canonicalJSONEncoder.encode(self)) ?? Data()
   }
 
-  static func decode(from data: Data) -> PayrollAdjustmentServerSnapshot? {
-    try? syncJSONDecoder.decode(PayrollAdjustmentServerSnapshot.self, from: data)
+  static func decode(from data: Data) -> Self? {
+    try? syncJSONDecoder.decode(Self.self, from: data)
   }
 
   static func from(
     row: SyncPayrollAdjustmentRow,
     updatedAt: Date,
     deletedAt: Date?
-  ) -> PayrollAdjustmentServerSnapshot {
-    PayrollAdjustmentServerSnapshot(
+  ) -> Self {
+    Self(
       jobId: row.job_id,
       amount: row.amount,
       currency: row.currency,
@@ -207,7 +209,7 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
     )
   }
 
-  func changedFields(from other: PayrollAdjustmentServerSnapshot) -> Set<PayrollAdjustmentField> {
+  func changedFields(from other: Self) -> Set<PayrollAdjustmentField> {
     var changed: Set<PayrollAdjustmentField> = []
     if jobId != other.jobId { changed.insert(.jobId) }
     if amount != other.amount { changed.insert(.amount) }

@@ -39,10 +39,13 @@ struct RecurringShiftProjector {
     case .none:
       // Infinite: project 2 years ahead for preview
       endDate = calendar.date(byAdding: .year, value: 2, to: earliestDate) ?? earliestDate
+
     case .months(let value):
       endDate = calendar.date(byAdding: .month, value: value, to: earliestDate) ?? earliestDate
+
     case .years(let value):
       endDate = calendar.date(byAdding: .year, value: value, to: earliestDate) ?? earliestDate
+
     case .endDate(let dateString):
       endDate = Date.fromISODateString(dateString) ?? earliestDate
     }
@@ -71,7 +74,7 @@ struct RecurringShiftProjector {
     var result = Array(Set(dates)).sorted()
 
     // Apply limit if specified
-    if let limit = limit, result.count > limit {
+    if let limit, result.count > limit {
       result = Array(result.prefix(limit))
     }
 
@@ -120,12 +123,15 @@ struct RecurringShiftProjector {
     case .none:
       // Infinite: use a far future date
       patternEndDate = calendar.date(byAdding: .year, value: 10, to: earliestDate) ?? earliestDate
+
     case .months(let value):
       patternEndDate =
         calendar.date(byAdding: .month, value: value, to: earliestDate) ?? earliestDate
+
     case .years(let value):
       patternEndDate =
         calendar.date(byAdding: .year, value: value, to: earliestDate) ?? earliestDate
+
     case .endDate(let dateString):
       patternEndDate = Date.fromISODateString(dateString) ?? earliestDate
     }
@@ -158,7 +164,7 @@ struct RecurringShiftProjector {
       }
 
       // Generate dates within the display month
-      while currentDate < monthEnd && currentDate <= patternEndDate {
+      while currentDate < monthEnd, currentDate <= patternEndDate {
         if currentDate >= monthStart {
           dates.append(currentDate.toISODateString())
         }
@@ -206,18 +212,21 @@ struct RecurringShiftProjector {
     case .none:
       // Infinite: no max
       maxMonth = nil
+
     case .months(let value):
       if let endDate = calendar.date(byAdding: .month, value: value, to: earliestDate) {
         maxMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: endDate))
       } else {
         maxMonth = nil
       }
+
     case .years(let value):
       if let endDate = calendar.date(byAdding: .year, value: value, to: earliestDate) {
         maxMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: endDate))
       } else {
         maxMonth = nil
       }
+
     case .endDate(let dateString):
       if let endDate = Date.fromISODateString(dateString) {
         maxMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: endDate))

@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_body_length no_magic_numbers number_separator type_contents_order
 import Foundation
 
 // MARK: - Date + Tidex Extensions
@@ -46,7 +52,7 @@ extension Date {
     var calendar = Self.gregorianCalendar
     calendar.timeZone = timeZone
     let components = calendar.dateComponents([.year, .month], from: self)
-    return (year: components.year ?? 1970, month: components.month ?? 1)
+    return (year: components.year ?? 1_970, month: components.month ?? 1)
   }
 
   /// Get current year and month

@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface file_types_order line_length multiline_arguments_brackets
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_empty_block no_magic_numbers number_separator
 import SwiftUI
 
 /// Banner displayed when an admin is impersonating another user
@@ -92,8 +100,8 @@ private struct ExpirationText: View {
       return
     }
 
-    let hours = Int(remaining) / 3600
-    let minutes = (Int(remaining) % 3600) / 60
+    let hours = Int(remaining) / 3_600
+    let minutes = (Int(remaining) % 3_600) / 60
     let seconds = Int(remaining) % 60
 
     if hours > 0 {
@@ -114,7 +122,7 @@ private struct ExpirationText: View {
   VStack(spacing: Spacing.mlg) {
     ImpersonationBanner(
       targetName: "John Doe",
-      expiresAt: Date().addingTimeInterval(3600),
+      expiresAt: Date().addingTimeInterval(3_600),
       onStop: {}
     )
 

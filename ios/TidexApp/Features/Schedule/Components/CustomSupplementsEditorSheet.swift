@@ -64,7 +64,7 @@ enum ApplicableSupplements {
   ///   - weekday: Weekday number (1-7, Mon-Sun) of the shift start date
   ///   - rules: Predefined supplement rules from snapshot
   /// - Returns: Rules that apply to this shift
-  static func getApplicableSupplements(
+  static func getApplicableSupplements(  // swiftlint:disable:this explicit_acl function_body_length
     startTime: String,
     endTime: String,
     weekday: Int,
@@ -98,8 +98,8 @@ enum ApplicableSupplements {
       }
 
       // Check overlap with start day
-      if appliesToStartDay
-        && rangesOverlap(
+      if appliesToStartDay,
+        rangesOverlap(
           shiftStart: shiftStart,
           shiftEnd: shiftEnd,
           ruleFrom: ruleFrom,
@@ -118,7 +118,7 @@ enum ApplicableSupplements {
       }
 
       // For cross-midnight shifts, check if next-day rules apply
-      if isCrossMidnight && appliesToNextDay {
+      if isCrossMidnight, appliesToNextDay {
         let nextDayRuleFrom = ruleFrom + 24 * 60
         let nextDayRuleTo = ruleTo + 24 * 60
         if rangesOverlap(
@@ -190,7 +190,7 @@ enum ApplicableSupplements {
     endTime: String
   ) -> [CustomSupplementRuleWithId] {
     let applicable = filterToApplicable(rules: rules, startTime: startTime, endTime: endTime)
-    let applicableIds = Set(applicable.map { $0.id })
+    let applicableIds = Set(applicable.map(\.id))  // swiftlint:disable:this explicit_type_interface
     return rules.filter { !applicableIds.contains($0.id) }
   }
 }
@@ -198,7 +198,7 @@ enum ApplicableSupplements {
 // MARK: - Custom Supplements Editor Sheet
 
 /// Full-screen sheet for editing custom supplements on a shift
-struct CustomSupplementsEditorSheet: View {
+struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl line_length type_body_length
   /// The shift being edited
   let shift: ShiftWithComputations
   /// User's currency for formatting
@@ -519,21 +519,19 @@ struct CustomSupplementsEditorSheet: View {
 
     // If all rules were explicitly removed, save empty object to mean "no supplements"
     // (distinct from nil which means "use tariff defaults")
-    if rules.isEmpty && nonApplicableRules.isEmpty
-      && (hadCustomSupplements || userHasModifiedRules)
-    {
+    if rules.isEmpty, nonApplicableRules.isEmpty, hadCustomSupplements || userHasModifiedRules {
       onSave(CustomSupplementsData(rules: []))
       return
     }
 
     // If no rules and no explicit modification, return nil (use tariff)
-    if rules.isEmpty && !hadCustomSupplements {
+    if rules.isEmpty, !hadCustomSupplements {
       onSave(nil)
       return
     }
 
     // If all rules are non-custom (tariff) and unchanged from original tariff, return nil
-    if !hadCustomSupplements && rules.allSatisfy({ !$0.isCustom }) {
+    if !hadCustomSupplements, rules.allSatisfy({ !$0.isCustom }) {
       // Check if rules match exactly what we'd get from tariff
       let tariffApplicable = ApplicableSupplements.getApplicableSupplements(
         startTime: shift.startTime,
@@ -594,9 +592,9 @@ struct CustomSupplementsEditorSheet: View {
         id: "preview-1",
         durationHours: 6.0,
         paidHours: 5.5,
-        basePay: 1100,
+        basePay: 1_100,
         supplementPay: 90,
-        gross: 1190,
+        gross: 1_190,
         wagePeriods: [],
         originalWagePeriods: [],
         breakAudit: BreakAudit(
@@ -632,9 +630,9 @@ struct CustomSupplementsEditorSheet: View {
         id: "preview-2",
         durationHours: 6.0,
         paidHours: 5.5,
-        basePay: 1100,
+        basePay: 1_100,
         supplementPay: 120,
-        gross: 1220,
+        gross: 1_220,
         wagePeriods: [],
         originalWagePeriods: [],
         breakAudit: BreakAudit(
@@ -650,4 +648,4 @@ struct CustomSupplementsEditorSheet: View {
     onSave: { _ in },
     onCancel: {}
   )
-}
+}  // swiftlint:disable:this file_length

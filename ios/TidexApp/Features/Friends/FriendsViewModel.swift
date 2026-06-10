@@ -48,8 +48,10 @@ enum SharingError: Error, LocalizedError {
     switch self {
     case .notAuthenticated:
       return "Not authenticated"
+
     case .loadFailed(let error):
       return "Failed to load: \(error.localizedDescription)"
+
     case .noSharers:
       return "No one has shared shifts with you yet"
     }
@@ -257,20 +259,21 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     monthContextCancellable = monthContext.monthChanged
       .receive(on: DispatchQueue.main)
       .sink { [weak self] newMonth in
-        guard let self = self else { return }
+        // swiftlint:disable:next conditional_returns_on_newline
+        guard let self else { return }
 
-        guard newMonth.year != self.lastObservedYear || newMonth.month != self.lastObservedMonth
+        guard newMonth.year != lastObservedYear || newMonth.month != lastObservedMonth
         else {
           return
         }
 
-        self.lastObservedYear = newMonth.year
-        self.lastObservedMonth = newMonth.month
-        self.navigationDirection = self.monthContext.navigationDirection
+        lastObservedYear = newMonth.year
+        lastObservedMonth = newMonth.month
+        navigationDirection = monthContext.navigationDirection
 
         // Reload shifts for new month if a sharer is selected
-        if self.selectedSharer != nil {
-          self.startSelectedSharerLoadTask()
+        if selectedSharer != nil {
+          startSelectedSharerLoadTask()
         }
       }
   }
@@ -300,7 +303,8 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Returns when sharers are loaded or timeout is reached (3 seconds max)
   func waitForSharersLoaded() async {
     // If already loaded, return immediately
-    guard sharers.isEmpty && hiddenSharers.isEmpty else { return }
+    // swiftlint:disable:next conditional_returns_on_newline
+    guard sharers.isEmpty, hiddenSharers.isEmpty else { return }
 
     // Poll every 100ms until sharers are loaded (max 3 seconds)
     // We need to wait for loading to START and then COMPLETE
@@ -329,7 +333,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       // Load BOTH sharers and shift previews together to avoid pop-in effect
       // This happens BEFORE setting isLoadingSharers so view renders with complete data instantly
       var loadedFromCache = false
-      if sharers.isEmpty && hiddenSharers.isEmpty {
+      if sharers.isEmpty, hiddenSharers.isEmpty {
         let cachedFriends = sharedShiftsRepository.getCachedFriends(
           for: userId, includeHidden: true)
         if !cachedFriends.sharers.isEmpty {
@@ -359,7 +363,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
       }
 
       // Only show loading indicator if we have no cached data
-      if !loadedFromCache && sharers.isEmpty && hiddenSharers.isEmpty {
+      if !loadedFromCache, sharers.isEmpty, hiddenSharers.isEmpty {
         isLoadingSharers = true
         isLoadingPreviews = true
       }
@@ -397,7 +401,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
       logger.error("Failed to load sharers: \(error.localizedDescription)")
       self.error = SharingError.loadFailed(underlying: error)
-      if sharers.isEmpty && hiddenSharers.isEmpty {
+      if sharers.isEmpty, hiddenSharers.isEmpty {
         hasFinishedInitialSharersLoad = true
         chatOnlyUserIds = []
       }
@@ -437,11 +441,11 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     let filteredFreshSharers = bootstrap.sharers.filter { !blockedUserIds.contains($0.id) }
     let outgoingChatSharers = chatOnlySharers(
       from: bootstrap.friends,
-      excluding: Set(filteredFreshSharers.map { $0.id }).union(blockedUserIds),
+      excluding: Set(filteredFreshSharers.map(\.id)).union(blockedUserIds),
       viewerId: userId
     )
     logger.info(
-      "Network returned \(filteredFreshSharers.count) non-blocked sharers: \(filteredFreshSharers.map { $0.displayName })"
+      "Network returned \(filteredFreshSharers.count) non-blocked sharers: \(filteredFreshSharers.map(\.displayName))"
     )
 
     let partitionedSharers = partitionSharers(filteredFreshSharers)
@@ -459,7 +463,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
     sharers = partitionedSharers.visible + partitionedOutgoingChatSharers.visible
     hiddenSharers = partitionedSharers.hidden + partitionedOutgoingChatSharers.hidden
-    chatOnlyUserIds = Set(outgoingChatSharers.map { $0.id })
+    chatOnlyUserIds = Set(outgoingChatSharers.map(\.id))
     if let selectedSharer,
       !(sharers + hiddenSharers).contains(where: { $0.id == selectedSharer.id })
     {
@@ -582,12 +586,13 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     // Create an unstructured task that will complete even if the parent is cancelled
     // This is necessary because SwiftUI's .refreshable cancels when the user releases
     let refreshTask = Task { @MainActor [weak self] in
-      guard let self = self else { return }
+      // swiftlint:disable:next conditional_returns_on_newline
+      guard let self else { return }
 
       if hasSelectedSharer {
-        await self.loadShiftsForSelectedSharer()
+        await loadShiftsForSelectedSharer()
       } else {
-        await self.loadSharers(forceRefreshPreviews: true)
+        await loadSharers(forceRefreshPreviews: true)
       }
     }
 
@@ -916,7 +921,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
   /// Whether any shift in the current month has tax enabled
   var hasTaxEnabled: Bool {
-    sharedShifts.contains { $0.taxEnabled }
+    sharedShifts.contains(where: \.taxEnabled)
   }
 
   /// Shift count for the current month
@@ -988,7 +993,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
           )
 
           for virtual in virtualShifts {
-            guard virtual.date >= startISO && virtual.date <= endISO else { continue }
+            guard virtual.date >= startISO, virtual.date <= endISO else { continue }
 
             let key = "\(virtual.date)|\(recurring.cleanStartTime)|\(recurring.cleanEndTime)"
             if realShiftKeys.contains(key) { continue }
@@ -1094,6 +1099,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     switch monthWindow.count {
     case 0:
       return [:]
+
     case 1:
       let key = monthWindow[0]
       let response = try await sharingService.fetchSharedShifts(
@@ -1102,6 +1108,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         month: key.month
       )
       return [key: response]
+
     case 2:
       let key0 = monthWindow[0]
       let key1 = monthWindow[1]
@@ -1121,6 +1128,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
         key0: try await response0,
         key1: try await response1,
       ]
+
     default:
       let key0 = monthWindow[0]
       let key1 = monthWindow[1]

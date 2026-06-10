@@ -19,7 +19,7 @@ struct GlobalPaySettingsCard: View {
   @State private var selectedCurrency: String = "kr"
   @State private var monthlyGoalText: String = ""
   @State private var selectedPayrollDay: Int = 1
-  @State private var selectedHalfTaxMonth: Int? = nil
+  @State private var selectedHalfTaxMonth: Int?
   @State private var initializedJobId: String?
   @State private var showingCurrencyPicker = false
 
@@ -151,7 +151,7 @@ struct GlobalPaySettingsCard: View {
         .foregroundColor(.tidexTextPrimary)
         .onChange(of: monthlyGoalText) { _, newValue in
           // Filter to digits only
-          let filtered = newValue.filter { $0.isNumber }
+          let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
           if filtered != newValue {
             monthlyGoalText = filtered
           }
@@ -368,7 +368,7 @@ private struct CurrencyRow: View {
     GlobalPaySettingsCard(
       jobId: "test-job",
       currency: "kr",
-      monthlyGoal: 20000,
+      monthlyGoal: 20_000,
       payrollDay: 15,
       halfTaxMonth: nil,
       canChangeCurrency: true,

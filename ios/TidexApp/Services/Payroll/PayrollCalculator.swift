@@ -12,7 +12,7 @@ struct PayrollCalculator {
   // MARK: - Constants
 
   /// Precision for hour calculations (3 decimal places)
-  private static let hourPrecision: Double = 1000
+  private static let hourPrecision: Double = 1_000
   /// Precision for currency calculations (2 decimal places)
   private static let currencyPrecision: Double = 100
 
@@ -221,7 +221,7 @@ struct PayrollCalculator {
     // Priority: snapshot supplements (even if empty) > preset fallback
     // If snapshot exists, use its supplements - empty array means "no supplements"
     // Only fall back to presets if there's no snapshot at all (offline fallback)
-    if let snapshot = snapshot {
+    if let snapshot {
       return snapshot.effectiveSupplements
     }
 

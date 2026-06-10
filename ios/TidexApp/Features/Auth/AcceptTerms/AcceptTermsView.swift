@@ -38,7 +38,7 @@ struct AcceptTermsView: View {
           // Main content
           VStack(spacing: Spacing.lg) {
             // Error banner
-            if let error = error {
+            if let error {
               ErrorBanner(
                 message: error,
                 onDismiss: { self.error = nil }
@@ -232,7 +232,7 @@ struct AcceptTermsView: View {
       } catch {
         await MainActor.run {
           self.error = String(localized: .acceptTermsErrorsUpdateFailed)
-          self.isProcessing = false
+          isProcessing = false
         }
         logger.error("Failed to update terms acceptance: \(error.localizedDescription)")
       }
@@ -254,11 +254,12 @@ struct AcceptTermsView: View {
 private struct SafariViewAcceptTerms: UIViewControllerRepresentable {
   let url: URL
 
-  func makeUIViewController(context: Context) -> SFSafariViewController {
+  func makeUIViewController(context _: Context) -> SFSafariViewController {
     SFSafariViewController(url: url)
   }
 
-  func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+  // swiftlint:disable:next no_empty_block
+  func updateUIViewController(_: SFSafariViewController, context _: Context) {}
 }
 
 #Preview("Accept Terms - Initial") {

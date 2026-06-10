@@ -5,7 +5,7 @@ import os.log
 private let logger = Logger(subsystem: "com.tidex.app", category: "FeedbackSettingsViewModel")
 
 /// Maximum feedback message length
-private let maxFeedbackLength = 2000
+private let maxFeedbackLength = 2_000  // swiftlint:disable:this explicit_type_interface prefixed_toplevel_constant
 
 // MARK: - Models
 
@@ -149,7 +149,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
       return
     }
 
-    guard let userId = userId, let userEmail = userEmail else {
+    guard let userId, let userEmail else {
       errorMessage = "Not authenticated"
       return
     }
@@ -265,7 +265,7 @@ extension FeedbackItem {
 
   /// Format the responded_at date for display
   func formattedResponseDate(locale: Locale) -> String? {
-    guard let respondedAt = respondedAt else { return nil }
+    guard let respondedAt else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
 
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]

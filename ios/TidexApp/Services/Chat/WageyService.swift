@@ -69,6 +69,7 @@ private struct ChatAPIRequest: Encodable {
       switch self {
       case .text(let text):
         try container.encode(text)
+
       case .blocks(let blocks):
         try container.encode(blocks)
       }
@@ -94,6 +95,7 @@ private struct ChatAPIRequest: Encodable {
       case .text(let text):
         try container.encode("text", forKey: .type)
         try container.encode(text, forKey: .text)
+
       case .image(let mediaType, let base64Data):
         try container.encode("image", forKey: .type)
         var sourceContainer = container.nestedContainer(keyedBy: SourceKeys.self, forKey: .source)
@@ -129,12 +131,16 @@ enum WageyServiceError: Error, LocalizedError {
     switch self {
     case .notAuthenticated:
       return "Not authenticated"
+
     case .networkError(let error):
       return "Network error: \(error.localizedDescription)"
+
     case .httpError(let code, let message):
       return "HTTP \(code): \(message ?? "Unknown error")"
+
     case .streamError(let message):
       return "Stream error: \(message)"
+
     case .cancelled:
       return "Request was cancelled"
     }
@@ -405,8 +411,10 @@ private actor WageyStreamWorker {
       switch httpResponse.statusCode {
       case 200:
         break
+
       case 401:
         throw WageyServiceError.notAuthenticated
+
       default:
         throw WageyServiceError.httpError(
           statusCode: httpResponse.statusCode,
@@ -430,6 +438,7 @@ private actor WageyStreamWorker {
           switch chatChunk {
           case .status, .textStart, .done:
             break
+
           default:
             receivedRenderableChunk = true
           }
@@ -538,17 +547,22 @@ private actor WageyStreamWorker {
     switch raw.type {
     case "status":
       return .status(thinking: raw.status == "thinking")
+
     case "text_start":
       return .textStart
+
     case "message_break":
       return .messageBreak
+
     case "text":
       guard let content = raw.content else { return nil }
       return .text(content: content)
+
     case "tool_start":
       guard let toolName = raw.toolName, let toolCallId = raw.toolCallId else { return nil }
       return .toolStart(
         toolName: toolName, toolCallId: toolCallId, toolArguments: raw.toolArguments)
+
     case "tool_result":
       guard let toolName = raw.toolName,
         let toolCallId = raw.toolCallId,
@@ -561,10 +575,12 @@ private actor WageyStreamWorker {
         result: result,
         success: raw.success ?? true
       )
+
     case "wagey_built_in_tool_start":
       guard let toolName = raw.toolName, let toolCallId = raw.toolCallId else { return nil }
       return .builtInToolStart(
         toolName: toolName, toolCallId: toolCallId, toolArguments: raw.toolArguments)
+
     case "wagey_built_in_tool_result":
       guard let toolName = raw.toolName,
         let toolCallId = raw.toolCallId,
@@ -576,6 +592,7 @@ private actor WageyStreamWorker {
         result: result,
         success: raw.success ?? true
       )
+
     case "wagey_limit":
       guard let remaining = raw.remaining, let resetDays = raw.resetDays else { return nil }
       return .wageyLimit(
@@ -584,17 +601,23 @@ private actor WageyStreamWorker {
         exceeded: raw.exceeded ?? false,
         bonus: raw.bonus ?? 0
       )
+
     case "wagey_no_access":
       return .wageyNoAccess
+
     case "wagey_sources":
       return .sources(items: raw.items ?? [])
+
     case "wagey_compaction":
       guard let content = raw.content else { return nil }
       return .compaction(content: content)
+
     case "done":
       return .done
+
     case "error":
       return .error(message: raw.error ?? "Unknown error")
+
     default:
       logger.warning("Unknown chunk type: \(raw.type)")
       return nil

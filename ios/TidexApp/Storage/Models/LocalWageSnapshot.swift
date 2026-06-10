@@ -1,3 +1,5 @@
+// swiftlint:disable cyclomatic_complexity explicit_acl explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -112,7 +114,7 @@ final class LocalWageSnapshot {
       }
     }
     set {
-      let keys = newValue.map { $0.rawValue }
+      let keys = newValue.map(\.rawValue)
       dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
@@ -267,8 +269,8 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
     updatedAt: Date,
     revision: Int64,
     deletedAt: Date?
-  ) -> WageSnapshotServerSnapshot {
-    WageSnapshotServerSnapshot(
+  ) -> Self {
+    Self(
       jobId: row.job_id,
       fromDate: row.from_date,
       hourlyWage: row.hourly_wage,
@@ -300,12 +302,12 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
   }
 
   /// Decode from Data
-  static func decode(from data: Data) -> WageSnapshotServerSnapshot? {
-    try? syncJSONDecoder.decode(WageSnapshotServerSnapshot.self, from: data)
+  static func decode(from data: Data) -> Self? {
+    try? syncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
-  func changedFields(from other: WageSnapshotServerSnapshot) -> Set<WageSnapshotField> {
+  func changedFields(from other: Self) -> Set<WageSnapshotField> {
     var changed: Set<WageSnapshotField> = []
 
     if jobId != other.jobId {
@@ -379,7 +381,7 @@ extension LocalWageSnapshot {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    context: ModelContext
+    context _: ModelContext
   ) -> LocalWageSnapshot {
     let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
 

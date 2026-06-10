@@ -53,6 +53,7 @@ struct LoginView: View {
                   switch viewModel.currentStep {
                   case .input:
                     inputStepContent(scrollProxy: scrollProxy)
+
                   case .otp:
                     PhoneOTPForm(viewModel: viewModel)
                   }
@@ -554,8 +555,10 @@ struct NativeTextField: View {
   let placeholder: String
   @Binding var text: String
   var keyboardType: UIKeyboardType = .default
-  var textContentType: UITextContentType? = nil
-  var onSubmit: (() -> Void)? = nil
+  // swiftlint:disable:next explicit_acl
+  var textContentType: UITextContentType?
+  // swiftlint:disable:next explicit_acl
+  var onSubmit: (() -> Void)?
 
   @FocusState private var isFocused: Bool
 
@@ -582,7 +585,8 @@ struct NativeTextField: View {
 struct NativeSecureField: View {
   let placeholder: String
   @Binding var text: String
-  var onSubmit: (() -> Void)? = nil
+  // swiftlint:disable:next explicit_acl
+  var onSubmit: (() -> Void)?
 
   @FocusState private var isFocused: Bool
   @State private var isSecure: Bool = true

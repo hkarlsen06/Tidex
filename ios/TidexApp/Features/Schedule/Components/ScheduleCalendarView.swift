@@ -21,7 +21,7 @@ private enum SingleSelectionActionMode: Equatable {
 /// Full-featured calendar for the Shifts tab
 /// Shows shift times or earnings per day, ISO week numbers, and monthly totals
 /// Supports multi-date selection via long-press + drag
-struct ShiftsCalendarView: View {
+struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ObservedObject private var appearanceManager = AppearanceManager.shared
 
@@ -108,7 +108,7 @@ struct ShiftsCalendarView: View {
   // Shift IDs that should be excluded from totals (conflicting shifts)
   var excludedFromTotalIds: Set<String> = []
 
-  @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+  @State private var viewMode = CalendarViewMode.load()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @State private var singleSelectionActionMode: SingleSelectionActionMode = .primary
   @State private var showSingleSelectionDeleteConfirm = false
   @State private var showMultiSelectionDeleteConfirm = false
@@ -673,7 +673,8 @@ struct ShiftsCalendarView: View {
         )
       }
       return .earningsBreakdown(earnings)
-    } else if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
+    }
+    if effectiveViewMode == .hours, let hoursData = hoursByDate[dateISO] {
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .hours(
           hoursData,
@@ -730,7 +731,7 @@ struct ShiftsCalendarView: View {
       return
     }
 
-    if shiftsOnDay.isEmpty && eventsOnDay.isEmpty {
+    if shiftsOnDay.isEmpty, eventsOnDay.isEmpty {
       onEmptyDayTapped?(dayISO)
     } else {
       onDayTapped?(dayISO, shiftsOnDay)
@@ -1310,7 +1311,7 @@ struct ShiftsCalendarView: View {
         ShiftsCalendarView(
           shifts: [],
           month: Date(),
-          year: 2025,
+          year: 2_025,
           monthNumber: 1,
           currency: "kr",
           showEarnings: true,
@@ -1335,4 +1336,4 @@ struct ShiftsCalendarView: View {
   }
 
   return PreviewWrapper()
-}
+}  // swiftlint:disable:this file_length

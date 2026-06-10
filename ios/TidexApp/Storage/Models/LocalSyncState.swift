@@ -165,25 +165,32 @@ final class LocalSyncState {
     case .jobs:
       return SyncCursor(
         updatedAt: lastJobsUpdatedAt, tieId: lastJobsUpdatedAtTieId ?? "")
+
     case .userShifts:
       return SyncCursor(
         updatedAt: lastUserShiftsUpdatedAt, tieId: lastUserShiftsUpdatedAtTieId ?? "")
+
     case .events:
       return SyncCursor(
         updatedAt: lastEventsUpdatedAt, tieId: lastEventsUpdatedAtTieId ?? "")
+
     case .recurringShifts:
       return SyncCursor(
         updatedAt: lastRecurringShiftsUpdatedAt, tieId: lastRecurringShiftsUpdatedAtTieId ?? "")
+
     case .wageSnapshots:
       return SyncCursor(
         updatedAt: lastWageSnapshotsUpdatedAt, tieId: lastWageSnapshotsUpdatedAtTieId ?? "")
+
     case .payrollAdjustments:
       return SyncCursor(
         updatedAt: lastPayrollAdjustmentsUpdatedAt,
         tieId: lastPayrollAdjustmentsUpdatedAtTieId ?? "")
+
     case .userSettings:
       return SyncCursor(
         updatedAt: lastUserSettingsUpdatedAt, tieId: lastUserSettingsUpdatedAtTieId ?? "")
+
     case .notificationPreferences:
       return SyncCursor(
         updatedAt: lastNotificationPreferencesUpdatedAt,
@@ -197,24 +204,31 @@ final class LocalSyncState {
     case .jobs:
       lastJobsUpdatedAt = updatedAt
       lastJobsUpdatedAtTieId = tieId
+
     case .userShifts:
       lastUserShiftsUpdatedAt = updatedAt
       lastUserShiftsUpdatedAtTieId = tieId
+
     case .events:
       lastEventsUpdatedAt = updatedAt
       lastEventsUpdatedAtTieId = tieId
+
     case .recurringShifts:
       lastRecurringShiftsUpdatedAt = updatedAt
       lastRecurringShiftsUpdatedAtTieId = tieId
+
     case .wageSnapshots:
       lastWageSnapshotsUpdatedAt = updatedAt
       lastWageSnapshotsUpdatedAtTieId = tieId
+
     case .payrollAdjustments:
       lastPayrollAdjustmentsUpdatedAt = updatedAt
       lastPayrollAdjustmentsUpdatedAtTieId = tieId
+
     case .userSettings:
       lastUserSettingsUpdatedAt = updatedAt
       lastUserSettingsUpdatedAtTieId = tieId
+
     case .notificationPreferences:
       lastNotificationPreferencesUpdatedAt = updatedAt
       lastNotificationPreferencesUpdatedAtTieId = tieId
@@ -228,18 +242,25 @@ final class LocalSyncState {
     switch table {
     case .jobs:
       return 0
+
     case .userShifts:
       return lastRevisionUserShifts
+
     case .events:
       return 0
+
     case .recurringShifts:
       return lastRevisionRecurringShifts
+
     case .wageSnapshots:
       return lastRevisionWageSnapshots
+
     case .payrollAdjustments:
       return 0
+
     case .userSettings:
       return lastRevisionUserSettings
+
     case .notificationPreferences:
       return 0  // No legacy revision for notification preferences
     }
@@ -250,18 +271,25 @@ final class LocalSyncState {
     switch table {
     case .jobs:
       break
+
     case .userShifts:
       lastRevisionUserShifts = revision
+
     case .events:
       break
+
     case .recurringShifts:
       lastRevisionRecurringShifts = revision
+
     case .wageSnapshots:
       lastRevisionWageSnapshots = revision
+
     case .payrollAdjustments:
       break
+
     case .userSettings:
       lastRevisionUserSettings = revision
+
     case .notificationPreferences:
       break  // No legacy revision for notification preferences
     }
@@ -329,13 +357,12 @@ struct SyncCursor {
 
   /// Format the cursor for logging
   var description: String {
-    if let updatedAt = updatedAt {
+    if let updatedAt {
       let formattedUpdatedAt = FormatterCache.iso8601Formatter().string(from: updatedAt)
       return
         "updated_at: \(formattedUpdatedAt), tieId: \(tieId.prefix(8))..."
-    } else {
-      return "initial (no cursor)"
     }
+    return "initial (no cursor)"
   }
 }
 

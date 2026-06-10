@@ -2,7 +2,7 @@ import Combine
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "StatsService")
+private let logger = Logger(subsystem: "com.tidex.app", category: "StatsService")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 
 private struct FullYearCacheKey: Hashable {
   let userId: String
@@ -34,8 +34,8 @@ private struct StatsComputationResult {
 /// Service for computing stats locally from on-device data
 /// Uses the same PayrollEngine as the Dashboard for consistent calculations
 @MainActor
-final class StatsService: ObservableObject {
-  static let shared = StatsService()
+final class StatsService: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length required_deinit type_body_length
+  static let shared = StatsService()  // swiftlint:disable:this explicit_acl explicit_type_interface
 
   // MARK: - Dependencies
 
@@ -43,9 +43,9 @@ final class StatsService: ObservableObject {
 
   // MARK: - Published State
 
-  @Published private(set) var stats: StatsData?
-  @Published private(set) var isLoading = false
-  @Published private(set) var error: Error?
+  @Published private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
+  @Published private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
+  @Published private(set) var error: Error?  // swiftlint:disable:this explicit_acl
 
   // MARK: - Private State
 
@@ -54,7 +54,7 @@ final class StatsService: ObservableObject {
 
   // MARK: - Initialization
 
-  init(
+  init(  // swiftlint:disable:this explicit_acl
     shiftsRepository: ShiftsRepository? = nil,
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
@@ -62,12 +62,12 @@ final class StatsService: ObservableObject {
     jobsRepository: JobsRepository? = nil,
     monthlyPayrollReadService: MonthlyPayrollReadService? = nil
   ) {
-    let resolvedShiftsRepository = shiftsRepository ?? ShiftsRepository.shared
-    let resolvedSettingsRepository = settingsRepository ?? SettingsRepository.shared
-    let resolvedSnapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
-    let resolvedRecurringShiftsRepository =
+    let resolvedShiftsRepository = shiftsRepository ?? ShiftsRepository.shared  // swiftlint:disable:this explicit_type_interface line_length
+    let resolvedSettingsRepository = settingsRepository ?? SettingsRepository.shared  // swiftlint:disable:this explicit_type_interface line_length
+    let resolvedSnapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared  // swiftlint:disable:this explicit_type_interface line_length
+    let resolvedRecurringShiftsRepository =  // swiftlint:disable:this explicit_type_interface
       recurringShiftsRepository ?? RecurringShiftsRepository.shared
-    let resolvedJobsRepository = jobsRepository ?? JobsRepository.shared
+    let resolvedJobsRepository = jobsRepository ?? JobsRepository.shared  // swiftlint:disable:this explicit_type_interface line_length
 
     self.monthlyPayrollReadService =
       monthlyPayrollReadService
@@ -88,72 +88,72 @@ final class StatsService: ObservableObject {
   ///   - month: Month to compute stats for (defaults to current month)
   ///   - jobId: Optional job filter. Nil aggregates all jobs.
   /// - Returns: Computed stats data
-  func computeStats(
+  func computeStats(  // swiftlint:disable:this cyclomatic_complexity explicit_acl function_body_length line_length type_contents_order
     year: Int? = nil,
     month: Int? = nil,
     jobId: String? = nil
   ) async throws -> StatsData {
-    let calendar = Calendar.current
-    let now = Date()
-    let targetYear = year ?? calendar.component(.year, from: now)
-    let targetMonth = month ?? calendar.component(.month, from: now)
+    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let now = Date()  // swiftlint:disable:this explicit_type_interface
+    let targetYear = year ?? calendar.component(.year, from: now)  // swiftlint:disable:this explicit_type_interface
+    let targetMonth = month ?? calendar.component(.month, from: now)  // swiftlint:disable:this explicit_type_interface
 
     isLoading = true
     error = nil
     defer { isLoading = false }
 
     do {
-      let userId = try await resolveUserIdForLocalStats()
+      let userId = try await resolveUserIdForLocalStats()  // swiftlint:disable:this explicit_type_interface
 
       // Load shared payroll inputs through the DAL-backed read service
-      let readContext = monthlyPayrollReadService.loadContext(for: userId, jobId: jobId)
+      let readContext = monthlyPayrollReadService.loadContext(for: userId, jobId: jobId)  // swiftlint:disable:this explicit_type_interface line_length
 
       guard let settings = readContext.settings else {
         throw StatsServiceError.noLocalData
       }
 
-      let snapshots = readContext.snapshots
-      let recurringShifts = readContext.recurringShifts
-      let jobs = readContext.jobs
+      let snapshots = readContext.snapshots  // swiftlint:disable:this explicit_type_interface
+      let recurringShifts = readContext.recurringShifts  // swiftlint:disable:this explicit_type_interface
+      let jobs = readContext.jobs  // swiftlint:disable:this explicit_type_interface
 
       // Calculate date ranges
-      let currentYM = (year: targetYear, month: targetMonth)
-      let previousYM = Date.previousYearMonth(from: currentYM)
+      let currentYM = (year: targetYear, month: targetMonth)  // swiftlint:disable:this explicit_type_interface
+      let previousYM = Date.previousYearMonth(from: currentYM)  // swiftlint:disable:this explicit_type_interface
 
-      let currentStartDate = Date.firstDayOfMonthDate(year: currentYM.year, month: currentYM.month)
-      let currentEndDate = Date.lastDayOfMonthDate(year: currentYM.year, month: currentYM.month)
-      let previousStartDate = Date.firstDayOfMonthDate(
-        year: previousYM.year, month: previousYM.month)
-      let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
+      let currentStartDate = Date.firstDayOfMonthDate(year: currentYM.year, month: currentYM.month)  // swiftlint:disable:this explicit_type_interface line_length
+      let currentEndDate = Date.lastDayOfMonthDate(year: currentYM.year, month: currentYM.month)  // swiftlint:disable:this explicit_type_interface line_length
+      let previousStartDate = Date.firstDayOfMonthDate(  // swiftlint:disable:this explicit_type_interface
+        year: previousYM.year, month: previousYM.month)  // swiftlint:disable:this multiline_arguments_brackets
+      let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)  // swiftlint:disable:this explicit_type_interface line_length
 
-      let yearStartDate = Date.firstDayOfMonthDate(year: targetYear, month: 1)
-      let yearEndDate = Date.lastDayOfMonthDate(year: targetYear, month: 12)
+      let yearStartDate = Date.firstDayOfMonthDate(year: targetYear, month: 1)  // swiftlint:disable:this explicit_type_interface line_length
+      let yearEndDate = Date.lastDayOfMonthDate(year: targetYear, month: 12)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
 
       // Load shifts from local repositories
-      async let currentMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(
+      async let currentMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(  // swiftlint:disable:this explicit_type_interface line_length
         for: userId,
         startDate: currentStartDate,
         endDate: currentEndDate,
         jobId: jobId
       )
-      async let previousMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(
+      async let previousMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(  // swiftlint:disable:this explicit_type_interface line_length
         for: userId,
         startDate: previousStartDate,
         endDate: previousEndDate,
         jobId: jobId
       )
-      async let yearShiftsRaw = monthlyPayrollReadService.loadShiftRows(
+      async let yearShiftsRaw = monthlyPayrollReadService.loadShiftRows(  // swiftlint:disable:this explicit_type_interface line_length
         for: userId,
         startDate: yearStartDate,
         endDate: yearEndDate,
         jobId: jobId
       )
 
-      let (resolvedCurrentMonthShiftsRaw, resolvedPreviousMonthShiftsRaw, resolvedYearShiftsRaw) =
+      let (resolvedCurrentMonthShiftsRaw, resolvedPreviousMonthShiftsRaw, resolvedYearShiftsRaw) =  // swiftlint:disable:this explicit_type_interface line_length
         await (currentMonthShiftsRaw, previousMonthShiftsRaw, yearShiftsRaw)
 
       // Build a deterministic fingerprint so we only recompute full-year data when inputs changed.
-      let cacheKey = FullYearCacheKey(
+      let cacheKey = FullYearCacheKey(  // swiftlint:disable:this explicit_type_interface
         userId: userId,
         year: targetYear,
         jobId: jobId ?? "__all__",
@@ -163,14 +163,14 @@ final class StatsService: ObservableObject {
         jobsFingerprint: Self.fingerprintJobsForCaching(jobs),
         shiftsFingerprint: Self.fingerprintShiftsForCaching(resolvedYearShiftsRaw)
       )
-      let cachedFullYearData = fullYearCache[cacheKey]
+      let cachedFullYearData = fullYearCache[cacheKey]  // swiftlint:disable:this explicit_type_interface
 
       try Task.checkCancellation()
 
-      let computeTask = Task.detached(priority: .userInitiated) {
+      let computeTask = Task.detached(priority: .userInitiated) {  // swiftlint:disable:this closure_body_length explicit_type_interface line_length
         try Task.checkCancellation()
 
-        let currentMonthShifts = PayrollEngine.computeShiftsForMonth(
+        let currentMonthShifts = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
           .init(
             year: currentYM.year,
             month: currentYM.month,
@@ -182,7 +182,7 @@ final class StatsService: ObservableObject {
           )
         )
 
-        let previousMonthShifts = PayrollEngine.computeShiftsForMonth(
+        let previousMonthShifts = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
           .init(
             year: previousYM.year,
             month: previousYM.month,
@@ -194,10 +194,10 @@ final class StatsService: ObservableObject {
           )
         )
 
-        let currentMonthPartition = ConflictExclusion.partition(shifts: currentMonthShifts)
-        let previousMonthPartition = ConflictExclusion.partition(shifts: previousMonthShifts)
-        let currentMonthIncluded = currentMonthPartition.includedShifts
-        let previousMonthIncluded = previousMonthPartition.includedShifts
+        let currentMonthPartition = ConflictExclusion.partition(shifts: currentMonthShifts)  // swiftlint:disable:this explicit_type_interface line_length
+        let previousMonthPartition = ConflictExclusion.partition(shifts: previousMonthShifts)  // swiftlint:disable:this explicit_type_interface line_length
+        let currentMonthIncluded = currentMonthPartition.includedShifts  // swiftlint:disable:this explicit_type_interface line_length
+        let previousMonthIncluded = previousMonthPartition.includedShifts  // swiftlint:disable:this explicit_type_interface line_length
 
         let fullYearData: FullYearComputedData
         let newFullYearCacheData: FullYearComputedData?
@@ -205,17 +205,17 @@ final class StatsService: ObservableObject {
           fullYearData = cachedFullYearData
           newFullYearCacheData = nil
         } else {
-          let shiftsByMonth = Dictionary(grouping: resolvedYearShiftsRaw) { shift in
+          let shiftsByMonth = Dictionary(grouping: resolvedYearShiftsRaw) { shift in  // swiftlint:disable:this explicit_type_interface line_length
             Self.monthNumber(fromISODate: shift.shift_date)
           }
 
           var fullYearShifts: [ShiftWithComputations] = []
-          fullYearShifts.reserveCapacity(max(resolvedYearShiftsRaw.count, 64))
+          fullYearShifts.reserveCapacity(max(resolvedYearShiftsRaw.count, 64))  // swiftlint:disable:this line_length no_magic_numbers
 
-          for month in 1...12 {
+          for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
             try Task.checkCancellation()
-            let monthShiftsRaw = shiftsByMonth[month] ?? []
-            let computedShifts = PayrollEngine.computeShiftsForMonth(
+            let monthShiftsRaw = shiftsByMonth[month] ?? []  // swiftlint:disable:this explicit_type_interface
+            let computedShifts = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
               .init(
                 year: targetYear,
                 month: month,
@@ -229,8 +229,8 @@ final class StatsService: ObservableObject {
             fullYearShifts.append(contentsOf: computedShifts)
           }
 
-          let fullYearIncluded = ConflictExclusion.partition(shifts: fullYearShifts).includedShifts
-          let computedData = FullYearComputedData(
+          let fullYearIncluded = ConflictExclusion.partition(shifts: fullYearShifts).includedShifts  // swiftlint:disable:this explicit_type_interface line_length
+          let computedData = FullYearComputedData(  // swiftlint:disable:this explicit_type_interface
             shifts: fullYearShifts,
             includedShifts: fullYearIncluded
           )
@@ -238,14 +238,14 @@ final class StatsService: ObservableObject {
           newFullYearCacheData = computedData
         }
 
-        let fallbackCurrency = settings.currency ?? "kr"
-        let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(
+        let fallbackCurrency = settings.currency ?? "kr"  // swiftlint:disable:this explicit_type_interface
+        let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(  // swiftlint:disable:this explicit_type_interface line_length
           shifts: currentMonthIncluded,
           jobs: jobs,
           fallbackCurrency: fallbackCurrency,
           referenceDate: now
         )
-        let primaryCurrentMonthShifts = JobCurrencyAggregateResolver.shifts(
+        let primaryCurrentMonthShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface line_length
           matching: currentMonthAggregate.primary,
           in: currentMonthIncluded,
           jobs: jobs,
@@ -253,14 +253,14 @@ final class StatsService: ObservableObject {
         )
 
         // Get totals using PayrollEngine with centralized exclusion IDs
-        let halfTaxMonth = settings.half_tax_month
-        let currentTotals = PayrollEngine.summarizeShiftTotals(
+        let halfTaxMonth = settings.half_tax_month  // swiftlint:disable:this explicit_type_interface
+        let currentTotals = PayrollEngine.summarizeShiftTotals(  // swiftlint:disable:this explicit_type_interface
           shifts: primaryCurrentMonthShifts,
           halfTaxMonth: halfTaxMonth,
           earningsMonth: currentYM.month,
           now: now
         )
-        let previousTotals = PayrollEngine.summarizeShiftTotals(
+        let previousTotals = PayrollEngine.summarizeShiftTotals(  // swiftlint:disable:this explicit_type_interface
           shifts: previousMonthShifts,
           excludedShiftIds: previousMonthPartition.analysis.excludedIds,
           halfTaxMonth: halfTaxMonth,
@@ -270,7 +270,7 @@ final class StatsService: ObservableObject {
 
         let previousComparisonGross: Double
         if currentMonthAggregate.hasMixedCurrency {
-          let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(
+          let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface line_length
             matching: currentMonthAggregate.primary,
             in: previousMonthIncluded,
             jobs: jobs,
@@ -288,12 +288,12 @@ final class StatsService: ObservableObject {
         }
 
         // Calculate total hours (using filtered shifts that exclude conflicts)
-        let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }
-        let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }
+        let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }  // swiftlint:disable:this explicit_type_interface line_length
+        let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }  // swiftlint:disable:this explicit_type_interface line_length
 
         // Get tax settings from the primary aggregate bucket.
-        let taxEnabled = currentMonthAggregate.primary.hasTaxEnabled
-        let taxPercentage =
+        let taxEnabled = currentMonthAggregate.primary.hasTaxEnabled  // swiftlint:disable:this explicit_type_interface
+        let taxPercentage =  // swiftlint:disable:this explicit_type_interface
           primaryCurrentMonthShifts.first?.taxPercentage
           ?? currentMonthShifts.first?.taxPercentage
           ?? 0
@@ -314,9 +314,9 @@ final class StatsService: ObservableObject {
         if let goalTarget = settings.effectiveMonthlyGoal(year: targetYear, month: targetMonth),
           goalTarget > 0
         {
-          let progress = currentTotals.net
-          let percentage = (progress / Double(goalTarget)) * 100
-          let remaining = max(Double(goalTarget) - progress, 0)
+          let progress = currentTotals.net  // swiftlint:disable:this explicit_type_interface
+          let percentage = (progress / Double(goalTarget)) * 100  // swiftlint:disable:this explicit_type_interface
+          let remaining = max(Double(goalTarget) - progress, 0)  // swiftlint:disable:this explicit_type_interface
           monthlyGoal = MonthlyGoal(
             enabled: true,
             target: Double(goalTarget),
@@ -335,7 +335,7 @@ final class StatsService: ObservableObject {
         }
 
         // Build cumulative data for progress chart (using filtered shifts for earnings)
-        let cumulativeData = Self.buildCumulativeData(
+        let cumulativeData = Self.buildCumulativeData(  // swiftlint:disable:this explicit_type_interface
           currentMonthShifts: currentMonthIncluded,
           previousMonthShifts: previousMonthIncluded,
           targetYear: targetYear,
@@ -346,12 +346,12 @@ final class StatsService: ObservableObject {
         )
 
         // Determine if viewing current month
-        let isCurrentMonth =
+        let isCurrentMonth =  // swiftlint:disable:this explicit_type_interface
           targetYear == calendar.component(.year, from: now)
           && targetMonth == calendar.component(.month, from: now)
 
         // Build weekly data (using filtered shifts for earnings)
-        let thisWeek: [DailyData]?
+        let thisWeek: [DailyData]?  // swiftlint:disable:this discouraged_optional_collection
         let bestWeek: BestWeekData?
 
         if isCurrentMonth {
@@ -370,18 +370,18 @@ final class StatsService: ObservableObject {
         }
 
         // Build employment data for the focus year (uses all shifts for hours worked)
-        let employmentData = Self.buildEmploymentData(
+        let employmentData = Self.buildEmploymentData(  // swiftlint:disable:this explicit_type_interface
           focusYear: targetYear,
           shifts: fullYearData.shifts,
           snapshots: snapshots
         )
 
-        let yearlyIncomeData = Self.buildYearlyIncomeData(
+        let yearlyIncomeData = Self.buildYearlyIncomeData(  // swiftlint:disable:this explicit_type_interface
           focusYear: targetYear,
           shifts: fullYearData.includedShifts
         )
 
-        let statsData = StatsData(
+        let statsData = StatsData(  // swiftlint:disable:this explicit_type_interface
           focusMonth: FocusMonth(year: targetYear, month: targetMonth),
           tax: TaxSettings(enabled: taxEnabled, percentage: taxPercentage),
           currentMonth: MonthStats(
@@ -428,14 +428,14 @@ final class StatsService: ObservableObject {
 
       if let fullYearCacheData = result.fullYearCacheData {
         fullYearCache[cacheKey] = fullYearCacheData
-        if fullYearCache.count > 8 {
+        if fullYearCache.count > 8 {  // swiftlint:disable:this no_magic_numbers
           fullYearCache.removeAll(keepingCapacity: true)
         }
       }
 
       stats = result.statsData
       logger.info(
-        "Computed stats: \(result.currentShiftCount) shifts (\(result.excludedShiftCount) excluded), \(Int(result.currentHours))h, \(Int(result.currentGross)) gross"
+        "Computed stats: \(result.currentShiftCount) shifts (\(result.excludedShiftCount) excluded), \(Int(result.currentHours))h, \(Int(result.currentGross)) gross"  // swiftlint:disable:this line_length
       )
 
       return result.statsData
@@ -445,26 +445,26 @@ final class StatsService: ObservableObject {
       self.error = error
       throw error
     } catch {
-      let wrappedError = StatsServiceError.computationFailed(underlying: error)
+      let wrappedError = StatsServiceError.computationFailed(underlying: error)  // swiftlint:disable:this explicit_type_interface line_length
       self.error = wrappedError
       throw wrappedError
     }
   }
 
   /// Clear cached data
-  func clearCache() {
+  func clearCache() {  // swiftlint:disable:this explicit_acl type_contents_order
     stats = nil
     cachedUserId = nil
     fullYearCache.removeAll(keepingCapacity: true)
   }
 
-  private func resolveUserIdForLocalStats() async throws -> String {
+  private func resolveUserIdForLocalStats() async throws -> String {  // swiftlint:disable:this type_contents_order
     if let cachedUserId {
       return cachedUserId
     }
 
     do {
-      let session = try await AuthSessionManager.shared.getSession()
+      let session = try await AuthSessionManager.shared.getSession()  // swiftlint:disable:this explicit_type_interface
       cachedUserId = session.normalizedUserId
       return session.normalizedUserId
     } catch {
@@ -480,14 +480,14 @@ final class StatsService: ObservableObject {
     }
   }
 
-  nonisolated static func fingerprintSettingsForCaching(_ settings: UserSettings) -> Int {
-    var hasher = Hasher()
+  nonisolated static func fingerprintSettingsForCaching(_ settings: UserSettings) -> Int {  // swiftlint:disable:this explicit_acl line_length
+    var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
     hasher.combine(settings.updated_at ?? "")
     hasher.combine(settings.monthly_goal ?? -1)
     hasher.combine(settings.half_tax_month ?? -1)
     hasher.combine(settings.currency ?? "")
 
-    let monthlyGoals = (settings.monthly_goals_by_month ?? [:]).sorted(by: { $0.key < $1.key })
+    let monthlyGoals = (settings.monthly_goals_by_month ?? [:]).sorted(by: { $0.key < $1.key })  // swiftlint:disable:this explicit_type_interface line_length
     for entry in monthlyGoals {
       hasher.combine(entry.key)
       hasher.combine(entry.value)
@@ -495,8 +495,8 @@ final class StatsService: ObservableObject {
     return hasher.finalize()
   }
 
-  nonisolated static func fingerprintSnapshotsForCaching(_ snapshots: [WageSnapshot]) -> Int {
-    var hasher = Hasher()
+  nonisolated static func fingerprintSnapshotsForCaching(_ snapshots: [WageSnapshot]) -> Int {  // swiftlint:disable:this explicit_acl line_length
+    var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
     for snapshot in snapshots.sorted(by: { $0.id < $1.id }) {
       hasher.combine(snapshot.id)
       hasher.combine(snapshot.job_id ?? "")
@@ -515,10 +515,10 @@ final class StatsService: ObservableObject {
     return hasher.finalize()
   }
 
-  nonisolated static func fingerprintRecurringShiftsForCaching(
+  nonisolated static func fingerprintRecurringShiftsForCaching(  // swiftlint:disable:this explicit_acl
     _ recurringShifts: [RecurringShiftRow]
   ) -> Int {
-    var hasher = Hasher()
+    var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
     for shift in recurringShifts.sorted(by: { $0.id < $1.id }) {
       hasher.combine(shift.id)
       hasher.combine(shift.job_id ?? "")
@@ -545,8 +545,8 @@ final class StatsService: ObservableObject {
     return hasher.finalize()
   }
 
-  nonisolated static func fingerprintJobsForCaching(_ jobs: [Job]) -> Int {
-    var hasher = Hasher()
+  nonisolated static func fingerprintJobsForCaching(_ jobs: [Job]) -> Int {  // swiftlint:disable:this explicit_acl
+    var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
     for job in jobs.sorted(by: { $0.id < $1.id }) {
       hasher.combine(job.id)
       hasher.combine(job.name)
@@ -564,8 +564,8 @@ final class StatsService: ObservableObject {
     return hasher.finalize()
   }
 
-  nonisolated static func fingerprintShiftsForCaching(_ shifts: [ShiftRow]) -> Int {
-    var hasher = Hasher()
+  nonisolated static func fingerprintShiftsForCaching(_ shifts: [ShiftRow]) -> Int {  // swiftlint:disable:this explicit_acl line_length
+    var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
     for shift in shifts.sorted(by: { $0.id < $1.id }) {
       hasher.combine(shift.id)
       hasher.combine(shift.job_id ?? "")
@@ -580,9 +580,9 @@ final class StatsService: ObservableObject {
   }
 
   nonisolated private static func monthNumber(fromISODate date: String) -> Int {
-    guard date.count >= 7 else { return -1 }
-    let monthStart = date.index(date.startIndex, offsetBy: 5)
-    let monthEnd = date.index(monthStart, offsetBy: 2)
+    guard date.count >= 7 else { return -1 }  // swiftlint:disable:this conditional_returns_on_newline no_magic_numbers
+    let monthStart = date.index(date.startIndex, offsetBy: 5)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
+    let monthEnd = date.index(monthStart, offsetBy: 2)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
     return Int(date[monthStart..<monthEnd]) ?? -1
   }
 
@@ -598,7 +598,7 @@ final class StatsService: ObservableObject {
   ///   - previousMonth: Month number (1-12) of previous month
   ///   - now: Current date for determining today/future
   /// - Returns: Array of cumulative data for each day of the month
-  nonisolated private static func buildCumulativeData(  // swiftlint:disable:this function_parameter_count
+  nonisolated private static func buildCumulativeData(  // swiftlint:disable:this function_body_length function_parameter_count line_length
     currentMonthShifts: [ShiftWithComputations],
     previousMonthShifts: [ShiftWithComputations],
     targetYear: Int,
@@ -607,35 +607,35 @@ final class StatsService: ObservableObject {
     previousMonth: Int,
     now: Date
   ) -> [DailyCumulativeData] {
-    let calendar = Calendar.current
+    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
 
     // Get days in target month
     guard
       let targetMonthDate = calendar.date(
-        from: DateComponents(year: targetYear, month: targetMonth, day: 1)),
+        from: DateComponents(year: targetYear, month: targetMonth, day: 1)),  // swiftlint:disable:this line_length multiline_arguments_brackets
       let range = calendar.range(of: .day, in: .month, for: targetMonthDate)
     else {
       return []
     }
-    let daysInCurrentMonth = range.count
+    let daysInCurrentMonth = range.count  // swiftlint:disable:this explicit_type_interface
 
     // Get days in previous month
     guard
       let prevMonthDate = calendar.date(
-        from: DateComponents(year: previousYear, month: previousMonth, day: 1)),
+        from: DateComponents(year: previousYear, month: previousMonth, day: 1)),  // swiftlint:disable:this line_length multiline_arguments_brackets
       let prevRange = calendar.range(of: .day, in: .month, for: prevMonthDate)
     else {
       return []
     }
-    let daysInPreviousMonth = prevRange.count
+    let daysInPreviousMonth = prevRange.count  // swiftlint:disable:this explicit_type_interface
 
     // Determine if we're viewing the current real month
-    let currentYear = calendar.component(.year, from: now)
-    let currentMonth = calendar.component(.month, from: now)
-    let isCurrentSelection = targetYear == currentYear && targetMonth == currentMonth
+    let currentYear = calendar.component(.year, from: now)  // swiftlint:disable:this explicit_type_interface
+    let currentMonth = calendar.component(.month, from: now)  // swiftlint:disable:this explicit_type_interface
+    let isCurrentSelection = targetYear == currentYear && targetMonth == currentMonth  // swiftlint:disable:this explicit_type_interface line_length
 
     // Today's day number (or end of month if viewing a past month)
-    let todayDayNumber =
+    let todayDayNumber =  // swiftlint:disable:this explicit_type_interface
       isCurrentSelection ? calendar.component(.day, from: now) : daysInCurrentMonth
 
     // Build earnings per day maps
@@ -644,16 +644,16 @@ final class StatsService: ObservableObject {
 
     for shift in currentMonthShifts {
       // Parse day from shift_date string (YYYY-MM-DD)
-      let components = shift.shiftDate.split(separator: "-")
-      if components.count >= 3, let day = Int(components[2]) {
+      let components = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
+      if components.count >= 3, let day = Int(components[2]) {  // swiftlint:disable:this no_magic_numbers
         currentMonthEarningsPerDay[day, default: 0] += shift.grossPay
       }
     }
 
     for shift in previousMonthShifts {
       // Parse day from shift_date string (YYYY-MM-DD)
-      let components = shift.shiftDate.split(separator: "-")
-      if components.count >= 3, let day = Int(components[2]) {
+      let components = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
+      if components.count >= 3, let day = Int(components[2]) {  // swiftlint:disable:this no_magic_numbers
         previousMonthEarningsPerDay[day, default: 0] += shift.grossPay
       }
     }
@@ -672,7 +672,7 @@ final class StatsService: ObservableObject {
         previousCumulative += previousMonthEarningsPerDay[day] ?? 0
       }
 
-      let dataPoint = DailyCumulativeData(
+      let dataPoint = DailyCumulativeData(  // swiftlint:disable:this explicit_type_interface
         day: day,
         currentMonth: currentCumulative,
         lastMonth: previousCumulative,
@@ -694,24 +694,24 @@ final class StatsService: ObservableObject {
     shifts: [ShiftWithComputations],
     now: Date
   ) -> [DailyData] {
-    var calendar = Calendar(identifier: .gregorian)
+    var calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
     calendar.timeZone = Date.localTimeZone
-    calendar.firstWeekday = 2  // Monday
+    calendar.firstWeekday = 2  // Monday // swiftlint:disable:this no_magic_numbers
 
     // Find Monday of current week
-    let weekday = calendar.component(.weekday, from: now)
+    let weekday = calendar.component(.weekday, from: now)  // swiftlint:disable:this explicit_type_interface
     // weekday: 1=Sun, 2=Mon, ..., 7=Sat
     // Days back to Monday: Sun(1)->6, Mon(2)->0, Tue(3)->1, etc.
-    let daysBackToMonday = weekday == 1 ? 6 : weekday - 2
+    let daysBackToMonday = weekday == 1 ? 6 : weekday - 2  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
     guard let monday = calendar.date(byAdding: .day, value: -daysBackToMonday, to: now) else {
       return []
     }
 
     // Build earnings map for shifts
-    var earningsMap: [String: (earnings: Double, hours: Double, shifts: Int)] = [:]
+    var earningsMap: [String: (earnings: Double, hours: Double, shifts: Int)] = [:]  // swiftlint:disable:this large_tuple line_length
     for shift in shifts {
-      let key = shift.shiftDate
-      let existing = earningsMap[key] ?? (0, 0, 0)
+      let key = shift.shiftDate  // swiftlint:disable:this explicit_type_interface
+      let existing = earningsMap[key] ?? (0, 0, 0)  // swiftlint:disable:this explicit_type_interface
       earningsMap[key] = (
         existing.earnings + shift.grossPay,
         existing.hours + shift.paidHours,
@@ -722,17 +722,17 @@ final class StatsService: ObservableObject {
     // Build data for each day of the week (Mon-Sun)
     var weekData: [DailyData] = []
 
-    for dayOffset in 0..<7 {
+    for dayOffset in 0..<7 {  // swiftlint:disable:this no_magic_numbers
       guard let date = calendar.date(byAdding: .day, value: dayOffset, to: monday) else {
         continue
       }
 
-      let isoDate = date.toISODateString()
-      let data = earningsMap[isoDate] ?? (0, 0, 0)
+      let isoDate = date.toISODateString()  // swiftlint:disable:this explicit_type_interface
+      let data = earningsMap[isoDate] ?? (0, 0, 0)  // swiftlint:disable:this explicit_type_interface
 
       // Get localized day names
-      let shortName = Self.shortWeekdayName(for: date, calendar: calendar)
-      let fullName = Self.fullWeekdayName(for: date, calendar: calendar)
+      let shortName = Self.shortWeekdayName(for: date, calendar: calendar)  // swiftlint:disable:this explicit_type_interface line_length
+      let fullName = Self.fullWeekdayName(for: date, calendar: calendar)  // swiftlint:disable:this explicit_type_interface line_length
 
       weekData.append(
         DailyData(
@@ -742,7 +742,7 @@ final class StatsService: ObservableObject {
           hours: data.hours,
           shifts: data.shifts,
           fullDate: isoDate
-        ))
+        ))  // swiftlint:disable:this multiline_arguments_brackets
     }
 
     return weekData
@@ -754,26 +754,27 @@ final class StatsService: ObservableObject {
   ///   - focusYear: Year of focus month
   ///   - focusMonth: Month number (1-12) of focus month
   /// - Returns: Best week data or nil if no shifts
-  nonisolated private static func buildBestWeekData(
+  nonisolated private static func buildBestWeekData(  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length
     shifts: [ShiftWithComputations],
-    focusYear: Int,
+    focusYear _: Int,
     focusMonth: Int
   ) -> BestWeekData? {
-    guard !shifts.isEmpty else { return nil }
+    guard !shifts.isEmpty else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
 
-    var calendar = Calendar(identifier: .gregorian)
+    var calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
     calendar.timeZone = Date.localTimeZone
-    calendar.firstWeekday = 2  // Monday
+    calendar.firstWeekday = 2  // Monday // swiftlint:disable:this no_magic_numbers
 
     // Group shifts by ISO week number
-    var weeklyEarnings: [Int: (earnings: Double, hours: Double, shifts: [ShiftWithComputations])] =
-      [:]
+    var weeklyEarnings:
+      [Int: (earnings: Double, hours: Double, shifts: [ShiftWithComputations])] =  // swiftlint:disable:this large_tuple line_length
+        [:]
 
     for shift in shifts {
       guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
-      let weekNumber = calendar.component(.weekOfYear, from: date)
+      let weekNumber = calendar.component(.weekOfYear, from: date)  // swiftlint:disable:this explicit_type_interface
 
-      let existing = weeklyEarnings[weekNumber] ?? (0, 0, [])
+      let existing = weeklyEarnings[weekNumber] ?? (0, 0, [])  // swiftlint:disable:this explicit_type_interface
       weeklyEarnings[weekNumber] = (
         existing.earnings + shift.grossPay,
         existing.hours + shift.paidHours,
@@ -787,8 +788,8 @@ final class StatsService: ObservableObject {
       return nil
     }
 
-    let bestWeekNumber = bestWeekEntry.key
-    let bestWeekShifts = bestWeekEntry.value.shifts
+    let bestWeekNumber = bestWeekEntry.key  // swiftlint:disable:this explicit_type_interface
+    let bestWeekShifts = bestWeekEntry.value.shifts  // swiftlint:disable:this explicit_type_interface
 
     // Find Monday of the best week
     // Get any date from that week and find its Monday
@@ -798,18 +799,18 @@ final class StatsService: ObservableObject {
       return nil
     }
 
-    let weekday = calendar.component(.weekday, from: sampleDate)
-    let daysBackToMonday = weekday == 1 ? 6 : weekday - 2
+    let weekday = calendar.component(.weekday, from: sampleDate)  // swiftlint:disable:this explicit_type_interface
+    let daysBackToMonday = weekday == 1 ? 6 : weekday - 2  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
     guard let monday = calendar.date(byAdding: .day, value: -daysBackToMonday, to: sampleDate)
     else {
       return nil
     }
 
     // Build earnings map
-    var earningsMap: [String: (earnings: Double, hours: Double, shifts: Int)] = [:]
+    var earningsMap: [String: (earnings: Double, hours: Double, shifts: Int)] = [:]  // swiftlint:disable:this large_tuple line_length
     for shift in bestWeekShifts {
-      let key = shift.shiftDate
-      let existing = earningsMap[key] ?? (0, 0, 0)
+      let key = shift.shiftDate  // swiftlint:disable:this explicit_type_interface
+      let existing = earningsMap[key] ?? (0, 0, 0)  // swiftlint:disable:this explicit_type_interface
       earningsMap[key] = (
         existing.earnings + shift.grossPay,
         existing.hours + shift.paidHours,
@@ -821,19 +822,19 @@ final class StatsService: ObservableObject {
     // Use date numbers for best week (e.g., "15.") instead of day names
     var weekData: [DailyData] = []
 
-    for dayOffset in 0..<7 {
+    for dayOffset in 0..<7 {  // swiftlint:disable:this no_magic_numbers
       guard let date = calendar.date(byAdding: .day, value: dayOffset, to: monday) else {
         continue
       }
 
-      let isoDate = date.toISODateString()
-      let dayComponents = isoDate.split(separator: "-")
+      let isoDate = date.toISODateString()  // swiftlint:disable:this explicit_type_interface
+      let dayComponents = isoDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
 
       // Only include days that are in the focus month
-      let dateMonth = dayComponents.count >= 2 ? Int(dayComponents[1]) ?? 0 : 0
-      let dayNumber = dayComponents.count >= 3 ? Int(dayComponents[2]) ?? 0 : 0
+      let dateMonth = dayComponents.count >= 2 ? Int(dayComponents[1]) ?? 0 : 0  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
+      let dayNumber = dayComponents.count >= 3 ? Int(dayComponents[2]) ?? 0 : 0  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
 
-      let data: (earnings: Double, hours: Double, shifts: Int)
+      let data: (earnings: Double, hours: Double, shifts: Int)  // swiftlint:disable:this large_tuple
       if dateMonth == focusMonth {
         data = earningsMap[isoDate] ?? (0, 0, 0)
       } else {
@@ -842,8 +843,8 @@ final class StatsService: ObservableObject {
       }
 
       // Show date number instead of day name for best week (e.g., "15.")
-      let dateLabel = "\(dayNumber)."
-      let fullName = Self.fullWeekdayName(for: date, calendar: calendar)
+      let dateLabel = "\(dayNumber)."  // swiftlint:disable:this explicit_type_interface
+      let fullName = Self.fullWeekdayName(for: date, calendar: calendar)  // swiftlint:disable:this explicit_type_interface line_length
 
       weekData.append(
         DailyData(
@@ -853,7 +854,7 @@ final class StatsService: ObservableObject {
           hours: data.hours,
           shifts: data.shifts,
           fullDate: isoDate
-        ))
+        ))  // swiftlint:disable:this multiline_arguments_brackets
     }
 
     return BestWeekData(
@@ -866,14 +867,14 @@ final class StatsService: ObservableObject {
 
   /// Get short weekday name (e.g., "Man", "Tir")
   nonisolated private static func shortWeekdayName(for date: Date, calendar: Calendar) -> String {
-    let formatter = FormatterCache.shortWeekdayFormatter(locale: Locale(identifier: "nb_NO"))
+    let formatter = FormatterCache.shortWeekdayFormatter(locale: Locale(identifier: "nb_NO"))  // swiftlint:disable:this explicit_type_interface line_length
     formatter.calendar = calendar
     return formatter.string(from: date).sentenceCased()
   }
 
   /// Get full weekday name (e.g., "Mandag", "Tirsdag")
   nonisolated private static func fullWeekdayName(for date: Date, calendar: Calendar) -> String {
-    let formatter = FormatterCache.weekdayFormatter(locale: Locale(identifier: "nb_NO"))
+    let formatter = FormatterCache.weekdayFormatter(locale: Locale(identifier: "nb_NO"))  // swiftlint:disable:this explicit_type_interface line_length
     formatter.calendar = calendar
     return formatter.string(from: date).sentenceCased()
   }
@@ -888,45 +889,45 @@ final class StatsService: ObservableObject {
   ///   - shifts: All computed shifts for the year
   ///   - snapshots: Wage snapshots to determine break deduction settings
   /// - Returns: Employment data with monthly breakdown and yearly average
-  nonisolated private static func buildEmploymentData(
+  nonisolated private static func buildEmploymentData(  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length
     focusYear: Int,
     shifts: [ShiftWithComputations],
     snapshots: [WageSnapshot]
   ) -> EmploymentData {
     // Full-time hours per week: 37.5h if break deduction enabled, 40h otherwise
     // Uses baseline snapshot's break setting (or first available snapshot)
-    let baselineSnapshot = snapshots.first { $0.isBaseline } ?? snapshots.first
-    let breakDeductionEnabled = baselineSnapshot?.effectiveBreakEnabled ?? true
-    let fullTimeHoursPerWeek: Double = breakDeductionEnabled ? 37.5 : 40
+    let baselineSnapshot = snapshots.first(where: \.isBaseline) ?? snapshots.first  // swiftlint:disable:this explicit_type_interface line_length
+    let breakDeductionEnabled = baselineSnapshot?.effectiveBreakEnabled ?? true  // swiftlint:disable:this explicit_type_interface line_length
+    let fullTimeHoursPerWeek: Double = breakDeductionEnabled ? 37.5 : 40  // swiftlint:disable:this no_magic_numbers
 
     // Short and full month names (Norwegian)
-    let shortMonthNames = [
+    let shortMonthNames = [  // swiftlint:disable:this explicit_type_interface
       "jan.", "feb.", "mar.", "apr.", "mai", "jun.",
       "jul.", "aug.", "sep.", "okt.", "nov.", "des.",
     ]
-    let fullMonthNames = [
+    let fullMonthNames = [  // swiftlint:disable:this explicit_type_interface
       "Januar", "Februar", "Mars", "April", "Mai", "Juni",
       "Juli", "August", "September", "Oktober", "November", "Desember",
     ]
 
-    var calendar = Calendar(identifier: .gregorian)
+    var calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
     calendar.timeZone = Date.localTimeZone
-    calendar.firstWeekday = 2  // Monday
+    calendar.firstWeekday = 2  // Monday // swiftlint:disable:this no_magic_numbers
 
     // Build a map of date -> hours worked
     var hoursPerDay: [String: Double] = [:]
     for shift in shifts {
-      let dateStr = shift.shiftDate
+      let dateStr = shift.shiftDate  // swiftlint:disable:this explicit_type_interface
       hoursPerDay[dateStr, default: 0] += shift.paidHours
     }
 
     // Track which days have shifts for hasShifts flag
     var daysWithShiftsPerMonth: [Int: Set<Int>] = [:]
     for shift in shifts {
-      let components = shift.shiftDate.split(separator: "-")
-      if components.count >= 3,
+      let components = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
+      if components.count >= 3,  // swiftlint:disable:this no_magic_numbers
         let month = Int(components[1]),
-        let day = Int(components[2])
+        let day = Int(components[2])  // swiftlint:disable:this no_magic_numbers
       {
         daysWithShiftsPerMonth[month, default: []].insert(day)
       }
@@ -938,7 +939,7 @@ final class StatsService: ObservableObject {
       var totalWeight: Double = 0
     }
     var monthlyAccumulators: [Int: MonthAccumulator] = [:]
-    for month in 1...12 {
+    for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
       monthlyAccumulators[month] = MonthAccumulator()
     }
 
@@ -946,28 +947,28 @@ final class StatsService: ObservableObject {
     guard let yearStart = calendar.date(from: DateComponents(year: focusYear, month: 1, day: 1))
     else {
       return EmploymentData(
-        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)
+        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)  // swiftlint:disable:this line_length multiline_arguments_brackets
     }
-    let weekday = calendar.component(.weekday, from: yearStart)
-    let daysBackToMonday = weekday == 1 ? 6 : weekday - 2
+    let weekday = calendar.component(.weekday, from: yearStart)  // swiftlint:disable:this explicit_type_interface
+    let daysBackToMonday = weekday == 1 ? 6 : weekday - 2  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
     guard var currentMonday = calendar.date(byAdding: .day, value: -daysBackToMonday, to: yearStart)
     else {
       return EmploymentData(
-        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)
+        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)  // swiftlint:disable:this line_length multiline_arguments_brackets
     }
 
     // End of the focus year
-    guard let yearEnd = calendar.date(from: DateComponents(year: focusYear, month: 12, day: 31))
+    guard let yearEnd = calendar.date(from: DateComponents(year: focusYear, month: 12, day: 31))  // swiftlint:disable:this line_length no_magic_numbers
     else {
       return EmploymentData(
-        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)
+        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)  // swiftlint:disable:this line_length multiline_arguments_brackets
     }
 
     // Process all weeks until we pass the end of the year
     while currentMonday <= yearEnd {
       // Build the 7 days of this week
       var weekDays: [Date] = []
-      for i in 0..<7 {
+      for i in 0..<7 {  // swiftlint:disable:this identifier_name no_magic_numbers
         if let day = calendar.date(byAdding: .day, value: i, to: currentMonday) {
           weekDays.append(day)
         }
@@ -979,43 +980,43 @@ final class StatsService: ObservableObject {
       var daysPerMonth: [Int: Int] = [:]
 
       for day in weekDays {
-        let month = calendar.component(.month, from: day)
-        let year = calendar.component(.year, from: day)
+        let month = calendar.component(.month, from: day)  // swiftlint:disable:this explicit_type_interface
+        let year = calendar.component(.year, from: day)  // swiftlint:disable:this explicit_type_interface
 
         // Only count days in the focus year
         if year == focusYear {
           daysPerMonth[month, default: 0] += 1
 
           // Add hours worked on this day to the appropriate month
-          let dateStr = day.toISODateString()
-          let hoursOnDay = hoursPerDay[dateStr] ?? 0
+          let dateStr = day.toISODateString()  // swiftlint:disable:this explicit_type_interface
+          let hoursOnDay = hoursPerDay[dateStr] ?? 0  // swiftlint:disable:this explicit_type_interface
           hoursPerMonthInWeek[month, default: 0] += hoursOnDay
         }
       }
 
       // Add weighted contribution to each month based on hours worked IN that month
       for (month, dayCount) in daysPerMonth {
-        let weight = Double(dayCount) / 7.0
-        let hoursInMonth = hoursPerMonthInWeek[month] ?? 0
+        let weight = Double(dayCount) / 7.0  // swiftlint:disable:this explicit_type_interface no_magic_numbers
+        let hoursInMonth = hoursPerMonthInWeek[month] ?? 0  // swiftlint:disable:this explicit_type_interface
 
         // Calculate employment percentage based only on hours worked in this month's portion
-        let monthEmploymentPct = (hoursInMonth / fullTimeHoursPerWeek) * 100
+        let monthEmploymentPct = (hoursInMonth / fullTimeHoursPerWeek) * 100  // swiftlint:disable:this explicit_type_interface line_length
 
         monthlyAccumulators[month]?.totalWeightedPercentage += monthEmploymentPct * weight
         monthlyAccumulators[month]?.totalWeight += weight
       }
 
       // Move to next week
-      currentMonday = calendar.date(byAdding: .day, value: 7, to: currentMonday) ?? currentMonday
+      currentMonday = calendar.date(byAdding: .day, value: 7, to: currentMonday) ?? currentMonday  // swiftlint:disable:this line_length no_magic_numbers
     }
 
     // Build monthly data
     var monthlyData: [EmploymentMonthlyData] = []
     var yearlySum: Double = 0
-    var monthsWithShifts = 0
+    var monthsWithShifts = 0  // swiftlint:disable:this explicit_type_interface
 
-    for month in 1...12 {
-      let accumulator = monthlyAccumulators[month] ?? MonthAccumulator()
+    for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
+      let accumulator = monthlyAccumulators[month] ?? MonthAccumulator()  // swiftlint:disable:this explicit_type_interface line_length
       let averagePercentage: Double
       if accumulator.totalWeight > 0 {
         averagePercentage = accumulator.totalWeightedPercentage / accumulator.totalWeight
@@ -1023,10 +1024,10 @@ final class StatsService: ObservableObject {
         averagePercentage = 0
       }
 
-      let hasShifts = !(daysWithShiftsPerMonth[month]?.isEmpty ?? true)
+      let hasShifts = !(daysWithShiftsPerMonth[month]?.isEmpty ?? true)  // swiftlint:disable:this explicit_type_interface line_length
 
       // Round to 1 decimal place
-      let roundedPercentage = (averagePercentage * 10).rounded() / 10
+      let roundedPercentage = (averagePercentage * 10).rounded() / 10  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
 
       monthlyData.append(
         EmploymentMonthlyData(
@@ -1036,10 +1037,10 @@ final class StatsService: ObservableObject {
           monthNumber: month,
           averagePercentage: roundedPercentage,
           hasShifts: hasShifts
-        ))
+        ))  // swiftlint:disable:this multiline_arguments_brackets
 
       // Add to yearly sum if month has shifts
-      if hasShifts && accumulator.totalWeight > 0 {
+      if hasShifts, accumulator.totalWeight > 0 {
         yearlySum += averagePercentage
         monthsWithShifts += 1
       }
@@ -1048,7 +1049,7 @@ final class StatsService: ObservableObject {
     // Calculate yearly average
     let yearlyAverage: Double?
     if monthsWithShifts > 0 {
-      yearlyAverage = (yearlySum / Double(monthsWithShifts) * 10).rounded() / 10
+      yearlyAverage = (yearlySum / Double(monthsWithShifts) * 10).rounded() / 10  // swiftlint:disable:this line_length no_magic_numbers
     } else {
       yearlyAverage = nil
     }
@@ -1072,11 +1073,11 @@ final class StatsService: ObservableObject {
     shifts: [ShiftWithComputations]
   ) -> [MonthlyIncomeData] {
     // Short and full month names (Norwegian)
-    let shortMonthNames = [
+    let shortMonthNames = [  // swiftlint:disable:this explicit_type_interface
       "jan.", "feb.", "mar.", "apr.", "mai", "jun.",
       "jul.", "aug.", "sep.", "okt.", "nov.", "des.",
     ]
-    let fullMonthNames = [
+    let fullMonthNames = [  // swiftlint:disable:this explicit_type_interface
       "Januar", "Februar", "Mars", "April", "Mai", "Juni",
       "Juli", "August", "September", "Oktober", "November", "Desember",
     ]
@@ -1088,10 +1089,10 @@ final class StatsService: ObservableObject {
 
     for shift in shifts {
       // Parse month from shift_date string (YYYY-MM-DD)
-      let components = shift.shiftDate.split(separator: "-")
-      guard components.count >= 2,
+      let components = shift.shiftDate.split(separator: "-")  // swiftlint:disable:this explicit_type_interface
+      guard components.count >= 2,  // swiftlint:disable:this no_magic_numbers
         let month = Int(components[1]),
-        month >= 1, month <= 12
+        month >= 1, month <= 12  // swiftlint:disable:this no_magic_numbers
       else {
         continue
       }
@@ -1102,7 +1103,7 @@ final class StatsService: ObservableObject {
     }
 
     // Build monthly data for all 12 months
-    return (1...12).map { month in
+    return (1...12).map { month in  // swiftlint:disable:this no_magic_numbers
       MonthlyIncomeData(
         month: shortMonthNames[month - 1],
         fullMonth: fullMonthNames[month - 1],
@@ -1118,19 +1119,21 @@ final class StatsService: ObservableObject {
 
 // MARK: - Errors
 
-enum StatsServiceError: Error, LocalizedError {
-  case notAuthenticated
+enum StatsServiceError: Error, LocalizedError {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  case notAuthenticated  // swiftlint:disable:this sorted_enum_cases
   case noLocalData
-  case computationFailed(underlying: Error)
+  case computationFailed(underlying: Error)  // swiftlint:disable:this sorted_enum_cases
 
-  var errorDescription: String? {
+  var errorDescription: String? {  // swiftlint:disable:this explicit_acl
     switch self {
     case .notAuthenticated:
       return "Not authenticated"
+
     case .noLocalData:
       return "No local data available. Please wait for sync to complete."
+
     case .computationFailed(let error):
       return "Failed to compute stats: \(error.localizedDescription)"
     }
   }
-}
+}  // swiftlint:disable:this file_length

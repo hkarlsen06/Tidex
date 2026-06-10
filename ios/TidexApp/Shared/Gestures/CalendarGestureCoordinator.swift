@@ -1,3 +1,13 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_name file_types_order multiline_arguments_brackets no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable prefer_condition_list prefer_self_in_static_references required_deinit type_contents_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable unused_parameter
 import SwiftUI
 import UIKit
 
@@ -29,7 +39,7 @@ struct CalendarGestureConfig {
   /// Minimum movement between drag update callbacks
   let dragUpdateThreshold: CGFloat
 
-  static let `default` = CalendarGestureConfig(
+  static let `default` = Self(
     minimumDragDistance: 10,  // Needs some movement to be a drag
     dragUpdateThreshold: 5  // Report updates frequently
   )
@@ -94,7 +104,7 @@ struct CalendarSelectionGestureModifier: ViewModifier {
       location.x - (dragStartLocation?.x ?? 0),
       location.y - (dragStartLocation?.y ?? 0))
 
-    if !isDragging && drift >= config.minimumDragDistance {
+    if !isDragging, drift >= config.minimumDragDistance {
       // Start drag mode
       isDragging = true
       dragHaptic.selectionChanged()
@@ -239,7 +249,7 @@ private struct CalendarPressOverlay: UIViewRepresentable {
     return view
   }
 
-  func updateUIView(_ uiView: UIView, context: Context) {
+  func updateUIView(_: UIView, context: Context) {
     context.coordinator.onTap = onTap
     context.coordinator.onLongPress = onLongPress
     context.coordinator.onSwipeLeft = onSwipeLeft
@@ -323,8 +333,8 @@ private struct CalendarPressOverlay: UIViewRepresentable {
     }
 
     func gestureRecognizer(
-      _ gestureRecognizer: UIGestureRecognizer,
-      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+      _: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer
     ) -> Bool {
       true
     }

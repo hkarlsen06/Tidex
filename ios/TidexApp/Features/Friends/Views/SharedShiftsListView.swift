@@ -73,9 +73,9 @@ struct SharedShiftsListView: View {
       ZStack {
         TidexAppBackground()
 
-        if !isContentReady && shifts.isEmpty {
+        if !isContentReady, shifts.isEmpty {
           Color.clear
-        } else if isLoading && shifts.isEmpty {
+        } else if isLoading, shifts.isEmpty {
           loadingState
         } else if showListView {
           shiftListContent
@@ -187,7 +187,8 @@ struct SharedShiftsListView: View {
 
         // Leave edge swipes to NavigationStack interactive pop gesture.
         let startX = value.startLocation.x
-        guard startX > edgeExclusion && startX < (containerWidth - edgeExclusion) else { return }
+        // swiftlint:disable:next conditional_returns_on_newline
+        guard startX > edgeExclusion, startX < (containerWidth - edgeExclusion) else { return }
 
         let swipeLeft = horizontal < 0
         let action: (() -> Void)?
@@ -365,7 +366,7 @@ struct SharedShiftsListView: View {
     ),
     shifts: [],
     jobs: [],
-    year: 2025,
+    year: 2_025,
     month: 1,
     phase: nil,
     isLoading: false,

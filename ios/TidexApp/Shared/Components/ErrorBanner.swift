@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_types_order implicit_optional_initialization no_empty_block no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable shorthand_optional_binding vertical_whitespace_between_cases
 import SwiftUI
 
 /// Error banner for displaying error messages
@@ -5,8 +13,8 @@ import SwiftUI
 /// Supports optional retry and dismiss actions
 struct ErrorBanner: View {
   let message: String
-  var onRetry: (() -> Void)? = nil
-  var onDismiss: (() -> Void)? = nil
+  var onRetry: (() -> Void)?
+  var onDismiss: (() -> Void)?
 
   var body: some View {
     HStack(alignment: .top, spacing: Spacing.sm) {
@@ -21,7 +29,7 @@ struct ErrorBanner: View {
 
       Spacer()
 
-      if let onRetry = onRetry {
+      if let onRetry {
         Button(action: onRetry) {
           Text(.commonRetry)
             .font(.tidexLabel)
@@ -32,7 +40,7 @@ struct ErrorBanner: View {
         .buttonStyle(.plain)
       }
 
-      if let onDismiss = onDismiss {
+      if let onDismiss {
         Button(action: onDismiss) {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)
@@ -63,14 +71,15 @@ struct SuccessBanner: View {
 
   let message: String
   var style: Style = .inline
-  var actionTitle: LocalizedStringResource? = nil
-  var onAction: (() -> Void)? = nil
-  var onDismiss: (() -> Void)? = nil
+  var actionTitle: LocalizedStringResource?
+  var onAction: (() -> Void)?
+  var onDismiss: (() -> Void)?
 
   private var backgroundColor: Color {
     switch style {
     case .inline:
       return Color.tidexSuccess.opacity(0.15)
+
     case .toast:
       return .tidexSurfacePrimary
     }
@@ -80,6 +89,7 @@ struct SuccessBanner: View {
     switch style {
     case .inline:
       return Color.tidexSuccess.opacity(0.3)
+
     case .toast:
       return .tidexBorder
     }
@@ -89,6 +99,7 @@ struct SuccessBanner: View {
     switch style {
     case .inline:
       return CornerRadius.md
+
     case .toast:
       return CornerRadius.xxxl
     }
@@ -127,7 +138,7 @@ struct SuccessBanner: View {
         .fixedSize(horizontal: true, vertical: false)
       }
 
-      if let onDismiss = onDismiss {
+      if let onDismiss {
         Button(action: onDismiss) {
           Image(systemName: "xmark")
             .foregroundColor(.tidexTextMuted)

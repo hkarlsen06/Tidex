@@ -16,10 +16,13 @@ enum SSEParseError: Error, LocalizedError {
     switch self {
     case .invalidUTF8Data:
       return "Received invalid UTF-8 data in SSE stream"
+
     case .jsonDecodingFailed(let error):
       return "Failed to decode JSON from SSE event: \(error.localizedDescription)"
+
     case .streamInterrupted:
       return "SSE stream was interrupted"
+
     case .connectionClosed:
       return "SSE connection was closed"
     }
@@ -256,7 +259,7 @@ extension SSEStreamParser {
   /// - Returns: An async throwing stream of decoded chunk objects
   static func parseChunks<T: Decodable>(
     _ bytes: URLSession.AsyncBytes,
-    as chunkType: T.Type
+    as _: T.Type
   ) -> AsyncThrowingStream<T, Error> {
     AsyncThrowingStream { continuation in
       let task = Task {

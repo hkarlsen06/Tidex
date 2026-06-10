@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_type_interface no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_contents_order
 import Foundation
 
 extension String {

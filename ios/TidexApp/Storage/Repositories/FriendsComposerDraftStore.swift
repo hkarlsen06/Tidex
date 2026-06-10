@@ -42,6 +42,7 @@ final class FriendsComposerDraftStore {
       switch type {
       case .image:
         self = .image(try container.decode(PersistedImageAttachmentDraft.self, forKey: .image))
+
       case .shiftSnapshot:
         self = .shiftSnapshot(
           try container.decode(ComposerShiftSnapshotDraft.self, forKey: .shiftSnapshot)
@@ -56,6 +57,7 @@ final class FriendsComposerDraftStore {
       case .image(let imageDraft):
         try container.encode(DraftType.image, forKey: .type)
         try container.encode(imageDraft, forKey: .image)
+
       case .shiftSnapshot(let draft):
         try container.encode(DraftType.shiftSnapshot, forKey: .type)
         try container.encode(draft, forKey: .shiftSnapshot)
@@ -367,6 +369,7 @@ final class FriendsComposerDraftStore {
       switch attachment {
       case .shiftSnapshot(let draft):
         return PersistedAttachmentDraft.shiftSnapshot(draft)
+
       case .image(let image):
         let fileURL = try writeImageAttachment(
           image,
@@ -402,13 +405,14 @@ final class FriendsComposerDraftStore {
 
   private func materializePersistedAttachmentDrafts(
     _ persistedDrafts: [PersistedAttachmentDraft],
-    threadId: String,
-    viewerUserId: String
+    threadId _: String,
+    viewerUserId _: String
   ) throws -> [FriendsComposerAttachmentDraft] {
     try persistedDrafts.compactMap { persistedDraft in
       switch persistedDraft {
       case .shiftSnapshot(let draft):
         return .shiftSnapshot(draft)
+
       case .image(let imageDraft):
         let fileURL = attachmentsDirectory.appendingPathComponent(imageDraft.relativePath)
         let data = try Data(contentsOf: fileURL)
@@ -528,10 +532,13 @@ final class FriendsComposerDraftStore {
     switch mimeType.lowercased() {
     case "image/png":
       return "png"
+
     case "image/webp":
       return "webp"
+
     case "image/heic", "image/heif":
       return "heic"
+
     default:
       return "jpg"
     }

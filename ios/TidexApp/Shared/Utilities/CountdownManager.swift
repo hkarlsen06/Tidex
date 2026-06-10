@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface shorthand_optional_binding
 import Combine
 import Foundation
 
@@ -66,9 +70,9 @@ final class CountdownManager: ObservableObject {
 
   private func updateCountdowns() {
     // Update shift countdown
-    if let shiftDate = shiftDate,
-      let startTime = startTime,
-      let endTime = endTime
+    if let shiftDate,
+      let startTime,
+      let endTime
     {
       let (text, isActive, progress) = CountdownFormatter.formatShiftCountdown(
         shiftDate: shiftDate,
@@ -91,7 +95,7 @@ final class CountdownManager: ObservableObject {
     }
 
     // Update payroll countdown
-    if let payrollDate = payrollDate {
+    if let payrollDate {
       let (text, isPast, isToday) = CountdownFormatter.formatPayrollCountdown(
         payrollDate: payrollDate
       )

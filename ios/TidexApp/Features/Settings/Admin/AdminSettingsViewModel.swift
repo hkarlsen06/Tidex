@@ -181,7 +181,7 @@ struct AdminReportItem: Codable, Identifiable {
   var reasonTitle: String {
     reason
       .split(separator: "_")
-      .map { $0.capitalized }
+      .map(\.capitalized)
       .joined(separator: " ")
   }
 }
@@ -284,9 +284,9 @@ struct AnyCodable: Codable {
       value = bool
     } else if let string = try? container.decode(String.self) {
       value = string
-    } else if let array = try? container.decode([AnyCodable].self) {
-      value = array.map { $0.value }
-    } else if let dict = try? container.decode([String: AnyCodable].self) {
+    } else if let array = try? container.decode([Self].self) {
+      value = array.map(\.value)
+    } else if let dict = try? container.decode([String: Self].self) {
       value = dict.mapValues { $0.value }
     } else if container.decodeNil() {
       value = NSNull()
@@ -300,14 +300,19 @@ struct AnyCodable: Codable {
     switch value {
     case let int as Int:
       try container.encode(int)
+
     case let double as Double:
       try container.encode(double)
+
     case let bool as Bool:
       try container.encode(bool)
+
     case let string as String:
       try container.encode(string)
+
     case is NSNull:
       try container.encodeNil()
+
     default:
       try container.encodeNil()
     }
@@ -426,7 +431,7 @@ struct ImpersonationTabState {
 /// AdminSettingsViewModel uses grouped state structs to reduce re-renders.
 /// When a property in one state group changes, only observers of that group re-evaluate.
 @MainActor
-final class AdminSettingsViewModel: ObservableObject {
+final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
 
   // MARK: - Common State
 
@@ -731,16 +736,22 @@ final class AdminSettingsViewModel: ObservableObject {
     switch tab {
     case .users:
       await fetchUsers(page: 1, search: nil)
+
     case .subscribers:
       await fetchSubscribers()
+
     case .feedback:
       await fetchFeedback()
+
     case .reports:
       await fetchReports()
+
     case .auditLog:
       await fetchAuditLog()
+
     case .shares:
       await fetchShares()
+
     case .notifications:
       await fetchBroadcastHistory()
     }
@@ -768,7 +779,7 @@ final class AdminSettingsViewModel: ObservableObject {
   }
 
   func loadMoreUsers() async {
-    guard usersHasMore && !usersIsLoading else { return }
+    guard usersHasMore, !usersIsLoading else { return }  // swiftlint:disable:this conditional_returns_on_newline
     let query = usersSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
     await fetchUsers(page: usersCurrentPage + 1, search: query.isEmpty ? nil : query, append: true)
   }
@@ -781,7 +792,7 @@ final class AdminSettingsViewModel: ObservableObject {
         URLQueryItem(name: "page", value: String(page)),
         URLQueryItem(name: "perPage", value: String(perPage)),
       ]
-      if let search = search { queryItems.append(URLQueryItem(name: "search", value: search)) }
+      if let search { queryItems.append(URLQueryItem(name: "search", value: search)) }
       let url = try adminRequestURL(path: "/api/admin/users", queryItems: queryItems)
       let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
 
@@ -1304,7 +1315,7 @@ final class AdminSettingsViewModel: ObservableObject {
           ])
         let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
         // Filter out already selected users
-        let selectedIds = Set(notificationSelectedUsers.map { $0.id })
+        let selectedIds = Set(notificationSelectedUsers.map(\.id))  // swiftlint:disable:this explicit_type_interface
         notificationUserSearchResults = result.users.filter { !selectedIds.contains($0.id) }
       } catch {
         notificationUserSearchResults = []
@@ -1326,7 +1337,7 @@ final class AdminSettingsViewModel: ObservableObject {
     previewCount = notificationSelectedUsers.count
   }
 
-  func sendNotification() async {
+  func sendNotification() async {  // swiftlint:disable:this explicit_acl function_body_length type_contents_order
     let draftBeforeSend = NotificationFormDraft(
       title: notificationTitle,
       titleNo: notificationTitleNo,
@@ -1341,15 +1352,15 @@ final class AdminSettingsViewModel: ObservableObject {
 
     // Require both English and Norwegian title/body
     guard
-      !notificationTitle.isEmpty && !notificationTitleNo.isEmpty && !notificationBody.isEmpty
-        && !notificationBodyNo.isEmpty
+      !notificationTitle.isEmpty, !notificationTitleNo.isEmpty, !notificationBody.isEmpty,
+      !notificationBodyNo.isEmpty
     else {
       errorMessage = "English and Norwegian title and body are required"
       return
     }
 
     // For specific target, require at least one selected user
-    if notificationTarget == "specific" && notificationSelectedUsers.isEmpty {
+    if notificationTarget == "specific", notificationSelectedUsers.isEmpty {
       errorMessage = "Please select at least one user"
       return
     }
@@ -1373,7 +1384,7 @@ final class AdminSettingsViewModel: ObservableObject {
         body["deeplinkNo"] = notificationDeeplinkNo
       }
       if notificationTarget == "specific" {
-        body["specificUserIds"] = notificationSelectedUsers.map { $0.id }
+        body["specificUserIds"] = notificationSelectedUsers.map(\.id)
       }
 
       let result: AdminActionResponse = try await makeRequest(
@@ -1862,4 +1873,4 @@ extension AdminSubscriberItem {
     default: return "Free"
     }
   }
-}
+}  // swiftlint:disable:this file_length

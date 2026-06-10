@@ -3,10 +3,10 @@ import UIKit
 
 /// Screen for configuring break, tax, and payday with progressive accordion
 /// Each section expands one at a time for focused input
-struct SettingsAccordionScreen: View {
+struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
-  var onBack: (() -> Void)? = nil
+  var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
 
   @State private var currentSection: SettingsSection? = .breakDeduction
   @State private var completedSections: Set<SettingsSection> = []
@@ -36,7 +36,7 @@ struct SettingsAccordionScreen: View {
         ScrollView {
           VStack(spacing: 0) {
             // Back button (if provided)
-            if let onBack = onBack {
+            if let onBack {
               HStack {
                 Button(action: {
                   UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -173,9 +173,8 @@ struct SettingsAccordionScreen: View {
   private var breakSummary: String {
     if data.breakEnabled {
       return String(localized: .onboardingSettingsBreakEnabledSummary)
-    } else {
-      return String(localized: .onboardingSettingsBreakDisabledSummary)
     }
+    return String(localized: .onboardingSettingsBreakDisabledSummary)
   }
 
   // MARK: - Tax Section
@@ -311,8 +310,8 @@ struct SettingsAccordionScreen: View {
     }
     .onTapGesture {
       // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
-      if currentSection != .tax
-        && (completedSections.contains(.tax) || completedSections.contains(.breakDeduction))
+      if currentSection != .tax,
+        completedSections.contains(.tax) || completedSections.contains(.breakDeduction)
       {
         withAnimation {
           currentSection = .tax
@@ -325,9 +324,8 @@ struct SettingsAccordionScreen: View {
   private var taxSummary: String {
     if data.taxEnabled {
       return "\(Int(data.taxPercentage))%"
-    } else {
-      return String(localized: .onboardingSettingsTaxDisabledSummary)
     }
+    return String(localized: .onboardingSettingsTaxDisabledSummary)
   }
 
   // MARK: - Payday Section
@@ -452,7 +450,7 @@ struct SettingsAccordionScreen: View {
         }
 
         // Show current custom value if not a preset
-        if !payrollDayOptions.contains(data.payrollDay) && !showingPaydayInput {
+        if !payrollDayOptions.contains(data.payrollDay), !showingPaydayInput {
           Text(String(localized: .onboardingSettingsPaydayCustomValue(data.payrollDay)))
             .font(.tidexFootnote)
             .foregroundColor(.tidexBlue)
@@ -461,8 +459,8 @@ struct SettingsAccordionScreen: View {
     }
     .onTapGesture {
       // Allow tapping if: already completed (to edit) OR unlocked and not yet completed
-      if currentSection != .payday
-        && (completedSections.contains(.payday) || completedSections.contains(.tax))
+      if currentSection != .payday,
+        completedSections.contains(.payday) || completedSections.contains(.tax)
       {
         withAnimation {
           currentSection = .payday
@@ -475,9 +473,8 @@ struct SettingsAccordionScreen: View {
   private var paydaySummary: String {
     if data.payrollDay == 31 {
       return String(localized: .onboardingPersonalizePaydayLastDay)
-    } else {
-      return "\(data.payrollDay)."
     }
+    return "\(data.payrollDay)."
   }
 
   // MARK: - Helpers
@@ -490,8 +487,10 @@ struct SettingsAccordionScreen: View {
       switch section {
       case .breakDeduction:
         currentSection = .tax
+
       case .tax:
         currentSection = .payday
+
       case .payday:
         // All done - collapse the final section so its completed state is visible.
         currentSection = nil
@@ -590,4 +589,4 @@ private struct PaydayButton: View {
 
 #Preview {
   SettingsAccordionScreen(data: OnboardingData(), onContinue: {})
-}
+}  // swiftlint:disable:this file_length

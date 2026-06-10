@@ -148,21 +148,21 @@ final class NotificationPreferencesRepository: ObservableObject {
 
     var hasChanges = false
 
-    if let remindersEnabled = remindersEnabled,
+    if let remindersEnabled,
       remindersEnabled != preferences.shiftRemindersEnabled
     {
       preferences.shiftRemindersEnabled = remindersEnabled
       hasChanges = true
     }
 
-    if let reminderMinutes = reminderMinutes,
+    if let reminderMinutes,
       reminderMinutes != preferences.shiftReminderMinutesArray
     {
       preferences.shiftReminderMinutesArray = reminderMinutes
       hasChanges = true
     }
 
-    if let sharedShiftsEnabled = sharedShiftsEnabled,
+    if let sharedShiftsEnabled,
       sharedShiftsEnabled != preferences.sharedShiftsEnabled
     {
       preferences.sharedShiftsEnabled = sharedShiftsEnabled
@@ -170,7 +170,7 @@ final class NotificationPreferencesRepository: ObservableObject {
     }
 
     let currentSmartEnabled = preferences.smartNotificationsEnabled ?? true
-    if let smartNotificationsEnabled = smartNotificationsEnabled,
+    if let smartNotificationsEnabled,
       smartNotificationsEnabled != currentSmartEnabled
     {
       preferences.smartNotificationsEnabled = smartNotificationsEnabled

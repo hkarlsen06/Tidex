@@ -35,10 +35,13 @@ enum SendAttachmentRecipientOrdering {
         if lhsTimestamp != rhsTimestamp {
           return lhsTimestamp > rhsTimestamp
         }
+
       case (.some, .none):
         return true
+
       case (.none, .some):
         return false
+
       case (.none, .none):
         break
       }

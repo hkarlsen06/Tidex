@@ -19,8 +19,10 @@ enum CalendarSubscriptionContentMode: String, CaseIterable, Identifiable, Codabl
     switch self {
     case .eventsOnly:
       return String(localized: .calendarSubscriptionModeEventsOnly)
+
     case .shiftsOnly:
       return String(localized: .calendarSubscriptionModeShiftsOnly)
+
     case .shiftsAndEvents:
       return String(localized: .calendarSubscriptionModeShiftsAndEvents)
     }
@@ -39,7 +41,8 @@ struct CalendarSubscriptionMetadata: Equatable, Sendable {
 struct CalendarSubscriptionState: Equatable, Sendable {
   var metadata: CalendarSubscriptionMetadata?
 
-  static let inactive = CalendarSubscriptionState(metadata: nil)
+  // swiftlint:disable:next redundant_type_annotation
+  internal static let inactive: Self = Self(metadata: nil)
 
   var isActive: Bool { metadata != nil }
 }
@@ -74,7 +77,8 @@ protocol CalendarSubscriptionServicing {
 }
 
 struct CalendarSubscriptionService: CalendarSubscriptionServicing {
-  static let shared = CalendarSubscriptionService()
+  // swiftlint:disable:next redundant_type_annotation
+  internal static let shared: Self = Self()
 
   private let supabaseClient: SupabaseClient
 
@@ -140,19 +144,16 @@ struct CalendarSubscriptionService: CalendarSubscriptionServicing {
       .execute()
       .value
 
-    return try row.metadata
+    return row.metadata
   }
 
   func disableSubscription() async throws -> Bool {
     _ = try await AuthSessionManager.shared.getSession()
 
-    let disabled: Bool =
-      try await supabaseClient
+    return try await supabaseClient
       .rpc("disable_my_calendar_subscription")
       .execute()
-      .value
-
-    return disabled
+      .value as Bool
   }
 
   func webcalURL(rawToken: String) -> URL? {
@@ -317,16 +318,14 @@ private struct CalendarSubscriptionMetadataRow: Decodable {
   }
 
   var metadata: CalendarSubscriptionMetadata {
-    get throws {
-      CalendarSubscriptionMetadata(
-        id: id,
-        contentMode: contentMode,
-        tokenSuffix: tokenSuffix,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-        lastUsedAt: lastUsedAt
-      )
-    }
+    CalendarSubscriptionMetadata(
+      id: id,
+      contentMode: contentMode,
+      tokenSuffix: tokenSuffix,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      lastUsedAt: lastUsedAt
+    )
   }
 }
 

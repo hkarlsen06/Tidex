@@ -7,8 +7,10 @@ struct OTPInputField: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   @Binding var code: String
-  var error: String? = nil
-  var onComplete: (() -> Void)? = nil
+  // swiftlint:disable:next explicit_acl
+  var error: String?
+  // swiftlint:disable:next explicit_acl
+  var onComplete: (() -> Void)?
   var autoFocus: Bool = true
 
   @FocusState private var isFocused: Bool
@@ -55,7 +57,7 @@ struct OTPInputField: View {
       }
 
       // Error message
-      if let error = error, !error.isEmpty {
+      if let error, !error.isEmpty {
         Text(error)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)
@@ -78,7 +80,8 @@ struct OTPInputField: View {
 
   private func handleCodeChange(_ newValue: String) {
     // Filter non-digits and limit to 6 characters
-    let filtered = newValue.filter { $0.isNumber }
+    // swiftlint:disable:next explicit_type_interface
+    let filtered = newValue.filter(\.isNumber)
     if filtered.count > digitCount {
       code = String(filtered.prefix(digitCount))
     } else if filtered != newValue {
@@ -139,11 +142,11 @@ private struct DigitBox: View {
         .stroke(borderColor, lineWidth: isCurrentPosition ? 2 : 1)
 
       // Digit or cursor
-      if let digit = digit {
+      if let digit {
         Text(digit)
           .font(.tidexMonoTitle)
           .foregroundColor(.tidexTextPrimary)
-      } else if isCurrentPosition && cursorVisible {
+      } else if isCurrentPosition, cursorVisible {
         // Blinking cursor
         RoundedRectangle(cornerRadius: 1)
           .fill(Color.tidexBrandPrimary)

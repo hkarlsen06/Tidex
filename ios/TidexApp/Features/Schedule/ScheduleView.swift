@@ -26,8 +26,10 @@ private enum ShiftListItem: Identifiable {
     switch self {
     case .shift(let shift):
       return shift.id
+
     case .event(let event):
       return "event-\(event.id)"
+
     case .todayPlaceholder:
       return "today-placeholder"
     }
@@ -38,8 +40,10 @@ private enum ShiftListItem: Identifiable {
     switch self {
     case .shift(let shift):
       return shift.shiftDate
+
     case .event(let event):
       return event.coveredDateISO
+
     case .todayPlaceholder:
       return todayISO()
     }
@@ -49,8 +53,10 @@ private enum ShiftListItem: Identifiable {
     switch self {
     case .shift(let shift):
       return shift.startTime
+
     case .event(let event):
       return event.sortTime
+
     case .todayPlaceholder:
       return "99:99"
     }
@@ -60,8 +66,10 @@ private enum ShiftListItem: Identifiable {
     switch self {
     case .event(let event):
       return event.isAllDay ? 0 : 1
+
     case .shift:
       return 1
+
     case .todayPlaceholder:
       return 2
     }
@@ -244,7 +252,7 @@ struct ShiftsView: View {
   @ToolbarContentBuilder
   private var shiftsToolbarContent: some ToolbarContent {
     // Share button (only in calendar view, not list view)
-    if !showListView && !shouldShowWorkSetupRequiredPlaceholder {
+    if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
       ToolbarItem(placement: .topBarLeading) {
         Button {
           startCalendarShare()
@@ -258,7 +266,7 @@ struct ShiftsView: View {
     }
 
     // Selection mode toggle (only in calendar view)
-    if !showListView && !shouldShowWorkSetupRequiredPlaceholder {
+    if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
       ToolbarSpacer(.fixed, placement: .topBarLeading)
       ToolbarItem(placement: .topBarLeading) {
         selectionModeToggleButton
@@ -1015,7 +1023,7 @@ struct ShiftsView: View {
 
     // Make sure we're on the correct committed month before trying to find the shift
     // (committed values indicate data is ready to display)
-    guard viewModel.committedYear == targetYear && viewModel.committedMonth == targetMonth else {
+    guard viewModel.committedYear == targetYear, viewModel.committedMonth == targetMonth else {
       logger.debug(
         " Not on target month yet (committed: \(viewModel.committedYear)-\(viewModel.committedMonth), target: \(targetYear)-\(targetMonth))"
       )
@@ -1162,6 +1170,7 @@ struct ShiftsView: View {
       switch singleItem {
       case .shift(let shift):
         selectedShift = shift
+
       case .event(let event):
         handleEventTapped(event.event)
       }
@@ -1272,7 +1281,7 @@ struct ShiftsView: View {
     PullToRefreshContainer(onRefresh: {
       await refreshShiftsContent()
     }) {
-      GeometryReader { geometry in
+      GeometryReader { _ in  // swiftlint:disable:this closure_body_length
         ZStack {
           // Background layer to dismiss selection when tapping outside calendar
           Color.clear
@@ -1355,7 +1364,7 @@ struct ShiftsView: View {
                 if !viewModel.selectedDates.isEmpty {
                   return
                 }
-                if let dateISO = dateISO {
+                if let dateISO {
                   navigateToAddTab(preselectedDate: dateISO)
                 }
               },
@@ -1416,7 +1425,7 @@ struct ShiftsView: View {
   /// Shifts list panel for iPad landscape (right side)
   @ViewBuilder
   private var shiftsPanelForIPad: some View {
-    if shiftListItems.isEmpty && !viewModel.isCurrentMonth {
+    if shiftListItems.isEmpty, !viewModel.isCurrentMonth {
       // Empty state for past/future months
       ScrollView {
         ShiftsEmptyState(
@@ -1492,7 +1501,7 @@ struct ShiftsView: View {
     PullToRefreshContainer(onRefresh: {
       await refreshShiftsContent()
     }) {
-      GeometryReader { geometry in
+      GeometryReader { _ in  // swiftlint:disable:this closure_body_length
         // Calendar only - no list below. Tapping days opens day sheet.
         ZStack {
           // Background layer to dismiss selection when tapping outside calendar
@@ -1582,7 +1591,7 @@ struct ShiftsView: View {
                 }
 
                 // No selection active - navigate to Add tab with date pre-selected
-                if let dateISO = dateISO {
+                if let dateISO {
                   navigateToAddTab(preselectedDate: dateISO)
                 }
               },
@@ -1647,7 +1656,7 @@ struct ShiftsView: View {
   private var listViewContent: some View {
     // Show empty state only when there are no shifts AND it's not current month
     // (current month with no shifts shows just the today placeholder card in the list)
-    if shiftListItems.isEmpty && !viewModel.isCurrentMonth {
+    if shiftListItems.isEmpty, !viewModel.isCurrentMonth {
       // Empty state for past/future months with no shifts
       ScrollView {
         ShiftsEmptyState(
@@ -1687,7 +1696,7 @@ struct ShiftsView: View {
   }
 
   private var defaultActiveJobId: String? {
-    viewModel.activeJobs.first(where: { $0.is_default })?.id
+    viewModel.activeJobs.first(where: \.is_default)?.id
   }
 
   private var filteredListShifts: [ShiftWithComputations] {

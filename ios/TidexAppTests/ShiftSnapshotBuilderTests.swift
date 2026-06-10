@@ -1,6 +1,16 @@
+import Nimble
 import XCTest
 
 @testable import Tidex
+
+private enum ShiftSnapshotBuilderTestValues {
+  static let shiftBasePay: Double = 1_000
+  static let shiftSupplementPay: Double = 200
+  static let shiftGross: Double = 1_200
+  static let virtualShiftBasePay: Double = 1_100
+  static let virtualShiftSupplementPay: Double = 210
+  static let virtualShiftGross: Double = 1_310
+}
 
 final class ShiftSnapshotBuilderTests: XCTestCase {
   private let ownerUserId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3"
@@ -58,9 +68,9 @@ final class ShiftSnapshotBuilderTests: XCTestCase {
       )
     )
 
-    XCTAssertTrue(draft.snapshot.includesEarnings)
-    XCTAssertEqual(draft.snapshot.grossPay, 1200)
-    XCTAssertEqual(draft.snapshot.netPay, 1050)
+    expect(draft.snapshot.includesEarnings) == true
+    expect(draft.snapshot.grossPay) == ShiftSnapshotBuilderTestValues.shiftGross
+    expect(draft.snapshot.netPay) == 1_050
   }
 
   func testOwnShiftSnapshotBuilderUsesRecurringIdForVirtualShiftSnapshots() {
@@ -133,9 +143,9 @@ private func makeShift() -> ShiftWithComputations {
       id: "shift-1",
       durationHours: 8,
       paidHours: 7.5,
-      basePay: 1000,
-      supplementPay: 200,
-      gross: 1200,
+      basePay: ShiftSnapshotBuilderTestValues.shiftBasePay,
+      supplementPay: ShiftSnapshotBuilderTestValues.shiftSupplementPay,
+      gross: ShiftSnapshotBuilderTestValues.shiftGross,
       wagePeriods: [],
       originalWagePeriods: [],
       breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
@@ -163,9 +173,9 @@ private func makeVirtualShift() -> ShiftWithComputations {
       id: "virtual-2026-03-11",
       durationHours: 7.25,
       paidHours: 6.75,
-      basePay: 1100,
-      supplementPay: 210,
-      gross: 1310,
+      basePay: ShiftSnapshotBuilderTestValues.virtualShiftBasePay,
+      supplementPay: ShiftSnapshotBuilderTestValues.virtualShiftSupplementPay,
+      gross: ShiftSnapshotBuilderTestValues.virtualShiftGross,
       wagePeriods: [],
       originalWagePeriods: [],
       breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])

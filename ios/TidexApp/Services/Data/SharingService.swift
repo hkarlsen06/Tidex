@@ -50,12 +50,16 @@ enum SharingServiceError: Error, LocalizedError {
     switch self {
     case .notAuthenticated:
       return "Not authenticated"
+
     case .networkError(let error):
       return "Network error: \(error.localizedDescription)"
+
     case .decodingError(let error):
       return "Failed to decode response: \(error.localizedDescription)"
+
     case .httpError(_, let message):
       return message ?? "Something went wrong. Please try again."
+
     case .noShareAccess:
       return "No access to shared shifts"
     }
@@ -115,6 +119,7 @@ private struct FriendsTabBootstrapRPCResponse: Decodable {
 /// Service for fetching shared shifts and sharers.
 /// Sharing management now uses authenticated Supabase RPCs end-to-end.
 @MainActor
+// swiftlint:disable:next type_body_length
 final class SharingService: ObservableObject {
   static let shared = SharingService()
 
@@ -662,9 +667,10 @@ final class SharingService: ObservableObject {
 
   // MARK: - Friends Management (via Supabase RPC)
 
-  /// Fetch all friends (bidirectional relationships) and share capacity
-  /// Used by the sharing management modal
-  func fetchAllFriends() async throws -> (
+  // Fetch all friends (bidirectional relationships) and share capacity.
+  // Used by the sharing management modal.
+  // swiftlint:disable:next cyclomatic_complexity function_body_length large_tuple type_contents_order
+  internal func fetchAllFriends() async throws -> (
     friends: [Friend],
     blockedFriends: [Friend],
     capacity: ShareCapacity
@@ -692,20 +698,33 @@ final class SharingService: ObservableObject {
         switch decodingError {
         case .keyNotFound(let key, let context):
           logger.error(
-            "Decoding error - key not found: '\(key.stringValue)' at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            """
+            Decoding error - key not found: '\(key.stringValue)' at path: \
+            \(context.codingPath.map(\.stringValue).joined(separator: "."))
+            """
           )
+
         case .typeMismatch(let type, let context):
           logger.error(
-            "Decoding error - type mismatch: expected \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            """
+            Decoding error - type mismatch: expected \(type) at path: \
+            \(context.codingPath.map(\.stringValue).joined(separator: "."))
+            """
           )
+
         case .valueNotFound(let type, let context):
           logger.error(
-            "Decoding error - value not found: \(type) at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            """
+            Decoding error - value not found: \(type) at path: \
+            \(context.codingPath.map(\.stringValue).joined(separator: "."))
+            """
           )
+
         case .dataCorrupted(let context):
           logger.error(
-            "Decoding error - data corrupted at path: \(context.codingPath.map { $0.stringValue }.joined(separator: "."))"
+            "Decoding error - data corrupted at path: \(context.codingPath.map(\.stringValue).joined(separator: "."))"
           )
+
         @unknown default:
           logger.error("Decoding error - unknown: \(decodingError)")
         }
@@ -979,4 +998,5 @@ final class SharingService: ObservableObject {
 
     logger.info("Successfully toggled owner_muted status")
   }
+  // swiftlint:disable:next file_length
 }

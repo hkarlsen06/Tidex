@@ -86,7 +86,7 @@ struct SharedShiftRow: View {
         .fixedSize(horizontal: true, vertical: false)
 
       // Show gross - tax breakdown if tax enabled
-      if shift.taxEnabled && shift.taxAmount > 0 {
+      if shift.taxEnabled, shift.taxAmount > 0 {
         HStack(spacing: Spacing.xxs) {
           Text(formatPlainAmount(shift.grossPay))
           Text("−")
@@ -180,9 +180,9 @@ struct SharedShiftRow: View {
           id: "1",
           durationHours: 8,
           paidHours: 7.5,
-          basePay: 1500,
+          basePay: 1_500,
           supplementPay: 200,
-          gross: 1700,
+          gross: 1_700,
           wagePeriods: [],
           originalWagePeriods: [],
           breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
@@ -210,9 +210,9 @@ struct SharedShiftRow: View {
           id: "2",
           durationHours: 8,
           paidHours: 8,
-          basePay: 1600,
+          basePay: 1_600,
           supplementPay: 0,
-          gross: 1600,
+          gross: 1_600,
           wagePeriods: [],
           originalWagePeriods: [],
           breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])

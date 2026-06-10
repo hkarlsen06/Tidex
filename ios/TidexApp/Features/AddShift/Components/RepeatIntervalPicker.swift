@@ -10,9 +10,8 @@ struct RepeatIntervalPicker: View {
     let weeks = index + 1
     if weeks == 1 {
       return String(localized: .addShiftEveryWeek)
-    } else {
-      return String(localized: .addShiftEveryNWeeks(weeks))
     }
+    return String(localized: .addShiftEveryNWeeks(weeks))
   }
 
   var body: some View {

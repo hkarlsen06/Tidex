@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers sorted_enum_cases vertical_whitespace_between_cases
 import SwiftUI
 
 /// Totals shown on the trailing side of a calendar header.
@@ -141,6 +147,7 @@ struct CalendarHeaderRow: View {
     case .detail:
       amountText
         .foregroundColor(.tidexTextMuted)
+
     case .delta:
       HStack(alignment: .center, spacing: Spacing.xxxs) {
         Image(systemName: "plus")

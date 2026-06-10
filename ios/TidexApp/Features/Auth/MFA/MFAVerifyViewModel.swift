@@ -66,7 +66,8 @@ final class MFAVerifyViewModel: ObservableObject {
   /// Handle code input changes
   func handleCodeChange(_ newValue: String) {
     // Only allow digits
-    let filtered = newValue.filter { $0.isNumber }
+    // swiftlint:disable:next explicit_type_interface
+    let filtered = newValue.filter(\.isNumber)
 
     // Limit to 6 characters
     if filtered.count > 6 {
@@ -93,7 +94,7 @@ final class MFAVerifyViewModel: ObservableObject {
       return
     }
 
-    guard let challengeId = challengeId else {
+    guard let challengeId else {
       errorMessage = String(localized: .mfaErrorsChallengeExpired)
       // Try to create a new challenge
       await createChallenge()

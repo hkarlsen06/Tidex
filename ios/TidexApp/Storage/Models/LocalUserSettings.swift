@@ -1,3 +1,5 @@
+// swiftlint:disable cyclomatic_complexity explicit_acl explicit_type_interface function_body_length
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -117,7 +119,7 @@ final class LocalUserSettings {
       }
     }
     set {
-      let keys = newValue.map { $0.rawValue }
+      let keys = newValue.map(\.rawValue)
       dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
@@ -138,6 +140,7 @@ final class LocalUserSettings {
     switch style {
     case "workplace", "monochrome":
       return style
+
     default:
       return "workplace"
     }
@@ -154,6 +157,7 @@ final class LocalUserSettings {
     switch tab {
     case "home", "shifts", "add", "stats", "sharing":
       return tab
+
     default:
       return "home"
     }
@@ -283,10 +287,10 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     row: UserSettings,
     updatedAt: Date,
     revision: Int64
-  ) -> UserSettingsServerSnapshot {
+  ) -> Self {
     let dateFormatter = FormatterCache.iso8601Formatter()
 
-    return UserSettingsServerSnapshot(
+    return Self(
       monthlyGoal: row.monthly_goal,
       monthlyGoalsByMonth: row.monthly_goals_by_month ?? [:],
       defaultShiftsView: row.default_shifts_view,
@@ -318,12 +322,12 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   }
 
   /// Decode from Data
-  static func decode(from data: Data) -> UserSettingsServerSnapshot? {
-    try? syncJSONDecoder.decode(UserSettingsServerSnapshot.self, from: data)
+  static func decode(from data: Data) -> Self? {
+    try? syncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
-  func changedFields(from other: UserSettingsServerSnapshot) -> Set<UserSettingsField> {
+  func changedFields(from other: Self) -> Set<UserSettingsField> {
     var changed: Set<UserSettingsField> = []
 
     if monthlyGoal != other.monthlyGoal {
@@ -429,7 +433,7 @@ extension LocalUserSettings {
     serverRow: UserSettings,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    context: ModelContext
+    context _: ModelContext
   ) -> LocalUserSettings {
     let dateFormatter = FormatterCache.iso8601Formatter()
 

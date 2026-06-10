@@ -53,12 +53,12 @@ struct FriendEntityQuery: EntityQuery {
   private let appGroupId = "group.no.tidex.app"
   private let friendSharersKey = "friend_sharers"
 
-  func entities(for identifiers: [FriendEntity.ID]) async throws -> [FriendEntity] {
+  internal func entities(for identifiers: [FriendEntity.ID]) async -> [FriendEntity] {
     let allFriends = await loadFriendsWithAPIFallback()
     return allFriends.filter { identifiers.contains($0.id) }
   }
 
-  func suggestedEntities() async throws -> [FriendEntity] {
+  internal func suggestedEntities() async -> [FriendEntity] {
     await loadFriendsWithAPIFallback()
   }
 
@@ -362,9 +362,9 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     }
 
     // Unwrap required fields
-    guard let shiftDate = shiftDate,
-      let startTime = startTime,
-      let endTime = endTime
+    guard let shiftDate,
+      let startTime,
+      let endTime
     else {
       return FriendShiftWidgetEntry.empty(
         friendId: friend.id,
@@ -397,7 +397,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     if shiftActive {
       layoutState = .todayOrTomorrow
       daysRemaining = 0
-    } else if layoutState != .pastShift && (shiftStarted || shiftEnded) {
+    } else if layoutState != .pastShift, shiftStarted || shiftEnded {
       layoutState = .todayOrTomorrow
     }
 
@@ -560,9 +560,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     if daysRemaining <= 1 {
       return (.todayOrTomorrow, daysRemaining)
-    } else {
-      return (.countdown, daysRemaining)
     }
+    return (.countdown, daysRemaining)
   }
 
   private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
@@ -577,12 +576,11 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       let daysAgo = abs(daysRemaining)
       if daysAgo == 1 {
         return String(localized: .widgetYesterday)
-      } else {
-        let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = appLocale()
-        weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-        return sentenceCased(weekdayFormatter.string(from: shiftDate))
       }
+      let weekdayFormatter: DateFormatter = .init()
+      weekdayFormatter.locale = appLocale()
+      weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
+      return sentenceCased(weekdayFormatter.string(from: shiftDate))
     }
 
     // Today
@@ -620,9 +618,12 @@ private func appLocale() -> Locale {
 // MARK: - Initials Circle View
 
 private struct InitialsCircle: View {
+  private static let defaultBackgroundOpacity: Double = 0.15
+
   let initials: String
   let size: CGFloat
-  var backgroundColor: Color = Color.white.opacity(0.15)
+
+  var backgroundColor: Color = .white.opacity(Self.defaultBackgroundOpacity)
   var textColor: Color = .white
 
   var body: some View {
@@ -679,8 +680,10 @@ struct FriendShiftWidgetView: View {
     switch renderingMode {
     case .accented:
       return .clear
+
     case .vibrant:
       return Color.black.opacity(0.4)
+
     default:
       return tidexDarkBackground
     }
@@ -690,6 +693,7 @@ struct FriendShiftWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .primary
+
     default:
       return .white
     }
@@ -699,6 +703,7 @@ struct FriendShiftWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return .white.opacity(0.6)
     }
@@ -708,6 +713,7 @@ struct FriendShiftWidgetView: View {
     switch renderingMode {
     case .accented:
       return .primary
+
     default:
       return tidexBlue
     }
@@ -717,6 +723,7 @@ struct FriendShiftWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return .white.opacity(0.4)
     }
@@ -808,8 +815,10 @@ struct FriendShiftWidgetView: View {
         switch entry.layoutState {
         case .countdown:
           countdownLayout
+
         case .pastShift, .todayOrTomorrow:
           todayTomorrowLayout
+
         case .empty:
           emptyStateLayout
         }

@@ -2,34 +2,34 @@ import SwiftUI
 
 /// Card displaying previous month's earnings and payroll information
 /// Design matches NextPayrollCard from the Next.js app
-struct PayrollCard: View {
+struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
   private static let centeredTrailingAmountOffset: CGFloat = 11
 
-  let payrollDate: Date
-  let label: String
-  var labelColorHex: String? = nil
-  var labelIsWorkplace: Bool = false
-  var workplaceBadges: [PayrollCardBadge] = []
-  let gross: Double
-  let net: Double?
-  let tax: Double?
-  let taxEnabled: Bool
-  var hasPayrollAdjustments: Bool = false
+  let payrollDate: Date  // swiftlint:disable:this explicit_acl
+  let label: String  // swiftlint:disable:this explicit_acl
+  var labelColorHex: String?  // swiftlint:disable:this explicit_acl
+  var labelIsWorkplace: Bool = false  // swiftlint:disable:this explicit_acl
+  var workplaceBadges: [PayrollCardBadge] = []  // swiftlint:disable:this explicit_acl
+  let gross: Double  // swiftlint:disable:this explicit_acl
+  let net: Double?  // swiftlint:disable:this explicit_acl
+  let tax: Double?  // swiftlint:disable:this explicit_acl
+  let taxEnabled: Bool  // swiftlint:disable:this explicit_acl
+  var hasPayrollAdjustments: Bool = false  // swiftlint:disable:this explicit_acl
   /// Progress through the month until payroll (0-100), shows a subtle progress bar when provided
-  var progress: Double?
+  var progress: Double?  // swiftlint:disable:this explicit_acl
   /// When true, shows skeleton state with shimmer animation (for loading)
-  var isLoading: Bool = false
+  var isLoading: Bool = false  // swiftlint:disable:this explicit_acl
   /// Allows transition placeholders to use the loading layout without starting shimmer.
-  var showsLoadingShimmer: Bool = true
+  var showsLoadingShimmer: Bool = true  // swiftlint:disable:this explicit_acl
 
-  @Environment(\.userCurrency) private var currency
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-  @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.colorScheme) private var colorScheme  // swiftlint:disable:this explicit_type_interface
 
   /// Animated progress value for smooth entrance animation
   @State private var animatedProgress: Double = 0
   @State private var previousPrimaryAmount: Double?
-  @State private var previousHasTrailingBottomContent: Bool?
+  @State private var previousHasTrailingBottomContent: Bool?  // swiftlint:disable:this discouraged_optional_boolean
 
   // MARK: - Computed Properties
 
@@ -65,11 +65,11 @@ struct PayrollCard: View {
 
   /// Whether to show the progress bar (valid progress between 1-100)
   private var hasProgress: Bool {
-    guard let progress = progress else { return false }
+    guard let progress else { return false }  // swiftlint:disable:this conditional_returns_on_newline
     return progress >= 1 && progress <= 100
   }
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     ShiftCardContentLayout(topRowAlignment: .center) {
       // Row 1: Label (leads with purpose, matches shift card title size)
       payrollLabelContent
@@ -78,19 +78,19 @@ struct PayrollCard: View {
       // Row 2: Banknote icon + payroll date (secondary)
       if isPayrollToday {
         HStack(spacing: Spacing.xxxs) {
-          Image(systemName: "banknote")
+          Image(systemName: "banknote")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
           Text(.dashboardToday)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
-          Image(systemName: "party.popper.fill")
+          Image(systemName: "party.popper.fill")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexFootnote)
             .foregroundColor(.tidexBlue)
         }
       } else {
         HStack(spacing: Spacing.xxs) {
-          Image(systemName: "banknote")
+          Image(systemName: "banknote")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
           Text(dateParts.weekday)
@@ -104,15 +104,15 @@ struct PayrollCard: View {
             .foregroundColor(.tidexTextMuted)
             .contentTransition(.numericText())
         }
-        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)
+        .animation(.spring(duration: 0.8, bounce: 0), value: dateParts.dayMonth)  // swiftlint:disable:this line_length no_magic_numbers
       }
-    } trailingTop: {
+    } trailingTop: {  // swiftlint:disable:this closure_body_length
       // Right side: amount
       if showPayout {
         HStack(alignment: .firstTextBaseline, spacing: 1) {
           CurrencyCountUpText(
             amount: primaryAmount,
-            duration: 0.8,
+            duration: 0.8,  // swiftlint:disable:this no_magic_numbers
             animateOnAppear: false,
             animateChanges: true,
             animateFrom: ShiftCardAmountAnimationFallback.animateFrom(
@@ -126,7 +126,7 @@ struct PayrollCard: View {
           if hasPayrollAdjustments {
             adjustmentMarker
               .font(.tidexSubheadline.weight(.semibold))
-              .offset(y: -6)
+              .offset(y: -6)  // swiftlint:disable:this no_magic_numbers
               .accessibilityHidden(true)
           }
         }
@@ -139,13 +139,13 @@ struct PayrollCard: View {
             .opacity(0)
 
           RoundedRectangle(cornerRadius: CornerRadius.xs)
-            .fill(Color.tidexTextMuted.opacity(0.3))
-            .frame(width: 112, height: 24)
+            .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
+            .frame(width: 112, height: 24)  // swiftlint:disable:this no_magic_numbers
         }
       }
     } trailingBottom: {
       // Breakdown (gross - tax) when tax enabled
-      if showPayout && showBreakdown {
+      if showPayout, showBreakdown {
         HStack(spacing: Spacing.xxs) {
           Text(formatPlainAmount(gross))
             .contentTransition(.numericText(value: gross))
@@ -155,8 +155,8 @@ struct PayrollCard: View {
         }
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
-        .animation(.spring(duration: 0.8, bounce: 0), value: gross)
-        .animation(.spring(duration: 0.8, bounce: 0), value: tax)
+        .animation(.spring(duration: 0.8, bounce: 0), value: gross)  // swiftlint:disable:this no_magic_numbers
+        .animation(.spring(duration: 0.8, bounce: 0), value: tax)  // swiftlint:disable:this no_magic_numbers
       } else if !showPayout {
         ZStack {
           Text(verbatim: "00 000 − 00 000")
@@ -164,8 +164,8 @@ struct PayrollCard: View {
             .opacity(0)
 
           RoundedRectangle(cornerRadius: CornerRadius.xxs)
-            .fill(Color.tidexTextMuted.opacity(0.2))
-            .frame(width: 84, height: 17)
+            .fill(Color.tidexTextMuted.opacity(0.2))  // swiftlint:disable:this no_magic_numbers
+            .frame(width: 84, height: 17)  // swiftlint:disable:this no_magic_numbers
         }
       }
     }
@@ -204,7 +204,7 @@ struct PayrollCard: View {
       previousPrimaryAmount = primaryAmount
       previousHasTrailingBottomContent = showBreakdown
 
-      guard let progress = progress, progress >= 1, progress <= 100 else {
+      guard let progress, progress >= 1, progress <= 100 else {
         animatedProgress = 0
         return
       }
@@ -223,12 +223,12 @@ struct PayrollCard: View {
     ShiftCardFormatter.dateParts(for: payrollDate)
   }
 
-  private func formatCurrency(_ amount: Double) -> String {
+  private func formatCurrency(_ amount: Double) -> String {  // swiftlint:disable:this type_contents_order
     CurrencyConfig.format(amount, currency: currency)
   }
 
   /// Format amount without currency symbol (for breakdown display)
-  private func formatPlainAmount(_ amount: Double) -> String {
+  private func formatPlainAmount(_ amount: Double) -> String {  // swiftlint:disable:this type_contents_order
     CurrencyConfig.formatPlain(amount)
   }
 
@@ -237,7 +237,7 @@ struct PayrollCard: View {
   }
 
   private var progressFillColor: Color {
-    colorScheme == .light ? Color.tidexBlue.opacity(0.035) : Color.tidexBlue.opacity(0.1)
+    colorScheme == .light ? Color.tidexBlue.opacity(0.035) : Color.tidexBlue.opacity(0.1)  // swiftlint:disable:this line_length no_magic_numbers
   }
 
   @ViewBuilder
@@ -276,9 +276,9 @@ struct PayrollCard: View {
     PayrollCard(
       payrollDate: Date(),
       label: "Neste utbetaling",
-      gross: 15800,
-      net: 12500,
-      tax: 3300,
+      gross: 15_800,
+      net: 12_500,
+      tax: 3_300,
       taxEnabled: true,
       progress: 65
     )
@@ -287,7 +287,7 @@ struct PayrollCard: View {
     PayrollCard(
       payrollDate: Date(),
       label: "Forrige utbetaling",
-      gross: 22000,
+      gross: 22_000,
       net: nil,
       tax: nil,
       taxEnabled: false

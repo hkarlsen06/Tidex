@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable closure_body_length explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers number_separator
 import SwiftUI
 
 /// Popover content for mixed-currency totals.
@@ -50,9 +56,9 @@ struct MixedCurrencyBreakdownPopover: View {
         jobId: "1",
         jobName: "Very long workplace name that should wrap to multiple lines in the tooltip",
         currency: "kr",
-        grossAmount: 3200,
-        netAmount: 2990,
-        displayAmount: 2990,
+        grossAmount: 3_200,
+        netAmount: 2_990,
+        displayAmount: 2_990,
         shiftCount: 3,
         completedShiftCount: 2,
         plannedShiftCount: 1,

@@ -297,10 +297,13 @@ struct ShiftLockScreenWidgetEntryView: View {
     switch widgetFamily {
     case .accessoryCircular:
       ShiftAccessoryCircularView(entry: entry)
+
     case .accessoryRectangular:
       ShiftAccessoryRectangularView(entry: entry)
+
     case .accessoryInline:
       ShiftAccessoryInlineView(entry: entry)
+
     default:
       // Fallback for unsupported families
       Text("---")

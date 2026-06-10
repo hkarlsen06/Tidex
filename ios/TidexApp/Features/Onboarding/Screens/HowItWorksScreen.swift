@@ -26,7 +26,7 @@ struct HowItWorksScreen: View {
   @State private var isConfettiActive = false
   @State private var lastConfettiSeed = -1
   @State private var entranceSequenceID = 0
-  @State private var focusedStepIndex: Int? = nil
+  @State private var focusedStepIndex: Int?
   @State private var hasCompletedFocusSequence = false
   @State private var step1TitleFocusTrigger = 0
   @State private var step2TitleFocusTrigger = 0
@@ -333,10 +333,13 @@ struct HowItWorksScreen: View {
           switch step {
           case 0:
             step1TitleFocusTrigger += 1
+
           case 1:
             step2TitleFocusTrigger += 1
+
           case 2:
             step3TitleFocusTrigger += 1
+
           default:
             break
           }

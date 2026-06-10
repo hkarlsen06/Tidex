@@ -1,3 +1,4 @@
+import Nimble
 import XCTest
 
 @testable import Tidex
@@ -23,7 +24,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
         startTime: "08:00",
         endTime: "16:00",
         jobId: "job-usd",
-        gross: 1200
+        gross: 1_200
       ),
     ]
 
@@ -53,7 +54,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
         startTime: "08:00",
         endTime: "16:00",
         jobId: "job-eur",
-        gross: 1400
+        gross: 1_400
       )
     ]
 
@@ -81,7 +82,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
         startTime: "08:00",
         endTime: "16:00",
         jobId: "job-default",
-        gross: 1000
+        gross: 1_000
       ),
       TestFixtures.computedShift(
         id: "s-extra",
@@ -89,7 +90,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
         startTime: "08:00",
         endTime: "16:00",
         jobId: "job-extra",
-        gross: 2000
+        gross: 2_000
       ),
     ]
 
@@ -108,8 +109,8 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
 
     XCTAssertEqual(resolution.primary.jobId, "job-default")
     XCTAssertEqual(resolution.primary.currency, "kr")
-    XCTAssertEqual(resolution.primary.grossAmount, 3000, accuracy: 0.0001)
-    XCTAssertEqual(resolution.primary.displayAmount, 3000, accuracy: 0.0001)
+    expect(resolution.primary.grossAmount).to(beCloseTo(3_000, within: 0.0001))
+    expect(resolution.primary.displayAmount).to(beCloseTo(3_000, within: 0.0001))
     XCTAssertEqual(resolution.primary.shiftCount, 2)
     XCTAssertFalse(resolution.hasMixedCurrency)
     XCTAssertTrue(resolution.secondary.isEmpty)
@@ -129,7 +130,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
         startTime: "08:00",
         endTime: "16:00",
         jobId: "job-default",
-        gross: 1000
+        gross: 1_000
       ),
       TestFixtures.computedShift(
         id: "s-extra",
@@ -145,7 +146,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
         startTime: "08:00",
         endTime: "16:00",
         jobId: "job-usd",
-        gross: 2000
+        gross: 2_000
       ),
     ]
 
@@ -164,7 +165,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
 
     XCTAssertEqual(resolution.primary.jobId, "job-default")
     XCTAssertEqual(resolution.primary.currency, "kr")
-    XCTAssertEqual(resolution.primary.grossAmount, 1500, accuracy: 0.0001)
+    expect(resolution.primary.grossAmount).to(beCloseTo(1_500, within: 0.0001))
     XCTAssertTrue(resolution.hasMixedCurrency)
     XCTAssertEqual(resolution.secondary.count, 1)
     XCTAssertEqual(resolution.secondary.first?.jobId, "job-usd")
@@ -226,7 +227,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
         startTime: "08:00",
         endTime: "16:00",
         jobId: "job-default",
-        gross: 1000
+        gross: 1_000
       ),
       TestFixtures.computedShift(
         id: "s-usd-zero",

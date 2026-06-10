@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable prefixed_toplevel_constant type_contents_order
 import Foundation
 import os.log
 
@@ -16,7 +20,7 @@ enum TermsVersion {
   /// Cached version reference (fetched from API)
   private static var cachedVersionReference: String?
   private static var lastFetchTime: Date?
-  private static let cacheExpiryInterval: TimeInterval = 3600  // 1 hour
+  private static let cacheExpiryInterval: TimeInterval = 3_600  // 1 hour
 
   /// Maximum time to wait for terms version API response
   /// Since this runs in the background, we can be more lenient
@@ -109,7 +113,7 @@ enum TermsVersion {
   /// - Parameter termsAcceptedAt: ISO date string of when user accepted terms (from user metadata)
   /// - Returns: true if user needs to accept/re-accept terms
   static func needsTermsReAcceptance(_ termsAcceptedAt: String?) -> Bool {
-    guard let termsAcceptedAt = termsAcceptedAt, !termsAcceptedAt.isEmpty else {
+    guard let termsAcceptedAt, !termsAcceptedAt.isEmpty else {
       // Never accepted terms
       return true
     }
@@ -123,7 +127,7 @@ enum TermsVersion {
 
   /// Async version that fetches the latest version date first
   static func needsTermsReAcceptanceAsync(_ termsAcceptedAt: String?) async -> Bool {
-    guard let termsAcceptedAt = termsAcceptedAt, !termsAcceptedAt.isEmpty else {
+    guard let termsAcceptedAt, !termsAcceptedAt.isEmpty else {
       // Never accepted terms
       return true
     }

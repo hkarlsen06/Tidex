@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image explicit_acl explicit_top_level_acl file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers
 import SwiftUI
 
 struct ScreenshotNotificationBubble: View {

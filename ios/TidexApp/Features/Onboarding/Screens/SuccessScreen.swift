@@ -60,7 +60,7 @@ struct SuccessScreen: View {
         .offset(y: contentVisible ? 0 : 20)
 
         // Error message
-        if saveStatus == .error, let errorMessage = errorMessage {
+        if saveStatus == .error, let errorMessage {
           Spacer()
             .frame(height: 24)
 
@@ -85,7 +85,7 @@ struct SuccessScreen: View {
           .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
 
           // Retry button (only on error)
-          if saveStatus == .error, let onRetry = onRetry {
+          if saveStatus == .error, let onRetry {
             Button(action: {
               UIImpactFeedbackGenerator(style: .medium).impactOccurred()
               onRetry()
@@ -170,12 +170,15 @@ struct SuccessScreen: View {
       switch completionMode {
       case .fullSetup:
         return String(localized: .onboardingSuccessTitle)
+
       case .friendOnlySkip:
         return String(
           localized: "onboarding.success.friend_only.title", table: "Localizable")
       }
+
     case .saving:
       return String(localized: .onboardingSuccessSavingTitle)
+
     case .error:
       return String(localized: .onboardingSuccessErrorTitle)
     }
@@ -187,12 +190,15 @@ struct SuccessScreen: View {
       switch completionMode {
       case .fullSetup:
         return String(localized: .onboardingSuccessSubtitle)
+
       case .friendOnlySkip:
         return String(
           localized: "onboarding.success.friend_only.subtitle", table: "Localizable")
       }
+
     case .saving:
       return String(localized: .onboardingSuccessSaving)
+
     case .error:
       return String(localized: .onboardingSuccessErrorSubtitle)
     }
@@ -202,6 +208,7 @@ struct SuccessScreen: View {
     switch completionMode {
     case .fullSetup:
       return .onboardingSuccessReassurance
+
     case .friendOnlySkip:
       return .onboardingSuccessFriendOnlyReassurance
     }
@@ -211,6 +218,7 @@ struct SuccessScreen: View {
     switch completionMode {
     case .fullSetup:
       return String(localized: .onboardingSuccessButton)
+
     case .friendOnlySkip:
       return String(localized: .onboardingSuccessFriendOnlyButton)
     }

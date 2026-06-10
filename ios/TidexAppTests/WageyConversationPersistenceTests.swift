@@ -95,7 +95,7 @@ final class WageyConversationPersistenceTests: XCTestCase {
     )
   }
 
-  func testStoredChatMessageNormalizesAdjacentTextBlocksBeforePersistence() throws {
+  internal func testStoredChatMessageNormalizesAdjacentTextBlocksBeforePersistence() {
     let message = ChatMessage(
       id: "assistant-persisted-text-blocks",
       role: .assistant,

@@ -50,8 +50,10 @@ struct JobPaySetupSheet: View {
       switch step {
       case .schedule:
         scheduleStep
+
       case .wage:
         wageStep
+
       case .supplements:
         supplementsStep
       }

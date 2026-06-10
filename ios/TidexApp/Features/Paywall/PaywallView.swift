@@ -38,7 +38,7 @@ struct PaywallView: View {
         }
       }
       .overlay {
-        if viewModel.isLoading && !viewModel.hasProducts {
+        if viewModel.isLoading, !viewModel.hasProducts {
           loadingOverlay
         }
       }
@@ -744,20 +744,23 @@ struct PaywallContext {
     self.message = type.message
   }
 
-  static let monthLimit = PaywallContext(
+  // swiftlint:disable:next explicit_acl explicit_type_interface
+  static let monthLimit = Self(
     icon: "calendar.badge.exclamationmark",
     title: "Upgrade to Add More Months",
     message:
       "Free plan allows shifts in one month at a time. Upgrade to track shifts across multiple months."
   )
 
-  static let upgrade = PaywallContext(
+  // swiftlint:disable:next explicit_acl explicit_type_interface
+  static let upgrade = Self(
     icon: "crown.fill",
     title: "Unlock Premium Features",
     message: "Get unlimited months, advanced statistics, Wagey AI, and more."
   )
 
-  static let wageyLimit = PaywallContext(
+  // swiftlint:disable:next explicit_acl explicit_type_interface
+  static let wageyLimit = Self(
     icon: "bubble.left.and.exclamationmark.bubble.right",
     title: "Message Limit Reached",
     message: "You've used all your messages this month. Upgrade to continue chatting with Wagey."

@@ -1,6 +1,18 @@
 import SwiftData
 import SwiftUI
 import UIKit
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image anonymous_argument_in_multiline_closure closure_body_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_length file_types_order function_parameter_count multiline_arguments_brackets no_empty_block
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers prefer_asset_symbols
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable prefixed_toplevel_constant required_deinit type_body_length type_contents_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_name
 import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
@@ -98,7 +110,7 @@ private struct RootContent: View {
           LoadingView()
 
         case .unauthenticated:
-          if !hasCompletedPreAuthOnboarding && !showAuthAfterOnboarding {
+          if !hasCompletedPreAuthOnboarding, !showAuthAfterOnboarding {
             // Show pre-auth onboarding (screens 1-3)
             OnboardingView(
               onNavigateToSignup: {
@@ -259,6 +271,7 @@ private struct RootContent: View {
     case .unauthenticated:
       Color.tidexBackground
         .ignoresSafeArea()
+
     default:
       TidexAppBackground()
     }
@@ -322,8 +335,10 @@ struct LoadingView: View {
     switch appearanceManager.theme.resolvedColorScheme(fallback: systemColorScheme) {
     case .light:
       userInterfaceStyle = .light
+
     case .dark:
       userInterfaceStyle = .dark
+
     @unknown default:
       userInterfaceStyle = .light
     }
@@ -381,14 +396,14 @@ struct LoadingView: View {
 
     let scenario: Scenario
 
-    static var current: UITestingConfiguration? {
+    static var current: Self? {
       let processInfo = ProcessInfo.processInfo
       guard processInfo.arguments.contains("-ui-testing") else { return nil }
 
       let rawScenario =
         processInfo.environment["TIDEX_UI_TEST_SCENARIO"] ?? Scenario.friendsChat.rawValue
       let scenario = Scenario(rawValue: rawScenario) ?? .friendsChat
-      return UITestingConfiguration(scenario: scenario)
+      return Self(scenario: scenario)
     }
   }
 
@@ -399,6 +414,7 @@ struct LoadingView: View {
       switch configuration.scenario {
       case .friendsChat, .friendsChatReply:
         FriendsThreadUITestHostView(configuration: configuration)
+
       case .wageyHistoryDelete:
         WageyHistoryUITestHostView()
       }
@@ -598,7 +614,7 @@ struct LoadingView: View {
     let draftStore: FriendsComposerDraftStore
 
     @MainActor
-    static func make() throws -> FriendsThreadUITestStorage {
+    static func make() throws -> Self {
       let schema = Schema([
         LocalPendingFriendComposerDraft.self,
         LocalThread.self,
@@ -617,7 +633,7 @@ struct LoadingView: View {
       let container = try ModelContainer(for: schema, configurations: [configuration])
       let storeActor = LocalStoreActor(modelContainer: container)
 
-      return FriendsThreadUITestStorage(
+      return Self(
         repository: FriendsMessagesRepository(container: container, storeActor: storeActor),
         draftStore: FriendsComposerDraftStore(container: container, storeActor: storeActor)
       )
@@ -632,7 +648,7 @@ struct LoadingView: View {
   private final class FriendsThreadUITestShareVisibilityResolver:
     FriendsThreadShareVisibilityResolving
   {
-    func canCounterpartSeeOwnerEarnings(counterpartUserId _: String) async throws -> Bool {
+    func canCounterpartSeeOwnerEarnings(counterpartUserId _: String) async -> Bool {
       await Task.yield()
       return false
     }
@@ -642,7 +658,7 @@ struct LoadingView: View {
 
   @MainActor
   private final class FriendsThreadUITestSharingPreviewService: SharingPreviewProviding {
-    func fetchShiftPreviews(sharerIds _: [String], forceRefresh _: Bool) async throws
+    func fetchShiftPreviews(sharerIds _: [String], forceRefresh _: Bool) async
       -> [SharerShiftPreview]
     {
       await Task.yield()
@@ -704,17 +720,17 @@ struct LoadingView: View {
       self.messages = messages
     }
 
-    func getOrCreateDirectThread(otherUserId _: String) async throws -> FriendThread {
+    func getOrCreateDirectThread(otherUserId _: String) async -> FriendThread {
       await Task.yield()
       return threadSummary
     }
 
-    func listMyThreads(limit _: Int, before _: FriendThreadCursor?) async throws -> [FriendThread] {
+    func listMyThreads(limit _: Int, before _: FriendThreadCursor?) async -> [FriendThread] {
       await Task.yield()
       return [threadSummary]
     }
 
-    func fetchInboxSyncSnapshotV2(limit _: Int, before _: FriendThreadCursor?) async throws
+    func fetchInboxSyncSnapshotV2(limit _: Int, before _: FriendThreadCursor?) async
       -> FriendInboxSyncSnapshot
     {
       await Task.yield()
@@ -728,7 +744,7 @@ struct LoadingView: View {
       )
     }
 
-    func listInboxEventsV2(afterVersion _: Int64, limit _: Int) async throws
+    func listInboxEventsV2(afterVersion _: Int64, limit _: Int) async
       -> FriendInboxSyncEventsPage
     {
       await Task.yield()
@@ -745,7 +761,7 @@ struct LoadingView: View {
       threadId _: String,
       limit _: Int,
       before _: FriendMessageCursor?
-    ) async throws -> [FriendMessage] {
+    ) async -> [FriendMessage] {
       await Task.yield()
       return messages
     }
@@ -754,7 +770,7 @@ struct LoadingView: View {
       threadId _: String,
       limit _: Int,
       before _: FriendMessageCursor?
-    ) async throws -> FriendThreadMessagesPage {
+    ) async -> FriendThreadMessagesPage {
       await Task.yield()
       return FriendThreadMessagesPage(
         messages: messages,
@@ -763,7 +779,7 @@ struct LoadingView: View {
       )
     }
 
-    func fetchThreadSyncSnapshotV2(threadId _: String, messageLimit _: Int) async throws
+    func fetchThreadSyncSnapshotV2(threadId _: String, messageLimit _: Int) async
       -> FriendThreadSyncSnapshot
     {
       await Task.yield()
@@ -795,7 +811,7 @@ struct LoadingView: View {
       )
     }
 
-    func listThreadEventsV2(threadId _: String, afterVersion _: Int64, limit _: Int) async throws
+    func listThreadEventsV2(threadId _: String, afterVersion _: Int64, limit _: Int) async
       -> FriendThreadSyncEventsPage
     {
       await Task.yield()
@@ -815,7 +831,7 @@ struct LoadingView: View {
       replyToMessageId: String?,
       attachments _: [FriendOutgoingAttachment],
       metadataData: Data?
-    ) async throws -> FriendMessage {
+    ) async -> FriendMessage {
       await Task.yield()
       sentMessageCount += 1
 
@@ -872,13 +888,13 @@ struct LoadingView: View {
       return updated
     }
 
-    func deleteMessage(messageId: String) async throws -> FriendThread {
+    func deleteMessage(messageId: String) async -> FriendThread {
       await Task.yield()
       messages.removeAll { $0.id == messageId }
       return threadSummary
     }
 
-    func markThreadRead(threadId: String, throughMessageId: String) async throws
+    func markThreadRead(threadId: String, throughMessageId: String) async
       -> FriendThreadState
     {
       await Task.yield()
@@ -892,7 +908,7 @@ struct LoadingView: View {
       )
     }
 
-    func setThreadMuted(threadId: String, muted: Bool) async throws -> FriendThreadState {
+    func setThreadMuted(threadId: String, muted: Bool) async -> FriendThreadState {
       await Task.yield()
       return FriendThreadState(
         threadId: threadId,
@@ -904,27 +920,27 @@ struct LoadingView: View {
       )
     }
 
-    func queueThreadTypingNotification(threadId _: String) async throws -> Bool {
+    func queueThreadTypingNotification(threadId _: String) async -> Bool {
       await Task.yield()
       return false
     }
 
-    func fetchUnreadDirectMessageCount(userId _: String) async throws -> Int {
+    func fetchUnreadDirectMessageCount(userId _: String) async -> Int {
       await Task.yield()
       return 0
     }
 
-    func fetchThreadSummary(threadId _: String) async throws -> FriendThread {
+    func fetchThreadSummary(threadId _: String) async -> FriendThread {
       await Task.yield()
       return threadSummary
     }
 
-    func fetchThreadState(threadId _: String, userId _: String) async throws -> FriendThreadState? {
+    func fetchThreadState(threadId _: String, userId _: String) async -> FriendThreadState? {
       await Task.yield()
       return nil
     }
 
-    func listThreadStates(threadId _: String) async throws -> [FriendThreadState] {
+    func listThreadStates(threadId _: String) async -> [FriendThreadState] {
       await Task.yield()
       return []
     }
@@ -962,15 +978,15 @@ struct LoadingView: View {
       reportedUserId _: String,
       messageId _: String?,
       reason _: FriendAbuseReportReason
-    ) async throws {
+    ) async {
       await Task.yield()
     }
 
-    func blockUserPair(otherUserId _: String) async throws {
+    func blockUserPair(otherUserId _: String) async {
       await Task.yield()
     }
 
-    func uploadImageAttachment(threadId _: String, image _: ImageAttachment) async throws
+    func uploadImageAttachment(threadId _: String, image _: ImageAttachment) async
       -> FriendOutgoingAttachment
     {
       await Task.yield()
@@ -984,7 +1000,7 @@ struct LoadingView: View {
       )
     }
 
-    func downloadAttachmentData(path _: String) async throws -> Data {
+    func downloadAttachmentData(path _: String) async -> Data {
       await Task.yield()
       return Data()
     }

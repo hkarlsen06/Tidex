@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable convenience_type explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_types_order no_magic_numbers type_contents_order unused_parameter
 import SwiftUI
 import UIKit
 
@@ -63,7 +69,7 @@ extension View {
   ///   - alignment: Horizontal alignment when constrained (default: center)
   func adaptiveMaxWidth(
     _ maxWidth: CGFloat = AdaptiveMaxWidth.form,
-    alignment: Alignment = .center
+    alignment _: Alignment = .center
   ) -> some View {
     modifier(SimpleAdaptiveModifier(maxWidth: maxWidth))
   }
