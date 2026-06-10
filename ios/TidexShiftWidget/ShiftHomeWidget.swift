@@ -11,7 +11,7 @@ import WidgetKit
 /// Tidex brand blue color - adapts to light/dark mode for optimal contrast
 /// Light: HSL(221, 83%, 53%) - vibrant blue
 /// Dark: HSL(217, 91%, 65%) - bright blue
-private struct TidexWidgetColors {
+private enum TidexWidgetColors {
   /// Light mode brand blue
   static let lightBlue = Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
   /// Dark mode brand blue
@@ -21,15 +21,14 @@ private struct TidexWidgetColors {
   static let lightBackground = Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
   /// Dark mode background
   static let darkBackground = Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
-}
 
-/// Logo gradient colors from short-logo-gradient.svg
-/// These remain constant regardless of appearance mode
-private let logoGradientColors = [
-  Color(red: 0, green: 212 / 255, blue: 1),  // #00D4FF - cyan (top)
-  Color(red: 123 / 255, green: 97 / 255, blue: 1),  // #7B61FF - purple (middle)
-  Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255),  // #9B4DCA - magenta (bottom)
-]
+  /// Logo gradient colors from short-logo-gradient.svg.
+  static let logoGradient = [
+    Color(red: 0, green: 212 / 255, blue: 1),  // #00D4FF - cyan (top)
+    Color(red: 123 / 255, green: 97 / 255, blue: 1),  // #7B61FF - purple (middle)
+    Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255),  // #9B4DCA - magenta (bottom)
+  ]
+}
 
 // MARK: - Logo Watermark View
 
@@ -65,33 +64,47 @@ private struct TidexLogoShape: Shape {
 
     path.move(to: pt(1.23732, 1.7177))
     path.addCurve(
-      to: pt(0.66612, 1.7177), control1: pt(1.13775, 1.7179), control2: pt(0.76566, 1.71337))
+      to: pt(0.66612, 1.7177), control1: pt(1.13775, 1.7179), control2: pt(0.76566, 1.71337)
+    )
     path.addCurve(
-      to: pt(0.63993, 1.74003), control1: pt(0.65617, 1.71814), control2: pt(0.6412, 1.72111))
+      to: pt(0.63993, 1.74003), control1: pt(0.65617, 1.71814), control2: pt(0.6412, 1.72111)
+    )
     path.addCurve(
-      to: pt(0.63993, 1.81659), control1: pt(0.6388, 1.75702), control2: pt(0.6372, 1.79978))
+      to: pt(0.63993, 1.81659), control1: pt(0.6388, 1.75702), control2: pt(0.6372, 1.79978)
+    )
     path.addCurve(
-      to: pt(0.66612, 1.83892), control1: pt(0.6412, 1.82434), control2: pt(0.64969, 1.83921))
+      to: pt(0.66612, 1.83892), control1: pt(0.6412, 1.82434), control2: pt(0.64969, 1.83921)
+    )
     path.addCurve(
-      to: pt(0.83797, 1.83892), control1: pt(0.69934, 1.83832), control2: pt(0.80156, 1.83786))
+      to: pt(0.83797, 1.83892), control1: pt(0.69934, 1.83832), control2: pt(0.80156, 1.83786)
+    )
     path.addCurve(
-      to: pt(0.88052, 1.88038), control1: pt(0.85928, 1.83953), control2: pt(0.88041, 1.85613))
+      to: pt(0.88052, 1.88038), control1: pt(0.85928, 1.83953), control2: pt(0.88041, 1.85613)
+    )
     path.addCurve(
-      to: pt(0.88052, 2.311), control1: pt(0.88091, 1.95937), control2: pt(0.88011, 2.24337))
+      to: pt(0.88052, 2.311), control1: pt(0.88091, 1.95937), control2: pt(0.88011, 2.24337)
+    )
     path.addCurve(
-      to: pt(1.02782, 2.25997), control1: pt(0.88095, 2.38083), control2: pt(1.02782, 2.32572))
+      to: pt(1.02782, 2.25997), control1: pt(0.88095, 2.38083), control2: pt(1.02782, 2.32572)
+    )
     path.addCurve(
-      to: pt(1.02782, 1.87719), control1: pt(1.02783, 2.18381), control2: pt(1.02715, 1.94768))
+      to: pt(1.02782, 1.87719), control1: pt(1.02783, 2.18381), control2: pt(1.02715, 1.94768)
+    )
     path.addCurve(
-      to: pt(1.06874, 1.83892), control1: pt(1.02797, 1.86204), control2: pt(1.04362, 1.83915))
+      to: pt(1.06874, 1.83892), control1: pt(1.02797, 1.86204), control2: pt(1.04362, 1.83915)
+    )
     path.addCurve(
-      to: pt(1.23568, 1.83892), control1: pt(1.10399, 1.83859), control2: pt(1.20286, 1.83973))
+      to: pt(1.23568, 1.83892), control1: pt(1.10399, 1.83859), control2: pt(1.20286, 1.83973)
+    )
     path.addCurve(
-      to: pt(1.2635, 1.81021), control1: pt(1.25067, 1.83854), control2: pt(1.26304, 1.83083))
+      to: pt(1.2635, 1.81021), control1: pt(1.25067, 1.83854), control2: pt(1.26304, 1.83083)
+    )
     path.addCurve(
-      to: pt(1.2635, 1.74482), control1: pt(1.26387, 1.79389), control2: pt(1.26396, 1.76203))
+      to: pt(1.2635, 1.74482), control1: pt(1.26387, 1.79389), control2: pt(1.26396, 1.76203)
+    )
     path.addCurve(
-      to: pt(1.23732, 1.7177), control1: pt(1.26317, 1.73255), control2: pt(1.25496, 1.71767))
+      to: pt(1.23732, 1.7177), control1: pt(1.26317, 1.73255), control2: pt(1.25496, 1.71767)
+    )
     path.closeSubpath()
 
     return path
@@ -113,7 +126,7 @@ private struct LogoWatermark: View {
       TidexLogoShape()
         .fill(
           LinearGradient(
-            colors: logoGradientColors,
+            colors: TidexWidgetColors.logoGradient,
             startPoint: .top,
             endPoint: .bottom
           )
@@ -124,10 +137,10 @@ private struct LogoWatermark: View {
 
 // MARK: - Widget View
 
-struct ShiftHomeWidgetView: View {
-  let entry: ShiftWidgetEntry
-  @Environment(\.widgetRenderingMode) var renderingMode
-  @Environment(\.colorScheme) var colorScheme
+internal struct ShiftHomeWidgetView: View {
+  internal let entry: ShiftWidgetEntry
+  @Environment(\.widgetRenderingMode) internal var renderingMode: WidgetRenderingMode
+  @Environment(\.colorScheme) internal var colorScheme: ColorScheme
 
   /// Whether we're in light mode
   private var isLightMode: Bool {
@@ -310,7 +323,7 @@ struct ShiftHomeWidgetView: View {
     return endDate
   }
 
-  var body: some View {
+  internal var body: some View {
     ZStack {
       // Adaptive background
       backgroundColor
@@ -573,15 +586,15 @@ private struct StoredShift: Codable {
 
 /// Currency formatting for widgets - mirrors CurrencyConfig from the main app
 /// Handles prefix vs suffix display based on currency symbol
-enum WidgetCurrencyFormatter {
+internal enum WidgetCurrencyFormatter {
   /// Currency display position
-  enum Display {
+  internal enum Display {
     case prefix  // Symbol before amount (e.g., "$100")
     case suffix  // Symbol after amount (e.g., "100 kr")
   }
 
   /// Get display position for a currency symbol
-  static func display(for currency: String) -> Display {
+  internal static func display(for currency: String) -> Display {
     switch currency {
     // Suffix currencies
     case "kr", "zł", "Kč", "₽":
@@ -594,7 +607,7 @@ enum WidgetCurrencyFormatter {
   }
 
   /// Format an amount with currency symbol
-  static func format(_ amount: Double, currency: String) -> String {
+  internal static func format(_ amount: Double, currency: String) -> String {
     let formatter = NumberFormatter()
     formatter.numberStyle = .decimal
     formatter.minimumFractionDigits = 0
@@ -613,7 +626,7 @@ enum WidgetCurrencyFormatter {
   }
 
   /// Format empty/placeholder with currency symbol (e.g., "--- kr" or "$---")
-  static func formatEmpty(currency: String) -> String {
+  internal static func formatEmpty(currency: String) -> String {
     switch display(for: currency) {
     case .prefix:
       return "\(currency)---"
@@ -624,7 +637,7 @@ enum WidgetCurrencyFormatter {
   }
 
   /// Format an amount in compact form for stats (e.g., "1.5k", "15k")
-  static func formatCompact(_ amount: Double, currency: String) -> String {
+  internal static func formatCompact(_ amount: Double, currency: String) -> String {
     let absAmount = abs(amount)
     let formatted: String
 
@@ -654,7 +667,7 @@ enum WidgetCurrencyFormatter {
 
 // MARK: - Widget Provider
 
-struct ShiftWidgetProvider: TimelineProvider {
+internal struct ShiftWidgetProvider: TimelineProvider {
   private let helper: ShiftWidgetProviderHelper = .init()
 
   internal func placeholder(in _: Context) -> ShiftWidgetEntry {
@@ -753,10 +766,14 @@ internal struct ShiftWidgetProviderHelper {
 
   /// Build a local Date from shift day + HH:mm, supporting 24:00 as next-day midnight.
   private func shiftDateTime(shiftDateString: String, time: String) -> Date? {
-    guard let shiftDate = parseShiftDate(shiftDateString) else { return nil }
+    guard let shiftDate = parseShiftDate(shiftDateString) else {
+      return nil
+    }
 
     let timeComponents = time.split(separator: ":").compactMap { Int($0) }
-    guard timeComponents.count >= 2 else { return nil }
+    guard timeComponents.count >= 2 else {
+      return nil
+    }
 
     let rawHour = timeComponents[0]
     let minute = timeComponents[1]
@@ -768,7 +785,9 @@ internal struct ShiftWidgetProviderHelper {
     components.minute = minute
     components.second = 0
 
-    guard var date = calendar.date(from: components) else { return nil }
+    guard var date = calendar.date(from: components) else {
+      return nil
+    }
     if rawHour == 24 {
       date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
     }
@@ -1093,7 +1112,9 @@ private func formatShiftDate(
 }
 
 private func sentenceCased(_ text: String) -> String {
-  guard !text.isEmpty else { return text }
+  guard !text.isEmpty else {
+    return text
+  }
   return text.prefix(1).uppercased(with: appLocale()) + text.dropFirst()
 }
 
@@ -1104,10 +1125,10 @@ private func appLocale() -> Locale {
 
 // MARK: - Widget Configuration
 
-struct ShiftHomeWidget: Widget {
-  let kind: String = "ShiftHomeWidget"
+internal struct ShiftHomeWidget: Widget {
+  internal let kind: String = "ShiftHomeWidget"
 
-  var body: some WidgetConfiguration {
+  internal var body: some WidgetConfiguration {
     StaticConfiguration(kind: kind, provider: ShiftWidgetProvider()) { entry in
       ShiftHomeWidgetView(entry: entry)
         .widgetURL(entry.deepLinkURL)

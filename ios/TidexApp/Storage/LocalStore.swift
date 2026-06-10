@@ -4,12 +4,13 @@ import Foundation
 import os.log
 import SwiftData
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "LocalStore")
+private let kLocalStoreLogger = Logger(subsystem: "com.tidex.app", category: "LocalStore")
+private let kLogIdentifierPrefixLength = 8
 
-enum LocalStoreWriteError: Error {
+internal enum LocalStoreWriteError: Error {
+  case missingConflictSnapshot
   case notFound
   case notInConflict
-  case missingConflictSnapshot
 }
 
 // MARK: - Local Store
@@ -17,28 +18,29 @@ enum LocalStoreWriteError: Error {
 /// Central SwiftData container for offline storage
 /// Manages the ModelContainer and provides thread-safe access via ModelActor
 @MainActor
-final class LocalStore {
+internal final class LocalStore {
   private static let appGroupId = "group.no.tidex.app"
 
   /// Shared instance for the app
-  static let shared = LocalStore()
+  internal static let shared = LocalStore()
 
   /// The SwiftData model container
-  let container: ModelContainer
+  internal let container: ModelContainer
 
   /// Actor for serialized writes (sync operations)
-  let storeActor: LocalStoreActor
+  internal let storeActor: LocalStoreActor
 
   /// Indicates if the store fell back to in-memory storage due to persistent storage failure.
   /// When true, data will NOT be saved between app launches - user should be warned.
-  let isUsingInMemoryFallback: Bool
+  internal let isUsingInMemoryFallback: Bool
 
   private static func ensureStoreParentDirectoryExists() {
     guard
       let appGroupURL = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: appGroupId)
+        forSecurityApplicationGroupIdentifier: appGroupId
+      )
     else {
-      logger.error("Missing App Group container for local store")
+      kLocalStoreLogger.error("Missing App Group container for local store")
       return
     }
 
@@ -53,7 +55,7 @@ final class LocalStore {
         withIntermediateDirectories: true
       )
     } catch {
-      logger.error("Failed to create local store directory: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to create local store directory: \(error.localizedDescription)")
     }
   }
 
@@ -99,13 +101,13 @@ final class LocalStore {
       container = try ModelContainer(for: schema, configurations: [configuration])
       storeActor = LocalStoreActor(modelContainer: container)
       isUsingInMemoryFallback = false
-      logger.info("LocalStore initialized successfully")
+      kLocalStoreLogger.info("LocalStore initialized successfully")
     } catch {
-      logger.error("Failed to initialize LocalStore: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to initialize LocalStore: \(error.localizedDescription)")
 
       // Try to recover by creating an in-memory container as fallback
       // This allows the app to function (without persistence) rather than crash
-      logger.warning("Attempting fallback to in-memory storage")
+      kLocalStoreLogger.warning("Attempting fallback to in-memory storage")
       let fallbackConfig = ModelConfiguration(
         schema: schema,
         isStoredInMemoryOnly: true,
@@ -116,12 +118,13 @@ final class LocalStore {
         container = try ModelContainer(for: schema, configurations: [fallbackConfig])
         storeActor = LocalStoreActor(modelContainer: container)
         isUsingInMemoryFallback = true
-        logger.warning("LocalStore initialized with in-memory fallback - data will not persist")
+        kLocalStoreLogger.warning("LocalStore initialized with in-memory fallback - data will not persist")
       } catch {
         // This should essentially never happen - in-memory containers rarely fail
         // But we need to initialize the properties, so create a minimal container
-        logger.critical(
-          "Failed to create even in-memory storage: \(fallbackError.localizedDescription)")
+        kLocalStoreLogger.critical(
+          "Failed to create even in-memory storage: \(fallbackError.localizedDescription)"
+        )
 
         // Last resort: try with default configuration
         // If this fails, there's a fundamental issue with the app's model definitions
@@ -129,7 +132,7 @@ final class LocalStore {
           container = try ModelContainer(for: schema)
           storeActor = LocalStoreActor(modelContainer: container)
           isUsingInMemoryFallback = true
-          logger.critical("LocalStore using default container - app may be unstable")
+          kLocalStoreLogger.critical("LocalStore using default container - app may be unstable")
         } catch {
           fatalError(
             """
@@ -138,7 +141,8 @@ final class LocalStore {
             In-memory fallback error: \(fallbackError.localizedDescription)
             Default container error: \(lastResortError.localizedDescription)
             This indicates a fundamental issue with the app's SwiftData model definitions.
-            """)
+            """
+          )
         }
       }
     }
@@ -147,14 +151,14 @@ final class LocalStore {
   /// Get a fresh ModelContext for main actor operations
   /// Creates a new context each time to ensure it sees the latest persisted data
   /// (avoids stale cache issues when actor writes and main thread reads)
-  var mainContext: ModelContext {
+  internal var mainContext: ModelContext {
     ModelContext(container)
   }
 
   /// Reset all local data (for debugging or logout)
-  func resetAllData() async {
+  internal func resetAllData() async {
     await storeActor.resetAllData()
-    logger.info("All local data has been reset")
+    kLocalStoreLogger.info("All local data has been reset")
   }
 }
 
@@ -163,12 +167,13 @@ final class LocalStore {
 /// ModelActor for serialized write operations
 /// All sync operations should use this actor to prevent data races
 @ModelActor
-actor LocalStoreActor {
+internal actor LocalStoreActor {
   private let isoDateFormatter: DateFormatter = FormatterCache.isoDateFormatter(
-    timeZone: Date.localTimeZone)
+    timeZone: Date.localTimeZone
+  )
 
   /// Delete all data from all tables
-  func resetAllData() {
+  internal func resetAllData() {
     do {
       try modelContext.delete(model: LocalUserShift.self)
       try modelContext.delete(model: LocalEvent.self)
@@ -196,18 +201,18 @@ actor LocalStoreActor {
       try modelContext.delete(model: LocalFriendMessagingSyncState.self)
       try modelContext.save()
     } catch {
-      logger.error("Failed to reset all data: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to reset all data: \(error.localizedDescription)")
     }
   }
 
   /// Save changes to the context
-  func save() throws {
+  internal func save() throws {
     try modelContext.save()
   }
 
   // MARK: - Read Operations (Local Only)
 
-  func fetchUserSettings(userId: String) -> UserSettings? {
+  internal func fetchUserSettings(userId: String) -> UserSettings? {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -218,12 +223,12 @@ actor LocalStoreActor {
       }
       return localSettings.toUserSettings()
     } catch {
-      logger.error("Failed to fetch settings: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to fetch settings: \(error.localizedDescription)")
       return nil
     }
   }
 
-  func fetchSnapshots(userId: String) -> [WageSnapshot] {
+  internal func fetchSnapshots(userId: String) -> [WageSnapshot] {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { snapshot in
         snapshot.userId == userId && snapshot.serverDeletedAt == nil
@@ -236,12 +241,12 @@ actor LocalStoreActor {
       let localSnapshots = try modelContext.fetch(descriptor)
       return localSnapshots.map { $0.toWageSnapshot() }
     } catch {
-      logger.error("Failed to fetch snapshots: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to fetch snapshots: \(error.localizedDescription)")
       return []
     }
   }
 
-  func fetchRecurringShifts(userId: String) -> [RecurringShiftRow] {
+  internal func fetchRecurringShifts(userId: String) -> [RecurringShiftRow] {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { shift in
         shift.userId == userId && shift.serverDeletedAt == nil
@@ -254,12 +259,12 @@ actor LocalStoreActor {
       let localRecurring = try modelContext.fetch(descriptor)
       return localRecurring.map { $0.toRecurringShiftRow() }
     } catch {
-      logger.error("Failed to fetch recurring shifts: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to fetch recurring shifts: \(error.localizedDescription)")
       return []
     }
   }
 
-  func fetchShifts(userId: String, startDate: Date, endDate: Date) -> [ShiftRow] {
+  internal func fetchShifts(userId: String, startDate: Date, endDate: Date) -> [ShiftRow] {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { shift in
         shift.userId == userId && shift.serverDeletedAt == nil
@@ -273,12 +278,12 @@ actor LocalStoreActor {
       let localShifts: [LocalUserShift] = try modelContext.fetch(descriptor)
       return localShifts.map { $0.toShiftRow() }
     } catch {
-      logger.error("Failed to fetch shifts: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to fetch shifts: \(error.localizedDescription)")
       return []
     }
   }
 
-  func fetchEvents(userId: String, startDate: Date, endDate: Date) -> [EventRow] {
+  internal func fetchEvents(userId: String, startDate: Date, endDate: Date) -> [EventRow] {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { event in
         event.userId == userId && event.serverDeletedAt == nil
@@ -296,12 +301,12 @@ actor LocalStoreActor {
       let localEvents = try modelContext.fetch(descriptor)
       return localEvents.map { $0.toEventRow() }
     } catch {
-      logger.error("Failed to fetch events: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to fetch events: \(error.localizedDescription)")
       return []
     }
   }
 
-  func fetchAllEvents(userId: String) -> [EventRow] {
+  internal func fetchAllEvents(userId: String) -> [EventRow] {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { event in
         event.userId == userId && event.serverDeletedAt == nil
@@ -323,7 +328,7 @@ actor LocalStoreActor {
   // MARK: - Sync State Operations
 
   /// Get or create sync state for a user
-  func getOrCreateSyncState(userId: String) throws -> LocalSyncState {
+  internal func getOrCreateSyncState(userId: String) throws -> LocalSyncState {
     let descriptor = FetchDescriptor<LocalSyncState>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -339,7 +344,7 @@ actor LocalStoreActor {
   }
 
   /// Get sync state for a user (returns nil if not found)
-  func getSyncState(userId: String) throws -> LocalSyncState? {
+  internal func getSyncState(userId: String) throws -> LocalSyncState? {
     let descriptor = FetchDescriptor<LocalSyncState>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -350,7 +355,7 @@ actor LocalStoreActor {
 
   // MARK: - Jobs Operations
 
-  func fetchNonDeletedJobs(userId: String) -> [Job] {
+  internal func fetchNonDeletedJobs(userId: String) -> [Job] {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { job in
         job.userId == userId
@@ -368,13 +373,13 @@ actor LocalStoreActor {
         }
         .map { $0.toJob() }
     } catch {
-      logger.error("Failed to fetch jobs: \(error.localizedDescription)")
+      kLocalStoreLogger.error("Failed to fetch jobs: \(error.localizedDescription)")
       return []
     }
   }
 
   /// Upsert a job from server data
-  func upsertJob(_ job: LocalJob) throws {
+  internal func upsertJob(_ job: LocalJob) throws {
     let jobId = job.id
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == jobId }
@@ -406,14 +411,14 @@ actor LocalStoreActor {
     }
   }
 
-  func getJob(id: String) throws -> LocalJob? {
+  internal func getJob(id: String) throws -> LocalJob? {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
     return try modelContext.fetch(descriptor).first
   }
 
-  func getAllJobs(userId: String) throws -> [LocalJob] {
+  internal func getAllJobs(userId: String) throws -> [LocalJob] {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -421,7 +426,7 @@ actor LocalStoreActor {
   }
 
   /// Get dirty jobs that need to be pushed
-  func getDirtyJobs(userId: String) throws -> [LocalJob] {
+  internal func getDirtyJobs(userId: String) throws -> [LocalJob] {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { job in
         job.userId == userId
@@ -432,7 +437,7 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
-  func hasDirtyJobs(userId: String) throws -> Bool {
+  internal func hasDirtyJobs(userId: String) throws -> Bool {
     var descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { job in
         job.userId == userId
@@ -447,7 +452,7 @@ actor LocalStoreActor {
   // MARK: - Local Job Write Operations
 
   // swiftlint:disable:next function_parameter_count
-  func createJob(
+  internal func createJob(
     userId: String,
     name: String,
     color: String?,
@@ -526,7 +531,7 @@ actor LocalStoreActor {
     return localJob.toJob()
   }
 
-  func updateJobMetadata(
+  internal func updateJobMetadata(
     id: String,
     name: String,
     color: String?
@@ -564,7 +569,7 @@ actor LocalStoreActor {
     return localJob.toJob()
   }
 
-  func updateJobCurrency(
+  internal func updateJobCurrency(
     id: String,
     currency: String
   ) throws -> Job {
@@ -596,7 +601,7 @@ actor LocalStoreActor {
     return localJob.toJob()
   }
 
-  func updateJobPaySettings(
+  internal func updateJobPaySettings(
     id: String,
     payrollDay: Int,
     halfTaxMonth: Int?,
@@ -639,7 +644,7 @@ actor LocalStoreActor {
     return localJob.toJob()
   }
 
-  func setJobDefault(userId: String, jobId: String) throws {
+  internal func setJobDefault(userId: String, jobId: String) throws {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { job in
         job.userId == userId && job.deletedAt == nil && job.archivedAt == nil
@@ -662,7 +667,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func archiveJob(id: String, archivedAt: Date = Date()) throws -> String {
+  internal func archiveJob(id: String, archivedAt: Date = Date()) throws -> String {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
@@ -683,7 +688,7 @@ actor LocalStoreActor {
     return localJob.userId
   }
 
-  func restoreJob(id: String, sortOrder: Int) throws -> String {
+  internal func restoreJob(id: String, sortOrder: Int) throws -> String {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
@@ -705,7 +710,7 @@ actor LocalStoreActor {
     return localJob.userId
   }
 
-  func reorderJobs(userId: String, orderedJobIds: [String]) throws {
+  internal func reorderJobs(userId: String, orderedJobIds: [String]) throws {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { job in
         job.userId == userId && job.deletedAt == nil && job.archivedAt == nil
@@ -729,7 +734,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func markJobPendingDelete(id: String) throws -> String {
+  internal func markJobPendingDelete(id: String) throws -> String {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
@@ -750,7 +755,7 @@ actor LocalStoreActor {
     return localJob.userId
   }
 
-  func resolveStoredJobConflictKeepLocal(id: String) throws {
+  internal func resolveStoredJobConflictKeepLocal(id: String) throws {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
@@ -780,7 +785,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredJobConflictKeepServer(id: String) throws {
+  internal func resolveStoredJobConflictKeepServer(id: String) throws {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
@@ -820,7 +825,7 @@ actor LocalStoreActor {
   }
 
   /// Upsert a user shift from server data
-  func upsertUserShift(_ shift: LocalUserShift) throws {
+  internal func upsertUserShift(_ shift: LocalUserShift) throws {
     let shiftId = shift.id
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == shiftId }
@@ -849,7 +854,7 @@ actor LocalStoreActor {
   }
 
   /// Get user shift by ID
-  func getUserShift(id: String) throws -> LocalUserShift? {
+  internal func getUserShift(id: String) throws -> LocalUserShift? {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -857,7 +862,7 @@ actor LocalStoreActor {
   }
 
   /// Get all user shifts for a user (including soft-deleted for sync)
-  func getAllUserShifts(userId: String) throws -> [LocalUserShift] {
+  internal func getAllUserShifts(userId: String) throws -> [LocalUserShift] {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -865,7 +870,7 @@ actor LocalStoreActor {
   }
 
   /// Get dirty user shifts that need to be pushed
-  func getDirtyUserShifts(userId: String) throws -> [LocalUserShift] {
+  internal func getDirtyUserShifts(userId: String) throws -> [LocalUserShift] {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { shift in
         shift.userId == userId
@@ -878,7 +883,7 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
-  func hasDirtyUserShifts(userId: String) throws -> Bool {
+  internal func hasDirtyUserShifts(userId: String) throws -> Bool {
     var descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { shift in
         shift.userId == userId
@@ -892,7 +897,7 @@ actor LocalStoreActor {
 
   // MARK: - Local User Shift Write Operations
 
-  func createUserShift(
+  internal func createUserShift(
     id: String? = nil,
     userId: String,
     jobId: String? = nil,
@@ -913,8 +918,8 @@ actor LocalStoreActor {
 
     let now = Date()
 
-    let pauseWindowsData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    let pauseWindowsData = PauseWindowSupport.normalize(customPauseWindows).flatMap { value in
+      try? kCanonicalJSONEncoder.encode(value)
     }
     let supplementsData = customSupplements.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     let normalizedNote = ShiftNoteSupport.normalize(note)
@@ -963,7 +968,7 @@ actor LocalStoreActor {
     return localShift.toShiftRow()
   }
 
-  func updateUserShiftCustomPauseWindows(
+  internal func updateUserShiftCustomPauseWindows(
     id: String,
     customPauseWindows: CustomPauseWindows?
   ) throws -> ShiftRow {
@@ -975,8 +980,8 @@ actor LocalStoreActor {
       throw LocalStoreWriteError.notFound
     }
 
-    let normalizedData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    let normalizedData = PauseWindowSupport.normalize(customPauseWindows).flatMap { value in
+      try? kCanonicalJSONEncoder.encode(value)
     }
 
     var dirtyFields = localShift.dirtyFieldKeys
@@ -994,7 +999,7 @@ actor LocalStoreActor {
     return localShift.toShiftRow()
   }
 
-  func updateUserShift(
+  internal func updateUserShift(
     id: String,
     jobId: String? = nil,
     shiftDate: Date?,
@@ -1062,7 +1067,7 @@ actor LocalStoreActor {
     return localShift.toShiftRow()
   }
 
-  func markShiftPendingDelete(id: String) throws -> String {
+  internal func markShiftPendingDelete(id: String) throws -> String {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1080,8 +1085,10 @@ actor LocalStoreActor {
 
   /// Mark multiple shifts for deletion in one transaction.
   /// Returns affected user IDs so callers can trigger side effects once per user.
-  func markShiftsPendingDelete(ids: [String]) throws -> Set<String> {
-    guard !ids.isEmpty else { return [] }
+  internal func markShiftsPendingDelete(ids: [String]) throws -> Set<String> {
+    guard !ids.isEmpty else {
+      return []
+    }
 
     var affectedUserIds: Set<String> = []
     var didMutate = false
@@ -1109,7 +1116,7 @@ actor LocalStoreActor {
     return affectedUserIds
   }
 
-  func resolveStoredShiftConflictKeepLocal(id: String) throws {
+  internal func resolveStoredShiftConflictKeepLocal(id: String) throws {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1139,7 +1146,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredShiftConflictKeepServer(id: String) throws {
+  internal func resolveStoredShiftConflictKeepServer(id: String) throws {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1181,7 +1188,7 @@ actor LocalStoreActor {
 
   // MARK: - Event Operations
 
-  func upsertEvent(_ event: LocalEvent) throws {
+  internal func upsertEvent(_ event: LocalEvent) throws {
     let eventId = event.id
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == eventId }
@@ -1207,21 +1214,21 @@ actor LocalStoreActor {
     }
   }
 
-  func getEvent(id: String) throws -> LocalEvent? {
+  internal func getEvent(id: String) throws -> LocalEvent? {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
     return try modelContext.fetch(descriptor).first
   }
 
-  func getAllEvents(userId: String) throws -> [LocalEvent] {
+  internal func getAllEvents(userId: String) throws -> [LocalEvent] {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.userId == userId }
     )
     return try modelContext.fetch(descriptor)
   }
 
-  func getDirtyEvents(userId: String) throws -> [LocalEvent] {
+  internal func getDirtyEvents(userId: String) throws -> [LocalEvent] {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { event in
         event.userId == userId
@@ -1232,7 +1239,7 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
-  func hasDirtyEvents(userId: String) throws -> Bool {
+  internal func hasDirtyEvents(userId: String) throws -> Bool {
     var descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { event in
         event.userId == userId
@@ -1245,7 +1252,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func createEvent(
+  internal func createEvent(
     id: String? = nil,
     userId: String,
     startDate: Date,
@@ -1267,7 +1274,8 @@ actor LocalStoreActor {
     let dateFormatter = isoDateFormatter
     let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
     let normalizedReminderMinutes = LocalEvent.normalizedReminderMinutesOptional(
-      notificationMinutesArray)
+      notificationMinutesArray
+    )
     let normalizedAnchorTime =
       isAllDay ? LocalEvent.normalizedAnchorTime(notificationAnchorTime) : nil
 
@@ -1315,7 +1323,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func updateEvent(
+  internal func updateEvent(
     id: String,
     startDate: Date?,
     endDate: Date?,
@@ -1395,7 +1403,7 @@ actor LocalStoreActor {
     return localEvent.toEventRow()
   }
 
-  func markEventPendingDelete(id: String) throws -> String {
+  internal func markEventPendingDelete(id: String) throws -> String {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1411,7 +1419,7 @@ actor LocalStoreActor {
     return localEvent.userId
   }
 
-  func resolveStoredEventConflictKeepLocal(id: String) throws {
+  internal func resolveStoredEventConflictKeepLocal(id: String) throws {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1441,7 +1449,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredEventConflictKeepServer(id: String) throws {
+  internal func resolveStoredEventConflictKeepServer(id: String) throws {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1488,7 +1496,7 @@ actor LocalStoreActor {
   // MARK: - Recurring Shift Operations
 
   /// Upsert a recurring shift from server data
-  func upsertRecurringShift(_ shift: LocalRecurringShift) throws {
+  internal func upsertRecurringShift(_ shift: LocalRecurringShift) throws {
     let shiftId = shift.id
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == shiftId }
@@ -1520,7 +1528,7 @@ actor LocalStoreActor {
   }
 
   /// Get recurring shift by ID
-  func getRecurringShift(id: String) throws -> LocalRecurringShift? {
+  internal func getRecurringShift(id: String) throws -> LocalRecurringShift? {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1528,7 +1536,7 @@ actor LocalStoreActor {
   }
 
   /// Get all recurring shifts for a user
-  func getAllRecurringShifts(userId: String) throws -> [LocalRecurringShift] {
+  internal func getAllRecurringShifts(userId: String) throws -> [LocalRecurringShift] {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -1536,7 +1544,7 @@ actor LocalStoreActor {
   }
 
   /// Get dirty recurring shifts that need to be pushed
-  func getDirtyRecurringShifts(userId: String) throws -> [LocalRecurringShift] {
+  internal func getDirtyRecurringShifts(userId: String) throws -> [LocalRecurringShift] {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { shift in
         shift.userId == userId
@@ -1549,7 +1557,7 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
-  func hasDirtyRecurringShifts(userId: String) throws -> Bool {
+  internal func hasDirtyRecurringShifts(userId: String) throws -> Bool {
     var descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { shift in
         shift.userId == userId
@@ -1564,7 +1572,7 @@ actor LocalStoreActor {
   // MARK: - Local Recurring Shift Write Operations
 
   // swiftlint:disable:next function_parameter_count
-  func createRecurringShift(
+  internal func createRecurringShift(
     userId: String,
     jobId: String? = nil,
     startTime: String,
@@ -1583,12 +1591,12 @@ actor LocalStoreActor {
     let selectedDaysData = (try? kCanonicalJSONEncoder.encode(selectedDays)) ?? Data()
     let endConditionData = endCondition.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     let exclusionsData = exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) }
-    let pauseWindowsData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    let pauseWindowsData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap { value in
+      try? kCanonicalJSONEncoder.encode(value)
     }
     let supplementsData = dateSpecificSupplements.flatMap { try? kCanonicalJSONEncoder.encode($0) }
-    let notesData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    let notesData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap { value in
+      try? kCanonicalJSONEncoder.encode(value)
     }
 
     let serverSnapshot = RecurringShiftServerSnapshot(
@@ -1639,7 +1647,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func updateRecurringShift(
+  internal func updateRecurringShift(
     id: String,
     jobId: String? = nil,
     startTime: String?,
@@ -1733,7 +1741,7 @@ actor LocalStoreActor {
     return localShift.toRecurringShiftRow()
   }
 
-  func updateRecurringShiftDateSpecificPauseWindows(
+  internal func updateRecurringShiftDateSpecificPauseWindows(
     id: String,
     dateSpecificPauseWindows: DateSpecificPauseWindows?
   ) throws -> RecurringShiftRow {
@@ -1745,8 +1753,8 @@ actor LocalStoreActor {
       throw LocalStoreWriteError.notFound
     }
 
-    let normalizedData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    let normalizedData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap { value in
+      try? kCanonicalJSONEncoder.encode(value)
     }
 
     var dirtyFields = localShift.dirtyFieldKeys
@@ -1764,7 +1772,7 @@ actor LocalStoreActor {
     return localShift.toRecurringShiftRow()
   }
 
-  func updateRecurringShiftDateSpecificNotes(
+  internal func updateRecurringShiftDateSpecificNotes(
     id: String,
     dateSpecificNotes: [String: String]?
   ) throws -> RecurringShiftRow {
@@ -1776,8 +1784,8 @@ actor LocalStoreActor {
       throw LocalStoreWriteError.notFound
     }
 
-    let normalizedData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    let normalizedData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap { value in
+      try? kCanonicalJSONEncoder.encode(value)
     }
 
     var dirtyFields = localShift.dirtyFieldKeys
@@ -1795,11 +1803,11 @@ actor LocalStoreActor {
     return localShift.toRecurringShiftRow()
   }
 
-  func addRecurringShiftExclusion(id: String, date: String) throws -> Bool {
+  internal func addRecurringShiftExclusion(id: String, date: String) throws -> Bool {
     try addRecurringShiftExclusions(id: id, dates: [date]) > 0
   }
 
-  func addRecurringShiftExclusions(id: String, dates: [String]) throws -> Int {
+  internal func addRecurringShiftExclusions(id: String, dates: [String]) throws -> Int {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1832,7 +1840,7 @@ actor LocalStoreActor {
     return datesToAdd.count
   }
 
-  func markRecurringShiftPendingDelete(id: String) throws {
+  internal func markRecurringShiftPendingDelete(id: String) throws {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1847,7 +1855,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredRecurringShiftConflictKeepLocal(id: String) throws {
+  internal func resolveStoredRecurringShiftConflictKeepLocal(id: String) throws {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1877,7 +1885,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredRecurringShiftConflictKeepServer(id: String) throws {
+  internal func resolveStoredRecurringShiftConflictKeepServer(id: String) throws {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1918,7 +1926,7 @@ actor LocalStoreActor {
   // MARK: - Wage Snapshot Operations
 
   /// Upsert a wage snapshot from server data
-  func upsertWageSnapshot(_ snapshot: LocalWageSnapshot) throws {
+  internal func upsertWageSnapshot(_ snapshot: LocalWageSnapshot) throws {
     let snapshotId = snapshot.id
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == snapshotId }
@@ -1952,7 +1960,7 @@ actor LocalStoreActor {
   }
 
   /// Get wage snapshot by ID
-  func getWageSnapshot(id: String) throws -> LocalWageSnapshot? {
+  internal func getWageSnapshot(id: String) throws -> LocalWageSnapshot? {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
@@ -1960,7 +1968,7 @@ actor LocalStoreActor {
   }
 
   /// Get all wage snapshots for a user
-  func getAllWageSnapshots(userId: String) throws -> [LocalWageSnapshot] {
+  internal func getAllWageSnapshots(userId: String) throws -> [LocalWageSnapshot] {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.userId == userId },
       sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
@@ -1969,7 +1977,7 @@ actor LocalStoreActor {
   }
 
   /// Get dirty wage snapshots that need to be pushed
-  func getDirtyWageSnapshots(userId: String) throws -> [LocalWageSnapshot] {
+  internal func getDirtyWageSnapshots(userId: String) throws -> [LocalWageSnapshot] {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { snapshot in
         snapshot.userId == userId
@@ -1982,7 +1990,7 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor)
   }
 
-  func hasDirtyWageSnapshots(userId: String) throws -> Bool {
+  internal func hasDirtyWageSnapshots(userId: String) throws -> Bool {
     var descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { snapshot in
         snapshot.userId == userId
@@ -1997,7 +2005,7 @@ actor LocalStoreActor {
   // MARK: - Local Wage Snapshot Write Operations
 
   // swiftlint:disable:next function_parameter_count
-  func createWageSnapshot(
+  internal func createWageSnapshot(
     userId: String,
     jobId: String? = nil,
     fromDate: Date?,
@@ -2072,7 +2080,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func updateWageSnapshot(
+  internal func updateWageSnapshot(
     id: String,
     jobId: String? = nil,
     hourlyWage: Double?,
@@ -2170,7 +2178,7 @@ actor LocalStoreActor {
     return localSnapshot.toWageSnapshot()
   }
 
-  func markWageSnapshotPendingDelete(id: String) throws {
+  internal func markWageSnapshotPendingDelete(id: String) throws {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
@@ -2185,7 +2193,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredWageSnapshotConflictKeepLocal(id: String) throws {
+  internal func resolveStoredWageSnapshotConflictKeepLocal(id: String) throws {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
@@ -2215,7 +2223,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredWageSnapshotConflictKeepServer(id: String) throws {
+  internal func resolveStoredWageSnapshotConflictKeepServer(id: String) throws {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
@@ -2262,7 +2270,7 @@ actor LocalStoreActor {
   // MARK: - User Settings Operations
 
   /// Upsert user settings from server data
-  func upsertUserSettings(_ settings: LocalUserSettings) throws {
+  internal func upsertUserSettings(_ settings: LocalUserSettings) throws {
     let settingsUserId = settings.userId
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == settingsUserId }
@@ -2298,7 +2306,7 @@ actor LocalStoreActor {
   }
 
   /// Get user settings by user ID
-  func getUserSettings(userId: String) throws -> LocalUserSettings? {
+  internal func getUserSettings(userId: String) throws -> LocalUserSettings? {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -2306,7 +2314,7 @@ actor LocalStoreActor {
   }
 
   /// Get dirty user settings that need to be pushed
-  func getDirtyUserSettings(userId: String) throws -> LocalUserSettings? {
+  internal func getDirtyUserSettings(userId: String) throws -> LocalUserSettings? {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { settings in
         settings.userId == userId
@@ -2319,7 +2327,7 @@ actor LocalStoreActor {
     return try modelContext.fetch(descriptor).first
   }
 
-  func hasDirtyUserSettings(userId: String) throws -> Bool {
+  internal func hasDirtyUserSettings(userId: String) throws -> Bool {
     var descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { settings in
         settings.userId == userId
@@ -2335,7 +2343,7 @@ actor LocalStoreActor {
 
   /// Create a new local user settings entry
   /// Used during onboarding when no settings exist yet
-  func createUserSettings(
+  internal func createUserSettings(
     userId: String,
     payrollDay: Int? = nil,
     currency: String? = nil,
@@ -2421,7 +2429,7 @@ actor LocalStoreActor {
 
   /// Get or create user settings for a user
   /// Returns existing settings if found, otherwise creates new settings
-  func getOrCreateUserSettings(
+  internal func getOrCreateUserSettings(
     userId: String,
     payrollDay: Int? = nil,
     currency: String? = nil
@@ -2443,7 +2451,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func updateUserSettings(
+  internal func updateUserSettings(
     userId: String,
     monthlyGoal: Int?,
     monthlyGoalsByMonth: [String: Int]?,
@@ -2551,7 +2559,7 @@ actor LocalStoreActor {
   /// Clear the profile picture URL (set to nil)
   /// This is separate from updateUserSettings because Swift optionals can't distinguish
   /// between "not provided" and "explicitly set to nil"
-  func clearProfilePictureUrl(userId: String) throws -> UserSettings {
+  internal func clearProfilePictureUrl(userId: String) throws -> UserSettings {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -2572,7 +2580,7 @@ actor LocalStoreActor {
     return localSettings.toUserSettings()
   }
 
-  func updateUserSettingsLastActive(userId: String) throws -> Bool {
+  internal func updateUserSettingsLastActive(userId: String) throws -> Bool {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -2589,7 +2597,7 @@ actor LocalStoreActor {
     return true
   }
 
-  func resolveStoredUserSettingsConflictKeepLocal(userId: String) throws {
+  internal func resolveStoredUserSettingsConflictKeepLocal(userId: String) throws {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -2619,7 +2627,7 @@ actor LocalStoreActor {
     try modelContext.save()
   }
 
-  func resolveStoredUserSettingsConflictKeepServer(userId: String) throws {
+  internal func resolveStoredUserSettingsConflictKeepServer(userId: String) throws {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -2664,7 +2672,7 @@ actor LocalStoreActor {
   // MARK: - Conflict Helpers
 
   /// Get all records with conflicts for a user
-  func getConflicts(userId: String) throws -> (
+  internal func getConflicts(userId: String) throws -> (
     jobs: [LocalJob],
     shifts: [LocalUserShift],
     events: [LocalEvent],
@@ -2718,7 +2726,7 @@ actor LocalStoreActor {
   }
 
   /// Check if user has any conflicts
-  func hasConflicts(userId: String) throws -> Bool {
+  internal func hasConflicts(userId: String) throws -> Bool {
     let conflicts = try getConflicts(userId: userId)
     return !conflicts.jobs.isEmpty || !conflicts.shifts.isEmpty
       || !conflicts.events.isEmpty || !conflicts.recurringShifts.isEmpty
@@ -2726,7 +2734,7 @@ actor LocalStoreActor {
   }
 
   /// Check if user has any pending changes
-  func hasPendingChanges(userId: String) throws -> Bool {
+  internal func hasPendingChanges(userId: String) throws -> Bool {
     try hasDirtyJobs(userId: userId)
       || hasDirtyUserShifts(userId: userId)
       || hasDirtyEvents(userId: userId)
@@ -2737,7 +2745,7 @@ actor LocalStoreActor {
   }
 
   /// Count total conflicts for a user
-  func countConflicts(userId: String) throws -> Int {
+  internal func countConflicts(userId: String) throws -> Int {
     let conflicts = try getConflicts(userId: userId)
     return conflicts.jobs.count + conflicts.shifts.count + conflicts.events.count
       + conflicts.recurringShifts.count
@@ -2746,7 +2754,7 @@ actor LocalStoreActor {
   }
 
   /// Update sync state with a closure
-  func updateSyncState(userId: String, update: (LocalSyncState) -> Void) {
+  internal func updateSyncState(userId: String, update: (LocalSyncState) -> Void) {
     let descriptor = FetchDescriptor<LocalSyncState>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -2762,7 +2770,7 @@ actor LocalStoreActor {
   // MARK: - Sync Update Operations for Jobs
 
   // swiftlint:disable:next function_parameter_count
-  func updateJobFromServer(
+  internal func updateJobFromServer(
     id: String,
     serverRow: SyncJobRow,
     serverUpdatedAt: Date,
@@ -2775,7 +2783,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.name = serverRow.name
     existing.color = serverRow.color
@@ -2793,29 +2805,37 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markJobConflict(id: String, serverSnapshot: JobServerSnapshot?) {
+  internal func markJobConflict(id: String, serverSnapshot: JobServerSnapshot?) {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }
 
-  func updateJobConflictSnapshot(id: String, serverSnapshot: JobServerSnapshot) {
+  internal func updateJobConflictSnapshot(id: String, serverSnapshot: JobServerSnapshot) {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
   // swiftlint:disable:next function_parameter_count
-  func autoMergeJob(
+  internal func autoMergeJob(
     id: String,
     serverRow: SyncJobRow,
     serverUpdatedAt: Date,
@@ -2829,7 +2849,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     if !localDirtyFields.contains(.name) {
       existing.name = serverRow.name
@@ -2870,7 +2894,7 @@ actor LocalStoreActor {
   // MARK: - Sync Update Operations for User Shifts
 
   /// Update a shift from server data (for clean rows)
-  func updateShiftFromServer(
+  internal func updateShiftFromServer(
     id: String,
     serverRow: SyncShiftRow,
     serverUpdatedAt: Date,
@@ -2882,7 +2906,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -2892,11 +2920,11 @@ actor LocalStoreActor {
     existing.endTime = serverRow.end_time
     existing.note = ShiftNoteSupport.normalize(serverRow.note)
     existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
-      .flatMap {
-        try? kCanonicalJSONEncoder.encode($0)
+      .flatMap { value in
+        try? kCanonicalJSONEncoder.encode(value)
       }
-    existing.customSupplements = serverRow.custom_supplements.flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    existing.customSupplements = serverRow.custom_supplements.flatMap { value in
+      try? kCanonicalJSONEncoder.encode(value)
     }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -2906,30 +2934,38 @@ actor LocalStoreActor {
   }
 
   /// Mark a shift as having a conflict
-  func markShiftConflict(id: String, serverSnapshot: UserShiftServerSnapshot?) {
+  internal func markShiftConflict(id: String, serverSnapshot: UserShiftServerSnapshot?) {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }
 
   /// Update conflict snapshot for a shift already in conflict
-  func updateShiftConflictSnapshot(id: String, serverSnapshot: UserShiftServerSnapshot) {
+  internal func updateShiftConflictSnapshot(id: String, serverSnapshot: UserShiftServerSnapshot) {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
   /// Auto-merge a shift (apply server changes for non-dirty fields)
-  func autoMergeShift(  // swiftlint:disable:this function_parameter_count
+  internal func autoMergeShift(  // swiftlint:disable:this function_parameter_count
     id: String,
     serverRow: SyncShiftRow,
     serverUpdatedAt: Date,
@@ -2942,7 +2978,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -2967,8 +3007,8 @@ actor LocalStoreActor {
         .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
     if !localDirtyFields.contains(.customSupplements) {
-      existing.customSupplements = serverRow.custom_supplements.flatMap {
-        try? kCanonicalJSONEncoder.encode($0)
+      existing.customSupplements = serverRow.custom_supplements.flatMap { value in
+        try? kCanonicalJSONEncoder.encode(value)
       }
     }
 
@@ -2982,7 +3022,7 @@ actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for Events
 
-  func updateEventFromServer(
+  internal func updateEventFromServer(
     id: String,
     serverRow: SyncEventRow,
     serverUpdatedAt: Date,
@@ -2994,7 +3034,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3015,29 +3059,37 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markEventConflict(id: String, serverSnapshot: EventServerSnapshot?) {
+  internal func markEventConflict(id: String, serverSnapshot: EventServerSnapshot?) {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }
 
-  func updateEventConflictSnapshot(id: String, serverSnapshot: EventServerSnapshot) {
+  internal func updateEventConflictSnapshot(id: String, serverSnapshot: EventServerSnapshot) {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
   // swiftlint:disable:next function_parameter_count
-  func autoMergeEvent(
+  internal func autoMergeEvent(
     id: String,
     serverRow: SyncEventRow,
     serverUpdatedAt: Date,
@@ -3050,7 +3102,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3089,7 +3145,7 @@ actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for Recurring Shifts
 
-  func updateRecurringShiftFromServer(
+  internal func updateRecurringShiftFromServer(
     id: String,
     serverRow: SyncRecurringShiftRow,
     serverUpdatedAt: Date,
@@ -3101,7 +3157,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.jobId = serverRow.job_id
     existing.startTime = serverRow.cleanStartTime
@@ -3136,31 +3196,39 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markRecurringShiftConflict(id: String, serverSnapshot: RecurringShiftServerSnapshot?) {
+  internal func markRecurringShiftConflict(id: String, serverSnapshot: RecurringShiftServerSnapshot?) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }
 
-  func updateRecurringShiftConflictSnapshot(
+  internal func updateRecurringShiftConflictSnapshot(
     id: String, serverSnapshot: RecurringShiftServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
   // swiftlint:disable:next function_parameter_count
-  func autoMergeRecurringShift(
+  internal func autoMergeRecurringShift(
     id: String,
     serverRow: SyncRecurringShiftRow,
     serverUpdatedAt: Date,
@@ -3173,7 +3241,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     if !localDirtyFields.contains(.jobId) {
       existing.jobId = serverRow.job_id
@@ -3191,8 +3263,8 @@ actor LocalStoreActor {
       existing.selectedDays = (try? kCanonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
     }
     if !localDirtyFields.contains(.endCondition) {
-      existing.endCondition = serverRow.end_condition.flatMap {
-        try? kCanonicalJSONEncoder.encode($0)
+      existing.endCondition = serverRow.end_condition.flatMap { value in
+        try? kCanonicalJSONEncoder.encode(value)
       }
     }
     if !localDirtyFields.contains(.exclusions) {
@@ -3204,8 +3276,8 @@ actor LocalStoreActor {
         .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
     if !localDirtyFields.contains(.dateSpecificSupplements) {
-      existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
-        try? kCanonicalJSONEncoder.encode($0)
+      existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap { value in
+        try? kCanonicalJSONEncoder.encode(value)
       }
     }
     if !localDirtyFields.contains(.dateSpecificNotes) {
@@ -3222,7 +3294,7 @@ actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for Wage Snapshots
 
-  func updateWageSnapshotFromServer(
+  internal func updateWageSnapshotFromServer(
     id: String,
     serverRow: SyncWageSnapshotRow,
     serverUpdatedAt: Date,
@@ -3234,7 +3306,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3257,29 +3333,37 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markWageSnapshotConflict(id: String, serverSnapshot: WageSnapshotServerSnapshot?) {
+  internal func markWageSnapshotConflict(id: String, serverSnapshot: WageSnapshotServerSnapshot?) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }
 
-  func updateWageSnapshotConflictSnapshot(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
+  internal func updateWageSnapshotConflictSnapshot(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
   // swiftlint:disable:next function_parameter_count
-  func autoMergeWageSnapshot(
+  internal func autoMergeWageSnapshot(
     id: String,
     serverRow: SyncWageSnapshotRow,
     serverUpdatedAt: Date,
@@ -3292,7 +3376,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3341,7 +3429,7 @@ actor LocalStoreActor {
 
   // MARK: - Sync Update Operations for User Settings
 
-  func updateUserSettingsFromServer(
+  internal func updateUserSettingsFromServer(
     userId: String,
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
@@ -3352,7 +3440,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = FormatterCache.iso8601Formatter()
 
@@ -3376,30 +3468,38 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markUserSettingsConflict(userId: String, serverSnapshot: UserSettingsServerSnapshot?) {
+  internal func markUserSettingsConflict(userId: String, serverSnapshot: UserSettingsServerSnapshot?) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }
 
-  func updateUserSettingsConflictSnapshot(
+  internal func updateUserSettingsConflictSnapshot(
     userId: String, serverSnapshot: UserSettingsServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
-  func autoMergeUserSettings(
+  internal func autoMergeUserSettings(
     userId: String,
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
@@ -3411,7 +3511,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = FormatterCache.iso8601Formatter()
 
@@ -3465,7 +3569,7 @@ actor LocalStoreActor {
   // MARK: - Push Operations for Jobs
 
   // swiftlint:disable:next function_parameter_count
-  func markJobPushed(
+  internal func markJobPushed(
     id: String,
     serverRow: SyncJobRow,
     serverUpdatedAt: Date,
@@ -3478,7 +3582,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.name = serverRow.name
     existing.color = serverRow.color
@@ -3499,19 +3607,23 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markJobClean(id: String) {
+  internal func markJobClean(id: String) {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
   }
 
-  func markJobDeleted(
+  internal func markJobDeleted(
     id: String,
     serverUpdatedAt: Date,
     serverRevision: Int64,
@@ -3521,7 +3633,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.deletedAt = deletedAt
     existing.isDefault = false
@@ -3533,7 +3649,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func rebaseJob(
+  internal func rebaseJob(
     id: String,
     serverRow: SyncJobRow,
     serverUpdatedAt: Date,
@@ -3555,12 +3671,16 @@ actor LocalStoreActor {
     )
   }
 
-  func resolveJobConflictKeepServer(id: String, serverSnapshot: JobServerSnapshot) {
+  internal func resolveJobConflictKeepServer(id: String, serverSnapshot: JobServerSnapshot) {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.name = serverSnapshot.name
     existing.color = serverSnapshot.color
@@ -3581,12 +3701,16 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func resolveJobConflictKeepLocal(id: String, serverRevision: Int64) {
+  internal func resolveJobConflictKeepLocal(id: String, serverRevision: Int64) {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverRevision = serverRevision
     existing.syncStatus = .dirty
@@ -3594,7 +3718,7 @@ actor LocalStoreActor {
   }
 
   /// Mark a shift as successfully pushed (clean)
-  func markShiftPushed(
+  internal func markShiftPushed(
     id: String,
     serverRow: SyncShiftRow,
     serverUpdatedAt: Date,
@@ -3605,7 +3729,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3632,12 +3760,16 @@ actor LocalStoreActor {
   }
 
   /// Mark a shift as clean (no dirty fields)
-  func markShiftClean(id: String) {
+  internal func markShiftClean(id: String) {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
@@ -3645,7 +3777,7 @@ actor LocalStoreActor {
   }
 
   /// Mark a shift as successfully deleted
-  func markShiftDeleted(
+  internal func markShiftDeleted(
     id: String,
     serverUpdatedAt: Date,
     serverRevision: Int64,
@@ -3655,7 +3787,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -3666,7 +3802,7 @@ actor LocalStoreActor {
   }
 
   /// Rebase a shift (update server metadata, keep local dirty fields)
-  func rebaseShift(  // swiftlint:disable:this function_parameter_count
+  internal func rebaseShift(  // swiftlint:disable:this function_parameter_count
     id: String,
     serverRow: SyncShiftRow,
     serverUpdatedAt: Date,
@@ -3688,12 +3824,16 @@ actor LocalStoreActor {
   }
 
   /// Resolve shift conflict by keeping server version
-  func resolveShiftConflictKeepServer(id: String, serverSnapshot: UserShiftServerSnapshot) {
+  internal func resolveShiftConflictKeepServer(id: String, serverSnapshot: UserShiftServerSnapshot) {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3716,12 +3856,16 @@ actor LocalStoreActor {
   }
 
   /// Resolve shift conflict by keeping local version (prepare for push)
-  func resolveShiftConflictKeepLocal(id: String, serverRevision: Int64) {
+  internal func resolveShiftConflictKeepLocal(id: String, serverRevision: Int64) {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     // Update server revision so next push uses correct revision
     existing.serverRevision = serverRevision
@@ -3732,7 +3876,7 @@ actor LocalStoreActor {
 
   // MARK: - Push Operations for Events
 
-  func markEventPushed(
+  internal func markEventPushed(
     id: String,
     serverRow: SyncEventRow,
     serverUpdatedAt: Date,
@@ -3743,7 +3887,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3766,19 +3914,23 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markEventClean(id: String) {
+  internal func markEventClean(id: String) {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
   }
 
-  func markEventDeleted(
+  internal func markEventDeleted(
     id: String,
     serverUpdatedAt: Date,
     serverRevision: Int64,
@@ -3788,7 +3940,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -3799,7 +3955,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func rebaseEvent(
+  internal func rebaseEvent(
     id: String,
     serverRow: SyncEventRow,
     serverUpdatedAt: Date,
@@ -3819,12 +3975,16 @@ actor LocalStoreActor {
     )
   }
 
-  func resolveEventConflictKeepServer(id: String, serverSnapshot: EventServerSnapshot) {
+  internal func resolveEventConflictKeepServer(id: String, serverSnapshot: EventServerSnapshot) {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -3848,12 +4008,16 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func resolveEventConflictKeepLocal(id: String, serverRevision: Int64) {
+  internal func resolveEventConflictKeepLocal(id: String, serverRevision: Int64) {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverRevision = serverRevision
     existing.syncStatus = .dirty
@@ -3862,7 +4026,7 @@ actor LocalStoreActor {
 
   // MARK: - Push Operations for Recurring Shifts
 
-  func markRecurringShiftPushed(
+  internal func markRecurringShiftPushed(
     id: String,
     serverRow: SyncRecurringShiftRow,
     serverUpdatedAt: Date,
@@ -3873,7 +4037,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.jobId = serverRow.job_id
     existing.startTime = serverRow.cleanStartTime
@@ -3910,19 +4078,23 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markRecurringShiftClean(id: String) {
+  internal func markRecurringShiftClean(id: String) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
   }
 
-  func markRecurringShiftDeleted(
+  internal func markRecurringShiftDeleted(
     id: String,
     serverUpdatedAt: Date,
     serverRevision: Int64,
@@ -3932,7 +4104,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -3943,7 +4119,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func rebaseRecurringShift(
+  internal func rebaseRecurringShift(
     id: String,
     serverRow: SyncRecurringShiftRow,
     serverUpdatedAt: Date,
@@ -3963,14 +4139,18 @@ actor LocalStoreActor {
     )
   }
 
-  func resolveRecurringShiftConflictKeepServer(
+  internal func resolveRecurringShiftConflictKeepServer(
     id: String, serverSnapshot: RecurringShiftServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.jobId = serverSnapshot.jobId
     existing.startTime = serverSnapshot.startTime
@@ -3992,12 +4172,16 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func resolveRecurringShiftConflictKeepLocal(id: String, serverRevision: Int64) {
+  internal func resolveRecurringShiftConflictKeepLocal(id: String, serverRevision: Int64) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverRevision = serverRevision
     existing.syncStatus = .dirty
@@ -4006,7 +4190,7 @@ actor LocalStoreActor {
 
   // MARK: - Push Operations for Wage Snapshots
 
-  func markWageSnapshotPushed(
+  internal func markWageSnapshotPushed(
     id: String,
     serverRow: SyncWageSnapshotRow,
     serverUpdatedAt: Date,
@@ -4017,7 +4201,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -4042,19 +4230,23 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markWageSnapshotClean(id: String) {
+  internal func markWageSnapshotClean(id: String) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
   }
 
-  func markWageSnapshotDeleted(
+  internal func markWageSnapshotDeleted(
     id: String,
     serverUpdatedAt: Date,
     serverRevision: Int64,
@@ -4064,7 +4256,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -4075,7 +4271,7 @@ actor LocalStoreActor {
   }
 
   // swiftlint:disable:next function_parameter_count
-  func rebaseWageSnapshot(
+  internal func rebaseWageSnapshot(
     id: String,
     serverRow: SyncWageSnapshotRow,
     serverUpdatedAt: Date,
@@ -4095,13 +4291,17 @@ actor LocalStoreActor {
     )
   }
 
-  func resolveWageSnapshotConflictKeepServer(id: String, serverSnapshot: WageSnapshotServerSnapshot)
+  internal func resolveWageSnapshotConflictKeepServer(id: String, serverSnapshot: WageSnapshotServerSnapshot)
   {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = isoDateFormatter
 
@@ -4127,12 +4327,16 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func resolveWageSnapshotConflictKeepLocal(id: String, serverRevision: Int64) {
+  internal func resolveWageSnapshotConflictKeepLocal(id: String, serverRevision: Int64) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverRevision = serverRevision
     existing.syncStatus = .dirty
@@ -4141,7 +4345,7 @@ actor LocalStoreActor {
 
   // MARK: - Push Operations for User Settings
 
-  func markUserSettingsPushed(
+  internal func markUserSettingsPushed(
     userId: String,
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
@@ -4152,7 +4356,11 @@ actor LocalStoreActor {
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     let dateFormatter = FormatterCache.iso8601Formatter()
 
@@ -4179,19 +4387,23 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func markUserSettingsClean(userId: String) {
+  internal func markUserSettingsClean(userId: String) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
   }
 
-  func rebaseUserSettings(
+  internal func rebaseUserSettings(
     userId: String,
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
@@ -4209,14 +4421,18 @@ actor LocalStoreActor {
     )
   }
 
-  func resolveUserSettingsConflictKeepServer(
+  internal func resolveUserSettingsConflictKeepServer(
     userId: String, serverSnapshot: UserSettingsServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.monthlyGoal = serverSnapshot.monthlyGoal
     existing.monthlyGoalsByMonth = serverSnapshot.monthlyGoalsByMonth
@@ -4240,12 +4456,16 @@ actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  func resolveUserSettingsConflictKeepLocal(userId: String, serverRevision: Int64) {
+  internal func resolveUserSettingsConflictKeepLocal(userId: String, serverRevision: Int64) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
 
-    guard let existing = try? modelContext.fetch(descriptor).first else { return }
+    guard let existing = try? modelContext.fetch(descriptor).first else {
+
+      return
+
+    }
 
     existing.serverRevision = serverRevision
     existing.syncStatus = .dirty
@@ -4255,7 +4475,7 @@ actor LocalStoreActor {
   // MARK: - Entitlement Cache Operations
 
   /// Upsert entitlement cache from server entitlement
-  func upsertEntitlementCache(userId: String, entitlement: ServerEntitlement) throws {
+  internal func upsertEntitlementCache(userId: String, entitlement: ServerEntitlement) throws {
     let descriptor = FetchDescriptor<LocalEntitlementCache>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -4273,7 +4493,7 @@ actor LocalStoreActor {
   }
 
   /// Delete entitlement cache for a user (on logout)
-  func deleteEntitlementCache(userId: String) throws {
+  internal func deleteEntitlementCache(userId: String) throws {
     let descriptor = FetchDescriptor<LocalEntitlementCache>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -4289,7 +4509,7 @@ actor LocalStoreActor {
 
   /// Insert pending JWS upload (upsert by transactionId)
   /// Since transactionId is unique, attempting to insert a duplicate will be skipped
-  func insertPendingJWSUpload(_ upload: LocalPendingJWSUpload) throws {
+  internal func insertPendingJWSUpload(_ upload: LocalPendingJWSUpload) throws {
     // Check if already exists (don't reset attempt count for existing entries)
     let transactionId = upload.transactionId
     let descriptor = FetchDescriptor<LocalPendingJWSUpload>(
@@ -4306,7 +4526,7 @@ actor LocalStoreActor {
   }
 
   /// Delete pending JWS upload after successful upload
-  func deletePendingJWSUpload(transactionId: String) throws {
+  internal func deletePendingJWSUpload(transactionId: String) throws {
     let descriptor = FetchDescriptor<LocalPendingJWSUpload>(
       predicate: #Predicate { $0.transactionId == transactionId }
     )
@@ -4319,7 +4539,7 @@ actor LocalStoreActor {
   }
 
   /// Schedule next retry for a failed upload (exponential backoff)
-  func schedulePendingJWSUploadRetry(transactionId: String) throws {
+  internal func schedulePendingJWSUploadRetry(transactionId: String) throws {
     let descriptor = FetchDescriptor<LocalPendingJWSUpload>(
       predicate: #Predicate { $0.transactionId == transactionId }
     )
@@ -4333,7 +4553,7 @@ actor LocalStoreActor {
   // MARK: - Shared Shifts Operations
 
   /// Save friend rows to cache, replacing existing entries for this viewer
-  func saveSharers(
+  internal func saveSharers(
     _ sharers: [SharedUser],
     chatOnlyUserIds: Set<String> = [],
     for viewerId: String
@@ -4368,7 +4588,7 @@ actor LocalStoreActor {
   ///   - year: Year
   ///   - month: Month (1-12)
   ///   - forceReplace: If true, replace cache even when new data is empty (default false)
-  func saveSharedShifts(
+  internal func saveSharedShifts(
     _ shifts: [SharedShiftData],
     ownerId: String,
     viewerId: String,
@@ -4389,8 +4609,12 @@ actor LocalStoreActor {
     // Don't delete existing cached data if new data is empty (unless forced)
     // This prevents data loss when the API returns an empty array due to errors
     if shifts.isEmpty, !existing.isEmpty, !forceReplace {
-      logger.warning(
-        "API returned empty shared shifts for \(year)-\(month) (owner: \(ownerId.prefix(8))...), keeping \(existing.count) cached shifts"
+      kLocalStoreLogger.warning(
+        """
+        API returned empty shared shifts for \(year)-\(month) \
+        (owner: \(ownerId.prefix(kLogIdentifierPrefixLength))...), \
+        keeping \(existing.count) cached shifts
+        """
       )
       return
     }
@@ -4434,7 +4658,7 @@ actor LocalStoreActor {
   }
 
   /// Clear all shared data for a viewer
-  func clearSharedData(for viewerId: String) throws {
+  internal func clearSharedData(for viewerId: String) throws {
     // Clear sharers
     let sharerDescriptor = FetchDescriptor<LocalSharer>(
       predicate: #Predicate { $0.viewerId == viewerId }
@@ -4471,7 +4695,7 @@ actor LocalStoreActor {
   }
 
   /// Clear shared shifts for a specific owner
-  func clearSharedShifts(ownerId: String, viewerId: String) throws {
+  internal func clearSharedShifts(ownerId: String, viewerId: String) throws {
     let descriptor = FetchDescriptor<LocalSharedShift>(
       predicate: #Predicate { shift in
         shift.ownerId == ownerId && shift.viewerId == viewerId
@@ -4497,7 +4721,7 @@ actor LocalStoreActor {
   // MARK: - Shift Preview Operations
 
   /// Save shift previews to cache, replacing existing entries for this viewer
-  func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) throws {
+  internal func saveShiftPreviews(_ previews: [SharerShiftPreview], for viewerId: String) throws {
     // Delete existing previews for this viewer (only for sharers in this batch)
     let sharerIds = Set(previews.map(\.sharerId))
     if !sharerIds.isEmpty {

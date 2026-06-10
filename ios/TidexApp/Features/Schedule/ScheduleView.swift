@@ -1,17 +1,17 @@
 import os.log
 import SwiftUI
 
-private let logger = Logger(subsystem: "no.tidex.app", category: "ShiftsView")
+private let kLogger: Logger = Logger(subsystem: "no.tidex.app", category: "ShiftsView")
 
 /// Helper struct for day sheet selection (must be Identifiable for .sheet(item:))
 private struct DayItemSelection: Identifiable {
-  let id = UUID()
+  let id: UUID = UUID()
   let dateISO: String
   let items: [DayPresentationItem]
 }
 
 private struct EventSheetSelection: Identifiable {
-  let id = UUID()
+  let id: UUID = UUID()
   let event: EventRow
   let startInEditMode: Bool
 }
@@ -88,27 +88,29 @@ private struct ListWeekGroup: Identifiable {
 
 /// Shifts tab view - displays list of user's shifts grouped by week
 /// Supports month navigation, pull-to-refresh, swipe gestures, and calendar/list view toggle
-struct ShiftsView: View {
+internal struct ShiftsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize: DynamicTypeSize
 
   /// Binding to the selected tab for navigation (to switch to Add tab)
-  @Binding var selectedTab: MainTabView.Tab
+  @Binding internal var selectedTab: MainTabView.Tab
 
-  @StateObject private var viewModel = ShiftsViewModel()
-  @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared
-  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
-  @ObservedObject private var celebrationManager = CelebrationManager.shared
-  @ObservedObject private var syncStatusManager = SyncStatusManager.shared
+  @StateObject private var viewModel: ShiftsViewModel = ShiftsViewModel()
+  @StateObject private var calendarSubscriptionStore: CalendarSubscriptionStore =
+    CalendarSubscriptionStore.shared
+  @StateObject private var workSetupPresentationViewModel: WorkSetupPresentationViewModel =
+    WorkSetupPresentationViewModel()
+  @ObservedObject private var celebrationManager: CelebrationManager = CelebrationManager.shared
+  @ObservedObject private var syncStatusManager: SyncStatusManager = SyncStatusManager.shared
   @State private var operationErrorMessage: String?
 
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
   @State private var selectedShift: ShiftWithComputations?
   @State private var selectedEvent: EventSheetSelection?
-  @State private var showDeleteConfirmation = false
+  @State private var showDeleteConfirmation: Bool = false
   @State private var shiftToDelete: ShiftWithComputations?
-  @State private var showEventDeleteConfirmation = false
+  @State private var showEventDeleteConfirmation: Bool = false
   @State private var eventToDelete: EventRow?
 
   // Edit mode state (when opening from swipe action)
@@ -121,10 +123,10 @@ struct ShiftsView: View {
 
   // Recurring shift editor state
   @State private var recurringShiftToEdit: RecurringShiftRow?
-  @State private var showCalendarSubscriptionSettings = false
+  @State private var showCalendarSubscriptionSettings: Bool = false
 
   // List scroll state (hidden until scrolled to today to prevent flash)
-  @State private var listReady = false
+  @State private var listReady: Bool = false
 
   // Deep link navigation state
   @State private var highlightedDateISO: String?
@@ -138,15 +140,15 @@ struct ShiftsView: View {
   }
 
   // Share functionality state
-  @State private var showingShareDestinationPicker = false
-  @State private var showingShareOptions = false
-  @State private var showingSendToChatSheet = false
+  @State private var showingShareDestinationPicker: Bool = false
+  @State private var showingShareOptions: Bool = false
+  @State private var showingSendToChatSheet: Bool = false
   @State private var shareImage: UIImage?
   @State private var shareImageURL: URL?
-  @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.colorScheme) private var colorScheme: ColorScheme
 
   // View mode toggle (calendar vs list) - persisted across app launches
-  @AppStorage("shiftsViewMode") private var showListView = false
+  @AppStorage("shiftsViewMode") private var showListView: Bool = false
   @State private var tabTransitionOffset: CGFloat = 0
   @State private var tabTransitionOpacity: Double = 1
   @State private var selectedListJobId: String?
@@ -155,8 +157,8 @@ struct ShiftsView: View {
   @State private var weekGroupsWithPlaceholderCache: [ListWeekGroup] = []
 
   // Haptic feedback
-  private let selectionHaptic = UISelectionFeedbackGenerator()
-  private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
+  private let selectionHaptic: UISelectionFeedbackGenerator = UISelectionFeedbackGenerator()
+  private let impactHaptic: UIImpactFeedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
 
   private func shouldKeepShiftDetailsOpen(
     after editResult: ShiftEditResult,
@@ -178,7 +180,7 @@ struct ShiftsView: View {
   }
 
   // Orientation tracking for iPad landscape layout
-  @ObservedObject private var orientationTracker = OrientationTracker.shared
+  @ObservedObject private var orientationTracker: OrientationTracker = OrientationTracker.shared
 
   /// Whether to show iPad landscape side-by-side layout (calendar + list)
   private var isIPadLandscape: Bool {
@@ -192,7 +194,7 @@ struct ShiftsView: View {
 
   @discardableResult
   private func refreshWorkSetupPresentationState() -> Bool {
-    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder
+    let wasShowingPlaceholder: Bool = shouldShowWorkSetupRequiredPlaceholder
     workSetupPresentationViewModel.refresh(
       userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
@@ -205,23 +207,35 @@ struct ShiftsView: View {
   }
 
   private func loadShiftsContent() async {
-    guard selectedTab == .shifts else { return }
-    guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+    guard selectedTab == .shifts else {
+      return
+    }
+    guard !shouldShowWorkSetupRequiredPlaceholder else {
+      return
+    }
     await calendarSubscriptionStore.refreshIfNeeded()
     await viewModel.loadShifts()
   }
 
   private func handleSuccessfulSyncSummary(_ summary: SyncCompletionSummary?) {
-    guard let summary, summary.userId == coordinator.userId else { return }
-    guard summary.reason != .appLaunch else { return }
-    guard let context = summary.scheduleChangeContext else { return }
+    guard let summary, summary.userId == coordinator.userId else {
+      return
+    }
+    guard summary.reason != .appLaunch else {
+      return
+    }
+    guard let context = summary.scheduleChangeContext else {
+      return
+    }
 
     guard !shouldShowWorkSetupRequiredPlaceholder else {
       viewModel.markLocalDataStale()
       return
     }
 
-    guard !(summary.reason == .manualRefresh && selectedTab == .shifts) else { return }
+    guard !(summary.reason == .manualRefresh && selectedTab == .shifts) else {
+      return
+    }
 
     Task {
       await viewModel.handleExternalShiftsDidChange(context)
@@ -258,6 +272,7 @@ struct ShiftsView: View {
           startCalendarShare()
         } label: {
           Image(systemName: "square.and.arrow.up")
+            .accessibilityHidden(true)
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextPrimary)
             .offset(y: -1)
@@ -315,7 +330,7 @@ struct ShiftsView: View {
     }
   }
 
-  var body: some View {
+  internal var body: some View {
     bodyWithSecondarySheets
   }
 
@@ -333,15 +348,21 @@ struct ShiftsView: View {
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
           let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard !shouldShowWorkSetupRequiredPlaceholder else {
+            return
+          }
           if shouldLoadAfterSetupCompleted {
             Task {
               await loadShiftsContent()
             }
           }
-          guard completed else { return }
+          guard completed else {
+            return
+          }
           viewModel.markLocalDataStale()
-          guard selectedTab == .shifts else { return }
+          guard selectedTab == .shifts else {
+            return
+          }
           Task {
             await viewModel.reloadFromLocal()
           }
@@ -349,25 +370,35 @@ struct ShiftsView: View {
         .onChange(of: coordinator.userId) { _, _ in
           refreshWorkSetupPresentationState()
           viewModel.markLocalDataStale()
-          guard selectedTab == .shifts else { return }
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard selectedTab == .shifts else {
+            return
+          }
+          guard !shouldShowWorkSetupRequiredPlaceholder else {
+            return
+          }
           Task {
             await viewModel.reloadFromLocal()
           }
         }
         .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) {
           notification in
-          guard !shouldIgnoreWorkSetupNotification(notification) else { return }
+          guard !shouldIgnoreWorkSetupNotification(notification) else {
+            return
+          }
           let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
           viewModel.markLocalDataStale()
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard !shouldShowWorkSetupRequiredPlaceholder else {
+            return
+          }
           if shouldLoadAfterSetupCompleted {
             Task {
               await loadShiftsContent()
             }
             return
           }
-          guard selectedTab == .shifts else { return }
+          guard selectedTab == .shifts else {
+            return
+          }
           Task {
             await viewModel.reloadFromLocal()
           }
@@ -377,9 +408,13 @@ struct ShiftsView: View {
         }
         .onChange(of: selectedTab) { oldTab, newTab in
           viewModel.setActiveTabVisible(newTab == .shifts)
-          guard newTab == .shifts, oldTab != .shifts else { return }
+          guard newTab == .shifts, oldTab != .shifts else {
+            return
+          }
           refreshWorkSetupPresentationState()
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard !shouldShowWorkSetupRequiredPlaceholder else {
+            return
+          }
           if oldTab == .add {
             tabTransitionOffset = -28
             tabTransitionOpacity = 0.92
@@ -392,8 +427,12 @@ struct ShiftsView: View {
         .onAppear {
           viewModel.setActiveTabVisible(selectedTab == .shifts)
           refreshWorkSetupPresentationState()
-          guard selectedTab == .shifts else { return }
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }
+          guard selectedTab == .shifts else {
+            return
+          }
+          guard !shouldShowWorkSetupRequiredPlaceholder else {
+            return
+          }
           recomputeListDerivedDataIfNeeded()
         }
         .onChange(of: selectedListJobId) { _, _ in
@@ -704,7 +743,7 @@ struct ShiftsView: View {
         // When shifts finish loading, check if we should highlight/select a date from deep link
         .onChange(of: viewModel.isLoading) { _, isLoading in
           if !isLoading, let dateISO = highlightedDateISO {
-            logger.debug(" Shifts finished loading, checking for deep link date: \(dateISO)")
+            kLogger.debug(" Shifts finished loading, checking for deep link date: \(dateISO)")
             selectShiftFromDeepLink(
               dateISO: dateISO,
               shiftIds: highlightedShiftIds,
@@ -947,22 +986,26 @@ struct ShiftsView: View {
 
   /// Handle pending deep link from widget or notification
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-    guard case .shifts(let dates, let shiftIds, let action) = deepLink else { return }
+    guard case .shifts(let dates, let shiftIds, let action) = deepLink else {
+      return
+    }
 
     let sortedDates = dates?.sorted() ?? []
     let targetShiftIds = Set(shiftIds ?? [])
     let dateISO =
       sortedDates.first
       ?? viewModel.shifts.first(where: { targetShiftIds.contains($0.id) })?.shiftDate
-    guard let dateISO else { return }
-
-    // Avoid processing the same deep link twice
-    if highlightedDateISO == dateISO {
-      logger.debug(" Deep link already being processed for: \(dateISO)")
+    guard let dateISO else {
       return
     }
 
-    logger.debug(" Handling deep link for date: \(dateISO), action: \(action.rawValue)")
+    // Avoid processing the same deep link twice
+    if highlightedDateISO == dateISO {
+      kLogger.debug(" Deep link already being processed for: \(dateISO)")
+      return
+    }
+
+    kLogger.debug(" Handling deep link for date: \(dateISO), action: \(action.rawValue)")
 
     // Store the action to use when selecting the shift
     deepLinkAction = action
@@ -973,7 +1016,7 @@ struct ShiftsView: View {
 
     // Parse the date to extract year and month
     guard let date = Date.fromISODateString(dateISO) else {
-      logger.debug(" Failed to parse date: \(dateISO)")
+      kLogger.debug(" Failed to parse date: \(dateISO)")
       highlightedShiftIds = []
       coordinator.clearPendingDeepLink()
       return
@@ -992,7 +1035,7 @@ struct ShiftsView: View {
 
     // Navigate to the correct month if not already there
     if viewModel.displayYear != targetYear || viewModel.displayMonth != targetMonth {
-      logger.debug(" Navigating to \(targetYear)-\(targetMonth)")
+      kLogger.debug(" Navigating to \(targetYear)-\(targetMonth)")
       SharedMonthContext.shared.navigateTo(year: targetYear, month: targetMonth)
       // Shifts will load via the month change subscription
       // The onChange(of: viewModel.shifts) will then call selectShiftFromDeepLink
@@ -1011,7 +1054,7 @@ struct ShiftsView: View {
   ) {
     // Parse target date to verify we're looking at the correct month
     guard let targetDate = Date.fromISODateString(dateISO) else {
-      logger.debug(" Invalid date format: \(dateISO)")
+      kLogger.debug(" Invalid date format: \(dateISO)")
       highlightedDateISO = nil
       highlightedShiftIds = []
       return
@@ -1024,7 +1067,7 @@ struct ShiftsView: View {
     // Make sure we're on the correct committed month before trying to find the shift
     // (committed values indicate data is ready to display)
     guard viewModel.committedYear == targetYear, viewModel.committedMonth == targetMonth else {
-      logger.debug(
+      kLogger.debug(
         " Not on target month yet (committed: \(viewModel.committedYear)-\(viewModel.committedMonth), target: \(targetYear)-\(targetMonth))"
       )
       // Keep highlightedDateISO - month navigation is still in progress
@@ -1036,7 +1079,7 @@ struct ShiftsView: View {
     }
 
     guard !shiftsOnDate.isEmpty else {
-      logger.debug(" No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
+      kLogger.debug(" No shifts found for date: \(dateISO) (shifts loaded: \(shifts.count))")
       // Clear highlighted date - we're on the right month but there's no shift
       // This handles the case where the shift was deleted
       highlightedDateISO = nil
@@ -1044,7 +1087,7 @@ struct ShiftsView: View {
       return
     }
 
-    logger.debug(
+    kLogger.debug(
       " Found \(shiftsOnDate.count) shift(s) on \(dateISO), action: \(deepLinkAction.rawValue)")
 
     // Capture the action before clearing state
@@ -1062,7 +1105,7 @@ struct ShiftsView: View {
       // Only open sheets when action is .open (default behavior from notifications)
       // When action is .highlight (from widgets), show visual highlight instead
       if action == .highlight {
-        logger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
+        kLogger.debug(" Highlight-only mode - showing visual highlight for \(dateISO)")
         showDeepLinkHighlights(for: [dateISO], shiftIds: shiftIds)
         return
       }
@@ -1081,7 +1124,9 @@ struct ShiftsView: View {
   }
 
   private func showDeepLinkHighlights(for dates: Set<String>, shiftIds: Set<String>) {
-    guard !dates.isEmpty || !shiftIds.isEmpty else { return }
+    guard !dates.isEmpty || !shiftIds.isEmpty else {
+      return
+    }
     deepLinkHighlightClearTask?.cancel()
 
     MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
@@ -1131,7 +1176,7 @@ struct ShiftsView: View {
 
       shiftToDelete = nil
     } catch {
-      logger.error("Failed to delete shift: \(error.localizedDescription)")
+      kLogger.error("Failed to delete shift: \(error.localizedDescription)")
       operationErrorMessage = ErrorTranslations.translate(error)
       shiftToDelete = nil
     }
@@ -1144,7 +1189,7 @@ struct ShiftsView: View {
       try await viewModel.deleteEvent(event)
       eventToDelete = nil
     } catch {
-      logger.error("Failed to delete event: \(error.localizedDescription)")
+      kLogger.error("Failed to delete event: \(error.localizedDescription)")
       operationErrorMessage = ErrorTranslations.translate(error)
       eventToDelete = nil
     }
@@ -1194,7 +1239,9 @@ struct ShiftsView: View {
 
   /// Open the selected day's details from the calendar action bar.
   private func handleSelectedDayDetails() {
-    guard let dateISO = viewModel.selectedDates.first else { return }
+    guard let dateISO = viewModel.selectedDates.first else {
+      return
+    }
     presentDayItems(dateISO: dateISO, shifts: viewModel.selectedDateShifts)
   }
 
@@ -1713,7 +1760,9 @@ struct ShiftsView: View {
 
   /// Recompute list-derived collections when upstream inputs change.
   private func recomputeListDerivedDataIfNeeded(force: Bool = false) {
-    guard force || shouldMaintainListDerivedData else { return }
+    guard force || shouldMaintainListDerivedData else {
+      return
+    }
     recomputeListDerivedData()
   }
 
@@ -2067,7 +2116,9 @@ struct ShiftsView: View {
   /// otherwise to today's shift card/placeholder, then reveal the list.
   private func scrollToTodayItem(using proxy: ScrollViewProxy) {
     if let conflictTargetId = shiftListItems.first(where: { item in
-      guard case .shift(let shift) = item else { return false }
+      guard case .shift(let shift) = item else {
+        return false
+      }
       return viewModel.conflictingShiftIds.contains(shift.id)
     })?.id {
       proxy.scrollTo(conflictTargetId, anchor: .top)
