@@ -18,7 +18,7 @@ internal enum AddShiftSubmitBlocker: Hashable {
 /// - Track current mode for proper action routing
 @MainActor
 internal final class AddShiftCoordinator: ObservableObject {
-  internal static let shared: Self = .init()
+  internal static let shared: AddShiftCoordinator = .init()
 
   /// Whether a shift can currently be submitted (dates/days selected + valid times)
   @Published internal private(set) var canSubmit: Bool = false

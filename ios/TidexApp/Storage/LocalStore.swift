@@ -55,7 +55,8 @@ internal final class LocalStore {
         withIntermediateDirectories: true
       )
     } catch {
-      kLocalStoreLogger.error("Failed to create local store directory: \(error.localizedDescription)")
+      kLocalStoreLogger.error(
+        "Failed to create local store directory: \(error.localizedDescription)")
     }
   }
 
@@ -118,8 +119,10 @@ internal final class LocalStore {
         container = try ModelContainer(for: schema, configurations: [fallbackConfig])
         storeActor = LocalStoreActor(modelContainer: container)
         isUsingInMemoryFallback = true
-        kLocalStoreLogger.warning("LocalStore initialized with in-memory fallback - data will not persist")
+        kLocalStoreLogger.warning(
+          "LocalStore initialized with in-memory fallback - data will not persist")
       } catch {
+        let fallbackError: Error = error
         // This should essentially never happen - in-memory containers rarely fail
         // But we need to initialize the properties, so create a minimal container
         kLocalStoreLogger.critical(
@@ -134,6 +137,7 @@ internal final class LocalStore {
           isUsingInMemoryFallback = true
           kLocalStoreLogger.critical("LocalStore using default container - app may be unstable")
         } catch {
+          let lastResortError: Error = error
           fatalError(
             """
             LocalStore: All storage initialization attempts failed.
@@ -1595,7 +1599,8 @@ internal actor LocalStoreActor {
       try? kCanonicalJSONEncoder.encode(value)
     }
     let supplementsData = dateSpecificSupplements.flatMap { try? kCanonicalJSONEncoder.encode($0) }
-    let notesData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap { value in
+    let notesData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
+      value in
       try? kCanonicalJSONEncoder.encode(value)
     }
 
@@ -1784,7 +1789,8 @@ internal actor LocalStoreActor {
       throw LocalStoreWriteError.notFound
     }
 
-    let normalizedData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap { value in
+    let normalizedData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
+      value in
       try? kCanonicalJSONEncoder.encode(value)
     }
 
@@ -3196,7 +3202,9 @@ internal actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  internal func markRecurringShiftConflict(id: String, serverSnapshot: RecurringShiftServerSnapshot?) {
+  internal func markRecurringShiftConflict(
+    id: String, serverSnapshot: RecurringShiftServerSnapshot?
+  ) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -3348,7 +3356,9 @@ internal actor LocalStoreActor {
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }
 
-  internal func updateWageSnapshotConflictSnapshot(id: String, serverSnapshot: WageSnapshotServerSnapshot) {
+  internal func updateWageSnapshotConflictSnapshot(
+    id: String, serverSnapshot: WageSnapshotServerSnapshot
+  ) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )
@@ -3468,7 +3478,9 @@ internal actor LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
-  internal func markUserSettingsConflict(userId: String, serverSnapshot: UserSettingsServerSnapshot?) {
+  internal func markUserSettingsConflict(
+    userId: String, serverSnapshot: UserSettingsServerSnapshot?
+  ) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
     )
@@ -3824,7 +3836,8 @@ internal actor LocalStoreActor {
   }
 
   /// Resolve shift conflict by keeping server version
-  internal func resolveShiftConflictKeepServer(id: String, serverSnapshot: UserShiftServerSnapshot) {
+  internal func resolveShiftConflictKeepServer(id: String, serverSnapshot: UserShiftServerSnapshot)
+  {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
     )
@@ -4291,8 +4304,9 @@ internal actor LocalStoreActor {
     )
   }
 
-  internal func resolveWageSnapshotConflictKeepServer(id: String, serverSnapshot: WageSnapshotServerSnapshot)
-  {
+  internal func resolveWageSnapshotConflictKeepServer(
+    id: String, serverSnapshot: WageSnapshotServerSnapshot
+  ) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
     )

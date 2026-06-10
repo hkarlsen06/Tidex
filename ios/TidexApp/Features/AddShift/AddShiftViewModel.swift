@@ -273,7 +273,6 @@ internal final class AddShiftViewModel: ObservableObject {
   /// Minimal delay when form is complete (instant feedback)
   private static let completedFormDelay: UInt64 = 50_000_000  // 50ms
 
-  private static let minutesPerDay: Int = CalendarGridHelper.timeToMinutes("24:00")
   private static let defaultStartHour: Int = 9
   private static let defaultEndHour: Int = 17
 
@@ -2031,6 +2030,7 @@ internal final class AddShiftViewModel: ObservableObject {
   private nonisolated static func buildExistingShiftHours(
     from shiftTimesByDate: [String: [(start: String, end: String)]]
   ) -> [String: HoursData] {
+    let minutesPerDay: Int = CalendarGridHelper.timeToMinutes("24:00")
     var existingHours: [String: HoursData] = [:]
     for (date, shiftsOnDate) in shiftTimesByDate {
       guard !shiftsOnDate.isEmpty else {
@@ -2045,11 +2045,11 @@ internal final class AddShiftViewModel: ObservableObject {
         shiftsOnDate.max(by: { lhs, rhs in
           let lhsStart: Int = CalendarGridHelper.timeToMinutes(lhs.start)
           let lhsEnd: Int = CalendarGridHelper.timeToMinutes(lhs.end)
-          let lhsAdjustedEnd: Int = lhsEnd <= lhsStart ? lhsEnd + Self.minutesPerDay : lhsEnd
+          let lhsAdjustedEnd: Int = lhsEnd <= lhsStart ? lhsEnd + minutesPerDay : lhsEnd
 
           let rhsStart: Int = CalendarGridHelper.timeToMinutes(rhs.start)
           let rhsEnd: Int = CalendarGridHelper.timeToMinutes(rhs.end)
-          let rhsAdjustedEnd: Int = rhsEnd <= rhsStart ? rhsEnd + Self.minutesPerDay : rhsEnd
+          let rhsAdjustedEnd: Int = rhsEnd <= rhsStart ? rhsEnd + minutesPerDay : rhsEnd
 
           return lhsAdjustedEnd < rhsAdjustedEnd
         })?.end ?? ""
@@ -2536,8 +2536,10 @@ internal final class AddShiftViewModel: ObservableObject {
     }
 
     kLogger.info(
-      "Loaded draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count), "
-        + "days=\(draft.selectedDays.count), jobSelected=\(draft.jobId != nil)"
+      """
+      Loaded draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count), \
+      days=\(draft.selectedDays.count), jobSelected=\(draft.jobId != nil)
+      """
     )
   }
 
@@ -2739,8 +2741,10 @@ internal final class AddShiftViewModel: ObservableObject {
 
       cachedDisplayData = displayData
       kLogger.info(
-        "Rebuilt calendar display data: \(displayData.existingShiftDates.count) dates, "
-          + "\(displayData.virtualShifts.count) virtual shifts"
+        """
+        Rebuilt calendar display data: \(displayData.existingShiftDates.count) dates, \
+        \(displayData.virtualShifts.count) virtual shifts
+        """
       )
     }
   }

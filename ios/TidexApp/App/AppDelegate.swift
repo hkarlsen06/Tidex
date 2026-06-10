@@ -411,11 +411,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       hourlyWage: 0,
       supplementRatePerHour: 0,
       totalGrossEstimate: 0,
+      startDate: startedAt,
+      endDate: startedAt,
       totalNetEstimate: nil,
       currencySymbol: currencySymbol ?? "kr",
-      isTemporaryClock: true,
-      startDate: startedAt,
-      endDate: startedAt
+      isTemporaryClock: true
     )
 
     let initialState = ShiftActivityAttributes.ContentState(
@@ -520,11 +520,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       hourlyWage: shift.hourlyWage,
       supplementRatePerHour: shift.supplementRatePerHour,
       totalGrossEstimate: shift.totalGrossEstimate,
+      startDate: startDate,
+      endDate: endDate,
       totalNetEstimate: totalNetEstimate,
       currencySymbol: shift.currencySymbol ?? "kr",
-      isTemporaryClock: false,
-      startDate: startDate,
-      endDate: endDate
+      isTemporaryClock: false
     )
 
     // Initial state values are now fallback - the UI calculates real-time values

@@ -1059,22 +1059,22 @@ internal struct FriendOutgoingAttachment: Codable, Equatable {
   }
 }
 
-private struct FriendRichContentEnvelope: Codable {
-  private let content: Content?
+internal struct FriendRichContentEnvelope: Codable {
+  internal struct Content: Codable {
+    internal let kind: String?
+    internal let shiftSnapshot: FriendShiftSnapshot?
 
-  private struct Content: Codable {
-    let kind: String?
-    let shiftSnapshot: FriendShiftSnapshot?
-
-    enum CodingKeys: String, CodingKey {
+    internal enum CodingKeys: String, CodingKey {
       case kind
       case shiftSnapshot = "shift_snapshot"
     }
   }
+
+  internal let content: Content?
 }
 
-private enum FriendRichContentDecoder {
-  private static func richContentKind(from metadataData: Data?) -> FriendRichContentKind? {
+internal enum FriendRichContentDecoder {
+  internal static func richContentKind(from metadataData: Data?) -> FriendRichContentKind? {
     guard
       let envelope = decodeEnvelope(from: metadataData),
       let rawKind = envelope.content?.kind?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -1095,7 +1095,7 @@ private enum FriendRichContentDecoder {
     }
   }
 
-  private static func richContent(from metadataData: Data?) -> FriendRichContent? {
+  internal static func richContent(from metadataData: Data?) -> FriendRichContent? {
     guard let envelope = decodeEnvelope(from: metadataData) else {
       return nil
     }
@@ -1118,8 +1118,8 @@ private enum FriendRichContentDecoder {
   }
 }
 
-private enum FriendMessagePreviewPolicy {
-  private static func resolvedPreviewKind(
+internal enum FriendMessagePreviewPolicy {
+  internal static func resolvedPreviewKind(
     explicitPreviewKind: FriendLastMessagePreviewKind? = nil,
     body: String?,
     richContentKind: FriendRichContentKind? = nil,
@@ -1149,7 +1149,7 @@ private enum FriendMessagePreviewPolicy {
     }
   }
 
-  private static func previewText(
+  internal static func previewText(
     body: String?,
     previewKind: FriendLastMessagePreviewKind
   ) -> String? {

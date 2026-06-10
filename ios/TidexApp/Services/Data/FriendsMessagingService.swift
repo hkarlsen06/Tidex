@@ -1269,8 +1269,8 @@ private struct MessagingInboxSyncEventRow: Decodable {
   }
 
   private static func decode<T: Decodable>(_ value: AnyJSON, as type: T.Type) throws -> T {
-    let data = try canonicalJSONEncoder.encode(value)
-    return try syncJSONDecoder.decode(type, from: data)
+    let data: Data = try kCanonicalJSONEncoder.encode(value)
+    return try kSyncJSONDecoder.decode(type, from: data)
   }
 }
 
@@ -1330,8 +1330,8 @@ private struct MessagingThreadSyncEventRow: Decodable {
   }
 
   private static func decode<T: Decodable>(_ value: AnyJSON, as type: T.Type) throws -> T {
-    let data = try canonicalJSONEncoder.encode(value)
-    return try syncJSONDecoder.decode(type, from: data)
+    let data: Data = try kCanonicalJSONEncoder.encode(value)
+    return try kSyncJSONDecoder.decode(type, from: data)
   }
 }
 
