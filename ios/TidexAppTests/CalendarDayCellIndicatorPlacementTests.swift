@@ -3,29 +3,29 @@ import XCTest
 
 @testable import Tidex
 
-final class CalendarDayCellIndicatorPlacementTests: XCTestCase {
-  func testEventIndicatorUsesOneSegmentForSingleEvent() {
+internal final class CalendarDayCellIndicatorPlacementTests: XCTestCase {
+  internal func testEventIndicatorUsesOneSegmentForSingleEvent() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.eventIndicatorSegmentCount(for: 1),
       1
     )
   }
 
-  func testEventIndicatorUsesTwoSegmentsForTwoEvents() {
+  internal func testEventIndicatorUsesTwoSegmentsForTwoEvents() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.eventIndicatorSegmentCount(for: 2),
       2
     )
   }
 
-  func testEventIndicatorCapsAtThreeSegments() {
+  internal func testEventIndicatorCapsAtThreeSegments() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.eventIndicatorSegmentCount(for: 4),
       3
     )
   }
 
-  func testTodayBadgePromotesOverlapIndicatorIntoBadge() {
+  internal func testTodayBadgePromotesOverlapIndicatorIntoBadge() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.indicatorPlacement(
         showsTodayBadge: true,
@@ -36,7 +36,7 @@ final class CalendarDayCellIndicatorPlacementTests: XCTestCase {
     )
   }
 
-  func testTodayBadgePromotesSingleUserIndicatorIntoBadge() {
+  internal func testTodayBadgePromotesSingleUserIndicatorIntoBadge() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.indicatorPlacement(
         showsTodayBadge: true,
@@ -47,7 +47,7 @@ final class CalendarDayCellIndicatorPlacementTests: XCTestCase {
     )
   }
 
-  func testNonTodayCellsKeepIndicatorInLeadingMarkerSlot() {
+  internal func testNonTodayCellsKeepIndicatorInLeadingMarkerSlot() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.indicatorPlacement(
         showsTodayBadge: false,
@@ -58,7 +58,7 @@ final class CalendarDayCellIndicatorPlacementTests: XCTestCase {
     )
   }
 
-  func testCellsWithoutIndicatorsDoNotReserveBadgePlacement() {
+  internal func testCellsWithoutIndicatorsDoNotReserveBadgePlacement() {
     XCTAssertEqual(
       CalendarDayCell<EmptyView>.indicatorPlacement(
         showsTodayBadge: true,
@@ -67,5 +67,9 @@ final class CalendarDayCellIndicatorPlacementTests: XCTestCase {
       ),
       .none
     )
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

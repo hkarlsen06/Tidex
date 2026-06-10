@@ -1,76 +1,82 @@
 import Foundation
 
-struct EventPresentation: Identifiable, Equatable {
-  let event: EventRow
-  let coveredDateISO: String
-
-  var id: String { event.id }
-  var anchorDateISO: String { event.start_date }
-  var isAllDay: Bool { event.is_all_day }
-  var sortTime: String { event.start_time ?? "99:99" }
-}
-
-enum DayPresentationItem: Identifiable, Equatable {
-  case shift(ShiftWithComputations)
+internal enum DayPresentationItem: Identifiable, Equatable {
   case event(EventPresentation)
+  case shift(ShiftWithComputations)
 
-  var id: String {
+  internal var id: String {
     switch self {
-    case .shift(let shift):
-      return shift.id
-
     case .event(let event):
       return event.id
+
+    case .shift(let shift):
+      return shift.id
     }
   }
 
-  var anchorDateISO: String {
+  internal var anchorDateISO: String {
     switch self {
-    case .shift(let shift):
-      return shift.shiftDate
-
     case .event(let event):
       return event.anchorDateISO
-    }
-  }
 
-  var coveredDateISO: String {
-    switch self {
     case .shift(let shift):
       return shift.shiftDate
-
-    case .event(let event):
-      return event.coveredDateISO
     }
   }
 
-  var isAllDayEvent: Bool {
+  internal var coveredDateISO: String {
+    switch self {
+    case .event(let event):
+      return event.coveredDateISO
+
+    case .shift(let shift):
+      return shift.shiftDate
+    }
+  }
+
+  internal var isAllDayEvent: Bool {
     if case .event(let event) = self {
       return event.isAllDay
     }
     return false
   }
 
-  var startSortKey: String {
+  internal var startSortKey: String {
     switch self {
-    case .shift(let shift):
-      return shift.startTime
-
     case .event(let event):
       return event.sortTime
+
+    case .shift(let shift):
+      return shift.startTime
     }
   }
 }
 
-enum ShiftsListPlaceholderPolicy {
-  static func shouldShowTodayPlaceholder(
+internal enum ShiftsListPlaceholderPolicy {
+  internal static func shouldShowTodayPlaceholder(
     isCurrentMonth: Bool,
     filteredShifts: [ShiftWithComputations],
     eventCoverageByDate: [String: [EventPresentation]],
     todayISO: String
   ) -> Bool {
-    guard isCurrentMonth else { return false }
-    guard !filteredShifts.contains(where: { $0.shiftDate == todayISO }) else { return false }
+    guard isCurrentMonth else {
+      return false
+    }
+    guard !filteredShifts.contains(where: { $0.shiftDate == todayISO }) else {
+      return false
+    }
     return eventCoverageByDate[todayISO]?.isEmpty != false
   }
+}
+
+internal struct EventPresentation: Identifiable, Equatable {
+  private static let allDaySortTime: String = "99:99"
+
+  internal let event: EventRow
+  internal let coveredDateISO: String
+
+  internal var id: String { event.id }
+  internal var anchorDateISO: String { event.start_date }
+  internal var isAllDay: Bool { event.is_all_day }
+  internal var sortTime: String { event.start_time ?? Self.allDaySortTime }
 }

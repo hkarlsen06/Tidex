@@ -4,7 +4,9 @@ import XCTest
 
 internal final class ShiftDetailsPresentationPolicyTests: XCTestCase {
   internal func testOwnShiftShowsEarningsDetails() {
-    let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(snapshotShareContext: .own)
+    let policy: ShiftDetailsPresentationPolicy = ShiftDetailsPresentationPolicy(
+      snapshotShareContext: .own
+    )
 
     XCTAssertTrue(policy.showsEarningsDetails)
     XCTAssertNil(policy.automaticBreakOwnerName)

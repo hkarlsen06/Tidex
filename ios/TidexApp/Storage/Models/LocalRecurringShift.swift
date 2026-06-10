@@ -199,7 +199,10 @@ final class LocalRecurringShift {
   var decodedDateSpecificSupplements: [String: CustomSupplementsData] {
     get {
       guard let data = dateSpecificSupplements else { return [:] }
-      if let decoded = try? kSyncJSONDecoder.decode([String: CustomSupplementsData].self, from: data)
+      if let decoded = try? kSyncJSONDecoder.decode(
+        [String: CustomSupplementsData].self,
+        from: data
+      )
       {
         return decoded
       }

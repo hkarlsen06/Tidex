@@ -67,7 +67,9 @@ internal extension View {
   /// - Parameters:
   ///   - isActive: Whether the shimmer is active (default true)
   ///   - duration: Duration of one shimmer cycle (default 1.5s)
-  func shimmer(isActive: Bool = true, duration: Double = ShimmerModifier.Constants.defaultDuration) -> some View {
+  func shimmer(isActive: Bool = true, duration: Double = ShimmerModifier.Constants.defaultDuration)
+    -> some View
+  {
     modifier(ShimmerModifier(duration: duration, isActive: isActive))
   }
 }

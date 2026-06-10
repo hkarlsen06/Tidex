@@ -2,45 +2,45 @@ import XCTest
 
 @testable import Tidex
 
-final class AppDeepLinkResolverTests: XCTestCase {
-  func testResolvesSettingsPayDeepLinkWithJobId() throws {
-    let url = try XCTUnwrap(URL(string: "tidex://settings/pay?jobId=job_123"))
+internal final class AppDeepLinkResolverTests: XCTestCase {
+  internal func testResolvesSettingsPayDeepLinkWithJobId() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://settings/pay?jobId=job_123"))
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(deepLink, .settings(destination: .pay(jobId: "job_123")))
   }
 
-  func testResolvesSettingsPayDeepLinkWithoutJobId() throws {
-    let url = try XCTUnwrap(URL(string: "tidex://settings/pay"))
+  internal func testResolvesSettingsPayDeepLinkWithoutJobId() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://settings/pay"))
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(deepLink, .settings(destination: .pay(jobId: nil)))
   }
 
-  func testResolvesSettingsRecurringShiftsDeepLink() throws {
-    let url = try XCTUnwrap(URL(string: "tidex://settings/recurring-shifts"))
+  internal func testResolvesSettingsRecurringShiftsDeepLink() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://settings/recurring-shifts"))
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
-
-    XCTAssertEqual(deepLink, .settings(destination: .recurringShifts))
-  }
-
-  func testResolvesHttpsSettingsAlias() throws {
-    let url = try XCTUnwrap(URL(string: "https://app.tidex.no/no/settings/recurring-shifts"))
-
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(deepLink, .settings(destination: .recurringShifts))
   }
 
-  func testResolvesShiftHighlightDeepLinkWithShiftIds() throws {
-    let url = try XCTUnwrap(
+  internal func testResolvesHttpsSettingsAlias() throws {
+    let url: URL = try XCTUnwrap(URL(string: "https://app.tidex.no/no/settings/recurring-shifts"))
+
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
+
+    XCTAssertEqual(deepLink, .settings(destination: .recurringShifts))
+  }
+
+  internal func testResolvesShiftHighlightDeepLinkWithShiftIds() throws {
+    let url: URL = try XCTUnwrap(
       URL(string: "tidex://shifts?dates=2026-06-01,2026-06-02&shiftIds=a,b&action=highlight")
     )
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(
       deepLink,
@@ -52,37 +52,41 @@ final class AppDeepLinkResolverTests: XCTestCase {
     )
   }
 
-  func testResolvesAddShiftDeepLinkWithRecurringMode() throws {
-    let url = try XCTUnwrap(URL(string: "tidex://add-shift?mode=recurring"))
+  internal func testResolvesAddShiftDeepLinkWithRecurringMode() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://add-shift?mode=recurring"))
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(deepLink, .addShift(mode: .recurring))
   }
 
-  func testResolvesHttpsAddShiftDeepLinkWithEventsMode() throws {
-    let url = try XCTUnwrap(URL(string: "https://app.tidex.no/no/add-shift?mode=events"))
+  internal func testResolvesHttpsAddShiftDeepLinkWithEventsMode() throws {
+    let url: URL = try XCTUnwrap(URL(string: "https://app.tidex.no/no/add-shift?mode=events"))
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(deepLink, .addShift(mode: .events))
   }
 
-  func testResolvesAdminSettingsDeepLinkToAdminPanel() throws {
-    let url = try XCTUnwrap(URL(string: "tidex://settings/admin"))
+  internal func testResolvesAdminSettingsDeepLinkToAdminPanel() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://settings/admin"))
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(deepLink, .settings(destination: .admin))
   }
 
-  func testResolvesHttpsSettingsAdminReportsToAdminReport() throws {
-    let url = try XCTUnwrap(
+  internal func testResolvesHttpsSettingsAdminReportsToAdminReport() throws {
+    let url: URL = try XCTUnwrap(
       URL(string: "https://app.tidex.no/settings/admin?tab=reports&reportId=report_123")
     )
 
-    let deepLink = AppDeepLinkResolver.resolve(url)
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
     XCTAssertEqual(deepLink, .adminReport(reportId: "report_123"))
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

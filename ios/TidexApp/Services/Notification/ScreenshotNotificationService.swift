@@ -2,12 +2,6 @@ import Foundation
 import os.log
 import Supabase
 
-private struct ScreenshotRPCResponse: Decodable {
-  let success: Bool
-}
-
-// MARK: - Errors
-
 internal enum ScreenshotServiceError: Error, LocalizedError {
   case httpError(statusCode: Int)
   case networkError
@@ -27,6 +21,10 @@ internal enum ScreenshotServiceError: Error, LocalizedError {
   }
 }
 
+private struct ScreenshotRPCResponse: Decodable {
+  let success: Bool
+}
+
 /// Service for reporting screenshot events to the backend
 /// When a user takes a screenshot while viewing another user's shifts,
 /// this service notifies the shift owner via push notification
@@ -38,7 +36,10 @@ internal final class ScreenshotNotificationService {
     static let internalServerErrorStatusCode: Int = 500
   }
 
-  private static let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "ScreenshotNotificationService")
+  private static let logger: Logger = Logger(
+    subsystem: "com.tidex.app",
+    category: "ScreenshotNotificationService"
+  )
 
   internal static let shared: ScreenshotNotificationService = ScreenshotNotificationService()
 
@@ -50,7 +51,8 @@ internal final class ScreenshotNotificationService {
   private var inFlightRequests: Set<String> = []
 
   /// Minimum interval between screenshot notifications for the same sharer (5 minutes)
-  private let cooldownInterval: TimeInterval = Constants.cooldownMinutes * Constants.secondsPerMinute
+  private let cooldownInterval: TimeInterval =
+    Constants.cooldownMinutes * Constants.secondsPerMinute
 
   private init() {
     // Singleton.
@@ -78,18 +80,14 @@ internal final class ScreenshotNotificationService {
     params: [String: AnyJSON]
   ) async throws {
     guard !inFlightRequests.contains(targetKey) else {
-      Self.kLogger.info("Screenshot notification skipped - request already in flight for \(targetKey)")
+      Self.logger.info(
+        "Screenshot notification skipped - request already in flight for \(targetKey)"
+      )
       return
     }
 
-    if let lastReported = lastReportedTimestamps[targetKey] {
-      let elapsed: TimeInterval = Date().timeIntervalSince(lastReported)
-      if elapsed < cooldownInterval {
-        Self.kLogger.info(
-          "Screenshot notification skipped - cooldown active (\(Int(self.cooldownInterval - elapsed))s remaining)"
-        )
-        return
-      }
+    guard !isCooldownActive(for: targetKey) else {
+      return
     }
 
     inFlightRequests.insert(targetKey)
@@ -97,16 +95,49 @@ internal final class ScreenshotNotificationService {
 
     lastReportedTimestamps[targetKey] = Date()
 
+    try await authenticateReportingSession(targetKey: targetKey)
+
+    Self.logger.info("Reporting screenshot notification for \(targetKey)")
+    try await submitScreenshotReport(targetKey: targetKey, rpcName: rpcName, params: params)
+
+    Self.logger.info("Screenshot reported successfully")
+  }
+
+  private func isCooldownActive(for targetKey: String) -> Bool {
+    guard let lastReported: Date = lastReportedTimestamps[targetKey] else {
+      return false
+    }
+
+    let elapsed: TimeInterval = Date().timeIntervalSince(lastReported)
+    guard elapsed < cooldownInterval else {
+      return false
+    }
+
+    Self.logger.info(
+      "Screenshot notification skipped - cooldown active (\(Int(self.cooldownInterval - elapsed))s remaining)"
+    )
+    return true
+  }
+
+  private func authenticateReportingSession(targetKey: String) async throws {
     do {
       _ = try await AuthSessionManager.shared.getSession()
     } catch {
       lastReportedTimestamps.removeValue(forKey: targetKey)
       throw error
     }
+  }
 
-    Self.kLogger.info("Reporting screenshot notification for \(targetKey)")
+  private func submitScreenshotReport(
+    targetKey: String,
+    rpcName: String,
+    params: [String: AnyJSON]
+  ) async throws {
     do {
-      let response: ScreenshotRPCResponse = try await executeScreenshotRPC(rpcName: rpcName, params: params)
+      let response: ScreenshotRPCResponse = try await executeScreenshotRPC(
+        rpcName: rpcName,
+        params: params
+      )
 
       guard response.success else {
         lastReportedTimestamps.removeValue(forKey: targetKey)
@@ -116,11 +147,11 @@ internal final class ScreenshotNotificationService {
       lastReportedTimestamps.removeValue(forKey: targetKey)
       throw error
     }
-
-    Self.kLogger.info("Screenshot reported successfully")
   }
 
-  private func executeScreenshotRPC(rpcName: String, params: [String: AnyJSON]) async throws -> ScreenshotRPCResponse {
+  private func executeScreenshotRPC(rpcName: String, params: [String: AnyJSON]) async throws
+    -> ScreenshotRPCResponse
+  {
     try await supabase
       .rpc(rpcName, params: params)
       .single()

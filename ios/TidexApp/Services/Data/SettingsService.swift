@@ -2,7 +2,10 @@ import Foundation
 import os.log
 import Supabase
 
-private let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "SettingsService")
+private let kSettingsServiceLogger: Logger = Logger(
+  subsystem: "com.tidex.app",
+  category: "SettingsService"
+)
 
 /// Service for fetching user settings from Supabase
 @MainActor
@@ -56,7 +59,7 @@ internal final class SettingsService: ObservableObject {
         settings = response
         return response
       } catch is CancellationError {
-        kLogger.info("Settings fetch was cancelled")
+        kSettingsServiceLogger.info("Settings fetch was cancelled")
         throw CancellationError()
       } catch {
         // Check if error is "no rows returned" - return nil instead of throwing
@@ -71,7 +74,7 @@ internal final class SettingsService: ObservableObject {
         throw error
       }
     } onCancel: {
-      kLogger.info("Settings fetch cancellation requested")
+      kSettingsServiceLogger.info("Settings fetch cancellation requested")
     }
   }
 

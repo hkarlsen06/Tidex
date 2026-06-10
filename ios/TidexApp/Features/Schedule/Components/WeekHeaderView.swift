@@ -2,18 +2,12 @@ import SwiftUI
 
 /// Header view for a week group in the shifts list
 /// Shows week number and total earnings for the week
-struct WeekHeaderView: View {
-  let weekNumber: Int
-  let totalGross: Double
-  let totalGrossTextOverride: String?
+internal struct WeekHeaderView: View {
+  internal let weekNumber: Int
+  internal let totalGross: Double
+  internal let totalGrossTextOverride: String?
 
-  @Environment(\.userCurrency) private var currency
-
-  init(weekNumber: Int, totalGross: Double, totalGrossTextOverride: String? = nil) {
-    self.weekNumber = weekNumber
-    self.totalGross = totalGross
-    self.totalGrossTextOverride = totalGrossTextOverride
-  }
+  @Environment(\.userCurrency) private var currency: CurrencyConfig
 
   // MARK: - Computed Properties
 
@@ -23,7 +17,7 @@ struct WeekHeaderView: View {
 
   // MARK: - Body
 
-  var body: some View {
+  internal var body: some View {
     HStack(alignment: .center, spacing: 0) {
       // Week label with number
       HStack(spacing: Spacing.xxs) {
@@ -45,6 +39,12 @@ struct WeekHeaderView: View {
     }
     .padding(.horizontal, Spacing.xxs)
     .padding(.vertical, Spacing.xs)
+  }
+
+  internal init(weekNumber: Int, totalGross: Double, totalGrossTextOverride: String? = nil) {
+    self.weekNumber = weekNumber
+    self.totalGross = totalGross
+    self.totalGrossTextOverride = totalGrossTextOverride
   }
 
   // MARK: - Formatting

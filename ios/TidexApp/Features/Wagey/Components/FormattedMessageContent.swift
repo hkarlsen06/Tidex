@@ -30,10 +30,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
   // MARK: - Horizontal Rule
 
   private var horizontalRuleView: some View {  // swiftlint:disable:this type_contents_order
-    Rectangle()
-      .fill(Color.tidexBorder)
-      .frame(height: 1)
-      .padding(.vertical, Spacing.xxs)
+    Rectangle().fill(Color.tidexBorder).frame(height: 1).padding(.vertical, Spacing.xxs)
   }
 
   // MARK: - Text Rendering
@@ -131,7 +128,12 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
     )
   }
 
-  private func rowBackground(for rowIndex: Int) -> Color { rowIndex.isMultiple(of: 2) ? .clear : Color.tidexSurfaceSecondary.opacity(0.2) }  // swiftlint:disable:this line_length no_magic_numbers type_contents_order
+  private func rowBackground(for rowIndex: Int) -> Color {  // swiftlint:disable:this type_contents_order
+    let isAlternateRow: Bool = rowIndex.isMultiple(of: FormattedMessageContentConstants.alternatingRowDivisor)
+    return isAlternateRow ? .clear : Color.tidexSurfaceSecondary.opacity(
+      FormattedMessageContentConstants.oddRowBackgroundOpacity
+    )
+  }
 
   private func minColumnWidth(rows: [[String]], column: Int) -> CGFloat {  // swiftlint:disable:this type_contents_order
     let maxCharacters: Int =
@@ -189,10 +191,7 @@ struct FormattedMessageContent: View {  // swiftlint:disable:this explicit_acl e
   // MARK: - Content Parsing
 
   private enum ContentSegment {
-    case text(String)
-    case table([[String]])
-    case code(String)
-    case horizontalRule
+    case code(String), horizontalRule, table([[String]]), text(String)
   }
 
   private func parseContent() -> [ContentSegment] {  // swiftlint:disable:this type_contents_order
