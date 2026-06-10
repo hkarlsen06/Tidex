@@ -1,16 +1,17 @@
 import Foundation
 
 /// Pure helpers for detecting completed shifts and celebration data.
-struct CelebrationDetector {
+internal enum CelebrationDetector {
   /// Return IDs for completed shifts (optionally including virtual).
-  static func completedShiftIds(
+  internal static func completedShiftIds(
     shifts: [ShiftWithComputations],
     now: Date = Date(),
     includeVirtual: Bool = false
   ) -> Set<String> {
-    let completed = shifts.filter { shift in
-      // swiftlint:disable:next conditional_returns_on_newline
-      if !includeVirtual, shift.isVirtual { return false }
+    let completed: [ShiftWithComputations] = shifts.filter { shift in
+      if !includeVirtual, shift.isVirtual {
+        return false
+      }
       return Date.hasShiftEnded(
         shiftDate: shift.shiftDate,
         startTime: shift.startTime,
@@ -22,16 +23,19 @@ struct CelebrationDetector {
   }
 
   /// Find newly completed shifts since the previous completed ID set.
-  static func newlyCompletedShifts(
+  internal static func newlyCompletedShifts(
     shifts: [ShiftWithComputations],
     previousCompletedIds: Set<String>,
     now: Date = Date(),
     includeVirtual: Bool = false
   ) -> [ShiftWithComputations] {
     shifts.filter { shift in
-      // swiftlint:disable:next conditional_returns_on_newline
-      if !includeVirtual, shift.isVirtual { return false }
-      guard !previousCompletedIds.contains(shift.id) else { return false }
+      if !includeVirtual, shift.isVirtual {
+        return false
+      }
+      guard !previousCompletedIds.contains(shift.id) else {
+        return false
+      }
       return Date.hasShiftEnded(
         shiftDate: shift.shiftDate,
         startTime: shift.startTime,
@@ -42,13 +46,14 @@ struct CelebrationDetector {
   }
 
   /// Select the highest-earning shift by gross pay (earliest date wins ties).
-  static func selectHighestEarningShift(from shifts: [ShiftWithComputations])
+  internal static func selectHighestEarningShift(from shifts: [ShiftWithComputations])
     -> ShiftWithComputations?
   {
-    guard !shifts.isEmpty else { return nil }
+    guard !shifts.isEmpty else {
+      return nil
+    }
 
-    // swiftlint:disable:next explicit_type_interface
-    let maxGross = shifts.map(\.grossPay).max() ?? 0
+    let maxGross: Double = shifts.map(\.grossPay).max() ?? 0
     if maxGross == 0 {
       return shifts.min { $0.shiftDate < $1.shiftDate }
     }
@@ -60,7 +65,9 @@ struct CelebrationDetector {
   }
 
   /// Compute the TotalCard "earned to date" display value.
-  static func displayValue(dashboardData: DashboardData) -> (value: Double, taxEnabled: Bool) {
+  internal static func displayValue(
+    dashboardData: DashboardData
+  ) -> (value: Double, taxEnabled: Bool) {
     if dashboardData.currentMonthTaxEnabled {
       return (
         dashboardData.currentMonthCompletedNet ?? dashboardData.currentMonthCompletedGross,

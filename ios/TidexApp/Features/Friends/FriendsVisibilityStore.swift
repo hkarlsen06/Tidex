@@ -1,22 +1,23 @@
 import Foundation
 
 /// Stores local visibility preferences for friend relationships that are not server-backed.
-final class FriendsVisibilityStore {
-  static let shared = FriendsVisibilityStore()
+internal final class FriendsVisibilityStore {
+  internal static let shared: FriendsVisibilityStore = .init()
 
   private let defaults: UserDefaults
 
-  init(defaults: UserDefaults = .standard) {
+  internal init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
   }
 
-  func hiddenOutgoingFriendIds(for viewerId: String) -> Set<String> {
-    let ids = defaults.stringArray(forKey: hiddenOutgoingFriendIdsKey(for: viewerId)) ?? []
+  internal func hiddenOutgoingFriendIds(for viewerId: String) -> Set<String> {
+    let ids: [String] =
+      defaults.stringArray(forKey: hiddenOutgoingFriendIdsKey(for: viewerId)) ?? []
     return Set(ids)
   }
 
-  func setOutgoingFriendHidden(_ hidden: Bool, friendId: String, viewerId: String) {
-    var hiddenIds = hiddenOutgoingFriendIds(for: viewerId)
+  internal func setOutgoingFriendHidden(_ hidden: Bool, friendId: String, viewerId: String) {
+    var hiddenIds: Set<String> = hiddenOutgoingFriendIds(for: viewerId)
 
     if hidden {
       hiddenIds.insert(friendId)
@@ -29,5 +30,9 @@ final class FriendsVisibilityStore {
 
   private func hiddenOutgoingFriendIdsKey(for viewerId: String) -> String {
     "friends.hiddenOutgoingFriendIds.\(viewerId)"
+  }
+
+  deinit {
+    // No cleanup is required.
   }
 }
