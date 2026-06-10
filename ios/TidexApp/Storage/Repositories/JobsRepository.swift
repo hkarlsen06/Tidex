@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "JobsRepository")
 
@@ -97,7 +97,9 @@ enum JobDeletionPolicy {
     serverRevision: Int64,
     serverDeletedAt: Date?
   ) -> Bool {
-    guard serverDeletedAt == nil else { return false }
+    guard serverDeletedAt == nil else {
+      return false
+    }
     return syncStatusRaw != SyncStatus.pendingDelete.rawValue || serverRevision > 0
   }
 }
@@ -640,9 +642,13 @@ final class JobsRepository: ObservableObject {
   }
 
   func discardIncompleteJob(userId: String, jobId: String) async throws {
-    guard snapshotsRepository.getSnapshots(for: userId, jobId: jobId).isEmpty else { return }
+    guard snapshotsRepository.getSnapshots(for: userId, jobId: jobId).isEmpty else {
+      return
+    }
     let dependencyCounts = try deletionDependencyCounts(userId: userId, jobId: jobId)
-    guard !JobDeletionPolicy.shouldBlockDeletion(dependencyCounts: dependencyCounts) else { return }
+    guard !JobDeletionPolicy.shouldBlockDeletion(dependencyCounts: dependencyCounts) else {
+      return
+    }
 
     let affectedUserId = try await localStore.storeActor.markJobPendingDelete(id: jobId)
     logger.info("Discarded incomplete job: \(jobId)")

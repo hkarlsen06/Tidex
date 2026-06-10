@@ -7,8 +7,8 @@
 import Foundation
 import GoogleSignIn
 import Intents
-import UIKit
 import os.log
+import UIKit
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AppLifecycleHandler")
 

@@ -1,25 +1,31 @@
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "AppearanceSettingsViewModel")
+private enum AppearanceSettingsConstants {
+  static var logger: Logger {
+    Logger(subsystem: "com.tidex.app", category: "AppearanceSettingsViewModel")
+  }
+}
 
-enum StartupTabOption: String, CaseIterable {
-  case home
-  case shifts
+internal enum StartupTabOption: String, CaseIterable {
   case add
-  case wagey
+  case home
   case sharing
+  case shifts
+  case wagey
+
+  internal static let allCases: [Self] = [.home, .shifts, .add, .wagey, .sharing]
 }
 
 /// ViewModel for appearance settings
 @MainActor
-final class AppearanceSettingsViewModel: ObservableObject {
-  private static let startupTabCacheKey = "defaultStartupTab"
+internal final class AppearanceSettingsViewModel: ObservableObject {
+  private static let startupTabCacheKey: String = "defaultStartupTab"
 
   // MARK: - Published State
 
   /// The currently selected theme
-  @Published var selectedTheme: AppTheme = .system {
+  @Published internal var selectedTheme: AppTheme = .system {
     didSet {
       if oldValue != selectedTheme, !isInitialLoad {
         updateTheme()
@@ -28,7 +34,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// The currently selected calendar content color style
-  @Published var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace {
+  @Published internal var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace {
     didSet {
       if oldValue != selectedCalendarContentColorStyle, !isInitialLoad {
         updateCalendarContentColorStyle()
@@ -37,7 +43,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// Whether dashboard clock buttons are visible
-  @Published var showDashboardClockButtons: Bool = true {
+  @Published internal var showDashboardClockButtons: Bool = true {
     didSet {
       if oldValue != showDashboardClockButtons, !isInitialLoad {
         updateShowDashboardClockButtons()
@@ -46,7 +52,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// The default tab to open when launching the app
-  @Published var selectedStartupTab: StartupTabOption = .home {
+  @Published internal var selectedStartupTab: StartupTabOption = .home {
     didSet {
       if oldValue != selectedStartupTab, !isInitialLoad {
         updateDefaultStartupTab()
@@ -55,26 +61,28 @@ final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// Loading state
-  @Published var isLoading: Bool = false
+  @Published internal var isLoading: Bool = false
 
   /// Error message
-  @Published var errorMessage: String?
+  @Published internal var errorMessage: String?
 
   // MARK: - Private Properties
 
   private let settingsRepository = SettingsRepository.shared
   private let appearanceManager = AppearanceManager.shared
   private var userId: String?
-  private var isInitialLoad = true
+  private var isInitialLoad: Bool = true
 
   // MARK: - Initialization
 
-  init() {}
+  internal init() {
+    // Default initializer required for SwiftLint's explicit initialization policy.
+  }
 
   // MARK: - Public Methods
 
   /// Load appearance settings
-  func loadSettings() async {
+  internal func loadSettings() async {
     isLoading = true
     errorMessage = nil
 
@@ -86,7 +94,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
     }
 
     // Load settings from repository
-    let settings = settingsRepository.getSettings(for: userId)
+    let settings: UserSettings? = settingsRepository.getSettings(for: userId)
 
     // Update state without triggering saves
     isInitialLoad = true
@@ -98,10 +106,10 @@ final class AppearanceSettingsViewModel: ObservableObject {
       selectedTheme = .system
     }
 
-    let calendarContentStyleRaw =
+    let calendarContentStyleRaw: String =
       settings?.effectiveCalendarContentColorStyle
       ?? appearanceManager.calendarContentColorStyle.rawValue
-    let calendarContentStyle =
+    let calendarContentStyle: CalendarContentColorStyle =
       CalendarContentColorStyle(rawValue: calendarContentStyleRaw) ?? .workplace
     selectedCalendarContentColorStyle = calendarContentStyle
     appearanceManager.setCalendarContentColorStyle(calendarContentStyle)
@@ -115,7 +123,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
       resolvedStartupTabRawValue =
         UserDefaults.standard.string(forKey: Self.startupTabCacheKey) ?? "home"
     }
-    let normalizedStartupTabRawValue =
+    let normalizedStartupTabRawValue: String =
       resolvedStartupTabRawValue == "stats"
       ? StartupTabOption.home.rawValue : resolvedStartupTabRawValue
     selectedStartupTab = StartupTabOption(rawValue: normalizedStartupTabRawValue) ?? .home
@@ -124,11 +132,11 @@ final class AppearanceSettingsViewModel: ObservableObject {
     isInitialLoad = false
 
     isLoading = false
-    logger.info("Loaded appearance settings")
+    AppearanceSettingsConstants.logger.info("Loaded appearance settings")
   }
 
   /// Clear error message
-  func clearError() {
+  internal func clearError() {
     errorMessage = nil
   }
 
@@ -141,18 +149,20 @@ final class AppearanceSettingsViewModel: ObservableObject {
       if AuthSessionManager.shared.isTransientSessionResolutionError(error),
         let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
       {
-        logger.info("Using offline user id fallback for appearance settings")
+        AppearanceSettingsConstants.logger.info("Using offline user id fallback for appearance settings")
         return offlineUserId
       }
 
-      logger.error("Failed to get user session: \(error.localizedDescription)")
+      AppearanceSettingsConstants.logger.error("Failed to get user session: \(error.localizedDescription)")
       return nil
     }
   }
 
   /// Update theme in repository and apply to app
   private func updateTheme() {
-    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    guard !isInitialLoad, let userId else {
+      return
+    }
 
     // Apply immediately to AppearanceManager
     appearanceManager.setTheme(selectedTheme)
@@ -165,9 +175,9 @@ final class AppearanceSettingsViewModel: ObservableObject {
           theme: selectedTheme.rawValue
         )
 
-        logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
+        AppearanceSettingsConstants.logger.info("Updated theme to: \(self.selectedTheme.rawValue)")
       } catch {
-        logger.error("Failed to save theme: \(error.localizedDescription)")
+        AppearanceSettingsConstants.logger.error("Failed to save theme: \(error.localizedDescription)")
         errorMessage = "Failed to save theme preference"
       }
     }
@@ -175,7 +185,9 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
   /// Update calendar content color style in repository and apply to app
   private func updateCalendarContentColorStyle() {
-    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    guard !isInitialLoad, let userId else {
+      return
+    }
 
     appearanceManager.setCalendarContentColorStyle(selectedCalendarContentColorStyle)
 
@@ -186,11 +198,13 @@ final class AppearanceSettingsViewModel: ObservableObject {
           calendarContentColorStyle: selectedCalendarContentColorStyle.rawValue
         )
 
-        logger.info(
+        AppearanceSettingsConstants.logger.info(
           "Updated calendar content color style to: \(self.selectedCalendarContentColorStyle.rawValue)"
         )
       } catch {
-        logger.error("Failed to save calendar content color style: \(error.localizedDescription)")
+        AppearanceSettingsConstants.logger.error(
+          "Failed to save calendar content color style: \(error.localizedDescription)"
+        )
         errorMessage = String(localized: .appearanceCalendarContentColorSaveError)
       }
     }
@@ -198,7 +212,9 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
   /// Update dashboard clock button visibility in repository
   private func updateShowDashboardClockButtons() {
-    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    guard !isInitialLoad, let userId else {
+      return
+    }
 
     Task {
       do {
@@ -213,11 +229,13 @@ final class AppearanceSettingsViewModel: ObservableObject {
           userInfo: ["isVisible": self.showDashboardClockButtons]
         )
 
-        logger.info(
-          "Updated dashboard clock button visibility to: \(self.showDashboardClockButtons)")
+        AppearanceSettingsConstants.logger.info(
+          "Updated dashboard clock button visibility to: \(self.showDashboardClockButtons)"
+        )
       } catch {
-        logger.error(
-          "Failed to save dashboard clock button visibility: \(error.localizedDescription)")
+        AppearanceSettingsConstants.logger.error(
+          "Failed to save dashboard clock button visibility: \(error.localizedDescription)"
+        )
         errorMessage = "Failed to save dashboard preference"
       }
     }
@@ -225,7 +243,9 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
   /// Update default startup tab in repository
   private func updateDefaultStartupTab() {
-    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
+    guard !isInitialLoad, let userId else {
+      return
+    }
 
     Task {
       do {
@@ -235,9 +255,9 @@ final class AppearanceSettingsViewModel: ObservableObject {
         )
         UserDefaults.standard.set(selectedStartupTab.rawValue, forKey: Self.startupTabCacheKey)
 
-        logger.info("Updated default startup tab to: \(self.selectedStartupTab.rawValue)")
+        AppearanceSettingsConstants.logger.info("Updated default startup tab to: \(self.selectedStartupTab.rawValue)")
       } catch {
-        logger.error("Failed to save default startup tab: \(error.localizedDescription)")
+        AppearanceSettingsConstants.logger.error("Failed to save default startup tab: \(error.localizedDescription)")
         errorMessage = "Failed to save startup tab preference"
       }
     }

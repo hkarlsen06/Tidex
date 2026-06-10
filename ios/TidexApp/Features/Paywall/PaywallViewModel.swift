@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import StoreKit
 import os.log
+import StoreKit
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "PaywallViewModel")
 

@@ -1,6 +1,6 @@
 import Foundation
-import UserNotifications
 import os.log
+import UserNotifications
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "EventReminderScheduler")
 

@@ -1,9 +1,9 @@
 import Auth
 import Combine
 import Foundation
+import os.log
 import Supabase
 import UIKit
-import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessagingService")
 

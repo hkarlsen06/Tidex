@@ -1,6 +1,6 @@
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "EntitlementRepository")
 

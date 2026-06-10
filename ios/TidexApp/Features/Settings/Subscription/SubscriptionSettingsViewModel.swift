@@ -1,8 +1,8 @@
 import Combine
 import Foundation
 import Network
-import StoreKit
 import os.log
+import StoreKit
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SubscriptionSettingsViewModel")
 

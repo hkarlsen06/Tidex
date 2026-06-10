@@ -1,8 +1,8 @@
 // swiftlint:disable explicit_type_interface
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsRepository")
 
@@ -67,7 +67,9 @@ final class ShiftsRepository: ObservableObject {
     )
 
     do {
-      guard let defaultJob = try context.fetch(descriptor).first else { return false }
+      guard let defaultJob = try context.fetch(descriptor).first else {
+        return false
+      }
       return defaultJob.id == selectedJobId
     } catch {
       logger.error(
@@ -404,7 +406,9 @@ final class ShiftsRepository: ObservableObject {
   /// Side effects (widget/watch/sync) are dispatched once per affected user.
   func deleteShifts(ids: [String]) async throws {
     let uniqueIds = Array(Set(ids))
-    guard !uniqueIds.isEmpty else { return }
+    guard !uniqueIds.isEmpty else {
+      return
+    }
 
     let userIds = try await localStore.storeActor.markShiftsPendingDelete(ids: uniqueIds)
     guard !userIds.isEmpty else {
@@ -448,7 +452,9 @@ final class ShiftsRepository: ObservableObject {
 
     // Filter to only active shifts (not pending delete) that are NOT in target month
     let shiftsToDelete = allShifts.filter { shift in
-      guard shift.isActiveShift else { return false }
+      guard shift.isActiveShift else {
+        return false
+      }
 
       let shiftComponents = calendar.dateComponents([.year, .month], from: shift.shiftDate)
       return shiftComponents.year != targetMonth.year || shiftComponents.month != targetMonth.month
@@ -523,7 +529,9 @@ final class ShiftsRepository: ObservableObject {
   /// - Returns: Whether the shift can be created
   func canCreateShift(userId: String, targetDate: Date, tier: SubscriptionTier) -> Bool {
     // Pro and Max can always create
-    guard tier == .free else { return true }
+    guard tier == .free else {
+      return true
+    }
 
     let calendar = Calendar.current
     let targetMonth = calendar.dateComponents([.year, .month], from: targetDate)

@@ -1,6 +1,6 @@
 import Foundation
-import WidgetKit
 import os.log
+import WidgetKit
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WatchDataStore")
 

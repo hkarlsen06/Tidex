@@ -1,14 +1,14 @@
 import Combine
 
-enum AddShiftSubmitBlocker: Hashable {
-  case noAvailableJob
-  case noSelectedJob
-  case noSingleDates
-  case noRecurringDays
-  case missingTimes
-  case noEventDate
+internal enum AddShiftSubmitBlocker: Hashable {
   case invalidEventDateRange
   case missingEventNote
+  case missingTimes
+  case noAvailableJob
+  case noEventDate
+  case noRecurringDays
+  case noSelectedJob
+  case noSingleDates
 }
 
 /// Coordinates state between AddShiftView/ViewModel and the tab bar
@@ -17,69 +17,83 @@ enum AddShiftSubmitBlocker: Hashable {
 /// - Trigger add action from tab bar tap
 /// - Track current mode for proper action routing
 @MainActor
-final class AddShiftCoordinator: ObservableObject {
-  static let shared = AddShiftCoordinator()
+internal final class AddShiftCoordinator: ObservableObject {
+  internal static let shared: Self = .init()
 
   /// Whether a shift can currently be submitted (dates/days selected + valid times)
-  @Published private(set) var canSubmit: Bool = false
+  @Published internal private(set) var canSubmit: Bool = false
 
   /// Current add mode - determines which action to trigger
-  @Published private(set) var currentMode: AddShiftMode = .single
+  @Published internal private(set) var currentMode: AddShiftMode = .single
 
   /// Whether the view is currently loading (submitting)
-  @Published private(set) var isLoading: Bool = false
+  @Published internal private(set) var isLoading: Bool = false
 
   /// Whether the current add-shift context requires explicit job selection before submit.
-  @Published private(set) var requiresJobSelection: Bool = false
+  @Published internal private(set) var requiresJobSelection: Bool = false
 
   /// Currently selected job for add-shift context.
-  @Published private(set) var selectedJobId: String?
+  @Published internal private(set) var selectedJobId: String?
 
   /// Reasons the Add action is currently blocked.
-  @Published private(set) var submitBlockers: [AddShiftSubmitBlocker] = []
+  @Published internal private(set) var submitBlockers: [AddShiftSubmitBlocker] = []
+
+  private let triggerAddSubject: PassthroughSubject<Void, Never> = .init()
+  private let cycleModeSubject: PassthroughSubject<Void, Never> = .init()
 
   /// Publisher for triggering the add action from outside (tab bar tap)
-  let triggerAddAction = PassthroughSubject<Void, Never>()
+  internal var triggerAddAction: AnyPublisher<Void, Never> {
+    triggerAddSubject.eraseToAnyPublisher()
+  }
 
   /// Publisher for cycling add modes when the Add tab is reselected.
-  let cycleModeAction = PassthroughSubject<Void, Never>()
+  internal var cycleModeAction: AnyPublisher<Void, Never> {
+    cycleModeSubject.eraseToAnyPublisher()
+  }
 
-  private init() {}
+  private init() {
+    // Singleton.
+  }
 
   /// Update the can submit state (called by AddShiftViewModel)
-  func updateCanSubmit(_ canSubmit: Bool) {
+  internal func updateCanSubmit(_ canSubmit: Bool) {
     self.canSubmit = canSubmit
   }
 
   /// Update the current mode (called by AddShiftViewModel)
-  func updateMode(_ mode: AddShiftMode) {
+  internal func updateMode(_ mode: AddShiftMode) {
     self.currentMode = mode
   }
 
   /// Update the loading state (called by AddShiftViewModel)
-  func updateIsLoading(_ isLoading: Bool) {
+  internal func updateIsLoading(_ isLoading: Bool) {
     self.isLoading = isLoading
   }
 
   /// Update job selection context (called by AddShiftViewModel)
-  func updateJobSelection(selectedJobId: String?, requiresJobSelection: Bool) {
+  internal func updateJobSelection(selectedJobId: String?, requiresJobSelection: Bool) {
     self.selectedJobId = selectedJobId
     self.requiresJobSelection = requiresJobSelection
   }
 
   /// Update blockers that explain why submit is unavailable.
-  func updateSubmitBlockers(_ blockers: [AddShiftSubmitBlocker]) {
+  internal func updateSubmitBlockers(_ blockers: [AddShiftSubmitBlocker]) {
     submitBlockers = blockers
   }
 
   /// Trigger the add action (called from MainTabView when Add tab is tapped)
-  func triggerAdd() {
+  internal func triggerAdd() {
     // swiftlint:disable:next conditional_returns_on_newline
     guard canSubmit, !isLoading else { return }
-    triggerAddAction.send()
+    triggerAddSubject.send()
   }
 
-  func triggerModeCycle() {
-    cycleModeAction.send()
+  internal func triggerModeCycle() {
+    cycleModeSubject.send()
+  }
+
+  deinit {
+    triggerAddSubject.send(completion: .finished)
+    cycleModeSubject.send(completion: .finished)
   }
 }

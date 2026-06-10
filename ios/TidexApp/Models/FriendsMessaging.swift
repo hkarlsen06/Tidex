@@ -216,7 +216,9 @@ struct FriendShiftSnapshot: Codable, Equatable {
 
   var ownerFirstName: String {
     let trimmed = ownerDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else { return "?" }
+    guard !trimmed.isEmpty else {
+      return "?"
+    }
     return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
   }
 
@@ -260,7 +262,9 @@ struct FriendShiftSnapshot: Codable, Equatable {
 
   // swiftlint:disable:next type_contents_order
   internal func applyingEarningsVisibility(_ canSeeEarnings: Bool) -> Self {
-    guard !canSeeEarnings else { return self }
+    guard !canSeeEarnings else {
+      return self
+    }
 
     return Self(
       schemaVersion: schemaVersion,
@@ -430,12 +434,16 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
   }
 
   var imageAttachment: ImageAttachment? {
-    guard case .image(let image) = self else { return nil }
+    guard case .image(let image) = self else {
+      return nil
+    }
     return image
   }
 
   var shiftSnapshotDraft: ComposerShiftSnapshotDraft? {
-    guard case .shiftSnapshot(let draft) = self else { return nil }
+    guard case .shiftSnapshot(let draft) = self else {
+      return nil
+    }
     return draft
   }
 
@@ -454,7 +462,9 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
   }
 
   var metadataData: Data? {
-    guard let shiftSnapshot else { return nil }
+    guard let shiftSnapshot else {
+      return nil
+    }
     return try? JSONEncoder().encode(
       FriendRichContentEnvelope(
         content: FriendRichContentEnvelope.Content(
@@ -565,7 +575,9 @@ struct FriendThread: Identifiable, Codable, Equatable {
   }
 
   var lastMessagePreviewText: String? {
-    guard lastMessageId != nil else { return nil }
+    guard lastMessageId != nil else {
+      return nil
+    }
     return FriendMessagePreviewPolicy.previewText(
       body: lastMessageBody,
       previewKind: resolvedLastMessagePreviewKind
@@ -577,7 +589,9 @@ struct FriendThread: Identifiable, Codable, Equatable {
   }
 
   var paginationCursor: FriendThreadCursor? {
-    guard let lastMessageAt else { return nil }
+    guard let lastMessageAt else {
+      return nil
+    }
     return FriendThreadCursor(lastMessageAt: lastMessageAt, threadId: id)
   }
 }
@@ -753,12 +767,16 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   }
 
   var shiftSnapshot: FriendShiftSnapshot? {
-    guard case .shiftSnapshot(let snapshot) = richContent else { return nil }
+    guard case .shiftSnapshot(let snapshot) = richContent else {
+      return nil
+    }
     return snapshot
   }
 
   var sendableMetadataData: Data? {
-    guard let shiftSnapshot else { return metadataData }
+    guard let shiftSnapshot else {
+      return metadataData
+    }
     return try? JSONEncoder().encode(
       FriendRichContentEnvelope(
         content: FriendRichContentEnvelope.Content(
@@ -798,7 +816,9 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   }
 
   var normalizedBody: String? {
-    guard let body else { return nil }
+    guard let body else {
+      return nil
+    }
     let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
   }
@@ -951,7 +971,9 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     -> [FriendMessageReaction]
   {
     let normalizedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !normalizedEmoji.isEmpty else { return reactions }
+    guard !normalizedEmoji.isEmpty else {
+      return reactions
+    }
 
     var updatedReactions = reactions
 
@@ -991,14 +1013,14 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   static func sortedReactions(_ reactions: [FriendMessageReaction])
     -> [FriendMessageReaction]
   {
-    reactions.sorted {
-      if $0.viewerHasReacted != $1.viewerHasReacted {
-        return $0.viewerHasReacted && !$1.viewerHasReacted
+    reactions.sorted { lhs, rhs in
+      if lhs.viewerHasReacted != rhs.viewerHasReacted {
+        return lhs.viewerHasReacted && !rhs.viewerHasReacted
       }
-      if $0.count != $1.count {
-        return $0.count > $1.count
+      if lhs.count != rhs.count {
+        return lhs.count > rhs.count
       }
-      return $0.emoji < $1.emoji
+      return lhs.emoji < rhs.emoji
     }
   }
 }
@@ -1058,7 +1080,9 @@ private enum FriendRichContentDecoder {
   }
 
   static func richContent(from metadataData: Data?) -> FriendRichContent? {
-    guard let envelope = decodeEnvelope(from: metadataData) else { return nil }
+    guard let envelope = decodeEnvelope(from: metadataData) else {
+      return nil
+    }
     guard let snapshot = envelope.content?.shiftSnapshot, snapshot.isSupportedSchemaVersion else {
       return nil
     }
@@ -1071,7 +1095,9 @@ private enum FriendRichContentDecoder {
   }
 
   private static func decodeEnvelope(from metadataData: Data?) -> FriendRichContentEnvelope? {
-    guard let metadataData, !metadataData.isEmpty else { return nil }
+    guard let metadataData, !metadataData.isEmpty else {
+      return nil
+    }
     return try? JSONDecoder().decode(FriendRichContentEnvelope.self, from: metadataData)
   }
 }
@@ -1135,7 +1161,9 @@ private enum FriendMessagePreviewPolicy {
       .replacingOccurrences(of: "\n", with: " ")
       .trimmingCharacters(in: .whitespacesAndNewlines)
 
-    guard let snippet, !snippet.isEmpty else { return nil }
+    guard let snippet, !snippet.isEmpty else {
+      return nil
+    }
     return snippet
   }
 }

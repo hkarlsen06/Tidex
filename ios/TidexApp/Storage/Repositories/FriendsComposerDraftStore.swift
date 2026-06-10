@@ -1,6 +1,6 @@
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let composerDraftLogger = Logger(
   subsystem: "com.tidex.app",
@@ -114,7 +114,9 @@ final class FriendsComposerDraftStore {
     )
 
     do {
-      guard let localDraft = try context.fetch(descriptor).first else { return nil }
+      guard let localDraft = try context.fetch(descriptor).first else {
+        return nil
+      }
       let text = localDraft.draftText ?? ""
       var attachments: [FriendsComposerAttachmentDraft] = []
 
@@ -393,7 +395,9 @@ final class FriendsComposerDraftStore {
     pruneAttachmentFiles(
       keeping: Set(
         persistedDrafts.compactMap {
-          guard case .image(let imageDraft) = $0 else { return nil }
+          guard case .image(let imageDraft) = $0 else {
+            return nil
+          }
           return imageDraft.relativePath
         }),
       threadId: threadId,

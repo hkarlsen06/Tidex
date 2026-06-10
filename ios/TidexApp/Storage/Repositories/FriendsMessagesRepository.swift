@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "FriendsMessagesRepository")
 
@@ -207,7 +207,9 @@ final class FriendsMessagesRepository: ObservableObject {
     )
 
     do {
-      guard let message = try context.fetch(messageDescriptor).first else { return nil }
+      guard let message = try context.fetch(messageDescriptor).first else {
+        return nil
+      }
       let attachments = try context.fetch(attachmentDescriptor)
       let reactions = try context.fetch(reactionDescriptor)
       let friendMessage = message.toFriendMessage(attachments: attachments, reactions: reactions)
@@ -383,10 +385,14 @@ extension FriendsMessagesRepository {
   }
 
   fileprivate func deduplicationKey(for message: FriendMessage, viewerUserId: String) -> String? {
-    guard message.senderUserId == viewerUserId else { return nil }
+    guard message.senderUserId == viewerUserId else {
+      return nil
+    }
     let normalizedClientId = message.clientId.trimmingCharacters(in: .whitespacesAndNewlines)
       .lowercased()
-    guard !normalizedClientId.isEmpty else { return nil }
+    guard !normalizedClientId.isEmpty else {
+      return nil
+    }
     return "\(message.senderUserId):\(normalizedClientId)"
   }
 

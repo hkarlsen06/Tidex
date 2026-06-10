@@ -1,102 +1,105 @@
 import Foundation
-import Supabase
 import os.log
+import Supabase
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "FeedbackSettingsViewModel")
+private enum FeedbackSettingsConstants {
+  static var logger: Logger {
+    Logger(subsystem: "com.tidex.app", category: "FeedbackSettingsViewModel")
+  }
 
-/// Maximum feedback message length
-private let maxFeedbackLength = 2_000  // swiftlint:disable:this explicit_type_interface prefixed_toplevel_constant
+  static let maxFeedbackLength: Int = 2_000
+}
 
 // MARK: - Models
 
 /// A feedback item from the database
-struct FeedbackItem: Codable, Identifiable {
-  let id: String
-  let userId: String
-  let message: String
-  let userEmail: String
-  let createdAt: String
-  let response: String?
-  let respondedAt: String?
-  let respondedBy: String?
-
-  enum CodingKeys: String, CodingKey {
-    case id
-    case userId = "user_id"
-    case message
-    case userEmail = "user_email"
+internal struct FeedbackItem: Codable, Identifiable {
+  internal enum CodingKeys: String, CodingKey {
     case createdAt = "created_at"
-    case response
+    case id = "id"
+    case message = "message"
     case respondedAt = "responded_at"
     case respondedBy = "responded_by"
+    case response = "response"
+    case userEmail = "user_email"
+    case userId = "user_id"
   }
+
+  internal let id: String
+  internal let userId: String
+  internal let message: String
+  internal let userEmail: String
+  internal let createdAt: String
+  internal let response: String?
+  internal let respondedAt: String?
+  internal let respondedBy: String?
 }
 
 /// Data for inserting new feedback
-struct FeedbackInsert: Encodable {
-  let userId: String
-  let message: String
-  let userEmail: String
-
-  enum CodingKeys: String, CodingKey {
-    case userId = "user_id"
-    case message
+internal struct FeedbackInsert: Encodable {
+  internal enum CodingKeys: String, CodingKey {
+    case message = "message"
     case userEmail = "user_email"
+    case userId = "user_id"
   }
+
+  internal let userId: String
+  internal let message: String
+  internal let userEmail: String
 }
 
 // MARK: - View Model
 
 /// ViewModel for feedback settings
 @MainActor
-final class FeedbackSettingsViewModel: ObservableObject {
+internal final class FeedbackSettingsViewModel: ObservableObject {
 
   // MARK: - Published State
 
   /// The feedback message being composed
-  @Published var message: String = ""
+  @Published internal var message: String = ""
 
   /// Loading state for initial data fetch
-  @Published var isLoading: Bool = false
+  @Published internal var isLoading: Bool = false
 
   /// Loading state for submitting feedback
-  @Published var isSubmitting: Bool = false
+  @Published internal var isSubmitting: Bool = false
 
   /// Error message to display
-  @Published var errorMessage: String?
+  @Published internal var errorMessage: String?
 
   /// Whether feedback was successfully submitted
-  @Published var showSuccess: Bool = false
+  @Published internal var showSuccess: Bool = false
   /// Whether feedback actions are unavailable because the session was resolved offline
-  @Published private(set) var isOfflineUnavailable = false
+  @Published internal private(set) var isOfflineUnavailable: Bool = false
 
   /// History of user's feedback
-  @Published var feedbackHistory: [FeedbackItem] = []
+  @Published internal var feedbackHistory: [FeedbackItem] = []
 
   /// Currently expanded feedback item ID
-  @Published var expandedItemId: String?
+  @Published internal var expandedItemId: String?
 
   // MARK: - Computed Properties
 
   /// Current character count
-  var characterCount: Int {
+  internal var characterCount: Int {
     message.count
   }
 
   /// Whether the message exceeds the max length
-  var isOverLimit: Bool {
-    message.count > maxFeedbackLength
+  internal var isOverLimit: Bool {
+    message.count > FeedbackSettingsConstants.maxFeedbackLength
   }
 
   /// Whether the submit button should be enabled
-  var canSubmit: Bool {
+  internal var canSubmit: Bool {
     !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit
       && !isSubmitting && !isOfflineUnavailable
   }
 
   /// Formatted character count string
-  var characterCountText: String {
-    "\(characterCount) / \(maxFeedbackLength)"
+  internal var characterCountText: String {
+    "\(characterCount) / \(FeedbackSettingsConstants.maxFeedbackLength)"
   }
 
   // MARK: - Private Properties
@@ -106,19 +109,21 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
   // MARK: - Initialization
 
-  init() {}
+  internal init() {
+    // Default initializer required for SwiftLint's explicit initialization policy.
+  }
 
   // MARK: - Public Methods
 
   /// Load initial data - user info and feedback history
-  func loadData() async {
+  internal func loadData() async {
     isLoading = true
     errorMessage = nil
     isOfflineUnavailable = false
 
     do {
       // Get current user session
-      let session = try await AuthSessionManager.shared.getSession()
+      let session: Session = try await AuthSessionManager.shared.getSession()
       userId = session.normalizedUserId
       userEmail = session.user.email ?? ""
 
@@ -126,7 +131,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
       await fetchFeedbackHistory()
 
     } catch {
-      logger.error("Failed to get user session: \(error.localizedDescription)")
+      FeedbackSettingsConstants.logger.error("Failed to get user session: \(error.localizedDescription)")
       if AuthSessionManager.shared.isTransientSessionResolutionError(error),
         let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
       {
@@ -143,7 +148,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
   }
 
   /// Submit new feedback
-  func submitFeedback() async {
+  internal func submitFeedback() async {
     guard !isOfflineUnavailable else {
       errorMessage = String(localized: .feedbackOfflineSubmitUnavailable)
       return
@@ -154,15 +159,15 @@ final class FeedbackSettingsViewModel: ObservableObject {
       return
     }
 
-    let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmedMessage: String = message.trimmingCharacters(in: .whitespacesAndNewlines)
 
     guard !trimmedMessage.isEmpty else {
       errorMessage = "Please enter your feedback"
       return
     }
 
-    guard trimmedMessage.count <= maxFeedbackLength else {
-      errorMessage = "Feedback must be \(maxFeedbackLength) characters or less"
+    guard trimmedMessage.count <= FeedbackSettingsConstants.maxFeedbackLength else {
+      errorMessage = "Feedback must be \(FeedbackSettingsConstants.maxFeedbackLength) characters or less"
       return
     }
 
@@ -181,7 +186,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
         .insert(feedback)
         .execute()
 
-      logger.info("Feedback submitted successfully")
+      FeedbackSettingsConstants.logger.info("Feedback submitted successfully")
 
       // Clear the form and show success
       message = ""
@@ -191,7 +196,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
       await fetchFeedbackHistory()
 
     } catch {
-      logger.error("Failed to submit feedback: \(error.localizedDescription)")
+      FeedbackSettingsConstants.logger.error("Failed to submit feedback: \(error.localizedDescription)")
       errorMessage = "Failed to send feedback. Please try again."
     }
 
@@ -199,17 +204,17 @@ final class FeedbackSettingsViewModel: ObservableObject {
   }
 
   /// Clear error message
-  func clearError() {
+  internal func clearError() {
     errorMessage = nil
   }
 
   /// Reset success state to show form again
-  func resetSuccess() {
+  internal func resetSuccess() {
     showSuccess = false
   }
 
   /// Toggle expanded state for a feedback item
-  func toggleExpanded(_ itemId: String) {
+  internal func toggleExpanded(_ itemId: String) {
     if expandedItemId == itemId {
       expandedItemId = nil
     } else {
@@ -221,7 +226,9 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
   /// Fetch user's feedback history
   private func fetchFeedbackHistory() async {
-    guard let userId else { return }
+    guard let userId else {
+      return
+    }
 
     do {
       let items: [FeedbackItem] =
@@ -234,10 +241,10 @@ final class FeedbackSettingsViewModel: ObservableObject {
         .value
 
       feedbackHistory = items
-      logger.info("Fetched \(items.count) feedback items")
+      FeedbackSettingsConstants.logger.info("Fetched \(items.count) feedback items")
 
     } catch {
-      logger.error("Failed to fetch feedback history: \(error.localizedDescription)")
+      FeedbackSettingsConstants.logger.error("Failed to fetch feedback history: \(error.localizedDescription)")
       // Don't show error for history fetch failure
     }
   }
@@ -245,7 +252,7 @@ final class FeedbackSettingsViewModel: ObservableObject {
 
 // MARK: - Date Formatting Helpers
 
-extension FeedbackItem {
+internal extension FeedbackItem {
   /// Format the created_at date for display
   func formattedDate(locale: Locale) -> String {
     let formatter = ISO8601DateFormatter()
@@ -265,7 +272,9 @@ extension FeedbackItem {
 
   /// Format the responded_at date for display
   func formattedResponseDate(locale: Locale) -> String? {
-    guard let respondedAt else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
+    guard let respondedAt else {
+      return nil
+    }
 
     let formatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]

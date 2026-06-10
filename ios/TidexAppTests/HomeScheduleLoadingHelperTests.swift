@@ -5,9 +5,11 @@ import XCTest
 final class HomeScheduleLoadingHelperTests: XCTestCase {
   func testShiftChangePayloadParsesTargetedMonthsFromPrimitiveUserInfo() throws {
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let june: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 6))
+      ShiftChangeAffectedMonth(year: 2_026, month: 6)
+    )
     let notification = Notification(
       name: .shiftsDidChange,
       object: nil,
@@ -42,7 +44,8 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testShiftChangePayloadPreservesExplicitFullReload() throws {
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let notification = Notification(
       name: .shiftsDidChange,
       object: nil,
@@ -61,11 +64,14 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testShiftChangeContextBuildsAllAffectedMonthsForDateRange() throws {
     let january: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 1))
+      ShiftChangeAffectedMonth(year: 2_026, month: 1)
+    )
     let february: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 2))
+      ShiftChangeAffectedMonth(year: 2_026, month: 2)
+    )
     let march: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 3))
+      ShiftChangeAffectedMonth(year: 2_026, month: 3)
+    )
 
     let context = ShiftChangeContext.affecting(
       isoDateRangeStart: "2026-01-31",
@@ -78,9 +84,11 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testLoadingGateDefersHiddenMonthChangesAndLoadsLatestWhenVisible() throws {
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let june: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 6))
+      ShiftChangeAffectedMonth(year: 2_026, month: 6)
+    )
     var gate: HomeScheduleMonthLoadingGate = .init(isVisible: false)
 
     XCTAssertEqual(gate.monthDidChange(to: may), .deferUntilVisible(may))
@@ -95,9 +103,11 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testLoadingGateOnlyReloadsVisibleCurrentMonthForTargetedPayload() throws {
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let june: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 6))
+      ShiftChangeAffectedMonth(year: 2_026, month: 6)
+    )
     var gate: HomeScheduleMonthLoadingGate = .init(isVisible: true)
 
     XCTAssertEqual(
@@ -118,7 +128,8 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testLoadingGateDefersFullReloadWhileHidden() throws {
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     var gate: HomeScheduleMonthLoadingGate = .init(isVisible: false)
 
     XCTAssertEqual(
@@ -130,11 +141,14 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testDashboardDependencyIncludesDisplayedAndPreviousMonthsOnly() throws {
     let april: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 4))
+      ShiftChangeAffectedMonth(year: 2_026, month: 4)
+    )
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let june: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 6))
+      ShiftChangeAffectedMonth(year: 2_026, month: 6)
+    )
 
     XCTAssertTrue(
       HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
@@ -161,11 +175,14 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testScheduleInvalidatesAffectedMonthAndAdjacentDisplayMonths() throws {
     let april: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 4))
+      ShiftChangeAffectedMonth(year: 2_026, month: 4)
+    )
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let june: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 6))
+      ShiftChangeAffectedMonth(year: 2_026, month: 6)
+    )
 
     let affectedDisplayMonths = HomeScheduleAffectedMonthResolver.scheduleDisplayMonthsAffected(
       by: [may]
@@ -190,7 +207,8 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testSyncSummaryBuildsTargetedContextsForDatedTables() throws {
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let summary = syncSummary(
       tableResults: [
         pullResult(table: .userShifts, rowsProcessed: 1, affectedMonths: [may])
@@ -212,7 +230,8 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
 
   func testSyncSummaryScopesPayrollAdjustmentsToDashboard() throws {
     let may: ShiftChangeAffectedMonth = try XCTUnwrap(
-      ShiftChangeAffectedMonth(year: 2_026, month: 5))
+      ShiftChangeAffectedMonth(year: 2_026, month: 5)
+    )
     let summary = syncSummary(
       tableResults: [
         pullResult(table: .payrollAdjustments, rowsProcessed: 1, affectedMonths: [may])

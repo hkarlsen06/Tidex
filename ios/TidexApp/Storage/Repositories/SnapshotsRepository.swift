@@ -1,6 +1,6 @@
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SnapshotsRepository")
 
@@ -45,7 +45,9 @@ final class SnapshotsRepository: ObservableObject {
     )
 
     do {
-      guard let defaultJob = try context.fetch(descriptor).first else { return false }
+      guard let defaultJob = try context.fetch(descriptor).first else {
+        return false
+      }
       return defaultJob.id == selectedJobId
     } catch {
       logger.error(
@@ -196,7 +198,9 @@ final class SnapshotsRepository: ObservableObject {
           return localSnapshot.toWageSnapshot()
         }
 
-        guard includeLegacyNil else { return nil }
+        guard includeLegacyNil else {
+          return nil
+        }
 
         guard let localSnapshot = baselineRows.first(where: { $0.jobId == nil }) else {
           return nil

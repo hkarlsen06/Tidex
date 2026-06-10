@@ -1,9 +1,9 @@
 import Combine
 import Foundation
 import Observation
+import os.log
 import Supabase
 import UIKit
-import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyViewModel")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 

@@ -362,9 +362,9 @@ extension BestWeekData {  // swiftlint:disable:this no_grouping_extension
   static var preview: BestWeekData {  // swiftlint:disable:this explicit_acl
     BestWeekData(
       weekData: [
-        DailyData(
-          date: "9.", fullDay: "Mandag", earnings: 1_400, hours: 7, shifts: 1,
-          fullDate: "2024-12-09"  // swiftlint:disable:this line_length no_magic_numbers
+        DailyData(  // swiftlint:disable:this multiline_call_arguments
+          date: "9.", fullDay: "Mandag", earnings: 1_400, hours: 7, shifts: 1,  // swiftlint:disable:this line_length no_magic_numbers
+          fullDate: "2024-12-09"
         ),
         DailyData(  // swiftlint:disable:this multiline_call_arguments
           date: "10.", fullDay: "Tirsdag", earnings: 1_350, hours: 7, shifts: 1,  // swiftlint:disable:this line_length no_magic_numbers

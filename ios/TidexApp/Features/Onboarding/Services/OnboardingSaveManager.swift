@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import Supabase
 import os.log
+import Supabase
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "OnboardingSaveManager")
 

@@ -1,8 +1,8 @@
 import Combine
 import Foundation
+import os.log
 import Supabase
 import UIKit
-import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "DashboardViewModel")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 

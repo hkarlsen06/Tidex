@@ -1,6 +1,6 @@
+import os.log
 import SwiftUI
 import UIKit
-import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WageSnapshotEditorSheet")
 

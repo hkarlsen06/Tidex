@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 @MainActor
 final class PayrollAdjustmentsRepository: ObservableObject {

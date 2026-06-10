@@ -1,6 +1,6 @@
 import Foundation
-import WatchConnectivity
 import os.log
+import WatchConnectivity
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WatchConnectivityManager")
 

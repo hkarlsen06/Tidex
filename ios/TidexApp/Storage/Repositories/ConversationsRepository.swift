@@ -1,6 +1,6 @@
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ConversationsRepository")
 
@@ -204,7 +204,9 @@ final class ConversationsRepository: ObservableObject {
   func deleteAll(for userId: String) {
     let conversations = getConversations(for: userId)
 
-    guard !conversations.isEmpty else { return }
+    guard !conversations.isEmpty else {
+      return
+    }
 
     let context = localStore.mainContext
 

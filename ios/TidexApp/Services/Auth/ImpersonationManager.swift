@@ -1,8 +1,9 @@
 import Foundation
-import Supabase
 import os.log
+import Supabase
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ImpersonationManager")
+private let kMinimumImpersonationReasonLength: Int = 5
 
 /// Manages admin impersonation sessions
 ///
@@ -55,7 +56,9 @@ final class ImpersonationManager: ObservableObject {
   /// Call this from AppCoordinator after the app is ready
   /// If session is invalid/expired, automatically stops impersonation
   func validateSessionOnLaunch() async {
-    guard isImpersonating else { return }
+    guard isImpersonating else {
+      return
+    }
 
     // 1. Check local expiration first (fast path)
     if let expiresAt, expiresAt < Date() {
@@ -127,7 +130,7 @@ final class ImpersonationManager: ObservableObject {
   /// - Returns: The impersonation result with session details
   func startImpersonation(targetUserId: String, reason: String) async throws -> ImpersonationResult
   {
-    guard reason.count >= 5 else {
+    guard reason.count >= kMinimumImpersonationReasonLength else {
       throw ImpersonationError.reasonTooShort
     }
 
@@ -330,7 +333,9 @@ final class ImpersonationManager: ObservableObject {
   }
 
   private func storeString(_ value: String, forKey key: String) throws {
-    guard let data = value.data(using: .utf8) else { return }
+    guard let data = value.data(using: .utf8) else {
+      return
+    }
     try storeData(data, forKey: key)
   }
 
@@ -353,7 +358,9 @@ final class ImpersonationManager: ObservableObject {
   }
 
   private func getString(forKey key: String) -> String? {
-    guard let data = getData(forKey: key) else { return nil }
+    guard let data = getData(forKey: key) else {
+      return nil
+    }
     return String(data: data, encoding: .utf8)
   }
 
