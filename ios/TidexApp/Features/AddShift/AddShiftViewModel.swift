@@ -3,26 +3,26 @@ import Foundation
 import os.log
 import SwiftUI
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
+private let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
 
-enum AddShiftCompletion {
-  case single(dates: Set<String>)
-  case recurring
+internal enum AddShiftCompletion {
   case event
+  case recurring
+  case single(dates: Set<String>)
 }
 
-struct AddShiftPaySetupRequest: Identifiable, Equatable {
-  enum Action: String, Equatable {
+internal struct AddShiftPaySetupRequest: Identifiable, Equatable {
+  internal enum Action: String, Equatable {
     case selectJob
-    case submitSingle
     case showRecurringPreview
     case submitRecurring
+    case submitSingle
   }
 
-  let job: Job
-  let action: Action
+  internal let job: Job
+  internal let action: Action
 
-  var id: String {
+  internal var id: String {
     "\(job.id)-\(action.rawValue)"
   }
 }
@@ -30,29 +30,29 @@ struct AddShiftPaySetupRequest: Identifiable, Equatable {
 // MARK: - Calendar Display Data
 
 /// Pre-computed display data for calendar cells to avoid redundant computation
-struct CalendarDisplayData {
-  /// Set of dates that have existing shifts
-  let existingShiftDates: Set<String>
-  /// Earnings by date for existing shifts
-  let existingShiftEarnings: [String: CalendarEarningsData]
-  /// Start/end hour range by date for existing shifts
-  let existingShiftHours: [String: HoursData]
-  /// Virtual shifts with computed earnings (cached)
-  let virtualShifts: [VirtualShiftWithEarnings]
-  /// Year and month this data is for
-  let year: Int
-  let month: Int
-  /// Timestamp for cache invalidation
-  let timestamp: Date
-
+internal struct CalendarDisplayData {
   /// Virtual shift with computed earnings
-  struct VirtualShiftWithEarnings {
-    let date: String
-    let earnings: CalendarEarningsData
+  internal struct VirtualShiftWithEarnings {
+    internal let date: String
+    internal let earnings: CalendarEarningsData
   }
 
+  /// Set of dates that have existing shifts
+  internal let existingShiftDates: Set<String>
+  /// Earnings by date for existing shifts
+  internal let existingShiftEarnings: [String: CalendarEarningsData]
+  /// Start/end hour range by date for existing shifts
+  internal let existingShiftHours: [String: HoursData]
+  /// Virtual shifts with computed earnings (cached)
+  internal let virtualShifts: [VirtualShiftWithEarnings]
+  /// Year and month this data is for
+  internal let year: Int
+  internal let month: Int
+  /// Timestamp for cache invalidation
+  internal let timestamp: Date
+
   /// Check if cache is valid for the given month
-  func isValid(for year: Int, month: Int) -> Bool {
+  internal func isValid(for year: Int, month: Int) -> Bool {
     self.year == year && self.month == month
   }
 }
@@ -60,7 +60,7 @@ struct CalendarDisplayData {
 /// ViewModel for the Add Shift screen
 /// Manages state for single, event, and recurring add modes
 @MainActor
-final class AddShiftViewModel: ObservableObject {
+internal final class AddShiftViewModel: ObservableObject {
 
   // MARK: - Dependencies
 
@@ -74,15 +74,17 @@ final class AddShiftViewModel: ObservableObject {
   private let monthContext: SharedMonthContext
   private let addShiftCoordinator: AddShiftCoordinator
   private var eventRangeAnchorDate: Date?
-  private var didEditEventCalendarSelectionSinceEnteringEventMode = false
-  private var isSyncingCalendarSelectionAcrossModes = false
+  private var didEditEventCalendarSelectionSinceEnteringEventMode: Bool = false
+  private var isSyncingCalendarSelectionAcrossModes: Bool = false
   private var pendingDeepLinkMode: AddShiftMode?
 
   // MARK: - Mode State
 
-  @Published var mode: AddShiftMode = .single {
+  @Published internal var mode: AddShiftMode = .single {
     didSet {
-      guard oldValue != mode else { return }
+      guard oldValue != mode else {
+        return
+      }
       syncCalendarSelectionForModeTransition(from: oldValue, to: mode)
       if mode == .events {
         selectedDays.removeAll()
@@ -112,23 +114,25 @@ final class AddShiftViewModel: ObservableObject {
       scheduleDraftSave()
     }
   }
-  @Published var isLoading = false {
+  @Published internal var isLoading: Bool = false {
     didSet { publishStateToCoordinator() }
   }
-  @Published var error: String?
+  @Published internal var error: String?
 
   // MARK: - Event Mode State
 
-  @Published var eventNote = "" {
+  @Published internal var eventNote: String = "" {
     didSet {
       publishStateToCoordinator()
       scheduleDraftSave()
     }
   }
 
-  @Published var isEventAllDay = false {
+  @Published internal var isEventAllDay: Bool = false {
     didSet {
-      guard oldValue != isEventAllDay else { return }
+      guard oldValue != isEventAllDay else {
+        return
+      }
       markEventCalendarSelectionEdited()
       if isEventAllDay {
         if eventStartDate != eventDate {
@@ -158,9 +162,11 @@ final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published var eventDate: Date = Calendar.current.startOfDay(for: Date()) {
+  @Published internal var eventDate: Date = Calendar.current.startOfDay(for: Date()) {
     didSet {
-      guard oldValue != eventDate else { return }
+      guard oldValue != eventDate else {
+        return
+      }
       if !isEventAllDay {
         if eventStartDate != eventDate {
           eventStartDate = eventDate
@@ -175,9 +181,11 @@ final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published var eventStartDate: Date = Calendar.current.startOfDay(for: Date()) {
+  @Published internal var eventStartDate: Date = Calendar.current.startOfDay(for: Date()) {
     didSet {
-      guard oldValue != eventStartDate else { return }
+      guard oldValue != eventStartDate else {
+        return
+      }
       if !isEventAllDay {
         if eventDate != eventStartDate {
           eventDate = eventStartDate
@@ -189,18 +197,22 @@ final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published var eventEndDate: Date = Calendar.current.startOfDay(for: Date()) {
+  @Published internal var eventEndDate: Date = Calendar.current.startOfDay(for: Date()) {
     didSet {
-      guard oldValue != eventEndDate else { return }
+      guard oldValue != eventEndDate else {
+        return
+      }
       publishStateToCoordinator()
       scheduleDraftSave()
     }
   }
 
-  @Published var eventReminderTimes: [Int] = [] {
+  @Published internal var eventReminderTimes: [Int] = [] {
     didSet {
-      let normalized = LocalEvent.normalizedReminderMinutes(eventReminderTimes)
-      guard oldValue != normalized else { return }
+      let normalized: [Int] = LocalEvent.normalizedReminderMinutes(eventReminderTimes)
+      guard oldValue != normalized else {
+        return
+      }
       if eventReminderTimes != normalized {
         eventReminderTimes = normalized
         return
@@ -213,27 +225,31 @@ final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published var eventReminderAnchorTime: Date? {
+  @Published internal var eventReminderAnchorTime: Date? {
     didSet {
-      guard oldValue != eventReminderAnchorTime else { return }
+      guard oldValue != eventReminderAnchorTime else {
+        return
+      }
       publishStateToCoordinator()
       scheduleDraftSave()
     }
   }
 
   /// Active (non-archived, non-deleted) jobs for the current user.
-  @Published private(set) var activeJobs: [Job] = []
+  @Published internal private(set) var activeJobs: [Job] = []
   /// Active job IDs that have the required baseline wage snapshot.
-  @Published private(set) var configuredJobIds: Set<String> = []
+  @Published internal private(set) var configuredJobIds: Set<String> = []
 
   /// Number of distinct start/end time pairs the user has used across all shifts.
-  @Published private(set) var distinctShiftTimePairCount: Int = 0
+  @Published internal private(set) var distinctShiftTimePairCount: Int = 0
 
   /// Selected job for new shift creation.
   /// Defaults to the user's standard workplace when no valid selection exists.
-  @Published var selectedJobId: String? {
+  @Published internal var selectedJobId: String? {
     didSet {
-      guard oldValue != selectedJobId else { return }
+      guard oldValue != selectedJobId else {
+        return
+      }
       publishStateToCoordinator()
       scheduleDraftSave()
       scheduleConflictsAndPreviewsRecompute()
@@ -256,6 +272,10 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Minimal delay when form is complete (instant feedback)
   private static let completedFormDelay: UInt64 = 50_000_000  // 50ms
+
+  private static let minutesPerDay: Int = CalendarGridHelper.timeToMinutes("24:00")
+  private static let defaultStartHour: Int = 9
+  private static let defaultEndHour: Int = 17
 
   private struct CalendarDisplayComputationInput {
     let year: Int
@@ -511,8 +531,9 @@ final class AddShiftViewModel: ObservableObject {
     monthContextCancellable = monthContext.monthChanged
       .receive(on: DispatchQueue.main)
       .sink { [weak self] newMonth in
-        // swiftlint:disable:next conditional_returns_on_newline
-        guard let self else { return }
+        guard let self else {
+          return
+        }
 
         // Only reload if month actually changed
         guard newMonth.year != lastObservedYear || newMonth.month != lastObservedMonth
@@ -647,7 +668,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Selected job object for display and contextual calculations.
   var selectedJob: Job? {
-    guard let jobId = effectiveSelectedJobId else { return nil }
+    guard let jobId = effectiveSelectedJobId else {
+      return nil
+    }
     return activeJobs.first(where: { $0.id == jobId })
   }
 
@@ -691,7 +714,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   func requestPaySetup(for jobId: String, action: AddShiftPaySetupRequest.Action) {
-    guard let job = activeJobs.first(where: { $0.id == jobId }) else { return }
+    guard let job = activeJobs.first(where: { $0.id == jobId }) else {
+      return
+    }
     showSubmitJobChooser = false
     paySetupRequest = AddShiftPaySetupRequest(job: job, action: action)
   }
@@ -747,7 +772,7 @@ final class AddShiftViewModel: ObservableObject {
       Haptics.play(.success)
       return true
     } catch {
-      logger.error("Failed to create configured job from Add Shift: \(error.localizedDescription)")
+      kLogger.error("Failed to create configured job from Add Shift: \(error.localizedDescription)")
       self.error = error.localizedDescription
       return false
     }
@@ -773,7 +798,7 @@ final class AddShiftViewModel: ObservableObject {
       await refreshData()
       return createdJob
     } catch {
-      logger.error("Failed to create basic job from Add Shift: \(error.localizedDescription)")
+      kLogger.error("Failed to create basic job from Add Shift: \(error.localizedDescription)")
       self.error = error.localizedDescription
       return nil
     }
@@ -820,7 +845,7 @@ final class AddShiftViewModel: ObservableObject {
       Haptics.play(.success)
       return true
     } catch {
-      logger.error("Failed to complete Add Shift pay setup: \(error.localizedDescription)")
+      kLogger.error("Failed to complete Add Shift pay setup: \(error.localizedDescription)")
       self.error = error.localizedDescription
       return false
     }
@@ -831,7 +856,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   func presentJobSelection() {
-    guard !activeJobs.isEmpty else { return }
+    guard !activeJobs.isEmpty else {
+      return
+    }
     showSubmitJobChooser = true
   }
 
@@ -841,7 +868,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   private var hasValidEventTimes: Bool {
-    guard startTime != nil, endTime != nil else { return false }
+    guard startTime != nil, endTime != nil else {
+      return false
+    }
     return endTimeString > startTimeString
   }
 
@@ -854,7 +883,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   private var hasValidEventReminderConfiguration: Bool {
-    guard isEventAllDay, !eventReminderTimes.isEmpty else { return true }
+    guard isEventAllDay, !eventReminderTimes.isEmpty else {
+      return true
+    }
     return eventReminderAnchorTime != nil
   }
 
@@ -936,14 +967,18 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Start time as HH:mm string
   var startTimeString: String {
-    guard let time = startTime else { return "" }
+    guard let time = startTime else {
+      return ""
+    }
     return formatTimeAsHHmm(time)
   }
 
   /// End time as HH:mm string
   /// Returns "24:00" when end is midnight and start is not (end-of-day convention)
   var endTimeString: String {
-    guard let time = endTime else { return "" }
+    guard let time = endTime else {
+      return ""
+    }
     let formatted = formatTimeAsHHmm(time)
     if formatted == "00:00", let start = startTime, formatTimeAsHHmm(start) != "00:00" {
       return "24:00"
@@ -952,7 +987,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   var eventReminderAnchorTimeString: String? {
-    guard let eventReminderAnchorTime else { return nil }
+    guard let eventReminderAnchorTime else {
+      return nil
+    }
     return formatTimeAsHHmm(eventReminderAnchorTime)
   }
 
@@ -973,7 +1010,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Start/end hours for currently entered times (used for add-calendar previews)
   var enteredHours: HoursData? {
-    guard hasValidTimes else { return nil }
+    guard hasValidTimes else {
+      return nil
+    }
 
     let start = CalendarGridHelper.formatTime(startTimeString)
     let end = CalendarGridHelper.formatTime(endTimeString)
@@ -1047,7 +1086,9 @@ final class AddShiftViewModel: ObservableObject {
       conflictDates: cachedConflictDatesForCalendar
     )
 
-    guard totals.gross > 0 else { return nil }
+    guard totals.gross > 0 else {
+      return nil
+    }
 
     let baselineTotals = ConflictExclusion.combinedEarnings(
       existingByDate: existingEarnings,
@@ -1058,7 +1099,9 @@ final class AddShiftViewModel: ObservableObject {
     let primaryAmount = totals.hasTaxEnabled ? totals.net : totals.gross
     let baselinePrimary = baselineTotals.hasTaxEnabled ? baselineTotals.net : baselineTotals.gross
     let secondaryAmount: Double? = {
-      guard !previewByDate.isEmpty else { return nil }
+      guard !previewByDate.isEmpty else {
+        return nil
+      }
       let delta = max(primaryAmount - baselinePrimary, 0)
       return delta > 0 ? delta : nil
     }()
@@ -1080,10 +1123,12 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Load initial data from repositories
   func loadData() async {  // swiftlint:disable:this async_without_await
-    guard !hasLoadedInitialData else { return }
+    guard !hasLoadedInitialData else {
+      return
+    }
 
     guard let userId = AppCoordinator.shared.getCurrentUserId() else {
-      logger.warning("Cannot load data: no user ID")
+      kLogger.warning("Cannot load data: no user ID")
       return
     }
 
@@ -1123,7 +1168,7 @@ final class AddShiftViewModel: ObservableObject {
 
     publishStateToCoordinator()
 
-    logger.info(
+    kLogger.info(
       "Loaded data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots, \(self.activeJobs.count) jobs"
     )
   }
@@ -1131,7 +1176,7 @@ final class AddShiftViewModel: ObservableObject {
   /// Refresh cached repository data while preserving current in-progress form state.
   func refreshData() async {  // swiftlint:disable:this async_without_await
     guard let userId = AppCoordinator.shared.getCurrentUserId() else {
-      logger.warning("Cannot refresh data: no user ID")
+      kLogger.warning("Cannot refresh data: no user ID")
       return
     }
 
@@ -1148,7 +1193,7 @@ final class AddShiftViewModel: ObservableObject {
 
     publishStateToCoordinator()
 
-    logger.info(
+    kLogger.info(
       "Refreshed add tab data: \(self.cachedShifts.count) shifts, \(self.cachedRecurringShifts.count) recurring, \(self.cachedSnapshots.count) snapshots, \(self.activeJobs.count) jobs"
     )
   }
@@ -1158,7 +1203,9 @@ final class AddShiftViewModel: ObservableObject {
   func checkPreselectedDate() {
     // On first add-tab load, loadData() must restore the draft before consuming the
     // preselected date. Otherwise the restored draft can overwrite the tapped date.
-    guard hasLoadedInitialData else { return }
+    guard hasLoadedInitialData else {
+      return
+    }
     applyPreselectedDate()
   }
 
@@ -1171,7 +1218,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   private func applyPendingDeepLinkMode() {
-    guard hasLoadedInitialData, let pendingDeepLinkMode else { return }
+    guard hasLoadedInitialData, let pendingDeepLinkMode else {
+      return
+    }
     self.pendingDeepLinkMode = nil
     mode = pendingDeepLinkMode
   }
@@ -1179,7 +1228,9 @@ final class AddShiftViewModel: ObservableObject {
   /// Apply and consume the pre-selected date from SharedMonthContext
   /// Called when the user taps an empty day in the Shifts calendar
   private func applyPreselectedDate() {
-    guard let dateISO = monthContext.preselectedDate else { return }
+    guard let dateISO = monthContext.preselectedDate else {
+      return
+    }
 
     // Consume the pre-selected date (one-time use)
     monthContext.preselectedDate = nil
@@ -1203,17 +1254,21 @@ final class AddShiftViewModel: ObservableObject {
       }
     }
 
-    logger.info("Applied pre-selected date: \(dateISO)")
+    kLogger.info("Applied pre-selected date: \(dateISO)")
   }
 
   /// Reload shifts for the currently displayed month
   /// Call this when navigating to a new month
   func reloadShiftsForDisplayedMonth() {
-    guard let userId = AppCoordinator.shared.getCurrentUserId() else { return }
+    guard let userId = AppCoordinator.shared.getCurrentUserId() else {
+      return
+    }
 
     let calendar = Calendar.current
     let components = calendar.dateComponents([.year, .month], from: displayMonth)
-    guard let year = components.year, let month = components.month else { return }
+    guard let year = components.year, let month = components.month else {
+      return
+    }
 
     let startDate = Date.firstDayOfMonthDate(year: year, month: month)
     let endDate = Date.lastDayOfMonthDate(year: year, month: month)
@@ -1246,7 +1301,9 @@ final class AddShiftViewModel: ObservableObject {
       allShifts.compactMap { shift -> String? in
         let start = shift.start_time.trimmingCharacters(in: .whitespacesAndNewlines)
         let end = shift.end_time.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !start.isEmpty, !end.isEmpty else { return nil }
+        guard !start.isEmpty, !end.isEmpty else {
+          return nil
+        }
         return "\(start)|\(end)"
       })
     distinctShiftTimePairCount = distinctPairs.count
@@ -1288,7 +1345,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   func toggleEventCalendarDate(_ dateISO: String) {
-    guard let tappedDate = Date.fromISODateString(dateISO) else { return }
+    guard let tappedDate = Date.fromISODateString(dateISO) else {
+      return
+    }
     let calendar = Calendar.current
     let normalizedDate = calendar.startOfDay(for: tappedDate)
     markEventCalendarSelectionEdited()
@@ -1324,7 +1383,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Submit single shifts
   func submitSingleShifts() async {
-    guard canSubmitSingle else { return }
+    guard canSubmitSingle else {
+      return
+    }
 
     if let job = jobRequiringPaySetupForCurrentSelection() {
       paySetupRequest = AddShiftPaySetupRequest(job: job, action: .submitSingle)
@@ -1351,7 +1412,7 @@ final class AddShiftViewModel: ObservableObject {
 
       for dateISO in sortedDates {
         guard let shiftDate = Date.fromISODateString(dateISO) else {
-          logger.warning("Invalid date: \(dateISO)")
+          kLogger.warning("Invalid date: \(dateISO)")
           continue
         }
 
@@ -1367,7 +1428,7 @@ final class AddShiftViewModel: ObservableObject {
         )
       }
 
-      logger.info("Created \(sortedDates.count) shifts")
+      kLogger.info("Created \(sortedDates.count) shifts")
 
       // Trigger celebration with the dates that were added
       // Use the current display month as the origin for confetti
@@ -1396,7 +1457,7 @@ final class AddShiftViewModel: ObservableObject {
 
     } catch ShiftCreationError.monthLimitReached(let months) {
       // Show month limit sheet instead of error
-      logger.info(
+      kLogger.info(
         "Month limit reached, showing month limit sheet. Existing months: \(months.count)")
       existingShiftMonths = months
 
@@ -1410,7 +1471,7 @@ final class AddShiftViewModel: ObservableObject {
 
       showMonthLimitSheet = true
     } catch {
-      logger.error("Failed to create shifts: \(error.localizedDescription)")
+      kLogger.error("Failed to create shifts: \(error.localizedDescription)")
       self.error = error.localizedDescription
       Haptics.play(.error)
     }
@@ -1420,7 +1481,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Submit a private event.
   func submitEvent() async {
-    guard canSubmitEvent else { return }
+    guard canSubmitEvent else {
+      return
+    }
 
     let userId: String
     do {
@@ -1455,7 +1518,7 @@ final class AddShiftViewModel: ObservableObject {
         notificationAnchorTime: notificationAnchorTime
       )
 
-      logger.info("Created private event")
+      kLogger.info("Created private event")
 
       clearForm()
       Haptics.playShiftCreationSuccess()
@@ -1464,7 +1527,7 @@ final class AddShiftViewModel: ObservableObject {
       )
       onShiftsCreated?(.event)
     } catch {
-      logger.error("Failed to create event: \(error.localizedDescription)")
+      kLogger.error("Failed to create event: \(error.localizedDescription)")
       self.error = error.localizedDescription
       Haptics.play(.error)
     }
@@ -1519,7 +1582,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Show the preview sheet - computes projected dates once
   func showPreview() {
-    guard canSubmitRecurring else { return }
+    guard canSubmitRecurring else {
+      return
+    }
 
     if let job = jobRequiringPaySetupForCurrentSelection() {
       paySetupRequest = AddShiftPaySetupRequest(job: job, action: .showRecurringPreview)
@@ -1547,7 +1612,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Submit recurring shift
   func submitRecurringShift() async {
-    guard canSubmitRecurring else { return }
+    guard canSubmitRecurring else {
+      return
+    }
 
     if let job = jobRequiringPaySetupForCurrentSelection() {
       paySetupRequest = AddShiftPaySetupRequest(job: job, action: .submitRecurring)
@@ -1581,7 +1648,7 @@ final class AddShiftViewModel: ObservableObject {
         dateSpecificSupplements: nil
       )
 
-      logger.info(
+      kLogger.info(
         "Created recurring shift with \(self.cachedProjectedDates.count) projected dates, \(conflicts.count) exclusions"
       )
 
@@ -1613,7 +1680,7 @@ final class AddShiftViewModel: ObservableObject {
       onShiftsCreated?(.recurring)
 
     } catch {
-      logger.error("Failed to create recurring shift: \(error.localizedDescription)")
+      kLogger.error("Failed to create recurring shift: \(error.localizedDescription)")
       self.error = error.localizedDescription
       Haptics.play(.error)
     }
@@ -1627,7 +1694,7 @@ final class AddShiftViewModel: ObservableObject {
   /// Returns true if successful
   func deleteShiftsInOtherMonths() async -> Bool {
     guard let userId = AppCoordinator.shared.getCurrentUserId() else {
-      logger.warning("Cannot delete shifts: no user ID")
+      kLogger.warning("Cannot delete shifts: no user ID")
       return false
     }
 
@@ -1637,7 +1704,7 @@ final class AddShiftViewModel: ObservableObject {
         targetMonth: targetMonth
       )
 
-      logger.info("Deleted \(deletedCount) shifts in other months")
+      kLogger.info("Deleted \(deletedCount) shifts in other months")
 
       // Clear existing months since they're now deleted
       existingShiftMonths.removeAll()
@@ -1651,7 +1718,7 @@ final class AddShiftViewModel: ObservableObject {
 
       return true
     } catch {
-      logger.error("Failed to delete shifts in other months: \(error.localizedDescription)")
+      kLogger.error("Failed to delete shifts in other months: \(error.localizedDescription)")
       return false
     }
   }
@@ -1690,13 +1757,19 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   private func jobRequiringPaySetupForCurrentSelection() -> Job? {
-    guard let jobId = effectiveSelectedJobId else { return nil }
-    guard !configuredJobIds.contains(jobId) else { return nil }
+    guard let jobId = effectiveSelectedJobId else {
+      return nil
+    }
+    guard !configuredJobIds.contains(jobId) else {
+      return nil
+    }
     return activeJobs.first { $0.id == jobId }
   }
 
   private func snapshotsForJob(_ jobId: String?) -> [WageSnapshot] {
-    guard let jobId else { return cachedSnapshots }
+    guard let jobId else {
+      return cachedSnapshots
+    }
 
     let jobSnapshots = cachedSnapshots.filter { $0.job_id == jobId }
     if !jobSnapshots.isEmpty {
@@ -1960,26 +2033,28 @@ final class AddShiftViewModel: ObservableObject {
   ) -> [String: HoursData] {
     var existingHours: [String: HoursData] = [:]
     for (date, shiftsOnDate) in shiftTimesByDate {
-      guard !shiftsOnDate.isEmpty else { continue }
-
-      let sortedByStart = shiftsOnDate.sorted {
-        CalendarGridHelper.timeToMinutes($0.start) < CalendarGridHelper.timeToMinutes($1.start)
+      guard !shiftsOnDate.isEmpty else {
+        continue
       }
-      let earliestStart = sortedByStart.first?.start ?? ""
-      let latestEnd =
-        shiftsOnDate.max(by: { lhs, rhs in
-          let lhsStart = CalendarGridHelper.timeToMinutes(lhs.start)
-          let lhsEnd = CalendarGridHelper.timeToMinutes(lhs.end)
-          let lhsAdjustedEnd = lhsEnd <= lhsStart ? lhsEnd + 24 * 60 : lhsEnd
 
-          let rhsStart = CalendarGridHelper.timeToMinutes(rhs.start)
-          let rhsEnd = CalendarGridHelper.timeToMinutes(rhs.end)
-          let rhsAdjustedEnd = rhsEnd <= rhsStart ? rhsEnd + 24 * 60 : rhsEnd
+      let sortedByStart: [(start: String, end: String)] = shiftsOnDate.sorted { lhs, rhs in
+        CalendarGridHelper.timeToMinutes(lhs.start) < CalendarGridHelper.timeToMinutes(rhs.start)
+      }
+      let earliestStart: String = sortedByStart.first?.start ?? ""
+      let latestEnd: String =
+        shiftsOnDate.max(by: { lhs, rhs in
+          let lhsStart: Int = CalendarGridHelper.timeToMinutes(lhs.start)
+          let lhsEnd: Int = CalendarGridHelper.timeToMinutes(lhs.end)
+          let lhsAdjustedEnd: Int = lhsEnd <= lhsStart ? lhsEnd + Self.minutesPerDay : lhsEnd
+
+          let rhsStart: Int = CalendarGridHelper.timeToMinutes(rhs.start)
+          let rhsEnd: Int = CalendarGridHelper.timeToMinutes(rhs.end)
+          let rhsAdjustedEnd: Int = rhsEnd <= rhsStart ? rhsEnd + Self.minutesPerDay : rhsEnd
 
           return lhsAdjustedEnd < rhsAdjustedEnd
         })?.end ?? ""
-      let crossesMidnight = shiftsOnDate.contains {
-        CalendarGridHelper.timeToMinutes($0.end) <= CalendarGridHelper.timeToMinutes($0.start)
+      let crossesMidnight: Bool = shiftsOnDate.contains { shift in
+        CalendarGridHelper.timeToMinutes(shift.end) <= CalendarGridHelper.timeToMinutes(shift.start)
       }
 
       existingHours[date] = HoursData(
@@ -2161,7 +2236,9 @@ final class AddShiftViewModel: ObservableObject {
     snapshots: [WageSnapshot],
     jobs: [Job]
   ) -> [WageSnapshot] {
-    guard let jobId else { return snapshots }
+    guard let jobId else {
+      return snapshots
+    }
 
     let jobSnapshots = snapshots.filter { $0.job_id == jobId }
     if !jobSnapshots.isEmpty {
@@ -2184,7 +2261,9 @@ final class AddShiftViewModel: ObservableObject {
     jobs: [Job]
   ) -> WageSnapshot? {
     SnapshotsService.snapshotForDate(
-      dateISO, from: snapshotsForJob(jobId, snapshots: snapshots, jobs: jobs))
+      dateISO,
+      from: snapshotsForJob(jobId, snapshots: snapshots, jobs: jobs)
+    )
   }
 
   private nonisolated static func payrollDay(
@@ -2241,7 +2320,9 @@ final class AddShiftViewModel: ObservableObject {
         // Tax settings from payout date (shift month + 1)
         let payrollDay = payrollDay(for: recurring.job_id)
         let payoutDate = PayrollEngine.calculatePayoutDate(
-          shiftDate: virtualShift.date, payrollDay: payrollDay)
+          shiftDate: virtualShift.date,
+          payrollDay: payrollDay
+        )
         let taxSnapshot = snapshotForDate(payoutDate, jobId: recurring.job_id)
 
         let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
@@ -2315,7 +2396,7 @@ final class AddShiftViewModel: ObservableObject {
   private static func defaultStartTime() -> Date {
     let calendar = Calendar.current
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
-    components.hour = 9
+    components.hour = Self.defaultStartHour
     components.minute = 0
     return calendar.date(from: components) ?? Date()
   }
@@ -2324,7 +2405,7 @@ final class AddShiftViewModel: ObservableObject {
   private static func defaultEndTime() -> Date {
     let calendar = Calendar.current
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
-    components.hour = 17
+    components.hour = Self.defaultEndHour
     components.minute = 0
     return calendar.date(from: components) ?? Date()
   }
@@ -2336,7 +2417,12 @@ final class AddShiftViewModel: ObservableObject {
   private static func defaultEventReminderAnchorTime() -> Date {
     let calendar = Calendar.current
     let baseDate = Date()
-    return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: baseDate) ?? baseDate
+    return calendar.date(
+      bySettingHour: Self.defaultStartHour,
+      minute: 0,
+      second: 0,
+      of: baseDate
+    ) ?? baseDate
   }
 
   // MARK: - Draft Persistence Methods
@@ -2352,7 +2438,9 @@ final class AddShiftViewModel: ObservableObject {
         try await Task.sleep(nanoseconds: Self.draftSaveDebounceDelay)
 
         // Check if cancelled during sleep
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled else {
+          return
+        }
 
         await MainActor.run {
           self?.saveDraft()
@@ -2392,7 +2480,7 @@ final class AddShiftViewModel: ObservableObject {
 
     if let data = try? JSONEncoder().encode(draft) {
       UserDefaults.standard.set(data, forKey: ShiftDraft.userDefaultsKey)
-      logger.debug("Saved draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count)")
+      kLogger.debug("Saved draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count)")
     }
   }
 
@@ -2447,8 +2535,9 @@ final class AddShiftViewModel: ObservableObject {
       eventRangeAnchorDate = isEventAllDay ? self.eventStartDate : self.eventDate
     }
 
-    logger.info(
-      "Loaded draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count), days=\(draft.selectedDays.count), jobSelected=\(draft.jobId != nil)"
+    kLogger.info(
+      "Loaded draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count), "
+        + "days=\(draft.selectedDays.count), jobSelected=\(draft.jobId != nil)"
     )
   }
 
@@ -2457,7 +2546,7 @@ final class AddShiftViewModel: ObservableObject {
     draftSaveTask?.cancel()
     draftSaveTask = nil
     UserDefaults.standard.removeObject(forKey: ShiftDraft.userDefaultsKey)
-    logger.debug("Cleared draft")
+    kLogger.debug("Cleared draft")
   }
 
   /// Start fresh - clear all form data and the draft
@@ -2493,7 +2582,9 @@ final class AddShiftViewModel: ObservableObject {
 
     let formatter = DateFormatter()
     formatter.dateFormat = "HH:mm"
-    guard let time = formatter.date(from: parseable) else { return nil }
+    guard let time = formatter.date(from: parseable) else {
+      return nil
+    }
 
     // Transfer hour and minute to today's date
     let calendar = Calendar.current
@@ -2534,7 +2625,9 @@ final class AddShiftViewModel: ObservableObject {
         .compactMap({ Date.fromISODateString($0) })
         .map({ Calendar.current.startOfDay(for: $0) })
         .min()
-    else { return }
+    else {
+      return
+    }
 
     withCalendarSelectionModeSync {
       if isEventAllDay {
@@ -2554,7 +2647,9 @@ final class AddShiftViewModel: ObservableObject {
       carriedDates = [eventDate.toISODateString()]
     }
 
-    guard !carriedDates.isEmpty else { return }
+    guard !carriedDates.isEmpty else {
+      return
+    }
     selectedDates = carriedDates
   }
 
@@ -2565,7 +2660,9 @@ final class AddShiftViewModel: ObservableObject {
   }
 
   private func markEventCalendarSelectionEdited() {
-    guard mode == .events, !isSyncingCalendarSelectionAcrossModes else { return }
+    guard mode == .events, !isSyncingCalendarSelectionAcrossModes else {
+      return
+    }
     didEditEventCalendarSelectionSinceEnteringEventMode = true
   }
 
@@ -2578,7 +2675,9 @@ final class AddShiftViewModel: ObservableObject {
     var current = normalizedStart
     while current <= normalizedEnd {
       dates.insert(current.toISODateString())
-      guard let next = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+      guard let next = calendar.date(byAdding: .day, value: 1, to: current) else {
+        break
+      }
       current = next
     }
     return dates
@@ -2602,7 +2701,9 @@ final class AddShiftViewModel: ObservableObject {
         try await Task.sleep(nanoseconds: delay)
 
         // Check if cancelled during sleep
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled else {
+          return
+        }
 
         self?.scheduleConflictsAndPreviewsRecompute()
       } catch {
@@ -2625,15 +2726,21 @@ final class AddShiftViewModel: ObservableObject {
     )
 
     Task { [weak self] in
-      guard let self else { return }
+      guard let self else {
+        return
+      }
       let displayData = await Self.computeCalendarDisplayDataOffMain(input)
-      guard !Task.isCancelled else { return }
-      // swiftlint:disable:next conditional_returns_on_newline
-      guard displayComputationVersion == computationVersion else { return }
+      guard !Task.isCancelled else {
+        return
+      }
+      guard displayComputationVersion == computationVersion else {
+        return
+      }
 
       cachedDisplayData = displayData
-      logger.info(
-        "Rebuilt calendar display data: \(displayData.existingShiftDates.count) dates, \(displayData.virtualShifts.count) virtual shifts"
+      kLogger.info(
+        "Rebuilt calendar display data: \(displayData.existingShiftDates.count) dates, "
+          + "\(displayData.virtualShifts.count) virtual shifts"
       )
     }
   }
@@ -2675,8 +2782,12 @@ final class AddShiftViewModel: ObservableObject {
     )
 
     let result = await Self.computeConflictsAndPreviewsOffMain(input)
-    guard !Task.isCancelled else { return }
-    guard previewComputationVersion == computationVersion else { return }
+    guard !Task.isCancelled else {
+      return
+    }
+    guard previewComputationVersion == computationVersion else {
+      return
+    }
 
     if let projectedDates = result.projectedRecurringDates {
       cachedProjectedRecurringDates = projectedDates
@@ -2690,7 +2801,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Incrementally update preview earnings when a single date is added
   private func updatePreviewEarningsIncrementally(addedDate: String) {
-    guard hasValidTimes else { return }
+    guard hasValidTimes else {
+      return
+    }
 
     if let earnings = computeEarningsForDate(addedDate) {
       cachedPreviewEarnings[addedDate] = earnings
@@ -2699,7 +2812,9 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Incrementally update conflicts when a date is added
   private func updateConflictsIncrementally(addedDate: String) {
-    guard hasValidTimes else { return }
+    guard hasValidTimes else {
+      return
+    }
 
     // Check if the added date conflicts with existing shifts
     let conflicts = ShiftConflictDetector.detectConflicts(

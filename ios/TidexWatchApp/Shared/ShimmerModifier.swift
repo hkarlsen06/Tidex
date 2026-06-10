@@ -62,12 +62,14 @@ internal struct ShimmerModifier: ViewModifier {
 
 // MARK: - View Extension
 
-internal extension View {
+extension View {
   /// Applies a shimmer animation for loading states
   /// - Parameters:
   ///   - isActive: Whether the shimmer is active (default true)
   ///   - duration: Duration of one shimmer cycle (default 1.5s)
-  func shimmer(isActive: Bool = true, duration: Double = ShimmerModifier.Constants.defaultDuration)
+  internal func shimmer(
+    isActive: Bool = true, duration: Double = ShimmerModifier.Constants.defaultDuration
+  )
     -> some View
   {
     modifier(ShimmerModifier(duration: duration, isActive: isActive))

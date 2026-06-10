@@ -3204,7 +3204,7 @@ private func makeShiftSnapshot() -> FriendShiftSnapshot {
     shiftDate: "2026-03-11",
     startTime: "09:00",
     endTime: "17:00",
-    paidHours: 7.5,
+    paidHours: FriendsThreadViewModelTestValues.paidHours,
     currency: "kr",
     includesEarnings: true,
     grossPay: FriendsThreadViewModelTestValues.grossPay,
@@ -3488,8 +3488,8 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
         storagePath: "thread-1/viewer-1/test.jpg",
         mimeType: "image/jpeg",
         byteSize: FriendsThreadViewModelTestValues.uploadedAttachmentByteSize,
-        width: 200,
-        height: 200
+        width: FriendsThreadViewModelTestValues.attachmentPixelSize,
+        height: FriendsThreadViewModelTestValues.attachmentPixelSize
       )
   }
 
@@ -3519,9 +3519,13 @@ private final class MockFriendsRealtimeCoordinator: FriendsMessagingRealtimeCoor
     await Task.yield()
   }
 
-  func setFriendsFeedVisible(_: Bool) {}
+  func setFriendsFeedVisible(_: Bool) {
+    // No-op for thread view model tests.
+  }
 
-  func setVisibleThreadIds(_: [String]) {}
+  func setVisibleThreadIds(_: [String]) {
+    // No-op for thread view model tests.
+  }
 
   func setActiveThread(threadId _: String, viewerUserId _: String) async {
     startThreadSubscriptionCallCount += 1
@@ -3565,9 +3569,11 @@ private final class MockFriendsRealtimeCoordinator: FriendsMessagingRealtimeCoor
 }
 
 private enum FriendsThreadViewModelTestValues {
+  static let paidHours: Double = 7.5
   static let grossPay: Double = 1_200
   static let netPay: Double = 1_050
   static let uploadedAttachmentByteSize: Int = 1_024
+  static let attachmentPixelSize: Int = 200
 }
 
 // swiftlint:enable file_length
