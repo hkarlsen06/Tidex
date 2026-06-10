@@ -3108,18 +3108,27 @@ actor LocalStoreActor {
     existing.endTime = serverRow.cleanEndTime
     existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
     existing.selectedDays = (try? kCanonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
-    existing.endCondition = serverRow.end_condition.flatMap { try? kCanonicalJSONEncoder.encode($0) }
-    existing.exclusions = serverRow.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) }
+    existing.endCondition = serverRow.end_condition.flatMap { endCondition in
+      try? kCanonicalJSONEncoder.encode(endCondition)
+    }
+    existing.exclusions = serverRow.exclusions.flatMap { exclusions in
+      try? kCanonicalJSONEncoder.encode(exclusions)
+    }
     existing.dateSpecificPauseWindows =
       PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
-      .flatMap { try? kCanonicalJSONEncoder.encode($0) }
+      .flatMap { pauseWindows in
+        try? kCanonicalJSONEncoder.encode(pauseWindows)
+      }
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+      supplements in
+      try? kCanonicalJSONEncoder.encode(supplements)
     }
     existing.dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(
       serverRow.date_specific_notes
     )
-    .flatMap { try? kCanonicalJSONEncoder.encode($0) }
+    .flatMap { notes in
+      try? kCanonicalJSONEncoder.encode(notes)
+    }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
@@ -3607,11 +3616,11 @@ actor LocalStoreActor {
     existing.endTime = serverRow.end_time
     existing.note = ShiftNoteSupport.normalize(serverRow.note)
     existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
-      .flatMap {
-        try? kCanonicalJSONEncoder.encode($0)
+      .flatMap { pauseWindows in
+        try? kCanonicalJSONEncoder.encode(pauseWindows)
       }
-    existing.customSupplements = serverRow.custom_supplements.flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+    existing.customSupplements = serverRow.custom_supplements.flatMap { supplements in
+      try? kCanonicalJSONEncoder.encode(supplements)
     }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -3871,18 +3880,27 @@ actor LocalStoreActor {
     existing.endTime = serverRow.cleanEndTime
     existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
     existing.selectedDays = (try? kCanonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
-    existing.endCondition = serverRow.end_condition.flatMap { try? kCanonicalJSONEncoder.encode($0) }
-    existing.exclusions = serverRow.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) }
+    existing.endCondition = serverRow.end_condition.flatMap { endCondition in
+      try? kCanonicalJSONEncoder.encode(endCondition)
+    }
+    existing.exclusions = serverRow.exclusions.flatMap { exclusions in
+      try? kCanonicalJSONEncoder.encode(exclusions)
+    }
     existing.dateSpecificPauseWindows =
       PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
-      .flatMap { try? kCanonicalJSONEncoder.encode($0) }
+      .flatMap { pauseWindows in
+        try? kCanonicalJSONEncoder.encode(pauseWindows)
+      }
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
-      try? kCanonicalJSONEncoder.encode($0)
+      supplements in
+      try? kCanonicalJSONEncoder.encode(supplements)
     }
     existing.dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(
       serverRow.date_specific_notes
     )
-    .flatMap { try? kCanonicalJSONEncoder.encode($0) }
+    .flatMap { notes in
+      try? kCanonicalJSONEncoder.encode(notes)
+    }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.syncStatus = .clean

@@ -2,7 +2,10 @@ import Foundation
 import os.log
 import Supabase
 
-private let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "ShiftsService")
+private let kShiftsServiceLogger: Logger = Logger(
+  subsystem: "com.tidex.app",
+  category: "ShiftsService"
+)
 
 /// Service for fetching shifts and recurring shifts from Supabase
 @MainActor
@@ -60,14 +63,14 @@ internal final class ShiftsService: ObservableObject {
         shifts = response
         return response
       } catch is CancellationError {
-        kLogger.info("Shifts fetch was cancelled")
+        kShiftsServiceLogger.info("Shifts fetch was cancelled")
         throw CancellationError()
       } catch {
         self.error = error
         throw error
       }
     } onCancel: {
-      kLogger.info("Shifts fetch cancellation requested")
+      kShiftsServiceLogger.info("Shifts fetch cancellation requested")
     }
   }
 
@@ -94,14 +97,14 @@ internal final class ShiftsService: ObservableObject {
         recurringShifts = response
         return response
       } catch is CancellationError {
-        kLogger.info("Recurring shifts fetch was cancelled")
+        kShiftsServiceLogger.info("Recurring shifts fetch was cancelled")
         throw CancellationError()
       } catch {
         self.error = error
         throw error
       }
     } onCancel: {
-      kLogger.info("Recurring shifts fetch cancellation requested")
+      kShiftsServiceLogger.info("Recurring shifts fetch cancellation requested")
     }
   }
 
@@ -117,10 +120,16 @@ internal final class ShiftsService: ObservableObject {
     endDate: String
   ) async throws -> (shifts: [ShiftRow], recurring: [RecurringShiftRow]) {
     // Fetch both in parallel
-    async let shiftsTask: [ShiftRow] = fetchShifts(for: userId, startDate: startDate, endDate: endDate)
+    async let shiftsTask: [ShiftRow] = fetchShifts(
+      for: userId,
+      startDate: startDate,
+      endDate: endDate
+    )
     async let recurringTask: [RecurringShiftRow] = fetchRecurringShifts(for: userId)
 
-    let (fetchedShifts, fetchedRecurring): ([ShiftRow], [RecurringShiftRow]) = try await (shiftsTask, recurringTask)
+    let (fetchedShifts, fetchedRecurring): ([ShiftRow], [RecurringShiftRow]) = try await (
+      shiftsTask, recurringTask
+    )
     return (shifts: fetchedShifts, recurring: fetchedRecurring)
   }
 

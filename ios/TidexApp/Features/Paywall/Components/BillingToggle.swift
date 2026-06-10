@@ -19,7 +19,9 @@ internal struct BillingToggle: View {
         title: String(localized: .paywallMonthly),
         isSelected: selection == .monthly
       ) {
-        withAnimation(.spring(response: animationResponse, dampingFraction: animationDampingFraction)) {
+        withAnimation(
+          .spring(response: animationResponse, dampingFraction: animationDampingFraction)
+        ) {
           selection = .monthly
         }
       }
@@ -29,10 +31,14 @@ internal struct BillingToggle: View {
         title: String(localized: .paywallYearly),
         isSelected: selection == .yearly,
         badge: yearlySavingsPercent.map { savingsPercent in
-          String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double(savingsPercent))))
+          String(
+            localized: .paywallSavePercent(FormatterCache.percentagePoints(Double(savingsPercent)))
+          )
         },
         action: {
-          withAnimation(.spring(response: animationResponse, dampingFraction: animationDampingFraction)) {
+          withAnimation(
+            .spring(response: animationResponse, dampingFraction: animationDampingFraction)
+          ) {
             selection = .yearly
           }
         }

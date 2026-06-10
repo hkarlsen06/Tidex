@@ -336,8 +336,7 @@ struct WageyView: View {
   private func handleSendMessageWithImage(  // swiftlint:disable:this type_contents_order
     _ content: String,
     image: ImageAttachment?
-  ) async -> Bool
-  {
+  ) async -> Bool {
     if viewModel.limitReached {
       if viewModel.remainingMessagesCount > 0 {
         viewModel.resetLimitReached()

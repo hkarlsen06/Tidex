@@ -3,9 +3,10 @@ import os.log
 import Supabase
 
 private enum FeedbackSettingsConstants {
-  static var logger: Logger {
-    Logger(subsystem: "com.tidex.app", category: "FeedbackSettingsViewModel")
-  }
+  static let logger: Logger = Logger(
+    subsystem: "com.tidex.app",
+    category: "FeedbackSettingsViewModel"
+  )
 
   static let maxFeedbackLength: Int = 2_000
 }
@@ -93,7 +94,8 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
 
   /// Whether the submit button should be enabled
   internal var canSubmit: Bool {
-    !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isOverLimit
+    !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      && !isOverLimit
       && !isSubmitting && !isOfflineUnavailable
   }
 
@@ -271,8 +273,8 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
 
 extension FeedbackItem {
   /// Format the created_at date for display
-  func formattedDate(locale: Locale) -> String {
-    let formatter = ISO8601DateFormatter()
+  internal func formattedDate(locale: Locale) -> String {
+    let formatter: ISO8601DateFormatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
     guard let date = formatter.date(from: createdAt) else {
@@ -281,6 +283,7 @@ extension FeedbackItem {
       guard let date = formatter.date(from: createdAt) else {
         return createdAt
       }
+
       return formatDate(date, locale: locale)
     }
 
@@ -288,12 +291,12 @@ extension FeedbackItem {
   }
 
   /// Format the responded_at date for display
-  func formattedResponseDate(locale: Locale) -> String? {
+  internal func formattedResponseDate(locale: Locale) -> String? {
     guard let respondedAt else {
       return nil
     }
 
-    let formatter = ISO8601DateFormatter()
+    let formatter: ISO8601DateFormatter = ISO8601DateFormatter()
     formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
 
     guard let date = formatter.date(from: respondedAt) else {
@@ -301,6 +304,7 @@ extension FeedbackItem {
       guard let date = formatter.date(from: respondedAt) else {
         return respondedAt
       }
+
       return formatDate(date, locale: locale)
     }
 
@@ -308,7 +312,7 @@ extension FeedbackItem {
   }
 
   private func formatDate(_ date: Date, locale: Locale) -> String {
-    let displayFormatter = DateFormatter()
+    let displayFormatter: DateFormatter = DateFormatter()
     displayFormatter.dateStyle = .medium
     displayFormatter.timeStyle = .none
     displayFormatter.locale = locale

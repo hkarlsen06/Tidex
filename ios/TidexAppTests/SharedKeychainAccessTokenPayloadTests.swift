@@ -28,7 +28,9 @@ internal final class SharedKeychainAccessTokenPayloadTests: XCTestCase {
       )
     )
 
-    let payload: SharedKeychainAccessTokenPayload = SharedKeychainAccessTokenPayload(session: session)
+    let payload: SharedKeychainAccessTokenPayload = SharedKeychainAccessTokenPayload(
+      session: session
+    )
 
     XCTAssertEqual(payload.token, "access-token")
     XCTAssertEqual(payload.expiresAt, 1_800_003_600)

@@ -7,7 +7,8 @@ internal final class SensitiveContentPresentationState {
     case sharedCalendar(ownerId: String, ownerToken: UUID)
   }
 
-  internal static let shared: SensitiveContentPresentationState = SensitiveContentPresentationState()
+  internal static let shared: SensitiveContentPresentationState =
+    SensitiveContentPresentationState()
 
   internal private(set) var visibleContext: VisibleContext?
 
@@ -16,19 +17,17 @@ internal final class SensitiveContentPresentationState {
   }
 
   internal var activeFriendThreadId: String? {
-    guard case .friendThread(let threadId, _) = visibleContext else {
-      return nil
+    if case .friendThread(let threadId, _) = visibleContext {
+      return threadId
     }
-
-    return threadId
+    return nil
   }
 
   internal var activeSharedCalendarOwnerId: String? {
-    guard case .sharedCalendar(let ownerId, _) = visibleContext else {
-      return nil
+    if case .sharedCalendar(let ownerId, _) = visibleContext {
+      return ownerId
     }
-
-    return ownerId
+    return nil
   }
 
   private init() {

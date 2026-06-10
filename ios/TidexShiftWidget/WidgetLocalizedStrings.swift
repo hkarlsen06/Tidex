@@ -48,8 +48,12 @@ extension LocalizedStringResource {
   internal static var widgetDescLockScreen: LocalizedStringResource {
     "See your next shift on the lock screen"
   }
-  internal static var widgetDescNextShift: LocalizedStringResource { "See your next shift at a glance" }
-  internal static var widgetDescFriendsShift: LocalizedStringResource { "See a friend's next shift" }
+  internal static var widgetDescNextShift: LocalizedStringResource {
+    "See your next shift at a glance"
+  }
+  internal static var widgetDescFriendsShift: LocalizedStringResource {
+    "See a friend's next shift"
+  }
   internal static var widgetDescFriendsShifts: LocalizedStringResource {
     "See your friends' upcoming shifts"
   }

@@ -4,10 +4,10 @@ import SwiftUI
 /// Uses the same visual style as ShiftsCalendarView with rectangular cells and week numbers
 /// Allows one anchor per weekday (max 7 anchors)
 /// Note: Month navigation is handled by AnimatedMonthHeader in AddShiftView
-struct RecurringCalendarView: View {
-  @ObservedObject var viewModel: AddShiftViewModel
+internal struct RecurringCalendarView: View {
+  @ObservedObject internal var viewModel: AddShiftViewModel
 
-  var body: some View {
+  internal var body: some View {
     RecurringAnchorCalendar(
       displayMonth: viewModel.displayMonth,
       selectedDays: viewModel.selectedDays,

@@ -6,7 +6,8 @@ import Foundation
 internal enum MotivationalSalutes {
   /// Returns a random salute using the widget string catalog.
   internal static func random() -> String {
-    let key: LocalizedStringResource = LocalizedStringResource.widgetSaluteKeys.randomElement() ?? "salute.01"
+    let key: LocalizedStringResource =
+      LocalizedStringResource.widgetSaluteKeys.randomElement() ?? "salute.01"
     return String(localized: key)
   }
 
