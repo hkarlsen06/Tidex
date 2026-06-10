@@ -276,7 +276,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   }
 
   private var dayJobTimeColorsByDate: [String: DayJobTimeColors] {
-    guard shouldUseWorkplaceCalendarColors, hasMultipleActiveJobs else { return [:] }
+    guard shouldUseWorkplaceCalendarColors, hasMultipleActiveJobs else {
+      return [:]
+    }
 
     var result: [String: DayJobTimeColors] = [:]
 
@@ -286,8 +288,12 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           < CalendarGridHelper.timeToMinutes(rhs.startTime)
       }
 
-      guard let earliestShift = sortedShifts.first else { continue }
-      guard let topColor = resolvedJobColor(for: earliestShift) else { continue }
+      guard let earliestShift = sortedShifts.first else {
+        continue
+      }
+      guard let topColor = resolvedJobColor(for: earliestShift) else {
+        continue
+      }
 
       // For days with multiple shifts, always use the earliest shift's workplace color.
       result[dateISO] = DayJobTimeColors(topColor: topColor, bottomColor: topColor)
@@ -343,7 +349,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       .userCurrency(headerDisplayCurrency)
       .contentShape(Rectangle())
       .onTapGesture {
-        guard canShowMixedCurrencyBreakdown else { return }
+        guard canShowMixedCurrencyBreakdown else {
+          return
+        }
         toggleHaptic.impactOccurred()
         showMixedCurrencyBreakdownPopover.toggle()
       }
@@ -370,7 +378,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   // MARK: - Header Data
 
   private var headerTotals: CalendarHeaderTotals? {
-    guard showEarnings else { return nil }
+    guard showEarnings else {
+      return nil
+    }
 
     if isCopyMode, !copyPreviewEarnings.isEmpty {
       return copyPreviewHeaderTotals
@@ -415,14 +425,18 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     let previewByDate = copyPreviewEarnings.filter { dateISO, _ in
       isDateInDisplayedMonth(dateISO)
     }
-    guard !previewByDate.isEmpty else { return nil }
+    guard !previewByDate.isEmpty else {
+      return nil
+    }
 
     let totals = ConflictExclusion.combinedEarnings(
       existingByDate: existingByDate,
       previewByDate: previewByDate,
       conflictDates: copyPreviewConflictDates
     )
-    guard totals.gross > 0 else { return nil }
+    guard totals.gross > 0 else {
+      return nil
+    }
 
     let baselineTotals = ConflictExclusion.combinedEarnings(
       existingByDate: existingByDate,
@@ -446,7 +460,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   }
 
   private func isDateInDisplayedMonth(_ dateISO: String) -> Bool {
-    guard let date = Date.fromISODateString(dateISO) else { return false }
+    guard let date = Date.fromISODateString(dateISO) else {
+      return false
+    }
     let components = calendar.dateComponents([.year, .month], from: date)
     return components.year == year && components.month == monthNumber
   }
@@ -649,7 +665,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     earningsByDate: [String: CalendarEarningsData],
     hoursByDate: [String: HoursData]
   ) -> CalendarCellContent {
-    guard let dateISO = dayInfo.dateISO else { return .empty }
+    guard let dateISO = dayInfo.dateISO else {
+      return .empty
+    }
 
     if isCopyMode, copyTargetDates.contains(dateISO) {
       if let earnings = copyPreviewEarnings[dateISO] {
@@ -726,7 +744,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     let eventsOnDay = eventCoverageByDate[dayISO] ?? []
 
     if isSelectionModeEnabled {
-      guard !shiftsOnDay.isEmpty else { return }
+      guard !shiftsOnDay.isEmpty else {
+        return
+      }
       onDayTapped?(dayISO, shiftsOnDay)
       return
     }
@@ -741,13 +761,17 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   private func handleLongPress(
     at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]
   ) {
-    guard !isCopyMode, !isMoveMode else { return }
+    guard !isCopyMode, !isMoveMode else {
+      return
+    }
     guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
       return
     }
 
     let shiftsOnDay = shiftsByDate[dayISO] ?? []
-    guard !shiftsOnDay.isEmpty else { return }
+    guard !shiftsOnDay.isEmpty else {
+      return
+    }
 
     onDayLongPressed?(dayISO, shiftsOnDay)
   }
@@ -768,7 +792,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   private func handleDragChanged(
     at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]
   ) {
-    guard gestureMode == .selecting else { return }
+    guard gestureMode == .selecting else {
+      return
+    }
 
     if let dayISO = findDayAt(location: location, geometry: geometry, days: days) {
       if dayISO != hoverDateISO {
@@ -831,7 +857,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
     while current <= laterDate {
       result.append(current.toISODateString())
-      guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else { break }
+      guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else {
+        break
+      }
       current = nextDay
     }
 
@@ -850,7 +878,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     let colStep = cellWidth + spacing
     let rowStep = cellHeight + spacing
 
-    guard colStep > 0, rowStep > 0 else { return nil }
+    guard colStep > 0, rowStep > 0 else {
+      return nil
+    }
 
     let col = Int(location.x / colStep)
     let row = Int(location.y / rowStep)
@@ -862,13 +892,19 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     // Ignore hits in the inter-cell spacing gutters.
     let xInCell = location.x - CGFloat(col) * colStep
     let yInCell = location.y - CGFloat(row) * rowStep
-    guard xInCell <= cellWidth, yInCell <= cellHeight else { return nil }
+    guard xInCell <= cellWidth, yInCell <= cellHeight else {
+      return nil
+    }
 
     let index = row * CalendarGridHelper.columnCount + col
-    guard index >= 0, index < days.count else { return nil }
+    guard index >= 0, index < days.count else {
+      return nil
+    }
 
     let dayInfo = days[index]
-    guard !dayInfo.isOutsideMonth else { return nil }
+    guard !dayInfo.isOutsideMonth else {
+      return nil
+    }
 
     return dayInfo.dateISO
   }
@@ -928,7 +964,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       singleDeleteConfirmTitle,
       isPresented: $showSingleSelectionDeleteConfirm
     ) {
-      Button(String(localized: .commonCancel), role: .cancel) {}
+      Button(String(localized: .commonCancel), role: .cancel) {
+        // The cancel role dismisses the alert automatically.
+      }
       Button(String(localized: .shiftsDeleteButton), role: .destructive) {
         warningHaptic.notificationOccurred(.warning)
         onConfirmDelete?()
@@ -937,7 +975,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       Text(singleDeleteConfirmMessage)
     }
     .alert(multiDeleteConfirmTitle, isPresented: $showMultiSelectionDeleteConfirm) {
-      Button(String(localized: .commonCancel), role: .cancel) {}
+      Button(String(localized: .commonCancel), role: .cancel) {
+        // The cancel role dismisses the alert automatically.
+      }
       Button(String(localized: .shiftsDeleteButton), role: .destructive) {
         warningHaptic.notificationOccurred(.warning)
         onConfirmDelete?()
