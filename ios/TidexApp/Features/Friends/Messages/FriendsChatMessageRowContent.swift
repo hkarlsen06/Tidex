@@ -44,15 +44,25 @@ enum FriendsThreadAttachmentReactionMenuTarget {
   }
 
   static func clear(messageId: String? = nil, attachmentId: String? = nil) {
-    guard let current = target else { return }
-    if let messageId, current.messageId != messageId { return }
-    if let attachmentId, current.attachmentId != attachmentId { return }
+    guard let current = target else {
+      return
+    }
+    if let messageId, current.messageId != messageId {
+      return
+    }
+    if let attachmentId, current.attachmentId != attachmentId {
+      return
+    }
     target = nil
   }
 
   static func attachmentId(for messageId: String, now: Date = .now) -> String? {
-    guard let current = target else { return nil }
-    guard current.messageId == messageId else { return nil }
+    guard let current = target else {
+      return nil
+    }
+    guard current.messageId == messageId else {
+      return nil
+    }
     guard now.timeIntervalSince(current.createdAt) <= expirationInterval else {
       target = nil
       return nil
@@ -78,8 +88,10 @@ private enum FriendsThreadAttachmentTapSuppressor {
   ) -> Bool {
     pruneExpired(now: now)
 
-    let key = key(messageId: messageId, attachmentId: attachmentId)
-    guard targets.removeValue(forKey: key) != nil else { return false }
+    let key: String = key(messageId: messageId, attachmentId: attachmentId)
+    guard targets.removeValue(forKey: key) != nil else {
+      return false
+    }
     return true
   }
 
@@ -101,10 +113,11 @@ struct FriendsChatDetectedLink: Equatable {
 }
 
 enum FriendsChatMessageLinkifier {
-  private static let detector = try? NSDataDetector(
-    types: NSTextCheckingResult.CheckingType.link.rawValue)
-  private static let tidexSchemePattern = #"(?i)\btidex://[^\s<>()\[\]{}"']+"#
-  private static let bareDomainPattern =
+  private static let detector: NSDataDetector? = try? NSDataDetector(
+    types: NSTextCheckingResult.CheckingType.link.rawValue
+  )
+  private static let tidexSchemePattern: String = #"(?i)\btidex://[^\s<>()\[\]{}"']+"#
+  private static let bareDomainPattern: String =
     #"(?i)(?<![@\w.-])(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}(?:/[^\s<>()\[\]{}"']*)?"#
   private static let trailingURLCharacters: Set<Character> = [
     ".", ",", "!", "?", ";", ":", ")", "]", "}",
@@ -137,7 +150,9 @@ enum FriendsChatMessageLinkifier {
   }
 
   static func links(in text: String) -> [FriendsChatDetectedLink] {
-    guard !text.isEmpty else { return [] }
+    guard !text.isEmpty else {
+      return []
+    }
 
     var links: [FriendsChatDetectedLink] = []
     links.append(contentsOf: detectedURLLinks(in: text))
@@ -148,25 +163,37 @@ enum FriendsChatMessageLinkifier {
   }
 
   private static func detectedURLLinks(in text: String) -> [FriendsChatDetectedLink] {
-    guard let detector else { return [] }
+    guard let detector else {
+      return []
+    }
 
-    let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
+    let nsRange: NSRange = NSRange(text.startIndex..<text.endIndex, in: text)
     return detector.matches(in: text, options: [], range: nsRange).compactMap { match in
-      guard let matchRange = trimmedRange(match.range, in: text) else { return nil }
-      let displayText = substring(in: matchRange, text: text)
-      guard let url = normalizedURL(for: displayText, detectedURL: match.url) else { return nil }
+      guard let matchRange = trimmedRange(match.range, in: text) else {
+        return nil
+      }
+      let displayText: String = substring(in: matchRange, text: text)
+      guard let url = normalizedURL(for: displayText, detectedURL: match.url) else {
+        return nil
+      }
       return FriendsChatDetectedLink(range: matchRange, text: displayText, url: url)
     }
   }
 
   private static func regexLinks(in text: String, pattern: String) -> [FriendsChatDetectedLink] {
-    guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+    guard let regex = try? NSRegularExpression(pattern: pattern) else {
+      return []
+    }
 
-    let nsRange = NSRange(text.startIndex..<text.endIndex, in: text)
+    let nsRange: NSRange = NSRange(text.startIndex..<text.endIndex, in: text)
     return regex.matches(in: text, range: nsRange).compactMap { match in
-      guard let matchRange = trimmedRange(match.range, in: text) else { return nil }
-      let displayText = substring(in: matchRange, text: text)
-      guard let url = normalizedURL(for: displayText, detectedURL: nil) else { return nil }
+      guard let matchRange = trimmedRange(match.range, in: text) else {
+        return nil
+      }
+      let displayText: String = substring(in: matchRange, text: text)
+      guard let url = normalizedURL(for: displayText, detectedURL: nil) else {
+        return nil
+      }
       return FriendsChatDetectedLink(range: matchRange, text: displayText, url: url)
     }
   }
@@ -175,11 +202,11 @@ enum FriendsChatMessageLinkifier {
     -> [FriendsChatDetectedLink]
   {
     links
-      .sorted {
-        if $0.range.location == $1.range.location {
-          return $0.range.length > $1.range.length
+      .sorted { lhs, rhs in
+        if lhs.range.location == rhs.range.location {
+          return lhs.range.length > rhs.range.length
         }
-        return $0.range.location < $1.range.location
+        return lhs.range.location < rhs.range.location
       }
       .reduce(into: [FriendsChatDetectedLink]()) { result, link in
         guard !result.contains(where: { NSIntersectionRange($0.range, link.range).length > 0 })
@@ -209,7 +236,9 @@ enum FriendsChatMessageLinkifier {
   }
 
   private static func trimmedRange(_ nsRange: NSRange, in text: String) -> NSRange? {
-    guard var range = Range(nsRange, in: text) else { return nil }
+    guard var range = Range(nsRange, in: text) else {
+      return nil
+    }
 
     while range.lowerBound < range.upperBound,
       let last = text[range].last,
@@ -218,12 +247,16 @@ enum FriendsChatMessageLinkifier {
       range = range.lowerBound..<text.index(before: range.upperBound)
     }
 
-    guard range.lowerBound < range.upperBound else { return nil }
+    guard range.lowerBound < range.upperBound else {
+      return nil
+    }
     return NSRange(range, in: text)
   }
 
   private static func substring(in nsRange: NSRange, text: String) -> String {
-    guard let range = Range(nsRange, in: text) else { return "" }
+    guard let range = Range(nsRange, in: text) else {
+      return ""
+    }
     return String(text[range])
   }
 }
@@ -252,7 +285,8 @@ private struct FriendsChatLinkedMessageText: View {
         }
 
         return .systemAction(url)
-      })
+      }
+    )
   }
 
   private var foregroundColor: Color {
@@ -269,16 +303,18 @@ struct FriendsChatMessageRowContent: View {
   private static let maximumTextBubbleWidth: CGFloat = 360
   private static let reactionHorizontalOffset: CGFloat = 12
   private static let reactionVerticalOffset: CGFloat = 12
-  private static let avatarSize = AvatarView.Size.small
+  private static let avatarSize: CGFloat = AvatarView.Size.small
   private static let replySwipeResetAnimationDuration: TimeInterval = 0.18
 
   private enum ReplySwipeHaptics {
-    static let impact = UIImpactFeedbackGenerator(style: .medium)
-    static let selection = UISelectionFeedbackGenerator()
-    private static var isPrepared = false
+    static let impact: UIImpactFeedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
+    static let selection: UISelectionFeedbackGenerator = UISelectionFeedbackGenerator()
+    private static var isPrepared: Bool = false
 
     static func prepareIfNeeded() {
-      guard !isPrepared else { return }
+      guard !isPrepared else {
+        return
+      }
       isPrepared = true
       impact.prepare()
       selection.prepare()
@@ -313,43 +349,45 @@ struct FriendsChatMessageRowContent: View {
 
   @State private var replySwipeOffset: CGFloat = 0
   @State private var activeReplySwipePayloadId: String?
-  @State private var hasTriggeredReplySwipeHaptic = false
+  @State private var hasTriggeredReplySwipeHaptic: Bool = false
   @State private var rowFrame: CGRect = .zero
   @State private var payloadFrame: CGRect = .zero
 
   var body: some View {
-    let menuAttachmentId =
+    let menuAttachmentId: String? =
       messageFrame != nil
       ? FriendsThreadAttachmentReactionMenuTarget.attachmentId(for: message.id)
       : nil
-    let targetAttachmentId = menuAttachmentId ?? highlightedAttachmentId
-    let isShowingAttachmentReactionTarget = messageFrame != nil && targetAttachmentId != nil
-    let hasMessageText =
+    let targetAttachmentId: String? = menuAttachmentId ?? highlightedAttachmentId
+    let isShowingAttachmentReactionTarget: Bool = messageFrame != nil && targetAttachmentId != nil
+    let hasMessageText: Bool =
       !isShowingAttachmentReactionTarget
       && !visibleMessageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    let allImageAttachments = message.attachments.filter { $0.kind == .image }
-    let imageAttachments =
+    let allImageAttachments: [FriendMessageAttachment] = message.attachments.filter { attachment in
+      attachment.kind == .image
+    }
+    let imageAttachments: [FriendMessageAttachment] =
       if isShowingAttachmentReactionTarget, let targetAttachmentId {
         allImageAttachments.filter { $0.id == targetAttachmentId }
       } else {
         allImageAttachments
       }
-    let shiftSnapshot = message.shiftSnapshot
-    let fallbackPreviewText = message.previewText
-    let showsFallbackBubble =
+    let shiftSnapshot: FriendShiftSnapshot? = message.shiftSnapshot
+    let fallbackPreviewText: String? = message.previewText
+    let showsFallbackBubble: Bool =
       !hasMessageText && imageAttachments.isEmpty && shiftSnapshot == nil
       && fallbackPreviewText != nil
-    let showsReplyPreview = !isShowingAttachmentReactionTarget && quotedPreview != nil
-    let showsBubblePayload = showsFallbackBubble || hasMessageText
-    let payloadCount =
+    let showsReplyPreview: Bool = !isShowingAttachmentReactionTarget && quotedPreview != nil
+    let showsBubblePayload: Bool = showsFallbackBubble || hasMessageText
+    let payloadCount: Int =
       (showsReplyPreview ? 1 : 0) + imageAttachments.count + (showsBubblePayload ? 1 : 0)
-    let usesStandalonePayloadGrouping = showsReplyPreview || !imageAttachments.isEmpty
-    let imagePayloadStartIndex = showsReplyPreview ? 1 : 0
-    let bubblePayloadIndex = imagePayloadStartIndex + imageAttachments.count
-    let showsMetadataRow =
+    let usesStandalonePayloadGrouping: Bool = showsReplyPreview || !imageAttachments.isEmpty
+    let imagePayloadStartIndex: Int = showsReplyPreview ? 1 : 0
+    let bubblePayloadIndex: Int = imagePayloadStartIndex + imageAttachments.count
+    let showsMetadataRow: Bool =
       !isShowingAttachmentReactionTarget && (inlineMetadataStatus != nil || message.editedAt != nil)
-    let topPadding = groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
-    let bottomPadding =
+    let topPadding: CGFloat = groupContext.joinsPrevious ? Spacing.micro : Spacing.xxs
+    let bottomPadding: CGFloat =
       if showsMetadataRow {
         Spacing.xxxs
       } else if groupContext.joinsNext {
@@ -422,12 +460,16 @@ struct FriendsChatMessageRowContent: View {
                     )
                     .overlay(alignment: reactionAlignment) {
                       if !hasMessageText, !showsFallbackBubble, shiftSnapshot == nil {
-                        let reactionTarget = imageReactionTarget(
-                          for: attachment,
-                          index: index,
-                          imageCount: imageAttachments.count,
-                          allowsMessageFallback: !isShowingAttachmentReactionTarget
-                        )
+                        let reactionTarget:
+                          (
+                            reactions: [FriendMessageReaction],
+                            attachmentId: String?
+                          ) = imageReactionTarget(
+                            for: attachment,
+                            index: index,
+                            imageCount: imageAttachments.count,
+                            allowsMessageFallback: !isShowingAttachmentReactionTarget
+                          )
                         reactionStrip(
                           for: reactionTarget.reactions,
                           attachmentId: reactionTarget.attachmentId
@@ -554,8 +596,8 @@ struct FriendsChatMessageRowContent: View {
 
   private var shouldHighlightWholeMessage: Bool {
     isHighlighted && highlightedAttachmentId == nil
-      && !message.attachments.contains {
-        $0.kind == .image
+      && !message.attachments.contains { attachment in
+        attachment.kind == .image
       }
   }
 
@@ -571,10 +613,12 @@ struct FriendsChatMessageRowContent: View {
     count: Int,
     usesStandalonePayloadGrouping: Bool
   ) -> FriendsChatMessageGroupContext {
-    guard usesStandalonePayloadGrouping else { return groupContext }
+    guard usesStandalonePayloadGrouping else {
+      return groupContext
+    }
 
-    let joinsPrevious = groupContext.joinsPrevious || index > 0
-    let joinsNext = index < count - 1 || groupContext.joinsNext
+    let joinsPrevious: Bool = groupContext.joinsPrevious || index > 0
+    let joinsNext: Bool = index < count - 1 || groupContext.joinsNext
 
     let position: FriendsChatMessageGroupPosition =
       switch (joinsPrevious, joinsNext) {
@@ -640,7 +684,7 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private var timestampRevealOpacity: Double {
-    let progress = timestampRevealOffset / FriendsChatTimestampRevealResolver.revealWidth
+    let progress: CGFloat = timestampRevealOffset / FriendsChatTimestampRevealResolver.revealWidth
     return min(max(Double(progress), 0), 1)
   }
 
@@ -676,7 +720,7 @@ struct FriendsChatMessageRowContent: View {
       return Spacing.xxxl
     }
 
-    let emptyWidth = payloadFrame.minX - rowFrame.minX
+    let emptyWidth: CGFloat = payloadFrame.minX - rowFrame.minX
     return max(min(emptyWidth, rowFrame.width), 0)
   }
 
@@ -692,7 +736,7 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private static func unionFrame(_ frames: Dictionary<String, CGRect>.Values) -> CGRect {
-    let union =
+    let union: CGRect =
       frames
       .filter { !$0.isNull && !$0.isEmpty }
       .reduce(CGRect.null) { partialResult, frame in
@@ -717,7 +761,9 @@ struct FriendsChatMessageRowContent: View {
   private func handleTimestampRevealEnded(_ value: FriendsChatReplyDragValue) {
     handleTimestampRevealChanged(value)
 
-    guard timestampRevealOffset != 0 else { return }
+    guard timestampRevealOffset != 0 else {
+      return
+    }
     withAnimation(.easeOut(duration: Self.replySwipeResetAnimationDuration)) {
       timestampRevealOffset = 0
     }
@@ -758,6 +804,7 @@ struct FriendsChatMessageRowContent: View {
       Image(systemName: "arrowshape.turn.up.left.fill")
         .font(.system(size: 15, weight: .semibold))
         .foregroundColor(.tidexTextOnBrand)
+        .accessibilityHidden(true)
     }
     .frame(width: 44, height: 32)
     .scaleEffect(replySwipeActionScale)
@@ -776,7 +823,9 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private func replySwipeActionOpacity(for id: String) -> Double {
-    guard activeReplySwipePayloadId == id else { return 0 }
+    guard activeReplySwipePayloadId == id else {
+      return 0
+    }
     return min(
       Double(abs(replySwipeOffset)) / Double(FriendsChatReplySwipeResolver.actionWidth * 0.6),
       1
@@ -784,7 +833,8 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private var replySwipeActionScale: CGFloat {
-    let progress = min(abs(replySwipeOffset) / FriendsChatReplySwipeResolver.actionWidth, 1)
+    let progress: CGFloat = min(
+      abs(replySwipeOffset) / FriendsChatReplySwipeResolver.actionWidth, 1)
     return 0.7 + (progress * 0.3)
   }
 
@@ -794,7 +844,9 @@ struct FriendsChatMessageRowContent: View {
 
   private func textBubbleReplySwipeConfiguration(id: String) -> FriendsChatReplySwipeConfiguration?
   {
-    guard onReplySwipe != nil else { return nil }
+    guard onReplySwipe != nil else {
+      return nil
+    }
     return FriendsChatReplySwipeConfiguration(
       id: id,
       isCurrentUser: isCurrentUser,
@@ -829,7 +881,9 @@ struct FriendsChatMessageRowContent: View {
     }
     replySwipeOffset = newOffset
 
-    let crossedThreshold = FriendsChatReplySwipeResolver.crossedThreshold(offset: replySwipeOffset)
+    let crossedThreshold: Bool = FriendsChatReplySwipeResolver.crossedThreshold(
+      offset: replySwipeOffset
+    )
     if crossedThreshold, !hasTriggeredReplySwipeHaptic {
       hasTriggeredReplySwipeHaptic = true
       ReplySwipeHaptics.impact.impactOccurred()
@@ -838,7 +892,7 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private func handleReplySwipeEnded(id: String, value: FriendsChatReplyDragValue) {
-    let finalOffset = replySwipeOffset
+    let finalOffset: CGFloat = replySwipeOffset
     hasTriggeredReplySwipeHaptic = false
 
     guard finalOffset != 0 else {
@@ -848,7 +902,10 @@ struct FriendsChatMessageRowContent: View {
       return
     }
 
-    let outcome = replySwipeOutcome(offset: finalOffset, velocity: value.velocity.width)
+    let outcome: FriendsChatReplySwipeOutcome = replySwipeOutcome(
+      offset: finalOffset,
+      velocity: value.velocity.width
+    )
 
     withAnimation(.easeOut(duration: Self.replySwipeResetAnimationDuration)) {
       replySwipeOffset = 0
@@ -860,7 +917,9 @@ struct FriendsChatMessageRowContent: View {
       }
     }
 
-    guard outcome == .trigger, let onReplySwipe else { return }
+    guard outcome == .trigger, let onReplySwipe else {
+      return
+    }
 
     ReplySwipeHaptics.impact.impactOccurred()
     DispatchQueue.main.asyncAfter(
@@ -905,6 +964,7 @@ struct FriendsChatMessageRowContent: View {
       HStack(spacing: 3) {
         Image(systemName: "checkmark")
           .font(.system(size: 11, weight: .semibold))
+          .accessibilityHidden(true)
 
         Text(.friendsChatStatusDelivered)
           .lineLimit(1)
@@ -916,6 +976,7 @@ struct FriendsChatMessageRowContent: View {
         Image(systemName: "checkmark.circle.fill")
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.tidexBlue)
+          .accessibilityHidden(true)
 
         Text(.friendsChatStatusRead)
           .lineLimit(1)
@@ -927,6 +988,7 @@ struct FriendsChatMessageRowContent: View {
         Image(systemName: "exclamationmark.circle.fill")
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.tidexError)
+          .accessibilityHidden(true)
 
         Text(.friendsChatStatusFailed)
           .foregroundColor(.tidexError)
@@ -948,7 +1010,9 @@ struct FriendsChatMessageRowContent: View {
   }
 
   private var inlineMetadataStatus: FriendsChatMessageStatus? {
-    guard let messageStatus else { return nil }
+    guard let messageStatus else {
+      return nil
+    }
     switch messageStatus {
     case .sending, .delivered, .read:
       return messageStatus
@@ -1094,14 +1158,14 @@ extension FriendMessageAttachment {
       return CGSize(width: 180, height: 180)
     }
 
-    let aspectRatio = CGFloat(width) / CGFloat(height)
+    let aspectRatio: CGFloat = CGFloat(width) / CGFloat(height)
 
     if aspectRatio >= 1 {
-      let scaledHeight = max(minDimension, maxDimension / aspectRatio)
+      let scaledHeight: CGFloat = max(minDimension, maxDimension / aspectRatio)
       return CGSize(width: maxDimension, height: min(maxDimension, scaledHeight))
     }
 
-    let scaledWidth = max(minDimension, maxDimension * aspectRatio)
+    let scaledWidth: CGFloat = max(minDimension, maxDimension * aspectRatio)
     return CGSize(width: min(maxDimension, scaledWidth), height: maxDimension)
   }
 }
@@ -1339,7 +1403,7 @@ private struct FriendsChatDateSeparator: View {
   }
 
   private var separatorText: String {
-    let calendar = Calendar.current
+    let calendar: Calendar = Calendar.current
     if calendar.isDateInToday(date) {
       return String(localized: .commonToday)
     }
@@ -1581,7 +1645,7 @@ struct ChatShiftSnapshotCard: View {
   var topInset: CGFloat = 0
   // swiftlint:disable:next explicit_acl
   var onTap: (() -> Void)?
-  @State private var shouldSuppressNextTap = false
+  @State private var shouldSuppressNextTap: Bool = false
 
   private var ownerPrimaryTextColor: Color {
     .tidexTextMuted
@@ -1676,7 +1740,7 @@ private struct FriendsChatImageView: View {
   let onReactionPressChanged: (FriendMessageAttachment, Bool) -> Void
   let onPrepareReaction: (FriendMessageAttachment) -> Void
 
-  @State private var shouldSuppressNextTap = false
+  @State private var shouldSuppressNextTap: Bool = false
 
   var body: some View {
     let onImageTap: (() -> Void)? = canOpenAttachment ? handleImageTap : nil
@@ -1761,7 +1825,9 @@ private struct FriendsChatImageView: View {
 
   private func showAttachmentReactionMenu() {
     shouldSuppressNextTap = true
-    guard canReact else { return }
+    guard canReact else {
+      return
+    }
     FriendsThreadAttachmentReactionMenuTarget.set(
       messageId: messageId,
       attachmentId: attachment.id
@@ -1845,6 +1911,10 @@ final class FriendsChatGestureTargetView: UIView {
     isUserInteractionEnabled = false
   }
 
+  deinit {
+    // Required by lint policy for explicit class teardown.
+  }
+
   @available(*, unavailable)
   // swiftlint:disable:next explicit_acl
   required init?(coder _: NSCoder) {
@@ -1860,6 +1930,10 @@ final class FriendsChatGestureTargetView: UIView {
 final class FriendsChatDirectionalPanGestureRecognizer: UIPanGestureRecognizer {
   var targetKind: FriendsChatGestureTargetKind?
   var direction: FriendsChatReplySwipeDirection?
+
+  deinit {
+    // Required by lint policy for explicit class teardown.
+  }
 }
 
 struct FriendsChatGestureTargetSurface: UIViewRepresentable {
@@ -1925,7 +1999,7 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
     private weak var view: UIView?
     private weak var gestureHostView: UIView?
     private var recognizer: UIPanGestureRecognizer?
-    private var hasPassedMinimumDistance = false
+    private var hasPassedMinimumDistance: Bool = false
 
     init(
       targetKind: FriendsChatGestureTargetKind,
@@ -1946,7 +2020,9 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
       installRecognizerIfPossible()
 
       DispatchQueue.main.async { [weak self, weak view] in
-        guard let self, self.view === view else { return }
+        guard let self, self.view === view else {
+          return
+        }
         installRecognizerIfPossible()
       }
     }
@@ -1962,14 +2038,18 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
     }
 
     private func installRecognizerIfPossible() {
-      guard let view, let hostView = gestureHost(for: view) else { return }
-      guard gestureHostView !== hostView else { return }
+      guard let view, let hostView = gestureHost(for: view) else {
+        return
+      }
+      guard gestureHostView !== hostView else {
+        return
+      }
 
       if let recognizer, let gestureHostView {
         gestureHostView.removeGestureRecognizer(recognizer)
       }
 
-      let panRecognizer =
+      let panRecognizer: UIPanGestureRecognizer =
         recognizer
         ?? FriendsChatDirectionalPanGestureRecognizer(
           target: self,
@@ -1989,13 +2069,20 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
     }
 
     private func gestureHost(for view: UIView) -> UIView? {
-      let ancestors = sequence(first: view.superview, next: { $0?.superview })
+      var ancestors: [UIView] = []
+      var currentView: UIView? = view.superview
+      while let ancestor = currentView {
+        ancestors.append(ancestor)
+        currentView = ancestor.superview
+      }
       return ancestors.first { $0 is UITableViewCell } ?? view.superview
     }
 
     @objc private func handlePan(_ recognizer: UIPanGestureRecognizer) {
-      guard let view else { return }
-      let value = dragValue(from: recognizer, in: view)
+      guard let view else {
+        return
+      }
+      let value: FriendsChatReplyDragValue = dragValue(from: recognizer, in: view)
 
       switch recognizer.state {
       case .began:
@@ -2046,11 +2133,11 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
       from recognizer: UIPanGestureRecognizer,
       in view: UIView
     ) -> FriendsChatReplyDragValue {
-      let coordinateView = view.window ?? view
-      let translation = recognizer.translation(in: coordinateView)
-      let velocity = recognizer.velocity(in: coordinateView)
-      let location = recognizer.location(in: coordinateView)
-      let startLocation = CGPoint(
+      let coordinateView: UIView = view.window ?? view
+      let translation: CGPoint = recognizer.translation(in: coordinateView)
+      let velocity: CGPoint = recognizer.velocity(in: coordinateView)
+      let location: CGPoint = recognizer.location(in: coordinateView)
+      let startLocation: CGPoint = CGPoint(
         x: location.x - translation.x,
         y: location.y - translation.y
       )
@@ -2067,8 +2154,10 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
       guard let recognizer = gestureRecognizer as? UIPanGestureRecognizer, let view else {
         return true
       }
-      guard view.bounds.contains(recognizer.location(in: view)) else { return false }
-      let velocity = recognizer.velocity(in: view.window ?? view)
+      guard view.bounds.contains(recognizer.location(in: view)) else {
+        return false
+      }
+      let velocity: CGPoint = recognizer.velocity(in: view.window ?? view)
       return FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
         velocity: CGSize(width: velocity.x, height: velocity.y),
         direction: direction
@@ -2131,8 +2220,8 @@ final class FriendsChatImageLoader: ObservableObject {
   }
 
   @Published private(set) var image: UIImage?
-  @Published private(set) var isLoading = false
-  @Published private(set) var didFail = false
+  @Published private(set) var isLoading: Bool = false
+  @Published private(set) var didFail: Bool = false
 
   private let variant: Variant
 
@@ -2141,13 +2230,17 @@ final class FriendsChatImageLoader: ObservableObject {
     self.variant = variant
   }
 
+  deinit {
+    // Required by lint policy for explicit class teardown.
+  }
+
   func loadIfNeeded(attachment: FriendMessageAttachment) async {
     if let image {
       self.image = image
       return
     }
 
-    let cacheURL = Self.cacheURL(for: attachment.storagePath, variant: variant)
+    let cacheURL: URL = Self.cacheURL(for: attachment.storagePath, variant: variant)
 
     if let cached = await cachedImage(for: cacheURL) {
       image = cached
@@ -2164,17 +2257,21 @@ final class FriendsChatImageLoader: ObservableObject {
       return
     }
 
-    guard !isLoading else { return }
+    guard !isLoading else {
+      return
+    }
     didFail = false
     isLoading = true
     defer { isLoading = false }
 
     do {
-      let data = try await FriendsMessagingService.shared.downloadAttachmentData(
+      let data: Data = try await FriendsMessagingService.shared.downloadAttachmentData(
         path: attachment.storagePath
       )
       try Task.checkCancellation()
-      guard let loadedImage = await Self.decodeImage(from: data, variant: variant) else { return }
+      guard let loadedImage = await Self.decodeImage(from: data, variant: variant) else {
+        return
+      }
       try Task.checkCancellation()
       ImageCache.shared.set(loadedImage, for: cacheURL, policy: .messageAttachment)
       image = loadedImage
@@ -2199,17 +2296,21 @@ final class FriendsChatImageLoader: ObservableObject {
     storagePath: String,
     displayCacheURL: URL
   ) async -> UIImage? {
-    guard case .display = variant else { return nil }
+    guard case .display = variant else {
+      return nil
+    }
 
-    let originalCacheURL = Self.cacheURL(for: storagePath, variant: .original)
-    guard let cached = await cachedImage(for: originalCacheURL) else { return nil }
-    let displayImage = await Self.displayImage(from: cached, variant: variant)
+    let originalCacheURL: URL = Self.cacheURL(for: storagePath, variant: .original)
+    guard let cached = await cachedImage(for: originalCacheURL) else {
+      return nil
+    }
+    let displayImage: UIImage = await Self.displayImage(from: cached, variant: variant)
     ImageCache.shared.set(displayImage, for: displayCacheURL, policy: .messageAttachment)
     return displayImage
   }
 
   nonisolated static func cacheURL(for storagePath: String, variant: Variant = .original) -> URL {
-    var components = URLComponents()
+    var components: URLComponents = URLComponents()
     components.scheme = "https"
     components.host = "friends-message-cache.local"
     components.path = "/\(storagePath)"
@@ -2218,8 +2319,8 @@ final class FriendsChatImageLoader: ObservableObject {
       break
 
     case .display(let pixelSize):
-      let width = Int(pixelSize.width.rounded())
-      let height = Int(pixelSize.height.rounded())
+      let width: Int = Int(pixelSize.width.rounded())
+      let height: Int = Int(pixelSize.height.rounded())
       components.queryItems = [
         URLQueryItem(name: "variant", value: "display"),
         URLQueryItem(name: "w", value: "\(width)"),
@@ -2244,13 +2345,15 @@ final class FriendsChatImageLoader: ObservableObject {
   }
 
   nonisolated private static func downsampleImage(from data: Data, pixelSize: CGSize) -> UIImage? {
-    let targetPixelSize = normalizedPixelSize(pixelSize)
-    let maxPixelSize = max(targetPixelSize.width, targetPixelSize.height)
-    guard maxPixelSize > 0 else { return UIImage(data: data) }
+    let targetPixelSize: CGSize = normalizedPixelSize(pixelSize)
+    let maxPixelSize: CGFloat = max(targetPixelSize.width, targetPixelSize.height)
+    guard maxPixelSize > 0 else {
+      return UIImage(data: data)
+    }
     guard let imageSource = CGImageSourceCreateWithData(data as CFData, nil) else {
       return UIImage(data: data)
     }
-    let thumbnailMaxPixelSize = thumbnailMaxPixelSize(
+    let thumbnailMaxPixelSize: Int = thumbnailMaxPixelSize(
       for: imageSource,
       targetPixelSize: targetPixelSize
     )
@@ -2283,20 +2386,26 @@ final class FriendsChatImageLoader: ObservableObject {
   nonisolated private static func resizedDisplayImage(from image: UIImage, variant: Variant)
     -> UIImage
   {
-    guard case .display(let pixelSize) = variant else { return image }
-    let targetPixelSize = normalizedPixelSize(pixelSize)
-    guard max(targetPixelSize.width, targetPixelSize.height) > 0 else { return image }
+    guard case .display(let pixelSize) = variant else {
+      return image
+    }
+    let targetPixelSize: CGSize = normalizedPixelSize(pixelSize)
+    guard max(targetPixelSize.width, targetPixelSize.height) > 0 else {
+      return image
+    }
 
-    let sourcePixelWidth = image.size.width * image.scale
-    let sourcePixelHeight = image.size.height * image.scale
-    let sourcePixelSize = CGSize(width: sourcePixelWidth, height: sourcePixelHeight)
-    let resizedPixelSize = coverPixelSize(
+    let sourcePixelWidth: CGFloat = image.size.width * image.scale
+    let sourcePixelHeight: CGFloat = image.size.height * image.scale
+    let sourcePixelSize: CGSize = CGSize(width: sourcePixelWidth, height: sourcePixelHeight)
+    let resizedPixelSize: CGSize = coverPixelSize(
       for: sourcePixelSize,
       targetPixelSize: targetPixelSize
     )
-    guard resizedPixelSize != sourcePixelSize else { return image }
+    guard resizedPixelSize != sourcePixelSize else {
+      return image
+    }
 
-    let format = UIGraphicsImageRendererFormat()
+    let format: UIGraphicsImageRendererFormat = UIGraphicsImageRendererFormat()
     format.scale = 1
     format.opaque = false
 
@@ -2325,12 +2434,12 @@ final class FriendsChatImageLoader: ObservableObject {
       return Int(max(1, max(targetPixelSize.width, targetPixelSize.height)).rounded(.up))
     }
 
-    let sourcePixelSize = orientedPixelSize(
+    let sourcePixelSize: CGSize = orientedPixelSize(
       width: pixelWidth,
       height: pixelHeight,
       properties: properties
     )
-    let resizedPixelSize = coverPixelSize(
+    let resizedPixelSize: CGSize = coverPixelSize(
       for: sourcePixelSize,
       targetPixelSize: targetPixelSize
     )
@@ -2342,7 +2451,7 @@ final class FriendsChatImageLoader: ObservableObject {
     height: CGFloat,
     properties: [CFString: Any]
   ) -> CGSize {
-    let orientation = intProperty(kCGImagePropertyOrientation, in: properties)
+    let orientation: Int? = intProperty(kCGImagePropertyOrientation, in: properties)
     if let orientation, [5, 6, 7, 8].contains(orientation) {
       return CGSize(width: height, height: width)
     }
@@ -2373,16 +2482,18 @@ final class FriendsChatImageLoader: ObservableObject {
     for sourcePixelSize: CGSize,
     targetPixelSize: CGSize
   ) -> CGSize {
-    let sourceWidth = sourcePixelSize.width
-    let sourceHeight = sourcePixelSize.height
-    let targetWidth = targetPixelSize.width
-    let targetHeight = targetPixelSize.height
+    let sourceWidth: CGFloat = sourcePixelSize.width
+    let sourceHeight: CGFloat = sourcePixelSize.height
+    let targetWidth: CGFloat = targetPixelSize.width
+    let targetHeight: CGFloat = targetPixelSize.height
     guard sourceWidth > 0, sourceHeight > 0, targetWidth > 0, targetHeight > 0 else {
       return sourcePixelSize
     }
 
-    let scale = min(1, max(targetWidth / sourceWidth, targetHeight / sourceHeight))
-    guard scale < 1 else { return sourcePixelSize }
+    let scale: CGFloat = min(1, max(targetWidth / sourceWidth, targetHeight / sourceHeight))
+    guard scale < 1 else {
+      return sourcePixelSize
+    }
 
     return CGSize(
       width: max(1, (sourceWidth * scale).rounded(.up)),

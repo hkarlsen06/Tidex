@@ -4,10 +4,11 @@ import Foundation
 import os.log
 import Supabase
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "AdminSettingsViewModel")
+private let kAdminSettingsLogger: Logger =
+  Logger(subsystem: "com.tidex.app", category: "AdminSettingsViewModel")
 
 /// Superadmin user ID - only this user can grant/revoke admin privileges
-private let SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3"
+private let kSuperadminUserID: String = "032d8c2a-9af6-4777-99f0-24e2c4058bf3"
 
 // MARK: - Admin Tab
 
@@ -275,7 +276,7 @@ struct AnyCodable: Codable {
   }
 
   init(from decoder: Decoder) throws {
-    let container = try decoder.singleValueContainer()
+    let container: SingleValueDecodingContainer = try decoder.singleValueContainer()
     if let int = try? container.decode(Int.self) {
       value = int
     } else if let double = try? container.decode(Double.self) {
@@ -296,7 +297,7 @@ struct AnyCodable: Codable {
   }
 
   func encode(to encoder: Encoder) throws {
-    var container = encoder.singleValueContainer()
+    var container: SingleValueEncodingContainer = encoder.singleValueContainer()
     switch value {
     case let int as Int:
       try container.encode(int)
@@ -443,14 +444,14 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
 
   // MARK: - Grouped Tab States
 
-  @Published var usersState = UsersTabState()
-  @Published var subscribersState = SubscribersTabState()
-  @Published var feedbackState = FeedbackTabState()
-  @Published var reportsState = ReportsTabState()
-  @Published var auditLogState = AuditLogTabState()
-  @Published var sharesState = SharesTabState()
-  @Published var notificationsState = NotificationsTabState()
-  @Published var impersonationState = ImpersonationTabState()
+  @Published var usersState: UsersTabState = UsersTabState()
+  @Published var subscribersState: SubscribersTabState = SubscribersTabState()
+  @Published var feedbackState: FeedbackTabState = FeedbackTabState()
+  @Published var reportsState: ReportsTabState = ReportsTabState()
+  @Published var auditLogState: AuditLogTabState = AuditLogTabState()
+  @Published var sharesState: SharesTabState = SharesTabState()
+  @Published var notificationsState: NotificationsTabState = NotificationsTabState()
+  @Published var impersonationState: ImpersonationTabState = ImpersonationTabState()
 
   // MARK: - Legacy Computed Properties (for backwards compatibility with View)
 
@@ -709,8 +710,8 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   // MARK: - Private Properties
 
   private var searchTask: Task<Void, Never>?
-  private let perPage = 20
-  private let adminRouteBaseURL =
+  private let perPage: Int = 20
+  private let adminRouteBaseURL: URL =
     URL(string: "https://tidex.invalid")
     ?? URL(fileURLWithPath: "/")
   private var initialReportId: String?
@@ -723,10 +724,10 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
 
   func loadInitialData() async {
     do {
-      let session = try await AuthSessionManager.shared.getSession()
-      isSuperAdmin = session.normalizedUserId == SUPERADMIN_USER_ID
+      let session: Session = try await AuthSessionManager.shared.getSession()
+      isSuperAdmin = session.normalizedUserId == kSuperadminUserID
     } catch {
-      logger.error("Failed to check superadmin status: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to check superadmin status: \(error.localizedDescription)")
     }
 
     await loadDataForTab(selectedTab)
@@ -769,18 +770,22 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
 
   func searchUsers() {
     searchTask?.cancel()
-    let query = usersSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    let query: String = usersSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
 
     searchTask = Task {
       try? await Task.sleep(nanoseconds: 300_000_000)
-      guard !Task.isCancelled else { return }
+      guard !Task.isCancelled else {
+        return
+      }
       await fetchUsers(page: 1, search: query.isEmpty ? nil : query)
     }
   }
 
   func loadMoreUsers() async {
-    guard usersHasMore, !usersIsLoading else { return }  // swiftlint:disable:this conditional_returns_on_newline
-    let query = usersSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard usersHasMore, !usersIsLoading else {
+      return
+    }
+    let query: String = usersSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
     await fetchUsers(page: usersCurrentPage + 1, search: query.isEmpty ? nil : query, append: true)
   }
 
@@ -788,12 +793,12 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     if !append { usersIsLoading = true }
 
     do {
-      var queryItems = [
+      var queryItems: [URLQueryItem] = [
         URLQueryItem(name: "page", value: String(page)),
         URLQueryItem(name: "perPage", value: String(perPage)),
       ]
       if let search { queryItems.append(URLQueryItem(name: "search", value: search)) }
-      let url = try adminRequestURL(path: "/api/admin/users", queryItems: queryItems)
+      let url: URL = try adminRequestURL(path: "/api/admin/users", queryItems: queryItems)
       let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
 
       if append {
@@ -805,7 +810,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
       usersTotalCount = result.totalCount
       usersHasMore = result.users.count == perPage
     } catch {
-      logger.error("Failed to fetch users: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to fetch users: \(error.localizedDescription)")
       if !append { errorMessage = "Failed to load users" }
     }
 
@@ -819,7 +824,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   func toggleAdmin(user: AdminUserItem) async {
-    guard isSuperAdmin else { return }
+    guard isSuperAdmin else {
+      return
+    }
     await performUserAction(
       endpoint: "/api/admin/users/admin",
       body: ["targetUserId": user.id, "targetEmail": user.email ?? "", "grant": !user.isAdmin])
@@ -843,7 +850,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   private func performUserAction(endpoint: String, body: [String: Any]) async {
-    guard !isPerformingAction else { return }
+    guard !isPerformingAction else {
+      return
+    }
     isPerformingAction = true
     clearMessages()
 
@@ -876,7 +885,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     subscribersIsLoading = true
 
     do {
-      let url = try adminRequestURL(
+      let url: URL = try adminRequestURL(
         path: "/api/admin/subscribers",
         queryItems: [URLQueryItem(name: "filter", value: subscribersFilter.rawValue)]
       )
@@ -889,7 +898,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
         errorMessage = "Failed to load subscribers"
       }
     } catch {
-      logger.error("Failed to fetch subscribers: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to fetch subscribers: \(error.localizedDescription)")
       errorMessage = "Failed to load subscribers"
     }
 
@@ -919,7 +928,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   private func performSubscriberAction(endpoint: String, body: [String: Any]) async {
-    guard !isPerformingAction else { return }
+    guard !isPerformingAction else {
+      return
+    }
     isPerformingAction = true
     clearMessages()
 
@@ -946,12 +957,12 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     feedbackIsLoading = true
 
     do {
-      let url = adminRouteBaseURL.appendingPathComponent("/api/admin/feedback")
+      let url: URL = adminRouteBaseURL.appendingPathComponent("/api/admin/feedback")
       let result: AdminFeedbackResponse = try await makeRequest(url: url, method: "GET")
       feedbackItems = result.feedback
       feedbackTotal = result.total
     } catch {
-      logger.error("Failed to fetch feedback: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to fetch feedback: \(error.localizedDescription)")
       errorMessage = "Failed to load feedback"
     }
 
@@ -959,7 +970,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   func respondToFeedback(_ feedbackId: String, response: String) async {
-    guard !isPerformingAction else { return }
+    guard !isPerformingAction else {
+      return
+    }
     isPerformingAction = true
     clearMessages()
 
@@ -990,14 +1003,14 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     reportsIsLoading = true
 
     do {
-      var queryItems = [
+      var queryItems: [URLQueryItem] = [
         URLQueryItem(name: "limit", value: "50"),
         URLQueryItem(name: "offset", value: "0"),
       ]
       if let reportsStatusFilter {
         queryItems.append(URLQueryItem(name: "status", value: reportsStatusFilter.rawValue))
       }
-      let url = try adminRequestURL(path: "/api/admin/reports", queryItems: queryItems)
+      let url: URL = try adminRequestURL(path: "/api/admin/reports", queryItems: queryItems)
       let result: AdminReportsResponse = try await makeRequest(url: url, method: "GET")
       reportsItems = result.reports
       reportsTotal = result.total
@@ -1014,7 +1027,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
         reportsReviewerNotes = self.selectedReport?.reviewerNotes ?? reportsReviewerNotes
       }
     } catch {
-      logger.error("Failed to fetch reports: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to fetch reports: \(error.localizedDescription)")
       errorMessage = "Failed to load reports"
     }
 
@@ -1029,12 +1042,14 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   func updateReportStatus(_ reportId: String, status: AdminReportStatus, reviewerNotes: String)
     async
   {
-    guard !isPerformingAction else { return }
+    guard !isPerformingAction else {
+      return
+    }
     isPerformingAction = true
     clearMessages()
 
     do {
-      let trimmedNotes = reviewerNotes.trimmingCharacters(in: .whitespacesAndNewlines)
+      let trimmedNotes: String = reviewerNotes.trimmingCharacters(in: .whitespacesAndNewlines)
       let result: AdminActionResponse = try await makeRequest(
         url: adminRouteBaseURL.appendingPathComponent("/api/admin/reports/status"),
         method: "POST",
@@ -1053,7 +1068,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
         errorMessage = "Failed to update report"
       }
     } catch {
-      logger.error("Failed to update report status: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to update report status: \(error.localizedDescription)")
       errorMessage = "Failed to update report"
     }
 
@@ -1066,11 +1081,11 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     auditLogIsLoading = true
 
     do {
-      let url = adminRouteBaseURL.appendingPathComponent("/api/admin/audit-log")
+      let url: URL = adminRouteBaseURL.appendingPathComponent("/api/admin/audit-log")
       let result: AuditLogResponse = try await makeRequest(url: url, method: "GET")
       auditLogEntries = result.entries ?? []
     } catch {
-      logger.error("Failed to fetch audit log: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to fetch audit log: \(error.localizedDescription)")
       errorMessage = "Failed to load audit log"
     }
 
@@ -1087,12 +1102,12 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
       if !sharesSearchQuery.isEmpty {
         queryItems.append(URLQueryItem(name: "search", value: sharesSearchQuery))
       }
-      let url = try adminRequestURL(path: "/api/admin/shares", queryItems: queryItems)
+      let url: URL = try adminRequestURL(path: "/api/admin/shares", queryItems: queryItems)
       let result: SharesResponse = try await makeRequest(url: url, method: "GET")
       shares = result.shares ?? []
       sharesTotalCount = result.totalCount ?? 0
     } catch {
-      logger.error("Failed to fetch shares: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to fetch shares: \(error.localizedDescription)")
       errorMessage = "Failed to load shares"
     }
 
@@ -1103,13 +1118,17 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     searchTask?.cancel()
     searchTask = Task {
       try? await Task.sleep(nanoseconds: 300_000_000)
-      guard !Task.isCancelled else { return }
+      guard !Task.isCancelled else {
+        return
+      }
       await fetchShares()
     }
   }
 
   func deleteShare(_ shareId: String) async {
-    guard !isPerformingAction else { return }
+    guard !isPerformingAction else {
+      return
+    }
     isPerformingAction = true
     clearMessages()
 
@@ -1142,7 +1161,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
       return
     }
 
-    guard !isCreatingShare else { return }
+    guard !isCreatingShare else {
+      return
+    }
     isCreatingShare = true
     clearMessages()
 
@@ -1186,7 +1207,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   func searchShareOwner() {
-    let query = createShareOwnerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+    let query: String = createShareOwnerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
     guard query.count >= 2 else {
       createShareOwnerResults = []
       return
@@ -1195,7 +1216,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     Task {
       isSearchingOwner = true
       do {
-        let url = try adminRequestURL(
+        let url: URL = try adminRequestURL(
           path: "/api/admin/users",
           queryItems: [
             URLQueryItem(name: "search", value: query),
@@ -1223,7 +1244,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   func searchShareViewer() {
-    let query = createShareViewerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+    let query: String = createShareViewerSearch.trimmingCharacters(in: .whitespacesAndNewlines)
     guard query.count >= 2 else {
       createShareViewerResults = []
       return
@@ -1232,7 +1253,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     Task {
       isSearchingViewer = true
       do {
-        let url = try adminRequestURL(
+        let url: URL = try adminRequestURL(
           path: "/api/admin/users",
           queryItems: [
             URLQueryItem(name: "search", value: query),
@@ -1265,12 +1286,12 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     notificationsIsLoading = true
 
     do {
-      let url = adminRouteBaseURL.appendingPathComponent(
+      let url: URL = adminRouteBaseURL.appendingPathComponent(
         "/api/admin/notifications/history")
       let result: BroadcastHistoryResponse = try await makeRequest(url: url, method: "GET")
       broadcastHistory = result.broadcasts
     } catch {
-      logger.error("Failed to fetch broadcast history: \(error.localizedDescription)")
+      kAdminSettingsLogger.error("Failed to fetch broadcast history: \(error.localizedDescription)")
       errorMessage = "Failed to load notification history"
     }
 
@@ -1298,7 +1319,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   func searchNotificationUsers() {
-    let query = notificationUserSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+    let query: String = notificationUserSearch.trimmingCharacters(in: .whitespacesAndNewlines)
     guard query.count >= 2 else {
       notificationUserSearchResults = []
       return
@@ -1307,7 +1328,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     Task {
       isSearchingNotificationUsers = true
       do {
-        let url = try adminRequestURL(
+        let url: URL = try adminRequestURL(
           path: "/api/admin/users",
           queryItems: [
             URLQueryItem(name: "search", value: query),
@@ -1315,7 +1336,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
           ])
         let result: AdminUsersResponse = try await makeRequest(url: url, method: "GET")
         // Filter out already selected users
-        let selectedIds = Set(notificationSelectedUsers.map(\.id))  // swiftlint:disable:this explicit_type_interface
+        let selectedIds: Set<String> = Set(notificationSelectedUsers.map(\.id))
         notificationUserSearchResults = result.users.filter { !selectedIds.contains($0.id) }
       } catch {
         notificationUserSearchResults = []
@@ -1325,7 +1346,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   func selectNotificationUser(_ user: AdminUserItem) {
-    guard !notificationSelectedUsers.contains(where: { $0.id == user.id }) else { return }
+    guard !notificationSelectedUsers.contains(where: { $0.id == user.id }) else {
+      return
+    }
     notificationSelectedUsers.append(user)
     notificationUserSearchResults.removeAll { $0.id == user.id }
     notificationUserSearch = ""
@@ -1338,7 +1361,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   func sendNotification() async {  // swiftlint:disable:this explicit_acl function_body_length type_contents_order
-    let draftBeforeSend = NotificationFormDraft(
+    let draftBeforeSend: NotificationFormDraft = NotificationFormDraft(
       title: notificationTitle,
       titleNo: notificationTitleNo,
       body: notificationBody,
@@ -1443,7 +1466,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     current: NotificationsTabState,
     draft: NotificationFormDraft
   ) -> Bool {
-    guard draft.hasMeaningfulInput else { return false }
+    guard draft.hasMeaningfulInput else {
+      return false
+    }
 
     return current.title.isEmpty
       && current.titleNo.isEmpty
@@ -1475,7 +1500,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   // MARK: - Impersonation Tab Methods
 
   func searchImpersonationUsers() {
-    let query = impersonationUserSearch.trimmingCharacters(in: .whitespacesAndNewlines)
+    let query: String = impersonationUserSearch.trimmingCharacters(in: .whitespacesAndNewlines)
     guard query.count >= 2 else {
       impersonationUserSearchResults = []
       return
@@ -1484,7 +1509,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     Task {
       isSearchingImpersonationUsers = true
       do {
-        let url = try adminRequestURL(
+        let url: URL = try adminRequestURL(
           path: "/api/admin/users",
           queryItems: [
             URLQueryItem(name: "search", value: query),
@@ -1522,7 +1547,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
       return
     }
 
-    let reason = impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines)
+    let reason: String = impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines)
     guard reason.count >= 5 else {
       errorMessage = "Reason must be at least 5 characters"
       return
@@ -1556,16 +1581,17 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   {
     _ = try await AuthSessionManager.shared.getSession()
 
-    let path = normalizedAPIPath(from: url)
-    let queryItems = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+    let path: String = normalizedAPIPath(from: url)
+    let queryItems: [URLQueryItem] =
+      URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
 
     switch (method, path) {
     case ("GET", "/api/admin/users"):
-      let page = intQuery(named: "page", in: queryItems) ?? 1
-      let perPage =
+      let page: Int = intQuery(named: "page", in: queryItems) ?? 1
+      let perPage: Int =
         intQuery(named: "perPage", in: queryItems) ?? intQuery(named: "limit", in: queryItems)
         ?? self.perPage
-      let search = stringQuery(named: "search", in: queryItems)
+      let search: String? = stringQuery(named: "search", in: queryItems)
       return try await rpcRequest(
         "admin_list_users_api",
         params: compactParams([
@@ -1727,7 +1753,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   ) async throws -> T {
     do {
       let payload: [String: Any] = body ?? [:]
-      let encodedBody = try anyJSONBody(payload)
+      let encodedBody: AnyJSON = try anyJSONBody(payload)
       return try await supabase.functions.invoke(
         functionName,
         options: FunctionInvokeOptions(body: encodedBody)
@@ -1759,7 +1785,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
 
     components.queryItems = queryItems.isEmpty ? nil : queryItems
 
-    guard let url = components.url else {
+    guard let url: URL = components.url else {
       throw AdminError.invalidURL
     }
 
@@ -1767,7 +1793,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   private func normalizedAPIPath(from url: URL) -> String {
-    let path = url.path
+    let path: String = url.path
     return path.hasSuffix("/") && path.count > 1 ? String(path.dropLast()) : path
   }
 
@@ -1776,7 +1802,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   private func intQuery(named name: String, in items: [URLQueryItem]) -> Int? {
-    guard let value = stringQuery(named: name, in: items) else { return nil }
+    guard let value = stringQuery(named: name, in: items) else {
+      return nil
+    }
     return Int(value)
   }
 
@@ -1785,7 +1813,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   private func nullableStringBody(_ body: [String: Any]?, key: String) -> AnyJSON? {
-    guard let body, let value = body[key] else { return nil }
+    guard let body, let value = body[key] else {
+      return nil
+    }
     if value is NSNull {
       return .null
     }
@@ -1809,7 +1839,7 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
   }
 
   private func anyJSONBody(_ body: [String: Any]) throws -> AnyJSON {
-    let data = try JSONSerialization.data(withJSONObject: body)
+    let data: Data = try JSONSerialization.data(withJSONObject: body)
     return try AnyJSON.decoder.decode(AnyJSON.self, from: data)
   }
 

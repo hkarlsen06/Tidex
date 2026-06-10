@@ -154,7 +154,7 @@ internal enum SyncEncodingError: LocalizedError {
   /// Technical description for logging
   internal var errorDescription: String? {
     switch self {
-    case let .emptyUpdatePayload(type):
+    case .emptyUpdatePayload(let type):
       return "Empty update payload for \(type)"
 
     case let .payloadDecodingFailed(type, error):
