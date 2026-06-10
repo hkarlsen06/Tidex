@@ -1,18 +1,34 @@
 import SwiftUI
 
 /// Dot indicators for onboarding page progress
-struct PageIndicator: View {
-  let totalPages: Int
-  let currentPage: Int
+internal struct PageIndicator: View {
+  private static let inactiveOpacity: Double = 0.4
+  private static let dotSize: CGFloat = 8
+  private static let selectedScale: CGFloat = 1.2
+  private static let animationResponse: Double = 0.3
+  private static let animationDampingFraction: Double = 0.7
 
-  var body: some View {
+  internal let totalPages: Int
+  internal let currentPage: Int
+
+  internal var body: some View {
     HStack(spacing: Spacing.xs) {
       ForEach(0..<totalPages, id: \.self) { index in
         Circle()
-          .fill(index == currentPage ? Color.tidexBlue : Color.tidexTextMuted.opacity(0.4))
-          .frame(width: 8, height: 8)
-          .scaleEffect(index == currentPage ? 1.2 : 1.0)
-          .animation(.spring(response: 0.3, dampingFraction: 0.7), value: currentPage)
+          .fill(
+            index == currentPage
+              ? Color.tidexBlue
+              : Color.tidexTextMuted.opacity(Self.inactiveOpacity)
+          )
+          .frame(width: Self.dotSize, height: Self.dotSize)
+          .scaleEffect(index == currentPage ? Self.selectedScale : 1.0)
+          .animation(
+            .spring(
+              response: Self.animationResponse,
+              dampingFraction: Self.animationDampingFraction
+            ),
+            value: currentPage
+          )
       }
     }
   }

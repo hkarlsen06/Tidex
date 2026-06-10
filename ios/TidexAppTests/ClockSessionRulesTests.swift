@@ -1,3 +1,4 @@
+import Nimble
 import XCTest
 
 @testable import Tidex
@@ -6,7 +7,7 @@ internal final class ClockSessionRulesTests: XCTestCase {
   internal func testTimeStringUsesHHmmFormat() {
     let date: Date = Date.fromDateAndTime("2026-03-02", time: "09:07") ?? Date()
 
-    XCTAssertEqual(ClockSessionRules.timeString(from: date), "09:07")
+    expect(ClockSessionRules.timeString(from: date)) == "09:07"
   }
 
   internal func testHasExceededEndOfDayLimitOnlyAfterCutoff() {
@@ -22,8 +23,8 @@ internal final class ClockSessionRulesTests: XCTestCase {
     let atCutoff: Date = Date.fromDateAndTime("2026-03-02", time: "23:59") ?? Date()
     let afterCutoff: Date = Date.fromDateAndTime("2026-03-03", time: "00:00") ?? Date()
 
-    XCTAssertFalse(ClockSessionRules.hasExceededEndOfDayLimit(session, at: atCutoff))
-    XCTAssertTrue(ClockSessionRules.hasExceededEndOfDayLimit(session, at: afterCutoff))
+    expect(ClockSessionRules.hasExceededEndOfDayLimit(session, at: atCutoff)) == false
+    expect(ClockSessionRules.hasExceededEndOfDayLimit(session, at: afterCutoff)) == true
   }
 
   internal func testIsShiftOngoingForSameDayShift() {
@@ -35,8 +36,8 @@ internal final class ClockSessionRulesTests: XCTestCase {
     let withinShift: Date = Date.fromDateAndTime("2026-03-02", time: "12:00") ?? Date()
     let afterShift: Date = Date.fromDateAndTime("2026-03-02", time: "17:00") ?? Date()
 
-    XCTAssertTrue(ClockSessionRules.isShiftOngoing(shift, at: withinShift))
-    XCTAssertFalse(ClockSessionRules.isShiftOngoing(shift, at: afterShift))
+    expect(ClockSessionRules.isShiftOngoing(shift, at: withinShift)) == true
+    expect(ClockSessionRules.isShiftOngoing(shift, at: afterShift)) == false
   }
 
   internal func testIsShiftOngoingHandlesCrossMidnightShift() {
@@ -50,9 +51,9 @@ internal final class ClockSessionRulesTests: XCTestCase {
     let afterMidnight: Date = Date.fromDateAndTime("2026-03-03", time: "01:00") ?? Date()
     let ended: Date = Date.fromDateAndTime("2026-03-03", time: "06:00") ?? Date()
 
-    XCTAssertTrue(ClockSessionRules.isShiftOngoing(shift, at: beforeMidnight))
-    XCTAssertTrue(ClockSessionRules.isShiftOngoing(shift, at: afterMidnight))
-    XCTAssertFalse(ClockSessionRules.isShiftOngoing(shift, at: ended))
+    expect(ClockSessionRules.isShiftOngoing(shift, at: beforeMidnight)) == true
+    expect(ClockSessionRules.isShiftOngoing(shift, at: afterMidnight)) == true
+    expect(ClockSessionRules.isShiftOngoing(shift, at: ended)) == false
   }
 
   internal func testIsShiftOngoingReturnsFalseForInvalidDate() {
@@ -64,7 +65,7 @@ internal final class ClockSessionRulesTests: XCTestCase {
 
     let reference: Date = Date.fromDateAndTime("2026-03-02", time: "12:00") ?? Date()
 
-    XCTAssertFalse(ClockSessionRules.isShiftOngoing(shift, at: reference))
+    expect(ClockSessionRules.isShiftOngoing(shift, at: reference)) == false
   }
 
   internal func testIsShiftOngoingReturnsFalseForInvalidTimes() {
@@ -76,7 +77,7 @@ internal final class ClockSessionRulesTests: XCTestCase {
 
     let reference: Date = Date.fromDateAndTime("2026-03-02", time: "12:00") ?? Date()
 
-    XCTAssertFalse(ClockSessionRules.isShiftOngoing(shift, at: reference))
+    expect(ClockSessionRules.isShiftOngoing(shift, at: reference)) == false
   }
 
   deinit {
