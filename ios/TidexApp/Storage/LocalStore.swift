@@ -1,8 +1,8 @@
-// swiftlint:disable explicit_type_interface
+// swiftlint:disable explicit_type_interface file_length sorted_imports type_body_length
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let kLocalStoreLogger = Logger(subsystem: "com.tidex.app", category: "LocalStore")
 private let kLogIdentifierPrefixLength = 8
@@ -212,6 +212,16 @@ internal actor LocalStoreActor {
   /// Save changes to the context
   internal func save() throws {
     try modelContext.save()
+  }
+
+  /// Save changes and return an error description instead of throwing.
+  internal func saveErrorDescription() -> String? {
+    do {
+      try modelContext.save()
+      return nil
+    } catch {
+      return error.localizedDescription
+    }
   }
 
   // MARK: - Read Operations (Local Only)

@@ -1,5 +1,6 @@
-import os.log
 import SwiftUI
+// swiftlint:disable:next sorted_imports
+import os.log
 
 private let kLogger: Logger = Logger(subsystem: "no.tidex.app", category: "ShiftsView")
 
@@ -88,7 +89,7 @@ private struct ListWeekGroup: Identifiable {
 
 /// Shifts tab view - displays list of user's shifts grouped by week
 /// Supports month navigation, pull-to-refresh, swipe gestures, and calendar/list view toggle
-internal struct ShiftsView: View {
+internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize: DynamicTypeSize
@@ -1327,9 +1328,9 @@ internal struct ShiftsView: View {
   private var calendarPanelForIPad: some View {
     PullToRefreshContainer(onRefresh: {
       await refreshShiftsContent()
-    }) {
+    }) {  // swiftlint:disable:this closure_body_length
       GeometryReader { _ in  // swiftlint:disable:this closure_body_length
-        ZStack {
+        ZStack {  // swiftlint:disable:this closure_body_length
           // Background layer to dismiss selection when tapping outside calendar
           Color.clear
             .contentShape(Rectangle())
@@ -1340,7 +1341,7 @@ internal struct ShiftsView: View {
             }
 
           // Calendar content - centered
-          VStack {
+          VStack {  // swiftlint:disable:this closure_body_length
             Spacer()
             ShiftsCalendarView(
               shifts: viewModel.shifts,
@@ -1363,6 +1364,14 @@ internal struct ShiftsView: View {
               onDayLongPressed: { dateISO, shiftsOnDay in
                 selectionHaptic.selectionChanged()
                 presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
+              },
+              onSwipeLeft: {
+                AppearanceTracker.shared.reset()
+                viewModel.goToNextMonth()
+              },
+              onSwipeRight: {
+                AppearanceTracker.shared.reset()
+                viewModel.goToPreviousMonth()
               },
               selectedDates: $viewModel.selectedDates,
               confirmingDelete: viewModel.confirmingDelete,
@@ -1454,18 +1463,6 @@ internal struct ShiftsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .contentShape(Rectangle())
-      .monthSwipeGesture(
-        onSwipeLeft: {
-          AppearanceTracker.shared.reset()
-          viewModel.goToNextMonth()
-        },
-        onSwipeRight: {
-          AppearanceTracker.shared.reset()
-          viewModel.goToPreviousMonth()
-        },
-        isEnabled: !viewModel.isSelectionModeEnabled
-      )
     }
   }
 
@@ -1547,10 +1544,10 @@ internal struct ShiftsView: View {
   private var calendarViewContent: some View {
     PullToRefreshContainer(onRefresh: {
       await refreshShiftsContent()
-    }) {
+    }) {  // swiftlint:disable:this closure_body_length
       GeometryReader { _ in  // swiftlint:disable:this closure_body_length
         // Calendar only - no list below. Tapping days opens day sheet.
-        ZStack {
+        ZStack {  // swiftlint:disable:this closure_body_length
           // Background layer to dismiss selection when tapping outside calendar
           Color.clear
             .contentShape(Rectangle())
@@ -1561,7 +1558,7 @@ internal struct ShiftsView: View {
             }
 
           // Calendar content - centered between toolbar and month picker
-          VStack {
+          VStack {  // swiftlint:disable:this closure_body_length
             Spacer()
             ShiftsCalendarView(
               shifts: viewModel.shifts,
@@ -1584,6 +1581,14 @@ internal struct ShiftsView: View {
               onDayLongPressed: { dateISO, shiftsOnDay in
                 selectionHaptic.selectionChanged()
                 presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
+              },
+              onSwipeLeft: {
+                AppearanceTracker.shared.reset()
+                viewModel.goToNextMonth()
+              },
+              onSwipeRight: {
+                AppearanceTracker.shared.reset()
+                viewModel.goToPreviousMonth()
               },
               selectedDates: $viewModel.selectedDates,
               confirmingDelete: viewModel.confirmingDelete,
@@ -1682,18 +1687,6 @@ internal struct ShiftsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .contentShape(Rectangle())
-      .monthSwipeGesture(
-        onSwipeLeft: {
-          AppearanceTracker.shared.reset()
-          viewModel.goToNextMonth()
-        },
-        onSwipeRight: {
-          AppearanceTracker.shared.reset()
-          viewModel.goToPreviousMonth()
-        },
-        isEnabled: !viewModel.isSelectionModeEnabled
-      )
     }
   }
 
@@ -2190,4 +2183,4 @@ internal struct ShiftsView: View {
   }
 
   return PreviewWrapper()
-}
+}  // swiftlint:disable:this file_length

@@ -9,12 +9,12 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_magic_numbers prefixed_toplevel_constant type_body_length
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable type_contents_order
+// swiftlint:disable sorted_imports type_contents_order
 import Combine
 import Foundation
-import os
 import Supabase
 import UIKit
+import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
@@ -928,6 +928,7 @@ final class AppCoordinator: ObservableObject {
 
     runTrackedTask { [weak self] in
       guard let self else { return }
+      await coordinator.loadTrackingState(userId: userId)
       _ = await coordinator.sync(reason: .appLaunch, userId: userId)
 
       let settings = await MainActor.run { () -> UserSettings? in
@@ -988,6 +989,7 @@ final class AppCoordinator: ObservableObject {
           await appDelegate.registerCachedAPNsTokenIfNeeded()
         }
 
+        await syncCoordinator.loadTrackingState(userId: userId)
         _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
 
         // Update Apple Watch with latest shift data after foreground sync
@@ -1455,6 +1457,7 @@ final class AppCoordinator: ObservableObject {
 
       // Run sync and WAIT for it to complete (unlike normal flow which runs in background)
       initialSyncComplete = false
+      await syncCoordinator.loadTrackingState(userId: currentUserId)
       _ = await syncCoordinator.sync(reason: .appLaunch, userId: currentUserId)
       initialSyncComplete = true
 
