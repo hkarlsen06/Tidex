@@ -113,7 +113,7 @@ extension LocalStoreActor {
       deletedAt: nil
     )
     let dirtyFields =
-      (try? canonicalJSONEncoder.encode(PayrollAdjustmentField.allCases.map(\.rawValue)))
+      (try? kCanonicalJSONEncoder.encode(PayrollAdjustmentField.allCases.map(\.rawValue)))
       ?? Data()
     let local = LocalPayrollAdjustment(
       id: id,

@@ -42,7 +42,7 @@ final class LocalEvent {
       guard !dirtyFields.isEmpty else { return [] }
 
       do {
-        let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+        let keys = try kSyncJSONDecoder.decode([String].self, from: dirtyFields)
         return Set(keys.compactMap { EventField(rawValue: $0) })
       } catch {
         SyncLogger.shared.log(
@@ -54,7 +54,7 @@ final class LocalEvent {
     }
     set {
       let keys = newValue.map(\.rawValue)
-      dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
+      dirtyFields = (try? kCanonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
 
@@ -107,7 +107,7 @@ final class LocalEvent {
   }
 
   static func emptyDirtyFields() -> Data {
-    (try? canonicalJSONEncoder.encode([String]())) ?? Data()
+    (try? kCanonicalJSONEncoder.encode([String]())) ?? Data()
   }
 
   static func normalizedReminderMinutes(_ minutes: [Int]?) -> [Int] {
@@ -187,11 +187,11 @@ struct EventServerSnapshot: Codable, Equatable {
   }
 
   func encoded() -> Data {
-    (try? canonicalJSONEncoder.encode(self)) ?? Data()
+    (try? kCanonicalJSONEncoder.encode(self)) ?? Data()
   }
 
   static func decode(from data: Data) -> Self? {
-    try? syncJSONDecoder.decode(Self.self, from: data)
+    try? kSyncJSONDecoder.decode(Self.self, from: data)
   }
 
   func changedFields(from other: Self) -> Set<EventField> {

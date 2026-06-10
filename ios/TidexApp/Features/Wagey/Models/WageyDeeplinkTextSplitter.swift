@@ -64,7 +64,7 @@ enum WageyDeeplinkTextSplitter {  // swiftlint:disable:this explicit_acl explici
   }
 
   private static func appendText(_ text: String, to segments: inout [WageyDeeplinkTextSegment]) {
-    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)  // swiftlint:disable:this explicit_type_interface
+    let trimmed: String = text.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }  // swiftlint:disable:this conditional_returns_on_newline
     segments.append(.text(trimmed))
   }

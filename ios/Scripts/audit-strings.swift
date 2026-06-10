@@ -1,4 +1,5 @@
 #!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable:next blanket_disable_command
 // swiftlint:disable file_length
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable anonymous_argument_in_multiline_closure conditional_returns_on_newline

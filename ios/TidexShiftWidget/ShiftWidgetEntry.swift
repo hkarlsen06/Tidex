@@ -1,54 +1,54 @@
 import WidgetKit
 
 /// Layout state for the widget - determines which layout to render
-enum WidgetLayoutState {
-  /// State A: Today or tomorrow - shows start time prominently with end time and salute
-  case todayOrTomorrow
+internal enum WidgetLayoutState {
   /// State B: More than 1 day away - shows countdown in days with time range
   case countdown
-  /// State C: Past shift - shows "X days ago" when no future shifts
-  case pastShift
   /// Empty/placeholder state - no shift available
   case empty
+  /// State C: Past shift - shows "X days ago" when no future shifts
+  case pastShift
+  /// State A: Today or tomorrow - shows start time prominently with end time and salute
+  case todayOrTomorrow
 }
 
 /// Timeline entry for the Shift Home Widget
-struct ShiftWidgetEntry: TimelineEntry {
+internal struct ShiftWidgetEntry: TimelineEntry {
   /// The date for this timeline entry (used by WidgetKit for scheduling)
-  let date: Date
+  internal let date: Date
 
   /// Formatted shift date: "I dag", "I morgen", "Man 12." etc.
-  let shiftDate: String
+  internal let shiftDate: String
 
   /// Start time in HH:MM format (always includes minutes for clarity)
-  let startTime: String
+  internal let startTime: String
 
   /// End time in HH:MM format
-  let endTime: String
+  internal let endTime: String
 
   /// Formatted net earnings after tax, e.g., "892 kr"
-  let netEarnings: String
+  internal let netEarnings: String
 
   /// Random motivational salute phrase
-  let salute: String
+  internal let salute: String
 
   /// Whether there's a shift to display (false shows placeholder)
-  let hasShift: Bool
+  internal let hasShift: Bool
 
   /// Number of days until the shift (using midnight-crossing logic)
-  let daysRemaining: Int
+  internal let daysRemaining: Int
 
   /// The layout state determining which view to render
-  let layoutState: WidgetLayoutState
+  internal let layoutState: WidgetLayoutState
 
   /// Whether the shift has already started (used to swap time emphasis)
-  let shiftHasStarted: Bool
+  internal let shiftHasStarted: Bool
 
   /// Whether the shift has already ended (used to show "Ferdig" / "Done")
-  let shiftHasEnded: Bool
+  internal let shiftHasEnded: Bool
 
   /// Deep link URL to open the shift in the app (e.g., "tidex://shifts?dates=2025-01-15")
-  let deepLinkURL: URL?
+  internal let deepLinkURL: URL?
 
   /// Placeholder entry for widget gallery and loading states
   internal static func placeholder() -> Self {

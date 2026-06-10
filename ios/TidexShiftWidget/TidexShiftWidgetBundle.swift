@@ -2,8 +2,8 @@ import SwiftUI
 import WidgetKit
 
 @main
-struct TidexShiftWidgetBundle: WidgetBundle {
-  var body: some Widget {
+internal struct TidexShiftWidgetBundle: WidgetBundle {
+  internal var body: some Widget {
     ShiftHomeWidget()
     ShiftLockScreenWidget()
     ShiftLiveActivity()

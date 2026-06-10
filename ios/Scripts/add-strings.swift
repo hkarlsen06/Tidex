@@ -1,4 +1,5 @@
 #!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable:next blanket_disable_command
 // swiftlint:disable conditional_returns_on_newline cyclomatic_complexity
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable discouraged_optional_collection explicit_type_interface file_types_order

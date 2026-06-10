@@ -182,7 +182,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
           )
         )
 
-        let previousMonthShifts = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
+        let previousMonthShifts: [ShiftWithComputations] = PayrollEngine.computeShiftsForMonth(
           .init(
             year: previousYM.year,
             month: previousYM.month,

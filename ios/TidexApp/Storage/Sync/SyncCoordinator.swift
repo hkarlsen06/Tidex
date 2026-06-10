@@ -1215,10 +1215,10 @@ final class SyncCoordinator: ObservableObject {
         table: .userShifts, id: serverRow.id, rawValue: serverRow.shift_date)
     }
     let supplementsData = serverRow.custom_supplements.flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
     let pauseWindowsData = PauseWindowSupport.normalize(serverRow.custom_pause_windows).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
 
     let snapshot = UserShiftServerSnapshot.from(
@@ -1733,16 +1733,16 @@ final class SyncCoordinator: ObservableObject {
       startTime: serverRow.cleanStartTime,
       endTime: serverRow.cleanEndTime,
       repeatIntervalWeeks: serverRow.repeat_interval_weeks,
-      selectedDays: try canonicalJSONEncoder.encode(serverRow.selected_days),
-      endCondition: serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) },
-      exclusions: serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) },
+      selectedDays: try kCanonicalJSONEncoder.encode(serverRow.selected_days),
+      endCondition: serverRow.end_condition.flatMap { try? kCanonicalJSONEncoder.encode($0) },
+      exclusions: serverRow.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) },
       dateSpecificPauseWindows: PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
-        .flatMap { try? canonicalJSONEncoder.encode($0) },
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) },
       dateSpecificSupplements: serverRow.date_specific_supplements.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       },
       dateSpecificNotes: ShiftNoteSupport.normalizeDateSpecificNotes(serverRow.date_specific_notes)
-        .flatMap { try? canonicalJSONEncoder.encode($0) },
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) },
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
       serverDeletedAt: serverDeletedAt,
@@ -1982,7 +1982,7 @@ final class SyncCoordinator: ObservableObject {
       hourlyWage: serverRow.hourly_wage,
       wageLevel: serverRow.wage_level,
       tariffTypeId: serverRow.tariff_type_id,
-      supplements: (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
+      supplements: (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
       taxEnabled: serverRow.tax_enabled,
       taxPercentage: serverRow.tax_percentage,
       breakEnabled: serverRow.break_enabled,
@@ -2558,7 +2558,7 @@ final class SyncCoordinator: ObservableObject {
     let localSettings = LocalUserSettings(
       userId: serverRow.user_id,
       monthlyGoal: serverRow.monthly_goal,
-      monthlyGoalsByMonthData: (try? canonicalJSONEncoder.encode(
+      monthlyGoalsByMonthData: (try? kCanonicalJSONEncoder.encode(
         serverRow.monthly_goals_by_month ?? [:]))
         ?? Data(),
       defaultShiftsView: serverRow.default_shifts_view,

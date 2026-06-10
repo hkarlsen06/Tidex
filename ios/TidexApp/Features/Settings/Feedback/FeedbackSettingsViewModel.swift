@@ -113,6 +113,10 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
     // Default initializer required for SwiftLint's explicit initialization policy.
   }
 
+  deinit {
+    // Required by SwiftLint.
+  }
+
   // MARK: - Public Methods
 
   /// Load initial data - user info and feedback history
@@ -131,7 +135,9 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
       await fetchFeedbackHistory()
 
     } catch {
-      FeedbackSettingsConstants.logger.error("Failed to get user session: \(error.localizedDescription)")
+      FeedbackSettingsConstants.logger.error(
+        "Failed to get user session: \(error.localizedDescription)"
+      )
       if AuthSessionManager.shared.isTransientSessionResolutionError(error),
         let offlineUserId = AuthSessionManager.shared.offlineUserIdFallback()
       {
@@ -167,7 +173,8 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
     }
 
     guard trimmedMessage.count <= FeedbackSettingsConstants.maxFeedbackLength else {
-      errorMessage = "Feedback must be \(FeedbackSettingsConstants.maxFeedbackLength) characters or less"
+      errorMessage =
+        "Feedback must be \(FeedbackSettingsConstants.maxFeedbackLength) characters or less"
       return
     }
 
@@ -175,28 +182,16 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
     errorMessage = nil
 
     do {
-      let feedback = FeedbackInsert(
+      try await submitFeedback(
         userId: userId,
-        message: trimmedMessage,
-        userEmail: userEmail
+        userEmail: userEmail,
+        message: trimmedMessage
       )
-
-      try await supabase
-        .from("feedback")
-        .insert(feedback)
-        .execute()
-
-      FeedbackSettingsConstants.logger.info("Feedback submitted successfully")
-
-      // Clear the form and show success
-      message = ""
-      showSuccess = true
-
-      // Refresh history
-      await fetchFeedbackHistory()
-
+      await handleSuccessfulSubmission()
     } catch {
-      FeedbackSettingsConstants.logger.error("Failed to submit feedback: \(error.localizedDescription)")
+      FeedbackSettingsConstants.logger.error(
+        "Failed to submit feedback: \(error.localizedDescription)"
+      )
       errorMessage = "Failed to send feedback. Please try again."
     }
 
@@ -224,6 +219,26 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
 
   // MARK: - Private Methods
 
+  private func submitFeedback(userId: String, userEmail: String, message: String) async throws {
+    let feedback: FeedbackInsert = .init(
+      userId: userId,
+      message: message,
+      userEmail: userEmail
+    )
+
+    try await supabase
+      .from("feedback")
+      .insert(feedback)
+      .execute()
+  }
+
+  private func handleSuccessfulSubmission() async {
+    FeedbackSettingsConstants.logger.info("Feedback submitted successfully")
+    message = ""
+    showSuccess = true
+    await fetchFeedbackHistory()
+  }
+
   /// Fetch user's feedback history
   private func fetchFeedbackHistory() async {
     guard let userId else {
@@ -244,7 +259,9 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
       FeedbackSettingsConstants.logger.info("Fetched \(items.count) feedback items")
 
     } catch {
-      FeedbackSettingsConstants.logger.error("Failed to fetch feedback history: \(error.localizedDescription)")
+      FeedbackSettingsConstants.logger.error(
+        "Failed to fetch feedback history: \(error.localizedDescription)"
+      )
       // Don't show error for history fetch failure
     }
   }
@@ -252,7 +269,7 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
 
 // MARK: - Date Formatting Helpers
 
-internal extension FeedbackItem {
+extension FeedbackItem {
   /// Format the created_at date for display
   func formattedDate(locale: Locale) -> String {
     let formatter = ISO8601DateFormatter()

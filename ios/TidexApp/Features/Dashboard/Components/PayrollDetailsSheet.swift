@@ -1128,7 +1128,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
   }
 
   private func normalizedNote() -> String? {
-    let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)  // swiftlint:disable:this explicit_type_interface
+    let trimmed: String = note.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
   }
 

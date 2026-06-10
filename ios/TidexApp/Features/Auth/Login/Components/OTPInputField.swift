@@ -1,60 +1,91 @@
 import SwiftUI
 import UIKit
 
+// MARK: - Digit Box
+
+/// Individual digit display box - extracted for performance
+private struct DigitBox: View {
+  private let cursorWidth: CGFloat = 2
+  private let cursorHeight: CGFloat = 24
+  private let activeBorderWidth: CGFloat = 2
+  private let inactiveBorderWidth: CGFloat = 1
+  private let boxWidth: CGFloat = 48
+  private let boxHeight: CGFloat = 56
+
+  private let digit: String?
+  private let isCurrentPosition: Bool
+  private let hasError: Bool
+  private let isFilled: Bool
+  private let cursorVisible: Bool
+
+  private var body: some View {
+    ZStack {
+      // Background
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
+        .fill(Color.tidexSurfaceSecondary)
+
+      // Border
+      RoundedRectangle(cornerRadius: CornerRadius.sm)
+        .stroke(borderColor, lineWidth: isCurrentPosition ? activeBorderWidth : inactiveBorderWidth)
+
+      // Digit or cursor
+      if let digit {
+        Text(digit)
+          .font(.tidexMonoTitle)
+          .foregroundColor(.tidexTextPrimary)
+      } else if isCurrentPosition, cursorVisible {
+        // Blinking cursor
+        RoundedRectangle(cornerRadius: inactiveBorderWidth)
+          .fill(Color.tidexBrandPrimary)
+          .frame(width: cursorWidth, height: cursorHeight)
+      }
+    }
+    .frame(width: boxWidth, height: boxHeight)
+  }
+
+  private var borderColor: Color {
+    if hasError {
+      return .tidexError
+    }
+    if isCurrentPosition {
+      return .tidexBrandPrimary
+    }
+    if isFilled {
+      return .tidexBorder
+    }
+    return .tidexBorderSubtle
+  }
+}
+
 /// 6-digit OTP input field with individual digit boxes
 /// Optimized for instant keyboard response
-struct OTPInputField: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+internal struct OTPInputField: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion: Bool
 
-  @Binding var code: String
-  // swiftlint:disable:next explicit_acl
-  var error: String?
-  // swiftlint:disable:next explicit_acl
-  var onComplete: (() -> Void)?
-  var autoFocus: Bool = true
+  @Binding internal var code: String
+  internal var error: String?
+  internal var onComplete: (() -> Void)?
+  internal var autoFocus: Bool = true
 
   @FocusState private var isFocused: Bool
-  @State private var cursorVisible = true
+  @State private var cursorVisible: Bool = true
   @State private var cursorTimer: Timer?
 
-  private let digitCount = 6
+  private let digitCount: Int = 6
+  private let cursorBlinkInterval: TimeInterval = 0.5
+  private let textFieldHeight: CGFloat = 56
 
-  var body: some View {
+  internal var body: some View {
     VStack(spacing: Spacing.xs) {
-      // Visual digit boxes with hidden TextField overlay
       ZStack {
-        // Visual digit boxes (behind the text field)
-        HStack(spacing: Spacing.xs) {
-          ForEach(0..<digitCount, id: \.self) { index in
-            DigitBox(
-              digit: getDigit(at: index),
-              isCurrentPosition: index == code.count && isFocused,
-              hasError: error != nil,
-              isFilled: index < code.count,
-              cursorVisible: cursorVisible
-            )
-          }
-        }
-
-        // Text field on top - transparent but receives all touches including autofill
-        TextField("", text: $code)
-          .keyboardType(.numberPad)
-          .textContentType(.oneTimeCode)
-          .focused($isFocused)
-          .foregroundColor(.clear)
-          .tint(.clear)
-          .accentColor(.clear)
-          .frame(maxWidth: .infinity)
-          .frame(height: 56)
-          .accessibilityLabel(Text(.securityPasswordOtpLabel))
-          .onChange(of: code) { _, newValue in
-            handleCodeChange(newValue)
-          }
+        digitBoxes
+        hiddenTextField
       }
       .onTapGesture {
         isFocused = true
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
       }
+      .accessibilityAddTraits(.isButton)
 
       // Error message
       if let error, !error.isEmpty {
@@ -78,10 +109,39 @@ struct OTPInputField: View {
     }
   }
 
+  private var digitBoxes: some View {
+    HStack(spacing: Spacing.xs) {
+      ForEach(0..<digitCount, id: \.self) { index in
+        DigitBox(
+          digit: getDigit(at: index),
+          isCurrentPosition: index == code.count && isFocused,
+          hasError: error != nil,
+          isFilled: index < code.count,
+          cursorVisible: cursorVisible
+        )
+      }
+    }
+  }
+
+  private var hiddenTextField: some View {
+    TextField("", text: $code)
+      .keyboardType(.numberPad)
+      .textContentType(.oneTimeCode)
+      .focused($isFocused)
+      .foregroundColor(.clear)
+      .tint(.clear)
+      .accentColor(.clear)
+      .frame(maxWidth: .infinity)
+      .frame(height: textFieldHeight)
+      .accessibilityLabel(Text(.securityPasswordOtpLabel))
+      .onChange(of: code) { _, newValue in
+        handleCodeChange(newValue)
+      }
+  }
+
   private func handleCodeChange(_ newValue: String) {
     // Filter non-digits and limit to 6 characters
-    // swiftlint:disable:next explicit_type_interface
-    let filtered = newValue.filter(\.isNumber)
+    let filtered: String = newValue.filter(\.isNumber)
     if filtered.count > digitCount {
       code = String(filtered.prefix(digitCount))
     } else if filtered != newValue {
@@ -101,8 +161,10 @@ struct OTPInputField: View {
   }
 
   private func getDigit(at index: Int) -> String? {
-    guard index < code.count else { return nil }
-    let stringIndex = code.index(code.startIndex, offsetBy: index)
+    guard index < code.count else {
+      return nil
+    }
+    let stringIndex: String.Index = code.index(code.startIndex, offsetBy: index)
     return String(code[stringIndex])
   }
 
@@ -115,58 +177,9 @@ struct OTPInputField: View {
       return
     }
 
-    cursorTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+    cursorTimer = Timer.scheduledTimer(withTimeInterval: cursorBlinkInterval, repeats: true) { _ in
       cursorVisible.toggle()
     }
-  }
-}
-
-// MARK: - Digit Box
-
-/// Individual digit display box - extracted for performance
-private struct DigitBox: View {
-  let digit: String?
-  let isCurrentPosition: Bool
-  let hasError: Bool
-  let isFilled: Bool
-  let cursorVisible: Bool
-
-  var body: some View {
-    ZStack {
-      // Background
-      RoundedRectangle(cornerRadius: CornerRadius.sm)
-        .fill(Color.tidexSurfaceSecondary)
-
-      // Border
-      RoundedRectangle(cornerRadius: CornerRadius.sm)
-        .stroke(borderColor, lineWidth: isCurrentPosition ? 2 : 1)
-
-      // Digit or cursor
-      if let digit {
-        Text(digit)
-          .font(.tidexMonoTitle)
-          .foregroundColor(.tidexTextPrimary)
-      } else if isCurrentPosition, cursorVisible {
-        // Blinking cursor
-        RoundedRectangle(cornerRadius: 1)
-          .fill(Color.tidexBrandPrimary)
-          .frame(width: 2, height: 24)
-      }
-    }
-    .frame(width: 48, height: 56)
-  }
-
-  private var borderColor: Color {
-    if hasError {
-      return .tidexError
-    }
-    if isCurrentPosition {
-      return .tidexBrandPrimary
-    }
-    if isFilled {
-      return .tidexBorder
-    }
-    return .tidexBorderSubtle
   }
 }
 

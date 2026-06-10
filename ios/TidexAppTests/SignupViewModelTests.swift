@@ -3,9 +3,9 @@ import XCTest
 @testable import Tidex
 
 @MainActor
-final class SignupViewModelTests: XCTestCase {
-  func testEmailSignupRequiresTermsAcceptanceBeforeNetworkWork() async {
-    let viewModel = SignupViewModel()
+internal final class SignupViewModelTests: XCTestCase {
+  internal func testEmailSignupRequiresTermsAcceptanceBeforeNetworkWork() async {
+    let viewModel: SignupViewModel = SignupViewModel()
     viewModel.firstName = "Test"
     viewModel.lastName = "User"
     viewModel.emailOrPhone = "test@example.com"
@@ -17,12 +17,16 @@ final class SignupViewModelTests: XCTestCase {
     XCTAssertFalse(viewModel.isLoading)
   }
 
-  func testOAuthSignupRequiresTermsAcceptanceBeforeProviderWork() async {
-    let viewModel = SignupViewModel()
+  internal func testOAuthSignupRequiresTermsAcceptanceBeforeProviderWork() async {
+    let viewModel: SignupViewModel = SignupViewModel()
 
     await viewModel.signUpWithGoogle()
 
     XCTAssertEqual(viewModel.fieldErrors.terms, String(localized: .acceptTermsDescription))
     XCTAssertFalse(viewModel.isLoading)
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

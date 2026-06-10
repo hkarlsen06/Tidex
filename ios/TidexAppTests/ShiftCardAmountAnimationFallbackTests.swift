@@ -2,9 +2,9 @@ import XCTest
 
 @testable import Tidex
 
-final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
-  func testReturnsPreviousAmountWhenTrailingBottomContentAppears() {
-    let animateFrom = ShiftCardAmountAnimationFallback.animateFrom(
+internal final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
+  internal func testReturnsPreviousAmountWhenTrailingBottomContentAppears() {
+    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 12_500,
       previousHasTrailingBottomContent: false,
       currentHasTrailingBottomContent: true
@@ -13,8 +13,8 @@ final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
     XCTAssertEqual(animateFrom, 12_500)
   }
 
-  func testReturnsPreviousAmountWhenTrailingBottomContentDisappears() {
-    let animateFrom = ShiftCardAmountAnimationFallback.animateFrom(
+  internal func testReturnsPreviousAmountWhenTrailingBottomContentDisappears() {
+    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 18_900,
       previousHasTrailingBottomContent: true,
       currentHasTrailingBottomContent: false
@@ -23,8 +23,8 @@ final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
     XCTAssertEqual(animateFrom, 18_900)
   }
 
-  func testReturnsNilWhenLayoutModeDoesNotChange() {
-    let animateFrom = ShiftCardAmountAnimationFallback.animateFrom(
+  internal func testReturnsNilWhenLayoutModeDoesNotChange() {
+    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 9_750,
       previousHasTrailingBottomContent: true,
       currentHasTrailingBottomContent: true
@@ -33,13 +33,17 @@ final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
     XCTAssertNil(animateFrom)
   }
 
-  func testReturnsNilWithoutPreviousLayoutState() {
-    let animateFrom = ShiftCardAmountAnimationFallback.animateFrom(
+  internal func testReturnsNilWithoutPreviousLayoutState() {
+    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 9_750,
       previousHasTrailingBottomContent: nil,
       currentHasTrailingBottomContent: true
     )
 
     XCTAssertNil(animateFrom)
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

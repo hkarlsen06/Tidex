@@ -68,7 +68,7 @@ final class LocalPayrollAdjustment {
     get {
       guard !dirtyFields.isEmpty else { return [] }
       do {
-        let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+        let keys = try kSyncJSONDecoder.decode([String].self, from: dirtyFields)
         return Set(keys.compactMap { PayrollAdjustmentField(rawValue: $0) })
       } catch {
         SyncLogger.shared.log(
@@ -79,7 +79,7 @@ final class LocalPayrollAdjustment {
       }
     }
     set {
-      dirtyFields = (try? canonicalJSONEncoder.encode(newValue.map(\.rawValue))) ?? Data()
+      dirtyFields = (try? kCanonicalJSONEncoder.encode(newValue.map(\.rawValue))) ?? Data()
     }
   }
 
@@ -152,7 +152,7 @@ final class LocalPayrollAdjustment {
   }
 
   static func emptyDirtyFields() -> Data {
-    (try? canonicalJSONEncoder.encode([String]())) ?? Data()
+    (try? kCanonicalJSONEncoder.encode([String]())) ?? Data()
   }
 }
 
@@ -176,11 +176,11 @@ struct PayrollAdjustmentServerSnapshot: Codable, Equatable {
   let deletedAt: Date?
 
   func encoded() -> Data {
-    (try? canonicalJSONEncoder.encode(self)) ?? Data()
+    (try? kCanonicalJSONEncoder.encode(self)) ?? Data()
   }
 
   static func decode(from data: Data) -> Self? {
-    try? syncJSONDecoder.decode(Self.self, from: data)
+    try? kSyncJSONDecoder.decode(Self.self, from: data)
   }
 
   static func from(

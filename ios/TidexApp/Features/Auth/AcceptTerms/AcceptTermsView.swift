@@ -3,17 +3,38 @@ import SafariServices
 import Supabase
 import SwiftUI
 
-private let logger = Logger(subsystem: "no.tidex.app", category: "AcceptTerms")
+private let kAcceptTermsLogger: Logger = Logger(subsystem: "no.tidex.app", category: "AcceptTerms")
+
+// MARK: - Safari View (local copy to avoid import issues)
+
+/// Wrapper for presenting SFSafariViewController in SwiftUI
+private struct SafariViewAcceptTerms: UIViewControllerRepresentable {
+  private let url: URL
+
+  func makeUIViewController(context _: Context) -> SFSafariViewController {
+    SFSafariViewController(url: url)
+  }
+
+  func updateUIViewController(_: SFSafariViewController, context _: Context) {
+    _ = url
+  }
+}
 
 /// Screen shown when user needs to accept (or re-accept) terms of service
 /// Mirrors the web app's `/accept-terms` page behavior
-struct AcceptTermsView: View {
-  let isUpdate: Bool
-  let coordinator: AppCoordinator
+internal struct AcceptTermsView: View {
+  internal let isUpdate: Bool
+  internal let coordinator: AppCoordinator
 
-  @State private var isProcessing = false
+  @State private var isProcessing: Bool = false
   @State private var error: String?
   @State private var safariURL: URL?
+
+  private let verticalSpacerLength: CGFloat = 60
+  private let iconBackgroundSize: CGFloat = 80
+  private let documentIconSize: CGFloat = 36
+  private let linkIconWidth: CGFloat = 20
+  private let iconBackgroundOpacity: Double = 0.1
 
   /// Terms URL - uses locale-specific path for proper language display
   private var termsURL: URL? {
@@ -25,11 +46,11 @@ struct AcceptTermsView: View {
     URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
   }
 
-  var body: some View {
+  internal var body: some View {
     GeometryReader { geometry in
       ScrollView {
         VStack(spacing: 0) {
-          Spacer(minLength: 60)
+          Spacer(minLength: verticalSpacerLength)
 
           // Header section
           headerSection
@@ -56,7 +77,7 @@ struct AcceptTermsView: View {
           }
           .padding(.horizontal, Spacing.lg)
 
-          Spacer(minLength: 60)
+          Spacer(minLength: verticalSpacerLength)
         }
         .frame(minHeight: geometry.size.height)
       }
@@ -76,12 +97,13 @@ struct AcceptTermsView: View {
       // Document icon for terms
       ZStack {
         Circle()
-          .fill(Color.tidexBlue.opacity(0.1))
-          .frame(width: 80, height: 80)
+          .fill(Color.tidexBlue.opacity(iconBackgroundOpacity))
+          .frame(width: iconBackgroundSize, height: iconBackgroundSize)
 
         Image(systemName: "doc.text.fill")
-          .font(.system(size: 36))
+          .font(.system(size: documentIconSize))
           .foregroundColor(.tidexBlue)
+          .accessibilityHidden(true)
       }
 
       // Title
@@ -129,58 +151,20 @@ struct AcceptTermsView: View {
 
   private var legalLinksSection: some View {
     VStack(spacing: 0) {
-      Button {
-        if let url = termsURL {
-          safariURL = url
-        }
-      } label: {
-        HStack(alignment: .top, spacing: Spacing.sm) {
-          Image(systemName: "doc.text")
-            .font(.tidexBody)
-            .frame(width: 20, alignment: .leading)
-          Text(.acceptTermsViewTerms)
-            .font(.tidexBody)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-          Image(systemName: "arrow.up.right")
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.msm)
-      }
-      .disabled(isProcessing)
+      legalLinkButton(
+        title: Text(.acceptTermsViewTerms),
+        systemImage: "doc.text",
+        url: termsURL
+      )
 
       Divider()
         .background(Color.tidexBorderSubtle)
 
-      Button {
-        if let url = privacyURL {
-          safariURL = url
-        }
-      } label: {
-        HStack(alignment: .top, spacing: Spacing.sm) {
-          Image(systemName: "shield")
-            .font(.tidexBody)
-            .frame(width: 20, alignment: .leading)
-          Text(.acceptTermsViewPrivacy)
-            .font(.tidexBody)
-            .multilineTextAlignment(.leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-          Image(systemName: "arrow.up.right")
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.msm)
-      }
-      .disabled(isProcessing)
+      legalLinkButton(
+        title: Text(.acceptTermsViewPrivacy),
+        systemImage: "shield",
+        url: privacyURL
+      )
     }
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
@@ -210,6 +194,39 @@ struct AcceptTermsView: View {
     }
   }
 
+  private func legalLinkButton(
+    title: Text,
+    systemImage: String,
+    url: URL?
+  ) -> some View {
+    Button {
+      if let url {
+        safariURL = url
+      }
+    } label: {
+      HStack(alignment: .top, spacing: Spacing.sm) {
+        Image(systemName: systemImage)
+          .font(.tidexBody)
+          .frame(width: linkIconWidth, alignment: .leading)
+          .accessibilityHidden(true)
+        title
+          .font(.tidexBody)
+          .multilineTextAlignment(.leading)
+          .fixedSize(horizontal: false, vertical: true)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        Image(systemName: "arrow.up.right")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .foregroundColor(.tidexTextPrimary)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.msm)
+    }
+    .disabled(isProcessing)
+  }
+
   private func acceptTerms() {
     isProcessing = true
     error = nil
@@ -220,7 +237,8 @@ struct AcceptTermsView: View {
         _ = try await supabase.auth.update(
           user: UserAttributes(
             data: ["terms_accepted_at": .string(ISO8601DateFormatter().string(from: Date()))]
-          ))
+          )
+        )
 
         // Refresh session to get updated JWT via serialized auth path
         _ = try await AuthSessionManager.shared.forceRefresh()
@@ -234,7 +252,7 @@ struct AcceptTermsView: View {
           self.error = String(localized: .acceptTermsErrorsUpdateFailed)
           isProcessing = false
         }
-        logger.error("Failed to update terms acceptance: \(error.localizedDescription)")
+        kAcceptTermsLogger.error("Failed to update terms acceptance: \(error.localizedDescription)")
       }
     }
   }
@@ -246,20 +264,6 @@ struct AcceptTermsView: View {
       await coordinator.handleTermsDeclined()
     }
   }
-}
-
-// MARK: - Safari View (local copy to avoid import issues)
-
-/// Wrapper for presenting SFSafariViewController in SwiftUI
-private struct SafariViewAcceptTerms: UIViewControllerRepresentable {
-  let url: URL
-
-  func makeUIViewController(context _: Context) -> SFSafariViewController {
-    SFSafariViewController(url: url)
-  }
-
-  // swiftlint:disable:next no_empty_block
-  func updateUIViewController(_: SFSafariViewController, context _: Context) {}
 }
 
 #Preview("Accept Terms - Initial") {

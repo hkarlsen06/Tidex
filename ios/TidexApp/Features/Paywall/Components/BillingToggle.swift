@@ -4,18 +4,22 @@ import SwiftUI
 
 /// Segmented control for selecting monthly vs yearly billing
 /// Shows savings percentage for yearly option
-struct BillingToggle: View {
-  @Binding var selection: BillingPeriod
-  var yearlySavingsPercent: Int?
+internal struct BillingToggle: View {
+  @Binding internal var selection: BillingPeriod
+  internal var yearlySavingsPercent: Int?
 
-  var body: some View {
+  private let animationResponse: Double = 0.3
+  private let animationDampingFraction: Double = 0.8
+  private let badgeVerticalPadding: CGFloat = 3
+
+  internal var body: some View {
     HStack(spacing: 0) {
       // Monthly option
       toggleOption(
         title: String(localized: .paywallMonthly),
         isSelected: selection == .monthly
       ) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+        withAnimation(.spring(response: animationResponse, dampingFraction: animationDampingFraction)) {
           selection = .monthly
         }
       }
@@ -23,15 +27,16 @@ struct BillingToggle: View {
       // Yearly option with savings badge
       toggleOption(
         title: String(localized: .paywallYearly),
-        badge: yearlySavingsPercent.map {
-          String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double($0))))
+        isSelected: selection == .yearly,
+        badge: yearlySavingsPercent.map { savingsPercent in
+          String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double(savingsPercent))))
         },
-        isSelected: selection == .yearly
-      ) {
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-          selection = .yearly
+        action: {
+          withAnimation(.spring(response: animationResponse, dampingFraction: animationDampingFraction)) {
+            selection = .yearly
+          }
         }
-      }
+      )
     }
     .padding(Spacing.xxs)
     .background(Color.tidexSurfacePrimary)
@@ -41,8 +46,8 @@ struct BillingToggle: View {
   @ViewBuilder
   private func toggleOption(
     title: String,
-    badge: String? = nil,
     isSelected: Bool,
+    badge: String? = nil,
     action: @escaping () -> Void
   ) -> some View {
     Button(action: action) {
@@ -56,7 +61,7 @@ struct BillingToggle: View {
             .font(.tidexMicro.bold())
             .foregroundColor(.tidexTextOnSuccess)
             .padding(.horizontal, Spacing.xxxs)
-            .padding(.vertical, 3)
+            .padding(.vertical, badgeVerticalPadding)
             .background(Color.tidexSuccess)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
         }

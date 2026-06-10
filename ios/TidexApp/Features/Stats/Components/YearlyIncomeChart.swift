@@ -38,7 +38,9 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
   /// Filter out leading and trailing zero months for display
   private var trimmedData: [MonthlyIncomeData] {
     let firstNonZeroIndex = data.firstIndex { $0.earnings > 0 }  // swiftlint:disable:this explicit_type_interface
-    guard let firstIdx = firstNonZeroIndex else { return data }  // swiftlint:disable:this conditional_returns_on_newline
+    guard let firstIdx = firstNonZeroIndex else {
+      return data
+    }
 
     let lastNonZeroIndex = data.lastIndex { $0.earnings > 0 }  // swiftlint:disable:this explicit_type_interface
     guard let lastIdx = lastNonZeroIndex else { return data }  // swiftlint:disable:this conditional_returns_on_newline

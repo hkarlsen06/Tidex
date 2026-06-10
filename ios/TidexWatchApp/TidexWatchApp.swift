@@ -1,16 +1,15 @@
 import SwiftUI
 
 @main
-struct TidexWatchApp: App {
-  @State private var dataStore = WatchDataStore.shared
-  @State private var connectivity = WatchConnectivityManager.shared
-
-  init() {
-    // Activate Watch Connectivity on launch
-    WatchConnectivityManager.shared.activateSession()
+internal struct TidexWatchApp: App {
+  private enum Constants {
+    static let connectivityActivationDelayMilliseconds: Int = 500
   }
 
-  var body: some Scene {
+  @State private var dataStore: WatchDataStore = .shared
+  @State private var connectivity: WatchConnectivityManager = .shared
+
+  internal var body: some Scene {
     WindowGroup {
       ContentView()
         .environment(dataStore)
@@ -22,11 +21,16 @@ struct TidexWatchApp: App {
     }
   }
 
+  internal init() {
+    // Activate Watch Connectivity on launch
+    WatchConnectivityManager.shared.activateSession()
+  }
+
   /// Fetch initial data when app launches
   /// Uses API first, falls back to iPhone if needed
   private func fetchInitialData() async {
     // Small delay to let connectivity activate
-    try? await Task.sleep(for: .milliseconds(500))
+    try? await Task.sleep(for: .milliseconds(Constants.connectivityActivationDelayMilliseconds))
 
     // Request refresh (will try API first, then iPhone)
     await MainActor.run {

@@ -117,7 +117,7 @@ final class LocalStore {
         storeActor = LocalStoreActor(modelContainer: container)
         isUsingInMemoryFallback = true
         logger.warning("LocalStore initialized with in-memory fallback - data will not persist")
-      } catch let fallbackError {
+      } catch {
         // This should essentially never happen - in-memory containers rarely fail
         // But we need to initialize the properties, so create a minimal container
         logger.critical(
@@ -130,7 +130,7 @@ final class LocalStore {
           storeActor = LocalStoreActor(modelContainer: container)
           isUsingInMemoryFallback = true
           logger.critical("LocalStore using default container - app may be unstable")
-        } catch let lastResortError {
+        } catch {
           fatalError(
             """
             LocalStore: All storage initialization attempts failed.
@@ -495,7 +495,7 @@ actor LocalStoreActor {
     )
 
     let dirtyFieldsData =
-      (try? canonicalJSONEncoder.encode(JobField.allCases.map(\.rawValue)))
+      (try? kCanonicalJSONEncoder.encode(JobField.allCases.map(\.rawValue)))
       ?? Data()
 
     let localJob = LocalJob(
@@ -914,9 +914,9 @@ actor LocalStoreActor {
     let now = Date()
 
     let pauseWindowsData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
-    let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let supplementsData = customSupplements.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     let normalizedNote = ShiftNoteSupport.normalize(note)
 
     let dateFormatter = isoDateFormatter
@@ -936,7 +936,7 @@ actor LocalStoreActor {
     )
 
     let allFields = UserShiftField.allCases.map(\.rawValue)
-    let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+    let dirtyFieldsData = (try? kCanonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localShift = LocalUserShift(
       id: resolvedId,
@@ -976,7 +976,7 @@ actor LocalStoreActor {
     }
 
     let normalizedData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
 
     var dirtyFields = localShift.dirtyFieldKeys
@@ -1044,7 +1044,7 @@ actor LocalStoreActor {
     }
 
     if let newSupplements = customSupplements {
-      let newData = try? canonicalJSONEncoder.encode(newSupplements)
+      let newData = try? kCanonicalJSONEncoder.encode(newSupplements)
       if newData != localShift.customSupplements {
         localShift.customSupplements = newData
         newDirtyFields.insert(.customSupplements)
@@ -1286,7 +1286,7 @@ actor LocalStoreActor {
     )
 
     let allFields = EventField.allCases.map(\.rawValue)
-    let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+    let dirtyFieldsData = (try? kCanonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localEvent = LocalEvent(
       id: resolvedId,
@@ -1580,15 +1580,15 @@ actor LocalStoreActor {
     let id = UUID().lowercasedString
     let now = Date()
 
-    let selectedDaysData = (try? canonicalJSONEncoder.encode(selectedDays)) ?? Data()
-    let endConditionData = endCondition.flatMap { try? canonicalJSONEncoder.encode($0) }
-    let exclusionsData = exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let selectedDaysData = (try? kCanonicalJSONEncoder.encode(selectedDays)) ?? Data()
+    let endConditionData = endCondition.flatMap { try? kCanonicalJSONEncoder.encode($0) }
+    let exclusionsData = exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     let pauseWindowsData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
-    let supplementsData = dateSpecificSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let supplementsData = dateSpecificSupplements.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     let notesData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
 
     let serverSnapshot = RecurringShiftServerSnapshot(
@@ -1608,7 +1608,7 @@ actor LocalStoreActor {
     )
 
     let allFields = RecurringShiftField.allCases.map(\.rawValue)
-    let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+    let dirtyFieldsData = (try? kCanonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localShift = LocalRecurringShift(
       id: id,
@@ -1683,7 +1683,7 @@ actor LocalStoreActor {
     }
 
     if let newDays = selectedDays {
-      let newData = (try? canonicalJSONEncoder.encode(newDays)) ?? Data()
+      let newData = (try? kCanonicalJSONEncoder.encode(newDays)) ?? Data()
       if newData != localShift.selectedDays {
         localShift.selectedDays = newData
         newDirtyFields.insert(.selectedDays)
@@ -1691,7 +1691,7 @@ actor LocalStoreActor {
     }
 
     if let newCondition = endCondition {
-      let newData = try? canonicalJSONEncoder.encode(newCondition)
+      let newData = try? kCanonicalJSONEncoder.encode(newCondition)
       if newData != localShift.endCondition {
         localShift.endCondition = newData
         newDirtyFields.insert(.endCondition)
@@ -1699,7 +1699,7 @@ actor LocalStoreActor {
     }
 
     if let newExclusions = exclusions {
-      let newData = try? canonicalJSONEncoder.encode(newExclusions)
+      let newData = try? kCanonicalJSONEncoder.encode(newExclusions)
       if newData != localShift.exclusions {
         localShift.exclusions = newData
         newDirtyFields.insert(.exclusions)
@@ -1707,7 +1707,7 @@ actor LocalStoreActor {
     }
 
     if let newSupplements = dateSpecificSupplements {
-      let newData = try? canonicalJSONEncoder.encode(newSupplements)
+      let newData = try? kCanonicalJSONEncoder.encode(newSupplements)
       if newData != localShift.dateSpecificSupplements {
         localShift.dateSpecificSupplements = newData
         newDirtyFields.insert(.dateSpecificSupplements)
@@ -1715,7 +1715,7 @@ actor LocalStoreActor {
     }
 
     if let newNotes = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes) {
-      let newData = try? canonicalJSONEncoder.encode(newNotes)
+      let newData = try? kCanonicalJSONEncoder.encode(newNotes)
       if newData != localShift.dateSpecificNotes {
         localShift.dateSpecificNotes = newData
         newDirtyFields.insert(.dateSpecificNotes)
@@ -1746,7 +1746,7 @@ actor LocalStoreActor {
     }
 
     let normalizedData = PauseWindowSupport.normalize(dateSpecificPauseWindows).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
 
     var dirtyFields = localShift.dirtyFieldKeys
@@ -1777,7 +1777,7 @@ actor LocalStoreActor {
     }
 
     let normalizedData = ShiftNoteSupport.normalizeDateSpecificNotes(dateSpecificNotes).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
 
     var dirtyFields = localShift.dirtyFieldKeys
@@ -2015,7 +2015,7 @@ actor LocalStoreActor {
     let id = UUID().lowercasedString
     let now = Date()
 
-    let supplementsData = (try? canonicalJSONEncoder.encode(supplements)) ?? Data()
+    let supplementsData = (try? kCanonicalJSONEncoder.encode(supplements)) ?? Data()
 
     let dateFormatter = isoDateFormatter
     let fromDateString = fromDate.map { dateFormatter.string(from: $0) }
@@ -2039,7 +2039,7 @@ actor LocalStoreActor {
     )
 
     let allFields = WageSnapshotField.allCases.map(\.rawValue)
-    let dirtyFieldsData = (try? canonicalJSONEncoder.encode(allFields)) ?? Data()
+    let dirtyFieldsData = (try? kCanonicalJSONEncoder.encode(allFields)) ?? Data()
 
     let localSnapshot = LocalWageSnapshot(
       id: id,
@@ -2121,7 +2121,7 @@ actor LocalStoreActor {
     }
 
     if let newSupplements = supplements {
-      let newData = (try? canonicalJSONEncoder.encode(newSupplements)) ?? Data()
+      let newData = (try? kCanonicalJSONEncoder.encode(newSupplements)) ?? Data()
       if newData != localSnapshot.supplements {
         localSnapshot.supplements = newData
         newDirtyFields.insert(.supplements)
@@ -2386,12 +2386,12 @@ actor LocalStoreActor {
     if defaultStartupTab != nil { dirtyFields.append(.defaultStartupTab) }
 
     let dirtyFieldsData =
-      (try? canonicalJSONEncoder.encode(dirtyFields.map(\.rawValue))) ?? Data()
+      (try? kCanonicalJSONEncoder.encode(dirtyFields.map(\.rawValue))) ?? Data()
 
     let localSettings = LocalUserSettings(
       userId: userId,
       monthlyGoal: monthlyGoal,
-      monthlyGoalsByMonthData: (try? canonicalJSONEncoder.encode(monthlyGoalsByMonth))
+      monthlyGoalsByMonthData: (try? kCanonicalJSONEncoder.encode(monthlyGoalsByMonth))
         ?? Data(),
       defaultShiftsView: defaultShiftsView,
       profilePictureUrl: nil,
@@ -2893,10 +2893,10 @@ actor LocalStoreActor {
     existing.note = ShiftNoteSupport.normalize(serverRow.note)
     existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
       .flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     existing.customSupplements = serverRow.custom_supplements.flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -2964,11 +2964,11 @@ actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.customPauseWindows) {
       existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
-        .flatMap { try? canonicalJSONEncoder.encode($0) }
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
     if !localDirtyFields.contains(.customSupplements) {
       existing.customSupplements = serverRow.custom_supplements.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     }
 
@@ -3107,19 +3107,19 @@ actor LocalStoreActor {
     existing.startTime = serverRow.cleanStartTime
     existing.endTime = serverRow.cleanEndTime
     existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
-    existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
-    existing.endCondition = serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) }
-    existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+    existing.selectedDays = (try? kCanonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
+    existing.endCondition = serverRow.end_condition.flatMap { try? kCanonicalJSONEncoder.encode($0) }
+    existing.exclusions = serverRow.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     existing.dateSpecificPauseWindows =
       PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
-      .flatMap { try? canonicalJSONEncoder.encode($0) }
+      .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
     existing.dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(
       serverRow.date_specific_notes
     )
-    .flatMap { try? canonicalJSONEncoder.encode($0) }
+    .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
@@ -3179,30 +3179,30 @@ actor LocalStoreActor {
       existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
     }
     if !localDirtyFields.contains(.selectedDays) {
-      existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
+      existing.selectedDays = (try? kCanonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
     }
     if !localDirtyFields.contains(.endCondition) {
       existing.endCondition = serverRow.end_condition.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     }
     if !localDirtyFields.contains(.exclusions) {
-      existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+      existing.exclusions = serverRow.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
     if !localDirtyFields.contains(.dateSpecificPauseWindows) {
       existing.dateSpecificPauseWindows =
         PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
-        .flatMap { try? canonicalJSONEncoder.encode($0) }
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
     if !localDirtyFields.contains(.dateSpecificSupplements) {
       existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     }
     if !localDirtyFields.contains(.dateSpecificNotes) {
       existing.dateSpecificNotes =
         ShiftNoteSupport.normalizeDateSpecificNotes(serverRow.date_specific_notes)
-        .flatMap { try? canonicalJSONEncoder.encode($0) }
+        .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
 
     existing.serverUpdatedAt = serverUpdatedAt
@@ -3234,7 +3234,7 @@ actor LocalStoreActor {
     existing.hourlyWage = serverRow.hourly_wage
     existing.wageLevel = serverRow.wage_level
     existing.tariffTypeId = serverRow.tariff_type_id
-    existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+    existing.supplements = (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
     existing.taxEnabled = serverRow.tax_enabled
     existing.taxPercentage = serverRow.tax_percentage
     existing.breakEnabled = serverRow.break_enabled
@@ -3303,7 +3303,7 @@ actor LocalStoreActor {
       existing.tariffTypeId = serverRow.tariff_type_id
     }
     if !localDirtyFields.contains(.supplements) {
-      existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+      existing.supplements = (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
     }
     if !localDirtyFields.contains(.taxEnabled) {
       existing.taxEnabled = serverRow.tax_enabled
@@ -3608,10 +3608,10 @@ actor LocalStoreActor {
     existing.note = ShiftNoteSupport.normalize(serverRow.note)
     existing.customPauseWindows = PauseWindowSupport.normalize(serverRow.custom_pause_windows)
       .flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     existing.customSupplements = serverRow.custom_supplements.flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
@@ -3870,19 +3870,19 @@ actor LocalStoreActor {
     existing.startTime = serverRow.cleanStartTime
     existing.endTime = serverRow.cleanEndTime
     existing.repeatIntervalWeeks = serverRow.repeat_interval_weeks
-    existing.selectedDays = (try? canonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
-    existing.endCondition = serverRow.end_condition.flatMap { try? canonicalJSONEncoder.encode($0) }
-    existing.exclusions = serverRow.exclusions.flatMap { try? canonicalJSONEncoder.encode($0) }
+    existing.selectedDays = (try? kCanonicalJSONEncoder.encode(serverRow.selected_days)) ?? Data()
+    existing.endCondition = serverRow.end_condition.flatMap { try? kCanonicalJSONEncoder.encode($0) }
+    existing.exclusions = serverRow.exclusions.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     existing.dateSpecificPauseWindows =
       PauseWindowSupport.normalize(serverRow.date_specific_pause_windows)
-      .flatMap { try? canonicalJSONEncoder.encode($0) }
+      .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     existing.dateSpecificSupplements = serverRow.date_specific_supplements.flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
     existing.dateSpecificNotes = ShiftNoteSupport.normalizeDateSpecificNotes(
       serverRow.date_specific_notes
     )
-    .flatMap { try? canonicalJSONEncoder.encode($0) }
+    .flatMap { try? kCanonicalJSONEncoder.encode($0) }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.syncStatus = .clean
@@ -4008,7 +4008,7 @@ actor LocalStoreActor {
     existing.hourlyWage = serverRow.hourly_wage
     existing.wageLevel = serverRow.wage_level
     existing.tariffTypeId = serverRow.tariff_type_id
-    existing.supplements = (try? canonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+    existing.supplements = (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
     existing.taxEnabled = serverRow.tax_enabled
     existing.taxPercentage = serverRow.tax_percentage
     existing.breakEnabled = serverRow.break_enabled

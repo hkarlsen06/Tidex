@@ -266,7 +266,7 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   private var pendingCompactionContent: String?
 
   /// Repository for conversation persistence
-  private let conversationsRepository = ConversationsRepository.shared  // swiftlint:disable:this explicit_type_interface
+  private let conversationsRepository: ConversationsRepository = .shared
 
   /// Repository for server-synced user settings.
   private let settingsRepository = SettingsRepository.shared  // swiftlint:disable:this explicit_type_interface
@@ -811,9 +811,10 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
 
     let recentMessages = truncated.reversed()  // swiftlint:disable:this explicit_type_interface
     let omittedCount = max(0, messages.count - recentMessages.count)  // swiftlint:disable:this explicit_type_interface
-    let omittedMessages = omittedCount > 0 ? Array(messages.prefix(omittedCount)) : []  // swiftlint:disable:this explicit_type_interface line_length
+    let omittedMessages: [ChatMessage] =
+      omittedCount > 0 ? Array(messages.prefix(omittedCount)) : []
 
-    let localCompaction = buildCompactionSummary(for: omittedMessages)  // swiftlint:disable:this explicit_type_interface
+    let localCompaction: String? = buildCompactionSummary(for: omittedMessages)
     let combinedCompaction = combinedCompactionSummary(  // swiftlint:disable:this explicit_type_interface
       base: baseCompaction, appended: localCompaction)  // swiftlint:disable:this multiline_arguments_brackets
 
@@ -844,8 +845,8 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
       return nil
     }
 
-    let summaryLines = messages.suffix(Self.compactionMessageLimit).flatMap {
-      message -> [String] in  // swiftlint:disable:this explicit_type_interface line_length
+    let summaryLines: [String] = messages.suffix(Self.compactionMessageLimit).flatMap {
+      message -> [String] in
       var lines: [String] = []
       let speaker = message.role == .user ? "User" : "Assistant"  // swiftlint:disable:this explicit_type_interface
 
@@ -1304,7 +1305,7 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
 
     let alreadySyncingError = "Sync already in progress"  // swiftlint:disable:this explicit_type_interface
     let retryIntervalNanoseconds: UInt64 = 250_000_000
-    let retryDeadline = Date().addingTimeInterval(30)  // swiftlint:disable:this explicit_type_interface no_magic_numbers
+    let retryDeadline: Date = Date().addingTimeInterval(30)  // swiftlint:disable:this no_magic_numbers
     var syncResult: SyncResult
 
     while true {

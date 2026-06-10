@@ -2,9 +2,9 @@ import XCTest
 
 @testable import Tidex
 
-final class SyncErrorTests: XCTestCase {
-  func testDateParsingFailedProvidesUserFriendlyMessage() {
-    let error = SyncError.dateParsingFailed(
+internal final class SyncErrorTests: XCTestCase {
+  internal func testDateParsingFailedProvidesUserFriendlyMessage() {
+    let error: SyncError = SyncError.dateParsingFailed(
       table: .userShifts,
       id: "12345678-aaaa-bbbb-cccc-123456789000",
       rawValue: "bad-date"
@@ -14,9 +14,13 @@ final class SyncErrorTests: XCTestCase {
     XCTAssertTrue(error.userFriendlyMessage.contains("User Shifts"))
   }
 
-  func testNotFoundHasTechnicalDescription() {
-    let error = SyncError.notFound(table: .wageSnapshots, id: "abc")
+  internal func testNotFoundHasTechnicalDescription() {
+    let error: SyncError = SyncError.notFound(table: .wageSnapshots, id: "abc")
 
     XCTAssertEqual(error.errorDescription, "Wage Snapshots with id abc not found")
+  }
+
+  deinit {
+    // Required by SwiftLint for XCTestCase subclasses.
   }
 }

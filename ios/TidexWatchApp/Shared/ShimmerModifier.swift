@@ -2,21 +2,30 @@ import SwiftUI
 
 /// A modifier that applies a shimmer animation to skeleton loading states
 /// Creates a subtle left-to-right gradient sweep effect
-struct ShimmerModifier: ViewModifier {
-  @State private var phase: CGFloat = -1
+internal struct ShimmerModifier: ViewModifier {
+  internal enum Constants {
+    internal static let initialPhase: CGFloat = -1
+    internal static let completedPhase: CGFloat = 1
+    internal static let defaultDuration: Double = 1.5
+    internal static let highlightOpacity: Double = 0.3
+    internal static let bandWidthMultiplier: CGFloat = 0.6
+    internal static let travelWidthMultiplier: CGFloat = 1.6
+  }
+
+  @State private var phase: CGFloat = Constants.initialPhase
 
   /// Duration of one complete shimmer cycle
-  let duration: Double
+  internal let duration: Double
 
   /// Whether shimmer is active
-  let isActive: Bool
+  internal let isActive: Bool
 
-  init(duration: Double = 1.5, isActive: Bool = true) {
+  internal init(duration: Double = Constants.defaultDuration, isActive: Bool = true) {
     self.duration = duration
     self.isActive = isActive
   }
 
-  func body(content: Content) -> some View {
+  internal func body(content: Content) -> some View {
     content
       .overlay {
         if isActive {
@@ -24,26 +33,28 @@ struct ShimmerModifier: ViewModifier {
             LinearGradient(
               gradient: Gradient(colors: [
                 .clear,
-                .white.opacity(0.3),
+                .white.opacity(Constants.highlightOpacity),
                 .clear,
               ]),
               startPoint: .leading,
               endPoint: .trailing
             )
-            .frame(width: geometry.size.width * 0.6)
-            .offset(x: phase * geometry.size.width * 1.6)
+            .frame(width: geometry.size.width * Constants.bandWidthMultiplier)
+            .offset(x: phase * geometry.size.width * Constants.travelWidthMultiplier)
             .blendMode(.overlay)
           }
           .mask(content)
         }
       }
       .onAppear {
-        guard isActive else { return }
+        guard isActive else {
+          return
+        }
         withAnimation(
           .linear(duration: duration)
             .repeatForever(autoreverses: false)
         ) {
-          phase = 1
+          phase = Constants.completedPhase
         }
       }
   }
@@ -51,12 +62,12 @@ struct ShimmerModifier: ViewModifier {
 
 // MARK: - View Extension
 
-extension View {
+internal extension View {
   /// Applies a shimmer animation for loading states
   /// - Parameters:
   ///   - isActive: Whether the shimmer is active (default true)
   ///   - duration: Duration of one shimmer cycle (default 1.5s)
-  func shimmer(isActive: Bool = true, duration: Double = 1.5) -> some View {
+  func shimmer(isActive: Bool = true, duration: Double = ShimmerModifier.Constants.defaultDuration) -> some View {
     modifier(ShimmerModifier(duration: duration, isActive: isActive))
   }
 }

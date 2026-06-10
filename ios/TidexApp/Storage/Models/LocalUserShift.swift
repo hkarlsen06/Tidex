@@ -90,7 +90,7 @@ final class LocalUserShift {
       }
 
       do {
-        let keys = try syncJSONDecoder.decode([String].self, from: dirtyFields)
+        let keys = try kSyncJSONDecoder.decode([String].self, from: dirtyFields)
         return Set(keys.compactMap { UserShiftField(rawValue: $0) })
       } catch {
         // If decode fails, treat as fully dirty to ensure data is pushed to server
@@ -104,7 +104,7 @@ final class LocalUserShift {
     }
     set {
       let keys = newValue.map(\.rawValue)
-      dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
+      dirtyFields = (try? kCanonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
 
@@ -112,10 +112,10 @@ final class LocalUserShift {
   var decodedCustomSupplements: CustomSupplementsData? {
     get {
       guard let data = customSupplements else { return nil }
-      return try? syncJSONDecoder.decode(CustomSupplementsData.self, from: data)
+      return try? kSyncJSONDecoder.decode(CustomSupplementsData.self, from: data)
     }
     set {
-      customSupplements = newValue.flatMap { try? canonicalJSONEncoder.encode($0) }
+      customSupplements = newValue.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     }
   }
 
@@ -124,11 +124,11 @@ final class LocalUserShift {
     get {
       guard let data = customPauseWindows else { return nil }
       return PauseWindowSupport.normalize(
-        try? syncJSONDecoder.decode(CustomPauseWindows.self, from: data))
+        try? kSyncJSONDecoder.decode(CustomPauseWindows.self, from: data))
     }
     set {
       customPauseWindows = PauseWindowSupport.normalize(newValue).flatMap {
-        try? canonicalJSONEncoder.encode($0)
+        try? kCanonicalJSONEncoder.encode($0)
       }
     }
   }
@@ -197,7 +197,7 @@ final class LocalUserShift {
 
   /// Initialize empty dirty fields array
   static func emptyDirtyFields() -> Data {
-    (try? canonicalJSONEncoder.encode([String]())) ?? Data()
+    (try? kCanonicalJSONEncoder.encode([String]())) ?? Data()
   }
 }
 
@@ -231,9 +231,9 @@ struct UserShiftServerSnapshot: Codable, Equatable {
     deletedAt: Date?
   ) -> Self {
     let pauseWindowsData = PauseWindowSupport.normalize(customPauseWindows).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
-    let supplementsData = customSupplements.flatMap { try? canonicalJSONEncoder.encode($0) }
+    let supplementsData = customSupplements.flatMap { try? kCanonicalJSONEncoder.encode($0) }
     return Self(
       jobId: jobId,
       shiftDate: shiftDate,
@@ -257,12 +257,12 @@ struct UserShiftServerSnapshot: Codable, Equatable {
   /// Encode to Data (returns empty Data on failure - use only for non-critical paths)
   /// DEPRECATED: Prefer encodedOrThrow() for new code
   func encoded() -> Data {
-    (try? canonicalJSONEncoder.encode(self)) ?? Data()
+    (try? kCanonicalJSONEncoder.encode(self)) ?? Data()
   }
 
   /// Decode from Data
   static func decode(from data: Data) -> Self? {
-    try? syncJSONDecoder.decode(Self.self, from: data)
+    try? kSyncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
@@ -331,10 +331,10 @@ extension LocalUserShift {
       .isoDateFormatter(timeZone: Date.localTimeZone)
       .date(from: serverRow.shift_date) ?? Date()
     let supplementsData = serverRow.custom_supplements.flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
     let pauseWindowsData = PauseWindowSupport.normalize(serverRow.custom_pause_windows).flatMap {
-      try? canonicalJSONEncoder.encode($0)
+      try? kCanonicalJSONEncoder.encode($0)
     }
 
     let snapshot = UserShiftServerSnapshot.from(

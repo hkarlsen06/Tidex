@@ -2,10 +2,10 @@ import SwiftUI
 
 /// Main content view for the Watch app
 /// Displays shift list when data is available, otherwise shows empty state
-struct ContentView: View {
-  @Environment(WatchDataStore.self) private var store
+internal struct ContentView: View {
+  @Environment(WatchDataStore.self) private var store: WatchDataStore
 
-  var body: some View {
+  internal var body: some View {
     ShiftListView()
   }
 }

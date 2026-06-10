@@ -60,13 +60,13 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?  // swiftlint:disable:this type_contents_order
   @State private var temporaryClockReviewSession: TemporaryClockSession?  // swiftlint:disable:this type_contents_order
   @State private var clockInJobOptions: [Job] = []  // swiftlint:disable:this type_contents_order
-  @State private var showClockInJobChooser = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @State private var showClockInJobChooser: Bool = false  // swiftlint:disable:this type_contents_order
   @State private var clockPaySetupJob: Job?  // swiftlint:disable:this type_contents_order
   @State private var pendingClockAction: PendingClockAction?  // swiftlint:disable:this type_contents_order
-  @State private var temporarySessionReferenceDate = Date()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @State private var showMixedCurrencyBreakdownPopover = false  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @State private var temporarySessionReferenceDate: Date = .init()  // swiftlint:disable:this type_contents_order
+  @State private var showMixedCurrencyBreakdownPopover: Bool = false  // swiftlint:disable:this type_contents_order
   @State private var activeDashboardRefreshTask: Task<Void, Never>?  // swiftlint:disable:this type_contents_order
-  @State private var showCalendarSubscriptionSettings = false  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @State private var showCalendarSubscriptionSettings: Bool = false  // swiftlint:disable:this type_contents_order
   @State private var selectedPayrollDetailsVariant: PayrollCardVariant?  // swiftlint:disable:this type_contents_order
 
   /// Haptic feedback generator
@@ -103,7 +103,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   @discardableResult
   private func refreshWorkSetupPresentationState() -> Bool {  // swiftlint:disable:this type_contents_order
-    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder  // swiftlint:disable:this explicit_type_interface
+    let wasShowingPlaceholder: Bool = shouldShowWorkSetupRequiredPlaceholder
     workSetupPresentationViewModel.refresh(
       userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
@@ -973,8 +973,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       fallback: data,
       defaultTitle: String(localized: .dashboardPayroll)
     )
-    let selectedPayoutDate = preliminaryPayrollVariants.first?.payoutDate ?? data.payrollDate  // swiftlint:disable:this explicit_type_interface line_length
-    let payrollDayStart = calendar.startOfDay(for: selectedPayoutDate)  // swiftlint:disable:this explicit_type_interface
+    let selectedPayoutDate: Date = preliminaryPayrollVariants.first?.payoutDate ?? data.payrollDate
+    let payrollDayStart: Date = calendar.startOfDay(for: selectedPayoutDate)
     let payrollDayEnd =  // swiftlint:disable:this explicit_type_interface
       calendar.date(byAdding: .day, value: 1, to: payrollDayStart) ?? payrollDayStart
     let isOnOrBeforePayrollDay = now < payrollDayEnd  // swiftlint:disable:this explicit_type_interface
@@ -1071,9 +1071,12 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           return defaultPayrollProgress
         }
 
-        guard shouldShowLivePayrollProgress else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
+        guard shouldShowLivePayrollProgress else {
+          return nil
+        }
 
-        let selectedPayrollDayStart = calendar.startOfDay(for: selectedPayrollVariant.payoutDate)  // swiftlint:disable:this explicit_type_interface line_length
+        let selectedPayrollDayStart: Date =
+          calendar.startOfDay(for: selectedPayrollVariant.payoutDate)
         let selectedPayrollDayEnd =  // swiftlint:disable:this explicit_type_interface
           calendar.date(byAdding: .day, value: 1, to: selectedPayrollDayStart)
           ?? selectedPayrollDayStart
@@ -1713,7 +1716,9 @@ private struct ClockOutReviewSheet: View {
   }
 
   private var selectedJob: Job? {
-    guard let selectedJobId else { return availableJobs.first }  // swiftlint:disable:this conditional_returns_on_newline
+    guard let selectedJobId else {
+      return availableJobs.first
+    }
     return availableJobs.first(where: { $0.id == selectedJobId }) ?? availableJobs.first
   }
 
