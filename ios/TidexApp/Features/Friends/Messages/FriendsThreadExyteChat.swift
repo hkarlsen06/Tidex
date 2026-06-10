@@ -95,8 +95,12 @@ enum FriendsThreadMessageStatusResolver {
     counterpartLastReadMessageId: String?,
     counterpartLastReadAt: Date?
   ) -> String? {
-    guard let counterpartLastReadAt else { return nil }
-    guard let normalizedViewerUserId = normalizedUserId(viewerUserId) else { return nil }
+    guard let counterpartLastReadAt else {
+      return nil
+    }
+    guard let normalizedViewerUserId = normalizedUserId(viewerUserId) else {
+      return nil
+    }
 
     return messages.last(where: {
       isReadReceiptCandidate($0, viewerUserId: normalizedViewerUserId)
@@ -109,7 +113,9 @@ enum FriendsThreadMessageStatusResolver {
   }
 
   static func latestOutgoingMessageId(messages: [FriendMessage], viewerUserId: String) -> String? {
-    guard let normalizedViewerUserId = normalizedUserId(viewerUserId) else { return nil }
+    guard let normalizedViewerUserId = normalizedUserId(viewerUserId) else {
+      return nil
+    }
 
     return messages.last(where: {
       isReadReceiptCandidate($0, viewerUserId: normalizedViewerUserId)
@@ -122,7 +128,9 @@ enum FriendsThreadMessageStatusResolver {
     latestOutgoingMessageId: String?,
     readReceiptMessageId: String?
   ) -> FriendsChatMessageStatus? {
-    guard message.senderUserId == viewerUserId, message.messageType == .user else { return nil }
+    guard message.senderUserId == viewerUserId, message.messageType == .user else {
+      return nil
+    }
 
     switch message.sendState {
     case .sending:
@@ -148,7 +156,9 @@ enum FriendsThreadMessageStatusResolver {
     groupContext: FriendsChatMessageGroupContext,
     messageStatus: FriendsChatMessageStatus?
   ) -> Bool {
-    guard isCurrentUser else { return !groupContext.joinsNext }
+    guard isCurrentUser else {
+      return !groupContext.joinsNext
+    }
 
     switch messageStatus {
     case .sending, .failed:
@@ -222,7 +232,9 @@ enum FriendsChatPanGestureResolver {
     direction: FriendsChatReplySwipeDirection,
     ratio: CGFloat = horizontalIntentRatio
   ) -> Bool {
-    guard hasHorizontalIntent(velocity: velocity, ratio: ratio) else { return false }
+    guard hasHorizontalIntent(velocity: velocity, ratio: ratio) else {
+      return false
+    }
 
     switch direction {
     case .left:
@@ -234,8 +246,12 @@ enum FriendsChatPanGestureResolver {
   }
 
   static func shouldTriggerNavigationBack(translation: CGSize, velocity: CGSize) -> Bool {
-    guard translation.width > 0 else { return false }
-    guard abs(translation.width) > abs(translation.height) else { return false }
+    guard translation.width > 0 else {
+      return false
+    }
+    guard abs(translation.width) > abs(translation.height) else {
+      return false
+    }
     return translation.width >= navigationBackDistanceThreshold
       || velocity.width >= navigationBackVelocityThreshold
   }
@@ -252,14 +268,20 @@ enum FriendsChatReplySwipeResolver {
     vertical: CGFloat,
     allowedDirection: FriendsChatReplySwipeDirection
   ) -> CGFloat? {
-    guard abs(horizontal) > abs(vertical) else { return nil }
+    guard abs(horizontal) > abs(vertical) else {
+      return nil
+    }
 
     switch allowedDirection {
     case .left:
-      guard horizontal < 0 else { return 0 }
+      guard horizontal < 0 else {
+        return 0
+      }
 
     case .right:
-      guard horizontal > 0 else { return 0 }
+      guard horizontal > 0 else {
+        return 0
+      }
     }
 
     if abs(horizontal) > actionWidth {
@@ -312,8 +334,12 @@ enum FriendsChatTimestampRevealResolver {
   }
 
   static func clampedRevealOffset(horizontal: CGFloat, vertical: CGFloat) -> CGFloat? {
-    guard abs(horizontal) > abs(vertical) else { return nil }
-    guard horizontal < 0 else { return 0 }
+    guard abs(horizontal) > abs(vertical) else {
+      return nil
+    }
+    guard horizontal < 0 else {
+      return 0
+    }
     return min(abs(horizontal), revealWidth)
   }
 }
@@ -332,7 +358,9 @@ enum FriendsThreadMessageListChangeResolver {
     lastMessageSenderId: String?,
     viewerUserId: String
   ) -> Change {
-    guard !newMessageIDs.isEmpty, newMessageIDs != oldMessageIDs else { return .none }
+    guard !newMessageIDs.isEmpty, newMessageIDs != oldMessageIDs else {
+      return .none
+    }
 
     let prependedMessage = isPrependedMessage(
       oldMessageIDs: oldMessageIDs, newMessageIDs: newMessageIDs)
@@ -449,7 +477,9 @@ enum FriendsThreadImageGalleryResolver {
 
 enum FriendsThreadCounterpartPreviewNavigationResolver {
   static func deepLink(for preview: SharerShiftPreview) -> AppCoordinator.DeepLink? {
-    guard let shift = preview.shift else { return nil }
+    guard let shift = preview.shift else {
+      return nil
+    }
 
     return .sharing(
       sharerId: preview.sharerId,
@@ -474,7 +504,9 @@ enum FriendsThreadAttachmentTapGuard {
   }
 
   static func shouldHandleTap(suppressedUntil: Date?, now: Date = .now) -> Bool {
-    guard let suppressedUntil else { return true }
+    guard let suppressedUntil else {
+      return true
+    }
     return now >= suppressedUntil
   }
 }
@@ -486,14 +518,18 @@ enum FriendsThreadShiftSnapshotNavigationResolver {
     cachedFriends: SharedShiftsRepository.CachedFriendsSnapshot
   ) -> AppCoordinator.DeepLink? {
     let shiftDate = snapshot.shiftDate.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !shiftDate.isEmpty else { return nil }
+    guard !shiftDate.isEmpty else {
+      return nil
+    }
 
     if snapshot.ownerUserId == viewerUserId {
       return .shifts(dates: [shiftDate], shiftIds: nil, action: .highlight)
     }
 
     guard canViewSharedShifts(ownerUserId: snapshot.ownerUserId, cachedFriends: cachedFriends)
-    else { return nil }
+    else {
+      return nil
+    }
 
     return .sharing(
       sharerId: snapshot.ownerUserId,
@@ -673,8 +709,12 @@ enum FriendsThreadChatViewportRequestResolver {
     messages: [FriendMessage],
     viewerUserId: String
   ) -> String? {
-    guard let messageId else { return nil }
-    guard let message = messages.first(where: { $0.id == messageId }) else { return nil }
+    guard let messageId else {
+      return nil
+    }
+    guard let message = messages.first(where: { $0.id == messageId }) else {
+      return nil
+    }
     return FriendsThreadMessagePresentationID.make(for: message, viewerUserId: viewerUserId)
   }
 
@@ -715,8 +755,12 @@ enum FriendsThreadChatViewportRequestResolver {
     messages: [FriendMessage],
     viewerUserId: String
   ) -> FriendsThreadChatViewportScrollRequest? {
-    guard let messageId else { return nil }
-    guard let message = messages.first(where: { $0.id == messageId }) else { return nil }
+    guard let messageId else {
+      return nil
+    }
+    guard let message = messages.first(where: { $0.id == messageId }) else {
+      return nil
+    }
 
     return FriendsThreadChatViewportScrollRequest(
       kind: kind,
@@ -732,7 +776,9 @@ enum FriendsThreadChatViewportRequestResolver {
     kind: FriendsThreadChatViewportScrollRequest.Kind,
     presentedMessageID: String?
   ) -> FriendsThreadChatViewportScrollRequest? {
-    guard let presentedMessageID else { return nil }
+    guard let presentedMessageID else {
+      return nil
+    }
 
     return FriendsThreadChatViewportScrollRequest(
       kind: kind,
@@ -748,7 +794,9 @@ enum FriendsThreadVisibleMessageResolver {
     messages: [FriendMessage],
     viewerUserId: String
   ) -> String? {
-    guard let presentedMessageID else { return nil }
+    guard let presentedMessageID else {
+      return nil
+    }
     guard presentedMessageID != FriendsThreadExyteMessageFactory.typingIndicatorMessageID else {
       return nil
     }
@@ -959,10 +1007,18 @@ struct FriendsThreadChatProjection {
     showsTypingIndicator: Bool,
     now: Date = .now
   ) -> Bool {
-    guard showsTypingIndicator else { return false }
-    guard message.senderUserId != viewerUserId else { return false }
-    guard message.messageType == .user, message.deletedAt == nil else { return false }
-    guard index == lastMessageIndex else { return false }
+    guard showsTypingIndicator else {
+      return false
+    }
+    guard message.senderUserId != viewerUserId else {
+      return false
+    }
+    guard message.messageType == .user, message.deletedAt == nil else {
+      return false
+    }
+    guard index == lastMessageIndex else {
+      return false
+    }
     return now.timeIntervalSince(message.createdAt) <= FriendsChatMessageGrouping.maximumGap
   }
 }
@@ -973,7 +1029,9 @@ final class FriendsThreadChatProjectionStore: ObservableObject {
   private var cachedProjection: FriendsThreadChatProjection = .empty
 
   func projection(for input: FriendsThreadChatProjection.Input) -> FriendsThreadChatProjection {
-    guard cachedInput != input else { return cachedProjection }
+    guard cachedInput != input else {
+      return cachedProjection
+    }
     cachedInput = input
     cachedProjection = FriendsThreadChatProjection.make(input: input)
     return cachedProjection
@@ -988,7 +1046,9 @@ enum FriendsThreadExyteHighlightRedrawResolver {
     highlightedPresentedMessageID: String?
   ) -> [ExyteChat.Message] {
     messages.map { message in
-      guard message.id == highlightedPresentedMessageID else { return message }
+      guard message.id == highlightedPresentedMessageID else {
+        return message
+      }
       var highlightedMessage = message
       highlightedMessage.attributedText += AttributedString(redrawMarker)
       return highlightedMessage
@@ -1001,7 +1061,9 @@ enum FriendsThreadExyteHighlightRedrawResolver {
 
   static func visibleText(for message: ExyteChat.Message) -> String {
     let text = String(message.attributedText.characters)
-    guard isHighlighted(message) else { return text }
+    guard isHighlighted(message) else {
+      return text
+    }
     return String(text.dropLast(redrawMarker.count))
   }
 }
@@ -1126,7 +1188,9 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
       if gestureRecognizer === backgroundBackPanGestureRecognizer {
-        guard let recognizer = gestureRecognizer as? UIPanGestureRecognizer else { return true }
+        guard let recognizer = gestureRecognizer as? UIPanGestureRecognizer else {
+          return true
+        }
         let velocity = recognizer.velocity(in: recognizer.view)
         guard
           FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
@@ -1247,18 +1311,26 @@ struct FriendsThreadNavigationGestureBridge: UIViewRepresentable {
     }
 
     private func startsInChatTableBackground(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-      guard let rootView = gestureRecognizer.view else { return false }
+      guard let rootView = gestureRecognizer.view else {
+        return false
+      }
       let location = gestureRecognizer.location(in: rootView)
-      guard let tableView = rootView.containingTableView(at: location) else { return false }
+      guard let tableView = rootView.containingTableView(at: location) else {
+        return false
+      }
       let tableLocation = gestureRecognizer.location(in: tableView)
-      guard tableView.bounds.contains(tableLocation) else { return false }
+      guard tableView.bounds.contains(tableLocation) else {
+        return false
+      }
       return !isNavigationBackExcludedTarget(rootView.chatGestureTargetKind(at: location))
     }
 
     private func startsInNavigationBackExcludedTarget(
       _ gestureRecognizer: UIGestureRecognizer
     ) -> Bool {
-      guard let rootView = gestureRecognizer.view else { return false }
+      guard let rootView = gestureRecognizer.view else {
+        return false
+      }
       let location = gestureRecognizer.location(in: rootView)
       return isNavigationBackExcludedTarget(rootView.chatGestureTargetKind(at: location))
     }
@@ -1436,14 +1508,20 @@ struct FriendsThreadTimestampRevealGestureBridge: UIViewRepresentable {
     }
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-      guard isEnabled else { return false }
+      guard isEnabled else {
+        return false
+      }
       guard let recognizer = gestureRecognizer as? UIPanGestureRecognizer, let tableView else {
         return false
       }
 
       let location = recognizer.location(in: tableView)
-      guard tableView.bounds.contains(location) else { return false }
-      guard tableView.indexPathForRow(at: location) == nil else { return false }
+      guard tableView.bounds.contains(location) else {
+        return false
+      }
+      guard tableView.indexPathForRow(at: location) == nil else {
+        return false
+      }
 
       let velocity = recognizer.velocity(in: tableView.window ?? tableView)
       return FriendsChatPanGestureResolver.hasDirectionalHorizontalIntent(
@@ -1464,7 +1542,9 @@ struct FriendsThreadTimestampRevealGestureBridge: UIViewRepresentable {
       let tableViews = searchRoot.descendantViews(ofType: UITableView.self)
 
       return tableViews.first(where: { candidate in
-        guard let delegate = candidate.delegate else { return false }
+        guard let delegate = candidate.delegate else {
+          return false
+        }
         return String(reflecting: type(of: delegate)).contains("UIList")
       }) ?? tableViews.first
     }
@@ -1840,7 +1920,9 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       if let layoutSnapshot, layoutSnapshot.matches(messages: messages) {
         return layoutSnapshot
       }
-      guard !messages.isEmpty else { return nil }
+      guard !messages.isEmpty else {
+        return nil
+      }
 
       let rebuiltLayoutSnapshot = FriendsThreadChatViewportResolver.layoutSnapshot(
         messages: messages)
@@ -1853,7 +1935,9 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       let tableViews = searchRoot.descendantViews(ofType: UITableView.self)
 
       return tableViews.first(where: { candidate in
-        guard let delegate = candidate.delegate else { return false }
+        guard let delegate = candidate.delegate else {
+          return false
+        }
         return String(reflecting: type(of: delegate)).contains("UIList")
       }) ?? tableViews.first
     }
@@ -2064,7 +2148,9 @@ enum FriendsThreadExyteMessageFactory {
   }
 
   private static func exyteMenuMarker(for message: FriendMessage) -> String? {
-    guard message.shiftSnapshot != nil else { return nil }
+    guard message.shiftSnapshot != nil else {
+      return nil
+    }
     return FriendsThreadMessageMenuAction.shiftSnapshotForwardMarker
   }
 
@@ -2080,7 +2166,9 @@ enum FriendsThreadExyteMessageFactory {
       } ?? message.reactions
 
     return reactions.compactMap { reaction in
-      guard reaction.viewerHasReacted else { return nil }
+      guard reaction.viewerHasReacted else {
+        return nil
+      }
       return ExyteChat.Reaction(
         user: ExyteChat.User(
           id: viewerUserId,

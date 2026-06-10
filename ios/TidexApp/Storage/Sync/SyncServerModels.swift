@@ -2,29 +2,29 @@ import Foundation
 
 // MARK: - Server Row Types for Sync
 
-struct SyncRowId: Codable {
-  let id: String
+internal struct SyncRowId: Codable {
+  internal let id: String
 }
 
 /// Extended shift row with sync metadata fields
 /// Used when fetching from server for sync (includes updated_at, revision, deleted_at)
-struct SyncShiftRow: Codable {
-  let id: String
-  let user_id: String
-  let job_id: String?
-  let shift_date: String
-  let start_time: String
-  let end_time: String
-  let note: String?
-  let custom_pause_windows: CustomPauseWindows?
-  let custom_supplements: CustomSupplementsData?
-  let created_at: String?
-  let updated_at: String
-  let revision: Int64
-  let deleted_at: String?
+internal struct SyncShiftRow: Codable {
+  internal let id: String
+  internal let user_id: String
+  internal let job_id: String?
+  internal let shift_date: String
+  internal let start_time: String
+  internal let end_time: String
+  internal let note: String?
+  internal let custom_pause_windows: CustomPauseWindows?
+  internal let custom_supplements: CustomSupplementsData?
+  internal let created_at: String?
+  internal let updated_at: String
+  internal let revision: Int64
+  internal let deleted_at: String?
 
   /// Convert to regular ShiftRow (for compatibility)
-  func toShiftRow() -> ShiftRow {
+  internal func toShiftRow() -> ShiftRow {
     ShiftRow(
       id: id,
       user_id: user_id,
@@ -41,23 +41,23 @@ struct SyncShiftRow: Codable {
 }
 
 /// Extended event row with sync metadata fields.
-struct SyncEventRow: Codable {
-  let id: String
-  let user_id: String
-  let start_date: String
-  let end_date: String
-  let is_all_day: Bool
-  let start_time: String?
-  let end_time: String?
-  let note: String
-  let notification_minutes_array: [Int]?
-  let notification_anchor_time: String?
-  let created_at: String?
-  let updated_at: String
-  let revision: Int64
-  let deleted_at: String?
+internal struct SyncEventRow: Codable {
+  internal let id: String
+  internal let user_id: String
+  internal let start_date: String
+  internal let end_date: String
+  internal let is_all_day: Bool
+  internal let start_time: String?
+  internal let end_time: String?
+  internal let note: String
+  internal let notification_minutes_array: [Int]?
+  internal let notification_anchor_time: String?
+  internal let created_at: String?
+  internal let updated_at: String
+  internal let revision: Int64
+  internal let deleted_at: String?
 
-  func toEventRow() -> EventRow {
+  internal func toEventRow() -> EventRow {
     EventRow(
       id: id,
       user_id: user_id,
@@ -75,51 +75,55 @@ struct SyncEventRow: Codable {
 }
 
 /// Extended recurring shift row with sync metadata fields
-struct SyncRecurringShiftRow: Codable {
-  let id: String
-  let user_id: String
-  let job_id: String?
-  let start_time: String
-  let end_time: String
-  let repeat_interval_weeks: Int
-  let selected_days: SelectedDays
-  let end_condition: EndCondition?
-  let exclusions: [String]?
-  let date_specific_pause_windows: DateSpecificPauseWindows?
-  let date_specific_supplements: [String: CustomSupplementsData]?
-  let date_specific_notes: [String: String]?
-  let updated_at: String
-  let revision: Int64
-  let deleted_at: String?
+internal struct SyncRecurringShiftRow: Codable {
+  private static let timeZoneOffsetSeparatorMinimumIndex: Int = 2
+  private static let timePrefixLength: Int = 5
+
+  internal let id: String
+  internal let user_id: String
+  internal let job_id: String?
+  internal let start_time: String
+  internal let end_time: String
+  internal let repeat_interval_weeks: Int
+  internal let selected_days: SelectedDays
+  internal let end_condition: EndCondition?
+  internal let exclusions: [String]?
+  internal let date_specific_pause_windows: DateSpecificPauseWindows?
+  internal let date_specific_supplements: [String: CustomSupplementsData]?
+  internal let date_specific_notes: [String: String]?
+  internal let updated_at: String
+  internal let revision: Int64
+  internal let deleted_at: String?
 
   /// Clean start time (removes timezone suffix from timetz)
-  var cleanStartTime: String {
+  internal var cleanStartTime: String {
     cleanTime(start_time)
   }
 
   /// Clean end time (removes timezone suffix from timetz)
-  var cleanEndTime: String {
+  internal var cleanEndTime: String {
     cleanTime(end_time)
   }
 
   private func cleanTime(_ time: String) -> String {
-    var cleaned = time
+    var cleaned: String = time
 
     if let plusIndex = cleaned.firstIndex(of: "+") {
       cleaned = String(cleaned[..<plusIndex])
     }
 
     if let minusIndex = cleaned.lastIndex(of: "-"),
-      cleaned.distance(from: cleaned.startIndex, to: minusIndex) > 2
+      cleaned.distance(from: cleaned.startIndex, to: minusIndex)
+        > Self.timeZoneOffsetSeparatorMinimumIndex
     {
       cleaned = String(cleaned[..<minusIndex])
     }
 
-    return String(cleaned.prefix(5))
+    return String(cleaned.prefix(Self.timePrefixLength))
   }
 
   /// Convert to regular RecurringShiftRow
-  func toRecurringShiftRow() -> RecurringShiftRow {
+  internal func toRecurringShiftRow() -> RecurringShiftRow {
     RecurringShiftRow(
       id: id,
       user_id: user_id,
@@ -138,28 +142,28 @@ struct SyncRecurringShiftRow: Codable {
 }
 
 /// Extended wage snapshot row with sync metadata fields
-struct SyncWageSnapshotRow: Codable {
-  let id: String
-  let user_id: String
-  let job_id: String?
-  let from_date: String?
-  let hourly_wage: Double
-  let wage_level: Int?
-  let tariff_type_id: String?
-  let supplements: SupplementRulesSnapshot
-  let tax_enabled: Bool?
-  let tax_percentage: Double?
-  let break_enabled: Bool?
-  let break_method: String?
-  let break_threshold_hours: Double?
-  let break_deduction_minutes: Int?
-  let created_at: String?
-  let updated_at: String
-  let revision: Int64
-  let deleted_at: String?
+internal struct SyncWageSnapshotRow: Codable {
+  internal let id: String
+  internal let user_id: String
+  internal let job_id: String?
+  internal let from_date: String?
+  internal let hourly_wage: Double
+  internal let wage_level: Int?
+  internal let tariff_type_id: String?
+  internal let supplements: SupplementRulesSnapshot
+  internal let tax_enabled: Bool?
+  internal let tax_percentage: Double?
+  internal let break_enabled: Bool?
+  internal let break_method: String?
+  internal let break_threshold_hours: Double?
+  internal let break_deduction_minutes: Int?
+  internal let created_at: String?
+  internal let updated_at: String
+  internal let revision: Int64
+  internal let deleted_at: String?
 
   /// Convert to regular WageSnapshot
-  func toWageSnapshot() -> WageSnapshot {
+  internal func toWageSnapshot() -> WageSnapshot {
     WageSnapshot(
       id: id,
       user_id: user_id,
@@ -181,29 +185,29 @@ struct SyncWageSnapshotRow: Codable {
 }
 
 /// Extended payroll adjustment row with sync metadata fields
-struct SyncPayrollAdjustmentRow: Codable {
-  let id: String
-  let user_id: String
-  let job_id: String?
-  let amount: Double
-  let currency: String
-  let category: PayrollAdjustmentCategory
-  let tax_treatment: PayrollAdjustmentTaxTreatment
-  let description: String
-  let note: String?
-  let curated_note: String?
-  let curated_description: String?
-  let curated_link: String?
-  let curated_link_title: String?
-  let earned_from_date: String?
-  let earned_to_date: String?
-  let payout_date: String
-  let created_at: String?
-  let updated_at: String
-  let revision: Int64
-  let deleted_at: String?
+internal struct SyncPayrollAdjustmentRow: Codable {
+  internal let id: String
+  internal let user_id: String
+  internal let job_id: String?
+  internal let amount: Double
+  internal let currency: String
+  internal let category: PayrollAdjustmentCategory
+  internal let tax_treatment: PayrollAdjustmentTaxTreatment
+  internal let description: String
+  internal let note: String?
+  internal let curated_note: String?
+  internal let curated_description: String?
+  internal let curated_link: String?
+  internal let curated_link_title: String?
+  internal let earned_from_date: String?
+  internal let earned_to_date: String?
+  internal let payout_date: String
+  internal let created_at: String?
+  internal let updated_at: String
+  internal let revision: Int64
+  internal let deleted_at: String?
 
-  func toPayrollAdjustment() -> PayrollAdjustment {
+  internal func toPayrollAdjustment() -> PayrollAdjustment {
     PayrollAdjustment(
       id: id,
       user_id: user_id,
@@ -230,22 +234,22 @@ struct SyncPayrollAdjustmentRow: Codable {
 }
 
 /// Extended jobs row with sync metadata fields
-struct SyncJobRow: Codable {
-  let id: String
-  let user_id: String
-  let name: String
-  let color: String?
-  let currency: String
-  let is_default: Bool
-  let sort_order: Int
-  let payroll_day: Int?
-  let half_tax_month: Int?
-  let monthly_goal: Int?
-  let archived_at: String?
-  let deleted_at: String?
-  let created_at: String?
-  let updated_at: String
-  let revision: Int64
+internal struct SyncJobRow: Codable {
+  internal let id: String
+  internal let user_id: String
+  internal let name: String
+  internal let color: String?
+  internal let currency: String
+  internal let is_default: Bool
+  internal let sort_order: Int
+  internal let payroll_day: Int?
+  internal let half_tax_month: Int?
+  internal let monthly_goal: Int?
+  internal let archived_at: String?
+  internal let deleted_at: String?
+  internal let created_at: String?
+  internal let updated_at: String
+  internal let revision: Int64
 
   private enum CodingKeys: String, CodingKey {
     case id
@@ -265,8 +269,9 @@ struct SyncJobRow: Codable {
     case revision
   }
 
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
+  internal init(from decoder: Decoder) throws {
+    let container: KeyedDecodingContainer<CodingKeys> =
+      try decoder.container(keyedBy: CodingKeys.self)
 
     id = try container.decode(String.self, forKey: .id)
     user_id = try container.decode(String.self, forKey: .user_id)
@@ -287,27 +292,27 @@ struct SyncJobRow: Codable {
 }
 
 /// Extended user settings row with sync metadata fields
-struct SyncUserSettingsRow: Codable {
-  let user_id: String
-  let created_at: String?
-  let updated_at: String
-  let last_active: String?
-  let monthly_goal: Int?
-  let monthly_goals_by_month: [String: Int]?
-  let default_shifts_view: String?
-  let profile_picture_url: String?
-  let payroll_day: Int?
-  let theme: String
-  let calendar_content_color_style: String?
-  let show_dashboard_clock_buttons: Bool?
-  let ai_data_sharing_enabled: Bool?
-  let half_tax_month: Int?
-  let currency: String?
-  let default_startup_tab: String?
-  let revision: Int64
+internal struct SyncUserSettingsRow: Codable {
+  internal let user_id: String
+  internal let created_at: String?
+  internal let updated_at: String
+  internal let last_active: String?
+  internal let monthly_goal: Int?
+  internal let monthly_goals_by_month: [String: Int]?
+  internal let default_shifts_view: String?
+  internal let profile_picture_url: String?
+  internal let payroll_day: Int?
+  internal let theme: String
+  internal let calendar_content_color_style: String?
+  internal let show_dashboard_clock_buttons: Bool?
+  internal let ai_data_sharing_enabled: Bool?
+  internal let half_tax_month: Int?
+  internal let currency: String?
+  internal let default_startup_tab: String?
+  internal let revision: Int64
 
   /// Convert to regular UserSettings
-  func toUserSettings() -> UserSettings {
+  internal func toUserSettings() -> UserSettings {
     UserSettings(
       user_id: user_id,
       created_at: created_at,
@@ -331,15 +336,15 @@ struct SyncUserSettingsRow: Codable {
 
 /// Notification preferences row for sync
 /// Note: This table has no revision column - iOS is the source of truth
-struct SyncNotificationPreferencesRow: Codable {
-  let user_id: String
-  let shift_reminders_enabled: Bool
-  let shift_reminder_minutes_array: [Int]?
-  let shared_shifts_enabled: Bool
-  let updated_at: String
+internal struct SyncNotificationPreferencesRow: Codable {
+  internal let user_id: String
+  internal let shift_reminders_enabled: Bool
+  internal let shift_reminder_minutes_array: [Int]?
+  internal let shared_shifts_enabled: Bool
+  internal let updated_at: String
 
   /// Convert to NotificationPreferencesRow
-  func toNotificationPreferencesRow() -> NotificationPreferencesRow {
+  internal func toNotificationPreferencesRow() -> NotificationPreferencesRow {
     NotificationPreferencesRow(
       user_id: user_id,
       shared_shifts_enabled: shared_shifts_enabled,
@@ -353,33 +358,32 @@ struct SyncNotificationPreferencesRow: Codable {
 // MARK: - Sync Result Types
 
 /// Result of pulling a single table
-struct TablePullResult {
-  let table: SyncTable
-  let rowsProcessed: Int
+internal struct TablePullResult {
+  internal let table: SyncTable
+  internal let rowsProcessed: Int
   /// Last updated_at timestamp processed (for cursor)
-  let lastUpdatedAt: Date?
+  internal let lastUpdatedAt: Date?
   /// ID of the last row at the lastUpdatedAt timestamp (tie-breaker)
-  let lastUpdatedAtTieId: String?
+  internal let lastUpdatedAtTieId: String?
   /// Legacy max revision (kept for debugging only)
-  let maxRevision: Int64
-  let newConflicts: Int
-  let autoMerged: Int
-  let affectedMonths: Set<ShiftChangeAffectedMonth>
+  internal let maxRevision: Int64
+  internal let newConflicts: Int, autoMerged: Int
+  internal let affectedMonths: Set<ShiftChangeAffectedMonth>
 }
 
 /// Overall sync result
-struct SyncResult {
-  let success: Bool
-  let tableResults: [TablePullResult]
-  let pushResults: [TablePushResult]
-  let totalRowsProcessed: Int
-  let totalRowsPushed: Int
-  let totalConflicts: Int
-  let totalAutoMerged: Int
-  let duration: TimeInterval
-  let error: String?
+internal struct SyncResult {
+  internal let success: Bool
+  internal let tableResults: [TablePullResult]
+  internal let pushResults: [TablePushResult]
+  internal let totalRowsProcessed: Int
+  internal let totalRowsPushed: Int
+  internal let totalConflicts: Int
+  internal let totalAutoMerged: Int
+  internal let duration: TimeInterval
+  internal let error: String?
 
-  var hasConflicts: Bool {
+  internal var hasConflicts: Bool {
     totalConflicts > 0
   }
 }
@@ -387,54 +391,50 @@ struct SyncResult {
 // MARK: - Push Result Types
 
 /// Result of pushing a single table
-struct TablePushResult {
-  let table: SyncTable
-  let rowsPushed: Int
-  let newConflicts: Int
-  let rebased: Int
-  let affectedMonths: Set<ShiftChangeAffectedMonth> = []
+internal struct TablePushResult {
+  internal let table: SyncTable
+  internal let rowsPushed: Int, newConflicts: Int, rebased: Int
+  internal let affectedMonths: Set<ShiftChangeAffectedMonth> = []
 }
 
 // MARK: - Sync Completion Summary
 
-struct SyncTableChange: Equatable {
-  let table: SyncTable
-  let pulledRows: Int
-  let pushedRows: Int
-  let newConflicts: Int
-  let autoMerged: Int
-  let rebased: Int
-  let affectedMonths: Set<ShiftChangeAffectedMonth>
+internal struct SyncTableChange: Equatable {
+  internal let table: SyncTable
+  internal let pulledRows: Int, pushedRows: Int, newConflicts: Int, autoMerged: Int, rebased: Int
+  internal let affectedMonths: Set<ShiftChangeAffectedMonth>
 
-  var changesLocalReadModels: Bool {
+  internal var changesLocalReadModels: Bool {
     pulledRows > 0 || newConflicts > 0 || autoMerged > 0 || rebased > 0
   }
 }
 
-struct SyncCompletionSummary: Equatable {
-  let reason: SyncReason
-  let userId: String
-  let completedAt: Date
-  let tableChanges: [SyncTableChange]
+internal struct SyncCompletionSummary: Equatable {
+  internal let reason: SyncReason
+  internal let userId: String
+  internal let completedAt: Date
+  internal let tableChanges: [SyncTableChange]
 
-  init(
+  internal init(
     reason: SyncReason,
     userId: String,
-    completedAt: Date = Date(),
     tableResults: [TablePullResult],
-    pushResults: [TablePushResult]
+    pushResults: [TablePushResult],
+    completedAt: Date = Date()
   ) {
     self.reason = reason
     self.userId = userId
     self.completedAt = completedAt
 
-    let pullResultsByTable = Dictionary(uniqueKeysWithValues: tableResults.map { ($0.table, $0) })
-    let pushResultsByTable = Dictionary(uniqueKeysWithValues: pushResults.map { ($0.table, $0) })
-    let tables = Set(pullResultsByTable.keys).union(pushResultsByTable.keys)
+    let pullResultsByTable: [SyncTable: TablePullResult] =
+      Dictionary(uniqueKeysWithValues: tableResults.map { ($0.table, $0) })
+    let pushResultsByTable: [SyncTable: TablePushResult] =
+      Dictionary(uniqueKeysWithValues: pushResults.map { ($0.table, $0) })
+    let tables: Set<SyncTable> = Set(pullResultsByTable.keys).union(pushResultsByTable.keys)
 
     self.tableChanges = tables.sorted { $0.rawValue < $1.rawValue }.map { table in
-      let pullResult = pullResultsByTable[table]
-      let pushResult = pushResultsByTable[table]
+      let pullResult: TablePullResult? = pullResultsByTable[table]
+      let pushResult: TablePushResult? = pushResultsByTable[table]
       return SyncTableChange(
         table: table,
         pulledRows: pullResult?.rowsProcessed ?? 0,
@@ -447,28 +447,28 @@ struct SyncCompletionSummary: Equatable {
     }
   }
 
-  var localReadModelChanges: [SyncTableChange] {
+  internal var localReadModelChanges: [SyncTableChange] {
     tableChanges.filter(\.changesLocalReadModels)
   }
 
-  var hasLocalReadModelChanges: Bool {
+  internal var hasLocalReadModelChanges: Bool {
     !localReadModelChanges.isEmpty
   }
 }
 
 /// Result of pushing a single record
-enum PushResult {
-  case success
+internal enum PushResult {
   case conflict
-  case rebased
-  case noChange
   case deleted
+  case noChange
+  case rebased
+  case success
 }
 
 // MARK: - Conflict Resolution
 
 /// Resolution choice for a conflict
-enum ConflictResolution {
+internal enum ConflictResolution {
   /// Keep the local (iPhone) version and push to server
   case keepLocal
   /// Keep the server (Web) version and discard local changes

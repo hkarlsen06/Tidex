@@ -3,148 +3,148 @@ import Foundation
 
 // MARK: - Friends Messaging Domain Models
 
-enum FriendThreadKind: String, Codable, Equatable {
+internal enum FriendThreadKind: String, Codable, Equatable {
   case direct
   case room
   case feed
 }
 
-enum FriendMessageType: String, Codable, Equatable {
+internal enum FriendMessageType: String, Codable, Equatable {
   case user
   case system
 }
 
-enum FriendMessageAttachmentKind: String, Codable, Equatable {
+internal enum FriendMessageAttachmentKind: String, Codable, Equatable {
   case image
 }
 
-enum FriendMessageSendState: String, Codable, Equatable {
+internal enum FriendMessageSendState: String, Codable, Equatable {
   case sending
   case sent
   case failed
 }
 
-enum FriendAbuseReportReason: String, Codable, CaseIterable, Equatable {
+internal enum FriendAbuseReportReason: String, Codable, CaseIterable, Equatable {
   case harassmentOrBullying = "harassment_or_bullying"
   case sexualContent = "sexual_content"
   case hateOrDiscriminatoryContent = "hate_or_discriminatory_content"
   case violenceOrThreats = "violence_or_threats"
-  case spam = "spam"
+  case spam
   case inappropriateProfileOrConduct = "inappropriate_profile_or_conduct"
   case other
 }
 
-struct FriendThreadCursor: Equatable {
-  let lastMessageAt: Date
-  let threadId: String
+internal struct FriendThreadCursor: Equatable {
+  internal let lastMessageAt: Date
+  internal let threadId: String
 }
 
-struct FriendMessageCursor: Equatable {
-  let createdAt: Date
-  let messageId: String
+internal struct FriendMessageCursor: Equatable {
+  internal let createdAt: Date
+  internal let messageId: String
 }
 
-struct FriendInboxSyncSnapshot: Equatable {
-  let threads: [FriendThread]
-  let unreadDirectMessageCount: Int
-  let nextCursor: FriendThreadCursor?
-  let snapshotVersion: Int64
-  let retainedFromVersion: Int64
-  let hasMore: Bool
+internal struct FriendInboxSyncSnapshot: Equatable {
+  internal let threads: [FriendThread]
+  internal let unreadDirectMessageCount: Int
+  internal let nextCursor: FriendThreadCursor?
+  internal let snapshotVersion: Int64
+  internal let retainedFromVersion: Int64
+  internal let hasMore: Bool
 }
 
-struct FriendThreadCounterpartPresence: Equatable {
-  let userId: String
-  let displayName: String?
-  let profilePictureUrl: String?
-  let oauthAvatarUrl: String?
+internal struct FriendThreadCounterpartPresence: Equatable {
+  internal let userId: String
+  internal let displayName: String?
+  internal let profilePictureUrl: String?
+  internal let oauthAvatarUrl: String?
 }
 
-struct FriendThreadSyncSnapshot: Equatable {
-  let thread: FriendThread
-  let viewerState: FriendThreadState
-  let counterpartPresence: FriendThreadCounterpartPresence?
-  let messages: [FriendMessage]
-  let nextCursor: FriendMessageCursor?
-  let snapshotVersion: Int64
-  let retainedFromVersion: Int64
-  let hasMore: Bool
+internal struct FriendThreadSyncSnapshot: Equatable {
+  internal let thread: FriendThread
+  internal let viewerState: FriendThreadState
+  internal let counterpartPresence: FriendThreadCounterpartPresence?
+  internal let messages: [FriendMessage]
+  internal let nextCursor: FriendMessageCursor?
+  internal let snapshotVersion: Int64
+  internal let retainedFromVersion: Int64
+  internal let hasMore: Bool
 }
 
-enum FriendMessagingSyncScope: Equatable {
+internal enum FriendMessagingSyncScope: Equatable {
   case inbox
   case thread(threadId: String)
 }
 
-struct FriendMessagingSyncState: Equatable {
-  let viewerUserId: String
-  let scope: FriendMessagingSyncScope
-  let version: Int64
-  let retainedFromVersion: Int64
-  let updatedAt: Date
+internal struct FriendMessagingSyncState: Equatable {
+  internal let viewerUserId: String
+  internal let scope: FriendMessagingSyncScope
+  internal let version: Int64
+  internal let retainedFromVersion: Int64
+  internal let updatedAt: Date
 }
 
-struct FriendInboxSyncEvent: Equatable {
-  enum EventType: String, Equatable {
+internal struct FriendInboxSyncEvent: Equatable {
+  internal enum EventType: String, Equatable {
     case threadUpserted = "thread_upserted"
     case threadRemoved = "thread_removed"
   }
 
-  let id: String
-  let version: Int64
-  let threadId: String?
-  let eventType: EventType
-  let thread: FriendThread?
+  internal let id: String
+  internal let version: Int64
+  internal let threadId: String?
+  internal let eventType: EventType
+  internal let thread: FriendThread?
 }
 
-struct FriendInboxSyncEventsPage: Equatable {
-  let requiresSnapshot: Bool
-  let latestVersion: Int64
-  let retainedFromVersion: Int64
-  let hasMore: Bool
-  let events: [FriendInboxSyncEvent]
+internal struct FriendInboxSyncEventsPage: Equatable {
+  internal let requiresSnapshot: Bool
+  internal let latestVersion: Int64
+  internal let retainedFromVersion: Int64
+  internal let hasMore: Bool
+  internal let events: [FriendInboxSyncEvent]
 }
 
-struct FriendThreadSyncEvent: Equatable {
-  enum EventType: String, Equatable {
+internal struct FriendThreadSyncEvent: Equatable {
+  internal enum EventType: String, Equatable {
     case messageUpserted = "message_upserted"
     case messageDeleted = "message_deleted"
   }
 
-  let id: String
-  let version: Int64
-  let eventType: EventType
-  let message: FriendMessage?
-  let deletedMessageId: String?
+  internal let id: String
+  internal let version: Int64
+  internal let eventType: EventType
+  internal let message: FriendMessage?
+  internal let deletedMessageId: String?
 }
 
-struct FriendThreadSyncEventsPage: Equatable {
-  let requiresSnapshot: Bool
-  let latestVersion: Int64
-  let retainedFromVersion: Int64
-  let hasMore: Bool
-  let events: [FriendThreadSyncEvent]
+internal struct FriendThreadSyncEventsPage: Equatable {
+  internal let requiresSnapshot: Bool
+  internal let latestVersion: Int64
+  internal let retainedFromVersion: Int64
+  internal let hasMore: Bool
+  internal let events: [FriendThreadSyncEvent]
 }
 
-struct FriendThreadMessagesPage: Equatable {
-  let messages: [FriendMessage]
-  let nextCursor: FriendMessageCursor?
-  let hasMore: Bool
+internal struct FriendThreadMessagesPage: Equatable {
+  internal let messages: [FriendMessage]
+  internal let nextCursor: FriendMessageCursor?
+  internal let hasMore: Bool
 }
 
-enum FriendLastMessagePreviewKind: String, Codable, Equatable {
+internal enum FriendLastMessagePreviewKind: String, Codable, Equatable {
   case text
   case image
   case shiftSnapshot = "shift_snapshot"
   case unknown
 }
 
-enum FriendRichContentKind: Equatable {
+internal enum FriendRichContentKind: Equatable {
   case shiftSnapshot
   case unsupported(String)
 }
 
-enum FriendRichContent: Equatable {
+internal enum FriendRichContent: Equatable {
   case shiftSnapshot(FriendShiftSnapshot)
 }
 
@@ -156,41 +156,44 @@ extension ImageAttachment: Codable {
   }
 
   public init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    let id = try container.decode(String.self, forKey: .id)
-    let data = try container.decode(Data.self, forKey: .data)
-    let mediaType = try container.decode(String.self, forKey: .mediaType)
+    let container: KeyedDecodingContainer<CodingKeys> = try decoder.container(
+      keyedBy: CodingKeys.self)
+    let id: String = try container.decode(String.self, forKey: .id)
+    let data: Data = try container.decode(Data.self, forKey: .data)
+    let mediaType: String = try container.decode(String.self, forKey: .mediaType)
     self.init(id: id, data: data, mediaType: mediaType)
   }
 
   public func encode(to encoder: Encoder) throws {
-    var container = encoder.container(keyedBy: CodingKeys.self)
+    var container: KeyedEncodingContainer<CodingKeys> = encoder.container(keyedBy: CodingKeys.self)
     try container.encode(id, forKey: .id)
     try container.encode(data, forKey: .data)
     try container.encode(mediaType, forKey: .mediaType)
   }
 }
 
-struct FriendShiftSnapshot: Codable, Equatable {
-  let schemaVersion: Int
-  let ownerUserId: String
-  let ownerDisplayName: String
-  let ownerAvatarUrl: String?
-  let shiftId: String
-  let jobName: String?
-  let jobColorHex: String?
-  let shiftDate: String
-  let startTime: String
-  let endTime: String
-  let paidHours: Double
-  let currency: String
-  let includesEarnings: Bool
-  let grossPay: Double?
-  let netPay: Double?
-  let taxEnabled: Bool
-  let source: String
+internal struct FriendShiftSnapshot: Codable, Equatable {
+  private static let ownerInitialsLimit: Int = 2
 
-  enum CodingKeys: String, CodingKey {
+  internal let schemaVersion: Int
+  internal let ownerUserId: String
+  internal let ownerDisplayName: String
+  internal let ownerAvatarUrl: String?
+  internal let shiftId: String
+  internal let jobName: String?
+  internal let jobColorHex: String?
+  internal let shiftDate: String
+  internal let startTime: String
+  internal let endTime: String
+  internal let paidHours: Double
+  internal let currency: String
+  internal let includesEarnings: Bool
+  internal let grossPay: Double?
+  internal let netPay: Double?
+  internal let taxEnabled: Bool
+  internal let source: String
+
+  internal enum CodingKeys: String, CodingKey {
     case schemaVersion = "schema_version"
     case ownerUserId = "owner_user_id"
     case ownerDisplayName = "owner_display_name"
@@ -210,25 +213,25 @@ struct FriendShiftSnapshot: Codable, Equatable {
     case source
   }
 
-  var isSupportedSchemaVersion: Bool {
+  internal var isSupportedSchemaVersion: Bool {
     schemaVersion == 1
   }
 
-  var ownerFirstName: String {
-    let trimmed = ownerDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+  internal var ownerFirstName: String {
+    let trimmed: String = ownerDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else {
       return "?"
     }
     return trimmed.components(separatedBy: .whitespacesAndNewlines).first ?? trimmed
   }
 
-  var ownerInitials: String {
-    let letters =
+  internal var ownerInitials: String {
+    let letters: ArraySlice<String.Element> =
       ownerFirstName
       .split(whereSeparator: \.isWhitespace)
       .compactMap(\.first)
-      .prefix(2)
-    let initials = letters.map(String.init).joined()
+      .prefix(Self.ownerInitialsLimit)
+    let initials: String = letters.map(String.init).joined()
     return initials.isEmpty ? "?" : initials.uppercased()
   }
 
@@ -287,9 +290,9 @@ struct FriendShiftSnapshot: Codable, Equatable {
     )
   }
 
-  var renderableShift: ShiftWithComputations {
-    let gross = grossPay ?? netPay ?? 0
-    let resolvedTaxEnabled = includesEarnings ? taxEnabled : false
+  internal var renderableShift: ShiftWithComputations {
+    let gross: Double = grossPay ?? netPay ?? 0
+    let resolvedTaxEnabled: Bool = includesEarnings ? taxEnabled : false
     let resolvedTaxPercentage: Double
 
     if resolvedTaxEnabled, gross > 0, let netPay {
@@ -325,11 +328,18 @@ struct FriendShiftSnapshot: Codable, Equatable {
   }
 }
 
-enum SnapshotRichContentIdentifier {
-  private static let uuidPattern =
+internal enum SnapshotRichContentIdentifier {
+  private static let uuidByteCount: Int = 16
+  private static let uuidVersionByteIndex: Int = 6
+  private static let uuidVariantByteIndex: Int = 8
+  private static let uuidVersionMask: UInt8 = 0x0F
+  private static let uuidVersionBits: UInt8 = 0x50
+  private static let uuidVariantMask: UInt8 = 0x3F
+  private static let uuidVariantBits: UInt8 = 0x80
+  private static let uuidPattern: String =
     "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
 
-  static func normalizedUUIDString(primary: String, fallbackSeed: String) -> String {
+  internal static func normalizedUUIDString(primary: String, fallbackSeed: String) -> String {
     if let valid = validUUIDString(from: primary) {
       return valid
     }
@@ -337,7 +347,9 @@ enum SnapshotRichContentIdentifier {
     return deterministicUUID(seed: fallbackSeed)
   }
 
-  static func normalizedUUIDString(primary: String?, secondary: String?, fallbackSeed: String)
+  internal static func normalizedUUIDString(
+    primary: String?, secondary: String?, fallbackSeed: String
+  )
     -> String
   {
     if let primary, let valid = validUUIDString(from: primary) {
@@ -352,7 +364,7 @@ enum SnapshotRichContentIdentifier {
   }
 
   private static func validUUIDString(from rawValue: String) -> String? {
-    let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed: String = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty, trimmed.range(of: uuidPattern, options: .regularExpression) != nil
     else {
       return nil
@@ -361,12 +373,14 @@ enum SnapshotRichContentIdentifier {
   }
 
   private static func deterministicUUID(seed: String) -> String {
-    let digest = SHA256.hash(data: Data(seed.utf8))
-    var bytes = Array(digest.prefix(16))
-    bytes[6] = (bytes[6] & 0x0F) | 0x50
-    bytes[8] = (bytes[8] & 0x3F) | 0x80
+    let digest: SHA256.Digest = SHA256.hash(data: Data(seed.utf8))
+    var bytes: [UInt8] = Array(digest.prefix(Self.uuidByteCount))
+    bytes[Self.uuidVersionByteIndex] =
+      (bytes[Self.uuidVersionByteIndex] & Self.uuidVersionMask) | Self.uuidVersionBits
+    bytes[Self.uuidVariantByteIndex] =
+      (bytes[Self.uuidVariantByteIndex] & Self.uuidVariantMask) | Self.uuidVariantBits
 
-    let uuid = UUID(
+    let uuid: UUID = UUID(
       uuid: (
         bytes[0], bytes[1], bytes[2], bytes[3],
         bytes[4], bytes[5], bytes[6], bytes[7],
@@ -377,19 +391,19 @@ enum SnapshotRichContentIdentifier {
   }
 }
 
-struct ComposerShiftSnapshotDraft: Codable, Equatable {
-  let snapshot: FriendShiftSnapshot
+internal struct ComposerShiftSnapshotDraft: Codable, Equatable {
+  internal let snapshot: FriendShiftSnapshot
 
-  var ownerDisplayName: String {
+  internal var ownerDisplayName: String {
     snapshot.ownerDisplayName
   }
 }
 
-enum FriendsComposerAttachmentLimits {
-  static let maxImagesPerMessage = 4
+internal enum FriendsComposerAttachmentLimits {
+  internal static let maxImagesPerMessage: Int = 4
 }
 
-enum FriendsComposerAttachmentDraft: Codable, Equatable {
+internal enum FriendsComposerAttachmentDraft: Codable, Equatable {
   case image(ImageAttachment)
   case shiftSnapshot(ComposerShiftSnapshotDraft)
 
@@ -404,9 +418,10 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
     case shiftSnapshot = "shift_snapshot"
   }
 
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
-    let type = try container.decode(DraftType.self, forKey: .type)
+  internal init(from decoder: Decoder) throws {
+    let container: KeyedDecodingContainer<CodingKeys> = try decoder.container(
+      keyedBy: CodingKeys.self)
+    let type: DraftType = try container.decode(DraftType.self, forKey: .type)
 
     switch type {
     case .image:
@@ -419,8 +434,8 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
     }
   }
 
-  func encode(to encoder: Encoder) throws {
-    var container = encoder.container(keyedBy: CodingKeys.self)
+  internal func encode(to encoder: Encoder) throws {
+    var container: KeyedEncodingContainer<CodingKeys> = encoder.container(keyedBy: CodingKeys.self)
 
     switch self {
     case .image(let image):
@@ -433,25 +448,25 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
     }
   }
 
-  var imageAttachment: ImageAttachment? {
+  internal var imageAttachment: ImageAttachment? {
     guard case .image(let image) = self else {
       return nil
     }
     return image
   }
 
-  var shiftSnapshotDraft: ComposerShiftSnapshotDraft? {
+  internal var shiftSnapshotDraft: ComposerShiftSnapshotDraft? {
     guard case .shiftSnapshot(let draft) = self else {
       return nil
     }
     return draft
   }
 
-  var shiftSnapshot: FriendShiftSnapshot? {
+  internal var shiftSnapshot: FriendShiftSnapshot? {
     shiftSnapshotDraft?.snapshot
   }
 
-  var previewKind: FriendLastMessagePreviewKind {
+  internal var previewKind: FriendLastMessagePreviewKind {
     switch self {
     case .image:
       return .image
@@ -461,7 +476,7 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
     }
   }
 
-  var metadataData: Data? {
+  internal var metadataData: Data? {
     guard let shiftSnapshot else {
       return nil
     }
@@ -477,52 +492,52 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
 }
 
 extension Array where Element == FriendsComposerAttachmentDraft {
-  var imageAttachments: [ImageAttachment] {
+  internal var imageAttachments: [ImageAttachment] {
     compactMap(\.imageAttachment)
   }
 
-  var shiftSnapshotDraft: ComposerShiftSnapshotDraft? {
+  internal var shiftSnapshotDraft: ComposerShiftSnapshotDraft? {
     compactMap(\.shiftSnapshotDraft).first
   }
 
-  var shiftSnapshot: FriendShiftSnapshot? {
+  internal var shiftSnapshot: FriendShiftSnapshot? {
     shiftSnapshotDraft?.snapshot
   }
 
-  var hasImageAttachments: Bool {
+  internal var hasImageAttachments: Bool {
     contains { $0.imageAttachment != nil }
   }
 
-  var hasShiftSnapshot: Bool {
+  internal var hasShiftSnapshot: Bool {
     contains { $0.shiftSnapshot != nil }
   }
 
-  var metadataData: Data? {
+  internal var metadataData: Data? {
     compactMap(\.metadataData).first
   }
 }
 
-struct FriendThread: Identifiable, Codable, Equatable {
-  let id: String
-  let kind: FriendThreadKind
-  let title: String?
-  let avatarUrl: String?
-  let metadataData: Data?
-  let counterpartUserId: String?
-  let counterpartDisplayName: String?
-  let counterpartProfilePictureUrl: String?
-  let counterpartOAuthAvatarUrl: String?
-  let lastMessageId: String?
-  let lastMessageSenderId: String?
-  let lastMessageAt: Date?
-  let lastMessageBody: String?
-  let lastMessagePreviewKind: FriendLastMessagePreviewKind?
-  let lastMessageHasImage: Bool
-  let unreadCount: Int
-  let muted: Bool
-  let createdAt: Date
+internal struct FriendThread: Identifiable, Codable, Equatable {
+  internal let id: String
+  internal let kind: FriendThreadKind
+  internal let title: String?
+  internal let avatarUrl: String?
+  internal let metadataData: Data?
+  internal let counterpartUserId: String?
+  internal let counterpartDisplayName: String?
+  internal let counterpartProfilePictureUrl: String?
+  internal let counterpartOAuthAvatarUrl: String?
+  internal let lastMessageId: String?
+  internal let lastMessageSenderId: String?
+  internal let lastMessageAt: Date?
+  internal let lastMessageBody: String?
+  internal let lastMessagePreviewKind: FriendLastMessagePreviewKind?
+  internal let lastMessageHasImage: Bool
+  internal let unreadCount: Int
+  internal let muted: Bool
+  internal let createdAt: Date
 
-  init(
+  internal init(
     id: String,
     kind: FriendThreadKind,
     title: String?,
@@ -562,11 +577,11 @@ struct FriendThread: Identifiable, Codable, Equatable {
     self.createdAt = createdAt
   }
 
-  var counterpartAvatarUrl: String? {
+  internal var counterpartAvatarUrl: String? {
     counterpartProfilePictureUrl ?? counterpartOAuthAvatarUrl
   }
 
-  var resolvedLastMessagePreviewKind: FriendLastMessagePreviewKind {
+  internal var resolvedLastMessagePreviewKind: FriendLastMessagePreviewKind {
     FriendMessagePreviewPolicy.resolvedPreviewKind(
       explicitPreviewKind: lastMessagePreviewKind,
       body: lastMessageBody,
@@ -574,7 +589,7 @@ struct FriendThread: Identifiable, Codable, Equatable {
     )
   }
 
-  var lastMessagePreviewText: String? {
+  internal var lastMessagePreviewText: String? {
     guard lastMessageId != nil else {
       return nil
     }
@@ -584,11 +599,11 @@ struct FriendThread: Identifiable, Codable, Equatable {
     )
   }
 
-  var sortTimestamp: Date {
+  internal var sortTimestamp: Date {
     lastMessageAt ?? createdAt
   }
 
-  var paginationCursor: FriendThreadCursor? {
+  internal var paginationCursor: FriendThreadCursor? {
     guard let lastMessageAt else {
       return nil
     }
@@ -596,29 +611,29 @@ struct FriendThread: Identifiable, Codable, Equatable {
   }
 }
 
-struct FriendThreadState: Codable, Equatable {
-  let threadId: String
-  let userId: String
-  let lastReadMessageId: String?
-  let lastReadAt: Date?
-  let muted: Bool
-  let updatedAt: Date
+internal struct FriendThreadState: Codable, Equatable {
+  internal let threadId: String
+  internal let userId: String
+  internal let lastReadMessageId: String?
+  internal let lastReadAt: Date?
+  internal let muted: Bool
+  internal let updatedAt: Date
 }
 
-struct FriendMessageAttachment: Identifiable, Codable, Equatable {
-  let id: String
-  let attachmentIndex: Int
-  let kind: FriendMessageAttachmentKind
-  let storageBucket: String
-  let storagePath: String
-  let mimeType: String
-  let byteSize: Int64
-  let width: Int?
-  let height: Int?
-  let createdAt: Date
-  let reactions: [FriendMessageReaction]
+internal struct FriendMessageAttachment: Identifiable, Codable, Equatable {
+  internal let id: String
+  internal let attachmentIndex: Int
+  internal let kind: FriendMessageAttachmentKind
+  internal let storageBucket: String
+  internal let storagePath: String
+  internal let mimeType: String
+  internal let byteSize: Int64
+  internal let width: Int?
+  internal let height: Int?
+  internal let createdAt: Date
+  internal let reactions: [FriendMessageReaction]
 
-  enum CodingKeys: String, CodingKey {
+  internal enum CodingKeys: String, CodingKey {
     case id
     case attachmentIndex
     case kind
@@ -632,7 +647,7 @@ struct FriendMessageAttachment: Identifiable, Codable, Equatable {
     case reactions
   }
 
-  init(
+  internal init(
     id: String,
     attachmentIndex: Int,
     kind: FriendMessageAttachmentKind,
@@ -658,8 +673,9 @@ struct FriendMessageAttachment: Identifiable, Codable, Equatable {
     self.reactions = reactions
   }
 
-  init(from decoder: Decoder) throws {
-    let container = try decoder.container(keyedBy: CodingKeys.self)
+  internal init(from decoder: Decoder) throws {
+    let container: KeyedDecodingContainer<CodingKeys> = try decoder.container(
+      keyedBy: CodingKeys.self)
     id = try container.decode(String.self, forKey: .id)
     attachmentIndex = try container.decode(Int.self, forKey: .attachmentIndex)
     kind = try container.decode(FriendMessageAttachmentKind.self, forKey: .kind)
@@ -695,32 +711,32 @@ struct FriendMessageAttachment: Identifiable, Codable, Equatable {
   }
 }
 
-struct FriendMessageReaction: Identifiable, Codable, Equatable, Hashable {
-  var id: String { emoji }
+internal struct FriendMessageReaction: Identifiable, Codable, Equatable, Hashable {
+  internal var id: String { emoji }
 
-  let emoji: String
-  let count: Int
-  let viewerHasReacted: Bool
+  internal let emoji: String
+  internal let count: Int
+  internal let viewerHasReacted: Bool
 }
 
-struct FriendMessage: Identifiable, Codable, Equatable {
-  let id: String
-  let threadId: String
-  let senderUserId: String
-  let messageType: FriendMessageType
-  let body: String?
-  let clientId: String
-  let replyToMessageId: String?
-  let createdAt: Date
-  let editedAt: Date?
-  let deletedAt: Date?
-  let metadataData: Data?
-  let attachments: [FriendMessageAttachment]
-  let reactions: [FriendMessageReaction]
-  let sendState: FriendMessageSendState
-  let failureMessage: String?
+internal struct FriendMessage: Identifiable, Codable, Equatable {
+  internal let id: String
+  internal let threadId: String
+  internal let senderUserId: String
+  internal let messageType: FriendMessageType
+  internal let body: String?
+  internal let clientId: String
+  internal let replyToMessageId: String?
+  internal let createdAt: Date
+  internal let editedAt: Date?
+  internal let deletedAt: Date?
+  internal let metadataData: Data?
+  internal let attachments: [FriendMessageAttachment]
+  internal let reactions: [FriendMessageReaction]
+  internal let sendState: FriendMessageSendState
+  internal let failureMessage: String?
 
-  init(
+  internal init(
     id: String,
     threadId: String,
     senderUserId: String,
@@ -754,26 +770,26 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     self.failureMessage = failureMessage
   }
 
-  var hasImageAttachment: Bool {
+  internal var hasImageAttachment: Bool {
     attachments.contains { $0.kind == .image }
   }
 
-  var richContentKind: FriendRichContentKind? {
+  internal var richContentKind: FriendRichContentKind? {
     FriendRichContentDecoder.richContentKind(from: metadataData)
   }
 
-  var richContent: FriendRichContent? {
+  internal var richContent: FriendRichContent? {
     FriendRichContentDecoder.richContent(from: metadataData)
   }
 
-  var shiftSnapshot: FriendShiftSnapshot? {
+  internal var shiftSnapshot: FriendShiftSnapshot? {
     guard case .shiftSnapshot(let snapshot) = richContent else {
       return nil
     }
     return snapshot
   }
 
-  var sendableMetadataData: Data? {
+  internal var sendableMetadataData: Data? {
     guard let shiftSnapshot else {
       return metadataData
     }
@@ -787,7 +803,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     )
   }
 
-  var replyIconPreviewKind: FriendLastMessagePreviewKind? {
+  internal var replyIconPreviewKind: FriendLastMessagePreviewKind? {
     if shiftSnapshot != nil {
       return .shiftSnapshot
     }
@@ -799,7 +815,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     return nil
   }
 
-  var previewKind: FriendLastMessagePreviewKind {
+  internal var previewKind: FriendLastMessagePreviewKind {
     FriendMessagePreviewPolicy.resolvedPreviewKind(
       body: body,
       richContentKind: richContentKind,
@@ -807,28 +823,28 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     )
   }
 
-  var previewText: String? {
+  internal var previewText: String? {
     FriendMessagePreviewPolicy.previewText(body: body, previewKind: previewKind)
   }
 
-  var canRetrySend: Bool {
+  internal var canRetrySend: Bool {
     sendState == .failed
   }
 
-  var normalizedBody: String? {
+  internal var normalizedBody: String? {
     guard let body else {
       return nil
     }
-    let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed: String = body.trimmingCharacters(in: .whitespacesAndNewlines)
     return trimmed.isEmpty ? nil : trimmed
   }
 
-  var paginationCursor: FriendMessageCursor {
+  internal var paginationCursor: FriendMessageCursor {
     FriendMessageCursor(createdAt: createdAt, messageId: id)
   }
 
-  func logicalRowIdentity(viewerUserId: String) -> String {
-    let normalizedClientId = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
+  internal func logicalRowIdentity(viewerUserId: String) -> String {
+    let normalizedClientId: String = clientId.trimmingCharacters(in: .whitespacesAndNewlines)
       .lowercased()
 
     if senderUserId == viewerUserId, !normalizedClientId.isEmpty {
@@ -844,7 +860,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
       == other.logicalRowIdentity(viewerUserId: viewerUserId)
   }
 
-  func canEdit(viewerUserId: String) -> Bool {
+  internal func canEdit(viewerUserId: String) -> Bool {
     senderUserId == viewerUserId
       && messageType == .user
       && deletedAt == nil
@@ -852,14 +868,14 @@ struct FriendMessage: Identifiable, Codable, Equatable {
       && normalizedBody != nil
   }
 
-  func canDelete(viewerUserId: String) -> Bool {
+  internal func canDelete(viewerUserId: String) -> Bool {
     senderUserId == viewerUserId
       && messageType == .user
       && deletedAt == nil
       && (sendState == .sent || sendState == .failed)
   }
 
-  func withSendState(
+  internal func withSendState(
     _ sendState: FriendMessageSendState,
     failureMessage: String? = nil
   ) -> Self {
@@ -935,7 +951,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
       return toggledReaction(emoji: emoji)
     }
 
-    var updatedAttachments = attachments
+    var updatedAttachments: [FriendMessageAttachment] = attachments
     guard let attachmentIndex = updatedAttachments.firstIndex(where: { $0.id == attachmentId })
     else {
       return self
@@ -963,24 +979,24 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     )
   }
 
-  var canReact: Bool {
+  internal var canReact: Bool {
     messageType == .user && deletedAt == nil && sendState == .sent
   }
 
-  static func toggledReactions(_ reactions: [FriendMessageReaction], emoji: String)
+  internal static func toggledReactions(_ reactions: [FriendMessageReaction], emoji: String)
     -> [FriendMessageReaction]
   {
-    let normalizedEmoji = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
+    let normalizedEmoji: String = emoji.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !normalizedEmoji.isEmpty else {
       return reactions
     }
 
-    var updatedReactions = reactions
+    var updatedReactions: [FriendMessageReaction] = reactions
 
     if let existingIndex = updatedReactions.firstIndex(where: { $0.emoji == normalizedEmoji }) {
-      let existingReaction = updatedReactions[existingIndex]
+      let existingReaction: FriendMessageReaction = updatedReactions[existingIndex]
       if existingReaction.viewerHasReacted {
-        let updatedCount = existingReaction.count - 1
+        let updatedCount: Int = existingReaction.count - 1
         if updatedCount <= 0 {
           updatedReactions.remove(at: existingIndex)
         } else {
@@ -1010,7 +1026,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     return sortedReactions(updatedReactions)
   }
 
-  static func sortedReactions(_ reactions: [FriendMessageReaction])
+  internal static func sortedReactions(_ reactions: [FriendMessageReaction])
     -> [FriendMessageReaction]
   {
     reactions.sorted { lhs, rhs in
@@ -1025,15 +1041,15 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   }
 }
 
-struct FriendOutgoingAttachment: Codable, Equatable {
-  let attachmentId: String
-  let storagePath: String
-  let mimeType: String
-  let byteSize: Int64
-  let width: Int?
-  let height: Int?
+internal struct FriendOutgoingAttachment: Codable, Equatable {
+  internal let attachmentId: String
+  internal let storagePath: String
+  internal let mimeType: String
+  internal let byteSize: Int64
+  internal let width: Int?
+  internal let height: Int?
 
-  enum CodingKeys: String, CodingKey {
+  internal enum CodingKeys: String, CodingKey {
     case attachmentId = "attachment_id"
     case storagePath = "storage_path"
     case mimeType = "mime_type"
@@ -1044,9 +1060,9 @@ struct FriendOutgoingAttachment: Codable, Equatable {
 }
 
 private struct FriendRichContentEnvelope: Codable {
-  let content: Content?
+  private let content: Content?
 
-  struct Content: Codable {
+  private struct Content: Codable {
     let kind: String?
     let shiftSnapshot: FriendShiftSnapshot?
 
@@ -1058,7 +1074,7 @@ private struct FriendRichContentEnvelope: Codable {
 }
 
 private enum FriendRichContentDecoder {
-  static func richContentKind(from metadataData: Data?) -> FriendRichContentKind? {
+  private static func richContentKind(from metadataData: Data?) -> FriendRichContentKind? {
     guard
       let envelope = decodeEnvelope(from: metadataData),
       let rawKind = envelope.content?.kind?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -1079,7 +1095,7 @@ private enum FriendRichContentDecoder {
     }
   }
 
-  static func richContent(from metadataData: Data?) -> FriendRichContent? {
+  private static func richContent(from metadataData: Data?) -> FriendRichContent? {
     guard let envelope = decodeEnvelope(from: metadataData) else {
       return nil
     }
@@ -1103,7 +1119,7 @@ private enum FriendRichContentDecoder {
 }
 
 private enum FriendMessagePreviewPolicy {
-  static func resolvedPreviewKind(
+  private static func resolvedPreviewKind(
     explicitPreviewKind: FriendLastMessagePreviewKind? = nil,
     body: String?,
     richContentKind: FriendRichContentKind? = nil,
@@ -1133,7 +1149,7 @@ private enum FriendMessagePreviewPolicy {
     }
   }
 
-  static func previewText(
+  private static func previewText(
     body: String?,
     previewKind: FriendLastMessagePreviewKind
   ) -> String? {
@@ -1156,8 +1172,8 @@ private enum FriendMessagePreviewPolicy {
     }
   }
 
-  static func normalizedBody(_ body: String?) -> String? {
-    let snippet = body?
+  private static func normalizedBody(_ body: String?) -> String? {
+    let snippet: String? = body?
       .replacingOccurrences(of: "\n", with: " ")
       .trimmingCharacters(in: .whitespacesAndNewlines)
 
