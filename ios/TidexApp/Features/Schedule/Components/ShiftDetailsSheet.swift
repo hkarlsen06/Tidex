@@ -66,8 +66,8 @@ enum ShiftSaveError: Error, LocalizedError {
 }
 
 enum ShiftPauseEditTarget: Equatable {
-  case standalone(shiftId: String)
   case recurringOccurrence(recurringId: String, date: String)
+  case standalone(shiftId: String)
 }
 
 struct ShiftPauseEditResult: Equatable {
@@ -282,7 +282,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     let hoursLabel = String(localized: .commonHours)
     let formatter = FormatterCache.numberFormatter(includeDecimals: true, locale: Locale.appLocale)
     let hoursValue =
-      formatter.string(from: NSNumber(value: shift.paidHours))
+      formatter.string(for: shift.paidHours)
       ?? String(format: "%.2f", shift.paidHours)
     return "\(hoursValue) \(hoursLabel)"
   }
@@ -328,8 +328,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   private var noteBinding: Binding<String> {
     Binding(
       get: { editedNote },
-      set: {
-        editedNote = $0
+      set: { note in
+        editedNote = note
         noteWasEdited = true
       }
     )
@@ -471,7 +471,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Base wage rate per hour (for showing in supplement rows)
   private var baseWageRate: Double {
-    guard shift.computed.paidHours > 0 else { return 0 }
+    guard shift.computed.paidHours > 0 else {
+      return 0
+    }
     return shift.computed.basePay / shift.computed.paidHours
   }
 
@@ -482,13 +484,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     let adjusted = shouldShowBreakDeductionRow ? original : shift.computed.wagePeriods
 
     var segments: [SupplementSegment] = []
-    var i = 0
+    var periodIndex = 0
 
-    while i < original.count {
-      let period = original[i]
+    while periodIndex < original.count {
+      let period = original[periodIndex]
       // Skip periods with no supplement
       guard period.supplementRate > 0 else {
-        i += 1
+        periodIndex += 1
         continue
       }
 
@@ -496,11 +498,13 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       let groupStart = period.fromMin
       var groupEnd = period.toMin
       let currentRate = period.supplementRate
-      var j = i + 1
+      var nextPeriodIndex = periodIndex + 1
 
-      while j < original.count, original[j].supplementRate == currentRate {
-        groupEnd = original[j].toMin
-        j += 1
+      while nextPeriodIndex < original.count,
+        original[nextPeriodIndex].supplementRate == currentRate
+      {
+        groupEnd = original[nextPeriodIndex].toMin
+        nextPeriodIndex += 1
       }
 
       // Calculate actual paid hours for this supplement rate group from adjusted periods
@@ -520,10 +524,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
             toMin: groupEnd,
             rate: currentRate,
             actualHours: actualHours
-          ))
+          )
+        )
       }
 
-      i = j
+      periodIndex = nextPeriodIndex
     }
 
     return segments
@@ -743,9 +748,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         shift: shift,
         onSave: { customPauseWindows in
           showingPauseEditor = false
-          guard let target = pauseEditTarget() else { return }
+          guard let target = pauseEditTarget() else {
+            return
+          }
           onUpdatePause?(
-            ShiftPauseEditResult(target: target, customPauseWindows: customPauseWindows))
+            ShiftPauseEditResult(target: target, customPauseWindows: customPauseWindows)
+          )
           dismiss()
         },
         onCancel: {
@@ -784,7 +792,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       Button(String(localized: .commonContinue)) {
         onShowInCalendarRequested?()
       }
-      Button(String(localized: .commonCancel), role: .cancel) {}
+      Button(String(localized: .commonCancel), role: .cancel) {
+        // The confirmation dialog handles cancellation.
+      }
     } message: {
       Text(.calendarSubscriptionDetailConfirmationMessage)
     }
@@ -796,7 +806,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       Button(String(localized: .shiftsRecurringStopAfterDateButton), role: .destructive) {
         stopRecurringAfterCurrentDate()
       }
-      Button(String(localized: .commonCancel), role: .cancel) {}
+      Button(String(localized: .commonCancel), role: .cancel) {
+        // The confirmation dialog handles cancellation.
+      }
     } message: {
       Text(
         String(
@@ -833,7 +845,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   private func parseTimeToDate(_ timeString: String) -> Date? {
     let formatter = DateFormatter()
     formatter.dateFormat = "HH:mm"
-    guard let time = formatter.date(from: String(timeString.prefix(5))) else { return nil }
+    guard let time = formatter.date(from: String(timeString.prefix(5))) else {
+      return nil
+    }
 
     // Combine with today's date
     let calendar = Calendar.current
@@ -860,7 +874,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Check if any changes have been made
   private var hasChanges: Bool {
-    guard let start = editedStartTime, let end = editedEndTime else { return false }
+    guard let start = editedStartTime, let end = editedEndTime else {
+      return false
+    }
     let newDate = formatDateToISO(editedDate)
     let newStartTime = formatTimeToString(start)
     let newEndTime = formatTimeToString(end)
@@ -941,7 +957,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
 
     let activityVC = UIActivityViewController(
-      activityItems: activityItems, applicationActivities: nil)
+      activityItems: activityItems,
+      applicationActivities: nil
+    )
 
     // Get the root view controller and present
     if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
@@ -964,8 +982,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Save changes
   private func saveChanges() {
-    guard !isSaving else { return }
-    guard let startTime = editedStartTime, let endTime = editedEndTime else { return }
+    guard !isSaving else {
+      return
+    }
+    guard let startTime = editedStartTime, let endTime = editedEndTime else {
+      return
+    }
     // Validate times (basic validation)
     let newDate = formatDateToISO(editedDate)
     let newStartTime = formatTimeToString(startTime)
@@ -1030,7 +1052,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   private func stopRecurringAfterCurrentDate() {
-    guard !isStoppingRecurringAfterDate else { return }
+    guard !isStoppingRecurringAfterDate else {
+      return
+    }
     guard let recurringId = shift.shift.recurring_id, let onStopRecurringAfterDate else {
       errorMessage = ShiftSaveError.missingRecurringInfo.localizedDescription
       return
@@ -1165,7 +1189,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       )
       .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
       .onTapGesture {
-        guard onUpdate != nil else { return }
+        guard onUpdate != nil else {
+          return
+        }
         beginNoteEditing()
       }
     }
@@ -1350,7 +1376,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Whether the edited times represent a cross-midnight shift
   private var isCrossMidnightShift: Bool {
-    guard let start = editedStartTime, let end = editedEndTime else { return false }
+    guard let start = editedStartTime, let end = editedEndTime else {
+      return false
+    }
     let startStr = formatTimeToString(start)
     let endStr = formatTimeToString(end)
     return endStr <= startStr && endStr != "00:00"
@@ -1814,13 +1842,17 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   private func minutes(for hhmm: String) -> Int {
     let parts = hhmm.split(separator: ":").compactMap { Int($0) }
-    guard parts.count == 2 else { return 0 }
+    guard parts.count == 2 else {
+      return 0
+    }
     return (parts[0] * 60) + parts[1]
   }
 
   private func segmentTimeRange(_ segment: SupplementSegment) -> String {
     let range = segment.timeRange
-    guard layoutDirection == .rightToLeft else { return range }
+    guard layoutDirection == .rightToLeft else {
+      return range
+    }
     let parts = range.components(separatedBy: " – ")
     if parts.count == 2 {
       return "\(parts[1]) – \(parts[0])"
@@ -2159,16 +2191,18 @@ struct BreakDeductionBreakdown: Equatable {
 
   static func basePay(for periods: [WagePeriod]) -> Double {
     roundedCurrency(
-      periods.reduce(0) {
-        $0 + payFor(hours: max(0, $1.durationHours), rate: $1.baseRate)
-      })
+      periods.reduce(0) { total, period in
+        total + payFor(hours: max(0, period.durationHours), rate: period.baseRate)
+      }
+    )
   }
 
   static func supplementPay(for periods: [WagePeriod]) -> Double {
     roundedCurrency(
-      periods.reduce(0) {
-        $0 + payFor(hours: max(0, $1.durationHours), rate: $1.supplementRate)
-      })
+      periods.reduce(0) { total, period in
+        total + payFor(hours: max(0, period.durationHours), rate: period.supplementRate)
+      }
+    )
   }
 
   static func make(
@@ -2204,9 +2238,12 @@ struct BreakDeductionBreakdown: Equatable {
       contentsOf: supplementParts(
         originalPeriods: originalPeriods,
         adjustedPeriods: adjustedPeriods
-      ))
+      )
+    )
 
-    guard !parts.isEmpty else { return nil }
+    guard !parts.isEmpty else {
+      return nil
+    }
     return Self(parts: parts)
   }
 
@@ -2215,23 +2252,25 @@ struct BreakDeductionBreakdown: Equatable {
     adjustedPeriods: [WagePeriod]
   ) -> [BreakDeductionPart] {
     var parts: [BreakDeductionPart] = []
-    var i = 0
+    var periodIndex = 0
 
-    while i < originalPeriods.count {
-      let period = originalPeriods[i]
+    while periodIndex < originalPeriods.count {
+      let period = originalPeriods[periodIndex]
       guard period.supplementRate > 0 else {
-        i += 1
+        periodIndex += 1
         continue
       }
 
       let groupStart = period.fromMin
       var groupEnd = period.toMin
       let rate = period.supplementRate
-      var j = i + 1
+      var nextPeriodIndex = periodIndex + 1
 
-      while j < originalPeriods.count, originalPeriods[j].supplementRate == rate {
-        groupEnd = originalPeriods[j].toMin
-        j += 1
+      while nextPeriodIndex < originalPeriods.count,
+        originalPeriods[nextPeriodIndex].supplementRate == rate
+      {
+        groupEnd = originalPeriods[nextPeriodIndex].toMin
+        nextPeriodIndex += 1
       }
 
       let originalMetrics = overlappingMetrics(
@@ -2266,7 +2305,7 @@ struct BreakDeductionBreakdown: Equatable {
           ))
       }
 
-      i = j
+      periodIndex = nextPeriodIndex
     }
 
     return parts
@@ -2283,7 +2322,9 @@ struct BreakDeductionBreakdown: Equatable {
       .reduce((hours: 0, pay: 0)) { total, current in
         let overlapStart = max(current.fromMin, from)
         let overlapEnd = min(current.toMin, to)
-        guard overlapEnd > overlapStart else { return total }
+        guard overlapEnd > overlapStart else {
+          return total
+        }
         let hours = (overlapEnd - overlapStart) / 60.0
         return (
           hours: total.hours + hours,

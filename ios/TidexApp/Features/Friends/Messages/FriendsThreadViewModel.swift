@@ -3,10 +3,13 @@ import Foundation
 import os.log
 import UIKit
 
-private let threadLogger = Logger(subsystem: "com.tidex.app", category: "FriendsThreadViewModel")
+private let kThreadLogger: Logger = Logger(
+  subsystem: "com.tidex.app",
+  category: "FriendsThreadViewModel"
+)
 
 @MainActor
-protocol SharingPreviewProviding: AnyObject {
+internal protocol SharingPreviewProviding: AnyObject {
   func fetchShiftPreviews(sharerIds: [String], forceRefresh: Bool) async throws
     -> [SharerShiftPreview]
 }
@@ -14,7 +17,7 @@ protocol SharingPreviewProviding: AnyObject {
 extension SharingService: SharingPreviewProviding {}
 
 @MainActor
-protocol SharedShiftsCaching: AnyObject {
+internal protocol SharedShiftsCaching: AnyObject {
   func getCachedFriends(
     for viewerId: String,
     includeHidden: Bool
@@ -26,17 +29,17 @@ protocol SharedShiftsCaching: AnyObject {
 extension SharedShiftsRepository: SharedShiftsCaching {}
 
 @MainActor
-final class FriendsThreadViewModel: ObservableObject {
+internal final class FriendsThreadViewModel: ObservableObject {
   private enum NotificationSource {
-    static let localRead = "localRead"
+    static let localRead: String = "localRead"
   }
 
   private enum Pagination {
-    static let pageSize = 50
+    static let pageSize: Int = 50
   }
 
   private enum Attachments {
-    static let storageBucket = "message-attachments"
+    static let storageBucket: String = "message-attachments"
   }
 
   private enum Typing {
@@ -53,8 +56,7 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private enum MessageBody {
-    // swiftlint:disable:next explicit_type_interface
-    static let characterLimit = 5_000
+    static let characterLimit: Int = 5_000
   }
 
   private enum VisibleReadTracking {
@@ -80,12 +82,16 @@ final class FriendsThreadViewModel: ObservableObject {
     }
 
     var replyTarget: FriendMessage? {
-      guard case .reply(let message) = self else { return nil }
+      guard case .reply(let message) = self else {
+        return nil
+      }
       return message
     }
 
     var editTarget: FriendMessage? {
-      guard case .edit(let message) = self else { return nil }
+      guard case .edit(let message) = self else {
+        return nil
+      }
       return message
     }
   }
@@ -101,7 +107,9 @@ final class FriendsThreadViewModel: ObservableObject {
     private var continuations: [CheckedContinuation<Result<FriendMessage, Error>, Never>] = []
 
     func complete(with result: Result<FriendMessage, Error>) {
-      guard self.result == nil else { return }
+      guard self.result == nil else {
+        return
+      }
       self.result = result
 
       let continuations = continuations
@@ -322,7 +330,7 @@ final class FriendsThreadViewModel: ObservableObject {
     defer { isLoading = false }
 
     guard await resolveViewerUserIdIfNeeded() else {
-      threadLogger.error("Unable to load thread without a viewer user ID")
+      kThreadLogger.error("Unable to load thread without a viewer user ID")
       return
     }
     hasLoaded = true
@@ -372,7 +380,7 @@ final class FriendsThreadViewModel: ObservableObject {
       await repository.saveThreadState(state)
       notifyThreadUpdated(source: NotificationSource.localRead)
     } catch {
-      threadLogger.error("Failed to mark thread as read: \(error.localizedDescription)")
+      kThreadLogger.error("Failed to mark thread as read: \(error.localizedDescription)")
     }
   }
 
@@ -577,7 +585,7 @@ final class FriendsThreadViewModel: ObservableObject {
 
   func startRealtime() async {
     guard await resolveViewerUserIdIfNeeded(forceReloadCache: false) else {
-      threadLogger.error("Skipping realtime thread subscription because viewer user ID is missing")
+      kThreadLogger.error("Skipping realtime thread subscription because viewer user ID is missing")
       return
     }
     await realtimeCoordinator.setActiveThread(
@@ -755,7 +763,7 @@ final class FriendsThreadViewModel: ObservableObject {
           }
         }
         loadFromCache()
-        threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
+        kThreadLogger.error("Failed to send thread message: \(error.localizedDescription)")
         return isConnectivityError(error)
       }
     }
@@ -809,7 +817,7 @@ final class FriendsThreadViewModel: ObservableObject {
       sendErrorMessage =
         isConnectivityError(error) ? serverActionOfflineMessage : deleteMessageFailedMessage
       Haptics.play(.error)
-      threadLogger.error("Failed to delete message: \(error.localizedDescription)")
+      kThreadLogger.error("Failed to delete message: \(error.localizedDescription)")
     }
   }
 
@@ -881,7 +889,7 @@ final class FriendsThreadViewModel: ObservableObject {
         ? serverActionOfflineMessage
         : String(localized: .friendsChatReactionFailed)
       Haptics.play(.error)
-      threadLogger.error("Failed to toggle reaction: \(error.localizedDescription)")
+      kThreadLogger.error("Failed to toggle reaction: \(error.localizedDescription)")
     }
 
     togglingReactionKeys.remove(reactionKey)
@@ -968,7 +976,7 @@ final class FriendsThreadViewModel: ObservableObject {
       loadFromCache()
       notifyThreadUpdated()
     } catch {
-      threadLogger.error("Failed to refresh thread snapshot: \(error.localizedDescription)")
+      kThreadLogger.error("Failed to refresh thread snapshot: \(error.localizedDescription)")
     }
   }
 
@@ -984,7 +992,7 @@ final class FriendsThreadViewModel: ObservableObject {
       } catch is CancellationError {
         return
       } catch {
-        threadLogger.error("Failed to refresh thread states: \(error.localizedDescription)")
+        kThreadLogger.error("Failed to refresh thread states: \(error.localizedDescription)")
       }
     }
   }
@@ -1277,7 +1285,7 @@ final class FriendsThreadViewModel: ObservableObject {
         counterpartShiftPreview = resolvedPreview
       }
     } catch {
-      threadLogger.error(
+      kThreadLogger.error(
         "Failed to load counterpart shift preview: \(error.localizedDescription)")
     }
   }
@@ -1369,7 +1377,7 @@ final class FriendsThreadViewModel: ObservableObject {
         lastTypingPushQueuedAt = Date()
       }
     } catch {
-      threadLogger.error(
+      kThreadLogger.error(
         "Failed to queue typing push notification: \(error.localizedDescription)")
     }
   }
@@ -1435,7 +1443,7 @@ final class FriendsThreadViewModel: ObservableObject {
           ? messageBlockedBySafetyFilterMessage
           : (isMessageBodyTooLongError(error) ? nil : editMessageFailedMessage))
       Haptics.play(.error)
-      threadLogger.error("Failed to edit message: \(error.localizedDescription)")
+      kThreadLogger.error("Failed to edit message: \(error.localizedDescription)")
       return false
     }
   }
@@ -1467,7 +1475,7 @@ final class FriendsThreadViewModel: ObservableObject {
       }
       return true
     } catch {
-      threadLogger.error("Failed to load older messages: \(error.localizedDescription)")
+      kThreadLogger.error("Failed to load older messages: \(error.localizedDescription)")
       return false
     }
   }
@@ -1502,7 +1510,7 @@ final class FriendsThreadViewModel: ObservableObject {
           }
           quotedMessagesById[messageId] = quotedMessage
         } catch {
-          threadLogger.error(
+          kThreadLogger.error(
             "Failed to fetch quoted message \(messageId): \(error.localizedDescription)")
         }
       }
@@ -1541,7 +1549,7 @@ final class FriendsThreadViewModel: ObservableObject {
       restoreScrollTargetMessageId = nil
       replyScrollTargetMessageId = messageId
     } catch {
-      threadLogger.error("Failed to focus message \(messageId): \(error.localizedDescription)")
+      kThreadLogger.error("Failed to focus message \(messageId): \(error.localizedDescription)")
     }
   }
 
@@ -1622,7 +1630,7 @@ final class FriendsThreadViewModel: ObservableObject {
           failureMessage: failureMessage
         )
         loadFromCache()
-        threadLogger.error("Failed to send thread message: \(error.localizedDescription)")
+        kThreadLogger.error("Failed to send thread message: \(error.localizedDescription)")
       }
     }
   }
