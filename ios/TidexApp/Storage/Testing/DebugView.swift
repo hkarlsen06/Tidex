@@ -277,6 +277,7 @@
     // MARK: - Sync Status Section
 
     private var syncStatusSection: some View {
+      // swiftlint:disable:next closure_body_length
       Section("Sync Status") {
         HStack {
           Text("Status")
@@ -295,7 +296,19 @@
         }
 
         HStack {
-          Text("Last Synced")
+          Text("Last Run")
+          Spacer()
+          if let lastAttempt = syncCoordinator.lastSyncAttemptedAt {
+            Text(lastAttempt, style: .relative)
+              .foregroundColor(.secondary)
+          } else {
+            Text("Never")
+              .foregroundColor(.orange)
+          }
+        }
+
+        HStack {
+          Text("Last Successful Sync")
           Spacer()
           if let lastSync = syncCoordinator.lastSyncedAt {
             Text(lastSync, style: .relative)

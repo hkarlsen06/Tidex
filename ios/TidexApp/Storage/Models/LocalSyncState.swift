@@ -296,8 +296,8 @@ final class LocalSyncState {
   }
 
   /// Mark sync as started
-  func markSyncStarted() {
-    lastSyncAttemptAt = Date()
+  internal func markSyncStarted(at date: Date = Date()) {
+    lastSyncAttemptAt = date
     lastSyncError = nil
   }
 

@@ -1,10 +1,10 @@
 // swiftlint:disable:next line_length
-// swiftlint:disable explicit_type_interface file_length function_body_length multiline_arguments_brackets no_magic_numbers type_body_length
+// swiftlint:disable explicit_type_interface file_length function_body_length multiline_arguments_brackets no_magic_numbers sorted_imports type_body_length
 // swiftlint:disable:previous blanket_disable_command
 import Combine
 import Foundation
-import os.log
 import Supabase
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinator")
 
@@ -142,6 +142,10 @@ final class SyncCoordinator: ObservableObject {
   /// When the last successful sync completed
   @Published private(set) var lastSyncedAt: Date?
 
+  // When the last sync attempt started
+  // swiftlint:disable:next type_contents_order
+  @Published internal private(set) var lastSyncAttemptedAt: Date?
+
   // MARK: - Configuration
 
   /// Page size for incremental sync queries
@@ -169,6 +173,7 @@ final class SyncCoordinator: ObservableObject {
       isSyncing = false
       lastError = nil
       lastSyncedAt = nil
+      lastSyncAttemptedAt = nil
       conflictCount = 0
       SyncStatusManager.shared.reset()
     }
@@ -218,6 +223,24 @@ final class SyncCoordinator: ObservableObject {
   }
 
   // MARK: - Public API
+
+  // Load persisted sync tracking state for display/debugging.
+  // swiftlint:disable:next type_contents_order
+  internal func loadTrackingState(userId: String) async {
+    let storeActor = await MainActor.run { LocalStore.shared.storeActor }
+    let state = try? await storeActor.getSyncState(userId: userId)
+    let conflicts = (try? await storeActor.countConflicts(userId: userId)) ?? 0
+    let lastSuccessfulSyncAt = state?.lastSuccessfulSyncAt
+    let lastSyncAttemptAt = state?.lastSyncAttemptAt
+    let lastSyncError = state?.lastSyncError
+
+    await MainActor.run {
+      lastSyncedAt = lastSuccessfulSyncAt
+      lastSyncAttemptedAt = lastSyncAttemptAt
+      lastError = lastSyncError
+      conflictCount = conflicts
+    }
+  }
 
   /// Trigger a sync operation
   /// - Parameters:
@@ -338,10 +361,14 @@ final class SyncCoordinator: ObservableObject {
       break
     }
 
+    let startTime = Date()
+
     await MainActor.run {
       isSyncing = true
       lastError = nil
+      lastSyncAttemptedAt = startTime
     }
+    await updateRemoteLastSyncedAt(userId: userId, syncedAt: startTime)
 
     // Update global sync status for UI indicators (only for manual pull-to-refresh)
     if reason == .manualRefresh {
@@ -349,8 +376,6 @@ final class SyncCoordinator: ObservableObject {
         SyncStatusManager.shared.syncStarted()
       }
     }
-
-    let startTime = Date()
 
     // Race the sync work against a timeout to prevent zombie syncs
     // from holding the syncing lock indefinitely.
@@ -457,6 +482,22 @@ final class SyncCoordinator: ObservableObject {
     }
   }
 
+  // swiftlint:disable:next type_contents_order
+  private func updateRemoteLastSyncedAt(userId: String, syncedAt: Date) async {
+    let params: [String: AnyJSON] = [
+      "p_last_synced_at": .string(formatSupabaseTimestamp(syncedAt))
+    ]
+
+    do {
+      try await supabase
+        .rpc("update_my_profile_last_synced_at", params: params)
+        .execute()
+      logger.debug("Updated remote last_synced_at for \(userId.prefix(8))")
+    } catch {
+      logger.warning("Failed to update remote last_synced_at: \(error.localizedDescription)")
+    }
+  }
+
   /// Performs the actual sync work (locale update, pull, push, widget update).
   /// Extracted so it can be raced against a timeout in `sync()`.
   private func performSyncWork(
@@ -476,7 +517,7 @@ final class SyncCoordinator: ObservableObject {
 
       let syncState = try await storeActor.getOrCreateSyncState(userId: userId)
       await storeActor.updateSyncState(userId: userId) { state in
-        state.markSyncStarted()
+        state.markSyncStarted(at: startTime)
       }
 
       // Phase 1: Pull all tables (get latest server state)
@@ -1058,7 +1099,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Final save for any remaining rows
-    try await storeActor.save()
+    try await savePulledPage(storeActor: storeActor, table: .userShifts)
 
     let duration = Date().timeIntervalSince(pageStartTime)
     logger.info(
@@ -1340,7 +1381,7 @@ final class SyncCoordinator: ObservableObject {
       }
     }
 
-    try await storeActor.save()
+    try await savePulledPage(storeActor: storeActor, table: .events)
 
     let duration = Date().timeIntervalSince(pageStartTime)
     logger.info(
@@ -1585,7 +1626,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Final save for any remaining rows
-    try await storeActor.save()
+    try await savePulledPage(storeActor: storeActor, table: .recurringShifts)
 
     let duration = Date().timeIntervalSince(pageStartTime)
     logger.info(
@@ -1833,7 +1874,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Final save for any remaining rows
-    try await storeActor.save()
+    try await savePulledPage(storeActor: storeActor, table: .wageSnapshots)
 
     let duration = Date().timeIntervalSince(pageStartTime)
     logger.info(
@@ -2419,7 +2460,7 @@ final class SyncCoordinator: ObservableObject {
     }
 
     // Final save for any remaining rows
-    try await storeActor.save()
+    try await savePulledPage(storeActor: storeActor, table: .userSettings)
 
     let duration = Date().timeIntervalSince(pageStartTime)
     logger.info(
@@ -5790,6 +5831,12 @@ final class SyncCoordinator: ObservableObject {
     return Date()
   }
 
+  private func savePulledPage(storeActor: LocalStoreActor, table: SyncTable) async throws {
+    if let errorDescription = await storeActor.saveErrorDescription() {
+      throw SyncError.localSaveFailed(table: table, message: errorDescription)
+    }
+  }
+
   /// Parse ISO8601 date string to Date, throwing on failure
   /// Use this for cursor-affecting code paths to prevent data loss
   /// - Parameters:
@@ -5853,10 +5900,11 @@ final class SyncCoordinator: ObservableObject {
 
 /// Errors that can occur during sync operations
 enum SyncError: LocalizedError {
+  case dateParsingFailed(table: SyncTable, id: String, rawValue: String)
+  case localSaveFailed(table: SyncTable, message: String)
+  case missingConflictSnapshot(table: SyncTable, id: String)
   case notFound(table: SyncTable, id: String)
   case notInConflict(table: SyncTable, id: String)
-  case missingConflictSnapshot(table: SyncTable, id: String)
-  case dateParsingFailed(table: SyncTable, id: String, rawValue: String)
 
   /// Technical description for logging
   var errorDescription: String? {
@@ -5872,6 +5920,9 @@ enum SyncError: LocalizedError {
 
     case .dateParsingFailed(let table, let id, let rawValue):
       return "\(table.displayName) with id \(id) has unparseable date field: '\(rawValue)'"
+
+    case .localSaveFailed(let table, let message):  // swiftlint:disable:this pattern_matching_keywords
+      return "Failed to save pulled \(table.displayName) rows locally: \(message)"
     }
   }
 
@@ -5887,6 +5938,9 @@ enum SyncError: LocalizedError {
     case .dateParsingFailed(let table, let id, _):
       return
         "Sync failed: Server returned invalid data for \(table.displayName) (ID: \(id.prefix(8))...). Please contact support."
+
+    case .localSaveFailed:
+      return "Sync failed: Local changes could not be saved. Please try again."
     }
   }
 }

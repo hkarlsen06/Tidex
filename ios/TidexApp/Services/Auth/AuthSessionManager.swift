@@ -1,8 +1,9 @@
 import Combine
 import Foundation
-import os.log
 import Supabase
 import SwiftData
+// swiftlint:disable:next sorted_imports
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AuthSessionManager")
 
@@ -83,6 +84,7 @@ final class AuthSessionManager: ObservableObject {
 
   // MARK: - Public API
 
+  // swiftlint:disable function_body_length
   /// Get the current session, refreshing if needed.
   ///
   /// This is the primary method services should use to get a session. It:
@@ -95,7 +97,10 @@ final class AuthSessionManager: ObservableObject {
   ///   Useful during launch where fastest possible handoff is preferred.
   /// - Returns: A valid session with a fresh access token
   /// - Throws: Auth errors if session cannot be obtained or refreshed
-  func getSession(allowProactiveRefresh: Bool = true) async throws -> Session {
+  internal func getSession(
+    allowProactiveRefresh: Bool = true,
+    reportMissingSessionWarning: Bool = true
+  ) async throws -> Session {
     // If a session lookup/refresh flow is already in progress, await it.
     if let existingSessionTask = sessionTask {
       let existingAllowsProactiveRefresh = sessionTaskAllowsProactiveRefresh
@@ -159,12 +164,22 @@ final class AuthSessionManager: ObservableObject {
       sessionTaskAllowsProactiveRefresh = false
       return session
     } catch {
+      let isMissingSessionError: Bool = isMissingSessionError(error)
+      let hadRememberedAuthenticatedUserId: Bool =
+        AuthDiagnosticsReporter.shared.hasRememberedAuthenticatedUserId
+      let shouldReportMissingSessionWarning: Bool =
+        reportMissingSessionWarning && hadRememberedAuthenticatedUserId
+      let severity: AuthDiagnosticsReporter.Severity =
+        isMissingSessionError && !shouldReportMissingSessionWarning ? .debug : .warning
       AuthDiagnosticsReporter.shared.record(
         .sessionFetchFailed,
-        severity: .warning,
+        severity: severity,
         error: error,
         metadata: [
           "allow_proactive_refresh": .bool(allowProactiveRefresh),
+          "report_missing_session_warning": .bool(reportMissingSessionWarning),
+          "had_remembered_authenticated_user_id": .bool(hadRememberedAuthenticatedUserId),
+          "is_missing_session_error": .bool(isMissingSessionError),
           "is_revoked_error": .bool(isSessionRevokedError(error)),
           "is_transient_network_error": .bool(isTransientNetworkError(error)),
           "is_transient_session_resolution_error": .bool(isTransientSessionResolutionError(error)),
@@ -175,13 +190,17 @@ final class AuthSessionManager: ObservableObject {
       throw error
     }
   }
+  // swiftlint:enable function_body_length
 
   /// Get session if available, returning nil instead of throwing on error.
   ///
   /// Useful for optional session checks where authentication errors should be handled gracefully.
   func getSessionIfAvailable(allowProactiveRefresh: Bool = true) async -> Session? {
     do {
-      return try await getSession(allowProactiveRefresh: allowProactiveRefresh)
+      return try await getSession(
+        allowProactiveRefresh: allowProactiveRefresh,
+        reportMissingSessionWarning: false
+      )
     } catch {
       logger.debug("No session available: \(error.localizedDescription)")
       return nil
@@ -248,6 +267,18 @@ final class AuthSessionManager: ObservableObject {
       || message.contains("session_not_found")
       || message.contains("refresh_token_already_used")
       || message.contains("session_expired")
+  }
+
+  /// Best-effort classification of the SDK's normal "no local session" state.
+  /// This is expected before first sign-in, so it should not be counted as an
+  /// auth warning unless the app previously observed an authenticated user.
+  internal func isMissingSessionError(_ error: Error) -> Bool {
+    let message: String = error.localizedDescription
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+    return message == "auth session missing."
+      || message == "auth session missing"
+      || message.contains("session missing")
   }
 
   /// Best-effort classification of transient network errors where we should not sign user out.
