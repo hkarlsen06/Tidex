@@ -4,37 +4,35 @@ import Foundation
 /// - single: Add one or more individual shifts on specific dates
 /// - recurring: Create a recurring shift pattern
 /// - events: Add a private calendar event
-enum AddShiftMode: String, CaseIterable, Identifiable, Codable {
-  case single
+internal enum AddShiftMode: String, CaseIterable, Identifiable, Codable {
   case events
   case recurring
+  case single
 
-  var id: String { rawValue }
+  internal static let displayOrder: [Self] = [.single, .events, .recurring]
 
-  // swiftlint:disable:next explicit_acl
-  static let displayOrder: [Self] = [.single, .events, .recurring]
+  internal var id: String { rawValue }
 
   /// Localization key for the mode title
-  var titleKey: LocalizedStringResource {
+  internal var titleKey: LocalizedStringResource {
     switch self {
-    case .single:
-      return .addShiftModeSingle
+    case .events:
+      return .addShiftModeEvents
 
     case .recurring:
       return .addShiftModeRecurring
 
-    case .events:
-      return .addShiftModeEvents
+    case .single:
+      return .addShiftModeSingle
     }
   }
 
-  // swiftlint:disable:next explicit_acl
-  var nextMode: Self {
+  internal var nextMode: Self {
     guard let currentIndex = Self.displayOrder.firstIndex(of: self) else {
       return .single
     }
 
-    let nextIndex = Self.displayOrder.index(after: currentIndex)
+    let nextIndex: [Self].Index = Self.displayOrder.index(after: currentIndex)
     if nextIndex == Self.displayOrder.endIndex {
       return Self.displayOrder[Self.displayOrder.startIndex]
     }

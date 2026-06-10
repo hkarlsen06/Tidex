@@ -7,8 +7,8 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable required_deinit sorted_enum_cases type_name
 import Foundation
-import UIKit
 import os.log
+import UIKit
 
 private let prefetchLogger = Logger(
   subsystem: "com.tidex.app",

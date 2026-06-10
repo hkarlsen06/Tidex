@@ -2,8 +2,8 @@
 // swiftlint:disable:previous blanket_disable_command
 import Combine
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SettingsRepository")
 

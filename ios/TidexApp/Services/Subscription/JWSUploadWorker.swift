@@ -1,8 +1,13 @@
 import Foundation
-import Supabase
 import os.log
+import Supabase
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "JWSUploadWorker")
+private let kUserIdLogPrefixLength: Int = 8
+private let kMinimumRetrySleepSeconds: TimeInterval = 1.0
+private let kRetryLoopPauseSeconds: TimeInterval = 1.0
+private let kServerReturnedErrorCode: Int = -2
+private let kServerDidNotConfirmSuccessCode: Int = -3
 
 // MARK: - Request/Response Models
 
@@ -42,13 +47,15 @@ private struct JWSUploadResponse: Decodable {
 /// Uses exponential backoff for retries (30s, 60s, 120s, 240s, max 10min)
 @MainActor
 final class JWSUploadWorker {
-  static let shared = JWSUploadWorker()
+  internal static let shared: JWSUploadWorker = .init()
 
   private var uploadTask: Task<Void, Never>?
   private let repository = EntitlementRepository.shared
-  private let maxAttempts = 10
+  private let maxAttempts: Int = 10
 
-  private init() {}
+  private init() {
+    // Singleton instance.
+  }
 
   /// Trigger upload processing (single-flight)
   /// Safe to call multiple times - only one worker runs at a time
@@ -111,17 +118,7 @@ final class JWSUploadWorker {
           // Truly no uploads left - we're done
           logger.debug("No pending uploads, worker stopping")
 
-          // Refresh entitlement ONCE for all users who had successful uploads
-          // (debounced - not per-upload which would be spammy)
-          for userId in successfulUserIds {
-            do {
-              try await EntitlementService.shared.refreshFromServer(userId: userId)
-            } catch {
-              logger.warning(
-                "Failed to refresh entitlement for \(userId.prefix(8)): \(error.localizedDescription)"
-              )
-            }
-          }
+          await refreshEntitlements(for: successfulUserIds)
 
           return
         }
@@ -129,7 +126,10 @@ final class JWSUploadWorker {
         // Find the earliest scheduled retry and sleep until then
         // This ensures backoff retries happen even if app stays open
         guard let earliestRetry = allPending.map(\.nextAttemptAt).min() else { continue }
-        let sleepDuration = max(earliestRetry.timeIntervalSinceNow, 1.0)  // At least 1 second
+        let sleepDuration: TimeInterval = max(
+          earliestRetry.timeIntervalSinceNow,
+          kMinimumRetrySleepSeconds
+        )
 
         logger.debug("No uploads ready now, sleeping \(Int(sleepDuration))s until next retry")
         try? await Task.sleep(for: .seconds(sleepDuration))
@@ -139,33 +139,63 @@ final class JWSUploadWorker {
       logger.info("Processing \(readyUploads.count) pending JWS uploads")
 
       for upload in readyUploads {
-        guard !Task.isCancelled else { return }
-
-        // Skip if max attempts reached
-        if upload.attemptCount >= maxAttempts {
-          logger.warning(
-            "Max attempts reached for upload \(upload.transactionId), removing from queue")
-          try? await repository.removePendingUpload(transactionId: upload.transactionId)
-          continue
+        guard !Task.isCancelled else {
+          return
         }
 
-        do {
-          try await uploadToServer(upload)
-          try await repository.removePendingUpload(transactionId: upload.transactionId)
-          logger.info("Successfully uploaded JWS: \(upload.transactionId)")
-
-          // Track userId for debounced refresh at end of loop
-          successfulUserIds.insert(upload.userId)
-        } catch {
-          logger.error(
-            "Upload failed for \(upload.transactionId) (attempt \(upload.attemptCount + 1)): \(error.localizedDescription)"
-          )
-          try? await repository.schedulePendingUploadRetry(transactionId: upload.transactionId)
+        // Skip if max attempts reached
+        if let userId = await processReadyUpload(upload) {
+          successfulUserIds.insert(userId)
         }
       }
 
       // Brief pause before checking for more (prevents tight loop if uploads fail fast)
-      try? await Task.sleep(for: .seconds(1))
+      try? await Task.sleep(for: .seconds(kRetryLoopPauseSeconds))
+    }
+  }
+
+  private func processReadyUpload(_ upload: LocalPendingJWSUpload) async -> String? {
+    if await removeUploadIfMaxAttemptsReached(upload) {
+      return nil
+    }
+
+    do {
+      try await uploadToServer(upload)
+      try await repository.removePendingUpload(transactionId: upload.transactionId)
+      logger.info("Successfully uploaded JWS: \(upload.transactionId)")
+      return upload.userId
+    } catch {
+      logger.error(
+        "Upload failed for \(upload.transactionId) (attempt \(upload.attemptCount + 1)): \(error.localizedDescription)"
+      )
+      try? await repository.schedulePendingUploadRetry(transactionId: upload.transactionId)
+      return nil
+    }
+  }
+
+  private func removeUploadIfMaxAttemptsReached(_ upload: LocalPendingJWSUpload) async -> Bool {
+    guard upload.attemptCount >= maxAttempts else {
+      return false
+    }
+
+    logger.warning("Max attempts reached for upload \(upload.transactionId), removing from queue")
+    try? await repository.removePendingUpload(transactionId: upload.transactionId)
+    return true
+  }
+
+  private func refreshEntitlements(for userIds: Set<String>) async {
+    // Refresh entitlement ONCE for all users who had successful uploads.
+    for userId in userIds {
+      do {
+        try await EntitlementService.shared.refreshFromServer(userId: userId)
+      } catch {
+        logger.warning(
+          """
+          Failed to refresh entitlement for \(userId.prefix(kUserIdLogPrefixLength)): \
+          \(error.localizedDescription)
+          """
+        )
+      }
     }
   }
 
@@ -192,7 +222,7 @@ final class JWSUploadWorker {
       throw PurchaseError.networkError(
         underlying: NSError(
           domain: "JWSUpload",
-          code: -2,
+          code: kServerReturnedErrorCode,
           userInfo: [NSLocalizedDescriptionKey: errorMessage]
         ))
     }
@@ -202,7 +232,7 @@ final class JWSUploadWorker {
       throw PurchaseError.networkError(
         underlying: NSError(
           domain: "JWSUpload",
-          code: -3,
+          code: kServerDidNotConfirmSuccessCode,
           userInfo: [NSLocalizedDescriptionKey: "Server did not confirm success"]
         ))
     }

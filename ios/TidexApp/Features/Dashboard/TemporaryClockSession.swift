@@ -1,7 +1,7 @@
 import ActivityKit
 import Foundation
-import UIKit
 import os.log
+import UIKit
 
 private let clockSessionLogger = Logger(subsystem: "com.tidex.app", category: "ClockSession")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 

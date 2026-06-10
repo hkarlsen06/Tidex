@@ -1,9 +1,9 @@
 // swiftlint:disable explicit_type_interface
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
+import os.log
 import UIKit
 import WidgetKit
-import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "NativeWidgetStorage")
 

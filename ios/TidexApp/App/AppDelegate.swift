@@ -11,9 +11,9 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable type_body_length
 import ActivityKit
+import os
 import Supabase
 import UIKit
-import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 

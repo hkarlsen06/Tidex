@@ -13,8 +13,8 @@
 import CryptoKit
 import Foundation
 import Intents
-import UserNotifications
 import os
+import UserNotifications
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "NotificationServiceExtension")
 private let avatarFetchBudget = Duration.milliseconds(250)

@@ -12,9 +12,9 @@
 // swiftlint:disable type_contents_order
 import Combine
 import Foundation
+import os
 import Supabase
 import UIKit
-import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 

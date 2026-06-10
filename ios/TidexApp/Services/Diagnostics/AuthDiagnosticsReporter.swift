@@ -1,7 +1,7 @@
 import Foundation
+import os
 import Supabase
 import UIKit
-import os
 
 private let authDiagnosticsLog = Logger(subsystem: "com.tidex.app", category: "AuthDiagnostics")
 

@@ -1,9 +1,11 @@
 import Foundation
+import os.log
 import StoreKit
 import Supabase
-import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "StoreKitManager")
+private let kUserIdLogPrefixLength: Int = 8
+private let kServerUploadFailureCode: Int = -2
 
 // MARK: - StoreKit Manager
 
@@ -11,7 +13,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "StoreKitManag
 /// Finishes transactions immediately after local verification, queues JWS for async server upload
 @MainActor
 final class StoreKitManager: ObservableObject {
-  static let shared = StoreKitManager()
+  internal static let shared: StoreKitManager = .init()
 
   // MARK: - Published State
 
@@ -27,7 +29,9 @@ final class StoreKitManager: ObservableObject {
   private var userId: String?
   private var cachedAppAccountToken: UUID?
 
-  private init() {}
+  private init() {
+    // Singleton instance.
+  }
 
   // MARK: - Configuration
 
@@ -41,7 +45,7 @@ final class StoreKitManager: ObservableObject {
     }
 
     self.userId = userId
-    logger.info("Configured StoreKitManager for user \(userId.prefix(8))")
+    logger.info("Configured StoreKitManager for user \(userId.prefix(kUserIdLogPrefixLength))")
   }
 
   /// Start listening for transaction updates (renewals, restores, family sharing)
@@ -66,12 +70,14 @@ final class StoreKitManager: ObservableObject {
 
   /// Load subscription products from the App Store
   func loadProducts() async {
-    guard !isLoadingProducts else { return }
+    guard !isLoadingProducts else {
+      return
+    }
 
     isLoadingProducts = true
     defer { isLoadingProducts = false }
 
-    var productIds = ProductID.allCases.map(\.rawValue)
+    var productIds: [String] = ProductID.allCases.map(\.rawValue)
     productIds.append(ConsumableProductID.wageyBonus20.rawValue)
 
     do {
@@ -542,7 +548,7 @@ final class StoreKitManager: ObservableObject {
       guard let uuid = UUID(uuidString: token) else {
         throw NSError(
           domain: "StoreKitManager",
-          code: -2,
+          code: kServerUploadFailureCode,
           userInfo: [NSLocalizedDescriptionKey: "Invalid app account token"]
         )
       }

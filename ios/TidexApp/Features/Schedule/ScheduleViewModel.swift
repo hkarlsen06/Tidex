@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import UIKit
 import os.log
+import UIKit
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsViewModel")
 private let monthNameFormatter = FormatterCache.monthNameFormatter()

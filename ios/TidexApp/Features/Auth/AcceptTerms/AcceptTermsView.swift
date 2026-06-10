@@ -1,7 +1,7 @@
+import os.log
 import SafariServices
 import Supabase
 import SwiftUI
-import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "AcceptTerms")
 

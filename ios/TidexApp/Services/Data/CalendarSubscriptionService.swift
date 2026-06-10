@@ -1,7 +1,7 @@
 import Foundation
+import os.log
 import Security
 import Supabase
-import os.log
 
 private let calendarSubscriptionLogger = Logger(
   subsystem: "com.tidex.app",

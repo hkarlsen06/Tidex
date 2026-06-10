@@ -1,6 +1,6 @@
 import Foundation
-import SwiftData
 import os.log
+import SwiftData
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "RecurringShiftsRepository")
 
@@ -50,7 +50,9 @@ final class RecurringShiftsRepository: ObservableObject {
     )
 
     do {
-      guard let defaultJob = try context.fetch(descriptor).first else { return false }
+      guard let defaultJob = try context.fetch(descriptor).first else {
+        return false
+      }
       return defaultJob.id == selectedJobId
     } catch {
       logger.error(

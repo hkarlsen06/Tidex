@@ -1,9 +1,9 @@
 // swiftlint:disable function_body_length
 // Watch connectivity requires handling multiple delegate methods in sequence
 import Foundation
+import os.log
 import WatchConnectivity
 import WidgetKit
-import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WatchConnectivity")
 private let iphoneRefreshReplyTimeout = Duration.seconds(8)

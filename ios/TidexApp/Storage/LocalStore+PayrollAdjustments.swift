@@ -201,7 +201,9 @@ extension LocalStoreActor {
     serverDeletedAt: Date?,
     snapshot: PayrollAdjustmentServerSnapshot
   ) {
-    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
     let formatter = payrollAdjustmentDateFormatter
     existing.jobId = serverRow.job_id
     existing.amount = serverRow.amount
@@ -238,14 +240,18 @@ extension LocalStoreActor {
       serverDeletedAt: serverDeletedAt,
       snapshot: snapshot
     )
-    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
   }
 
   func markPayrollAdjustmentClean(id: String) {
-    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
@@ -257,7 +263,9 @@ extension LocalStoreActor {
     serverRevision: Int64,
     serverDeletedAt: Date?
   ) {
-    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
@@ -298,7 +306,9 @@ extension LocalStoreActor {
     id: String,
     serverSnapshot: PayrollAdjustmentServerSnapshot?
   ) {
-    guard let existing = try? getPayrollAdjustment(id: id) else { return }
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
     existing.syncStatus = .conflict
     existing.conflictServerSnapshot = serverSnapshot?.encoded()
   }

@@ -1,5 +1,5 @@
-import SwiftUI
 import os.log
+import SwiftUI
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "ShiftsView")
 

@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import SwiftUI
 import os.log
+import SwiftUI
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
 

@@ -1,7 +1,7 @@
 import Foundation
+import os.log
 import UIKit
 import UserNotifications
-import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "NotificationSettingsViewModel")
 

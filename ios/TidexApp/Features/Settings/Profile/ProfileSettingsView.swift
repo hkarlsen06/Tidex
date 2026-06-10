@@ -1,6 +1,6 @@
+import os.log
 import PhotosUI
 import SwiftUI
-import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSettings")
 

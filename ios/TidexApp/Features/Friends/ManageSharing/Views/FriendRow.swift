@@ -216,6 +216,7 @@ struct FriendRow: View {
           .background(Color.tidexError.opacity(0.85))
           .clipShape(Circle())
           .offset(x: 2, y: 2)
+          .accessibilityHidden(true)
       }
     }
   }
@@ -366,13 +367,13 @@ struct FriendRow: View {
         isHiddenInFriendsTab: false,
         areServerActionsUnavailable: false,
         isHideActionDisabled: false,
-        onToggleEarnings: {},
-        onShareBack: {},
-        onToggleMuted: {},
-        onToggleOwnerMuted: {},
-        onToggleHidden: {},
-        onBlock: {},
-        onRemove: { _ in }
+        onToggleEarnings: { _ = () },
+        onShareBack: { _ = () },
+        onToggleMuted: { _ = () },
+        onToggleOwnerMuted: { _ = () },
+        onToggleHidden: { _ = () },
+        onBlock: { _ = () },
+        onRemove: { _ in _ = () }
       )
     }
 
@@ -397,13 +398,13 @@ struct FriendRow: View {
         isHiddenInFriendsTab: false,
         areServerActionsUnavailable: false,
         isHideActionDisabled: false,
-        onToggleEarnings: {},
-        onShareBack: {},
-        onToggleMuted: {},
-        onToggleOwnerMuted: {},
-        onToggleHidden: {},
-        onBlock: {},
-        onRemove: { _ in }
+        onToggleEarnings: { _ = () },
+        onShareBack: { _ = () },
+        onToggleMuted: { _ = () },
+        onToggleOwnerMuted: { _ = () },
+        onToggleHidden: { _ = () },
+        onBlock: { _ = () },
+        onRemove: { _ in _ = () }
       )
     }
 
@@ -430,13 +431,13 @@ struct FriendRow: View {
         isHiddenInFriendsTab: false,
         areServerActionsUnavailable: true,
         isHideActionDisabled: true,
-        onToggleEarnings: {},
-        onShareBack: {},
-        onToggleMuted: {},
-        onToggleOwnerMuted: {},
-        onToggleHidden: {},
-        onBlock: {},
-        onRemove: { _ in }
+        onToggleEarnings: { _ = () },
+        onShareBack: { _ = () },
+        onToggleMuted: { _ = () },
+        onToggleOwnerMuted: { _ = () },
+        onToggleHidden: { _ = () },
+        onBlock: { _ = () },
+        onRemove: { _ in _ = () }
       )
     }
   }

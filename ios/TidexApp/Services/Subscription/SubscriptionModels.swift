@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Configuration
 
-enum EntitlementConfig {
+internal enum EntitlementConfig {
   /// How long server tier is valid offline (1 hour)
   internal static let serverTierTTL: TimeInterval = 1 * 3_600  // swiftlint:disable:this no_magic_numbers
 }
@@ -11,20 +11,28 @@ enum EntitlementConfig {
 
 /// User's subscription tier
 /// Matches tier values from database `user_entitlements` view
-enum SubscriptionTier: String, Codable, Comparable {
+internal enum SubscriptionTier: String, Codable, Comparable {
   case free
-  case pro
   case max
+  case pro
 
-  var priority: Int {
+  private static let proPriority: Int = 1
+  private static let maxPriority: Int = 2
+
+  internal var priority: Int {
     switch self {
-    case .free: return 0
-    case .pro: return 1
-    case .max: return 2
+    case .free:
+      return 0
+
+    case .max:
+      return Self.maxPriority
+
+    case .pro:
+      return Self.proPriority
     }
   }
 
-  static func < (lhs: Self, rhs: Self) -> Bool {
+  internal static func < (lhs: Self, rhs: Self) -> Bool {
     lhs.priority < rhs.priority
   }
 }
@@ -32,43 +40,45 @@ enum SubscriptionTier: String, Codable, Comparable {
 // MARK: - Product IDs (StoreKit only)
 
 /// App Store product identifiers for in-app subscriptions
-enum ProductID: String, CaseIterable {
-  case proMonthly = "no.tidex.pro"
-  case proYearly = "no.tidex.pro.year"
+internal enum ProductID: String, CaseIterable {
   case maxMonthly = "no.tidex.max"
   case maxYearly = "no.tidex.max.year"
+  case proMonthly = "no.tidex.pro"
+  case proYearly = "no.tidex.pro.year"
 
   /// The tier this product unlocks
-  var tier: SubscriptionTier {
+  internal var tier: SubscriptionTier {
     switch self {
-    case .proMonthly, .proYearly:
-      return .pro
-
     case .maxMonthly, .maxYearly:
       return .max
+
+    case .proMonthly, .proYearly:
+      return .pro
     }
   }
 
   /// Whether this is a yearly subscription
-  var isYearly: Bool {
+  internal var isYearly: Bool {
     switch self {
-    case .proYearly, .maxYearly:
+    case .maxYearly, .proYearly:
       return true
 
-    case .proMonthly, .maxMonthly:
+    case .maxMonthly, .proMonthly:
       return false
     }
   }
 }
 
 /// App Store product identifiers for consumable IAPs
-enum ConsumableProductID: String {
+internal enum ConsumableProductID: String {
   case wageyBonus20 = "no.tidex.wagey.20"
 
-  var credits: Int {
+  private static let wageyBonusCredits: Int = 20
+
+  internal var credits: Int {
     switch self {
     case .wageyBonus20:
-      return 20
+      return Self.wageyBonusCredits
     }
   }
 }
@@ -77,19 +87,10 @@ enum ConsumableProductID: String {
 
 /// Server entitlement from `user_entitlements` view via `get_my_entitlement()` RPC
 /// Tier comes directly from the view, no client-side derivation needed
-struct ServerEntitlement: Codable {
-  let userId: String
-  let tier: SubscriptionTier
-  let isEntitled: Bool
-  let isGrandfathered: Bool
-  let hasActiveSubscription: Bool
-  let activeProvider: String?
-  let activeProductId: String?
-  let subscriptionEndsAt: Date?
-
-  enum CodingKeys: String, CodingKey {
+internal struct ServerEntitlement: Codable {
+  internal enum CodingKeys: String, CodingKey {
     case userId = "user_id"
-    case tier
+    case tier = "tier"
     case isEntitled = "is_entitled"
     case isGrandfathered = "is_grandfathered"
     case hasActiveSubscription = "has_active_subscription"
@@ -97,27 +98,45 @@ struct ServerEntitlement: Codable {
     case activeProductId = "active_product_id"
     case subscriptionEndsAt = "subscription_ends_at"
   }
+
+  internal let userId: String
+  internal let tier: SubscriptionTier
+  internal let isEntitled: Bool
+  internal let isGrandfathered: Bool
+  internal let hasActiveSubscription: Bool
+  internal let activeProvider: String?
+  internal let activeProductId: String?
+  internal let subscriptionEndsAt: Date?
 }
 
 // MARK: - Paywall Config
 
 /// Backend-controlled paywall offer metadata.
-struct PaywallConfig: Codable, Equatable {
-  let freeTrialEnabled: Bool
-  let freeTrialDurationDays: Int
-  let freeTrialReminderDaysBeforeEnd: Int
+internal struct PaywallConfig: Codable, Equatable {
+  internal enum CodingKeys: String, CodingKey {
+    case freeTrialEnabled = "free_trial_enabled"
+    case freeTrialDurationDays = "free_trial_duration_days"
+    case freeTrialReminderDaysBeforeEnd = "free_trial_reminder_days_before_end"
+  }
+
+  private static let fallbackFreeTrialDurationDays: Int = 14
+  private static let fallbackReminderDaysBeforeEnd: Int = 2
+  private static let minimumTrialDays: Int = 1
 
   // swiftlint:disable:next redundant_type_annotation
-  internal static let fallback: Self = Self(  // swiftlint:disable:this type_contents_order
+  internal static let fallback: Self = Self(
     freeTrialEnabled: true,
-    freeTrialDurationDays: 14,
-    freeTrialReminderDaysBeforeEnd: 2
+    freeTrialDurationDays: fallbackFreeTrialDurationDays,
+    freeTrialReminderDaysBeforeEnd: fallbackReminderDaysBeforeEnd
   )
 
-  // swiftlint:disable:next type_contents_order
+  internal let freeTrialEnabled: Bool
+  internal let freeTrialDurationDays: Int
+  internal let freeTrialReminderDaysBeforeEnd: Int
+
   internal var normalized: Self {
-    let durationDays = max(freeTrialDurationDays, 1)
-    let reminderDays = min(max(freeTrialReminderDaysBeforeEnd, 1), durationDays)
+    let durationDays: Int = max(freeTrialDurationDays, Self.minimumTrialDays)
+    let reminderDays: Int = min(max(freeTrialReminderDaysBeforeEnd, Self.minimumTrialDays), durationDays)
 
     return Self(
       freeTrialEnabled: freeTrialEnabled,
@@ -126,43 +145,38 @@ struct PaywallConfig: Codable, Equatable {
     )
   }
 
-  var hasFreeTrial: Bool {
+  internal var hasFreeTrial: Bool {
     freeTrialEnabled && freeTrialDurationDays > 0
   }
 
-  var reminderDay: Int {
-    max(freeTrialDurationDays - freeTrialReminderDaysBeforeEnd, 1)
+  internal var reminderDay: Int {
+    max(freeTrialDurationDays - freeTrialReminderDaysBeforeEnd, Self.minimumTrialDays)
   }
 
-  enum CodingKeys: String, CodingKey {
-    case freeTrialEnabled = "free_trial_enabled"
-    case freeTrialDurationDays = "free_trial_duration_days"
-    case freeTrialReminderDaysBeforeEnd = "free_trial_reminder_days_before_end"
-  }
 }
 
 // MARK: - Errors
 
 /// Errors that can occur during purchase flow
-enum PurchaseError: Error, LocalizedError {
-  case verificationFailed
-  case productNotFound
+internal enum PurchaseError: Error, LocalizedError {
   case networkError(underlying: Error)
+  case productNotFound
   case userNotConfigured
+  case verificationFailed
 
-  var errorDescription: String? {
+  internal var errorDescription: String? {
     switch self {
-    case .verificationFailed:
-      return "Purchase verification failed"
+    case .networkError(let error):
+      return "Network error: \(error.localizedDescription)"
 
     case .productNotFound:
       return "Product not found"
 
-    case .networkError(let error):
-      return "Network error: \(error.localizedDescription)"
-
     case .userNotConfigured:
       return "User not configured"
+
+    case .verificationFailed:
+      return "Purchase verification failed"
     }
   }
 }

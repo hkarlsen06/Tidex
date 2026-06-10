@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import UIKit
 import os.log
+import UIKit
 
 private let threadLogger = Logger(subsystem: "com.tidex.app", category: "FriendsThreadViewModel")
 

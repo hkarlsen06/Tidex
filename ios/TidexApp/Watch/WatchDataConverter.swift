@@ -1,8 +1,8 @@
 import CoreGraphics
 import Foundation
 import ImageIO
-import UniformTypeIdentifiers
 import os.log
+import UniformTypeIdentifiers
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WatchDataConverter")
 
