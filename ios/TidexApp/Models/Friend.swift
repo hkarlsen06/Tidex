@@ -86,17 +86,23 @@ struct Friend: Codable, Identifiable, Equatable {
     }
 
     /// Create a copy with updated hidden status
-    func with(hidden: Bool) -> SharesWithMe {
-      SharesWithMe(
-        hidden: hidden, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt,
-        notificationFrequency: notificationFrequency)
+    internal func with(hidden: Bool) -> Self {
+      Self(
+        hidden: hidden,
+        showEarningsToMe: showEarningsToMe,
+        sharedAt: sharedAt,
+        notificationFrequency: notificationFrequency
+      )
     }
 
     /// Create a copy with updated notification frequency
-    func with(notificationFrequency: NotificationFrequency) -> SharesWithMe {
-      SharesWithMe(
-        hidden: hidden, showEarningsToMe: showEarningsToMe, sharedAt: sharedAt,
-        notificationFrequency: notificationFrequency)
+    internal func with(notificationFrequency: NotificationFrequency) -> Self {
+      Self(
+        hidden: hidden,
+        showEarningsToMe: showEarningsToMe,
+        sharedAt: sharedAt,
+        notificationFrequency: notificationFrequency
+      )
     }
   }
 
@@ -122,13 +128,13 @@ struct Friend: Codable, Identifiable, Equatable {
     }
 
     /// Create a copy with updated earnings visibility
-    func with(showEarningsToThem: Bool) -> IShareWith {
-      IShareWith(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt, ownerMuted: ownerMuted)
+    internal func with(showEarningsToThem: Bool) -> Self {
+      Self(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt, ownerMuted: ownerMuted)
     }
 
     /// Create a copy with updated owner muted status
-    func with(ownerMuted: Bool) -> IShareWith {
-      IShareWith(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt, ownerMuted: ownerMuted)
+    internal func with(ownerMuted: Bool) -> Self {
+      Self(showEarningsToThem: showEarningsToThem, sharedAt: sharedAt, ownerMuted: ownerMuted)
     }
   }
 
@@ -142,16 +148,16 @@ struct Friend: Codable, Identifiable, Equatable {
 
   /// Display name for the friend (firstName > username > email username > phone > "Unknown")
   var displayName: String {
-    if let firstName = firstName, !firstName.isEmpty {
+    if let firstName, !firstName.isEmpty {
       return firstName
     }
     if let username = formattedUsername {
       return username
     }
-    if let email = email, !email.isEmpty {
+    if let email, !email.isEmpty {
       return email.components(separatedBy: "@").first ?? email
     }
-    if let phone = phone, !phone.isEmpty {
+    if let phone, !phone.isEmpty {
       return formatPhoneNumber(phone)
     }
     return "Unknown"
@@ -181,17 +187,17 @@ struct Friend: Codable, Identifiable, Equatable {
     }
 
     // If we have firstName, show email or phone as secondary info
-    if let firstName = firstName, !firstName.isEmpty {
-      if let email = email, !email.isEmpty {
+    if let firstName, !firstName.isEmpty {
+      if let email, !email.isEmpty {
         return email
       }
-      if let phone = phone, !phone.isEmpty {
+      if let phone, !phone.isEmpty {
         return formatPhoneNumber(phone)
       }
     }
     // If email is display name, show phone if available
-    if let email = email, !email.isEmpty {
-      if let phone = phone, !phone.isEmpty {
+    if let email, !email.isEmpty {
+      if let phone, !phone.isEmpty {
         return formatPhoneNumber(phone)
       }
     }
@@ -228,8 +234,8 @@ struct Friend: Codable, Identifiable, Equatable {
   // MARK: - Copy-With Methods (for optimistic updates)
 
   /// Create a copy with updated sharesWithMe
-  func with(sharesWithMe: SharesWithMe?) -> Friend {
-    Friend(
+  internal func with(sharesWithMe: SharesWithMe?) -> Self {
+    Self(
       id: id,
       email: email,
       phone: phone,
@@ -243,8 +249,8 @@ struct Friend: Codable, Identifiable, Equatable {
   }
 
   /// Create a copy with updated iShareWith
-  func with(iShareWith: IShareWith?) -> Friend {
-    Friend(
+  internal func with(iShareWith: IShareWith?) -> Self {
+    Self(
       id: id,
       email: email,
       phone: phone,
@@ -265,7 +271,8 @@ struct Friend: Codable, Identifiable, Equatable {
 
     // Remove country code if present
     let localNumber: String
-    if digits.hasPrefix("47") && digits.count == 10 {
+    // swiftlint:disable:next no_magic_numbers
+    if digits.hasPrefix("47"), digits.count == 10 {
       localNumber = String(digits.dropFirst(2))
     } else {
       localNumber = digits

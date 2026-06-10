@@ -45,7 +45,7 @@ struct PayrollAdjustmentTotals: Equatable {
   let net: Double
   let taxEnabled: Bool
 
-  static var zero: PayrollAdjustmentTotals {
-    PayrollAdjustmentTotals(gross: 0, net: 0, taxEnabled: false)
+  internal static var zero: Self {
+    Self(gross: 0, net: 0, taxEnabled: false)
   }
 }

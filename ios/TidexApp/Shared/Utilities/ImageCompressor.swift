@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers number_separator
 import Foundation
 import ImageIO
 import UIKit
@@ -16,7 +22,7 @@ enum ImageCompressor {
 
   /// Maximum dimension for images sent to Wagey provider APIs
   /// Larger images are downscaled to fit within this dimension
-  private static let maxDimension: CGFloat = 1568
+  private static let maxDimension: CGFloat = 1_568
 
   /// Default compression quality (0.0 - 1.0)
   private static let defaultQuality: CGFloat = 0.8

@@ -65,9 +65,9 @@ struct NextShiftCountdownText: View {
           id: "preview-1",
           durationHours: 8.0,
           paidHours: 7.5,
-          basePay: 1500,
+          basePay: 1_500,
           supplementPay: 200,
-          gross: 1700,
+          gross: 1_700,
           wagePeriods: [],
           originalWagePeriods: [],
           breakAudit: BreakAudit(

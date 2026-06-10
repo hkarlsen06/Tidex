@@ -38,6 +38,7 @@ struct WorkPatternAnalyzer {
     switch analyzeDetailed(for: userId) {
     case .success(let pattern):
       return pattern
+
     default:
       return nil
     }
@@ -49,6 +50,7 @@ struct WorkPatternAnalyzer {
     switch await analyzeDetailedAsync(for: userId) {
     case .success(let pattern):
       return pattern
+
     default:
       return nil
     }
@@ -158,7 +160,7 @@ struct WorkPatternAnalyzer {
     startDate: Date,
     endDate: Date
   ) -> [ShiftTime] {
-    let realDates = Set(realShifts.map { $0.shift_date })
+    let realDates: Set<String> = Set(realShifts.map(\.shift_date))
     let monthsInRange = getMonthsInRange(startDate: startDate, endDate: endDate)
 
     var virtualShifts: [ShiftRow] = []
@@ -242,8 +244,8 @@ struct WorkPatternAnalyzer {
       let frequency = Double(dayShifts.count) / Double(weeksCount)
       guard frequency >= frequencyThreshold else { continue }
 
-      let startMinutes = dayShifts.map { $0.startMinutes }.sorted()
-      let endMinutes = dayShifts.map { $0.endMinutes }.sorted()
+      let startMinutes: [Int] = dayShifts.map(\.startMinutes).sorted()
+      let endMinutes: [Int] = dayShifts.map(\.endMinutes).sorted()
 
       guard let medianStart = median(of: startMinutes),
         let medianEnd = median(of: endMinutes)

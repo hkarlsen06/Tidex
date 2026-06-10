@@ -58,7 +58,7 @@ final class ImpersonationManager: ObservableObject {
     guard isImpersonating else { return }
 
     // 1. Check local expiration first (fast path)
-    if let expiresAt = expiresAt, expiresAt < Date() {
+    if let expiresAt, expiresAt < Date() {
       logger.info("Impersonation session expired locally, stopping")
       await handleInvalidSession()
       return

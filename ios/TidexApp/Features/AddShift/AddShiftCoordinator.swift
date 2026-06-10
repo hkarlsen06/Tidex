@@ -74,7 +74,8 @@ final class AddShiftCoordinator: ObservableObject {
 
   /// Trigger the add action (called from MainTabView when Add tab is tapped)
   func triggerAdd() {
-    guard canSubmit && !isLoading else { return }
+    // swiftlint:disable:next conditional_returns_on_newline
+    guard canSubmit, !isLoading else { return }
     triggerAddAction.send()
   }
 

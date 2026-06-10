@@ -411,8 +411,10 @@ extension FriendsMessagesRepository {
     switch message.sendState {
     case .sent:
       stateScore = 3
+
     case .failed:
       stateScore = 2
+
     case .sending:
       stateScore = 1
     }

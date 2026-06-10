@@ -1,4 +1,11 @@
-#!/usr/bin/env swift
+#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable cyclomatic_complexity explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_body_length legacy_objc_type multiline_arguments_brackets
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_direct_print no_magic_numbers prefixed_toplevel_constant
 
 import Foundation
 

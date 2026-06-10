@@ -112,7 +112,7 @@ enum BreakMethod: String, Codable, Equatable, CaseIterable {
   init(from decoder: Decoder) throws {
     let container = try decoder.singleValueContainer()
     let rawValue = try container.decode(String.self)
-    self = BreakMethod(rawValue: rawValue) ?? .proportional
+    self = Self(rawValue: rawValue) ?? .proportional
   }
 }
 

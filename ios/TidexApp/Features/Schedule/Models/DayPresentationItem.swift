@@ -18,6 +18,7 @@ enum DayPresentationItem: Identifiable, Equatable {
     switch self {
     case .shift(let shift):
       return shift.id
+
     case .event(let event):
       return event.id
     }
@@ -27,6 +28,7 @@ enum DayPresentationItem: Identifiable, Equatable {
     switch self {
     case .shift(let shift):
       return shift.shiftDate
+
     case .event(let event):
       return event.anchorDateISO
     }
@@ -36,6 +38,7 @@ enum DayPresentationItem: Identifiable, Equatable {
     switch self {
     case .shift(let shift):
       return shift.shiftDate
+
     case .event(let event):
       return event.coveredDateISO
     }
@@ -52,6 +55,7 @@ enum DayPresentationItem: Identifiable, Equatable {
     switch self {
     case .shift(let shift):
       return shift.startTime
+
     case .event(let event):
       return event.sortTime
     }

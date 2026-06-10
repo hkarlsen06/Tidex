@@ -34,6 +34,7 @@ struct MixedDaySheet: View {
               switch item {
               case .shift(let shift):
                 shiftCard(shift)
+
               case .event(let event):
                 EventRowCard(
                   event: event.event,

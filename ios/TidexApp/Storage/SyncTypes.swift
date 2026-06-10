@@ -156,8 +156,10 @@ enum SyncEncodingError: LocalizedError {
     switch self {
     case .snapshotEncodingFailed(let type, let error):
       return "Failed to encode \(type): \(error.localizedDescription)"
+
     case .payloadDecodingFailed(let type, let error):
       return "Failed to decode \(type): \(error.localizedDescription)"
+
     case .emptyUpdatePayload(let type):
       return "Empty update payload for \(type)"
     }
@@ -168,6 +170,7 @@ enum SyncEncodingError: LocalizedError {
     switch self {
     case .snapshotEncodingFailed:
       return "Sync failed: Unable to save local changes. Please try again."
+
     case .payloadDecodingFailed, .emptyUpdatePayload:
       return "Sync failed: Unable to prepare local changes. Please try again."
     }
@@ -198,10 +201,13 @@ struct SyncLoggerImpl {
     switch level {
     case .debug:
       logger.debug("\(message)")
+
     case .info:
       logger.info("\(message)")
+
     case .warning:
       logger.warning("\(message)")
+
     case .error:
       logger.error("\(message)")
     }

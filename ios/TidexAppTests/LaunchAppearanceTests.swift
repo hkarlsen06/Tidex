@@ -105,10 +105,13 @@ extension UIUserInterfaceStyle {
     switch self {
     case .dark:
       return "dark"
+
     case .light:
       return "light"
+
     case .unspecified:
       return "unspecified"
+
     @unknown default:
       return "unknown"
     }

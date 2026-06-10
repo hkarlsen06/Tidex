@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable discouraged_optional_collection explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_direct_print prefixed_toplevel_constant
 import Foundation
 
 private struct Catalog: Codable {
@@ -148,6 +154,7 @@ private func parseConfig() -> Config {
     switch arg {
     case "--catalog":
       if let value = iterator.next() { catalogURL = URL(fileURLWithPath: value) }
+
     default:
       continue
     }

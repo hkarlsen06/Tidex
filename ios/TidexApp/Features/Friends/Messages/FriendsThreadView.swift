@@ -321,7 +321,7 @@ struct FriendsThreadView: View {
       ZStack(alignment: .top) {
         chatView
 
-        if viewModel.isLoadingOlderMessages && !viewModel.messages.isEmpty {
+        if viewModel.isLoadingOlderMessages, !viewModel.messages.isEmpty {
           olderMessagesLoadingState
             .padding(.top, Spacing.md)
         }
@@ -340,7 +340,7 @@ struct FriendsThreadView: View {
             )
         }
 
-        if viewModel.isLoading && viewModel.messages.isEmpty {
+        if viewModel.isLoading, viewModel.messages.isEmpty {
           loadingState
         } else if viewModel.messages.isEmpty {
           emptyState
@@ -941,6 +941,7 @@ struct FriendsThreadView: View {
     switch pendingReportTarget {
     case .user:
       return [.harassmentOrBullying, .spam, .inappropriateProfileOrConduct, .other]
+
     case .message:
       return [
         .harassmentOrBullying,
@@ -950,6 +951,7 @@ struct FriendsThreadView: View {
         .spam,
         .other,
       ]
+
     case .none:
       return []
     }
@@ -1067,7 +1069,7 @@ struct FriendsThreadView: View {
 
   private func handleMessageMenuAction(
     _ action: FriendsThreadMessageMenuAction,
-    _ defaultActionClosure: @escaping (ExyteChat.Message, DefaultMessageMenuAction) -> Void,
+    _: (ExyteChat.Message, DefaultMessageMenuAction) -> Void,
     _ message: ExyteChat.Message
   ) {
     guard let friendMessage = chatProjection.presentedMessageLookup[message.id] else { return }
@@ -1078,21 +1080,26 @@ struct FriendsThreadView: View {
     switch action {
     case .reply:
       viewModel.setReplyTarget(friendMessage)
+
     case .copy:
       UIPasteboard.general.string = friendMessage.body
+
     case .edit:
       Task {
         await viewModel.startEditing(friendMessage)
       }
+
     case .forward:
       guard let shiftSnapshot = friendMessage.shiftSnapshot else { return }
       pendingForwardAttachment = PendingForwardAttachment(
         snapshot: shiftSnapshot
       )
+
     case .delete:
       Task {
         await viewModel.deleteMessage(messageId: friendMessage.id)
       }
+
     case .report:
       pendingReportTarget = .message(messageId: friendMessage.id)
     }
@@ -1109,6 +1116,7 @@ struct FriendsThreadView: View {
     switch change {
     case .none, .prependedHistory:
       return
+
     case .appendedOutgoing:
       unreadIncomingCount = 0
       showsNewMessagesPill = false
@@ -1121,6 +1129,7 @@ struct FriendsThreadView: View {
         requestScrollToBottom(presentedMessageID: scrollTarget)
       }
       return
+
     case .appendedIncoming:
       break
     }
@@ -1193,7 +1202,7 @@ struct FriendsThreadView: View {
   private func showReactionMenu(
     for message: FriendMessage,
     attachmentId: String?,
-    showContextMenu: @escaping () -> Void
+    showContextMenu: () -> Void
   ) {
     guard message.canReact else { return }
 
@@ -1253,10 +1262,12 @@ struct FriendsThreadView: View {
     switch request.kind {
     case .reply:
       completeReplyScrollRequest(request)
+
     case .restore:
       Task { @MainActor in
         viewModel.consumeRestoreScrollTarget()
       }
+
     case .liveEdge:
       isPinnedToBottom = true
       unreadIncomingCount = 0
@@ -1390,7 +1401,7 @@ struct FriendsThreadView: View {
   private struct AlertState: Identifiable {
     let id = UUID()
     let title: String
-    var message: String? = nil
+    var message: String?
   }
 
   private enum FriendsChatPhotoLibrarySaveError: LocalizedError {
@@ -1404,6 +1415,7 @@ struct FriendsThreadView: View {
           localized: "friends.chat.image.save_permission_denied",
           table: "Localizable"
         )
+
       case .saveFailed:
         return String(localized: .friendsChatImageSaveFailed)
       }
@@ -1438,13 +1450,16 @@ struct FriendsThreadView: View {
       switch status {
       case .authorized, .limited:
         return
+
       case .notDetermined:
         let requestedStatus = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
         guard requestedStatus == .authorized || requestedStatus == .limited else {
           throw FriendsChatPhotoLibrarySaveError.permissionDenied
         }
+
       case .denied, .restricted:
         throw FriendsChatPhotoLibrarySaveError.permissionDenied
+
       @unknown default:
         throw FriendsChatPhotoLibrarySaveError.saveFailed
       }
@@ -1459,6 +1474,7 @@ struct FriendsThreadView: View {
       switch self {
       case .user:
         return nil
+
       case .message(let messageId):
         return messageId
       }
@@ -1673,16 +1689,22 @@ extension FriendAbuseReportReason {
     switch self {
     case .harassmentOrBullying:
       return String(localized: .friendsChatReasonHarassment)
+
     case .sexualContent:
       return String(localized: .friendsChatReasonSexual)
+
     case .hateOrDiscriminatoryContent:
       return String(localized: .friendsChatReasonHate)
+
     case .violenceOrThreats:
       return String(localized: .friendsChatReasonViolence)
+
     case .spam:
       return String(localized: .friendsChatReasonSpam)
+
     case .inappropriateProfileOrConduct:
       return String(localized: .friendsChatReasonInappropriateProfile)
+
     case .other:
       return String(localized: .friendsChatReasonOther)
     }

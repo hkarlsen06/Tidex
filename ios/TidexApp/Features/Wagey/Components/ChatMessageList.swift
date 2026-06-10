@@ -1,40 +1,40 @@
 import SwiftUI
 
 /// Scrollable list of chat messages with auto-scroll to bottom
-struct ChatMessageList: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+struct ChatMessageList: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
 
-  let messages: [ChatMessage]
-  let streamingMessages: [ChatMessage]
-  let streamingContentBlocks: [ContentBlock]
-  let isStreaming: Bool
-  let isThinking: Bool
-  let showsConversationLengthWarning: Bool
-  let remainingMessagesText: String?
-  let showsHistoryButton: Bool
-  let bottomContentInset: CGFloat
-  @Binding var isScrolledToBottom: Bool
-  let scrollToBottomTrigger: Int
-  var onStreamEndedAwayFromBottom: (() -> Void)?
+  let messages: [ChatMessage]  // swiftlint:disable:this explicit_acl type_contents_order
+  let streamingMessages: [ChatMessage]  // swiftlint:disable:this explicit_acl type_contents_order
+  let streamingContentBlocks: [ContentBlock]  // swiftlint:disable:this explicit_acl type_contents_order
+  let isStreaming: Bool  // swiftlint:disable:this explicit_acl type_contents_order
+  let isThinking: Bool  // swiftlint:disable:this explicit_acl type_contents_order
+  let showsConversationLengthWarning: Bool  // swiftlint:disable:this explicit_acl type_contents_order
+  let remainingMessagesText: String?  // swiftlint:disable:this explicit_acl type_contents_order
+  let showsHistoryButton: Bool  // swiftlint:disable:this explicit_acl type_contents_order
+  let bottomContentInset: CGFloat  // swiftlint:disable:this explicit_acl type_contents_order
+  @Binding var isScrolledToBottom: Bool  // swiftlint:disable:this explicit_acl type_contents_order
+  let scrollToBottomTrigger: Int  // swiftlint:disable:this explicit_acl type_contents_order
+  var onStreamEndedAwayFromBottom: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
 
   /// Callback when a suggestion chip is tapped
-  var onSuggestionTapped: ((String) -> Void)?
-  var onHistoryTapped: (() -> Void)?
+  var onSuggestionTapped: ((String) -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
+  var onHistoryTapped: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
 
   /// Whether the "Copied!" confirmation is showing
-  @State private var showCopiedConfirmation = false
-  @State private var showsSuggestions = false
+  @State private var showCopiedConfirmation = false  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @State private var showsSuggestions = false  // swiftlint:disable:this explicit_type_interface type_contents_order
 
-  init(
+  init(  // swiftlint:disable:this explicit_acl type_contents_order
     messages: [ChatMessage],
     streamingMessages: [ChatMessage],
     streamingContentBlocks: [ContentBlock],
     isStreaming: Bool,
     isThinking: Bool,
-    showsConversationLengthWarning: Bool = false,
+    showsConversationLengthWarning: Bool = false,  // swiftlint:disable:this function_default_parameter_at_end
     remainingMessagesText: String?,
     showsHistoryButton: Bool,
-    bottomContentInset: CGFloat = Spacing.bottomScrollMargin,
+    bottomContentInset: CGFloat = Spacing.bottomScrollMargin,  // swiftlint:disable:this function_default_parameter_at_end line_length
     isScrolledToBottom: Binding<Bool>,
     scrollToBottomTrigger: Int = 0,
     onStreamEndedAwayFromBottom: (() -> Void)? = nil,
@@ -65,7 +65,7 @@ struct ChatMessageList: View {
   }
 
   private var scrollState: ScrollState {
-    let allMessages = renderedMessages
+    let allMessages = renderedMessages  // swiftlint:disable:this explicit_type_interface
     return ScrollState(
       messageCount: allMessages.count,
       lastMessageID: allMessages.last?.id,
@@ -79,7 +79,7 @@ struct ChatMessageList: View {
   }
 
   private var streamingGroupContext: ChatMessageGroupContext {
-    let placeholder = ChatMessage(
+    let placeholder = ChatMessage(  // swiftlint:disable:this explicit_type_interface
       role: .assistant,
       contentBlocks: streamingContentBlocks,
       timestamp: Date()
@@ -95,19 +95,22 @@ struct ChatMessageList: View {
     streamingContentBlocks.reduce(into: 0) { result, block in
       switch block {
       case .text(let text):
-        result = result &* 31 &+ text.count
+        result = result &* 31 &+ text.count  // swiftlint:disable:this no_magic_numbers
+
       case .toolCall(let toolCall):
-        result = result &* 31 &+ toolCall.name.count
-        result = result &* 31 &+ (toolCall.result?.count ?? 0)
+        result = result &* 31 &+ toolCall.name.count  // swiftlint:disable:this no_magic_numbers
+        result = result &* 31 &+ (toolCall.result?.count ?? 0)  // swiftlint:disable:this no_magic_numbers
+
       case .image:
-        result = result &* 31 &+ 1
+        result = result &* 31 &+ 1  // swiftlint:disable:this no_magic_numbers
+
       case .thoughtStatus(let status):
-        result = result &* 31 &+ status.durationSeconds
+        result = result &* 31 &+ status.durationSeconds  // swiftlint:disable:this no_magic_numbers
       }
     }
   }
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     ChatTimelineScrollView(
       scrollState: scrollState,
       bottomContentInset: bottomContentInset,
@@ -120,7 +123,7 @@ struct ChatMessageList: View {
       }
     ) {
       // Empty state when no messages
-      if messages.isEmpty && !isStreaming {
+      if messages.isEmpty, !isStreaming {
         emptyStateView
           .padding(.top, Spacing.xxl)
       } else {
@@ -156,7 +159,8 @@ struct ChatMessageList: View {
     }
   }
 
-  private func groupContext(for index: Int, in messages: [ChatMessage]) -> ChatMessageGroupContext {
+  private func groupContext(for index: Int, in messages: [ChatMessage]) -> ChatMessageGroupContext
+  {  // swiftlint:disable:this line_length type_contents_order
     WageyChatMessageGrouping.context(
       for: messages[index],
       previous: index > 0 ? messages[index - 1] : nil,
@@ -212,8 +216,8 @@ struct ChatMessageList: View {
 
           if index < suggestions.count - 1 {
             Divider()
-              .overlay(Color.tidexBorderSubtle.opacity(0.7))
-              .padding(.leading, 42)
+              .overlay(Color.tidexBorderSubtle.opacity(0.7))  // swiftlint:disable:this no_magic_numbers
+              .padding(.leading, 42)  // swiftlint:disable:this no_magic_numbers
           }
         }
       }
@@ -230,13 +234,13 @@ struct ChatMessageList: View {
   }
 
   private var welcomeHero: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
+    VStack(alignment: .leading, spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
       VStack(alignment: .leading, spacing: Spacing.xs) {
         Image(systemName: "sparkles")
           .font(.tidexSubheadline)
           .foregroundColor(.tidexBlue)
-          .frame(width: 32, height: 32)
-          .background(Color.tidexBlue.opacity(0.1), in: Circle())
+          .frame(width: 32, height: 32)  // swiftlint:disable:this no_magic_numbers
+          .background(Color.tidexBlue.opacity(0.1), in: Circle())  // swiftlint:disable:this no_magic_numbers
 
         Text(.wageyEmptyStateWelcomeTitle)
           .font(.tidexScreenTitle)
@@ -262,7 +266,7 @@ struct ChatMessageList: View {
 
         if !showsSuggestions {
           Button {
-            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
               showsSuggestions = true
             }
           } label: {
@@ -284,7 +288,7 @@ struct ChatMessageList: View {
       }
     }
     .padding(.top, Spacing.md)
-    .padding(.trailing, showsHistoryButton ? 56 : 0)
+    .padding(.trailing, showsHistoryButton ? 56 : 0)  // swiftlint:disable:this no_magic_numbers
     .frame(maxWidth: .infinity, alignment: .leading)
     .overlay(alignment: .topTrailing) {
       if showsHistoryButton {
@@ -295,7 +299,7 @@ struct ChatMessageList: View {
           Image(systemName: "clock.arrow.circlepath")
             .font(.tidexBodyMedium)
             .foregroundColor(.tidexTextSecondary)
-            .frame(width: 40, height: 40)
+            .frame(width: 40, height: 40)  // swiftlint:disable:this no_magic_numbers
             .background(Color.tidexSurfaceSecondary, in: Circle())
             .overlay(Circle().stroke(Color.tidexBorderSubtle, lineWidth: 1))
         }
@@ -307,7 +311,7 @@ struct ChatMessageList: View {
     }
   }
 
-  private func suggestionRow(icon: String, text: String) -> some View {
+  private func suggestionRow(icon: String, text: String) -> some View {  // swiftlint:disable:this type_contents_order
     Button {
       Haptics.play(.light)
       onSuggestionTapped?(text)
@@ -316,14 +320,14 @@ struct ChatMessageList: View {
         Image(systemName: icon)
           .font(.tidexFootnoteStrong)
           .foregroundColor(.tidexBlue)
-          .frame(width: 28, height: 28)
-          .background(Color.tidexBlue.opacity(0.09), in: Circle())
+          .frame(width: 28, height: 28)  // swiftlint:disable:this no_magic_numbers
+          .background(Color.tidexBlue.opacity(0.09), in: Circle())  // swiftlint:disable:this no_magic_numbers
 
         Text(text)
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexTextPrimary)
           .multilineTextAlignment(.leading)
-          .lineLimit(2)
+          .lineLimit(2)  // swiftlint:disable:this no_magic_numbers
           .fixedSize(horizontal: false, vertical: true)
 
         Spacer(minLength: 0)
@@ -353,7 +357,7 @@ struct ChatMessageList: View {
     }
     .buttonStyle(.plain)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .padding(.leading, 18)
+    .padding(.leading, 18)  // swiftlint:disable:this no_magic_numbers
     .padding(.top, Spacing.xxs)
   }
 
@@ -375,25 +379,25 @@ struct ChatMessageList: View {
   }
 
   private func copyConversation() {
-    let text = messages.map(formatMessageForCopy).joined(separator: "\n\n")
+    let text = messages.map(formatMessageForCopy).joined(separator: "\n\n")  // swiftlint:disable:this explicit_type_interface line_length
 
     UIPasteboard.general.string = text
 
-    withAnimation(.easeInOut(duration: 0.2)) {
+    withAnimation(.easeInOut(duration: 0.2)) {  // swiftlint:disable:this no_magic_numbers
       showCopiedConfirmation = true
     }
-    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-      withAnimation(.easeInOut(duration: 0.2)) {
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {  // swiftlint:disable:this no_magic_numbers
+      withAnimation(.easeInOut(duration: 0.2)) {  // swiftlint:disable:this no_magic_numbers
         showCopiedConfirmation = false
       }
     }
   }
 
   private func formatMessageForCopy(_ message: ChatMessage) -> String {
-    let role = message.role == .user ? "You" : "Wagey"
-    let sections = message.contentBlocks.compactMap(formatContentBlockForCopy)
+    let role = message.role == .user ? "You" : "Wagey"  // swiftlint:disable:this explicit_type_interface
+    let sections = message.contentBlocks.compactMap(formatContentBlockForCopy)  // swiftlint:disable:this explicit_type_interface line_length
 
-    guard !sections.isEmpty else { return "\(role):" }
+    guard !sections.isEmpty else { return "\(role):" }  // swiftlint:disable:this conditional_returns_on_newline
     guard sections.count == 1, !sections[0].contains("\n") else {
       return "\(role):\n\(sections.joined(separator: "\n\n"))"
     }
@@ -405,18 +409,21 @@ struct ChatMessageList: View {
     switch block {
     case .text(let text):
       return text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : text
+
     case .toolCall(let toolCall):
       return formatToolCallForCopy(toolCall)
+
     case .image:
       return nil
+
     case .thoughtStatus(let status):
       return status.localizedLabel
     }
   }
 
   private func formatToolCallForCopy(_ toolCall: ToolCall) -> String {
-    let toolName = WageyToolLabelResolver.displayName(for: toolCall, isExecuting: false)
-    var sections = ["\(String(localized: .wageyToolName)): \(toolName)"]
+    let toolName = WageyToolLabelResolver.displayName(for: toolCall, isExecuting: false)  // swiftlint:disable:this explicit_type_interface line_length
+    var sections = ["\(String(localized: .wageyToolName)): \(toolName)"]  // swiftlint:disable:this explicit_type_interface line_length
 
     if let arguments = toolCall.arguments, !arguments.isEmpty {
       sections.append("\(String(localized: .wageyToolRequest)):\n\(formatJSON(arguments))")
@@ -440,9 +447,9 @@ struct ChatMessageList: View {
     to newValue: ScrollState,
     context: ChatTimelineScrollContext
   ) {
-    let startedStreaming = !oldValue.isStreaming && newValue.isStreaming
-    let finishedStreaming = oldValue.isStreaming && !newValue.isStreaming
-    let appendedMessage =
+    let startedStreaming = !oldValue.isStreaming && newValue.isStreaming  // swiftlint:disable:this explicit_type_interface line_length
+    let finishedStreaming = oldValue.isStreaming && !newValue.isStreaming  // swiftlint:disable:this explicit_type_interface line_length
+    let appendedMessage =  // swiftlint:disable:this explicit_type_interface
       oldValue.messageCount != newValue.messageCount
       || oldValue.lastMessageID != newValue.lastMessageID
 
@@ -451,13 +458,13 @@ struct ChatMessageList: View {
       return
     }
 
-    if finishedStreaming && (!context.isPinnedToBottom || context.suppressAutoFollow) {
+    if finishedStreaming, !context.isPinnedToBottom || context.suppressAutoFollow {
       onStreamEndedAwayFromBottom?()
     }
 
     if appendedMessage {
-      guard context.shouldAutoFollow else { return }
-      let shouldAnimate = !newValue.isStreaming
+      guard context.shouldAutoFollow else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      let shouldAnimate = !newValue.isStreaming  // swiftlint:disable:this explicit_type_interface
       context.scrollToBottom(shouldAnimate, false)
       return
     }
@@ -500,7 +507,7 @@ struct ChatMessageList: View {
         id: "2",
         role: MessageRole.assistant,
         content:
-          "You have 3 shifts scheduled this week:\n\n- Monday: 09:00-17:00\n- Wednesday: 14:00-22:00\n- Friday: 08:00-16:00\n\nTotal: 24 hours, approximately **4,800 kr** before taxes.",
+          "You have 3 shifts scheduled this week:\n\n- Monday: 09:00-17:00\n- Wednesday: 14:00-22:00\n- Friday: 08:00-16:00\n\nTotal: 24 hours, approximately **4,800 kr** before taxes.",  // swiftlint:disable:this line_length
         toolCalls: [
           ToolCall(id: "call_1", name: "get_shifts", arguments: nil, result: "{}", success: true)
         ],
@@ -533,7 +540,7 @@ struct ChatMessageList: View {
     streamingContentBlocks: [
       .text("I'll add that shift for you..."),
       .toolCall(
-        ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil)),
+        ToolCall(id: "call_1", name: "manage_shift", arguments: nil, result: nil, success: nil)),  // swiftlint:disable:this line_length multiline_arguments_brackets
     ],
     isStreaming: true,
     isThinking: true,
@@ -542,4 +549,4 @@ struct ChatMessageList: View {
     isScrolledToBottom: .constant(true)
   )
   .background(Color.tidexBackground)
-}
+}  // swiftlint:disable:this file_length

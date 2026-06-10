@@ -90,7 +90,8 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
         if let featuredShift {
           let previousDisplayValue =
             previousState?.lastDisplayValue
-            ?? max(0, displayValueSnapshot - 1000)
+            // swiftlint:disable:next no_magic_numbers
+            ?? max(0, displayValueSnapshot - 1_000)
           let animateFrom: Double? =
             previousState?.displayTaxEnabled != displayTaxEnabledSnapshot
             ? displayValueSnapshot
@@ -117,7 +118,7 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
       } else if let featuredShift = CelebrationDetector.selectHighestEarningShift(
         from: newlyCompleted)
       {
-        var animateFrom: Double? = nil
+        var animateFrom: Double?
         if previousState?.displayTaxEnabled != displayTaxEnabledSnapshot {
           // Avoid misleading count-up when tax basis changed.
           animateFrom = displayValueSnapshot
@@ -141,8 +142,9 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
 
       await MainActor.run { [weak self] in
         guard let self else { return }
-        if self.shouldShowCelebration { return }
-        self.apply(result: result, stateKey: stateKey)
+        // swiftlint:disable:next conditional_returns_on_newline
+        if shouldShowCelebration { return }
+        apply(result: result, stateKey: stateKey)
       }
     }
   }
@@ -236,7 +238,7 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
 
       await MainActor.run { [weak self] in
         guard let self else { return }
-        self.checkForCelebration(
+        checkForCelebration(
           userId: userIdSnapshot,
           month: current,
           shifts: computedShifts,
@@ -280,11 +282,13 @@ final class ShiftCompletionCelebrationManager: ObservableObject {
       pendingState = state
       celebrationData = data
       shouldShowCelebration = true
+
     case .store(let state):
       CelebrationPersistence.saveState(state, forKey: stateKey)
       pendingState = nil
       celebrationData = nil
       shouldShowCelebration = false
+
     case .none:
       break
     }

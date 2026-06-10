@@ -1,3 +1,6 @@
+// swiftlint:disable file_length
+
+import Nimble
 import SwiftData
 import XCTest
 
@@ -775,7 +778,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       sortOrder: 0,
       payrollDay: 25,
       halfTaxMonth: 12,
-      monthlyGoal: 30000
+      monthlyGoal: 30_000
     )
 
     let localRecord = try await store.getJob(id: created.id)
@@ -797,7 +800,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       sortOrder: 0,
       payrollDay: 25,
       halfTaxMonth: 12,
-      monthlyGoal: 30000
+      monthlyGoal: 30_000
     )
 
     let snapshots = try await store.getAllWageSnapshots(userId: userId)
@@ -907,7 +910,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       sortOrder: 0,
       payrollDay: 25,
       halfTaxMonth: nil,
-      monthlyGoal: 25000
+      monthlyGoal: 25_000
     )
 
     let serverUpdatedAt = makeDate("2026-03-06", "12:00")
@@ -919,7 +922,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       sortOrder: 2,
       payrollDay: 20,
       halfTaxMonth: 11,
-      monthlyGoal: 35000,
+      monthlyGoal: 35_000,
       archivedAt: nil,
       deletedAt: nil,
       updatedAt: serverUpdatedAt,
@@ -941,7 +944,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.sortOrder, 2)
     XCTAssertEqual(local.payrollDay, 20)
     XCTAssertEqual(local.halfTaxMonth, 11)
-    XCTAssertEqual(local.monthlyGoal, 35000)
+    expect(local.monthlyGoal) == 35_000
     XCTAssertEqual(local.serverRevision, 5)
     XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
     XCTAssertNil(local.conflictServerSnapshot)
@@ -985,7 +988,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       sortOrder: 4,
       payrollDay: 20,
       halfTaxMonth: 11,
-      monthlyGoal: 40000,
+      monthlyGoal: 40_000,
       archivedAt: nil,
       deletedAt: nil,
       updatedAt: serverUpdatedAt,
@@ -1188,8 +1191,8 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       theme: "dark",
       calendarContentColorStyle: "monochrome",
       showDashboardClockButtons: false,
-      monthlyGoal: 30000,
-      monthlyGoalsByMonth: ["2026-03": 32000],
+      monthlyGoal: 30_000,
+      monthlyGoalsByMonth: ["2026-03": 32_000],
       defaultShiftsView: "list",
       halfTaxMonth: 12,
       defaultStartupTab: "stats"
@@ -1299,8 +1302,8 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
       theme: "dark",
       calendarContentColorStyle: "monochrome",
       showDashboardClockButtons: false,
-      monthlyGoal: 30000,
-      monthlyGoalsByMonth: ["2026-03": 32000],
+      monthlyGoal: 30_000,
+      monthlyGoalsByMonth: ["2026-03": 32_000],
       defaultShiftsView: "list",
       halfTaxMonth: 12,
       defaultStartupTab: "stats"
@@ -1308,8 +1311,8 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     let serverUpdatedAt = makeDate("2026-03-08", "11:00")
     let serverSnapshot = UserSettingsServerSnapshot(
-      monthlyGoal: 42000,
-      monthlyGoalsByMonth: ["2026-03": 43000],
+      monthlyGoal: 42_000,
+      monthlyGoalsByMonth: ["2026-03": 43_000],
       defaultShiftsView: "calendar",
       profilePictureUrl: "https://tidex.no/avatar.png",
       payrollDay: 20,
@@ -1334,8 +1337,8 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     let local = try XCTUnwrap(localRecord)
     XCTAssertEqual(local.syncStatus, .clean)
-    XCTAssertEqual(local.monthlyGoal, 42000)
-    XCTAssertEqual(local.monthlyGoalsByMonth, ["2026-03": 43000])
+    expect(local.monthlyGoal) == 42_000
+    expect(local.monthlyGoalsByMonth) == ["2026-03": 43_000]
     XCTAssertEqual(local.defaultShiftsView, "calendar")
     XCTAssertEqual(local.profilePictureUrl, "https://tidex.no/avatar.png")
     XCTAssertEqual(local.payrollDay, 20)
@@ -1388,7 +1391,7 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     let serverUpdatedAt = makeDate("2026-03-08", "18:00")
     let serverSnapshot = UserSettingsServerSnapshot(
-      monthlyGoal: 45000,
+      monthlyGoal: 45_000,
       monthlyGoalsByMonth: [:],
       defaultShiftsView: "calendar",
       profilePictureUrl: nil,
@@ -1421,3 +1424,5 @@ final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertNil(local.conflictServerSnapshot)
   }
 }
+
+// swiftlint:enable file_length

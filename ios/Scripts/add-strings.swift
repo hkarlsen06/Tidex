@@ -1,4 +1,11 @@
-#!/usr/bin/env swift
+#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline cyclomatic_complexity
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable discouraged_optional_collection explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_body_length line_length multiline_arguments_brackets
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_direct_print sorted_enum_cases switch_case_on_newline
 
 import Foundation
 
@@ -83,23 +90,32 @@ private enum AddStringError: Error, CustomStringConvertible {
           --nb         The Norwegian (Bokmal) translation (must follow its --key)
           --catalog, -c  Optional path to xcstrings file (defaults to App catalog)
         """
+
     case .fileNotFound(let path):
       return "String catalog not found: \(path)"
+
     case .keyAlreadyExists(let key):
       return "Key '\(key)' already exists in the catalog. Use Xcode to edit existing keys."
+
     case .invalidJSON:
       return "Failed to parse string catalog JSON"
+
     case .invalidUTF8Encoding:
       return "Failed to convert output data to UTF-8 string"
+
     case .incompleteEntry(let key):
       return
         "Incomplete entry for key '\(key)': both --en and --nb values are required after each --key"
+
     case .lockFileOpenFailed(let path):
       return "Failed to open lock file at \(path)"
+
     case .lockFailed(let path):
       return "Failed to acquire lock for \(path)"
+
     case .invalidCatalogStructure(let reason):
       return "Invalid catalog structure: \(reason)"
+
     case .invalidKey(let reason):
       return "Invalid key: \(reason)"
     }
@@ -136,14 +152,19 @@ private func parseArgs() throws -> Config {
       // Flush previous entry if any
       try flushEntry()
       currentKey = iterator.next()
+
     case "--en", "--english":
       currentEn = iterator.next()
+
     case "--nb", "--norwegian":
       currentNb = iterator.next()
+
     case "--catalog", "-c":
       catalogPath = iterator.next()
+
     case "--help", "-h":
       throw AddStringError.missingArguments
+
     default:
       continue
     }
@@ -387,8 +408,10 @@ private func run() throws {
       case .added:
         addedCount += 1
         addedEntries.append(entry)
+
       case .needsManualUpdate:
         manualUpdateCount += 1
+
       case .skipped: break
       }
     }

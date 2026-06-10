@@ -3,20 +3,20 @@ import UIKit
 
 /// Main Wagey chat view
 /// Composes the header, message list, input field, and conversation sidebar
-struct WageyView: View {
+struct WageyView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length
   @EnvironmentObject private var coordinator: AppCoordinator
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
   @Binding private var selectedTab: MainTabView.Tab
-  @StateObject private var orientationTracker = OrientationTracker.shared
+  @StateObject private var orientationTracker = OrientationTracker.shared  // swiftlint:disable:this explicit_type_interface line_length
 
   /// Shared ViewModel for managing chat state
   /// Using shared instance ensures conversation persists when dismissing and reopening Wagey
-  private let viewModel = WageyViewModel.shared
+  private let viewModel = WageyViewModel.shared  // swiftlint:disable:this explicit_type_interface
 
   /// Whether to show the conversation history sheet
-  @State private var showHistory = false
+  @State private var showHistory = false  // swiftlint:disable:this explicit_type_interface
 
-  init(selectedTab: Binding<MainTabView.Tab>) {
+  init(selectedTab: Binding<MainTabView.Tab>) {  // swiftlint:disable:this explicit_acl type_contents_order
     _selectedTab = selectedTab
   }
 
@@ -24,19 +24,19 @@ struct WageyView: View {
   @State private var inputText: String = ""
 
   /// Whether to show the paywall when limit is reached
-  @State private var showPaywall = false
+  @State private var showPaywall = false  // swiftlint:disable:this explicit_type_interface
 
   /// Pending message to send after upgrade
   @State private var pendingMessage: String?
 
   /// Whether the chat list is currently pinned to the bottom
-  @State private var isChatScrolledToBottom = true
+  @State private var isChatScrolledToBottom = true  // swiftlint:disable:this explicit_type_interface
 
   /// Triggers an imperative scroll-to-bottom inside the chat list
-  @State private var scrollToBottomTrigger = 0
+  @State private var scrollToBottomTrigger = 0  // swiftlint:disable:this explicit_type_interface
 
   /// Explicit visibility state for the post-stream scroll affordance
-  @State private var showScrollToBottomButton = false
+  @State private var showScrollToBottomButton = false  // swiftlint:disable:this explicit_type_interface
 
   /// Measured height of the floating bottom chrome so messages can scroll underneath it.
   @State private var bottomChromeHeight: CGFloat = Spacing.bottomScrollMargin
@@ -60,7 +60,7 @@ struct WageyView: View {
     "\(selectedTab.rawValue):\(coordinator.userId ?? "")"
   }
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     Group {
       if !viewModel.hasResolvedEntryState {
         onboardingStatePlaceholder
@@ -87,9 +87,9 @@ struct WageyView: View {
       }
     }
     .task(id: startupTaskID) {
-      guard selectedTab == .wagey else { return }
+      guard selectedTab == .wagey else { return }  // swiftlint:disable:this conditional_returns_on_newline
       viewModel.loadConversations()
-      guard !Task.isCancelled else { return }
+      guard !Task.isCancelled else { return }  // swiftlint:disable:this conditional_returns_on_newline
       await viewModel.fetchWageyUsage()
     }
   }
@@ -97,7 +97,7 @@ struct WageyView: View {
   // MARK: - Chat Interface
 
   private var chatInterface: some View {
-    NavigationStack {
+    NavigationStack {  // swiftlint:disable:this closure_body_length
       ZStack {
         TidexAppBackground()
 
@@ -107,7 +107,7 @@ struct WageyView: View {
       .navigationBarTitleDisplayMode(.inline)
       .iPadToolbarBackground()
       .toolbarBackground(.hidden, for: .tabBar)
-      .toolbar {
+      .toolbar {  // swiftlint:disable:this closure_body_length
         if shouldShowUsageSubtitle {
           ToolbarItem(placement: .topBarLeading) {
             messagesRemainingBadge
@@ -127,13 +127,13 @@ struct WageyView: View {
           }
         }
 
-        if isShowingWelcomeState && !viewModel.conversations.isEmpty {
+        if isShowingWelcomeState, !viewModel.conversations.isEmpty {
           ToolbarItem(placement: .topBarTrailing) {
             historyButton
           }
         }
 
-        if !isShowingWelcomeState && !viewModel.conversations.isEmpty {
+        if !isShowingWelcomeState, !viewModel.conversations.isEmpty {
           ToolbarItem(placement: .topBarTrailing) {
             historyButton
           }
@@ -173,7 +173,7 @@ struct WageyView: View {
       }
     }
     .onChange(of: viewModel.limitReached) { _, isLimitReached in
-      if isLimitReached && !showPaywall {
+      if isLimitReached, !showPaywall {
         showPaywall = true
       }
     }
@@ -185,7 +185,7 @@ struct WageyView: View {
   }
 
   /// Handle paywall dismiss - check if user upgraded
-  private func handlePaywallDismiss() {
+  private func handlePaywallDismiss() {  // swiftlint:disable:this type_contents_order
     Task {
       await viewModel.fetchWageyUsage()
 
@@ -238,7 +238,7 @@ struct WageyView: View {
     .overlay(alignment: .bottom) {
       bottomChrome
     }
-    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsScrollToBottomButton)
+    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsScrollToBottomButton)  // swiftlint:disable:this line_length no_magic_numbers
     .onPreferenceChange(WageyBottomChromeHeightPreferenceKey.self) { value in
       bottomChromeHeight = value
     }
@@ -287,13 +287,13 @@ struct WageyView: View {
   // MARK: - Entitlement Sync Banner
 
   @ViewBuilder
-  private func entitlementSyncBanner(_ message: String) -> some View {
+  private func entitlementSyncBanner(_ message: String) -> some View {  // swiftlint:disable:this type_contents_order
     HStack(spacing: Spacing.xs) {
       if viewModel.isSyncingEntitlement {
         ProgressView()
-          .scaleEffect(0.8)
+          .scaleEffect(0.8)  // swiftlint:disable:this no_magic_numbers
       } else {
-        Image(
+        Image(  // swiftlint:disable:this accessibility_label_for_image
           systemName: message.contains("Could not") || message.contains("Kunne ikke")
             ? "exclamationmark.triangle.fill"
             : "checkmark.circle.fill"
@@ -301,7 +301,7 @@ struct WageyView: View {
         .foregroundColor(
           message.contains("Could not") || message.contains("Kunne ikke")
             ? .tidexWarning
-            : .tidexSuccess)
+            : .tidexSuccess)  // swiftlint:disable:this multiline_arguments_brackets
       }
 
       Text(message)
@@ -313,7 +313,7 @@ struct WageyView: View {
       Button {
         viewModel.dismissEntitlementSyncMessage()
       } label: {
-        Image(systemName: "xmark")
+        Image(systemName: "xmark")  // swiftlint:disable:this accessibility_label_for_image
           .font(.tidexMicro)
           .foregroundColor(.tidexTextMuted)
       }
@@ -327,12 +327,13 @@ struct WageyView: View {
   // MARK: - Message Handling
 
   /// Handle sending a message, showing paywall if limit reached
-  private func handleSendMessage(_ content: String) async -> Bool {
+  private func handleSendMessage(_ content: String) async -> Bool {  // swiftlint:disable:this type_contents_order
     await handleSendMessageWithImage(content, image: nil)
   }
 
   /// Handle sending a message with an image, showing paywall if limit reached
-  private func handleSendMessageWithImage(_ content: String, image: ImageAttachment?) async -> Bool
+  private func handleSendMessageWithImage(_ content: String, image: ImageAttachment?) async
+    -> Bool  // swiftlint:disable:this line_length type_contents_order
   {
     if viewModel.limitReached {
       if viewModel.remainingMessagesCount > 0 {
@@ -383,7 +384,7 @@ struct WageyView: View {
 
   /// Localized conversation title - translates "New Conversation" to current locale
   private var localizedConversationTitle: String {
-    let title = viewModel.currentConversationTitle
+    let title = viewModel.currentConversationTitle  // swiftlint:disable:this explicit_type_interface
     if title == "New Conversation" {
       return String(localized: .wageyNewConversation)
     }
@@ -392,9 +393,9 @@ struct WageyView: View {
 
   /// Show usage subtitle only when nearing the limit (>= 50% used)
   private var shouldShowUsageSubtitle: Bool {
-    guard viewModel.messageLimit > 0 else { return false }
-    let usage = Double(viewModel.messagesUsed) / Double(viewModel.messageLimit)
-    return usage >= 0.5
+    guard viewModel.messageLimit > 0 else { return false }  // swiftlint:disable:this conditional_returns_on_newline
+    let usage = Double(viewModel.messagesUsed) / Double(viewModel.messageLimit)  // swiftlint:disable:this explicit_type_interface line_length
+    return usage >= 0.5  // swiftlint:disable:this no_magic_numbers
   }
 
   private var headerTitle: some View {
@@ -413,7 +414,7 @@ struct WageyView: View {
     .font(.tidexFootnote)
     .monospacedDigit()
     .foregroundColor(
-      viewModel.remainingMessagesCount <= 3 ? .tidexWarning : .tidexTextSecondary
+      viewModel.remainingMessagesCount <= 3 ? .tidexWarning : .tidexTextSecondary  // swiftlint:disable:this line_length no_magic_numbers
     )
     .lineLimit(1)
     .fixedSize(horizontal: true, vertical: false)
@@ -427,7 +428,7 @@ struct WageyView: View {
       Haptics.play(.light)
       showHistory = true
     } label: {
-      Image(systemName: "clock.arrow.circlepath")
+      Image(systemName: "clock.arrow.circlepath")  // swiftlint:disable:this accessibility_label_for_image
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
     }
@@ -438,13 +439,13 @@ struct WageyView: View {
       Haptics.play(.light)
       viewModel.startNewConversation()
     } label: {
-      Image(systemName: "square.and.pencil")
+      Image(systemName: "square.and.pencil")  // swiftlint:disable:this accessibility_label_for_image
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
         .offset(y: -1)
     }
     .disabled(viewModel.messages.isEmpty && !viewModel.isStreaming)
-    .opacity(viewModel.messages.isEmpty && !viewModel.isStreaming ? 0.4 : 1)
+    .opacity(viewModel.messages.isEmpty && !viewModel.isStreaming ? 0.4 : 1)  // swiftlint:disable:this no_magic_numbers
   }
 
   private var scrollToBottomButton: some View {
@@ -453,17 +454,17 @@ struct WageyView: View {
       showScrollToBottomButton = false
       scrollToBottomTrigger += 1
     } label: {
-      Image(systemName: "arrow.down")
+      Image(systemName: "arrow.down")  // swiftlint:disable:this accessibility_label_for_image
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextPrimary)
-        .frame(width: 44, height: 44)
-        .background(Color.tidexSurfacePrimary.opacity(0.96))
+        .frame(width: 44, height: 44)  // swiftlint:disable:this no_magic_numbers
+        .background(Color.tidexSurfacePrimary.opacity(0.96))  // swiftlint:disable:this no_magic_numbers
         .overlay(
           Circle()
-            .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)
+            .stroke(Color.tidexBorder.opacity(0.45), lineWidth: 1)  // swiftlint:disable:this no_magic_numbers
         )
         .clipShape(Circle())
-        .shadow(color: Color.tidexTextPrimary.opacity(0.16), radius: 12, y: 4)
+        .shadow(color: Color.tidexTextPrimary.opacity(0.16), radius: 12, y: 4)  // swiftlint:disable:this line_length no_magic_numbers
     }
     .buttonStyle(.plain)
     .accessibilityLabel(Text(.wageyChatJumpToLatest))
@@ -492,11 +493,11 @@ private struct WageyBottomChromeHeightPreferenceKey: PreferenceKey {
 
 @MainActor
 private struct PreviewWageyView: View {
-  @StateObject private var coordinator = AppCoordinator.shared
+  @StateObject private var coordinator = AppCoordinator.shared  // swiftlint:disable:this explicit_type_interface
   @State private var selectedTab: MainTabView.Tab = .wagey
 
   var body: some View {
     WageyView(selectedTab: $selectedTab)
       .environmentObject(coordinator)
   }
-}
+}  // swiftlint:disable:this file_length

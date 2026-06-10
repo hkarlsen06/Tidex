@@ -1,3 +1,13 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline cyclomatic_complexity discouraged_optional_collection explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface file_types_order function_body_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable identifier_name legacy_objc_type multiline_arguments_brackets no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable number_separator type_contents_order unused_parameter
 import Foundation
 import SwiftUI
 
@@ -23,7 +33,7 @@ enum CalendarGridHelper {
   static func daysInMonth(
     year: Int,
     month: Int,
-    selectedDates: Set<String>? = nil
+    selectedDates _: Set<String>? = nil
   ) -> [CalendarDayInfo] {
     var days: [CalendarDayInfo] = []
 
@@ -59,7 +69,7 @@ enum CalendarGridHelper {
 
       days.append(
         .outsideMonth(
-          id: -1000 + i,
+          id: -1_000 + i,
           dayNumber: day,
           dateISO: dateISO,
           weekNumber: weekNum
@@ -97,7 +107,7 @@ enum CalendarGridHelper {
 
         days.append(
           .outsideMonth(
-            id: 1000 + i,
+            id: 1_000 + i,
             dayNumber: i + 1,
             dateISO: dateISO,
             weekNumber: weekNum

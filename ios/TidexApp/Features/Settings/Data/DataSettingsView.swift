@@ -168,13 +168,17 @@ struct DataSettingsView: View {
       }
       dateFormatter.dateFormat = "MMMM"
       return dateFormatter.string(from: lastMonth).sentenceCased()
+
     case .currentMonth:
       dateFormatter.dateFormat = "MMMM"
       return dateFormatter.string(from: now).sentenceCased()
+
     case .lastYear:
       return String(calendar.component(.year, from: now) - 1)
+
     case .currentYear:
       return String(calendar.component(.year, from: now))
+
     case .custom:
       return String(localized: .dataExportCustomPeriod)
     }
@@ -295,8 +299,7 @@ struct DataSettingsView: View {
     }
   }
 
-  // swiftlint:disable:next function_parameter_count
-  private func exportCard(
+  private func exportCard(  // swiftlint:disable:this function_body_length function_parameter_count type_contents_order
     icon: String,
     iconColor: Color,
     title: String,
@@ -388,17 +391,17 @@ struct DataSettingsView: View {
 /// Wrapper for UIActivityViewController
 struct ShareSheet: UIViewControllerRepresentable {
   let activityItems: [Any]
-  var applicationActivities: [UIActivity]? = nil
-
-  func makeUIViewController(context: Context) -> UIActivityViewController {
-    UIActivityViewController(
+  var applicationActivities: [UIActivity]?  // swiftlint:disable:this discouraged_optional_collection explicit_acl
+  // swiftlint:disable:this discouraged_optional_collection explicit_acl
+  func makeUIViewController(context _: Context) -> UIActivityViewController {  // swiftlint:disable:this explicit_acl
+    UIActivityViewController(  // swiftlint:disable:this explicit_acl
       activityItems: activityItems,
       applicationActivities: applicationActivities
     )
   }
 
-  func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
+  func updateUIViewController(_: UIActivityViewController, context _: Context) {}  // swiftlint:disable:this explicit_acl line_length no_empty_block
+}  // swiftlint:disable:this explicit_acl no_empty_block
 
 // MARK: - Preview
 

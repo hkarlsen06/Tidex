@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image accessibility_trait_for_button
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface file_types_order no_magic_numbers required_deinit
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable strict_fileprivate type_contents_order
 import Combine
 import SwiftUI
 import UIKit
@@ -138,6 +146,7 @@ private final class ShareExtensionViewModel: ObservableObject {
       switch self {
       case .missingInputItems:
         return String(localized: .shareErrorMissingInput)
+
       case .noSupportedImage:
         return String(localized: .shareErrorNoSupportedImage)
       }

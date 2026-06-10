@@ -135,11 +135,13 @@ struct TermsAgreementView: View {
 struct SafariView: UIViewControllerRepresentable {
   let url: URL
 
-  func makeUIViewController(context: Context) -> SFSafariViewController {
+  // swiftlint:disable:next explicit_acl
+  func makeUIViewController(context _: Context) -> SFSafariViewController {
     SFSafariViewController(url: url)
   }
 
-  func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+  // swiftlint:disable:next explicit_acl no_empty_block
+  func updateUIViewController(_: SFSafariViewController, context _: Context) {}
 }
 
 // MARK: - URL Identifiable Extension

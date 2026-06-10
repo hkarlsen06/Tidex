@@ -82,10 +82,13 @@ struct AddJobSheet: View {
       switch step {
       case .jobDetails:
         jobDetailsStep
+
       case .wage:
         wageStep
+
       case .supplements:
         supplementsStep
+
       case .existingJobSetup:
         existingJobSetupStep
       }
@@ -380,7 +383,7 @@ struct AddJobSheet: View {
           .allowsHitTesting(false)
         }
 
-        if !payrollDayOptions.contains(payrollDay) && !showingPaydayInput {
+        if !payrollDayOptions.contains(payrollDay), !showingPaydayInput {
           Text(String(localized: .onboardingSettingsPaydayCustomValue(payrollDay)))
             .font(.tidexFootnote)
             .foregroundColor(.tidexBlue)

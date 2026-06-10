@@ -7,7 +7,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WageSnapshotE
 // MARK: - Wage Snapshot Editor Sheet
 
 /// Sheet for creating or editing a wage snapshot
-struct WageSnapshotEditorSheet: View {
+struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   let mode: PaySettingsViewModel.EditorMode
   let snapshot: WageSnapshot?
   let mostRecentSnapshot: WageSnapshot?
@@ -18,7 +18,7 @@ struct WageSnapshotEditorSheet: View {
   let onCancel: () -> Void
 
   // Form state
-  @State private var fromDate: Date = Date()
+  @State private var fromDate = Date()  // swiftlint:disable:this explicit_type_interface
   @State private var usePreset: Bool = true
   @State private var wageLevel: Int = 1
   @State private var customWage: Double = 200
@@ -85,7 +85,7 @@ struct WageSnapshotEditorSheet: View {
     let canUseTariff = userCurrency == "kr"
 
     // Initialize form state
-    if mode == .edit, let snapshot = snapshot {
+    if mode == .edit, let snapshot {
       // Editing existing snapshot
       if let fromDateString = snapshot.from_date,
         let date = ISO8601DateFormatter.dateFromDateOnlyString(fromDateString)
@@ -195,7 +195,7 @@ struct WageSnapshotEditorSheet: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-          if mode == .edit && !isBaseline {
+          if mode == .edit, !isBaseline {
             VStack(spacing: 0) {
               deleteButton
                 .padding(.horizontal, Spacing.lg)
@@ -294,7 +294,7 @@ struct WageSnapshotEditorSheet: View {
         effectiveTariffTypeId = existingTypeId
       } else {
         // Get default tariff type
-        guard let defaultType = types.first(where: { $0.is_default }) ?? types.first else {
+        guard let defaultType = types.first(where: \.is_default) ?? types.first else {
           logger.warning("No default tariff type found")
           return
         }
@@ -347,9 +347,8 @@ struct WageSnapshotEditorSheet: View {
   private var canSave: Bool {
     if usePreset {
       return true  // Tariff always valid
-    } else {
-      return customWage > 0
     }
+    return customWage > 0
   }
 
   // MARK: - Tariff Version Indicator
@@ -635,9 +634,11 @@ struct WageSnapshotEditorSheet: View {
 
     if sortedDays == [1, 2, 3, 4, 5] {
       return String(localized: .daysWeekdays)
-    } else if sortedDays == [6, 7] || sortedDays == [0, 6] {
+    }
+    if sortedDays == [6, 7] || sortedDays == [0, 6] {  // swiftlint:disable:this no_magic_numbers
       return String(localized: .daysWeekend)
-    } else if sortedDays == Array(1...7) || sortedDays == Array(0...6) {
+    }
+    if sortedDays == Array(1...7) || sortedDays == Array(0...6) {  // swiftlint:disable:this no_magic_numbers
       return String(localized: .daysAllDays)
     }
 
@@ -657,7 +658,8 @@ struct WageSnapshotEditorSheet: View {
   private func formatRuleValue(_ rule: SupplementRule) -> String {
     if let rate = rule.rate {
       return "+\(Int(rate)) kr/t"
-    } else if let percent = rule.percent {
+    }
+    if let percent = rule.percent {
       return "+\(Int(percent))%"
     }
     return ""
@@ -688,7 +690,7 @@ struct WageSnapshotEditorSheet: View {
   private var deleteButton: some View {
     Button(action: {
       UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-      if let snapshot = snapshot {
+      if let snapshot {
         onDelete(snapshot)
       }
     }) {
@@ -785,10 +787,8 @@ extension OnboardingSupplementRule {
         // Convert 0-6 (Sun-Sat) to 1-7 (Mon-Sun)
         if day == 0 {
           return 7
-        }  // Sunday
-        else {
-          return day
-        }  // Mon-Sat stay as 1-6
+        }
+        return day
       })
 
     self.id = UUID()

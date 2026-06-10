@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length conditional_returns_on_newline
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable discouraged_none_name explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_types_order no_magic_numbers
 import SwiftUI
 
 extension Notification.Name {

@@ -240,9 +240,9 @@ private struct PayPreviewCard: View {
       id: row.id,
       durationHours: 8.0,
       paidHours: 8.0,
-      basePay: 1880,
+      basePay: 1_880,  // swiftlint:disable:this no_magic_numbers
       supplementPay: 266,
-      gross: 2146,
+      gross: 2_146,  // swiftlint:disable:this no_magic_numbers
       wagePeriods: [],
       originalWagePeriods: [],
       breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])

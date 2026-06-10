@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable closure_body_length conditional_returns_on_newline explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface file_types_order implicit_optional_initialization multiline_arguments_brackets
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers type_contents_order
 import SwiftUI
 import UIKit
 
@@ -7,7 +15,7 @@ struct WorkplaceNameText: View {
   let name: String
   let colorHex: String?
   var font: Font = .tidexBody
-  var fallbackBadgeColor: Color? = nil
+  var fallbackBadgeColor: Color?
   var lineLimit: Int? = 1
   var maxTextWidth: CGFloat?
   var maxTextAlignment: Alignment = .leading

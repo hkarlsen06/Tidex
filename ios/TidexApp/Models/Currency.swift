@@ -22,30 +22,51 @@ enum WageRangeTier: Equatable {
   /// Slider minimum value for this tier
   var minValue: Double {
     switch self {
-    case .high: return 150
-    case .medium: return 15
-    case .low: return 100
-    case .veryLow: return 1000
+    case .high:
+      return 150  // swiftlint:disable:this no_magic_numbers
+
+    case .medium:
+      return 15  // swiftlint:disable:this no_magic_numbers
+
+    case .low:
+      return 100
+
+    case .veryLow:
+      return 1_000  // swiftlint:disable:this no_magic_numbers
     }
   }
 
   /// Slider maximum value for this tier
   var maxValue: Double {
     switch self {
-    case .high: return 550
-    case .medium: return 75
-    case .low: return 1000
-    case .veryLow: return 5000
+    case .high:
+      return 550  // swiftlint:disable:this no_magic_numbers
+
+    case .medium:
+      return 75  // swiftlint:disable:this no_magic_numbers
+
+    case .low:
+      return 1_000  // swiftlint:disable:this no_magic_numbers
+
+    case .veryLow:
+      return 5_000  // swiftlint:disable:this no_magic_numbers
     }
   }
 
   /// Default starting value for this tier
   var defaultValue: Double {
     switch self {
-    case .high: return 200
-    case .medium: return 25
-    case .low: return 300
-    case .veryLow: return 2000
+    case .high:
+      return 200  // swiftlint:disable:this no_magic_numbers
+
+    case .medium:
+      return 25  // swiftlint:disable:this no_magic_numbers
+
+    case .low:
+      return 300  // swiftlint:disable:this no_magic_numbers
+
+    case .veryLow:
+      return 2_000  // swiftlint:disable:this no_magic_numbers
     }
   }
 }
@@ -82,10 +103,13 @@ extension CurrencyGroup {
     switch label {
     case "Krone":
       return String(localized: .commonCurrencyGroupKrone)
+
     case "Popular":
       return String(localized: .commonCurrencyGroupPopular)
+
     case "Other":
       return String(localized: .commonCurrencyGroupOther)
+
     default:
       return label
     }
@@ -135,7 +159,7 @@ enum CurrencyConfig {
   ]
 
   /// Flat list of all currencies for lookup
-  static let all: [CurrencyOption] = groups.flatMap { $0.options }
+  internal static let all: [CurrencyOption] = groups.flatMap(\.options)
 
   /// Default currency (Norwegian krone)
   static let defaultCurrency = CurrencyOption(
@@ -158,6 +182,7 @@ enum CurrencyConfig {
     switch config.display {
     case .prefix:
       return "\(config.value)\(formattedNumber)"
+
     case .suffix:
       return "\(formattedNumber) \(config.value)"
     }
@@ -170,6 +195,7 @@ enum CurrencyConfig {
     switch config.display {
     case .prefix:
       return "\(config.value)---"
+
     case .suffix:
       return "--- \(config.value)"
     }

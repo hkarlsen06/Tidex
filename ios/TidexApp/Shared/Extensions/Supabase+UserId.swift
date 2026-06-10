@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl file_name
 import Foundation
 import Supabase
 

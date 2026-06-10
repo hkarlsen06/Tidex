@@ -242,77 +242,77 @@ struct PostAuthOnboardingView: View {
       initializeOnboarding()
     }
     .onChange(of: saveManager.status) { oldStatus, newStatus in
-      if oldStatus != .success && newStatus == .success {
+      if oldStatus != .success, newStatus == .success {
         OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
       }
     }
     .onChange(of: currentScreen) { _, newScreen in
       // Save progress when screen changes (except success and loading screens)
-      if newScreen != .success && newScreen != .loading {
+      if newScreen != .success, newScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: scenePhase) { _, newPhase in
       // Save when app goes to background
       if newPhase == .inactive || newPhase == .background {
-        if currentScreen != .success && currentScreen != .loading {
+        if currentScreen != .success, currentScreen != .loading {
           saveProgress()
         }
       }
     }
     // Save when key data changes within screens
     .onChange(of: onboardingData.supplementRules.count) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.jobName) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.jobColor) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.wageType) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.customHourlyWage) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.selectedTariffLevel) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.breakEnabled) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.taxEnabled) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.taxPercentage) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.payrollDay) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
     .onChange(of: onboardingData.currency) { _, _ in
-      if currentScreen != .success && currentScreen != .loading {
+      if currentScreen != .success, currentScreen != .loading {
         saveProgress()
       }
     }
@@ -334,7 +334,7 @@ struct PostAuthOnboardingView: View {
     if entryMode == .initial {
       if let savedScreenName = onboardingData.restore(),
         let savedScreen = PostAuthScreen(rawValue: savedScreenName),
-        savedScreen != .success && savedScreen != .loading
+        savedScreen != .success, savedScreen != .loading
       {
         currentScreen = savedScreen
         if savedScreen == .multiJobPrompt {
@@ -380,6 +380,7 @@ struct PostAuthOnboardingView: View {
     switch onboardingData.wageType {
     case .tariff:
       navigateTo(.settingsAccordion)
+
     case .custom:
       navigateTo(.supplements)
     }
@@ -420,6 +421,7 @@ struct PostAuthOnboardingView: View {
     switch onboardingData.wageType {
     case .custom:
       navigateBack(to: .supplements)
+
     case .tariff:
       navigateBack(to: .wage)
     }
@@ -476,7 +478,7 @@ struct PostAuthOnboardingView: View {
       activeJobs = jobsRepository.getActiveJobs(for: userId)
     }
 
-    if activeJobs.isEmpty && entryMode == .initial && createPrimaryIfNeeded {
+    if activeJobs.isEmpty, entryMode == .initial, createPrimaryIfNeeded {
       do {
         let primaryJob = try await createPrimaryOnboardingJob(userId: userId)
         activeJobs = [primaryJob]
@@ -486,7 +488,7 @@ struct PostAuthOnboardingView: View {
       }
     }
 
-    if activeJobs.isEmpty && entryMode == .reentry {
+    if activeJobs.isEmpty, entryMode == .reentry {
       do {
         let placeholderJob = try await jobsRepository.createJob(
           userId: userId,
@@ -782,7 +784,7 @@ private struct MFAEnrollmentSheet: View {
       }
       .onAppear {
         // Auto-start enrollment when sheet opens
-        if !isEnrolling && totpUri == nil {
+        if !isEnrolling, totpUri == nil {
           startEnrollment()
         }
       }
@@ -799,7 +801,7 @@ private struct MFAEnrollmentSheet: View {
           .multilineTextAlignment(.center)
 
         // QR Code - Generated natively from otpauth:// URI
-        if let totpUri = totpUri, let qrImage = generateQRCode(from: totpUri) {
+        if let totpUri, let qrImage = generateQRCode(from: totpUri) {
           Image(uiImage: qrImage)
             .interpolation(.none)
             .resizable()
@@ -823,7 +825,7 @@ private struct MFAEnrollmentSheet: View {
         }
 
         // Add to Passwords button
-        if let totpUri = totpUri, let secret = secret {
+        if let totpUri, let secret {
           Button(action: {
             addToiCloudKeychain(uri: totpUri, secret: secret)
           }) {
@@ -841,7 +843,7 @@ private struct MFAEnrollmentSheet: View {
           }
         }
 
-        if let secret = secret {
+        if let secret {
           VStack(spacing: Spacing.xxs) {
             Text(.onboardingMfaManualEntry)
               .font(.tidexFootnote)
@@ -882,7 +884,7 @@ private struct MFAEnrollmentSheet: View {
             .background(Color.tidexSurfaceSecondary)
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md))
             .onChange(of: verificationCode) { _, newValue in
-              let filtered = newValue.filter { $0.isNumber }
+              let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
               if filtered.count > 6 {
                 verificationCode = String(filtered.prefix(6))
               } else if filtered != newValue {
@@ -933,7 +935,7 @@ private struct MFAEnrollmentSheet: View {
   }
 
   /// Add TOTP to iCloud Keychain / iOS Password Manager
-  private func addToiCloudKeychain(uri: String, secret: String) {
+  private func addToiCloudKeychain(uri: String, secret _: String) {
     // Open the otpauth:// URI which will trigger iOS to offer adding it to Passwords
     // This works on iOS 15+ and uses the native password manager integration
     if let url = URL(string: uri) {
@@ -966,7 +968,7 @@ private struct MFAEnrollmentSheet: View {
   }
 
   private func verifyCode() {
-    guard let factorId = factorId else { return }
+    guard let factorId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     isEnrolling = true
     errorMessage = nil

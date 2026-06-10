@@ -359,8 +359,10 @@ extension CalendarSubscriptionContentMode {
     switch self {
     case .eventsOnly:
       return "calendar"
+
     case .shiftsOnly:
       return "briefcase"
+
     case .shiftsAndEvents:
       return "calendar.badge.clock"
     }

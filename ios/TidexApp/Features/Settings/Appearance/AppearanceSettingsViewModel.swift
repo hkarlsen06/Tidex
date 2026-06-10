@@ -21,7 +21,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
   /// The currently selected theme
   @Published var selectedTheme: AppTheme = .system {
     didSet {
-      if oldValue != selectedTheme && !isInitialLoad {
+      if oldValue != selectedTheme, !isInitialLoad {
         updateTheme()
       }
     }
@@ -30,7 +30,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
   /// The currently selected calendar content color style
   @Published var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace {
     didSet {
-      if oldValue != selectedCalendarContentColorStyle && !isInitialLoad {
+      if oldValue != selectedCalendarContentColorStyle, !isInitialLoad {
         updateCalendarContentColorStyle()
       }
     }
@@ -39,7 +39,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
   /// Whether dashboard clock buttons are visible
   @Published var showDashboardClockButtons: Bool = true {
     didSet {
-      if oldValue != showDashboardClockButtons && !isInitialLoad {
+      if oldValue != showDashboardClockButtons, !isInitialLoad {
         updateShowDashboardClockButtons()
       }
     }
@@ -48,7 +48,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
   /// The default tab to open when launching the app
   @Published var selectedStartupTab: StartupTabOption = .home {
     didSet {
-      if oldValue != selectedStartupTab && !isInitialLoad {
+      if oldValue != selectedStartupTab, !isInitialLoad {
         updateDefaultStartupTab()
       }
     }
@@ -80,7 +80,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
     userId = await resolveUserIdForLocalSettings()
 
-    guard let userId = userId else {
+    guard let userId else {
       isLoading = false
       return
     }
@@ -152,7 +152,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
   /// Update theme in repository and apply to app
   private func updateTheme() {
-    guard !isInitialLoad, let userId = userId else { return }
+    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     // Apply immediately to AppearanceManager
     appearanceManager.setTheme(selectedTheme)
@@ -175,7 +175,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
   /// Update calendar content color style in repository and apply to app
   private func updateCalendarContentColorStyle() {
-    guard !isInitialLoad, let userId = userId else { return }
+    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     appearanceManager.setCalendarContentColorStyle(selectedCalendarContentColorStyle)
 
@@ -198,7 +198,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
   /// Update dashboard clock button visibility in repository
   private func updateShowDashboardClockButtons() {
-    guard !isInitialLoad, let userId = userId else { return }
+    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     Task {
       do {
@@ -225,7 +225,7 @@ final class AppearanceSettingsViewModel: ObservableObject {
 
   /// Update default startup tab in repository
   private func updateDefaultStartupTab() {
-    guard !isInitialLoad, let userId = userId else { return }
+    guard !isInitialLoad, let userId else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     Task {
       do {

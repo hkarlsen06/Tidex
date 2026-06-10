@@ -6,7 +6,7 @@ import UIKit
 struct MFASetupScreen: View {
   let onSetupMFA: () -> Void
   let onSkip: () -> Void
-  var onBack: (() -> Void)? = nil
+  var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl
 
   var body: some View {
     ZStack {
@@ -16,7 +16,7 @@ struct MFASetupScreen: View {
 
       VStack(spacing: 0) {
         // Back button (if provided)
-        if let onBack = onBack {
+        if let onBack {
           HStack {
             Button(action: {
               UIImpactFeedbackGenerator(style: .light).impactOccurred()

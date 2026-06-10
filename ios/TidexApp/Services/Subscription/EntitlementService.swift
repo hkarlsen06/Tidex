@@ -136,7 +136,9 @@ final class EntitlementService: ObservableObject {
 
   /// Clear cache on logout
   func clearCache() async {
-    guard let userId = userId else { return }
+    guard let userId else {
+      return
+    }
     try? await repository.clearCache(for: userId)
     cachedEntitlement = nil
     effectiveTier = .free

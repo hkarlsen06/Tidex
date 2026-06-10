@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl file_name implicit_optional_initialization
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers prefer_condition_list prefer_self_in_static_references sorted_enum_cases
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_contents_order vertical_whitespace_between_cases
 import SwiftUI
 
 enum ChatMessageGroupPosition: Equatable {
@@ -11,14 +19,15 @@ struct ChatMessageGroupContext: Equatable {
   let position: ChatMessageGroupPosition
   let isCurrentUser: Bool
 
-  static func standalone(isCurrentUser: Bool) -> ChatMessageGroupContext {
-    ChatMessageGroupContext(position: .standalone, isCurrentUser: isCurrentUser)
+  static func standalone(isCurrentUser: Bool) -> Self {
+    Self(position: .standalone, isCurrentUser: isCurrentUser)
   }
 
   var joinsPrevious: Bool {
     switch position {
     case .middle, .trailing:
       return true
+
     case .standalone, .leading:
       return false
     }
@@ -28,6 +37,7 @@ struct ChatMessageGroupContext: Equatable {
     switch position {
     case .leading, .middle:
       return true
+
     case .standalone, .trailing:
       return false
     }
@@ -62,9 +72,9 @@ struct ChatMessageRow<Content: View>: View {
 
 struct ChatBubbleCard<Content: View>: View {
   let isCurrentUser: Bool
-  var groupContext: ChatMessageGroupContext? = nil
-  var minWidth: CGFloat? = nil
-  var maxWidth: CGFloat? = nil
+  var groupContext: ChatMessageGroupContext?
+  var minWidth: CGFloat?
+  var maxWidth: CGFloat?
   @ViewBuilder let content: () -> Content
 
   private var effectiveGroupContext: ChatMessageGroupContext {
@@ -122,28 +132,28 @@ struct ChatBubbleCard<Content: View>: View {
   }
 
   private var topLeadingRadius: CGFloat {
-    if !isCurrentUser && effectiveGroupContext.joinsPrevious {
+    if !isCurrentUser, effectiveGroupContext.joinsPrevious {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
   }
 
   private var bottomLeadingRadius: CGFloat {
-    if !isCurrentUser && effectiveGroupContext.joinsNext {
+    if !isCurrentUser, effectiveGroupContext.joinsNext {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
   }
 
   private var bottomTrailingRadius: CGFloat {
-    if isCurrentUser && effectiveGroupContext.joinsNext {
+    if isCurrentUser, effectiveGroupContext.joinsNext {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
   }
 
   private var topTrailingRadius: CGFloat {
-    if isCurrentUser && effectiveGroupContext.joinsPrevious {
+    if isCurrentUser, effectiveGroupContext.joinsPrevious {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble

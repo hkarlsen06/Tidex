@@ -11,21 +11,25 @@ enum AddShiftMode: String, CaseIterable, Identifiable, Codable {
 
   var id: String { rawValue }
 
-  static let displayOrder: [AddShiftMode] = [.single, .events, .recurring]
+  // swiftlint:disable:next explicit_acl
+  static let displayOrder: [Self] = [.single, .events, .recurring]
 
   /// Localization key for the mode title
   var titleKey: LocalizedStringResource {
     switch self {
     case .single:
       return .addShiftModeSingle
+
     case .recurring:
       return .addShiftModeRecurring
+
     case .events:
       return .addShiftModeEvents
     }
   }
 
-  var nextMode: AddShiftMode {
+  // swiftlint:disable:next explicit_acl
+  var nextMode: Self {
     guard let currentIndex = Self.displayOrder.firstIndex(of: self) else {
       return .single
     }

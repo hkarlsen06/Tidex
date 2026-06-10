@@ -9,14 +9,14 @@ final class ConflictExclusionTests: XCTestCase {
       shiftDate: "2026-02-10",
       startTime: "09:00",
       endTime: "17:00",
-      gross: 1000
+      gross: 1_000
     )
     let exclude = TestFixtures.computedShift(
       id: "exclude",
       shiftDate: "2026-02-10",
       startTime: "12:00",
       endTime: "16:00",
-      gross: 2000
+      gross: 2_000
     )
     let separate = TestFixtures.computedShift(
       id: "separate",

@@ -25,7 +25,7 @@ final class ManageSharingViewModel: ObservableObject {
   @Published private(set) var blockedFriends: [Friend] = []
 
   /// Share capacity based on subscription tier
-  @Published private(set) var capacity: ShareCapacity = ShareCapacity(
+  @Published private(set) var capacity = ShareCapacity(  // swiftlint:disable:this explicit_acl explicit_type_interface
     canAdd: true, currentCount: 0, limit: 5)
 
   /// Loading state for initial data fetch
@@ -66,17 +66,17 @@ final class ManageSharingViewModel: ObservableObject {
 
   /// Friends where both users share with each other
   var mutualFriends: [Friend] {
-    friends.filter { $0.isMutual }
+    friends.filter(\.isMutual)
   }
 
   /// Friends where only I share with them
   var outgoingOnlyFriends: [Friend] {
-    friends.filter { $0.isOutgoingOnly }
+    friends.filter(\.isOutgoingOnly)
   }
 
   /// Friends where only they share with me
   var incomingOnlyFriends: [Friend] {
-    friends.filter { $0.isIncomingOnly }
+    friends.filter(\.isIncomingOnly)
   }
 
   /// Whether user can add more friends
@@ -747,6 +747,7 @@ final class ManageSharingViewModel: ObservableObject {
     switch sharingError {
     case .networkError(let underlying), .decodingError(let underlying):
       return AuthSessionManager.shared.isTransientSessionResolutionError(underlying)
+
     case .notAuthenticated, .httpError, .noShareAccess:
       return false
     }

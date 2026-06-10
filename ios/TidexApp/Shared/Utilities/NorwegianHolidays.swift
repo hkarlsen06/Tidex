@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface function_body_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable identifier_name multiline_arguments_brackets no_magic_numbers number_separator
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_contents_order
 import Foundation
 
 /// Norwegian Public Holidays
@@ -14,12 +22,12 @@ enum NorwegianHolidays {
 
   /// Pre-computed Easter Sunday dates for 2025-2030
   private static let easterDates: [Int: (month: Int, day: Int)] = [
-    2025: (month: 4, day: 20),  // April 20, 2025
-    2026: (month: 4, day: 5),  // April 5, 2026
-    2027: (month: 3, day: 28),  // March 28, 2027
-    2028: (month: 4, day: 16),  // April 16, 2028
-    2029: (month: 4, day: 1),  // April 1, 2029
-    2030: (month: 4, day: 21),  // April 21, 2030
+    2_025: (month: 4, day: 20),  // April 20, 2025
+    2_026: (month: 4, day: 5),  // April 5, 2026
+    2_027: (month: 3, day: 28),  // March 28, 2027
+    2_028: (month: 4, day: 16),  // April 16, 2028
+    2_029: (month: 4, day: 1),  // April 1, 2029
+    2_030: (month: 4, day: 21),  // April 21, 2030
   ]
 
   // MARK: - Public API

@@ -14,9 +14,9 @@ struct WageSourceSelector: View {
   /// Used when user's currency is not "kr" (Norwegian krone)
   var showTariffOption: Bool = true
   /// Optional tariff version to use for rates (when nil, uses static fallback)
-  var tariffVersion: TariffVersion? = nil
+  var tariffVersion: TariffVersion?  // swiftlint:disable:this explicit_acl
   /// Optional content shown between selector buttons and the tariff/custom input list.
-  var selectorFooterContent: AnyView? = nil
+  var selectorFooterContent: AnyView?  // swiftlint:disable:this explicit_acl
 
   /// Tariff levels to display - from version if available, otherwise static fallback
   private var tariffLevels: [TariffLevel] {
@@ -76,7 +76,7 @@ struct WageSourceSelector: View {
       }
 
       // Content based on selection
-      if usePreset && showTariffOption {
+      if usePreset, showTariffOption {
         tariffLevelPicker
           .transition(.opacity.combined(with: .move(edge: .top)))
       } else {
@@ -160,6 +160,7 @@ struct WageSourceSelector: View {
     switch currencyConfig.display {
     case .prefix:
       return "\(currency)\(formatted)\(perHour)"
+
     case .suffix:
       return "\(formatted) \(currency)\(perHour)"
     }

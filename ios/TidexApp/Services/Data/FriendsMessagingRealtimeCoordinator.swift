@@ -30,6 +30,7 @@ protocol FriendsMessagingRealtimeCoordinating: AnyObject {
 }
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private enum Pagination {
     static let pageSize = 50
@@ -289,19 +290,19 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           Task { [weak self] in
             guard let self else { return }
             for await action in threadChanges {
-              await self.handleThreadListThreadAction(action, viewerUserId: viewerUserId)
+              await handleThreadListThreadAction(action, viewerUserId: viewerUserId)
             }
           },
           Task { [weak self] in
             guard let self else { return }
             for await action in messageChanges {
-              await self.handleThreadListMessageAction(action, viewerUserId: viewerUserId)
+              await handleThreadListMessageAction(action, viewerUserId: viewerUserId)
             }
           },
           Task { [weak self] in
             guard let self else { return }
             for await action in stateChanges {
-              await self.handleThreadListStateAction(action, viewerUserId: viewerUserId)
+              await handleThreadListStateAction(action, viewerUserId: viewerUserId)
             }
           },
         ] + makeThreadListTypingChannelTasks(for: channel)
@@ -386,28 +387,28 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
         Task { [weak self] in
           guard let self else { return }
           for await action in threadChanges {
-            await self.handleThreadDetailThreadAction(
+            await handleThreadDetailThreadAction(
               action, threadId: threadId, viewerUserId: viewerUserId)
           }
         },
         Task { [weak self] in
           guard let self else { return }
           for await action in messageChanges {
-            await self.handleThreadDetailMessageAction(
+            await handleThreadDetailMessageAction(
               action, threadId: threadId, viewerUserId: viewerUserId)
           }
         },
         Task { [weak self] in
           guard let self else { return }
           for await action in reactionChanges {
-            await self.handleThreadDetailReactionAction(
+            await handleThreadDetailReactionAction(
               action, threadId: threadId, viewerUserId: viewerUserId)
           }
         },
         Task { [weak self] in
           guard let self else { return }
           for await action in stateChanges {
-            await self.handleThreadDetailStateAction(
+            await handleThreadDetailStateAction(
               action, threadId: threadId, viewerUserId: viewerUserId)
           }
         },
@@ -708,7 +709,8 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     let payload = ThreadTypingPayload(
       threadId: threadId,
       userId: userId,
-      sentAtMs: Int64(Date().timeIntervalSince1970 * 1000)
+      // swiftlint:disable:next no_magic_numbers
+      sentAtMs: Int64(Date().timeIntervalSince1970 * 1_000)
     )
 
     let didSendThreadTyping: Bool
@@ -857,7 +859,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       for await status in channel.statusChange {
         guard !Task.isCancelled else { return }
         if status == .unsubscribed {
-          self.scheduleThreadListRetry(
+          scheduleThreadListRetry(
             viewerUserId: viewerUserId,
             reason: "thread list status unsubscribed"
           )
@@ -868,7 +870,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           hasSkippedInitialSubscribedRefresh = true
           continue
         }
-        await self.refreshThreadList(
+        await refreshThreadList(
           viewerUserId: viewerUserId,
           allowIncrementalSync: false
         )
@@ -892,7 +894,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           hasSkippedInitialSubscribedRefresh = true
           continue
         }
-        await self.refreshThreadDetail(
+        await refreshThreadDetail(
           threadId: threadId,
           viewerUserId: viewerUserId,
           allowIncrementalSync: false
@@ -904,13 +906,13 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   private func makeTypingBroadcastTask(
     stream: AsyncStream<JSONObject>,
     threadId: String,
-    event: String,
+    event _: String,
     isTyping: Bool
   ) -> Task<Void, Never> {
     Task { [weak self] in
       guard let self else { return }
       for await payload in stream {
-        self.handleTypingBroadcast(
+        handleTypingBroadcast(
           payload,
           threadId: threadId,
           isTyping: isTyping
@@ -965,7 +967,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     Task { [weak self] in
       guard let self else { return }
       for await payload in stream {
-        self.handleThreadListTypingBroadcast(payload, isTyping: isTyping)
+        handleThreadListTypingBroadcast(payload, isTyping: isTyping)
       }
     }
   }
@@ -1047,6 +1049,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
+  // swiftlint:disable:next function_body_length
   private func ensureTypingChannel(threadId: String) async -> Bool {
     if let channel = typingChannels[threadId],
       isTypingChannelHealthy(threadId: threadId, channel: channel)
@@ -1058,31 +1061,35 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
       return await task.value
     }
 
+    // swiftlint:disable:next closure_body_length
     let task = Task { @MainActor [weak self] in
       guard let self else { return false }
-      defer { self.typingSubscriptionTasks[threadId] = nil }
+      defer { typingSubscriptionTasks[threadId] = nil }
 
-      if let channel = self.typingChannels[threadId],
-        self.isTypingChannelHealthy(threadId: threadId, channel: channel)
+      if let channel = typingChannels[threadId],
+        isTypingChannelHealthy(threadId: threadId, channel: channel)
       {
         return true
       }
 
-      if let channel = self.typingChannels[threadId] {
+      if let channel = typingChannels[threadId] {
         realtimeLogger.info(
           "Replacing stale typing realtime channel for \(threadId, privacy: .private) with status \(String(describing: channel.status), privacy: .public)"
         )
-        await self.teardownTypingChannel(threadId: threadId, cancelSubscriptionTask: false)
+        await teardownTypingChannel(threadId: threadId, cancelSubscriptionTask: false)
       }
 
       let channel = supabase.channel(TypingTopic.name(threadId: threadId)) { config in
         config.broadcast.receiveOwnBroadcasts = true
       }
-      let typingTasks = self.makeTypingChannelTasks(for: channel, threadId: threadId)
+      let typingTasks: [Task<Void, Never>] = makeTypingChannelTasks(
+        for: channel,
+        threadId: threadId
+      )
 
       do {
-        try await self.subscribeWithTimeout(channel)
-        self.typingChannels[threadId] = channel
+        try await subscribeWithTimeout(channel)
+        typingChannels[threadId] = channel
         self.typingTasks[threadId] = typingTasks
         return true
       } catch is CancellationError {
@@ -1095,7 +1102,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
           "Failed to subscribe typing realtime for \(threadId, privacy: .private): \(error.localizedDescription)"
         )
         await supabase.removeChannel(channel)
-        self.scheduleTypingChannelRetry(threadId: threadId, reason: error.localizedDescription)
+        scheduleTypingChannelRetry(threadId: threadId, reason: error.localizedDescription)
         return false
       }
     }
@@ -1179,44 +1186,50 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
     typingRepairTasks[threadId] = Task { @MainActor [weak self] in
       guard let self else { return }
-      defer { self.typingRepairTasks[threadId] = nil }
-      await self.repairTypingChannel(threadId: threadId, reason: reason)
+      defer { typingRepairTasks[threadId] = nil }
+      await repairTypingChannel(threadId: threadId, reason: reason)
     }
   }
 
-  private func scheduleTypingChannelRetry(threadId: String, reason: String) {
+  // swiftlint:disable:next type_contents_order
+  private func scheduleTypingChannelRetry(threadId: String, reason _: String) {
     guard shouldTrackTypingChannel(threadId: threadId) else { return }
     guard typingRetryTasks[threadId] == nil else { return }
 
     typingRetryTasks[threadId] = Task { @MainActor [weak self] in
       guard let self else { return }
-      defer { self.typingRetryTasks[threadId] = nil }
+      defer { typingRetryTasks[threadId] = nil }
       do {
         try await Task.sleep(for: TypingRepair.retryDelay)
       } catch {
         return
       }
       guard !Task.isCancelled else { return }
-      guard self.shouldTrackTypingChannel(threadId: threadId) else { return }
-      _ = await self.ensureTypingChannel(threadId: threadId)
+      guard shouldTrackTypingChannel(threadId: threadId) else {
+        return
+      }
+      _ = await ensureTypingChannel(threadId: threadId)
     }
   }
 
-  private func scheduleThreadListRetry(viewerUserId: String, reason: String) {
+  // swiftlint:disable:next type_contents_order
+  private func scheduleThreadListRetry(viewerUserId: String, reason _: String) {
     guard authenticatedViewerUserId == viewerUserId else { return }
     guard threadListRetryTask == nil else { return }
 
     threadListRetryTask = Task { @MainActor [weak self] in
       guard let self else { return }
-      defer { self.threadListRetryTask = nil }
+      defer { threadListRetryTask = nil }
       do {
         try await Task.sleep(for: TypingRepair.retryDelay)
       } catch {
         return
       }
       guard !Task.isCancelled else { return }
-      guard self.authenticatedViewerUserId == viewerUserId else { return }
-      await self.startThreadListSubscription(viewerUserId: viewerUserId)
+      guard authenticatedViewerUserId == viewerUserId else {
+        return
+      }
+      await startThreadListSubscription(viewerUserId: viewerUserId)
     }
   }
 
@@ -1263,8 +1276,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     switch action {
     case .insert(let insert):
       return insert.record["thread_id"]?.stringValue ?? insert.record["id"]?.stringValue
+
     case .update(let update):
       return update.record["thread_id"]?.stringValue ?? update.record["id"]?.stringValue
+
     case .delete(let delete):
       return delete.oldRecord["thread_id"]?.stringValue ?? delete.oldRecord["id"]?.stringValue
     }
@@ -1274,8 +1289,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     switch action {
     case .insert(let insert):
       return insert.record["id"]?.stringValue ?? insert.record["message_id"]?.stringValue
+
     case .update(let update):
       return update.record["id"]?.stringValue ?? update.record["message_id"]?.stringValue
+
     case .delete(let delete):
       return delete.oldRecord["id"]?.stringValue ?? delete.oldRecord["message_id"]?.stringValue
     }
@@ -1285,8 +1302,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     switch action {
     case .insert(let insert):
       return insert.record["message_id"]?.stringValue
+
     case .update(let update):
       return update.record["message_id"]?.stringValue
+
     case .delete(let delete):
       return delete.oldRecord["message_id"]?.stringValue
     }
@@ -1297,8 +1316,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     switch action {
     case .insert(let insert):
       payload = insert.record
+
     case .update(let update):
       payload = update.record
+
     case .delete:
       payload = nil
     }
@@ -1409,6 +1430,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     case .threadUpserted:
       guard let thread = event.thread else { return }
       await repository.saveThread(thread, for: viewerUserId)
+
     case .threadRemoved:
       guard let threadId = event.threadId else { return }
       await repository.deleteThread(id: threadId, viewerUserId: viewerUserId)
@@ -1420,6 +1442,7 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     case .messageUpserted:
       guard let message = event.message else { return }
       await repository.saveMessages([message], in: message.threadId, for: viewerUserId)
+
     case .messageDeleted:
       guard let deletedMessageId = event.deletedMessageId else { return }
       await repository.deleteMessage(id: deletedMessageId, viewerUserId: viewerUserId)
@@ -1444,4 +1467,5 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
   }
 }
 
+// swiftlint:disable:next file_length
 extension FriendsMessagingRealtimeCoordinator: FriendsMessagingRealtimeCoordinating {}

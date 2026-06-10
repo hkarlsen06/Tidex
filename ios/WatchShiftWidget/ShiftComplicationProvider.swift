@@ -121,7 +121,7 @@ struct ShiftCalculator {
     }
 
     // Active shift - show end time
-    if date >= range.start && date < range.end {
+    if date >= range.start, date < range.end {
       return shift.endTime
     }
 
@@ -190,8 +190,8 @@ struct ShiftComplicationEntry: TimelineEntry {
   let date: Date
   let shift: WatchShiftDTO?
 
-  static var placeholder: ShiftComplicationEntry {
-    ShiftComplicationEntry(
+  internal static var placeholder: Self {
+    Self(
       date: Date(),
       shift: WatchShiftDTO(
         id: "placeholder",
@@ -215,11 +215,11 @@ struct ShiftComplicationProvider: TimelineProvider {
   private let appGroupId = "group.no.tidex.app"
   private let payloadStorageKey = "watch_data_payload_v1"
 
-  func placeholder(in context: Context) -> ShiftComplicationEntry {
+  internal func placeholder(in _: Context) -> ShiftComplicationEntry {
     .placeholder
   }
 
-  func getSnapshot(in context: Context, completion: @escaping (ShiftComplicationEntry) -> Void) {
+  internal func getSnapshot(in _: Context, completion: @escaping (ShiftComplicationEntry) -> Void) {
     Task { @MainActor in
       let entry = ShiftComplicationEntry(
         date: Date(),
@@ -230,7 +230,7 @@ struct ShiftComplicationProvider: TimelineProvider {
   }
 
   func getTimeline(
-    in context: Context, completion: @escaping (Timeline<ShiftComplicationEntry>) -> Void
+    in _: Context, completion: @escaping (Timeline<ShiftComplicationEntry>) -> Void
   ) {
     Task { @MainActor in
       let now = Date()
@@ -388,12 +388,16 @@ struct ShiftComplicationView: View {
     switch family {
     case .accessoryCorner:
       accessoryCornerView
+
     case .accessoryCircular:
       accessoryCircularView
+
     case .accessoryRectangular:
       accessoryRectangularView
+
     case .accessoryInline:
       accessoryInlineView
+
     default:
       Text("--")
     }
@@ -546,8 +550,10 @@ struct ShiftComplicationView: View {
     switch status {
     case .active:
       return "play.fill"
+
     case .upcoming:
       return "calendar.badge.clock"
+
     case .past:
       return "checkmark.circle.fill"
     }
@@ -640,6 +646,7 @@ struct ShiftComplicationView: View {
     switch displayState(for: range, at: date) {
     case .upcoming:
       return shift.startTime
+
     case .active, .ended:
       return shift.endTime
     }
@@ -662,8 +669,10 @@ struct ShiftComplicationView: View {
     switch displayState(for: range, at: date) {
     case .upcoming:
       return range.start
+
     case .active:
       return range.end
+
     case .ended:
       return nil
     }
@@ -676,8 +685,10 @@ struct ShiftComplicationView: View {
     switch displayState(for: range, at: date) {
     case .upcoming:
       return .upcoming
+
     case .active:
       return .active
+
     case .ended:
       return .past
     }

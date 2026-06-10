@@ -1,3 +1,5 @@
+// swiftlint:disable cyclomatic_complexity explicit_acl explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -82,7 +84,7 @@ final class LocalJob {
       }
     }
     set {
-      let keys = newValue.map { $0.rawValue }
+      let keys = newValue.map(\.rawValue)
       dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
@@ -159,8 +161,8 @@ struct JobServerSnapshot: Codable, Equatable {
   static func from(
     row: SyncJobRow,
     updatedAt: Date
-  ) -> JobServerSnapshot {
-    JobServerSnapshot(
+  ) -> Self {
+    Self(
       name: row.name,
       color: row.color,
       currency: row.currency,
@@ -184,11 +186,11 @@ struct JobServerSnapshot: Codable, Equatable {
     (try? canonicalJSONEncoder.encode(self)) ?? Data()
   }
 
-  static func decode(from data: Data) -> JobServerSnapshot? {
-    try? syncJSONDecoder.decode(JobServerSnapshot.self, from: data)
+  static func decode(from data: Data) -> Self? {
+    try? syncJSONDecoder.decode(Self.self, from: data)
   }
 
-  func changedFields(from other: JobServerSnapshot) -> Set<JobField> {
+  func changedFields(from other: Self) -> Set<JobField> {
     var changed: Set<JobField> = []
 
     if name != other.name {

@@ -21,6 +21,7 @@ enum WorkSetupPresentationState: Equatable {
     switch self {
     case .loading:
       return nil
+
     case .ready(let status), .incomplete(let status):
       return status
     }

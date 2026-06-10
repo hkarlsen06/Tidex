@@ -1,10 +1,11 @@
+import Nimble
 import XCTest
 
 @testable import Tidex
 
 final class PayrollAdjustmentCalculatorTests: XCTestCase {
   func testGrossTaxableAdjustmentUsesPayoutMonthTax() {
-    let adjustment = makeAdjustment(amount: 1000, taxTreatment: .grossTaxable)
+    let adjustment: PayrollAdjustment = makeAdjustment(amount: 1_000, taxTreatment: .grossTaxable)
 
     let totals = PayrollAdjustmentCalculator.totals(
       adjustments: [adjustment],
@@ -14,7 +15,7 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
       payoutMonth: 6
     )
 
-    XCTAssertEqual(totals.gross, 1000, accuracy: 0.01)
+    expect(totals.gross).to(beCloseTo(1_000, within: 0.01))
     XCTAssertEqual(totals.net, 800, accuracy: 0.01)
   }
 
@@ -34,7 +35,7 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
   }
 
   func testGrossTaxableAdjustmentUsesHalfTaxForPayoutMonth() {
-    let adjustment = makeAdjustment(amount: 1000, taxTreatment: .grossTaxable)
+    let adjustment: PayrollAdjustment = makeAdjustment(amount: 1_000, taxTreatment: .grossTaxable)
 
     let totals = PayrollAdjustmentCalculator.totals(
       adjustments: [adjustment],
@@ -44,14 +45,14 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
       payoutMonth: 6
     )
 
-    XCTAssertEqual(totals.gross, 1000, accuracy: 0.01)
+    expect(totals.gross).to(beCloseTo(1_000, within: 0.01))
     XCTAssertEqual(totals.net, 800, accuracy: 0.01)
     XCTAssertTrue(totals.taxEnabled)
   }
 
   func testDeletedAdjustmentIsIgnored() {
     let adjustment = makeAdjustment(
-      amount: 1000,
+      amount: 1_000,
       taxTreatment: .grossTaxable,
       deletedAt: "2026-06-11T10:00:00Z"
     )

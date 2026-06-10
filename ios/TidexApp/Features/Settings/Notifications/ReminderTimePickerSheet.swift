@@ -90,7 +90,7 @@ struct ReminderTimePickerSheet: View {
         Spacer()
 
         // Delete button (only when editing)
-        if isEditing, let onDelete = onDelete {
+        if isEditing, let onDelete {
           deleteButton(action: onDelete)
         }
       }
@@ -140,6 +140,7 @@ struct ReminderTimePickerSheet: View {
     switch context {
     case .shift:
       return ReminderOffsetFormatter.localizedShiftPickerPreview(hours: hours, minutes: minutes)
+
     case .event:
       return ReminderOffsetFormatter.localizedEventPickerPreview(hours: hours, minutes: minutes)
     }
@@ -149,6 +150,7 @@ struct ReminderTimePickerSheet: View {
     switch context {
     case .shift:
       return String(localized: .notificationsTimePickerDescription)
+
     case .event:
       return String(localized: .eventsNotificationsTimedPickerDescription)
     }

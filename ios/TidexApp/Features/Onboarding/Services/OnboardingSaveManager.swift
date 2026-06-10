@@ -96,6 +96,7 @@ final class OnboardingSaveManager: ObservableObject {
         )
         logger.info(
           "Updated settings with payroll day: \(data.payrollDay), currency: \(data.currency)")
+
       case .friendOnlySkip:
         try await prepareFriendOnlySkip(userId: userId, data: data)
         logger.info("Prepared friend-only skip state")

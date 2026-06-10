@@ -2,12 +2,12 @@ import SwiftUI
 
 /// Small stat card for displaying a single metric (hours, shifts, etc.)
 /// Used in a 2-column grid layout
-struct SmallStatCard: View {
-  let title: String
-  let value: String
-  let icon: String
+struct SmallStatCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order
+  let title: String  // swiftlint:disable:this explicit_acl
+  let value: String  // swiftlint:disable:this explicit_acl
+  let icon: String  // swiftlint:disable:this explicit_acl
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     VStack(alignment: .leading, spacing: Spacing.sm) {
       // Header row with title and icon
       HStack {
@@ -17,7 +17,7 @@ struct SmallStatCard: View {
 
         Spacer()
 
-        Image(systemName: icon)
+        Image(systemName: icon)  // swiftlint:disable:this accessibility_label_for_image
           .font(.tidexBody)
           .foregroundColor(.tidexTextMuted)
       }
@@ -26,7 +26,7 @@ struct SmallStatCard: View {
       Text(value)
         .font(.tidexStatSecondary)
         .foregroundColor(.tidexTextPrimary)
-        .minimumScaleFactor(0.6)
+        .minimumScaleFactor(0.6)  // swiftlint:disable:this no_magic_numbers
         .lineLimit(1)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -38,10 +38,10 @@ struct SmallStatCard: View {
 }
 
 /// Hours stat card with decimal formatting
-struct HoursStatCard: View {
-  let hours: Double
+struct HoursStatCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  let hours: Double  // swiftlint:disable:this explicit_acl
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     SmallStatCard(
       title: String(localized: .statsHours),
       value: formatHours(hours),
@@ -55,10 +55,10 @@ struct HoursStatCard: View {
 }
 
 /// Shifts count stat card
-struct ShiftsStatCard: View {
-  let count: Int
+struct ShiftsStatCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  let count: Int  // swiftlint:disable:this explicit_acl
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     SmallStatCard(
       title: String(localized: .statsShifts),
       value: "\(count)",

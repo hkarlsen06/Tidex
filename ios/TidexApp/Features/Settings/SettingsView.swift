@@ -196,26 +196,37 @@ struct SettingsView: View {
             ProfileSettingsView {
               navigationPath.append(SettingsDestination.security)
             }
+
           case .security:
             SecuritySettingsView()
+
           case .subscription:
             SubscriptionSettingsView()
+
           case .notifications:
             NotificationSettingsView()
+
           case .appearance:
             AppearanceSettingsView()
+
           case .pay(let jobId):
             PaySettingsView(initialJobId: jobId)
+
           case .recurringShifts:
             RecurringShiftsSettingsView()
+
           case .calendarSync(let calendarSetupIntent):
             CalendarSyncSettingsView(calendarSetupIntent: calendarSetupIntent)
+
           case .data:
             DataSettingsView()
+
           case .feedback:
             FeedbackSettingsView()
+
           case .admin:
             AdminSettingsView()
+
           #if DEBUG
             case .debug:
               SyncDebugView()
@@ -431,6 +442,7 @@ struct SettingsView: View {
           await openPaySettings()
         }
       }
+
     default:
       navigationPath.append(initialDestination)
     }
@@ -576,7 +588,7 @@ struct SettingsView: View {
       refreshPayChooserDefaults(for: userId)
 
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-        self.presentPayChooserPayScreen(jobId: configuredJob.id)
+        presentPayChooserPayScreen(jobId: configuredJob.id)
       }
 
       Haptics.play(.success)
@@ -618,14 +630,14 @@ struct SettingsView: View {
       payChooserJobs.contains(where: { $0.id == selectedPayChooserJobId }) == false
     {
       self.selectedPayChooserJobId =
-        payChooserJobs.first(where: { $0.is_default })?.id
+        payChooserJobs.first(where: \.is_default)?.id
         ?? payChooserJobs.first?.id
       return
     }
 
     if selectedPayChooserJobId == nil {
       selectedPayChooserJobId =
-        payChooserJobs.first(where: { $0.is_default })?.id
+        payChooserJobs.first(where: \.is_default)?.id
         ?? payChooserJobs.first?.id
     }
   }
@@ -753,7 +765,7 @@ struct SettingsView: View {
     pendingPaySetupAction = action
     showPayJobChooser = false
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-      self.paySetupJob = job
+      paySetupJob = job
     }
   }
 
@@ -790,13 +802,14 @@ struct SettingsView: View {
         refreshPayJobLists(for: userId)
         pendingPaySetupAction = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-          self.showPayJobChooser = true
+          showPayJobChooser = true
         }
+
       case .openPay, .none:
         selectedPayChooserJobId = configuredJob.id
         pendingPaySetupAction = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-          self.presentPayChooserPayScreen(jobId: configuredJob.id)
+          presentPayChooserPayScreen(jobId: configuredJob.id)
         }
       }
 
@@ -825,7 +838,7 @@ struct SettingsView: View {
   }
 
   private func payJobChooserNavigationStack(isPresentedAsNestedSheet: Bool) -> some View {
-    let defaultJob = payChooserJobs.first(where: { $0.is_default })
+    let defaultJob = payChooserJobs.first(where: \.is_default)  // swiftlint:disable:this explicit_type_interface
 
     return NavigationStack {
       ScrollView {
@@ -1244,7 +1257,7 @@ struct SettingsView: View {
       }
     }
 
-    if payChooserJobs.count > 1 && !job.is_default {
+    if payChooserJobs.count > 1, !job.is_default {
       Button {
         Task {
           await archivePayJob(job.id)

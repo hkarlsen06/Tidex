@@ -15,7 +15,8 @@ struct FriendsMessagingCapabilities: FriendsMessagingCapabilityProviding {
     static let shiftSnapshotsMinimumVersion = "friends.messaging.shiftSnapshots.minimumAppVersion"
   }
 
-  static let shared = FriendsMessagingCapabilities()
+  // swiftlint:disable:next explicit_acl explicit_type_interface
+  static let shared = Self()
 
   private let bundle: Bundle
   private let userDefaults: UserDefaults

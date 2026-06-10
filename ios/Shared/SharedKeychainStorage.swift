@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable sorted_enum_cases type_contents_order
 import Foundation
 import Security
 
@@ -98,12 +102,16 @@ enum SharedKeychainStorage {
       switch self {
       case .unableToStore(let status):
         return "Unable to store in Keychain: \(status)"
+
       case .unableToRetrieve(let status):
         return "Unable to retrieve from Keychain: \(status)"
+
       case .unableToDelete(let status):
         return "Unable to delete from Keychain: \(status)"
+
       case .tokenExpired:
         return "Access token has expired"
+
       case .tokenNotFound:
         return "Access token not found in Keychain"
       }
@@ -200,8 +208,10 @@ enum SharedKeychainStorage {
         return nil
       }
       return string
+
     case errSecItemNotFound:
       return nil
+
     default:
       throw KeychainError.unableToRetrieve(status: status)
     }

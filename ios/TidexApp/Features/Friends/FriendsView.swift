@@ -358,11 +358,12 @@ struct SharingView: View {
   /// Handle pending deep link from AppCoordinator
   /// Navigates to a specific sharer or opens the manage modal
   private func handlePendingDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-    guard let deepLink = deepLink else { return }
+    // swiftlint:disable:next conditional_returns_on_newline
+    guard let deepLink else { return }
 
     switch deepLink {
     case .sharing(let sharerId, let dates, let changes):
-      if let sharerId = sharerId {
+      if let sharerId {
         // Wait for sharers to load, then select the sharer
         deepLinkNavigationTask?.cancel()
         deepLinkNavigationTask = Task { @MainActor in
@@ -387,13 +388,13 @@ struct SharingView: View {
             navigationPath.append(sharer)
 
             // Extract shift IDs for precise highlighting (excludes deleted shifts)
-            if let changes = changes, !changes.isEmpty {
+            if let changes, !changes.isEmpty {
               let shiftIds = changes.filter { $0.op != "deleted" }.map(\.shiftId)
               highlightShiftIds = Set(shiftIds)
             }
 
             // If dates were provided, navigate to the correct month and set highlight
-            if let dates = dates, let firstDate = dates.first,
+            if let dates, let firstDate = dates.first,
               let date = Date.fromISODateString(firstDate)
             {
               let calendar = Calendar.current
@@ -1022,8 +1023,10 @@ struct SharingView: View {
       switch lastMessage?.sendState {
       case .sending:
         return .outgoingSending
+
       case .failed:
         return .outgoingFailed
+
       case .sent, .none:
         break
       }

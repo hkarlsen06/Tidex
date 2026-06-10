@@ -1,3 +1,4 @@
+import Nimble
 import XCTest
 
 @testable import Tidex
@@ -16,7 +17,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     let date = PayrollDateAdjuster.adjustPayrollDate(
       payrollDay: 31,
       month: 2,
-      year: 2026
+      year: 2_026
     )
 
     XCTAssertEqual(date.toISODateString(), "2026-02-27")
@@ -26,7 +27,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     let date = PayrollDateAdjuster.adjustPayrollDate(
       payrollDay: 29,
       month: 2,
-      year: 2026
+      year: 2_026
     )
 
     XCTAssertEqual(date.toISODateString(), "2026-02-27")
@@ -36,7 +37,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     let date = PayrollDateAdjuster.adjustPayrollDate(
       payrollDay: 29,
       month: 2,
-      year: 2028
+      year: 2_028
     )
 
     XCTAssertEqual(date.toISODateString(), "2028-02-29")
@@ -76,17 +77,17 @@ final class PayrollEngineDateLogicTests: XCTestCase {
   func testDashboardPayrollSelectorUsesUpcomingCurrentMonthPayout() throws {
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 5),
+        displayYM: (year: 2_026, month: 5),
         jobs: [payrollJob(id: "job-1", payrollDay: 20)],
         fallbackPayrollDay: 15,
         isViewingCurrentMonth: true,
         now: try date("2026-05-12")
       ))
 
-    XCTAssertEqual(selection.payoutYear, 2026)
+    expect(selection.payoutYear) == 2_026
     XCTAssertEqual(selection.payoutMonth, 5)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-05-20")
-    XCTAssertEqual(selection.earningsYear, 2026)
+    expect(selection.earningsYear) == 2_026
     XCTAssertEqual(selection.earningsMonth, 4)
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
@@ -94,17 +95,17 @@ final class PayrollEngineDateLogicTests: XCTestCase {
   func testDashboardPayrollSelectorAdvancesWhenCurrentMonthPayoutPassed() throws {
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 5),
+        displayYM: (year: 2_026, month: 5),
         jobs: [payrollJob(id: "job-1", payrollDay: 10)],
         fallbackPayrollDay: 15,
         isViewingCurrentMonth: true,
         now: try date("2026-05-12")
       ))
 
-    XCTAssertEqual(selection.payoutYear, 2026)
+    expect(selection.payoutYear) == 2_026
     XCTAssertEqual(selection.payoutMonth, 6)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-10")
-    XCTAssertEqual(selection.earningsYear, 2026)
+    expect(selection.earningsYear) == 2_026
     XCTAssertEqual(selection.earningsMonth, 5)
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
@@ -112,17 +113,17 @@ final class PayrollEngineDateLogicTests: XCTestCase {
   func testDashboardPayrollSelectorAdvancesWhenAdjustedMonthEndPayoutPassed() throws {
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 5),
+        displayYM: (year: 2_026, month: 5),
         jobs: [payrollJob(id: "job-1", payrollDay: 31)],
         fallbackPayrollDay: 15,
         isViewingCurrentMonth: true,
         now: try date("2026-05-31")
       ))
 
-    XCTAssertEqual(selection.payoutYear, 2026)
+    expect(selection.payoutYear) == 2_026
     XCTAssertEqual(selection.payoutMonth, 6)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-30")
-    XCTAssertEqual(selection.earningsYear, 2026)
+    expect(selection.earningsYear) == 2_026
     XCTAssertEqual(selection.earningsMonth, 5)
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
@@ -131,7 +132,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     let job = payrollJob(id: "job-1", payrollDay: 31)
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 5),
+        displayYM: (year: 2_026, month: 5),
         jobs: [job],
         fallbackPayrollDay: 15,
         isViewingCurrentMonth: true,
@@ -152,7 +153,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     let job = payrollJob(id: "job-1", payrollDay: 10)
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 6),
+        displayYM: (year: 2_026, month: 6),
         jobs: [job],
         fallbackPayrollDay: 15,
         isViewingCurrentMonth: true,
@@ -173,7 +174,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
   func testDashboardPayrollSelectorUsesLaterCurrentMonthJobWhenEarlierJobPassed() throws {
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 5),
+        displayYM: (year: 2_026, month: 5),
         jobs: [
           payrollJob(id: "passed", payrollDay: 10),
           payrollJob(id: "upcoming", payrollDay: 20),
@@ -184,7 +185,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
       ))
 
     XCTAssertEqual(selection.payoutMonth, 5)
-    XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-05-20")
+    expect(selection.payoutDate.toISODateString()) == "2026-05-20"
     XCTAssertEqual(selection.earningsMonth, 4)
     XCTAssertEqual(selection.jobIds, ["upcoming"])
   }
@@ -192,7 +193,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
   func testDashboardPayrollSelectorCombinesJobsWithSameSelectedPayoutDate() throws {
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 5),
+        displayYM: (year: 2_026, month: 5),
         jobs: [
           payrollJob(id: "job-1", payrollDay: 20),
           payrollJob(id: "job-2", payrollDay: 20),
@@ -209,14 +210,14 @@ final class PayrollEngineDateLogicTests: XCTestCase {
   func testDashboardPayrollSelectorKeepsNonCurrentSelectedPayoutMonth() throws {
     let selection = try XCTUnwrap(
       DashboardPayrollSelector.select(
-        displayYM: (year: 2026, month: 4),
+        displayYM: (year: 2_026, month: 4),
         jobs: [payrollJob(id: "job-1", payrollDay: 10)],
         fallbackPayrollDay: 15,
         isViewingCurrentMonth: false,
         now: try date("2026-05-12")
       ))
 
-    XCTAssertEqual(selection.payoutYear, 2026)
+    expect(selection.payoutYear) == 2_026
     XCTAssertEqual(selection.payoutMonth, 4)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-04-10")
     XCTAssertEqual(selection.earningsMonth, 3)

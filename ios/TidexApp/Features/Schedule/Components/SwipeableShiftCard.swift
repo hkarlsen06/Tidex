@@ -173,7 +173,7 @@ struct SwipeableShiftCard<Content: View>: View {
     var newOffset = horizontal
 
     // Restrict direction based on available actions
-    if !canSwipeLeft && horizontal < 0 {
+    if !canSwipeLeft, horizontal < 0 {
       newOffset = 0
     }
 
@@ -190,11 +190,11 @@ struct SwipeableShiftCard<Content: View>: View {
     let thresholdOffset = actionWidth * actionThreshold
     let crossedThreshold = abs(offset) >= thresholdOffset
 
-    if crossedThreshold && !hasTriggeredHaptic {
+    if crossedThreshold, !hasTriggeredHaptic {
       hasTriggeredHaptic = true
       SwipeHaptics.impact.impactOccurred()
       SwipeHaptics.impact.prepare()
-    } else if !crossedThreshold && hasTriggeredHaptic {
+    } else if !crossedThreshold, hasTriggeredHaptic {
       hasTriggeredHaptic = false
       SwipeHaptics.selection.prepare()
     }
@@ -221,7 +221,7 @@ struct SwipeableShiftCard<Content: View>: View {
     let triggeredAction: (() -> Void)?
     if fullySwipedRight {
       triggeredAction = onEdit
-    } else if fullySwipedLeft && onDelete != nil {
+    } else if fullySwipedLeft, onDelete != nil {
       triggeredAction = onDelete
     } else {
       triggeredAction = nil

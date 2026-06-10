@@ -6,9 +6,9 @@ import UIKit
 struct WageScreen: View {
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
-  var onBack: (() -> Void)? = nil
-  var topTrailingTitle: String? = nil
-  var onTopTrailingAction: (() -> Void)? = nil
+  var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
+  var topTrailingTitle: String?  // swiftlint:disable:this explicit_acl type_contents_order
+  var onTopTrailingAction: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
 
   @State private var isLoadingTariffData = false
   @State private var showingTariffDisabledInfoAlert = false
@@ -35,7 +35,7 @@ struct WageScreen: View {
               // Top actions (if provided)
               if showsTopBar {
                 HStack {
-                  if let onBack = onBack {
+                  if let onBack {
                     Button(action: {
                       UIImpactFeedbackGenerator(style: .light).impactOccurred()
                       onBack()
@@ -98,6 +98,7 @@ struct WageScreen: View {
                 switch data.wageType {
                 case .tariff:
                   tariffSelector
+
                 case .custom:
                   customWageContent
                     .id(ScrollTarget.customWageContent)
@@ -176,7 +177,7 @@ struct WageScreen: View {
     }
     .task {
       // Ensure tariff version is loaded for the selected type
-      if data.currentTariffVersion == nil && data.wageType == .tariff {
+      if data.currentTariffVersion == nil, data.wageType == .tariff {
         await loadTariffVersion(for: data.selectedTariffTypeId)
       }
     }
@@ -393,7 +394,7 @@ struct WageScreen: View {
         data.availableTariffTypes = types
 
         // Set default tariff type if not already set
-        if let defaultType = types.first(where: { $0.is_default }) ?? types.first {
+        if let defaultType = types.first(where: \.is_default) ?? types.first {
           if data.selectedTariffTypeId.isEmpty
             || !types.contains(where: { $0.id == data.selectedTariffTypeId })
           {
@@ -454,7 +455,7 @@ private struct WageTypeButton: View {
   let isSelected: Bool
   let isEnabled: Bool
   let action: () -> Void
-  var onDisabledTap: (() -> Void)? = nil
+  var onDisabledTap: (() -> Void)?
 
   var body: some View {
     Button(action: {

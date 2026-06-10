@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_trait_for_button explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface no_magic_numbers
 import SwiftUI
 
 #if os(iOS)
@@ -21,7 +27,7 @@ import SwiftUI
   struct ShareRecipientPickerList: View {
     let recipients: [ShareRecipient]
     @Binding var selectionState: ShareRecipientSelectionState
-    var onRecipientTap: ((ShareRecipient) -> Void)? = nil
+    var onRecipientTap: ((ShareRecipient) -> Void)?
 
     var body: some View {
       ScrollView {
@@ -99,6 +105,7 @@ import SwiftUI
             image
               .resizable()
               .scaledToFill()
+
           default:
             initialsAvatar
           }

@@ -230,8 +230,8 @@ struct FriendShiftSnapshot: Codable, Equatable {
     return initials.isEmpty ? "?" : initials.uppercased()
   }
 
-  var normalizedForTransport: FriendShiftSnapshot {
-    FriendShiftSnapshot(
+  internal var normalizedForTransport: Self {
+    Self(
       schemaVersion: schemaVersion,
       ownerUserId: SnapshotRichContentIdentifier.normalizedUUIDString(
         primary: ownerUserId,
@@ -258,10 +258,11 @@ struct FriendShiftSnapshot: Codable, Equatable {
     )
   }
 
-  func applyingEarningsVisibility(_ canSeeEarnings: Bool) -> FriendShiftSnapshot {
+  // swiftlint:disable:next type_contents_order
+  internal func applyingEarningsVisibility(_ canSeeEarnings: Bool) -> Self {
     guard !canSeeEarnings else { return self }
 
-    return FriendShiftSnapshot(
+    return Self(
       schemaVersion: schemaVersion,
       ownerUserId: ownerUserId,
       ownerDisplayName: ownerDisplayName,
@@ -406,6 +407,7 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
     switch type {
     case .image:
       self = .image(try container.decode(ImageAttachment.self, forKey: .image))
+
     case .shiftSnapshot:
       self = .shiftSnapshot(
         try container.decode(ComposerShiftSnapshotDraft.self, forKey: .shiftSnapshot)
@@ -420,6 +422,7 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
     case .image(let image):
       try container.encode(DraftType.image, forKey: .type)
       try container.encode(image, forKey: .image)
+
     case .shiftSnapshot(let draft):
       try container.encode(DraftType.shiftSnapshot, forKey: .type)
       try container.encode(draft, forKey: .shiftSnapshot)
@@ -444,6 +447,7 @@ enum FriendsComposerAttachmentDraft: Codable, Equatable {
     switch self {
     case .image:
       return .image
+
     case .shiftSnapshot:
       return .shiftSnapshot
     }
@@ -656,8 +660,8 @@ struct FriendMessageAttachment: Identifiable, Codable, Equatable {
       try container.decodeIfPresent([FriendMessageReaction].self, forKey: .reactions) ?? []
   }
 
-  func withReactions(_ reactions: [FriendMessageReaction]) -> FriendMessageAttachment {
-    FriendMessageAttachment(
+  internal func withReactions(_ reactions: [FriendMessageReaction]) -> Self {
+    Self(
       id: id,
       attachmentIndex: attachmentIndex,
       kind: kind,
@@ -672,7 +676,7 @@ struct FriendMessageAttachment: Identifiable, Codable, Equatable {
     )
   }
 
-  func toggledReaction(emoji: String) -> FriendMessageAttachment {
+  internal func toggledReaction(emoji: String) -> Self {
     withReactions(FriendMessage.toggledReactions(reactions, emoji: emoji))
   }
 }
@@ -814,7 +818,8 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     return "message:\(id)"
   }
 
-  func matchesLogicalRow(of other: FriendMessage, viewerUserId: String) -> Bool {
+  // swiftlint:disable:next type_contents_order
+  internal func matchesLogicalRow(of other: Self, viewerUserId: String) -> Bool {
     logicalRowIdentity(viewerUserId: viewerUserId)
       == other.logicalRowIdentity(viewerUserId: viewerUserId)
   }
@@ -837,8 +842,8 @@ struct FriendMessage: Identifiable, Codable, Equatable {
   func withSendState(
     _ sendState: FriendMessageSendState,
     failureMessage: String? = nil
-  ) -> FriendMessage {
-    FriendMessage(
+  ) -> Self {
+    Self(
       id: id,
       threadId: threadId,
       senderUserId: senderUserId,
@@ -857,8 +862,9 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     )
   }
 
-  func withEditedBody(_ body: String, editedAt: Date?) -> FriendMessage {
-    FriendMessage(
+  // swiftlint:disable:next type_contents_order
+  internal func withEditedBody(_ body: String, editedAt: Date?) -> Self {
+    Self(
       id: id,
       threadId: threadId,
       senderUserId: senderUserId,
@@ -877,8 +883,9 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     )
   }
 
-  func withReactions(_ reactions: [FriendMessageReaction]) -> FriendMessage {
-    FriendMessage(
+  // swiftlint:disable:next type_contents_order
+  internal func withReactions(_ reactions: [FriendMessageReaction]) -> Self {
+    Self(
       id: id,
       threadId: threadId,
       senderUserId: senderUserId,
@@ -897,11 +904,13 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     )
   }
 
-  func toggledReaction(emoji: String) -> FriendMessage {
+  // swiftlint:disable:next type_contents_order
+  internal func toggledReaction(emoji: String) -> Self {
     withReactions(Self.toggledReactions(reactions, emoji: emoji))
   }
 
-  func toggledReaction(emoji: String, attachmentId: String?) -> FriendMessage {
+  // swiftlint:disable:next type_contents_order
+  internal func toggledReaction(emoji: String, attachmentId: String?) -> Self {
     guard let attachmentId else {
       return toggledReaction(emoji: emoji)
     }
@@ -915,7 +924,7 @@ struct FriendMessage: Identifiable, Codable, Equatable {
     updatedAttachments[attachmentIndex] = updatedAttachments[attachmentIndex]
       .toggledReaction(emoji: emoji)
 
-    return FriendMessage(
+    return Self(
       id: id,
       threadId: threadId,
       senderUserId: senderUserId,
@@ -1042,6 +1051,7 @@ private enum FriendRichContentDecoder {
         return .unsupported(rawKind)
       }
       return .shiftSnapshot
+
     default:
       return .unsupported(rawKind)
     }
@@ -1088,8 +1098,10 @@ private enum FriendMessagePreviewPolicy {
     switch richContentKind {
     case .shiftSnapshot:
       return .shiftSnapshot
+
     case .unsupported:
       return .unknown
+
     case nil:
       return .unknown
     }
@@ -1106,10 +1118,13 @@ private enum FriendMessagePreviewPolicy {
     switch previewKind {
     case .text:
       return String(localized: .friendsChatPreviewUnsupported)
+
     case .image:
       return String(localized: .friendsChatPreviewImage)
+
     case .shiftSnapshot:
       return String(localized: .friendsChatPreviewSharedShift)
+
     case .unknown:
       return String(localized: .friendsChatPreviewUnsupported)
     }

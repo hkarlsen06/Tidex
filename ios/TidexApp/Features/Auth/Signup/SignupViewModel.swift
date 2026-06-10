@@ -85,7 +85,7 @@ final class SignupViewModel: ObservableObject {
 
     do {
       let email = emailOrPhone.trimmingCharacters(in: .whitespacesAndNewlines)
-      let _ = try await authService.signUpWithEmail(
+      _ = try await authService.signUpWithEmail(
         email: email,
         password: password,
         fullName: fullName
@@ -108,7 +108,7 @@ final class SignupViewModel: ObservableObject {
 
     do {
       let idToken = try await googleAuthProvider.signIn()
-      let _ = try await authService.signInWithGoogle(idToken: idToken)
+      _ = try await authService.signInWithGoogle(idToken: idToken)
       try await authService.recordTermsAcceptance()
       await handleSuccessfulSignup()
     } catch let error as GoogleAuthError where error.isCancellation {
@@ -130,7 +130,7 @@ final class SignupViewModel: ObservableObject {
 
     do {
       let result = try await appleAuthProvider.signIn()
-      let _ = try await authService.signInWithApple(
+      _ = try await authService.signInWithApple(
         idToken: result.idToken,
         fullName: result.fullName
       )
@@ -191,7 +191,7 @@ final class SignupViewModel: ObservableObject {
       isValid = false
     }
 
-    if !confirmPassword.isEmpty && password != confirmPassword {
+    if !confirmPassword.isEmpty, password != confirmPassword {
       fieldErrors.confirmPassword = String(localized: .signupErrorsPasswordMismatch)
       isValid = false
     }

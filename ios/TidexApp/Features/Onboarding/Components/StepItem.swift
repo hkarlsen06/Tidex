@@ -61,7 +61,7 @@ struct StepItem: View {
             .frame(width: iconSize, height: iconSize)
 
           // Checkmark pulse ring (only for active step)
-          if progressState == .active && showCheckPulse {
+          if progressState == .active, showCheckPulse {
             Circle()
               .stroke(Color.tidexBlue.opacity(0.3), lineWidth: 2)
               .frame(width: iconSize, height: iconSize)
@@ -127,7 +127,7 @@ struct StepItem: View {
     .animation(.easeInOut(duration: 0.26), value: isDimmedForFocus)
     .onChange(of: isVisible) { _, visible in
       // Trigger checkmark pulse for active step after entrance
-      if visible && progressState == .active {
+      if visible, progressState == .active {
         DispatchQueue.main.asyncAfter(deadline: .now() + entranceDelay + 0.3) {
           withAnimation(.easeOut(duration: 0.6)) {
             showCheckPulse = true

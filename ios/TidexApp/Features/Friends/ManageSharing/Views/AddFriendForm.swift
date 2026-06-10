@@ -49,7 +49,7 @@ struct AddFriendForm: View {
               }
             }
 
-            if canAdd && !isOfflineUnavailable {
+            if canAdd, !isOfflineUnavailable {
               Button(action: {
                 if reduceMotion {
                   isExpanded = true
@@ -101,7 +101,7 @@ struct AddFriendForm: View {
             .disabled(isLoading || isOfflineUnavailable)
 
             // Error message
-            if let error = error {
+            if let error {
               Text(error)
                 .font(.tidexCaptionRegular)
                 .foregroundColor(.tidexError)

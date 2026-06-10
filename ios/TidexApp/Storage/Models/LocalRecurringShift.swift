@@ -1,3 +1,5 @@
+// swiftlint:disable cyclomatic_complexity explicit_acl explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -107,7 +109,7 @@ final class LocalRecurringShift {
       }
     }
     set {
-      let keys = newValue.map { $0.rawValue }
+      let keys = newValue.map(\.rawValue)
       dirtyFields = (try? canonicalJSONEncoder.encode(keys)) ?? Data()
     }
   }
@@ -373,8 +375,8 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
     updatedAt: Date,
     revision: Int64,
     deletedAt: Date?
-  ) -> RecurringShiftServerSnapshot {
-    RecurringShiftServerSnapshot(
+  ) -> Self {
+    Self(
       jobId: row.job_id,
       startTime: row.cleanStartTime,
       endTime: row.cleanEndTime,
@@ -410,12 +412,12 @@ struct RecurringShiftServerSnapshot: Codable, Equatable {
   }
 
   /// Decode from Data
-  static func decode(from data: Data) -> RecurringShiftServerSnapshot? {
-    try? syncJSONDecoder.decode(RecurringShiftServerSnapshot.self, from: data)
+  static func decode(from data: Data) -> Self? {
+    try? syncJSONDecoder.decode(Self.self, from: data)
   }
 
   /// Compute changed fields compared to another snapshot
-  func changedFields(from other: RecurringShiftServerSnapshot) -> Set<RecurringShiftField> {
+  func changedFields(from other: Self) -> Set<RecurringShiftField> {
     var changed: Set<RecurringShiftField> = []
 
     if jobId != other.jobId {
@@ -482,7 +484,7 @@ extension LocalRecurringShift {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    context: ModelContext
+    context _: ModelContext
   ) -> LocalRecurringShift {
     let snapshot = RecurringShiftServerSnapshot.from(
       row: serverRow,

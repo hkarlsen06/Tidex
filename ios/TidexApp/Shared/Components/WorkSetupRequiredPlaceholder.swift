@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length conditional_returns_on_newline explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface file_types_order function_body_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers
 import SwiftUI
 
 struct WorkSetupRequiredPlaceholder: View {

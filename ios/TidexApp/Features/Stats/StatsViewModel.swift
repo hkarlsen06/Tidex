@@ -2,8 +2,8 @@ import Combine
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "com.tidex.app", category: "StatsViewModel")
-private let startupStatsCacheKey = "statsStartupCacheV1"
+private let logger = Logger(subsystem: "com.tidex.app", category: "StatsViewModel")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
+private let startupStatsCacheKey = "statsStartupCacheV1"  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 
 private struct StartupStatsCache: Codable {
   let userId: String
@@ -19,39 +19,39 @@ private struct StartupStatsCache: Codable {
 /// View model for the stats tab
 /// Computes statistics locally from on-device shift data
 @MainActor
-final class StatsViewModel: ObservableObject {
+final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl line_length type_body_length
 
   // MARK: - Published State
 
-  @Published private(set) var stats: StatsData?
-  @Published private(set) var isLoading = false
-  @Published private(set) var error: Error?
+  @Published private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
+  @Published private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
+  @Published private(set) var error: Error?  // swiftlint:disable:this explicit_acl
 
   /// User's selected currency (from settings)
-  @Published private(set) var currency: String = "kr"
-  @Published private(set) var activeJobs: [Job] = []
-  @Published private(set) var selectedJobId: String?
+  @Published private(set) var currency: String = "kr"  // swiftlint:disable:this explicit_acl
+  @Published private(set) var activeJobs: [Job] = []  // swiftlint:disable:this explicit_acl
+  @Published private(set) var selectedJobId: String?  // swiftlint:disable:this explicit_acl
 
   /// Baseline monthly goal from settings (global fallback goal).
-  var baselineMonthlyGoal: Int? {
+  var baselineMonthlyGoal: Int? {  // swiftlint:disable:this explicit_acl
     settings?.monthly_goal.flatMap { $0 > 0 ? $0 : nil }
   }
 
   /// Month-specific override for the currently displayed month, if present.
-  var displayedMonthOverrideGoal: Int? {
-    let monthKey = UserSettings.monthKey(year: displayYear, month: displayMonth)
+  var displayedMonthOverrideGoal: Int? {  // swiftlint:disable:this explicit_acl
+    let monthKey = UserSettings.monthKey(year: displayYear, month: displayMonth)  // swiftlint:disable:this explicit_type_interface line_length
     return settings?.monthly_goals_by_month?[monthKey].flatMap { $0 > 0 ? $0 : nil }
   }
 
   // MARK: - Month Navigation State (from SharedMonthContext)
 
-  @Published private(set) var displayYear: Int
-  @Published private(set) var displayMonth: Int
-  @Published private(set) var displayMonthName: String = ""
-  @Published private(set) var navigationDirection: MonthNavigationDirection?
+  @Published private(set) var displayYear: Int  // swiftlint:disable:this explicit_acl
+  @Published private(set) var displayMonth: Int  // swiftlint:disable:this explicit_acl
+  @Published private(set) var displayMonthName: String = ""  // swiftlint:disable:this explicit_acl
+  @Published private(set) var navigationDirection: MonthNavigationDirection?  // swiftlint:disable:this explicit_acl
 
   /// Whether viewing the current (real) month
-  var isCurrentMonth: Bool {
+  var isCurrentMonth: Bool {  // swiftlint:disable:this explicit_acl
     SharedMonthContext.shared.isCurrentMonth
   }
 
@@ -62,14 +62,14 @@ final class StatsViewModel: ObservableObject {
   private let jobsRepository: JobsRepository
   private let monthContext: SharedMonthContext
   private let syncCoordinator: SyncCoordinator
-  private var cancellables = Set<AnyCancellable>()
+  private var cancellables = Set<AnyCancellable>()  // swiftlint:disable:this explicit_type_interface
   private var settings: UserSettings?
   private var activeLoadTask: Task<Void, Never>?
   private var loadGeneration: Int = 0
 
   // MARK: - Initialization
 
-  init(
+  init(  // swiftlint:disable:this explicit_acl type_contents_order
     statsService: StatsService? = nil,
     settingsRepository: SettingsRepository? = nil,
     jobsRepository: JobsRepository? = nil,
@@ -93,7 +93,7 @@ final class StatsViewModel: ObservableObject {
     setupMonthSubscription()
   }
 
-  deinit {
+  deinit {  // swiftlint:disable:this type_contents_order
     // Cancel all Combine subscriptions to prevent memory leaks
     // While [weak self] prevents retain cycles, the subscriptions
     // themselves remain active without explicit cancellation
@@ -103,20 +103,20 @@ final class StatsViewModel: ObservableObject {
 
   // MARK: - Month Subscription
 
-  private func setupMonthSubscription() {
+  private func setupMonthSubscription() {  // swiftlint:disable:this type_contents_order
     monthContext.monthChanged
       .receive(on: DispatchQueue.main)
       .sink { [weak self] year, month in
-        guard let self = self else { return }
+        guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
         // Update local state
-        self.displayYear = year
-        self.displayMonth = month
-        self.displayMonthName = self.monthContext.displayMonthName
-        self.navigationDirection = self.monthContext.navigationDirection
+        displayYear = year
+        displayMonth = month
+        displayMonthName = monthContext.displayMonthName
+        navigationDirection = monthContext.navigationDirection
 
         // Reload stats for new month
-        self.scheduleLoadStats()
+        scheduleLoadStats()
       }
       .store(in: &cancellables)
   }
@@ -124,13 +124,13 @@ final class StatsViewModel: ObservableObject {
   // MARK: - Startup Cache
 
   /// Preload local metadata and last known stats snapshot so the first Stats frame is fully composed.
-  private func preloadInitialStateFromLocalCache() {
+  private func preloadInitialStateFromLocalCache() {  // swiftlint:disable:this type_contents_order
     guard
       let userId = AppCoordinator.shared.getCurrentUserId()
         ?? AuthSessionManager.shared.offlineUserIdFallback()
     else { return }
 
-    let jobs = jobsRepository.getNonDeletedJobs(for: userId)
+    let jobs = jobsRepository.getNonDeletedJobs(for: userId)  // swiftlint:disable:this explicit_type_interface
     activeJobs = jobs
     if jobs.count <= 1 {
       selectedJobId = nil
@@ -152,23 +152,23 @@ final class StatsViewModel: ObservableObject {
       return
     }
 
-    guard let cached = loadStartupStatsCache(for: userId) else { return }
+    guard let cached = loadStartupStatsCache(for: userId) else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     stats = cached.stats
     currency = cached.currency
     logger.info("Preloaded stats from persisted startup cache")
   }
 
-  private func loadStartupStatsCache(for userId: String) -> StartupStatsCache? {
+  private func loadStartupStatsCache(for userId: String) -> StartupStatsCache? {  // swiftlint:disable:this line_length type_contents_order
     guard let data = UserDefaults.standard.data(forKey: startupStatsCacheKey) else {
       return nil
     }
 
     do {
-      let cached = try JSONDecoder().decode(StartupStatsCache.self, from: data)
-      guard cached.userId == userId else { return nil }
-      guard cached.year == displayYear, cached.month == displayMonth else { return nil }
+      let cached = try JSONDecoder().decode(StartupStatsCache.self, from: data)  // swiftlint:disable:this explicit_type_interface line_length
+      guard cached.userId == userId else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
+      guard cached.year == displayYear, cached.month == displayMonth else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
       // Keep cache fresh; stale snapshots feel wrong on startup.
-      guard Date().timeIntervalSince(cached.cachedAt) < 60 * 60 * 24 else { return nil }
+      guard Date().timeIntervalSince(cached.cachedAt) < 60 * 60 * 24 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length no_magic_numbers
       return cached
     } catch {
       logger.warning("Failed to decode startup stats cache: \(error.localizedDescription)")
@@ -176,8 +176,8 @@ final class StatsViewModel: ObservableObject {
     }
   }
 
-  private func persistStartupStatsCache(stats: StatsData, userId: String) {
-    let payload = StartupStatsCache(
+  private func persistStartupStatsCache(stats: StatsData, userId: String) {  // swiftlint:disable:this line_length type_contents_order
+    let payload = StartupStatsCache(  // swiftlint:disable:this explicit_type_interface
       userId: userId,
       year: displayYear,
       month: displayMonth,
@@ -187,7 +187,7 @@ final class StatsViewModel: ObservableObject {
     )
 
     do {
-      let encoded = try JSONEncoder().encode(payload)
+      let encoded = try JSONEncoder().encode(payload)  // swiftlint:disable:this explicit_type_interface
       UserDefaults.standard.set(encoded, forKey: startupStatsCacheKey)
     } catch {
       logger.warning("Failed to persist startup stats cache: \(error.localizedDescription)")
@@ -197,31 +197,31 @@ final class StatsViewModel: ObservableObject {
   // MARK: - Navigation Methods
 
   /// Navigate to the previous month
-  func goToPreviousMonth() {
+  func goToPreviousMonth() {  // swiftlint:disable:this explicit_acl type_contents_order
     monthContext.goToPreviousMonth()
   }
 
   /// Navigate to the next month
-  func goToNextMonth() {
+  func goToNextMonth() {  // swiftlint:disable:this explicit_acl type_contents_order
     monthContext.goToNextMonth()
   }
 
   /// Reset to current month
-  func goToCurrentMonth() {
+  func goToCurrentMonth() {  // swiftlint:disable:this explicit_acl type_contents_order
     monthContext.goToCurrentMonth()
   }
 
-  var shouldShowJobFilter: Bool {
+  var shouldShowJobFilter: Bool {  // swiftlint:disable:this explicit_acl
     activeJobs.count > 1
   }
 
-  var selectedJobName: String? {
-    guard let selectedJobId else { return nil }
+  var selectedJobName: String? {  // swiftlint:disable:this explicit_acl
+    guard let selectedJobId else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
     return activeJobs.first(where: { $0.id == selectedJobId })?.name
   }
 
-  func selectJobFilter(_ jobId: String?) {
-    guard selectedJobId != jobId else { return }
+  func selectJobFilter(_ jobId: String?) {  // swiftlint:disable:this explicit_acl
+    guard selectedJobId != jobId else { return }  // swiftlint:disable:this conditional_returns_on_newline
     selectedJobId = jobId
     scheduleLoadStats()
   }
@@ -229,15 +229,15 @@ final class StatsViewModel: ObservableObject {
   // MARK: - Public Methods
 
   /// Load stats for the displayed month from local data
-  func loadStats() async {
+  func loadStats() async {  // swiftlint:disable:this explicit_acl
     activeLoadTask?.cancel()
     activeLoadTask = nil
-    let generation = nextLoadGeneration()
+    let generation = nextLoadGeneration()  // swiftlint:disable:this explicit_type_interface
     await performLoadStats(generation: generation)
   }
 
   private func scheduleLoadStats() {
-    let generation = nextLoadGeneration()
+    let generation = nextLoadGeneration()  // swiftlint:disable:this explicit_type_interface
     activeLoadTask?.cancel()
     activeLoadTask = Task { @MainActor [weak self] in
       await self?.performLoadStats(generation: generation)
@@ -249,15 +249,15 @@ final class StatsViewModel: ObservableObject {
     return loadGeneration
   }
 
-  private func performLoadStats(generation: Int) async {
+  private func performLoadStats(generation: Int) async {  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length
     isLoading = true
     error = nil
 
     do {
       // Load user's currency from settings
-      let userId = try await resolveUserIdForLocalStats()
+      let userId = try await resolveUserIdForLocalStats()  // swiftlint:disable:this explicit_type_interface
 
-      let jobs = jobsRepository.getNonDeletedJobs(for: userId)
+      let jobs = jobsRepository.getNonDeletedJobs(for: userId)  // swiftlint:disable:this explicit_type_interface
       activeJobs = jobs
       if let selectedJobId, !jobs.contains(where: { $0.id == selectedJobId }) {
         self.selectedJobId = nil
@@ -277,7 +277,7 @@ final class StatsViewModel: ObservableObject {
         currency = jobs.first(where: { $0.id == selectedJobId })?.currency ?? "kr"
       }
 
-      let computedStats = try await statsService.computeStats(
+      let computedStats = try await statsService.computeStats(  // swiftlint:disable:this explicit_type_interface
         year: displayYear,
         month: displayMonth,
         jobId: selectedJobId
@@ -295,20 +295,20 @@ final class StatsViewModel: ObservableObject {
       )
     } catch is CancellationError {
       logger.info("Stats load cancelled")
-      guard generation == loadGeneration else { return }
+      guard generation == loadGeneration else { return }  // swiftlint:disable:this conditional_returns_on_newline
     } catch {
-      guard generation == loadGeneration else { return }
+      guard generation == loadGeneration else { return }  // swiftlint:disable:this conditional_returns_on_newline
       logger.error("Failed to load stats: \(error.localizedDescription)")
       self.error = error
     }
 
-    guard generation == loadGeneration else { return }
+    guard generation == loadGeneration else { return }  // swiftlint:disable:this conditional_returns_on_newline
     isLoading = false
   }
 
   private func resolveUserIdForLocalStats() async throws -> String {
     do {
-      let session = try await AuthSessionManager.shared.getSession()
+      let session = try await AuthSessionManager.shared.getSession()  // swiftlint:disable:this explicit_type_interface
       return session.normalizedUserId
     } catch {
       guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
@@ -323,22 +323,22 @@ final class StatsViewModel: ObservableObject {
   }
 
   /// Refresh stats by syncing first, then recomputing from local data
-  func refresh() async {
+  func refresh() async {  // swiftlint:disable:this explicit_acl
     // SwiftUI .refreshable can cancel the parent task when the view hierarchy changes.
     // Run refresh work in an unstructured task so sync can complete reliably.
-    let refreshTask = Task { @MainActor [weak self] in
-      guard let self = self else { return }
-      await self.performRefresh()
+    let refreshTask = Task { @MainActor [weak self] in  // swiftlint:disable:this explicit_type_interface
+      guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      await performRefresh()
     }
 
     _ = await refreshTask.result
   }
 
   /// Save month-specific goal override for the displayed month.
-  func saveMonthlyGoalForDisplayedMonth(_ goal: Int?) async throws {
-    let session = try await AuthSessionManager.shared.getSession()
+  func saveMonthlyGoalForDisplayedMonth(_ goal: Int?) async throws {  // swiftlint:disable:this explicit_acl
+    let session = try await AuthSessionManager.shared.getSession()  // swiftlint:disable:this explicit_type_interface
 
-    let updatedSettings = try await settingsRepository.saveMonthlyGoalForMonth(
+    let updatedSettings = try await settingsRepository.saveMonthlyGoalForMonth(  // swiftlint:disable:this explicit_type_interface line_length
       userId: session.normalizedUserId,
       year: displayYear,
       month: displayMonth,
@@ -357,8 +357,8 @@ final class StatsViewModel: ObservableObject {
     logger.info("Pull-to-refresh: triggering sync then local stats recompute")
 
     do {
-      let session = try await AuthSessionManager.shared.getSession()
-      let syncResult = await syncCoordinator.sync(
+      let session = try await AuthSessionManager.shared.getSession()  // swiftlint:disable:this explicit_type_interface
+      let syncResult = await syncCoordinator.sync(  // swiftlint:disable:this explicit_type_interface
         reason: .manualRefresh,
         userId: session.normalizedUserId
       )

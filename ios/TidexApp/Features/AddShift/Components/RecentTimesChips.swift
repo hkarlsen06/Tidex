@@ -30,7 +30,7 @@ struct RecentTimesChips: View {
 
   /// Optional fixed ranges for demo/preview contexts.
   /// When provided, repository loading is bypassed.
-  var presetRanges: [TimeRangeCount]? = nil
+  var presetRanges: [TimeRangeCount]?  // swiftlint:disable:this discouraged_optional_collection explicit_acl
 
   /// Shifts repository for querying shift data
   private let shiftsRepository = ShiftsRepository.shared

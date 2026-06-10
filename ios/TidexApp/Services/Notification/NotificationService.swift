@@ -53,10 +53,13 @@ final class NotificationService {
     switch settings.authorizationStatus {
     case .authorized, .provisional, .ephemeral:
       registerForRemoteNotifications()
+
     case .denied:
       PushNotificationManager.shared.permissionDenied()
+
     case .notDetermined:
       break
+
     @unknown default:
       break
     }

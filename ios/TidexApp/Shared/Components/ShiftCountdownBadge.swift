@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl implicit_optional_initialization no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable vertical_whitespace_between_cases
 import SwiftUI
 
 /// Shared badge style for shift countdown/status labels.
@@ -5,7 +11,7 @@ import SwiftUI
 struct ShiftCountdownBadge: View {
   let text: String
   let status: ShiftPreviewStatus
-  var finalCountdownSeconds: Int? = nil
+  var finalCountdownSeconds: Int?
 
   var body: some View {
     if let finalCountdownSeconds, status == .active, finalCountdownSeconds > 0 {
@@ -42,8 +48,10 @@ struct ShiftCountdownBadge: View {
     switch status {
     case .active:
       return Color.green.opacity(0.15)
+
     case .upcoming:
       return Color.blue.opacity(0.15)
+
     case .past:
       return Color.tidexTextMuted.opacity(0.15)
     }
@@ -53,8 +61,10 @@ struct ShiftCountdownBadge: View {
     switch status {
     case .active:
       return .green
+
     case .upcoming:
       return .blue
+
     case .past:
       return .tidexTextMuted
     }

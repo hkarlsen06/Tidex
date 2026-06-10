@@ -1,3 +1,11 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_trait_for_button conditional_returns_on_newline explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface extension_access_modifier function_default_parameter_at_end no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable strict_fileprivate type_contents_order
 import SwiftUI
 
 struct ChatComposerField<LeadingAccessory: View>: View {

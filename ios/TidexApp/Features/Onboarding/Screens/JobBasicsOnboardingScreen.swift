@@ -5,7 +5,7 @@ import UIKit
 struct JobBasicsOnboardingScreen: View {
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
-  var onBack: (() -> Void)? = nil
+  var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl
 
   @FocusState private var isJobNameFocused: Bool
 

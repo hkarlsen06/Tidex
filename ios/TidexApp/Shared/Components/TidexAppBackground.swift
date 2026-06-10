@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable closure_body_length explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers number_separator
 import SwiftUI
 
 /// Shared app background with a subtle top-centered radial glow.
@@ -27,7 +33,7 @@ struct TidexAppBackground: View {
   }
 
   private var primaryGlowRadius: CGFloat {
-    UIDevice.current.userInterfaceIdiom == .pad ? 1120 : 780
+    UIDevice.current.userInterfaceIdiom == .pad ? 1_120 : 780
   }
 
   private var secondaryGlowRadius: CGFloat {

@@ -121,7 +121,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
       // Determine authentication capabilities from identities
       let identities = freshUser.identities ?? []
-      let providers = Set(identities.map { $0.provider })
+      let providers = Set(identities.map(\.provider))  // swiftlint:disable:this explicit_type_interface
 
       // Supabase may not add an "email" identity when setting a password on OAuth users.
       let metadataHasPassword = freshUser.userMetadata["hasPassword"]?.value as? Bool ?? false
@@ -511,21 +511,21 @@ final class ProfileSettingsViewModel: ObservableObject {
           contentType: "image/webp",
           fileExtension: "webp"
         )
-      } else if let heicData = convertToHEIC(imageData, quality: avatarCompressionQuality) {
+      }
+      if let heicData = convertToHEIC(imageData, quality: avatarCompressionQuality) {
         // HEIC fallback - ~50% smaller than JPEG, supported since iOS 11
         return PreparedAvatarUpload(
           data: heicData,
           contentType: "image/heic",
           fileExtension: "heic"
         )
-      } else {
-        // Final fallback to JPEG
-        return PreparedAvatarUpload(
-          data: imageData,
-          contentType: "image/jpeg",
-          fileExtension: "jpg"
-        )
       }
+      // Final fallback to JPEG
+      return PreparedAvatarUpload(
+        data: imageData,
+        contentType: "image/jpeg",
+        fileExtension: "jpg"
+      )
     }.value
   }
 
@@ -732,7 +732,7 @@ final class ProfileSettingsViewModel: ObservableObject {
     return
       name
       .split(separator: " ")
-      .compactMap { $0.first }
+      .compactMap(\.first)
       .prefix(2)
       .map { String($0).uppercased() }
       .joined()

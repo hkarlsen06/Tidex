@@ -99,6 +99,13 @@ final class FriendsThreadShareVisibilityResolverTests: XCTestCase {
 
 @MainActor
 private final class MockShareRelationshipProvider: FriendsThreadShareRelationshipProviding {
+  // swiftlint:disable:next large_tuple
+  private typealias FetchAllFriendsResult = (
+    friends: [Friend],
+    blockedFriends: [Friend],
+    capacity: ShareCapacity
+  )
+
   var friends: [Friend]
   private(set) var fetchCount = 0
 
@@ -106,11 +113,7 @@ private final class MockShareRelationshipProvider: FriendsThreadShareRelationshi
     self.friends = friends
   }
 
-  func fetchAllFriends() async throws -> (
-    friends: [Friend],
-    blockedFriends: [Friend],
-    capacity: ShareCapacity
-  ) {
+  func fetchAllFriends() async -> FetchAllFriendsResult {
     fetchCount += 1
     await Task.yield()
     return (

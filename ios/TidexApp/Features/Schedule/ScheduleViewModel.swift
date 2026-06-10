@@ -37,12 +37,16 @@ enum ShiftsError: Error, LocalizedError {
     switch self {
     case .notAuthenticated:
       return "Not authenticated"
+
     case .dataLoadFailed(let error):
       return "Failed to load data: \(error.localizedDescription)"
+
     case .noLocalData:
       return "No local data available. Please wait for sync to complete."
+
     case .invalidEventDateRange:
       return "Invalid event date range"
+
     case .eventNotFound:
       return "Event not found. Please refresh and try again."
     }
@@ -110,8 +114,8 @@ struct ShiftsCalendarPresentation {
   let defaultJobId: String?
   let hasMultipleActiveJobs: Bool
 
-  static func empty(currency: String = "kr") -> ShiftsCalendarPresentation {
-    ShiftsCalendarPresentation(
+  static func empty(currency: String = "kr") -> Self {  // swiftlint:disable:this explicit_acl
+    Self(
       shiftsByDate: [:],
       earningsByDate: [:],
       hoursByDate: [:],
@@ -134,7 +138,7 @@ struct ShiftsCalendarPresentation {
     jobs: [Job],
     currency: String,
     excludedFromTotalIds: Set<String>
-  ) -> ShiftsCalendarPresentation {
+  ) -> Self {
     let shiftsByDate = Dictionary(grouping: shifts, by: \.shiftDate)
     var earningsByDate: [String: CalendarEarningsData] = [:]
     var hoursByDate: [String: HoursData] = [:]
@@ -155,7 +159,7 @@ struct ShiftsCalendarPresentation {
         earningsByDate[date] = CalendarEarningsData(
           net: net,
           gross: gross,
-          hasTaxEnabled: includedShifts.contains { $0.taxEnabled }
+          hasTaxEnabled: includedShifts.contains(where: \.taxEnabled)
         )
       }
 
@@ -183,7 +187,7 @@ struct ShiftsCalendarPresentation {
       }
     }
 
-    return ShiftsCalendarPresentation(
+    return Self(
       shiftsByDate: shiftsByDate,
       earningsByDate: earningsByDate,
       hoursByDate: hoursByDate,
@@ -194,7 +198,7 @@ struct ShiftsCalendarPresentation {
         fallbackCurrency: currency
       ),
       jobsById: Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) }),
-      defaultJobId: jobs.first(where: { $0.is_default })?.id,
+      defaultJobId: jobs.first(where: \.is_default)?.id,
       hasMultipleActiveJobs: jobs.count > 1
     )
   }
@@ -297,11 +301,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     if displayedIndex < currentIndex {
       return .past
-    } else if displayedIndex == currentIndex {
-      return .current
-    } else {
-      return .future
     }
+    if displayedIndex == currentIndex {
+      return .current
+    }
+    return .future
   }
 
   /// User's currency for formatting
@@ -369,7 +373,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   @Published private(set) var existingShiftMonths: Set<DateComponents> = []
 
   /// Target month the user is trying to copy shifts to.
-  @Published private(set) var targetMonth: DateComponents = DateComponents()
+  @Published private(set) var targetMonth = DateComponents()  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
 
   /// Whether an event update is in progress
   private var isUpdatingEvent = false
@@ -684,7 +688,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       queue: .main
     ) { [weak self] notification in
       Task { @MainActor in
-        guard let self else { return }
+        guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
         if let sender = notification.object as AnyObject?, sender === self {
           return
         }
@@ -698,29 +702,29 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     monthContextCancellable = monthContext.monthChanged
       .receive(on: DispatchQueue.main)
       .sink { [weak self] newMonth in
-        guard let self = self else { return }
+        guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
         // Only reload if month actually changed
-        guard newMonth.year != self.lastObservedYear || newMonth.month != self.lastObservedMonth
+        guard newMonth.year != lastObservedYear || newMonth.month != lastObservedMonth
         else {
           return
         }
 
         // Update tracking
-        self.lastObservedYear = newMonth.year
-        self.lastObservedMonth = newMonth.month
+        lastObservedYear = newMonth.year
+        lastObservedMonth = newMonth.month
 
         // Sync navigation direction from context
-        self.navigationDirection = self.monthContext.navigationDirection
+        navigationDirection = monthContext.navigationDirection
 
-        guard self.isActiveTabVisible else {
-          self.displayedMonthLoadPending = true
+        guard isActiveTabVisible else {
+          displayedMonthLoadPending = true
           logger.info("⏸️ Deferring schedule month load while Schedule tab is hidden")
           return
         }
 
         // Trigger data reload for new month
-        self.loadShiftsForDisplayedMonthNonBlocking()
+        loadShiftsForDisplayedMonthNonBlocking()
       }
   }
 
@@ -901,7 +905,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         grouping: virtualExclusions,
         by: { $0.recurringId }
       ).mapValues { exclusions in
-        exclusions.map { $0.date }
+        exclusions.map(\.date)
       }
       let regularShiftIds = shiftsToDelete.filter { !$0.isVirtual }.map(\.id)
 
@@ -1177,7 +1181,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       return jobSnapshots
     }
 
-    let defaultJobId = activeJobs.first(where: { $0.is_default })?.id
+    let defaultJobId = activeJobs.first(where: \.is_default)?.id  // swiftlint:disable:this explicit_type_interface
     if defaultJobId == jobId {
       return snapshots.filter { $0.job_id == nil }
     }
@@ -1573,6 +1577,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       } else {
         changeContext = .fullReload
       }
+
     case .recurringOccurrence(_, let date):
       changeContext = .affecting(isoDate: date)
     }
@@ -1584,6 +1589,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
           id: shiftId,
           customPauseWindows: editResult.customPauseWindows
         )
+
       case .recurringOccurrence(let recurringId, let date):
         guard
           let recurringShift = recurringShifts.first(where: { $0.id == recurringId })
@@ -1746,31 +1752,31 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     // Start background fetch
     activeNavigationTask = Task { [weak self] in
-      guard let self = self else { return }
+      guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
       // Check if this task is still relevant
       guard !Task.isCancelled,
-        self.displayYear == targetYear,
-        self.displayMonth == targetMonth
+        displayYear == targetYear,
+        displayMonth == targetMonth
       else {
         logger.info("⏭️ Skipping stale fetch for \(displayKey)")
         return
       }
 
-      await self.loadShiftsForDisplayedMonth(
+      await loadShiftsForDisplayedMonth(
         showLoadingState: false, targetYear: targetYear, targetMonth: targetMonth)
 
       // Check again after fetch
       guard !Task.isCancelled,
-        self.displayYear == targetYear,
-        self.displayMonth == targetMonth
+        displayYear == targetYear,
+        displayMonth == targetMonth
       else {
         logger.info("⏭️ Skipping prefetch - user navigated during fetch")
         return
       }
 
       // Prefetch neighbors after successful load
-      self.prefetchNeighboringMonths()
+      prefetchNeighboringMonths()
     }
   }
 
@@ -1821,8 +1827,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // SwiftUI .refreshable can cancel the parent task when the view hierarchy changes.
     // Run refresh work in an unstructured task so sync can complete reliably.
     let refreshTask = Task { @MainActor [weak self] in
-      guard let self = self else { return }
-      await self.performRefresh()
+      guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      await performRefresh()
     }
 
     _ = await refreshTask.result
@@ -1895,8 +1901,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     let reloadID = UUID()
     let task: Task<Void, Never> = Task { @MainActor [weak self] in
-      guard let self else { return }
-      await self.performReloadFromLocal()
+      guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      await performReloadFromLocal()
     }
 
     localReloadTask = task
@@ -2144,9 +2150,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         return false
       }
 
-      let recurringSnapshot = recurringShifts
-      let snapshotsSnapshot = snapshots
-      let activeJobsSnapshot = activeJobs
+      let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
+      let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
+      let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
       let computedShifts = try await Self.computeShiftsForMonthOffMain(
         MonthComputationInput(
           year: displayYM.year,
@@ -2253,9 +2259,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         return
       }
 
-      let recurringSnapshot = recurringShifts
-      let snapshotsSnapshot = snapshots
-      let activeJobsSnapshot = activeJobs
+      let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
+      let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
+      let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
       let computedShifts = try await Self.computeShiftsForMonthOffMain(
         MonthComputationInput(
           year: displayYM.year,
@@ -2422,11 +2428,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     }
 
     prefetchTasks[key] = Task { [weak self] in
-      guard let self else { return }
-      defer { self.prefetchTasks.removeValue(forKey: key) }
+      guard let self else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      defer { prefetchTasks.removeValue(forKey: key) }
 
       guard let userId = cachedUserId,
-        let currentSettings = self.settings
+        let currentSettings = settings
       else {
         return
       }
@@ -2440,9 +2446,9 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         window: .visibleCalendarMonth(year: year, month: month)
       )
 
-      let recurringSnapshot = self.recurringShifts
-      let snapshotsSnapshot = self.snapshots
-      let activeJobsSnapshot = self.activeJobs
+      let recurringSnapshot = recurringShifts  // swiftlint:disable:this explicit_type_interface
+      let snapshotsSnapshot = snapshots  // swiftlint:disable:this explicit_type_interface
+      let activeJobsSnapshot = activeJobs  // swiftlint:disable:this explicit_type_interface
 
       do {
         try Task.checkCancellation()
@@ -2465,7 +2471,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         }
 
         // Store in full computed cache
-        self.monthCache[key] = MonthCacheEntry(
+        monthCache[key] = MonthCacheEntry(
           year: year,
           month: month,
           shifts: computedShifts,
@@ -2475,7 +2481,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         )
 
         // Evict old entries if needed
-        self.evictCacheIfNeeded()
+        evictCacheIfNeeded()
 
         logger.info("📦 Prefetched \(key): \(computedShifts.count) shifts (with payroll)")
       } catch is CancellationError {

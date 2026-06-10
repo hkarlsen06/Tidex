@@ -51,7 +51,7 @@ struct BillingToggle: View {
           .font(isSelected ? .tidexLabelStrong : .tidexLabel)
           .foregroundColor(isSelected ? .tidexTextPrimary : .tidexTextSecondary)
 
-        if let badge = badge {
+        if let badge {
           Text(badge)
             .font(.tidexMicro.bold())
             .foregroundColor(.tidexTextOnSuccess)

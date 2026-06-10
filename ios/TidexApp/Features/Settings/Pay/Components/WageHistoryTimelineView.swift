@@ -240,8 +240,10 @@ private struct TimelineEntryRow: View {
     switch entry.type {
     case .future:
       return .tidexTextMuted
+
     case .current:
       return .tidexBrandPrimary
+
     case .past:
       return .tidexBrandPrimary.opacity(0.6)
     }
@@ -283,6 +285,7 @@ private struct TimelineEntryRow: View {
     switch currencyConfig.display {
     case .prefix:
       return "\(currency)\(formatted)\(perHour)"
+
     case .suffix:
       return "\(formatted) \(currency)\(perHour)"
     }

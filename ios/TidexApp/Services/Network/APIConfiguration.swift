@@ -13,8 +13,10 @@ enum APIConfigurationError: Error, LocalizedError {
     switch self {
     case .missingSupabaseURL:
       return "SUPABASE_URL not found in Info.plist"
+
     case .invalidSupabaseURL(let urlString):
       return "Invalid SUPABASE_URL in Info.plist: \(urlString)"
+
     case .missingSupabaseAnonKey:
       return "SUPABASE_ANON_KEY not found in Info.plist"
     }

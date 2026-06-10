@@ -6,6 +6,11 @@ import WidgetKit
 // MARK: - Widget Entry
 
 struct TotalCardWidgetEntry: TimelineEntry {
+  private static let placeholderGross: Double = 15_000
+  private static let placeholderNet: Double = 12_500
+  private static let placeholderCompletedGross: Double = 9_000
+  private static let placeholderCompletedNet: Double = 7_500
+
   let date: Date
 
   // Display values
@@ -75,13 +80,13 @@ struct TotalCardWidgetEntry: TimelineEntry {
 
   // MARK: - Factory Methods
 
-  static func placeholder() -> TotalCardWidgetEntry {
-    TotalCardWidgetEntry(
+  internal static func placeholder() -> Self {
+    Self(
       date: Date(),
-      gross: 15000,
-      net: 12500,
-      completedGross: 9000,
-      completedNet: 7500,
+      gross: placeholderGross,
+      net: placeholderNet,
+      completedGross: placeholderCompletedGross,
+      completedNet: placeholderCompletedNet,
       shiftCount: 8,
       plannedCount: 3,
       totalHours: 64,
@@ -93,8 +98,8 @@ struct TotalCardWidgetEntry: TimelineEntry {
     )
   }
 
-  static func empty(currency: String = "kr") -> TotalCardWidgetEntry {
-    TotalCardWidgetEntry(
+  internal static func empty(currency: String = "kr") -> Self {
+    Self(
       date: Date(),
       gross: 0,
       net: nil,
@@ -127,15 +132,15 @@ struct TotalCardWidgetProvider: TimelineProvider {
     return UserDefaults(suiteName: appGroupId)
   }
 
-  func placeholder(in _: Context) -> TotalCardWidgetEntry {
+  internal func placeholder(in _: Context) -> TotalCardWidgetEntry {
     TotalCardWidgetEntry.placeholder()
   }
 
-  func getSnapshot(in _: Context, completion: @escaping (TotalCardWidgetEntry) -> Void) {
+  internal func getSnapshot(in _: Context, completion: (TotalCardWidgetEntry) -> Void) {
     completion(TotalCardWidgetEntry.placeholder())
   }
 
-  func getTimeline(in _: Context, completion: @escaping (Timeline<TotalCardWidgetEntry>) -> Void) {
+  internal func getTimeline(in _: Context, completion: (Timeline<TotalCardWidgetEntry>) -> Void) {
     let entry = createEntry()
 
     // Refresh every 15 minutes
@@ -227,6 +232,7 @@ struct TotalCardWidgetView: View {
     switch renderingMode {
     case .accented:
       return .primary
+
     default:
       return tidexBlue
     }
@@ -236,6 +242,7 @@ struct TotalCardWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return tidexTextSecondary
     }
@@ -245,6 +252,7 @@ struct TotalCardWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary
+
     default:
       return tidexTextMuted
     }
@@ -254,8 +262,10 @@ struct TotalCardWidgetView: View {
     switch renderingMode {
     case .accented:
       return .clear
+
     case .vibrant:
       return Color.black.opacity(0.4)
+
     default:
       return tidexWidgetBackground
     }
@@ -443,6 +453,7 @@ struct TotalCardWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .secondary.opacity(0.3)
+
     default:
       return mutedTextColor.opacity(0.3)
     }
@@ -452,6 +463,7 @@ struct TotalCardWidgetView: View {
     switch renderingMode {
     case .accented, .vibrant:
       return .primary
+
     default:
       return isLightMode ? .black : .white
     }
@@ -548,10 +560,10 @@ private struct StoredMonthlyTotals: Codable {
     // Case 1: Has future shifts AND real earned amount → "7 500 kr hittil"
     TotalCardWidgetEntry(
       date: Date(),
-      gross: 15000,
-      net: 12500,
-      completedGross: 9000,
-      completedNet: 7500,
+      gross: 15_000,
+      net: 12_500,
+      completedGross: 9_000,
+      completedNet: 7_500,
       shiftCount: 8,
       plannedCount: 3,
       totalHours: 64,
@@ -564,10 +576,10 @@ private struct StoredMonthlyTotals: Codable {
     // Case 2: No future shifts, tax enabled → "12 000 kr før skatt"
     TotalCardWidgetEntry(
       date: Date(),
-      gross: 12000,
-      net: 10000,
-      completedGross: 12000,
-      completedNet: 10000,
+      gross: 12_000,
+      net: 10_000,
+      completedGross: 12_000,
+      completedNet: 10_000,
       shiftCount: 5,
       plannedCount: 0,
       totalHours: 40,
@@ -580,9 +592,9 @@ private struct StoredMonthlyTotals: Codable {
     // Case 3: No future shifts, no tax → "5 vakter"
     TotalCardWidgetEntry(
       date: Date(),
-      gross: 12000,
+      gross: 12_000,
       net: nil,
-      completedGross: 12000,
+      completedGross: 12_000,
       completedNet: nil,
       shiftCount: 5,
       plannedCount: 0,
@@ -596,7 +608,7 @@ private struct StoredMonthlyTotals: Codable {
     // Case 4: Future shifts, no earnings yet → "3 vakter planlagt"
     TotalCardWidgetEntry(
       date: Date(),
-      gross: 5000,
+      gross: 5_000,
       net: nil,
       completedGross: 0,
       completedNet: nil,

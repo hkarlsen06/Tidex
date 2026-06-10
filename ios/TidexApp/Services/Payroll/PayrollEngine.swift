@@ -114,7 +114,7 @@ struct PayrollEngine {
     let context = ComputationContext(
       fallbackPayrollDay: fallbackPayrollDay,
       jobsById: Dictionary(uniqueKeysWithValues: request.jobs.map { ($0.id, $0) }),
-      defaultJobId: request.jobs.first(where: { $0.is_default })?.id,
+      defaultJobId: request.jobs.first(where: \.is_default)?.id,
       snapshotsByJobId: snapshotsByJobId,
       legacyNilJobSnapshots: snapshotsByJobId[nil] ?? []
     )
@@ -151,7 +151,7 @@ struct PayrollEngine {
 
         for virtual in virtualShifts {
           // Filter to visible date range
-          guard virtual.date >= startDate && virtual.date <= endDate else { continue }
+          guard virtual.date >= startDate, virtual.date <= endDate else { continue }
 
           // Skip if we already added this virtual shift (from another month generation)
           let virtualId = "virtual-\(recurringShift.id)-\(virtual.date)"

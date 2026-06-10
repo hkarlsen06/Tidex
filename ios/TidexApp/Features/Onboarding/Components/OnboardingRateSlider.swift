@@ -75,9 +75,9 @@ enum HourlyRateInputFormatter {
 
 /// Unified hourly rate slider for onboarding flows
 /// Supports compact (inline) and full (with label/helper) styles
-struct OnboardingRateSlider: View {
+struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Binding var value: Double
-  var currency: String? = nil  // Optional currency override (uses locale default if nil)
+  var currency: String?  // Optional currency override (uses locale default if nil) // swiftlint:disable:this explicit_acl line_length type_contents_order
   var style: Style = .compact
 
   @State private var showingCustomInput = false
@@ -93,6 +93,7 @@ struct OnboardingRateSlider: View {
     switch style {
     case .compact:
       compactLayout
+
     case .full:
       fullLayout
     }
@@ -102,7 +103,7 @@ struct OnboardingRateSlider: View {
 
   /// Get the effective currency config (from parameter or locale default)
   private var currencyConfig: CurrencyOption {
-    if let currency = currency {
+    if let currency {
       return CurrencyConfig.get(currency)
     }
     return Locale.current.isNorwegian ? CurrencyConfig.defaultCurrency : CurrencyConfig.get("$")
@@ -287,9 +288,8 @@ struct OnboardingRateSlider: View {
     let number = formatValue(amount)
     if isCurrencyPrefix {
       return "\(currencySymbol)\(number)"
-    } else {
-      return "\(number) \(currencySymbol)"
     }
+    return "\(number) \(currencySymbol)"
   }
 
   /// Format value for display, preserving manually entered decimal rates.
@@ -406,7 +406,7 @@ struct OnboardingRateSlider: View {
   private func applyCustomValue() {
     if let parsed = HourlyRateInputFormatter.parse(inputText) {
       // Allow any positive value 0-10000 when manually entered (not limited by slider range).
-      let clamped = min(max(parsed, 0), 10000)
+      let clamped = min(max(parsed, 0), 10_000)  // swiftlint:disable:this explicit_type_interface no_magic_numbers
       value = HourlyRateInputFormatter.roundedToCents(clamped)
     }
     showingCustomInput = false

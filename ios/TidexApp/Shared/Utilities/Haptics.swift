@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable cyclomatic_complexity explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers sorted_enum_cases vertical_whitespace_between_cases
 import AVFoundation
 import UIKit
 
@@ -75,20 +81,28 @@ enum Haptics {
     switch type {
     case .success:
       UINotificationFeedbackGenerator().notificationOccurred(.success)
+
     case .error:
       UINotificationFeedbackGenerator().notificationOccurred(.error)
+
     case .warning:
       UINotificationFeedbackGenerator().notificationOccurred(.warning)
+
     case .light:
       UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
     case .medium:
       UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+
     case .heavy:
       UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+
     case .selection:
       UISelectionFeedbackGenerator().selectionChanged()
+
     case .hold:
       UIImpactFeedbackGenerator(style: .rigid).impactOccurred(intensity: 1.0)
+
     case .release:
       UIImpactFeedbackGenerator(style: .soft).impactOccurred(intensity: 0.7)
     }

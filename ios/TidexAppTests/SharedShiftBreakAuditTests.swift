@@ -48,9 +48,9 @@ final class SharedShiftBreakAuditTests: XCTestCase {
         id: "shared-shift-1",
         durationHours: 8,
         paidHours: 7.5,
-        basePay: 1000,
+        basePay: 1_000,
         supplementPay: 200,
-        gross: 1200,
+        gross: 1_200,
         breakAudit: SharedBreakAudit(
           method: .none,
           thresholdHours: 0,

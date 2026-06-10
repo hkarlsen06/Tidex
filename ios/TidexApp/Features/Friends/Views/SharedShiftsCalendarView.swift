@@ -3,14 +3,15 @@ import UIKit
 
 /// Read-only calendar view for shared shifts
 /// Matches the visual style of ShiftsCalendarView but without selection/editing features
-struct SharedShiftsCalendarView: View {
+internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type_body_length
   @ObservedObject private var appearanceManager = AppearanceManager.shared
 
   let shifts: [ShiftWithComputations]
   let jobs: [SharedJob]
   let year: Int
   let month: Int  // 1-12
-  var phase: MonthTransitionPhase? = nil
+  // swiftlint:disable:next explicit_acl type_contents_order
+  var phase: MonthTransitionPhase?
   let currency: String
   let showEarnings: Bool
   let friendFirstName: String
@@ -36,7 +37,8 @@ struct SharedShiftsCalendarView: View {
   /// Callback when a shift is tapped (for showing details)
   var onShiftTapped: ((ShiftWithComputations) -> Void)?
 
-  @State private var viewMode: CalendarViewMode = CalendarViewMode.load()
+  // swiftlint:disable:next explicit_type_interface type_contents_order
+  @State private var viewMode = CalendarViewMode.load()
   @State private var selectedDates: Set<String> = []
   @State private var selectedEarningsByDate: [String: CalendarEarningsData] = [:]
   private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -84,7 +86,7 @@ struct SharedShiftsCalendarView: View {
 
       guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
       let components = calendar.dateComponents([.year, .month], from: date)
-      guard components.year == year && components.month == month else { continue }
+      guard components.year == year, components.month == month else { continue }
 
       monthlyGross += shift.grossPay
       monthlyNet += net
@@ -555,7 +557,7 @@ struct SharedShiftsCalendarView: View {
     let shiftsForDay = metrics.shiftsByDate[dateISO] ?? []
     guard !shiftsForDay.isEmpty else { return }
 
-    if showEarnings && !isSuperimposing {
+    if showEarnings, !isSuperimposing {
       if selectedDates.contains(dateISO) {
         selectedDates.remove(dateISO)
         selectedEarningsByDate.removeValue(forKey: dateISO)
@@ -637,7 +639,8 @@ struct SharedShiftsCalendarView: View {
         )
       }
       return .earningsBreakdown(earnings)
-    } else if effectiveViewMode == .hours, let hoursData = metrics.hoursByDate[dateISO] {
+    }
+    if effectiveViewMode == .hours, let hoursData = metrics.hoursByDate[dateISO] {
       if shouldColorJobMetrics, let dayJobTimeColors {
         return .hours(
           hoursData,
@@ -717,11 +720,12 @@ struct SharedShiftsCalendarView: View {
   SharedShiftsCalendarView(
     shifts: [],
     jobs: [],
-    year: 2025,
+    year: 2_025,
     month: 1,
     currency: "kr",
     showEarnings: true,
     friendFirstName: "Alex"
   )
   .background(Color.tidexBackground)
+  // swiftlint:disable:next file_length
 }

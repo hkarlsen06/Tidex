@@ -12,16 +12,16 @@ struct RecurringShiftEditorSheet: View {
 
   // MARK: - Edit State
 
-  @State private var editedStartTime: Date? = nil
-  @State private var editedEndTime: Date? = nil
+  @State private var editedStartTime: Date?
+  @State private var editedEndTime: Date?
   @State private var editedRepeatInterval: Int = 0
   @State private var editedSelectedDays: SelectedDays = [:]
-  @State private var editedEndCondition: EndCondition? = nil
+  @State private var editedEndCondition: EndCondition?
   @State private var editedExclusions: [String] = []
 
   // MARK: - Calendar Display State
 
-  @State private var displayMonth: Date = Date()
+  @State private var displayMonth = Date()  // swiftlint:disable:this explicit_type_interface
   @State private var navigationDirection: MonthNavigationDirection?
 
   // MARK: - UI State

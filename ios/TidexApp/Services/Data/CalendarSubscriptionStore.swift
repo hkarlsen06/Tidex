@@ -200,12 +200,16 @@ enum CalendarSubscriptionStoreError: Error, LocalizedError, Equatable {
     switch self {
     case .operationInProgress:
       return String(localized: .calendarSubscriptionErrorOperationInProgress)
+
     case .noActiveSubscription:
       return String(localized: .calendarSubscriptionErrorNoActive)
+
     case .missingLocalToken:
       return String(localized: .calendarSubscriptionErrorMissingToken)
+
     case .invalidURL:
       return String(localized: .calendarSubscriptionErrorInvalidUrl)
+
     case .subscriptionAlreadyActive:
       return String(localized: .calendarSubscriptionErrorAlreadyActive)
     }

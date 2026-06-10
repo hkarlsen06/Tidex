@@ -53,7 +53,8 @@ final class FriendsThreadViewModel: ObservableObject {
   }
 
   private enum MessageBody {
-    static let characterLimit = 5000
+    // swiftlint:disable:next explicit_type_interface
+    static let characterLimit = 5_000
   }
 
   private enum VisibleReadTracking {
@@ -69,8 +70,10 @@ final class FriendsThreadViewModel: ObservableObject {
       switch self {
       case .normal:
         return .normal
+
       case .reply:
         return .reply
+
       case .edit:
         return .edit
       }
@@ -132,8 +135,10 @@ final class FriendsThreadViewModel: ObservableObject {
       switch self {
       case .missingCounterpart:
         return "Missing counterpart user"
+
       case .missingPendingAttachment:
         return String(localized: .friendsChatSendFailed)
+
       case .offlineServerAction:
         return String(localized: .friendsChatWaitingForNetwork)
       }
@@ -384,7 +389,7 @@ final class FriendsThreadViewModel: ObservableObject {
       guard let self else { return }
       try? await Task.sleep(for: VisibleReadTracking.debounceDelay)
       guard !Task.isCancelled else { return }
-      await self.markVisibleMessagesReadIfNeeded()
+      await markVisibleMessagesReadIfNeeded()
     }
   }
 
@@ -634,7 +639,7 @@ final class FriendsThreadViewModel: ObservableObject {
         guard let self else { return }
         try? await Task.sleep(for: Typing.remoteTimeout)
         guard !Task.isCancelled else { return }
-        self.resetCounterpartTypingState()
+        resetCounterpartTypingState()
       }
     } else {
       if pendingNotificationTypingUserId == normalizedUserId {
@@ -644,7 +649,7 @@ final class FriendsThreadViewModel: ObservableObject {
         guard let self else { return }
         try? await Task.sleep(for: Typing.remoteStopGraceDelay)
         guard !Task.isCancelled else { return }
-        self.resetCounterpartTypingState()
+        resetCounterpartTypingState()
       }
     }
   }
@@ -730,6 +735,7 @@ final class FriendsThreadViewModel: ObservableObject {
         )
         loadFromCache()
         return true
+
       case .failure(let error):
         if isConnectivityError(error) {
           await repository.updateMessageSendState(
@@ -972,8 +978,9 @@ final class FriendsThreadViewModel: ObservableObject {
       guard let self else { return }
 
       do {
-        let refreshedStates = try await self.service.listThreadStates(threadId: self.route.threadId)
-        await self.saveThreadStates(refreshedStates)
+        // swiftlint:disable:next explicit_type_interface
+        let refreshedStates = try await service.listThreadStates(threadId: route.threadId)
+        await saveThreadStates(refreshedStates)
       } catch is CancellationError {
         return
       } catch {
@@ -996,7 +1003,7 @@ final class FriendsThreadViewModel: ObservableObject {
         }
 
         guard !Task.isCancelled else { return }
-        guard SensitiveContentPresentationState.shared.activeFriendThreadId == self.route.threadId
+        guard SensitiveContentPresentationState.shared.activeFriendThreadId == route.threadId
         else {
           continue
         }
@@ -1004,7 +1011,7 @@ final class FriendsThreadViewModel: ObservableObject {
           continue
         }
 
-        await self.refreshFromServer()
+        await refreshFromServer()
       }
     }
   }
@@ -1147,12 +1154,14 @@ final class FriendsThreadViewModel: ObservableObject {
     switch composerState {
     case .normal:
       break
+
     case .reply(let message):
       guard let refreshedMessage = messageForComposerContext(matching: message) else {
         composerState = .normal
         return
       }
       composerState = .reply(refreshedMessage)
+
     case .edit(let message):
       guard let refreshedMessage = messageForComposerContext(matching: message),
         refreshedMessage.canEdit(viewerUserId: viewerUserId)
@@ -1203,11 +1212,13 @@ final class FriendsThreadViewModel: ObservableObject {
     switch state {
     case .normal:
       return .normal
+
     case .reply(let message):
       guard let refreshedMessage = messageForComposerContext(matching: message) else {
         return .normal
       }
       return .reply(refreshedMessage)
+
     case .edit(let message):
       guard let refreshedMessage = messageForComposerContext(matching: message),
         refreshedMessage.canEdit(viewerUserId: viewerUserId)
@@ -1315,7 +1326,7 @@ final class FriendsThreadViewModel: ObservableObject {
       guard let self else { return }
       try? await Task.sleep(for: Typing.idleStopDelay)
       guard !Task.isCancelled else { return }
-      await self.stopTypingIfNeeded()
+      await stopTypingIfNeeded()
     }
   }
 
@@ -1331,14 +1342,16 @@ final class FriendsThreadViewModel: ObservableObject {
 
     localTypingPushTask = Task { @MainActor [weak self] in
       guard let self else { return }
-      defer { self.localTypingPushTask = nil }
+      defer { localTypingPushTask = nil }
 
       try? await Task.sleep(for: Typing.pushEscalationDelay)
       guard !Task.isCancelled else { return }
-      guard !self.isThreadReadOnly, self.composerMode != .edit else { return }
-      guard !self.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+      // swiftlint:disable:next conditional_returns_on_newline
+      guard !isThreadReadOnly, composerMode != .edit else { return }
+      // swiftlint:disable:next conditional_returns_on_newline
+      guard !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 
-      await self.queueTypingNotificationIfNeeded()
+      await queueTypingNotificationIfNeeded()
     }
   }
 
@@ -1475,17 +1488,19 @@ final class FriendsThreadViewModel: ObservableObject {
         guard let self else { return }
 
         defer {
-          self.loadingQuotedMessageIds.remove(messageId)
+          loadingQuotedMessageIds.remove(messageId)
         }
 
         do {
-          let quotedMessage = try await self.service.fetchMessageSyncPayloadV2(messageId: messageId)
-          guard quotedMessage.threadId == self.route.threadId else { return }
+          // swiftlint:disable:next explicit_type_interface
+          let quotedMessage = try await service.fetchMessageSyncPayloadV2(messageId: messageId)
+          // swiftlint:disable:next conditional_returns_on_newline
+          guard quotedMessage.threadId == route.threadId else { return }
           guard quotedMessage.deletedAt == nil else {
-            self.quotedMessagesById.removeValue(forKey: messageId)
+            quotedMessagesById.removeValue(forKey: messageId)
             return
           }
-          self.quotedMessagesById[messageId] = quotedMessage
+          quotedMessagesById[messageId] = quotedMessage
         } catch {
           threadLogger.error(
             "Failed to fetch quoted message \(messageId): \(error.localizedDescription)")
@@ -1593,6 +1608,7 @@ final class FriendsThreadViewModel: ObservableObject {
           for: viewerUserId
         )
         loadFromCache()
+
       case .failure(let error):
         let sendState: FriendMessageSendState = isConnectivityError(error) ? .sending : .failed
         let failureMessage =
@@ -1729,6 +1745,7 @@ final class FriendsThreadViewModel: ObservableObject {
       switch serviceError {
       case .networkError:
         return true
+
       case .notAuthenticated, .decodingError, .httpError:
         return false
       }

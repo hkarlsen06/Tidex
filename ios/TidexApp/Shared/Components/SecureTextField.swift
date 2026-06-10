@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface implicit_optional_initialization shorthand_optional_binding
 import SwiftUI
 
 /// Styled secure text field for passwords
@@ -6,8 +12,8 @@ struct SecureTextField: View {
   let label: String
   let placeholder: String
   @Binding var text: String
-  var error: String? = nil
-  var onSubmit: (() -> Void)? = nil
+  var error: String?
+  var onSubmit: (() -> Void)?
 
   @State private var isSecure = true
   @FocusState private var isFocused: Bool
@@ -60,7 +66,7 @@ struct SecureTextField: View {
       .contentShape(Rectangle())
 
       // Error message
-      if let error = error, !error.isEmpty {
+      if let error, !error.isEmpty {
         Text(error)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)

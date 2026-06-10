@@ -54,8 +54,8 @@ struct FriendShiftWidgetEntry: TimelineEntry {
   // MARK: - Factory Methods
 
   /// Placeholder entry for widget gallery and loading states
-  static func placeholder() -> FriendShiftWidgetEntry {
-    FriendShiftWidgetEntry(
+  internal static func placeholder() -> Self {
+    Self(
       date: Date(),
       friendId: "placeholder",
       friendName: String(localized: .widgetFriend),
@@ -80,15 +80,15 @@ struct FriendShiftWidgetEntry: TimelineEntry {
     friendName: String,
     friendInitials: String,
     currency: String? = nil
-  ) -> FriendShiftWidgetEntry {
+  ) -> Self {
     let emptyEarnings: String
-    if let currency = currency {
+    if let currency {
       emptyEarnings = WidgetCurrencyFormatter.formatEmpty(currency: currency)
     } else {
       emptyEarnings = "---"
     }
 
-    return FriendShiftWidgetEntry(
+    return Self(
       date: Date(),
       friendId: friendId,
       friendName: friendName,
@@ -108,8 +108,8 @@ struct FriendShiftWidgetEntry: TimelineEntry {
   }
 
   /// No friend selected - prompt to configure widget
-  static func noFriendSelected() -> FriendShiftWidgetEntry {
-    FriendShiftWidgetEntry(
+  internal static func noFriendSelected() -> Self {
+    Self(
       date: Date(),
       friendId: "",
       friendName: "",

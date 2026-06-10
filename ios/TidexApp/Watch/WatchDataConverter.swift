@@ -91,6 +91,7 @@ enum WatchDataConverter {
         if activeShift == nil {
           activeShift = (shift, shiftDate)
         }
+
       case .upcoming:
         // Keep the earliest upcoming shift
         if let existing = upcomingShift, shiftDate < existing.date {
@@ -98,6 +99,7 @@ enum WatchDataConverter {
         } else if upcomingShift == nil {
           upcomingShift = (shift, shiftDate)
         }
+
       case .past:
         // Keep the most recent past shift
         if let existing = pastShift, shiftDate > existing.date {
@@ -269,7 +271,7 @@ enum WatchDataConverter {
       }
 
       for await dto in group {
-        if let dto = dto {
+        if let dto {
           friendShifts.append(dto)
         }
       }
@@ -295,7 +297,7 @@ enum WatchDataConverter {
   /// - Parameter urlString: The URL string of the avatar image
   /// - Returns: JPEG data or nil if download/conversion fails
   private nonisolated static func downloadAvatar(from urlString: String?) async -> Data? {
-    guard let urlString = urlString,
+    guard let urlString,
       !urlString.isEmpty,
       let url = URL(string: urlString)
     else {
@@ -427,13 +429,13 @@ enum WatchDataConverter {
     }
 
     // Determine status
-    if now >= shiftStart && now < shiftEnd {
+    if now >= shiftStart, now < shiftEnd {
       return .active
-    } else if now < shiftStart {
-      return .upcoming
-    } else {
-      return .past
     }
+    if now < shiftStart {
+      return .upcoming
+    }
+    return .past
   }
 
   /// Sort priority (lower = higher priority)

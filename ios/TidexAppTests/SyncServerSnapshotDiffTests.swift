@@ -272,7 +272,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       sortOrder: 0,
       payrollDay: 25,
       halfTaxMonth: 12,
-      monthlyGoal: 30000,
+      monthlyGoal: 30_000,
       archivedAt: nil,
       deletedAt: nil,
       updatedAt: timestamp,
@@ -287,7 +287,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       sortOrder: 0,
       payrollDay: 20,
       halfTaxMonth: 12,
-      monthlyGoal: 30000,
+      monthlyGoal: 30_000,
       archivedAt: timestamp,
       deletedAt: nil,
       updatedAt: timestamp,
@@ -304,8 +304,8 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
 
     let original = UserSettingsServerSnapshot(
-      monthlyGoal: 20000,
-      monthlyGoalsByMonth: ["2026-03": 25000],
+      monthlyGoal: 20_000,
+      monthlyGoalsByMonth: ["2026-03": 25_000],
       defaultShiftsView: "calendar",
       profilePictureUrl: nil,
       payrollDay: 25,
@@ -322,8 +322,8 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     )
 
     let updated = UserSettingsServerSnapshot(
-      monthlyGoal: 22000,
-      monthlyGoalsByMonth: ["2026-03": 26000],
+      monthlyGoal: 22_000,
+      monthlyGoalsByMonth: ["2026-03": 26_000],
       defaultShiftsView: "list",
       profilePictureUrl: nil,
       payrollDay: 25,

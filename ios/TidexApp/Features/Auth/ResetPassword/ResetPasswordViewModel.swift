@@ -144,8 +144,10 @@ final class ResetPasswordViewModel: ObservableObject {
       switch inputType {
       case .email:
         _ = try await authService.verifyPasswordResetOTP(email: emailOrPhone, token: otpCode)
+
       case .phone:
         _ = try await authService.verifyPasswordResetOTP(phone: normalizedPhone, token: otpCode)
+
       case .unknown:
         fieldErrors.otp = String(localized: .otpErrorsCodeInvalid)
         return
@@ -189,9 +191,11 @@ final class ResetPasswordViewModel: ObservableObject {
     case .input, .success:
       // Already at start or end
       break
+
     case .otp:
       otpCode = ""
       currentStep = .input
+
     case .newPassword:
       newPassword = ""
       confirmPassword = ""
@@ -216,9 +220,11 @@ final class ResetPasswordViewModel: ObservableObject {
       case .email:
         try await authService.sendPasswordResetEmail(email: emailOrPhone)
         successMessage = String(localized: .resetPasswordSuccessEmailSent)
+
       case .phone:
         try await authService.sendPasswordResetOTP(phone: normalizedPhone)
         successMessage = String(localized: .resetPasswordSuccessOtpResent)
+
       case .unknown:
         fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsInvalidEmailOrPhone)
       }

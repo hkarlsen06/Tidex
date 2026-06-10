@@ -121,7 +121,7 @@ enum WageTimelineProcessor {
 
   /// Calculate the end date for a snapshot (one day before the next snapshot starts)
   private static func calculateEndDate(
-    for snapshot: WageSnapshot,
+    for _: WageSnapshot,
     previousSnapshot: WageSnapshot?
   ) -> String? {
     guard let previousFromDate = previousSnapshot?.from_date else { return nil }
@@ -150,9 +150,9 @@ enum WageTimelineProcessor {
     let nowText = String(localized: .commonNow)
 
     // Baseline with no date
-    guard let fromDate = fromDate else {
+    guard let fromDate else {
       // If baseline has an end date and is past, show "- {endDate}"
-      if let endDate = endDate, isPast {
+      if let endDate, isPast {
         let formattedEnd = formatDate(endDate, locale: locale)
         return "- \(formattedEnd)"
       }
@@ -164,12 +164,12 @@ enum WageTimelineProcessor {
 
     if isCurrent {
       return "\(formattedFrom) - \(nowText)"
-    } else if let endDate = endDate {
+    }
+    if let endDate {
       let formattedEnd = formatDate(endDate, locale: locale)
       return "\(formattedFrom) - \(formattedEnd)"
-    } else {
-      return formattedFrom
     }
+    return formattedFrom
   }
 
   /// Format a single date, hiding year if it's the current year
@@ -197,13 +197,13 @@ enum WageTimelineProcessor {
   }
 
   /// Detect what changed between two consecutive snapshots
-  private static func detectChanges(
+  private static func detectChanges(  // swiftlint:disable:this cyclomatic_complexity function_body_length
     current: WageSnapshot,
     previous: WageSnapshot?,
     locale: Locale,
     currency: String
   ) -> [WageChange] {
-    guard let previous = previous else { return [] }
+    guard let previous else { return [] }  // swiftlint:disable:this conditional_returns_on_newline
 
     var changes: [WageChange] = []
 
@@ -230,13 +230,13 @@ enum WageTimelineProcessor {
 
     // Tariff level change
     if current.wage_level != previous.wage_level {
-      if current.wage_level == nil && previous.wage_level != nil {
+      if current.wage_level == nil, previous.wage_level != nil {
         changes.append(
           WageChange(
             description: String(localized: .timelineSwitchedToCustom),
             type: .tariffLevel
           ))
-      } else if current.wage_level != nil && previous.wage_level == nil {
+      } else if current.wage_level != nil, previous.wage_level == nil {
         changes.append(
           WageChange(
             description: String(localized: .timelineSwitchedToTariff),
@@ -261,8 +261,8 @@ enum WageTimelineProcessor {
             : String(localized: .timelineTaxDisabled),
           type: .tax
         ))
-    } else if current.effectiveTaxEnabled
-      && current.effectiveTaxPercentage != previous.effectiveTaxPercentage
+    } else if current.effectiveTaxEnabled,
+      current.effectiveTaxPercentage != previous.effectiveTaxPercentage
     {
       changes.append(
         WageChange(
@@ -283,7 +283,7 @@ enum WageTimelineProcessor {
             : String(localized: .timelineBreakDisabled),
           type: .breaks
         ))
-    } else if current.effectiveBreakEnabled && current.breakMethod != previous.breakMethod {
+    } else if current.effectiveBreakEnabled, current.breakMethod != previous.breakMethod {
       changes.append(
         WageChange(
           description: String(localized: .timelineBreakMethodChanged),
@@ -319,6 +319,7 @@ enum WageTimelineProcessor {
     switch currencyConfig.display {
     case .prefix:
       return "\(currency)\(amount)\(perHour)"
+
     case .suffix:
       return "\(amount) \(currency)\(perHour)"
     }

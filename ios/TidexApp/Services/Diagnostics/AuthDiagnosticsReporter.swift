@@ -197,10 +197,13 @@ final class AuthDiagnosticsReporter {
     switch UIApplication.shared.applicationState {
     case .active:
       return "active"
+
     case .inactive:
       return "inactive"
+
     case .background:
       return "background"
+
     @unknown default:
       return "unknown"
     }

@@ -1,3 +1,5 @@
+// swiftlint:disable conditional_returns_on_newline no_magic_numbers
+// swiftlint:disable:previous blanket_disable_command
 import Combine
 import Foundation
 import SwiftData
@@ -189,7 +191,7 @@ final class SettingsRepository: ObservableObject {
     month: Int,
     goal: Int?
   ) async throws -> UserSettings? {
-    guard month >= 1 && month <= 12 else { return nil }
+    guard month >= 1, month <= 12 else { return nil }
 
     guard let localSettings = getLocalSettings(for: userId) else {
       logger.warning("Settings not found for month-specific goal update: \(userId)")

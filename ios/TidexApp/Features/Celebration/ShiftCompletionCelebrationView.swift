@@ -266,8 +266,8 @@ private struct CelebrationCountUpText: View {
 #Preview {
   ShiftCompletionCelebrationView(
     data: CelebrationData(
-      previousDisplayValue: 12000,
-      newDisplayValue: 16500,
+      previousDisplayValue: 12_000,
+      newDisplayValue: 16_500,
       featuredShift: ShiftWithComputations(
         shift: ShiftRow(
           id: "preview",
@@ -282,9 +282,9 @@ private struct CelebrationCountUpText: View {
           id: "preview",
           durationHours: 8,
           paidHours: 7.5,
-          basePay: 1200,
+          basePay: 1_200,
           supplementPay: 200,
-          gross: 1400,
+          gross: 1_400,
           wagePeriods: [],
           originalWagePeriods: [],
           breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
@@ -294,7 +294,7 @@ private struct CelebrationCountUpText: View {
       ),
       completedShiftCount: 3,
       currency: "kr",
-      animateFrom: 12000
+      animateFrom: 12_000
     ),
     onDismiss: {}
   )

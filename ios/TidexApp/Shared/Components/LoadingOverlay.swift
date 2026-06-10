@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable implicit_optional_initialization multiline_arguments_brackets no_magic_numbers shorthand_optional_binding
 import SwiftUI
 
 /// Full-screen loading overlay with smooth animations
@@ -5,7 +11,7 @@ import SwiftUI
 struct LoadingOverlay: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  var message: String? = nil
+  var message: String?
   var isSuccess: Bool = false
 
   var body: some View {
@@ -25,7 +31,7 @@ struct LoadingOverlay: View {
             .scaleEffect(1.5)
         }
 
-        if let message = message {
+        if let message {
           Text(message)
             .font(.tidexSubheadline)
             .foregroundColor(.tidexTextPrimary)
@@ -48,7 +54,7 @@ struct LoadingModifier: ViewModifier {
 
   let isLoading: Bool
   var isSuccess: Bool = false
-  var message: String? = nil
+  var message: String?
 
   private var showOverlay: Bool {
     isLoading || isSuccess

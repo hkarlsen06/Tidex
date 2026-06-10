@@ -374,11 +374,11 @@ struct ProfileSettingsView: View {
   private var uploadButtonText: String {
     if viewModel.isUploadingAvatar {
       return String(localized: .profilePersonalInfoUploadingImage)
-    } else if viewModel.profilePictureUrl != nil {
-      return String(localized: .profilePersonalInfoChangeImage)
-    } else {
-      return String(localized: .profilePersonalInfoUploadImage)
     }
+    if viewModel.profilePictureUrl != nil {
+      return String(localized: .profilePersonalInfoChangeImage)
+    }
+    return String(localized: .profilePersonalInfoUploadImage)
   }
 
   private var avatarSection: some View {
@@ -939,7 +939,7 @@ struct ProfileSettingsView: View {
   // MARK: - Photo Selection Handler
 
   private func handlePhotoSelection(_ item: PhotosPickerItem?) async {
-    guard let item = item else { return }
+    guard let item else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
     do {
       // Load the image data

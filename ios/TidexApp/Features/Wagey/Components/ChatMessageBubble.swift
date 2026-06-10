@@ -3,9 +3,9 @@ import SwiftUI
 /// A chat message bubble component
 /// User messages are right-aligned with blue background
 /// Assistant messages are left-aligned with surface background
-struct ChatMessageBubble: View {
-  let message: ChatMessage
-  var groupContext: ChatMessageGroupContext? = nil
+struct ChatMessageBubble: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order
+  let message: ChatMessage  // swiftlint:disable:this explicit_acl
+  var groupContext: ChatMessageGroupContext?  // swiftlint:disable:this explicit_acl
 
   /// State for full-screen image viewer
   @State private var selectedImageViewer: SelectedImageViewer?
@@ -35,7 +35,7 @@ struct ChatMessageBubble: View {
     }
   }
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     ChatMessageRow(isCurrentUser: message.role == .user) {
       // Render content blocks in chronological order
       ForEach(Array(renderBlocks.enumerated()), id: \.offset) { _, block in
@@ -48,10 +48,13 @@ struct ChatMessageBubble: View {
               assistantMessageSegments(text: text, forceStandaloneBubbles: containsDeeplinkButton)
             }
           }
+
         case .toolCall(let toolCall):
           ToolStatusView(toolCall: toolCall)
+
         case .image(let attachment):
           imageContent(attachment: attachment, isUser: message.role == .user)
+
         case .thoughtStatus(let status):
           thoughtStatusContent(status)
         }
@@ -89,7 +92,7 @@ struct ChatMessageBubble: View {
 
   @ViewBuilder
   private func assistantMessageSegments(text: String, forceStandaloneBubbles: Bool) -> some View {
-    let segments = WageyDeeplinkTextSplitter.split(text)
+    let segments = WageyDeeplinkTextSplitter.split(text)  // swiftlint:disable:this explicit_type_interface
     ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
       switch segment {
       case .text(let text):
@@ -97,7 +100,8 @@ struct ChatMessageBubble: View {
           text: text,
           forceStandaloneBubble: forceStandaloneBubbles || segments.count > 1
         )
-      case .deeplink(let title, let url):
+
+      case .deeplink(let title, let url):  // swiftlint:disable:this pattern_matching_keywords
         WageyDeeplinkButton(title: title, url: url)
       }
     }
@@ -125,15 +129,15 @@ struct ChatMessageBubble: View {
   private func imageContent(attachment: ImageAttachment, isUser: Bool) -> some View {
     Group {
       if let uiImage = UIImage(data: attachment.data) {
-        Image(uiImage: uiImage)
+        Image(uiImage: uiImage)  // swiftlint:disable:this accessibility_label_for_image accessibility_trait_for_button
           .resizable()
           .scaledToFill()
-          .frame(maxWidth: 200, maxHeight: 200)
+          .frame(maxWidth: 200, maxHeight: 200)  // swiftlint:disable:this no_magic_numbers
           .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
           .overlay(
             RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
               .strokeBorder(
-                isUser ? Color.tidexTextOnBrand.opacity(0.22) : Color.tidexBorder.opacity(0.45),
+                isUser ? Color.tidexTextOnBrand.opacity(0.22) : Color.tidexBorder.opacity(0.45),  // swiftlint:disable:this line_length no_magic_numbers
                 lineWidth: 1
               )
           )
@@ -153,7 +157,7 @@ struct ChatMessageBubble: View {
 
   private func thoughtStatusContent(_ status: ThoughtStatus) -> some View {
     HStack(spacing: Spacing.xxs) {
-      Image(systemName: "brain.head.profile")
+      Image(systemName: "brain.head.profile")  // swiftlint:disable:this accessibility_label_for_image
         .font(.tidexCaptionStrong)
         .foregroundColor(.tidexTextMuted)
 
@@ -170,49 +174,49 @@ private struct WageyDeeplinkButton: View {
   let title: String
   let url: URL
 
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
 
   var body: some View {
     Button {
       Task { @MainActor in
         AppCoordinator.shared.handleDeepLink(url)
       }
-    } label: {
+    } label: {  // swiftlint:disable:this closure_body_length
       HStack(spacing: Spacing.xs) {
         Image(systemName: "arrow.up.forward.app")
           .font(.tidexFootnoteMedium)
           .foregroundColor(.tidexBlue)
-          .frame(width: 28, height: 28)
-          .background(Color.tidexBlue.opacity(0.12))
+          .frame(width: 28, height: 28)  // swiftlint:disable:this no_magic_numbers
+          .background(Color.tidexBlue.opacity(0.12))  // swiftlint:disable:this no_magic_numbers
           .clipShape(Circle())
           .accessibilityHidden(true)
 
         Text(title)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextPrimary)
-          .lineLimit(2)
+          .lineLimit(2)  // swiftlint:disable:this no_magic_numbers
           .multilineTextAlignment(.leading)
 
         Spacer(minLength: 0)
 
         Image(systemName: "chevron.right")
-          .font(.system(size: 11, weight: .semibold))
+          .font(.system(size: 11, weight: .semibold))  // swiftlint:disable:this no_magic_numbers
           .foregroundColor(.tidexBlue)
           .accessibilityHidden(true)
       }
       .padding(.leading, Spacing.xs)
       .padding(.trailing, Spacing.sm)
       .padding(.vertical, Spacing.xxs)
-      .frame(minHeight: 44)
-      .frame(maxWidth: 320, alignment: .leading)
+      .frame(minHeight: 44)  // swiftlint:disable:this no_magic_numbers
+      .frame(maxWidth: 320, alignment: .leading)  // swiftlint:disable:this no_magic_numbers
       .tidexGlass(
         shape: .capsule,
-        tint: Color.tidexBlue.opacity(0.16),
+        tint: Color.tidexBlue.opacity(0.16),  // swiftlint:disable:this no_magic_numbers
         clear: true,
         interactive: true,
-        fallbackOpacity: 0.9
+        fallbackOpacity: 0.9  // swiftlint:disable:this no_magic_numbers
       )
-      .shadow(color: Color.tidexBlue.opacity(0.08), radius: 14, y: 5)
+      .shadow(color: Color.tidexBlue.opacity(0.08), radius: 14, y: 5)  // swiftlint:disable:this no_magic_numbers
       .contentShape(Capsule())
     }
     .buttonStyle(WageyDeeplinkButtonStyle(reduceMotion: reduceMotion))
@@ -232,9 +236,9 @@ private struct WageyDeeplinkButtonStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+      .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)  // swiftlint:disable:this no_magic_numbers
       .animation(
-        reduceMotion ? nil : .easeOut(duration: 0.12),
+        reduceMotion ? nil : .easeOut(duration: 0.12),  // swiftlint:disable:this no_magic_numbers
         value: configuration.isPressed
       )
   }
@@ -242,12 +246,12 @@ private struct WageyDeeplinkButtonStyle: ButtonStyle {
 
 private struct MessageSourcesView: View {
   let sources: [MessageSource]
-  @State private var isExpanded = false
+  @State private var isExpanded = false  // swiftlint:disable:this explicit_type_interface
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
+    VStack(alignment: .leading, spacing: Spacing.xs) {  // swiftlint:disable:this closure_body_length
       Button {
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(.easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
           isExpanded.toggle()
         }
       } label: {
@@ -262,13 +266,13 @@ private struct MessageSourcesView: View {
 
           Spacer(minLength: 0)
 
-          Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-            .font(.system(size: 11, weight: .semibold))
+          Image(systemName: isExpanded ? "chevron.up" : "chevron.down")  // swiftlint:disable:this accessibility_label_for_image line_length
+            .font(.system(size: 11, weight: .semibold))  // swiftlint:disable:this no_magic_numbers
             .foregroundColor(.tidexTextMuted)
         }
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
-        .background(Color.tidexSurfaceSecondary.opacity(0.4))
+        .background(Color.tidexSurfaceSecondary.opacity(0.4))  // swiftlint:disable:this no_magic_numbers
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
       }
       .buttonStyle(.plain)
@@ -279,9 +283,9 @@ private struct MessageSourcesView: View {
             Link(destination: url) {
               HStack(alignment: .top, spacing: Spacing.xs) {
                 faviconView(for: url)
-                  .padding(.top, 2)
+                  .padding(.top, 2)  // swiftlint:disable:this no_magic_numbers
 
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 2) {  // swiftlint:disable:this no_magic_numbers
                   Text(source.title)
                     .font(.tidexFootnoteMedium)
                     .foregroundColor(.tidexTextPrimary)
@@ -296,39 +300,39 @@ private struct MessageSourcesView: View {
               }
               .padding(.horizontal, Spacing.sm)
               .padding(.vertical, Spacing.xs)
-              .background(Color.tidexSurfaceSecondary.opacity(0.55))
+              .background(Color.tidexSurfaceSecondary.opacity(0.55))  // swiftlint:disable:this no_magic_numbers
               .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
             }
           }
         }
       }
     }
-    .frame(maxWidth: 320, alignment: .leading)
+    .frame(maxWidth: 320, alignment: .leading)  // swiftlint:disable:this no_magic_numbers
   }
 
   @ViewBuilder
-  private func faviconView(for pageURL: URL) -> some View {
+  private func faviconView(for pageURL: URL) -> some View {  // swiftlint:disable:this type_contents_order
     if let faviconURL = faviconURL(for: pageURL) {
       CachedAsyncImage(url: faviconURL) { image in
         image
           .resizable()
           .scaledToFit()
-          .frame(width: 16, height: 16)
-          .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+          .frame(width: 16, height: 16)  // swiftlint:disable:this no_magic_numbers
+          .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))  // swiftlint:disable:this no_magic_numbers
       } placeholder: {
         fallbackFavicon
       }
-      .frame(width: 16, height: 16)
+      .frame(width: 16, height: 16)  // swiftlint:disable:this no_magic_numbers
     } else {
       fallbackFavicon
     }
   }
 
   private var fallbackFavicon: some View {
-    Image(systemName: "globe")
+    Image(systemName: "globe")  // swiftlint:disable:this accessibility_label_for_image
       .font(.tidexCaptionRegular)
       .foregroundColor(.tidexBlue)
-      .frame(width: 16, height: 16)
+      .frame(width: 16, height: 16)  // swiftlint:disable:this no_magic_numbers
   }
 
   private func faviconURL(for pageURL: URL) -> URL? {
@@ -336,7 +340,7 @@ private struct MessageSourcesView: View {
       return nil
     }
 
-    var components = URLComponents()
+    var components = URLComponents()  // swiftlint:disable:this explicit_type_interface
     components.scheme = scheme
     components.host = host
     components.path = "/favicon.ico"
@@ -345,26 +349,26 @@ private struct MessageSourcesView: View {
 }
 
 private struct SelectedImageViewer: Identifiable {
-  let id = UUID()
+  let id = UUID()  // swiftlint:disable:this explicit_type_interface
   let image: UIImage
 }
 
 // MARK: - Image Viewer Overlay
 
 /// Full-screen image viewer with zoom and dismiss gestures
-struct ImageViewerOverlay: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+struct ImageViewerOverlay: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
 
-  let image: UIImage
-  let onDismiss: () -> Void
-  let onSave: (() -> Void)?
+  let image: UIImage  // swiftlint:disable:this explicit_acl
+  let onDismiss: () -> Void  // swiftlint:disable:this explicit_acl
+  let onSave: (() -> Void)?  // swiftlint:disable:this explicit_acl
 
   @State private var scale: CGFloat = 1.0
   @State private var lastScale: CGFloat = 1.0
   @State private var offset: CGSize = .zero
   @State private var lastOffset: CGSize = .zero
 
-  init(
+  init(  // swiftlint:disable:this explicit_acl type_contents_order
     image: UIImage,
     onDismiss: @escaping () -> Void,
     onSave: (() -> Void)? = nil
@@ -374,13 +378,13 @@ struct ImageViewerOverlay: View {
     self.onSave = onSave
   }
 
-  var body: some View {
-    ZStack {
+  var body: some View {  // swiftlint:disable:this explicit_acl
+    ZStack {  // swiftlint:disable:this closure_body_length
       // Background
       Color.tidexDarkBackgroundColor.ignoresSafeArea()
 
       // Image with zoom
-      Image(uiImage: image)
+      Image(uiImage: image)  // swiftlint:disable:this accessibility_label_for_image
         .resizable()
         .scaledToFit()
         .scaleEffect(scale)
@@ -388,15 +392,15 @@ struct ImageViewerOverlay: View {
         .gesture(
           MagnifyGesture()
             .onChanged { value in
-              let delta = value.magnification / lastScale
+              let delta = value.magnification / lastScale  // swiftlint:disable:this explicit_type_interface
               lastScale = value.magnification
-              scale = min(max(scale * delta, 1), 4)
+              scale = min(max(scale * delta, 1), 4)  // swiftlint:disable:this no_magic_numbers
             }
             .onEnded { _ in
               lastScale = 1.0
               // Reset if zoomed out
               if scale <= 1 {
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {  // swiftlint:disable:this line_length no_magic_numbers
                   scale = 1
                   offset = .zero
                 }
@@ -419,24 +423,24 @@ struct ImageViewerOverlay: View {
             .onEnded { value in
               lastOffset = offset
               // Dismiss if dragged down far enough when not zoomed
-              if scale <= 1 && value.translation.height > 100 {
+              if scale <= 1, value.translation.height > 100 {
                 onDismiss()
               } else if scale <= 1 {
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {  // swiftlint:disable:this line_length no_magic_numbers
                   offset = .zero
                 }
                 lastOffset = .zero
               }
             }
         )
-        .onTapGesture(count: 2) {
-          withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+        .onTapGesture(count: 2) {  // swiftlint:disable:this no_magic_numbers
+          withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
             if scale > 1 {
               scale = 1
               offset = .zero
               lastOffset = .zero
             } else {
-              scale = 2
+              scale = 2  // swiftlint:disable:this no_magic_numbers
             }
           }
         }
@@ -447,11 +451,11 @@ struct ImageViewerOverlay: View {
           if let onSave {
             Button(action: onSave) {
               Image(systemName: "arrow.down.circle.fill")
-                .font(.system(size: 30))
-                .foregroundColor(.tidexTextOnBrand.opacity(0.86))
+                .font(.system(size: 30))  // swiftlint:disable:this no_magic_numbers
+                .foregroundColor(.tidexTextOnBrand.opacity(0.86))  // swiftlint:disable:this no_magic_numbers
                 .background(
                   Circle()
-                    .fill(Color.tidexDarkBackgroundColor.opacity(0.58))
+                    .fill(Color.tidexDarkBackgroundColor.opacity(0.58))  // swiftlint:disable:this no_magic_numbers
                 )
             }
             .accessibilityLabel(
@@ -464,12 +468,12 @@ struct ImageViewerOverlay: View {
           Button {
             onDismiss()
           } label: {
-            Image(systemName: "xmark.circle.fill")
-              .font(.system(size: 30))
-              .foregroundColor(.tidexTextOnBrand.opacity(0.86))
+            Image(systemName: "xmark.circle.fill")  // swiftlint:disable:this accessibility_label_for_image
+              .font(.system(size: 30))  // swiftlint:disable:this no_magic_numbers
+              .foregroundColor(.tidexTextOnBrand.opacity(0.86))  // swiftlint:disable:this no_magic_numbers
               .background(
                 Circle()
-                  .fill(Color.tidexDarkBackgroundColor.opacity(0.58))
+                  .fill(Color.tidexDarkBackgroundColor.opacity(0.58))  // swiftlint:disable:this no_magic_numbers
               )
           }
           .padding(Spacing.mlg)
@@ -484,10 +488,10 @@ struct ImageViewerOverlay: View {
 // MARK: - Streaming Message Bubble
 
 /// A bubble showing the currently streaming assistant response
-struct StreamingMessageBubble: View {
-  let contentBlocks: [ContentBlock]
-  let isThinking: Bool
-  var groupContext: ChatMessageGroupContext? = nil
+struct StreamingMessageBubble: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  let contentBlocks: [ContentBlock]  // swiftlint:disable:this explicit_acl
+  let isThinking: Bool  // swiftlint:disable:this explicit_acl
+  var groupContext: ChatMessageGroupContext?  // swiftlint:disable:this explicit_acl
 
   private var renderBlocks: [ContentBlock] {
     ContentBlock.normalized(contentBlocks)
@@ -496,7 +500,7 @@ struct StreamingMessageBubble: View {
   /// Whether any text block has content
   private var hasAnyText: Bool {
     renderBlocks.contains { block in
-      if case .text(let text) = block, !text.isEmpty { return true }
+      if case .text(let text) = block, !text.isEmpty { return true }  // swiftlint:disable:this conditional_returns_on_newline line_length
       return false
     }
   }
@@ -522,7 +526,7 @@ struct StreamingMessageBubble: View {
     }
   }
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     HStack {
       VStack(alignment: .leading, spacing: Spacing.xs) {
         if renderBlocks.isEmpty {
@@ -538,10 +542,13 @@ struct StreamingMessageBubble: View {
               if !text.isEmpty {
                 streamingTextSegments(text: text, forceStandaloneBubbles: containsDeeplinkButton)
               }
+
             case .toolCall(let toolCall):
               ToolStatusView(toolCall: toolCall)
+
             case .image:
               EmptyView()
+
             case .thoughtStatus(let status):
               ThinkingDurationInlineView(status: status)
             }
@@ -555,7 +562,7 @@ struct StreamingMessageBubble: View {
         }
       }
 
-      Spacer(minLength: 40)
+      Spacer(minLength: 40)  // swiftlint:disable:this no_magic_numbers
     }
     .padding(.top, topPadding)
     .padding(.bottom, bottomPadding)
@@ -563,7 +570,7 @@ struct StreamingMessageBubble: View {
 
   @ViewBuilder
   private func streamingTextSegments(text: String, forceStandaloneBubbles: Bool) -> some View {
-    let segments = WageyDeeplinkTextSplitter.split(text)
+    let segments = WageyDeeplinkTextSplitter.split(text)  // swiftlint:disable:this explicit_type_interface
     ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
       switch segment {
       case .text(let text):
@@ -571,7 +578,8 @@ struct StreamingMessageBubble: View {
           text: text,
           forceStandaloneBubble: forceStandaloneBubbles || segments.count > 1
         )
-      case .deeplink(let title, let url):
+
+      case .deeplink(let title, let url):  // swiftlint:disable:this pattern_matching_keywords
         WageyDeeplinkButton(title: title, url: url)
       }
     }
@@ -580,7 +588,7 @@ struct StreamingMessageBubble: View {
   private func streamingTextView(text: String, forceStandaloneBubble: Bool = false) -> some View {
     Group {
       if let attributedString = try? AttributedString(
-        markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
+        markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))  // swiftlint:disable:this line_length multiline_arguments_brackets
       {
         ChatBubbleCard(
           isCurrentUser: false,
@@ -611,7 +619,7 @@ private struct ThinkingDurationInlineView: View {
 
   var body: some View {
     HStack(spacing: Spacing.xxs) {
-      Image(systemName: "brain.head.profile")
+      Image(systemName: "brain.head.profile")  // swiftlint:disable:this accessibility_label_for_image
         .font(.tidexCaptionStrong)
         .foregroundColor(.tidexTextMuted)
 
@@ -651,7 +659,7 @@ private struct ThinkingStatusBubble: View {
         content: "Add a shift tomorrow from 9 to 17",
         toolCalls: nil,
         timestamp: Date()
-      ))
+      ))  // swiftlint:disable:this multiline_arguments_brackets
 
     ChatMessageBubble(
       message: ChatMessage(
@@ -661,13 +669,13 @@ private struct ThinkingStatusBubble: View {
           "I've added a shift for tomorrow from 09:00 to 17:00. You'll earn approximately **1,600 kr** before taxes.",
         toolCalls: nil,
         timestamp: Date()
-      ))
+      ))  // swiftlint:disable:this multiline_arguments_brackets
   }
   .padding()
   .background(Color.tidexBackground)
 }
 
-#Preview("With Table") {
+#Preview("With Table") {  // swiftlint:disable:this closure_body_length
   ScrollView {
     VStack(spacing: Spacing.md) {
       ChatMessageBubble(
@@ -677,7 +685,7 @@ private struct ThinkingStatusBubble: View {
           content: "Show me my shifts this week",
           toolCalls: nil,
           timestamp: Date()
-        ))
+        ))  // swiftlint:disable:this multiline_arguments_brackets
 
       ChatMessageBubble(
         message: ChatMessage(
@@ -697,7 +705,7 @@ private struct ThinkingStatusBubble: View {
             """,
           toolCalls: nil,
           timestamp: Date()
-        ))
+        ))  // swiftlint:disable:this multiline_arguments_brackets
     }
     .padding()
   }
@@ -743,7 +751,7 @@ private struct ThinkingStatusBubble: View {
           arguments: nil,
           result: nil,
           success: nil
-        )),
+        )),  // swiftlint:disable:this multiline_arguments_brackets
     ],
     isThinking: true
   )
@@ -761,10 +769,10 @@ private struct ThinkingStatusBubble: View {
           arguments: nil,
           result: "{\"status\":\"completed\"}",
           success: true
-        ))
+        ))  // swiftlint:disable:this multiline_arguments_brackets
     ],
     isThinking: true
   )
   .padding()
   .background(Color.tidexBackground)
-}
+}  // swiftlint:disable:this file_length

@@ -65,10 +65,13 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
     switch self {
     case .notAuthenticated:
       return "Not authenticated"
+
     case .networkError(let error):
       return "Network error: \(error.localizedDescription)"
+
     case .decodingError(let error):
       return "Failed to decode response: \(error.localizedDescription)"
+
     case .httpError(_, let message):
       return message ?? "Something went wrong. Please try again."
     }
@@ -76,6 +79,7 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
 }
 
 @MainActor
+// swiftlint:disable:next type_body_length
 final class FriendsMessagingService: ObservableObject {
   static let shared = FriendsMessagingService()
 
@@ -545,13 +549,10 @@ final class FriendsMessagingService: ObservableObject {
     do {
       _ = try await AuthSessionManager.shared.getSession()
 
-      let queued: Bool =
-        try await supabase
+      return try await supabase
         .rpc("queue_thread_typing_notification", params: params)
         .execute()
-        .value
-
-      return queued
+        .value as Bool
     } catch let error as PostgrestError {
       throw mapRPCError(error)
     } catch let error as AuthError {
@@ -868,12 +869,16 @@ final class FriendsMessagingService: ObservableObject {
     switch mimeType {
     case "image/webp":
       return "webp"
+
     case "image/heic":
       return "heic"
+
     case "image/heif":
       return "heif"
+
     case "image/png":
       return "png"
+
     default:
       return "jpg"
     }
@@ -1302,6 +1307,7 @@ private struct MessagingThreadSyncEventRow: Decodable {
       }
       message = try Self.decode(payload, as: MessagingMessageRow.self).toFriendMessage()
       deletedMessageId = nil
+
     case .messageDeleted:
       guard let payload else {
         throw DecodingError.valueNotFound(
@@ -1503,4 +1509,4 @@ struct MessagingThreadUserStateRow: Decodable {
       updatedAt: updatedAt
     )
   }
-}
+}  // swiftlint:disable:this file_length

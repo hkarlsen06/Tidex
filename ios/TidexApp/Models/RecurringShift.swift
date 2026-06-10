@@ -29,9 +29,11 @@ enum EndCondition: Codable, Equatable {
     case "months":
       let value = try container.decode(Int.self, forKey: .value)
       self = .months(value: value)
+
     case "years":
       let value = try container.decode(Int.self, forKey: .value)
       self = .years(value: value)
+
     case "end_date":
       // Handle both formats: "date" key (newer) or "value" key (older)
       if let date = try? container.decode(String.self, forKey: .date) {
@@ -45,6 +47,7 @@ enum EndCondition: Codable, Equatable {
             debugDescription: "end_date requires either 'date' or 'value' key")
         )
       }
+
     default:
       throw DecodingError.dataCorrupted(
         DecodingError.Context(
@@ -60,9 +63,11 @@ enum EndCondition: Codable, Equatable {
     case .months(let value):
       try container.encode("months", forKey: .type)
       try container.encode(value, forKey: .value)
+
     case .years(let value):
       try container.encode("years", forKey: .type)
       try container.encode(value, forKey: .value)
+
     case .endDate(let date):
       try container.encode("end_date", forKey: .type)
       try container.encode(date, forKey: .date)
@@ -77,7 +82,7 @@ struct RecurringShiftRow: Codable, Identifiable, Equatable {
   let id: String
   let user_id: String
   /// Job that owns this recurring pattern (nullable during rollout compatibility)
-  var job_id: String? = nil
+  var job_id: String?  // swiftlint:disable:this explicit_acl identifier_name type_contents_order
   /// Start time (HH:mm or HH:mm:ss+TZ from timetz)
   let start_time: String
   /// End time (HH:mm or HH:mm:ss+TZ from timetz)

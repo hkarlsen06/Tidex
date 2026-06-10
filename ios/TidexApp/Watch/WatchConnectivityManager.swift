@@ -68,7 +68,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     error: Error?
   ) {
     Task { @MainActor [weak self] in
-      if let error = error {
+      if let error {
         logger.error("WCSession activation failed: \(error.localizedDescription)")
       } else {
         logger.info("WCSession activated: \(activationState.rawValue)")
@@ -78,7 +78,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
   }
 
-  nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
+  internal nonisolated func sessionDidBecomeInactive(_: WCSession) {
     Task { @MainActor in
       logger.info("WCSession became inactive")
     }
@@ -136,7 +136,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
           return
         }
 
-        let transferSucceeded = self.sendPayloadToWatch(
+        let transferSucceeded: Bool = sendPayloadToWatch(
           payload, reason: "watch_refresh", maxPayloadBytes: maxContextPayloadBytes)
 
         var response: [String: Any] = [
@@ -157,10 +157,10 @@ extension WatchConnectivityManager: WCSessionDelegate {
           guard AppCoordinator.shared.userId == userId else { return }
 
           _ = await SyncCoordinator.shared.sync(reason: .watchRefresh, userId: userId)
-          await self.refreshFriendData(userId: userId)
+          await refreshFriendData(userId: userId)
 
           guard AppCoordinator.shared.userId == userId else { return }
-          _ = await self.sendUpdatedDataNow(userId: userId, reason: "watch_refresh_follow_up")
+          _ = await sendUpdatedDataNow(userId: userId, reason: "watch_refresh_follow_up")
         }
       }
     }
@@ -179,7 +179,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
       await SharedShiftsRepository.shared.saveSharers(sharers, for: userId)
 
       // Get sharer IDs (visible only)
-      let sharerIds = sharers.filter { !$0.hidden }.map { $0.id }
+      let sharerIds: [String] = sharers.filter { !$0.hidden }.map(\.id)
 
       guard !sharerIds.isEmpty else {
         logger.info("No sharers to fetch previews for")
@@ -359,7 +359,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     }
 
     // If still too large (many friends), trim low-priority tail entries until it fits.
-    while !candidate.friendShifts.isEmpty && encoded.count > maxBytes {
+    while !candidate.friendShifts.isEmpty, encoded.count > maxBytes {
       candidate = WatchDataPayload(
         timestamp: candidate.timestamp,
         lastSyncTimestamp: candidate.lastSyncTimestamp,
@@ -464,7 +464,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     pendingRetryTask = Task { @MainActor [weak self] in
       try? await Task.sleep(for: .seconds(5))
       guard let self, !Task.isCancelled else { return }
-      await self.flushPendingTransferIfPossible()
+      await flushPendingTransferIfPossible()
     }
   }
 }

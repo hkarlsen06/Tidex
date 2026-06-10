@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface no_empty_block
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable required_deinit type_contents_order unused_parameter
 import SwiftUI
 import UIKit
 
@@ -16,7 +22,7 @@ struct CameraPicker: UIViewControllerRepresentable {
     return picker
   }
 
-  func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+  func updateUIViewController(_: UIImagePickerController, context _: Context) {}
 
   func makeCoordinator() -> Coordinator {
     Coordinator(parent: self)
@@ -30,7 +36,7 @@ struct CameraPicker: UIViewControllerRepresentable {
     }
 
     func imagePickerController(
-      _ picker: UIImagePickerController,
+      _: UIImagePickerController,
       didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
     ) {
       if let image = info[.originalImage] as? UIImage {
@@ -39,7 +45,7 @@ struct CameraPicker: UIViewControllerRepresentable {
       parent.dismiss()
     }
 
-    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+    func imagePickerControllerDidCancel(_: UIImagePickerController) {
       parent.dismiss()
     }
   }

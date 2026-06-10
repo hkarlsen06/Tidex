@@ -107,10 +107,13 @@ struct NotificationSettingsView: View {
     switch viewModel.notificationStatus {
     case .authorized, .provisional, .ephemeral:
       return "bell.badge.fill"
+
     case .denied:
       return "bell.slash.fill"
+
     case .notDetermined:
       return "bell"
+
     @unknown default:
       return "bell"
     }
@@ -120,10 +123,13 @@ struct NotificationSettingsView: View {
     switch viewModel.notificationStatus {
     case .authorized, .provisional, .ephemeral:
       return .tidexSuccess
+
     case .denied:
       return .tidexError
+
     case .notDetermined:
       return .tidexBlue
+
     @unknown default:
       return .tidexBlue
     }
@@ -133,10 +139,13 @@ struct NotificationSettingsView: View {
     switch viewModel.notificationStatus {
     case .authorized, .provisional, .ephemeral:
       return String(localized: .notificationsPermissionEnabled)
+
     case .denied:
       return String(localized: .notificationsPermissionDenied)
+
     case .notDetermined:
       return String(localized: .notificationsPermissionNotDetermined)
+
     @unknown default:
       return String(localized: .notificationsPermissionNotDetermined)
     }
@@ -218,7 +227,7 @@ struct NotificationSettingsView: View {
       .tint(.tidexBlue)
 
       // Reminder times (shown when enabled)
-      if viewModel.shiftRemindersEnabled && !viewModel.reminderTimes.isEmpty {
+      if viewModel.shiftRemindersEnabled, !viewModel.reminderTimes.isEmpty {
         settingsDivider
 
         ForEach(Array(viewModel.reminderTimes.enumerated()), id: \.offset) { index, minutes in
@@ -320,16 +329,20 @@ struct NotificationSettingsView: View {
       case .active(let scheduledCount, let workDays):
         Text(.notificationsSmartStatusActive(scheduledCount, workDays))
           .foregroundColor(.tidexSuccess)
+
       case .insufficientData(let weeksFound, let weeksRequired):
         let weeksNeeded = weeksRequired - weeksFound
         Text(.notificationsSmartStatusInsufficientData(weeksNeeded, weeksFound, weeksRequired))
           .foregroundColor(.tidexWarning)
+
       case .noShifts:
         Text(.notificationsSmartStatusNoShifts)
           .foregroundColor(.tidexWarning)
+
       case .noPatternDetected:
         Text(.notificationsSmartStatusNoPattern)
           .foregroundColor(.tidexWarning)
+
       case .disabled, .permissionDenied:
         Text(.notificationsSmartSectionSubtitle)
       }

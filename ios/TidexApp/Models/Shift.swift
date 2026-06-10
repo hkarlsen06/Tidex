@@ -208,8 +208,8 @@ struct ShiftsAggregates: Equatable {
     return totalGross * (1 - taxPercentage / 100)
   }
 
-  static var zero: ShiftsAggregates {
-    ShiftsAggregates(totalHours: 0, totalGross: 0)
+  internal static var zero: Self {
+    Self(totalHours: 0, totalGross: 0)
   }
 }
 
@@ -230,7 +230,7 @@ struct ShiftTotals: Equatable {
   let completedNet: Double
 
   /// Zero totals for empty state
-  static var zero: ShiftTotals {
-    ShiftTotals(gross: 0, net: 0, supplement: 0, completedGross: 0, completedNet: 0)
+  internal static var zero: Self {
+    Self(gross: 0, net: 0, supplement: 0, completedGross: 0, completedNet: 0)
   }
 }

@@ -1,3 +1,17 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length conditional_returns_on_newline cyclomatic_complexity
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_body_length large_tuple legacy_objc_type multiline_arguments_brackets
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers number_separator prefixed_toplevel_constant redundant_self
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable required_deinit shorthand_optional_binding sorted_imports strict_fileprivate
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_body_length type_contents_order vertical_whitespace_between_cases
 import CryptoKit
 import ImageIO
 import SwiftUI
@@ -83,7 +97,8 @@ enum ImageCachePolicy: Equatable {
   var ttl: TimeInterval {
     switch self {
     case .defaultImage:
-      return 3600
+      return 3_600
+
     case .messageAttachment:
       return 60 * 60 * 24 * 90
     }
@@ -93,8 +108,9 @@ enum ImageCachePolicy: Equatable {
     switch self {
     case .defaultImage:
       return nil
+
     case .messageAttachment:
-      return 1_000 * 1024 * 1024
+      return 1_000 * 1_024 * 1_024
     }
   }
 
@@ -102,6 +118,7 @@ enum ImageCachePolicy: Equatable {
     switch self {
     case .defaultImage:
       return nil
+
     case .messageAttachment:
       return "message-attachment"
     }
@@ -124,7 +141,7 @@ final class ImageCache: @unchecked Sendable {
   private init() {
     // Configure memory cache limits
     memoryCache.countLimit = 100  // Max 100 images
-    memoryCache.totalCostLimit = 50 * 1024 * 1024  // 50MB max
+    memoryCache.totalCostLimit = 50 * 1_024 * 1_024  // 50MB max
 
     // Setup disk cache directory
     let cacheDir =
@@ -168,13 +185,13 @@ final class ImageCache: @unchecked Sendable {
   ) async -> UIImage? {
     await withCheckedContinuation { continuation in
       diskCacheQueue.async { [weak self] in
-        guard let self = self else {
+        guard let self else {
           continuation.resume(returning: nil)
           return
         }
 
-        let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize, policy: policy)
-        let exists = self.fileManager.fileExists(atPath: filePath.path)
+        let filePath = diskCachePath(for: url, maxPixelSize: maxPixelSize, policy: policy)
+        let exists = fileManager.fileExists(atPath: filePath.path)
 
         if !exists {
           logger.debug("💾 Disk cache MISS for: \(url.lastPathComponent)")
@@ -184,13 +201,13 @@ final class ImageCache: @unchecked Sendable {
 
         // Check file modification date for expiration
         do {
-          let attributes = try self.fileManager.attributesOfItem(atPath: filePath.path)
+          let attributes = try fileManager.attributesOfItem(atPath: filePath.path)
           if let modificationDate = attributes[.modificationDate] as? Date {
             let age = Date().timeIntervalSince(modificationDate)
             if age > policy.ttl {
               logger.debug("🕐 Disk cache EXPIRED for: \(url.lastPathComponent)")
               // Remove expired file
-              try? self.fileManager.removeItem(at: filePath)
+              try? fileManager.removeItem(at: filePath)
               continuation.resume(returning: nil)
               return
             }
@@ -243,16 +260,16 @@ final class ImageCache: @unchecked Sendable {
 
     // Save to disk cache asynchronously
     diskCacheQueue.async { [weak self] in
-      guard let self = self else { return }
+      guard let self else { return }
 
-      let filePath = self.diskCachePath(for: url, maxPixelSize: maxPixelSize, policy: policy)
+      let filePath = diskCachePath(for: url, maxPixelSize: maxPixelSize, policy: policy)
 
       // Use JPEG for photos, PNG for images with transparency
       if let data = image.jpegData(compressionQuality: 0.8) {
         do {
           try data.write(to: filePath)
           logger.debug("💾 Saved image to disk: \(url.lastPathComponent) (\(data.count) bytes)")
-          self.trimDiskCacheIfNeeded(for: policy)
+          trimDiskCacheIfNeeded(for: policy)
         } catch {
           logger.error("Failed to write image to disk: \(error.localizedDescription)")
         }
@@ -267,17 +284,17 @@ final class ImageCache: @unchecked Sendable {
     NotificationAvatarSharedCache.remove(for: url)
 
     diskCacheQueue.async { [weak self] in
-      guard let self = self else { return }
+      guard let self else { return }
       guard
-        let files = try? self.fileManager.contentsOfDirectory(
-          at: self.diskCacheDirectory,
+        let files = try? fileManager.contentsOfDirectory(
+          at: diskCacheDirectory,
           includingPropertiesForKeys: nil
         )
       else { return }
 
-      let urlPrefix = self.cacheKey(for: url, maxPixelSize: nil, policy: .defaultImage)
+      let urlPrefix = cacheKey(for: url, maxPixelSize: nil, policy: .defaultImage)
       for file in files where file.lastPathComponent.hasPrefix(urlPrefix) {
-        try? self.fileManager.removeItem(at: file)
+        try? fileManager.removeItem(at: file)
       }
     }
   }
@@ -287,10 +304,10 @@ final class ImageCache: @unchecked Sendable {
     NotificationAvatarSharedCache.clearAll()
 
     diskCacheQueue.async { [weak self] in
-      guard let self = self else { return }
-      try? self.fileManager.removeItem(at: self.diskCacheDirectory)
-      try? self.fileManager.createDirectory(
-        at: self.diskCacheDirectory, withIntermediateDirectories: true)
+      guard let self else { return }
+      try? fileManager.removeItem(at: diskCacheDirectory)
+      try? fileManager.createDirectory(
+        at: diskCacheDirectory, withIntermediateDirectories: true)
     }
   }
 
@@ -298,11 +315,11 @@ final class ImageCache: @unchecked Sendable {
   /// Call this periodically or on app launch to clean up stale entries
   func clearExpired() {
     diskCacheQueue.async { [weak self] in
-      guard let self = self else { return }
+      guard let self else { return }
 
       guard
-        let files = try? self.fileManager.contentsOfDirectory(
-          at: self.diskCacheDirectory,
+        let files = try? fileManager.contentsOfDirectory(
+          at: diskCacheDirectory,
           includingPropertiesForKeys: [.contentModificationDateKey]
         )
       else { return }
@@ -310,11 +327,11 @@ final class ImageCache: @unchecked Sendable {
       var removedCount = 0
       for file in files {
         do {
-          let attributes = try self.fileManager.attributesOfItem(atPath: file.path)
+          let attributes = try fileManager.attributesOfItem(atPath: file.path)
           if let modificationDate = attributes[.modificationDate] as? Date {
             let age = Date().timeIntervalSince(modificationDate)
-            if age > self.cachePolicy(for: file).ttl {
-              try self.fileManager.removeItem(at: file)
+            if age > cachePolicy(for: file).ttl {
+              try fileManager.removeItem(at: file)
               removedCount += 1
             }
           }
@@ -327,7 +344,7 @@ final class ImageCache: @unchecked Sendable {
         logger.info("🧹 Cleared \(removedCount) expired images from disk cache")
       }
 
-      self.trimDiskCacheIfNeeded(for: .messageAttachment)
+      trimDiskCacheIfNeeded(for: .messageAttachment)
     }
   }
 

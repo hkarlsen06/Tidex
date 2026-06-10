@@ -317,8 +317,8 @@ private struct SteppingCountUpText: View {
 
     CelebrationOverlay(
       data: CelebrationData(
-        previousDisplayValue: 12000,
-        newDisplayValue: 14500,
+        previousDisplayValue: 12_000,
+        newDisplayValue: 14_500,
         featuredShift: ShiftWithComputations(
           shift: ShiftRow(
             id: "preview",
@@ -333,9 +333,9 @@ private struct SteppingCountUpText: View {
             id: "preview",
             durationHours: 8,
             paidHours: 7.5,
-            basePay: 1200,
+            basePay: 1_200,
             supplementPay: 300,
-            gross: 1500,
+            gross: 1_500,
             wagePeriods: [],
             originalWagePeriods: [],
             breakAudit: BreakAudit(method: .none, thresholdHours: 0, deductedHours: 0, notes: [])
@@ -345,7 +345,7 @@ private struct SteppingCountUpText: View {
         ),
         completedShiftCount: 1,
         currency: "kr",
-        animateFrom: 12000
+        animateFrom: 12_000
       ),
       onDismiss: {}
     )

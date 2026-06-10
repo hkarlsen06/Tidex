@@ -55,8 +55,8 @@ struct WagePeriodBuilder {
         if b < start || a > end { continue }
 
         // Add boundary points within shift range
-        if a > start && a < end { points.insert(a) }
-        if b > start && b < end { points.insert(b) }
+        if a > start, a < end { points.insert(a) }
+        if b > start, b < end { points.insert(b) }
       }
     }
 
@@ -95,7 +95,7 @@ struct WagePeriodBuilder {
           // Period [a,b) means from minute a (inclusive) to minute b (exclusive)
           // So we need: a >= ruleFrom (period starts at or after rule starts)
           //         and b-1 <= ruleTo (period ends at or before rule ends, since b is exclusive)
-          if a >= ruleFrom && (b - 1) <= ruleTo {
+          if a >= ruleFrom, (b - 1) <= ruleTo {
             let supplementValue = resolveSupplementRate(rule: rule, baseRate: baseRate)
             supplement = max(supplement, supplementValue)
           }

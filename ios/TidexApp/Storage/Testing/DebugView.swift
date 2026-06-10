@@ -1,8 +1,10 @@
+// swiftlint:disable conditional_returns_on_newline file_length type_body_length
+// swiftlint:disable:previous blanket_disable_command
 #if DEBUG
-  import SwiftUI
-  import StoreKit
-  import UserNotifications
   import os.log
+  import StoreKit
+  import SwiftUI
+  import UserNotifications
 
   private let logger = Logger(subsystem: "com.tidex.app", category: "SyncDebugView")
 
@@ -92,12 +94,15 @@
             case .success(let pattern):
               Text("\(pattern.typicalWorkDays.count) work days")
                 .foregroundColor(.green)
+
             case .insufficientData(let weeksFound):
               Text("\(weeksFound)/\(WorkPatternAnalyzer.WorkPattern.minimumWeeksRequired) weeks")
                 .foregroundColor(.orange)
+
             case .noShifts:
               Text("No shifts")
                 .foregroundColor(.red)
+
             case .noPatternDetected:
               Text("No pattern")
                 .foregroundColor(.orange)
@@ -178,7 +183,7 @@
         }
 
         Button {
-          guard let userId = userId else { return }
+          guard let userId else { return }
           Task {
             await SmartNotificationScheduler.shared.scheduleSmartNotifications(for: userId)
             testNotificationResult = "Rescheduled"
@@ -241,7 +246,7 @@
           return aDate < bDate
         }
 
-      if let userId = userId {
+      if let userId {
         workPatternResult = WorkPatternAnalyzer.analyzeDetailed(for: userId)
       }
     }
@@ -251,15 +256,19 @@
     {
       if identifier.hasPrefix("smart-test-morning") {
         return ("Test morning", "sun.max", .orange)
-      } else if identifier.hasPrefix("smart-test-evening") {
+      }
+      if identifier.hasPrefix("smart-test-evening") {
         return ("Test evening", "moon", .purple)
-      } else if identifier.hasPrefix("smart-morning-") {
+      }
+      if identifier.hasPrefix("smart-morning-") {
         let date = String(identifier.dropFirst("smart-morning-".count))
         return ("Morning \(date)", "sun.max", .yellow)
-      } else if identifier.hasPrefix("smart-evening-") {
+      }
+      if identifier.hasPrefix("smart-evening-") {
         let date = String(identifier.dropFirst("smart-evening-".count))
         return ("Evening \(date)", "moon", .indigo)
-      } else if identifier.hasPrefix("shift-reminder-") {
+      }
+      if identifier.hasPrefix("shift-reminder-") {
         return ("Reminder", "bell.fill", .blue)
       }
       return (identifier, "questionmark.circle", .secondary)
@@ -428,7 +437,7 @@
     /// Sync current StoreKit entitlements to server
     /// Use this when StoreKit has a subscription but server doesn't know about it
     private func syncStoreKitToServer() async {
-      guard let userId = userId else { return }
+      guard let userId else { return }
 
       isSyncingStoreKit = true
       storeKitSyncResult = "Scanning entitlements..."
@@ -499,7 +508,7 @@
     }
 
     private func forceRefreshEntitlement() async {
-      guard let userId = userId else { return }
+      guard let userId else { return }
 
       isRefreshingEntitlement = true
       do {
@@ -666,16 +675,19 @@
             .foregroundColor(.green)
           Text("Clean")
             .foregroundColor(.green)
+
         case .dirty:
           Image(systemName: "pencil.circle.fill")
             .foregroundColor(.orange)
           Text("Dirty")
             .foregroundColor(.orange)
+
         case .pendingDelete:
           Image(systemName: "trash.circle.fill")
             .foregroundColor(.red)
           Text("Pending Delete")
             .foregroundColor(.red)
+
         case .conflict:
           Image(systemName: "exclamationmark.triangle.fill")
             .foregroundColor(.red)
@@ -863,7 +875,7 @@
     }
 
     private func loadSummary() async {  // swiftlint:disable:this async_without_await
-      guard let userId = userId else { return }
+      guard let userId else { return }
 
       isLoadingSummary = true
       syncStateSummary = testHelper.getSyncStateSummary(userId: userId)
@@ -871,7 +883,7 @@
     }
 
     private func runValidation() async {
-      guard let userId = userId else { return }
+      guard let userId else { return }
 
       isRunningValidation = true
       validationResults = await testHelper.runAllValidations(userId: userId)
@@ -879,7 +891,7 @@
     }
 
     private func triggerManualSync() async {
-      guard let userId = userId else { return }
+      guard let userId else { return }
 
       testHelper.logSyncStart(reason: .manualRefresh, userId: userId)
       let result = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)

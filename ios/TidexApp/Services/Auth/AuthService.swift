@@ -62,11 +62,10 @@ final class AuthService: ObservableObject {
     isLoading = true
     defer { isLoading = false }
 
-    let response = try await supabase.auth.signIn(
+    return try await supabase.auth.signIn(
       email: email,
       password: password
     )
-    return response
   }
 
   /// Sign in with phone and password
@@ -78,11 +77,10 @@ final class AuthService: ObservableObject {
     isLoading = true
     defer { isLoading = false }
 
-    let response = try await supabase.auth.signIn(
+    return try await supabase.auth.signIn(
       phone: phone,
       password: password
     )
-    return response
   }
 
   // MARK: - Sign Up
@@ -107,7 +105,7 @@ final class AuthService: ObservableObject {
       // Keep metadata locale aligned with current iPhone/app language from first write.
       "locale": .string(localeCode),
     ]
-    if let fullName = fullName, !fullName.isEmpty {
+    if let fullName, !fullName.isEmpty {
       data["full_name"] = .string(fullName)
     }
 
@@ -286,13 +284,12 @@ final class AuthService: ObservableObject {
     isLoading = true
     defer { isLoading = false }
 
-    let response = try await supabase.auth.signInWithIdToken(
+    return try await supabase.auth.signInWithIdToken(
       credentials: OpenIDConnectCredentials(
         provider: .google,
         idToken: idToken
       )
     )
-    return response
   }
 
   // MARK: - MFA

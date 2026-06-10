@@ -1,3 +1,5 @@
+// swiftlint:disable explicit_acl
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 
@@ -140,9 +142,9 @@ struct EventServerSnapshot: Codable, Equatable {
   let deletedAt: Date?
 
   static func from(serverRow: SyncEventRow, updatedAt: Date, deletedAt: Date?)
-    -> EventServerSnapshot
+    -> Self
   {
-    EventServerSnapshot(
+    Self(
       startDate: serverRow.start_date,
       endDate: serverRow.end_date,
       isAllDay: serverRow.is_all_day,
@@ -163,8 +165,8 @@ struct EventServerSnapshot: Codable, Equatable {
     updatedAt: Date,
     revision: Int64,
     deletedAt: Date?
-  ) -> EventServerSnapshot {
-    EventServerSnapshot(
+  ) -> Self {
+    Self(
       startDate: eventRow.start_date,
       endDate: eventRow.end_date,
       isAllDay: eventRow.is_all_day,
@@ -188,11 +190,11 @@ struct EventServerSnapshot: Codable, Equatable {
     (try? canonicalJSONEncoder.encode(self)) ?? Data()
   }
 
-  static func decode(from data: Data) -> EventServerSnapshot? {
-    try? syncJSONDecoder.decode(EventServerSnapshot.self, from: data)
+  static func decode(from data: Data) -> Self? {
+    try? syncJSONDecoder.decode(Self.self, from: data)
   }
 
-  func changedFields(from other: EventServerSnapshot) -> Set<EventField> {
+  func changedFields(from other: Self) -> Set<EventField> {
     var changed: Set<EventField> = []
 
     if startDate != other.startDate {

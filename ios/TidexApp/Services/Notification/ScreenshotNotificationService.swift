@@ -108,8 +108,10 @@ enum ScreenshotServiceError: Error, LocalizedError {
     switch self {
     case .notAuthenticated:
       return "Not authenticated"
+
     case .networkError:
       return "Network error"
+
     case .httpError(let code):
       return "HTTP error \(code)"
     }

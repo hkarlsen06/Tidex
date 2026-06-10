@@ -133,14 +133,19 @@ enum ImpersonationError: Error, LocalizedError {
     switch self {
     case .notAuthenticated:
       return "You must be logged in to impersonate"
+
     case .notAdmin:
       return "Admin privileges required"
+
     case .noActiveSession:
       return "No active impersonation session"
+
     case .adminSessionNotFound:
       return "Could not restore admin session"
+
     case .serverError(let message):
       return message
+
     case .reasonTooShort:
       return "Reason must be at least 5 characters"
     }

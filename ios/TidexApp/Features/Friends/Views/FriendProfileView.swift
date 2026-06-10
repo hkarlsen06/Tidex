@@ -90,6 +90,7 @@ struct FriendProfileView: View {
             switch action {
             case .stopSharingMyShifts:
               await viewModel.removeShare(for: friend)
+
             case .stopSeeingTheirShifts:
               await viewModel.removeSharer(for: friend)
             }
@@ -202,6 +203,7 @@ struct FriendProfileView: View {
           )
         )
       }
+
     case .incoming:
       Section {
         Button {
@@ -343,7 +345,7 @@ struct FriendProfileView: View {
       friend.sharesWithMe?.sharedAt,
       friend.iShareWith?.sharedAt,
     ]
-    .compactMap { $0 }
+    .compactMap(\.self)
     .compactMap(parseFriendshipDate)
     .min()
   }

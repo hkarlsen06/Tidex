@@ -118,7 +118,7 @@ final class SecuritySettingsViewModel: ObservableObject {
 
       // Determine authentication capabilities from identities
       let identities = user.identities ?? []
-      let providers = Set(identities.map { $0.provider })
+      let providers = Set(identities.map(\.provider))  // swiftlint:disable:this explicit_type_interface
 
       // Supabase does not always create an "email" identity when setting a password on OAuth users.
       // Track a metadata flag as a fallback (set when password is created/updated).
@@ -142,7 +142,7 @@ final class SecuritySettingsViewModel: ObservableObject {
       let authMethodCount = [
         passwordCountsAsMethod, hasGoogleConnected, hasAppleConnected, hasPhoneConnected,
         !passkeys.isEmpty,
-      ].filter { $0 }.count
+      ].filter(\.self).count
 
       // Can only disconnect if there's more than one auth method
       canDisconnectGoogle = hasGoogleConnected && authMethodCount > 1
@@ -342,13 +342,13 @@ final class SecuritySettingsViewModel: ObservableObject {
     }
 
     // For phone-only users, verify OTP first
-    if !hasPassword && hasPhoneConnected {
+    if !hasPassword, hasPhoneConnected {
       guard !phoneOtp.isEmpty else {
         errorMessage = String(localized: .securityPasswordErrorsOtpRequired)
         return
       }
 
-      guard phoneOtp.count == 6, phoneOtp.allSatisfy({ $0.isNumber }) else {
+      guard phoneOtp.count == 6, phoneOtp.allSatisfy(\.isNumber) else {  // swiftlint:disable:this no_magic_numbers
         errorMessage = String(localized: .securityPasswordErrorsOtpInvalid)
         return
       }
@@ -359,14 +359,14 @@ final class SecuritySettingsViewModel: ObservableObject {
 
     do {
       // If phone-only, verify OTP first
-      if !hasPassword && hasPhoneConnected, let phone = phoneNumber {
+      if !hasPassword, hasPhoneConnected, let phone = phoneNumber {
         try await supabase.auth.verifyOTP(phone: phone, token: phoneOtp, type: .sms)
       }
 
       // Update password
       // Supabase won't always add an "email" identity for OAuth users, so store a metadata flag.
       let passwordMetadata: [String: AnyJSON] = ["hasPassword": .bool(true)]
-      if !hasPassword && !email.isEmpty {
+      if !hasPassword, !email.isEmpty {
         try await supabase.auth.update(
           user: UserAttributes(
             email: email,
@@ -564,7 +564,7 @@ final class SecuritySettingsViewModel: ObservableObject {
   /// Start phone linking by sending OTP to the phone number
   func connectPhone() async {
     // Validate phone number (Norwegian format: 8 digits)
-    let cleanedPhone = phoneLinkInput.filter { $0.isNumber }
+    let cleanedPhone = phoneLinkInput.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
     guard cleanedPhone.count == 8 else {
       errorMessage = String(localized: .securityPhoneLinkingErrorsPhoneInvalid)
       return
@@ -598,13 +598,13 @@ final class SecuritySettingsViewModel: ObservableObject {
   /// Verify the OTP and complete phone linking
   func verifyPhoneLinkOTP() async {
     // Validate OTP
-    guard phoneLinkOtp.count == 6, phoneLinkOtp.allSatisfy({ $0.isNumber }) else {
+    guard phoneLinkOtp.count == 6, phoneLinkOtp.allSatisfy(\.isNumber) else {  // swiftlint:disable:this no_magic_numbers
       errorMessage = String(localized: .securityPhoneLinkingErrorsOtpInvalid)
       return
     }
 
     // Format phone to E.164
-    let cleanedPhone = phoneLinkInput.filter { $0.isNumber }
+    let cleanedPhone = phoneLinkInput.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
     let phoneE164 = "+47\(cleanedPhone)"
 
     isLinkingPhone = true

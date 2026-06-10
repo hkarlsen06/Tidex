@@ -114,16 +114,16 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
 
   /// Display name for the sharer (firstName > username > email > phone > "Unknown")
   var displayName: String {
-    if let firstName = firstName, !firstName.isEmpty {
+    if let firstName, !firstName.isEmpty {
       return firstName
     }
     if let username = formattedUsername {
       return username
     }
-    if let email = email, !email.isEmpty {
+    if let email, !email.isEmpty {
       return email.components(separatedBy: "@").first ?? email
     }
-    if let phone = phone, !phone.isEmpty {
+    if let phone, !phone.isEmpty {
       return phone
     }
     return "Unknown"
@@ -160,8 +160,8 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
     }
 
     // If we have email and it's not already used as displayName
-    if let email = email, !email.isEmpty {
-      if let firstName = firstName, !firstName.isEmpty {
+    if let email, !email.isEmpty {
+      if let firstName, !firstName.isEmpty {
         // firstName is used as display name, so show email
         return email
       }
@@ -169,8 +169,8 @@ struct SharedUser: Codable, Identifiable, Equatable, Hashable {
       return nil
     }
     // If we have phone and it's not already used as displayName
-    if let phone = phone, !phone.isEmpty {
-      if let firstName = firstName, !firstName.isEmpty {
+    if let phone, !phone.isEmpty {
+      if let firstName, !firstName.isEmpty {
         // firstName is used as display name, so show phone
         return phone
       }

@@ -130,7 +130,7 @@ final class LoginViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
-      let _ = try await authService.verifyOTP(phone: normalizedPhone, token: otpCode)
+      _ = try await authService.verifyOTP(phone: normalizedPhone, token: otpCode)
       await handleSuccessfulLogin()
     } catch {
       handleError(error)
@@ -145,7 +145,7 @@ final class LoginViewModel: ObservableObject {
 
     do {
       let idToken = try await googleAuthProvider.signIn()
-      let _ = try await authService.signInWithGoogle(idToken: idToken)
+      _ = try await authService.signInWithGoogle(idToken: idToken)
       await handleSuccessfulLogin()
     } catch let error as GoogleAuthError where error.isCancellation {
       // User cancelled - do nothing
@@ -161,7 +161,7 @@ final class LoginViewModel: ObservableObject {
     defer { isLoading = false }
 
     do {
-      let _ = try await passkeyAuthService.signIn()
+      _ = try await passkeyAuthService.signIn()
       await handleSuccessfulLogin()
     } catch let error as PasskeyAuthError where error.isCancellation {
       // User cancelled - do nothing
@@ -184,7 +184,7 @@ final class LoginViewModel: ObservableObject {
 
     do {
       let result = try await appleAuthProvider.signIn()
-      let _ = try await authService.signInWithApple(
+      _ = try await authService.signInWithApple(
         idToken: result.idToken,
         fullName: result.fullName
       )
@@ -230,12 +230,12 @@ final class LoginViewModel: ObservableObject {
   // MARK: - Private Methods
 
   private func signInWithEmail() async throws {
-    let _ = try await authService.signInWithPassword(email: emailOrPhone, password: password)
+    _ = try await authService.signInWithPassword(email: emailOrPhone, password: password)
     await handleSuccessfulLogin()
   }
 
   private func signInWithPhone() async throws {
-    let _ = try await authService.signInWithPassword(phone: normalizedPhone, password: password)
+    _ = try await authService.signInWithPassword(phone: normalizedPhone, password: password)
     await handleSuccessfulLogin()
   }
 
@@ -259,7 +259,7 @@ final class LoginViewModel: ObservableObject {
     }
 
     // Password is required for email login
-    if inputType == .email && password.isEmpty {
+    if inputType == .email, password.isEmpty {
       fieldErrors.password = String(localized: .loginErrorsPasswordRequired)
       return false
     }

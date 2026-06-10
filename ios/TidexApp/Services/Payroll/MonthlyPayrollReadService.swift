@@ -17,16 +17,16 @@ struct PayrollReadWindow: Hashable {
   let startDate: Date
   let endDate: Date
 
-  static func month(year: Int, month: Int) -> PayrollReadWindow {
-    PayrollReadWindow(
+  internal static func month(year: Int, month: Int) -> Self {
+    Self(
       startDate: Date.firstDayOfMonthDate(year: year, month: month),
       endDate: Date.lastDayOfMonthDate(year: year, month: month)
     )
   }
 
-  static func visibleCalendarMonth(year: Int, month: Int) -> PayrollReadWindow {
+  internal static func visibleCalendarMonth(year: Int, month: Int) -> Self {
     let range = Date.visibleCalendarRange(year: year, month: month)
-    return PayrollReadWindow(startDate: range.start, endDate: range.end)
+    return Self(startDate: range.start, endDate: range.end)
   }
 }
 

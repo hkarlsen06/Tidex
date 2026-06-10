@@ -94,7 +94,8 @@ final class AddShiftViewModel: ObservableObject {
 
   // MARK: - Shared State
 
-  @Published var startTime: Date? = nil {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  @Published var startTime: Date? {
     didSet {
       // Debounce time changes - schedule recomputation
       schedulePreviewUpdate()
@@ -102,7 +103,8 @@ final class AddShiftViewModel: ObservableObject {
       scheduleDraftSave()
     }
   }
-  @Published var endTime: Date? = nil {
+  // swiftlint:disable:next explicit_acl type_contents_order
+  @Published var endTime: Date? {
     didSet {
       // Debounce time changes - schedule recomputation
       schedulePreviewUpdate()
@@ -389,7 +391,7 @@ final class AddShiftViewModel: ObservableObject {
   @Published private(set) var existingShiftMonths: Set<DateComponents> = []
 
   /// Target month the user is trying to add shifts to (for month limit sheet)
-  @Published private(set) var targetMonth: DateComponents = DateComponents()
+  @Published private(set) var targetMonth = DateComponents()  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
 
   // MARK: - Recurring Mode State
 
@@ -406,7 +408,8 @@ final class AddShiftViewModel: ObservableObject {
       scheduleDraftSave()
     }
   }
-  @Published var endCondition: EndCondition? = nil {  // Default: indefinite
+  // swiftlint:disable:next explicit_acl type_contents_order
+  @Published var endCondition: EndCondition? {  // Default: indefinite
     didSet {
       scheduleDraftSave()
       // Update projected dates immediately when end condition changes
@@ -508,23 +511,24 @@ final class AddShiftViewModel: ObservableObject {
     monthContextCancellable = monthContext.monthChanged
       .receive(on: DispatchQueue.main)
       .sink { [weak self] newMonth in
-        guard let self = self else { return }
+        // swiftlint:disable:next conditional_returns_on_newline
+        guard let self else { return }
 
         // Only reload if month actually changed
-        guard newMonth.year != self.lastObservedYear || newMonth.month != self.lastObservedMonth
+        guard newMonth.year != lastObservedYear || newMonth.month != lastObservedMonth
         else {
           return
         }
 
         // Update tracking
-        self.lastObservedYear = newMonth.year
-        self.lastObservedMonth = newMonth.month
+        lastObservedYear = newMonth.year
+        lastObservedMonth = newMonth.month
 
         // Sync navigation direction from context (for animations)
-        self.navigationDirection = self.monthContext.navigationDirection
+        navigationDirection = monthContext.navigationDirection
 
         // Reload shifts and publish the new month's cell data together.
-        self.reloadShiftsForDisplayedMonth()
+        reloadShiftsForDisplayedMonth()
       }
   }
 
@@ -556,8 +560,10 @@ final class AddShiftViewModel: ObservableObject {
       Task {
         await submitSingleShifts()
       }
+
     case .recurring:
       showPreview()
+
     case .events:
       Task {
         await submitEvent()
@@ -571,8 +577,10 @@ final class AddShiftViewModel: ObservableObject {
     switch mode {
     case .single:
       canSubmit = canSubmitSingle
+
     case .recurring:
       canSubmit = canSubmitRecurring
+
     case .events:
       canSubmit = canSubmitEvent
     }
@@ -795,12 +803,15 @@ final class AddShiftViewModel: ObservableObject {
       switch action {
       case .selectJob:
         selectedJobId = configuredJob.id
+
       case .submitSingle:
         selectedJobId = configuredJob.id
         Task { await submitSingleShifts() }
+
       case .showRecurringPreview:
         selectedJobId = configuredJob.id
         showPreview()
+
       case .submitRecurring:
         selectedJobId = configuredJob.id
         Task { await submitRecurringShift() }
@@ -902,8 +913,10 @@ final class AddShiftViewModel: ObservableObject {
     switch mode {
     case .single:
       return !selectedDates.isEmpty || startTime != nil || endTime != nil
+
     case .recurring:
       return !selectedDays.isEmpty || startTime != nil || endTime != nil
+
     case .events:
       return !eventNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         || startTime != nil || endTime != nil
@@ -1012,6 +1025,7 @@ final class AddShiftViewModel: ObservableObject {
       switch mode {
       case .single:
         return cachedPreviewEarnings
+
       case .recurring:
         var map: [String: CalendarEarningsData] = [:]
         for dateISO in cachedProjectedRecurringDates {
@@ -1021,6 +1035,7 @@ final class AddShiftViewModel: ObservableObject {
           }
         }
         return map
+
       case .events:
         return [:]
       }
@@ -1468,7 +1483,7 @@ final class AddShiftViewModel: ObservableObject {
       requiresAtLeastOneAnchor: false
     )
 
-    if selectedDays[weekday] == dateISO && updatedSelectedDays[weekday] == nil {
+    if selectedDays[weekday] == dateISO, updatedSelectedDays[weekday] == nil {
       cachedAnchorEarnings.removeValue(forKey: weekday)
     }
     selectedDays = updatedSelectedDays
@@ -1670,7 +1685,7 @@ final class AddShiftViewModel: ObservableObject {
     }
 
     selectedJobId =
-      activeJobs.first(where: { $0.is_default })?.id
+      activeJobs.first(where: \.is_default)?.id
       ?? activeJobs.first?.id
   }
 
@@ -1690,7 +1705,8 @@ final class AddShiftViewModel: ObservableObject {
 
     // Rollout fallback for legacy local rows that may not yet have job_id populated.
     // Nil job rows are treated as default-job rows only.
-    let defaultJobId = activeJobs.first(where: { $0.is_default })?.id
+    // swiftlint:disable:next explicit_type_interface
+    let defaultJobId = activeJobs.first(where: \.is_default)?.id
     if defaultJobId == jobId {
       return cachedSnapshots.filter { $0.job_id == nil }
     }
@@ -1719,7 +1735,7 @@ final class AddShiftViewModel: ObservableObject {
   private func computeEarningsForDate(_ dateISO: String) -> CalendarEarningsData? {
     // Multi-job users must choose a workplace before previews become job-scoped.
     // Until then, cells keep the checkmark-only selected style.
-    if requiresExplicitJobSelection && selectedJobId == nil {
+    if requiresExplicitJobSelection, selectedJobId == nil {
       return nil
     }
 
@@ -2006,6 +2022,7 @@ final class AddShiftViewModel: ObservableObject {
       projectedRecurringDates = nil
       anchorEarnings = nil
       datesToCheck = input.selectedDates
+
     case .recurring:
       if !input.selectedDays.isEmpty {
         let generated = RecurringShiftProjector.generateDatesForCalendarDisplay(
@@ -2038,6 +2055,7 @@ final class AddShiftViewModel: ObservableObject {
         anchorEarnings = [:]
         datesToCheck = []
       }
+
     case .events:
       projectedRecurringDates = nil
       anchorEarnings = nil
@@ -2089,7 +2107,7 @@ final class AddShiftViewModel: ObservableObject {
     endTime: String,
     context: EarningsComputationContext
   ) -> CalendarEarningsData? {
-    if context.requiresExplicitJobSelection && context.selectedJobId == nil {
+    if context.requiresExplicitJobSelection, context.selectedJobId == nil {
       return nil
     }
     guard let effectiveJobId = context.effectiveJobId,
@@ -2150,7 +2168,8 @@ final class AddShiftViewModel: ObservableObject {
       return jobSnapshots
     }
 
-    let defaultJobId = jobs.first(where: { $0.is_default })?.id
+    // swiftlint:disable:next explicit_type_interface
+    let defaultJobId = jobs.first(where: \.is_default)?.id
     if defaultJobId == jobId {
       return snapshots.filter { $0.job_id == nil }
     }
@@ -2187,7 +2206,7 @@ final class AddShiftViewModel: ObservableObject {
 
   /// Generate virtual shift dates from recurring patterns for display
   private func generateVirtualShiftDatesForDisplay() -> Set<String> {
-    Set(generateVirtualShiftsForDisplay().map { $0.date })
+    Set(generateVirtualShiftsForDisplay().map(\.date))
   }
 
   /// Generate virtual shifts with computed earnings from recurring patterns (net after tax)
@@ -2403,10 +2422,12 @@ final class AddShiftViewModel: ObservableObject {
     switch mode {
     case .single:
       selectedDates = Set(draft.selectedDates)
+
     case .recurring:
       selectedDays = draft.selectedDays
       repeatInterval = draft.repeatInterval
       endCondition = draft.endCondition
+
     case .events:
       eventNote = draft.eventNote
       isEventAllDay = draft.isEventAllDay
@@ -2492,11 +2513,13 @@ final class AddShiftViewModel: ObservableObject {
     case (.single, .events):
       syncSingleSelectionIntoEvent()
       didEditEventCalendarSelectionSinceEnteringEventMode = false
+
     case (.events, .single):
       if didEditEventCalendarSelectionSinceEnteringEventMode || selectedDates.isEmpty {
         syncEventSelectionIntoSingle()
       }
       didEditEventCalendarSelectionSinceEnteringEventMode = false
+
     default:
       if newMode != .events {
         didEditEventCalendarSelectionSinceEnteringEventMode = false
@@ -2605,9 +2628,10 @@ final class AddShiftViewModel: ObservableObject {
       guard let self else { return }
       let displayData = await Self.computeCalendarDisplayDataOffMain(input)
       guard !Task.isCancelled else { return }
-      guard self.displayComputationVersion == computationVersion else { return }
+      // swiftlint:disable:next conditional_returns_on_newline
+      guard displayComputationVersion == computationVersion else { return }
 
-      self.cachedDisplayData = displayData
+      cachedDisplayData = displayData
       logger.info(
         "Rebuilt calendar display data: \(displayData.existingShiftDates.count) dates, \(displayData.virtualShifts.count) virtual shifts"
       )

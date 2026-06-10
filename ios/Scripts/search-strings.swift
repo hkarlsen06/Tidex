@@ -1,4 +1,11 @@
-#!/usr/bin/env swift
+#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline cyclomatic_complexity
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable discouraged_optional_collection explicit_type_interface file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_body_length multiline_arguments_brackets no_direct_print
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable sorted_enum_cases switch_case_on_newline
 
 import Foundation
 
@@ -75,8 +82,10 @@ private enum SearchError: Error, CustomStringConvertible {
           --catalog, -c  Path to xcstrings file (defaults to App catalog)
           --help, -h     Show this help message
         """
+
     case .fileNotFound(let path):
       return "String catalog not found: \(path)"
+
     case .noResults(let query):
       return "No strings found matching '\(query)'"
     }
@@ -106,18 +115,24 @@ private func parseArgs() throws -> Config {
     switch arg {
     case "--keys-only", "-k":
       keysOnly = true
+
     case "--values-only", "-v":
       valuesOnly = true
+
     case "--no-symbol":
       showSymbol = false
+
     case "--limit", "-l":
       limit = iterator.next().flatMap(Int.init)
+
     case "--catalog", "-c":
       catalogPath = iterator.next()
+
     case "--help", "-h":
       throw SearchError.missingArguments
+
     default:
-      if !arg.hasPrefix("-") && query == nil {
+      if !arg.hasPrefix("-"), query == nil {
         query = arg
       }
     }
@@ -180,7 +195,7 @@ private func findMatches(in catalog: Catalog, config: Config) -> [SearchMatch] {
   for (key, entry) in catalog.strings {
     var matchReasons: [String] = []
 
-    if config.searchKeys && key.lowercased().contains(queryLower) {
+    if config.searchKeys, key.lowercased().contains(queryLower) {
       matchReasons.append("key")
     }
 

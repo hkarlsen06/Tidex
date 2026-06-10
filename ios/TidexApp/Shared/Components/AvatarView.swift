@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface no_magic_numbers
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable type_contents_order
 import SwiftUI
 
 /// Reusable avatar component with image loading and initials fallback

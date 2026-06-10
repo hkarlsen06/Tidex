@@ -20,7 +20,7 @@ struct AccordionSectionView<Content: View>: View {
             .font(.tidexButton)
             .foregroundColor(.tidexTextPrimary)
 
-          if !isExpanded, let summary = summary {
+          if !isExpanded, let summary {
             Text(summary)
               .font(.tidexSubheadline)
               .foregroundColor(.tidexTextSecondary)
@@ -51,7 +51,7 @@ struct AccordionSectionView<Content: View>: View {
         VStack(spacing: Spacing.md) {
           content()
 
-          if let onContinue = onContinue {
+          if let onContinue {
             Button(action: {
               UIImpactFeedbackGenerator(style: .medium).impactOccurred()
               onContinue()

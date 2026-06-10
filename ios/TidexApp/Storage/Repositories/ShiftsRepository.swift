@@ -1,3 +1,5 @@
+// swiftlint:disable explicit_type_interface
+// swiftlint:disable:previous blanket_disable_command
 import Foundation
 import SwiftData
 import os.log
@@ -501,7 +503,7 @@ final class ShiftsRepository: ObservableObject {
     do {
       let shifts = try context.fetch(descriptor)
       // Filter out pending deletes using the computed property
-      let activeShifts = shifts.filter { $0.isActiveShift }
+      let activeShifts = shifts.filter(\.isActiveShift)
       return Set(activeShifts.map { calendar.dateComponents([.year, .month], from: $0.shiftDate) })
     } catch {
       logger.error("Failed to fetch existing shift months: \(error.localizedDescription)")

@@ -23,7 +23,7 @@ final class TidexAppUITests: XCTestCase {
   private let commonCancelLabel = "Cancel"
   private let deleteConfirmationTitle = "Delete this conversation?"
 
-  override func setUpWithError() throws {
+  override internal func setUpWithError() {
     continueAfterFailure = false
   }
 

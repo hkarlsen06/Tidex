@@ -65,10 +65,13 @@ struct FriendsListOrdering {
         switch (messageStatusLhs.timestamp, messageStatusRhs.timestamp) {
         case (let lhsTimestamp?, let rhsTimestamp?):
           return lhsTimestamp > rhsTimestamp
+
         case (.some, .none):
           return true
+
         case (.none, .some):
           return false
+
         case (.none, .none):
           break
         }
@@ -119,12 +122,16 @@ struct FriendsListOrdering {
     switch previewState {
     case .outgoingFailed:
       return 2
+
     case .outgoingSending:
       return 3
+
     case .outgoingSent, .outgoingOpened, .incomingOpened:
       return 4
+
     case .incomingUnread:
       return 1
+
     case .none:
       return 5
     }
@@ -134,7 +141,7 @@ struct FriendsListOrdering {
   private func compareShiftFallback(_ lhs: FriendSortDescriptor, _ rhs: FriendSortDescriptor)
     -> Bool
   {
-    guard !isLoadingShiftPreviews && !shiftPreviews.isEmpty else {
+    guard !isLoadingShiftPreviews, !shiftPreviews.isEmpty else {
       return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
     }
 
@@ -152,11 +159,13 @@ struct FriendsListOrdering {
         return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
       }
       return timeLhs < timeRhs
+
     case .past:
       if timeLhs == timeRhs {
         return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
       }
       return timeLhs > timeRhs
+
     default:
       return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
     }
@@ -233,8 +242,10 @@ struct SharerListView: View {
   let onSelectSharer: (SharedUser) -> Void
   let onMessageTap: (SharedUser) -> Void
   let onProfileRequested: (SharedUser) -> Void
-  var highlightedChatUserId: String? = nil
-  var openingThreadUserId: String? = nil
+  // swiftlint:disable:next explicit_acl
+  var highlightedChatUserId: String?
+  // swiftlint:disable:next explicit_acl
+  var openingThreadUserId: String?
   var onAddFriend: (() -> Void)?
 
   private var sortedVisibleSharers: [SharedUser] {

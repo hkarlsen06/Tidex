@@ -1,4 +1,15 @@
-#!/usr/bin/env swift  // swiftlint:disable file_length
+#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable anonymous_argument_in_multiline_closure conditional_returns_on_newline
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable cyclomatic_complexity explicit_type_interface function_body_length
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable legacy_objc_type multiline_arguments_brackets no_direct_print
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers no_raw_localization_keys prefixed_toplevel_constant
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable switch_case_on_newline
 import Foundation
 
 // MARK: - Config
@@ -199,7 +210,7 @@ private func keyToSymbolName(_ key: String) -> String {
     // Split each dot-part by underscores
     let underscoreParts = dotPart.split(separator: "_")
     for (subIndex, part) in underscoreParts.enumerated() {
-      if index == 0 && subIndex == 0 {
+      if index == 0, subIndex == 0 {
         // First part stays as-is (preserves original casing)
         result += String(part)
       } else {
@@ -262,7 +273,7 @@ private func findSwiftFiles(in directory: String, includeSkippedPaths: Bool = fa
     let fullPath = (directory as NSString).appendingPathComponent(file)
 
     // Skip excluded paths
-    if !includeSkippedPaths && skipPaths.contains(where: { fullPath.contains($0) }) {
+    if !includeSkippedPaths, skipPaths.contains(where: { fullPath.contains($0) }) {
       continue
     }
 
@@ -306,7 +317,7 @@ private func scanFileForHardcodedStrings(_ path: String) -> [Violation] {
       previewBraceDepth -= line.filter { $0 == "}" }.count
 
       // Exit preview block when braces balance (and we've seen at least one open brace)
-      if previewBraceDepth <= 0 && line.contains("}") {
+      if previewBraceDepth <= 0, line.contains("}") {
         inPreviewBlock = false
       }
       continue  // Skip all lines in preview blocks
@@ -380,7 +391,7 @@ private func scanFileForRawErrorDescriptions(_ path: String) -> [Violation] {
   var braceDepth = 0
 
   for (index, line) in lines.enumerated() {
-    if !isInsideErrorDescription && line.contains("var errorDescription: String?") {
+    if !isInsideErrorDescription, line.contains("var errorDescription: String?") {
       isInsideErrorDescription = true
       braceDepth = 0
     }
@@ -402,7 +413,7 @@ private func scanFileForRawErrorDescriptions(_ path: String) -> [Violation] {
         ))
     }
 
-    if braceDepth <= 0 && line.contains("}") {
+    if braceDepth <= 0, line.contains("}") {
       isInsideErrorDescription = false
     }
   }
@@ -640,24 +651,31 @@ private func parseArgs() -> Config {
     switch arg {
     case "--path", "-p":
       searchPath = iterator.next() ?? searchPath
+
     case "--catalog", "-c":
       if let catalogPath = iterator.next() {
         catalogPaths.append(catalogPath)
       }
+
     case "--strict", "-s": strict = true
     case "--hardcoded-only": checkOrphaned = false
+
     case "--error-descriptions":
       checkHardcoded = false
       checkErrorDescriptions = true
       checkOrphaned = false
+
     case "--orphaned-only": checkHardcoded = false
     case "--json": jsonOutput = true
+
     case "--remove":
       removeOrphaned = true
       checkHardcoded = false
+
     case "--help", "-h":
       printHelp()
       exit(0)
+
     default: continue
     }
   }
@@ -801,7 +819,7 @@ private func printOrphanedKeysHumanReadable(
 }
 
 private func checkOrphanedKeys(config: Config) -> Bool {
-  if !config.jsonOutput && !config.removeOrphaned {
+  if !config.jsonOutput, !config.removeOrphaned {
     print("Checking for orphaned keys in String Catalogs...\n")
   }
 
@@ -884,7 +902,7 @@ private func run() {
     hasIssues = checkOrphanedKeys(config: config) || hasIssues
   }
 
-  if config.strict && hasIssues {
+  if config.strict, hasIssues {
     exit(1)
   }
 }

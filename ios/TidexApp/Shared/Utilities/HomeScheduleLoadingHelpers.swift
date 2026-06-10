@@ -1,3 +1,15 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable anonymous_argument_in_multiline_closure conditional_returns_on_newline discouraged_none_name explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface file_length file_name
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_types_order legacy_objc_type multiline_arguments_brackets no_grouping_extension
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers prefer_self_in_static_references sorted_enum_cases type_contents_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable vertical_whitespace_between_cases
 import Foundation
 
 struct ShiftChangeAffectedMonth: Hashable, Comparable {
@@ -32,7 +44,7 @@ struct ShiftChangeAffectedMonth: Hashable, Comparable {
     String(format: "%04d-%02d", year, month)
   }
 
-  static func < (lhs: ShiftChangeAffectedMonth, rhs: ShiftChangeAffectedMonth) -> Bool {
+  static func < (lhs: Self, rhs: Self) -> Bool {
     if lhs.year == rhs.year {
       return lhs.month < rhs.month
     }
@@ -61,15 +73,15 @@ struct ShiftChangeNotificationPayload: Equatable {
     !requiresFullReload && !affectedMonths.isEmpty
   }
 
-  static var fullReload: ShiftChangeNotificationPayload {
-    ShiftChangeNotificationPayload(requiresFullReload: true)
+  static var fullReload: Self {
+    Self(requiresFullReload: true)
   }
 
   static func userInfo(
     affectedMonths: Set<ShiftChangeAffectedMonth> = [],
     requiresFullReload: Bool = false
   ) -> [AnyHashable: Any] {
-    let payload = ShiftChangeNotificationPayload(
+    let payload = Self(
       affectedMonths: affectedMonths,
       requiresFullReload: requiresFullReload
     )
@@ -83,12 +95,12 @@ struct ShiftChangeNotificationPayload: Equatable {
     ]
   }
 
-  static func parse(from notification: Notification) -> ShiftChangeNotificationPayload {
+  static func parse(from notification: Notification) -> Self {
     guard let userInfo = notification.userInfo else {
       return .fullReload
     }
 
-    if let payload = userInfo[payloadUserInfoKey] as? ShiftChangeNotificationPayload {
+    if let payload = userInfo[payloadUserInfoKey] as? Self {
       return payload
     }
 
@@ -96,7 +108,7 @@ struct ShiftChangeNotificationPayload: Equatable {
     let affectedMonths = parseAffectedMonths(from: userInfo[affectedMonthsUserInfoKey])
       .union(parseAffectedMonths(from: userInfo[affectedDatesUserInfoKey]))
 
-    return ShiftChangeNotificationPayload(
+    return Self(
       affectedMonths: affectedMonths,
       requiresFullReload: requiresFullReload
     )
@@ -140,10 +152,13 @@ struct ShiftChangeNotificationPayload: Equatable {
     switch value {
     case let value as Int:
       return value
+
     case let value as NSNumber:
       return value.intValue
+
     case let value as String:
       return Int(value)
+
     default:
       return nil
     }

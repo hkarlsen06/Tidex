@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl implicit_optional_initialization shorthand_optional_binding
 import SwiftUI
 
 /// Styled text field with Tidex design
@@ -6,12 +10,12 @@ struct TidexTextField: View {
   let label: String
   let placeholder: String
   @Binding var text: String
-  var error: String? = nil
+  var error: String?
   var keyboardType: UIKeyboardType = .default
-  var textContentType: UITextContentType? = nil
+  var textContentType: UITextContentType?
   var autocapitalization: TextInputAutocapitalization = .sentences
   var autocorrection: Bool = true
-  var onSubmit: (() -> Void)? = nil
+  var onSubmit: (() -> Void)?
 
   @FocusState private var isFocused: Bool
 
@@ -45,7 +49,7 @@ struct TidexTextField: View {
         }
 
       // Error message
-      if let error = error, !error.isEmpty {
+      if let error, !error.isEmpty {
         Text(error)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexError)

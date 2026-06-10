@@ -190,12 +190,11 @@ struct SamplePaycheckScreen: View {
       formatter.numberStyle = .decimal
       let number = formatter.string(from: NSNumber(value: amount)) ?? "0"
       return "\(number) kr"
-    } else {
-      formatter.numberStyle = .currency
-      formatter.currencyCode = "USD"
-      formatter.currencySymbol = "$"
-      return formatter.string(from: NSNumber(value: amount)) ?? "$0"
     }
+    formatter.numberStyle = .currency
+    formatter.currencyCode = "USD"
+    formatter.currencySymbol = "$"
+    return formatter.string(from: NSNumber(value: amount)) ?? "$0"  // swiftlint:disable:this legacy_objc_type
   }
 }
 

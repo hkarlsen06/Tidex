@@ -10,6 +10,7 @@ struct DetailSheetActionButton: View {
       switch self {
       case .destructive:
         return .destructive
+
       case .primary, .secondary:
         return nil
       }
@@ -19,8 +20,10 @@ struct DetailSheetActionButton: View {
       switch self {
       case .primary:
         return .tidexTextOnBrand
+
       case .secondary:
         return .tidexBlue
+
       case .destructive:
         return .tidexTextOnDanger
       }
@@ -30,8 +33,10 @@ struct DetailSheetActionButton: View {
       switch self {
       case .primary:
         return .tidexBlue
+
       case .secondary:
         return .tidexBlue.opacity(0.08)
+
       case .destructive:
         return .tidexError
       }
@@ -41,6 +46,7 @@ struct DetailSheetActionButton: View {
       switch self {
       case .secondary:
         return .tidexBlue.opacity(0.14)
+
       case .primary, .destructive:
         return .clear
       }

@@ -22,7 +22,7 @@ struct SupplementRuleEditor: View {
     case type = 2
     case value = 3
 
-    static func < (lhs: EditorStep, rhs: EditorStep) -> Bool {
+    static func < (lhs: Self, rhs: Self) -> Bool {
       lhs.rawValue < rhs.rawValue
     }
   }
@@ -171,10 +171,13 @@ struct SupplementRuleEditor: View {
     switch currentStep {
     case .days:
       return !editedRule.days.isEmpty
+
     case .time:
       return !editedRule.fromTime.isEmpty && !editedRule.toTime.isEmpty
+
     case .type:
       return true
+
     case .value:
       return false
     }
@@ -202,12 +205,15 @@ struct SupplementRuleEditor: View {
           (!editedRule.fromTime.isEmpty && !editedRule.toTime.isEmpty)
           ? .type
           : .time
+
       case .time:
         currentStep = .type
+
       case .type:
         // Accept the currently shown type as the chosen type when tapping Next.
         hasSelectedType = true
         currentStep = .value
+
       case .value:
         break
       }
@@ -238,7 +244,7 @@ struct SupplementRuleEditor: View {
                 }
 
                 // Advance to time step if we have at least one day
-                if !editedRule.days.isEmpty && currentStep == .days {
+                if !editedRule.days.isEmpty, currentStep == .days {
                   withAnimation {
                     currentStep = .time
                   }
@@ -270,7 +276,7 @@ struct SupplementRuleEditor: View {
   }
 
   private func advanceIfNeeded() {
-    if currentStep == .days && !editedRule.days.isEmpty {
+    if currentStep == .days, !editedRule.days.isEmpty {
       withAnimation {
         currentStep = .time
       }
@@ -342,7 +348,7 @@ struct SupplementRuleEditor: View {
       return nil
     }
 
-    if hours == 24 && minutes != 0 { return nil }
+    if hours == 24, minutes != 0 { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length no_magic_numbers
 
     var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
     components.hour = hours == 24 ? 0 : hours
@@ -542,16 +548,20 @@ struct SupplementRuleEditor: View {
       case .high:
         // NOK, CZK, Ruble - higher nominal values
         return [22, 45, 55, 110, 115]
+
       case .medium:
         // USD, EUR, GBP, etc. - lower nominal values
         return [2, 5, 10, 15, 20]
+
       case .low:
         // INR, BRL, ZAR, etc. - mid-range nominal values
         return [10, 25, 50, 75, 100]
+
       case .veryLow:
         // JPY, KRW - very high nominal values
-        return [100, 250, 500, 750, 1000]
+        return [100, 250, 500, 750, 1_000]  // swiftlint:disable:this no_magic_numbers
       }
+
     case .percent:
       return [25, 50, 100, 150]
     }
@@ -564,13 +574,17 @@ struct SupplementRuleEditor: View {
       switch currencyConfig.wageRangeTier {
       case .high:
         return 1...200
+
       case .medium:
         return 1...50
+
       case .low:
         return 1...500
+
       case .veryLow:
-        return 1...2000
+        return 1...2_000  // swiftlint:disable:this no_magic_numbers
       }
+
     case .percent:
       return 1...200
     }

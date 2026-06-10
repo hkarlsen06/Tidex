@@ -40,7 +40,7 @@ final class RecurringShiftProjectorTests: XCTestCase {
 
     let dates =
       RecurringShiftGenerator
-      .generateVirtualShiftsForMonth(year: 2026, month: 3, recurring: recurring)
+      .generateVirtualShiftsForMonth(year: 2_026, month: 3, recurring: recurring)
       .map(\.date)
 
     XCTAssertEqual(dates, ["2026-03-02", "2026-03-09", "2026-03-16"])

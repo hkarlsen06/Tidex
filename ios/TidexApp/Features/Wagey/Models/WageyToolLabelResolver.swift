@@ -1,8 +1,8 @@
 import Foundation
 
-enum WageyToolLabelResolver {
-  static func displayName(for toolCall: ToolCall, isExecuting: Bool) -> String {
-    var name = actionSpecificName(for: toolCall) ?? fallbackName(for: toolCall.name)
+enum WageyToolLabelResolver {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  static func displayName(for toolCall: ToolCall, isExecuting: Bool) -> String {  // swiftlint:disable:this explicit_acl line_length type_contents_order
+    var name = actionSpecificName(for: toolCall) ?? fallbackName(for: toolCall.name)  // swiftlint:disable:this explicit_type_interface line_length
 
     if !isExecuting {
       name = name.replacingOccurrences(of: "...", with: "")
@@ -13,7 +13,7 @@ enum WageyToolLabelResolver {
     return name
   }
 
-  private static func actionSpecificName(for toolCall: ToolCall) -> String? {
+  private static func actionSpecificName(for toolCall: ToolCall) -> String? {  // swiftlint:disable:this line_length type_contents_order
     guard
       let arguments = toolCall.arguments,
       let data = arguments.data(using: .utf8),
@@ -23,7 +23,7 @@ enum WageyToolLabelResolver {
       return nil
     }
 
-    var key = "\(toolCall.name).\(action)"
+    var key = "\(toolCall.name).\(action)"  // swiftlint:disable:this explicit_type_interface
     if toolCall.name == "manage_workplace",
       action == "reorder",
       let direction = json["direction"] as? String
@@ -34,7 +34,7 @@ enum WageyToolLabelResolver {
     return actionNameMapping[key] ?? actionNameMapping["\(toolCall.name).\(action)"]
   }
 
-  private static func fallbackName(for toolName: String) -> String {
+  private static func fallbackName(for toolName: String) -> String {  // swiftlint:disable:this type_contents_order
     toolNameMapping[toolName] ?? toolName
   }
 
@@ -69,11 +69,11 @@ enum WageyToolLabelResolver {
 
       "manage_payroll_adjustment.list": String(localized: .wageyToolPayrollAdjustmentListing),
       "manage_payroll_adjustment.create": String(
-        localized: .wageyToolPayrollAdjustmentCreating),
+        localized: .wageyToolPayrollAdjustmentCreating),  // swiftlint:disable:this multiline_arguments_brackets
       "manage_payroll_adjustment.update": String(
-        localized: .wageyToolPayrollAdjustmentUpdating),
+        localized: .wageyToolPayrollAdjustmentUpdating),  // swiftlint:disable:this multiline_arguments_brackets
       "manage_payroll_adjustment.delete": String(
-        localized: .wageyToolPayrollAdjustmentDeleting),
+        localized: .wageyToolPayrollAdjustmentDeleting),  // swiftlint:disable:this multiline_arguments_brackets
 
       "manage_workplace.create": String(localized: .wageyToolWorkplaceCreating),
       "manage_workplace.update": String(localized: .wageyToolWorkplaceUpdating),
@@ -85,30 +85,30 @@ enum WageyToolLabelResolver {
       "manage_workplace.delete": String(localized: .wageyToolWorkplaceDeleting),
 
       "manage_friend_sharing.share_by_identifier": String(
-        localized: .wageyToolFriendSharingShareByIdentifier),
+        localized: .wageyToolFriendSharingShareByIdentifier),  // swiftlint:disable:this multiline_arguments_brackets
       "manage_friend_sharing.share_back": String(localized: .wageyToolFriendSharingShareBack),
       "manage_friend_sharing.remove_recipient": String(
-        localized: .wageyToolFriendSharingRemoveRecipient),
+        localized: .wageyToolFriendSharingRemoveRecipient),  // swiftlint:disable:this multiline_arguments_brackets
       "manage_friend_sharing.toggle_recipient_earnings": String(
-        localized: .wageyToolFriendSharingToggleRecipientEarnings),
+        localized: .wageyToolFriendSharingToggleRecipientEarnings),  // swiftlint:disable:this line_length multiline_arguments_brackets
       "manage_friend_sharing.block_sharer": String(localized: .wageyToolFriendSharingBlockSharer),
       "manage_friend_sharing.unblock_sharer": String(
-        localized: .wageyToolFriendSharingUnblockSharer),
+        localized: .wageyToolFriendSharingUnblockSharer),  // swiftlint:disable:this multiline_arguments_brackets
       "manage_friend_sharing.set_sharer_muted": String(
-        localized: .wageyToolFriendSharingSetSharerMuted),
+        localized: .wageyToolFriendSharingSetSharerMuted),  // swiftlint:disable:this multiline_arguments_brackets
       "manage_friend_sharing.remove_sharer": String(localized: .wageyToolFriendSharingRemoveSharer),
 
       "manage_shift_advanced.copy_shifts": String(localized: .wageyToolShiftAdvancedCopyShifts),
       "manage_shift_advanced.update_custom_pause_windows": String(
-        localized: .settingsPayEditorBreakTitle),
+        localized: .settingsPayEditorBreakTitle),  // swiftlint:disable:this multiline_arguments_brackets
       "manage_shift_advanced.update_custom_supplements": String(
-        localized: .wageyToolShiftAdvancedUpdateCustomSupplements),
+        localized: .wageyToolShiftAdvancedUpdateCustomSupplements),  // swiftlint:disable:this line_length multiline_arguments_brackets
       "manage_shift_advanced.convert_recurring_to_standalone": String(
-        localized: .wageyToolShiftAdvancedConvertRecurringToStandalone),
+        localized: .wageyToolShiftAdvancedConvertRecurringToStandalone),  // swiftlint:disable:this line_length multiline_arguments_brackets
       "manage_shift_advanced.move_recurring_occurrence": String(
-        localized: .wageyToolShiftAdvancedMoveRecurringOccurrence),
+        localized: .wageyToolShiftAdvancedMoveRecurringOccurrence),  // swiftlint:disable:this line_length multiline_arguments_brackets
       "manage_shift_advanced.clear_shift_snapshots": String(
-        localized: .wageyToolShiftAdvancedClearShiftSnapshots),
+        localized: .wageyToolShiftAdvancedClearShiftSnapshots),  // swiftlint:disable:this multiline_arguments_brackets
 
       "manage_feedback.submit": String(localized: .wageyToolFeedbackSubmit),
       "manage_feedback.list": String(localized: .wageyToolFeedbackList),

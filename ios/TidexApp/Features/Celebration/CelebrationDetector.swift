@@ -9,7 +9,8 @@ struct CelebrationDetector {
     includeVirtual: Bool = false
   ) -> Set<String> {
     let completed = shifts.filter { shift in
-      if !includeVirtual && shift.isVirtual { return false }
+      // swiftlint:disable:next conditional_returns_on_newline
+      if !includeVirtual, shift.isVirtual { return false }
       return Date.hasShiftEnded(
         shiftDate: shift.shiftDate,
         startTime: shift.startTime,
@@ -17,7 +18,7 @@ struct CelebrationDetector {
         referenceDate: now
       )
     }
-    return Set(completed.map { $0.id })
+    return Set(completed.map(\.id))
   }
 
   /// Find newly completed shifts since the previous completed ID set.
@@ -28,7 +29,8 @@ struct CelebrationDetector {
     includeVirtual: Bool = false
   ) -> [ShiftWithComputations] {
     shifts.filter { shift in
-      if !includeVirtual && shift.isVirtual { return false }
+      // swiftlint:disable:next conditional_returns_on_newline
+      if !includeVirtual, shift.isVirtual { return false }
       guard !previousCompletedIds.contains(shift.id) else { return false }
       return Date.hasShiftEnded(
         shiftDate: shift.shiftDate,
@@ -45,7 +47,8 @@ struct CelebrationDetector {
   {
     guard !shifts.isEmpty else { return nil }
 
-    let maxGross = shifts.map { $0.grossPay }.max() ?? 0
+    // swiftlint:disable:next explicit_type_interface
+    let maxGross = shifts.map(\.grossPay).max() ?? 0
     if maxGross == 0 {
       return shifts.min { $0.shiftDate < $1.shiftDate }
     }

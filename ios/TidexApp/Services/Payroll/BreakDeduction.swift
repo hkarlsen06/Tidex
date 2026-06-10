@@ -34,7 +34,7 @@ struct BreakDeduction {
     var adjusted = periods
     var notes: [String] = []
 
-    if totalMinutes > 0 && toDeduct > 0 && method != .none {
+    if totalMinutes > 0, toDeduct > 0, method != .none {
       // For end_of_shift and base_only, use rounded minutes like Next.js
       var remaining = (toDeduct * 60).rounded()
 

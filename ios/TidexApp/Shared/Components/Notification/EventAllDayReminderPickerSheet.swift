@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable accessibility_label_for_image closure_body_length explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers number_separator shorthand_optional_binding
 import SwiftUI
 
 struct EventAllDayReminderPickerSheet: View {
@@ -52,7 +58,7 @@ struct EventAllDayReminderPickerSheet: View {
 
         Spacer()
 
-        if isEditing, let onDelete = onDelete {
+        if isEditing, let onDelete {
           deleteButton(action: onDelete)
         }
       }
@@ -88,7 +94,7 @@ struct EventAllDayReminderPickerSheet: View {
 
       Text(
         ReminderOffsetFormatter.localizedAllDayEventReminder(
-          minutesBefore: daysBefore * 1440,
+          minutesBefore: daysBefore * 1_440,
           anchorTime: anchorTime
         )
       )

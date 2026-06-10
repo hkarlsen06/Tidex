@@ -178,7 +178,7 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   private func updateSelectedJobConfiguration() {
-    isSelectedJobConfigured = selectedJobId != nil && snapshots.contains { $0.isBaseline }
+    isSelectedJobConfigured = selectedJobId != nil && snapshots.contains(where: \.isBaseline)
   }
 
   private func applySelection(from jobs: [Job]) {
@@ -205,7 +205,7 @@ final class PaySettingsViewModel: ObservableObject {
     }
 
     selectedJobId =
-      jobs.first(where: { $0.is_default })?.id
+      jobs.first(where: \.is_default)?.id
       ?? jobs.first?.id
     requiresJobReselection = false
   }
@@ -254,7 +254,7 @@ final class PaySettingsViewModel: ObservableObject {
   var selectedJobManagementHint: String? {
     guard let selectedJob else { return nil }
 
-    if !isSelectedJobConfigured && !selectedJob.is_default {
+    if !isSelectedJobConfigured, !selectedJob.is_default {
       return String(localized: .settingsPayJobActionsSetupHint)
     }
 
@@ -459,7 +459,7 @@ final class PaySettingsViewModel: ObservableObject {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
       return false
     }
-    guard let selectedJobId = selectedJobId else {
+    guard let selectedJobId else {
       errorMessage = String(localized: .settingsPayErrorLoadFailed)
       return false
     }
@@ -784,8 +784,8 @@ final class PaySettingsViewModel: ObservableObject {
   private func saveMonthlyGoal(_ value: Int?) async {
     guard
       let userId = currentLocalUserId(),
-      let selectedJobId = selectedJobId,
-      let selectedJob = selectedJob
+      let selectedJobId,
+      let selectedJob
     else { return }
 
     do {
@@ -825,8 +825,8 @@ final class PaySettingsViewModel: ObservableObject {
   private func savePayrollDay(_ value: Int) async {
     guard
       let userId = currentLocalUserId(),
-      let selectedJobId = selectedJobId,
-      let selectedJob = selectedJob
+      let selectedJobId,
+      let selectedJob
     else { return }
 
     do {
@@ -851,8 +851,8 @@ final class PaySettingsViewModel: ObservableObject {
   func updateHalfTaxMonth(_ value: Int?) async {
     guard
       let userId = currentLocalUserId(),
-      let selectedJobId = selectedJobId,
-      let selectedJob = selectedJob
+      let selectedJobId,
+      let selectedJob
     else { return }
 
     do {
@@ -921,7 +921,7 @@ struct WageSnapshotEditorInput {
   init(prefillFrom snapshot: WageSnapshot? = nil) {
     self.fromDate = Date()
 
-    if let snapshot = snapshot {
+    if let snapshot {
       self.hourlyWage = snapshot.hourly_wage
       self.wageLevel = snapshot.wage_level
       self.supplements = snapshot.supplements

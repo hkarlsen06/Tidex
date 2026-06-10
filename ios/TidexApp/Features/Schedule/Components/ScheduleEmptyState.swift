@@ -76,8 +76,10 @@ struct ShiftsEmptyState: View {
     switch monthPeriod {
     case .past:
       return "clock.arrow.circlepath"
+
     case .current:
       return "calendar.badge.plus"
+
     case .future:
       return "calendar.badge.clock"
     }
@@ -87,8 +89,10 @@ struct ShiftsEmptyState: View {
     switch monthPeriod {
     case .past:
       return .tidexTextMuted
+
     case .current:
       return .tidexBlue
+
     case .future:
       return .tidexBlue
     }
@@ -98,8 +102,10 @@ struct ShiftsEmptyState: View {
     switch monthPeriod {
     case .past:
       return String(localized: .shiftsEmptyNoShifts)
+
     case .current:
       return String(localized: .shiftsEmptyNoShiftsThisMonth)
+
     case .future:
       if let name = monthName {
         return String(localized: .shiftsEmptyNoShiftsInMonth(name))
@@ -115,8 +121,10 @@ struct ShiftsEmptyState: View {
         return String(localized: .shiftsEmptyNoPastRecords(name.lowercased()))
       }
       return String(localized: .shiftsEmptyNoRecordsMonth)
+
     case .current:
       return String(localized: .shiftsEmptyStartTracking)
+
     case .future:
       return String(localized: .shiftsEmptyPlanAhead)
     }
@@ -128,6 +136,7 @@ struct ShiftsEmptyState: View {
     case .past:
       // No action for past months
       EmptyView()
+
     case .current, .future:
       Button(action: onAddShift) {
         HStack(spacing: Spacing.xs) {

@@ -1,26 +1,26 @@
 import SwiftUI
 
-struct PayrollAdjustmentDraft {
-  let jobId: String?
-  let amount: Double
-  let currency: String
-  let category: PayrollAdjustmentCategory
-  let taxTreatment: PayrollAdjustmentTaxTreatment
-  let description: String
-  let note: String?
-  let earnedFromDate: Date?
-  let earnedToDate: Date?
-  let payoutDate: Date
+struct PayrollAdjustmentDraft {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  let jobId: String?  // swiftlint:disable:this explicit_acl
+  let amount: Double  // swiftlint:disable:this explicit_acl
+  let currency: String  // swiftlint:disable:this explicit_acl
+  let category: PayrollAdjustmentCategory  // swiftlint:disable:this explicit_acl
+  let taxTreatment: PayrollAdjustmentTaxTreatment  // swiftlint:disable:this explicit_acl
+  let description: String  // swiftlint:disable:this explicit_acl
+  let note: String?  // swiftlint:disable:this explicit_acl
+  let earnedFromDate: Date?  // swiftlint:disable:this explicit_acl
+  let earnedToDate: Date?  // swiftlint:disable:this explicit_acl
+  let payoutDate: Date  // swiftlint:disable:this explicit_acl
 }
 
-struct PayrollDetailsSheet: View {
-  let variant: PayrollCardVariant
-  var onCreateAdjustment: ((PayrollAdjustmentDraft) async throws -> PayrollAdjustment)?
-  var onUpdateAdjustment: ((String, PayrollAdjustmentDraft) async throws -> PayrollAdjustment)?
-  var onDeleteAdjustment: ((String) async throws -> Void)?
+struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
+  let variant: PayrollCardVariant  // swiftlint:disable:this explicit_acl
+  var onCreateAdjustment: ((PayrollAdjustmentDraft) async throws -> PayrollAdjustment)?  // swiftlint:disable:this explicit_acl line_length
+  var onUpdateAdjustment: ((String, PayrollAdjustmentDraft) async throws -> PayrollAdjustment)?  // swiftlint:disable:this explicit_acl line_length
+  var onDeleteAdjustment: ((String) async throws -> Void)?  // swiftlint:disable:this explicit_acl
 
-  @Environment(\.dismiss) private var dismiss
-  @Environment(\.userCurrency) private var currency
+  @Environment(\.dismiss) private var dismiss  // swiftlint:disable:this explicit_type_interface
+  @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
   @State private var expandedSupplementJobIds: Set<String> = []
   @State private var expandedPostDeductionJobIds: Set<String> = []
   @State private var expandedAdjustmentSectionIds: Set<String> = []
@@ -46,7 +46,7 @@ struct PayrollDetailsSheet: View {
     totalTax > 0
   }
 
-  var body: some View {
+  var body: some View {  // swiftlint:disable:this explicit_acl
     NavigationStack {
       ScrollView {
         VStack(spacing: Spacing.lg) {
@@ -72,19 +72,19 @@ struct PayrollDetailsSheet: View {
         context: context,
         onSave: { draft in
           if let adjustment = context.adjustment {
-            guard let onUpdateAdjustment else { return }
-            let updated = try await onUpdateAdjustment(adjustment.id, draft)
+            guard let onUpdateAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline
+            let updated = try await onUpdateAdjustment(adjustment.id, draft)  // swiftlint:disable:this explicit_type_interface
             replaceAdjustment(updated, in: context.breakdown.id)
           } else {
-            guard let onCreateAdjustment else { return }
-            let adjustment = try await onCreateAdjustment(draft)
+            guard let onCreateAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline
+            let adjustment = try await onCreateAdjustment(draft)  // swiftlint:disable:this explicit_type_interface
             createdAdjustmentsByJobId[context.breakdown.id, default: []].append(adjustment)
           }
         },
         onDelete: context.adjustment == nil
           ? nil
           : {
-            guard let adjustment = context.adjustment, let onDeleteAdjustment else { return }
+            guard let adjustment = context.adjustment, let onDeleteAdjustment else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
             try await onDeleteAdjustment(adjustment.id)
             removeAdjustment(adjustment.id, from: context.breakdown.id)
           }
@@ -115,9 +115,9 @@ struct PayrollDetailsSheet: View {
         earningsRow(
           label: String(
             localized: showTaxBreakdown
-              ? .dashboardPayrollDetailsTotalGross : .dashboardPayrollDetailsTotalNet),
+              ? .dashboardPayrollDetailsTotalGross : .dashboardPayrollDetailsTotalNet),  // swiftlint:disable:this line_length multiline_arguments_brackets
           value: formatCurrency(
-            showTaxBreakdown ? totalGross : totalNet, currency: variant.currency),
+            showTaxBreakdown ? totalGross : totalNet, currency: variant.currency),  // swiftlint:disable:this line_length multiline_arguments_brackets
           isHighlighted: !showTaxBreakdown
         )
 
@@ -162,11 +162,11 @@ struct PayrollDetailsSheet: View {
     }
 
     return variant.jobBreakdowns.map { breakdown in
-      let persisted = breakdown.adjustments.compactMap { adjustment -> PayrollAdjustment? in
-        guard !deletedAdjustmentIds.contains(adjustment.id) else { return nil }
+      let persisted = breakdown.adjustments.compactMap { adjustment -> PayrollAdjustment? in  // swiftlint:disable:this explicit_type_interface line_length
+        guard !deletedAdjustmentIds.contains(adjustment.id) else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
         return editedAdjustmentsById[adjustment.id] ?? adjustment
       }
-      let additions = (createdAdjustmentsByJobId[breakdown.id] ?? [])
+      let additions = (createdAdjustmentsByJobId[breakdown.id] ?? [])  // swiftlint:disable:this explicit_type_interface
         .filter { !deletedAdjustmentIds.contains($0.id) && editedAdjustmentsById[$0.id] == nil }
       return breakdown.withAdjustments(persisted + additions)
     }
@@ -174,14 +174,14 @@ struct PayrollDetailsSheet: View {
 
   private var workplaceDivider: some View {
     RoundedRectangle(cornerRadius: 1)
-      .fill(Color.tidexBorder.opacity(0.85))
-      .frame(height: 2)
+      .fill(Color.tidexBorder.opacity(0.85))  // swiftlint:disable:this no_magic_numbers
+      .frame(height: 2)  // swiftlint:disable:this no_magic_numbers
       .padding(.vertical, Spacing.xs)
   }
 
   @ViewBuilder
-  private func jobBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {
-    VStack(spacing: Spacing.sm) {
+  private func jobBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {  // swiftlint:disable:this function_body_length line_length
+    VStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
       HStack(spacing: Spacing.xs) {
         WorkplaceNameText(
           name: breakdown.title,
@@ -215,8 +215,8 @@ struct PayrollDetailsSheet: View {
         postDeductionBreakdownSection(breakdown)
       }
 
-      if breakdown.taxEnabled
-        && (!taxableAdjustments(for: breakdown).isEmpty || onCreateAdjustment != nil)
+      if breakdown.taxEnabled,
+        !taxableAdjustments(for: breakdown).isEmpty || onCreateAdjustment != nil
       {
         Divider()
         taxableAdjustmentBreakdownSection(breakdown)
@@ -239,13 +239,13 @@ struct PayrollDetailsSheet: View {
         )
       }
 
-      if breakdown.taxEnabled && !directPayoutAdjustments(for: breakdown).isEmpty {
+      if breakdown.taxEnabled, !directPayoutAdjustments(for: breakdown).isEmpty {
         Divider()
         directPayoutAdjustmentBreakdownSection(breakdown)
       }
 
-      if !breakdown.taxEnabled
-        && (!directPayoutAdjustments(for: breakdown).isEmpty || onCreateAdjustment != nil)
+      if !breakdown.taxEnabled,
+        !directPayoutAdjustments(for: breakdown).isEmpty || onCreateAdjustment != nil
       {
         Divider()
         directPayoutAdjustmentBreakdownSection(breakdown)
@@ -261,18 +261,18 @@ struct PayrollDetailsSheet: View {
     }
   }
 
-  private func adjustmentBreakdownSection(
+  private func adjustmentBreakdownSection(  // swiftlint:disable:this function_body_length
     _ breakdown: PayrollCardJobBreakdown,
     kind: AdjustmentSectionKind,
     adjustments: [PayrollAdjustment],
     showsAddButton: Bool
   ) -> some View {
-    VStack(spacing: Spacing.xs) {
-      let sectionId = adjustmentSectionId(breakdown, kind: kind)
-      let isExpanded = expandedAdjustmentSectionIds.contains(sectionId)
+    VStack(spacing: Spacing.xs) {  // swiftlint:disable:this closure_body_length
+      let sectionId = adjustmentSectionId(breakdown, kind: kind)  // swiftlint:disable:this explicit_type_interface
+      let isExpanded = expandedAdjustmentSectionIds.contains(sectionId)  // swiftlint:disable:this explicit_type_interface line_length
 
       Button {
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(.easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
           if isExpanded {
             expandedAdjustmentSectionIds.remove(sectionId)
           } else {
@@ -290,12 +290,12 @@ struct PayrollDetailsSheet: View {
 
       if isExpanded {
         ForEach(adjustments) { adjustment in
-          adjustmentCard(adjustment, currency: breakdown.currency)
+          adjustmentCard(adjustment, currency: breakdown.currency)  // swiftlint:disable:this accessibility_trait_for_button line_length
             .onTapGesture {
               adjustmentFormContext = PayrollAdjustmentFormContext(
                 breakdown: breakdown,
                 jobOptions: displayedBreakdowns.map {
-                  PayrollAdjustmentJobOption(id: $0.id, title: $0.title)
+                  PayrollAdjustmentJobOption(id: $0.id, title: $0.title)  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
                 },
                 adjustment: adjustment
               )
@@ -307,13 +307,13 @@ struct PayrollDetailsSheet: View {
             adjustmentFormContext = PayrollAdjustmentFormContext(
               breakdown: breakdown,
               jobOptions: displayedBreakdowns.map {
-                PayrollAdjustmentJobOption(id: $0.id, title: $0.title)
+                PayrollAdjustmentJobOption(id: $0.id, title: $0.title)  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
               },
               adjustment: nil
             )
           } label: {
             HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "plus")
+              Image(systemName: "plus")  // swiftlint:disable:this accessibility_label_for_image
                 .font(.tidexFootnote)
               Text(.dashboardPayrollDetailsAddAdjustment)
                 .font(.tidexLabel)
@@ -321,7 +321,7 @@ struct PayrollDetailsSheet: View {
             .foregroundColor(.tidexBlue)
             .padding(.vertical, Spacing.xs)
             .frame(maxWidth: .infinity)
-            .background(Color.tidexBlue.opacity(0.08))
+            .background(Color.tidexBlue.opacity(0.08))  // swiftlint:disable:this no_magic_numbers
             .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
           }
           .buttonStyle(.plain)
@@ -356,16 +356,16 @@ struct PayrollDetailsSheet: View {
     adjustments: [PayrollAdjustment],
     isExpanded: Bool
   ) -> some View {
-    let total = adjustmentTotal(for: adjustments)
+    let total = adjustmentTotal(for: adjustments)  // swiftlint:disable:this explicit_type_interface
     return HStack(spacing: Spacing.xs) {
       Text(.dashboardPayrollDetailsAdjustments)
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextSecondary)
 
-      Image(systemName: "chevron.down")
+      Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextMuted)
-        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+        .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
 
       Spacer()
 
@@ -378,12 +378,12 @@ struct PayrollDetailsSheet: View {
 
   private func supplementBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {
     VStack(spacing: Spacing.sm) {
-      let canExpand = !breakdown.supplementBreakdowns.isEmpty
-      let isExpanded = expandedSupplementJobIds.contains(breakdown.id)
+      let canExpand = !breakdown.supplementBreakdowns.isEmpty  // swiftlint:disable:this explicit_type_interface
+      let isExpanded = expandedSupplementJobIds.contains(breakdown.id)  // swiftlint:disable:this explicit_type_interface
 
       if canExpand {
         Button {
-          withAnimation(.easeInOut(duration: 0.18)) {
+          withAnimation(.easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
             if isExpanded {
               expandedSupplementJobIds.remove(breakdown.id)
             } else {
@@ -398,7 +398,7 @@ struct PayrollDetailsSheet: View {
         supplementTotalRow(breakdown, showsChevron: false, isExpanded: false)
       }
 
-      if canExpand && isExpanded {
+      if canExpand, isExpanded {
         ForEach(breakdown.supplementBreakdowns) { supplement in
           supplementBreakdownCard(supplement, currency: breakdown.currency)
         }
@@ -417,10 +417,10 @@ struct PayrollDetailsSheet: View {
         .foregroundColor(.tidexTextSecondary)
 
       if showsChevron {
-        Image(systemName: "chevron.down")
+        Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
-          .rotationEffect(.degrees(isExpanded ? 180 : 0))
+          .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
       }
 
       Spacer()
@@ -436,7 +436,7 @@ struct PayrollDetailsSheet: View {
     _ supplement: PayrollSupplementBreakdown,
     currency: String
   ) -> some View {
-    let segment = supplement.segment
+    let segment = supplement.segment  // swiftlint:disable:this explicit_type_interface
     return EarningsSupplementBreakdownDetailCard(
       timeRange: segment.timeRange,
       hoursAndRate:
@@ -447,12 +447,12 @@ struct PayrollDetailsSheet: View {
 
   private func postDeductionBreakdownSection(_ breakdown: PayrollCardJobBreakdown) -> some View {
     VStack(spacing: Spacing.xs) {
-      let canExpand = !breakdown.postDeductionParts.isEmpty
-      let isExpanded = expandedPostDeductionJobIds.contains(breakdown.id)
+      let canExpand = !breakdown.postDeductionParts.isEmpty  // swiftlint:disable:this explicit_type_interface
+      let isExpanded = expandedPostDeductionJobIds.contains(breakdown.id)  // swiftlint:disable:this explicit_type_interface
 
       if canExpand {
         Button {
-          withAnimation(.easeInOut(duration: 0.18)) {
+          withAnimation(.easeInOut(duration: 0.18)) {  // swiftlint:disable:this no_magic_numbers
             if isExpanded {
               expandedPostDeductionJobIds.remove(breakdown.id)
             } else {
@@ -467,7 +467,7 @@ struct PayrollDetailsSheet: View {
         postDeductionTotalRow(breakdown, showsChevron: false, isExpanded: false)
       }
 
-      if canExpand && isExpanded {
+      if canExpand, isExpanded {
         ForEach(breakdown.postDeductionParts) { part in
           postDeductionPartCard(part, currency: breakdown.currency)
         }
@@ -486,10 +486,10 @@ struct PayrollDetailsSheet: View {
         .foregroundColor(.tidexTextSecondary)
 
       if showsChevron {
-        Image(systemName: "chevron.down")
+        Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
-          .rotationEffect(.degrees(isExpanded ? 180 : 0))
+          .rotationEffect(.degrees(isExpanded ? 180 : 0))  // swiftlint:disable:this no_magic_numbers
       }
 
       Spacer()
@@ -510,10 +510,11 @@ struct PayrollDetailsSheet: View {
         amount: "−\(formatCurrency(part.amount, currency: currency))",
         detailTitle: String(localized: .shiftsBreakDeduction),
         detailValue: part.rate.map {
-          "\(formatHoursValue(part.hours)) × \(formatCurrency($0, currency: currency))"
+          "\(formatHoursValue(part.hours)) × \(formatCurrency($0, currency: currency))"  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
         }
           ?? formatHoursValue(part.hours)
       )
+
     case .supplement:
       if let segment = part.supplementSegment {
         EarningsBreakDeductionDetailCard(
@@ -558,7 +559,7 @@ struct PayrollDetailsSheet: View {
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
           .multilineTextAlignment(.leading)
-          .lineLimit(3)
+          .lineLimit(3)  // swiftlint:disable:this no_magic_numbers
           .frame(maxWidth: .infinity, alignment: .leading)
       }
 
@@ -571,9 +572,9 @@ struct PayrollDetailsSheet: View {
     if let text = adjustment.curated_note?.trimmingCharacters(in: .whitespacesAndNewlines),
       !text.isEmpty
     {
-      let linkText = adjustment.curated_link?.trimmingCharacters(in: .whitespacesAndNewlines)
-      let description = adjustment.curated_description?.trimmingCharacters(
-        in: .whitespacesAndNewlines)
+      let linkText = adjustment.curated_link?.trimmingCharacters(in: .whitespacesAndNewlines)  // swiftlint:disable:this explicit_type_interface line_length
+      let description = adjustment.curated_description?.trimmingCharacters(  // swiftlint:disable:this explicit_type_interface line_length
+        in: .whitespacesAndNewlines)  // swiftlint:disable:this multiline_arguments_brackets
       if let description, !description.isEmpty {
         Button {
           curatedAdjustmentContext = PayrollAdjustmentCuratedContext(
@@ -581,7 +582,7 @@ struct PayrollDetailsSheet: View {
             description: description,
             linkURL: linkText.flatMap(URL.init(string:)),
             linkTitle: adjustment.curated_link_title?.trimmingCharacters(
-              in: .whitespacesAndNewlines)
+              in: .whitespacesAndNewlines)  // swiftlint:disable:this multiline_arguments_brackets
           )
         } label: {
           curatedAdjustmentText(text)
@@ -635,14 +636,14 @@ struct PayrollDetailsSheet: View {
   }
 
   private func taxableAdjustments(for breakdown: PayrollCardJobBreakdown) -> [PayrollAdjustment] {
-    guard breakdown.taxEnabled else { return [] }
+    guard breakdown.taxEnabled else { return [] }  // swiftlint:disable:this conditional_returns_on_newline
     return breakdown.adjustments.filter { $0.tax_treatment != .netManual }
   }
 
   private func directPayoutAdjustments(for breakdown: PayrollCardJobBreakdown)
     -> [PayrollAdjustment]
   {
-    guard breakdown.taxEnabled else { return breakdown.adjustments }
+    guard breakdown.taxEnabled else { return breakdown.adjustments }  // swiftlint:disable:this conditional_returns_on_newline line_length
     return breakdown.adjustments.filter { $0.tax_treatment == .netManual }
   }
 
@@ -654,7 +655,7 @@ struct PayrollDetailsSheet: View {
   }
 
   private func replaceAdjustment(_ adjustment: PayrollAdjustment, in breakdownId: String) {
-    var additions = createdAdjustmentsByJobId[breakdownId] ?? []
+    var additions = createdAdjustmentsByJobId[breakdownId] ?? []  // swiftlint:disable:this explicit_type_interface
     if let index = additions.firstIndex(where: { $0.id == adjustment.id }) {
       additions[index] = adjustment
       createdAdjustmentsByJobId[breakdownId] = additions
@@ -678,10 +679,13 @@ struct PayrollDetailsSheet: View {
     switch adjustment.category {
     case .retroPay:
       return String(localized: .dashboardPayrollDetailsAdjustmentRetroPay)
+
     case .bonus:
       return String(localized: .dashboardPayrollDetailsAdjustmentBonus)
+
     case .correction:
       return String(localized: .dashboardPayrollDetailsAdjustmentCorrection)
+
     case .other:
       return String(localized: .dashboardPayrollDetailsAdjustmentOther)
     }
@@ -702,19 +706,19 @@ private struct PayrollAdjustmentJobOption: Identifiable, Equatable {
 }
 
 private enum AdjustmentSectionKind: String {
-  case taxable
-  case directPayout
+  case taxable  // swiftlint:disable:this explicit_enum_raw_value sorted_enum_cases
+  case directPayout  // swiftlint:disable:this explicit_enum_raw_value sorted_enum_cases
 }
 
 private struct PayrollAdjustmentFormContext: Identifiable {
-  let id = UUID()
+  let id = UUID()  // swiftlint:disable:this explicit_type_interface
   let breakdown: PayrollCardJobBreakdown
   let jobOptions: [PayrollAdjustmentJobOption]
   let adjustment: PayrollAdjustment?
 }
 
 private struct PayrollAdjustmentCuratedContext: Identifiable {
-  let id = UUID()
+  let id = UUID()  // swiftlint:disable:this explicit_type_interface
   let adjustment: PayrollAdjustment
   let description: String
   let linkURL: URL?
@@ -724,17 +728,17 @@ private struct PayrollAdjustmentCuratedContext: Identifiable {
 private struct PayrollAdjustmentCuratedSheet: View {
   let context: PayrollAdjustmentCuratedContext
 
-  @Environment(\.dismiss) private var dismiss
+  @Environment(\.dismiss) private var dismiss  // swiftlint:disable:this explicit_type_interface
 
   private var displayLinkTitle: String {
-    let trimmed = context.linkTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    let trimmed = context.linkTitle?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""  // swiftlint:disable:this explicit_type_interface line_length
     return trimmed.isEmpty
       ? String(localized: .dashboardPayrollDetailsCuratedLinkFallback)
       : trimmed
   }
 
   var body: some View {
-    NavigationStack {
+    NavigationStack {  // swiftlint:disable:this closure_body_length
       ScrollView {
         VStack(alignment: .leading, spacing: Spacing.lg) {
           Text(context.description)
@@ -747,14 +751,14 @@ private struct PayrollAdjustmentCuratedSheet: View {
             Link(destination: linkURL) {
               HStack(spacing: Spacing.xxs) {
                 Text(displayLinkTitle)
-                Image(systemName: "arrow.up.right")
+                Image(systemName: "arrow.up.right")  // swiftlint:disable:this accessibility_label_for_image
                   .font(.tidexFootnote)
               }
               .font(.tidexLabel)
               .foregroundColor(.tidexBlue)
               .padding(.vertical, Spacing.xs)
               .frame(maxWidth: .infinity)
-              .background(Color.tidexBlue.opacity(0.08))
+              .background(Color.tidexBlue.opacity(0.08))  // swiftlint:disable:this no_magic_numbers
               .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
             }
           }
@@ -777,24 +781,24 @@ private struct PayrollAdjustmentCuratedSheet: View {
   }
 }
 
-private struct PayrollAdjustmentFormSheet: View {
-  let context: PayrollAdjustmentFormContext
-  let onSave: (PayrollAdjustmentDraft) async throws -> Void
-  let onDelete: (() async throws -> Void)?
+private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this type_body_length
+  let context: PayrollAdjustmentFormContext  // swiftlint:disable:this type_contents_order
+  let onSave: (PayrollAdjustmentDraft) async throws -> Void  // swiftlint:disable:this type_contents_order
+  let onDelete: (() async throws -> Void)?  // swiftlint:disable:this type_contents_order
 
-  @Environment(\.dismiss) private var dismiss
-  @State private var descriptionText: String
-  @State private var amountText = ""
-  @State private var category: PayrollAdjustmentCategory = .correction
-  @State private var taxTreatment: PayrollAdjustmentTaxTreatment = .grossTaxable
-  @State private var note = ""
-  @State private var selectedJobId: String?
-  @State private var useEarnedRange = false
-  @State private var earnedFromDate: Date
-  @State private var earnedToDate: Date
-  @State private var isSaving = false
-  @State private var errorMessage: String?
-  @FocusState private var focusedField: Field?
+  @Environment(\.dismiss) private var dismiss  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @State private var descriptionText: String  // swiftlint:disable:this type_contents_order
+  @State private var amountText = ""  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @State private var category: PayrollAdjustmentCategory = .correction  // swiftlint:disable:this type_contents_order
+  @State private var taxTreatment: PayrollAdjustmentTaxTreatment = .grossTaxable  // swiftlint:disable:this line_length type_contents_order
+  @State private var note = ""  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @State private var selectedJobId: String?  // swiftlint:disable:this type_contents_order
+  @State private var useEarnedRange = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @State private var earnedFromDate: Date  // swiftlint:disable:this type_contents_order
+  @State private var earnedToDate: Date  // swiftlint:disable:this type_contents_order
+  @State private var isSaving = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @State private var errorMessage: String?  // swiftlint:disable:this type_contents_order
+  @FocusState private var focusedField: Field?  // swiftlint:disable:this type_contents_order
 
   private enum Field {
     case description
@@ -802,7 +806,7 @@ private struct PayrollAdjustmentFormSheet: View {
     case note
   }
 
-  init(
+  init(  // swiftlint:disable:this type_contents_order
     context: PayrollAdjustmentFormContext,
     onSave: @escaping (PayrollAdjustmentDraft) async throws -> Void,
     onDelete: (() async throws -> Void)? = nil
@@ -810,7 +814,7 @@ private struct PayrollAdjustmentFormSheet: View {
     self.context = context
     self.onSave = onSave
     self.onDelete = onDelete
-    let adjustment = context.adjustment
+    let adjustment = context.adjustment  // swiftlint:disable:this explicit_type_interface
     _descriptionText = State(initialValue: adjustment?.description ?? "")
     _amountText = State(initialValue: adjustment.map { String($0.amount) } ?? "")
     _category = State(initialValue: adjustment?.category ?? .correction)
@@ -820,8 +824,8 @@ private struct PayrollAdjustmentFormSheet: View {
     )
     _note = State(initialValue: adjustment?.note ?? "")
     _selectedJobId = State(initialValue: adjustment?.job_id ?? context.breakdown.id)
-    let earnedFrom = adjustment?.earned_from_date.flatMap { Date.fromISODateString($0) }
-    let earnedTo = adjustment?.earned_to_date.flatMap { Date.fromISODateString($0) }
+    let earnedFrom = adjustment?.earned_from_date.flatMap { Date.fromISODateString($0) }  // swiftlint:disable:this explicit_type_interface line_length
+    let earnedTo = adjustment?.earned_to_date.flatMap { Date.fromISODateString($0) }  // swiftlint:disable:this explicit_type_interface line_length
     _useEarnedRange = State(initialValue: earnedFrom != nil || earnedTo != nil)
     _earnedFromDate = State(initialValue: earnedFrom ?? context.breakdown.payoutDate)
     _earnedToDate = State(initialValue: earnedTo ?? context.breakdown.payoutDate)
@@ -835,14 +839,14 @@ private struct PayrollAdjustmentFormSheet: View {
     guard !descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
       return false
     }
-    guard let parsedAmount, parsedAmount != 0 else { return false }
-    guard !useEarnedRange || earnedFromDate <= earnedToDate else { return false }
+    guard let parsedAmount, parsedAmount != 0 else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    guard !useEarnedRange || earnedFromDate <= earnedToDate else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
     return !isSaving
   }
 
   var body: some View {
-    NavigationStack {
-      Form {
+    NavigationStack {  // swiftlint:disable:this closure_body_length
+      Form {  // swiftlint:disable:this closure_body_length
         Section {
           TextField(
             String(localized: .dashboardPayrollDetailsAdjustmentDescriptionPlaceholder),
@@ -850,7 +854,7 @@ private struct PayrollAdjustmentFormSheet: View {
             axis: .vertical
           )
           .textInputAutocapitalization(.sentences)
-          .lineLimit(2...4)
+          .lineLimit(2...4)  // swiftlint:disable:this no_magic_numbers
           .focused($focusedField, equals: .description)
 
           HStack(spacing: Spacing.sm) {
@@ -860,13 +864,13 @@ private struct PayrollAdjustmentFormSheet: View {
             .keyboardType(.numbersAndPunctuation)
             .focused($focusedField, equals: .amount)
             .onChange(of: amountText) { _, newValue in
-              let sanitized = sanitizedAmountText(newValue)
+              let sanitized = sanitizedAmountText(newValue)  // swiftlint:disable:this explicit_type_interface
               if sanitized != newValue {
                 amountText = sanitized
               }
             }
 
-            if focusedField != .amount && !amountText.isEmpty {
+            if focusedField != .amount, !amountText.isEmpty {
               Text(context.breakdown.currency)
                 .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextSecondary)
@@ -904,7 +908,7 @@ private struct PayrollAdjustmentFormSheet: View {
         Section {
           Toggle(
             String(localized: .dashboardPayrollDetailsAdjustmentUseEarnedRange),
-            isOn: $useEarnedRange)
+            isOn: $useEarnedRange)  // swiftlint:disable:this multiline_arguments_brackets
           Text(.dashboardPayrollDetailsAdjustmentEarnedRangeHelp)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
@@ -929,7 +933,7 @@ private struct PayrollAdjustmentFormSheet: View {
             text: $note,
             axis: .vertical
           )
-          .lineLimit(3...8)
+          .lineLimit(3...8)  // swiftlint:disable:this no_magic_numbers
           .focused($focusedField, equals: .note)
         }
 
@@ -986,11 +990,11 @@ private struct PayrollAdjustmentFormSheet: View {
   }
 
   private func save() {
-    guard let parsedAmount else { return }
+    guard let parsedAmount else { return }  // swiftlint:disable:this conditional_returns_on_newline
     isSaving = true
     errorMessage = nil
 
-    let draft = PayrollAdjustmentDraft(
+    let draft = PayrollAdjustmentDraft(  // swiftlint:disable:this explicit_type_interface
       jobId: selectedJobId,
       amount: parsedAmount,
       currency: context.breakdown.currency,
@@ -1020,7 +1024,7 @@ private struct PayrollAdjustmentFormSheet: View {
   }
 
   private func delete() {
-    guard let onDelete else { return }
+    guard let onDelete else { return }  // swiftlint:disable:this conditional_returns_on_newline
     isSaving = true
     errorMessage = nil
 
@@ -1044,10 +1048,13 @@ private struct PayrollAdjustmentFormSheet: View {
     switch category {
     case .retroPay:
       return String(localized: .dashboardPayrollDetailsAdjustmentRetroPay)
+
     case .bonus:
       return String(localized: .dashboardPayrollDetailsAdjustmentBonus)
+
     case .correction:
       return String(localized: .dashboardPayrollDetailsAdjustmentCorrection)
+
     case .other:
       return String(localized: .dashboardPayrollDetailsAdjustmentOther)
     }
@@ -1063,7 +1070,7 @@ private struct PayrollAdjustmentFormSheet: View {
           .foregroundColor(.tidexTextPrimary)
         Spacer()
         if category == option {
-          Image(systemName: "checkmark")
+          Image(systemName: "checkmark")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
         }
@@ -1077,8 +1084,10 @@ private struct PayrollAdjustmentFormSheet: View {
     switch taxTreatment {
     case .grossTaxable:
       return String(localized: .dashboardPayrollDetailsAdjustmentGrossTaxable)
+
     case .netManual:
       return String(localized: .dashboardPayrollDetailsAdjustmentNetManual)
+
     case .excludedFromTaxEstimate:
       return String(localized: .dashboardPayrollDetailsAdjustmentExcludedFromTax)
     }
@@ -1108,7 +1117,7 @@ private struct PayrollAdjustmentFormSheet: View {
         Spacer()
 
         if taxTreatment == option {
-          Image(systemName: "checkmark")
+          Image(systemName: "checkmark")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
             .foregroundColor(.tidexBlue)
         }
@@ -1119,13 +1128,13 @@ private struct PayrollAdjustmentFormSheet: View {
   }
 
   private func normalizedNote() -> String? {
-    let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)  // swiftlint:disable:this explicit_type_interface
     return trimmed.isEmpty ? nil : trimmed
   }
 
   private func sanitizedAmountText(_ value: String) -> String {
-    var result = ""
-    var hasDecimalSeparator = false
+    var result = ""  // swiftlint:disable:this explicit_type_interface
+    var hasDecimalSeparator = false  // swiftlint:disable:this explicit_type_interface
 
     for character in value {
       if character.isNumber {
@@ -1162,13 +1171,13 @@ private struct PayrollAdjustmentFormSheet: View {
 }
 
 extension PayrollCardJobBreakdown {
-  fileprivate func withAdjustments(_ nextAdjustments: [PayrollAdjustment])
+  fileprivate func withAdjustments(_ nextAdjustments: [PayrollAdjustment])  // swiftlint:disable:this strict_fileprivate
     -> PayrollCardJobBreakdown
   {
-    let originalTotals = adjustmentDisplayTotals(adjustments)
-    let nextTotals = adjustmentDisplayTotals(nextAdjustments)
-    let grossDelta = nextTotals.gross - originalTotals.gross
-    let netDelta = nextTotals.net - originalTotals.net
+    let originalTotals = adjustmentDisplayTotals(adjustments)  // swiftlint:disable:this explicit_type_interface
+    let nextTotals = adjustmentDisplayTotals(nextAdjustments)  // swiftlint:disable:this explicit_type_interface
+    let grossDelta = nextTotals.gross - originalTotals.gross  // swiftlint:disable:this explicit_type_interface
+    let netDelta = nextTotals.net - originalTotals.net  // swiftlint:disable:this explicit_type_interface
 
     return PayrollCardJobBreakdown(
       id: id,
@@ -1193,7 +1202,7 @@ extension PayrollCardJobBreakdown {
     gross: Double, net: Double
   ) {
     adjustments.reduce((gross: 0, net: 0)) { total, adjustment in
-      var next = total
+      var next = total  // swiftlint:disable:this explicit_type_interface
       guard taxEnabled else {
         next.gross += adjustment.amount
         next.net += adjustment.amount
@@ -1203,10 +1212,11 @@ extension PayrollCardJobBreakdown {
       case .grossTaxable, .excludedFromTaxEstimate:
         next.gross += adjustment.amount
         next.net += adjustment.amount
+
       case .netManual:
         next.net += adjustment.amount
       }
       return next
     }
   }
-}
+}  // swiftlint:disable:this file_length

@@ -54,13 +54,14 @@ struct ShiftRowView: View {
     let now = Date()
 
     // Update during active shifts (for progress bar and status transition)
-    if now >= shiftStart && now < shiftEnd {
+    if now >= shiftStart, now < shiftEnd {
       return true
     }
 
     // Update during upcoming shifts within 24 hours
-    let secondsUntil = shiftStart.timeIntervalSince(now)
-    let hoursUntil = secondsUntil / 3600
+    let secondsPerHour: TimeInterval = 3_600
+    let secondsUntil: TimeInterval = shiftStart.timeIntervalSince(now)
+    let hoursUntil: TimeInterval = secondsUntil / secondsPerHour
 
     return hoursUntil > 0 && hoursUntil <= 24
   }
@@ -177,6 +178,7 @@ struct ShiftRowView: View {
     switch effectiveStatus {
     case .active:
       return String(localized: .watchActive)
+
     case .upcoming, .past:
       return relativeTimeText
     }
@@ -186,8 +188,10 @@ struct ShiftRowView: View {
     switch effectiveStatus {
     case .active:
       return .green
+
     case .upcoming:
       return .blue
+
     case .past:
       return .secondary
     }
@@ -197,8 +201,10 @@ struct ShiftRowView: View {
     switch effectiveStatus {
     case .active:
       return .green.opacity(0.2)
+
     case .upcoming:
       return .blue.opacity(0.2)
+
     case .past:
       return .secondary.opacity(0.2)
     }
@@ -241,9 +247,12 @@ struct ShiftRowView: View {
     let isFuture = diffSeconds > 0
     let absDiffSeconds = abs(diffSeconds)
 
+    let secondsPerHour: Int = 3_600
+    let secondsPerMinute: Int = 60
+    let hoursPerDay: Int = 24
     let totalSeconds = Int(absDiffSeconds)
-    let hours = totalSeconds / 3600
-    let minutes = (totalSeconds % 3600) / 60
+    let hours: Int = totalSeconds / secondsPerHour
+    let minutes: Int = (totalSeconds % secondsPerHour) / secondsPerMinute
     let seconds = totalSeconds % 60
 
     // Check for day boundaries
@@ -258,24 +267,25 @@ struct ShiftRowView: View {
     }
 
     // For upcoming shifts under 24 hours, show countdown with seconds
-    if effectiveStatus == .upcoming && isFuture && hours < 24 {
+    if effectiveStatus == .upcoming, isFuture, hours < hoursPerDay {
       let hourLabel = String(localized: .commonHoursShort)
       let minLabel = String(localized: .commonMinutesShort)
       let secLabel = "s"
 
       if hours > 0 {
         return "\(hours)\(hourLabel)\(minutes)\(minLabel)\(seconds)\(secLabel)"
-      } else if minutes > 0 {
-        return "\(minutes)\(minLabel)\(seconds)\(secLabel)"
-      } else {
-        return "\(seconds)\(secLabel)"
       }
+      if minutes > 0 {
+        return "\(minutes)\(minLabel)\(seconds)\(secLabel)"
+      }
+      return "\(seconds)\(secLabel)"
     }
 
     // Tomorrow/Yesterday for shifts more than 24 hours away
     if dayDiff == 1 {
       return String(localized: .watchTomorrow)
-    } else if dayDiff == -1 {
+    }
+    if dayDiff == -1 {
       return String(localized: .watchYesterday)
     }
 
@@ -285,9 +295,8 @@ struct ShiftRowView: View {
 
     if hours == 0 {
       return "-\(minutes)\(minLabel)"
-    } else {
-      return "-\(hours)\(hourLabel)"
     }
+    return "-\(hours)\(hourLabel)"
   }
 
   // MARK: - Avatar
@@ -311,14 +320,17 @@ struct ShiftRowView: View {
           image
             .resizable()
             .scaledToFill()
+
         case .failure:
           placeholderAvatar
+
         case .empty:
           placeholderAvatar
             .overlay {
               ProgressView()
                 .scaleEffect(0.4)
             }
+
         @unknown default:
           placeholderAvatar
         }

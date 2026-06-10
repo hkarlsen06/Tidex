@@ -56,10 +56,13 @@ struct PreAuthAddShiftSimulatorScreen: View {
     switch focusStage {
     case .calendar:
       return String(localized: .onboardingAddSimulatorFocusCalendar)
+
     case .times:
       return String(localized: .onboardingAddSimulatorFocusTimes)
+
     case .totals:
       return String(localized: .onboardingAddSimulatorFocusTotals)
+
     case .add:
       return String(localized: .onboardingAddSimulatorFocusAdd)
     }

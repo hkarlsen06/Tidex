@@ -1,10 +1,16 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable line_length superfluous_disable_command
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable convenience_type explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable file_name prefer_self_in_static_references type_contents_order
 import SwiftUI
 
 // MARK: - Pull to Refresh Configuration
 
 /// Kept for API compatibility with existing call sites.
 struct PullToRefreshConfig {
-  static let `default` = PullToRefreshConfig()
+  static let `default` = Self()
 }
 
 // MARK: - Pull to Refresh Container

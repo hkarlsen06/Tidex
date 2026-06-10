@@ -115,12 +115,15 @@ enum StoredContentBlock: Codable, Equatable {
     case .text:
       let content = try container.decode(String.self, forKey: .content)
       self = .text(content)
+
     case .toolCall:
       let toolCall = try container.decode(StoredToolCall.self, forKey: .toolCall)
       self = .toolCall(toolCall)
+
     case .image:
       let image = try container.decode(StoredImageAttachment.self, forKey: .image)
       self = .image(image)
+
     case .thoughtStatus:
       let thoughtStatus = try container.decode(ThoughtStatus.self, forKey: .thoughtStatus)
       self = .thoughtStatus(thoughtStatus)
@@ -134,12 +137,15 @@ enum StoredContentBlock: Codable, Equatable {
     case .text(let content):
       try container.encode(BlockType.text, forKey: .type)
       try container.encode(content, forKey: .content)
+
     case .toolCall(let toolCall):
       try container.encode(BlockType.toolCall, forKey: .type)
       try container.encode(toolCall, forKey: .toolCall)
+
     case .image(let image):
       try container.encode(BlockType.image, forKey: .type)
       try container.encode(image, forKey: .image)
+
     case .thoughtStatus(let thoughtStatus):
       try container.encode(BlockType.thoughtStatus, forKey: .type)
       try container.encode(thoughtStatus, forKey: .thoughtStatus)
@@ -255,10 +261,13 @@ extension StoredChatMessage {
       switch block {
       case .text(let text):
         return .text(text)
+
       case .toolCall(let toolCall):
         return .toolCall(StoredToolCall(from: toolCall))
+
       case .image(let attachment):
         return .image(StoredImageAttachment(from: attachment))
+
       case .thoughtStatus(let thoughtStatus):
         return .thoughtStatus(thoughtStatus)
       }
@@ -279,10 +288,13 @@ extension StoredChatMessage {
         switch storedBlock {
         case .text(let text):
           return .text(text)
+
         case .toolCall(let storedToolCall):
           return .toolCall(storedToolCall.toToolCall())
+
         case .image(let storedImage):
           return .image(storedImage.toImageAttachment())
+
         case .thoughtStatus(let thoughtStatus):
           return .thoughtStatus(thoughtStatus)
         }

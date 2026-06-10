@@ -140,18 +140,20 @@ struct ShiftConflictDetector {
       return existingIntervals.contains { interval in
         overlaps(startMinutes, endMinutes, interval.0, interval.1)
       }
-    } else {
-      // Cross-midnight: check both parts against correct day's intervals
-      let firstDayConflict = existingIntervals.contains { interval in
-        overlaps(startMinutes, 24 * 60, interval.0, interval.1)
-      }
-
-      let nextDayConflict = nextDayIntervals.contains { interval in
-        overlaps(0, endMinutes, interval.0, interval.1)
-      }
-
-      return firstDayConflict || nextDayConflict
     }
+    // Cross-midnight: check both parts against correct day's intervals
+    // swiftlint:disable:next explicit_type_interface
+    let firstDayConflict = existingIntervals.contains { interval in
+      // swiftlint:disable:next no_magic_numbers
+      overlaps(startMinutes, 24 * 60, interval.0, interval.1)
+    }
+
+    // swiftlint:disable:next explicit_type_interface
+    let nextDayConflict = nextDayIntervals.contains { interval in
+      overlaps(0, endMinutes, interval.0, interval.1)
+    }
+
+    return firstDayConflict || nextDayConflict
   }
 
   /// Check if two intervals overlap
@@ -213,7 +215,7 @@ struct ShiftConflictDetector {
         recurring: recurring
       )
 
-      dates.append(contentsOf: virtualShifts.map { $0.date })
+      dates.append(contentsOf: virtualShifts.map(\.date))
 
       // Move to next month
       guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: current) else {

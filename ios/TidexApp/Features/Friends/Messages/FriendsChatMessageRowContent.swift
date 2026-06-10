@@ -580,10 +580,13 @@ struct FriendsChatMessageRowContent: View {
       switch (joinsPrevious, joinsNext) {
       case (false, false):
         .standalone
+
       case (false, true):
         .leading
+
       case (true, true):
         .middle
+
       case (true, false):
         .trailing
       }
@@ -827,7 +830,7 @@ struct FriendsChatMessageRowContent: View {
     replySwipeOffset = newOffset
 
     let crossedThreshold = FriendsChatReplySwipeResolver.crossedThreshold(offset: replySwipeOffset)
-    if crossedThreshold && !hasTriggeredReplySwipeHaptic {
+    if crossedThreshold, !hasTriggeredReplySwipeHaptic {
       hasTriggeredReplySwipeHaptic = true
       ReplySwipeHaptics.impact.impactOccurred()
       ReplySwipeHaptics.impact.prepare()
@@ -949,6 +952,7 @@ struct FriendsChatMessageRowContent: View {
     switch messageStatus {
     case .sending, .delivered, .read:
       return messageStatus
+
     case .failed:
       return .failed
     }
@@ -1016,7 +1020,7 @@ struct FriendsChatMessageRowContent: View {
       return (attachment.reactions, attachment.id)
     }
 
-    if allowsMessageFallback && index == imageCount - 1 {
+    if allowsMessageFallback, index == imageCount - 1 {
       return (message.reactions, nil)
     }
 
@@ -1049,10 +1053,13 @@ extension FriendLastMessagePreviewKind {
     switch self {
     case .text:
       return nil
+
     case .image:
       return "photo"
+
     case .shiftSnapshot:
       return "calendar.badge.clock"
+
     case .unknown:
       return "questionmark.circle"
     }
@@ -1112,10 +1119,13 @@ struct FriendsChatReplySwipeConfiguration {
 struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View, Status: View>: View {
   let isCurrentUser: Bool
   let groupContext: FriendsChatMessageGroupContext
-  var minWidth: CGFloat? = nil
-  var maxWidth: CGFloat? = nil
+  // swiftlint:disable:next explicit_acl
+  var minWidth: CGFloat?
+  // swiftlint:disable:next explicit_acl
+  var maxWidth: CGFloat?
   let messageFrame: Binding<CGRect>?
-  var replySwipe: FriendsChatReplySwipeConfiguration? = nil
+  // swiftlint:disable:next explicit_acl
+  var replySwipe: FriendsChatReplySwipeConfiguration?
   @ViewBuilder let content: () -> Content
   @ViewBuilder let reaction: () -> Reaction
   @ViewBuilder let status: () -> Status
@@ -1237,7 +1247,7 @@ private enum FriendsChatMessageBubbleShapeResolver {
   private static func topLeadingRadius(for groupContext: FriendsChatMessageGroupContext)
     -> CGFloat
   {
-    if !groupContext.isCurrentUser && groupContext.joinsPrevious {
+    if !groupContext.isCurrentUser, groupContext.joinsPrevious {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
@@ -1264,7 +1274,7 @@ private enum FriendsChatMessageBubbleShapeResolver {
   private static func topTrailingRadius(for groupContext: FriendsChatMessageGroupContext)
     -> CGFloat
   {
-    if groupContext.isCurrentUser && groupContext.joinsPrevious {
+    if groupContext.isCurrentUser, groupContext.joinsPrevious {
       return CornerRadius.xxs
     }
     return CornerRadius.bubble
@@ -1361,7 +1371,7 @@ private struct FriendsChatMessageReplyPreview: View {
   let isCurrentUser: Bool
   let groupContext: FriendsChatMessageGroupContext
   let isHighlighted: Bool
-  var maxWidth: CGFloat? = nil
+  var maxWidth: CGFloat?
   let onTap: () -> Void
 
   var body: some View {
@@ -1569,7 +1579,8 @@ struct ChatShiftSnapshotCard: View {
   let isCurrentUser: Bool
   var showsOwnerHeader = true
   var topInset: CGFloat = 0
-  var onTap: (() -> Void)? = nil
+  // swiftlint:disable:next explicit_acl
+  var onTap: (() -> Void)?
   @State private var shouldSuppressNextTap = false
 
   private var ownerPrimaryTextColor: Color {
@@ -1835,11 +1846,13 @@ final class FriendsChatGestureTargetView: UIView {
   }
 
   @available(*, unavailable)
-  required init?(coder: NSCoder) {
+  // swiftlint:disable:next explicit_acl
+  required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 
-  override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+  // swiftlint:disable:next explicit_acl
+  override func point(inside _: CGPoint, with _: UIEvent?) -> Bool {
     false
   }
 }
@@ -1898,7 +1911,8 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
     context.coordinator.attach(to: uiView)
   }
 
-  static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+  // swiftlint:disable:next type_contents_order
+  static func dismantleUIView(_: UIView, coordinator: Coordinator) {
     coordinator.detach()
   }
 
@@ -1933,7 +1947,7 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
 
       DispatchQueue.main.async { [weak self, weak view] in
         guard let self, self.view === view else { return }
-        self.installRecognizerIfPossible()
+        installRecognizerIfPossible()
       }
     }
 
@@ -1987,21 +2001,26 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
       case .began:
         hasPassedMinimumDistance = false
         handleChangedIfReady(value)
+
       case .changed:
         handleChangedIfReady(value)
+
       case .ended:
         handleChangedIfReady(value)
         if hasPassedMinimumDistance {
           onEnded(value)
         }
         hasPassedMinimumDistance = false
+
       case .cancelled, .failed:
         if hasPassedMinimumDistance {
           onEnded(value)
         }
         hasPassedMinimumDistance = false
+
       case .possible:
         break
+
       @unknown default:
         if hasPassedMinimumDistance {
           onEnded(value)
@@ -2057,8 +2076,8 @@ private struct FriendsChatHorizontalPanSurface: UIViewRepresentable {
     }
 
     func gestureRecognizer(
-      _ gestureRecognizer: UIGestureRecognizer,
-      shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+      _: UIGestureRecognizer,
+      shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer
     ) -> Bool {
       true
     }
@@ -2197,6 +2216,7 @@ final class FriendsChatImageLoader: ObservableObject {
     switch variant {
     case .original:
       break
+
     case .display(let pixelSize):
       let width = Int(pixelSize.width.rounded())
       let height = Int(pixelSize.height.rounded())
@@ -2215,6 +2235,7 @@ final class FriendsChatImageLoader: ObservableObject {
         switch variant {
         case .original:
           UIImage(data: data)
+
         case .display(let pixelSize):
           downsampleImage(from: data, pixelSize: pixelSize)
         }
@@ -2378,7 +2399,8 @@ struct FriendsChatImageAttachmentCard: View {
   let displaySize: CGSize?
   let cornerRadius: CGFloat
   let placeholderSymbolSize: CGFloat
-  var onTap: (() -> Void)? = nil
+  // swiftlint:disable:next explicit_acl
+  var onTap: (() -> Void)?
 
   @StateObject private var loader: FriendsChatImageLoader
 

@@ -83,7 +83,7 @@ struct RecurringShiftGenerator {
         let currentISO = toISODateLocal(current)
 
         // Check date range
-        guard currentISO >= monthStartISO && currentISO <= monthEndISO else {
+        guard currentISO >= monthStartISO, currentISO <= monthEndISO else {
           current = calendar.date(byAdding: .weekOfYear, value: 1, to: current) ?? current
           continue
         }
@@ -112,7 +112,7 @@ struct RecurringShiftGenerator {
         // Check if not excluded
         let notExcluded = !exclusionSet.contains(currentISO)
 
-        if inPhase && withinWindow && notExcluded {
+        if inPhase, withinWindow, notExcluded {
           virtualShifts.append(
             RecurringVirtualShift(
               date: currentISO,
@@ -144,7 +144,7 @@ struct RecurringShiftGenerator {
     selectedDays: SelectedDays
   ) -> Bool {
     // No end condition = always valid (infinite recurrence)
-    guard let endCondition = endCondition else {
+    guard let endCondition else {
       return true
     }
 

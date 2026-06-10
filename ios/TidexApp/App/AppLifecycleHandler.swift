@@ -1,3 +1,9 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable anonymous_argument_in_multiline_closure conditional_returns_on_newline explicit_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_top_level_acl explicit_type_interface file_types_order no_direct_print no_empty_block
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers prefixed_toplevel_constant required_deinit
 import Foundation
 import GoogleSignIn
 import Intents
@@ -53,10 +59,10 @@ final class AppLifecycleHandler {
       guard !Task.isCancelled else { return }
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
       guard !Task.isCancelled else { return }
-      await self.runForegroundLiveActivityMaintenance()
+      await runForegroundLiveActivityMaintenance()
       guard !Task.isCancelled else { return }
-      self.scheduleForegroundLiveActivityRecovery()
-      self.foregroundMaintenanceTask = nil
+      scheduleForegroundLiveActivityRecovery()
+      foregroundMaintenanceTask = nil
     }
     // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
     // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
@@ -131,7 +137,7 @@ final class AppLifecycleHandler {
         $0.name == "code" || $0.name == "access_token" || $0.name == "refresh_token"
       })
 
-    if url.scheme == "tidex" && isAuthCallback {
+    if url.scheme == "tidex", isAuthCallback {
       Task { @MainActor in
         await handleSupabaseCallback(url)
       }

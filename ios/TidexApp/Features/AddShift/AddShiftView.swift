@@ -32,8 +32,10 @@ struct AddShiftView: View {
     switch viewModel.mode {
     case .single:
       return String(localized: .addShiftSingleTitle)
+
     case .recurring:
       return String(localized: .addShiftRecurringTitle)
+
     case .events:
       return String(localized: .addShiftEventsTitle)
     }
@@ -69,8 +71,10 @@ struct AddShiftView: View {
           action: .highlight
         )
         selectedTab = .shifts
+
       case .recurring:
         selectedTab = .shifts
+
       case .event:
         selectedTab = .shifts
       }
@@ -159,6 +163,7 @@ struct AddShiftView: View {
                 .onTapGesture {
                   hideKeyboard()
                 }
+
               case .events:
                 ScrollView {
                   VStack(spacing: Spacing.lg) {
@@ -199,8 +204,10 @@ struct AddShiftView: View {
                     switch viewModel.mode {
                     case .single:
                       await viewModel.submitSingleShifts()
+
                     case .recurring:
                       await viewModel.submitRecurringShift()
+
                     case .events:
                       await viewModel.submitEvent()
                     }
@@ -265,7 +272,7 @@ struct AddShiftView: View {
         }
       }
       .overlay(alignment: .bottomTrailing) {
-        if isKeyboardVisible && !shouldShowWorkSetupRequiredPlaceholder {
+        if isKeyboardVisible, !shouldShowWorkSetupRequiredPlaceholder {
           Button(keyboardButtonLabel) {
             handleKeyboardButtonTap()
           }

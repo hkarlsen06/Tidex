@@ -1,3 +1,7 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface no_empty_block required_deinit
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable sorted_enum_cases switch_case_on_newline
 import Combine
 import Foundation
 

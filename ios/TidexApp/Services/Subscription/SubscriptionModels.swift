@@ -4,7 +4,7 @@ import Foundation
 
 enum EntitlementConfig {
   /// How long server tier is valid offline (1 hour)
-  static let serverTierTTL: TimeInterval = 1 * 3600
+  internal static let serverTierTTL: TimeInterval = 1 * 3_600  // swiftlint:disable:this no_magic_numbers
 }
 
 // MARK: - Subscription Tier
@@ -43,6 +43,7 @@ enum ProductID: String, CaseIterable {
     switch self {
     case .proMonthly, .proYearly:
       return .pro
+
     case .maxMonthly, .maxYearly:
       return .max
     }
@@ -53,6 +54,7 @@ enum ProductID: String, CaseIterable {
     switch self {
     case .proYearly, .maxYearly:
       return true
+
     case .proMonthly, .maxMonthly:
       return false
     }
@@ -105,17 +107,19 @@ struct PaywallConfig: Codable, Equatable {
   let freeTrialDurationDays: Int
   let freeTrialReminderDaysBeforeEnd: Int
 
-  static let fallback = PaywallConfig(
+  // swiftlint:disable:next redundant_type_annotation
+  internal static let fallback: Self = Self(  // swiftlint:disable:this type_contents_order
     freeTrialEnabled: true,
     freeTrialDurationDays: 14,
     freeTrialReminderDaysBeforeEnd: 2
   )
 
-  var normalized: PaywallConfig {
+  // swiftlint:disable:next type_contents_order
+  internal var normalized: Self {
     let durationDays = max(freeTrialDurationDays, 1)
     let reminderDays = min(max(freeTrialReminderDaysBeforeEnd, 1), durationDays)
 
-    return PaywallConfig(
+    return Self(
       freeTrialEnabled: freeTrialEnabled,
       freeTrialDurationDays: durationDays,
       freeTrialReminderDaysBeforeEnd: reminderDays
@@ -150,10 +154,13 @@ enum PurchaseError: Error, LocalizedError {
     switch self {
     case .verificationFailed:
       return "Purchase verification failed"
+
     case .productNotFound:
       return "Product not found"
+
     case .networkError(let error):
       return "Network error: \(error.localizedDescription)"
+
     case .userNotConfigured:
       return "User not configured"
     }

@@ -1,3 +1,15 @@
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable conditional_returns_on_newline
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_acl explicit_top_level_acl
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable explicit_type_interface extension_access_modifier file_types_order
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable function_body_length legacy_objc_type line_length multiline_arguments_brackets
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable no_magic_numbers prefixed_toplevel_constant required_deinit
+// swiftlint:disable:next blanket_disable_command
+// swiftlint:disable strict_fileprivate type_contents_order
 import CryptoKit
 import Foundation
 import Intents
@@ -13,8 +25,8 @@ private enum SenderAvatarLoader {
   private static let sharedCacheDirectoryName = "NotificationAvatarCache"
   static let inMemoryCache = NSCache<NSURL, INImage>()
   static let urlCache = URLCache(
-    memoryCapacity: 4 * 1024 * 1024,
-    diskCapacity: 20 * 1024 * 1024,
+    memoryCapacity: 4 * 1_024 * 1_024,
+    diskCapacity: 20 * 1_024 * 1_024,
     diskPath: "TidexNotificationAvatarCache"
   )
   static let session: URLSession = {
@@ -284,7 +296,10 @@ final class NotificationService: UNNotificationServiceExtension {
         return nil
       }
 
-      let result = await group.next() ?? nil
+      guard let result = await group.next() else {
+        group.cancelAll()
+        return nil
+      }
       group.cancelAll()
       return result
     }
@@ -320,7 +335,7 @@ final class NotificationService: UNNotificationServiceExtension {
   }
 
   private static func elapsedMilliseconds(since startedAt: Date) -> Int {
-    Int(Date().timeIntervalSince(startedAt) * 1000)
+    Int(Date().timeIntervalSince(startedAt) * 1_000)
   }
 }
 

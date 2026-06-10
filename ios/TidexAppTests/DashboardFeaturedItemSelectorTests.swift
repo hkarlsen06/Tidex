@@ -9,7 +9,7 @@ final class DashboardFeaturedItemSelectorTests: XCTestCase {
       shiftDate: "2026-04-16",
       startTime: "14:00",
       endTime: "22:00",
-      gross: 1200
+      gross: 1_200
     )
     let event = TestFixtures.event(
       id: "event-1",
@@ -38,7 +38,7 @@ final class DashboardFeaturedItemSelectorTests: XCTestCase {
       shiftDate: "2026-04-16",
       startTime: "14:00",
       endTime: "22:00",
-      gross: 1200
+      gross: 1_200
     )
     let event = TestFixtures.event(
       id: "event-1",
@@ -91,7 +91,7 @@ final class DashboardFeaturedItemSelectorTests: XCTestCase {
       shiftDate: "2026-04-16",
       startTime: "invalid",
       endTime: "22:00",
-      gross: 1200
+      gross: 1_200
     )
 
     let selection = DashboardFeaturedItemSelector.select(
@@ -113,7 +113,7 @@ final class DashboardFeaturedItemSelectorTests: XCTestCase {
       shiftDate: "2026-03-20",
       startTime: "10:00",
       endTime: "18:00",
-      gross: 1800
+      gross: 1_800
     )
     let lowerShift = TestFixtures.computedShift(
       id: "shift-lower",

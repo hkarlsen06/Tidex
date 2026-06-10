@@ -562,10 +562,13 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
     switch monthIndex {
     case 2...4:
       return String(localized: .monthLimitHeroSeasonSpring)
+
     case 5...7:
       return String(localized: .monthLimitHeroSeasonSummer)
+
     case 8...10:
       return String(localized: .monthLimitHeroSeasonAutumn)
+
     default:
       return String(localized: .monthLimitHeroSeasonWinter)
     }
