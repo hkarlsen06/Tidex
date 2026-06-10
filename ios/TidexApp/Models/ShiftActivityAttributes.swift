@@ -8,6 +8,8 @@ import Foundation
 /// NOTE: This file must be included in BOTH the main App target AND the TidexShiftWidget target.
 /// If you modify this file, ensure the widget extension has access to the same definition.
 public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
+  public typealias OptionalValue<Value> = Value?
+
   /// Dynamic content that updates during the activity
   /// Note: With the new auto-updating UI, these values are only used as initial/fallback values.
   /// The UI calculates real-time values from the static attributes (startDate, endDate, totalGrossEstimate).
@@ -48,7 +50,7 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
   public let currencySymbol: String?
   /// Explicit marker for temporary open-ended clock activities.
   /// Optional for backward compatibility with already-running activities created by older builds.
-  public let isTemporaryClock: Bool?
+  public let isTemporaryClock: OptionalValue<Bool>
 
   // MARK: - Date Attributes for Real-Time Updates
 
@@ -65,11 +67,11 @@ public struct ShiftActivityAttributes: ActivityAttributes, Sendable {
     hourlyWage: Double,
     supplementRatePerHour: Double,
     totalGrossEstimate: Double,
+    startDate: Date,
+    endDate: Date,
     totalNetEstimate: Double? = nil,
     currencySymbol: String? = "kr",
-    isTemporaryClock: Bool? = nil,
-    startDate: Date,
-    endDate: Date
+    isTemporaryClock: OptionalValue<Bool> = nil
   ) {
     self.shiftId = shiftId
     self.shiftDate = shiftDate
