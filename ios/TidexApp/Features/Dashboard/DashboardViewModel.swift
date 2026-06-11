@@ -348,6 +348,7 @@ struct DashboardPayrollCardSnapshot: Equatable {  // swiftlint:disable:this expl
   let displayedYear: Int  // swiftlint:disable:this explicit_acl
   let displayedMonth: Int  // swiftlint:disable:this explicit_acl
   let variants: [PayrollCardVariant]  // swiftlint:disable:this explicit_acl
+  let previousPayoutVariants: [PayrollCardVariant]  // swiftlint:disable:this explicit_acl
 }
 
 struct DashboardPayrollSelection: Equatable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
@@ -424,6 +425,27 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
         fallbackPayrollDay: fallbackPayrollDay
       ),
       calendar: calendar
+    )
+  }
+
+  static func previousPassedSelections(  // swiftlint:disable:this explicit_acl type_contents_order
+    displayYM: (year: Int, month: Int),
+    jobs: [Job],
+    fallbackPayrollDay: Int,
+    now: Date = Date(),
+    calendar: Calendar = .current
+  ) -> [DashboardPayrollSelection] {
+    let startOfToday = calendar.startOfDay(for: now)  // swiftlint:disable:this explicit_type_interface
+    return Array(
+      makeSelections(
+        payoutYM: displayYM,
+        candidates: payoutCandidates(
+          for: displayYM,
+          jobs: jobs,
+          fallbackPayrollDay: fallbackPayrollDay
+        ).filter { $0.payoutDate < startOfToday },
+        calendar: calendar
+      ).reversed()
     )
   }
 
@@ -693,6 +715,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let now: Date
   }
 
+  private enum PayrollCardVariantSelectionMode {
+    case primary
+    case previousPassedCurrentMonth
+  }
+
   private func notifyShiftsDidChange(context: ShiftChangeContext = .fullReload) {  // swiftlint:disable:this line_length type_contents_order
     NotificationCenter.default.postShiftsDidChange(object: self, context: context)
   }
@@ -906,6 +933,21 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     return variants.map { $0.resolvingDefaultTitle(defaultTitle) }
   }
 
+  func previousPayrollCardVariants(  // swiftlint:disable:this explicit_acl type_contents_order
+    fallback: DashboardData,
+    defaultTitle: String
+  ) -> [PayrollCardVariant] {
+    guard
+      let snapshot = payrollCardSnapshot,
+      snapshot.displayedYear == fallback.displayedYear,
+      snapshot.displayedMonth == fallback.displayedMonth
+    else {
+      return []
+    }
+
+    return snapshot.previousPayoutVariants.map { $0.resolvingDefaultTitle(defaultTitle) }
+  }
+
   nonisolated private static func fallbackPayrollCardVariants(  // swiftlint:disable:this type_contents_order
     fallback: DashboardData
   ) -> [PayrollCardVariant] {
@@ -928,9 +970,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     ]
   }
 
-  nonisolated private static func buildPayrollCardVariants(  // swiftlint:disable:this function_body_length line_length type_contents_order
+  nonisolated private static func buildPayrollCardVariants(  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length type_contents_order
     _ input: PayrollCardVariantBuildInput,
-    defaultTitle: String = ""
+    defaultTitle: String = "",
+    selectionMode: PayrollCardVariantSelectionMode = .primary
   ) -> [PayrollCardVariant] {
     let displayedMonthShifts = input.displayedMonthShifts  // swiftlint:disable:this explicit_type_interface
     let previousMonthShifts = input.previousMonthShifts  // swiftlint:disable:this explicit_type_interface
@@ -970,7 +1013,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     }
 
     guard let settings, !jobs.isEmpty else {
-      return fallbackVariant()
+      return selectionMode == .primary ? fallbackVariant() : []
     }
 
     let fallbackPayrollDay = settings.effectivePayrollDay  // swiftlint:disable:this explicit_type_interface
@@ -985,13 +1028,27 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let current = now.yearMonth()  // swiftlint:disable:this explicit_type_interface
     let isViewingCurrentMonth =  // swiftlint:disable:this explicit_type_interface
       displayYM.year == current.year && displayYM.month == current.month
-    let candidateSelections = DashboardPayrollSelector.selections(  // swiftlint:disable:this explicit_type_interface
-      displayYM: displayYM,
-      jobs: sortedJobs,
-      fallbackPayrollDay: fallbackPayrollDay,
-      isViewingCurrentMonth: isViewingCurrentMonth,
-      now: now
-    )
+    let candidateSelections: [DashboardPayrollSelection] = {
+      switch selectionMode {
+      case .primary:
+        return DashboardPayrollSelector.selections(
+          displayYM: displayYM,
+          jobs: sortedJobs,
+          fallbackPayrollDay: fallbackPayrollDay,
+          isViewingCurrentMonth: isViewingCurrentMonth,
+          now: now
+        )
+
+      case .previousPassedCurrentMonth:
+        guard isViewingCurrentMonth else { return [] }  // swiftlint:disable:this conditional_returns_on_newline
+        return DashboardPayrollSelector.previousPassedSelections(
+          displayYM: displayYM,
+          jobs: sortedJobs,
+          fallbackPayrollDay: fallbackPayrollDay,
+          now: now
+        )
+      }
+    }()
 
     let candidateJobVariantGroups = candidateSelections.map { selection in  // swiftlint:disable:this closure_body_length explicit_type_interface line_length
       let selectedJobIds = Set(selection.jobIds)  // swiftlint:disable:this explicit_type_interface
@@ -1121,7 +1178,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       ?? candidateJobVariantGroups.first { !$0.isEmpty }
 
     guard let selectedPayoutJobs, let payoutDate = selectedPayoutJobs.first?.payoutDate else {
-      return fallbackVariant()
+      return selectionMode == .primary ? fallbackVariant() : []
     }
 
     guard selectedPayoutJobs.count > 1 else {
@@ -1176,7 +1233,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     DashboardPayrollCardSnapshot(
       displayedYear: input.displayYM.year,
       displayedMonth: input.displayYM.month,
-      variants: buildPayrollCardVariants(input)
+      variants: buildPayrollCardVariants(input),
+      previousPayoutVariants: buildPayrollCardVariants(
+        input,
+        defaultTitle: String(localized: .dashboardPreviousPayout),
+        selectionMode: .previousPassedCurrentMonth
+      )
     )
   }
 
