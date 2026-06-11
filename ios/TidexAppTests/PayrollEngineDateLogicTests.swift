@@ -3,6 +3,7 @@ import XCTest
 
 @testable import Tidex
 
+// swiftlint:disable:next type_body_length
 final class PayrollEngineDateLogicTests: XCTestCase {
   func testCalculatePayoutDateClampsToMonthEnd() {
     let payoutDate = PayrollEngine.calculatePayoutDate(
@@ -126,6 +127,52 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     expect(selection.earningsYear) == 2_026
     XCTAssertEqual(selection.earningsMonth, 5)
     XCTAssertEqual(selection.jobIds, ["job-1"])
+  }
+
+  // swiftlint:disable:next explicit_acl
+  func testDashboardPayrollPreviousPassedSelectionsReturnLatestPassedCurrentMonthPayout() throws {
+    let selections: [DashboardPayrollSelection] = DashboardPayrollSelector.previousPassedSelections(
+      displayYM: (year: 2_026, month: 5),
+      jobs: [
+        payrollJob(id: "passed", payrollDay: 10),
+        payrollJob(id: "upcoming", payrollDay: 20),
+      ],
+      fallbackPayrollDay: 15,
+      now: try date("2026-05-12")
+    )
+
+    expect(selections.map { $0.payoutDate.toISODateString() }) == ["2026-05-08"]
+    expect(selections.first?.jobIds) == ["passed"]
+  }
+
+  // swiftlint:disable:next explicit_acl
+  func testDashboardPayrollPreviousPassedSelectionsIgnoreTodayUntilDateHasPassed() throws {
+    let selections: [DashboardPayrollSelection] = DashboardPayrollSelector.previousPassedSelections(
+      displayYM: (year: 2_026, month: 5),
+      jobs: [payrollJob(id: "job-1", payrollDay: 12)],
+      fallbackPayrollDay: 15,
+      now: try date("2026-05-12")
+    )
+
+    expect(selections).to(beEmpty())
+  }
+
+  // swiftlint:disable:next explicit_acl
+  func testDashboardPayrollPreviousPassedSelectionsUseLatestWhenAllCurrentPayoutsPassed() throws {
+    let selections: [DashboardPayrollSelection] = DashboardPayrollSelector.previousPassedSelections(
+      displayYM: (year: 2_026, month: 5),
+      jobs: [
+        payrollJob(id: "passed", payrollDay: 10),
+        payrollJob(id: "upcoming", payrollDay: 20),
+      ],
+      fallbackPayrollDay: 15,
+      now: try date("2026-05-22")
+    )
+
+    expect(selections.map { $0.payoutDate.toISODateString() }) == [
+      "2026-05-20", "2026-05-08",
+    ]
+    expect(selections.first?.jobIds) == ["upcoming"]
   }
 
   func testDashboardPayrollPreviousPayoutStartUsesAdjustedPriorPayrollDate() throws {

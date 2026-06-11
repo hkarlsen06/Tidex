@@ -1073,6 +1073,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }()
 
     let payrollVariants = viewModel.payrollCardVariants(fallback: data, defaultTitle: payrollLabel)  // swiftlint:disable:this explicit_type_interface line_length
+    let previousPayrollVariant: PayrollCardVariant? = viewModel.previousPayrollCardVariants(
+      fallback: data,
+      defaultTitle: String(localized: .dashboardPreviousPayout)
+    ).first
     let isPayrollCardLoading = viewModel.payrollCardSnapshot == nil  // swiftlint:disable:this explicit_type_interface
     if let selectedPayrollVariant = payrollVariants.first {
       let showsMultiWorkplacePayroll = !selectedPayrollVariant.badges.isEmpty  // swiftlint:disable:this explicit_type_interface line_length
@@ -1106,12 +1110,16 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
       // Cards stay in place - only numbers animate on month change (like Next.js)
       VStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
-        // Payroll countdown text - fixed height to prevent layout shift
-        Text(countdownManager.payrollCountdownText ?? " ")
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-          .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
-          .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
+        // Payroll countdown slot - fixed height to prevent layout shift.
+        if let previousPayrollVariant, !isPayrollCardLoading {
+          previousPayrollDetailsChip(for: previousPayrollVariant)
+        } else {
+          Text(countdownManager.payrollCountdownText ?? " ")
+            .font(.tidexLabel)
+            .foregroundColor(.tidexTextSecondary)
+            .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
+            .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
+        }
 
         // Payroll Card (Previous Month relative to displayed month)
         payrollCardSection(
@@ -1391,6 +1399,30 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           }
         }
       }
+  }
+
+  private func previousPayrollDetailsChip(for variant: PayrollCardVariant) -> some View {  // swiftlint:disable:this line_length type_contents_order
+    Button {
+      impactHaptic.impactOccurred()
+      selectedPayrollDetailsVariant = variant
+    } label: {
+      HStack(spacing: Spacing.xxs) {
+        Image(systemName: "clock.arrow.circlepath")
+          .font(.tidexCaptionRegular.weight(.semibold))
+          .foregroundColor(.tidexBlue)
+
+        Text(.dashboardSeePreviousPayout)
+          .font(.tidexLabelStrong)
+          .foregroundColor(.tidexBlue)
+          .lineLimit(1)
+      }
+      .padding(.horizontal, Spacing.sm)
+      .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
+      .background(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
+      .clipShape(Capsule())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(.dashboardSeePreviousPayout))
   }
 
   // MARK: - Featured Shift Section
