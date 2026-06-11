@@ -87,10 +87,6 @@ struct StatsView: View {
     .navigationBarTitleDisplayMode(.inline)
     .iPadToolbarBackground()
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        TodayDateLabel()
-      }
-      .sharedBackgroundVisibility(.hidden)
       ToolbarItem(placement: .topBarTrailing) {
         UserMenuButton(
           displayName: coordinator.userDisplayName,

@@ -225,6 +225,7 @@ private struct MonthComputationInput {
 // MARK: - Shifts View Model
 
 @MainActor
+// swiftlint:disable:next explicit_acl explicit_top_level_acl type_body_length
 final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Dependencies (Local-First Repositories)
@@ -2138,12 +2139,17 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Private Loading Methods
 
-  private func loadScheduleDependencies(for userId: String, forceReload: Bool = false) {
+  private func loadScheduleDependencies(  // swiftlint:disable:this type_contents_order
+    for userId: String,
+    forceReload: Bool = false
+  ) async {
     guard forceReload || !scheduleDependenciesLoaded else {
       return
     }
 
-    let context = monthlyPayrollReadService.loadContext(for: userId)
+    let context: PayrollReadContext = await monthlyPayrollReadService.loadContextOffMain(
+      for: userId
+    )
     applyScheduleDependencies(context)
   }
 
@@ -2189,7 +2195,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         throw ShiftsError.notAuthenticated
       }
 
-      loadScheduleDependencies(for: userId)
+      await loadScheduleDependencies(for: userId)
       kScheduleLogger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
       kScheduleLogger.info("📋 Loaded snapshots: \(self.snapshots.count)")
       kScheduleLogger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
@@ -2305,7 +2311,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         throw ShiftsError.notAuthenticated
       }
 
-      loadScheduleDependencies(for: userId)
+      await loadScheduleDependencies(for: userId)
 
       // Calculate date range for displayed month (includes out-of-month padding days visible in calendar)
       let displayYM = (year: loadYear, month: loadMonth)
@@ -2688,4 +2694,4 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       throw error
     }
   }
-}
+}  // swiftlint:disable:this file_length

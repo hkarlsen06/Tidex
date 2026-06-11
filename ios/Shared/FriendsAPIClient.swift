@@ -2502,6 +2502,78 @@ enum FriendsAPIClient {
     }
   }
 
+  enum SiriMessageRecipientMatcher {
+    static func matches(
+      for spokenName: String?,
+      in recipients: [ShareRecipient]
+    ) -> [ShareRecipient] {
+      let query = normalizedSearchText(spokenName)
+      guard !query.isEmpty else { return [] }
+
+      let scored = recipients.compactMap { recipient -> (recipient: ShareRecipient, score: Int)? in
+        let fields = searchableFields(for: recipient)
+        let score = fields.reduce(0) { partial, field in
+          max(partial, score(query: query, candidate: normalizedSearchText(field)))
+        }
+        guard score > 0 else { return nil }
+        return (recipient, score)
+      }
+
+      let bestScore = scored.map(\.score).max() ?? 0
+      return
+        scored
+        .filter { $0.score == bestScore }
+        .sorted {
+          $0.recipient.displayName.localizedCaseInsensitiveCompare($1.recipient.displayName)
+            == .orderedAscending
+        }
+        .map(\.recipient)
+    }
+
+    private static func searchableFields(for recipient: ShareRecipient) -> [String] {
+      var fields = [recipient.displayName]
+
+      if let statusText = recipient.statusText {
+        fields.append(statusText)
+      }
+
+      return fields
+    }
+
+    private static func score(query: String, candidate: String) -> Int {
+      guard !candidate.isEmpty else { return 0 }
+      if candidate == query { return 100 }
+      if candidate.hasPrefix(query) { return 90 }
+      if candidate.split(separator: " ").contains(where: { $0 == query }) { return 80 }
+      if candidate.contains(query) { return 70 }
+
+      let queryTokens = Set(query.split(separator: " "))
+      let candidateTokens = Set(candidate.split(separator: " "))
+      guard !queryTokens.isEmpty, queryTokens.isSubset(of: candidateTokens) else {
+        return 0
+      }
+
+      return 60
+    }
+
+    private static func normalizedSearchText(_ value: String?) -> String {
+      guard let value else { return "" }
+
+      let folded =
+        value
+        .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+        .replacingOccurrences(of: "@", with: " ")
+
+      let scalars = folded.unicodeScalars.map { scalar -> Character in
+        CharacterSet.alphanumerics.contains(scalar) ? Character(scalar) : " "
+      }
+
+      return String(scalars)
+        .split(whereSeparator: \.isWhitespace)
+        .joined(separator: " ")
+    }
+  }
+
   enum ShareExtensionMessagingClient {
     private static let storageBucket = "message-attachments"
     private static let storageBaseURL = URL(string: "https://identity.tidex.no/storage/v1/object")
@@ -2542,6 +2614,41 @@ enum FriendsAPIClient {
         threads: threads,
         shiftPreviews: shiftPreviews
       )
+    }
+
+    static func sendTextMessage(
+      to recipientUserId: String,
+      message: String
+    ) async throws {
+      guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {
+        throw FriendsAPIError.noAccessToken
+      }
+
+      let trimmedMessage = message.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !trimmedMessage.isEmpty else {
+        throw FriendsAPIError.networkError(underlying: "Message content is empty")
+      }
+
+      let thread = try await getOrCreateDirectThread(
+        otherUserId: recipientUserId,
+        accessToken: accessToken
+      )
+      let payload: [String: Any] = [
+        "p_thread_id": thread.threadId,
+        "p_client_id": UUID().uuidString.lowercased(),
+        "p_body": trimmedMessage,
+        "p_reply_to_message_id": NSNull(),
+        "p_attachments": [],
+        "p_metadata": [:],
+      ]
+
+      _ =
+        try await FriendsAPIClient.callRPC(
+          functionName: "send_message",
+          body: payload,
+          accessToken: accessToken,
+          expectsSingleObject: true
+        ) as ShareMessageAck
     }
 
     static func sendSharedImage(

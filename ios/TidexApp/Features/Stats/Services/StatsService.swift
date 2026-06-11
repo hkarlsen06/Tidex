@@ -106,7 +106,10 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       let userId = try await resolveUserIdForLocalStats()  // swiftlint:disable:this explicit_type_interface
 
       // Load shared payroll inputs through the DAL-backed read service
-      let readContext = monthlyPayrollReadService.loadContext(for: userId, jobId: jobId)  // swiftlint:disable:this explicit_type_interface line_length
+      let readContext: PayrollReadContext = await monthlyPayrollReadService.loadContextOffMain(
+        for: userId,
+        jobId: jobId
+      )
 
       guard let settings = readContext.settings else {
         throw StatsServiceError.noLocalData

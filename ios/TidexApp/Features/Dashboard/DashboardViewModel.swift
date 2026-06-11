@@ -1,8 +1,8 @@
 import Combine
 import Foundation
-import os.log
 import Supabase
 import UIKit
+import os.log  // swiftlint:disable:this sorted_imports
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "DashboardViewModel")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 
@@ -2247,12 +2247,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   private func loadDashboardDependencies(  // swiftlint:disable:this type_contents_order
     for userId: String,
     forceReload: Bool = false
-  ) {
+  ) async {
     guard forceReload || !dashboardDependenciesLoaded else {
       return
     }
 
-    let context = monthlyPayrollReadService.loadContext(for: userId)  // swiftlint:disable:this explicit_type_interface
+    let context = await monthlyPayrollReadService.loadContextOffMain(for: userId)  // swiftlint:disable:this explicit_type_interface line_length
     applyDashboardDependencies(context)
   }
 
@@ -2568,7 +2568,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   /// Reload dashboard from local data without triggering sync
   /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
   /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
-  func reloadFromLocal(  // swiftlint:disable:this explicit_acl type_contents_order
+  func reloadFromLocal(  // swiftlint:disable:this explicit_acl function_body_length type_contents_order
     showLoadingState: Bool = true
   ) async {
     guard isActiveTabVisible else {
@@ -2587,7 +2587,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let currentUserId = try? await getCurrentUserId()  // swiftlint:disable:this explicit_type_interface
     invalidateSharedPayrollReadCache(for: currentUserId)
     let initialSyncJustCompleted = consumeInitialSyncCompletionTransition()  // swiftlint:disable:this explicit_type_interface line_length
-    let refreshedContext = currentUserId.map { monthlyPayrollReadService.loadContext(for: $0) }  // swiftlint:disable:this explicit_type_interface line_length
+    let refreshedContext: PayrollReadContext?
+    if let currentUserId {
+      refreshedContext = await monthlyPayrollReadService.loadContextOffMain(for: currentUserId)
+    } else {
+      refreshedContext = nil
+    }
     let dependenciesChanged = refreshedContext.map(dashboardDependenciesDiffer(from:)) ?? true  // swiftlint:disable:this explicit_type_interface line_length
 
     if let fullInvalidationReason = fullCacheInvalidationReasonForLocalReload(
@@ -2645,7 +2650,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       }
 
       // Load settings from repositories
-      loadDashboardDependencies(for: userId)
+      await loadDashboardDependencies(for: userId)
       logger.info("📋 Loaded settings: \(self.settings != nil ? "found" : "nil")")
 
       // Check if we have any data to show
@@ -2665,7 +2670,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           }
 
           // Retry loading through the shared monthly payroll read path
-          loadDashboardDependencies(for: userId, forceReload: true)
+          await loadDashboardDependencies(for: userId, forceReload: true)
           if settings != nil {
             logger.info("📋 Settings found on retry \(attempt)")
             break
@@ -2683,7 +2688,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
       updateUserAvatarFromSettings()
 
-      loadDashboardDependencies(for: userId)
+      await loadDashboardDependencies(for: userId)
       logger.info("📋 Loaded snapshots: \(self.snapshots.count)")
       logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
 
@@ -2863,7 +2868,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       }
 
       // Load settings and cached payroll inputs through repositories if needed
-      loadDashboardDependencies(for: userId)
+      await loadDashboardDependencies(for: userId)
       updateUserAvatarFromSettings()
 
       // Calculate date ranges for displayed month

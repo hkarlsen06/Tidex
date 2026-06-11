@@ -274,8 +274,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         } label: {
           Image(systemName: "square.and.arrow.up")
             .accessibilityHidden(true)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
             .offset(y: -1)
         }
       }
@@ -283,9 +281,14 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
     // Selection mode toggle (only in calendar view)
     if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
-      ToolbarSpacer(.fixed, placement: .topBarLeading)
       ToolbarItem(placement: .topBarLeading) {
         selectionModeToggleButton
+      }
+    }
+
+    if !shouldShowWorkSetupRequiredPlaceholder {
+      ToolbarItem(placement: .topBarLeading) {
+        listViewToggleButton
       }
     }
 
@@ -1247,6 +1250,18 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   }
 
   // MARK: - Selection Mode Toggle Button
+
+  private var listViewToggleButton: some View {
+    Button {
+      selectionHaptic.selectionChanged()
+      showListView.toggle()
+    } label: {
+      Image(systemName: showListView ? "calendar" : "list.bullet")
+        .accessibilityHidden(true)
+    }
+    .contentTransition(.symbolEffect(.replace))
+    .accessibilityLabel(Text(.tabsShifts))
+  }
 
   /// Toggle button for selection mode (calendar view only)
   @ViewBuilder

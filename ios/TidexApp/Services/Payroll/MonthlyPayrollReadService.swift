@@ -69,6 +69,7 @@ final class MonthlyPayrollReadService {
   private let snapshotsRepository: SnapshotsRepository
   private let recurringShiftsRepository: RecurringShiftsRepository
   private let jobsRepository: JobsRepository
+  private let localStore: LocalStore
   private let usesSharedCache: Bool
 
   init(
@@ -77,7 +78,8 @@ final class MonthlyPayrollReadService {
     settingsRepository: SettingsRepository? = nil,
     snapshotsRepository: SnapshotsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
-    jobsRepository: JobsRepository? = nil
+    jobsRepository: JobsRepository? = nil,
+    localStore: LocalStore? = nil
   ) {
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
     self.eventsRepository = eventsRepository ?? EventsRepository.shared
@@ -85,6 +87,7 @@ final class MonthlyPayrollReadService {
     self.snapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared
     self.recurringShiftsRepository = recurringShiftsRepository ?? RecurringShiftsRepository.shared
     self.jobsRepository = jobsRepository ?? JobsRepository.shared
+    self.localStore = localStore ?? LocalStore.shared
     self.usesSharedCache =
       self.shiftsRepository === ShiftsRepository.shared
       && self.eventsRepository === EventsRepository.shared
@@ -92,6 +95,7 @@ final class MonthlyPayrollReadService {
       && self.snapshotsRepository === SnapshotsRepository.shared
       && self.recurringShiftsRepository === RecurringShiftsRepository.shared
       && self.jobsRepository === JobsRepository.shared
+      && self.localStore === LocalStore.shared
   }
 
   func invalidateSharedCache(for userId: String? = nil) {
@@ -110,18 +114,52 @@ final class MonthlyPayrollReadService {
   }
 
   func loadContext(for userId: String, jobId: String? = nil) -> PayrollReadContext {
-    let key = ContextCacheKey(userId: userId, jobId: jobId)
+    let key: ContextCacheKey = ContextCacheKey(userId: userId, jobId: jobId)
     if usesSharedCache, let cached = Self.cachedContext(for: key) {
       return cached.value
     }
-    let generation = Self.cacheGenerationSnapshot()
+    let generation: Int = Self.cacheGenerationSnapshot()
 
-    let context = PayrollReadContext(
+    let context: PayrollReadContext = PayrollReadContext(
       userId: userId,
       settings: settingsRepository.getSettings(for: userId),
       snapshots: snapshotsRepository.getSnapshots(for: userId, jobId: jobId),
       recurringShifts: recurringShiftsRepository.getRecurringShifts(for: userId, jobId: jobId),
       jobs: jobsRepository.getNonDeletedJobs(for: userId)
+    )
+    if usesSharedCache {
+      Self.storeContext(context, for: key, generation: generation)
+    }
+    return context
+  }
+
+  internal func loadContextOffMain(  // swiftlint:disable:this type_contents_order
+    for userId: String,
+    jobId: String? = nil
+  ) async -> PayrollReadContext {
+    let key: ContextCacheKey = ContextCacheKey(userId: userId, jobId: jobId)
+    if usesSharedCache, let cached = Self.cachedContext(for: key) {
+      return cached.value
+    }
+    let generation: Int = Self.cacheGenerationSnapshot()
+
+    async let settings: UserSettings? = localStore.storeActor.fetchUserSettings(userId: userId)
+    async let snapshots: [WageSnapshot] = localStore.storeActor.fetchSnapshots(
+      userId: userId,
+      jobId: jobId
+    )
+    async let recurringShifts: [RecurringShiftRow] = localStore.storeActor.fetchRecurringShifts(
+      userId: userId,
+      jobId: jobId
+    )
+    async let jobs: [Job] = localStore.storeActor.fetchNonDeletedJobs(userId: userId)
+
+    let context: PayrollReadContext = await PayrollReadContext(
+      userId: userId,
+      settings: settings,
+      snapshots: snapshots,
+      recurringShifts: recurringShifts,
+      jobs: jobs
     )
     if usesSharedCache {
       Self.storeContext(context, for: key, generation: generation)
@@ -193,7 +231,7 @@ final class MonthlyPayrollReadService {
     if usesSharedCache, let cached = Self.cachedRawWindow(for: key) {
       return cached.value
     }
-    let generation = Self.cacheGenerationSnapshot()
+    let generation: Int = Self.cacheGenerationSnapshot()
 
     async let shifts = shiftsRepository.getShiftsOffMain(
       for: userId,
