@@ -116,13 +116,13 @@ struct MainTabView: View {
     var icon: String {
       switch self {
       case .home:
-        return "speedometer"
+        return "house.fill"
 
       case .shifts:
         return "calendar"
 
       case .add:
-        return "plus"
+        return "plus.capsule.fill"
 
       case .wagey:
         return "sparkles"
@@ -450,30 +450,8 @@ struct MainTabView: View {
   @ViewBuilder
   private var sharedMonthPickerOverlay: some View {
     HStack(spacing: Spacing.xs) {
-      // Stats/Back button - only on Home
-      if selectedTab == .home {
-        Button {
-          Haptics.play(.light)
-          showHomeStats.toggle()
-        } label: {
-          Image(systemName: showHomeStats ? "chevron.left" : "chart.bar.xaxis")
-            .font(.tidexTitle2)
-            .foregroundColor(.tidexBlue)
-            .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .contentTransition(.symbolEffect(.replace))
-        .tidexGlass(
-          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-          interactive: true
-        )
-        .transition(.opacity)
-        .accessibilityLabel(Text(showHomeStats ? .commonBack : .tabsStats))
-      }
-
-      // View mode toggle button - Shifts tab or Friends tab when viewing a friend
-      if selectedTab == .shifts || (selectedTab == .sharing && sharingHasSelectedSharer) {
+      // View mode toggle button - Friends tab when viewing a friend
+      if selectedTab == .sharing, sharingHasSelectedSharer {
         Button {
           selectionHaptic.selectionChanged()
           showListView.toggle()
@@ -986,7 +964,7 @@ struct ShiftsPlaceholderView: View {
 struct AddShiftPlaceholderView: View {
   var body: some View {
     PlaceholderTabView(
-      icon: "plus.circle.fill",
+      icon: "plus.capsule.fill",
       titleKey: .tabsAdd,
       descriptionKey: .placeholderAddShiftDescription,
       supportsRefresh: false

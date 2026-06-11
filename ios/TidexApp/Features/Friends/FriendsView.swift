@@ -13,7 +13,7 @@ enum SharingDeepLinkNavigationPathResolver {
 
 /// Sharing tab view - displays shifts from users who share with the current user
 /// Fetches shared shifts from the Next.js API for proper payroll computation
-struct SharingView: View {
+struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length line_length
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.userCurrency) private var currency
 
@@ -115,7 +115,7 @@ struct SharingView: View {
       .iPadToolbarBackground()
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
-          TodayDateLabel()
+          manageFriendsButton
         }
         .sharedBackgroundVisibility(.hidden)
 
@@ -477,36 +477,8 @@ struct SharingView: View {
   // MARK: - Sharer List
 
   private var sharerListView: some View {
-    ScrollView {
-      VStack(spacing: Spacing.md) {
-        // Title and manage button row
-        HStack {
-          // "Friends" / "Venner" title
-          Text(.sharingFriendsTitle)
-            .font(.tidexTitle2)
-            .foregroundColor(.tidexTextPrimary)
-
-          Spacer()
-
-          // Liquid glass manage button
-          Button(action: {
-            showManageSheet = true
-          }) {
-            HStack(spacing: Spacing.xxxs) {
-              Image(systemName: "person.2")
-                .font(.tidexSubheadline)
-              Text(.sharingSeeFriends)
-                .font(.tidexLabel)
-            }
-            .foregroundColor(.tidexTextPrimary)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xs)
-          }
-          .buttonStyle(PlainButtonStyle())
-          .tidexGlass(shape: .capsule, interactive: true)
-        }
-        .padding(.horizontal, Spacing.md)
-
+    ScrollView {  // swiftlint:disable:this closure_body_length
+      VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
         // Sharer list
         SharerListView(
           sharers: viewModel.sharers,
@@ -572,6 +544,25 @@ struct SharingView: View {
       .presentationDetents([.medium, .large])
       .presentationDragIndicator(.visible)
     }
+  }
+
+  private var manageFriendsButton: some View {
+    Button(action: {
+      showManageSheet = true
+    }) {
+      HStack(spacing: Spacing.xxxs) {
+        Image(systemName: "person.2")
+          .font(.tidexSubheadline)
+          .accessibilityHidden(true)
+        Text(.sharingSeeFriends)
+          .font(.tidexLabel)
+      }
+      .foregroundColor(.tidexTextPrimary)
+      .padding(.horizontal, Spacing.sm)
+      .padding(.vertical, Spacing.xs)
+    }
+    .buttonStyle(PlainButtonStyle())
+    .tidexGlass(shape: .capsule, interactive: true)
   }
 
   private func refreshFriendsTab() async {
@@ -1232,4 +1223,4 @@ private struct SharedShiftsDetailView: View {
   }
 
   return PreviewWrapper()
-}
+}  // swiftlint:disable:this file_length

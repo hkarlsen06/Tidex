@@ -20,7 +20,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     switch self {
     case .home: return "house.fill"
     case .shifts: return "calendar"
-    case .add: return "plus.circle.fill"
+    case .add: return "plus.capsule.fill"
     case .wagey: return "sparkles"
     case .sharing: return "person.2.fill"
     }

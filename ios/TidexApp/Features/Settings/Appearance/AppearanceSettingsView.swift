@@ -388,13 +388,13 @@ struct AppearanceSettingsView: View {
   private func startupTabIcon(_ tab: StartupTabOption) -> String {
     switch tab {
     case .home:
-      return "speedometer"
+      return "house.fill"
 
     case .shifts:
       return "calendar"
 
     case .add:
-      return "plus.circle.fill"
+      return "plus.capsule.fill"
 
     case .wagey:
       return "sparkles"

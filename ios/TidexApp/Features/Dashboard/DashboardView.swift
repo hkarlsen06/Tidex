@@ -317,9 +317,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .toolbarBackground(.hidden, for: .navigationBar)
       .toolbar {
         ToolbarItem(placement: .topBarLeading) {
-          TodayDateLabel()
+          statsToolbarButton
         }
-        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .topBarTrailing) {
           UserMenuButton(
             displayName: coordinator.userDisplayName,
@@ -332,6 +331,17 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }
       .iPadToolbarTransaction()
     }
+  }
+
+  private var statsToolbarButton: some View {
+    Button {
+      Haptics.play(.light)
+      showStatsView = true
+    } label: {
+      Image(systemName: "chart.bar.xaxis")
+        .accessibilityHidden(true)
+    }
+    .accessibilityLabel(Text(.tabsStats))
   }
 
   private var bodyWithLifecycle: AnyView {

@@ -329,14 +329,14 @@ private struct CalendarPressOverlay: UIViewRepresentable {
       guard onSwipeLeft != nil || onSwipeRight != nil else { return false }
 
       let velocity = pan.velocity(in: pan.view)
-      return abs(velocity.x) >= abs(velocity.y) * 0.9
+      return abs(velocity.x) >= abs(velocity.y) * 1.25
     }
 
     func gestureRecognizer(
-      _: UIGestureRecognizer,
+      _ gestureRecognizer: UIGestureRecognizer,
       shouldRecognizeSimultaneouslyWith _: UIGestureRecognizer
     ) -> Bool {
-      true
+      !(gestureRecognizer is UIPanGestureRecognizer)
     }
   }
 }
