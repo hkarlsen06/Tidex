@@ -480,7 +480,7 @@ struct EventDetailsSheet: View {
 
       Toggle(String(localized: .addShiftEventAllDay), isOn: $isAllDay)
         .labelsHidden()
-        .tint(.tidexBlue)
+        .tint(.tidexTextPrimary)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xsm)
@@ -528,12 +528,13 @@ struct EventDetailsSheet: View {
     HStack(spacing: Spacing.xs) {
       Image(systemName: scheduleSummary.footerIcon)
         .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
       Text(scheduleSummary.footerText)
         .font(.tidexSubheadline)
+        .foregroundColor(.tidexBlue)
         .fixedSize(horizontal: false, vertical: true)
       Spacer(minLength: 0)
     }
-    .foregroundColor(.tidexBlue)
   }
 
   private func detailRow(title: String, value: String) -> some View {
@@ -563,7 +564,7 @@ struct EventDetailsSheet: View {
       )
       .datePickerStyle(.compact)
       .labelsHidden()
-      .tint(.tidexBlue)
+      .tint(.tidexTextPrimary)
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(.horizontal, Spacing.sm)

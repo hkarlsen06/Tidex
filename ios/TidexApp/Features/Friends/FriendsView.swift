@@ -114,73 +114,13 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       .toolbar(isChatTabBarHidden ? .hidden : .visible, for: .tabBar)
       .iPadToolbarBackground()
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
-          manageFriendsButton
-        }
-        .sharedBackgroundVisibility(.hidden)
-
-        ToolbarItem(placement: .topBarTrailing) {
-          UserMenuButton(
-            displayName: coordinator.userDisplayName,
-            avatarUrl: coordinator.userAvatarUrl
-          )
-        }
+        friendsToolbarContent
       }
       .navigationDestination(for: SharedUser.self) { sharer in
-        SharedShiftsDetailView(
-          sharer: sharer,
-          viewModel: viewModel,
-          highlightDates: $highlightDates,
-          highlightShiftIds: $highlightShiftIds,
-          onMessageTapped: { sharedUser in
-            Task {
-              await openChat(for: sharedUser)
-            }
-          },
-          onSendToChatCompleted: { result in
-            let recipientAvatarUrl = result.recipient.avatarURL?.absoluteString
-            let threadDisplayName = result.thread.counterpartDisplayName?
-              .trimmingCharacters(in: .whitespacesAndNewlines)
-            let fallbackDisplayName =
-              if let threadDisplayName, !threadDisplayName.isEmpty {
-                threadDisplayName
-              } else {
-                result.recipient.displayName
-              }
-            let route = FriendChatRoute(
-              thread: result.thread,
-              fallbackDisplayName: fallbackDisplayName,
-              fallbackAvatarUrl: result.thread.counterpartAvatarUrl ?? recipientAvatarUrl
-            )
-            navigateToChatRoute(
-              route,
-              highlightedUserId: result.thread.counterpartUserId ?? result.recipient.id,
-              resetNavigationFirst: true
-            )
-          },
-          onFeedPlacementChange: {
-            scheduleChatMetadataRefresh()
-          }
-        )
-        .toolbarRole(.editor)
-        .onAppear {
-          hasSelectedSharer = true
-        }
+        sharedShiftsDetailDestination(for: sharer)
       }
       .navigationDestination(for: FriendChatRoute.self) { route in
-        FriendsThreadView(
-          route: route,
-          viewerUserId: coordinator.getCurrentUserId() ?? ""
-        )
-        .id(route.threadId)
-        .onAppear {
-          hasSelectedSharer = false
-        }
-        .onDisappear {
-          isChatTabBarHidden = false
-          activeChatHighlightUserId = nil
-          hasSelectedSharer = viewModel.selectedSharer != nil
-        }
+        friendChatDestination(for: route)
       }
       .iPadToolbarTransaction()
     }
@@ -546,23 +486,93 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     }
   }
 
+  @ToolbarContentBuilder
+  private var friendsToolbarContent: some ToolbarContent {
+    ToolbarItem(placement: .topBarLeading) {
+      manageFriendsButton
+    }
+
+    ToolbarItem(placement: .topBarTrailing) {
+      UserMenuButton(
+        displayName: coordinator.userDisplayName,
+        avatarUrl: coordinator.userAvatarUrl
+      )
+    }
+  }
+
   private var manageFriendsButton: some View {
     Button(action: {
       showManageSheet = true
     }) {
-      HStack(spacing: Spacing.xxxs) {
-        Image(systemName: "person.2")
-          .font(.tidexSubheadline)
-          .accessibilityHidden(true)
+      Label {
         Text(.sharingSeeFriends)
-          .font(.tidexLabel)
+      } icon: {
+        Image(systemName: "person.2")
+          .accessibilityHidden(true)
       }
-      .foregroundColor(.tidexTextPrimary)
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.xs)
     }
-    .buttonStyle(PlainButtonStyle())
-    .tidexGlass(shape: .capsule, interactive: true)
+  }
+
+  private func sharedShiftsDetailDestination(for sharer: SharedUser) -> some View {
+    SharedShiftsDetailView(
+      sharer: sharer,
+      viewModel: viewModel,
+      highlightDates: $highlightDates,
+      highlightShiftIds: $highlightShiftIds,
+      onMessageTapped: { sharedUser in
+        Task {
+          await openChat(for: sharedUser)
+        }
+      },
+      onSendToChatCompleted: { result in
+        handleSendToChatCompleted(result)
+      },
+      onFeedPlacementChange: {
+        scheduleChatMetadataRefresh()
+      }
+    )
+    .toolbarRole(.editor)
+    .onAppear {
+      hasSelectedSharer = true
+    }
+  }
+
+  private func friendChatDestination(for route: FriendChatRoute) -> some View {
+    FriendsThreadView(
+      route: route,
+      viewerUserId: coordinator.getCurrentUserId() ?? ""
+    )
+    .id(route.threadId)
+    .onAppear {
+      hasSelectedSharer = false
+    }
+    .onDisappear {
+      isChatTabBarHidden = false
+      activeChatHighlightUserId = nil
+      hasSelectedSharer = viewModel.selectedSharer != nil
+    }
+  }
+
+  private func handleSendToChatCompleted(_ result: SendShiftToChatResult) {
+    let recipientAvatarUrl: String? = result.recipient.avatarURL?.absoluteString
+    let threadDisplayName: String? = result.thread.counterpartDisplayName?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    let fallbackDisplayName: String =
+      if let threadDisplayName, !threadDisplayName.isEmpty {
+        threadDisplayName
+      } else {
+        result.recipient.displayName
+      }
+    let route: FriendChatRoute = FriendChatRoute(
+      thread: result.thread,
+      fallbackDisplayName: fallbackDisplayName,
+      fallbackAvatarUrl: result.thread.counterpartAvatarUrl ?? recipientAvatarUrl
+    )
+    navigateToChatRoute(
+      route,
+      highlightedUserId: result.thread.counterpartUserId ?? result.recipient.id,
+      resetNavigationFirst: true
+    )
   }
 
   private func refreshFriendsTab() async {

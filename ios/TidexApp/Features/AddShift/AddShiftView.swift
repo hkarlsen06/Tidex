@@ -6,6 +6,7 @@ import UIKit
 struct AddShiftView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
   @StateObject private var viewModel = AddShiftViewModel()
   @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   @Binding var selectedTab: MainTabView.Tab
@@ -48,6 +49,7 @@ struct AddShiftView: View {
       userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
+    addShiftCoordinator.updateCanShowStartFreshControl(!shouldShowWorkSetupRequiredPlaceholder)
     return wasShowingPlaceholder && !shouldShowWorkSetupRequiredPlaceholder
   }
 
@@ -252,19 +254,6 @@ struct AddShiftView: View {
         }
         if !shouldShowWorkSetupRequiredPlaceholder {
           ToolbarItem(placement: .topBarTrailing) {
-            Button {
-              presentStartFreshConfirmation()
-            } label: {
-              Image(systemName: "arrow.uturn.backward.circle.fill")
-                .font(.tidexHeadline)
-                .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
-            }
-            .buttonStyle(.plain)
-            .disabled(!viewModel.hasContent)
-            .accessibilityLabel(Text(.commonBack))
-          }
-          ToolbarSpacer(.fixed, placement: .topBarTrailing)
-          ToolbarItem(placement: .topBarTrailing) {
             AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
               .fixedSize(horizontal: true, vertical: false)
           }
@@ -349,6 +338,10 @@ struct AddShiftView: View {
         isKeyboardVisible = false
         keyboardHeight = 0
       }
+    }
+    .onReceive(addShiftCoordinator.startFreshAction) {
+      guard selectedTab == .add, !shouldShowWorkSetupRequiredPlaceholder else { return }
+      presentStartFreshConfirmation()
     }
     .onDisappear {
       focusedTimeField = nil

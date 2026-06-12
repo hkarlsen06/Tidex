@@ -38,8 +38,15 @@ internal final class AddShiftCoordinator: ObservableObject {
   /// Reasons the Add action is currently blocked.
   @Published internal private(set) var submitBlockers: [AddShiftSubmitBlocker] = []
 
+  /// Whether the current Add tab form has user-entered content that can be cleared.
+  @Published internal private(set) var hasContent: Bool = false
+
+  /// Whether the moved Add tab undo control should be shown in shared bottom chrome.
+  @Published internal private(set) var canShowStartFreshControl: Bool = false
+
   private let triggerAddSubject: PassthroughSubject<Void, Never> = .init()
   private let cycleModeSubject: PassthroughSubject<Void, Never> = .init()
+  private let startFreshSubject: PassthroughSubject<Void, Never> = .init()
 
   /// Publisher for triggering the add action from outside (tab bar tap)
   internal var triggerAddAction: AnyPublisher<Void, Never> {
@@ -49,6 +56,11 @@ internal final class AddShiftCoordinator: ObservableObject {
   /// Publisher for cycling add modes when the Add tab is reselected.
   internal var cycleModeAction: AnyPublisher<Void, Never> {
     cycleModeSubject.eraseToAnyPublisher()
+  }
+
+  /// Publisher for triggering the Add tab start-fresh confirmation.
+  internal var startFreshAction: AnyPublisher<Void, Never> {
+    startFreshSubject.eraseToAnyPublisher()
   }
 
   private init() {
@@ -81,6 +93,15 @@ internal final class AddShiftCoordinator: ObservableObject {
     submitBlockers = blockers
   }
 
+  /// Update whether the Add tab form has content that can be cleared.
+  internal func updateHasContent(_ hasContent: Bool) {
+    self.hasContent = hasContent
+  }
+
+  internal func updateCanShowStartFreshControl(_ canShowStartFreshControl: Bool) {
+    self.canShowStartFreshControl = canShowStartFreshControl
+  }
+
   /// Trigger the add action (called from MainTabView when Add tab is tapped)
   internal func triggerAdd() {
     // swiftlint:disable:next conditional_returns_on_newline
@@ -92,8 +113,14 @@ internal final class AddShiftCoordinator: ObservableObject {
     cycleModeSubject.send()
   }
 
+  internal func triggerStartFresh() {
+    guard hasContent else { return }
+    startFreshSubject.send()
+  }
+
   deinit {
     triggerAddSubject.send(completion: .finished)
     cycleModeSubject.send(completion: .finished)
+    startFreshSubject.send(completion: .finished)
   }
 }

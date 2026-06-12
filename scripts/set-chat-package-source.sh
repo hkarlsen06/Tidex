@@ -39,7 +39,7 @@ remote_reference = [
   "\t\t\trepositoryURL = \"https://github.com/TidexHQ/Chat.git\";",
   "\t\t\trequirement = {",
   "\t\t\t\tkind = revision;",
-  "\t\t\t\trevision = ebd451b27813fb2a714bb36c61ccc99e4bbc1dc3;",
+  "\t\t\t\trevision = f5f5cd59d1c1df123c7437eb1619bf6e78eea96b;",
   "\t\t\t};",
   "\t\t};",
   "",

@@ -318,7 +318,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
               Text(.dashboardPayrollDetailsAddAdjustment)
                 .font(.tidexLabel)
             }
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
             .padding(.vertical, Spacing.xs)
             .frame(maxWidth: .infinity)
             .background(Color.tidexBlue.opacity(0.08))  // swiftlint:disable:this no_magic_numbers
@@ -751,11 +751,12 @@ private struct PayrollAdjustmentCuratedSheet: View {
             Link(destination: linkURL) {
               HStack(spacing: Spacing.xxs) {
                 Text(displayLinkTitle)
+                  .foregroundColor(.tidexBlue)
                 Image(systemName: "arrow.up.right")  // swiftlint:disable:this accessibility_label_for_image
                   .font(.tidexFootnote)
+                  .foregroundColor(.tidexTextPrimary)
               }
               .font(.tidexLabel)
-              .foregroundColor(.tidexBlue)
               .padding(.vertical, Spacing.xs)
               .frame(maxWidth: .infinity)
               .background(Color.tidexBlue.opacity(0.08))  // swiftlint:disable:this no_magic_numbers
@@ -1072,7 +1073,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
         if category == option {
           Image(systemName: "checkmark")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
         }
       }
       .contentShape(Rectangle())
@@ -1119,7 +1120,7 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
         if taxTreatment == option {
           Image(systemName: "checkmark")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
         }
       }
       .contentShape(Rectangle())

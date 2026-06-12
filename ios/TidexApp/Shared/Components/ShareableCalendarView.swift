@@ -238,15 +238,26 @@ struct ShareableCalendarView: View {
 
 /// Bottom sheet for selecting calendar share options
 struct CalendarShareOptionsSheet: View {
+  let title: LocalizedStringResource
   let onShowEarnings: () -> Void
   let onHideEarnings: () -> Void
+
+  init(
+    title: LocalizedStringResource = .shiftsShareTitle,
+    onShowEarnings: @escaping () -> Void,
+    onHideEarnings: @escaping () -> Void
+  ) {
+    self.title = title
+    self.onShowEarnings = onShowEarnings
+    self.onHideEarnings = onHideEarnings
+  }
 
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {
     VStack(spacing: Spacing.mlg) {
       // Title
-      Text(.shiftsShareTitle)
+      Text(title)
         .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
         .padding(.top, Spacing.md)

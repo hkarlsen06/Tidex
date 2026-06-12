@@ -52,6 +52,7 @@ struct MainTabView: View {
   @Environment(\.requestReview) private var requestReview
   @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
   @ObservedObject private var monthContext = SharedMonthContext.shared
+  @ObservedObject private var shiftsToolbarCoordinator = ShiftsToolbarCoordinator.shared
   @ObservedObject private var impersonationManager = ImpersonationManager.shared
   @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
   private let friendsMessagesRepository = FriendsMessagesRepository.shared
@@ -268,7 +269,7 @@ struct MainTabView: View {
               handleTabReselection(tappedTab)
             }
           )
-          .tint(.tidexBlue)
+          .tint(.tidexTextPrimary)
 
           // Shared month picker overlay - floats above tab bar
           if shouldShowMonthPicker {
@@ -450,32 +451,17 @@ struct MainTabView: View {
   @ViewBuilder
   private var sharedMonthPickerOverlay: some View {
     HStack(spacing: Spacing.xs) {
+      if selectedTab == .shifts, shiftsToolbarCoordinator.canShowLeadingActions {
+        shiftsBottomToolbarPill
+      }
+
       // View mode toggle button - Friends tab when viewing a friend
       if selectedTab == .sharing, sharingHasSelectedSharer {
-        Button {
-          selectionHaptic.selectionChanged()
-          showListView.toggle()
-        } label: {
-          Image(systemName: showListView ? "calendar" : "list.bullet")
-            .font(.tidexButton)
-            .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexBlue)
-            .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-            .contentShape(Rectangle())
-            .accessibilityHidden(true)
-        }
-        .buttonStyle(.plain)
-        .contentTransition(.symbolEffect(.replace))
-        .tidexGlass(
-          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-          interactive: true
-        )
-        .transition(.opacity)
-        .motionAnimation(
-          .feedback,
-          value: monthContext.hasConflictsInMonth,
-          reduceMotion: shouldReduceEffects
-        )
-        .accessibilityLabel(Text(.tabsShifts))
+        shiftsViewModeToggleButton
+      }
+
+      if selectedTab == .add, addShiftCoordinator.canShowStartFreshControl {
+        addShiftUndoButton
       }
 
       // Month picker
@@ -556,6 +542,101 @@ struct MainTabView: View {
         ? MonthPickerLayout.bottomPadding
         : MonthPickerLayout.iPhoneTabBarHeight + MonthPickerLayout.bottomPadding
     )
+  }
+
+  private var shiftsViewModeToggleButton: some View {
+    Button {
+      selectionHaptic.selectionChanged()
+      showListView.toggle()
+    } label: {
+      Image(systemName: showListView ? "calendar" : "list.bullet")
+        .font(.tidexButton)
+        .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexTextPrimary)
+        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+        .contentShape(Rectangle())
+        .accessibilityHidden(true)
+    }
+    .buttonStyle(.plain)
+    .contentTransition(.symbolEffect(.replace))
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .transition(.opacity)
+    .motionAnimation(
+      .feedback,
+      value: monthContext.hasConflictsInMonth,
+      reduceMotion: shouldReduceEffects
+    )
+    .accessibilityLabel(Text(.tabsShifts))
+  }
+
+  private var addShiftUndoButton: some View {
+    Button {
+      selectionHaptic.selectionChanged()
+      addShiftCoordinator.triggerStartFresh()
+    } label: {
+      Image(systemName: "arrow.uturn.backward.circle.fill")
+        .font(.tidexHeadline)
+        .foregroundColor(addShiftCoordinator.hasContent ? .tidexTextPrimary : .tidexTextMuted)
+        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+        .contentShape(Rectangle())
+        .accessibilityHidden(true)
+    }
+    .buttonStyle(.plain)
+    .disabled(!addShiftCoordinator.hasContent)
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .transition(.opacity)
+    .accessibilityLabel(Text(.commonBack))
+  }
+
+  private var shiftsBottomToolbarPill: some View {
+    HStack(spacing: Spacing.sm) {
+      Button {
+        selectionHaptic.selectionChanged()
+        showListView.toggle()
+      } label: {
+        Image(systemName: showListView ? "calendar" : "list.bullet")
+          .font(.tidexButton)
+          .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexTextPrimary)
+          .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+          .contentShape(Rectangle())
+          .accessibilityHidden(true)
+      }
+      .buttonStyle(.plain)
+      .contentTransition(.symbolEffect(.replace))
+      .accessibilityLabel(Text(.tabsShifts))
+
+      if !showListView {
+        Button {
+          shiftsToolbarCoordinator.triggerToggleSelection()
+        } label: {
+          Image(
+            systemName: shiftsToolbarCoordinator.isSelectionModeEnabled
+              ? "checkmark.circle.fill" : "checkmark.circle"
+          )
+          .font(.tidexHeadline)
+          .foregroundColor(
+            shiftsToolbarCoordinator.isSelectionModeEnabled ? .tidexBrandPrimary : .tidexTextPrimary
+          )
+          .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+          .contentShape(Rectangle())
+          .accessibilityHidden(true)
+        }
+        .buttonStyle(.plain)
+        .contentTransition(.symbolEffect(.replace))
+      }
+    }
+    .padding(.horizontal, Spacing.xs)
+    .frame(height: MonthPickerLayout.height)
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .transition(.opacity)
   }
 
   private var monthPickerTransition: AnyTransition {

@@ -8,6 +8,23 @@ struct ShiftModeToggle: View {
     case standard
   }
 
+  private struct ModeButtonMetrics {
+    let iconFontSize: CGFloat
+    let horizontalPadding: CGFloat
+    let verticalPadding: CGFloat
+    let shadowRadius: CGFloat
+    let shadowOpacity: Double
+  }
+
+  private static let toolbarIconFontSize: CGFloat = 14
+  private static let toolbarHorizontalPadding: CGFloat = 10
+  private static let toolbarVerticalPadding: CGFloat = 6
+  private static let toolbarOuterPadding: CGFloat = 2
+  private static let standardShadowRadius: CGFloat = 4
+  private static let standardShadowOpacity: Double = 0.18
+  private static let selectedStandardTintOpacity: Double = 0.35
+  private static let selectedShadowYOffset: CGFloat = 2
+
   @Binding var mode: AddShiftMode
   let style: Style
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -22,58 +39,89 @@ struct ShiftModeToggle: View {
   }
 
   var body: some View {
-    let verticalPadding: CGFloat = style == .toolbar ? 6 : Spacing.sm
-    let horizontalPadding: CGFloat = style == .toolbar ? 10 : Spacing.md
-    let outerPadding: CGFloat = style == .toolbar ? 2 : Spacing.xxs
-    let iconFontSize: CGFloat = style == .toolbar ? 14 : iconSize
-    let shadowRadius: CGFloat = style == .toolbar ? 0 : 4
-    let shadowOpacity: Double = style == .toolbar ? 0 : 0.18
+    let metrics: ModeButtonMetrics = modeButtonMetrics
+    let outerPadding: CGFloat = style == .toolbar ? Self.toolbarOuterPadding : Spacing.xxs
 
     HStack(spacing: buttonSpacing) {
       ForEach(AddShiftMode.displayOrder) { modeOption in
-        let isSelected = mode == modeOption
-        Button {
-          select(modeOption)
-        } label: {
-          let labelContent = Label(
-            localizedTitle(for: modeOption), systemImage: iconName(for: modeOption)
-          )
-          .labelStyle(.iconOnly)
-          .font(.system(size: iconFontSize, weight: .semibold))
-          .foregroundStyle(isSelected ? .white : .tidexTextSecondary)
-          .padding(.horizontal, horizontalPadding)
-          .padding(.vertical, verticalPadding)
-          .contentShape(Capsule())
-
-          Group {
-            if isSelected {
-              labelContent
-                .tidexGlass(
-                  shape: .capsule,
-                  tint: Color.tidexBlue.opacity(0.35),
-                  interactive: true
-                )
-                .shadow(
-                  color: Color.black.opacity(shadowOpacity),
-                  radius: shadowRadius,
-                  x: 0,
-                  y: 2
-                )
-                .matchedGeometryEffect(id: "selection", in: namespace)
-            } else {
-              labelContent
-            }
-          }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(localizedTitle(for: modeOption))
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        modeButton(for: modeOption, metrics: metrics)
       }
     }
     .padding(outerPadding)
     .onAppear {
       toggleHaptic.prepare()
     }
+  }
+
+  private var modeButtonMetrics: ModeButtonMetrics {
+    ModeButtonMetrics(
+      iconFontSize: style == .toolbar ? Self.toolbarIconFontSize : iconSize,
+      horizontalPadding: style == .toolbar ? Self.toolbarHorizontalPadding : Spacing.md,
+      verticalPadding: style == .toolbar ? Self.toolbarVerticalPadding : Spacing.sm,
+      shadowRadius: style == .toolbar ? 0 : Self.standardShadowRadius,
+      shadowOpacity: style == .toolbar ? 0 : Self.standardShadowOpacity
+    )
+  }
+
+  private func modeButton(
+    for modeOption: AddShiftMode,
+    metrics: ModeButtonMetrics
+  ) -> some View {
+    let isSelected: Bool = mode == modeOption
+
+    return Button {
+      select(modeOption)
+    } label: {
+      modeButtonLabel(
+        for: modeOption,
+        isSelected: isSelected,
+        metrics: metrics
+      )
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(localizedTitle(for: modeOption))
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  @ViewBuilder
+  private func modeButtonLabel(
+    for modeOption: AddShiftMode,
+    isSelected: Bool,
+    metrics: ModeButtonMetrics
+  ) -> some View {
+    if isSelected, style == .standard {
+      baseLabel(for: modeOption, isSelected: isSelected, metrics: metrics)
+        .tidexGlass(
+          shape: .capsule,
+          tint: Color.tidexBlue.opacity(Self.selectedStandardTintOpacity),
+          interactive: true
+        )
+        .shadow(
+          color: Color.black.opacity(metrics.shadowOpacity),
+          radius: metrics.shadowRadius,
+          x: 0,
+          y: Self.selectedShadowYOffset
+        )
+        .matchedGeometryEffect(id: "selection", in: namespace)
+    } else {
+      baseLabel(for: modeOption, isSelected: isSelected, metrics: metrics)
+    }
+  }
+
+  private func baseLabel(
+    for modeOption: AddShiftMode,
+    isSelected: Bool,
+    metrics: ModeButtonMetrics
+  ) -> some View {
+    let selectedForeground: Color = style == .toolbar ? .tidexBlue : .white
+
+    return Label(localizedTitle(for: modeOption), systemImage: iconName(for: modeOption))
+      .labelStyle(.iconOnly)
+      .font(.system(size: metrics.iconFontSize, weight: .semibold))
+      .foregroundStyle(isSelected ? selectedForeground : .tidexTextSecondary)
+      .padding(.horizontal, metrics.horizontalPadding)
+      .padding(.vertical, metrics.verticalPadding)
+      .contentShape(Capsule())
   }
 
   private func iconName(for mode: AddShiftMode) -> String {

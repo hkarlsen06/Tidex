@@ -281,7 +281,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
               HStack(spacing: Spacing.xxxs) {
                 Image(systemName: "star.fill")  // swiftlint:disable:this accessibility_label_for_image
                   .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexBlue)
+                  .foregroundColor(.tidexTextSecondary)
                 Text(text)
                   .font(.tidexLabel)
                   .foregroundColor(.tidexTextSecondary)

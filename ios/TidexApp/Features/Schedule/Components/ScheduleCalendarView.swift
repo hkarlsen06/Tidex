@@ -1009,7 +1009,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       } else {
         Image(systemName: isCopyMode ? "doc.on.doc" : "arrow.left.arrow.right")
           .font(.tidexLabel)
-          .foregroundColor(isCopyMode ? .tidexBlue : .tidexWarning)
+          .foregroundColor(isCopyMode ? .tidexTextSecondary : .tidexWarning)
           .frame(width: 36)
 
         Text(
@@ -1165,10 +1165,11 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "doc.on.doc")
             .font(.tidexLabel)
+            .foregroundColor(.tidexTextPrimary)
           Text(.commonCopy)
             .font(.tidexLabelStrong)
+            .foregroundColor(.tidexBlue)
         }
-        .foregroundColor(.tidexBlue)
         .frame(maxWidth: .infinity)
         .frame(height: 44)
         .background(
