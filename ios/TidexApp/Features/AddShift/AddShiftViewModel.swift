@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import os.log
 import SwiftUI
+import os.log
 
 private let kLogger: Logger = Logger(subsystem: "com.tidex.app", category: "AddShiftViewModel")
 
@@ -612,6 +612,7 @@ internal final class AddShiftViewModel: ObservableObject {
       requiresJobSelection: mode == .events ? false : requiresExplicitJobSelection
     )
     addShiftCoordinator.updateSubmitBlockers(submitBlockers)
+    addShiftCoordinator.updateHasContent(hasContent)
   }
 
   // MARK: - Month Navigation

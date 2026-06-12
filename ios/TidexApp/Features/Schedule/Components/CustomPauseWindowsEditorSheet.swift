@@ -231,10 +231,11 @@ struct CustomPauseWindowsEditorSheet: View {
     } label: {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "plus")
+          .foregroundColor(.tidexTextPrimary)
         Text(.shiftsPauseEditorAddWindow)
+          .foregroundColor(.tidexBlue)
       }
       .font(.tidexLabelStrong)
-      .foregroundColor(.tidexBlue)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.md)
       .background(Color.tidexBlue.opacity(0.08))

@@ -153,7 +153,7 @@ struct ShiftSupplementRuleCard: View {
         Button(action: onEdit) {
           Image(systemName: "pencil")
             .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextPrimary)
             .frame(width: 36, height: 36)
             .background(Color.tidexBlue.opacity(0.1))
             .clipShape(Circle())
@@ -554,7 +554,7 @@ struct SupplementRuleEditorSheet: View {
             }
           }
         )
-        .tint(.tidexBlue)
+        .tint(.tidexTextPrimary)
       }
       .padding(Spacing.md)
       .background(Color.tidexSurfaceSecondary)

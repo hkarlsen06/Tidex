@@ -1,5 +1,5 @@
 {
-  "originHash" : "bf4ba353cc51b45c9533c2590d22e2573bf948b038a1a0b35c0801fb4648f275",
+  "originHash" : "b7009c5db94e594e60e0582b9aca5c0a1afd716cd82879055f0d888419c1a2d1",
   "pins" : [
     {
       "identity" : "activityindicatorview",
@@ -35,14 +35,6 @@
       "state" : {
         "revision" : "145104f5ea9d58ae21b60add007c33c1cc0c948e",
         "version" : "2.0.0"
-      }
-    },
-    {
-      "identity" : "chat",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/TidexHQ/Chat.git",
-      "state" : {
-        "revision" : "ebd451b27813fb2a714bb36c61ccc99e4bbc1dc3"
       }
     },
     {

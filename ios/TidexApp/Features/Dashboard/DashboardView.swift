@@ -918,7 +918,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: "calendar")
           .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextSecondary)
         Text(.addShiftEventAllDay)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
@@ -1409,15 +1409,16 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       HStack(spacing: Spacing.xxs) {
         Image(systemName: "clock.arrow.circlepath")
           .font(.tidexCaptionRegular.weight(.semibold))
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextSecondary)
 
         Text(.dashboardSeePreviousPayout)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexBlue)
           .lineLimit(1)
       }
-      .padding(.horizontal, Spacing.sm)
-      .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.xxs)
+      .frame(minHeight: 28)  // swiftlint:disable:this no_magic_numbers
       .background(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
       .clipShape(Capsule())
     }
@@ -1859,7 +1860,7 @@ private struct ClockOutReviewSheet: View {
           HStack(spacing: Spacing.xs) {
             Image(systemName: "moon.fill")  // swiftlint:disable:this accessibility_label_for_image
               .font(.tidexCaption)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexTextSecondary)
             Text(.shiftsCrossMidnightInfo)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)

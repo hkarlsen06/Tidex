@@ -80,19 +80,19 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "banknote")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
           Text(.dashboardToday)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)
           Image(systemName: "party.popper.fill")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
         }
       } else {
         HStack(spacing: Spacing.xxs) {
           Image(systemName: "banknote")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
           Text(dateParts.weekday)
             .font(.tidexLabel)
             .foregroundColor(.tidexTextSecondary)

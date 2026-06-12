@@ -1,8 +1,36 @@
+import Combine
 import SwiftUI
 // swiftlint:disable:next sorted_imports
 import os.log
 
 private let kLogger: Logger = Logger(subsystem: "no.tidex.app", category: "ShiftsView")
+
+@MainActor
+internal final class ShiftsToolbarCoordinator: ObservableObject {
+  internal static let shared = ShiftsToolbarCoordinator()
+
+  @Published internal private(set) var canShowLeadingActions = false
+  @Published internal private(set) var isSelectionModeEnabled = false
+
+  private let toggleSelectionSubject = PassthroughSubject<Void, Never>()
+
+  internal var toggleSelectionAction: AnyPublisher<Void, Never> {
+    toggleSelectionSubject.eraseToAnyPublisher()
+  }
+
+  private init() {
+    // Singleton.
+  }
+
+  internal func update(canShowLeadingActions: Bool, isSelectionModeEnabled: Bool) {
+    self.canShowLeadingActions = canShowLeadingActions
+    self.isSelectionModeEnabled = isSelectionModeEnabled
+  }
+
+  internal func triggerToggleSelection() {
+    toggleSelectionSubject.send()
+  }
+}
 
 /// Helper struct for day sheet selection (must be Identifiable for .sheet(item:))
 private struct DayItemSelection: Identifiable {
@@ -104,6 +132,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     WorkSetupPresentationViewModel()
   @ObservedObject private var celebrationManager: CelebrationManager = CelebrationManager.shared
   @ObservedObject private var syncStatusManager: SyncStatusManager = SyncStatusManager.shared
+  @ObservedObject private var shiftsToolbarCoordinator = ShiftsToolbarCoordinator.shared
   @State private var operationErrorMessage: String?
 
   // Sheet state for shift details (using item-based presentation to fix first-tap bug)
@@ -266,7 +295,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   @ToolbarContentBuilder
   private var shiftsToolbarContent: some ToolbarContent {
-    // Share button (only in calendar view, not list view)
     if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
       ToolbarItem(placement: .topBarLeading) {
         Button {
@@ -276,19 +304,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             .accessibilityHidden(true)
             .offset(y: -1)
         }
-      }
-    }
-
-    // Selection mode toggle (only in calendar view)
-    if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
-      ToolbarItem(placement: .topBarLeading) {
-        selectionModeToggleButton
-      }
-    }
-
-    if !shouldShowWorkSetupRequiredPlaceholder {
-      ToolbarItem(placement: .topBarLeading) {
-        listViewToggleButton
       }
     }
 
@@ -329,6 +344,27 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       .iPadToolbarBackground()
       .toolbar {
         shiftsToolbarContent
+      }
+      .onAppear {
+        publishToolbarState()
+      }
+      .onChange(of: showListView) { _, _ in
+        publishToolbarState()
+      }
+      .onChange(of: shouldShowWorkSetupRequiredPlaceholder) { _, _ in
+        publishToolbarState()
+      }
+      .onChange(of: viewModel.isSelectionModeEnabled) { _, _ in
+        publishToolbarState()
+      }
+      .onReceive(shiftsToolbarCoordinator.toggleSelectionAction) {
+        guard selectedTab == .shifts, !showListView, !shouldShowWorkSetupRequiredPlaceholder else {
+          return
+        }
+        selectionHaptic.selectionChanged()
+        MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
+          viewModel.isSelectionModeEnabled.toggle()
+        }
       }
       .iPadToolbarTransaction()
     }
@@ -822,6 +858,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         }
         .sheet(isPresented: $showingShareDestinationPicker) {
           ShareDestinationSheet(
+            title: .shiftsShareMonthTitle,
             onShareAsImage: {
               showingShareDestinationPicker = false
               showingShareOptions = true
@@ -847,6 +884,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           }
         ) {
           CalendarShareOptionsSheet(
+            title: .shiftsShareMonthTitle,
             onShowEarnings: {
               // Prepare the image first, then dismiss - share sheet shows on dismiss
               prepareCalendarImage(includeEarnings: true)
@@ -1249,37 +1287,13 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     presentDayItems(dateISO: dateISO, shifts: viewModel.selectedDateShifts)
   }
 
-  // MARK: - Selection Mode Toggle Button
+  // MARK: - Bottom Toolbar
 
-  private var listViewToggleButton: some View {
-    Button {
-      selectionHaptic.selectionChanged()
-      showListView.toggle()
-    } label: {
-      Image(systemName: showListView ? "calendar" : "list.bullet")
-        .accessibilityHidden(true)
-    }
-    .contentTransition(.symbolEffect(.replace))
-    .accessibilityLabel(Text(.tabsShifts))
-  }
-
-  /// Toggle button for selection mode (calendar view only)
-  @ViewBuilder
-  private var selectionModeToggleButton: some View {
-    Button {
-      selectionHaptic.selectionChanged()
-      MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
-        viewModel.isSelectionModeEnabled.toggle()
-      }
-    } label: {
-      Image(
-        systemName: viewModel.isSelectionModeEnabled ? "checkmark.circle.fill" : "checkmark.circle"
-      )
-      .font(.tidexHeadline)
-      .foregroundColor(viewModel.isSelectionModeEnabled ? .tidexBrandPrimary : .tidexTextPrimary)
-    }
-    .buttonStyle(.plain)
-    .contentTransition(.symbolEffect(.replace))
+  private func publishToolbarState() {
+    shiftsToolbarCoordinator.update(
+      canShowLeadingActions: !shouldShowWorkSetupRequiredPlaceholder,
+      isSelectionModeEnabled: viewModel.isSelectionModeEnabled
+    )
   }
 
   // MARK: - Transition Phase

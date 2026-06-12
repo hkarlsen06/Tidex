@@ -293,6 +293,10 @@ struct MonthYearPickerSheet: View {
     selectedYear == realMonth.year && selectedMonth == realMonth.month
   }
 
+  private var selectedMonthName: String {
+    monthNames[selectedMonth - 1]
+  }
+
   init(
     isPresented: Binding<Bool>, currentYear: Int, currentMonth: Int,
     onSelect: @escaping (Int, Int) -> Void
@@ -306,84 +310,139 @@ struct MonthYearPickerSheet: View {
   }
 
   var body: some View {
-    NavigationStack {
-      VStack(spacing: 0) {
-        // Wheel pickers
-        HStack(spacing: 0) {
-          // Month picker
-          Picker("Month", selection: $selectedMonth) {
-            ForEach(1...12, id: \.self) { month in
-              Text(monthNames[month - 1])
-                .tag(month)
-            }
-          }
-          .pickerStyle(.wheel)
-          .frame(maxWidth: .infinity)
-          .clipped()
-
-          // Year picker
-          Picker("Year", selection: $selectedYear) {
-            ForEach(yearRange, id: \.self) { year in
-              Text(String(year))
-                .tag(year)
-            }
-          }
-          .pickerStyle(.wheel)
-          .frame(width: 100)
-          .clipped()
-        }
-        .frame(height: 180)
-        .padding(.horizontal)
-        .padding(.vertical, Spacing.xs)
-        .background(Color.tidexSurfacePrimary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-        .compositingGroup()
-        .tidexCardShadow(cornerRadius: CornerRadius.lg)
-
-        Spacer()
-      }
-      .padding(.horizontal)
-      .background(Color.tidexBackground)
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            isPresented = false
-          }
-          .foregroundColor(.tidexBlue)
-        }
-
-        ToolbarItem(placement: .principal) {
-          Button {
-            onSelect(realMonth.year, realMonth.month)
-            isPresented = false
-          } label: {
-            Text(.commonThisMonth)
-              .font(.subheadline)
-              .fontWeight(.medium)
-              .foregroundColor(isShowingCurrentMonth ? .tidexTextMuted : .tidexBlue)
-              .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, Spacing.xxxs)
-              .background(
-                Color.tidexBlue.opacity(isShowingCurrentMonth ? 0.05 : 0.1),
-                in: Capsule()
-              )
-          }
-          .disabled(isShowingCurrentMonth)
-        }
-
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonDone)) {
-            onSelect(selectedYear, selectedMonth)
-            isPresented = false
-          }
-          .fontWeight(.semibold)
-          .foregroundColor(.tidexBlue)
-        }
-      }
+    VStack(spacing: Spacing.md) {
+      sheetActions
+      selectedPeriodHeader
+      pickerWheels
     }
-    .presentationDetents([.height(300)])
+    .padding(.horizontal, Spacing.md)
+    .padding(.top, Spacing.xl)
+    .padding(.bottom, Spacing.xl)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .background(Color.tidexBackground)
+    .presentationBackground(Color.tidexBackground)
+    .presentationDetents([.height(342)])
     .presentationDragIndicator(.visible)
+  }
+
+  private var sheetActions: some View {
+    HStack(spacing: Spacing.sm) {
+      Button {
+        isPresented = false
+      } label: {
+        Text(.commonCancel)
+      }
+      .buttonStyle(MonthPickerActionButtonStyle())
+
+      Spacer(minLength: Spacing.xxs)
+
+      Button {
+        onSelect(realMonth.year, realMonth.month)
+        isPresented = false
+      } label: {
+        Text(.commonThisMonth)
+      }
+      .buttonStyle(MonthPickerCurrentButtonStyle(isSelected: isShowingCurrentMonth))
+      .disabled(isShowingCurrentMonth)
+
+      Spacer(minLength: Spacing.xxs)
+
+      Button {
+        onSelect(selectedYear, selectedMonth)
+        isPresented = false
+      } label: {
+        Text(.commonDone)
+      }
+      .buttonStyle(MonthPickerActionButtonStyle(isProminent: true))
+    }
+  }
+
+  private var selectedPeriodHeader: some View {
+    HStack(spacing: Spacing.xs) {
+      Text(selectedMonthName)
+      Text(String(selectedYear))
+    }
+    .font(.title3.weight(.semibold))
+    .foregroundColor(.tidexTextPrimary)
+    .frame(maxWidth: .infinity)
+    .padding(.top, Spacing.xxs)
+  }
+
+  private var pickerWheels: some View {
+    VStack(spacing: 0) {
+      Divider()
+        .background(Color.tidexBorderSubtle)
+
+      HStack(spacing: 0) {
+        Picker("Month", selection: $selectedMonth) {
+          ForEach(1...12, id: \.self) { month in
+            Text(monthNames[month - 1])
+              .tag(month)
+          }
+        }
+        .pickerStyle(.wheel)
+        .frame(maxWidth: .infinity)
+        .clipped()
+
+        Picker("Year", selection: $selectedYear) {
+          ForEach(yearRange, id: \.self) { year in
+            Text(String(year))
+              .tag(year)
+          }
+        }
+        .pickerStyle(.wheel)
+        .frame(width: 112)
+        .clipped()
+      }
+      .frame(height: 174)
+
+      Divider()
+        .background(Color.tidexBorderSubtle)
+    }
+  }
+}
+
+private struct MonthPickerActionButtonStyle: ButtonStyle {
+  var isProminent = false
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.body.weight(isProminent ? .semibold : .regular))
+      .foregroundColor(.tidexBlue)
+      .lineLimit(1)
+      .minimumScaleFactor(0.82)
+      .frame(minWidth: 72, minHeight: 44)
+      .padding(.horizontal, Spacing.xs)
+      .background(Color.tidexSurfacePrimary, in: Capsule())
+      .overlay(
+        Capsule()
+          .stroke(Color.tidexBorderSubtle, lineWidth: 1)
+      )
+      .opacity(configuration.isPressed ? 0.7 : 1)
+  }
+}
+
+private struct MonthPickerCurrentButtonStyle: ButtonStyle {
+  let isSelected: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.body.weight(.medium))
+      .foregroundColor(isSelected ? .tidexTextSecondary : .tidexBlue)
+      .lineLimit(1)
+      .minimumScaleFactor(0.82)
+      .frame(minWidth: 104, minHeight: 44)
+      .padding(.horizontal, Spacing.xs)
+      .background(
+        isSelected ? Color.tidexSurfaceSecondary : Color.tidexBlue.opacity(0.08),
+        in: Capsule()
+      )
+      .overlay(
+        Capsule()
+          .stroke(
+            isSelected ? Color.tidexBorderSubtle : Color.tidexBlue.opacity(0.16), lineWidth: 1)
+      )
+      .opacity(configuration.isPressed ? 0.7 : 1)
   }
 }
 

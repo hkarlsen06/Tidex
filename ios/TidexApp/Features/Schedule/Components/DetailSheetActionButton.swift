@@ -29,6 +29,16 @@ struct DetailSheetActionButton: View {
       }
     }
 
+    internal var iconForegroundColor: Color {
+      switch self {
+      case .secondary:
+        return .tidexTextPrimary
+
+      case .primary, .destructive:
+        return foregroundColor
+      }
+    }
+
     var backgroundColor: Color {
       switch self {
       case .primary:
@@ -76,15 +86,16 @@ struct DetailSheetActionButton: View {
         if let systemImage {
           Image(systemName: systemImage)
             .font(.tidexLabel)
+            .foregroundColor(style.iconForegroundColor)
         }
 
         Text(title)
           .font(.tidexLabelStrong)
+          .foregroundColor(style.foregroundColor)
           .multilineTextAlignment(.leading)
           .lineLimit(2)
           .minimumScaleFactor(0.86)
       }
-      .foregroundColor(style.foregroundColor)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(style.backgroundColor)

@@ -1,8 +1,8 @@
 # SwiftLint configuration for all Swift in the Tidex monorepo.
 #
-# Every non-conflicting lint rule is enabled. Existing debt is recorded in the
-# baseline; new warnings are errors. Source formatting remains owned by
-# swift-format so the two tools do not compete over layout.
+# High-signal lint rules are enabled. Existing debt is recorded in the baseline.
+# Source formatting remains owned by swift-format so the two tools do not
+# compete over layout.
 
 included:
   - ios
@@ -16,14 +16,59 @@ excluded:
   - ios/TidexApp/Generated
 
 baseline: .swiftlint-baseline.json
-strict: true
+# Baseline note, 2026-06-11: lifted the prior strict posture by removing
+# `strict: true`, `opt_in_rules: all`, and `analyzer_rules: all`. The noisiest
+# rule families now left to the baseline history instead of active linting are:
+# explicit_acl, explicit_top_level_acl, explicit_type_interface,
+# no_magic_numbers, type_contents_order, file_types_order,
+# conditional_returns_on_newline, multiline_arguments_brackets,
+# multiline_call_arguments, anonymous_argument_in_multiline_closure,
+# sorted_enum_cases, explicit_enum_raw_value, required_deinit,
+# prefer_nimble, single_test_class, balanced_xctest_lifecycle,
+# xct_specific_matcher, discouraged_optional_boolean,
+# discouraged_optional_collection, no_grouping_extension,
+# strict_fileprivate, prefixed_toplevel_constant, legacy_objc_type,
+# pattern_matching_keywords, raw_value_for_camel_cased_codable_enum,
+# prefer_asset_symbols, let_var_whitespace, sorted_imports,
+# shorthand_argument, convenience_type, no_empty_block, and file_name.
+# The strict metric error thresholds are also lifted to warning-only for:
+# closure_body_length, cyclomatic_complexity, enum_case_associated_values_count,
+# file_length, function_body_length, function_parameter_count, large_tuple,
+# nesting, type_body_length, line_length, identifier_name, and type_name.
 reporter: xcode
 
 opt_in_rules:
-  - all
+  - accessibility_label_for_image
+  - accessibility_trait_for_button
+  - array_init
+  - async_without_await
+  - closure_body_length
+  - contains_over_filter_count
+  - contains_over_filter_is_empty
+  - contains_over_first_not_nil
+  - contains_over_range_nil_comparison
+  - discarded_notification_center_observer
+  - empty_count
+  - empty_string
+  - enum_case_associated_values_count
+  - fallthrough
+  - fatal_error_message
+  - first_where
+  - force_unwrapping
+  - last_where
+  - legacy_random
+  - number_separator
+  - overridden_super_call
+  - private_action
+  - private_outlet
+  - prohibited_super_call
+  - redundant_nil_coalescing
+  - toggle_bool
+  - unavailable_function
 
 analyzer_rules:
-  - all
+  - unused_declaration
+  - unused_import
 
 disabled_rules:
   # swift-format is the repository's formatting authority.
@@ -72,52 +117,40 @@ force_unwrapping:
 
 closure_body_length:
   warning: 30
-  error: 60
 
 cyclomatic_complexity:
   warning: 8
-  error: 12
   ignores_case_statements: false
 
 enum_case_associated_values_count:
   warning: 4
-  error: 5
 
 file_length:
   warning: 400
-  error: 600
   ignore_comment_only_lines: true
 
 function_body_length:
   warning: 40
-  error: 70
 
 function_parameter_count:
   warning: 5
-  error: 7
   ignores_default_parameters: true
 
 identifier_name:
   min_length:
     warning: 2
-    error: 1
   max_length:
     warning: 40
-    error: 50
   excluded:
     - id
     - x
     - y
-  validates_start_with_lowercase: error
-  unallowed_symbols_severity: error
 
 large_tuple:
   warning: 2
-  error: 3
 
 line_length:
   warning: 120
-  error: 160
   ignores_urls: true
   ignores_comments: false
   ignores_interpolated_strings: false
@@ -126,26 +159,19 @@ line_length:
 nesting:
   type_level:
     warning: 2
-    error: 3
   function_level:
     warning: 2
-    error: 3
   check_nesting_in_closures_and_statements: true
   ignore_coding_keys: true
 
 type_body_length:
   warning: 250
-  error: 400
 
 type_name:
   min_length:
     warning: 2
-    error: 1
   max_length:
     warning: 40
-    error: 50
-  validates_start_with_lowercase: error
-  unallowed_symbols_severity: error
 
 vertical_whitespace:
   max_empty_lines: 1

@@ -21,7 +21,7 @@ EOF
   exit 1
 fi
 
-if ! grep -q 'revision = ebd451b27813fb2a714bb36c61ccc99e4bbc1dc3;' "$project_file"; then
+if ! grep -q 'revision = f5f5cd59d1c1df123c7437eb1619bf6e78eea96b;' "$project_file"; then
   cat >&2 <<'EOF'
 Tidex is not pinned to the Exyte Chat revision that refreshes custom message builders.
 Run ./scripts/set-chat-package-source.sh remote before committing portable changes.

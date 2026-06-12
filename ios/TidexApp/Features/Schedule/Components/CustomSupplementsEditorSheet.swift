@@ -385,7 +385,7 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
     HStack(spacing: Spacing.sm) {
       Image(systemName: "info.circle")
         .font(.tidexBody)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexTextSecondary)
 
       Text(.supplementsEditorHint)
         .font(.tidexSubheadline)
@@ -450,10 +450,11 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
       HStack(spacing: Spacing.xs) {
         Image(systemName: "plus.circle.fill")
           .font(.tidexBody)
+          .foregroundColor(.tidexTextPrimary)
         Text(.supplementsAddRule)
           .font(.tidexLabel)
+          .foregroundColor(.tidexBlue)
       }
-      .foregroundColor(.tidexBlue)
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(

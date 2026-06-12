@@ -619,7 +619,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
             } label: {
               Image(systemName: "square.and.arrow.up")
                 .font(.tidexBodyMedium)
-                .foregroundColor(.tidexBlue)
+                .foregroundColor(.tidexTextPrimary)
             }
           }
         }
@@ -1107,7 +1107,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       // Section header
       HStack {
         Image(systemName: "clock")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextSecondary)
         Text(.shiftsTimeSection)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
@@ -1149,7 +1149,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     VStack(spacing: Spacing.md) {
       HStack(alignment: .center, spacing: Spacing.sm) {
         Image(systemName: "note.text")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextSecondary)
 
         Text(.shiftsDetailsNoteTitle)
           .font(.tidexLabelStrong)
@@ -1213,7 +1213,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           displayedComponents: .date
         )
         .labelsHidden()
-        .tint(.tidexBlue)
+        .tint(.tidexTextPrimary)
       }
 
       Divider()
@@ -1230,7 +1230,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         HStack(spacing: Spacing.xs) {
           Image(systemName: "moon.fill")
             .font(.tidexCaption)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
           Text(.shiftsCrossMidnightInfo)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
@@ -1244,7 +1244,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         HStack(spacing: Spacing.xs) {
           Image(systemName: "info.circle")
             .font(.tidexSubheadline)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextSecondary)
           Text(.shiftsVirtualConversionInfo)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
@@ -1264,7 +1264,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     VStack(spacing: Spacing.md) {
       HStack(alignment: .center, spacing: Spacing.sm) {
         Image(systemName: "note.text")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextSecondary)
 
         Text(.shiftsDetailsNoteTitle)
           .font(.tidexLabelStrong)
@@ -1301,7 +1301,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     VStack(spacing: Spacing.md) {
       HStack {
         Image(systemName: "pause.circle")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextSecondary)
         Text(.settingsPayEditorBreakTitle)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
@@ -1439,10 +1439,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: systemImage)
           .font(.tidexFootnote)
+          .foregroundColor(.tidexTextPrimary)
         Text(title)
           .font(.tidexLabel)
+          .foregroundColor(.tidexBlue)
       }
-      .foregroundColor(.tidexBlue)
       .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)
       .background(Color.tidexBlue.opacity(0.08))
@@ -1563,7 +1564,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       // Section header
       HStack {
         Image(systemName: "creditcard")
-          .foregroundColor(.tidexBlue)
+          .foregroundColor(.tidexTextSecondary)
         Text(.shiftsEarningsSection)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextSecondary)
@@ -1879,7 +1880,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     HStack(spacing: Spacing.sm) {
       Image(systemName: "repeat")
         .font(.tidexBody)
-        .foregroundColor(.tidexBlue)
+        .foregroundColor(.tidexTextSecondary)
 
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(.shiftsRecurringShift)
@@ -2029,7 +2030,7 @@ private struct ShareOptionsSheet: View {
           HStack(spacing: Spacing.msm) {
             Image(systemName: "eye")
               .font(.tidexTitle2)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexTextSecondary)
               .frame(width: 28)
             Text(.shiftsShareShowEarnings)
               .font(.tidexBodyMedium)
@@ -2052,7 +2053,7 @@ private struct ShareOptionsSheet: View {
           HStack(spacing: Spacing.msm) {
             Image(systemName: "eye.slash")
               .font(.tidexTitle2)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexTextSecondary)
               .frame(width: 28)
             Text(.shiftsShareHideEarnings)
               .font(.tidexBodyMedium)
@@ -2078,12 +2079,23 @@ private struct ShareOptionsSheet: View {
 }
 
 struct ShareDestinationSheet: View {
+  let title: LocalizedStringResource
   let onShareAsImage: () -> Void
   let onShareInChat: () -> Void
 
+  init(
+    title: LocalizedStringResource = .shiftsShareTitle,
+    onShareAsImage: @escaping () -> Void,
+    onShareInChat: @escaping () -> Void
+  ) {
+    self.title = title
+    self.onShareAsImage = onShareAsImage
+    self.onShareInChat = onShareInChat
+  }
+
   var body: some View {
     VStack(spacing: Spacing.mlg) {
-      Text(.shiftsShareTitle)
+      Text(title)
         .font(.tidexHeadline)
         .foregroundColor(.tidexTextPrimary)
         .padding(.top, Spacing.md)
@@ -2093,7 +2105,7 @@ struct ShareDestinationSheet: View {
           HStack(spacing: Spacing.msm) {
             Image(systemName: "bubble.left.and.text.bubble.right")
               .font(.tidexTitle2)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexTextSecondary)
               .frame(width: 28)
             Text(.friendsChatSendToChat)
               .font(.tidexBodyMedium)
@@ -2113,7 +2125,7 @@ struct ShareDestinationSheet: View {
           HStack(spacing: Spacing.msm) {
             Image(systemName: "photo.on.rectangle")
               .font(.tidexTitle2)
-              .foregroundColor(.tidexBlue)
+              .foregroundColor(.tidexTextSecondary)
               .frame(width: 28)
             Text(.shiftsShareAsImage)
               .font(.tidexBodyMedium)
