@@ -1,1 +1,1 @@
-směna,sledování,mzda,plat,práce,hodiny,čas,docházka,rozvrh,výdělek
+mzda,práce,hodiny,čas,směny,rozvrh,výdělek,kalkulačka,přesčasy,výplata,kalendář,plánovač,záznam

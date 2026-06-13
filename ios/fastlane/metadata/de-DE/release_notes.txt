@@ -1,8 +1,9 @@
-- Kalenderabonnements hinzugefügt, damit deine Schichten in deiner Kalender-App aktuell bleiben
-- Lohnanpassungen für Boni, Korrekturen und andere zusätzliche Vergütungsdetails hinzugefügt
-- Onboarding und Registrierung mit klarerer Anleitung und intelligenterer Standardauswahl der Währung verbessert
-- Wagey mit App-Links, klareren Tool-Updates, Unterstützung für Lohnanpassungen und besseren Hinweisen zum Abschluss im Hintergrund verbessert
-- Teilen mit Freunden und Chat mit Laden geteilter Schichten, Nachrichtengesten, Medieninteraktionen, aufgeräumterem Listenverhalten und besserer Synchronisierung verbessert
-- Dashboard, Lohnkarten und Statistiken zum Beschäftigungsgrad für klarere Einblicke in den Verdienst verbessert
-- Die Verarbeitung wiederkehrender Schichten, Wischaktionen für Schichten und die Erkennung von Überschneidungen bei geteilten Schichten behoben
+- Siri-Unterstützung zum Senden von Nachrichten an Freunde hinzugefügt
+- Passkey-Anmeldung für eine schnellere und sicherere Anmeldung hinzugefügt
+- Einen klareren Test- und Paywall-Ablauf hinzugefügt, einschließlich einer besseren Handhabung kostenloser Nutzungslimits
+- Die Arbeitseinrichtung mit einem reibungsloseren Ablauf zum Hinzufügen von Jobs, Löhnen und ersten Schichten verbessert
+- Lohnkarten mit klareren Details zu aktuellen und vorherigen Auszahlungen verbessert
+- Die Leistung von Dienstplan und Startseite beim Wechseln zwischen Monaten und beim Synchronisieren von Änderungen verbessert
+- Den Freunde-Chat mit besserer Nachrichtengruppierung, Anhängen, geteilten Schichten und Zeitstempeln verbessert
+- Zuverlässigkeitsprobleme bei Abonnements, Onboarding, Kalender und Benachrichtigungen behoben
 - Fehlerbehebungen und weitere Verbesserungen

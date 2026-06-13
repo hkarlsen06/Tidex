@@ -29,21 +29,26 @@ enum APIConfiguration {
 
   // MARK: - Supabase Configuration
 
-  // swiftlint:disable force_unwrapping
+  private static func staticURL(_ string: String) -> URL {
+    guard let url = URL(string: string) else {
+      preconditionFailure("Invalid static URL: \(string)")
+    }
+    return url
+  }
+
   /// Cached Supabase URL - loaded once at app startup
   /// Falls back to production URL if Info.plist is misconfigured (should never happen in release builds)
   static let supabaseURL: URL = {
     guard let urlString = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String else {
       logger.error("SUPABASE_URL not found in Info.plist - using fallback")
-      return URL(string: "https://identity.tidex.no")!
+      return staticURL("https://identity.tidex.no")
     }
     guard let url = URL(string: urlString) else {
       logger.error("Invalid SUPABASE_URL in Info.plist: \(urlString) - using fallback")
-      return URL(string: "https://identity.tidex.no")!
+      return staticURL("https://identity.tidex.no")
     }
     return url
   }()
-  // swiftlint:enable force_unwrapping
 
   /// Cached Supabase anon key - loaded once at app startup
   /// Falls back to empty string if missing (auth will fail gracefully)
@@ -65,7 +70,7 @@ enum APIConfiguration {
   // MARK: - Marketing Configuration
 
   /// Public marketing site used for support and legal documents.
-  static let marketingBaseURL = URL(string: "https://tidex.no")!  // swiftlint:disable:this force_unwrapping
+  static let marketingBaseURL = staticURL("https://tidex.no")
   static let supportURL = marketingBaseURL.appendingPathComponent("support")
   static let legalVersionURL = marketingBaseURL.appendingPathComponent("legal/version.json")
 

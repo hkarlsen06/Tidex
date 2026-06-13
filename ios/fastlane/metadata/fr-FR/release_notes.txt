@@ -1,8 +1,9 @@
-- Ajout des abonnements au calendrier pour que vos shifts restent à jour dans votre app de calendrier
-- Ajout des ajustements de paie pour les bonus, corrections et autres détails de rémunération supplémentaire
-- Amélioration de l’onboarding et de l’inscription avec des indications plus claires et une sélection plus intelligente de la devise par défaut
-- Amélioration de Wagey avec des liens vers l’app, des mises à jour d’outils plus claires, la prise en charge des ajustements de paie et de meilleures alertes de fin en arrière-plan
-- Amélioration du partage entre amis et du chat avec le chargement des shifts partagés, des gestes sur les messages, des interactions avec les médias, un comportement de liste plus fluide et une meilleure synchronisation
-- Amélioration du tableau de bord, des cartes de paie et des statistiques de pourcentage d’emploi pour une vision plus claire des revenus
-- Correction de la gestion des shifts récurrents, des actions de balayage sur les shifts et de la détection des chevauchements de shifts partagés
+- Ajout de la prise en charge de Siri pour envoyer des messages à des amis
+- Ajout de la connexion par passkey pour une expérience de connexion plus rapide et plus sécurisée
+- Ajout d’un parcours d’essai et de paywall plus clair, avec une meilleure gestion des limites d’utilisation gratuite
+- Amélioration de la configuration du travail avec un flux plus fluide pour ajouter des emplois, des salaires et les premiers shifts
+- Amélioration des cartes de paie avec des détails plus clairs sur les paiements actuels et précédents
+- Amélioration des performances de Planning et Accueil lors du passage d’un mois à l’autre et de la synchronisation des changements
+- Amélioration du chat entre amis avec un meilleur regroupement des messages, les pièces jointes, les shifts partagés et les horodatages
+- Correction de problèmes de fiabilité liés aux abonnements, à l’onboarding, au calendrier et aux notifications
 - Corrections de bugs et autres améliorations

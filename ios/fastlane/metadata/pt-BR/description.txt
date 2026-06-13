@@ -2,8 +2,8 @@ Acompanhe seus turnos de trabalho e calcule seu salário com o Tidex.
 
 Recursos:
 • Registro fácil de turnos com horários de início e término
-• Cálculos automáticos de salário
-• Visualização em calendário de todos os turnos
+• Cálculo automático de salário
+• Visualização de todos os turnos no calendário
 • Visão geral dos ganhos e estatísticas
 • Widget para acesso rápido
 • Sincronização entre dispositivos

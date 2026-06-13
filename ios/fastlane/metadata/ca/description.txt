@@ -1,11 +1,11 @@
-Fes el seguiment dels teus torns de feina i calcula el teu sou amb Tidex.
+Fes un seguiment dels teus torns de feina i calcula el teu sou amb Tidex.
 
 Funcions:
-• Registre fàcil de torns amb hora d'inici i de finalització
+• Registre fàcil de torns amb hores d'inici i finalització
 • Càlcul automàtic del sou
 • Vista de calendari de tots els torns
 • Resum d'ingressos i estadístiques
-• Giny per a un accés ràpid
+• Giny per a accés ràpid
 • Sincronització entre dispositius
 
 Perfecte per a empleats que volen portar el control de les hores de feina i dels ingressos.

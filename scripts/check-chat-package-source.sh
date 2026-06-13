@@ -21,7 +21,13 @@ EOF
   exit 1
 fi
 
-if ! grep -q 'revision = f5f5cd59d1c1df123c7437eb1619bf6e78eea96b;' "$project_file"; then
+if ! ruby - "$project_file" <<'RUBY'
+project_file = ARGV.fetch(0)
+contents = File.read(project_file)
+chat_reference = contents[/11CD7FA32F63CFC700A987E7 \/\* XCRemoteSwiftPackageReference "Chat" \*\/ = \{.*?\n\t\t\};/m]
+exit(chat_reference&.include?("branch = main;") && chat_reference&.include?("kind = branch;") ? 0 : 1)
+RUBY
+then
   cat >&2 <<'EOF'
 Tidex is not pinned to the Exyte Chat revision that refreshes custom message builders.
 Run ./scripts/set-chat-package-source.sh remote before committing portable changes.

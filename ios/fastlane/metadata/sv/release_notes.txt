@@ -1,8 +1,9 @@
-- Lade till kalenderprenumerationer så att dina pass kan hållas uppdaterade i din kalenderapp
-- Lade till lönejusteringar för bonusar, korrigeringar och andra extra löneuppgifter
-- Förbättrade onboarding och registrering med tydligare vägledning och smartare val av standardvaluta
-- Förbättrade Wagey med applänkar, tydligare verktygsuppdateringar, stöd för lönejusteringar och bättre aviseringar när bakgrundsslutförande är klart
-- Förbättrade delning med vänner och chatten med inläsning av delade pass, meddelandegester, medieinteraktioner, renare listbeteende och bättre synkronisering
-- Förbättrade instrumentpanelen, lönekorten och statistiken för sysselsättningsgrad för tydligare insikter om intäkter
-- Åtgärdade hantering av återkommande pass, svepåtgärder för pass och upptäckt av överlappande delade pass
+- Lade till stöd för Siri för att skicka meddelanden till vänner
+- Lade till inloggning med passkey för en snabbare och säkrare inloggningsupplevelse
+- Lade till ett tydligare flöde för provperiod och betalvägg, inklusive bättre hantering av gränser för gratis användning
+- Förbättrade arbetsinställningarna med ett smidigare flöde för att lägga till jobb, lön och första arbetspass
+- Förbättrade lönekorten med tydligare information om nuvarande och föregående utbetalning
+- Förbättrade prestandan i Schema och Hem vid byte mellan månader och synkronisering av ändringar
+- Förbättrade vänchatten med bättre grupperingar av meddelanden, bilagor, delade arbetspass och tidsstämplar
+- Åtgärdade problem med tillförlitligheten för abonnemang, onboarding, kalender och notiser
 - Buggfixar och andra förbättringar

@@ -1,8 +1,9 @@
-- Added calendar subscriptions so your shifts can stay up to date in your calendar app
-- Added payroll adjustments for bonuses, corrections, and other extra pay details
-- Improved onboarding and sign-up with clearer guidance and smarter default currency selection
-- Improved Wagey with app links, clearer tool updates, payroll adjustment support, and better background completion alerts
-- Improved friends sharing and chat with shared-shift loading, message gestures, media interactions, cleaner list behavior, and better syncing
-- Improved dashboard, payroll cards, and employment percentage stats for clearer earnings insight
-- Fixed recurring shift handling, shift swipe actions, and shared shift overlap detection
+- Added Siri support for sending messages to friends
+- Added passkey sign-in for a faster and more secure login experience
+- Added a clearer trial and paywall flow, including better handling of free usage limits
+- Improved work setup with a smoother flow for adding jobs, wages, and first shifts
+- Improved payroll cards with clearer current and previous payout details
+- Improved Schedule and Home performance when moving between months and syncing changes
+- Improved friends chat with better message grouping, attachments, shared shifts, and timestamps
+- Fixed subscription, onboarding, calendar, and notification reliability issues
 - Bug fixes and other improvements

@@ -1,8 +1,9 @@
-- Lagt til kalenderabonnementer slik at vaktene dine kan holdes oppdatert i kalenderappen din
-- Lagt til lønnsjusteringer for bonuser, korrigeringer og andre ekstra lønnsdetaljer
-- Forbedret onboarding og registrering med tydeligere veiledning og smartere standardvalg av valuta
-- Forbedret Wagey med applenker, tydeligere verktøyoppdateringer, støtte for lønnsjusteringer og bedre varsler når den fullfører i bakgrunnen
-- Forbedret vennedeling og chat med innlasting av delte vakter, meldingsbevegelser, mediehåndtering, ryddigere listevisning og bedre synkronisering
-- Forbedret oversikten, lønnskortene og statistikk for stillingsprosent for tydeligere innsikt i inntekt
-- Rettet håndtering av gjentakende vakter, sveipehandlinger på vakter og kontroll av overlappende delte vakter
+- Lagt til Siri-støtte for å sende meldinger til venner
+- Lagt til passkey-innlogging for raskere og sikrere innlogging
+- Lagt til en tydeligere prøveperiode og betalingsflyt, med bedre håndtering av gratisgrenser
+- Forbedret arbeidsoppsett med en smidigere flyt for jobber, lønn og første vakter
+- Forbedret lønnskortene med tydeligere detaljer for nåværende og forrige utbetaling
+- Forbedret ytelsen i Timeplan og Hjem når du bytter måned og synkroniserer endringer
+- Forbedret vennechat med bedre meldingsgruppering, vedlegg, delte vakter og tidsstempler
+- Rettet problemer med abonnement, onboarding, kalender og varsler
 - Feilrettinger og andre forbedringer

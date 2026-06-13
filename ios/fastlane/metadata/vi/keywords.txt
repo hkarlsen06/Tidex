@@ -1,1 +1,1 @@
-calam,theodoi,luong,thunhap,congviec,giolam,thoigian,chamcong,lichlam,kiemthem
+luong,calam,giolam,chamcong,lichlam,thunhap,tangca,bangluong,lich,ghica,congviec,tinhluong
