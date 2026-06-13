@@ -2510,24 +2510,24 @@ enum FriendsAPIClient {
       let query = normalizedSearchText(spokenName)
       guard !query.isEmpty else { return [] }
 
-      let scored = recipients.compactMap { recipient -> (recipient: ShareRecipient, score: Int)? in
+      let scoredRecipients = recipients.compactMap { recipient -> (recipient: ShareRecipient, score: Int)? in
         let fields = searchableFields(for: recipient)
-        let score = fields.reduce(0) { partial, field in
-          max(partial, score(query: query, candidate: normalizedSearchText(field)))
+        let recipientScore = fields.reduce(0) { partial, field in
+          max(partial, Self.score(query: query, candidate: normalizedSearchText(field)))
         }
-        guard score > 0 else { return nil }
-        return (recipient, score)
+        guard recipientScore > 0 else { return nil }
+        return (recipient, recipientScore)
       }
 
-      let bestScore = scored.map(\.score).max() ?? 0
+      let bestScore = scoredRecipients.map { $0.score }.max() ?? 0
       return
-        scored
+        scoredRecipients
         .filter { $0.score == bestScore }
         .sorted {
           $0.recipient.displayName.localizedCaseInsensitiveCompare($1.recipient.displayName)
             == .orderedAscending
         }
-        .map(\.recipient)
+        .map { $0.recipient }
     }
 
     private static func searchableFields(for recipient: ShareRecipient) -> [String] {
