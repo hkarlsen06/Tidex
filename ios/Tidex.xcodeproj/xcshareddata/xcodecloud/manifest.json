@@ -1,0 +1,9 @@
+{
+  "id" : "ef73548d-5936-46ed-8cd8-34a52b5d811f",
+  "targets" : [
+    {
+      "id" : "258f665d-9259-4f3b-ad5c-c880901e16dc",
+      "name" : "TidexApp"
+    }
+  ]
+}
