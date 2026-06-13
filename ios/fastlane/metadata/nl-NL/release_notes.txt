@@ -1,8 +1,9 @@
-- Kalenderabonnementen toegevoegd zodat je diensten up-to-date blijven in je agenda-app
-- Loonaanpassingen toegevoegd voor bonussen, correcties en andere extra loongegevens
-- Onboarding en registratie verbeterd met duidelijkere begeleiding en een slimmere standaardselectie van valuta
-- Wagey verbeterd met applinks, duidelijkere toolupdates, ondersteuning voor loonaanpassingen en betere meldingen bij voltooiing op de achtergrond
-- Delen met vrienden en chat verbeterd met het laden van gedeelde diensten, berichtgebaren, media-interacties, netter lijstgedrag en betere synchronisatie
-- Dashboard, loonkaarten en statistieken over het arbeidspercentage verbeterd voor duidelijker inzicht in inkomsten
-- Afhandeling van terugkerende diensten, veegacties voor diensten en detectie van overlappende gedeelde diensten opgelost
+- Siri-ondersteuning toegevoegd voor het sturen van berichten naar vrienden
+- Inloggen met een passkey toegevoegd voor een snellere en veiligere login
+- Een duidelijkere proefperiode- en betaalmuurflow toegevoegd, met betere afhandeling van limieten voor gratis gebruik
+- Werkconfiguratie verbeterd met een soepelere flow voor het toevoegen van banen, lonen en eerste diensten
+- Salariskaarten verbeterd met duidelijkere details over huidige en vorige uitbetalingen
+- Prestaties van Rooster en Start verbeterd bij het wisselen tussen maanden en het synchroniseren van wijzigingen
+- Vriendenchat verbeterd met betere berichtgroepering, bijlagen, gedeelde diensten en tijdstempels
+- Betrouwbaarheidsproblemen opgelost met abonnementen, onboarding, agenda en meldingen
 - Bugfixes en andere verbeteringen

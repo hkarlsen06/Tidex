@@ -1,8 +1,9 @@
-- Dodane su pretplate na kalendar kako bi vaše smjene ostale ažurne u vašoj aplikaciji kalendara
-- Dodane su prilagodbe obračuna plaće za bonuse, ispravke i druge dodatne stavke isplate
-- Poboljšani su onboarding i registracija uz jasnije upute i pametniji zadani odabir valute
-- Poboljšan je Wagey uz poveznice na aplikaciju, jasnija ažuriranja alata, podršku za prilagodbe obračuna plaće i bolja upozorenja o dovršetku u pozadini
-- Poboljšano je dijeljenje s prijateljima i chat uz učitavanje dijeljenih smjena, geste u porukama, interakcije s medijima, urednije ponašanje popisa i bolju sinkronizaciju
-- Poboljšani su nadzorna ploča, kartice obračuna plaće i statistika postotka zaposlenja za jasniji uvid u zaradu
-- Ispravljeno je rukovanje ponavljajućim smjenama, radnje prelaskom prsta na smjenama i otkrivanje preklapanja dijeljenih smjena
-- Ispravci pogrešaka i druga poboljšanja
+- Dodana je podrška za Siri za slanje poruka prijateljima
+- Dodana je prijava pomoću pristupnog ključa za bržu i sigurniju prijavu
+- Dodan je jasniji tijek probnog razdoblja i paywalla, uključujući bolje upravljanje ograničenjima besplatnog korištenja
+- Poboljšano je postavljanje rada uz jednostavniji tijek za dodavanje poslova, plaća i prvih smjena
+- Poboljšane su kartice obračuna plaće s jasnijim detaljima o trenutnoj i prethodnoj isplati
+- Poboljšane su performanse Rasporeda i Početne pri prelasku između mjeseci i sinkronizaciji promjena
+- Poboljšan je chat s prijateljima uz bolje grupiranje poruka, privitke, dijeljene smjene i vremenske oznake
+- Ispravljeni su problemi s pouzdanošću pretplate, onboardinga, kalendara i obavijesti
+- Ispravci grešaka i druga poboljšanja

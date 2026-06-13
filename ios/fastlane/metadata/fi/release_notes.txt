@@ -1,8 +1,9 @@
-- Lisätty kalenteritilaukset, jotta vuorosi pysyvät ajan tasalla kalenterisovelluksessasi
-- Lisätty palkkakorjaukset bonuksille, oikaisuille ja muille lisäpalkan tiedoille
-- Parannettu käyttöönottoa ja rekisteröitymistä selkeämmällä ohjauksella ja älykkäämmällä oletusvaluutan valinnalla
-- Parannettu Wageyta applinkeillä, selkeämmillä työkalupäivityksillä, palkkakorjausten tuella ja paremmilla ilmoituksilla taustalla valmistumisesta
-- Parannettu jakamista kavereiden kanssa ja chattia jaettujen vuorojen latauksella, viestieleillä, median käsittelyllä, siistimmällä listakäytöksellä ja paremmalla synkronoinnilla
-- Parannettu kojelautaa, palkkakortteja ja työaikaprosentin tilastoja selkeämpiä ansionäkymiä varten
-- Korjattu toistuvien vuorojen käsittelyä, vuorojen pyyhkäisytoimintoja ja jaettujen vuorojen päällekkäisyyden tunnistusta
+- Lisätty Siri-tuki viestien lähettämiseen ystäville
+- Lisätty passkey-kirjautuminen nopeampaa ja turvallisempaa kirjautumista varten
+- Lisätty selkeämpi kokeilujakso- ja maksumuuripolku, mukaan lukien ilmaisrajoitusten parempi käsittely
+- Parannettu työn käyttöönottoa sujuvammalla työn, palkan ja ensimmäisten vuorojen lisäysprosessilla
+- Parannettu palkkakortteja selkeämmillä nykyisen ja edellisen palkanmaksun tiedoilla
+- Parannettu Aikataulun ja Koti-näkymän suorituskykyä kuukausien välillä siirryttäessä ja muutoksia synkronoitaessa
+- Parannettu ystävächatia paremmalla viestien ryhmittelyllä, liitteillä, jaetuilla vuoroilla ja aikaleimoilla
+- Korjattu tilauksiin, käyttöönottoon, kalenteriin ja ilmoituksiin liittyviä luotettavuusongelmia
 - Virheenkorjauksia ja muita parannuksia

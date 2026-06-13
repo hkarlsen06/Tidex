@@ -1,1 +1,1 @@
-vardiya,takip,ücret,maaş,iş,saat,zaman,puantaj,program,kazanç
+maaş,iş,saat,mesai,vardiya,kazanç,hesaplayıcı,takvim,planlayıcı,kayıt,fazlamesai,çalışma

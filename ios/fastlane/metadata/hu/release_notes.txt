@@ -1,8 +1,9 @@
-- Hozzáadtuk a naptár-előfizetéseket, így a műszakjaid naprakészek maradhatnak a naptáralkalmazásodban
-- Hozzáadtuk a bérkorrekciókat a bónuszok, helyesbítések és egyéb extra kifizetési részletek kezeléséhez
-- Javítottuk a bevezető folyamatot és a regisztrációt egyértelműbb útmutatással, valamint okosabb alapértelmezett pénznemválasztással
-- Továbbfejlesztettük a Wagey-t alkalmazáslinkekkel, egyértelműbb eszközfrissítésekkel, bérkorrekció-támogatással és jobb értesítésekkel a háttérben történő befejezésről
-- Javítottuk a barátokkal való megosztást és a csevegést a megosztott műszakok betöltésével, üzenetgesztusokkal, médiakezeléssel, letisztultabb listaműködéssel és jobb szinkronizálással
-- Fejlesztettük az irányítópultot, a bérkártyákat és a foglalkoztatási százalék statisztikáit az átláthatóbb kereseti betekintésért
-- Javítottuk az ismétlődő műszakok kezelését, a műszakokon végzett húzási műveleteket és a megosztott műszakok átfedésének észlelését
+- Siri-támogatás hozzáadva az ismerősöknek küldött üzenetekhez
+- Jelszókulcsos bejelentkezés hozzáadva a gyorsabb és biztonságosabb belépés érdekében
+- Átláthatóbb próbaidőszak- és fizetőfal-folyamat hozzáadva, beleértve az ingyenes használati korlátok jobb kezelését
+- Javított munkabeállítás gördülékenyebb folyamattal az állások, bérek és első műszakok hozzáadásához
+- Javított bérkártyák az aktuális és előző kifizetés részleteinek átláthatóbb megjelenítésével
+- Javult a Beosztás és a Kezdőlap teljesítménye a hónapok közti váltás és a módosítások szinkronizálása során
+- Javított ismerősök közti chat jobb üzenetcsoportosítással, mellékletekkel, megosztott műszakokkal és időbélyegekkel
+- Javítva az előfizetéssel, bevezető folyamattal, naptárral és értesítésekkel kapcsolatos megbízhatósági problémák
 - Hibajavítások és egyéb fejlesztések

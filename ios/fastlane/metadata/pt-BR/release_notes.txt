@@ -1,8 +1,9 @@
-- Adicionadas assinaturas de calendário para que seus turnos fiquem atualizados no seu app de calendário
-- Adicionados ajustes na folha de pagamento para bônus, correções e outros detalhes de pagamentos extras
-- Melhorado o onboarding e o cadastro com orientações mais claras e uma seleção de moeda padrão mais inteligente
-- Melhorado o Wagey com links para o app, atualizações de ferramentas mais claras, suporte a ajustes na folha de pagamento e alertas melhores de conclusão em segundo plano
-- Melhorados o compartilhamento com amigos e o chat com carregamento de turnos compartilhados, gestos em mensagens, interações com mídia, comportamento de lista mais limpo e melhor sincronização
-- Melhorados o painel, os cartões da folha de pagamento e as estatísticas de percentual de trabalho para uma visão mais clara dos ganhos
-- Corrigidos o tratamento de turnos recorrentes, as ações de deslizar nos turnos e a detecção de sobreposição de turnos compartilhados
+- Adicionado suporte à Siri para enviar mensagens a amigos
+- Adicionado login com passkey para uma experiência de acesso mais rápida e segura
+- Adicionado um fluxo mais claro de teste e paywall, incluindo melhor tratamento dos limites de uso gratuito
+- Melhorada a configuração do trabalho com um fluxo mais suave para adicionar empregos, salários e os primeiros turnos
+- Melhorados os cartões de pagamento com detalhes mais claros sobre os pagamentos atual e anterior
+- Melhorado o desempenho da Agenda e da Tela Inicial ao alternar entre meses e sincronizar alterações
+- Melhorado o chat com amigos com melhor agrupamento de mensagens, anexos, turnos compartilhados e carimbos de data e hora
+- Corrigidos problemas de confiabilidade em assinaturas, onboarding, calendário e notificações
 - Correções de bugs e outras melhorias

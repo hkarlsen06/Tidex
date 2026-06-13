@@ -1,8 +1,9 @@
-- Tilføjet kalenderabonnementer, så dine vagter kan holdes opdateret i din kalenderapp
-- Tilføjet lønjusteringer for bonusser, korrektioner og andre ekstra løndetaljer
-- Forbedret onboarding og tilmelding med tydeligere vejledning og smartere valg af standardvaluta
-- Forbedret Wagey med applinks, tydeligere værktøjsopdateringer, understøttelse af lønjusteringer og bedre beskeder, når den bliver færdig i baggrunden
-- Forbedret deling med venner og chat med indlæsning af delte vagter, beskedbevægelser, mediehåndtering, mere ryddelig listeadfærd og bedre synkronisering
-- Forbedret dashboard, lønkort og statistik for ansættelsesprocent for tydeligere indsigt i indtjening
-- Rettet håndtering af tilbagevendende vagter, swipehandlinger på vagter og registrering af overlap mellem delte vagter
+- Tilføjet Siri-understøttelse til at sende beskeder til venner
+- Tilføjet login med passkey for en hurtigere og mere sikker loginoplevelse
+- Tilføjet et tydeligere forløb for prøveperiode og betalingsmur, inklusive bedre håndtering af grænser for gratis brug
+- Forbedret arbejdsopsætning med et mere smidigt forløb til at tilføje jobs, løn og de første vagter
+- Forbedret lønkort med tydeligere oplysninger om nuværende og tidligere udbetalinger
+- Forbedret ydeevne i Vagtplan og Hjem ved skift mellem måneder og synkronisering af ændringer
+- Forbedret chat med venner med bedre gruppering af beskeder, vedhæftninger, delte vagter og tidsstempler
+- Rettet problemer med pålideligheden for abonnementer, onboarding, kalender og notifikationer
 - Fejlrettelser og andre forbedringer
