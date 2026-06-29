@@ -1,6 +1,6 @@
-import os.log
 import SwiftUI
 import UIKit
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WageSnapshotEditorSheet")
 
@@ -23,6 +23,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   @State private var wageLevel: Int = 1
   @State private var customWage: Double = 200
   @State private var supplements: [OnboardingSupplementRule] = []
+  @State private var overtimeEnabled: Bool = false
+  @State private var overtimeThresholdHours: Double = OvertimeConfig.defaultWeeklyThresholdHours
+  @State private var overtimeRules: [OvertimeRuleDraft] = []
   @State private var breakEnabled: Bool = true
   @State private var breakMethod: BreakMethod = .proportional
   @State private var breakThresholdHours: Double = 5.5
@@ -98,6 +101,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       _customWage = State(initialValue: snapshot.hourly_wage)
       _supplements = State(
         initialValue: snapshot.supplements.rules.map { OnboardingSupplementRule(from: $0) })
+      _overtimeEnabled = State(initialValue: snapshot.overtime.enabled)
+      _overtimeThresholdHours = State(initialValue: snapshot.overtime.weeklyThresholdHours)
+      _overtimeRules = State(initialValue: snapshot.overtime.rules.map { OvertimeRuleDraft($0) })
       _breakEnabled = State(initialValue: snapshot.effectiveBreakEnabled)
       _breakMethod = State(initialValue: snapshot.breakMethod)
       _breakThresholdHours = State(initialValue: snapshot.effectiveBreakThresholdHours)
@@ -115,6 +121,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       _customWage = State(initialValue: mostRecent.hourly_wage)
       _supplements = State(
         initialValue: mostRecent.supplements.rules.map { OnboardingSupplementRule(from: $0) })
+      _overtimeEnabled = State(initialValue: mostRecent.overtime.enabled)
+      _overtimeThresholdHours = State(initialValue: mostRecent.overtime.weeklyThresholdHours)
+      _overtimeRules = State(initialValue: mostRecent.overtime.rules.map { OvertimeRuleDraft($0) })
       _breakEnabled = State(initialValue: mostRecent.effectiveBreakEnabled)
       _breakMethod = State(initialValue: mostRecent.breakMethod)
       _breakThresholdHours = State(initialValue: mostRecent.effectiveBreakThresholdHours)
@@ -126,6 +135,10 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     } else {
       // No existing snapshot - default to custom wage if tariff not available
       _usePreset = State(initialValue: canUseTariff)
+      let defaultOvertime = canUseTariff ? PayrollCalculator.presetOvertimeConfig : .disabled
+      _overtimeEnabled = State(initialValue: defaultOvertime.enabled)
+      _overtimeThresholdHours = State(initialValue: defaultOvertime.weeklyThresholdHours)
+      _overtimeRules = State(initialValue: defaultOvertime.rules.map { OvertimeRuleDraft($0) })
     }
   }
 
@@ -162,6 +175,12 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
             // Supplements section
             supplementsSection
+
+            Divider()
+              .padding(.horizontal)
+
+            // Overtime section
+            overtimeSection
 
             Divider()
               .padding(.horizontal)
@@ -269,6 +288,12 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         // Reload tariff version when date changes (for historical versions)
         Task { await loadTariffVersionForDate(newDate) }
       }
+      .onChange(of: overtimeEnabled) { _, enabled in
+        if enabled, overtimeRules.isEmpty {
+          overtimeThresholdHours = OvertimeConfig.defaultWeeklyThresholdHours
+          overtimeRules = OvertimeConfig.seededDefaults.rules.map { OvertimeRuleDraft($0) }
+        }
+      }
     }
   }
 
@@ -313,6 +338,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         tariffType: effectiveTariffTypeId,
         date: isoDate
       )
+      applyTariffOvertimeDefaultIfNeeded()
 
       logger.info("Loaded tariff version: \(tariffVersion?.effective_date ?? "none")")
     } catch {
@@ -335,6 +361,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         tariffType: typeId,
         date: isoDate
       )
+      applyTariffOvertimeDefaultIfNeeded()
       logger.info(
         "Reloaded tariff version for date \(isoDate): \(tariffVersion?.effective_date ?? "none")")
     } catch {
@@ -345,10 +372,30 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   // MARK: - Can Save
 
   private var canSave: Bool {
+    guard currentOvertimeConfig.isValidForEditing else {
+      return false
+    }
     if usePreset {
       return true  // Tariff always valid
     }
     return customWage > 0
+  }
+
+  private var currentOvertimeConfig: OvertimeConfig {
+    OvertimeConfig(
+      enabled: overtimeEnabled,
+      weeklyThresholdHours: overtimeThresholdHours,
+      rules: overtimeEnabled ? overtimeRules.map { $0.toRule() } : []
+    )
+  }
+
+  private func applyTariffOvertimeDefaultIfNeeded(force: Bool = false) {
+    guard showTariffOption, usePreset else { return }
+    guard force || (snapshot == nil && mostRecentSnapshot == nil) else { return }
+    let defaultOvertime = tariffVersion?.effectiveOvertime ?? PayrollCalculator.presetOvertimeConfig
+    overtimeEnabled = defaultOvertime.enabled
+    overtimeThresholdHours = defaultOvertime.weeklyThresholdHours
+    overtimeRules = defaultOvertime.rules.map { OvertimeRuleDraft($0) }
   }
 
   // MARK: - Tariff Version Indicator
@@ -447,6 +494,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         tariffType: typeId,
         date: isoDate
       )
+      applyTariffOvertimeDefaultIfNeeded(force: true)
       logger.info(
         "Loaded tariff version for type \(typeId): \(tariffVersion?.effective_date ?? "none")")
     } catch {
@@ -665,6 +713,146 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     return ""
   }
 
+  // MARK: - Overtime Section
+
+  @ViewBuilder
+  private var overtimeSection: some View {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
+      Toggle(isOn: $overtimeEnabled) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
+          Text(.settingsPayEditorOvertimeTitle)
+            .font(.tidexButton)
+            .foregroundColor(.tidexTextPrimary)
+
+          Text(.settingsPayEditorOvertimeSubtitle)
+            .font(.tidexCaptionRegular)
+            .foregroundColor(.tidexTextSecondary)
+        }
+      }
+      .tint(.tidexBrandPrimary)
+
+      if overtimeEnabled {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+          Text(.settingsPayEditorOvertimeThreshold)
+            .font(.tidexLabel)
+            .foregroundColor(.tidexTextSecondary)
+
+          TextField(
+            "",
+            value: $overtimeThresholdHours,
+            format: .number.precision(.fractionLength(0...2))
+          )
+          .keyboardType(.decimalPad)
+          .textFieldStyle(.roundedBorder)
+        }
+
+        ForEach($overtimeRules) { $rule in
+          overtimeRuleRow(rule: $rule)
+        }
+
+        Button {
+          overtimeRules.append(
+            OvertimeRuleDraft(
+              days: Set(1...7),
+              appliesOnHolidays: false,
+              from: "00:00",
+              to: "24:00",
+              percent: 50
+            ))
+        } label: {
+          Label(String(localized: .settingsPayEditorOvertimeAddRule), systemImage: "plus")
+            .font(.tidexLabel)
+        }
+        .buttonStyle(.borderless)
+        .tint(.tidexBrandPrimary)
+      }
+    }
+    .padding(.horizontal)
+  }
+
+  @ViewBuilder
+  private func overtimeRuleRow(rule: Binding<OvertimeRuleDraft>) -> some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      HStack(spacing: Spacing.xs) {
+        ForEach(1...7, id: \.self) { day in
+          Button {
+            if rule.wrappedValue.days.contains(day) {
+              rule.wrappedValue.days.remove(day)
+            } else {
+              rule.wrappedValue.days.insert(day)
+            }
+          } label: {
+            Text(dayShortName(day))
+              .font(.tidexCaption)
+              .foregroundColor(
+                rule.wrappedValue.days.contains(day) ? .tidexTextOnBrand : .tidexTextSecondary
+              )
+              .frame(width: 30, height: 28)
+              .background(
+                rule.wrappedValue.days.contains(day)
+                  ? Color.tidexBrandPrimary
+                  : Color.tidexSurfaceSecondary
+              )
+              .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+          }
+          .buttonStyle(.plain)
+        }
+      }
+
+      Toggle(isOn: rule.appliesOnHolidays) {
+        Text(.settingsPayEditorOvertimeHolidayToggle)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+      }
+      .tint(.tidexBrandPrimary)
+
+      HStack(spacing: Spacing.xs) {
+        TextField(String(localized: .settingsPayEditorOvertimeFrom), text: rule.from)
+          .textInputAutocapitalization(.never)
+          .keyboardType(.numbersAndPunctuation)
+          .textFieldStyle(.roundedBorder)
+
+        TextField(String(localized: .settingsPayEditorOvertimeTo), text: rule.to)
+          .textInputAutocapitalization(.never)
+          .keyboardType(.numbersAndPunctuation)
+          .textFieldStyle(.roundedBorder)
+
+        TextField(
+          String(localized: .settingsPayEditorOvertimePercent),
+          value: rule.percent,
+          format: .number.precision(.fractionLength(0...1))
+        )
+        .keyboardType(.decimalPad)
+        .textFieldStyle(.roundedBorder)
+
+        Button {
+          overtimeRules.removeAll { $0.id == rule.wrappedValue.id }
+        } label: {
+          Image(systemName: "trash")
+            .foregroundColor(.tidexError)
+            .accessibilityHidden(true)
+        }
+        .accessibilityLabel(Text(.commonDelete))
+        .buttonStyle(.plain)
+      }
+    }
+    .padding(Spacing.xs)
+    .background(Color.tidexSurfaceSecondary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+  }
+
+  private func dayShortName(_ day: Int) -> String {
+    switch day {
+    case 1: String(localized: .daysShortMon)
+    case 2: String(localized: .daysShortTue)
+    case 3: String(localized: .daysShortWed)
+    case 4: String(localized: .daysShortThu)
+    case 5: String(localized: .daysShortFri)
+    case 6: String(localized: .daysShortSat)
+    default: String(localized: .daysShortSun)
+    }
+  }
+
   // MARK: - Error Banner
 
   @ViewBuilder
@@ -752,12 +940,20 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     let resolvedTariffTypeId = effectiveUsePreset ? tariffTypeId : nil
     let resolvedBreakMethod: BreakMethod =
       breakEnabled && breakMethod == .none ? .proportional : breakMethod
+    let resolvedOvertime = currentOvertimeConfig
+
+    guard resolvedOvertime.isValidForEditing else {
+      errorMessage = String(localized: .settingsPayEditorOvertimeInvalid)
+      isSaving = false
+      return
+    }
 
     let input = WageSnapshotEditorInput(
       fromDate: isBaseline ? nil : fromDate,
       hourlyWage: resolvedHourlyWage,
       wageLevel: resolvedWageLevel,
       supplements: resolvedSupplements,
+      overtime: resolvedOvertime,
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage,
       breakEnabled: breakEnabled,
@@ -800,6 +996,50 @@ extension OnboardingSupplementRule {
   }
 }
 
+private struct OvertimeRuleDraft: Identifiable, Equatable {
+  let id: UUID
+  var days: Set<Int>
+  var appliesOnHolidays: Bool
+  var from: String
+  var to: String
+  var percent: Double
+
+  init(
+    id: UUID = UUID(),
+    days: Set<Int>,
+    appliesOnHolidays: Bool,
+    from: String,
+    to: String,
+    percent: Double
+  ) {
+    self.id = id
+    self.days = days
+    self.appliesOnHolidays = appliesOnHolidays
+    self.from = from
+    self.to = to
+    self.percent = percent
+  }
+
+  init(_ rule: OvertimeRule) {
+    id = UUID()
+    days = Set(rule.days)
+    appliesOnHolidays = rule.appliesOnHolidays
+    from = rule.from
+    to = rule.to
+    percent = rule.percent
+  }
+
+  func toRule() -> OvertimeRule {
+    OvertimeRule(
+      days: Array(days).sorted(),
+      appliesOnHolidays: appliesOnHolidays,
+      from: from,
+      to: to,
+      percent: percent
+    )
+  }
+}
+
 // MARK: - WageSnapshotEditorInput Extension
 
 extension WageSnapshotEditorInput {
@@ -809,6 +1049,7 @@ extension WageSnapshotEditorInput {
     hourlyWage: Double,
     wageLevel: Int?,
     supplements: SupplementRulesSnapshot,
+    overtime: OvertimeConfig = .disabled,
     taxEnabled: Bool,
     taxPercentage: Double,
     breakEnabled: Bool,
@@ -821,6 +1062,7 @@ extension WageSnapshotEditorInput {
     self.hourlyWage = hourlyWage
     self.wageLevel = wageLevel
     self.supplements = supplements
+    self.overtime = overtime
     self.taxEnabled = taxEnabled
     self.taxPercentage = taxPercentage
     self.breakEnabled = breakEnabled

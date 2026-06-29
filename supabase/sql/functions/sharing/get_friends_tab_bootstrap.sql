@@ -222,8 +222,20 @@ BEGIN
               FROM public.user_shifts s
               WHERE s.user_id = a.sharer_id
                 AND s.deleted_at IS NULL
-                AND (p_preview_start_date IS NULL OR s.shift_date >= p_preview_start_date)
-                AND (p_preview_end_date IS NULL OR s.shift_date <= p_preview_end_date)
+                AND (
+                  p_preview_start_date IS NULL OR
+                  s.shift_date >= (
+                    p_preview_start_date
+                    - ((EXTRACT(ISODOW FROM p_preview_start_date)::integer - 1) * interval '1 day')
+                  )::date
+                )
+                AND (
+                  p_preview_end_date IS NULL OR
+                  s.shift_date <= (
+                    p_preview_end_date
+                    + ((7 - EXTRACT(ISODOW FROM p_preview_end_date)::integer) * interval '1 day')
+                  )::date
+                )
             ),
             '[]'::jsonb
           ),
@@ -265,6 +277,10 @@ BEGIN
                     'wage_level', w.wage_level,
                     'tariff_type_id', w.tariff_type_id,
                     'supplements', w.supplements,
+                    'overtime', COALESCE(
+                      w.overtime,
+                      jsonb_build_object('enabled', false, 'weeklyThresholdHours', 40, 'rules', jsonb_build_array())
+                    ),
                     'tax_enabled', w.tax_enabled,
                     'tax_percentage', w.tax_percentage,
                     'break_enabled', w.break_enabled,
@@ -282,6 +298,7 @@ BEGIN
                     'wage_level', NULL,
                     'tariff_type_id', NULL,
                     'supplements', jsonb_build_object('rules', jsonb_build_array()),
+                    'overtime', jsonb_build_object('enabled', false, 'weeklyThresholdHours', 40, 'rules', jsonb_build_array()),
                     'tax_enabled', false,
                     'tax_percentage', 0,
                     'break_enabled', w.break_enabled,

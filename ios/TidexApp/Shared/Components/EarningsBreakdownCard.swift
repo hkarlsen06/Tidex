@@ -101,14 +101,27 @@ struct EarningsBreakdownDetailSecondaryRow: View {
 }
 
 struct EarningsSupplementBreakdownDetailCard: View {
+  let title: String
   let timeRange: String?
   let hoursAndRate: String
   let amount: String
 
+  init(
+    title: String = String(localized: .shiftsSupplementLabel),
+    timeRange: String?,
+    hoursAndRate: String,
+    amount: String
+  ) {
+    self.title = title
+    self.timeRange = timeRange
+    self.hoursAndRate = hoursAndRate
+    self.amount = amount
+  }
+
   var body: some View {
     EarningsBreakdownDetailCard {
       EarningsBreakdownDetailPrimaryRow(
-        title: String(localized: .shiftsSupplementLabel),
+        title: title,
         value: amount
       )
 

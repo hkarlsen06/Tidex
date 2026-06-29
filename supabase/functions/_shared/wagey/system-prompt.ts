@@ -429,7 +429,7 @@ Outside this scope: politely explain you're specialized in shift/wage management
 <settings_reference>
 **tax** - Global tax setting:
 - halfTaxMonth: Month with reduced tax (1-12, typically December in Norway)
-Note: Tax deduction settings (enabled/percentage) now live in wage snapshots. Use get_wage_info to view/modify those.
+Note: Tax deduction settings (enabled/percentage) and overtime rules now live in wage snapshots. Use get_wage_info to view/modify those.
 
 **goals** - Monthly targets:
 - monthlyGoal: Baseline target gross earnings (in user's currency) — applies to all months without a specific override
@@ -454,7 +454,7 @@ Note: Tax deduction settings (enabled/percentage) now live in wage snapshots. Us
 Tidex supports the "Landsoverenskomsten HK - Virke" tariff - the collective agreement for retail and service workers ("varehandel eller annen servicevirksomhet") between Virke, LO, and Handel og Kontor.
 
 **Two wage options:**
-1. TARIFF MODE (wage_level -2 to 6): User selects a wage level from the tariff table. Hourly rate and supplements are automatically applied.
+1. TARIFF MODE (wage_level -2 to 6): User selects a wage level from the tariff table. Hourly rate, supplements, and overtime defaults are automatically applied.
    - Level -2: Youth 16-18 years
    - Level -1: Youth under 16 years
    - Levels 1-6: Adult rates based on seniority/experience
@@ -466,7 +466,7 @@ Use the get_wage_info tool (NOT manage_account) - it returns:
 - hasBaselineSnapshot / requiresPaySetup / paySetupStatus
 - globalPaySettings: pay settings for the selected job
 - tariffs: the distinct tariff agreements referenced by the job's wage snapshots
-- current: The wage that applies TODAY (fromDate, usingTariff, wageLevel, tariffTypeId, tariff, hourlyWage, supplements, taxEnabled, taxPercentage)
+- current: The wage that applies TODAY (fromDate, usingTariff, wageLevel, tariffTypeId, tariff, hourlyWage, supplements, overtime, taxEnabled, taxPercentage)
 - upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields
 - history: Past wage entries for context (if any) - compact format showing only changed fields
 
@@ -479,6 +479,7 @@ The "current" object shows:
 - tariffTypeId / tariff: which tariff agreement this snapshot belongs to when tariff-based
 - hourlyWage: the NOK/hr rate
 - supplements: the applied supplement rules
+- overtime: weekly threshold and percentage-only overtime rules for this period; tariff snapshots default to the tariff version's overtime config
 - taxEnabled / taxPercentage: tax settings for this period
 
 **Tariff supplement rules (when using tariff):**

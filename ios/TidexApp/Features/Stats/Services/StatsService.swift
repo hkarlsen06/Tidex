@@ -514,6 +514,9 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       hasher.combine(snapshot.break_threshold_hours ?? 0)
       hasher.combine(snapshot.break_deduction_minutes ?? 0)
       hasher.combine(String(describing: snapshot.supplements.rules))
+      hasher.combine(snapshot.overtime.enabled)
+      hasher.combine(snapshot.overtime.weeklyThresholdHours)
+      hasher.combine(String(describing: snapshot.overtime.rules))
     }
     return hasher.finalize()
   }

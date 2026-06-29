@@ -35,6 +35,8 @@ struct PayrollCalculator {
     SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 115, percent: nil),
   ]
 
+  static let presetOvertimeConfig = OvertimeConfig.seededDefaults
+
   /// Default break deduction settings
   private static let defaultBreakEnabled = true
   private static let defaultBreakMethod: BreakMethod = .proportional
@@ -174,6 +176,39 @@ struct PayrollCalculator {
       wagePeriods: periods,
       originalWagePeriods: originalPeriods,
       breakAudit: breakAudit
+    )
+  }
+
+  static func replacingWagePeriods(
+    in computed: ShiftComputed,
+    with periods: [WagePeriod],
+    overtimeMinutes: Double
+  ) -> ShiftComputed {
+    var basePay: Double = 0
+    var supplementPay: Double = 0
+
+    for period in periods {
+      let h = round(period.durationHours * hourPrecision) / hourPrecision
+      basePay += round(h * period.baseRate * currencyPrecision) / currencyPrecision
+      supplementPay += round(h * period.supplementRate * currencyPrecision) / currencyPrecision
+    }
+
+    basePay = round(basePay * currencyPrecision) / currencyPrecision
+    supplementPay = round(supplementPay * currencyPrecision) / currencyPrecision
+    let gross = round((basePay + supplementPay) * currencyPrecision) / currencyPrecision
+
+    return ShiftComputed(
+      id: computed.id,
+      durationHours: computed.durationHours,
+      paidHours: computed.paidHours,
+      basePay: basePay,
+      supplementPay: supplementPay,
+      gross: gross,
+      wagePeriods: periods,
+      originalWagePeriods: computed.originalWagePeriods,
+      breakAudit: computed.breakAudit,
+      overtimeApplied: overtimeMinutes > 0,
+      overtimeMinutes: round(overtimeMinutes * currencyPrecision) / currencyPrecision
     )
   }
 

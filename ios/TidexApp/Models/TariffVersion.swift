@@ -32,6 +32,8 @@ struct TariffVersion: Codable, Identifiable, Equatable {
   let rates: [String: Double]
   /// Supplement rules for this tariff version
   let supplements: SupplementRulesSnapshot
+  /// Overtime rules for this tariff version
+  let overtime: OvertimeConfig?
 
   /// Get hourly wage for a specific level
   /// - Parameter level: The wage level (1-9)
@@ -53,5 +55,9 @@ struct TariffVersion: Codable, Identifiable, Equatable {
   /// Get the maximum available wage rate
   var maximumRate: Double? {
     rates.values.max()
+  }
+
+  var effectiveOvertime: OvertimeConfig {
+    overtime ?? PayrollCalculator.presetOvertimeConfig
   }
 }

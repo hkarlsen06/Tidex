@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SnapshotsRepository")
 
@@ -284,6 +284,7 @@ final class SnapshotsRepository: ObservableObject {
     wageLevel: Int? = nil,
     tariffTypeId: String? = nil,
     supplements: SupplementRulesSnapshot,
+    overtime: OvertimeConfig = .disabled,
     taxEnabled: Bool? = nil,
     taxPercentage: Double? = nil,
     breakEnabled: Bool? = nil,
@@ -299,6 +300,7 @@ final class SnapshotsRepository: ObservableObject {
       wageLevel: wageLevel,
       tariffTypeId: tariffTypeId,
       supplements: supplements,
+      overtime: overtime,
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage,
       breakEnabled: breakEnabled,
@@ -340,6 +342,7 @@ final class SnapshotsRepository: ObservableObject {
     tariffTypeId: String? = nil,
     updateTariffTypeId: Bool = false,
     supplements: SupplementRulesSnapshot? = nil,
+    overtime: OvertimeConfig? = nil,
     taxEnabled: Bool? = nil,
     taxPercentage: Double? = nil,
     updateTaxPercentage: Bool = false,
@@ -358,6 +361,7 @@ final class SnapshotsRepository: ObservableObject {
         tariffTypeId: tariffTypeId,
         updateTariffTypeId: updateTariffTypeId,
         supplements: supplements,
+        overtime: overtime,
         taxEnabled: taxEnabled,
         taxPercentage: taxPercentage,
         updateTaxPercentage: updateTaxPercentage,

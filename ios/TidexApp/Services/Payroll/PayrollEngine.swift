@@ -174,8 +174,24 @@ struct PayrollEngine {
       }
     }
 
-    // Sort by date
-    return result.sorted { $0.shiftDate < $1.shiftDate }
+    let overtimeAdjusted = applyOvertime(
+      to: result,
+      allSnapshots: request.snapshots,
+      context: context
+    )
+
+    return
+      overtimeAdjusted
+      .filter { $0.shiftDate >= startDate && $0.shiftDate <= endDate }
+      .sorted {
+        if $0.shiftDate != $1.shiftDate {
+          return $0.shiftDate < $1.shiftDate
+        }
+        if $0.startTime != $1.startTime {
+          return $0.startTime < $1.startTime
+        }
+        return $0.id < $1.id
+      }
   }
 
   /// Get all (year, month) pairs that fall within a date range
@@ -254,6 +270,332 @@ struct PayrollEngine {
       taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
     )
   }
+
+  private struct OvertimeSegment {
+    let shift: ShiftWithComputations
+    let period: WagePeriod
+    let absoluteStart: Date
+    let absoluteEnd: Date
+    let shiftDayStart: Date
+    let jobId: String?
+    let snapshot: WageSnapshot?
+    let config: OvertimeConfig?
+  }
+
+  private struct OvertimePiece {
+    let shiftId: String
+    let start: Date
+    let period: WagePeriod
+    let overtimeMinutes: Double
+  }
+
+  private struct OvertimeGroupKey: Hashable {
+    let jobId: String
+    let weekStart: String
+  }
+
+  private static func applyOvertime(
+    to shifts: [ShiftWithComputations],
+    allSnapshots: [WageSnapshot],
+    context: ComputationContext
+  ) -> [ShiftWithComputations] {
+    guard !shifts.isEmpty else { return shifts }
+
+    var grouped: [OvertimeGroupKey: [OvertimeSegment]] = [:]
+    var fallbackPiecesByShift: [String: [OvertimePiece]] = [:]
+
+    for shift in shifts {
+      let effectiveJobId = shift.shift.job_id ?? context.defaultJobId
+      let scopedSnapshots = snapshotsForJob(
+        jobId: effectiveJobId,
+        allSnapshots: allSnapshots,
+        snapshotsByJobId: context.snapshotsByJobId,
+        legacyNilJobSnapshots: context.legacyNilJobSnapshots,
+        defaultJobId: context.defaultJobId
+      )
+      let snapshot = SnapshotsService.snapshotForDate(shift.shiftDate, from: scopedSnapshots)
+      let config = snapshot?.overtime.runtimeEnabledConfig
+
+      guard let shiftDayStart = Date.fromISODateString(shift.shiftDate) else {
+        continue
+      }
+
+      for period in shift.computed.wagePeriods {
+        let absoluteStart = shiftDayStart.addingTimeInterval(period.fromMin * 60)
+        let absoluteEnd = shiftDayStart.addingTimeInterval(period.toMin * 60)
+        guard absoluteEnd > absoluteStart else { continue }
+
+        for (partStart, partEnd) in splitByISOWeek(start: absoluteStart, end: absoluteEnd) {
+          let key = OvertimeGroupKey(
+            jobId: effectiveJobId ?? "__nil__",
+            weekStart: isoWeekStart(for: partStart).toISODateString()
+          )
+          let partPeriod = WagePeriod(
+            fromMin: minutesBetween(shiftDayStart, partStart),
+            toMin: minutesBetween(shiftDayStart, partEnd),
+            baseRate: period.baseRate,
+            supplementRate: period.supplementRate
+          )
+          let segment = OvertimeSegment(
+            shift: shift,
+            period: partPeriod,
+            absoluteStart: partStart,
+            absoluteEnd: partEnd,
+            shiftDayStart: shiftDayStart,
+            jobId: effectiveJobId,
+            snapshot: snapshot,
+            config: config
+          )
+          grouped[key, default: []].append(segment)
+          fallbackPiecesByShift[shift.id, default: []].append(
+            OvertimePiece(
+              shiftId: shift.id,
+              start: partStart,
+              period: partPeriod,
+              overtimeMinutes: 0
+            ))
+        }
+      }
+    }
+
+    var piecesByShift: [String: [OvertimePiece]] = [:]
+
+    for key in grouped.keys {
+      var cumulativeMinutes: Double = 0
+      let segments = (grouped[key] ?? []).sorted {
+        if $0.absoluteStart != $1.absoluteStart {
+          return $0.absoluteStart < $1.absoluteStart
+        }
+        return $0.shift.id < $1.shift.id
+      }
+
+      for segment in segments {
+        let result = applyOvertime(to: segment, cumulativeMinutes: cumulativeMinutes)
+        cumulativeMinutes += segment.period.durationMinutes
+        for piece in result {
+          piecesByShift[piece.shiftId, default: []].append(piece)
+        }
+      }
+    }
+
+    return shifts.map { shift in
+      let pieces = piecesByShift[shift.id] ?? fallbackPiecesByShift[shift.id] ?? []
+      guard !pieces.isEmpty else { return shift }
+
+      let sortedPieces = pieces.sorted {
+        if $0.start != $1.start {
+          return $0.start < $1.start
+        }
+        return $0.period.fromMin < $1.period.fromMin
+      }
+      let periods = mergeAdjacentPeriods(sortedPieces.map(\.period))
+      let overtimeMinutes = sortedPieces.reduce(0.0) { $0 + $1.overtimeMinutes }
+      let computed = PayrollCalculator.replacingWagePeriods(
+        in: shift.computed,
+        with: periods,
+        overtimeMinutes: overtimeMinutes
+      )
+      return ShiftWithComputations(
+        shift: shift.shift,
+        computed: computed,
+        taxEnabled: shift.taxEnabled,
+        taxPercentage: shift.taxPercentage
+      )
+    }
+  }
+
+  private static func applyOvertime(
+    to segment: OvertimeSegment,
+    cumulativeMinutes: Double
+  ) -> [OvertimePiece] {
+    guard let config = segment.config else {
+      return [
+        OvertimePiece(
+          shiftId: segment.shift.id,
+          start: segment.absoluteStart,
+          period: segment.period,
+          overtimeMinutes: 0,
+        )
+      ]
+    }
+
+    let thresholdMinutes = config.weeklyThresholdHours * 60
+    var cursor = segment.absoluteStart
+    var cursorCumulative = cumulativeMinutes
+    var pieces: [OvertimePiece] = []
+
+    while cursor < segment.absoluteEnd {
+      let next = nextOvertimeBoundary(
+        after: cursor,
+        segmentEnd: segment.absoluteEnd,
+        config: config,
+        cumulativeMinutes: cursorCumulative,
+        thresholdMinutes: thresholdMinutes
+      )
+      let durationMinutes = max(0, next.timeIntervalSince(cursor) / 60)
+      guard durationMinutes > 0 else { break }
+
+      let isOvertime = cursorCumulative >= thresholdMinutes
+      let supplementRate: Double
+      let overtimeMinutes: Double
+      if isOvertime,
+        let percent = overtimePercent(config: config, at: cursor)
+      {
+        supplementRate = segment.period.baseRate * percent / 100
+        overtimeMinutes = durationMinutes
+      } else {
+        supplementRate = segment.period.supplementRate
+        overtimeMinutes = 0
+      }
+
+      pieces.append(
+        OvertimePiece(
+          shiftId: segment.shift.id,
+          start: cursor,
+          period: WagePeriod(
+            fromMin: minutesBetween(segment.shiftDayStart, cursor),
+            toMin: minutesBetween(segment.shiftDayStart, next),
+            baseRate: segment.period.baseRate,
+            supplementRate: supplementRate
+          ),
+          overtimeMinutes: overtimeMinutes
+        ))
+
+      cursorCumulative += durationMinutes
+      cursor = next
+    }
+
+    return pieces
+  }
+
+  private static func nextOvertimeBoundary(
+    after date: Date,
+    segmentEnd: Date,
+    config: OvertimeConfig,
+    cumulativeMinutes: Double,
+    thresholdMinutes: Double
+  ) -> Date {
+    var boundary = segmentEnd
+    let dayStart = startOfDay(for: date)
+
+    if let nextDay = calendar.date(byAdding: .day, value: 1, to: dayStart), nextDay > date {
+      boundary = min(boundary, nextDay)
+    }
+
+    if cumulativeMinutes < thresholdMinutes {
+      let minutesUntilThreshold = thresholdMinutes - cumulativeMinutes
+      let thresholdDate = date.addingTimeInterval(minutesUntilThreshold * 60)
+      if thresholdDate > date {
+        boundary = min(boundary, thresholdDate)
+      }
+    }
+
+    let minuteOfDay = minutesBetween(dayStart, date)
+    for rule in config.rules where overtimeRuleCanMatch(rule, at: date) {
+      guard let from = OvertimeConfig.timeToMinutes(rule.from),
+        let to = OvertimeConfig.timeToMinutes(rule.to)
+      else {
+        continue
+      }
+      for value in [Double(from), Double(to)] where value > minuteOfDay {
+        let candidate = dayStart.addingTimeInterval(value * 60)
+        if candidate > date {
+          boundary = min(boundary, candidate)
+        }
+      }
+    }
+
+    return boundary
+  }
+
+  private static func overtimePercent(config: OvertimeConfig, at date: Date) -> Double? {
+    let minute = minutesBetween(startOfDay(for: date), date)
+    return config.rules.compactMap { rule -> Double? in
+      guard overtimeRuleCanMatch(rule, at: date),
+        let from = OvertimeConfig.timeToMinutes(rule.from),
+        let to = OvertimeConfig.timeToMinutes(rule.to),
+        minute >= Double(from),
+        minute < Double(to)
+      else {
+        return nil
+      }
+      return rule.percent
+    }.max()
+  }
+
+  private static func overtimeRuleCanMatch(_ rule: OvertimeRule, at date: Date) -> Bool {
+    let day = date.tidexWeekday
+    guard rule.days.contains(day) else { return false }
+
+    if NorwegianHolidays.isPublicHoliday(date) {
+      return rule.appliesOnHolidays
+    }
+
+    let holidayOnly = rule.appliesOnHolidays && Set(rule.days) == Set(1...7)
+    return !holidayOnly
+  }
+
+  private static func splitByISOWeek(start: Date, end: Date) -> [(Date, Date)] {
+    var result: [(Date, Date)] = []
+    var cursor = start
+
+    while cursor < end {
+      let weekStart = isoWeekStart(for: cursor)
+      let weekEnd = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? end
+      let partEnd = min(end, weekEnd)
+      result.append((cursor, partEnd))
+      cursor = partEnd
+    }
+
+    return result
+  }
+
+  private static func isoWeekStart(for date: Date) -> Date {
+    isoCalendar.dateInterval(of: .weekOfYear, for: date)?.start ?? startOfDay(for: date)
+  }
+
+  private static func startOfDay(for date: Date) -> Date {
+    calendar.startOfDay(for: date)
+  }
+
+  private static func minutesBetween(_ start: Date, _ end: Date) -> Double {
+    end.timeIntervalSince(start) / 60
+  }
+
+  private static func mergeAdjacentPeriods(_ periods: [WagePeriod]) -> [WagePeriod] {
+    var merged: [WagePeriod] = []
+
+    for period in periods where period.toMin > period.fromMin {
+      if let last = merged.last,
+        abs(last.toMin - period.fromMin) < 0.0001,
+        last.baseRate == period.baseRate,
+        last.supplementRate == period.supplementRate
+      {
+        merged[merged.count - 1] = WagePeriod(
+          fromMin: last.fromMin,
+          toMin: period.toMin,
+          baseRate: last.baseRate,
+          supplementRate: last.supplementRate
+        )
+      } else {
+        merged.append(period)
+      }
+    }
+
+    return merged
+  }
+
+  private static let calendar: Calendar = {
+    var value = Calendar(identifier: .gregorian)
+    value.timeZone = Date.localTimeZone
+    return value
+  }()
+
+  private static let isoCalendar: Calendar = {
+    var value = Calendar(identifier: .iso8601)
+    value.timeZone = Date.localTimeZone
+    return value
+  }()
 
   /// Resolve snapshot scope for a shift's job.
   /// During rollout, nil-job snapshots are treated as default-job snapshots only.

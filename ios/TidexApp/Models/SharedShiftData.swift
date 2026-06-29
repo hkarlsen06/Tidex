@@ -46,6 +46,8 @@ struct SharedShiftComputed: Codable, Equatable {
   let wagePeriods: [WagePeriod]?
   let originalWagePeriods: [WagePeriod]?
   let breakAudit: SharedBreakAudit
+  let overtimeApplied: Bool
+  let overtimeMinutes: Double
 
   init(
     id: String,
@@ -56,7 +58,9 @@ struct SharedShiftComputed: Codable, Equatable {
     gross: Double,
     wagePeriods: [WagePeriod]? = nil,
     originalWagePeriods: [WagePeriod]? = nil,
-    breakAudit: SharedBreakAudit
+    breakAudit: SharedBreakAudit,
+    overtimeApplied: Bool = false,
+    overtimeMinutes: Double = 0
   ) {
     self.id = id
     self.durationHours = durationHours
@@ -67,6 +71,38 @@ struct SharedShiftComputed: Codable, Equatable {
     self.wagePeriods = wagePeriods
     self.originalWagePeriods = originalWagePeriods
     self.breakAudit = breakAudit
+    self.overtimeApplied = overtimeApplied
+    self.overtimeMinutes = overtimeMinutes
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case id
+    case durationHours
+    case paidHours
+    case basePay
+    case supplementPay
+    case gross
+    case wagePeriods
+    case originalWagePeriods
+    case breakAudit
+    case overtimeApplied
+    case overtimeMinutes
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    id = try container.decode(String.self, forKey: .id)
+    durationHours = try container.decode(Double.self, forKey: .durationHours)
+    paidHours = try container.decode(Double.self, forKey: .paidHours)
+    basePay = try container.decode(Double.self, forKey: .basePay)
+    supplementPay = try container.decode(Double.self, forKey: .supplementPay)
+    gross = try container.decode(Double.self, forKey: .gross)
+    wagePeriods = try container.decodeIfPresent([WagePeriod].self, forKey: .wagePeriods)
+    originalWagePeriods = try container.decodeIfPresent(
+      [WagePeriod].self, forKey: .originalWagePeriods)
+    breakAudit = try container.decode(SharedBreakAudit.self, forKey: .breakAudit)
+    overtimeApplied = try container.decodeIfPresent(Bool.self, forKey: .overtimeApplied) ?? false
+    overtimeMinutes = try container.decodeIfPresent(Double.self, forKey: .overtimeMinutes) ?? 0
   }
 }
 
@@ -143,7 +179,9 @@ extension SharedShiftData {
         source: computed.breakAudit.source,
         appliedPauseWindows: computed.breakAudit.appliedPauseWindows,
         notes: computed.breakAudit.notes
-      )
+      ),
+      overtimeApplied: computed.overtimeApplied,
+      overtimeMinutes: computed.overtimeMinutes
     )
 
     return ShiftWithComputations(

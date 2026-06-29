@@ -604,6 +604,26 @@ struct SharingRPCRecurringShiftRow: Codable, Sendable {
   }
 }
 
+struct SharingRPCOvertimeRule: Codable, Equatable, Sendable {
+  let days: [Int]
+  let appliesOnHolidays: Bool
+  let from: String
+  let to: String
+  let percent: Double
+}
+
+struct SharingRPCOvertimeConfig: Codable, Equatable, Sendable {
+  let enabled: Bool
+  let weeklyThresholdHours: Double
+  let rules: [SharingRPCOvertimeRule]
+
+  static let disabled = SharingRPCOvertimeConfig(
+    enabled: false,
+    weeklyThresholdHours: 40,
+    rules: []
+  )
+}
+
 struct SharingRPCWageSnapshot: Codable, Sendable {
   let id: String
   let userId: String
@@ -613,6 +633,7 @@ struct SharingRPCWageSnapshot: Codable, Sendable {
   let wageLevel: Int?
   let tariffTypeId: String?
   let supplements: SharingRPCSupplementRulesSnapshot
+  let overtime: SharingRPCOvertimeConfig?
   let taxEnabled: Bool?
   let taxPercentage: Double?
   let breakEnabled: Bool?
@@ -626,6 +647,10 @@ struct SharingRPCWageSnapshot: Codable, Sendable {
 
   var effectiveTaxPercentage: Double {
     taxPercentage ?? 0
+  }
+
+  var effectiveOvertime: SharingRPCOvertimeConfig {
+    overtime ?? .disabled
   }
 
   var effectiveBreakEnabled: Bool {
@@ -654,6 +679,7 @@ struct SharingRPCWageSnapshot: Codable, Sendable {
     case wageLevel = "wage_level"
     case tariffTypeId = "tariff_type_id"
     case supplements
+    case overtime
     case taxEnabled = "tax_enabled"
     case taxPercentage = "tax_percentage"
     case breakEnabled = "break_enabled"
@@ -809,6 +835,8 @@ struct SharingComputedShiftComputed: Equatable, Sendable {
   let wagePeriods: [SharingRPCWagePeriod]
   let originalWagePeriods: [SharingRPCWagePeriod]
   let breakAudit: SharingRPCBreakAudit
+  var overtimeApplied: Bool = false
+  var overtimeMinutes: Double = 0
 }
 
 struct SharingComputedShift: Identifiable, Equatable, Sendable {
@@ -942,9 +970,10 @@ enum SharingComputeCore {
       snapshots: payload.snapshots,
       jobs: payload.jobs
     )
+    let calculationRange = expandedISOWeekRange(startDate: startDate, endDate: endDate)
 
     let regularShifts = payload.shifts.filter { shift in
-      shift.shiftDate >= startDate && shift.shiftDate <= endDate
+      shift.shiftDate >= calculationRange.startDate && shift.shiftDate <= calculationRange.endDate
     }
 
     for shift in regularShifts {
@@ -956,7 +985,10 @@ enum SharingComputeCore {
         ))
     }
 
-    let months = monthsInRange(startDate: startDate, endDate: endDate)
+    let months = monthsInRange(
+      startDate: calculationRange.startDate,
+      endDate: calculationRange.endDate
+    )
     var seenVirtualIds = Set<String>()
 
     for recurring in payload.recurringShifts {
@@ -968,7 +1000,11 @@ enum SharingComputeCore {
         )
 
         for virtual in virtualShifts {
-          guard virtual.date >= startDate, virtual.date <= endDate else { continue }
+          guard virtual.date >= calculationRange.startDate,
+            virtual.date <= calculationRange.endDate
+          else {
+            continue
+          }
 
           let virtualId = "virtual-\(recurring.id)-\(virtual.date)"
           guard !seenVirtualIds.contains(virtualId) else { continue }
@@ -997,7 +1033,12 @@ enum SharingComputeCore {
       }
     }
 
-    let sorted = computed.sorted { lhs, rhs in
+    let overtimeAdjusted = applyOvertime(to: computed, context: context, mode: mode)
+    let visible = overtimeAdjusted.filter { shift in
+      shift.shiftDate >= startDate && shift.shiftDate <= endDate
+    }
+
+    let sorted = visible.sorted { lhs, rhs in
       if lhs.shiftDate == rhs.shiftDate {
         return lhs.startTime < rhs.startTime
       }
@@ -1238,6 +1279,487 @@ enum SharingComputeCore {
       taxPercentage: taxPercentage
     )
   }
+
+  private struct SharingOvertimeSegment {
+    let shift: SharingComputedShift
+    let period: SharingRPCWagePeriod
+    let absoluteStart: Date
+    let absoluteEnd: Date
+    let shiftDayStart: Date
+    let config: SharingRPCOvertimeConfig?
+  }
+
+  private struct SharingOvertimePiece {
+    let shiftId: String
+    let start: Date
+    let period: SharingRPCWagePeriod
+    let overtimeMinutes: Double
+  }
+
+  private static func applyOvertime(
+    to shifts: [SharingComputedShift],
+    context: SharingPayrollContext,
+    mode: SharingRPCMode
+  ) -> [SharingComputedShift] {
+    guard mode == .visible else { return shifts }
+
+    var grouped: [String: [SharingOvertimeSegment]] = [:]
+    var fallbackPieces: [String: [SharingOvertimePiece]] = [:]
+
+    for shift in shifts {
+      let scoped = snapshotsForJob(jobId: shift.jobId, context: context)
+      let snapshot = snapshotForDate(shift.shiftDate, from: scoped)
+      let config = runtimeOvertimeConfig(snapshot?.effectiveOvertime)
+      guard let shiftDayStart = dateFromISO(shift.shiftDate) else { continue }
+
+      for period in shift.computed.wagePeriods {
+        let absoluteStart = shiftDayStart.addingTimeInterval(period.fromMin * 60)
+        let absoluteEnd = shiftDayStart.addingTimeInterval(period.toMin * 60)
+        guard absoluteEnd > absoluteStart else { continue }
+
+        for (partStart, partEnd) in splitByISOWeek(start: absoluteStart, end: absoluteEnd) {
+          let partPeriod = SharingRPCWagePeriod(
+            fromMin: minutesBetween(shiftDayStart, partStart),
+            toMin: minutesBetween(shiftDayStart, partEnd),
+            baseRate: period.baseRate,
+            supplementRate: period.supplementRate
+          )
+          let key = "\(shift.jobId ?? "__nil__")|\(isoDateString(isoWeekStart(for: partStart)))"
+          let segment = SharingOvertimeSegment(
+            shift: shift,
+            period: partPeriod,
+            absoluteStart: partStart,
+            absoluteEnd: partEnd,
+            shiftDayStart: shiftDayStart,
+            config: config
+          )
+          grouped[key, default: []].append(segment)
+          fallbackPieces[shift.id, default: []].append(
+            SharingOvertimePiece(
+              shiftId: shift.id,
+              start: partStart,
+              period: partPeriod,
+              overtimeMinutes: 0
+            ))
+        }
+      }
+    }
+
+    var piecesByShift: [String: [SharingOvertimePiece]] = [:]
+    for segments in grouped.values {
+      var cumulativeMinutes: Double = 0
+      for segment in segments.sorted(by: {
+        if $0.absoluteStart != $1.absoluteStart {
+          return $0.absoluteStart < $1.absoluteStart
+        }
+        return $0.shift.id < $1.shift.id
+      }) {
+        for piece in applyOvertime(to: segment, cumulativeMinutes: cumulativeMinutes) {
+          piecesByShift[piece.shiftId, default: []].append(piece)
+        }
+        cumulativeMinutes += segment.period.durationMinutes
+      }
+    }
+
+    return shifts.map { shift in
+      let pieces = piecesByShift[shift.id] ?? fallbackPieces[shift.id] ?? []
+      guard !pieces.isEmpty else { return shift }
+
+      let sortedPieces = pieces.sorted {
+        if $0.start != $1.start {
+          return $0.start < $1.start
+        }
+        return $0.period.fromMin < $1.period.fromMin
+      }
+      let periods = mergeAdjacentSharingPeriods(sortedPieces.map(\.period))
+      let overtimeMinutes = sortedPieces.reduce(0.0) { $0 + $1.overtimeMinutes }
+      let computed = recomputeSharingComputed(
+        shift.computed,
+        periods: periods,
+        overtimeMinutes: overtimeMinutes
+      )
+      return SharingComputedShift(
+        id: shift.id,
+        userId: shift.userId,
+        jobId: shift.jobId,
+        jobName: shift.jobName,
+        jobColor: shift.jobColor,
+        shiftDate: shift.shiftDate,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        customPauseWindows: shift.customPauseWindows,
+        customSupplements: shift.customSupplements,
+        recurringId: shift.recurringId,
+        recurringAnchorWeekday: shift.recurringAnchorWeekday,
+        computed: computed,
+        taxEnabled: shift.taxEnabled,
+        taxPercentage: shift.taxPercentage
+      )
+    }
+  }
+
+  private static func applyOvertime(
+    to segment: SharingOvertimeSegment,
+    cumulativeMinutes: Double
+  ) -> [SharingOvertimePiece] {
+    guard let config = segment.config else {
+      return [
+        SharingOvertimePiece(
+          shiftId: segment.shift.id,
+          start: segment.absoluteStart,
+          period: segment.period,
+          overtimeMinutes: 0
+        )
+      ]
+    }
+
+    let thresholdMinutes = config.weeklyThresholdHours * 60
+    var cursor = segment.absoluteStart
+    var cursorCumulative = cumulativeMinutes
+    var pieces: [SharingOvertimePiece] = []
+
+    while cursor < segment.absoluteEnd {
+      let next = nextSharingOvertimeBoundary(
+        after: cursor,
+        segmentEnd: segment.absoluteEnd,
+        config: config,
+        cumulativeMinutes: cursorCumulative,
+        thresholdMinutes: thresholdMinutes
+      )
+      let durationMinutes = minutesBetween(cursor, next)
+      guard durationMinutes > 0 else { break }
+
+      let percent =
+        cursorCumulative >= thresholdMinutes
+        ? sharingOvertimePercent(config: config, at: cursor)
+        : nil
+      let supplementRate =
+        percent.map { segment.period.baseRate * $0 / 100 }
+        ?? segment.period.supplementRate
+
+      pieces.append(
+        SharingOvertimePiece(
+          shiftId: segment.shift.id,
+          start: cursor,
+          period: SharingRPCWagePeriod(
+            fromMin: minutesBetween(segment.shiftDayStart, cursor),
+            toMin: minutesBetween(segment.shiftDayStart, next),
+            baseRate: segment.period.baseRate,
+            supplementRate: supplementRate
+          ),
+          overtimeMinutes: percent == nil ? 0 : durationMinutes
+        ))
+
+      cursorCumulative += durationMinutes
+      cursor = next
+    }
+
+    return pieces
+  }
+
+  private static func recomputeSharingComputed(
+    _ computed: SharingComputedShiftComputed,
+    periods: [SharingRPCWagePeriod],
+    overtimeMinutes: Double
+  ) -> SharingComputedShiftComputed {
+    var basePay: Double = 0
+    var supplementPay: Double = 0
+
+    for period in periods {
+      let hours = round(period.durationHours * hourPrecision) / hourPrecision
+      basePay += round(hours * period.baseRate * currencyPrecision) / currencyPrecision
+      supplementPay += round(hours * period.supplementRate * currencyPrecision) / currencyPrecision
+    }
+
+    basePay = roundTo(basePay, decimals: 2)
+    supplementPay = roundTo(supplementPay, decimals: 2)
+    return SharingComputedShiftComputed(
+      durationHours: computed.durationHours,
+      paidHours: computed.paidHours,
+      basePay: basePay,
+      supplementPay: supplementPay,
+      gross: roundTo(basePay + supplementPay, decimals: 2),
+      wagePeriods: periods,
+      originalWagePeriods: computed.originalWagePeriods,
+      breakAudit: computed.breakAudit,
+      overtimeApplied: overtimeMinutes > 0,
+      overtimeMinutes: roundTo(overtimeMinutes, decimals: 2)
+    )
+  }
+
+  private static func runtimeOvertimeConfig(_ config: SharingRPCOvertimeConfig?)
+    -> SharingRPCOvertimeConfig?
+  {
+    guard let config, config.enabled, config.weeklyThresholdHours.isFinite,
+      config.weeklyThresholdHours > 0, !config.rules.isEmpty
+    else {
+      return nil
+    }
+    guard config.rules.allSatisfy(isValidSharingOvertimeRule),
+      sharingRulesCoverFullDay(config.rules, holiday: false),
+      sharingRulesCoverFullDay(config.rules, holiday: true)
+    else {
+      return nil
+    }
+    return config
+  }
+
+  private static func isValidSharingOvertimeRule(_ rule: SharingRPCOvertimeRule) -> Bool {
+    guard !rule.days.isEmpty,
+      Set(rule.days).isSubset(of: Set(1...7)),
+      rule.percent.isFinite,
+      rule.percent > 0,
+      let from = timeToMinutes(rule.from),
+      let to = timeToMinutes(rule.to)
+    else {
+      return false
+    }
+    return from < to && to <= 24 * 60
+  }
+
+  private static func sharingRulesCoverFullDay(
+    _ rules: [SharingRPCOvertimeRule],
+    holiday: Bool
+  ) -> Bool {
+    for day in 1...7 {
+      let intervals = rules.compactMap { rule -> (Int, Int)? in
+        guard rule.days.contains(day) else {
+          return nil
+        }
+        if holiday {
+          guard rule.appliesOnHolidays else { return nil }
+        } else if isHolidayOnlyRule(rule) {
+          return nil
+        }
+        guard let from = timeToMinutes(rule.from),
+          let to = timeToMinutes(rule.to)
+        else {
+          return nil
+        }
+        return (from, to)
+      }
+      guard intervalsCoverFullDay(intervals) else { return false }
+    }
+    return true
+  }
+
+  private static func nextSharingOvertimeBoundary(
+    after date: Date,
+    segmentEnd: Date,
+    config: SharingRPCOvertimeConfig,
+    cumulativeMinutes: Double,
+    thresholdMinutes: Double
+  ) -> Date {
+    var boundary = segmentEnd
+    let dayStart = sharingCalendar.startOfDay(for: date)
+
+    if let nextDay = sharingCalendar.date(byAdding: .day, value: 1, to: dayStart),
+      nextDay > date
+    {
+      boundary = min(boundary, nextDay)
+    }
+
+    if cumulativeMinutes < thresholdMinutes {
+      let thresholdDate = date.addingTimeInterval((thresholdMinutes - cumulativeMinutes) * 60)
+      if thresholdDate > date {
+        boundary = min(boundary, thresholdDate)
+      }
+    }
+
+    let minuteOfDay = minutesBetween(dayStart, date)
+    for rule in config.rules where sharingOvertimeRuleCanMatch(rule, at: date) {
+      guard let from = timeToMinutes(rule.from), let to = timeToMinutes(rule.to) else {
+        continue
+      }
+      for value in [Double(from), Double(to)] where value > minuteOfDay {
+        let candidate = dayStart.addingTimeInterval(value * 60)
+        if candidate > date {
+          boundary = min(boundary, candidate)
+        }
+      }
+    }
+
+    return boundary
+  }
+
+  private static func sharingOvertimePercent(
+    config: SharingRPCOvertimeConfig,
+    at date: Date
+  ) -> Double? {
+    let minute = minutesBetween(sharingCalendar.startOfDay(for: date), date)
+    return config.rules.compactMap { rule -> Double? in
+      guard sharingOvertimeRuleCanMatch(rule, at: date),
+        let from = timeToMinutes(rule.from),
+        let to = timeToMinutes(rule.to),
+        minute >= Double(from),
+        minute < Double(to)
+      else {
+        return nil
+      }
+      return rule.percent
+    }.max()
+  }
+
+  private static func sharingOvertimeRuleCanMatch(
+    _ rule: SharingRPCOvertimeRule,
+    at date: Date
+  ) -> Bool {
+    guard rule.days.contains(weekday(from: date)) else { return false }
+    if isNorwegianPublicHoliday(date) {
+      return rule.appliesOnHolidays
+    }
+    return !isHolidayOnlyRule(rule)
+  }
+
+  private static func isNorwegianPublicHoliday(_ date: Date) -> Bool {
+    let components = sharingCalendar.dateComponents([.year, .month, .day], from: date)
+    guard let year = components.year, let month = components.month, let day = components.day else {
+      return false
+    }
+
+    let fixedHolidays: Set<String> = ["01-01", "05-01", "05-17", "12-25", "12-26"]
+    if fixedHolidays.contains(String(format: "%02d-%02d", month, day)) {
+      return true
+    }
+
+    guard let easter = easterSunday(year: year) else { return false }
+    let holidayOffsets = [-3, -2, 0, 1, 39, 49, 50]
+    return holidayOffsets.contains { offset in
+      guard let holiday = sharingCalendar.date(byAdding: .day, value: offset, to: easter) else {
+        return false
+      }
+      return sharingCalendar.isDate(holiday, inSameDayAs: date)
+    }
+  }
+
+  private static func easterSunday(year: Int) -> Date? {
+    let a = year % 19
+    let b = year / 100
+    let c = year % 100
+    let d = b / 4
+    let e = b % 4
+    let f = (b + 8) / 25
+    let g = (b - f + 1) / 3
+    let h = (19 * a + b - d - g + 15) % 30
+    let i = c / 4
+    let k = c % 4
+    let l = (32 + 2 * e + 2 * i - h - k) % 7
+    let m = (a + 11 * h + 22 * l) / 451
+    let month = (h + l - 7 * m + 114) / 31
+    let day = ((h + l - 7 * m + 114) % 31) + 1
+    return sharingCalendar.date(from: DateComponents(year: year, month: month, day: day))
+  }
+
+  private static func isHolidayOnlyRule(_ rule: SharingRPCOvertimeRule) -> Bool {
+    rule.appliesOnHolidays && Set(rule.days) == Set(1...7)
+  }
+
+  private static func intervalsCoverFullDay(_ intervals: [(Int, Int)]) -> Bool {
+    var coveredUntil = 0
+    for interval in intervals.sorted(by: { $0.0 < $1.0 }) {
+      guard interval.0 <= coveredUntil else { return false }
+      coveredUntil = max(coveredUntil, interval.1)
+      if coveredUntil >= 24 * 60 {
+        return true
+      }
+    }
+    return false
+  }
+
+  private static func timeToMinutes(_ value: String) -> Int? {
+    let parts = value.split(separator: ":", omittingEmptySubsequences: false)
+    guard parts.count == 2,
+      let hours = Int(parts[0]),
+      let minutes = Int(parts[1]),
+      minutes >= 0,
+      minutes < 60,
+      hours >= 0,
+      hours <= 24,
+      hours < 24 || minutes == 0
+    else {
+      return nil
+    }
+    return hours * 60 + minutes
+  }
+
+  private static func splitByISOWeek(start: Date, end: Date) -> [(Date, Date)] {
+    var result: [(Date, Date)] = []
+    var cursor = start
+
+    while cursor < end {
+      let weekEnd =
+        sharingISOCalendar.date(byAdding: .day, value: 7, to: isoWeekStart(for: cursor))
+        ?? end
+      let partEnd = min(end, weekEnd)
+      result.append((cursor, partEnd))
+      cursor = partEnd
+    }
+
+    return result
+  }
+
+  private static func isoWeekStart(for date: Date) -> Date {
+    sharingISOCalendar.dateInterval(of: .weekOfYear, for: date)?.start
+      ?? sharingCalendar.startOfDay(for: date)
+  }
+
+  private static func expandedISOWeekRange(startDate: String, endDate: String) -> (
+    startDate: String, endDate: String
+  ) {
+    guard let start = dateFromISO(startDate), let end = dateFromISO(endDate) else {
+      return (startDate, endDate)
+    }
+    let expandedStart = isoWeekStart(for: start)
+    let endWeekStart = isoWeekStart(for: end)
+    let expandedEnd = sharingISOCalendar.date(byAdding: .day, value: 6, to: endWeekStart) ?? end
+    return (isoDateString(expandedStart), isoDateString(expandedEnd))
+  }
+
+  private static func weekday(from date: Date) -> Int {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+    let value = calendar.component(.weekday, from: date)
+    return value == 1 ? 7 : value - 1
+  }
+
+  private static func minutesBetween(_ start: Date, _ end: Date) -> Double {
+    end.timeIntervalSince(start) / 60
+  }
+
+  private static func mergeAdjacentSharingPeriods(_ periods: [SharingRPCWagePeriod])
+    -> [SharingRPCWagePeriod]
+  {
+    var merged: [SharingRPCWagePeriod] = []
+    for period in periods where period.toMin > period.fromMin {
+      if let last = merged.last,
+        abs(last.toMin - period.fromMin) < 0.0001,
+        last.baseRate == period.baseRate,
+        last.supplementRate == period.supplementRate
+      {
+        merged[merged.count - 1] = SharingRPCWagePeriod(
+          fromMin: last.fromMin,
+          toMin: period.toMin,
+          baseRate: last.baseRate,
+          supplementRate: last.supplementRate
+        )
+      } else {
+        merged.append(period)
+      }
+    }
+    return merged
+  }
+
+  private static let sharingCalendar: Calendar = {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = .current
+    return calendar
+  }()
+
+  private static let sharingISOCalendar: Calendar = {
+    var calendar = Calendar(identifier: .iso8601)
+    calendar.timeZone = .current
+    return calendar
+  }()
 
   private static func makePayrollContext(
     settings: SharingRPCUserSettings,
@@ -2510,7 +3032,8 @@ enum FriendsAPIClient {
       let query = normalizedSearchText(spokenName)
       guard !query.isEmpty else { return [] }
 
-      let scoredRecipients = recipients.compactMap { recipient -> (recipient: ShareRecipient, score: Int)? in
+      let scoredRecipients = recipients.compactMap {
+        recipient -> (recipient: ShareRecipient, score: Int)? in
         let fields = searchableFields(for: recipient)
         let recipientScore = fields.reduce(0) { partial, field in
           max(partial, Self.score(query: query, candidate: normalizedSearchText(field)))

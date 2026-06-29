@@ -28,6 +28,17 @@ struct PayrollReadWindow: Hashable {
     let range = Date.visibleCalendarRange(year: year, month: month)
     return Self(startDate: range.start, endDate: range.end)
   }
+
+  internal var expandedToFullISOWeeks: Self {
+    var calendar = Calendar(identifier: .iso8601)
+    calendar.timeZone = Date.localTimeZone
+    let expandedStart =
+      calendar.dateInterval(of: .weekOfYear, for: startDate)?.start ?? startDate
+    let endWeekStart = calendar.dateInterval(of: .weekOfYear, for: endDate)?.start ?? endDate
+    let expandedEnd =
+      calendar.date(byAdding: DateComponents(day: 6), to: endWeekStart) ?? endDate
+    return Self(startDate: expandedStart, endDate: expandedEnd)
+  }
 }
 
 struct PayrollRawWindowData {
@@ -175,11 +186,13 @@ final class MonthlyPayrollReadService {
   ) async -> [ShiftRow] {
     let startDate = Date.firstDayOfMonthDate(year: year, month: month)
     let endDate = Date.lastDayOfMonthDate(year: year, month: month)
+    let expandedWindow = PayrollReadWindow(startDate: startDate, endDate: endDate)
+      .expandedToFullISOWeeks
 
     return await shiftsRepository.getShiftsOffMain(
       for: userId,
-      startDate: startDate,
-      endDate: endDate,
+      startDate: expandedWindow.startDate,
+      endDate: expandedWindow.endDate,
       jobId: jobId
     )
   }
@@ -190,10 +203,12 @@ final class MonthlyPayrollReadService {
     endDate: Date,
     jobId: String? = nil
   ) async -> [ShiftRow] {
-    await shiftsRepository.getShiftsOffMain(
+    let expandedWindow = PayrollReadWindow(startDate: startDate, endDate: endDate)
+      .expandedToFullISOWeeks
+    return await shiftsRepository.getShiftsOffMain(
       for: userId,
-      startDate: startDate,
-      endDate: endDate,
+      startDate: expandedWindow.startDate,
+      endDate: expandedWindow.endDate,
       jobId: jobId
     )
   }
@@ -233,10 +248,12 @@ final class MonthlyPayrollReadService {
     }
     let generation: Int = Self.cacheGenerationSnapshot()
 
+    let expandedWindow = window.expandedToFullISOWeeks
+
     async let shifts = shiftsRepository.getShiftsOffMain(
       for: userId,
-      startDate: window.startDate,
-      endDate: window.endDate,
+      startDate: expandedWindow.startDate,
+      endDate: expandedWindow.endDate,
       jobId: jobId
     )
     async let events = eventsRepository.getEventsOffMain(

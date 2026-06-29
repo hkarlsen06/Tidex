@@ -63,6 +63,7 @@ internal enum WageSnapshotField: String, Codable, CaseIterable {
   case fromDate = "from_date"
   case hourlyWage = "hourly_wage"
   case jobId = "job_id"
+  case overtime = "overtime"
   case supplements = "supplements"
   case tariffTypeId = "tariff_type_id"
   case taxEnabled = "tax_enabled"
@@ -157,10 +158,10 @@ internal enum SyncEncodingError: LocalizedError {
     case .emptyUpdatePayload(let type):
       return "Empty update payload for \(type)"
 
-    case let .payloadDecodingFailed(type, error):
+    case .payloadDecodingFailed(let type, let error):
       return "Failed to decode \(type): \(error.localizedDescription)"
 
-    case let .snapshotEncodingFailed(type, error):
+    case .snapshotEncodingFailed(let type, let error):
       return "Failed to encode \(type): \(error.localizedDescription)"
     }
   }

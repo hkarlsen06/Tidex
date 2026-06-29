@@ -4,14 +4,14 @@ export type ShiftRow = {
   id: string;
   user_id: string;
   job_id?: string | null;
-  shift_date: string;           // ISO date
-  start_time: string;           // "HH:mm"
-  end_time: string;             // "HH:mm"
+  shift_date: string; // ISO date
+  start_time: string; // "HH:mm"
+  end_time: string; // "HH:mm"
   hourly_wage_snapshot?: number | null; // Snapshot of hourly wage at creation time
   supplement_rules_snapshot?: { rules: SupplementRule[] } | null; // Snapshot of supplement rules at creation time
   custom_pause_windows?: CustomPauseWindows | null; // Shift-specific pause overrides
   custom_supplements?: CustomSupplementsData | null; // Shift-specific supplement overrides
-  recurring_id?: string;           // Links to recurring_shifts if this is a virtual shift
+  recurring_id?: string; // Links to recurring_shifts if this is a virtual shift
   recurring_anchor_weekday?: number; // Which weekday anchor (0-6) generated this virtual shift
 };
 
@@ -27,7 +27,7 @@ export type CustomPauseWindows = {
 /**
  * A single supplement rule with origin tracking
  */
-export type CustomSupplementRuleSaved = Omit<SupplementRule, 'days'> & {
+export type CustomSupplementRuleSaved = Omit<SupplementRule, "days"> & {
   isCustom?: boolean; // true = user-added, false/undefined = from tariff
 };
 
@@ -83,14 +83,18 @@ export type Job = {
 };
 
 export type SupplementRule = {
-  days: number[];   // 1-7 Mon..Sun
-  from: HHMM;       // inclusive
-  to: HHMM;         // inclusive
-  rate?: number;    // Fixed NOK per hour supplement (e.g., 22, 45, 110)
+  days: number[]; // 1-7 Mon..Sun
+  from: HHMM; // inclusive
+  to: HHMM; // inclusive
+  rate?: number; // Fixed NOK per hour supplement (e.g., 22, 45, 110)
   percent?: number; // Percentage supplement (e.g., 50 for 50% supplement)
 };
 
-export type BreakMethod = "proportional" | "base_only" | "end_of_shift" | "none";
+export type BreakMethod =
+  | "proportional"
+  | "base_only"
+  | "end_of_shift"
+  | "none";
 
 export type WagePeriod = {
   fromMin: number;
@@ -111,14 +115,16 @@ export type BreakAudit = {
 
 export type ShiftComputed = {
   id: string;
-  durationHours: number;         // raw
-  paidHours: number;             // after break
-  basePay: number;               // NOK
-  supplementPay: number;              // NOK
-  gross: number;                 // NOK
-  wagePeriods: WagePeriod[];     // after break deduction
+  durationHours: number; // raw
+  paidHours: number; // after break
+  basePay: number; // NOK
+  supplementPay: number; // NOK
+  gross: number; // NOK
+  wagePeriods: WagePeriod[]; // after break deduction
   originalWagePeriods: WagePeriod[]; // before break deduction (for display)
   breakAudit: BreakAudit;
+  overtimeApplied: boolean;
+  overtimeMinutes: number;
 };
 
 export type ShiftWithComputations = ShiftRow & {
@@ -147,6 +153,7 @@ export type WageSnapshot = {
   wage_level: number | null; // NULL = custom wage, NUMBER (1-9) = tariff level
   tariff_type_id: string | null; // e.g., "hk_retail", NULL for custom wage
   supplements: { rules: SupplementRule[] };
+  overtime?: OvertimeConfig | null;
   created_at?: string;
 
   // Tax settings (per-snapshot)
@@ -158,4 +165,18 @@ export type WageSnapshot = {
   break_method: BreakMethod;
   break_threshold_hours: number;
   break_deduction_minutes: number;
+};
+
+export type OvertimeConfig = {
+  enabled: boolean;
+  weeklyThresholdHours: number;
+  rules: OvertimeRule[];
+};
+
+export type OvertimeRule = {
+  days: number[];
+  appliesOnHolidays: boolean;
+  from: HHMM;
+  to: HHMM;
+  percent: number;
 };

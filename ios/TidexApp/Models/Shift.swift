@@ -121,6 +121,10 @@ struct ShiftComputed: Equatable {
   let originalWagePeriods: [WagePeriod]
   /// Break deduction audit trail
   let breakAudit: BreakAudit
+  /// Whether overtime supplements were applied to this shift
+  var overtimeApplied: Bool = false
+  /// Paid minutes calculated as overtime
+  var overtimeMinutes: Double = 0
 
   /// Net pay after tax (if tax settings provided)
   func netPay(taxEnabled: Bool, taxPercentage: Double) -> Double {
