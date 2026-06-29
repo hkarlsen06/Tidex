@@ -1,0 +1,376 @@
+#!/usr/bin/env python3
+import argparse
+import copy
+import fcntl
+import json
+import shutil
+import subprocess
+import sys
+import tempfile
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Optional
+
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_CATALOG = REPO_ROOT / "ios/Resources/Localization/App/Localizable.xcstrings"
+DEFAULT_REQUIRED_LOCALES = ("en", "nb")
+VALID_STATES = ("new", "needs_review", "stale", "translated")
+
+
+def parse_args() -> argparse.Namespace:
+    raw_args = sys.argv[1:]
+    if raw_args and raw_args[0] == "--":
+        raw_args = raw_args[1:]
+
+    parser = argparse.ArgumentParser(
+        description="Add or update a plain stringUnit entry in an Xcode .xcstrings catalog.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""examples:
+  scripts/xcstrings-set ios/Resources/Localization/App/Localizable.xcstrings settings.saveButton \\
+    --comment "Button that saves settings changes" \\
+    --en "Save" \\
+    --nb "Lagre"
+
+  scripts/xcstrings-set ios/Resources/Localization/Widget/Localizable.xcstrings widget.title \\
+    --comment "Widget display name" \\
+    --en "Tidex" \\
+    --nb "Tidex"
+""",
+    )
+    parser.add_argument(
+        "catalog",
+        nargs="?",
+        help="Path to the .xcstrings file. Defaults to the app catalog when omitted.",
+    )
+    parser.add_argument("key", nargs="?", help="String catalog key to add or update.")
+    parser.add_argument(
+        "--catalog",
+        "-c",
+        dest="catalog_option",
+        help="Path to the .xcstrings file. Legacy-compatible alias for the positional catalog.",
+    )
+    parser.add_argument("--key", "-k", dest="key_option", help="String catalog key.")
+    parser.add_argument("--comment", help="Translator context for the key.")
+    parser.add_argument("--en", "--english", dest="en", help="English value.")
+    parser.add_argument("--nb", "--norwegian", dest="nb", help="Norwegian Bokmal value.")
+    parser.add_argument(
+        "--locale",
+        action="append",
+        default=[],
+        metavar="LOCALE=VALUE",
+        help="Additional locale value. Can be passed more than once.",
+    )
+    parser.add_argument(
+        "--state",
+        default="translated",
+        choices=VALID_STATES,
+        help="stringUnit state to write for provided locale values.",
+    )
+    parser.add_argument(
+        "--extraction-state",
+        help="Set the entry extractionState. New entries default to manual.",
+    )
+    parser.add_argument(
+        "--allow-missing-comment",
+        action="store_true",
+        help="Allow a new key without a translator comment.",
+    )
+    parser.add_argument(
+        "--allow-complex",
+        action="store_true",
+        help="Allow overwriting entries with variations or substitutions.",
+    )
+    parser.add_argument(
+        "--sort-keys",
+        action="store_true",
+        help="Sort the catalog's strings dictionary alphabetically.",
+    )
+    parser.add_argument(
+        "--skip-xcstringstool-check",
+        action="store_true",
+        help="Skip the xcrun xcstringstool compile dry-run check.",
+    )
+    return parser.parse_args(raw_args)
+
+
+def fail(message: str) -> None:
+    print(f"xcstrings-set: {message}", file=sys.stderr)
+    raise SystemExit(2)
+
+
+def resolve_catalog_and_key(args: argparse.Namespace) -> tuple[Path, str]:
+    catalog_value = args.catalog_option or args.catalog
+    key_value = args.key_option or args.key
+
+    if key_value is None and catalog_value is not None and not catalog_value.endswith(".xcstrings"):
+        key_value = catalog_value
+        catalog_value = None
+
+    if key_value is None:
+        fail("missing key; pass a positional key or --key")
+
+    catalog_path = Path(catalog_value) if catalog_value else DEFAULT_CATALOG
+    if not catalog_path.is_absolute():
+        cwd_catalog_path = Path.cwd() / catalog_path
+        repo_catalog_path = REPO_ROOT / catalog_path
+        catalog_path = cwd_catalog_path if cwd_catalog_path.exists() else repo_catalog_path
+
+    return catalog_path, key_value
+
+
+def parse_locale_assignments(args: argparse.Namespace) -> dict[str, str]:
+    localizations: dict[str, str] = {}
+
+    if args.en is not None:
+        localizations["en"] = args.en
+    if args.nb is not None:
+        localizations["nb"] = args.nb
+
+    for assignment in args.locale:
+        if "=" not in assignment:
+            fail(f"--locale must use LOCALE=VALUE, got {assignment!r}")
+        locale, value = assignment.split("=", 1)
+        locale = locale.strip()
+        if not locale:
+            fail("--locale locale code cannot be empty")
+        localizations[locale] = value
+
+    return localizations
+
+
+def load_catalog(path: Path) -> dict:
+    if path.suffix != ".xcstrings":
+        fail(f"expected a .xcstrings file, got {path}")
+    if not path.exists():
+        fail(f"catalog does not exist: {path}")
+
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            catalog = json.load(file)
+    except json.JSONDecodeError as error:
+        fail(f"invalid JSON in {path}: {error}")
+
+    if not isinstance(catalog, dict):
+        fail("catalog root must be a JSON object")
+    if "strings" not in catalog or not isinstance(catalog["strings"], dict):
+        fail("catalog must contain a strings object")
+
+    return catalog
+
+
+def validate_key_for_new_entry(key: str) -> None:
+    if "_" in key:
+        fail(
+            f"{key!r} contains an underscore. Use dot-separated camelCase segments, "
+            "for example dashboard.payrollDetails.totalGross."
+        )
+
+
+def entry_is_plain_string_unit(entry: dict) -> bool:
+    localizations = entry.get("localizations", {})
+    if localizations is None:
+        return True
+    if not isinstance(localizations, dict):
+        return False
+
+    for locale_entry in localizations.values():
+        if not isinstance(locale_entry, dict):
+            return False
+        if set(locale_entry.keys()) - {"stringUnit"}:
+            return False
+        string_unit = locale_entry.get("stringUnit")
+        if string_unit is not None and not isinstance(string_unit, dict):
+            return False
+
+    return True
+
+
+def update_catalog(
+    catalog: dict,
+    key: str,
+    comment: Optional[str],
+    locale_values: dict[str, str],
+    state: str,
+    extraction_state: Optional[str],
+    allow_missing_comment: bool,
+    allow_complex: bool,
+    sort_keys: bool,
+) -> tuple[bool, list[str]]:
+    strings = catalog["strings"]
+    is_new_entry = key not in strings
+
+    if is_new_entry:
+        validate_key_for_new_entry(key)
+        missing = [
+            locale
+            for locale in DEFAULT_REQUIRED_LOCALES
+            if locale not in locale_values
+        ]
+        if missing:
+            fail(
+                "new keys require localized values for "
+                + ", ".join(DEFAULT_REQUIRED_LOCALES)
+                + f"; missing {', '.join(missing)}"
+            )
+        if comment is None and not allow_missing_comment:
+            fail("new keys require --comment for translator context")
+        strings[key] = {
+            "extractionState": extraction_state or "manual",
+            "localizations": {},
+        }
+
+    entry = strings[key]
+    if not isinstance(entry, dict):
+        fail(f"{key} is not a string entry object")
+    if not allow_complex and not entry_is_plain_string_unit(entry):
+        fail(
+            f"{key} contains variations or substitutions; use Xcode/XLIFF "
+            "or pass --allow-complex if you are intentionally replacing it"
+        )
+
+    if extraction_state is not None:
+        entry["extractionState"] = extraction_state
+    elif is_new_entry and "extractionState" not in entry:
+        entry["extractionState"] = "manual"
+
+    if comment is not None:
+        entry["comment"] = comment
+
+    localizations = entry.setdefault("localizations", {})
+    if not isinstance(localizations, dict):
+        fail(f"{key}.localizations is not an object")
+
+    for locale, value in locale_values.items():
+        locale_entry = localizations.setdefault(locale, {})
+        if not isinstance(locale_entry, dict):
+            fail(f"{key}.localizations.{locale} is not an object")
+        if not allow_complex and set(locale_entry.keys()) - {"stringUnit"}:
+            fail(
+                f"{key}.localizations.{locale} is not a plain stringUnit; "
+                "use Xcode/XLIFF for complex entries"
+            )
+        locale_entry["stringUnit"] = {
+            "state": state,
+            "value": value,
+        }
+
+    if sort_keys:
+        catalog["strings"] = {
+            sorted_key: strings[sorted_key]
+            for sorted_key in sorted(strings.keys())
+        }
+
+    changed_locales = list(locale_values.keys())
+    return is_new_entry, changed_locales
+
+
+def serialize_catalog(catalog: dict) -> str:
+    return json.dumps(
+        catalog,
+        ensure_ascii=False,
+        indent=2,
+        separators=(",", " : "),
+    ) + "\n"
+
+
+def run_xcstringstool_check(path: Path) -> None:
+    if shutil.which("xcrun") is None:
+        print(
+            "xcstrings-set: warning: xcrun not found; skipped xcstringstool validation",
+            file=sys.stderr,
+        )
+        return
+
+    with tempfile.TemporaryDirectory(prefix="xcstrings-set-") as output_dir:
+        result = subprocess.run(
+            [
+                "xcrun",
+                "xcstringstool",
+                "compile",
+                str(path),
+                "--output-directory",
+                output_dir,
+                "--dry-run",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+    if result.returncode != 0:
+        if result.stdout:
+            print(result.stdout, file=sys.stderr)
+        if result.stderr:
+            print(result.stderr, file=sys.stderr)
+        raise RuntimeError(f"xcstringstool validation failed with exit code {result.returncode}")
+
+
+@contextmanager
+def exclusive_catalog_lock(path: Path):
+    lock_path = Path(f"{path}.lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def write_and_validate(path: Path, content: str, skip_xcstringstool_check: bool) -> None:
+    original_content = path.read_text(encoding="utf-8")
+
+    path.write_text(content, encoding="utf-8")
+    try:
+        json.loads(content)
+        if not skip_xcstringstool_check:
+            run_xcstringstool_check(path)
+    except Exception:
+        path.write_text(original_content, encoding="utf-8")
+        raise
+
+
+def main() -> None:
+    args = parse_args()
+    catalog_path, key = resolve_catalog_and_key(args)
+    locale_values = parse_locale_assignments(args)
+
+    if not locale_values and args.comment is None and args.extraction_state is None:
+        fail("nothing to update; pass --en, --nb, --locale, --comment, or --extraction-state")
+
+    with exclusive_catalog_lock(catalog_path):
+        catalog = load_catalog(catalog_path)
+        original_catalog = copy.deepcopy(catalog)
+
+        is_new_entry, changed_locales = update_catalog(
+            catalog=catalog,
+            key=key,
+            comment=args.comment,
+            locale_values=locale_values,
+            state=args.state,
+            extraction_state=args.extraction_state,
+            allow_missing_comment=args.allow_missing_comment,
+            allow_complex=args.allow_complex,
+            sort_keys=args.sort_keys,
+        )
+
+        content = serialize_catalog(catalog)
+        existing_content = catalog_path.read_text(encoding="utf-8")
+
+        if content == existing_content:
+            print(f"No changes for {key} in {catalog_path}")
+            return
+
+        write_and_validate(catalog_path, content, args.skip_xcstringstool_check)
+
+    action = "Added" if is_new_entry else "Updated"
+    locale_summary = ", ".join(changed_locales) if changed_locales else "metadata only"
+    if catalog == original_catalog:
+        locale_summary = "formatting only"
+    print(f"{action} {key} in {catalog_path} ({locale_summary})")
+
+
+if __name__ == "__main__":
+    main()

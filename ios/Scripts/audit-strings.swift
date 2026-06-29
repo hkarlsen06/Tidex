@@ -1,17 +1,7 @@
-#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable file_length
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable anonymous_argument_in_multiline_closure conditional_returns_on_newline
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable cyclomatic_complexity explicit_type_interface function_body_length
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable legacy_objc_type multiline_arguments_brackets no_direct_print
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable no_magic_numbers no_raw_localization_keys prefixed_toplevel_constant
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable switch_case_on_newline
+#!/usr/bin/env swift
 import Foundation
+
+// swiftlint:disable no_direct_print no_raw_localization_keys
 
 // MARK: - Config
 
@@ -789,7 +779,10 @@ private func checkHardcodedStrings(config: Config) -> Bool {
   print("To fix: Use String Catalog symbols instead of literal strings.")
   print("  Example: Text(.settingsSaveButton) instead of Text(\"Save\")")
   print("\nTo add a new string:")
-  print("  add-strings --key \"feature.key\" --en \"English\" --nb \"Norwegian\"\n")
+  print(
+    "  ./scripts/xcstrings-set ios/Resources/Localization/App/Localizable.xcstrings "
+      + "feature.key --comment \"Translator context\" --en \"English\" --nb \"Norwegian\"\n"
+  )
   return true
 }
 
@@ -909,3 +902,4 @@ private func run() {
 }
 
 run()
+// swiftlint:enable no_direct_print no_raw_localization_keys
