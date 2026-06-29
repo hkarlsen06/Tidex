@@ -1,8 +1,8 @@
 import Auth
 import Combine
 import Foundation
-import os.log
 import Supabase
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharingService")
 
@@ -509,7 +509,9 @@ final class SharingService: ObservableObject {
           source: shift.computed.breakAudit.source,
           appliedPauseWindows: shift.computed.breakAudit.appliedPauseWindows,
           notes: shift.computed.breakAudit.notes
-        )
+        ),
+        overtimeApplied: shift.computed.overtimeApplied,
+        overtimeMinutes: shift.computed.overtimeMinutes
       ),
       tax_enabled: shift.taxEnabled,
       tax_percentage: shift.taxPercentage,

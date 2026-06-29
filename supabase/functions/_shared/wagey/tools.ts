@@ -538,6 +538,106 @@ const supplementRuleAliasSchema = z.object({
   type: z.string().optional(),
 });
 
+const overtimeTimeSchema = z.string().regex(
+  /^(?:[01]\d|2[0-3]):[0-5]\d|24:00$/,
+);
+
+const overtimeRuleSchema = z.object({
+  days: z.array(z.number().int().min(1).max(7)).min(1),
+  appliesOnHolidays: z.boolean(),
+  from: overtimeTimeSchema,
+  to: overtimeTimeSchema,
+  percent: z.number().positive(),
+}).strict().refine((rule) => {
+  const from = timeToMinutes(rule.from);
+  const to = timeToMinutes(rule.to);
+  return from != null && to != null && from < to && to <= 24 * 60;
+}, {
+  message: "Overtime rules require same-day ranges with from < to <= 24:00",
+});
+
+const overtimeConfigSchema = z.object({
+  enabled: z.boolean(),
+  weeklyThresholdHours: z.number().positive(),
+  rules: z.array(overtimeRuleSchema),
+}).strict().superRefine((config, ctx) => {
+  if (!config.enabled) return;
+  if (config.rules.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Enabled overtime requires at least one rule",
+      path: ["rules"],
+    });
+    return;
+  }
+  if (!rulesCoverFullDay(config.rules, false)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        "Overtime rules must cover 00:00-24:00 for every non-holiday day",
+      path: ["rules"],
+    });
+  }
+  if (!rulesCoverFullDay(config.rules, true)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message:
+        "Overtime rules must cover 00:00-24:00 for Norwegian public holidays",
+      path: ["rules"],
+    });
+  }
+});
+
+function timeToMinutes(value: string): number | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (minutes < 0 || minutes >= 60 || hours < 0 || hours > 24) return null;
+  if (hours === 24 && minutes !== 0) return null;
+  return hours * 60 + minutes;
+}
+
+function rulesCoverFullDay(
+  rules: Array<z.infer<typeof overtimeRuleSchema>>,
+  holiday: boolean,
+): boolean {
+  for (let day = 1; day <= 7; day++) {
+    const intervals = rules
+      .filter((rule) =>
+        rule.days.includes(day) &&
+        (holiday ? rule.appliesOnHolidays : !isHolidayOnlyRule(rule))
+      )
+      .map((rule) =>
+        [timeToMinutes(rule.from), timeToMinutes(rule.to)] as const
+      )
+      .filter((interval): interval is readonly [number, number] =>
+        interval[0] != null && interval[1] != null
+      );
+    if (!intervalsCoverFullDay(intervals)) return false;
+  }
+  return true;
+}
+
+function intervalsCoverFullDay(
+  intervals: readonly (readonly [number, number])[],
+): boolean {
+  let coveredUntil = 0;
+  for (const [from, to] of [...intervals].sort((a, b) => a[0] - b[0])) {
+    if (from > coveredUntil) return false;
+    coveredUntil = Math.max(coveredUntil, to);
+    if (coveredUntil >= 24 * 60) return true;
+  }
+  return false;
+}
+
+function isHolidayOnlyRule(
+  rule: Pick<z.infer<typeof overtimeRuleSchema>, "days" | "appliesOnHolidays">,
+): boolean {
+  return rule.appliesOnHolidays && rule.days.length === 7 &&
+    new Set(rule.days).size === 7;
+}
+
 /**
  * Manage Wage Snapshots Tool Schema
  * Allows CRUD operations on wage snapshots (wage history entries)
@@ -568,6 +668,7 @@ export const manageWageSnapshotsSchema = z.object({
     z.literal("copy_current"),
     z.array(z.union([supplementRuleSchema, supplementRuleAliasSchema])),
   ]).optional(),
+  overtime: overtimeConfigSchema.optional(),
 });
 
 export type ManageWageSnapshotsInput = z.infer<
@@ -1970,7 +2071,7 @@ Returns:
 - hasBaselineSnapshot / requiresPaySetup / paySetupStatus
 - globalPaySettings: Pay configuration for the selected job when available
 - tariffs: Distinct tariff agreements referenced by the job's wage snapshots (id, displayName, description, country, isDefault)
-- current: The wage that applies today (id, fromDate, usingTariff, wageLevel, tariffTypeId, tariff, hourlyWage, supplements, taxEnabled, taxPercentage)
+- current: The wage that applies today (id, fromDate, usingTariff, wageLevel, tariffTypeId, tariff, hourlyWage, supplements, overtime, taxEnabled, taxPercentage)
 - upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields, includes id
 - history: Past wage entries for context (if any) - compact format showing only changed fields, includes id
 
@@ -2003,7 +2104,7 @@ To modify halfTaxMonth or payrollDay, use manage_account action="update_settings
     description:
       `Create, update, or delete wage snapshots (wage history entries).
 
-Wage snapshots define the user's hourly wage, tax settings, break deduction, and supplements for a specific time period.
+Wage snapshots define the user's hourly wage, tax settings, break deduction, supplements, and overtime rules for a specific time period.
 Each snapshot has a from_date (when it takes effect) - the baseline snapshot has from_date=null.
 
 Actions:
@@ -2015,6 +2116,7 @@ IMPORTANT - Dichotomy between tariff and custom rates:
 - Snapshots are EITHER tariff-based OR custom hourly rate, never both
 - If you provide hourly_wage → automatically switches to CUSTOM mode (wage_level becomes null)
 - If you provide wage_level → automatically switches to TARIFF mode (hourly_wage is looked up from preset rates)
+- In tariff mode, omitted supplements and overtime default to the selected tariff version when a tariff level/date change is applied
 - You do NOT need to explicitly set wage_level to null when setting a custom hourly_wage
 
 Other notes:
@@ -2024,6 +2126,7 @@ Other notes:
 - For CREATE: ask for tax handling explicitly (tax_enabled and optionally tax_percentage) before calling
 - For UPDATE: only specify fields to change
 - Use supplements: "copy_current" to explicitly copy current supplements, or provide a new array of rules
+- Omitted overtime copies/preserves the current snapshot unless Wagey is creating or recalculating a tariff snapshot, where it uses the tariff version default. Enabled overtime requires a positive weeklyThresholdHours value and rules that cover 00:00-24:00 for all days and Norwegian public holidays.
 - For end-of-day supplement windows, use 24:00 (preferred over 23:59)`,
     input_schema: {
       type: "object",
@@ -2136,6 +2239,63 @@ Other notes:
           },
           description:
             '"copy_current" to copy from current snapshot, or array of supplement rules. Rule keys can be canonical (from/to/rate) or alias (startTime/endTime/amount).',
+        },
+        overtime: {
+          type: "object",
+          properties: {
+            enabled: {
+              type: "boolean",
+              description: "Whether weekly overtime supplements are enabled.",
+            },
+            weeklyThresholdHours: {
+              type: "number",
+              description:
+                "Paid hours per ISO week before overtime starts, usually 40.",
+            },
+            rules: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  days: {
+                    type: "array",
+                    items: { type: "integer" },
+                    description: "Weekday numbers 1-7 (Monday-Sunday)",
+                  },
+                  appliesOnHolidays: {
+                    type: "boolean",
+                    description:
+                      "Whether this rule can apply on Norwegian public holidays.",
+                  },
+                  from: {
+                    type: "string",
+                    description: "Start time (HH:mm)",
+                  },
+                  to: {
+                    type: "string",
+                    description: "End time (HH:mm, use 24:00 for end of day)",
+                  },
+                  percent: {
+                    type: "number",
+                    description:
+                      "Overtime supplement as percent of base hourly wage.",
+                  },
+                },
+                required: [
+                  "days",
+                  "appliesOnHolidays",
+                  "from",
+                  "to",
+                  "percent",
+                ],
+              },
+              description:
+                "Percentage-only overtime rules. Matching overtime rules use the highest percent.",
+            },
+          },
+          required: ["enabled", "weeklyThresholdHours", "rules"],
+          description:
+            "Per-snapshot weekly overtime config. Set enabled=false with empty rules to disable.",
         },
       },
       required: ["action"],

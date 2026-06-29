@@ -180,6 +180,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   /// Whether the supplement breakdown is expanded
   @State private var isSupplementBreakdownExpanded = false
 
+  /// Whether the overtime breakdown is expanded
+  @State private var isOvertimeBreakdownExpanded = false
+
   /// Whether showing the share destination picker
   @State private var showingShareDestinationPicker = false
 
@@ -304,8 +307,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     displayedSupplementPay > 0 && !supplementSegments.isEmpty
   }
 
+  private var hasOvertimeBreakdown: Bool {
+    displayedOvertimePay > 0 && !overtimeSegments.isEmpty
+  }
+
   private var hasEarningsBreakdown: Bool {
-    hasSupplementBreakdown || shouldShowBreakDeductionRow
+    hasSupplementBreakdown || hasOvertimeBreakdown || shouldShowBreakDeductionRow
   }
 
   private var displayedBasePay: Double {
@@ -315,9 +322,23 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   private var displayedSupplementPay: Double {
+    if shouldShowBreakDeductionRow {
+      return displayedTotalSupplementPay
+    }
+    return roundedCurrency(max(0, displayedTotalSupplementPay - displayedOvertimePay))
+  }
+
+  private var displayedTotalSupplementPay: Double {
     shouldShowBreakDeductionRow
       ? BreakDeductionBreakdown.supplementPay(for: shift.computed.originalWagePeriods)
       : shift.computed.supplementPay
+  }
+
+  private var displayedOvertimePay: Double {
+    roundedCurrency(
+      overtimeSegments.reduce(0) { total, segment in
+        total + roundedCurrency(segment.amount)
+      })
   }
 
   /// Check if shift has custom supplements (including explicitly empty rules)
@@ -481,7 +502,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   /// Groups consecutive wage periods with the same supplement rate
   private var supplementSegments: [SupplementSegment] {
     let original = shift.computed.originalWagePeriods
-    let adjusted = shouldShowBreakDeductionRow ? original : shift.computed.wagePeriods
+    let adjusted = shouldShowBreakDeductionRow ? original : nonOvertimeWagePeriods
 
     var segments: [SupplementSegment] = []
     var periodIndex = 0
@@ -532,6 +553,108 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
 
     return segments
+  }
+
+  private var nonOvertimeWagePeriods: [WagePeriod] {
+    periodsRemovingTrailingOvertime(from: shift.computed.wagePeriods)
+  }
+
+  private var overtimeSegments: [SupplementSegment] {
+    guard shift.computed.overtimeApplied, shift.computed.overtimeMinutes > 0 else {
+      return []
+    }
+
+    var remainingMinutes = shift.computed.overtimeMinutes
+    var segments: [SupplementSegment] = []
+
+    for period in shift.computed.wagePeriods.reversed() {
+      guard remainingMinutes > 0 else { break }
+
+      let durationMinutes = max(0, period.durationMinutes)
+      guard durationMinutes > 0 else { continue }
+
+      let overtimeMinutes = min(durationMinutes, remainingMinutes)
+      let fromMin = max(period.fromMin, period.toMin - overtimeMinutes)
+
+      if period.supplementRate > 0 {
+        segments.append(
+          SupplementSegment(
+            fromMin: fromMin,
+            toMin: period.toMin,
+            rate: period.supplementRate,
+            actualHours: overtimeMinutes / 60
+          )
+        )
+      }
+
+      remainingMinutes -= overtimeMinutes
+    }
+
+    return mergeAdjacentSupplementSegments(segments.reversed())
+  }
+
+  private func periodsRemovingTrailingOvertime(from periods: [WagePeriod]) -> [WagePeriod] {
+    guard shift.computed.overtimeApplied, shift.computed.overtimeMinutes > 0 else {
+      return periods
+    }
+
+    var remainingMinutes = shift.computed.overtimeMinutes
+    var result: [WagePeriod] = []
+
+    for period in periods.reversed() {
+      guard remainingMinutes > 0 else {
+        result.append(period)
+        continue
+      }
+
+      let durationMinutes = max(0, period.durationMinutes)
+      guard durationMinutes > 0 else { continue }
+
+      if remainingMinutes >= durationMinutes {
+        remainingMinutes -= durationMinutes
+        continue
+      }
+
+      result.append(
+        WagePeriod(
+          fromMin: period.fromMin,
+          toMin: period.toMin - remainingMinutes,
+          baseRate: period.baseRate,
+          supplementRate: period.supplementRate
+        ))
+      remainingMinutes = 0
+    }
+
+    return result.reversed()
+  }
+
+  private func mergeAdjacentSupplementSegments<S: Sequence>(
+    _ segments: S
+  ) -> [SupplementSegment] where S.Element == SupplementSegment {
+    var merged: [SupplementSegment] = []
+
+    for segment in segments {
+      guard let last = merged.last,
+        last.rate == segment.rate,
+        last.toMin == segment.fromMin
+      else {
+        merged.append(segment)
+        continue
+      }
+
+      merged[merged.count - 1] = SupplementSegment(
+        fromMin: last.fromMin,
+        toMin: segment.toMin,
+        rate: last.rate,
+        actualHours: last.actualHours + segment.actualHours
+      )
+    }
+
+    return merged
+  }
+
+  private func roundedCurrency(_ amount: Double) -> Double {
+    (amount * 100).rounded() / 100
   }
 
   // MARK: - Body
@@ -1588,6 +1711,10 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           supplementBreakdownSection
         }
 
+        if hasOvertimeBreakdown {
+          overtimeBreakdownSection
+        }
+
         if shouldShowBreakDeductionRow, let breakdown = breakDeductionBreakdown {
           breakDeductionSection(breakdown)
 
@@ -1789,6 +1916,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
             .rotationEffect(.degrees(isSupplementBreakdownExpanded ? 180 : 0))
+            .accessibilityHidden(true)
         }
 
         if hasCustomSupplements {
@@ -1813,10 +1941,77 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     .contentShape(Rectangle())
   }
 
+  /// Overtime breakdown showing periods where weekly overtime applied.
+  @ViewBuilder
+  private var overtimeBreakdownSection: some View {
+    VStack(spacing: Spacing.sm) {
+      let canExpand = !overtimeSegments.isEmpty
+
+      if canExpand {
+        Button {
+          impactHaptic.impactOccurred()
+          withAnimation(.easeInOut(duration: 0.18)) {
+            isOvertimeBreakdownExpanded.toggle()
+          }
+        } label: {
+          overtimeTotalRow(showsChevron: true)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(.shiftsOvertimeLabel))
+        .accessibilityValue(formatCurrency(displayedOvertimePay))
+      } else {
+        overtimeTotalRow(showsChevron: false)
+      }
+
+      if canExpand, isOvertimeBreakdownExpanded {
+        ForEach(overtimeSegments) { segment in
+          overtimeSegmentRow(segment)
+        }
+      }
+
+      Divider()
+    }
+  }
+
+  private func overtimeTotalRow(showsChevron: Bool) -> some View {
+    HStack(spacing: Spacing.xs) {
+      HStack(spacing: Spacing.xs) {
+        Text(.shiftsOvertimeLabel)
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextSecondary)
+
+        if showsChevron {
+          Image(systemName: "chevron.down")
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+            .rotationEffect(.degrees(isOvertimeBreakdownExpanded ? 180 : 0))
+            .accessibilityHidden(true)
+        }
+      }
+
+      Spacer()
+
+      Text(formatCurrency(displayedOvertimePay))
+        .font(.tidexLabel)
+        .foregroundColor(.tidexTextPrimary)
+    }
+    .contentShape(Rectangle())
+  }
+
   /// A single supplement segment row showing time range, hours × rate, and amount
   @ViewBuilder
   private func supplementSegmentRow(_ segment: SupplementSegment) -> some View {
     EarningsSupplementBreakdownDetailCard(
+      timeRange: segmentTimeRange(segment),
+      hoursAndRate: "\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))",
+      amount: formatCurrency(segment.amount)
+    )
+  }
+
+  @ViewBuilder
+  private func overtimeSegmentRow(_ segment: SupplementSegment) -> some View {
+    EarningsSupplementBreakdownDetailCard(
+      title: String(localized: .shiftsOvertimeLabel),
       timeRange: segmentTimeRange(segment),
       hoursAndRate: "\(formatHoursValue(segment.actualHours)) × \(formatCurrency(segment.rate))",
       amount: formatCurrency(segment.amount)

@@ -2024,6 +2024,7 @@ final class SyncCoordinator: ObservableObject {
       wageLevel: serverRow.wage_level,
       tariffTypeId: serverRow.tariff_type_id,
       supplements: (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
+      overtime: (try? kCanonicalJSONEncoder.encode(serverRow.overtime ?? .disabled)) ?? Data(),
       taxEnabled: serverRow.tax_enabled,
       taxPercentage: serverRow.tax_percentage,
       breakEnabled: serverRow.break_enabled,
@@ -4651,6 +4652,15 @@ final class SyncCoordinator: ObservableObject {
       )
       updateData["supplements"] = decoded
     }
+    if dirtyFields.contains(.overtime) {
+      let decoded = try requireAnyJSON(
+        snapshot.overtime,
+        table: .wageSnapshots,
+        id: snapshotId,
+        field: "overtime"
+      )
+      updateData["overtime"] = decoded
+    }
     if dirtyFields.contains(.taxEnabled) {
       if let enabled = snapshot.taxEnabled {
         updateData["tax_enabled"] = .bool(enabled)
@@ -4863,6 +4873,14 @@ final class SyncCoordinator: ObservableObject {
       field: "supplements"
     )
     insertData["supplements"] = supplementsDecoded
+
+    let overtimeDecoded = try requireAnyJSON(
+      snapshot.overtime,
+      table: .wageSnapshots,
+      id: snapshotId,
+      field: "overtime"
+    )
+    insertData["overtime"] = overtimeDecoded
 
     // Optional fields
     if let enabled = snapshot.taxEnabled {

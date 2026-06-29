@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "JobsRepository")
 
@@ -10,6 +10,7 @@ struct JobBaselineSnapshotInput {
   let wageLevel: Int?
   let tariffTypeId: String?
   let supplements: SupplementRulesSnapshot
+  let overtime: OvertimeConfig
   let taxEnabled: Bool?
   let taxPercentage: Double?
   let breakEnabled: Bool?
@@ -363,6 +364,7 @@ final class JobsRepository: ObservableObject {
         wageLevel: baselineSnapshot.wageLevel,
         tariffTypeId: baselineSnapshot.tariffTypeId,
         supplements: baselineSnapshot.supplements,
+        overtime: baselineSnapshot.overtime,
         taxEnabled: baselineSnapshot.taxEnabled,
         taxPercentage: baselineSnapshot.taxPercentage,
         breakEnabled: baselineSnapshot.breakEnabled,

@@ -38,6 +38,9 @@ final class LocalWageSnapshot {
   /// Supplement rules (JSON)
   var supplements: Data
 
+  /// Overtime config (JSON)
+  var overtime: Data = (try? kCanonicalJSONEncoder.encode(OvertimeConfig.disabled)) ?? Data()
+
   /// Whether tax is enabled
   var taxEnabled: Bool?
 
@@ -130,6 +133,16 @@ final class LocalWageSnapshot {
     }
   }
 
+  /// Decoded overtime config
+  var decodedOvertime: OvertimeConfig {
+    get {
+      (try? kSyncJSONDecoder.decode(OvertimeConfig.self, from: overtime)) ?? .disabled
+    }
+    set {
+      overtime = (try? kCanonicalJSONEncoder.encode(newValue)) ?? Data()
+    }
+  }
+
   /// from_date as ISO string (YYYY-MM-DD) or nil for baseline
   var fromDateString: String? {
     guard let date = fromDate else { return nil }
@@ -198,6 +211,7 @@ final class LocalWageSnapshot {
     wageLevel: Int? = nil,
     tariffTypeId: String? = nil,
     supplements: Data,
+    overtime: Data = (try? kCanonicalJSONEncoder.encode(OvertimeConfig.disabled)) ?? Data(),
     taxEnabled: Bool? = nil,
     taxPercentage: Double? = nil,
     breakEnabled: Bool? = nil,
@@ -221,6 +235,7 @@ final class LocalWageSnapshot {
     self.wageLevel = wageLevel
     self.tariffTypeId = tariffTypeId
     self.supplements = supplements
+    self.overtime = overtime
     self.taxEnabled = taxEnabled
     self.taxPercentage = taxPercentage
     self.breakEnabled = breakEnabled
@@ -253,6 +268,7 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
   let wageLevel: Int?
   let tariffTypeId: String?
   let supplements: Data
+  let overtime: Data
   let taxEnabled: Bool?
   let taxPercentage: Double?
   let breakEnabled: Bool?
@@ -262,6 +278,83 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
   let updatedAt: Date
   let revision: Int64
   let deletedAt: Date?
+
+  init(
+    jobId: String?,
+    fromDate: String?,
+    hourlyWage: Double,
+    wageLevel: Int?,
+    tariffTypeId: String?,
+    supplements: Data,
+    overtime: Data = (try? kCanonicalJSONEncoder.encode(OvertimeConfig.disabled)) ?? Data(),
+    taxEnabled: Bool?,
+    taxPercentage: Double?,
+    breakEnabled: Bool?,
+    breakMethod: String?,
+    breakThresholdHours: Double?,
+    breakDeductionMinutes: Int?,
+    updatedAt: Date,
+    revision: Int64,
+    deletedAt: Date?
+  ) {
+    self.jobId = jobId
+    self.fromDate = fromDate
+    self.hourlyWage = hourlyWage
+    self.wageLevel = wageLevel
+    self.tariffTypeId = tariffTypeId
+    self.supplements = supplements
+    self.overtime = overtime
+    self.taxEnabled = taxEnabled
+    self.taxPercentage = taxPercentage
+    self.breakEnabled = breakEnabled
+    self.breakMethod = breakMethod
+    self.breakThresholdHours = breakThresholdHours
+    self.breakDeductionMinutes = breakDeductionMinutes
+    self.updatedAt = updatedAt
+    self.revision = revision
+    self.deletedAt = deletedAt
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case jobId
+    case fromDate
+    case hourlyWage
+    case wageLevel
+    case tariffTypeId
+    case supplements
+    case overtime
+    case taxEnabled
+    case taxPercentage
+    case breakEnabled
+    case breakMethod
+    case breakThresholdHours
+    case breakDeductionMinutes
+    case updatedAt
+    case revision
+    case deletedAt
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    jobId = try container.decodeIfPresent(String.self, forKey: .jobId)
+    fromDate = try container.decodeIfPresent(String.self, forKey: .fromDate)
+    hourlyWage = try container.decode(Double.self, forKey: .hourlyWage)
+    wageLevel = try container.decodeIfPresent(Int.self, forKey: .wageLevel)
+    tariffTypeId = try container.decodeIfPresent(String.self, forKey: .tariffTypeId)
+    supplements = try container.decode(Data.self, forKey: .supplements)
+    overtime =
+      (try? container.decodeIfPresent(Data.self, forKey: .overtime))
+      ?? ((try? kCanonicalJSONEncoder.encode(OvertimeConfig.disabled)) ?? Data())
+    taxEnabled = try container.decodeIfPresent(Bool.self, forKey: .taxEnabled)
+    taxPercentage = try container.decodeIfPresent(Double.self, forKey: .taxPercentage)
+    breakEnabled = try container.decodeIfPresent(Bool.self, forKey: .breakEnabled)
+    breakMethod = try container.decodeIfPresent(String.self, forKey: .breakMethod)
+    breakThresholdHours = try container.decodeIfPresent(Double.self, forKey: .breakThresholdHours)
+    breakDeductionMinutes = try container.decodeIfPresent(Int.self, forKey: .breakDeductionMinutes)
+    updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    revision = try container.decode(Int64.self, forKey: .revision)
+    deletedAt = try container.decodeIfPresent(Date.self, forKey: .deletedAt)
+  }
 
   /// Create snapshot from a WageSnapshot server response
   static func from(
@@ -277,6 +370,7 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
       wageLevel: row.wage_level,
       tariffTypeId: row.tariff_type_id,
       supplements: (try? kCanonicalJSONEncoder.encode(row.supplements)) ?? Data(),
+      overtime: (try? kCanonicalJSONEncoder.encode(row.overtime)) ?? Data(),
       taxEnabled: row.tax_enabled,
       taxPercentage: row.tax_percentage,
       breakEnabled: row.break_enabled,
@@ -328,6 +422,9 @@ struct WageSnapshotServerSnapshot: Codable, Equatable {
     if supplements != other.supplements {
       changed.insert(.supplements)
     }
+    if overtime != other.overtime {
+      changed.insert(.overtime)
+    }
     if taxEnabled != other.taxEnabled {
       changed.insert(.taxEnabled)
     }
@@ -365,6 +462,7 @@ extension LocalWageSnapshot {
       wage_level: wageLevel,
       tariff_type_id: tariffTypeId,
       supplements: decodedSupplements,
+      overtime: decodedOvertime,
       tax_enabled: taxEnabled,
       tax_percentage: taxPercentage,
       break_enabled: breakEnabled,
@@ -403,6 +501,7 @@ extension LocalWageSnapshot {
       wageLevel: serverRow.wage_level,
       tariffTypeId: serverRow.tariff_type_id,
       supplements: (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data(),
+      overtime: (try? kCanonicalJSONEncoder.encode(serverRow.overtime)) ?? Data(),
       taxEnabled: serverRow.tax_enabled,
       taxPercentage: serverRow.tax_percentage,
       breakEnabled: serverRow.break_enabled,

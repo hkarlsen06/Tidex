@@ -138,6 +138,16 @@ final class OnboardingData {
     }
   }
 
+  var resolvedOvertime: OvertimeConfig {
+    switch wageType {
+    case .tariff:
+      return currentTariffVersion?.effectiveOvertime ?? PayrollCalculator.presetOvertimeConfig
+
+    case .custom:
+      return .disabled
+    }
+  }
+
   // MARK: - Types
 
   /// Type of wage configuration

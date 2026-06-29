@@ -4,6 +4,43 @@ import type { WageyRequestContext } from "./context.ts";
 import { executeTool } from "./executor.ts";
 
 const USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
+const TARIFF_SUPPLEMENTS = {
+  rules: [{ days: [6], from: "18:00", to: "24:00", rate: 110 }],
+};
+const TARIFF_OVERTIME = {
+  enabled: true,
+  weeklyThresholdHours: 40,
+  rules: [
+    {
+      days: [1, 2, 3, 4, 5, 6],
+      appliesOnHolidays: false,
+      from: "00:00",
+      to: "21:00",
+      percent: 50,
+    },
+    {
+      days: [1, 2, 3, 4, 5, 6],
+      appliesOnHolidays: false,
+      from: "21:00",
+      to: "24:00",
+      percent: 100,
+    },
+    {
+      days: [7],
+      appliesOnHolidays: true,
+      from: "00:00",
+      to: "24:00",
+      percent: 100,
+    },
+    {
+      days: [1, 2, 3, 4, 5, 6, 7],
+      appliesOnHolidays: true,
+      from: "00:00",
+      to: "24:00",
+      percent: 100,
+    },
+  ],
+};
 
 type TableName =
   | "events"
@@ -337,6 +374,8 @@ function createMockClient(db: MockDb, userId: string) {
               rates: targetDate >= "2026-05-01" ? { "3": 195.25 } : {
                 "3": 187.46,
               },
+              supplements: TARIFF_SUPPLEMENTS,
+              overtime: TARIFF_OVERTIME,
             }],
             error: null,
           };
@@ -344,7 +383,14 @@ function createMockClient(db: MockDb, userId: string) {
         case "get_tariff_types":
           return { data: [], error: null };
         case "get_tariff_versions":
-          return { data: [{ rates: { "3": 195.25 } }], error: null };
+          return {
+            data: [{
+              rates: { "3": 195.25 },
+              supplements: TARIFF_SUPPLEMENTS,
+              overtime: TARIFF_OVERTIME,
+            }],
+            error: null,
+          };
         case "get_wagey_access_context":
           return {
             data: [{
@@ -1318,6 +1364,8 @@ Deno.test("manage_wage_snapshots update date recalculates tariff wage", async ()
   assertEquals(db.wage_snapshots?.[0].hourly_wage, 195.25);
   assertEquals(db.wage_snapshots?.[0].wage_level, 3);
   assertEquals(db.wage_snapshots?.[0].tariff_type_id, "hk_retail");
+  assertEquals(db.wage_snapshots?.[0].supplements, TARIFF_SUPPLEMENTS);
+  assertEquals(db.wage_snapshots?.[0].overtime, TARIFF_OVERTIME);
 });
 
 Deno.test("query_shifts ignores null and placeholder optional filters", async () => {

@@ -525,6 +525,7 @@ struct PostAuthOnboardingView: View {
         wageLevel: onboardingData.resolvedWageLevel,
         tariffTypeId: onboardingData.resolvedTariffTypeId,
         supplements: onboardingData.resolvedSupplements,
+        overtime: onboardingData.resolvedOvertime,
         taxEnabled: onboardingData.taxEnabled,
         taxPercentage: onboardingData.taxEnabled ? onboardingData.taxPercentage : nil,
         breakEnabled: onboardingData.breakEnabled,

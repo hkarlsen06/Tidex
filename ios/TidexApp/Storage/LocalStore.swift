@@ -2137,6 +2137,7 @@ internal actor LocalStoreActor {
     wageLevel: Int?,
     tariffTypeId: String?,
     supplements: SupplementRulesSnapshot,
+    overtime: OvertimeConfig = .disabled,
     taxEnabled: Bool?,
     taxPercentage: Double?,
     breakEnabled: Bool?,
@@ -2148,6 +2149,7 @@ internal actor LocalStoreActor {
     let now = Date()
 
     let supplementsData = (try? kCanonicalJSONEncoder.encode(supplements)) ?? Data()
+    let overtimeData = (try? kCanonicalJSONEncoder.encode(overtime)) ?? Data()
 
     let dateFormatter = isoDateFormatter
     let fromDateString = fromDate.map { dateFormatter.string(from: $0) }
@@ -2159,6 +2161,7 @@ internal actor LocalStoreActor {
       wageLevel: wageLevel,
       tariffTypeId: tariffTypeId,
       supplements: supplementsData,
+      overtime: overtimeData,
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage,
       breakEnabled: breakEnabled,
@@ -2182,6 +2185,7 @@ internal actor LocalStoreActor {
       wageLevel: wageLevel,
       tariffTypeId: tariffTypeId,
       supplements: supplementsData,
+      overtime: overtimeData,
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage,
       breakEnabled: breakEnabled,
@@ -2213,6 +2217,7 @@ internal actor LocalStoreActor {
     tariffTypeId: String?,
     updateTariffTypeId: Bool = false,
     supplements: SupplementRulesSnapshot?,
+    overtime: OvertimeConfig? = nil,
     taxEnabled: Bool?,
     taxPercentage: Double?,
     updateTaxPercentage: Bool = false,
@@ -2257,6 +2262,14 @@ internal actor LocalStoreActor {
       if newData != localSnapshot.supplements {
         localSnapshot.supplements = newData
         newDirtyFields.insert(.supplements)
+      }
+    }
+
+    if let newOvertime = overtime {
+      let newData = (try? kCanonicalJSONEncoder.encode(newOvertime)) ?? Data()
+      if newData != localSnapshot.overtime {
+        localSnapshot.overtime = newData
+        newDirtyFields.insert(.overtime)
       }
     }
 
@@ -3446,6 +3459,8 @@ internal actor LocalStoreActor {
     existing.wageLevel = serverRow.wage_level
     existing.tariffTypeId = serverRow.tariff_type_id
     existing.supplements = (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+    existing.overtime =
+      (try? kCanonicalJSONEncoder.encode(serverRow.overtime ?? .disabled)) ?? Data()
     existing.taxEnabled = serverRow.tax_enabled
     existing.taxPercentage = serverRow.tax_percentage
     existing.breakEnabled = serverRow.break_enabled
@@ -3529,6 +3544,10 @@ internal actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.supplements) {
       existing.supplements = (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+    }
+    if !localDirtyFields.contains(.overtime) {
+      existing.overtime =
+        (try? kCanonicalJSONEncoder.encode(serverRow.overtime ?? .disabled)) ?? Data()
     }
     if !localDirtyFields.contains(.taxEnabled) {
       existing.taxEnabled = serverRow.tax_enabled
@@ -4346,6 +4365,8 @@ internal actor LocalStoreActor {
     existing.wageLevel = serverRow.wage_level
     existing.tariffTypeId = serverRow.tariff_type_id
     existing.supplements = (try? kCanonicalJSONEncoder.encode(serverRow.supplements)) ?? Data()
+    existing.overtime =
+      (try? kCanonicalJSONEncoder.encode(serverRow.overtime ?? .disabled)) ?? Data()
     existing.taxEnabled = serverRow.tax_enabled
     existing.taxPercentage = serverRow.tax_percentage
     existing.breakEnabled = serverRow.break_enabled
@@ -4443,6 +4464,7 @@ internal actor LocalStoreActor {
     existing.wageLevel = serverSnapshot.wageLevel
     existing.tariffTypeId = serverSnapshot.tariffTypeId
     existing.supplements = serverSnapshot.supplements
+    existing.overtime = serverSnapshot.overtime
     existing.taxEnabled = serverSnapshot.taxEnabled
     existing.taxPercentage = serverSnapshot.taxPercentage
     existing.breakEnabled = serverSnapshot.breakEnabled

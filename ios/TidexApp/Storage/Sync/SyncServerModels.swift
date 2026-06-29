@@ -151,6 +151,7 @@ internal struct SyncWageSnapshotRow: Codable {
   internal let wage_level: Int?
   internal let tariff_type_id: String?
   internal let supplements: SupplementRulesSnapshot
+  internal let overtime: OvertimeConfig?
   internal let tax_enabled: Bool?
   internal let tax_percentage: Double?
   internal let break_enabled: Bool?
@@ -173,6 +174,7 @@ internal struct SyncWageSnapshotRow: Codable {
       wage_level: wage_level,
       tariff_type_id: tariff_type_id,
       supplements: supplements,
+      overtime: overtime ?? .disabled,
       tax_enabled: tax_enabled,
       tax_percentage: tax_percentage,
       break_enabled: break_enabled,

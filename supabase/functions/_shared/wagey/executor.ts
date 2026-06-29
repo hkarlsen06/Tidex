@@ -125,6 +125,8 @@ import {
   type CustomPauseWindows,
   type HHMM,
   type Job,
+  type OvertimeConfig,
+  PRESET_OVERTIME_CONFIG,
   PRESET_SUPPLEMENT_RULES,
   type SupplementRule,
   type WageSnapshot,
@@ -133,6 +135,8 @@ import { generateVirtualShiftsForMonth } from "./recurring/utils.ts";
 
 type TariffVersion = {
   rates?: Record<string, number> | null;
+  supplements?: { rules?: SupplementRule[] | null } | null;
+  overtime?: OvertimeConfig | null;
 };
 
 type WageSnapshotSupplementInput = NonNullable<
@@ -143,6 +147,12 @@ type WageSnapshotSupplementRuleInput = Exclude<
   WageSnapshotSupplementInput,
   "copy_current"
 >[number];
+
+const disabledOvertimeConfig: OvertimeConfig = {
+  enabled: false,
+  weeklyThresholdHours: 40,
+  rules: [],
+};
 
 function normalizeSupplementRuleInput(
   rule: WageSnapshotSupplementRuleInput,
@@ -303,6 +313,7 @@ async function resolveWageValues(
   hourlyWage: number;
   wageLevel: number | null;
   tariffTypeId: string | null;
+  tariffVersion: TariffVersion | null;
 }> {
   const DEFAULT_TARIFF_TYPE = "hk_retail";
 
@@ -311,6 +322,7 @@ async function resolveWageValues(
       hourlyWage: input.hourly_wage,
       wageLevel: null,
       tariffTypeId: null,
+      tariffVersion: null,
     };
   }
 
@@ -321,6 +333,7 @@ async function resolveWageValues(
         hourlyWage: current.hourly_wage,
         wageLevel: null,
         tariffTypeId: null,
+        tariffVersion: null,
       };
     }
 
@@ -338,6 +351,7 @@ async function resolveWageValues(
     hourlyWage: current.hourly_wage,
     wageLevel: current.wage_level,
     tariffTypeId: current.tariff_type_id,
+    tariffVersion: null,
   };
 }
 
@@ -353,6 +367,7 @@ async function resolveTariffWageValues(
   hourlyWage: number;
   wageLevel: number;
   tariffTypeId: string;
+  tariffVersion: TariffVersion | null;
 }> {
   const DEFAULT_TARIFF_TYPE = "hk_retail";
   let hourlyWage = current.hourly_wage;
@@ -373,7 +388,22 @@ async function resolveTariffWageValues(
     hourlyWage = tariffVersion.rates[String(wageLevel)];
   }
 
-  return { hourlyWage, wageLevel, tariffTypeId };
+  return { hourlyWage, wageLevel, tariffTypeId, tariffVersion };
+}
+
+function supplementRulesFromTariffVersion(
+  tariffVersion: TariffVersion | null,
+): { rules: SupplementRule[] } {
+  const rules = normalizeStoredSupplementRules(
+    tariffVersion?.supplements?.rules,
+  );
+  return { rules: rules.length > 0 ? rules : PRESET_SUPPLEMENT_RULES };
+}
+
+function overtimeFromTariffVersion(
+  tariffVersion: TariffVersion | null,
+): OvertimeConfig {
+  return tariffVersion?.overtime ?? PRESET_OVERTIME_CONFIG;
 }
 
 function t(
@@ -4002,6 +4032,11 @@ async function executeGetWageInfo(
             JSON.stringify(prev?.supplements)
           ? snapshot.supplements?.rules ?? []
           : "unchanged",
+        overtime:
+          JSON.stringify(snapshot.overtime ?? disabledOvertimeConfig) !==
+              JSON.stringify(prev?.overtime ?? disabledOvertimeConfig)
+            ? snapshot.overtime ?? disabledOvertimeConfig
+            : "unchanged",
         taxEnabled: snapshot.tax_enabled !== prev?.tax_enabled
           ? snapshot.tax_enabled
           : "unchanged",
@@ -4056,6 +4091,7 @@ async function executeGetWageInfo(
             : null,
           hourlyWage: currentSnapshot.hourly_wage,
           supplements: currentSnapshot.supplements?.rules ?? [],
+          overtime: currentSnapshot.overtime ?? disabledOvertimeConfig,
           taxEnabled: currentSnapshot.tax_enabled,
           taxPercentage: currentSnapshot.tax_percentage,
         }
@@ -4720,17 +4756,27 @@ async function executeManageWageSnapshots(
         hourly_wage: 200,
         wage_level: null,
         tariff_type_id: null,
+        overtime: disabledOvertimeConfig,
       };
-      const { hourlyWage, wageLevel, tariffTypeId } = await resolveWageValues(
-        ctx,
-        input,
-        current,
-      );
+      const { hourlyWage, wageLevel, tariffTypeId, tariffVersion } =
+        await resolveWageValues(
+          ctx,
+          input,
+          current,
+        );
+      const shouldUseTariffDefaults = input.wage_level != null &&
+        wageLevel !== null;
       const supplements = input.supplements === "copy_current"
         ? { rules: await resolveCurrentSupplementRules(ctx, jobId) }
         : input.supplements
         ? { rules: normalizeSupplementRulesInput(input.supplements) }
+        : shouldUseTariffDefaults
+        ? supplementRulesFromTariffVersion(tariffVersion)
         : snapshot?.supplements ?? { rules: [] };
+      const overtime = input.overtime ??
+        (shouldUseTariffDefaults
+          ? overtimeFromTariffVersion(tariffVersion)
+          : snapshot?.overtime ?? disabledOvertimeConfig);
       const { data, error } = await ctx.supabase
         .from("wage_snapshots")
         .insert({
@@ -4741,6 +4787,7 @@ async function executeManageWageSnapshots(
           wage_level: wageLevel,
           tariff_type_id: tariffTypeId,
           supplements,
+          overtime,
           tax_enabled: input.tax_enabled ?? snapshot?.tax_enabled ?? false,
           tax_percentage: input.tax_percentage ?? snapshot?.tax_percentage ?? 0,
           break_enabled: input.break_enabled ?? snapshot?.break_enabled ??
@@ -4793,17 +4840,27 @@ async function executeManageWageSnapshots(
           message: t(tr.snapshotNotFound, { id: input.snapshot_id }),
         };
       }
-      const { hourlyWage, wageLevel, tariffTypeId } = await resolveWageValues(
-        ctx,
-        input,
-        current,
-        { recalculateTariffForDateChange: true },
-      );
+      const { hourlyWage, wageLevel, tariffTypeId, tariffVersion } =
+        await resolveWageValues(
+          ctx,
+          input,
+          current,
+          { recalculateTariffForDateChange: true },
+        );
+      const shouldUseTariffDefaults = (input.wage_level != null ||
+        (input.from_date !== undefined && current.wage_level !== null)) &&
+        wageLevel !== null;
       const supplements = input.supplements === "copy_current"
         ? { rules: await resolveCurrentSupplementRules(ctx, current.job_id) }
         : input.supplements
         ? { rules: normalizeSupplementRulesInput(input.supplements) }
+        : shouldUseTariffDefaults
+        ? supplementRulesFromTariffVersion(tariffVersion)
         : current.supplements;
+      const overtime = input.overtime ??
+        (shouldUseTariffDefaults
+          ? overtimeFromTariffVersion(tariffVersion)
+          : current.overtime ?? disabledOvertimeConfig);
       const { error: updateError } = await ctx.supabase
         .from("wage_snapshots")
         .update({
@@ -4814,6 +4871,7 @@ async function executeManageWageSnapshots(
           wage_level: wageLevel,
           tariff_type_id: tariffTypeId,
           supplements,
+          overtime,
           tax_enabled: input.tax_enabled ?? current.tax_enabled,
           tax_percentage: input.tax_percentage ?? current.tax_percentage,
           break_enabled: input.break_enabled ?? current.break_enabled,

@@ -9,6 +9,7 @@ import {
 } from "./date-utils.ts";
 import { getUserTier } from "./get-user-tier.ts";
 import {
+  applyWeeklyOvertime,
   computeShift,
   type CustomPauseWindows,
   type CustomSupplementsData,
@@ -191,10 +192,12 @@ type FriendEntry = {
 };
 
 type BootstrapFriendEntry = Omit<FriendEntry, "sharesWithMe"> & {
-  sharesWithMe: (Omit<NonNullable<FriendEntry["sharesWithMe"]>, "blocked"> & {
-    blocked?: boolean;
-    hidden?: boolean;
-  }) | null;
+  sharesWithMe:
+    | (Omit<NonNullable<FriendEntry["sharesWithMe"]>, "blocked"> & {
+      blocked?: boolean;
+      hidden?: boolean;
+    })
+    | null;
 };
 
 const LEGACY_SNAPSHOT_KEY = "__legacy__";
@@ -253,7 +256,7 @@ const COMPUTED_SETTINGS_SELECT =
 const COMPUTED_JOB_SELECT =
   "id, user_id, name, color, is_default, sort_order, payroll_day, half_tax_month, monthly_goal, archived_at, deleted_at, created_at";
 const COMPUTED_SNAPSHOT_SELECT =
-  "id, user_id, job_id, from_date, hourly_wage, wage_level, tariff_type_id, supplements, tax_enabled, tax_percentage, break_enabled, break_method, break_threshold_hours, break_deduction_minutes, created_at";
+  "id, user_id, job_id, from_date, hourly_wage, wage_level, tariff_type_id, supplements, overtime, tax_enabled, tax_percentage, break_enabled, break_method, break_threshold_hours, break_deduction_minutes, created_at";
 const COMPUTED_SHIFT_SELECT =
   "id, user_id, job_id, shift_date, start_time, end_time, custom_pause_windows, custom_supplements";
 const COMPUTED_EVENT_SELECT =
@@ -1020,6 +1023,8 @@ function buildComputedShiftData(params: {
   recurringShifts: DbRecurringShift[];
   startDate: string;
   endDate: string;
+  returnStartDate?: string;
+  returnEndDate?: string;
 }): LoadedShiftData {
   const {
     userId,
@@ -1030,6 +1035,8 @@ function buildComputedShiftData(params: {
     recurringShifts,
     startDate,
     endDate,
+    returnStartDate = startDate,
+    returnEndDate = endDate,
   } = params;
   const normalizedJobs = jobs.filter((job) => job.deleted_at == null);
   const jobsById = new Map(normalizedJobs.map((job) => [job.id, job] as const));
@@ -1038,6 +1045,7 @@ function buildComputedShiftData(params: {
   const buckets = buildSnapshotBuckets(snapshots);
   const resolvePayrollDay = (jobId?: string | null): number =>
     payrollDayForJob(jobsById, defaultJob, settings, jobId);
+  const snapshotsByComputedShiftId = new Map<string, WageSnapshot | null>();
 
   const computedStandalone: ShiftWithComputations[] = shifts.map((shift) => {
     const shiftJobId = shift.job_id ?? defaultJobId;
@@ -1053,6 +1061,7 @@ function buildComputedShiftData(params: {
       calculatePayoutDate(shift.shift_date, resolvePayrollDay(shiftJobId)),
       shiftJobId,
     );
+    snapshotsByComputedShiftId.set(shift.id, snapshot);
 
     return {
       ...shift,
@@ -1137,6 +1146,7 @@ function buildComputedShiftData(params: {
           recurring_id: recurring.id,
           recurring_anchor_weekday: generatedShift.weekday,
         };
+        snapshotsByComputedShiftId.set(syntheticShift.id, snapshot);
 
         virtuals.push({
           ...syntheticShift,
@@ -1161,8 +1171,19 @@ function buildComputedShiftData(params: {
     }
   }
 
+  const computed = applyWeeklyOvertime(
+    [...computedStandalone, ...virtuals],
+    {
+      snapshotForShift: (shift) =>
+        snapshotsByComputedShiftId.get(shift.id) ?? null,
+      effectiveJobIdForShift: (shift) => shift.job_id ?? defaultJobId,
+    },
+  );
+
   return {
-    shifts: [...computedStandalone, ...virtuals].sort((a, b) => {
+    shifts: computed.filter((shift) =>
+      shift.shift_date >= returnStartDate && shift.shift_date <= returnEndDate
+    ).sort((a, b) => {
       const dateDiff = a.shift_date.localeCompare(b.shift_date);
       if (dateDiff !== 0) return dateDiff;
       return a.start_time.localeCompare(b.start_time);
@@ -1203,6 +1224,22 @@ function addDaysToIsoDate(date: string, days: number): string {
   const next = parseDateAsUTC(date);
   next.setUTCDate(next.getUTCDate() + days);
   return toISODate(next);
+}
+
+function expandToFullISOWeeks(startDate: string, endDate: string): {
+  startDate: string;
+  endDate: string;
+} {
+  const start = parseDateAsUTC(startDate);
+  const end = parseDateAsUTC(endDate);
+  const startOffset = (start.getUTCDay() + 6) % 7;
+  const endOffset = (end.getUTCDay() + 6) % 7;
+  start.setUTCDate(start.getUTCDate() - startOffset);
+  end.setUTCDate(end.getUTCDate() + (6 - endOffset));
+  return {
+    startDate: toISODate(start),
+    endDate: toISODate(end),
+  };
 }
 
 function getRecurringEffectiveEndDate(
@@ -1274,6 +1311,7 @@ export async function getComputedShiftsForApi(
 ): Promise<LoadedShiftData> {
   const startDate = options.startDate ?? getDefaultStartDate();
   const endDate = options.endDate ?? getDefaultEndDate();
+  const expandedRange = expandToFullISOWeeks(startDate, endDate);
 
   return await getCachedValue(
     ctx,
@@ -1289,8 +1327,8 @@ export async function getComputedShiftsForApi(
         await Promise.all([
           loadShiftResources(ctx, userId, { jobId: options.jobId }),
           loadShiftRows(ctx, userId, {
-            startDate,
-            endDate,
+            startDate: expandedRange.startDate,
+            endDate: expandedRange.endDate,
             limit: options.limit,
             jobId: options.jobId,
           }),
@@ -1303,8 +1341,10 @@ export async function getComputedShiftsForApi(
         snapshots,
         shifts: rawShifts,
         recurringShifts,
-        startDate,
-        endDate,
+        startDate: expandedRange.startDate,
+        endDate: expandedRange.endDate,
+        returnStartDate: startDate,
+        returnEndDate: endDate,
       });
     },
   );
@@ -2746,6 +2786,7 @@ async function loadSharedOwnerData(
 ): Promise<LoadedShiftData & { showEarnings: boolean }> {
   const startDate = options.startDate ?? getDefaultStartDate();
   const endDate = options.endDate ?? getDefaultEndDate();
+  const expandedRange = expandToFullISOWeeks(startDate, endDate);
 
   return await getCachedValue(
     ctx,
@@ -2776,8 +2817,8 @@ async function loadSharedOwnerData(
             asAdmin: true,
           }),
           loadShiftRows(ctx, ownerId, {
-            startDate,
-            endDate,
+            startDate: expandedRange.startDate,
+            endDate: expandedRange.endDate,
             limit: options.limit,
             jobId: options.jobId,
             asAdmin: true,
@@ -2791,8 +2832,10 @@ async function loadSharedOwnerData(
         snapshots,
         shifts,
         recurringShifts,
-        startDate,
-        endDate,
+        startDate: expandedRange.startDate,
+        endDate: expandedRange.endDate,
+        returnStartDate: startDate,
+        returnEndDate: endDate,
       });
 
       return {

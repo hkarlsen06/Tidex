@@ -586,6 +586,7 @@ final class PaySettingsViewModel: ObservableObject {
         wageLevel: input.wageLevel,
         tariffTypeId: input.tariffTypeId,
         supplements: input.supplements,
+        overtime: input.overtime,
         taxEnabled: input.taxEnabled,
         taxPercentage: input.taxPercentage,
         breakEnabled: input.breakEnabled,
@@ -635,6 +636,7 @@ final class PaySettingsViewModel: ObservableObject {
         tariffTypeId: input.tariffTypeId,
         updateTariffTypeId: true,
         supplements: input.supplements,
+        overtime: input.overtime,
         taxEnabled: input.taxEnabled,
         taxPercentage: input.taxPercentage,
         updateTaxPercentage: true,
@@ -889,6 +891,7 @@ struct WageSnapshotEditorInput {
   var hourlyWage: Double
   var wageLevel: Int?
   var supplements: SupplementRulesSnapshot
+  var overtime: OvertimeConfig
   var taxEnabled: Bool
   var taxPercentage: Double
   var breakEnabled: Bool
@@ -908,6 +911,7 @@ struct WageSnapshotEditorInput {
     self.hourlyWage = snapshot.hourly_wage
     self.wageLevel = snapshot.wage_level
     self.supplements = snapshot.supplements
+    self.overtime = snapshot.overtime
     self.taxEnabled = snapshot.effectiveTaxEnabled
     self.taxPercentage = snapshot.effectiveTaxPercentage
     self.breakEnabled = snapshot.effectiveBreakEnabled
@@ -925,6 +929,7 @@ struct WageSnapshotEditorInput {
       self.hourlyWage = snapshot.hourly_wage
       self.wageLevel = snapshot.wage_level
       self.supplements = snapshot.supplements
+      self.overtime = snapshot.overtime
       self.taxEnabled = snapshot.effectiveTaxEnabled
       self.taxPercentage = snapshot.effectiveTaxPercentage
       self.breakEnabled = snapshot.effectiveBreakEnabled
@@ -936,6 +941,7 @@ struct WageSnapshotEditorInput {
       self.hourlyWage = 184.54
       self.wageLevel = 1
       self.supplements = SupplementRulesSnapshot(rules: PayrollCalculator.presetSupplementRules)
+      self.overtime = .disabled
       self.taxEnabled = false
       self.taxPercentage = 0
       self.breakEnabled = true

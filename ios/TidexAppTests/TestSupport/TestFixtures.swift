@@ -14,7 +14,8 @@ enum TestFixtures {
     breakMethod: String? = nil,
     breakThresholdHours: Double? = nil,
     breakDeductionMinutes: Int? = nil,
-    jobId: String? = nil
+    jobId: String? = nil,
+    overtime: OvertimeConfig = .disabled
   ) -> WageSnapshot {
     WageSnapshot(
       id: id,
@@ -25,6 +26,7 @@ enum TestFixtures {
       wage_level: nil,
       tariff_type_id: nil,
       supplements: SupplementRulesSnapshot(rules: supplements),
+      overtime: overtime,
       tax_enabled: taxEnabled,
       tax_percentage: taxPercentage,
       break_enabled: breakEnabled,
