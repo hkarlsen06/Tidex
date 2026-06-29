@@ -110,9 +110,12 @@ Prefer small focused unit tests over broad UI tests unless the behavior is UI-on
 
 ### Adding new strings (AI workflow)
 
-1. **Add the string to the catalog** with English and Norwegian:
+1. **Add or update the plain string entry** with English, Norwegian, and translator context:
    ```bash
-   add-strings --key "feature.context.description" --en "English text" --nb "Norwegian text"
+   ./scripts/xcstrings-set ios/Resources/Localization/App/Localizable.xcstrings feature.context.description \
+     --comment "Translator context" \
+     --en "English text" \
+     --nb "Norwegian text"
    ```
 
 2. **Use the symbol in code:**
@@ -129,6 +132,16 @@ Prefer small focused unit tests over broad UI tests unless the behavior is UI-on
    ```bash
    node ios/Scripts/translate-xcstrings.mjs
    ```
+
+Deprecated compatibility entry points:
+- `./add-string`
+- `ios/add-string`
+- `pnpm ios:l10n:add`
+- `swift ios/Scripts/add-strings.swift`
+
+Use those only when preserving an old command invocation. They should warn and delegate where possible.
+
+Use Xcode's String Catalog editor or XLIFF export/import instead of `xcstrings-set` for pluralization, substitutions, device variants, or bulk translator workflows.
 
 ### Key naming convention
 

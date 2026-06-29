@@ -1,14 +1,7 @@
-#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable conditional_returns_on_newline cyclomatic_complexity
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable discouraged_optional_collection explicit_type_interface file_types_order
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable function_body_length line_length multiline_arguments_brackets
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable no_direct_print sorted_enum_cases switch_case_on_newline
-
+#!/usr/bin/env swift
 import Foundation
+
+// swiftlint:disable no_direct_print
 
 #if canImport(Darwin)
   import Darwin
@@ -79,7 +72,13 @@ private enum AddStringError: Error, CustomStringConvertible {
     switch self {
     case .missingArguments:
       return """
-        Usage: add-strings --key <key> --en <english> --nb <norwegian> [--key <key2> --en <en2> --nb <nb2> ...]
+        Deprecated: add-strings is kept only for old command invocations.
+
+        Prefer:
+          ./scripts/xcstrings-set ios/Resources/Localization/App/Localizable.xcstrings settings.save --comment "Button that saves settings" --en "Save" --nb "Lagre"
+
+        Legacy usage:
+          add-strings --key <key> --en <english> --nb <norwegian> [--key <key2> --en <en2> --nb <nb2> ...]
 
         Examples:
           add-strings --key "settings.save" --en "Save" --nb "Lagre"
@@ -388,7 +387,15 @@ private func withExclusiveCatalogLock<T>(catalogPath: String, body: () throws ->
   return try body()
 }
 
+private func printDeprecationWarning() {
+  let message =
+    "Warning: ios/Scripts/add-strings.swift is deprecated. Use ./scripts/xcstrings-set for new string catalog edits.\n"
+  FileHandle.standardError.write(Data(message.utf8))
+}
+
 private func run() throws {
+  printDeprecationWarning()
+
   let config = try parseArgs()
 
   guard FileManager.default.fileExists(atPath: config.catalogPath) else {
@@ -462,3 +469,4 @@ do {
   print("Error: \(error)")
   exit(1)
 }
+// swiftlint:enable no_direct_print

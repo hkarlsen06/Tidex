@@ -43,7 +43,7 @@
       "location" : "https://github.com/TidexHQ/Chat.git",
       "state" : {
         "branch" : "main",
-        "revision" : "d5932e04d962e1271acc175af6c41ae05858f66c"
+        "revision" : "e9c6ffc178fd62b018f82cf9082d886257a37776"
       }
     },
     {
@@ -52,7 +52,7 @@
       "location" : "https://github.com/google/GoogleSignIn-iOS.git",
       "state" : {
         "branch" : "main",
-        "revision" : "02616ac6b469e8f00212436d2cac16e6efad7954"
+        "revision" : "08d8dcecafb575f98879ffdbb8302c1b9ad65d19"
       }
     },
     {

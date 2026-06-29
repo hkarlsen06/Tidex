@@ -1,5 +1,6 @@
 [mcp_servers.supabase]
 url = "https://mcp.supabase.com/mcp?project_ref=iuwjdacxbirhmsglcbxp&features=storage%2Cdocs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+bearer_token_env_var = "SUPABASE_ACCESS_TOKEN"
 
 [mcp_servers.supabase.tools.execute_sql]
 approval_mode = "approve"

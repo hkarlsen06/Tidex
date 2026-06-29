@@ -1,4 +1,4 @@
 #!/bin/bash
-# Add a localized string to the iOS string catalog
-# Usage: add-string --key "feature.key" --en "English" --nb "Norwegian"
+# Deprecated compatibility wrapper for the iOS string catalog helper.
+# Prefer: ./scripts/xcstrings-set ios/Resources/Localization/App/Localizable.xcstrings feature.key --comment "..." --en "English" --nb "Norwegian"
 exec "$(dirname "$0")/ios/Scripts/add-string" "$@"
