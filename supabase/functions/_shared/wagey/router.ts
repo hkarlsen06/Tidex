@@ -17,8 +17,10 @@ import { executeTool } from "./executor.ts";
 import { maxIterationsReached } from "./i18n.ts";
 import {
   DEFAULT_OPENAI_MODEL,
+  type OpenAIReasoningEffort,
   OpenAIProviderError,
   resolveOpenAIModel,
+  resolveOpenAIReasoningEffort,
   streamOpenAIChat,
 } from "./openai.ts";
 import {
@@ -566,26 +568,34 @@ function getLoggableErrorMetadata(error: unknown): Record<string, unknown> {
   };
 }
 
-function getOpenAIConfig(): { apiKey: string; model: string } {
+function getOpenAIConfig(): {
+  apiKey: string;
+  model: string;
+  reasoningEffort: OpenAIReasoningEffort;
+} {
   const apiKey = Deno.env.get("OPENAI_API_KEY")?.trim() ?? "";
   const configuredModel = Deno.env.get("OPENAI_MODEL")?.trim() ?? "";
+  const configuredReasoningEffort = Deno.env.get("OPENAI_REASONING_EFFORT");
 
   if (!apiKey) {
     throw new Error("Missing OPENAI_API_KEY");
   }
 
   const model = resolveOpenAIModel(configuredModel);
+  const reasoningEffort = resolveOpenAIReasoningEffort(
+    configuredReasoningEffort,
+  );
 
   if (!configuredModel) {
     console.warn(JSON.stringify({
       scope: "wagey-router",
       message:
-        "OPENAI_MODEL is not configured for Wagey; falling back to default GPT-5.5",
+        "OPENAI_MODEL is not configured for Wagey; falling back to default GPT-5.6 Terra",
       fallbackModel: DEFAULT_OPENAI_MODEL,
     }));
   }
 
-  return { apiKey, model };
+  return { apiKey, model, reasoningEffort };
 }
 
 function getResetDays(resetDate: Date | null): number {
@@ -951,6 +961,7 @@ export async function handleWageyRequest(
               messages: conversationMessages,
               tools: [...tools, ...BUILT_IN_TOOLS],
               maxTokens: DEFAULT_WAGEY_MAX_TOKENS,
+              reasoningEffort: openAIConfig.reasoningEffort,
               signal: req.signal,
             });
 
