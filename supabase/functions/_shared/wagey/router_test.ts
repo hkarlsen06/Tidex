@@ -399,7 +399,7 @@ function buildOpenAITextOnlyEvents(): Record<string, unknown>[] {
     },
     {
       type: "response.output_text.delta",
-      delta: "Dette kommer fra GPT-5.6 Luna.",
+      delta: "Dette kommer fra GPT-5.6 Terra.",
     },
     {
       type: "response.completed",
@@ -851,7 +851,7 @@ Deno.test("handleWageyRequest does not emit message_break chunks for legacy clie
   }
 });
 
-Deno.test("handleWageyRequest sends Wagey through OpenAI GPT-5.6 Luna", async () => {
+Deno.test("handleWageyRequest sends Wagey through OpenAI GPT-5.6 Terra", async () => {
   const userId = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
   const originalFetch = globalThis.fetch;
   const originalApiKey = Deno.env.get("OPENAI_API_KEY");
@@ -888,7 +888,7 @@ Deno.test("handleWageyRequest sends Wagey through OpenAI GPT-5.6 Luna", async ()
     assert(
       chunks.some((chunk) =>
         chunk.type === "text" &&
-        chunk.content === "Dette kommer fra GPT-5.6 Luna."
+        chunk.content === "Dette kommer fra GPT-5.6 Terra."
       ),
     );
   } finally {
