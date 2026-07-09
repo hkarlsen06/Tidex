@@ -3,8 +3,10 @@ import { assertEquals } from "jsr:@std/assert";
 import type { StreamChunk } from "./ai-types.ts";
 import {
   DEFAULT_OPENAI_MODEL,
+  DEFAULT_OPENAI_REASONING_EFFORT,
   DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS,
   resolveOpenAIModel,
+  resolveOpenAIReasoningEffort,
   streamOpenAIChat,
 } from "./openai.ts";
 
@@ -250,7 +252,9 @@ Deno.test("streamOpenAIChat sends Responses API request shape", async () => {
     assertEquals(requestBody.model, DEFAULT_OPENAI_MODEL);
     assertEquals(requestBody.instructions, "You are Wagey.");
     assertEquals(requestBody.stream, true);
-    assertEquals(requestBody.reasoning, { effort: "medium" });
+    assertEquals(requestBody.reasoning, {
+      effort: DEFAULT_OPENAI_REASONING_EFFORT,
+    });
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -411,10 +415,19 @@ Deno.test("streamOpenAIChat serializes assistant history as output_text", async 
   }
 });
 
-Deno.test("resolveOpenAIModel defaults to GPT-5.5", () => {
-  assertEquals(resolveOpenAIModel("gpt-5.5"), "gpt-5.5");
-  assertEquals(resolveOpenAIModel("gpt-5.5-2026-05-01"), "gpt-5.5-2026-05-01");
+Deno.test("resolveOpenAIModel defaults to GPT-5.6 Terra", () => {
+  assertEquals(resolveOpenAIModel("gpt-5.6-terra"), "gpt-5.6-terra");
+  assertEquals(
+    resolveOpenAIModel("gpt-5.6-terra-2026-06-26"),
+    "gpt-5.6-terra-2026-06-26",
+  );
   assertEquals(resolveOpenAIModel(""), DEFAULT_OPENAI_MODEL);
+});
+
+Deno.test("resolveOpenAIReasoningEffort defaults invalid values to medium", () => {
+  assertEquals(resolveOpenAIReasoningEffort("high"), "high");
+  assertEquals(resolveOpenAIReasoningEffort(""), "medium");
+  assertEquals(resolveOpenAIReasoningEffort("maximum"), "medium");
 });
 
 Deno.test("streamOpenAIChat allows long reasoning pauses", () => {

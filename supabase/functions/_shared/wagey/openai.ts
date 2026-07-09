@@ -10,13 +10,19 @@ import type {
 } from "./ai-types.ts";
 
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
-export const DEFAULT_OPENAI_MODEL = "gpt-5.5";
-const DEFAULT_REASONING_EFFORT = "medium";
+export const DEFAULT_OPENAI_MODEL = "gpt-5.6-terra";
+export const DEFAULT_OPENAI_REASONING_EFFORT = "medium";
 export const DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS = 120_000;
 const GENERIC_PROVIDER_ERROR_MESSAGE =
   "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.";
 
 export type OpenAITool = Tool;
+export type OpenAIReasoningEffort =
+  | "none"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh";
 
 type OpenAIInputItem = Record<string, unknown>;
 
@@ -64,6 +70,22 @@ export class OpenAIProviderError extends Error {
 export function resolveOpenAIModel(configuredModel?: string | null): string {
   const trimmedModel = configuredModel?.trim() ?? "";
   return trimmedModel || DEFAULT_OPENAI_MODEL;
+}
+
+export function resolveOpenAIReasoningEffort(
+  configuredEffort?: string | null,
+): OpenAIReasoningEffort {
+  const effort = configuredEffort?.trim().toLowerCase();
+  if (
+    effort === "none" ||
+    effort === "low" ||
+    effort === "medium" ||
+    effort === "high" ||
+    effort === "xhigh"
+  ) {
+    return effort;
+  }
+  return DEFAULT_OPENAI_REASONING_EFFORT;
 }
 
 function parseOpenAIEvent(line: string): Record<string, unknown> | null {
@@ -425,6 +447,7 @@ export async function* streamOpenAIChat(options: {
   system?: string;
   tools?: OpenAITool[];
   maxTokens?: number;
+  reasoningEffort?: OpenAIReasoningEffort;
   signal?: AbortSignal;
   idleTimeoutMs?: number;
 }): AsyncIterable<StreamChunk> {
@@ -435,6 +458,7 @@ export async function* streamOpenAIChat(options: {
     system,
     tools,
     maxTokens = 4096,
+    reasoningEffort = DEFAULT_OPENAI_REASONING_EFFORT,
     signal,
     idleTimeoutMs = DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS,
   } = options;
@@ -456,7 +480,7 @@ export async function* streamOpenAIChat(options: {
     input: convertMessagesToOpenAIInput(messages),
     stream: true,
     max_output_tokens: maxTokens,
-    reasoning: { effort: DEFAULT_REASONING_EFFORT },
+    reasoning: { effort: reasoningEffort },
   };
 
   if (system) {
