@@ -415,20 +415,19 @@ Deno.test("streamOpenAIChat serializes assistant history as output_text", async 
   }
 });
 
-Deno.test("resolveOpenAIModel defaults to GPT-5.6 Luna", () => {
-  assertEquals(resolveOpenAIModel("gpt-5.6-luna"), "gpt-5.6-luna");
+Deno.test("resolveOpenAIModel defaults to GPT-5.6 Terra", () => {
+  assertEquals(resolveOpenAIModel("gpt-5.6-terra"), "gpt-5.6-terra");
   assertEquals(
-    resolveOpenAIModel("gpt-5.6-luna-2026-07-09"),
-    "gpt-5.6-luna-2026-07-09",
+    resolveOpenAIModel("gpt-5.6-terra-2026-06-26"),
+    "gpt-5.6-terra-2026-06-26",
   );
   assertEquals(resolveOpenAIModel(""), DEFAULT_OPENAI_MODEL);
 });
 
-Deno.test("resolveOpenAIReasoningEffort defaults invalid values to max", () => {
+Deno.test("resolveOpenAIReasoningEffort defaults invalid values to medium", () => {
   assertEquals(resolveOpenAIReasoningEffort("high"), "high");
-  assertEquals(resolveOpenAIReasoningEffort("max"), "max");
-  assertEquals(resolveOpenAIReasoningEffort(""), "max");
-  assertEquals(resolveOpenAIReasoningEffort("maximum"), "max");
+  assertEquals(resolveOpenAIReasoningEffort(""), "medium");
+  assertEquals(resolveOpenAIReasoningEffort("maximum"), "medium");
 });
 
 Deno.test("streamOpenAIChat allows long reasoning pauses", () => {
