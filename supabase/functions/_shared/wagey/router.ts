@@ -590,7 +590,7 @@ function getOpenAIConfig(): {
     console.warn(JSON.stringify({
       scope: "wagey-router",
       message:
-        "OPENAI_MODEL is not configured for Wagey; falling back to default GPT-5.6 Terra",
+        "OPENAI_MODEL is not configured for Wagey; falling back to default GPT-5.6 Luna",
       fallbackModel: DEFAULT_OPENAI_MODEL,
     }));
   }
