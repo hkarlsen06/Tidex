@@ -1504,7 +1504,8 @@ enum SharingComputeCore {
     return config
   }
 
-  private static func isValidSharingOvertimeRule(_ rule: SharingRPCOvertimeRule) -> Bool {
+  private nonisolated static func isValidSharingOvertimeRule(_ rule: SharingRPCOvertimeRule) -> Bool
+  {
     guard !rule.days.isEmpty,
       Set(rule.days).isSubset(of: Set(1...7)),
       rule.percent.isFinite,
@@ -1666,7 +1667,7 @@ enum SharingComputeCore {
     return false
   }
 
-  private static func timeToMinutes(_ value: String) -> Int? {
+  private nonisolated static func timeToMinutes(_ value: String) -> Int? {
     let parts = value.split(separator: ":", omittingEmptySubsequences: false)
     guard parts.count == 2,
       let hours = Int(parts[0]),

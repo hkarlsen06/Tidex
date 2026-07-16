@@ -1,6 +1,6 @@
-import os.log
 import SwiftUI
 import UIKit
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsListView")
 
@@ -307,18 +307,23 @@ struct SharedShiftsListView: View {
 
   /// Reports to the sharer that their shifts were captured
   private func reportScreenshot() async {
-    logger.info("Screen capture detected while viewing \(sharer.firstName ?? "friend")'s shifts")
+    // Debug builds ignore screenshots so development screenshots don't notify sharers
+    #if DEBUG
+      return
+    #else
+      logger.info("Screen capture detected while viewing \(sharer.firstName ?? "friend")'s shifts")
 
-    screenshotFeedback.showBubble()
+      screenshotFeedback.showBubble()
 
-    do {
-      try await ScreenshotNotificationService.shared.reportScreenshot(sharerId: sharer.id)
-      logger.info("Screenshot notification sent successfully")
-      await screenshotFeedback.markSent()
-    } catch {
-      // Silently fail - don't interrupt user experience for notification failures
-      logger.error("Failed to report screenshot: \(error.localizedDescription)")
-    }
+      do {
+        try await ScreenshotNotificationService.shared.reportScreenshot(sharerId: sharer.id)
+        logger.info("Screenshot notification sent successfully")
+        await screenshotFeedback.markSent()
+      } catch {
+        // Silently fail - don't interrupt user experience for notification failures
+        logger.error("Failed to report screenshot: \(error.localizedDescription)")
+      }
+    #endif
   }
 
   /// Dismisses the screenshot bubble
