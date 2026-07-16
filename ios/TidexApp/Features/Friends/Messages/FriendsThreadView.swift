@@ -1342,25 +1342,30 @@ struct FriendsThreadView: View {
   }
 
   private func reportScreenshot() async {
-    showScreenshotNotifiedIcon = false
+    // Debug builds ignore screenshots so development screenshots don't notify counterparts
+    #if DEBUG
+      return
+    #else
+      showScreenshotNotifiedIcon = false
 
-    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-      showScreenshotBubble = true
-    }
-
-    do {
-      try await ScreenshotNotificationService.shared.reportChatScreenshot(
-        threadId: viewModel.route.threadId
-      )
-      withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
-        showScreenshotNotifiedIcon = true
+      withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        showScreenshotBubble = true
       }
-      Haptics.play(.success)
-      try? await Task.sleep(for: .seconds(0.3))
-      screenshotBellShakeTrigger.toggle()
-    } catch {
-      // Keep the bubble visible, but don't interrupt chat on notification failure.
-    }
+
+      do {
+        try await ScreenshotNotificationService.shared.reportChatScreenshot(
+          threadId: viewModel.route.threadId
+        )
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+          showScreenshotNotifiedIcon = true
+        }
+        Haptics.play(.success)
+        try? await Task.sleep(for: .seconds(0.3))
+        screenshotBellShakeTrigger.toggle()
+      } catch {
+        // Keep the bubble visible, but don't interrupt chat on notification failure.
+      }
+    #endif
   }
 
   private func dismissScreenshotBubble() {

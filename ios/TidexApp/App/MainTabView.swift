@@ -327,12 +327,15 @@ struct MainTabView: View {
     .onReceive(
       NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)
     ) { _ in
-      // Only show prompt when shifts tab is active and in calendar view (where share button is visible)
-      if selectedTab == .shifts, !showListView, !showScreenshotPrompt, !showFeedbackSheet,
-        !showAdminFeedbackSheet
-      {
-        showScreenshotPrompt = true
-      }
+      // Debug builds ignore screenshots so development screenshots don't trigger the prompt
+      #if !DEBUG
+        // Only show prompt when shifts tab is active and in calendar view (where share button is visible)
+        if selectedTab == .shifts, !showListView, !showScreenshotPrompt, !showFeedbackSheet,
+          !showAdminFeedbackSheet
+        {
+          showScreenshotPrompt = true
+        }
+      #endif
     }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
       handlePendingDeepLink(deepLink)
