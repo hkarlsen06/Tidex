@@ -10,8 +10,8 @@ import type {
 } from "./ai-types.ts";
 
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
-export const DEFAULT_OPENAI_MODEL = "gpt-5.6-terra";
-export const DEFAULT_OPENAI_REASONING_EFFORT = "medium";
+export const DEFAULT_OPENAI_MODEL = "gpt-5.6-luna";
+export const DEFAULT_OPENAI_REASONING_EFFORT = "max";
 export const DEFAULT_OPENAI_STREAM_IDLE_TIMEOUT_MS = 120_000;
 const GENERIC_PROVIDER_ERROR_MESSAGE =
   "Wagey er midlertidig utilgjengelig akkurat nå. Prøv igjen litt senere.";
@@ -22,7 +22,8 @@ export type OpenAIReasoningEffort =
   | "low"
   | "medium"
   | "high"
-  | "xhigh";
+  | "xhigh"
+  | "max";
 
 type OpenAIInputItem = Record<string, unknown>;
 
@@ -81,7 +82,8 @@ export function resolveOpenAIReasoningEffort(
     effort === "low" ||
     effort === "medium" ||
     effort === "high" ||
-    effort === "xhigh"
+    effort === "xhigh" ||
+    effort === "max"
   ) {
     return effort;
   }
