@@ -33,6 +33,7 @@
 		ABCD200D3070000000ABCDEF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */; };
 		ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */; };
 		188D65FF4E96734657711265 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */; };
+		1A7E00013090000000A1B2C3 /* LiveActivityPushTokenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7E00023090000000A1B2C3 /* LiveActivityPushTokenTests.swift */; };
 		28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */; };
 		33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */; };
 		34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */; };
@@ -173,6 +174,7 @@
 		ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SiriMessageRecipientMatcherTests.swift; sourceTree = "<group>"; };
 		130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConflictExclusionTests.swift; sourceTree = "<group>"; };
 		17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalStoreDirtyTrackingTests.swift; sourceTree = "<group>"; };
+		1A7E00023090000000A1B2C3 /* LiveActivityPushTokenTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityPushTokenTests.swift; sourceTree = "<group>"; };
 		3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendCardMessagePreviewTimestampFormatterTests.swift; sourceTree = "<group>"; };
 		4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/ShareExtension/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -418,6 +420,7 @@
 		490F8B0AF0BA025DA4C44BCF /* TidexAppTests */ = {
 			isa = PBXGroup;
 			children = (
+				1A7E00023090000000A1B2C3 /* LiveActivityPushTokenTests.swift */,
 				130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */,
 				F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */,
 				0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */,
@@ -986,6 +989,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1A7E00013090000000A1B2C3 /* LiveActivityPushTokenTests.swift in Sources */,
 				33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */,
 				DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */,
 				614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */,
