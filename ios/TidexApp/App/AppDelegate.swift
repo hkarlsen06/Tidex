@@ -11,9 +11,9 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable type_body_length
 import ActivityKit
-import os
 import Supabase
 import UIKit
+import os
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
@@ -184,6 +184,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // Must be set before any notifications arrive
     UNUserNotificationCenter.current().delegate = self
     NotificationService.shared.registerNotificationCategories()
+    LiveActivityPushTokenService.shared.startObserving()
 
     // Apple recommends activating WCSession early in launch
     WatchConnectivityManager.shared.activateSession()
@@ -199,10 +200,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // --- Deferred (fire-and-forget, never blocks launch or first frame) ---
 
-    Task { @MainActor [weak self] in
+    Task { @MainActor in
       Haptics.prepareSounds()
       ImageCache.shared.clearExpired()
-      self?.checkAndStartLiveActivityIfNeeded()
     }
 
     launchLog.info("[Launch] AppDelegate.didFinishLaunching END")
@@ -535,11 +535,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     )
 
     do {
-      _ = try Activity.request(
+      let activity = try Activity.request(
         attributes: attributes,
         content: .init(state: initialState, staleDate: nil),
-        pushType: nil
+        pushType: .token
       )
+      LiveActivityPushTokenService.shared.observe(activity, locallyStarted: true)
     } catch {}
   }
 
@@ -589,6 +590,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     Task { @MainActor in
       await registerAPNsToken(tokenString)
+      await LiveActivityPushTokenService.shared.registerCachedTokensIfNeeded()
     }
   }
 
@@ -727,11 +729,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
   }
 
   func registerCachedAPNsTokenIfNeeded() async {
-    guard let token = cachedAPNsToken() else {
-      return
+    if let token = cachedAPNsToken() {
+      await registerAPNsToken(token)
     }
 
-    await registerAPNsToken(token)
+    await LiveActivityPushTokenService.shared.registerCachedTokensIfNeeded()
   }
 
   private func prefetchThreadMessageFromNotification(

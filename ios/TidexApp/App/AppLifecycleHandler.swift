@@ -7,8 +7,8 @@
 import Foundation
 import GoogleSignIn
 import Intents
-import os.log
 import UIKit
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "AppLifecycleHandler")
 
@@ -21,11 +21,8 @@ extension Notification.Name {
 @MainActor
 final class AppLifecycleHandler {
   static let shared = AppLifecycleHandler()
-  private static let liveActivityRecoveryDelay: UInt64 = 1_000_000_000  // 1 second
-  private static let foregroundMaintenanceDelay: UInt64 = 350_000_000  // 0.35 seconds
   private var hasHandledInitialActivation = false
-  private var foregroundMaintenanceTask: Task<Void, Never>?
-  private var liveActivityRecoveryTask: Task<Void, Never>?
+  private var clockSessionReconciliationTask: Task<Void, Never>?
 
   private init() {}
 
@@ -37,33 +34,21 @@ final class AppLifecycleHandler {
 
     AppearanceManager.shared.applyToWindows()
     PrivacyBlurManager.hide()
-    liveActivityRecoveryTask?.cancel()
-    liveActivityRecoveryTask = nil
-    foregroundMaintenanceTask?.cancel()
+    ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
+      .endBackgroundTaskIfNeeded()
+    clockSessionReconciliationTask?.cancel()
     NotificationCenter.default.post(name: .tidexDidBecomeActive, object: nil)
 
-    if isInitialActivation {
-      // Cold launch already runs the app-launch sync and live activity pass.
-      // Avoid stacking foreground storage work onto first activation/render.
-      return
+    if !isInitialActivation {
+      AppCoordinator.shared.handleAppForeground()
     }
 
-    AppCoordinator.shared.handleAppForeground()
-    foregroundMaintenanceTask = Task { @MainActor [weak self] in
-      guard let self else { return }
-      do {
-        try await Task.sleep(nanoseconds: Self.foregroundMaintenanceDelay)
-      } catch {
-        return
-      }
-      guard !Task.isCancelled else { return }
+    clockSessionReconciliationTask = Task { @MainActor [weak self] in
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
-      guard !Task.isCancelled else { return }
-      await runForegroundLiveActivityMaintenance()
-      guard !Task.isCancelled else { return }
-      scheduleForegroundLiveActivityRecovery()
-      foregroundMaintenanceTask = nil
+      self?.clockSessionReconciliationTask = nil
     }
+
+    guard !isInitialActivation else { return }
     // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
     // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
     // objectWillChange on the root ObservableObject does.
@@ -71,55 +56,20 @@ final class AppLifecycleHandler {
   }
 
   func handleWillResignActive() {
-    foregroundMaintenanceTask?.cancel()
-    foregroundMaintenanceTask = nil
-    liveActivityRecoveryTask?.cancel()
-    liveActivityRecoveryTask = nil
+    clockSessionReconciliationTask?.cancel()
+    clockSessionReconciliationTask = nil
     if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
       PrivacyBlurManager.showIfNeeded()
     }
   }
 
   func handleDidEnterBackground() {
-    foregroundMaintenanceTask?.cancel()
-    foregroundMaintenanceTask = nil
-    liveActivityRecoveryTask?.cancel()
-    liveActivityRecoveryTask = nil
+    clockSessionReconciliationTask?.cancel()
+    clockSessionReconciliationTask = nil
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.startBackgroundTask()
     // Defensive: ensure blur is shown when entering background.
     if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
       PrivacyBlurManager.showIfNeeded()
-    }
-  }
-
-  private func runForegroundLiveActivityMaintenance() async {
-    guard let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
-    else { return }
-
-    // Refresh the App Group snapshot from local storage before reconciling so
-    // foreground maintenance does not depend on stale widget storage.
-    if let userId = AppCoordinator.shared.getCurrentUserId() {
-      await NativeWidgetStorage.refreshWidgetStorageNow(for: userId)
-    } else {
-      appDelegate.checkAndStartLiveActivityIfNeeded()
-    }
-
-    appDelegate.endBackgroundTaskIfNeeded()
-  }
-
-  private func scheduleForegroundLiveActivityRecovery() {
-    liveActivityRecoveryTask?.cancel()
-    liveActivityRecoveryTask = Task { @MainActor [weak self] in
-      do {
-        try await Task.sleep(nanoseconds: Self.liveActivityRecoveryDelay)
-      } catch {
-        return
-      }
-
-      guard !Task.isCancelled else { return }
-      await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
-      await self?.runForegroundLiveActivityMaintenance()
-      self?.liveActivityRecoveryTask = nil
     }
   }
 

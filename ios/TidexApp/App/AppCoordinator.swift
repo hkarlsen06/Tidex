@@ -1146,6 +1146,10 @@ final class AppCoordinator: ObservableObject {
     )
     OnboardingCurrencyCarryoverStore.clearPreferredCurrency()
 
+    // Remove the authenticated device association before destroying the session so
+    // a signed-out device cannot receive push-to-start Live Activity notifications.
+    await LiveActivityPushTokenService.shared.unregisterCurrentDevice()
+
     // Clear all cached data
     await clearAllCachedData()
 

@@ -8,6 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { processLiveActivityTransitions } from "../_shared/live-activity-delivery.ts";
 
 // ---------- Env ----------
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
@@ -1397,6 +1398,15 @@ async function handleRequest(req: Request) {
       return json({ error: "Unauthorized" }, 401);
     }
 
+    let requestBody: Record<string, unknown> = {};
+    try {
+      requestBody = await req.json();
+    } catch {
+      // Existing outbox triggers intentionally send an empty JSON body.
+    }
+    const shouldProcessLiveActivities =
+      requestBody.process_live_activities === true;
+
     // Check if at least one push provider is configured
     const fcmConfigured =
       !!(FCM_PROJECT_ID && FCM_CLIENT_EMAIL && FCM_PRIVATE_KEY);
@@ -1409,6 +1419,29 @@ async function handleRequest(req: Request) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false },
     });
+
+    const liveActivitySummary = shouldProcessLiveActivities
+      ? apnsConfigured
+        ? await processLiveActivityTransitions(
+          supabase,
+          (token, payload, headers, preferredEnvironment) =>
+            sendPayloadToApns(
+              token,
+              payload,
+              headers,
+              "live activity",
+              preferredEnvironment,
+            ),
+          APNS_BUNDLE_ID,
+        )
+        : {
+          devices: 0,
+          started: 0,
+          ended: 0,
+          failed: 1,
+          waitingForUpdateToken: 0,
+        }
+      : null;
 
     // Claim notifications using the new RPC function
     // This atomically marks notifications as 'sending' and returns them
@@ -1423,7 +1456,11 @@ async function handleRequest(req: Request) {
     }
 
     if (!notifications?.length) {
-      return json({ processed: 0, message: "No pending notifications" });
+      return json({
+        processed: 0,
+        message: "No pending notifications",
+        liveActivity: liveActivitySummary,
+      });
     }
 
     console.log(`[Push] Claimed ${notifications.length} notifications`);
@@ -1724,6 +1761,7 @@ async function handleRequest(req: Request) {
       failed,
       total: notifications.length,
       invalidTokensRemoved: invalidTokens.length,
+      liveActivity: liveActivitySummary,
     });
   } catch (error) {
     console.error("Edge function error:", error);
