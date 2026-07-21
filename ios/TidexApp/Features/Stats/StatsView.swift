@@ -657,7 +657,7 @@ private struct StatsOverviewLedger: View {
             Text(.statsMonthlyGoalTitle)
               .font(.tidexLabelStrong)
           } icon: {
-            Image(systemName: "target")  // swiftlint:disable:this accessibility_label_for_image
+            Image(systemName: "target")
               .font(.tidexLabelStrong)
           }
           .foregroundColor(.tidexTextPrimary)

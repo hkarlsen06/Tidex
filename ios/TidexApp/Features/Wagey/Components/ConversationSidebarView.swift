@@ -48,7 +48,7 @@ struct ConversationSidebarView: View {  // swiftlint:disable:this explicit_acl e
       Label {
         Text(.wageyConversationsEmpty)
       } icon: {
-        Image(systemName: "bubble.left.and.bubble.right")  // swiftlint:disable:this accessibility_label_for_image
+        Image(systemName: "bubble.left.and.bubble.right")
           .foregroundColor(.tidexTextMuted)
       }
     } actions: {
