@@ -6,24 +6,38 @@ This directory contains Supabase Edge Functions for the application.
 
 ```
 supabase/functions/
-├── _shared/           # Shared utilities and helpers
-│   └── cors.ts        # CORS headers configuration
-├── example-function/  # Template function (rename for your use case)
-│   └── index.ts       # Function entry point
+├── _shared/           # Shared domain utilities and helpers
+├── function-name/     # One directory per deployed function
+│   └── index.ts       # Fetch handler entry point
+├── deno.json          # Shared import map and runtime configuration
 └── README.md          # This file
 ```
 
 ## Creating a New Function
 
-1. **Copy the template:**
+1. **Create the function:**
    ```bash
-   cp -r supabase/functions/example-function supabase/functions/your-function-name
+   supabase functions new your-function-name
    ```
 
 2. **Edit the function:**
    - Open `supabase/functions/your-function-name/index.ts`
-   - Update the request/response types
+   - Declare the caller with `withSupabase`
    - Implement your business logic
+
+   ```typescript
+   import { withSupabase } from "@supabase/server";
+
+   export default {
+     fetch: withSupabase({ auth: "user" }, async (_request, context) => {
+       const { data, error } = await context.supabase.from("profiles").select();
+       if (error) {
+         return Response.json({ error: error.message }, { status: 500 });
+       }
+       return Response.json(data);
+     }),
+   };
+   ```
 
 3. **Test locally:**
    ```bash
@@ -45,40 +59,46 @@ supabase/functions/
    supabase functions deploy your-function-name --no-verify-jwt
    ```
 
-   Keep per-function JWT behavior in `supabase/config.toml`. This repository's CLI
-   deploy workflow always includes `--no-verify-jwt`.
+   Keep per-function JWT behavior in `supabase/config.toml`. This repository's
+   CLI deploy workflow always includes `--no-verify-jwt`.
 
 ## Calling Functions from Your App
 
 ### From the client:
 
 ```typescript
-import { supabase } from '@/lib/supabase/browser'
+import { supabase } from "@/lib/supabase/browser";
 
-const { data, error } = await supabase.functions.invoke('your-function-name', {
-  body: { key: 'value' }
-})
+const { data, error } = await supabase.functions.invoke("your-function-name", {
+  body: { key: "value" },
+});
 ```
 
 ### From the server:
 
 ```typescript
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-const supabase = await createSupabaseServerClient()
-const { data, error } = await supabase.functions.invoke('your-function-name', {
-  body: { key: 'value' }
-})
+const supabase = await createSupabaseServerClient();
+const { data, error } = await supabase.functions.invoke("your-function-name", {
+  body: { key: "value" },
+});
 ```
 
 ## Environment Variables
 
 Edge Functions have access to these environment variables automatically:
+
 - `SUPABASE_URL` - Your Supabase project URL
-- `SUPABASE_ANON_KEY` - Your Supabase anon/public key
-- `SUPABASE_SERVICE_ROLE_KEY` - Service role key (use carefully!)
+- `SUPABASE_PUBLISHABLE_KEYS` - Named publishable keys
+- `SUPABASE_SECRET_KEYS` - Named server-only keys
+- `SUPABASE_JWKS` - Keys used to verify user JWTs
+
+`@supabase/server` resolves these variables and creates request-scoped clients.
+Do not read Supabase keys directly in new functions.
 
 For custom environment variables, set them via:
+
 ```bash
 npx supabase secrets set MY_SECRET=value
 ```
@@ -86,26 +106,32 @@ npx supabase secrets set MY_SECRET=value
 ## Common Patterns
 
 ### Database Operations
+
 ```typescript
-const { data, error } = await supabaseClient
-  .from('table_name')
-  .select('*')
-  .eq('user_id', user.id)
+const { data, error } = await context.supabase
+  .from("table_name")
+  .select("*");
 ```
 
 ### Authenticated Requests
-The template already includes authentication checking. The `user` object is available after verification.
+
+Use `auth: "user"`. `context.supabase` is scoped to the caller and respects RLS;
+`context.supabaseAdmin` bypasses RLS and must only be used deliberately.
 
 ### CORS
-CORS headers are defined in `_shared/cors.ts`. Update the allowed origins for production.
+
+`withSupabase` handles standard Supabase CORS headers and preflight requests.
+Use `cors: "disabled"` for webhooks and other server-only endpoints.
 
 ## TypeScript Support
 
-Edge Functions use Deno, which has built-in TypeScript support. No build step needed!
+Edge Functions use Deno, which has built-in TypeScript support. No build step
+needed!
 
 ## Logging
 
 Use `console.log()` and `console.error()` for logging. View logs with:
+
 ```bash
 npx supabase functions logs your-function-name
 ```

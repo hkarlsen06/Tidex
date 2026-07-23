@@ -1,13 +1,9 @@
-import { withSupabase } from "npm:@supabase/server@1.0.0";
-import { corsHeaders } from "../_shared/cors.ts";
+import { withSupabase } from "@supabase/server";
 
 const STORAGE_REMOVE_BATCH_SIZE = 100;
 
 function jsonResponse(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return Response.json(body, { status });
 }
 
 type StorageObjectRow = {
@@ -126,7 +122,7 @@ async function deleteOwnedStorageObjects(adminClient: any, userId: string) {
 
 export default {
   fetch: withSupabase<any>(
-    { auth: "user", cors: corsHeaders },
+    { auth: "user" },
     async (request, ctx) => {
       if (request.method !== "DELETE" && request.method !== "POST") {
         return jsonResponse(405, {
@@ -175,8 +171,8 @@ export default {
         });
       }
 
-      const { error: deleteError } =
-        await ctx.supabaseAdmin.auth.admin.deleteUser(user.id);
+      const { error: deleteError } = await ctx.supabaseAdmin.auth.admin
+        .deleteUser(user.id);
       if (deleteError) {
         console.error("[delete-account] deleteUser failed", deleteError);
         return jsonResponse(500, {

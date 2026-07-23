@@ -5,7 +5,7 @@
  * input_examples are preserved and folded into OpenAI tool descriptions at runtime.
  */
 
-import { z } from "npm:zod";
+import { z } from "zod";
 import type { FunctionTool } from "./ai-types.ts";
 import type { HHMM } from "./payroll/types.ts";
 

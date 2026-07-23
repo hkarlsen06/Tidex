@@ -6,12 +6,10 @@
 // - Automatic invalid token cleanup
 // - NO message building - titles/bodies are pre-computed by app
 
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { withSupabase } from "@supabase/server";
 import { processLiveActivityTransitions } from "../_shared/live-activity-delivery.ts";
 
 // ---------- Env ----------
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
   "";
 const SEND_PUSH_NOTIFICATIONS_SECRET =
@@ -1378,7 +1376,11 @@ async function runWithConcurrencyLimit<T>(
 }
 
 // ---------- Server ----------
-async function handleRequest(req: Request) {
+async function handleRequest(
+  req: Request,
+  supabase: any,
+  authenticatedWithSecretKey: boolean,
+) {
   try {
     // Only allow POST requests (or GET for cron health checks)
     if (req.method !== "POST" && req.method !== "GET") {
@@ -1389,12 +1391,7 @@ async function handleRequest(req: Request) {
       return json({ ok: true, service: "send-push-notifications" });
     }
 
-    // Check configuration
-    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return res("Supabase not configured", 503);
-    }
-
-    if (!hasTrustedCaller(req)) {
+    if (!authenticatedWithSecretKey && !hasTrustedCaller(req)) {
       return json({ error: "Unauthorized" }, 401);
     }
 
@@ -1415,10 +1412,6 @@ async function handleRequest(req: Request) {
     if (!fcmConfigured && !apnsConfigured) {
       return res("No push provider configured (FCM or APNs required)", 503);
     }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { persistSession: false },
-    });
 
     const liveActivitySummary = shouldProcessLiveActivities
       ? apnsConfigured
@@ -1772,6 +1765,14 @@ async function handleRequest(req: Request) {
   }
 }
 
-if (import.meta.main) {
-  serve(handleRequest);
-}
+export default {
+  fetch: withSupabase<any>(
+    { auth: ["secret", "none"], cors: "disabled" },
+    (request, ctx) =>
+      handleRequest(
+        request,
+        ctx.supabaseAdmin,
+        ctx.authMode === "secret",
+      ),
+  ),
+};

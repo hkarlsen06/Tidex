@@ -4,18 +4,14 @@
 // - Handles renewals, cancellations, refunds, grace periods, expirations
 // - Does NOT require Supabase auth (Apple sends notifications directly)
 // - Verifies notification signature using Apple's public keys
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { Buffer } from "node:buffer";
-import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { createAdminClient } from "@supabase/server/core";
 import {
   Environment,
   SignedDataVerifier,
-} from "npm:@apple/app-store-server-library";
+} from "@apple/app-store-server-library";
 
 // ---------- Environment ----------
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
-  "";
 const APPLE_APP_BUNDLE_ID = Deno.env.get("APPLE_APP_BUNDLE_ID") ??
   "no.tidex.app";
 const APPLE_APP_APPLE_ID_RAW = Deno.env.get("APPLE_APP_APPLE_ID") ??
@@ -45,11 +41,7 @@ function mapAppleProductToInternal(appleProductId: string): string {
 }
 
 // ---------- Supabase Client ----------
-const supabaseAdmin = SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY
-  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-    auth: { persistSession: false },
-  })
-  : null;
+let supabaseAdmin: any = null;
 
 // ---------- Apple Notification Types ----------
 // https://developer.apple.com/documentation/appstoreservernotifications/notificationtype
@@ -655,21 +647,24 @@ async function storeOrphanNotification(
 }
 
 // ---------- Request Handler ----------
-serve(async (req) => {
+async function handleRequest(req: Request): Promise<Response> {
   // Apple doesn't send OPTIONS, but handle it anyway
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200 });
   }
 
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
   try {
-    if (req.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405 });
-    }
+    supabaseAdmin ??= createAdminClient<any>();
+  } catch (error) {
+    console.error("[apple-notifications] Supabase not configured:", error);
+    return new Response("Service not configured", { status: 503 });
+  }
 
-    if (!supabaseAdmin) {
-      return new Response("Service not configured", { status: 503 });
-    }
-
+  try {
     // Parse request body
     const body = await req.json();
     const signedPayload = body.signedPayload;
@@ -806,4 +801,6 @@ serve(async (req) => {
       },
     );
   }
-});
+}
+
+export default { fetch: handleRequest };

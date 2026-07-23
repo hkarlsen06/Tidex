@@ -1,6 +1,5 @@
-import { withSupabase } from "npm:@supabase/server@1.0.0";
-import type { User } from "npm:@supabase/supabase-js@2.45.4";
-import { corsHeaders } from "../_shared/cors.ts";
+import { withSupabase } from "@supabase/server";
+import type { User } from "@supabase/supabase-js";
 
 const SUPERADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
 
@@ -11,10 +10,7 @@ interface RoleRequestBody {
 }
 
 function jsonResponse(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return Response.json(body, { status });
 }
 
 function isAdmin(user: User) {
@@ -42,7 +38,7 @@ async function logAction(
 
 export default {
   fetch: withSupabase<any>(
-    { auth: "user", cors: corsHeaders },
+    { auth: "user" },
     async (request, ctx) => {
       if (request.method !== "POST") {
         return jsonResponse(405, {
