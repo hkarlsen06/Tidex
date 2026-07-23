@@ -1,6 +1,5 @@
-import { withSupabase } from "npm:@supabase/server@1.0.0";
-import type { User } from "npm:@supabase/supabase-js@2.45.4";
-import { corsHeaders } from "../_shared/cors.ts";
+import { withSupabase } from "@supabase/server";
+import type { User } from "@supabase/supabase-js";
 
 const BAN_DURATION = "876000h";
 
@@ -11,10 +10,7 @@ interface BanRequestBody {
 }
 
 function jsonResponse(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  return Response.json(body, { status });
 }
 
 function isAdmin(user: User) {
@@ -42,7 +38,7 @@ async function logAction(
 
 export default {
   fetch: withSupabase<any>(
-    { auth: "user", cors: corsHeaders },
+    { auth: "user" },
     async (request, ctx) => {
       if (request.method !== "POST") {
         return jsonResponse(405, {
@@ -115,8 +111,8 @@ export default {
         });
       }
 
-      const { data: targetUserData, error: targetUserError } =
-        await ctx.supabaseAdmin.auth.admin.getUserById(targetUserId);
+      const { data: targetUserData, error: targetUserError } = await ctx
+        .supabaseAdmin.auth.admin.getUserById(targetUserId);
 
       if (targetUserError || !targetUserData.user) {
         await logAction(
@@ -163,8 +159,8 @@ export default {
         });
       }
 
-      const { error: updateError } =
-        await ctx.supabaseAdmin.auth.admin.updateUserById(targetUserId, {
+      const { error: updateError } = await ctx.supabaseAdmin.auth.admin
+        .updateUserById(targetUserId, {
           ban_duration: ban ? BAN_DURATION : "none",
         });
 

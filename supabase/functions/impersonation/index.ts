@@ -30,10 +30,9 @@
  *   }
  * }
  */
-import { withSupabase } from "npm:@supabase/server@1.0.0";
-import { createAdminClient } from "npm:@supabase/server@1.0.0/core";
-import type { User } from "npm:@supabase/supabase-js@2.45.4";
-import { corsHeaders } from "../_shared/cors.ts";
+import { withSupabase } from "@supabase/server";
+import { createAdminClient } from "@supabase/server/core";
+import type { User } from "@supabase/supabase-js";
 import { Buffer } from "node:buffer";
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 
@@ -741,7 +740,7 @@ async function handleStop(req: Request, caller: User): Promise<Response> {
 // ---------- Main Handler ----------
 export default {
   fetch: withSupabase<any>(
-    { auth: "user", cors: corsHeaders },
+    { auth: "user" },
     async (req, ctx) => {
       console.log("[impersonation] Request received:", req.method, req.url);
       supabaseAdmin = ctx.supabaseAdmin;
@@ -797,11 +796,5 @@ export default {
 
 // ---------- Response Helpers ----------
 function json(obj: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
-  });
+  return Response.json(obj, { status });
 }

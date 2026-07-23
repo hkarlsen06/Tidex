@@ -237,6 +237,14 @@ verify_jwt = false
 [functions.calendar-feed]
 verify_jwt = false
 
+# Apple authenticates these requests with a signed App Store payload
+[functions.apple-server-notifications]
+verify_jwt = false
+
+# Supabase Auth authenticates hook requests with a Standard Webhooks signature
+[functions.before-user-created]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

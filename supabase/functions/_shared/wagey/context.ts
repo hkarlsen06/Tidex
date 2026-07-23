@@ -1,5 +1,5 @@
-import type { SupabaseContext } from "npm:@supabase/server@1.0.0";
-import type { SupabaseClient, User } from "npm:@supabase/supabase-js@2";
+import type { SupabaseContext } from "@supabase/server";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 
 export type WageyRequestContext = {
   supabase: SupabaseClient;

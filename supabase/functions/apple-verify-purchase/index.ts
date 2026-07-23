@@ -4,8 +4,7 @@
 // - Returns entitlement status
 // - Requires authenticated Supabase user
 // - Uses StoreKit 2 / App Store Server API (not legacy verifyReceipt)
-import { withSupabase } from "npm:@supabase/server@1.0.0";
-import { corsHeaders } from "../_shared/cors.ts";
+import { withSupabase } from "@supabase/server";
 import * as jose from "https://deno.land/x/jose@v5.2.2/index.ts";
 
 // ---------- Environment ----------
@@ -807,7 +806,7 @@ async function creditConsumable(
 // ---------- Request Handlers ----------
 export default {
   fetch: withSupabase<any>(
-    { auth: "user", cors: corsHeaders },
+    { auth: "user" },
     async (req, ctx) => {
       supabaseAdmin = ctx.supabaseAdmin;
 
@@ -1069,11 +1068,5 @@ export default {
 
 // ---------- Response Helpers ----------
 function json(obj: Record<string, any>, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json",
-    },
-  });
+  return Response.json(obj, { status });
 }

@@ -1,5 +1,4 @@
-import { withSupabase } from "npm:@supabase/server@1.0.0";
-import { corsHeaders } from "../_shared/cors.ts";
+import { withSupabase } from "@supabase/server";
 import { createWageyContext } from "../_shared/wagey/context.ts";
 import { handleWageyRequest } from "../_shared/wagey/router.ts";
 
@@ -14,7 +13,6 @@ function json(
     status,
     headers: {
       "Content-Type": "application/json",
-      ...corsHeaders,
       ...extraHeaders,
     },
   });
@@ -46,10 +44,10 @@ function log(
 
 export default {
   fetch: withSupabase<any>(
-    { auth: "user", cors: corsHeaders },
+    { auth: "user" },
     async (req, supabaseContext) => {
-      const requestId =
-        req.headers.get(REQUEST_ID_HEADER) ?? crypto.randomUUID();
+      const requestId = req.headers.get(REQUEST_ID_HEADER) ??
+        crypto.randomUUID();
 
       if (req.method !== "POST") {
         return json({ error: "Method not allowed" }, 405, {
@@ -67,9 +65,6 @@ export default {
         });
 
         const responseHeaders = new Headers(response.headers);
-        for (const [key, value] of Object.entries(corsHeaders)) {
-          responseHeaders.set(key, value);
-        }
         responseHeaders.set(REQUEST_ID_HEADER, requestId);
 
         return new Response(response.body, {
@@ -78,8 +73,9 @@ export default {
           headers: responseHeaders,
         });
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "Failed to initialize Wagey";
+        const message = error instanceof Error
+          ? error.message
+          : "Failed to initialize Wagey";
         log("error", requestId, "Initialization failed", {
           error: message,
         });
