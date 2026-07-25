@@ -13,9 +13,6 @@ const HOOK_SECRET = Deno.env.get("BEFORE_USER_CREATED_HOOK_SECRET")?.replace(
   "",
 ) ?? "";
 
-// Admin user ID to receive notifications
-const ADMIN_USER_ID = "032d8c2a-9af6-4777-99f0-24e2c4058bf3";
-
 // ---------- Types ----------
 interface BeforeUserCreatedPayload {
   metadata: {
@@ -40,6 +37,24 @@ interface BeforeUserCreatedPayload {
     updated_at: string;
     is_anonymous: boolean;
   };
+}
+
+interface SignupNotification {
+  recipient_id: string;
+  notification_type: "admin_new_signup";
+  title: string;
+  body: string;
+  data_payload: {
+    new_user_id: string;
+    new_user_name: string | null;
+    new_user_email: string | null;
+    new_user_phone: string | null;
+    provider: string;
+    signup_ip: string;
+  };
+  status: "pending";
+  due_at: string;
+  idempotency_key: string;
 }
 
 // ---------- Helpers ----------
@@ -118,6 +133,34 @@ export function buildNotificationBody(
   return lines.join("\n") || "No contact info provided";
 }
 
+export function buildSignupNotifications(
+  adminUserIds: string[],
+  payload: BeforeUserCreatedPayload,
+  dueAt: string,
+): SignupNotification[] {
+  const title = "New user signed up";
+  const body = buildNotificationBody(payload.user);
+  const fullName = extractName(payload.user);
+
+  return adminUserIds.map((adminUserId) => ({
+    recipient_id: adminUserId,
+    notification_type: "admin_new_signup",
+    title,
+    body,
+    data_payload: {
+      new_user_id: payload.user.id,
+      new_user_name: fullName,
+      new_user_email: payload.user.email || null,
+      new_user_phone: payload.user.phone || null,
+      provider: payload.user.app_metadata.provider,
+      signup_ip: payload.metadata.ip_address,
+    },
+    status: "pending",
+    due_at: dueAt,
+    idempotency_key: `new-signup-${payload.user.id}-${adminUserId}`,
+  }));
+}
+
 // ---------- Server ----------
 async function handleRequest(req: Request): Promise<Response> {
   // Always return 204 to allow signup - we don't want notification failures to block signups
@@ -156,31 +199,34 @@ async function handleRequest(req: Request): Promise<Response> {
 
     const supabase = createAdminClient<any>();
 
-    // Build notification
-    const title = "New user signed up";
-    const body = buildNotificationBody(payload.user);
-    const idempotencyKey = `new-signup-${payload.user.id}`;
-    const fullName = extractName(payload.user);
+    const { data: adminUserIds, error: adminLookupError } = await supabase.rpc(
+      "get_admin_user_ids",
+    );
 
-    // Insert notification into outbox
+    if (adminLookupError) {
+      console.error(
+        "Failed to look up admin notification recipients:",
+        adminLookupError,
+      );
+      return allowSignup();
+    }
+
+    if (!adminUserIds?.length) {
+      console.error("No admin notification recipients configured");
+      return allowSignup();
+    }
+
+    const notifications = buildSignupNotifications(
+      adminUserIds,
+      payload,
+      new Date().toISOString(),
+    );
+
     const { error } = await supabase.schema("internal").from(
       "notifications_outbox",
-    ).insert({
-      recipient_id: ADMIN_USER_ID,
-      notification_type: "admin_new_signup",
-      title,
-      body,
-      data_payload: {
-        new_user_id: payload.user.id,
-        new_user_name: fullName || null,
-        new_user_email: payload.user.email || null,
-        new_user_phone: payload.user.phone || null,
-        provider: payload.user.app_metadata.provider,
-        signup_ip: payload.metadata.ip_address,
-      },
-      status: "pending",
-      due_at: new Date().toISOString(),
-      idempotency_key: idempotencyKey,
+    ).upsert(notifications, {
+      onConflict: "idempotency_key",
+      ignoreDuplicates: true,
     });
 
     if (error) {

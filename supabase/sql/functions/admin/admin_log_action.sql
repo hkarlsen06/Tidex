@@ -4,21 +4,21 @@
 -- Server actions pass verified admin info (never from client)
 -- Emails are denormalized at write time for future-proof rendering
 
-CREATE OR REPLACE FUNCTION admin_log_action(
-  p_admin_id UUID,
-  p_admin_email TEXT,
-  p_action TEXT,
-  p_target_id UUID DEFAULT NULL,
-  p_target_email TEXT DEFAULT NULL,
-  p_metadata JSONB DEFAULT '{}'::jsonb
+CREATE OR REPLACE FUNCTION public.admin_log_action(
+  p_admin_id uuid,
+  p_admin_email text,
+  p_action text,
+  p_target_id uuid DEFAULT NULL,
+  p_target_email text DEFAULT NULL,
+  p_metadata jsonb DEFAULT '{}'::jsonb
 )
-RETURNS UUID
+RETURNS uuid
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public', 'internal'
 AS $$
 DECLARE
-  v_log_id UUID;
+  v_log_id uuid;
 BEGIN
   -- Validate action is in allowed list
   IF p_action NOT IN (
@@ -55,7 +55,9 @@ END;
 $$;
 
 -- Revoke execute from public, only service role should call this
-REVOKE EXECUTE ON FUNCTION admin_log_action FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION admin_log_action FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_log_action(uuid, text, text, uuid, text, jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.admin_log_action(uuid, text, text, uuid, text, jsonb) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_log_action(uuid, text, text, uuid, text, jsonb) TO service_role;
 
-COMMENT ON FUNCTION admin_log_action IS 'Logs admin actions to audit log. SECURITY DEFINER - only callable via service role.';
+COMMENT ON FUNCTION public.admin_log_action(uuid, text, text, uuid, text, jsonb)
+  IS 'Logs admin actions to audit log. SECURITY DEFINER - only callable via service role.';
