@@ -4,21 +4,54 @@ export const devNo = {
     projects: 'Prosjekter',
     about: 'Om meg',
     contact: 'Kontakt',
+    menu: 'Meny',
+    close: 'Lukk',
   },
   home: {
     hero: {
+      status: 'Tilgjengelig for nye oppdrag',
       greeting: 'Hei, jeg er',
       name: 'Hjalmar Karlsen',
       title: 'iOS-utvikler',
-      tagline: 'Bygger native Apple-plattformapper med SwiftUI, lokal data og produksjonsklar synk',
+      roleLead: 'Jeg bygger',
+      roleAccent: 'native Apple-apper',
+      roleTrail: 'som folk faktisk bruker hver dag.',
+      tagline:
+        'SwiftUI-grensesnitt, lokal-først data og produksjonsklar synk. Fire produkter er lansert, to av dem ligger på App Store.',
       cta: 'Ta kontakt',
       viewWork: 'Se arbeidet mitt',
+      shipped: 'Lansert',
+    },
+    stats: {
+      productsValue: '4',
+      productsLabel: 'lanserte produkter',
+      storeValue: '2',
+      storeLabel: 'apper på App Store',
+      platformsValue: '4',
+      platformsLabel: 'plattformer i drift',
+    },
+    work: {
+      label: 'Utvalgt arbeid',
+      title: 'Produkter jeg har lansert',
+      subtitle:
+        'Ikke prototyper eller kursoppgaver. Ekte apper med brukere, abonnement, synk og support som må virke hver dag.',
+      all: 'Se alle prosjekter',
     },
     skills: {
+      label: 'Verktøykasse',
       title: 'Dette jobber jeg med',
+      subtitle:
+        'Jeg jobber gjennom hele stacken på en app: fra pikslene i SwiftUI til rader i Postgres og RLS-reglene som beskytter dem.',
       frontend: 'Native iOS',
+      frontendNote: 'Grensesnitt, navigasjon og bevegelse som føles hjemme på plattformen.',
       backend: 'Data og synk',
+      backendNote: 'Lokal data som kilde til sannhet, med synk som tåler frakoblet bruk.',
       tools: 'Apple-plattformen',
+      toolsNote: 'Widgets, Live Activities, watchOS og abonnement som del av produktet.',
+    },
+    cta: {
+      title: 'Har du et prosjekt i tankene?',
+      body: 'Jeg tar gjerne en prat om native iOS-arbeid, SwiftUI-funksjoner, synkarkitektur eller App Store-klar polish.',
     },
   },
   projects: {
@@ -32,6 +65,7 @@ export const devNo = {
     tidex: {
       title: 'Tidex',
       subtitle: 'iOS-app',
+      tagline: 'Vaktjournal og lønnsberegning med toveis synk og abonnement.',
       description: 'En produksjonsapp i SwiftUI for å føre vakter, beregne lønn og synkronisere lokal data med Supabase. Appen bruker SwiftData-repositories, toveis synk med konflikthåndtering, StoreKit-abonnement, varsler, widgets, live activities, watchOS-støtte og en egen lønnsberegningsmotor. Det offentlige nettstedet tidex.no eier anskaffelse, support og juridiske sider.',
       feature1: 'SwiftUI-grensesnitt med et delt designsystem',
       feature2: 'Lokal-først SwiftData-lagring og repository-lag',
@@ -43,6 +77,7 @@ export const devNo = {
     paeonia: {
       title: 'Paeonia',
       subtitle: 'iOS-app',
+      tagline: 'Daglige ritualer for par, med felles streaks og delte minner.',
       description: 'En privat parapp for kjærester som vil føle seg nær hverandre på avstand. Den er bygget rundt små og pålitelige daglige ritualer: spørsmål som holdes skjult til begge har svart, tilgivende felles streaks, en minnetidslinje, en tegnbar partner-widget og nedtellinger til milepæler.',
       feature1: 'Paring av to brukere med spørsmål som først avsløres når begge har svart',
       feature2: 'Felles streaks med tilgivende reparasjonsregler og påminnelser',
@@ -54,6 +89,7 @@ export const devNo = {
     kvist: {
       title: 'Kvist',
       subtitle: 'macOS-app',
+      tagline: 'Kompakt native Git-klient som står ved siden av editoren.',
       description: 'En kompakt native Git-klient for macOS som kan stå åpen ved siden av editoren i stedet for å ta over skjermen. Den styrer systemets git-kommando fra SwiftUI, tegner en vektorbasert historikkgraf og holder flere repositorier i kompakte faner i tittellinjen, uten å pakke inn Chromium eller en full editor.',
       feature1: 'Kompakte repo-faner som gjenoppretter arbeidsflate og ulagrede utkast',
       feature2: 'Staging, stash, commit og diff for arbeidskopi eller staged endringer',
@@ -65,6 +101,7 @@ export const devNo = {
     lyriclint: {
       title: 'LyricLint',
       subtitle: 'Webapp',
+      tagline: 'Offline teksteditor og linter for Genius-transkripsjoner.',
       description: 'En lokal-først teksteditor og linter for Genius sine transkripsjonskonvensjoner. Transkribenter limer inn arbeidet sitt, strukturerer det med seksjonsoverskrifter, tildeler artister til passasjer, går gjennom advarsler med kildehenvisning og kopierer ut gyldig Genius-markup, alt i nettleseren og uten nettforbindelse.',
       feature1: 'CodeMirror-editor som bevarer Genius-markup nøyaktig',
       feature2: 'Lint-regler som viser Genius-kilden bak hver advarsel',
@@ -78,8 +115,31 @@ export const devNo = {
     title: 'Om meg',
     subtitle: 'Native iOS-utvikler med fokus på ekte produktarkitektur',
     bio: {
+      label: 'Bakgrunn',
       intro: 'Jeg bygger hovedsakelig native iOS-apper. Tidex og Paeonia er der jeg legger mest av utviklingsarbeidet mitt: SwiftUI-skjermer, SwiftData-lagring, lokal-først repositories, Supabase-synk, StoreKit-abonnement, widgets, live activities, watchOS og varslingsflyter. Ved siden av dem bygger jeg Kvist, en kompakt native Git-klient for macOS, og LyricLint, en lokal-først teksteditor og linter på web.',
       passion: 'Jeg liker produktutvikling der polert UI møter vanskelige dataproblemer. Det mest interessante arbeidet er å få Apple-plattformfunksjoner til å føles enkle, mens arkitekturen under håndterer frakoblet bruk, synk, lønnsberegning, auth og edge cases stabilt.',
+    },
+    principles: {
+      label: 'Arbeidsmåte',
+      title: 'Fire prinsipper jeg holder fast på',
+      items: [
+        {
+          title: 'Lokal data er sannheten',
+          body: 'Enheten eier tilstanden, nettverket er en optimalisering. Appen skal virke i tunnelen og synke når den kan.',
+        },
+        {
+          title: 'Logikk ut av views',
+          body: 'Views tegner tilstand. Repositories, kalkulatorer og synkmotorer lever for seg selv og kan testes alene.',
+        },
+        {
+          title: 'Plattformfunksjoner, ikke påheng',
+          body: 'Widgets, Live Activities, App Intents og watchOS designes sammen med appen, ikke skrus på etterpå.',
+        },
+        {
+          title: 'Lansering er starten',
+          body: 'Ekte brukere, ekte abonnement, ekte support. Jobben begynner når appen er ute, ikke når den er kodet.',
+        },
+      ],
     },
     skills: {
       title: 'Tekniske ferdigheter',
@@ -100,10 +160,12 @@ export const devNo = {
       title: 'Min tilnærming',
       description: 'Jeg bryr meg om apper som holder seg raske, forståelige og robuste når de vokser. Jeg holder forretningslogikk ute av views, bruker lokal data som kilde til sannhet og lar plattformfunksjoner føles native i stedet for påklistret.',
     },
+    githubCta: 'Se GitHub-profilen min',
   },
   contact: {
     title: 'La oss samarbeide',
     subtitle: 'Jeg er tilgjengelig for iOS-arbeid og Apple-plattformprosjekter',
+    label: 'Kontakt',
     email: {
       title: 'E-post',
       cta: 'Send meg en e-post',
@@ -112,6 +174,10 @@ export const devNo = {
       title: 'GitHub',
       cta: 'Se min profil',
     },
+    hire: {
+      title: 'Har du et prosjekt i tankene?',
+    },
+    orgLabel: 'Produktene mine publiseres under organisasjonen',
     message: 'Trenger du hjelp med en native iOS-app, SwiftUI-funksjoner, synkarkitektur eller App Store-klar produktpolish? Ta kontakt.',
   },
   footer: {

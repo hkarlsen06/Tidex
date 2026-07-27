@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { devLocales, devLocaleNames, defaultDevLocale, type DevLocale } from '../lib/i18n-config';
-import { buildLocalizedDevPath } from '../lib/paths';
+import { devLocales, devLocaleNames, type DevLocale } from '../lib/i18n-config';
+import { buildLocalizedDevPath, stripDevLocalePrefix } from '../lib/paths';
 
 interface DevLocaleToggleProps {
   currentLocale: DevLocale;
@@ -17,15 +17,7 @@ export function DevLocaleToggle({ currentLocale }: DevLocaleToggleProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = useReducedMotion();
 
-  // Strip any locale prefix to get the raw path
-  let rawPath = pathname;
-  for (const loc of devLocales) {
-    const prefix = `/${loc}`;
-    if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      rawPath = pathname.slice(prefix.length) || '/';
-      break;
-    }
-  }
+  const rawPath = stripDevLocalePrefix(pathname);
 
   useEffect(() => {
     setIsOpen(false);

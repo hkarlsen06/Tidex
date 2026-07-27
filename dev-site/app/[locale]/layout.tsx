@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { devLocales, type DevLocale } from '../../lib/i18n-config';
 import { getDevDictionary } from '../../lib/dictionaries';
 import { DevHeader } from '../../components/DevHeader';
+import { DevFooter } from '../../components/DevFooter';
 import { LocaleLangSetter } from '../../components/LocaleLangSetter';
 import ViewportHeightSetter from '../../components/ViewportHeightSetter';
 
@@ -24,7 +25,8 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       <LocaleLangSetter locale={validLocale as any} />
       <ViewportHeightSetter />
       <DevHeader locale={validLocale} dictionary={dictionary} />
-      <main>{children}</main>
+      <main className="min-h-screen">{children}</main>
+      <DevFooter locale={validLocale} dictionary={dictionary} />
     </>
   );
 }

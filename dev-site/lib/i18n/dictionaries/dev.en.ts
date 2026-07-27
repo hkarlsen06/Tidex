@@ -4,21 +4,54 @@ export const devEn = {
     projects: 'Projects',
     about: 'About',
     contact: 'Contact',
+    menu: 'Menu',
+    close: 'Close',
   },
   home: {
     hero: {
+      status: 'Available for new work',
       greeting: 'Hi, I am',
       name: 'Hjalmar Karlsen',
       title: 'iOS Developer',
-      tagline: 'Building native Apple platform apps with SwiftUI, local-first data, and production-grade sync',
+      roleLead: 'I build',
+      roleAccent: 'native Apple apps',
+      roleTrail: 'that people actually use every day.',
+      tagline:
+        'SwiftUI interfaces, local-first data, and production-grade sync. Four products shipped, two of them live on the App Store.',
       cta: 'Get in touch',
       viewWork: 'View my work',
+      shipped: 'Shipped',
+    },
+    stats: {
+      productsValue: '4',
+      productsLabel: 'products shipped',
+      storeValue: '2',
+      storeLabel: 'apps on the App Store',
+      platformsValue: '4',
+      platformsLabel: 'platforms in production',
+    },
+    work: {
+      label: 'Selected work',
+      title: 'Products I have shipped',
+      subtitle:
+        'Not prototypes or course projects. Real apps with users, subscriptions, sync, and support that has to hold up every day.',
+      all: 'See all projects',
     },
     skills: {
+      label: 'Toolkit',
       title: 'What I work with',
+      subtitle:
+        'I work the whole depth of an app: from the pixels in SwiftUI down to the rows in Postgres and the RLS rules that guard them.',
       frontend: 'Native iOS',
+      frontendNote: 'Interfaces, navigation, and motion that feel native to the platform.',
       backend: 'Data & sync',
+      backendNote: 'Local data as the source of truth, with sync that survives being offline.',
       tools: 'Apple platform',
+      toolsNote: 'Widgets, Live Activities, watchOS, and subscriptions as part of the product.',
+    },
+    cta: {
+      title: 'Have a project in mind?',
+      body: 'Happy to talk about native iOS work, SwiftUI feature work, sync architecture, or App Store-ready polish.',
     },
   },
   projects: {
@@ -32,6 +65,7 @@ export const devEn = {
     tidex: {
       title: 'Tidex',
       subtitle: 'iOS app',
+      tagline: 'Shift tracking and payroll with bidirectional sync and subscriptions.',
       description: 'A production SwiftUI app for tracking work shifts, calculating wages, and syncing local data with Supabase. It uses SwiftData repositories, bidirectional sync with conflict handling, StoreKit subscriptions, notifications, widgets, live activities, watchOS support, and a custom payroll calculation engine. The public site at tidex.no owns acquisition, support, and legal pages.',
       feature1: 'SwiftUI interface with a shared design system',
       feature2: 'Local-first SwiftData storage and repository layer',
@@ -43,6 +77,7 @@ export const devEn = {
     paeonia: {
       title: 'Paeonia',
       subtitle: 'iOS app',
+      tagline: 'Daily rituals for couples, with shared streaks and memories.',
       description: 'A private relationship app for couples who want to feel close through distance. It is built around small, reliable daily rituals: check-in prompts that stay hidden until both partners answer, forgiving shared streaks, a memory timeline, a drawable partner widget, and milestone countdowns.',
       feature1: 'Couple pairing with reveal-gated daily prompts',
       feature2: 'Shared streaks with forgiving repair rules and expiry reminders',
@@ -54,6 +89,7 @@ export const devEn = {
     kvist: {
       title: 'Kvist',
       subtitle: 'macOS app',
+      tagline: 'A compact native Git client that lives beside your editor.',
       description: 'A compact native macOS Git client that stays open beside your editor instead of taking over the screen. It drives the system git command from SwiftUI, renders a vector parent-based history graph, and keeps several repositories in title-bar tabs without embedding Chromium or a full editor.',
       feature1: 'Compact repository tabs that restore workspace and draft state',
       feature2: 'Staging, stashing, committing, and working-tree or staged diffs',
@@ -65,6 +101,7 @@ export const devEn = {
     lyriclint: {
       title: 'LyricLint',
       subtitle: 'Web app',
+      tagline: 'An offline lyric editor and linter for Genius transcriptions.',
       description: 'A local-first lyric editor and linter for Genius transcription conventions. Transcribers paste their work, structure it with section headers, assign performers to passages, review sourced guideline warnings, and copy back valid Genius markup, all in the browser and without a network connection.',
       feature1: 'CodeMirror editor that preserves exact Genius markup',
       feature2: 'Lint rules that cite the Genius source behind every warning',
@@ -78,8 +115,31 @@ export const devEn = {
     title: 'About Me',
     subtitle: 'Native iOS developer focused on real product architecture',
     bio: {
+      label: 'Background',
       intro: 'I mainly build native iOS apps. Tidex and Paeonia are where most of my engineering energy goes: SwiftUI screens, SwiftData persistence, local-first repositories, Supabase sync, StoreKit subscriptions, widgets, live activities, watchOS, and notification flows. Alongside them I build Kvist, a compact native macOS Git client, and LyricLint, a local-first lyric editor and linter on the web.',
       passion: 'I like product engineering where UI polish and hard data problems meet. The work I enjoy most is making Apple-platform features feel simple while the architecture underneath handles offline use, sync, payroll calculations, auth, and edge cases reliably.',
+    },
+    principles: {
+      label: 'How I work',
+      title: 'Four principles I hold to',
+      items: [
+        {
+          title: 'Local data is the truth',
+          body: 'The device owns the state and the network is an optimization. The app works in a tunnel and syncs when it can.',
+        },
+        {
+          title: 'Logic out of views',
+          body: 'Views render state. Repositories, calculators, and sync engines stand on their own and can be tested alone.',
+        },
+        {
+          title: 'Platform features, not bolt-ons',
+          body: 'Widgets, Live Activities, App Intents, and watchOS get designed with the app, not stapled on afterwards.',
+        },
+        {
+          title: 'Shipping is the start',
+          body: 'Real users, real subscriptions, real support. The work begins when the app is out, not when the code compiles.',
+        },
+      ],
     },
     skills: {
       title: 'Technical Skills',
@@ -100,10 +160,12 @@ export const devEn = {
       title: 'My Approach',
       description: 'I care about apps that remain fast, understandable, and resilient as they grow. I keep business logic out of views, use local data as the source of truth, and make platform features feel native rather than bolted on.',
     },
+    githubCta: 'View my GitHub profile',
   },
   contact: {
     title: "Let's Work Together",
     subtitle: 'I am available for iOS work and Apple platform projects',
+    label: 'Contact',
     email: {
       title: 'Email',
       cta: 'Send me an email',
@@ -112,6 +174,10 @@ export const devEn = {
       title: 'GitHub',
       cta: 'View my profile',
     },
+    hire: {
+      title: 'Have a project in mind?',
+    },
+    orgLabel: 'My products are published under the organization',
     message: 'Looking for help with a native iOS app, SwiftUI feature work, sync architecture, or App Store-ready product polish? Get in touch.',
   },
   footer: {
