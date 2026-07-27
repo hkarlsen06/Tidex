@@ -62,7 +62,7 @@ export function getDevProjects(dictionary: DevDictionary, locale: DevLocale): De
       icon: { src: '/icons/kvist-app-icon.png', alt: 'Kvist app icon' },
       iconIsSquare: false,
       technologies: ['Swift', 'SwiftUI', 'macOS', 'Swift Package Manager', 'Git'],
-      links: [{ href: 'https://github.com/kkarlsen06/Kvist', label: projects.ctaSource }],
+      links: [{ href: 'https://github.com/hkarlsen06/Kvist', label: projects.ctaSource }],
     },
     {
       slug: 'lyriclint',
@@ -73,7 +73,7 @@ export function getDevProjects(dictionary: DevDictionary, locale: DevLocale): De
       technologies: ['SvelteKit', 'Svelte 5', 'TypeScript', 'CodeMirror 6', 'IndexedDB', 'Playwright'],
       links: [
         { href: 'https://lyriclint.com', label: `${projects.ctaVisit} lyriclint.com` },
-        { href: 'https://github.com/kkarlsen06/LyricLint_for_Genius', label: projects.ctaSource },
+        { href: 'https://github.com/hkarlsen06/LyricLint_for_Genius', label: projects.ctaSource },
       ],
     },
   ];

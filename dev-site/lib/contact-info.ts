@@ -1,6 +1,6 @@
-export const EMAIL = 'kristensenhjalmar2006@gmail.com';
+export const EMAIL = 'hkarlsen06@gmail.com';
 
-export const GITHUB_HANDLE = 'kkarlsen06';
+export const GITHUB_HANDLE = 'hkarlsen06';
 export const GITHUB_URL = `https://github.com/${GITHUB_HANDLE}`;
 
 export const GITHUB_ORG_HANDLE = 'TidexHQ';
