@@ -15,7 +15,7 @@ interface DevLandingPageProps {
 
 export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
   const { home } = dictionary;
-  const projects = getDevProjects(dictionary);
+  const projects = getDevProjects(dictionary, locale);
 
   const stats = [
     { value: home.stats.productsValue, label: home.stats.productsLabel },
@@ -52,16 +52,8 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
 
         <div className="mx-auto grid w-full max-w-6xl gap-14 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center lg:gap-20">
           <div className="max-w-2xl">
-            <div className="animate-fade-in inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.03] py-1.5 pl-3 pr-4 text-xs font-medium text-text-secondary">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-70" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
-              </span>
-              {home.hero.status}
-            </div>
-
             <p
-              className="animate-fade-in mt-8 text-sm font-medium uppercase tracking-[0.16em] text-text-muted"
+              className="animate-fade-in text-sm font-medium uppercase tracking-[0.16em] text-text-muted"
               style={{ animationDelay: '60ms' }}
             >
               {home.hero.greeting}
@@ -148,21 +140,18 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
                 />
               </div>
 
-              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="eyebrow">{home.hero.shipped}</span>
-                <div className="flex items-center gap-2">
-                  {projects.map((project) => (
-                    <Image
-                      key={project.slug}
-                      src={project.icon.src}
-                      alt={project.copy.title}
-                      title={project.copy.title}
-                      width={64}
-                      height={64}
-                      className="h-7 w-7 rounded-lg ring-1 ring-white/10"
-                    />
-                  ))}
-                </div>
+              <div className="mt-6 flex items-center justify-center gap-3">
+                {projects.map((project) => (
+                  <Image
+                    key={project.slug}
+                    src={project.icon.src}
+                    alt={project.copy.title}
+                    title={project.copy.title}
+                    width={64}
+                    height={64}
+                    className={`h-8 w-8 ${project.iconIsSquare ? 'rounded-[0.5rem]' : ''}`}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -203,7 +192,7 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
                 className="reveal panel group relative flex flex-col overflow-hidden p-6 transition-colors duration-300 hover:border-[hsl(var(--project-accent)/0.4)] sm:p-7"
               >
                 <div
-                  className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--project-accent)/0.45),transparent_70%)] opacity-65 blur-xl transition-opacity duration-300 group-hover:opacity-100"
+                  className="pointer-events-none absolute -left-10 -top-10 h-48 w-48 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--project-accent)/0.45),transparent_70%)] opacity-65 blur-xl transition-opacity duration-300 group-hover:opacity-100"
                   aria-hidden
                 />
 
@@ -213,7 +202,7 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
                     alt=""
                     width={128}
                     height={128}
-                    className="h-14 w-14 shrink-0 rounded-[1rem] ring-1 ring-white/10"
+                    className={`h-14 w-14 shrink-0 ${project.iconIsSquare ? 'rounded-[0.9rem]' : ''}`}
                   />
                   <div className="min-w-0">
                     <h3 className="text-xl font-semibold tracking-[-0.025em]">{project.copy.title}</h3>
@@ -288,22 +277,14 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
       {/* Closing CTA */}
       <section className="px-5 pb-24 sm:px-8">
         <div className="mx-auto w-full max-w-6xl">
-          <div className="reveal panel relative overflow-hidden px-6 py-12 text-center sm:px-12 sm:py-16">
-            <div
-              className="pointer-events-none absolute inset-x-0 -top-24 h-64 bg-[radial-gradient(ellipse_60%_100%_at_50%_100%,hsl(189_94%_52%/0.22),transparent_70%)]"
-              aria-hidden
-            />
-            <div
-              className="pointer-events-none absolute inset-x-0 -bottom-32 h-64 bg-[radial-gradient(ellipse_55%_100%_at_50%_0%,hsl(264_85%_60%/0.22),transparent_70%)]"
-              aria-hidden
-            />
-            <h2 className="relative mx-auto max-w-2xl text-[clamp(1.75rem,4vw,2.75rem)] font-semibold leading-[1.1] tracking-[-0.035em]">
+          <div className="reveal panel px-6 py-12 text-center sm:px-12 sm:py-16">
+            <h2 className="mx-auto max-w-2xl text-[clamp(1.75rem,4vw,2.75rem)] font-semibold leading-[1.1] tracking-[-0.035em]">
               {home.cta.title}
             </h2>
-            <p className="relative mx-auto mt-4 max-w-xl text-pretty text-base leading-7 text-text-secondary">
+            <p className="mx-auto mt-4 max-w-xl text-pretty text-base leading-7 text-text-secondary">
               {home.cta.body}
             </p>
-            <div className="relative mt-9 flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
               <a
                 href={`mailto:${EMAIL}`}
                 className="inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5.5 text-sm font-semibold text-text-inverse shadow-[0_2px_24px_rgba(255,255,255,0.12)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(255,255,255,0.2)] active:scale-[0.98]"

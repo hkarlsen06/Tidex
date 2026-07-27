@@ -5,8 +5,8 @@
   "start_url": "https://kkarlsen.dev/",
   "scope": "https://kkarlsen.dev/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "background_color": "#05080f",
+  "theme_color": "#05080f",
   "orientation": "portrait",
   "icons": [
     { "src": "https://kkarlsen.dev/favicon-32x32.png", "sizes": "32x32", "type": "image/png" },

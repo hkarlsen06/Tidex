@@ -2,15 +2,17 @@ import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import { ArrowUpRight, Check } from 'lucide-react';
 import type { DevDictionary } from '../lib/dictionaries';
+import type { DevLocale } from '../lib/i18n-config';
 import { getDevProjects, projectFeatures } from '../lib/projects';
 
 interface ProjectsPageProps {
+  locale: DevLocale;
   dictionary: DevDictionary;
 }
 
-export function ProjectsPage({ dictionary }: ProjectsPageProps) {
+export function ProjectsPage({ locale, dictionary }: ProjectsPageProps) {
   const { projects } = dictionary;
-  const projectItems = getDevProjects(dictionary);
+  const projectItems = getDevProjects(dictionary, locale);
 
   return (
     <div className="px-5 pb-24 pt-32 text-text-primary sm:px-8 lg:pt-40">
@@ -41,7 +43,7 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
                   aria-hidden
                 />
                 <div
-                  className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--project-accent)/0.22),transparent_70%)] blur-2xl"
+                  className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--project-accent)/0.28),transparent_70%)] blur-2xl"
                   aria-hidden
                 />
 
@@ -53,7 +55,9 @@ export function ProjectsPage({ dictionary }: ProjectsPageProps) {
                         alt=""
                         width={176}
                         height={176}
-                        className="h-16 w-16 shrink-0 rounded-[1.1rem] ring-1 ring-white/12 sm:h-20 sm:w-20 sm:rounded-[1.35rem]"
+                        className={`h-16 w-16 shrink-0 sm:h-20 sm:w-20 ${
+                          project.iconIsSquare ? 'rounded-[1rem] sm:rounded-[1.25rem]' : ''
+                        }`}
                       />
                       <div>
                         <div className="flex items-center gap-3">

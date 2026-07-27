@@ -9,7 +9,6 @@ export const devEn = {
   },
   home: {
     hero: {
-      status: 'Available for new work',
       greeting: 'Hi, I am',
       name: 'Hjalmar Karlsen',
       title: 'iOS Developer',
@@ -17,22 +16,21 @@ export const devEn = {
       roleAccent: 'native Apple apps',
       roleTrail: 'that people actually use every day.',
       tagline:
-        'SwiftUI interfaces, local-first data, and production-grade sync. Four products shipped, two of them live on the App Store.',
+        'SwiftUI interfaces, local-first data, and production-grade sync. Four products across iOS, macOS, and the web, with Tidex live on the App Store.',
       cta: 'Get in touch',
       viewWork: 'View my work',
-      shipped: 'Shipped',
     },
     stats: {
       productsValue: '4',
-      productsLabel: 'products shipped',
-      storeValue: '2',
-      storeLabel: 'apps on the App Store',
+      productsLabel: 'own products',
+      storeValue: '1',
+      storeLabel: 'app on the App Store',
       platformsValue: '4',
       platformsLabel: 'platforms in production',
     },
     work: {
       label: 'Selected work',
-      title: 'Products I have shipped',
+      title: 'Products I have built',
       subtitle:
         'Not prototypes or course projects. Real apps with users, subscriptions, sync, and support that has to hold up every day.',
       all: 'See all projects',
@@ -56,7 +54,7 @@ export const devEn = {
   },
   projects: {
     title: 'My Projects',
-    subtitle: 'Shipped products across iOS, macOS, and the web',
+    subtitle: 'Products across iOS, macOS, and the web',
     techLabel: 'Technologies',
     featuresLabel: 'Key Features',
     ctaAppStore: 'View on App Store',

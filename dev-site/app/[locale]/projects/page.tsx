@@ -27,5 +27,5 @@ export default async function Projects({ params }: ProjectsPageProps) {
   const validLocale = locale as DevLocale;
   const dictionary = getDevDictionary(validLocale);
 
-  return <ProjectsPage dictionary={dictionary} />;
+  return <ProjectsPage locale={validLocale} dictionary={dictionary} />;
 }

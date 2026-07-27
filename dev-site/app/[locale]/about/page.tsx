@@ -27,5 +27,5 @@ export default async function About({ params }: AboutPageProps) {
   const validLocale = locale as DevLocale;
   const dictionary = getDevDictionary(validLocale);
 
-  return <AboutPage dictionary={dictionary} />;
+  return <AboutPage locale={validLocale} dictionary={dictionary} />;
 }

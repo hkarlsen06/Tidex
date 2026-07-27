@@ -1,4 +1,5 @@
 import type { DevDictionary } from './dictionaries';
+import type { DevLocale } from './i18n-config';
 
 type ProjectCopy = DevDictionary['projects']['tidex'];
 
@@ -8,11 +9,17 @@ export interface DevProject {
   /** Accent CSS var name, sourced from the product's own app icon. */
   accent: string;
   icon: { src: string; alt: string };
+  /**
+   * True when the icon file is a full-bleed square and needs to be clipped into an
+   * app-icon shape. Paeonia and Kvist already ship their own rounded silhouette with
+   * transparent corners, so framing them would shave their real edge.
+   */
+  iconIsSquare: boolean;
   technologies: string[];
   links: { href: string; label: string }[];
 }
 
-export function getDevProjects(dictionary: DevDictionary): DevProject[] {
+export function getDevProjects(dictionary: DevDictionary, locale: DevLocale): DevProject[] {
   const { projects } = dictionary;
 
   return [
@@ -21,6 +28,7 @@ export function getDevProjects(dictionary: DevDictionary): DevProject[] {
       copy: projects.tidex,
       accent: '--accent-tidex',
       icon: { src: '/icons/tidex-app-icon.png', alt: 'Tidex app icon' },
+      iconIsSquare: true,
       technologies: [
         'Swift',
         'SwiftUI',
@@ -34,7 +42,7 @@ export function getDevProjects(dictionary: DevDictionary): DevProject[] {
       ],
       links: [
         { href: 'https://apps.apple.com/app/tidex/id6757129790', label: projects.ctaAppStore },
-        { href: 'https://tidex.no', label: `${projects.ctaVisit} tidex.no` },
+        { href: `https://tidex.no/${locale}/`, label: `${projects.ctaVisit} tidex.no` },
       ],
     },
     {
@@ -42,17 +50,17 @@ export function getDevProjects(dictionary: DevDictionary): DevProject[] {
       copy: projects.paeonia,
       accent: '--accent-paeonia',
       icon: { src: '/icons/paeonia-app-icon.png', alt: 'Paeonia app icon' },
+      iconIsSquare: false,
       technologies: ['Swift', 'SwiftUI', 'SwiftData', 'Supabase', 'StoreKit 2', 'WidgetKit', 'Next.js'],
-      links: [
-        { href: 'https://apps.apple.com/app/paeonia/id6779833892', label: projects.ctaAppStore },
-        { href: 'https://paeonia.no', label: `${projects.ctaVisit} paeonia.no` },
-      ],
+      // Not on the App Store yet, so the product site is the only destination.
+      links: [{ href: `https://paeonia.no/${locale}/`, label: `${projects.ctaVisit} paeonia.no` }],
     },
     {
       slug: 'kvist',
       copy: projects.kvist,
       accent: '--accent-kvist',
       icon: { src: '/icons/kvist-app-icon.png', alt: 'Kvist app icon' },
+      iconIsSquare: false,
       technologies: ['Swift', 'SwiftUI', 'macOS', 'Swift Package Manager', 'Git'],
       links: [{ href: 'https://github.com/kkarlsen06/Kvist', label: projects.ctaSource }],
     },
@@ -61,6 +69,7 @@ export function getDevProjects(dictionary: DevDictionary): DevProject[] {
       copy: projects.lyriclint,
       accent: '--accent-lyriclint',
       icon: { src: '/icons/lyriclint-app-icon.svg', alt: 'LyricLint app icon' },
+      iconIsSquare: true,
       technologies: ['SvelteKit', 'Svelte 5', 'TypeScript', 'CodeMirror 6', 'IndexedDB', 'Playwright'],
       links: [
         { href: 'https://lyriclint.com', label: `${projects.ctaVisit} lyriclint.com` },
