@@ -13,9 +13,9 @@ EOF
   exit 1
 fi
 
-if ! grep -q 'repositoryURL = "https://github.com/TidexHQ/Chat.git";' "$project_file"; then
+if ! grep -q 'repositoryURL = "https://github.com/hkarlsen06/Chat.git";' "$project_file"; then
   cat >&2 <<'EOF'
-Tidex is not configured to resolve Exyte Chat from https://github.com/TidexHQ/Chat.git.
+Tidex is not configured to resolve Exyte Chat from https://github.com/hkarlsen06/Chat.git.
 Run ./scripts/set-chat-package-source.sh remote before committing portable changes.
 EOF
   exit 1
