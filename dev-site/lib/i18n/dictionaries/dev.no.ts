@@ -9,7 +9,6 @@ export const devNo = {
   },
   home: {
     hero: {
-      status: 'Tilgjengelig for nye oppdrag',
       greeting: 'Hei, jeg er',
       name: 'Hjalmar Karlsen',
       title: 'iOS-utvikler',
@@ -17,22 +16,21 @@ export const devNo = {
       roleAccent: 'native Apple-apper',
       roleTrail: 'som folk faktisk bruker hver dag.',
       tagline:
-        'SwiftUI-grensesnitt, lokal-først data og produksjonsklar synk. Fire produkter er lansert, to av dem ligger på App Store.',
+        'SwiftUI-grensesnitt, lokal-først data og produksjonsklar synk. Fire produkter for iOS, macOS og web, med Tidex ute på App Store.',
       cta: 'Ta kontakt',
       viewWork: 'Se arbeidet mitt',
-      shipped: 'Lansert',
     },
     stats: {
       productsValue: '4',
-      productsLabel: 'lanserte produkter',
-      storeValue: '2',
-      storeLabel: 'apper på App Store',
+      productsLabel: 'egne produkter',
+      storeValue: '1',
+      storeLabel: 'app på App Store',
       platformsValue: '4',
       platformsLabel: 'plattformer i drift',
     },
     work: {
       label: 'Utvalgt arbeid',
-      title: 'Produkter jeg har lansert',
+      title: 'Produkter jeg har bygget',
       subtitle:
         'Ikke prototyper eller kursoppgaver. Ekte apper med brukere, abonnement, synk og support som må virke hver dag.',
       all: 'Se alle prosjekter',
@@ -56,7 +54,7 @@ export const devNo = {
   },
   projects: {
     title: 'Mine prosjekter',
-    subtitle: 'Lanserte produkter for iOS, macOS og web',
+    subtitle: 'Egne produkter for iOS, macOS og web',
     techLabel: 'Teknologier',
     featuresLabel: 'Nøkkelfunksjoner',
     ctaAppStore: 'Se på App Store',

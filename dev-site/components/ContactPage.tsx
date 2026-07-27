@@ -42,26 +42,17 @@ export function ContactPage({ dictionary }: ContactPageProps) {
           <p className="mt-5 text-pretty text-lg leading-8 text-text-secondary">{contact.subtitle}</p>
         </header>
 
-        <div className="reveal panel relative overflow-hidden px-6 py-10 sm:px-10 sm:py-14">
-          <div
-            className="pointer-events-none absolute inset-x-0 -top-32 h-72 bg-[radial-gradient(ellipse_55%_100%_at_30%_100%,hsl(189_94%_52%/0.2),transparent_70%)]"
-            aria-hidden
-          />
-          <div
-            className="pointer-events-none absolute inset-x-0 -bottom-32 h-72 bg-[radial-gradient(ellipse_50%_100%_at_75%_0%,hsl(264_85%_60%/0.22),transparent_70%)]"
-            aria-hidden
-          />
-
-          <h2 className="relative max-w-xl text-[clamp(1.6rem,3.6vw,2.35rem)] font-semibold leading-[1.15] tracking-[-0.035em]">
+        <div className="reveal panel px-6 py-10 sm:px-10 sm:py-14">
+          <h2 className="max-w-xl text-[clamp(1.6rem,3.6vw,2.35rem)] font-semibold leading-[1.15] tracking-[-0.035em]">
             {contact.hire.title}
           </h2>
-          <p className="relative mt-4 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg sm:leading-8">
+          <p className="mt-4 max-w-2xl text-base leading-7 text-text-secondary sm:text-lg sm:leading-8">
             {contact.message}
           </p>
 
           <a
             href={`mailto:${EMAIL}`}
-            className="relative mt-9 inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5.5 text-sm font-semibold text-text-inverse shadow-[0_2px_24px_rgba(255,255,255,0.12)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(255,255,255,0.2)] active:scale-[0.98]"
+            className="mt-9 inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5.5 text-sm font-semibold text-text-inverse shadow-[0_2px_24px_rgba(255,255,255,0.12)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(255,255,255,0.2)] active:scale-[0.98]"
           >
             <Mail className="h-[1.05rem] w-[1.05rem]" />
             {contact.email.cta}

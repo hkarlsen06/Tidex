@@ -1,17 +1,19 @@
 import Image from 'next/image';
 import { ArrowUpRight, Github } from 'lucide-react';
 import type { DevDictionary } from '../lib/dictionaries';
+import type { DevLocale } from '../lib/i18n-config';
 import { getDevProjects } from '../lib/projects';
 import { GITHUB_URL } from '../lib/contact-info';
 
 interface AboutPageProps {
+  locale: DevLocale;
   dictionary: DevDictionary;
 }
 
-export function AboutPage({ dictionary }: AboutPageProps) {
+export function AboutPage({ locale, dictionary }: AboutPageProps) {
   const { about } = dictionary;
   const skillGroups = [about.skills.frontend, about.skills.backend, about.skills.tools];
-  const projects = getDevProjects(dictionary);
+  const projects = getDevProjects(dictionary, locale);
 
   return (
     <div className="px-5 pb-24 pt-32 text-text-primary sm:px-8 lg:pt-40">
@@ -29,22 +31,16 @@ export function AboutPage({ dictionary }: AboutPageProps) {
         {/* Portrait + bio */}
         <section className="reveal mb-20 grid gap-10 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-12">
           <div>
-            <div className="relative">
-              <div
-                className="absolute -inset-4 -z-10 rounded-full bg-[radial-gradient(circle_at_50%_40%,hsl(189_94%_52%/0.26),transparent_68%)] blur-2xl"
-                aria-hidden
-              />
-              <Image
-                src="/profile-hjalmar.webp"
-                alt="Hjalmar Karlsen"
-                width={512}
-                height={512}
-                className="aspect-square w-full max-w-[15rem] rounded-[1.5rem] border border-white/12 object-cover shadow-app"
-                priority
-              />
-            </div>
+            <Image
+              src="/profile-hjalmar.webp"
+              alt="Hjalmar Karlsen"
+              width={512}
+              height={512}
+              className="aspect-square w-full max-w-[15rem] rounded-[1.5rem] border border-white/12 object-cover shadow-app"
+              priority
+            />
 
-            <div className="mt-5 flex items-center gap-2">
+            <div className="mt-6 flex max-w-[15rem] items-center justify-center gap-3">
               {projects.map((project) => (
                 <Image
                   key={project.slug}
@@ -53,7 +49,7 @@ export function AboutPage({ dictionary }: AboutPageProps) {
                   title={project.copy.title}
                   width={64}
                   height={64}
-                  className="h-7 w-7 rounded-lg ring-1 ring-white/10"
+                  className={`h-8 w-8 ${project.iconIsSquare ? 'rounded-[0.5rem]' : ''}`}
                 />
               ))}
             </div>
@@ -111,20 +107,16 @@ export function AboutPage({ dictionary }: AboutPageProps) {
         </section>
 
         {/* Approach */}
-        <section className="reveal panel relative overflow-hidden p-6 sm:p-10">
-          <div
-            className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,hsl(264_85%_60%/0.24),transparent_70%)] blur-2xl"
-            aria-hidden
-          />
-          <h2 className="relative text-2xl font-semibold tracking-[-0.025em]">{about.approach.title}</h2>
-          <p className="relative mt-4 max-w-3xl text-lg leading-8 text-text-secondary">
+        <section className="reveal panel p-6 sm:p-10">
+          <h2 className="text-2xl font-semibold tracking-[-0.025em]">{about.approach.title}</h2>
+          <p className="mt-4 max-w-3xl text-lg leading-8 text-text-secondary">
             {about.approach.description}
           </p>
           <a
             href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="relative mt-8 inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5.5 text-sm font-semibold text-text-inverse shadow-[0_2px_24px_rgba(255,255,255,0.12)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(255,255,255,0.2)] active:scale-[0.98]"
+            className="mt-8 inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5.5 text-sm font-semibold text-text-inverse shadow-[0_2px_24px_rgba(255,255,255,0.12)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(255,255,255,0.2)] active:scale-[0.98]"
           >
             <Github className="h-[1.05rem] w-[1.05rem]" />
             {about.githubCta}
