@@ -1,9 +1,12 @@
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, Github, Mail } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Mail } from 'lucide-react';
 import type { DevLocale } from '../lib/i18n-config';
 import type { DevDictionary } from '../lib/dictionaries';
 import { buildLocalizedDevPath } from '../lib/paths';
+import { getDevProjects } from '../lib/projects';
+import { EMAIL, GITHUB_URL } from '../lib/contact-info';
 
 interface DevLandingPageProps {
   locale: DevLocale;
@@ -12,141 +15,267 @@ interface DevLandingPageProps {
 
 export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
   const { home } = dictionary;
-  const skills = [
+  const projects = getDevProjects(dictionary);
+
+  const stats = [
+    { value: home.stats.productsValue, label: home.stats.productsLabel },
+    { value: home.stats.storeValue, label: home.stats.storeLabel },
+    { value: home.stats.platformsValue, label: home.stats.platformsLabel },
+  ];
+
+  const stack = [
     {
       title: home.skills.frontend,
-      items: ['Swift', 'SwiftUI', 'SwiftData', 'MVVM'],
+      note: home.skills.frontendNote,
+      items: ['Swift', 'SwiftUI', 'SwiftData', 'async/await', 'MVVM', 'Charts'],
     },
     {
       title: home.skills.backend,
-      items: ['Supabase', 'PostgreSQL', 'Realtime', 'RLS'],
+      note: home.skills.backendNote,
+      items: ['Supabase', 'PostgreSQL', 'Realtime', 'RLS', 'Edge Functions', 'Offline sync'],
     },
     {
       title: home.skills.tools,
-      items: ['StoreKit', 'WidgetKit', 'ActivityKit', 'watchOS'],
+      note: home.skills.toolsNote,
+      items: ['StoreKit 2', 'WidgetKit', 'ActivityKit', 'watchOS', 'App Intents', 'TestFlight'],
     },
   ];
-  const profileCard = (
-    <div className="rounded-2xl border border-white/10 bg-surface-primary/72 p-5 shadow-app-lg">
-      <div className="flex items-center gap-4 border-b border-white/8 pb-5">
-        <div className="h-18 w-18 shrink-0 overflow-hidden rounded-2xl">
-          <Image
-            src="/profile-hjalmar.webp"
-            alt="Hjalmar Karlsen"
-            width={144}
-            height={144}
-            className="h-full w-full scale-[1.18] object-cover"
-            priority
-          />
-        </div>
-        <div>
-          <div className="text-base font-semibold text-text-primary">{home.hero.title}</div>
-          <div className="mt-0.5 max-w-[24ch] text-sm leading-5 text-text-muted">{home.hero.tagline}</div>
-        </div>
-      </div>
-      <dl className="mt-5 space-y-4">
-        {skills.map((skill) => (
-          <div key={skill.title}>
-            <dt className="text-sm font-medium text-text-primary">{skill.title}</dt>
-            <dd className="mt-2 flex flex-wrap gap-2">
-              {skill.items.map((item) => (
-                <span
-                  key={item}
-                  className="rounded-lg border border-white/10 bg-surface-secondary px-2.5 py-1 text-xs text-text-secondary"
-                >
-                  {item}
-                </span>
-              ))}
-            </dd>
-          </div>
-        ))}
-      </dl>
-      <a
-        href="https://github.com/TidexHQ"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-6 flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 text-sm font-medium text-text-secondary transition-colors hover:border-brand-highlight/35 hover:text-text-primary"
-      >
-        <Github className="h-4 w-4" />
-        GitHub
-      </a>
-    </div>
-  );
 
   return (
-    <div className="min-h-screen text-text-primary">
-      <section className="relative flex min-h-[var(--hero-initial-dvh)] items-center overflow-hidden px-5 pb-16 pt-28 sm:px-8 lg:pt-20">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_130%_80%_at_50%_-15%,hsl(199_89%_48%_/_0.24),transparent_60%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
-          <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-brand-highlight/20 to-transparent" />
+    <div className="text-text-primary">
+      {/* Hero */}
+      <section className="relative flex min-h-[var(--hero-initial-dvh)] items-center overflow-hidden px-5 pb-20 pt-28 sm:px-8 lg:pt-24">
+        <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden>
+          <div className="absolute inset-0 bg-[linear-gradient(hsl(210_40%_100%/0.035)_1px,transparent_1px),linear-gradient(90deg,hsl(210_40%_100%/0.035)_1px,transparent_1px)] bg-[size:4.5rem_4.5rem] [mask-image:radial-gradient(ellipse_75%_60%_at_50%_25%,black,transparent_75%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent" />
         </div>
 
-        <div className="mx-auto grid w-full max-w-6xl gap-12 lg:grid-cols-[minmax(0,1fr)_25rem] lg:items-center lg:gap-16">
-          <div className="max-w-3xl">
-            <p className="mb-2 text-base leading-7 text-text-muted sm:mb-3 sm:text-lg">
+        <div className="mx-auto grid w-full max-w-6xl gap-14 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center lg:gap-20">
+          <div className="max-w-2xl">
+            <div className="animate-fade-in inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/[0.03] py-1.5 pl-3 pr-4 text-xs font-medium text-text-secondary">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-success opacity-70" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+              </span>
+              {home.hero.status}
+            </div>
+
+            <p
+              className="animate-fade-in mt-8 text-sm font-medium uppercase tracking-[0.16em] text-text-muted"
+              style={{ animationDelay: '60ms' }}
+            >
               {home.hero.greeting}
             </p>
-            <h1 className="text-balance text-[3.2rem] font-semibold leading-[1.04] tracking-[-0.05em] sm:text-[4.2rem] lg:text-[4.75rem]">
+
+            <h1
+              className="animate-fade-in mt-3 text-[clamp(2.75rem,8.5vw,5rem)] font-semibold leading-[0.98] tracking-[-0.045em]"
+              style={{ animationDelay: '120ms' }}
+            >
               {home.hero.name}
             </h1>
-            <h2 className="mt-4 text-2xl font-semibold tracking-[-0.025em] text-text-primary sm:text-3xl">
-              {home.hero.title}
-            </h2>
-            <p className="mt-5 max-w-[42ch] text-pretty text-[1.0625rem] leading-8 text-text-secondary sm:text-lg">
+
+            <p
+              className="animate-fade-in mt-6 max-w-[30ch] text-[clamp(1.35rem,3.4vw,2rem)] font-medium leading-[1.25] tracking-[-0.025em] text-text-primary"
+              style={{ animationDelay: '180ms' }}
+            >
+              {home.hero.roleLead} <span className="text-gradient">{home.hero.roleAccent}</span>{' '}
+              {home.hero.roleTrail}
+            </p>
+
+            <p
+              className="animate-fade-in mt-6 max-w-[48ch] text-pretty text-base leading-7 text-text-secondary sm:text-[1.0625rem] sm:leading-8"
+              style={{ animationDelay: '240ms' }}
+            >
               {home.hero.tagline}
             </p>
 
-            <div className="mt-10 flex flex-wrap items-center gap-5">
+            <div
+              className="animate-fade-in mt-10 flex flex-wrap items-center gap-x-6 gap-y-4"
+              style={{ animationDelay: '300ms' }}
+            >
               <a
-                href="mailto:kristensenhjalmar2006@gmail.com"
-                className="inline-flex h-12 items-center gap-2.5 whitespace-nowrap rounded-full bg-white px-5 text-sm font-semibold text-text-inverse shadow-[0_2px_20px_rgba(255,255,255,0.1)] transition-all duration-200 hover:shadow-[0_4px_30px_rgba(255,255,255,0.18)] active:scale-[0.98]"
+                href={`mailto:${EMAIL}`}
+                className="inline-flex h-12 items-center gap-2.5 whitespace-nowrap rounded-full bg-white px-5.5 text-sm font-semibold text-text-inverse shadow-[0_2px_24px_rgba(255,255,255,0.12)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(255,255,255,0.2)] active:scale-[0.98]"
               >
                 <Mail className="h-[1.05rem] w-[1.05rem]" />
                 {home.hero.cta}
               </a>
               <Link
                 href={buildLocalizedDevPath(locale, '/projects')}
-                className="flex items-center gap-1.5 text-sm font-medium text-text-muted transition-colors hover:text-text-primary"
+                className="group inline-flex items-center gap-1.5 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
               >
                 {home.hero.viewWork}
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
               </Link>
             </div>
+
+            <dl
+              className="animate-fade-in mt-14 grid max-w-lg grid-cols-3 gap-px overflow-hidden rounded-xl border border-white/8 bg-white/6"
+              style={{ animationDelay: '360ms' }}
+            >
+              {stats.map((stat) => (
+                <div key={stat.label} className="bg-background/60 px-4 py-4">
+                  <dt className="sr-only">{stat.label}</dt>
+                  <dd>
+                    <span className="block text-2xl font-semibold tracking-[-0.03em] text-text-primary">
+                      {stat.value}
+                    </span>
+                    <span className="mt-1 block text-xs leading-4 text-text-muted">{stat.label}</span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
-          <aside className="hidden lg:block lg:translate-y-8">
-            {profileCard}
-          </aside>
+          <div className="animate-fade-in" style={{ animationDelay: '160ms' }}>
+            <div className="relative mx-auto w-full max-w-[13.5rem] sm:max-w-[15rem] lg:max-w-none">
+              <div
+                className="absolute -inset-10 -z-10 rounded-[3rem] bg-[radial-gradient(circle_at_50%_40%,hsl(264_85%_62%/0.42),transparent_70%)] blur-3xl"
+                aria-hidden
+              />
+              <div className="relative overflow-hidden rounded-[1.75rem] border border-white/12 shadow-app-lg">
+                <Image
+                  src="/profile-hjalmar.webp"
+                  alt="Hjalmar Karlsen"
+                  width={512}
+                  height={512}
+                  className="aspect-square w-full object-cover"
+                  priority
+                />
+                <div
+                  className="absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-background/80 to-transparent"
+                  aria-hidden
+                />
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <span className="eyebrow">{home.hero.shipped}</span>
+                <div className="flex items-center gap-2">
+                  {projects.map((project) => (
+                    <Image
+                      key={project.slug}
+                      src={project.icon.src}
+                      alt={project.copy.title}
+                      title={project.copy.title}
+                      width={64}
+                      height={64}
+                      className="h-7 w-7 rounded-lg ring-1 ring-white/10"
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="px-5 pb-8 sm:px-8 lg:hidden">
+      {/* Selected work */}
+      <section className="px-5 py-20 sm:px-8 lg:py-28">
         <div className="mx-auto w-full max-w-6xl">
-          {profileCard}
+          <div className="reveal mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="max-w-2xl">
+              <span className="eyebrow">
+                <span className="h-px w-6 bg-brand-highlight/60" aria-hidden />
+                {home.work.label}
+              </span>
+              <h2 className="mt-4 text-[clamp(2rem,4.5vw,3rem)] font-semibold leading-[1.08] tracking-[-0.04em]">
+                {home.work.title}
+              </h2>
+              <p className="mt-4 text-pretty text-base leading-7 text-text-secondary">{home.work.subtitle}</p>
+            </div>
+            <Link
+              href={buildLocalizedDevPath(locale, '/projects')}
+              className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+            >
+              {home.work.all}
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+
+          <div className="grid gap-5 sm:grid-cols-2">
+            {projects.map((project) => (
+              <a
+                key={project.slug}
+                href={project.links[0].href}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ '--project-accent': `var(${project.accent})` } as CSSProperties}
+                className="reveal panel group relative flex flex-col overflow-hidden p-6 transition-colors duration-300 hover:border-[hsl(var(--project-accent)/0.4)] sm:p-7"
+              >
+                <div
+                  className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--project-accent)/0.45),transparent_70%)] opacity-65 blur-xl transition-opacity duration-300 group-hover:opacity-100"
+                  aria-hidden
+                />
+
+                <div className="relative flex items-center gap-4">
+                  <Image
+                    src={project.icon.src}
+                    alt=""
+                    width={128}
+                    height={128}
+                    className="h-14 w-14 shrink-0 rounded-[1rem] ring-1 ring-white/10"
+                  />
+                  <div className="min-w-0">
+                    <h3 className="text-xl font-semibold tracking-[-0.025em]">{project.copy.title}</h3>
+                    <span className="mt-1 block text-xs font-medium uppercase tracking-[0.1em] text-text-muted">
+                      {project.copy.subtitle}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="relative mt-5 text-sm leading-6 text-text-secondary">{project.copy.tagline}</p>
+
+                <div className="relative mt-5 flex flex-wrap gap-1.5">
+                  {project.technologies.slice(0, 4).map((tech) => (
+                    <span
+                      key={tech}
+                      className="rounded-md border border-white/8 bg-white/[0.02] px-2 py-0.5 text-[0.7rem] font-medium text-text-muted"
+                    >
+                      {tech}
+                    </span>
+                  ))}
+                </div>
+
+                <span className="relative mt-7 inline-flex items-center gap-1.5 text-sm font-medium text-[hsl(var(--project-accent))]">
+                  {project.links[0].label}
+                  <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </span>
+              </a>
+            ))}
+          </div>
         </div>
       </section>
 
-      <section className="px-5 py-16 sm:px-8 lg:py-20">
+      {/* Toolkit */}
+      <section className="px-5 pb-20 sm:px-8 lg:pb-28">
         <div className="mx-auto w-full max-w-6xl">
-          <div className="mb-10 max-w-2xl space-y-4">
-            <h2 className="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+          <div className="reveal mb-12 max-w-2xl">
+            <span className="eyebrow">
+              <span className="h-px w-6 bg-brand-highlight/60" aria-hidden />
+              {home.skills.label}
+            </span>
+            <h2 className="mt-4 text-[clamp(2rem,4.5vw,3rem)] font-semibold leading-[1.08] tracking-[-0.04em]">
               {home.skills.title}
             </h2>
-            <p className="text-base leading-7 text-text-secondary sm:text-lg">
-              {home.hero.tagline}
-            </p>
+            <p className="mt-4 text-pretty text-base leading-7 text-text-secondary">{home.skills.subtitle}</p>
           </div>
 
-          <div className="grid overflow-hidden rounded-2xl border border-white/10 bg-surface-primary/58 md:grid-cols-3">
-            {skills.map((skill) => (
-              <div key={skill.title} className="border-white/10 p-6 md:border-l first:md:border-l-0">
-                <h3 className="text-lg font-semibold text-text-primary">{skill.title}</h3>
-                <ul className="mt-5 space-y-3">
-                  {skill.items.map((item) => (
-                    <li key={item} className="flex items-center justify-between gap-4 border-b border-white/8 pb-3 text-sm text-text-secondary last:border-b-0 last:pb-0">
-                      <span>{item}</span>
-                      <span className="h-1.5 w-1.5 rounded-full bg-brand-highlight/80" />
+          <div className="grid gap-5 md:grid-cols-3">
+            {stack.map((group) => (
+              <div key={group.title} className="reveal panel relative overflow-hidden p-6">
+                <span
+                  className="absolute left-6 top-0 h-[3px] w-10 rounded-b-full bg-linear-to-r from-brand-gradient-start to-brand-gradient-end"
+                  aria-hidden
+                />
+                <h3 className="text-lg font-semibold tracking-[-0.02em]">{group.title}</h3>
+                <p className="mt-2 text-sm leading-6 text-text-muted">{group.note}</p>
+                <ul className="mt-5 flex flex-wrap gap-1.5">
+                  {group.items.map((item) => (
+                    <li
+                      key={item}
+                      className="rounded-md border border-white/8 bg-white/[0.02] px-2 py-1 text-xs font-medium text-text-secondary"
+                    >
+                      {item}
                     </li>
                   ))}
                 </ul>
@@ -156,21 +285,45 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
         </div>
       </section>
 
-      <footer className="border-t border-white/8 px-5 py-8 sm:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-text-muted">
-            © 2026 Hjalmar Karlsen. {dictionary.footer.rights}.
-          </p>
-          <a
-            href="https://github.com/TidexHQ"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-text-secondary transition-colors hover:text-text-primary"
-          >
-            <Github className="h-5 w-5" />
-          </a>
+      {/* Closing CTA */}
+      <section className="px-5 pb-24 sm:px-8">
+        <div className="mx-auto w-full max-w-6xl">
+          <div className="reveal panel relative overflow-hidden px-6 py-12 text-center sm:px-12 sm:py-16">
+            <div
+              className="pointer-events-none absolute inset-x-0 -top-24 h-64 bg-[radial-gradient(ellipse_60%_100%_at_50%_100%,hsl(189_94%_52%/0.22),transparent_70%)]"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute inset-x-0 -bottom-32 h-64 bg-[radial-gradient(ellipse_55%_100%_at_50%_0%,hsl(264_85%_60%/0.22),transparent_70%)]"
+              aria-hidden
+            />
+            <h2 className="relative mx-auto max-w-2xl text-[clamp(1.75rem,4vw,2.75rem)] font-semibold leading-[1.1] tracking-[-0.035em]">
+              {home.cta.title}
+            </h2>
+            <p className="relative mx-auto mt-4 max-w-xl text-pretty text-base leading-7 text-text-secondary">
+              {home.cta.body}
+            </p>
+            <div className="relative mt-9 flex flex-wrap items-center justify-center gap-3">
+              <a
+                href={`mailto:${EMAIL}`}
+                className="inline-flex h-12 items-center gap-2.5 rounded-full bg-white px-5.5 text-sm font-semibold text-text-inverse shadow-[0_2px_24px_rgba(255,255,255,0.12)] transition-all duration-200 hover:shadow-[0_4px_32px_rgba(255,255,255,0.2)] active:scale-[0.98]"
+              >
+                <Mail className="h-[1.05rem] w-[1.05rem]" />
+                {home.hero.cta}
+              </a>
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex h-12 items-center gap-2 rounded-full border border-white/12 px-5 text-sm font-medium text-text-secondary transition-colors hover:border-brand-highlight/40 hover:text-text-primary"
+              >
+                GitHub
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
         </div>
-      </footer>
+      </section>
     </div>
   );
 }
