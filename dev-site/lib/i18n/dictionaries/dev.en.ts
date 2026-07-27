@@ -175,7 +175,6 @@ export const devEn = {
     hire: {
       title: 'Have a project in mind?',
     },
-    orgLabel: 'My products are published under the organization',
     message: 'Looking for help with a native iOS app, SwiftUI feature work, sync architecture, or App Store-ready product polish? Get in touch.',
   },
   footer: {

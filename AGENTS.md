@@ -83,7 +83,7 @@ pnpm ios:l10n:validate
 
 ## Local Chat Package Workflow
 
-The Exyte `Chat` dependency is forked at `TidexHQ/Chat` and is also cloned locally at `../Chat` for day-to-day development.
+The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned locally at `../Chat` for day-to-day development.
 
 - Default local development workflow: compile Tidex against the sibling `../Chat` clone.
 - Switch package source with:
@@ -94,7 +94,7 @@ The Exyte `Chat` dependency is forked at `TidexHQ/Chat` and is also cloned local
 ```
 
 - `local` mode points Xcode at `../../Chat` as a local Swift package.
-- `remote` mode points Xcode back at `https://github.com/TidexHQ/Chat.git` for a portable committed state.
+- `remote` mode points Xcode back at `https://github.com/hkarlsen06/Chat.git` for a portable committed state.
 - When editing the package, make code changes in the sibling `../Chat` repo and commit them there, not inside `tidex`.
 - Treat this as a hard rule: do not edit a resolved SwiftPM package checkout, build artifact, or any `Chat` source copy that lives under `tidex`.
 - If a change should persist, it must land in `../Chat`, because that is the sustained fork repo and the source of truth for local package development.
@@ -103,7 +103,7 @@ The Exyte `Chat` dependency is forked at `TidexHQ/Chat` and is also cloned local
 
 - If the user asks for work that implies a release or shared portable state, treat that as a reminder to check the `Chat` fork workflow.
 - Examples: release, ship, App Store submission, TestFlight build, tagging a version, cutting a release, handing work off, or preparing CI-safe commits.
-- Before those steps, if `../Chat` has relevant changes, remember to commit, tag, and push the `TidexHQ/Chat` fork.
+- Before those steps, if `../Chat` has relevant changes, remember to commit, tag, and push the `hkarlsen06/Chat` fork.
 - Before committing release-oriented Tidex project changes, run `./scripts/set-chat-package-source.sh remote`.
 - After release work, switch back with `./scripts/set-chat-package-source.sh local` if continuing local package development.
 

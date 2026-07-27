@@ -6,7 +6,7 @@ usage() {
 Usage: ./scripts/set-chat-package-source.sh <local|remote>
 
   local   Use the sibling ../Chat clone as a local Swift package
-  remote  Use the committed TidexHQ/Chat fork from GitHub
+  remote  Use the committed hkarlsen06/Chat fork from GitHub
 EOF
 }
 
@@ -36,7 +36,7 @@ local_package_reference = %(11CD7FA32F63CFC700A987E7 /* XCLocalSwiftPackageRefer
 remote_reference = [
   "\t\t11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference \"Chat\" */ = {",
   "\t\t\tisa = XCRemoteSwiftPackageReference;",
-  "\t\t\trepositoryURL = \"https://github.com/TidexHQ/Chat.git\";",
+  "\t\t\trepositoryURL = \"https://github.com/hkarlsen06/Chat.git\";",
   "\t\t\trequirement = {",
   "\t\t\t\tbranch = main;",
   "\t\t\t\tkind = branch;",
@@ -115,5 +115,5 @@ RUBY
 if [[ "$mode" == "local" ]]; then
   echo "Chat now resolves from $local_chat_dir"
 else
-  echo "Chat now resolves from https://github.com/TidexHQ/Chat.git"
+  echo "Chat now resolves from https://github.com/hkarlsen06/Chat.git"
 fi

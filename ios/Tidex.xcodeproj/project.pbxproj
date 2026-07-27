@@ -1894,7 +1894,7 @@
 		};
 		11CD7FA32F63CFC700A987E7 /* XCRemoteSwiftPackageReference "Chat" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/TidexHQ/Chat.git";
+			repositoryURL = "https://github.com/hkarlsen06/Chat.git";
 			requirement = {
 				branch = main;
 				kind = branch;

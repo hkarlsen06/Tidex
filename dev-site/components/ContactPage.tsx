@@ -1,6 +1,6 @@
 import { ArrowUpRight, Github, Mail } from 'lucide-react';
 import type { DevDictionary } from '../lib/dictionaries';
-import { EMAIL, GITHUB_HANDLE, GITHUB_ORG_HANDLE, GITHUB_ORG_URL, GITHUB_URL } from '../lib/contact-info';
+import { EMAIL, GITHUB_HANDLE, GITHUB_URL } from '../lib/contact-info';
 
 interface ContactPageProps {
   dictionary: DevDictionary;
@@ -79,17 +79,6 @@ export function ContactPage({ dictionary }: ContactPageProps) {
           ))}
         </div>
 
-        <p className="mt-8 text-sm text-text-muted">
-          {contact.orgLabel}{' '}
-          <a
-            href={GITHUB_ORG_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-text-secondary underline decoration-white/20 underline-offset-4 transition-colors hover:text-text-primary hover:decoration-brand-highlight/50"
-          >
-            @{GITHUB_ORG_HANDLE}
-          </a>
-        </p>
       </div>
     </div>
   );

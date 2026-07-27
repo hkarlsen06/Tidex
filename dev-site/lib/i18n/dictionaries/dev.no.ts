@@ -175,7 +175,6 @@ export const devNo = {
     hire: {
       title: 'Har du et prosjekt i tankene?',
     },
-    orgLabel: 'Produktene mine publiseres under organisasjonen',
     message: 'Trenger du hjelp med en native iOS-app, SwiftUI-funksjoner, synkarkitektur eller App Store-klar produktpolish? Ta kontakt.',
   },
   footer: {
