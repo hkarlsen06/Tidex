@@ -15,18 +15,13 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 24
-
-      - name: Enable pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.30.3 --activate
+          bun-version: 1.3.14
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Install SwiftLint
         run: |
@@ -35,19 +30,19 @@ jobs:
           fi
 
       - name: Check Chat package source
-        run: pnpm ios:chat-package:check
+        run: bun run ios:chat-package:check
 
       - name: Report size hotspots
-        run: pnpm maint:size-hotspots
+        run: bun run maint:size-hotspots
 
       - name: Type-check web surfaces
-        run: pnpm lint
+        run: bun run lint
 
       - name: Lint Swift
-        run: pnpm swiftlint -- --quiet
+        run: bun run swiftlint -- --quiet
 
       - name: Validate iOS localization
-        run: pnpm ios:l10n:validate
+        run: bun run ios:l10n:validate
 
       - name: Audit iOS localization
-        run: pnpm ios:l10n:audit
+        run: bun run ios:l10n:audit

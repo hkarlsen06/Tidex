@@ -190,10 +190,10 @@ const HK_VIRKE_TARGET_RATES: Record<string, Record<number, number>> = {
 
 function usage(exitCode = 1): never {
   console.error(`Usage:
-  pnpm tariff:hk-virke:backpay
-  pnpm tariff:hk-virke:backpay -- --apply
-  pnpm tariff:hk-virke:backpay -- --apply-backpay
-  pnpm tariff:hk-virke:backpay -- --apply-operational-wage-snapshots
+  bun run tariff:hk-virke:backpay
+  bun run tariff:hk-virke:backpay -- --apply
+  bun run tariff:hk-virke:backpay -- --apply-backpay
+  bun run tariff:hk-virke:backpay -- --apply-operational-wage-snapshots
 
 This one-off script keeps dates, filters, and tariff values in RUN_CONFIG.
 Without an apply flag it only performs a dry run.

@@ -104,7 +104,7 @@ Use this format for the release_notes field (plain text with line breaks):
 
 Remind the user they can now run:
 ```bash
-cd ios && npm run generate-metadata
+cd ios && bun run generate-metadata
 ```
 This will regenerate all localized metadata files, translating the new release notes to all supported languages.
 

@@ -24,7 +24,7 @@ platform :ios do
 
     # Generate localized metadata files from source JSON
     UI.message("Generating localized metadata files...")
-    sh("node", "../Scripts/generate-appstore-metadata.mjs")
+    sh("bun", "../Scripts/generate-appstore-metadata.mjs")
 
     # Configure App Store Connect API authentication
     api_key = app_store_connect_api_key(
@@ -51,7 +51,7 @@ platform :ios do
   desc "Generate metadata files without uploading"
   lane :generate_metadata do
     UI.message("Generating localized metadata files...")
-    sh("node", "../Scripts/generate-appstore-metadata.mjs")
+    sh("bun", "../Scripts/generate-appstore-metadata.mjs")
     UI.success("Metadata files generated in fastlane/metadata/")
   end
 
@@ -99,7 +99,7 @@ platform :ios do
   desc "Validate metadata files (check lengths and required files)"
   lane :validate_metadata do
     UI.message("Validating metadata files...")
-    sh("node", "../Scripts/generate-appstore-metadata.mjs", "--validate-only")
+    sh("bun", "../Scripts/generate-appstore-metadata.mjs", "--validate-only")
     UI.success("Metadata validation passed!")
   end
 end

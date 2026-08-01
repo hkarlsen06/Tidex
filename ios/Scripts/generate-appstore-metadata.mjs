@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * App Store Metadata Generator
@@ -9,10 +9,10 @@
  * For other locales, translates in parallel using OpenAI Responses API.
  *
  * Usage:
- *   node generate-appstore-metadata.mjs                  # Generate all metadata
- *   node generate-appstore-metadata.mjs --validate-only  # Only validate, don't write
- *   node generate-appstore-metadata.mjs --source-only    # Only write source locales
- *   node generate-appstore-metadata.mjs --force          # Re-translate even if files exist
+ *   bun generate-appstore-metadata.mjs                  # Generate all metadata
+ *   bun generate-appstore-metadata.mjs --validate-only  # Only validate, don't write
+ *   bun generate-appstore-metadata.mjs --source-only    # Only write source locales
+ *   bun generate-appstore-metadata.mjs --force          # Re-translate even if files exist
  */
 
 import fs from "fs/promises";

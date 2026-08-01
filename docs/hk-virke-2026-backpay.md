@@ -5,7 +5,7 @@ This runbook covers the one-off HK/Virke 2026 backpay adjustment and the later a
 ## Scope
 
 - Backpay and operational wage-update script: `scripts/hk-virke-backpay.ts`
-- Package command: `pnpm tariff:hk-virke:backpay`
+- Package command: `bun run tariff:hk-virke:backpay`
 - Backpay period: `2026-02-01` through `2026-05-31`
 - Payout month seed: `2026-06-15`
 - Adjustment payout dates: each job's adjusted June 2026 payroll date, using the same Tuesday-Friday/non-holiday adjustment as the app
@@ -115,13 +115,13 @@ export SUPABASE_SECRET_KEY="..."
 Check the script:
 
 ```bash
-pnpm dlx deno-bin@2.2.7 check --no-lock --config supabase/functions/deno.json scripts/hk-virke-backpay.ts
+bunx deno-bin@2.2.7 check --no-lock --config supabase/functions/deno.json scripts/hk-virke-backpay.ts
 ```
 
 Dry run:
 
 ```bash
-pnpm tariff:hk-virke:backpay
+bun run tariff:hk-virke:backpay
 ```
 
 Expected dry-run shape before apply:
@@ -169,7 +169,7 @@ The generated adjustment rows should use Norwegian user-facing fields:
 Apply operational wage snapshots only after approval:
 
 ```bash
-pnpm tariff:hk-virke:backpay -- --apply-operational-wage-snapshots
+bun run tariff:hk-virke:backpay -- --apply-operational-wage-snapshots
 ```
 
 The script refuses operational wage snapshot apply before `2026-05-27`.
@@ -177,7 +177,7 @@ The script refuses operational wage snapshot apply before `2026-05-27`.
 Apply backpay after the backpay period is complete:
 
 ```bash
-pnpm tariff:hk-virke:backpay -- --apply-backpay
+bun run tariff:hk-virke:backpay -- --apply-backpay
 ```
 
 The script refuses backpay apply before `2026-06-01`.

@@ -60,23 +60,23 @@ You are performing a bug analysis. Follow these steps:
    - Note: Do NOT attempt to build or run Xcode - just lint
 
    **If Next.js/Web files changed:**
-   - Run `pnpm lint` to check for linting issues
+   - Run `bun run lint` to check for linting issues
    - Fix any linting errors that are related to the changed files
    - Report any issues that couldn't be auto-fixed
 
    **If ONLY iOS files changed (no Next.js files):**
-   - Skip `pnpm lint` and `pnpm test` entirely
+   - Skip `bun run lint` and `bun run test` entirely
 
 6. **Run tests (only if Next.js files changed):**
 
    **If Next.js/Web files changed:**
-   - Run `pnpm test` to execute the test suite
+   - Run `bun run test` to execute the test suite
    - If tests fail, analyze whether the failures are related to the changes
    - Fix any test failures caused by the changes
    - Report test results summary
 
    **If ONLY iOS files changed:**
-   - Skip `pnpm test` (iOS tests require Xcode)
+   - Skip `bun run test` (iOS tests require Xcode)
 
 7. Perform fixes for any findings from steps 4-6
 

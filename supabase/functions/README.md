@@ -42,10 +42,10 @@ supabase/functions/
 3. **Test locally:**
    ```bash
    # Start Supabase locally (if not already running)
-   npx supabase start
+   bunx supabase start
 
    # Serve your function
-   npx supabase functions serve your-function-name --env-file .env.local
+   bunx supabase functions serve your-function-name --env-file .env.local
 
    # In another terminal, test it
    curl -i --location --request POST 'http://localhost:54321/functions/v1/your-function-name' \
@@ -100,7 +100,7 @@ Do not read Supabase keys directly in new functions.
 For custom environment variables, set them via:
 
 ```bash
-npx supabase secrets set MY_SECRET=value
+bunx supabase secrets set MY_SECRET=value
 ```
 
 ## Common Patterns
@@ -133,7 +133,7 @@ needed!
 Use `console.log()` and `console.error()` for logging. View logs with:
 
 ```bash
-npx supabase functions logs your-function-name
+bunx supabase functions logs your-function-name
 ```
 
 ## Resources

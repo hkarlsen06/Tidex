@@ -12,7 +12,7 @@ const nextConfig = {
   // Optional: keeps URLs consistent on static hosts
   trailingSlash: true,
 
-  // Monorepo/workspace hint so Next traces correctly on Netlify
+  // Monorepo/workspace hint so Next traces correctly on Cloudflare Pages
   outputFileTracingRoot: path.join(__dirname, '..'),
 
   // Set turbopack root for monorepo builds

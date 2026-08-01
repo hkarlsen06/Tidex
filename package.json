@@ -1,17 +1,24 @@
 {
   "name": "tidex",
   "private": true,
-  "packageManager": "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017",
+  "packageManager": "bun@1.3.14",
+  "workspaces": [
+    "marketing",
+    "dev-site",
+    "ios"
+  ],
   "description": "Tidex monorepo - iOS app and supporting backend/web infrastructure",
   "scripts": {
-    "dev": "pnpm --filter marketing dev",
-    "dev:https": "pnpm --filter marketing dev",
-    "build": "pnpm --filter marketing build",
-    "start": "pnpm --filter marketing start",
-    "lint": "pnpm --filter marketing exec tsc --noEmit && pnpm --filter dev-site exec tsc --noEmit",
-    "test": "pnpm --filter marketing build && pnpm --filter dev-site build",
+    "dev": "bun run --filter marketing dev",
+    "dev:https": "bun run --filter marketing dev",
+    "build": "bun run --filter marketing build",
+    "start": "bun run --filter marketing start",
+    "lint": "bun run --filter marketing typecheck && bun run --filter dev-site typecheck",
+    "test": "bun run --filter marketing build && bun run --filter dev-site build",
+    "pages:deploy:marketing": "bun run --filter marketing build && wrangler --cwd marketing pages deploy out --project-name tidex",
+    "pages:deploy:app-compat": "wrangler --cwd app-compat pages deploy . --project-name app-compat",
     "open-ios": "open ios/Tidex.xcodeproj",
-    "localize": "node ios/Scripts/translate-xcstrings.mjs",
+    "localize": "bun ios/Scripts/translate-xcstrings.mjs",
     "ios:l10n:set": "./scripts/xcstrings-set",
     "ios:l10n:add": "./ios/Scripts/add-string",
     "ios:l10n:delete": "swift ios/Scripts/delete-strings.swift",
@@ -21,46 +28,41 @@
     "ios:l10n:validate": "swift ios/Scripts/validate-localization.swift",
     "maint:size-hotspots": "./scripts/report-size-hotspots.sh",
     "ios:chat-package:check": "./scripts/check-chat-package-source.sh",
-    "tariff:hk-virke:backpay": "pnpm dlx deno-bin@2.2.7 run --no-lock --allow-env --allow-net --config supabase/functions/deno.json scripts/hk-virke-backpay.ts",
+    "tariff:hk-virke:backpay": "bunx deno-bin@2.2.7 run --no-lock --allow-env --allow-net --config supabase/functions/deno.json scripts/hk-virke-backpay.ts",
     "screenshots": "./ios/ASConnectScreenshots/resize-screenshots.sh",
-    "swiftlint": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; for arg in \"$@\"; do if [ \"$arg\" = \"--fix\" ] || [ \"$arg\" = \"autocorrect\" ]; then echo \"swiftlint autocorrect is disabled in this repo. Use pnpm swift-format.\"; exit 1; fi; done; swiftlint lint \"$@\" && swift ios/Scripts/check-swift-imports.swift' --",
+    "swiftlint": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; for arg in \"$@\"; do if [ \"$arg\" = \"--fix\" ] || [ \"$arg\" = \"autocorrect\" ]; then echo \"swiftlint autocorrect is disabled in this repo. Use bun run swift-format.\"; exit 1; fi; done; swiftlint lint \"$@\" && swift ios/Scripts/check-swift-imports.swift' --",
     "swiftlint:analyze": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; if [ -n \"$SWIFTLINT_COMPILE_COMMANDS_PATH\" ]; then swiftlint analyze --strict --config .swiftlint.yml --compile-commands \"$SWIFTLINT_COMPILE_COMMANDS_PATH\" \"$@\"; elif [ -n \"$SWIFTLINT_COMPILER_LOG_PATH\" ]; then swiftlint analyze --strict --config .swiftlint.yml --compiler-log-path \"$SWIFTLINT_COMPILER_LOG_PATH\" \"$@\"; else echo \"Set SWIFTLINT_COMPILE_COMMANDS_PATH or SWIFTLINT_COMPILER_LOG_PATH\"; exit 1; fi' --",
     "swift-format": "xcrun swift-format format --configuration .swift-format --recursive ios/ --in-place --parallel",
     "prepare": "husky"
   },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "19.2.2",
-      "@types/react-dom": "19.2.2",
-      "brace-expansion@<1.1.13": "1.1.13",
-      "flatted@<3.4.2": "3.4.2",
-      "glob": "^11.0.4",
-      "qs@>=6.7.0 <=6.14.1": ">=6.14.2",
-      "ajv@>=8.0.0 <8.18.0": ">=8.18.0",
-      "tar@<7.5.8": ">=7.5.8",
-      "ajv@<6.14.0": "^6.14.0",
-      "minimatch@<3.1.5": "3.1.5",
-      "minimatch@>=9.0.0 <9.0.9": "9.0.9",
-      "minimatch@>=10.0.0 <10.2.3": ">=10.2.3",
-      "postcss@<8.5.10": "8.5.10",
-      "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
-      "@eslint/eslintrc@3.3.3": "3.3.4"
-    },
-    "auditConfig": {
-      "ignoreGhsas": [
-        "GHSA-2g4f-4pwh-qvx6"
-      ]
-    },
-    "onlyBuiltDependencies": [
-      "@firebase/util",
-      "esbuild",
-      "protobufjs",
-      "sharp",
-      "supabase",
-      "unrs-resolver"
-    ]
+  "overrides": {
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "brace-expansion@<1.1.13": "1.1.13",
+    "flatted@<3.4.2": "3.4.2",
+    "glob": "^11.0.4",
+    "qs@>=6.7.0 <=6.14.1": ">=6.14.2",
+    "ajv@>=8.0.0 <8.18.0": ">=8.18.0",
+    "tar@<7.5.8": ">=7.5.8",
+    "ajv@<6.14.0": "^6.14.0",
+    "minimatch@<3.1.5": "3.1.5",
+    "minimatch@>=9.0.0 <9.0.9": "9.0.9",
+    "minimatch@>=10.0.0 <10.2.3": ">=10.2.3",
+    "postcss@<8.5.10": "8.5.10",
+    "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
+    "@eslint/eslintrc@3.3.3": "3.3.4"
   },
+  "trustedDependencies": [
+    "@firebase/util",
+    "esbuild",
+    "protobufjs",
+    "sharp",
+    "supabase",
+    "unrs-resolver",
+    "workerd"
+  ],
   "devDependencies": {
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "wrangler": "4.118.0"
   }
 }

@@ -14,16 +14,16 @@ Personal portfolio website for Hjalmar Kristensen showcasing development project
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Run dev server (port 3002)
-npm run dev
+bun run dev
 
 # Build for production
-npm run build
+bun run build
 
 # Serve production build
-npm start
+bun run start
 ```
 
 ## Features
