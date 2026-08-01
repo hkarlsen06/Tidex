@@ -15,6 +15,6 @@ fi
 STAGED_XCSTRINGS_FILES=$(git diff --cached --name-only --diff-filter=d -- 'ios/**/*.xcstrings')
 
 if [ -n "$STAGED_XCSTRINGS_FILES" ]; then
-  pnpm localize -- $STAGED_XCSTRINGS_FILES
+  bun run localize -- $STAGED_XCSTRINGS_FILES
   echo "$STAGED_XCSTRINGS_FILES" | xargs git add
 fi

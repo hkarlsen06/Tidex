@@ -54,7 +54,7 @@ Use these skills for specialized tasks:
 
 ## iOS Localization Scripts
 
-Use `./scripts/xcstrings-set` from the repo root for ordinary plain string catalog edits. The old `./add-string`, `ios/add-string`, and `pnpm ios:l10n:add` entry points are deprecated compatibility shims.
+Use `./scripts/xcstrings-set` from the repo root for ordinary plain string catalog edits. The old `./add-string`, `ios/add-string`, and `bun run ios:l10n:add` entry points are deprecated compatibility shims.
 
 **Localization key usage:**
 
@@ -69,17 +69,17 @@ Use `./scripts/xcstrings-set` from the repo root for ordinary plain string catal
   --comment "Translator context" \
   --en "English" \
   --nb "Norwegian"
-pnpm ios:l10n:delete -- --key "feature.key"
-pnpm ios:l10n:search -- "query"
-pnpm ios:l10n:audit
-pnpm ios:l10n:validate
+bun run ios:l10n:delete -- --key "feature.key"
+bun run ios:l10n:search -- "query"
+bun run ios:l10n:audit
+bun run ios:l10n:validate
 ```
 
 - New keys must include English, Norwegian Bokmal, and a translator comment.
 - The helper preserves existing catalog order by default to keep diffs focused. Pass `--sort-keys` only when intentionally normalizing a catalog.
 - Use `--locale <code>=<value>` for additional languages if a specific non-generated locale edit is needed.
 - Use Xcode's String Catalog editor or XLIFF export/import for pluralization, substitutions, device variants, or bulk translator workflows.
-- After adding English/Norwegian copy, remind the user to run `node ios/Scripts/translate-xcstrings.mjs` when other supported languages should be generated.
+- After adding English/Norwegian copy, remind the user to run `bun ios/Scripts/translate-xcstrings.mjs` when other supported languages should be generated.
 
 ## Local Chat Package Workflow
 

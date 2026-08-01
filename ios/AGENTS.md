@@ -130,13 +130,13 @@ Prefer small focused unit tests over broad UI tests unless the behavior is UI-on
 
 3. **Remind the user** to run the translation script for other languages:
    ```bash
-   node ios/Scripts/translate-xcstrings.mjs
+   bun ios/Scripts/translate-xcstrings.mjs
    ```
 
 Deprecated compatibility entry points:
 - `./add-string`
 - `ios/add-string`
-- `pnpm ios:l10n:add`
+- `bun run ios:l10n:add`
 - `swift ios/Scripts/add-strings.swift`
 
 Use those only when preserving an old command invocation. They should warn and delegate where possible.

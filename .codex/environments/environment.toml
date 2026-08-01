@@ -56,11 +56,7 @@ fi
 
 cd "$WORKTREE_ROOT"
 
-if command -v pnpm >/dev/null 2>&1; then
-  pnpm install --frozen-lockfile
-else
-  corepack pnpm install --frozen-lockfile
-fi
+bun install --frozen-lockfile
 
 if [ -d "$WORKTREE_ROOT/../Chat/.git" ]; then
   ./scripts/set-chat-package-source.sh local

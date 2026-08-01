@@ -50,17 +50,27 @@ tidex/
 
 ### Prerequisites
 
-- Node.js 24.x
-- pnpm
+- Bun 1.3.14+
 - Xcode 16+ (for iOS development)
 
 ### Supporting Website Development
 
 ```bash
 cd marketing
-pnpm install
-pnpm dev            # Start the Tidex public/legal site locally (http://localhost:3001)
+bun install
+bun run dev         # Start the Tidex public/legal site locally (http://localhost:3001)
 ```
+
+### Cloudflare Pages
+
+The marketing Pages project builds from `marketing/` with `bun run build` and publishes `out/`. The compatibility project publishes `app-compat/` directly.
+
+```bash
+bun run pages:deploy:marketing
+bun run pages:deploy:app-compat
+```
+
+Set `CLOUDFLARE_API_TOKEN` or authenticate with `bunx wrangler login` before deploying. These scripts target the existing `tidex` and `app-compat` Pages projects.
 
 ### iOS Development
 

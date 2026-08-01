@@ -2,7 +2,6 @@
 
 # dependencies
 node_modules
-.pnpm-store
 
 # testing
 /next/coverage
@@ -32,6 +31,7 @@ dev-site/out/
 dev-site/.next/
 marketing/out/
 marketing/.next/
+.wrangler/
 ios/build/
 
 # Xcode user state
@@ -52,7 +52,7 @@ next/backups/
 .env.*
 !.env.local.example
 
-# npm config with tokens
+# Registry config with tokens
 .npmrc
 
 # typescript

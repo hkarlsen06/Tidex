@@ -15,7 +15,7 @@ const nextConfig = {
   // Monorepo/workspace hint so Next traces correctly
   outputFileTracingRoot: path.join(__dirname, '..'),
 
-  // Turbopack needs the workspace root to resolve packages in a pnpm monorepo
+  // Turbopack needs the workspace root to resolve packages in this Bun monorepo
   turbopack: {
     root: path.join(__dirname, '..'),
   },

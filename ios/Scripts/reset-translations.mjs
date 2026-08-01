@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 /**
  * Removes all translations except English (en) and Norwegian (nb)
  * so they can be regenerated with better context.
