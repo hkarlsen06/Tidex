@@ -42,8 +42,13 @@ export function ProjectsPage({ locale, dictionary }: ProjectsPageProps) {
                   className="absolute left-6 top-0 h-[3px] w-12 rounded-b-full bg-[hsl(var(--project-accent))] sm:left-8 lg:left-10"
                   aria-hidden
                 />
+                {/*
+                  Drawn as a gradient on a full-bleed layer rather than a blurred
+                  circle: a filtered child is clipped to the card's bounding box
+                  instead of its rounded corner, so the glow leaked past the radius.
+                */}
                 <div
-                  className="pointer-events-none absolute -left-16 -top-16 h-72 w-72 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--project-accent)/0.28),transparent_70%)] blur-2xl"
+                  className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(18rem_18rem_at_5rem_5rem,hsl(var(--project-accent)/0.24),transparent_70%)]"
                   aria-hidden
                 />
 

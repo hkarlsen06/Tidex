@@ -192,7 +192,7 @@ export function DevLandingPage({ locale, dictionary }: DevLandingPageProps) {
                 className="reveal panel group relative flex flex-col overflow-hidden p-6 transition-colors duration-300 hover:border-[hsl(var(--project-accent)/0.4)] sm:p-7"
               >
                 <div
-                  className="pointer-events-none absolute -left-10 -top-10 h-48 w-48 rounded-full bg-[radial-gradient(circle_at_center,hsl(var(--project-accent)/0.45),transparent_70%)] opacity-65 blur-xl transition-opacity duration-300 group-hover:opacity-100"
+                  className="pointer-events-none absolute inset-0 rounded-[inherit] bg-[radial-gradient(12rem_12rem_at_3.5rem_3.5rem,hsl(var(--project-accent)/0.38),transparent_70%)] opacity-65 transition-opacity duration-300 group-hover:opacity-100"
                   aria-hidden
                 />
 
