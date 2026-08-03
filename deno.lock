@@ -225,8 +225,95 @@
   "workspace": {
     "packageJson": {
       "dependencies": [
-        "npm:husky@^9.1.7"
-      ]
+        "npm:husky@^9.1.7",
+        "npm:wrangler@4.118.0"
+      ],
+      "overrides": {
+        "@types/react": "19.2.2",
+        "@types/react-dom": "19.2.2",
+        "brace-expansion@<1.1.13": "1.1.13",
+        "flatted@<3.4.2": "3.4.2",
+        "glob": "^11.0.4",
+        "qs@>=6.7.0 <=6.14.1": ">=6.14.2",
+        "ajv@>=8.0.0 <8.18.0": ">=8.18.0",
+        "tar@<7.5.8": ">=7.5.8",
+        "ajv@<6.14.0": "^6.14.0",
+        "minimatch@<3.1.5": "3.1.5",
+        "minimatch@>=9.0.0 <9.0.9": "9.0.9",
+        "minimatch@>=10.0.0 <10.2.3": ">=10.2.3",
+        "postcss@<8.5.10": "8.5.10",
+        "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
+        "@eslint/eslintrc@3.3.3": "3.3.4"
+      }
+    },
+    "members": {
+      "dev-site": {
+        "packageJson": {
+          "dependencies": [
+            "npm:@radix-ui/react-navigation-menu@^1.2.2",
+            "npm:@radix-ui/react-slot@^1.2.3",
+            "npm:@tailwindcss/postcss@^4.1.18",
+            "npm:@types/node@^20.12.7",
+            "npm:@types/react-dom@19.2.2",
+            "npm:@types/react@19.2.2",
+            "npm:class-variance-authority@~0.7.1",
+            "npm:clsx@^2.1.1",
+            "npm:eslint@^9.38.0",
+            "npm:lucide-react@0.473",
+            "npm:motion@^12.37.0",
+            "npm:next@^16.2.11",
+            "npm:postcss@^8.5.18",
+            "npm:react-dom@19.2.0",
+            "npm:react@19.2.0",
+            "npm:tailwind-merge@^3.3.1",
+            "npm:tailwindcss-animate@^1.0.7",
+            "npm:tailwindcss@^4.1.18",
+            "npm:typescript@^5.4.4"
+          ]
+        }
+      },
+      "ios": {
+        "packageJson": {
+          "dependencies": [
+            "npm:cli-progress@^3.12.0",
+            "npm:dotenv@^17.2.3",
+            "npm:p-limit@^7.3.0"
+          ]
+        }
+      },
+      "marketing": {
+        "packageJson": {
+          "dependencies": [
+            "npm:@radix-ui/react-accordion@^1.1.6",
+            "npm:@radix-ui/react-separator@^1.1.7",
+            "npm:@radix-ui/react-slot@^1.2.3",
+            "npm:@radix-ui/react-tabs@^1.1.13",
+            "npm:@tailwindcss/postcss@^4.1.18",
+            "npm:@types/node@^20.12.7",
+            "npm:@types/react-dom@19.2.2",
+            "npm:@types/react-syntax-highlighter@^15.5.13",
+            "npm:@types/react@19.2.2",
+            "npm:class-variance-authority@~0.7.1",
+            "npm:clsx@^2.1.1",
+            "npm:eslint@^9.38.0",
+            "npm:lucide-react@0.473",
+            "npm:motion@^12.37.0",
+            "npm:next@^16.2.11",
+            "npm:postcss@^8.5.18",
+            "npm:react-dom@19.2.0",
+            "npm:react-markdown@^10.1.0",
+            "npm:react-syntax-highlighter@16",
+            "npm:react@19.2.0",
+            "npm:refractor@5",
+            "npm:rehype-highlight@^7.0.2",
+            "npm:remark-gfm@^4.0.1",
+            "npm:tailwind-merge@^3.3.1",
+            "npm:tailwindcss-animate@^1.0.7",
+            "npm:tailwindcss@^4.1.18",
+            "npm:typescript@^5.4.4"
+          ]
+        }
+      }
     }
   }
 }

@@ -46,6 +46,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "114F0F412F2150EA00B587F0"
             BuildableName = "TidexWatchApp.app"
+            BlueprintName = "TidexWatchApp"
             ReferencedContainer = "container:Tidex.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -62,6 +63,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "114F0F412F2150EA00B587F0"
             BuildableName = "TidexWatchApp.app"
+            BlueprintName = "TidexWatchApp"
             ReferencedContainer = "container:Tidex.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
