@@ -20,12 +20,12 @@ cd "$repo_root"
 
 list_files() {
   if command -v rg >/dev/null 2>&1; then
-    rg --files ios supabase/functions marketing dev-site \
+    rg --files ios supabase/functions marketing \
       -g '*.swift' \
       -g '*.ts' \
       -g '*.tsx'
   else
-    find ios supabase/functions marketing dev-site -type f \
+    find ios supabase/functions marketing -type f \
       \( -name '*.swift' -o -name '*.ts' -o -name '*.tsx' \)
   fi
 }
