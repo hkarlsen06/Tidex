@@ -2,11 +2,10 @@
 
 A monorepo for the Tidex iOS app and its supporting infrastructure.
 
-Tidex is now an iOS-only product. This repository still contains the supporting public/legal website, the legacy compatibility host for old `app.tidex.no` links, the developer site, and the shared Supabase backend.
+Tidex is now an iOS-only product. This repository still contains the supporting public/legal website, the legacy compatibility host for old `app.tidex.no` links, and the shared Supabase backend.
 
 - **marketing/** - Next.js 16 public website for `tidex.no`
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
-- **dev-site/** - Developer portfolio site for `kkarlsen.dev`
 - **ios/** - Native iOS application
 
 The iOS app and its supporting web infrastructure share a common Supabase backend for authentication, database, and edge functions.
@@ -33,7 +32,6 @@ The iOS app and its supporting web infrastructure share a common Supabase backen
 tidex/
 ├── marketing/          # Public Tidex site (tidex.no)
 ├── app-compat/         # Static compatibility host (app.tidex.no)
-├── dev-site/           # Developer portfolio (kkarlsen.dev)
 ├── ios/                # Native iOS application
 │   ├── TidexApp/       # iOS app target (Swift source)
 │   ├── TidexShiftWidget/ # Widget extension

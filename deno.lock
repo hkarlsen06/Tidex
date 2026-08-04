@@ -247,31 +247,6 @@
       }
     },
     "members": {
-      "dev-site": {
-        "packageJson": {
-          "dependencies": [
-            "npm:@radix-ui/react-navigation-menu@^1.2.2",
-            "npm:@radix-ui/react-slot@^1.2.3",
-            "npm:@tailwindcss/postcss@^4.1.18",
-            "npm:@types/node@^20.12.7",
-            "npm:@types/react-dom@19.2.2",
-            "npm:@types/react@19.2.2",
-            "npm:class-variance-authority@~0.7.1",
-            "npm:clsx@^2.1.1",
-            "npm:eslint@^9.38.0",
-            "npm:lucide-react@0.473",
-            "npm:motion@^12.37.0",
-            "npm:next@^16.2.11",
-            "npm:postcss@^8.5.18",
-            "npm:react-dom@19.2.0",
-            "npm:react@19.2.0",
-            "npm:tailwind-merge@^3.3.1",
-            "npm:tailwindcss-animate@^1.0.7",
-            "npm:tailwindcss@^4.1.18",
-            "npm:typescript@^5.4.4"
-          ]
-        }
-      },
       "ios": {
         "packageJson": {
           "dependencies": [

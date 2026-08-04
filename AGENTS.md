@@ -14,7 +14,6 @@ Tidex is now an iOS-only product. The repository still includes supporting publi
 
 - **marketing/** - Next.js 16 public website for `tidex.no`
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
-- **dev-site/** - Developer portfolio static site
 - **ios/** - Native iOS application
 
 The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`.
@@ -31,7 +30,6 @@ Prefer `mcp__supabase__.execute_sql` for database inspection and narrow, targete
 tidex/
 ├── marketing/      # Marketing static site (tidex.no)
 ├── app-compat/     # Compatibility redirects + Apple association files (app.tidex.no)
-├── dev-site/       # Developer portfolio static site (kkarlsen.dev)
 ├── ios/            # Native iOS application (see ios/AGENTS.md)
 ├── supabase/       # Shared backend (edge functions, migrations)
 └── docs/           # Shared documentation
