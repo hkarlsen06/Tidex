@@ -1269,7 +1269,9 @@ Optional: Use jobId (UUID from list_workplaces) to calculate wages for a specifi
 
 Important: The input dates are earnings dates, not payout dates. For example, June earnings are normally paid in July, so June 1-30 includes adjustments on the July payout, not adjustments on the June payout.
 
-Note: For quick monthly/yearly totals, prefer get_statistics which is optimized for common time periods.`,
+Payout questions: this is the right tool when the user asks what is being PAID OUT ("utbetaling", "lønning", "lønnsslipp", "paycheck", "what do I get paid this month"). Pass the previous calendar month as the earnings range: a payout in month M covers work performed in month M-1. The returned payoutStart/payoutEnd confirm which payout month the range maps to.
+
+Note: For quick monthly/yearly EARNINGS totals, prefer get_statistics which is optimized for common time periods. Do not use get_statistics for payout questions.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1299,6 +1301,11 @@ Note: For quick monthly/yearly totals, prefer get_statistics which is optimized 
       {
         startDate: "2025-01-15",
         endDate: "2025-01-15",
+      },
+      // "What is this month's payout?" asked in February 2025 — pass January as the earnings range
+      {
+        startDate: "2025-01-01",
+        endDate: "2025-01-31",
       },
     ],
   },
@@ -1789,9 +1796,11 @@ Note: The date must be one that would normally occur in the recurring shift patt
 Preferred first tool for summary questions about earnings, hours, or shift counts over a week, month, or year.
 Use query_shifts only if the user also wants the individual shift rows.
 
+All metrics are EARNINGS-based: they cover work performed inside the period, not money paid out during it. For payout questions ("utbetaling", "lønning", "lønnsslipp", "paycheck", "what am I getting paid this month"), use calculate_wages for the previous calendar month instead, since a payout in month M covers work from month M-1.
+
 Available metrics:
-- current_month: Earnings, hours, shift count for current month
-- last_month: Same metrics for previous month (good for comparison)
+- current_month: Earnings, hours, shift count for work performed in the current month (NOT the payout received this month)
+- last_month: Same metrics for previous month (good for comparison, and the earnings behind this month's payout)
 - year_to_date: Cumulative totals from Jan 1 up to today's date. For past years, uses same day-of-year as today (e.g., if today is Feb 4 2026, YTD for 2025 = Jan 1 - Feb 4 2025). Good for "same point in time" comparisons.
 - full_year: Complete calendar year totals (Jan 1 - Dec 31). Use for "how much did I earn in total last year" questions.
 - yearly_months: Monthly breakdown for all 12 months of the specified year. Returns array of {month, earnings, hours, shifts} for Jan-Dec. Use for trends, charts, or "show me my earnings by month".
