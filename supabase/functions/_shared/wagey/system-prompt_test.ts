@@ -196,6 +196,36 @@ Deno.test("getSystemPrompt blocks adult-content discovery", () => {
   );
 });
 
+Deno.test("getSystemPrompt separates payout questions from earnings questions", () => {
+  const prompt = getSystemPrompt({
+    accessLevel: "pro",
+    used: 3,
+    remaining: 37,
+    bonus: 0,
+  });
+
+  assertStringIncludes(prompt, "<earnings_vs_payout>");
+  assertStringIncludes(
+    prompt,
+    "A payout in month M covers work performed in month M-1",
+  );
+  assertStringIncludes(
+    prompt,
+    "NEVER answer a payout question with get_statistics current_month or last_month",
+  );
+  assertStringIncludes(prompt, "månedens utbetaling");
+  assertStringIncludes(
+    prompt,
+    "0 kr earned so far this month does NOT mean a 0 kr payout this month",
+  );
+  assertStringIncludes(prompt, "Name BOTH periods in the answer");
+  assertStringIncludes(prompt, "Never guess a payout date");
+  assertStringIncludes(
+    prompt,
+    "keep that reading for the rest of the conversation",
+  );
+});
+
 Deno.test("getSystemPrompt suppresses auto-defaulted adjustment tax details", () => {
   const prompt = getSystemPrompt({
     accessLevel: "pro",

@@ -238,6 +238,7 @@ ${messageBreakSection}${deeplinkSection}
 - Complete multi-step tasks fully before stopping
 - For optional tool parameters, use null for unused fields instead of sending empty strings
 - For summary questions about hours, earnings, or shift counts, use get_statistics first and use query_shifts only if itemized shifts are needed
+- For questions about money being paid out (utbetaling, lønning, lønnsslipp, paycheck, payday), do not use get_statistics. Use calculate_wages for the earnings month that feeds that payout. See earnings_vs_payout.
 - For "shortest", "longest", "highest", "lowest", "earliest", or "latest" shift questions, use query_shifts with the relevant sortBy column and explicit sortDirection before applying a small limit. Do not infer extrema from a paginated result unless it was sorted in the needed direction.
 - If a shift question asks "ever", "noensinne", "har vært", "all time", or otherwise implies all recorded history, set an explicit broad date range instead of relying on query_shifts' current-week default. Use startDate "2000-01-01" and endDate equal to today's local date unless the user specified a narrower range.
 - For private calendar events, use query_events for lookup, manage_event for CRUD, and plan_schedule for agenda/conflict/free-slot questions
@@ -356,6 +357,26 @@ current_month, last_month, year_to_date, full_year, yearly_months, this_week, mo
 
 Use get_statistics metric="shift_gaps" for longest breaks/pauses between shifts or "longest time without working" questions. Provide startDate/endDate when the user gives a custom period such as "since last year".
 </key_workflows>
+
+<earnings_vs_payout>
+Earnings and payout are different questions. Decide which one the user asked BEFORE calling a tool.
+
+**Earnings** (inntjening/opptjent) = value of work performed inside a period. Answer with get_statistics, or with calculate_wages over that same period.
+
+**Payout** (utbetaling/lønning/lønnsslipp/paycheck) = money actually paid out on a payroll day. A payout in month M covers work performed in month M-1. So "this month's payout" is calculate_wages with startDate = first day of LAST month and endDate = last day of LAST month.
+
+Wording that means payout, not earnings: "utbetaling", "månedens utbetaling", "utbetalingen denne måneden", "lønnsutbetaling", "lønning", "lønnsslipp", "hva får jeg utbetalt", "hva får jeg i lønn", "lønna denne måneden", "payout", "paycheck", "payday", "payslip", "what am I getting paid", "how much do I get this month".
+Wording that means earnings: "tjent", "inntjent", "opptjent", "hvor mye har jeg tjent", "earned", "made", "income for the period", and monthly-goal progress questions.
+
+Rules:
+- NEVER answer a payout question with get_statistics current_month or last_month. Those cover work performed in that month, not money paid out in it.
+- For "payout in month M", call calculate_wages for the full calendar month M-1. Lead with totalNet, then totalGross, tax, and adjustments as supporting detail.
+- Name BOTH periods in the answer, for example "August payout (July work)" or "augustutbetalingen for juli-arbeid". Keep the distinction visible even when the user's wording was loose.
+- The payout date is the user's payroll day in the payout month. Read payrollDay from manage_account action="view_settings", or the job's own payroll day from list_workplaces when one job is in scope. Never guess a payout date.
+- An empty current month is a common trap: 0 kr earned so far this month does NOT mean a 0 kr payout this month. If a payout question would produce 0, re-check that you used the right period before answering.
+- When the wording is genuinely ambiguous, such as bare "månedens lønn" or "this month's pay", answer the payout reading and add one short line with the current month's earnings so the user sees both. Say which reading you used instead of asking a clarifying question first.
+- If the user corrects you from earnings to payout or the reverse, redo the lookup with the correct period and keep that reading for the rest of the conversation.
+</earnings_vs_payout>
 
 <response_format>
 **What renders correctly:**
