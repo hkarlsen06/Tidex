@@ -26,7 +26,8 @@ BEGIN
   END IF;
 
   IF NULLIF(btrim(p_push_to_start_token), '') IS NULL
-     OR p_push_to_start_token !~ '^[0-9A-Fa-f]{32,512}$' THEN
+     OR char_length(p_push_to_start_token) NOT BETWEEN 32 AND 512
+     OR p_push_to_start_token !~ '^[0-9A-Fa-f]+$' THEN
     RAISE EXCEPTION 'invalid live activity push-to-start token' USING ERRCODE = '22023';
   END IF;
 
@@ -115,7 +116,8 @@ BEGIN
   END IF;
 
   IF NULLIF(btrim(p_push_token), '') IS NULL
-     OR p_push_token !~ '^[0-9A-Fa-f]{32,512}$' THEN
+     OR char_length(p_push_token) NOT BETWEEN 32 AND 512
+     OR p_push_token !~ '^[0-9A-Fa-f]+$' THEN
     RAISE EXCEPTION 'invalid live activity update token' USING ERRCODE = '22023';
   END IF;
 
