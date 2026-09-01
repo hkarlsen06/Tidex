@@ -5,6 +5,7 @@
 // - Does NOT require Supabase auth (Apple sends notifications directly)
 // - Verifies notification signature using Apple's public keys
 import { Buffer } from "node:buffer";
+import { DenoSignedDataVerifier } from "../_shared/deno-signed-data-verifier.ts";
 import { createAdminClient } from "@supabase/server/core";
 import {
   Environment,
@@ -212,7 +213,7 @@ function appleVerifiers(
   const environment = appleNotificationEnvironmentHint(signedPayload);
   if (environment === "Sandbox") {
     return [
-      new SignedDataVerifier(
+      new DenoSignedDataVerifier(
         rootCertificates,
         false,
         Environment.SANDBOX,
@@ -223,7 +224,7 @@ function appleVerifiers(
 
   if (environment === "Production") {
     return [
-      new SignedDataVerifier(
+      new DenoSignedDataVerifier(
         rootCertificates,
         false,
         Environment.PRODUCTION,
@@ -234,7 +235,7 @@ function appleVerifiers(
   }
 
   const verifiers = [
-    new SignedDataVerifier(
+    new DenoSignedDataVerifier(
       rootCertificates,
       false,
       Environment.SANDBOX,
@@ -244,7 +245,7 @@ function appleVerifiers(
 
   if (APPLE_APP_APPLE_ID_RAW) {
     verifiers.unshift(
-      new SignedDataVerifier(
+      new DenoSignedDataVerifier(
         rootCertificates,
         false,
         Environment.PRODUCTION,
