@@ -18,10 +18,6 @@
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
-	<key>FRIENDS_SHIFT_SNAPSHOTS_ENABLED</key>
-	<true/>
-	<key>FRIENDS_SHIFT_SNAPSHOTS_MINIMUM_APP_VERSION</key>
-	<string>2.4.1</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -47,6 +43,10 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>FRIENDS_SHIFT_SNAPSHOTS_ENABLED</key>
+	<true/>
+	<key>FRIENDS_SHIFT_SNAPSHOTS_MINIMUM_APP_VERSION</key>
+	<string>2.4.1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
@@ -59,12 +59,12 @@
 	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Tidex needs photo library access to show recent images you can attach in chat and Wagey.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>
 	</array>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
 	<key>SUPABASE_ANON_KEY</key>
 	<string>sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb</string>
 	<key>SUPABASE_URL</key>
