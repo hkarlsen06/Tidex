@@ -2578,7 +2578,7 @@ private struct RPCErrorResponse: Codable {
 /// Preview selection and payroll computation are handled client-side via SharingComputeCore.
 enum FriendsAPIClient {
   /// Base URL for Supabase REST RPC
-  private static let rpcBaseURL = URL(string: "https://identity.tidex.no/rest/v1/rpc")
+  private static let rpcBaseURL = URL(string: "https://api.tidex.no/rest/v1/rpc")
 
   /// Fallback anon/publishable key for extension contexts lacking Info.plist config
   private static let fallbackAnonKey = "sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb"
@@ -3100,7 +3100,7 @@ enum FriendsAPIClient {
 
   enum ShareExtensionMessagingClient {
     private static let storageBucket = "message-attachments"
-    private static let storageBaseURL = URL(string: "https://identity.tidex.no/storage/v1/object")
+    private static let storageBaseURL = URL(string: "https://api.tidex.no/storage/v1/object")
     private static let maxUploadBytes = 1_500_000
 
     static func fetchRecipients() async throws -> [ShareRecipient] {

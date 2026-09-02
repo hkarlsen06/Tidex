@@ -37,6 +37,6 @@
 	<key>SUPABASE_ANON_KEY</key>
 	<string>sb_publishable_z9EoG7GZZMS3RL4hmilh5A_xI0va5Nb</string>
 	<key>SUPABASE_URL</key>
-	<string>https://identity.tidex.no</string>
+	<string>https://api.tidex.no</string>
 </dict>
 </plist>

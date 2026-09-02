@@ -1,7 +1,7 @@
 import Foundation
-import os.log
 import Security
 import Supabase
+import os.log
 
 private let calendarSubscriptionLogger = Logger(
   subsystem: "com.tidex.app",
@@ -157,11 +157,11 @@ struct CalendarSubscriptionService: CalendarSubscriptionServicing {
   }
 
   func webcalURL(rawToken: String) -> URL? {
-    URL(string: "webcal://identity.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
+    URL(string: "webcal://api.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
   }
 
   func httpsURL(rawToken: String) -> URL? {
-    URL(string: "https://identity.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
+    URL(string: "https://api.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
   }
 
   private func contentModeParams(_ mode: CalendarSubscriptionContentMode) -> [String: AnyJSON] {

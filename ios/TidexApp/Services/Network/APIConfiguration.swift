@@ -41,11 +41,11 @@ enum APIConfiguration {
   static let supabaseURL: URL = {
     guard let urlString = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String else {
       logger.error("SUPABASE_URL not found in Info.plist - using fallback")
-      return staticURL("https://identity.tidex.no")
+      return staticURL("https://api.tidex.no")
     }
     guard let url = URL(string: urlString) else {
       logger.error("Invalid SUPABASE_URL in Info.plist: \(urlString) - using fallback")
-      return staticURL("https://identity.tidex.no")
+      return staticURL("https://api.tidex.no")
     }
     return url
   }()

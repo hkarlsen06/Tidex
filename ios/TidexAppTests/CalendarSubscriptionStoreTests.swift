@@ -10,11 +10,11 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
 
     XCTAssertEqual(
       service.webcalURL(rawToken: token)?.absoluteString,
-      "webcal://identity.tidex.no/functions/v1/calendar-feed/\(token).ics"
+      "webcal://api.tidex.no/functions/v1/calendar-feed/\(token).ics"
     )
     XCTAssertEqual(
       service.httpsURL(rawToken: token)?.absoluteString,
-      "https://identity.tidex.no/functions/v1/calendar-feed/\(token).ics"
+      "https://api.tidex.no/functions/v1/calendar-feed/\(token).ics"
     )
   }
 
@@ -76,7 +76,7 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
       userIdProvider: { "user-1" }
     )
     store.fallbackHTTPSURL = URL(
-      string: "https://identity.tidex.no/functions/v1/calendar-feed/old.ics")
+      string: "https://api.tidex.no/functions/v1/calendar-feed/old.ics")
 
     try await store.disable()
 
@@ -183,11 +183,11 @@ private final class MockCalendarSubscriptionService: CalendarSubscriptionServici
   }
 
   func webcalURL(rawToken: String) -> URL? {
-    URL(string: "webcal://identity.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
+    URL(string: "webcal://api.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
   }
 
   func httpsURL(rawToken: String) -> URL? {
-    URL(string: "https://identity.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
+    URL(string: "https://api.tidex.no/functions/v1/calendar-feed/\(rawToken).ics")
   }
 }
 
