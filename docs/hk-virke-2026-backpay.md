@@ -106,7 +106,7 @@ The rows make sense under the chosen rules:
 Use a Supabase secret/admin key only in the shell environment. Do not commit or paste the key into files.
 
 ```bash
-export SUPABASE_URL="https://iuwjdacxbirhmsglcbxp.supabase.co"
+export SUPABASE_URL="https://api.tidex.no"
 export SUPABASE_SECRET_KEY="..."
 ```
 
@@ -297,7 +297,7 @@ where not exists (
 Apply with:
 
 ```bash
-supabase db push
+supabase db push --db-url "$TIDEX_MDR_DB_URL"
 ```
 
 Verify through the public RPC used by iOS:

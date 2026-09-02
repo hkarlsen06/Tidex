@@ -370,7 +370,7 @@ WHERE user_id = 'your-user-id';
 ### Manually Trigger Edge Function
 
 ```bash
-curl -X POST "https://[project-ref].supabase.co/functions/v1/send-push-notifications" \
+curl -X POST "https://api.tidex.no/functions/v1/send-push-notifications" \
   -H "Authorization: Bearer [service-role-key]" \
   -H "Content-Type: application/json"
 ```

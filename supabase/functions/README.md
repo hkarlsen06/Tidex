@@ -54,10 +54,9 @@ supabase/functions/
      --data '{"key":"value"}'
    ```
 
-4. **Deploy to production:**
-   ```bash
-   supabase functions deploy your-function-name --no-verify-jwt
-   ```
+4. **Deploy to production:** Sync the function to
+   `/srv/tidex/tidex-sb/volumes/functions/` on `mdr`, then restart the
+   `functions` service.
 
    Keep per-function JWT behavior in `supabase/config.toml`. This repository's
    CLI deploy workflow always includes `--no-verify-jwt`.
