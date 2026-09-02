@@ -64,9 +64,9 @@ The feed:
 Use two URL forms in the app:
 
 - HTTPS feed URL for manual copy/paste into calendar apps:
-  `https://identity.tidex.no/functions/v1/calendar-feed/<raw_token>.ics`
+  `https://api.tidex.no/functions/v1/calendar-feed/<raw_token>.ics`
 - `webcal://` launch URL when opening the user's calendar app from Tidex:
-  `webcal://identity.tidex.no/functions/v1/calendar-feed/<raw_token>.ics`
+  `webcal://api.tidex.no/functions/v1/calendar-feed/<raw_token>.ics`
 
 Opening the HTTPS `.ics` URL directly in Safari can be treated as a one-time
 import, which asks the user to add every event individually. Opening the

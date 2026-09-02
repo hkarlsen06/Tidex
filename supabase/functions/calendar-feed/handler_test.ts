@@ -42,7 +42,7 @@ Deno.test("extractRawToken strips trailing .ics before resolver validation", () 
   assertEquals(
     extractRawToken(
       new Request(
-        `https://identity.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
+        `https://api.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
       ),
     ),
     RAW_TOKEN,
@@ -76,7 +76,7 @@ Deno.test("handler calls resolver RPC with p_raw_token and returns calendar cont
 
   const response = await handler(
     new Request(
-      `https://identity.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
+      `https://api.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
     ),
   );
 
@@ -105,12 +105,12 @@ Deno.test("handler returns 404 for invalid and resolver-empty tokens", async () 
 
   const invalid = await handler(
     new Request(
-      "https://identity.tidex.no/functions/v1/calendar-feed/not-a-token.ics",
+      "https://api.tidex.no/functions/v1/calendar-feed/not-a-token.ics",
     ),
   );
   const unknown = await handler(
     new Request(
-      `https://identity.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
+      `https://api.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
     ),
   );
 
@@ -137,7 +137,7 @@ Deno.test("HEAD returns the same calendar headers without a body", async () => {
   const handler = createCalendarFeedHandler({ supabase: client });
   const response = await handler(
     new Request(
-      `https://identity.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
+      `https://api.tidex.no/functions/v1/calendar-feed/${RAW_TOKEN}.ics`,
       {
         method: "HEAD",
       },
