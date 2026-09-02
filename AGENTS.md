@@ -16,13 +16,22 @@ Tidex is now an iOS-only product. The repository still includes supporting publi
 - **app-compat/** - Static Cloudflare Pages compatibility site for `app.tidex.no`
 - **ios/** - Native iOS application
 
-The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`.
+The supporting web surfaces and iOS app share a common Supabase backend (edge functions, migrations, database schema) located in `supabase/`. Production Supabase is self-hosted on the `mdr` server behind `api.tidex.no`; the old hosted Supabase project is retired.
 
-## Supabase MCP Tool Discovery
+## Supabase Production Access
 
-Supabase MCP tools may be lazy-loaded in Codex sessions. For any Supabase task, first call `tool_search` for `Supabase execute_sql get_project_url list_tables` so the `mcp__supabase__.*` tools become available.
+Agents may access production directly with `ssh mdr`. The Tidex stack is at
+`/srv/tidex/tidex-sb`; use `docker compose` there to inspect logs and services
+or make task-authorized service changes, and use
+`docker compose exec -T db psql -U postgres -d postgres` for direct database
+inspection or task-authorized data mutations. Direct SSH is the normal
+production access path, so do not block on Supabase MCP or the hosted dashboard.
 
-Prefer `mcp__supabase__.execute_sql` for database inspection and narrow, targeted data fixes when it is available. Use the Supabase JS client or ad hoc service-role scripts only as a fallback when MCP tools are unavailable or insufficient, and explain why.
+Use migrations rather than ad hoc SQL for schema changes. When a Supabase CLI
+operation is required, pass the explicit, percent-encoded MDR connection as
+`--db-url "$TIDEX_MDR_DB_URL"`. Do not use bare remote CLI commands or
+`--linked`; they target the retired hosted project unless explicitly
+reconfigured and verified. Never commit the database URL or its credentials.
 
 ## Repository Structure
 
@@ -107,12 +116,11 @@ The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned lo
 
 ## Supabase Edge Functions
 
-**CRITICAL: Edit locally in `supabase/functions/`, deploy via CLI, NOT via MCP deploy tool**
+**CRITICAL: Edit locally in `supabase/functions/`, then deploy to the self-hosted stack on `mdr`, NOT via Supabase's hosted deployment or MCP deploy tools**
 
 - **Location**: `supabase/functions/<function-name>/index.ts`
 - **Shared code**: `supabase/functions/_shared/`
-- **Deployment**: `supabase functions deploy <name> --no-verify-jwt`
-- **CLI rule**: Always include `--no-verify-jwt` when deploying edge functions with the Supabase CLI
+- **Deployment**: Sync the function to `/srv/tidex/tidex-sb/volumes/functions/` on `mdr` and restart the `functions` service
 
 **`verify_jwt` settings:**
 
@@ -137,7 +145,7 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 **CRITICAL:**
 
 - Write migrations that will be applied by the Supabase CLI to `supabase/migrations/`.
-- Use `supabase db pull` only when intentionally baselining or capturing remote-first schema changes back into `supabase/migrations/`.
+- Use `supabase db pull --db-url "$TIDEX_MDR_DB_URL"` only when intentionally baselining or capturing remote-first schema changes back into `supabase/migrations/`.
 - Do not treat `supabase/sql/migrations/` as the CLI-applied migration directory.
 - Keep the SQL source files in `supabase/sql/functions/` in sync with the actual database definitions when making changes.
 
@@ -155,15 +163,16 @@ and must remain migration-only for now:
   reference `user_settings.monthly_goals_by_month` before adding that column.
   A clean reset or shadow database therefore cannot establish a trustworthy
   declarative baseline.
-- Do not add a naïve earlier-dated bootstrap migration. Supabase's Git
-  integration could treat it as unapplied and run it against production.
+- Do not add a naïve earlier-dated bootstrap migration. The self-hosted MDR
+  database would treat it as unapplied during the next migration push.
 - Git history contains a useful deleted `00000000000000_schema.sql` plus
   January 2026 migrations, but they are not safe to restore verbatim. The
   snapshot omits `feedback`, `notification_preferences`,
   `shift_shares.notification_frequency`, and
   `wage_snapshots.tariff_type_id`; two deleted migrations also share version
   `20260130120000`.
-- A 2026-07-24 read-only linked dump of `public,internal`, advanced through the
+- A 2026-07-24 read-only dump of the then-hosted production `public,internal`
+  schemas, advanced through the
   four pending forward migrations and preceded by explicit hand-written
   prerequisites for the seven required user-lane extensions, replays and
   resets cleanly in disposable stacks. An independent snapshot replay produced
@@ -180,11 +189,11 @@ and must remain migration-only for now:
   intent. Retired sharing and notification-queue sources were removed, the 11
   previously remote-only definitions were exported, and one forward migration
   captures all 45 functions and two views that lacked active CREATE history.
-  Their definitions, ACLs, comments, and view options match the linked catalog
-  by exact hashes after disposable replay. A separate forward migration
+  Their definitions, ACLs, comments, and view options match the captured
+  production catalog by exact hashes after disposable replay. A separate forward migration
   reconciles the three intentionally newer function definitions. Intentional
   future-state sources under `supabase/todo-migrations/` remain outside the
-  active lane and differ from the linked project by design.
+  active lane and differ from the captured production state by design.
 - Read-only managed-schema inventory found `on_auth_user_created`,
   `ensure_rls`, three Storage buckets, 15 Storage policies, six cron jobs, four
   Realtime publication tables, the `stripe_sync_work` PGMQ queue, and Vault
@@ -192,8 +201,8 @@ and must remain migration-only for now:
   capture the Auth/event triggers, extension prerequisites, queue existence,
   canonical `profile-pictures` bucket/four policies, and removal of nine
   legacy avatar aliases. Queue messages and Vault values are runtime or secret
-  data and must never be copied. The linked `postgres` default ACLs grant broad
-  privileges in `public` and `storage`; preserve them only in the reviewed
+  data and must never be copied. The captured production `postgres` default
+  ACLs grant broad privileges in `public` and `storage`; preserve them only in the reviewed
   privilege lane and revisit them against Supabase's explicit-grant rollout.
 - The declarative pg-delta gate currently fails even for identical states. An
   ordered temporary schema build needed the extension prerequisite SQL plus
@@ -205,7 +214,7 @@ and must remain migration-only for now:
   active adoption blocker; related destructive dependency replacement is
   tracked in `supabase/pg-toolbelt#280`, and the clean-room breaking-alpha
   rewrite is still open in PR `#299`.
-- Use exact read-only catalog/dump inventories for linked-state comparison.
+- Use exact read-only catalog/dump inventories for production-state comparison.
   Current declarative `db diff` documentation compares schema files with
   migrations, not the live database. CLI 2.109.1's explicit linked-to-URL form
   also returned an empty result with a deliberate probe table, while the
@@ -225,13 +234,13 @@ Reconsider adoption only after all of these are true:
 1. A production-safe, reconstructable foundational migration history exists.
 2. `supabase/sql/` has been reconciled with current deployed intent.
 3. Remote-only Auth and Storage objects have been exported and explained.
-4. Migration-built, declarative-built, and linked schemas round-trip with zero
+4. Migration-built, declarative-built, and production schemas round-trip with zero
    unexplained pg-delta output and matching exact catalog inventories.
 5. Clean reset, lint, representative tests, advisors, and a disposable
    generated-migration trial pass.
 
-Any eventual history cutover must be coordinated while Supabase's Git
-integration cannot observe the branch. First deploy all ordinary forward
+Any eventual history cutover must be coordinated directly against the
+self-hosted MDR database. First deploy all ordinary forward
 migrations and regenerate the snapshot from that exact state. Create the new
 snapshot with `supabase migration new`, add a generic fail-closed
 nonempty-`public`/`internal` guard, and append the explicit privilege
@@ -239,10 +248,10 @@ reconciliation. Preserve current default-ACL behavior during the history
 cutover; change privilege policy only in a separate reviewed migration.
 Prove the snapshot from scratch, archive old applied migration files
 byte-for-byte outside the active migration directory, then use
-`supabase migration repair` to mark the old versions reverted and the snapshot
-version applied. Migration repair changes tracking only, so the snapshot SQL
-must never run on the populated linked database. Verify tracking rows
-read-only before the branch becomes deployable or Git deployment is reenabled.
+`supabase migration repair --db-url "$TIDEX_MDR_DB_URL"` to mark the old
+versions reverted and the snapshot version applied. Migration repair changes tracking only, so the snapshot SQL
+must never run on the populated MDR database. Verify tracking rows
+read-only before the next explicit production migration push.
 This is a future production operation and must not be inferred from routine
 schema work.
 
@@ -250,8 +259,8 @@ schema work.
 
 1. Edit function/trigger source files in `supabase/sql/functions/` as needed.
 2. Add or update the corresponding migration in `supabase/migrations/`.
-3. Apply it with `supabase db push`.
-4. If the remote database was changed outside the CLI workflow, reconcile with `supabase db pull` before continuing.
+3. Preview and apply it explicitly to MDR with `supabase db push --db-url "$TIDEX_MDR_DB_URL" --dry-run`, then rerun without `--dry-run`.
+4. If the remote database was changed outside the CLI workflow, reconcile with `supabase db pull --db-url "$TIDEX_MDR_DB_URL"` before continuing.
 
 **Current Cron Jobs:**
 
