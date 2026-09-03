@@ -1294,6 +1294,39 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     expect(local.dirtyFieldKeys) == Set([.calendarContentColorStyle])
   }
 
+  internal func testUpdateUserSettingsCanResetWageyShowcaseState() async throws {
+    let store: _ = try makeStoreActor()
+
+    _ = try await store.createUserSettings(
+      userId: userId,
+      wageyShowcaseSeen: true
+    )
+
+    await store.markUserSettingsClean(userId: userId)
+    try await store.save()
+
+    _ = try await store.updateUserSettings(
+      userId: userId,
+      monthlyGoal: nil,
+      monthlyGoalsByMonth: nil,
+      defaultShiftsView: nil,
+      profilePictureUrl: nil,
+      payrollDay: nil,
+      theme: nil,
+      calendarContentColorStyle: nil,
+      showDashboardClockButtons: nil,
+      wageyShowcaseSeen: false,
+      halfTaxMonth: nil,
+      currency: nil,
+      defaultStartupTab: nil
+    )
+
+    let localRecord: _ = try await store.getUserSettings(userId: userId)
+    let local: _ = try XCTUnwrap(localRecord)
+    expect(local.wageyShowcaseSeen) == false
+    expect(local.dirtyFieldKeys) == Set([.wageyShowcaseSeen])
+  }
+
   internal func testResolveStoredUserSettingsConflictKeepServerOverwritesLocal() async throws {
     let store: _ = try makeStoreActor()
 
