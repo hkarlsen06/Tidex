@@ -11,7 +11,6 @@ struct StatsData: Codable, Equatable {  // swiftlint:disable:this explicit_acl e
   let currentMonthCurrencyAggregate: JobCurrencyAggregateResolution?  // swiftlint:disable:this explicit_acl
   let lastMonth: MonthStats  // swiftlint:disable:this explicit_acl
   let percentageChange: Double?  // swiftlint:disable:this explicit_acl
-  let monthlyGoal: MonthlyGoal  // swiftlint:disable:this explicit_acl
   let thisMonthCumulative: [DailyCumulativeData]  // swiftlint:disable:this explicit_acl
   let thisWeek: [DailyData]?  // Current week (Mon-Sun) - only for current month // swiftlint:disable:this discouraged_optional_collection explicit_acl line_length
   let bestWeek: BestWeekData?  // Best week - only for past months // swiftlint:disable:this explicit_acl
@@ -36,14 +35,6 @@ struct MonthStats: Codable, Equatable {  // swiftlint:disable:this explicit_acl 
   let totalEarningsNet: Double  // swiftlint:disable:this explicit_acl
   let totalHours: Double  // swiftlint:disable:this explicit_acl
   let shiftCount: Int  // swiftlint:disable:this explicit_acl
-}
-
-struct MonthlyGoal: Codable, Equatable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
-  let enabled: Bool  // swiftlint:disable:this explicit_acl
-  let target: Double  // swiftlint:disable:this explicit_acl
-  let progress: Double  // swiftlint:disable:this explicit_acl
-  let percentage: Double  // swiftlint:disable:this explicit_acl
-  let remaining: Double  // swiftlint:disable:this explicit_acl
 }
 
 /// Daily cumulative earnings data for progress chart
@@ -215,13 +206,6 @@ extension StatsData {  // swiftlint:disable:this no_grouping_extension
         shiftCount: 0
       ),
       percentageChange: nil,
-      monthlyGoal: MonthlyGoal(
-        enabled: false,
-        target: 0,
-        progress: 0,
-        percentage: 0,
-        remaining: 0
-      ),
       thisMonthCumulative: [],
       thisWeek: nil,
       bestWeek: nil,
@@ -248,13 +232,6 @@ extension StatsData {  // swiftlint:disable:this no_grouping_extension
       shiftCount: 12  // swiftlint:disable:this no_magic_numbers
     ),
     percentageChange: -32,  // swiftlint:disable:this no_magic_numbers
-    monthlyGoal: MonthlyGoal(
-      enabled: true,
-      target: 15_000,  // swiftlint:disable:this no_magic_numbers
-      progress: 12_808,  // swiftlint:disable:this no_magic_numbers
-      percentage: 85.4,  // swiftlint:disable:this no_magic_numbers
-      remaining: 2_192  // swiftlint:disable:this no_magic_numbers
-    ),
     thisMonthCumulative: DailyCumulativeData.previewData,
     thisWeek: DailyData.previewThisWeek,
     bestWeek: nil,
@@ -280,13 +257,6 @@ extension StatsData {  // swiftlint:disable:this no_grouping_extension
       shiftCount: 10  // swiftlint:disable:this no_magic_numbers
     ),
     percentageChange: 11,  // swiftlint:disable:this no_magic_numbers
-    monthlyGoal: MonthlyGoal(
-      enabled: true,
-      target: 20_000,  // swiftlint:disable:this no_magic_numbers
-      progress: 18_500,  // swiftlint:disable:this no_magic_numbers
-      percentage: 92.5,  // swiftlint:disable:this no_magic_numbers
-      remaining: 1_500  // swiftlint:disable:this no_magic_numbers
-    ),
     thisMonthCumulative: DailyCumulativeData.previewData,
     thisWeek: nil,
     bestWeek: BestWeekData.preview,
@@ -312,13 +282,6 @@ extension StatsData {  // swiftlint:disable:this no_grouping_extension
       shiftCount: 0
     ),
     percentageChange: nil,
-    monthlyGoal: MonthlyGoal(
-      enabled: false,
-      target: 0,
-      progress: 0,
-      percentage: 0,
-      remaining: 0
-    ),
     thisMonthCumulative: [],
     thisWeek: nil,
     bestWeek: nil,
@@ -516,4 +479,4 @@ extension MonthlyIncomeData {  // swiftlint:disable:this no_grouping_extension
       )
     }
   }
-}  // swiftlint:disable:this file_length
+}

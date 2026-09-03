@@ -3,21 +3,18 @@ import UIKit
 
 // MARK: - Global Pay Settings Card
 
-/// Card for editing global pay settings: currency, monthly goal, payroll day, half-tax month
+/// Card for editing global pay settings: currency, payroll day, and half-tax month
 struct GlobalPaySettingsCard: View {
   let jobId: String?
   let currency: String
-  let monthlyGoal: Int?
   let payrollDay: Int
   let halfTaxMonth: Int?
   let canChangeCurrency: Bool
-  let onUpdateMonthlyGoal: (Int?) -> Void
   let onUpdatePayrollDay: (Int) -> Void
   let onUpdateHalfTaxMonth: (Int?) async -> Void
   let onUpdateCurrency: (String) async -> Void
 
   @State private var selectedCurrency: String = "kr"
-  @State private var monthlyGoalText: String = ""
   @State private var selectedPayrollDay: Int = 1
   @State private var selectedHalfTaxMonth: Int?
   @State private var initializedJobId: String?
@@ -32,9 +29,6 @@ struct GlobalPaySettingsCard: View {
 
       // Currency selector
       currencyInput
-
-      // Monthly goal
-      monthlyGoalInput
 
       // Payroll day
       payrollDayInput
@@ -73,12 +67,6 @@ struct GlobalPaySettingsCard: View {
     }
 
     selectedCurrency = currency
-
-    if let goal = monthlyGoal {
-      monthlyGoalText = "\(goal)"
-    } else {
-      monthlyGoalText = ""
-    }
 
     selectedPayrollDay = payrollDay
     selectedHalfTaxMonth = halfTaxMonth
@@ -129,52 +117,6 @@ struct GlobalPaySettingsCard: View {
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
-    }
-  }
-
-  // MARK: - Monthly Goal Input
-
-  @ViewBuilder
-  private var monthlyGoalInput: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.settingsPayGlobalMonthlyGoal)
-        .font(.tidexLabel)
-        .foregroundColor(.tidexTextSecondary)
-
-      HStack {
-        TextField(
-          String(localized: .settingsPayGlobalMonthlyGoalPlaceholder),
-          text: $monthlyGoalText
-        )
-        .keyboardType(.numberPad)
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextPrimary)
-        .onChange(of: monthlyGoalText) { _, newValue in
-          // Filter to digits only
-          let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
-          if filtered != newValue {
-            monthlyGoalText = filtered
-          }
-
-          // Debounced save
-          if let value = Int(filtered), value > 0 {
-            onUpdateMonthlyGoal(value)
-          } else if filtered.isEmpty {
-            onUpdateMonthlyGoal(nil)
-          }
-        }
-
-        Text(selectedCurrency)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
-      }
-      .padding(Spacing.sm)
-      .background(Color.tidexSurfaceSecondary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
-
-      Text(.settingsPayGlobalMonthlyGoalHelper)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
     }
   }
 
@@ -368,11 +310,9 @@ private struct CurrencyRow: View {
     GlobalPaySettingsCard(
       jobId: "test-job",
       currency: "kr",
-      monthlyGoal: 20_000,
       payrollDay: 15,
       halfTaxMonth: nil,
       canChangeCurrency: true,
-      onUpdateMonthlyGoal: { _ in },
       onUpdatePayrollDay: { _ in },
       onUpdateHalfTaxMonth: { _ in },
       onUpdateCurrency: { _ in }

@@ -8,6 +8,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
   enum SurfaceStyle {  // swiftlint:disable:this explicit_acl
     case standard
     case example
+    case flat
   }
 
   let shift: ShiftWithComputations  // swiftlint:disable:this explicit_acl
@@ -226,19 +227,29 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
           .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)  // swiftlint:disable:this line_length no_magic_numbers
         }
       }
-      .padding(.horizontal, Spacing.mlg)
+      .padding(.horizontal, surfaceStyle == .flat ? 0 : Spacing.mlg)
       .padding(.vertical, ShiftCardMetrics.verticalPadding)
       .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
-      .background(surfaceStyle == .example ? Color.clear : Color.tidexSurfacePrimary)
+      .background(cardFillColor)
       .overlay(alignment: .leading) {
         // Progress bar overlay - fills from left based on progress (for active shifts)
         // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
         // The clipShape on the parent handles the rounded corners
         if hasProgress(displayedProgress) {
           GeometryReader { geometry in
-            Rectangle()
-              .fill(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
-              .frame(width: geometry.size.width * (animatedProgress / 100))
+            if surfaceStyle == .flat {
+              Rectangle()
+                .fill(Color.tidexBlue)
+                .frame(
+                  width: geometry.size.width * (animatedProgress / 100),
+                  height: 3  // swiftlint:disable:this no_magic_numbers
+                )
+                .frame(maxHeight: .infinity, alignment: .bottom)
+            } else {
+              Rectangle()
+                .fill(Color.tidexBlue.opacity(0.1))  // swiftlint:disable:this no_magic_numbers
+                .frame(width: geometry.size.width * (animatedProgress / 100))
+            }
           }
         }
       }
@@ -382,7 +393,14 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
 
     case .example:
       .tidexBorder
+
+    case .flat:
+      .clear
     }
+  }
+
+  private var cardFillColor: Color {
+    surfaceStyle == .standard ? .tidexSurfacePrimary : .clear
   }
 
   private var cardBorderStyle: StrokeStyle {
@@ -392,6 +410,9 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
 
     case .example:
       StrokeStyle(lineWidth: 1.5, dash: [7, 5])  // swiftlint:disable:this no_magic_numbers
+
+    case .flat:
+      StrokeStyle(lineWidth: 0)
     }
   }
 }

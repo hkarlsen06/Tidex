@@ -16,7 +16,6 @@ struct WorkSetupRequiredPlaceholder: View {
   @State private var jobNeedingSetup: Job?
   @State private var setupInitialCurrency = "kr"
   @State private var setupInitialPayrollDay = 15
-  @State private var setupInitialMonthlyGoal: Int?
 
   private let jobsRepository = JobsRepository.shared
   private let settingsRepository = SettingsRepository.shared
@@ -60,7 +59,6 @@ struct WorkSetupRequiredPlaceholder: View {
       AddJobSheet(
         initialCurrency: setupInitialCurrency,
         initialPayrollDay: setupInitialPayrollDay,
-        initialMonthlyGoal: setupInitialMonthlyGoal,
         prefilledBasicJob: jobNeedingSetup,
         setupDismissTitle: String(localized: .settingsPaySetupLaterButton),
         onSaveBasics: { input in
@@ -210,9 +208,6 @@ struct WorkSetupRequiredPlaceholder: View {
       incompleteJob?.currency ?? defaultJob?.currency ?? settings?.currency ?? "kr"
     setupInitialPayrollDay =
       incompleteJob?.payroll_day ?? defaultJob?.payroll_day ?? settings?.effectivePayrollDay ?? 15
-    setupInitialMonthlyGoal =
-      incompleteJob?.monthly_goal ?? defaultJob?.monthly_goal
-      ?? settings?.monthly_goal
   }
 
   @MainActor
@@ -227,7 +222,7 @@ struct WorkSetupRequiredPlaceholder: View {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal
+        monthlyGoal: nil
       )
       jobNeedingSetup = createdJob
       return createdJob
@@ -259,7 +254,7 @@ struct WorkSetupRequiredPlaceholder: View {
           currency: input.currency,
           payrollDay: input.payrollDay,
           halfTaxMonth: input.halfTaxMonth,
-          monthlyGoal: input.monthlyGoal,
+          monthlyGoal: jobsRepository.getJob(id: existingJobSetup.id)?.monthly_goal,
           baselineSnapshot: input.baselineSnapshot
         )
       } else {
@@ -270,7 +265,7 @@ struct WorkSetupRequiredPlaceholder: View {
           currency: input.currency,
           payrollDay: input.payrollDay,
           halfTaxMonth: input.halfTaxMonth,
-          monthlyGoal: input.monthlyGoal,
+          monthlyGoal: nil,
           baselineSnapshot: input.baselineSnapshot
         )
       }

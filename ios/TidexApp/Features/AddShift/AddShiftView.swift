@@ -405,7 +405,6 @@ struct AddShiftView: View {
       AddJobSheet(
         initialCurrency: viewModel.jobCreationInitialCurrency,
         initialPayrollDay: viewModel.jobCreationInitialPayrollDay,
-        initialMonthlyGoal: viewModel.jobCreationInitialMonthlyGoal,
         setupDismissTitle: String(localized: .settingsPaySetupLaterButton),
         onSaveBasics: { input in
           await viewModel.createBasicJobForSetup(input: input)

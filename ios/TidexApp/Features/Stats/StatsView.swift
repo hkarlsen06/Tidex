@@ -1,21 +1,13 @@
 import SwiftUI
 
 /// Stats tab view - displays statistics and analytics
-/// Shows monthly earnings, hours, shifts, and goal progress
+/// Shows monthly earnings, hours, shifts, and trends
 struct StatsView: View {
   // swiftlint:disable:previous explicit_acl explicit_top_level_acl file_types_order type_body_length
   @EnvironmentObject private var coordinator: AppCoordinator  // swiftlint:disable:this type_contents_order
 
-  private struct MonthlyGoalEditContext: Identifiable {
-    let id = UUID()  // swiftlint:disable:this explicit_type_interface
-    let monthDate: Date
-    let baselineGoal: Int?
-    let initialGoal: Int?
-  }
-
   @StateObject private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
   @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()  // swiftlint:disable:this explicit_type_interface line_length
-  @State private var monthlyGoalEditContext: MonthlyGoalEditContext?
   @State private var isJobFilterDialogPresented = false  // swiftlint:disable:this explicit_type_interface
   @State private var showMixedCurrencyBreakdownPopover = false  // swiftlint:disable:this explicit_type_interface
   @State private var showExportSettings = false  // swiftlint:disable:this explicit_type_interface
@@ -95,17 +87,6 @@ struct StatsView: View {
       }
     }
     .iPadToolbarTransaction()
-    .sheet(item: $monthlyGoalEditContext) { context in
-      MonthlyGoalEditSheet(
-        monthDate: context.monthDate,
-        baselineGoal: context.baselineGoal,
-        initialGoal: context.initialGoal
-      ) { value in
-        try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
-      }
-      .presentationDetents([.fraction(0.35), .medium])  // swiftlint:disable:this no_magic_numbers
-      .presentationDragIndicator(.visible)
-    }
     .sheet(isPresented: $showExportSettings) {
       SettingsView(initialDestination: .data)
         .presentationDetents([.large])
@@ -167,9 +148,6 @@ struct StatsView: View {
                 selectionHaptic.selectionChanged()
                 showMixedCurrencyBreakdownPopover.toggle()
               }
-            },
-            onGoalTap: {
-              openMonthlyGoalEditor()
             }
           )
           .userCurrency(monthlyCardCurrency)
@@ -342,37 +320,6 @@ struct StatsView: View {
     .contentShape(shape)
   }
 
-  private func openMonthlyGoalEditor() {
-    guard viewModel.stats != nil else { return }  // swiftlint:disable:this conditional_returns_on_newline
-    selectionHaptic.selectionChanged()
-    let baseline = viewModel.baselineMonthlyGoal  // swiftlint:disable:this explicit_type_interface
-    let override = viewModel.displayedMonthOverrideGoal  // swiftlint:disable:this explicit_type_interface
-    let effectiveGoal =  // swiftlint:disable:this explicit_type_interface
-      viewModel.stats?.monthlyGoal.enabled == true
-      ? Int((viewModel.stats?.monthlyGoal.target ?? 0).rounded())
-      : nil
-
-    let initialGoal =  // swiftlint:disable:this explicit_type_interface
-      override
-      ?? effectiveGoal.flatMap { effective in
-        guard effective > 0 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
-        if let baseline, effective == baseline {
-          return nil
-        }
-        return effective
-      }
-    let monthDate =  // swiftlint:disable:this explicit_type_interface
-      Calendar.current.date(
-        from: DateComponents(year: viewModel.displayYear, month: viewModel.displayMonth, day: 1)
-      ) ?? Date()
-
-    monthlyGoalEditContext = MonthlyGoalEditContext(
-      monthDate: monthDate,
-      baselineGoal: baseline,
-      initialGoal: initialGoal
-    )
-  }
-
   // MARK: - Weekly Chart Section
 
   @ViewBuilder
@@ -472,9 +419,7 @@ private struct StatsOverviewLedger: View {
   let stats: StatsData
   let showsCurrencyBreakdown: Bool
   let onEarningsTap: () -> Void
-  let onGoalTap: () -> Void
 
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
 
   private var mainDisplayValue: Double {
@@ -509,32 +454,6 @@ private struct StatsOverviewLedger: View {
       "\(prefix)\(Int(abs(change)))% \(String(localized: .statsFromPreviousMonth))"
   }
 
-  private var clampedGoalPercentage: Double {
-    min(max(stats.monthlyGoal.percentage, 0), 100)
-  }
-
-  private var goalReached: Bool {
-    stats.monthlyGoal.progress >= stats.monthlyGoal.target && stats.monthlyGoal.enabled
-  }
-
-  private var goalStatusText: String {
-    guard stats.monthlyGoal.enabled else {
-      return String(localized: .statsMonthlyGoalNotEnabled)
-    }
-
-    let overAmount = max(stats.monthlyGoal.progress - stats.monthlyGoal.target, 0)  // swiftlint:disable:this explicit_type_interface line_length
-    if overAmount > 0 {
-      return String(localized: .statsMonthlyGoalOverTarget(formatCurrency(overAmount)))
-    }
-
-    if goalReached {
-      return String(localized: .statsMonthlyGoalGoalReached)
-    }
-
-    return String(
-      localized: .statsMonthlyGoalRemaining(formatCurrency(stats.monthlyGoal.remaining)))  // swiftlint:disable:this line_length multiline_arguments_brackets
-  }
-
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.mlg) {
       earningsHeader
@@ -543,11 +462,6 @@ private struct StatsOverviewLedger: View {
         .overlay(Color.tidexBorderSubtle.opacity(0.55))  // swiftlint:disable:this no_magic_numbers
 
       metricStrip
-
-      Divider()
-        .overlay(Color.tidexBorderSubtle.opacity(0.55))  // swiftlint:disable:this no_magic_numbers
-
-      goalPanel
     }
     .statsPanelSurface(
       padding: Spacing.lg,
@@ -647,77 +561,6 @@ private struct StatsOverviewLedger: View {
       )
       .padding(.leading, Spacing.md)
     }
-  }
-
-  private var goalPanel: some View {
-    Button(action: onGoalTap) {  // swiftlint:disable:this closure_body_length
-      VStack(alignment: .leading, spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
-        HStack(alignment: .center, spacing: Spacing.xs) {
-          Label {
-            Text(.statsMonthlyGoalTitle)
-              .font(.tidexLabelStrong)
-          } icon: {
-            Image(systemName: "target")
-              .font(.tidexLabelStrong)
-          }
-          .foregroundColor(.tidexTextPrimary)
-
-          Spacer(minLength: Spacing.sm)
-
-          Image(systemName: "gearshape")  // swiftlint:disable:this accessibility_label_for_image
-            .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexTextMuted)
-        }
-
-        if stats.monthlyGoal.enabled {
-          HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
-            Text("\(Int(clampedGoalPercentage.rounded()))%")
-              .font(.tidexMonoTitle)
-              .foregroundColor(goalReached ? .tidexSuccess : .tidexTextPrimary)
-
-            Text(
-              String(
-                localized: .statsMonthlyGoalProgressTargetSuffix(
-                  formatCurrency(stats.monthlyGoal.target)
-                ))  // swiftlint:disable:this multiline_arguments_brackets
-            )
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-            .lineLimit(1)
-            .minimumScaleFactor(0.8)  // swiftlint:disable:this no_magic_numbers
-          }
-
-          goalProgressBar
-        }
-
-        Text(goalStatusText)
-          .font(.tidexSubheadline)
-          .foregroundColor(goalReached ? .tidexSuccess : .tidexTextSecondary)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-  }
-
-  private var goalProgressBar: some View {
-    GeometryReader { geometry in
-      ZStack(alignment: .leading) {
-        Capsule(style: .continuous)
-          .fill(Color.tidexBackgroundSecondary)
-          .frame(height: 10)  // swiftlint:disable:this no_magic_numbers
-
-        Capsule(style: .continuous)
-          .fill(goalReached ? Color.tidexSuccess : Color.tidexBlue)
-          .frame(
-            width: max(0, geometry.size.width * (clampedGoalPercentage / 100)),
-            height: 10  // swiftlint:disable:this no_magic_numbers
-          )
-          .animation(reduceMotion ? nil : .easeOut(duration: 0.35), value: clampedGoalPercentage)  // swiftlint:disable:this line_length no_magic_numbers
-      }
-    }
-    .frame(height: 10)  // swiftlint:disable:this no_magic_numbers
   }
 
   private func formatCurrency(_ amount: Double) -> String {

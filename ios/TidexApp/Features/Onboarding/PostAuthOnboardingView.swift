@@ -228,7 +228,6 @@ struct PostAuthOnboardingView: View {
     ) {
       AddJobSheet(
         initialCurrency: onboardingData.currency,
-        initialMonthlyGoal: inheritedMonthlyGoal,
         existingJobNeedingSetup: onboardingJobNeedingSetup,
         onSaveBasics: { input in
           await createOnboardingJobBasics(input: input)
@@ -570,7 +569,7 @@ struct PostAuthOnboardingView: View {
           currency: input.currency,
           payrollDay: input.payrollDay,
           halfTaxMonth: input.halfTaxMonth,
-          monthlyGoal: input.monthlyGoal,
+          monthlyGoal: nil,
           baselineSnapshot: input.baselineSnapshot
         )
       }
@@ -601,7 +600,7 @@ struct PostAuthOnboardingView: View {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal
+        monthlyGoal: nil
       )
 
       onboardingActiveJobs = jobsRepository.getActiveJobs(for: userId)
@@ -646,7 +645,7 @@ struct PostAuthOnboardingView: View {
         jobId: job.id,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal
+        monthlyGoal: job.monthly_goal
       ) != nil
     else {
       throw JobsRepositoryError.jobNotFound
@@ -681,11 +680,6 @@ struct PostAuthOnboardingView: View {
     }
 
     return activeJobs.first(where: { $0.id == activeSetupJobId })
-  }
-
-  private var inheritedMonthlyGoal: Int? {
-    onboardingActiveJobs.first(where: \.is_default)?.monthly_goal
-      ?? onboardingActiveJobs.first?.monthly_goal
   }
 
   private var shouldShowCloseButton: Bool {

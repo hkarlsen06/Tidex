@@ -312,31 +312,6 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
           percentageChange = nil
         }
 
-        // Build monthly goal
-        let monthlyGoal: MonthlyGoal
-        if let goalTarget = settings.effectiveMonthlyGoal(year: targetYear, month: targetMonth),
-          goalTarget > 0
-        {
-          let progress = currentTotals.net  // swiftlint:disable:this explicit_type_interface
-          let percentage = (progress / Double(goalTarget)) * 100  // swiftlint:disable:this explicit_type_interface
-          let remaining = max(Double(goalTarget) - progress, 0)  // swiftlint:disable:this explicit_type_interface
-          monthlyGoal = MonthlyGoal(
-            enabled: true,
-            target: Double(goalTarget),
-            progress: progress,
-            percentage: percentage,
-            remaining: remaining
-          )
-        } else {
-          monthlyGoal = MonthlyGoal(
-            enabled: false,
-            target: 0,
-            progress: 0,
-            percentage: 0,
-            remaining: 0
-          )
-        }
-
         // Build cumulative data for progress chart (using filtered shifts for earnings)
         let cumulativeData = Self.buildCumulativeData(  // swiftlint:disable:this explicit_type_interface
           currentMonthShifts: currentMonthIncluded,
@@ -401,7 +376,6 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
             shiftCount: previousMonthShifts.count
           ),
           percentageChange: percentageChange,
-          monthlyGoal: monthlyGoal,
           thisMonthCumulative: cumulativeData,
           thisWeek: thisWeek,
           bestWeek: bestWeek,
@@ -486,15 +460,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   nonisolated static func fingerprintSettingsForCaching(_ settings: UserSettings) -> Int {  // swiftlint:disable:this explicit_acl line_length
     var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
     hasher.combine(settings.updated_at ?? "")
-    hasher.combine(settings.monthly_goal ?? -1)
     hasher.combine(settings.half_tax_month ?? -1)
     hasher.combine(settings.currency ?? "")
-
-    let monthlyGoals = (settings.monthly_goals_by_month ?? [:]).sorted(by: { $0.key < $1.key })  // swiftlint:disable:this explicit_type_interface line_length
-    for entry in monthlyGoals {
-      hasher.combine(entry.key)
-      hasher.combine(entry.value)
-    }
     return hasher.finalize()
   }
 

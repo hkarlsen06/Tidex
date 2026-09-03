@@ -19,7 +19,7 @@ private struct StartupStatsCache: Codable {
 /// View model for the stats tab
 /// Computes statistics locally from on-device shift data
 @MainActor
-final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl line_length type_body_length
+final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl line_length
 
   // MARK: - Published State
 
@@ -31,17 +31,6 @@ final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explic
   @Published private(set) var currency: String = "kr"  // swiftlint:disable:this explicit_acl
   @Published private(set) var activeJobs: [Job] = []  // swiftlint:disable:this explicit_acl
   @Published private(set) var selectedJobId: String?  // swiftlint:disable:this explicit_acl
-
-  /// Baseline monthly goal from settings (global fallback goal).
-  var baselineMonthlyGoal: Int? {  // swiftlint:disable:this explicit_acl
-    settings?.monthly_goal.flatMap { $0 > 0 ? $0 : nil }
-  }
-
-  /// Month-specific override for the currently displayed month, if present.
-  var displayedMonthOverrideGoal: Int? {  // swiftlint:disable:this explicit_acl
-    let monthKey = UserSettings.monthKey(year: displayYear, month: displayMonth)  // swiftlint:disable:this explicit_type_interface line_length
-    return settings?.monthly_goals_by_month?[monthKey].flatMap { $0 > 0 ? $0 : nil }
-  }
 
   // MARK: - Month Navigation State (from SharedMonthContext)
 
@@ -332,24 +321,6 @@ final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explic
     }
 
     _ = await refreshTask.result
-  }
-
-  /// Save month-specific goal override for the displayed month.
-  func saveMonthlyGoalForDisplayedMonth(_ goal: Int?) async throws {  // swiftlint:disable:this explicit_acl
-    let session = try await AuthSessionManager.shared.getSession()  // swiftlint:disable:this explicit_type_interface
-
-    let updatedSettings = try await settingsRepository.saveMonthlyGoalForMonth(  // swiftlint:disable:this explicit_type_interface line_length
-      userId: session.normalizedUserId,
-      year: displayYear,
-      month: displayMonth,
-      goal: goal
-    )
-    if let updatedSettings {
-      settings = updatedSettings
-    }
-
-    statsService.clearCache()
-    await loadStats()
   }
 
   /// Performs pull-to-refresh sync and local recompute.
