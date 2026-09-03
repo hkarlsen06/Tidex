@@ -84,7 +84,7 @@ export default async function LocaleSupportPage({ params }: LocaleSupportPagePro
       <LocaleLangSetter locale={typedLocale} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
         <div className="flex items-center justify-end">
-          <MarketingLocaleToggle />
+          <MarketingLocaleToggle locale={typedLocale} path="/support" />
         </div>
 
         <div className="space-y-4">

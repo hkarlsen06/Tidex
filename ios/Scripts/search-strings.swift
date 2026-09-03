@@ -1,6 +1,4 @@
-#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable conditional_returns_on_newline cyclomatic_complexity
+#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command  // swiftlint:disable:next blanket_disable_command  // swiftlint:disable conditional_returns_on_newline cyclomatic_complexity
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable discouraged_optional_collection explicit_type_interface file_types_order
 // swiftlint:disable:next blanket_disable_command
@@ -10,7 +8,7 @@
 
 import Foundation
 
-// MARK: - Models (must match add-strings.swift exactly to avoid mangling JSON)
+// MARK: - Models
 
 private struct Catalog: Codable {
   var sourceLanguage: String

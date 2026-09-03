@@ -1,8 +1,4 @@
-'use client';
-
-import { useEffect } from 'react';
 import { Button } from '../../../components/ui/button';
-import { Separator } from '../../../components/ui/separator';
 import { PayrollDocsRenderer } from '@/components/payroll-docs/PayrollDocsRenderer';
 
 interface PayrollDocsType {
@@ -25,45 +21,7 @@ interface PayrollDocsPageProps {
 }
 
 export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
-  const handleBugReport = () => {
-    const subject = encodeURIComponent(docs.bugReportCta.emailSubject);
-    const body = encodeURIComponent(docs.bugReportCta.emailBody);
-    window.location.href = `mailto:contact@tidex.no?subject=${subject}&body=${body}`;
-  };
-
-  const scrollToSection = (id: string, updateHash = true) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      if (updateHash) {
-        window.history.pushState(null, '', `#${id}`);
-      }
-    }
-  };
-
-  // Handle initial hash navigation on page load
-  useEffect(() => {
-    const hash = window.location.hash.slice(1); // Remove the # character
-    if (hash) {
-      // Small delay to ensure content is rendered
-      setTimeout(() => {
-        scrollToSection(hash, false);
-      }, 100);
-    }
-  }, []);
-
-  // Handle hash changes (browser back/forward)
-  useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.slice(1);
-      if (hash) {
-        scrollToSection(hash, false);
-      }
-    };
-
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+  const bugReportHref = `mailto:contact@tidex.no?subject=${encodeURIComponent(docs.bugReportCta.emailSubject)}&body=${encodeURIComponent(docs.bugReportCta.emailBody)}`;
 
   return (
     <div className="min-h-screen bg-background">
@@ -117,12 +75,12 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
             <ul className="flex flex-1 gap-1 overflow-x-auto">
               {docs.navigation.map((item) => (
                 <li key={item.id}>
-                  <button
-                    onClick={() => scrollToSection(item.id)}
+                  <a
+                    href={`#${item.id}`}
                     className="whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {item.label}
-                  </button>
+                  </a>
                 </li>
               ))}
             </ul>
@@ -140,7 +98,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
           ))}
         </div>
 
-        <Separator className="my-16 sm:my-20" />
+        <hr className="my-16 border-border-subtle sm:my-20" />
 
         {/* Bug Report CTA */}
         <section className="rounded-xl border border-border-subtle bg-surface-secondary p-10 text-center sm:p-12">
@@ -152,10 +110,10 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
               {docs.bugReportCta.description}
             </p>
             <Button
-              onClick={handleBugReport}
+              asChild
               className="h-11 rounded-lg bg-brand-gradient-start px-8 text-base font-semibold text-text-inverse hover:bg-brand-gradient-mid transition-colors"
             >
-              {docs.bugReportCta.buttonText}
+              <a href={bugReportHref}>{docs.bugReportCta.buttonText}</a>
             </Button>
           </div>
         </section>

@@ -61,7 +61,7 @@ Use these skills for specialized tasks:
 
 ## iOS Localization Scripts
 
-Use `./scripts/xcstrings-set` from the repo root for ordinary plain string catalog edits. The old `./add-string`, `ios/add-string`, and `bun run ios:l10n:add` entry points are deprecated compatibility shims.
+Use `./scripts/xcstrings-set` from the repo root for ordinary plain string catalog edits.
 
 **Localization key usage:**
 

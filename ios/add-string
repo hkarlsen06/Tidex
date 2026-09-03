@@ -1,7 +1,0 @@
-#!/bin/bash
-# Deprecated compatibility wrapper for the iOS string catalog helper.
-# Prefer: ../scripts/xcstrings-set Resources/Localization/App/Localizable.xcstrings feature.key --comment "..." --en "English" --nb "Norwegian"
-set -euo pipefail
-
-script_dir="$(cd "$(dirname "$0")" && pwd)"
-exec "$script_dir/Scripts/add-string" "$@"

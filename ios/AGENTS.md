@@ -133,14 +133,6 @@ Prefer small focused unit tests over broad UI tests unless the behavior is UI-on
    bun ios/Scripts/translate-xcstrings.mjs
    ```
 
-Deprecated compatibility entry points:
-- `./add-string`
-- `ios/add-string`
-- `bun run ios:l10n:add`
-- `swift ios/Scripts/add-strings.swift`
-
-Use those only when preserving an old command invocation. They should warn and delegate where possible.
-
 Use Xcode's String Catalog editor or XLIFF export/import instead of `xcstrings-set` for pluralization, substitutions, device variants, or bulk translator workflows.
 
 ### Key naming convention

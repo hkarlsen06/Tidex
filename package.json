@@ -19,7 +19,6 @@
     "open-ios": "open ios/Tidex.xcodeproj",
     "localize": "bun ios/Scripts/translate-xcstrings.mjs",
     "ios:l10n:set": "./scripts/xcstrings-set",
-    "ios:l10n:add": "./ios/Scripts/add-string",
     "ios:l10n:delete": "swift ios/Scripts/delete-strings.swift",
     "ios:l10n:search": "swift ios/Scripts/search-strings.swift",
     "ios:l10n:audit": "swift ios/Scripts/audit-strings.swift",
@@ -48,8 +47,7 @@
     "minimatch@>=9.0.0 <9.0.9": "9.0.9",
     "minimatch@>=10.0.0 <10.2.3": ">=10.2.3",
     "postcss@<8.5.10": "8.5.10",
-    "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
-    "@eslint/eslintrc@3.3.3": "3.3.4"
+    "rollup@>=4.0.0 <4.59.0": ">=4.59.0"
   },
   "trustedDependencies": [
     "@firebase/util",

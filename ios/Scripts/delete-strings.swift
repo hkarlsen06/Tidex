@@ -1,6 +1,4 @@
-#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable closure_body_length cyclomatic_complexity
+#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command  // swiftlint:disable:next blanket_disable_command  // swiftlint:disable closure_body_length cyclomatic_complexity
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable discouraged_optional_collection
 // swiftlint:disable:next blanket_disable_command
@@ -14,7 +12,7 @@ import Foundation
   import Glibc
 #endif
 
-// MARK: - Models (must match add-strings.swift exactly to avoid mangling JSON)
+// MARK: - Models
 
 private struct Catalog: Codable {
   var sourceLanguage: String
