@@ -1,95 +1,10 @@
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable line_length superfluous_disable_command
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable closure_body_length explicit_acl explicit_top_level_acl explicit_type_interface
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable no_magic_numbers number_separator
 import SwiftUI
 
-/// Shared app background with a subtle top-centered radial glow.
-/// Keeps the existing semantic background token as the base layer while adding
-/// the same brighter-at-the-top atmosphere used in the marketing phone mockup.
-struct TidexAppBackground: View {
-  @Environment(\.colorScheme) private var colorScheme
-
-  private var verticalTopOpacity: Double {
-    colorScheme == .dark ? 0.08 : 0.055
-  }
-
-  private var verticalMidOpacity: Double {
-    colorScheme == .dark ? 0.035 : 0.025
-  }
-
-  private var glowOpacityPrimary: Double {
-    colorScheme == .dark ? 0.09 : 0.06
-  }
-
-  private var glowOpacitySecondary: Double {
-    colorScheme == .dark ? 0.035 : 0.025
-  }
-
-  private var midGlowOpacity: Double {
-    colorScheme == .dark ? 0.025 : 0.02
-  }
-
-  private var primaryGlowRadius: CGFloat {
-    UIDevice.current.userInterfaceIdiom == .pad ? 1_120 : 780
-  }
-
-  private var secondaryGlowRadius: CGFloat {
-    UIDevice.current.userInterfaceIdiom == .pad ? 980 : 680
-  }
-
-  var body: some View {
-    ZStack {
-      Color.tidexBackground
-
-      LinearGradient(
-        colors: [
-          Color.tidexBlue.opacity(verticalTopOpacity),
-          Color.tidexBrandPrimary.opacity(verticalMidOpacity),
-          Color.clear,
-        ],
-        startPoint: .top,
-        endPoint: UnitPoint(x: 0.5, y: 0.8)
-      )
+/// Shared full-screen app canvas.
+internal struct TidexAppBackground: View {
+  internal var body: some View {
+    Color.tidexBackground
       .ignoresSafeArea()
-
-      // A large fixed radius avoids per-layout geometry reads in the shared root background.
-      RadialGradient(
-        colors: [
-          Color.tidexBlue.opacity(glowOpacityPrimary),
-          Color.tidexBrandPrimary.opacity(glowOpacitySecondary),
-          Color.clear,
-        ],
-        center: UnitPoint(x: 0.5, y: 0.0),
-        startRadius: 0,
-        endRadius: primaryGlowRadius
-      )
-      .ignoresSafeArea()
-
-      RadialGradient(
-        colors: [
-          Color.tidexBlue.opacity(midGlowOpacity),
-          Color.clear,
-        ],
-        center: UnitPoint(x: 0.5, y: 0.46),
-        startRadius: 0,
-        endRadius: secondaryGlowRadius
-      )
-      .ignoresSafeArea()
-
-      LinearGradient(
-        colors: [
-          Color.clear,
-          Color.tidexBackground.opacity(colorScheme == .dark ? 0.10 : 0.05),
-        ],
-        startPoint: UnitPoint(x: 0.5, y: 0.55),
-        endPoint: .bottom
-      )
-      .ignoresSafeArea()
-    }
-    .ignoresSafeArea()
-    .allowsHitTesting(false)
+      .allowsHitTesting(false)
   }
 }

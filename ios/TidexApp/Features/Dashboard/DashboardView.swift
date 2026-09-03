@@ -281,8 +281,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   private var navigationContent: some View {
     NavigationStack {  // swiftlint:disable:this closure_body_length
       ZStack {
-        // Background that fills entire screen including safe areas.
-        // Matches the brighter-at-the-top app chrome used in the marketing mockup.
         TidexAppBackground()
 
         // Main content - month picker is now in shared overlay
@@ -869,27 +867,11 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       endTime = nil
     }
 
-    // Configure countdown with current data
-    // Payroll countdown shown for all months (not just current)
     countdownManager.configure(
       shiftDate: shiftDate,
       startTime: startTime,
-      endTime: endTime,
-      payrollDate: selectedPayrollDate(for: data)
+      endTime: endTime
     )
-  }
-
-  private func selectedPayrollDate(for data: DashboardData) -> Date {  // swiftlint:disable:this type_contents_order
-    let payrollVariants = viewModel.payrollCardVariants(  // swiftlint:disable:this explicit_type_interface
-      fallback: data,
-      defaultTitle: String(localized: .dashboardPayroll)
-    )
-
-    guard !payrollVariants.isEmpty else {
-      return data.payrollDate
-    }
-
-    return payrollVariants[0].payoutDate
   }
 
   private func featuredEventCountdownStatus(_ event: EventRow, now: Date = Date())  // swiftlint:disable:this line_length type_contents_order
@@ -1110,33 +1092,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
       // Cards stay in place - only numbers animate on month change (like Next.js)
       VStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
-        // Payroll countdown slot - fixed height to prevent layout shift.
-        if let previousPayrollVariant, !isPayrollCardLoading {
-          previousPayrollDetailsChip(for: previousPayrollVariant)
-        } else {
-          Text(countdownManager.payrollCountdownText ?? " ")
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextSecondary)
-            .opacity(countdownManager.payrollCountdownText != nil ? 1 : 0)
-            .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
-        }
-
-        // Payroll Card (Previous Month relative to displayed month)
-        payrollCardSection(
-          selectedVariant: selectedPayrollVariant,
-          variantCount: payrollVariants.count,
-          canManuallySetPayrollStatus: canManuallySetPayrollStatus,
-          payrollMarkedReceived: payrollMarkedReceived,
-          payrollOverrideUserId: payrollOverrideUserId,
-          payrollProgress: isPayrollCardLoading ? nil : selectedPayrollProgress,
-          isLoading: isPayrollCardLoading,
-          showsLoadingShimmer: false
-        )
-        .frame(
-          minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
-          alignment: .top
-        )
-
         // Total Card (Displayed Month) - THE ANCHOR
         // Numbers animate smoothly when values change
         TotalCard(
@@ -1169,6 +1124,26 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         if viewModel.shouldShowDashboardClockButtons {
           clockButtonsSection()
         }
+
+        if let previousPayrollVariant, !isPayrollCardLoading {
+          previousPayrollDetailsChip(for: previousPayrollVariant)
+        }
+
+        // Payroll Card (Previous Month relative to displayed month)
+        payrollCardSection(
+          selectedVariant: selectedPayrollVariant,
+          variantCount: payrollVariants.count,
+          canManuallySetPayrollStatus: canManuallySetPayrollStatus,
+          payrollMarkedReceived: payrollMarkedReceived,
+          payrollOverrideUserId: payrollOverrideUserId,
+          payrollProgress: isPayrollCardLoading ? nil : selectedPayrollProgress,
+          isLoading: isPayrollCardLoading,
+          showsLoadingShimmer: false
+        )
+        .frame(
+          minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
+          alignment: .top
+        )
 
         // Featured Shift Card - exact height on regular Dynamic Type to avoid
         // skeleton/content vertical recentering during the loading transition.
@@ -1322,19 +1297,24 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @ViewBuilder
   private func clockButtonsSkeletonSection() -> some View {  // swiftlint:disable:this type_contents_order
     HStack(spacing: Spacing.sm) {
-      RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(Color.tidexSurfacePrimary)
-        .frame(height: 44)  // swiftlint:disable:this no_magic_numbers
-        .tidexCardShadow()
-        .shimmer(isActive: true)
+      clockButton(
+        title: .dashboardClockIn,
+        systemImage: "play.fill",
+        isEnabled: false,
+        action: {}
+      )
 
-      RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(Color.tidexSurfacePrimary)
-        .frame(height: 44)  // swiftlint:disable:this no_magic_numbers
-        .tidexCardShadow()
-        .shimmer(isActive: true)
+      clockButton(
+        title: .dashboardClockOut,
+        systemImage: "stop.fill",
+        isEnabled: false,
+        action: {}
+      )
     }
     .padding(.horizontal, Spacing.mlg)
+    .redacted(reason: .placeholder)
+    .shimmer(isActive: true)
+    .accessibilityHidden(true)
   }
 
   @ViewBuilder
@@ -1606,25 +1586,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
           // Skeleton cards matching the real dashboard layout
           VStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
-            // Placeholder for payroll countdown text
-            Color.clear
-              .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
-
-            // Payroll Card skeleton
-            PayrollCard(
-              payrollDate: Date(),
-              label: String(localized: .dashboardNextPayout),
-              gross: 0,
-              net: nil,
-              tax: nil,
-              taxEnabled: false,
-              isLoading: true
-            )
-            .frame(
-              minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
-              alignment: .top
-            )
-
             // Total Card skeleton
             TotalCard(
               gross: 0,
@@ -1642,6 +1603,21 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             if viewModel.shouldShowDashboardClockButtons {
               clockButtonsSkeletonSection()
             }
+
+            // Payroll Card skeleton
+            PayrollCard(
+              payrollDate: Date(),
+              label: String(localized: .dashboardNextPayout),
+              gross: 0,
+              net: nil,
+              tax: nil,
+              taxEnabled: false,
+              isLoading: true
+            )
+            .frame(
+              minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
+              alignment: .top
+            )
 
             // Featured Shift Card skeleton
             if usesFixedCardHeights {

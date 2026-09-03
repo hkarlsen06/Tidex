@@ -2,8 +2,8 @@
 // swiftlint:disable:previous blanket_disable_command
 import Combine
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SettingsRepository")
 
@@ -146,6 +146,7 @@ final class SettingsRepository: ObservableObject {
     calendarContentColorStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
     aiDataSharingEnabled: Bool? = nil,
+    wageyShowcaseSeen: Bool? = nil,
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
     defaultStartupTab: String? = nil,
@@ -163,6 +164,7 @@ final class SettingsRepository: ObservableObject {
         calendarContentColorStyle: calendarContentColorStyle,
         showDashboardClockButtons: showDashboardClockButtons,
         aiDataSharingEnabled: aiDataSharingEnabled,
+        wageyShowcaseSeen: wageyShowcaseSeen,
         halfTaxMonth: halfTaxMonth,
         currency: currency,
         defaultStartupTab: defaultStartupTab
@@ -223,6 +225,7 @@ final class SettingsRepository: ObservableObject {
       calendarContentColorStyle: nil,
       showDashboardClockButtons: nil,
       aiDataSharingEnabled: nil,
+      wageyShowcaseSeen: nil,
       halfTaxMonth: nil,
       currency: nil,
       defaultStartupTab: nil

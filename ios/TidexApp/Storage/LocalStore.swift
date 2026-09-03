@@ -2488,6 +2488,7 @@ internal actor LocalStoreActor {
     calendarContentColorStyle: String = "workplace",
     showDashboardClockButtons: Bool = true,
     aiDataSharingEnabled: Bool = false,
+    wageyShowcaseSeen: Bool = false,
     monthlyGoal: Int? = nil,
     monthlyGoalsByMonth: [String: Int] = [:],
     defaultShiftsView: String? = nil,
@@ -2510,6 +2511,7 @@ internal actor LocalStoreActor {
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       defaultStartupTab: defaultStartupTab,
+      wageyShowcaseSeen: wageyShowcaseSeen,
       lastActive: now,
       updatedAt: now,
       revision: 0
@@ -2548,6 +2550,7 @@ internal actor LocalStoreActor {
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       defaultStartupTab: defaultStartupTab,
+      wageyShowcaseSeen: wageyShowcaseSeen,
       lastActive: now,
       createdAt: now,
       serverUpdatedAt: now,
@@ -2599,6 +2602,7 @@ internal actor LocalStoreActor {
     calendarContentColorStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
     aiDataSharingEnabled: Bool? = nil,
+    wageyShowcaseSeen: Bool? = nil,
     halfTaxMonth: Int?,
     currency: String?,
     defaultStartupTab: String?
@@ -2662,6 +2666,11 @@ internal actor LocalStoreActor {
     if let newAIDataSharingEnabled = aiDataSharingEnabled {
       localSettings.aiDataSharingEnabled = newAIDataSharingEnabled
       newDirtyFields.insert(.aiDataSharingEnabled)
+    }
+
+    if let newWageyShowcaseSeen = wageyShowcaseSeen {
+      localSettings.wageyShowcaseSeen = newWageyShowcaseSeen
+      newDirtyFields.insert(.wageyShowcaseSeen)
     }
 
     if let newHalfTax = halfTaxMonth, newHalfTax != localSettings.halfTaxMonth {
@@ -3604,6 +3613,7 @@ internal actor LocalStoreActor {
     existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
+    existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.defaultStartupTab = serverRow.default_startup_tab
@@ -3694,6 +3704,9 @@ internal actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.aiDataSharingEnabled) {
       existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
+    }
+    if !localDirtyFields.contains(.wageyShowcaseSeen) {
+      existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
     }
     if !localDirtyFields.contains(.halfTaxMonth) {
       existing.halfTaxMonth = serverRow.half_tax_month
@@ -4527,6 +4540,7 @@ internal actor LocalStoreActor {
     existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
+    existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.defaultStartupTab = serverRow.default_startup_tab
@@ -4597,6 +4611,7 @@ internal actor LocalStoreActor {
     existing.calendarContentColorStyle = serverSnapshot.calendarContentColorStyle
     existing.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
     existing.aiDataSharingEnabled = serverSnapshot.aiDataSharingEnabled
+    existing.wageyShowcaseSeen = serverSnapshot.wageyShowcaseSeen
     existing.halfTaxMonth = serverSnapshot.halfTaxMonth
     existing.currency = serverSnapshot.currency
     existing.defaultStartupTab = serverSnapshot.defaultStartupTab

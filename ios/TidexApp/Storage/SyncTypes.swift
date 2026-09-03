@@ -118,6 +118,7 @@ internal enum UserSettingsField: String, Codable, CaseIterable {
   case profilePictureUrl = "profile_picture_url"
   case showDashboardClockButtons = "show_dashboard_clock_buttons"
   case theme = "theme"
+  case wageyShowcaseSeen = "wagey_showcase_seen"
 }
 
 /// Field keys for tracking dirty fields on LocalNotificationPreferences

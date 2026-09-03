@@ -1,3 +1,6 @@
+import SwiftData
+import SwiftUI
+import UIKit
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable accessibility_label_for_image anonymous_argument_in_multiline_closure closure_body_length
 // swiftlint:disable:next blanket_disable_command
@@ -11,9 +14,6 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable type_name
 import os
-import SwiftData
-import SwiftUI
-import UIKit
 
 private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 
@@ -101,7 +101,7 @@ private struct RootContent: View {
     )
 
     ZStack {
-      rootBackground
+      TidexAppBackground()
 
       // Content based on app state
       Group {
@@ -262,18 +262,6 @@ private struct RootContent: View {
     .onDisappear {
       chatToastDismissTask?.cancel()
       chatToastDismissTask = nil
-    }
-  }
-
-  @ViewBuilder
-  private var rootBackground: some View {
-    switch coordinator.appState {
-    case .unauthenticated:
-      Color.tidexBackground
-        .ignoresSafeArea()
-
-    default:
-      TidexAppBackground()
     }
   }
 

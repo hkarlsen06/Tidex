@@ -351,25 +351,7 @@ struct FriendsThreadView: View {
     .accessibilityIdentifier(AccessibilityID.threadView)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background {
-      ZStack(alignment: .top) {
-        Color.tidexBackground
-          .ignoresSafeArea()
-
-        TidexAppBackground()
-          .frame(height: 280)
-          .mask(
-            LinearGradient(
-              colors: [
-                .black,
-                .black,
-                .clear,
-              ],
-              startPoint: .top,
-              endPoint: .bottom
-            )
-          )
-          .ignoresSafeArea(edges: .top)
-      }
+      TidexAppBackground()
     }
     .navigationBarTitleDisplayMode(.inline)
     .toolbarBackground(.hidden, for: .navigationBar)

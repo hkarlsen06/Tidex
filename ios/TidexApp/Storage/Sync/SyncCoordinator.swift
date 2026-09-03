@@ -2613,6 +2613,7 @@ final class SyncCoordinator: ObservableObject {
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       defaultStartupTab: serverRow.default_startup_tab,
+      wageyShowcaseSeen: serverRow.wagey_showcase_seen ?? false,
       lastActive: lastActive,
       createdAt: createdAt,
       serverUpdatedAt: serverUpdatedAt,
@@ -5174,6 +5175,9 @@ final class SyncCoordinator: ObservableObject {
     if dirtyFields.contains(.aiDataSharingEnabled) {
       updateData["ai_data_sharing_enabled"] = .bool(settings.aiDataSharingEnabled ?? false)
     }
+    if dirtyFields.contains(.wageyShowcaseSeen) {
+      updateData["wagey_showcase_seen"] = .bool(settings.wageyShowcaseSeen ?? false)
+    }
     if dirtyFields.contains(.halfTaxMonth) {
       if let month = settings.halfTaxMonth {
         updateData["half_tax_month"] = .integer(month)
@@ -5267,6 +5271,7 @@ final class SyncCoordinator: ObservableObject {
       "calendar_content_color_style": .string(settings.effectiveCalendarContentColorStyle),
       "show_dashboard_clock_buttons": .bool(settings.effectiveShowDashboardClockButtons),
       "ai_data_sharing_enabled": .bool(settings.aiDataSharingEnabled ?? false),
+      "wagey_showcase_seen": .bool(settings.wageyShowcaseSeen ?? false),
     ]
 
     let monthlyGoalsByMonthEncoded = try requireEncode(
