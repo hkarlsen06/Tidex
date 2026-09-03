@@ -21,6 +21,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
   var isLoading: Bool = false  // swiftlint:disable:this explicit_acl
   /// Allows transition placeholders to use the loading layout without starting shimmer.
   var showsLoadingShimmer: Bool = true  // swiftlint:disable:this explicit_acl
+  var isElevated: Bool = true  // swiftlint:disable:this explicit_acl
 
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
@@ -169,29 +170,53 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         }
       }
     }
-    .padding(.horizontal, Spacing.mlg)
+    .padding(.horizontal, isElevated ? Spacing.mlg : 0)
     .padding(.vertical, ShiftCardMetrics.verticalPadding)
     .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
-    .background(Color.tidexSurfacePrimary)
     .overlay(alignment: .leading) {
       // Progress bar overlay - fills from left based on progress
       // Uses Rectangle instead of RoundedRectangle so small widths don't overflow
       // The clipShape on the parent handles the rounded corners
-      // Always rendered (width 0 is invisible) so animatedProgress can animate to zero
-      // when navigating away from the current month
-      GeometryReader { geometry in
-        Rectangle()
-          .fill(progressFillColor)
-          .frame(width: geometry.size.width * (animatedProgress / 100))
+      if isElevated {
+        GeometryReader { geometry in
+          Rectangle()
+            .fill(progressFillColor)
+            .frame(width: geometry.size.width * (animatedProgress / 100))
+        }
       }
     }
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-    .tidexCardShadow()
+    .tidexRowSurface(
+      cornerRadius: CornerRadius.card,
+      fillColor: isElevated ? .tidexSurfacePrimary : .clear,
+      shadowLevel: isElevated ? .card : nil
+    )
+    .overlay(alignment: .bottom) {
+      if !isElevated, !isLoading, hasProgress {
+        ProgressView(value: animatedProgress, total: 100)  // swiftlint:disable:this no_magic_numbers
+          .tint(.tidexBlue)
+          .frame(maxWidth: .infinity)
+          .offset(y: Spacing.xs)
+      }
+    }
+    .padding(.bottom, !isElevated && !isLoading && hasProgress ? Spacing.md : 0)
     .shimmer(isActive: isLoading && showsLoadingShimmer)
     .onChange(of: progress) { _, newValue in
+      guard !isLoading else {
+        animatedProgress = 0
+        return
+      }
       // Animate to new progress value
       withAnimation(.linear(duration: 1.0)) {
         animatedProgress = newValue ?? 0
+      }
+    }
+    .onChange(of: isLoading) { _, newValue in
+      if newValue {
+        animatedProgress = 0
+      } else {
+        withAnimation(.linear(duration: 1.0)) {
+          animatedProgress = progress ?? 0
+        }
       }
     }
     .onChange(of: primaryAmount) { _, newValue in
@@ -204,7 +229,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
       previousPrimaryAmount = primaryAmount
       previousHasTrailingBottomContent = showBreakdown
 
-      guard let progress, progress >= 1, progress <= 100 else {
+      guard !isLoading, let progress, progress >= 1, progress <= 100 else {
         animatedProgress = 0
         return
       }

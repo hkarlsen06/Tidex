@@ -103,7 +103,6 @@ final class PaySettingsViewModel: ObservableObject {
 
   // MARK: - Debounce
 
-  private var monthlyGoalSaveTask: Task<Void, Never>?
   private var payrollDaySaveTask: Task<Void, Never>?
 
   // MARK: - Init
@@ -114,7 +113,6 @@ final class PaySettingsViewModel: ObservableObject {
 
   deinit {
     // Cancel any pending debounce tasks to prevent orphaned operations
-    monthlyGoalSaveTask?.cancel()
     payrollDaySaveTask?.cancel()
   }
 
@@ -309,10 +307,6 @@ final class PaySettingsViewModel: ObservableObject {
     selectedJob?.payroll_day ?? 1
   }
 
-  var selectedJobMonthlyGoal: Int? {
-    selectedJob?.monthly_goal
-  }
-
   var selectedJobHalfTaxMonth: Int? {
     selectedJob?.half_tax_month
   }
@@ -438,7 +432,7 @@ final class PaySettingsViewModel: ObservableObject {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal,
+        monthlyGoal: job.monthly_goal,
         baselineSnapshot: input.baselineSnapshot
       )
       requiresJobReselection = false
@@ -766,47 +760,6 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   // MARK: - Global Settings Updates
-
-  /// Update monthly goal with debouncing
-  func updateMonthlyGoal(_ value: Int?) {
-    monthlyGoalSaveTask?.cancel()
-
-    monthlyGoalSaveTask = Task {
-      do {
-        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second debounce
-        guard !Task.isCancelled else { return }
-
-        await saveMonthlyGoal(value)
-      } catch {
-        // Task was cancelled
-      }
-    }
-  }
-
-  private func saveMonthlyGoal(_ value: Int?) async {
-    guard
-      let userId = currentLocalUserId(),
-      let selectedJobId,
-      let selectedJob
-    else { return }
-
-    do {
-      _ = try await jobsRepository.updateJobPaySettings(
-        userId: userId,
-        jobId: selectedJobId,
-        payrollDay: selectedJob.payroll_day ?? 1,
-        halfTaxMonth: selectedJob.half_tax_month,
-        monthlyGoal: value
-      )
-
-      refreshData()
-      notifyDashboardDataChanged()
-      logger.info("Updated monthly goal to: \(value ?? 0)")
-    } catch {
-      logger.error("Failed to update monthly goal: \(error.localizedDescription)")
-      errorMessage = String(localized: .settingsPayErrorSaveFailed)
-    }
-  }
 
   /// Update payroll day with debouncing
   func updatePayrollDay(_ value: Int) {

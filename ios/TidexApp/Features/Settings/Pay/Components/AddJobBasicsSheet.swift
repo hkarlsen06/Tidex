@@ -7,7 +7,6 @@ struct AddJobBasicsInput {
   let currency: String
   let payrollDay: Int
   let halfTaxMonth: Int?
-  let monthlyGoal: Int?
 }
 
 struct AddJobBasicsSheet: View {
@@ -16,7 +15,6 @@ struct AddJobBasicsSheet: View {
   let initialCurrency: String
   let initialPayrollDay: Int
   let initialHalfTaxMonth: Int?
-  let initialMonthlyGoal: Int?
   let onSave: (AddJobBasicsInput) async -> Bool
 
   @State private var name = ""
@@ -86,8 +84,7 @@ struct AddJobBasicsSheet: View {
         color: Self.normalizedHex(from: selectedColor),
         currency: initialCurrency,
         payrollDay: initialPayrollDay,
-        halfTaxMonth: initialHalfTaxMonth,
-        monthlyGoal: initialMonthlyGoal
+        halfTaxMonth: initialHalfTaxMonth
       ))
     isSaving = false
 

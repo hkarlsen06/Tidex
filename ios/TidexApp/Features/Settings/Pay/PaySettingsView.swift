@@ -240,11 +240,9 @@ struct PaySettingsView: View {
           GlobalPaySettingsCard(
             jobId: viewModel.selectedJobId,
             currency: viewModel.userCurrency,
-            monthlyGoal: viewModel.selectedJobMonthlyGoal,
             payrollDay: viewModel.selectedJobPayrollDay,
             halfTaxMonth: viewModel.selectedJobHalfTaxMonth,
             canChangeCurrency: viewModel.canChangeCurrency,
-            onUpdateMonthlyGoal: { viewModel.updateMonthlyGoal($0) },
             onUpdatePayrollDay: { viewModel.updatePayrollDay($0) },
             onUpdateHalfTaxMonth: { value in
               await viewModel.updateHalfTaxMonth(value)

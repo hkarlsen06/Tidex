@@ -15,8 +15,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   let plannedCount: Int  // Future/planned shift count // swiftlint:disable:this explicit_acl type_contents_order
   let percentageChange: Double?  // swiftlint:disable:this explicit_acl type_contents_order
   let taxEnabled: Bool  // swiftlint:disable:this explicit_acl type_contents_order
-  let monthlyGoal: Double?  // Optional monthly goal used for thin progress bar under total // swiftlint:disable:this explicit_acl line_length type_contents_order
-  var percentageIncludesPayrollAdjustments: Bool = false  // swiftlint:disable:this explicit_acl type_contents_order
+  var isElevated: Bool = true  // swiftlint:disable:this explicit_acl type_contents_order
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false  // swiftlint:disable:this explicit_acl type_contents_order
 
@@ -24,16 +23,16 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
 
-  /// Animated fraction for the monthly goal progress bar.
-  @State private var animatedGoalProgressFraction: Double = 0  // swiftlint:disable:this type_contents_order
+  /// Animated fraction for the month-over-month comparison bar.
+  @State private var animatedComparisonProgressFraction: Double = 0  // swiftlint:disable:this type_contents_order
   /// Second-pass overlay progress (0...1) that sweeps gradient over the filled blue bar.
-  @State private var goalReachedOverlayProgress: Double = 0  // swiftlint:disable:this type_contents_order
-  /// Pending delayed task for activating reached-goal visuals.
-  @State private var goalVisualTask: Task<Void, Never>?  // swiftlint:disable:this type_contents_order
+  @State private var comparisonReachedOverlayProgress: Double = 0  // swiftlint:disable:this type_contents_order
+  /// Pending delayed task for activating positive-comparison visuals.
+  @State private var comparisonVisualTask: Task<Void, Never>?  // swiftlint:disable:this type_contents_order
 
   private let amountAnimationDuration: Double = 0.8  // swiftlint:disable:this type_contents_order
-  private let goalFillAnimationDuration: Double = 0.52  // swiftlint:disable:this type_contents_order
-  private let goalReachedSweepDuration: Double = 0.4  // swiftlint:disable:this type_contents_order
+  private let comparisonFillAnimationDuration: Double = 0.52  // swiftlint:disable:this type_contents_order
+  private let comparisonReachedSweepDuration: Double = 0.4  // swiftlint:disable:this type_contents_order
 
   private struct GlitterSpeck: Identifiable {
     let id: Int
@@ -80,69 +79,32 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     isLoading || mainDisplayValue == 0
   }
 
-  private var isPositive: Bool {  // swiftlint:disable:this type_contents_order
-    (percentageChange ?? 0) >= 0
-  }
-
-  private var displayPercentage: Double {  // swiftlint:disable:this type_contents_order
-    abs(percentageChange ?? 0)
-  }
-
-  private var formattedPercentage: String {  // swiftlint:disable:this type_contents_order
-    let value = displayPercentage / 100  // swiftlint:disable:this explicit_type_interface
-    return value.formatted(.percent.precision(.fractionLength(0)).locale(Locale.appLocale))
-  }
-
-  /// Whether to show a dash instead of percentage (nil or zero means no meaningful comparison)
-  private var showPercentageDash: Bool {  // swiftlint:disable:this type_contents_order
-    percentageChange == nil || percentageChange == 0
-  }
-
   private var usesFixedTypographyFrames: Bool {  // swiftlint:disable:this type_contents_order
     !dynamicTypeSize.isAccessibilitySize
   }
 
-  private var goalTarget: Double? {  // swiftlint:disable:this type_contents_order
-    guard let monthlyGoal, monthlyGoal > 0 else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
-    return monthlyGoal
+  private var renderedComparisonProgressFraction: Double {  // swiftlint:disable:this type_contents_order
+    isLoading ? 0 : Self.comparisonProgressFraction(for: percentageChange)
   }
 
-  private var showGoalProgressBar: Bool {  // swiftlint:disable:this type_contents_order
-    isLoading || goalTarget != nil
+  private var comparisonPercentText: String {  // swiftlint:disable:this type_contents_order
+    Self.comparisonPercentText(for: percentageChange)
   }
 
-  /// Raw progress fraction for monthly goal (can exceed 1.0 when over target).
-  private var rawGoalProgressFraction: Double {  // swiftlint:disable:this type_contents_order
-    guard let goalTarget else { return 0 }  // swiftlint:disable:this conditional_returns_on_newline
-    return max(mainDisplayValue / goalTarget, 0)
+  private var isAtOrAbovePreviousMonth: Bool {  // swiftlint:disable:this type_contents_order
+    !isLoading && percentageChange.map { $0 >= 0 } == true
   }
 
-  /// Progress fraction used for bar fill (0.0-1.0), clamped to the track.
-  private var goalProgressFraction: Double {  // swiftlint:disable:this type_contents_order
-    min(rawGoalProgressFraction, 1)
+  private var showComparisonReachedOverlay: Bool {  // swiftlint:disable:this type_contents_order
+    comparisonReachedOverlayProgress > 0
   }
 
-  /// Rendered fraction for the progress bar.
-  /// Keep loading state visually empty, then animate to the real value on load completion.
-  private var renderedGoalProgressFraction: Double {  // swiftlint:disable:this type_contents_order
-    isLoading ? 0 : goalProgressFraction
-  }
+  private var comparisonFillStyle: AnyShapeStyle {  // swiftlint:disable:this type_contents_order
+    guard isAtOrAbovePreviousMonth else {
+      return AnyShapeStyle(Color.tidexError.opacity(0.58))  // swiftlint:disable:this no_magic_numbers
+    }
 
-  private var goalProgressPercentText: String {  // swiftlint:disable:this type_contents_order
-    let percent = Int((rawGoalProgressFraction * 100).rounded())  // swiftlint:disable:this explicit_type_interface
-    return "\(percent)%"
-  }
-
-  private var isGoalReachedOrExceeded: Bool {  // swiftlint:disable:this type_contents_order
-    !isLoading && rawGoalProgressFraction >= 1
-  }
-
-  private var showGoalReachedOverlay: Bool {  // swiftlint:disable:this type_contents_order
-    goalReachedOverlayProgress > 0
-  }
-
-  private var goalReachedOverlayStyle: AnyShapeStyle {  // swiftlint:disable:this type_contents_order
-    AnyShapeStyle(
+    return AnyShapeStyle(
       LinearGradient(
         colors: [
           .tidexBrandPrimary,
@@ -153,6 +115,19 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         endPoint: .trailing
       )
     )
+  }
+
+  static func comparisonProgressFraction(for percentageChange: Double?) -> Double {
+    guard let percentageChange else { return 0 }
+    if percentageChange.isInfinite { return 1 }
+    return min(max(1 + percentageChange / 100, 0), 1)
+  }
+
+  static func comparisonPercentText(for percentageChange: Double?) -> String {
+    guard let percentageChange else { return "—" }
+    if percentageChange.isInfinite { return "∞" }
+    let rounded = Int(percentageChange.rounded())  // swiftlint:disable:this explicit_type_interface
+    return "\(rounded > 0 ? "+" : "")\(rounded)%"
   }
 
   // MARK: - Subtitle Text
@@ -209,73 +184,38 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   var body: some View {  // swiftlint:disable:this explicit_acl
     VStack(spacing: Spacing.xxs) {
-      // Use fixed heights for standard text sizes, but allow expansion for accessibility sizes.
-      percentageIndicator
-        .frame(height: usesFixedTypographyFrames ? 22 : nil)  // swiftlint:disable:this no_magic_numbers
-
       mainAmountDisplay
         .frame(height: usesFixedTypographyFrames ? 88 : nil)  // swiftlint:disable:this no_magic_numbers
 
-      goalProgressBar
+      comparisonProgressBar
 
       subtitleContent
         .frame(height: usesFixedTypographyFrames ? 24 : nil)  // swiftlint:disable:this no_magic_numbers
     }
     .frame(maxWidth: .infinity)
-    .padding(.horizontal, Spacing.lg)
+    .padding(.horizontal, isElevated ? Spacing.lg : 0)
     .padding(.top, Spacing.mlg)
     .padding(.bottom, Spacing.md)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(Color.tidexSurfacePrimary)
+    .tidexRowSurface(
+      cornerRadius: CornerRadius.card,
+      fillColor: isElevated ? .tidexSurfacePrimary : .clear,
+      shadowLevel: isElevated ? .card : nil
     )
-    .tidexCardShadow()
     .shimmer(isActive: isLoading)
-    .onChange(of: renderedGoalProgressFraction) { _, newValue in
-      animateGoalProgress(to: newValue)
-      syncGoalReachedVisualsAfterProgressAnimation(for: newValue)
+    .onChange(of: renderedComparisonProgressFraction) { _, newValue in
+      animateComparisonProgress(to: newValue)
+      syncComparisonReachedVisualsAfterProgressAnimation(for: newValue)
     }
     .onAppear {
-      animateGoalProgress(to: renderedGoalProgressFraction)
-      syncGoalReachedVisualsAfterProgressAnimation(for: renderedGoalProgressFraction)
+      animateComparisonProgress(to: renderedComparisonProgressFraction)
+      syncComparisonReachedVisualsAfterProgressAnimation(for: renderedComparisonProgressFraction)
     }
     .onDisappear {
-      goalVisualTask?.cancel()
+      comparisonVisualTask?.cancel()
     }
   }
 
   // MARK: - Subviews
-
-  @ViewBuilder
-  private var percentageIndicator: some View {
-    if showPercentageDash {
-      // Skeleton placeholder bar matching other empty states
-      RoundedRectangle(cornerRadius: CornerRadius.xxs)
-        .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
-        .frame(width: 48, height: 14)  // swiftlint:disable:this no_magic_numbers
-    } else {
-      HStack(spacing: Spacing.xxs) {
-        Image(systemName: isPositive ? "arrow.up" : "arrow.down")
-          .font(.tidexButton)
-          .contentTransition(.symbolEffect(.replace))
-        HStack(alignment: .firstTextBaseline, spacing: 1) {
-          Text(formattedPercentage)
-            .font(.tidexHeadline)
-            .contentTransition(.numericText(value: displayPercentage))
-
-          if percentageIncludesPayrollAdjustments {
-            Text(verbatim: "*")
-              .font(.tidexFootnote.weight(.semibold))
-              .offset(y: -4)  // swiftlint:disable:this no_magic_numbers
-              .accessibilityHidden(true)
-          }
-        }
-      }
-      .foregroundColor(isPositive ? .tidexBlue : .tidexTextSecondary)
-      .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: displayPercentage)
-      .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: isPositive)
-    }
-  }
 
   @ViewBuilder
   private var subtitleContent: some View {
@@ -313,95 +253,90 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     }
   }
 
-  @ViewBuilder
-  private var goalProgressBar: some View {
-    if showGoalProgressBar {
-      HStack(spacing: Spacing.xs) {  // swiftlint:disable:this closure_body_length
-        GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
-          ZStack(alignment: .leading) {  // swiftlint:disable:this closure_body_length
-            RoundedRectangle(cornerRadius: CornerRadius.xs)
-              .fill(Color.tidexSurfaceSecondary)
-              .frame(height: 8)  // swiftlint:disable:this no_magic_numbers
+  private var comparisonProgressBar: some View {
+    HStack(spacing: Spacing.xs) {  // swiftlint:disable:this closure_body_length
+      GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
+        ZStack(alignment: .leading) {  // swiftlint:disable:this closure_body_length
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
+            .fill(Color.tidexSurfaceSecondary)
+            .frame(height: 8)  // swiftlint:disable:this no_magic_numbers
 
-            RoundedRectangle(cornerRadius: CornerRadius.xs)
-              .fill(Color.tidexBlue)
-              .frame(
-                width: geometry.size.width * animatedGoalProgressFraction,
-                height: 8  // swiftlint:disable:this no_magic_numbers
-              )
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
+            .fill(comparisonFillStyle)
+            .frame(
+              width: geometry.size.width * animatedComparisonProgressFraction,
+              height: 8  // swiftlint:disable:this no_magic_numbers
+            )
 
-            RoundedRectangle(cornerRadius: CornerRadius.xs)
-              .fill(goalReachedOverlayStyle)
-              .frame(
-                width: geometry.size.width
-                  * animatedGoalProgressFraction
-                  * goalReachedOverlayProgress,
-                height: 8  // swiftlint:disable:this no_magic_numbers
-              )
-              .shadow(
-                color: showGoalReachedOverlay ? Color.tidexBlue.opacity(0.4) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
-                radius: 8,  // swiftlint:disable:this no_magic_numbers
-                x: 0,
-                y: 0
-              )
-              .shadow(
-                color: showGoalReachedOverlay ? Color.tidexBlue.opacity(0.28) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
-                radius: 14,  // swiftlint:disable:this no_magic_numbers
-                x: 0,
-                y: 0
-              )
-              .overlay {
-                if showGoalReachedOverlay {
-                  RoundedRectangle(cornerRadius: CornerRadius.xs)
-                    .stroke(Color.white.opacity(0.28), lineWidth: 0.8)  // swiftlint:disable:this no_magic_numbers
-                }
+          RoundedRectangle(cornerRadius: CornerRadius.xs)
+            .fill(comparisonFillStyle)
+            .frame(
+              width: geometry.size.width
+                * animatedComparisonProgressFraction
+                * comparisonReachedOverlayProgress,
+              height: 8  // swiftlint:disable:this no_magic_numbers
+            )
+            .shadow(
+              color: showComparisonReachedOverlay ? Color.tidexBlue.opacity(0.4) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
+              radius: 8,  // swiftlint:disable:this no_magic_numbers
+              x: 0,
+              y: 0
+            )
+            .shadow(
+              color: showComparisonReachedOverlay ? Color.tidexBlue.opacity(0.28) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
+              radius: 14,  // swiftlint:disable:this no_magic_numbers
+              x: 0,
+              y: 0
+            )
+            .overlay {
+              if showComparisonReachedOverlay {
+                RoundedRectangle(cornerRadius: CornerRadius.xs)
+                  .stroke(Color.white.opacity(0.28), lineWidth: 0.8)  // swiftlint:disable:this no_magic_numbers
               }
-              .overlay {
-                if showGoalReachedOverlay {
-                  goalGlitterOverlay
-                }
+            }
+            .overlay {
+              if showComparisonReachedOverlay {
+                comparisonGlitterOverlay
               }
-          }
+            }
         }
-        .frame(height: 8)  // swiftlint:disable:this no_magic_numbers
-
-        ZStack(alignment: .trailing) {
-          // Always present - anchors both the width and height to the real font metrics.
-          Text(verbatim: "999%")
-            .font(.tidexLabel)
-            .monospacedDigit()
-            .hidden()
-
-          if showDashes {
-            RoundedRectangle(cornerRadius: CornerRadius.xxs)
-              .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
-              .frame(width: 46, height: 14)  // swiftlint:disable:this no_magic_numbers
-          } else {
-            Text(goalProgressPercentText)
-              .font(.tidexLabel)
-              .monospacedDigit()
-              .lineLimit(1)
-              .foregroundColor(.tidexBlue)
-              .shadow(
-                color: showGoalReachedOverlay ? Color.tidexBlue.opacity(0.35) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
-                radius: 6,  // swiftlint:disable:this no_magic_numbers
-                x: 0,
-                y: 0
-              )
-          }
-        }
-        .fixedSize(horizontal: true, vertical: false)
-        .layoutPriority(1)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      // Make the amount feel anchored to the bar, then restore breathing room
-      // before the subtitle row.
-      .padding(.top, -Spacing.xxs)
-      .padding(.bottom, Spacing.xs)
+      .frame(height: 8)  // swiftlint:disable:this no_magic_numbers
+
+      Group {
+        if isLoading {
+          RoundedRectangle(cornerRadius: CornerRadius.xxs)
+            .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
+            .frame(width: 46, height: 14)  // swiftlint:disable:this no_magic_numbers
+        } else {
+          Text(comparisonPercentText)
+            .monospacedDigit()
+            .foregroundColor(
+              percentageChange.map { $0 < 0 } == true ? .tidexError.opacity(0.72) : .tidexBlue  // swiftlint:disable:this line_length no_magic_numbers
+            )
+            .shadow(
+              color: showComparisonReachedOverlay ? Color.tidexBlue.opacity(0.35) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
+              radius: 6,  // swiftlint:disable:this no_magic_numbers
+              x: 0,
+              y: 0
+            )
+        }
+      }
+      .font(.tidexLabel)
+      .lineLimit(1)
+      .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
+      .frame(width: 64, alignment: .trailing)  // swiftlint:disable:this no_magic_numbers
+      .layoutPriority(1)
     }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.top, -Spacing.xxs)
+    .padding(.bottom, Spacing.xs)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(.statsFromPreviousMonth))
+    .accessibilityValue(Text(verbatim: comparisonPercentText))
   }
 
-  private var goalGlitterOverlay: some View {
+  private var comparisonGlitterOverlay: some View {
     TimelineView(.animation(minimumInterval: reduceMotion ? 0.35 : 1.0 / 24.0)) { context in  // swiftlint:disable:this line_length no_magic_numbers
       let time = context.date.timeIntervalSinceReferenceDate  // swiftlint:disable:this explicit_type_interface
       GeometryReader { geometry in
@@ -518,31 +453,31 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   // MARK: - Formatting
 
-  private func animateGoalProgress(to newValue: Double) {
-    withAnimation(.spring(duration: goalFillAnimationDuration, bounce: 0.06)) {  // swiftlint:disable:this line_length no_magic_numbers
-      animatedGoalProgressFraction = newValue
+  private func animateComparisonProgress(to newValue: Double) {
+    withAnimation(.spring(duration: comparisonFillAnimationDuration, bounce: 0.06)) {  // swiftlint:disable:this line_length no_magic_numbers
+      animatedComparisonProgressFraction = newValue
     }
   }
 
   /// Keep the fill blue while it animates, then sweep a gradient overlay from left to right once full.
-  private func syncGoalReachedVisualsAfterProgressAnimation(for renderedProgress: Double) {
-    goalVisualTask?.cancel()
+  private func syncComparisonReachedVisualsAfterProgressAnimation(for renderedProgress: Double) {
+    comparisonVisualTask?.cancel()
 
-    guard isGoalReachedOrExceeded, renderedProgress >= 1 else {
+    guard isAtOrAbovePreviousMonth, renderedProgress >= 1 else {
       withAnimation(.easeOut(duration: 0.2)) {  // swiftlint:disable:this no_magic_numbers
-        goalReachedOverlayProgress = 0
+        comparisonReachedOverlayProgress = 0
       }
       return
     }
 
-    goalReachedOverlayProgress = 0
-    goalVisualTask = Task { @MainActor in
-      let delay = UInt64(goalFillAnimationDuration * 1_000_000_000)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
+    comparisonReachedOverlayProgress = 0
+    comparisonVisualTask = Task { @MainActor in
+      let delay = UInt64(comparisonFillAnimationDuration * 1_000_000_000)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
       try? await Task.sleep(nanoseconds: delay)
-      guard !Task.isCancelled, isGoalReachedOrExceeded else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+      guard !Task.isCancelled, isAtOrAbovePreviousMonth else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
 
-      withAnimation(.easeOut(duration: goalReachedSweepDuration)) {
-        goalReachedOverlayProgress = 1
+      withAnimation(.easeOut(duration: comparisonReachedSweepDuration)) {
+        comparisonReachedOverlayProgress = 1
       }
     }
   }
@@ -560,8 +495,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 8,
       plannedCount: 3,
       percentageChange: 15,
-      taxEnabled: true,
-      monthlyGoal: 20_000
+      taxEnabled: true
     )
 
     // Case 2: No future shifts, tax enabled → "12 000 kr før skatt"
@@ -573,8 +507,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 5,
       plannedCount: 0,
       percentageChange: -8,
-      taxEnabled: true,
-      monthlyGoal: 15_000
+      taxEnabled: true
     )
 
     // Case 3: No future shifts, no tax → "5 vakter"
@@ -586,8 +519,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 5,
       plannedCount: 0,
       percentageChange: -8,
-      taxEnabled: false,
-      monthlyGoal: 15_000
+      taxEnabled: false
     )
 
     // Case 4: Has future/planned shifts but NO real earnings yet → "3 vakter planlagt"
@@ -599,8 +531,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 3,
       plannedCount: 3,
       percentageChange: nil,
-      taxEnabled: false,
-      monthlyGoal: 15_000
+      taxEnabled: false
     )
 
     // Case 5: Zero earnings (shows dashes with skeleton subtitle)
@@ -612,8 +543,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 0,
       plannedCount: 0,
       percentageChange: nil,
-      taxEnabled: false,
-      monthlyGoal: nil
+      taxEnabled: false
     )
   }
   .padding(.horizontal, Spacing.lg)

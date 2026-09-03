@@ -19,14 +19,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @Binding var selectedTab: MainTabView.Tab  // swiftlint:disable:this explicit_acl type_contents_order
   @Binding var showStatsView: Bool  // swiftlint:disable:this explicit_acl type_contents_order
 
-  private struct MonthlyGoalEditContext: Identifiable {
-    let id = UUID()  // swiftlint:disable:this explicit_type_interface
-    let monthDate: Date
-    let baselineGoal: Int?
-    let initialGoal: Int?
-    let showsAdjustmentPercentageFootnote: Bool
-  }
-
   @StateObject private var viewModel = DashboardViewModel()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @StateObject private var countdownManager = CountdownManager()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
@@ -54,7 +46,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   /// State for recurring shift editing
   @State private var recurringShiftToEdit: RecurringShiftRow?  // swiftlint:disable:this type_contents_order
-  @State private var monthlyGoalEditContext: MonthlyGoalEditContext?  // swiftlint:disable:this type_contents_order
   @State private var temporaryClockReviewSession: TemporaryClockSession?  // swiftlint:disable:this type_contents_order
   @State private var clockInJobOptions: [Job] = []  // swiftlint:disable:this type_contents_order
   @State private var showClockInJobChooser: Bool = false  // swiftlint:disable:this type_contents_order
@@ -475,18 +466,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         Button(String(localized: .commonCancel), role: .cancel) {
           featuredShiftActionTarget = nil
         }
-      }
-      .sheet(item: $monthlyGoalEditContext) { context in
-        MonthlyGoalEditSheet(
-          monthDate: context.monthDate,
-          baselineGoal: context.baselineGoal,
-          initialGoal: context.initialGoal,
-          showsAdjustmentPercentageFootnote: context.showsAdjustmentPercentageFootnote
-        ) { value in
-          try await viewModel.saveMonthlyGoalForDisplayedMonth(value)
-        }
-        .presentationDetents([.fraction(0.35), .medium])  // swiftlint:disable:this no_magic_numbers
-        .presentationDragIndicator(.visible)
       }
       .sheet(item: $selectedPayrollDetailsVariant) { variant in
         payrollDetailsSheet(for: variant)
@@ -1031,7 +1010,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }()
 
       // Cards stay in place - only numbers animate on month change (like Next.js)
-      VStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
+      VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
         // Total Card (Displayed Month) - THE ANCHOR
         // Numbers animate smoothly when values change
         TotalCard(
@@ -1043,16 +1022,13 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           plannedCount: data.currentMonthPlannedCount,
           percentageChange: data.percentageChangeVsPrevious,
           taxEnabled: data.currentMonthTaxEnabled,
-          monthlyGoal: data.currentMonthGoal,
-          percentageIncludesPayrollAdjustments: data.previousMonthHasPayrollAdjustments
+          isElevated: false
         )
         .contentShape(Rectangle())
         .onTapGesture {
           if data.currentMonthCurrencyAggregate.hasMixedCurrency {
             impactHaptic.impactOccurred()
             showMixedCurrencyBreakdownPopover.toggle()
-          } else {
-            openMonthlyGoalEditor()
           }
         }
         .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
@@ -1067,6 +1043,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         if let previousPayrollVariant, !isPayrollCardLoading {
           previousPayrollDetailsChip(for: previousPayrollVariant)
         }
+
+        Divider()
 
         // Payroll Card (Previous Month relative to displayed month)
         payrollCardSection(
@@ -1084,6 +1062,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           alignment: .top
         )
 
+        Divider()
+
         // Featured Shift Card - exact height on regular Dynamic Type to avoid
         // skeleton/content vertical recentering during the loading transition.
         if usesFixedCardHeights {
@@ -1098,36 +1078,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     } else {
       EmptyView()
     }
-  }
-
-  private func openMonthlyGoalEditor() {  // swiftlint:disable:this type_contents_order
-    impactHaptic.impactOccurred()
-    let baseline = viewModel.baselineMonthlyGoal  // swiftlint:disable:this explicit_type_interface
-    let override = viewModel.displayedMonthOverrideGoal  // swiftlint:disable:this explicit_type_interface
-    let effectiveGoal = viewModel.dashboardData?.currentMonthGoal.flatMap {  // swiftlint:disable:this explicit_type_interface line_length
-      $0 > 0 ? Int($0.rounded()) : nil  // swiftlint:disable:this anonymous_argument_in_multiline_closure
-    }
-
-    let initialGoal =  // swiftlint:disable:this explicit_type_interface
-      override
-      ?? effectiveGoal.flatMap { effective in
-        if let baseline, effective == baseline {
-          return nil
-        }
-        return effective
-      }
-    let monthDate =  // swiftlint:disable:this explicit_type_interface
-      Calendar.current.date(
-        from: DateComponents(year: viewModel.displayYear, month: viewModel.displayMonth, day: 1)
-      ) ?? Date()
-
-    monthlyGoalEditContext = MonthlyGoalEditContext(
-      monthDate: monthDate,
-      baselineGoal: baseline,
-      initialGoal: initialGoal,
-      showsAdjustmentPercentageFootnote: viewModel.dashboardData?.previousMonthHasPayrollAdjustments
-        ?? false
-    )
   }
 
   private func monthSwipeGesture() -> some Gesture {  // swiftlint:disable:this type_contents_order
@@ -1198,7 +1148,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
       }
     }
-    .padding(.horizontal, Spacing.mlg)
   }
 
   private func clockButton(  // swiftlint:disable:this type_contents_order
@@ -1252,7 +1201,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         action: {}
       )
     }
-    .padding(.horizontal, Spacing.mlg)
     .redacted(reason: .placeholder)
     .shimmer(isActive: true)
     .accessibilityHidden(true)
@@ -1285,7 +1233,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       hasPayrollAdjustments: selectedVariant.hasPayrollAdjustments,
       progress: payrollProgress,
       isLoading: isLoading,
-      showsLoadingShimmer: showsLoadingShimmer
+      showsLoadingShimmer: showsLoadingShimmer,
+      isElevated: false
     )
 
     card
@@ -1371,7 +1320,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           jobColorHex: shiftJob?.color,
           progress: 0,
           finalCountdownSeconds: nil,
-          showTimeRangeEndSkeleton: false
+          showTimeRangeEndSkeleton: false,
+          surfaceStyle: .flat
         )
         .userCurrency(shiftJob?.currency ?? data.currency)
         .contentShape(Rectangle())
@@ -1401,7 +1351,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             jobName: shiftJob?.name,
             jobColorHex: shiftJob?.color,
             progress: shiftProgress,
-            finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
+            finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds,
+            surfaceStyle: .flat
           )
           .userCurrency(shiftJob?.currency ?? data.currency)
           .contentShape(Rectangle())
@@ -1428,16 +1379,20 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
                 impactHaptic.impactOccurred()
                 selectedEvent = EventSheetSelection(event: event, startInEditMode: false)
               },
-              showTodayHighlight: false
+              showTodayHighlight: false,
+              isElevated: false
             )
 
             featuredEventFooter(event)
           }
         }
       } else {
-        EmptyShiftCard(onAddShift: {
-          selectedTab = .add
-        })
+        EmptyShiftCard(
+          onAddShift: {
+            selectedTab = .add
+          },
+          isElevated: false
+        )
       }
     }
   }
@@ -1502,7 +1457,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           Spacer()
 
           // Skeleton cards matching the real dashboard layout
-          VStack(spacing: Spacing.sm) {  // swiftlint:disable:this closure_body_length
+          VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
             // Total Card skeleton
             TotalCard(
               gross: 0,
@@ -1513,13 +1468,15 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
               plannedCount: 0,
               percentageChange: nil,
               taxEnabled: false,
-              monthlyGoal: nil,
+              isElevated: false,
               isLoading: true
             )
 
             if viewModel.shouldShowDashboardClockButtons {
               clockButtonsSkeletonSection()
             }
+
+            Divider()
 
             // Payroll Card skeleton
             PayrollCard(
@@ -1529,19 +1486,22 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
               net: nil,
               tax: nil,
               taxEnabled: false,
-              isLoading: true
+              isLoading: true,
+              isElevated: false
             )
             .frame(
               minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
               alignment: .top
             )
 
+            Divider()
+
             // Featured Shift Card skeleton
             if usesFixedCardHeights {
-              EmptyShiftCard(isLoading: true)
+              EmptyShiftCard(isLoading: true, isElevated: false)
                 .frame(height: featuredSectionMinHeight, alignment: .top)
             } else {
-              EmptyShiftCard(isLoading: true)
+              EmptyShiftCard(isLoading: true, isElevated: false)
             }
           }
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)

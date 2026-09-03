@@ -7,6 +7,7 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
   var isLoading: Bool = false  // swiftlint:disable:this explicit_acl
   /// Optional action for a small footer CTA
   var onAddShift: (() -> Void)?  // swiftlint:disable:this explicit_acl
+  var isElevated: Bool = true  // swiftlint:disable:this explicit_acl
 
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
 
@@ -67,14 +68,14 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
             .frame(width: 72, height: 17)  // swiftlint:disable:this no_magic_numbers
         }
       }
-      .padding(.horizontal, Spacing.mlg)
+      .padding(.horizontal, isElevated ? Spacing.mlg : 0)
       .padding(.vertical, ShiftCardMetrics.verticalPadding)
       .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.card)
-          .fill(Color.tidexSurfacePrimary)
+      .tidexRowSurface(
+        cornerRadius: CornerRadius.card,
+        fillColor: isElevated ? .tidexSurfacePrimary : .clear,
+        shadowLevel: isElevated ? .card : nil
       )
-      .tidexCardShadow()
       .shimmer(isActive: isLoading)
 
       // Footer area below the card - fixed height to match FeaturedShiftCard

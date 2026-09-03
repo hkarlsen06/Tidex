@@ -34,8 +34,6 @@ struct SettingsView: View {
   @State private var payChooserCurrency: String = "kr"
   /// Payroll day inherited by newly created basic jobs.
   @State private var payChooserPayrollDay = 15
-  /// Monthly goal inherited by newly created basic jobs.
-  @State private var payChooserMonthlyGoal: Int?
   /// User ID for the current pay chooser session.
   @State private var payChooserUserId: String?
   /// Selected job in the pay chooser (confirmed explicitly before navigation).
@@ -136,7 +134,6 @@ struct SettingsView: View {
       AddJobSheet(
         initialCurrency: payChooserCurrency,
         initialPayrollDay: payChooserPayrollDay,
-        initialMonthlyGoal: payChooserMonthlyGoal,
         setupDismissTitle: String(localized: .settingsPaySetupLaterButton),
         onSaveBasics: { input in
           await createBasicPayJobForSetup(input: input)
@@ -528,7 +525,7 @@ struct SettingsView: View {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal
+        monthlyGoal: nil
       )
 
       selectedPayChooserJobId = createdJob.id
@@ -578,7 +575,7 @@ struct SettingsView: View {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal,
+        monthlyGoal: jobsRepository.getJob(id: existingJobSetup.id)?.monthly_goal,
         baselineSnapshot: input.baselineSnapshot
       )
 
@@ -648,7 +645,6 @@ struct SettingsView: View {
 
     payChooserCurrency = defaultJob?.currency ?? settings?.currency ?? "kr"
     payChooserPayrollDay = defaultJob?.payroll_day ?? settings?.effectivePayrollDay ?? 15
-    payChooserMonthlyGoal = defaultJob?.monthly_goal ?? settings?.monthly_goal
   }
 
   private func sortJobs(_ jobs: [Job]) -> [Job] {
@@ -789,7 +785,7 @@ struct SettingsView: View {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal,
+        monthlyGoal: job.monthly_goal,
         baselineSnapshot: input.baselineSnapshot
       )
       refreshPayJobLists(for: userId)

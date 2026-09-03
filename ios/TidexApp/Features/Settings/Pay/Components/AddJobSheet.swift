@@ -8,7 +8,6 @@ struct AddJobSetupInput {
   let currency: String
   let payrollDay: Int
   let halfTaxMonth: Int?
-  let monthlyGoal: Int?
   let baselineSnapshot: JobBaselineSnapshotInput
 }
 
@@ -47,8 +46,6 @@ struct AddJobSheet: View {
   @State private var showingPaydayInput = false
   @State private var paydayInputText = ""
   @FocusState private var isPaydayInputFocused: Bool
-  @State private var monthlyGoal: String
-
   @State private var isSaving = false
   @State private var validationError: String?
   @State private var showSaveError = false
@@ -57,7 +54,6 @@ struct AddJobSheet: View {
   init(
     initialCurrency: String,
     initialPayrollDay: Int = 15,
-    initialMonthlyGoal: Int? = nil,
     prefilledBasicJob: Job? = nil,
     existingJobNeedingSetup: Job? = nil,
     setupDismissTitle: String = String(localized: .commonCancel),
@@ -73,8 +69,6 @@ struct AddJobSheet: View {
     _savedBasicJob = State(initialValue: prefilledBasicJob)
     _name = State(initialValue: prefilledBasicJob?.name ?? "")
     _payrollDay = State(initialValue: prefilledBasicJob?.payroll_day ?? initialPayrollDay)
-    _monthlyGoal = State(
-      initialValue: (prefilledBasicJob?.monthly_goal ?? initialMonthlyGoal).map(String.init) ?? "")
   }
 
   var body: some View {
@@ -608,8 +602,7 @@ struct AddJobSheet: View {
         color: normalizedHex(from: selectedColor),
         currency: resolvedCurrency,
         payrollDay: payrollDay,
-        halfTaxMonth: nil,
-        monthlyGoal: monthlyGoalValue
+        halfTaxMonth: nil
       ))
     isSaving = false
 
@@ -673,9 +666,6 @@ struct AddJobSheet: View {
       return
     }
 
-    let monthlyGoalValue: Int?
-    monthlyGoalValue = self.monthlyGoalValue
-
     let snapshotInput = JobBaselineSnapshotInput(
       hourlyWage: onboardingData.resolvedHourlyWage,
       wageLevel: onboardingData.resolvedWageLevel,
@@ -699,7 +689,6 @@ struct AddJobSheet: View {
         currency: resolvedCurrency,
         payrollDay: payrollDay,
         halfTaxMonth: nil,
-        monthlyGoal: monthlyGoalValue,
         baselineSnapshot: snapshotInput
       )
     )
@@ -720,11 +709,6 @@ struct AddJobSheet: View {
       return initialCurrency
     }
     return "kr"
-  }
-
-  private var monthlyGoalValue: Int? {
-    guard !monthlyGoal.isEmpty else { return nil }
-    return Int(monthlyGoal)
   }
 
   private func normalizedHex(from color: Color) -> String? {

@@ -5,6 +5,7 @@ struct EventRowCard: View {
   let coveredDateISO: String
   let onTap: (() -> Void)?
   var showTodayHighlight: Bool = true
+  var isElevated: Bool = true
 
   @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -114,12 +115,13 @@ struct EventRowCard: View {
           .frame(maxWidth: 170, alignment: .trailing)
       }
     }
-    .padding(.horizontal, Spacing.mlg)
+    .padding(.horizontal, isElevated ? Spacing.mlg : 0)
     .padding(.vertical, ShiftCardMetrics.verticalPadding)
     .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.card)
-        .fill(Color.tidexSurfacePrimary)
+    .tidexRowSurface(
+      cornerRadius: CornerRadius.card,
+      fillColor: isElevated ? .tidexSurfacePrimary : .clear,
+      shadowLevel: isElevated ? .card : nil
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.card)
@@ -128,7 +130,6 @@ struct EventRowCard: View {
           lineWidth: showTodayHighlight && isToday ? 2 : 0
         )
     )
-    .tidexCardShadow()
   }
 
   private var subtitleLabel: some View {

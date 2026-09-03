@@ -682,10 +682,6 @@ internal final class AddShiftViewModel: ObservableObject {
     activeJobs.first(where: \.is_default)?.payroll_day ?? cachedSettings?.effectivePayrollDay ?? 15
   }
 
-  var jobCreationInitialMonthlyGoal: Int? {
-    activeJobs.first(where: \.is_default)?.monthly_goal ?? cachedSettings?.monthly_goal
-  }
-
   /// User must explicitly pick a job when multiple active jobs exist.
   private var requiresExplicitJobSelection: Bool {
     activeJobs.count > 1
@@ -751,7 +747,7 @@ internal final class AddShiftViewModel: ObservableObject {
           currency: input.currency,
           payrollDay: input.payrollDay,
           halfTaxMonth: input.halfTaxMonth,
-          monthlyGoal: input.monthlyGoal,
+          monthlyGoal: activeJobs.first(where: { $0.id == existingJobSetup.id })?.monthly_goal,
           baselineSnapshot: input.baselineSnapshot
         )
       } else {
@@ -762,7 +758,7 @@ internal final class AddShiftViewModel: ObservableObject {
           currency: input.currency,
           payrollDay: input.payrollDay,
           halfTaxMonth: input.halfTaxMonth,
-          monthlyGoal: input.monthlyGoal,
+          monthlyGoal: nil,
           baselineSnapshot: input.baselineSnapshot
         )
       }
@@ -792,7 +788,7 @@ internal final class AddShiftViewModel: ObservableObject {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal
+        monthlyGoal: nil
       )
       selectedJobId = createdJob.id
       await refreshData()
@@ -819,7 +815,7 @@ internal final class AddShiftViewModel: ObservableObject {
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal,
+        monthlyGoal: job.monthly_goal,
         baselineSnapshot: input.baselineSnapshot
       )
       await refreshData()

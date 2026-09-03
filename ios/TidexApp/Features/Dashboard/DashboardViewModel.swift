@@ -252,7 +252,6 @@ struct DashboardData: Equatable {  // swiftlint:disable:this explicit_acl explic
   let currentMonthPlannedCount: Int  // Future shifts // swiftlint:disable:this explicit_acl
   let percentageChangeVsPrevious: Double?  // swiftlint:disable:this explicit_acl
   let currentMonthTaxEnabled: Bool  // swiftlint:disable:this explicit_acl
-  let currentMonthGoal: Double?  // nil when no monthly goal is configured // swiftlint:disable:this explicit_acl
 
   // Featured Home Card
   // For current month: next upcoming shift or calendar event
@@ -269,6 +268,11 @@ struct DashboardData: Equatable {  // swiftlint:disable:this explicit_acl explic
   // User Settings
   let currency: String  // User's selected currency (e.g., "kr", "$", "€") // swiftlint:disable:this explicit_acl
   let currentMonthCurrencyAggregate: JobCurrencyAggregateResolution  // swiftlint:disable:this explicit_acl
+
+  static func percentageChange(current: Double, previous: Double) -> Double? {
+    guard previous > 0 else { return current > 0 ? .infinity : nil }
+    return ((current - previous) / previous) * 100
+  }
 
   /// Whether there are future shifts (main display should be projected total)
   var hasFutureShifts: Bool {  // swiftlint:disable:this explicit_acl
@@ -841,17 +845,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
   /// Computed month name for immediate display (doesn't wait for API)
   var displayMonthName: String { monthContext.displayMonthName }  // swiftlint:disable:this explicit_acl line_length type_contents_order
-
-  /// Baseline monthly goal from settings (global fallback goal).
-  var baselineMonthlyGoal: Int? {  // swiftlint:disable:this explicit_acl type_contents_order
-    settings?.monthly_goal.flatMap { $0 > 0 ? $0 : nil }
-  }
-
-  /// Month-specific override for the currently displayed month, if present.
-  var displayedMonthOverrideGoal: Int? {  // swiftlint:disable:this explicit_acl type_contents_order
-    let monthKey = UserSettings.monthKey(year: displayYear, month: displayMonth)  // swiftlint:disable:this explicit_type_interface line_length
-    return settings?.monthly_goals_by_month?[monthKey].flatMap { $0 > 0 ? $0 : nil }
-  }
 
   func isCurrentMonthAdvancedNextPayoutDate(  // swiftlint:disable:this explicit_acl type_contents_order
     _ payoutDate: Date,
@@ -2602,31 +2595,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     objectWillChange.send()
   }
 
-  /// Save month-specific goal override for the currently displayed month.
-  func saveMonthlyGoalForDisplayedMonth(_ goal: Int?) async throws {  // swiftlint:disable:this explicit_acl line_length type_contents_order
-    if cachedUserId == nil {
-      cachedUserId = try await getCurrentUserId()
-    }
-
-    guard let userId = cachedUserId else {
-      throw DashboardError.notAuthenticated
-    }
-
-    guard
-      let updatedSettings = try await settingsRepository.saveMonthlyGoalForMonth(
-        userId: userId,
-        year: displayYear,
-        month: displayMonth,
-        goal: goal
-      )
-    else {
-      throw DashboardError.noLocalData
-    }
-
-    settings = updatedSettings
-    applyDashboardData(buildDashboardData())
-  }
-
   /// Reload dashboard from local data without triggering sync
   /// Called when shifts change locally (e.g., after adding a shift) or after initial sync completes
   /// - Parameter showLoadingState: Whether to show loading indicator (false for seamless updates after sync)
@@ -3365,9 +3333,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       now: now
     )
     let displayTaxEnabled = currentMonthAggregate.primary.hasTaxEnabled  // swiftlint:disable:this explicit_type_interface line_length
-    let monthlyGoal = settings?.effectiveMonthlyGoal(year: displayYM.year, month: displayYM.month)  // swiftlint:disable:this explicit_type_interface line_length
-      .flatMap { $0 > 0 ? Double($0) : nil }
-
     let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
     let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
 
@@ -3410,10 +3375,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       previousComparisonGross = previousGross
     }
 
-    let percentChange: Double? =
-      previousComparisonGross > 0
-      ? ((displayTotals.gross - previousComparisonGross) / previousComparisonGross) * 100
-      : nil
+    let percentChange = DashboardData.percentageChange(  // swiftlint:disable:this explicit_type_interface
+      current: displayTotals.gross,
+      previous: previousComparisonGross
+    )
 
     // Featured shift logic:
     // - Current month: show next upcoming shift
@@ -3452,7 +3417,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       currentMonthPlannedCount: plannedShiftsCount,
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
-      currentMonthGoal: monthlyGoal,
       featuredItem: featuredSelection.item,
       featuredShift: featuredSelection.item?.shift,
       isFeaturedItemToday: featuredSelection.isToday,
@@ -3545,9 +3509,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       now: now
     )
     let displayTaxEnabled = currentMonthAggregate.primary.hasTaxEnabled  // swiftlint:disable:this explicit_type_interface line_length
-    let monthlyGoal = settings.effectiveMonthlyGoal(year: displayYM.year, month: displayYM.month)  // swiftlint:disable:this explicit_type_interface line_length
-      .flatMap { $0 > 0 ? Double($0) : nil }
-
     let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
     let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
 
@@ -3591,10 +3552,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       previousComparisonGross = previousGross
     }
 
-    let percentChange: Double? =
-      previousComparisonGross > 0
-      ? ((displayTotals.gross - previousComparisonGross) / previousComparisonGross) * 100
-      : nil
+    let percentChange = DashboardData.percentageChange(  // swiftlint:disable:this explicit_type_interface
+      current: displayTotals.gross,
+      previous: previousComparisonGross
+    )
 
     let current = Date.currentYearMonth()  // swiftlint:disable:this explicit_type_interface
     let isViewingCurrentMonth = displayYM.year == current.year && displayYM.month == current.month  // swiftlint:disable:this explicit_type_interface line_length
@@ -3629,7 +3590,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       currentMonthPlannedCount: plannedShiftsCount,
       percentageChangeVsPrevious: percentChange,
       currentMonthTaxEnabled: displayTaxEnabled,
-      currentMonthGoal: monthlyGoal,
       featuredItem: featuredSelection.item,
       featuredShift: featuredSelection.item?.shift,
       isFeaturedItemToday: featuredSelection.isToday,
@@ -3980,7 +3940,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         currency: input.currency,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: input.monthlyGoal,
+        monthlyGoal: job.monthly_goal,
         baselineSnapshot: input.baselineSnapshot
       )
       displayJobs = jobsRepository.getNonDeletedJobs(for: userId)

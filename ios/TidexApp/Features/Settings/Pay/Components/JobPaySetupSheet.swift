@@ -4,7 +4,6 @@ struct JobPaySetupInput {
   let currency: String
   let payrollDay: Int
   let halfTaxMonth: Int?
-  let monthlyGoal: Int?
   let baselineSnapshot: JobBaselineSnapshotInput
 }
 
@@ -26,7 +25,6 @@ struct JobPaySetupSheet: View {
   @State private var onboardingData = OnboardingData()
   @State private var payrollDay: Int
   @State private var halfTaxMonth: Int?
-  @State private var monthlyGoal: String
   @State private var isSaving = false
   @State private var saveError: String?
 
@@ -42,7 +40,6 @@ struct JobPaySetupSheet: View {
     self.onSave = onSave
     _payrollDay = State(initialValue: job.payroll_day ?? 15)
     _halfTaxMonth = State(initialValue: job.half_tax_month)
-    _monthlyGoal = State(initialValue: job.monthly_goal.map(String.init) ?? "")
   }
 
   var body: some View {
@@ -77,7 +74,6 @@ struct JobPaySetupSheet: View {
       ),
       payrollDay: $payrollDay,
       halfTaxMonth: $halfTaxMonth,
-      monthlyGoalText: $monthlyGoal,
       dismissTitle: dismissTitle,
       isSaving: isSaving,
       saveError: saveError,
@@ -171,13 +167,6 @@ struct JobPaySetupSheet: View {
     isSaving = true
     saveError = nil
 
-    let monthlyGoalValue: Int?
-    if monthlyGoal.isEmpty {
-      monthlyGoalValue = nil
-    } else {
-      monthlyGoalValue = Int(monthlyGoal)
-    }
-
     let snapshotInput = JobBaselineSnapshotInput(
       hourlyWage: onboardingData.resolvedHourlyWage,
       wageLevel: onboardingData.resolvedWageLevel,
@@ -197,7 +186,6 @@ struct JobPaySetupSheet: View {
         currency: onboardingData.currency.isEmpty ? initialCurrency : onboardingData.currency,
         payrollDay: payrollDay,
         halfTaxMonth: halfTaxMonth,
-        monthlyGoal: monthlyGoalValue,
         baselineSnapshot: snapshotInput
       ))
     isSaving = false
@@ -216,17 +204,11 @@ private struct JobPayScheduleSetupScreen: View {
   @Binding var currency: String
   @Binding var payrollDay: Int
   @Binding var halfTaxMonth: Int?
-  @Binding var monthlyGoalText: String
   let dismissTitle: String
   let isSaving: Bool
   let saveError: String?
   let onCancel: () -> Void
   let onContinue: () -> Void
-
-  private var monthlyGoalValue: Int? {
-    guard !monthlyGoalText.isEmpty else { return nil }
-    return Int(monthlyGoalText)
-  }
 
   var body: some View {
     ZStack {
@@ -286,13 +268,9 @@ private struct JobPayScheduleSetupScreen: View {
             GlobalPaySettingsCard(
               jobId: job.id,
               currency: currency,
-              monthlyGoal: monthlyGoalValue,
               payrollDay: payrollDay,
               halfTaxMonth: halfTaxMonth,
               canChangeCurrency: true,
-              onUpdateMonthlyGoal: { value in
-                monthlyGoalText = value.map(String.init) ?? ""
-              },
               onUpdatePayrollDay: { value in
                 payrollDay = value
               },

@@ -102,7 +102,7 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {
     XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
   }
 
-  func testSettingsFingerprintChangesWhenMonthlyGoalOverridesChange() {
+  func testSettingsFingerprintIgnoresRetiredMonthlyGoals() {
     let original = UserSettings(
       user_id: "user-1",
       created_at: nil,
@@ -139,7 +139,7 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {
     let originalFingerprint = StatsService.fingerprintSettingsForCaching(original)
     let updatedFingerprint = StatsService.fingerprintSettingsForCaching(updated)
 
-    XCTAssertNotEqual(originalFingerprint, updatedFingerprint)
+    XCTAssertEqual(originalFingerprint, updatedFingerprint)
   }
 
   func testJobsFingerprintChangesWhenCurrencyChanges() {

@@ -1,5 +1,6 @@
 - [ ] Refactor remaining authenticated `SECURITY DEFINER` Supabase RPCs out of the exposed `public` API surface, or convert safe candidates to `SECURITY INVOKER`, so the remaining `authenticated_security_definer_function_executable` advisor warnings can be resolved without breaking iOS/admin flows.
 - [x] Remove legacy Friends tab bootstrap RPCs once unsupported iOS clients are retired: `get_my_sharers`, `get_sharing_friends_api`, and `get_my_sharer_preview_payloads`. Migration SQL: `DROP FUNCTION IF EXISTS public.get_my_sharer_preview_payloads(uuid[], date, date); DROP FUNCTION IF EXISTS public.get_my_sharers(); DROP FUNCTION IF EXISTS public.get_sharing_friends_api();`
+- [ ] Remove retired monthly-goal persistence after old app versions no longer need it: drop the Supabase goal columns/defaults/function plumbing in a forward migration, then remove the matching iOS local/sync/sharing compatibility and Wagey goal tools.
 
 ## iOS 27 foreground-auth lifecycle false positive
 
