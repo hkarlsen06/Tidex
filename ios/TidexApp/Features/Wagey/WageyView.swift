@@ -58,7 +58,7 @@ struct WageyView: View {
   }
 
   private var startupTaskID: String {
-    "\(selectedTab.rawValue):\(coordinator.userId ?? "")"
+    "\(selectedTab.rawValue):\(coordinator.userId ?? ""):\(coordinator.initialSyncComplete)"
   }
 
   var body: some View {  // swiftlint:disable:this explicit_acl
@@ -88,7 +88,7 @@ struct WageyView: View {
       }
     }
     .task(id: startupTaskID) {
-      guard selectedTab == .wagey else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      guard selectedTab == .wagey, coordinator.initialSyncComplete else { return }
       viewModel.loadConversations()
       guard !Task.isCancelled else { return }  // swiftlint:disable:this conditional_returns_on_newline
       await viewModel.fetchWageyUsage()

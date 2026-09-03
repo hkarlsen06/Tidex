@@ -136,7 +136,7 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   /// Message to show after entitlement sync (success or failure)
   private(set) var entitlementSyncMessage: String?  // swiftlint:disable:this explicit_acl
 
-  /// Whether the user has seen the showcase (per user, stored in UserDefaults)
+  /// Whether the user has seen the showcase (per user, synced through settings)
   private(set) var hasSeenShowcase: Bool = false  // swiftlint:disable:this explicit_acl
 
   /// Whether the user has consented to AI data sharing (per user, stored in UserDefaults)
@@ -277,6 +277,9 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
   /// Latest in-flight AI consent persistence task.
   private var consentPersistenceTask: Task<Void, Never>?
 
+  /// Latest in-flight showcase persistence task.
+  private var showcasePersistenceTask: Task<Void, Never>?
+
   /// Subscription for observing tier changes
   private var tierChangeSubscription: AnyCancellable?
 
@@ -338,7 +341,7 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     "wagey.hasSeenShowcase.\(userId)"
   }
 
-  /// Load the showcase seen state from UserDefaults
+  /// Load the showcase seen state from synced settings with a legacy fallback.
   private func loadShowcaseState() {  // swiftlint:disable:this type_contents_order
     guard let userId = AppCoordinator.shared.userId else {
       hasSeenShowcase = false
@@ -349,7 +352,7 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     hasSeenShowcase = databaseSeen || legacySeen
 
     if legacySeen && !databaseSeen {
-      persistShowcaseSeen(for: userId)
+      scheduleShowcasePersistence(true, for: userId)
     }
   }
 
@@ -359,16 +362,32 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     hasSeenShowcase = true
     hasResolvedEntryState = true
     UserDefaults.standard.set(true, forKey: showcaseKey(for: userId))
-    persistShowcaseSeen(for: userId)
+    scheduleShowcasePersistence(true, for: userId)
   }
 
-  private func persistShowcaseSeen(for userId: String) {
-    Task { @MainActor [weak self] in
+  private func scheduleShowcasePersistence(_ hasSeen: Bool, for userId: String) {
+    showcasePersistenceTask?.cancel()
+    showcasePersistenceTask = Task { @MainActor [weak self] in
       guard let self else { return }
       do {
+        try Task.checkCancellation()
+        guard AppCoordinator.shared.userId == userId else { return }
         _ = try await settingsRepository.getOrCreateSettings(for: userId)
-        _ = try await settingsRepository.updateSettings(for: userId, wageyShowcaseSeen: true)
+        try Task.checkCancellation()
+        guard AppCoordinator.shared.userId == userId else { return }
+        guard
+          try await settingsRepository.updateSettings(
+            for: userId,
+            wageyShowcaseSeen: hasSeen
+          ) != nil
+        else {
+          return
+        }
+        try Task.checkCancellation()
+        guard AppCoordinator.shared.userId == userId else { return }
         UserDefaults.standard.removeObject(forKey: showcaseKey(for: userId))
+      } catch is CancellationError {
+        return
       } catch {
         logger.error("Failed to persist Wagey showcase state: \(error.localizedDescription)")
       }
@@ -380,6 +399,7 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     guard let userId = AppCoordinator.shared.userId else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     hasSeenShowcase = false
     UserDefaults.standard.removeObject(forKey: showcaseKey(for: userId))
+    scheduleShowcasePersistence(false, for: userId)
   }
 
   // MARK: - AI Consent State Management
@@ -515,6 +535,8 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
     currentAssistantMessageId = nil
     currentStreamEnteredBackground = false
     pendingCompactionContent = nil
+    showcasePersistenceTask?.cancel()
+    showcasePersistenceTask = nil
     consentPersistenceTask?.cancel()
     consentPersistenceTask = nil
   }
