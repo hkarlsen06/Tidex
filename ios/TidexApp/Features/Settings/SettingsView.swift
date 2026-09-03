@@ -1,5 +1,5 @@
-import os.log
 import SwiftUI
+import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "SettingsView")
 
@@ -1584,8 +1584,7 @@ struct SettingsMenuItem: View {
         SettingsRowIcon(
           systemName: icon,
           foregroundColor: .tidexTextSecondary,
-          backgroundColor: .tidexSurfaceSecondary,
-          borderColor: .tidexBorderSubtle
+          backgroundColor: .tidexSurfaceSecondary
         )
 
         Text(title)
@@ -1634,7 +1633,6 @@ private struct SettingsRowIcon: View {
   let systemName: String
   var foregroundColor: Color = .tidexTextPrimary
   var backgroundColor: Color = .tidexSurfaceSecondary
-  var borderColor: Color = .tidexBorder
   private let glyphBoxSize: CGFloat = 18
 
   var body: some View {
@@ -1647,10 +1645,6 @@ private struct SettingsRowIcon: View {
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
           .fill(backgroundColor)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-          .stroke(borderColor, lineWidth: 1)
       )
       .accessibilityHidden(true)
   }

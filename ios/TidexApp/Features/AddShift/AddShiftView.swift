@@ -285,9 +285,9 @@ struct AddShiftView: View {
       refreshWorkSetupPresentationState()
       prepareVisibleAddShiftContent()
     }
-    .onChange(of: coordinator.initialSyncComplete) { _, _ in
-      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
-      guard shouldLoadAfterSetupCompleted else { return }
+    .onChange(of: coordinator.initialSyncComplete) { _, completed in
+      refreshWorkSetupPresentationState()
+      guard completed, !shouldShowWorkSetupRequiredPlaceholder else { return }
       prepareVisibleAddShiftContent()
       Task {
         await loadAddShiftContent()
@@ -319,6 +319,10 @@ struct AddShiftView: View {
       handleDeepLink(deepLink)
     }
     .onChange(of: selectedTab) { oldTab, newTab in
+      if newTab == .add {
+        handleDeepLink(coordinator.pendingDeepLink)
+      }
+
       if newTab == .add, oldTab == .shifts {
         applyPendingPreselectedDateWithoutAnimation()
         tabTransitionOffset = 28
@@ -458,7 +462,10 @@ struct AddShiftView: View {
   // MARK: - Deep Link Handling
 
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-    guard case .addShift(let mode) = deepLink else { return }
+    guard selectedTab == .add, case .addShift(let mode, let date) = deepLink else { return }
+    if let date, Date.fromISODateString(date) != nil {
+      SharedMonthContext.shared.preselectedDate = date
+    }
     if let mode {
       viewModel.applyDeepLinkMode(mode)
     }

@@ -93,10 +93,6 @@ struct TidexSettingsIcon: View {
         RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
           .fill(backgroundColor ?? foregroundColor.opacity(0.12))
       )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-          .stroke(foregroundColor.opacity(0.16), lineWidth: 1)
-      )
       .accessibilityHidden(true)
   }
 }

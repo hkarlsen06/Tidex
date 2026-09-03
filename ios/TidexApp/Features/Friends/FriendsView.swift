@@ -205,6 +205,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
         return
       }
       friendsRealtimeCoordinator.setFriendsFeedVisible(true)
+      handlePendingDeepLink(coordinator.pendingDeepLink)
       refreshChatMetadata()
       Task {
         await resubscribeTypingSubscriptions()
@@ -299,7 +300,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   /// Navigates to a specific sharer or opens the manage modal
   private func handlePendingDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
     // swiftlint:disable:next conditional_returns_on_newline
-    guard let deepLink else { return }
+    guard selectedTab == .sharing, let deepLink else { return }
 
     switch deepLink {
     case .sharing(let sharerId, let dates, let changes):

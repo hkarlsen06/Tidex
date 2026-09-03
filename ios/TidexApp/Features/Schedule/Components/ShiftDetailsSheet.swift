@@ -379,16 +379,16 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   private var shouldShowNoteSection: Bool {
-    onUpdate != nil || displayedNote != nil
+    displayedNote != nil
   }
 
-  private var hasPrimaryViewModeActions: Bool {
-    onUpdate != nil || onDelete != nil
+  private var hasInlineViewModeActions: Bool {
+    onUpdate != nil
       || (isVirtualShift && (onEditRecurring != nil || onStopRecurringAfterDate != nil))
   }
 
   private var shouldShowViewModeActionButtons: Bool {
-    hasPrimaryViewModeActions || showsCalendarSubscriptionCTA
+    hasInlineViewModeActions || showsCalendarSubscriptionCTA
   }
 
   private var canEditSupplements: Bool {
@@ -663,49 +663,43 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     NavigationStack {
       ScrollView {
         VStack(spacing: Spacing.lg) {
-          // Header with date
-          headerSection
-
-          // Time and hours (editable in edit mode)
           if isEditing {
             editableTimeSection
           } else {
+            headerSection
+
+            if isVirtualShift {
+              virtualShiftBanner
+            }
+
             timeSection
           }
 
           if isEditing {
             noteEditorSection
-          } else if shouldShowNoteSection {
-            noteSection
           }
 
           if isEditing, shouldShowEditOptionsSection {
             editOptionsSection
           }
 
-          if !isEditing, shouldShowBreakSection {
-            breakSection
-          }
-
-          // Error message
           if let error = errorMessage {
             errorBanner(message: error)
           }
 
-          // Earnings breakdown (hidden in edit mode)
           if !isEditing, showsEarningsDetails {
             earningsSection
           }
 
-          // Virtual shift indicator
-          if isVirtualShift, !isEditing {
-            virtualShiftBanner
+          if !isEditing, shouldShowBreakSection {
+            breakSection
           }
 
-          // Action buttons
-          if isEditing {
-            editActionButtons
-          } else if shouldShowViewModeActionButtons {
+          if !isEditing, shouldShowNoteSection {
+            noteSection
+          }
+
+          if !isEditing, shouldShowViewModeActionButtons {
             viewModeActionButtons
           }
 
@@ -724,7 +718,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       )
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
+        ToolbarItemGroup(placement: .topBarLeading) {
           if isEditing {
             Button(String(localized: .commonCancel)) {
               cancelEditing()
@@ -743,6 +737,23 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
               Image(systemName: "square.and.arrow.up")
                 .font(.tidexBodyMedium)
                 .foregroundColor(.tidexTextPrimary)
+            }
+
+            if let onDelete {
+              Button(role: .destructive) {
+                onDelete()
+              } label: {
+                Image(systemName: isVirtualShift ? "minus.circle" : "trash")
+                  .font(.tidexBodyMedium)
+                  .foregroundColor(.tidexError)
+              }
+              .accessibilityLabel(
+                Text(
+                  isVirtualShift
+                    ? String(localized: .shiftsExcludeButton)
+                    : String(localized: .shiftsDeleteButton)
+                )
+              )
             }
           }
         }
@@ -1575,55 +1586,11 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     .buttonStyle(.plain)
   }
 
-  /// Action buttons for edit mode
-  private var editActionButtons: some View {
-    VStack(spacing: Spacing.sm) {
-      // Save button
-      Button {
-        saveChanges()
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          if isSaving {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-              .scaleEffect(0.8)
-          } else {
-            Image(systemName: "checkmark")
-              .font(.tidexLabel)
-          }
-          Text(.commonSaveChanges)
-            .font(.tidexLabelStrong)
-        }
-        .foregroundColor(.tidexTextOnBrand)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(hasChanges ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-        .cornerRadius(CornerRadius.lg)
-      }
-      .disabled(isSaving || !hasChanges)
-
-      // Cancel button
-      Button {
-        cancelEditing()
-      } label: {
-        Text(.commonCancel)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(CornerRadius.lg)
-      }
-      .disabled(isSaving)
-    }
-    .padding(.top, Spacing.xs)
-  }
-
   /// Action buttons for view mode
   @ViewBuilder
   private var viewModeActionButtons: some View {
     VStack(spacing: Spacing.md) {
-      if hasPrimaryViewModeActions {
+      if hasInlineViewModeActions {
         VStack(spacing: Spacing.sm) {
           // Edit button (only show if onUpdate callback is provided)
           if onUpdate != nil {
@@ -1662,10 +1629,6 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
             }
           }
 
-          // Delete button
-          if let onDelete {
-            deleteButton(onDelete: onDelete, isVirtual: isVirtualShift)
-          }
         }
         .padding(.top, Spacing.xs)
       }
@@ -1674,7 +1637,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         DetailSheetActionButton(
           title: String(localized: .calendarSubscriptionDetailCta),
           systemImage: "calendar.badge.clock",
-          style: .primary
+          style: .secondary
         ) {
           showingCalendarSubscriptionConfirmation = true
         }
@@ -2093,19 +2056,6 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexBlue.opacity(0.1))
     )
-  }
-
-  @ViewBuilder
-  private func deleteButton(onDelete: @escaping () -> Void, isVirtual: Bool) -> some View {
-    DetailSheetActionButton(
-      title: isVirtual
-        ? String(localized: .shiftsExcludeButton)
-        : String(localized: .shiftsDeleteButton),
-      systemImage: isVirtual ? "minus.circle" : "trash",
-      style: .destructive
-    ) {
-      onDelete()
-    }
   }
 
   /// Footer showing when the shift was added and, when applicable, last edited.

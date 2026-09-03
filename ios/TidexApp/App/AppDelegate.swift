@@ -857,8 +857,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
       let dateISO = userInfo["date"] as? String
     {
       Task { @MainActor in
-        SharedMonthContext.shared.preselectedDate = dateISO
-        AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil)
+        AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil, date: dateISO)
       }
     }
     // Handle shift reminder notification taps
@@ -952,7 +951,6 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
       prefetchThreadMessageFromNotification(threadId: threadId, messageId: messageId)
 
       Task { @MainActor in
-        await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)
         AppCoordinator.shared.pendingDeepLink = .friendChat(
           threadId: threadId,
           messageId: messageId,
@@ -960,6 +958,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
           typingUserId: type == "thread_typing" ? senderUserId : nil,
           navigationRequestId: UUID()
         )
+        await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)
       }
     }
     // Handle deeplink from admin broadcast or other notification types

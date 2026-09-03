@@ -1122,8 +1122,11 @@ internal final class AddShiftViewModel: ObservableObject {
   // MARK: - Data Loading
 
   /// Load initial data from repositories
-  func loadData() async {  // swiftlint:disable:this async_without_await
-    guard !hasLoadedInitialData else {
+  func loadData() async {
+    if hasLoadedInitialData {
+      await refreshData()
+      applyPreselectedDate()
+      applyPendingDeepLinkMode()
       return
     }
 

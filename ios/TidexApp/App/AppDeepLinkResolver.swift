@@ -91,7 +91,10 @@ enum AppDeepLinkResolver {
   }
 
   private static func addShiftDeepLink(queryItems: [URLQueryItem]) -> AppCoordinator.DeepLink {
-    .addShift(mode: addShiftMode(queryItems.value(named: "mode")))
+    .addShift(
+      mode: addShiftMode(queryItems.value(named: "mode")),
+      date: queryItems.value(named: "date")
+    )
   }
 
   private static func addShiftMode(_ rawValue: String?) -> AddShiftMode? {

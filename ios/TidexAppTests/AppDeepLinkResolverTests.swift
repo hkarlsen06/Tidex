@@ -57,7 +57,7 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
 
     let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
-    XCTAssertEqual(deepLink, .addShift(mode: .recurring))
+    XCTAssertEqual(deepLink, .addShift(mode: .recurring, date: nil))
   }
 
   internal func testResolvesHttpsAddShiftDeepLinkWithEventsMode() throws {
@@ -65,7 +65,15 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
 
     let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
 
-    XCTAssertEqual(deepLink, .addShift(mode: .events))
+    XCTAssertEqual(deepLink, .addShift(mode: .events, date: nil))
+  }
+
+  internal func testResolvesAddShiftDeepLinkWithDate() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://add?date=2026-09-02"))
+
+    let deepLink: AppDeepLink? = AppDeepLinkResolver.resolve(url)
+
+    XCTAssertEqual(deepLink, .addShift(mode: nil, date: "2026-09-02"))
   }
 
   internal func testResolvesAdminSettingsDeepLinkToAdminPanel() throws {
