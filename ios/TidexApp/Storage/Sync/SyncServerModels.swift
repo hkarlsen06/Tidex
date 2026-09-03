@@ -311,6 +311,7 @@ internal struct SyncUserSettingsRow: Codable {
   internal let half_tax_month: Int?
   internal let currency: String?
   internal let default_startup_tab: String?
+  internal let wagey_showcase_seen: Bool?  // swiftlint:disable:this identifier_name
   internal let revision: Int64
 
   /// Convert to regular UserSettings
@@ -331,7 +332,8 @@ internal struct SyncUserSettingsRow: Codable {
       ai_data_sharing_enabled: ai_data_sharing_enabled,
       half_tax_month: half_tax_month,
       currency: currency,
-      default_startup_tab: default_startup_tab
+      default_startup_tab: default_startup_tab,
+      wagey_showcase_seen: wagey_showcase_seen
     )
   }
 }

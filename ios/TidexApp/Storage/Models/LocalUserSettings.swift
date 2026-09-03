@@ -58,6 +58,9 @@ final class LocalUserSettings {
   /// Default tab to open when launching the app
   var defaultStartupTab: String?
 
+  /// Whether the user has dismissed the Wagey showcase
+  var wageyShowcaseSeen: Bool?
+
   /// When the user was last active
   var lastActive: Date?
 
@@ -204,6 +207,7 @@ final class LocalUserSettings {
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
     defaultStartupTab: String? = nil,
+    wageyShowcaseSeen: Bool? = nil,
     lastActive: Date? = nil,
     createdAt: Date? = nil,
     serverUpdatedAt: Date,
@@ -227,6 +231,7 @@ final class LocalUserSettings {
     self.halfTaxMonth = halfTaxMonth
     self.currency = currency
     self.defaultStartupTab = defaultStartupTab
+    self.wageyShowcaseSeen = wageyShowcaseSeen
     self.lastActive = lastActive
     self.createdAt = createdAt
     self.serverUpdatedAt = serverUpdatedAt
@@ -260,6 +265,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
   let halfTaxMonth: Int?
   let currency: String?
   let defaultStartupTab: String?
+  let wageyShowcaseSeen: Bool
   let lastActive: Date?
   let updatedAt: Date
   let revision: Int64
@@ -277,6 +283,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     case halfTaxMonth
     case currency
     case defaultStartupTab
+    case wageyShowcaseSeen
     case lastActive
     case updatedAt
     case revision
@@ -303,6 +310,7 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
       halfTaxMonth: row.half_tax_month,
       currency: row.currency,
       defaultStartupTab: row.default_startup_tab,
+      wageyShowcaseSeen: row.wagey_showcase_seen ?? false,
       lastActive: row.last_active.flatMap { dateFormatter.date(from: $0) },
       updatedAt: updatedAt,
       revision: revision
@@ -366,6 +374,9 @@ struct UserSettingsServerSnapshot: Codable, Equatable {
     if defaultStartupTab != other.defaultStartupTab {
       changed.insert(.defaultStartupTab)
     }
+    if wageyShowcaseSeen != other.wageyShowcaseSeen {
+      changed.insert(.wageyShowcaseSeen)
+    }
     if lastActive != other.lastActive {
       changed.insert(.lastActive)
     }
@@ -395,6 +406,8 @@ extension UserSettingsServerSnapshot {
     halfTaxMonth = try container.decodeIfPresent(Int.self, forKey: .halfTaxMonth)
     currency = try container.decodeIfPresent(String.self, forKey: .currency)
     defaultStartupTab = try container.decodeIfPresent(String.self, forKey: .defaultStartupTab)
+    wageyShowcaseSeen =
+      try container.decodeIfPresent(Bool.self, forKey: .wageyShowcaseSeen) ?? false
     lastActive = try container.decodeIfPresent(Date.self, forKey: .lastActive)
     updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     revision = try container.decode(Int64.self, forKey: .revision)
@@ -424,7 +437,8 @@ extension LocalUserSettings {
       ai_data_sharing_enabled: aiDataSharingEnabled,
       half_tax_month: halfTaxMonth,
       currency: currency,
-      default_startup_tab: defaultStartupTab
+      default_startup_tab: defaultStartupTab,
+      wagey_showcase_seen: wageyShowcaseSeen
     )
   }
 
@@ -462,6 +476,7 @@ extension LocalUserSettings {
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       defaultStartupTab: serverRow.default_startup_tab,
+      wageyShowcaseSeen: serverRow.wagey_showcase_seen ?? false,
       lastActive: lastActive,
       createdAt: createdAt,
       serverUpdatedAt: serverUpdatedAt,

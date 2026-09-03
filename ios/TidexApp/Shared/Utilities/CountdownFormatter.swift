@@ -92,34 +92,6 @@ struct CountdownFormatter {
     return (1...60).contains(seconds) ? seconds : nil
   }
 
-  // MARK: - Payroll Countdown
-
-  /// Format countdown text for payroll date
-  /// - Parameters:
-  ///   - payrollDate: The payroll date
-  /// - Returns: Formatted countdown text and whether it's past
-  static func formatPayrollCountdown(
-    payrollDate: Date
-  ) -> (text: String, isPast: Bool, isToday: Bool) {
-    let now = Date()
-    let calendar = Calendar.current
-
-    // Check if payroll is today
-    if calendar.isDateInToday(payrollDate) {
-      return (String(localized: .commonToday), false, true)
-    }
-
-    // Check if payroll has passed
-    if now > payrollDate {
-      let (text, _) = formatPastTime(from: payrollDate)
-      return (text, true, false)
-    }
-
-    // Payroll is in the future
-    let (text, _) = formatFutureTime(to: payrollDate)
-    return (text, false, false)
-  }
-
   // MARK: - Shared Relative Countdown
 
   /// Shared relative countdown formatting used by payroll and friend next-shift previews.

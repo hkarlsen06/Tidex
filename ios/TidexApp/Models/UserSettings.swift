@@ -37,6 +37,8 @@ struct UserSettings: Codable, Equatable {
   let currency: String?
   /// Default tab to open when launching the app
   let default_startup_tab: String?
+  /// Whether the user has dismissed the Wagey showcase
+  let wagey_showcase_seen: Bool?  // swiftlint:disable:this identifier_name
 
   init(
     user_id: String,
@@ -54,7 +56,8 @@ struct UserSettings: Codable, Equatable {
     ai_data_sharing_enabled: Bool? = nil,
     half_tax_month: Int?,
     currency: String?,
-    default_startup_tab: String?
+    default_startup_tab: String?,  // swiftlint:disable:this identifier_name
+    wagey_showcase_seen: Bool? = nil  // swiftlint:disable:this identifier_name
   ) {
     self.user_id = user_id
     self.created_at = created_at
@@ -72,6 +75,7 @@ struct UserSettings: Codable, Equatable {
     self.half_tax_month = half_tax_month
     self.currency = currency
     self.default_startup_tab = default_startup_tab
+    self.wagey_showcase_seen = wagey_showcase_seen
   }
 
   /// Effective payroll day (defaults to 1 if not set)
@@ -150,7 +154,8 @@ struct UserSettings: Codable, Equatable {
       ai_data_sharing_enabled: false,
       half_tax_month: nil,
       currency: nil,
-      default_startup_tab: "home"
+      default_startup_tab: "home",
+      wagey_showcase_seen: false
     )
   }
 }

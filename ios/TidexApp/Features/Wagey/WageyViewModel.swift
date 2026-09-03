@@ -1,9 +1,9 @@
 import Combine
 import Foundation
 import Observation
-import os.log
 import Supabase
 import UIKit
+import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "WageyViewModel")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 
@@ -344,15 +344,35 @@ final class WageyViewModel {  // swiftlint:disable:this explicit_acl explicit_to
       hasSeenShowcase = false
       return
     }
-    hasSeenShowcase = UserDefaults.standard.bool(forKey: showcaseKey(for: userId))
+    let legacySeen = UserDefaults.standard.bool(forKey: showcaseKey(for: userId))
+    let databaseSeen = settingsRepository.getSettings(for: userId)?.wagey_showcase_seen ?? false
+    hasSeenShowcase = databaseSeen || legacySeen
+
+    if legacySeen && !databaseSeen {
+      persistShowcaseSeen(for: userId)
+    }
   }
 
-  /// Mark the showcase as seen and save to UserDefaults
+  /// Mark the showcase as seen and persist it through settings sync
   func markShowcaseSeen() {  // swiftlint:disable:this explicit_acl type_contents_order
     guard let userId = AppCoordinator.shared.userId else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     hasSeenShowcase = true
     hasResolvedEntryState = true
     UserDefaults.standard.set(true, forKey: showcaseKey(for: userId))
+    persistShowcaseSeen(for: userId)
+  }
+
+  private func persistShowcaseSeen(for userId: String) {
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      do {
+        _ = try await settingsRepository.getOrCreateSettings(for: userId)
+        _ = try await settingsRepository.updateSettings(for: userId, wageyShowcaseSeen: true)
+        UserDefaults.standard.removeObject(forKey: showcaseKey(for: userId))
+      } catch {
+        logger.error("Failed to persist Wagey showcase state: \(error.localizedDescription)")
+      }
+    }
   }
 
   /// Reset the showcase state (for debugging) - clears UserDefaults and cached state

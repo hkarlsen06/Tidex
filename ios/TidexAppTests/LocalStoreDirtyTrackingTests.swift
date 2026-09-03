@@ -122,9 +122,10 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     expect(local.syncStatus) == .dirty
     expect(local.dirtyFieldKeys) == Set([.customPauseWindows])
-    expect(local.decodedCustomPauseWindows) == CustomPauseWindows(
-      windows: [PauseWindow(start: "12:00", end: "12:30")]
-    )
+    expect(local.decodedCustomPauseWindows)
+      == CustomPauseWindows(
+        windows: [PauseWindow(start: "12:00", end: "12:30")]
+      )
   }
 
   internal func testMarkShiftPendingDeleteSetsPendingDeleteStatus() async throws {
@@ -579,10 +580,11 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     expect(local.notificationMinutesArray) == [120, 15]
     expect(local.notificationAnchorTime) == "09:30"
-    expect(local.dirtyFieldKeys) == Set([
-      .notificationMinutesArray,
-      .notificationAnchorTime,
-    ])
+    expect(local.dirtyFieldKeys)
+      == Set([
+        .notificationMinutesArray,
+        .notificationAnchorTime,
+      ])
   }
 
   internal func testMarkEventPendingDeleteSetsPendingDeleteStatus() async throws {
@@ -662,7 +664,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     expect(local.conflictServerSnapshot) == nil
     expect(local.dirtyFieldKeys.isEmpty) == true
 
-    let syncedSnapshot: _ = try XCTUnwrap(EventServerSnapshot.decode(from: local.lastSyncedSnapshot))
+    let syncedSnapshot: _ = try XCTUnwrap(
+      EventServerSnapshot.decode(from: local.lastSyncedSnapshot))
     expect(syncedSnapshot) == serverSnapshot
   }
 
@@ -952,7 +955,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     expect(syncedSnapshot) == serverSnapshot
   }
 
-  internal func testResolveStoredJobConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata() async throws
+  internal func testResolveStoredJobConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
+    async throws
   {
     let store: _ = try makeStoreActor()
 
@@ -1321,6 +1325,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       halfTaxMonth: nil,
       currency: "SEK",
       defaultStartupTab: "home",
+      wageyShowcaseSeen: false,
       lastActive: serverUpdatedAt,
       updatedAt: serverUpdatedAt,
       revision: 12
@@ -1358,7 +1363,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     expect(syncedSnapshot) == serverSnapshot
   }
 
-  internal func testResolveStoredUserSettingsConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
+  internal func
+    testResolveStoredUserSettingsConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
     async throws
   {
     let store: _ = try makeStoreActor()
@@ -1402,6 +1408,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       halfTaxMonth: nil,
       currency: "SEK",
       defaultStartupTab: "home",
+      wageyShowcaseSeen: false,
       lastActive: serverUpdatedAt,
       updatedAt: serverUpdatedAt,
       revision: 14

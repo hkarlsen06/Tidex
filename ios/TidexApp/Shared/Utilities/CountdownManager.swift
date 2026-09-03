@@ -6,7 +6,7 @@ import Combine
 import Foundation
 
 /// Observable manager for countdown updates
-/// Provides live-updating countdown text for shifts and payroll
+/// Provides live-updating countdown text for shifts
 @MainActor
 final class CountdownManager: ObservableObject {
 
@@ -16,9 +16,6 @@ final class CountdownManager: ObservableObject {
   @Published private(set) var isShiftActive: Bool = false
   @Published private(set) var shiftProgress: Double = 0  // 0-100, only meaningful when isShiftActive
   @Published private(set) var finalShiftCountdownSeconds: Int?
-  @Published private(set) var payrollCountdownText: String?
-  @Published private(set) var isPayrollToday: Bool = false
-  @Published private(set) var isPayrollPast: Bool = false
 
   // MARK: - Private State
 
@@ -26,21 +23,18 @@ final class CountdownManager: ObservableObject {
   private var shiftDate: String?
   private var startTime: String?
   private var endTime: String?
-  private var payrollDate: Date?
 
   // MARK: - Public Methods
 
-  /// Configure the countdown manager with shift and payroll data
+  /// Configure the countdown manager with shift data
   func configure(
     shiftDate: String?,
     startTime: String?,
-    endTime: String?,
-    payrollDate: Date?
+    endTime: String?
   ) {
     self.shiftDate = shiftDate
     self.startTime = startTime
     self.endTime = endTime
-    self.payrollDate = payrollDate
 
     // Update immediately
     updateCountdowns()
@@ -94,19 +88,6 @@ final class CountdownManager: ObservableObject {
       self.finalShiftCountdownSeconds = nil
     }
 
-    // Update payroll countdown
-    if let payrollDate {
-      let (text, isPast, isToday) = CountdownFormatter.formatPayrollCountdown(
-        payrollDate: payrollDate
-      )
-      self.payrollCountdownText = text
-      self.isPayrollPast = isPast
-      self.isPayrollToday = isToday
-    } else {
-      self.payrollCountdownText = nil
-      self.isPayrollPast = false
-      self.isPayrollToday = false
-    }
   }
 
   deinit {
