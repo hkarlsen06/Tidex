@@ -52,9 +52,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @State private var showEventDeleteConfirmation = false  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @State private var eventToDelete: EventRow?  // swiftlint:disable:this type_contents_order
 
-  /// Edit mode state (when opening from swipe action)
-  @State private var shiftToEditDirectly: ShiftWithComputations?  // swiftlint:disable:this type_contents_order
-
   /// State for recurring shift editing
   @State private var recurringShiftToEdit: RecurringShiftRow?  // swiftlint:disable:this type_contents_order
   @State private var monthlyGoalEditContext: MonthlyGoalEditContext?  // swiftlint:disable:this type_contents_order
@@ -253,7 +250,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   private func openCalendarSubscriptionSetupFromDashboard() {  // swiftlint:disable:this type_contents_order
     selectedShift = nil
-    shiftToEditDirectly = nil
     selectedEvent = nil
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {  // swiftlint:disable:this no_magic_numbers
       showCalendarSubscriptionSettings = true
@@ -599,62 +595,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           onShowInCalendarRequested: {
             openCalendarSubscriptionSetupFromDashboard()
           },
-          tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
-        )
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
-      }
-      .sheet(item: $shiftToEditDirectly) { shift in  // swiftlint:disable:this closure_body_length
-        let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil  // swiftlint:disable:this explicit_type_interface line_length
-        ShiftDetailsSheet(
-          shift: shift,
-          jobName: shiftJob?.name,
-          jobColorHex: shiftJob?.color,
-          onDelete: {
-            shiftToEditDirectly = nil
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {  // swiftlint:disable:this no_magic_numbers
-              shiftToDelete = shift
-              showDeleteConfirmation = true
-            }
-          },
-          onUpdate: { editResult in
-            let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(  // swiftlint:disable:this explicit_type_interface
-              after: editResult, originalShift: shift)  // swiftlint:disable:this multiline_arguments_brackets
-            try await viewModel.updateShift(editResult)
-            if shouldKeepSheetOpen {
-              if let refreshedShift = viewModel.getDisplayedShift(id: editResult.shiftId) {
-                shiftToEditDirectly = refreshedShift
-              }
-            } else {
-              shiftToEditDirectly = nil
-            }
-          },
-          onUpdatePause: { pauseResult in
-            shiftToEditDirectly = nil
-            Task {
-              await viewModel.updateShiftPause(pauseResult)
-            }
-          },
-          onEditRecurring: { recurringId in
-            shiftToEditDirectly = nil
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {  // swiftlint:disable:this no_magic_numbers
-              if let recurring = viewModel.getRecurringShift(id: recurringId) {
-                recurringShiftToEdit = recurring
-              }
-            }
-          },
-          onStopRecurringAfterDate: { recurringId, occurrenceDate in
-            try await viewModel.stopRecurringShiftAfterDate(
-              recurringId: recurringId,
-              occurrenceDate: occurrenceDate
-            )
-            shiftToEditDirectly = nil
-          },
-          showsCalendarSubscriptionCTA: !calendarSubscriptionStore.isActive,
-          onShowInCalendarRequested: {
-            openCalendarSubscriptionSetupFromDashboard()
-          },
-          startInEditMode: true,
           tariffRules: viewModel.getTariffRules(for: shift.shiftDate)
         )
         .presentationDetents([.medium, .large])
@@ -1107,7 +1047,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           percentageIncludesPayrollAdjustments: data.previousMonthHasPayrollAdjustments
         )
         .contentShape(Rectangle())
-        .gesture(monthSwipeGesture())
         .onTapGesture {
           if data.currentMonthCurrencyAggregate.hasMixedCurrency {
             impactHaptic.impactOccurred()
@@ -1154,6 +1093,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           featuredShiftSection(data: data)
         }
       }
+      .contentShape(Rectangle())
+      .gesture(monthSwipeGesture())
     } else {
       EmptyView()
     }
@@ -1451,70 +1392,46 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             ? viewModel.liveFeaturedShiftWhileOngoing(from: featuredShift, at: Date())
             : featuredShift
           let shiftJob = viewModel.jobForShift(featuredShift)  // swiftlint:disable:this explicit_type_interface
-          SwipeableShiftCard(
-            onEdit: {
-              shiftToEditDirectly = featuredShift
-            },
-            onDelete: {
-              impactHaptic.impactOccurred()
-              shiftToDelete = featuredShift
-              showDeleteConfirmation = true
-            },
-            actionHeight: usesFixedCardHeights ? ShiftCardMetrics.regularCardMinHeight : nil
-          ) {
-            FeaturedShiftCard(
-              shift: displayedFeaturedShift,
-              isToday: data.isFeaturedItemToday,
-              isBestShift: data.featuredShiftIsBestShift,
-              countdownText: countdownManager.shiftCountdownText,
-              showJobIndicator: viewModel.shouldShowJobIndicators,
-              jobName: shiftJob?.name,
-              jobColorHex: shiftJob?.color,
-              progress: shiftProgress,
-              finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
-            )
-            .userCurrency(shiftJob?.currency ?? data.currency)
-            .contentShape(Rectangle())
-            .onTapGesture {
-              impactHaptic.impactOccurred()
-              if countdownManager.isShiftActive {
-                if viewModel.shouldShowDashboardClockButtons {
-                  selectedShift = featuredShift
-                } else {
-                  featuredShiftActionTarget = featuredShift
-                  showFeaturedShiftActions = true
-                }
-              } else {
+          FeaturedShiftCard(
+            shift: displayedFeaturedShift,
+            isToday: data.isFeaturedItemToday,
+            isBestShift: data.featuredShiftIsBestShift,
+            countdownText: countdownManager.shiftCountdownText,
+            showJobIndicator: viewModel.shouldShowJobIndicators,
+            jobName: shiftJob?.name,
+            jobColorHex: shiftJob?.color,
+            progress: shiftProgress,
+            finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
+          )
+          .userCurrency(shiftJob?.currency ?? data.currency)
+          .contentShape(Rectangle())
+          .onTapGesture {
+            impactHaptic.impactOccurred()
+            if countdownManager.isShiftActive {
+              if viewModel.shouldShowDashboardClockButtons {
                 selectedShift = featuredShift
+              } else {
+                featuredShiftActionTarget = featuredShift
+                showFeaturedShiftActions = true
               }
+            } else {
+              selectedShift = featuredShift
             }
           }
 
         case .event(let event, let coveredDateISO):  // swiftlint:disable:this pattern_matching_keywords
-          SwipeableShiftCard(
-            onEdit: {
-              selectedEvent = EventSheetSelection(event: event, startInEditMode: true)
-            },
-            onDelete: {
-              impactHaptic.impactOccurred()
-              eventToDelete = event
-              showEventDeleteConfirmation = true
-            },
-            actionHeight: usesFixedCardHeights ? ShiftCardMetrics.regularCardMinHeight : nil
-          ) {
-            VStack(spacing: Spacing.sm) {
-              EventRowCard(
-                event: event,
-                coveredDateISO: coveredDateISO,
-                onTap: {
-                  impactHaptic.impactOccurred()
-                  selectedEvent = EventSheetSelection(event: event, startInEditMode: false)
-                },
-                showTodayHighlight: false
-              )
+          VStack(spacing: Spacing.sm) {
+            EventRowCard(
+              event: event,
+              coveredDateISO: coveredDateISO,
+              onTap: {
+                impactHaptic.impactOccurred()
+                selectedEvent = EventSheetSelection(event: event, startInEditMode: false)
+              },
+              showTodayHighlight: false
+            )
 
-              featuredEventFooter(event)
-            }
+            featuredEventFooter(event)
           }
         }
       } else {

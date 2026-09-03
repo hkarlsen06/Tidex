@@ -158,7 +158,6 @@ final class AppLifecycleHandler {
     logger.info("Resuming communication activity for thread \(threadId, privacy: .private)")
 
     Task { @MainActor in
-      await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)
       AppCoordinator.shared.pendingDeepLink = .friendChat(
         threadId: threadId,
         messageId: nil,
@@ -166,6 +165,7 @@ final class AppLifecycleHandler {
         typingUserId: nil,
         navigationRequestId: UUID()
       )
+      await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)
     }
 
     return true

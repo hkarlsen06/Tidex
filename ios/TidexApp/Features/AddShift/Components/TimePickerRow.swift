@@ -369,13 +369,12 @@ struct NumericTimeInput: View {
     .frame(maxWidth: .infinity)
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-        .strokeBorder(
-          isFocused ? Color.tidexBlue : Color.tidexBorder,
-          lineWidth: 1
-        )
-    )
+    .overlay {
+      if isFocused {
+        RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+          .strokeBorder(Color.tidexBlue, lineWidth: 1)
+      }
+    }
     .animation(.easeInOut(duration: 0.15), value: isFocused)
   }
 

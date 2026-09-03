@@ -155,9 +155,7 @@ extension Color {
 // MARK: - Card Shadow View Modifiers
 //
 // iOS-native shadow styles for elevated surfaces
-// Automatically adapts to light/dark mode:
-// - Light mode: Subtle drop shadows for depth
-// - Dark mode: Inner glow/rim effect + subtle shadow for definition
+// Light mode uses drop shadows; dark mode uses a directional rim highlight.
 
 /// Shadow elevation levels for cards
 enum TidexShadowLevel {
@@ -171,7 +169,7 @@ enum TidexShadowLevel {
   case floating
 }
 
-/// View modifier that applies an adaptive card shadow with dark mode glow
+/// View modifier that applies adaptive card elevation.
 struct TidexCardShadowModifier: ViewModifier {
   @Environment(\.colorScheme) private var colorScheme
   let level: TidexShadowLevel
@@ -179,46 +177,36 @@ struct TidexCardShadowModifier: ViewModifier {
 
   func body(content: Content) -> some View {
     if colorScheme == .dark {
-      // Dark mode: Add subtle inner glow overlay + shadow
-      content
-        .overlay(
-          RoundedRectangle(cornerRadius: cornerRadius)
-            .strokeBorder(
-              LinearGradient(
-                colors: [
-                  Color.white.opacity(glowOpacity),
-                  Color.white.opacity(glowOpacity * 0.3),
-                  Color.clear,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-              ),
-              lineWidth: 1
-            )
-        )
-        .shadow(
-          color: shadowColor,
-          radius: shadowRadius,
-          x: 0,
-          y: shadowY
-        )
+      content.overlay(
+        RoundedRectangle(cornerRadius: cornerRadius)
+          .strokeBorder(
+            LinearGradient(
+              colors: [
+                Color.tidexTextPrimary.opacity(rimOpacity),
+                Color.tidexTextPrimary.opacity(rimOpacity * 0.3),
+                Color.clear,
+              ],
+              startPoint: .top,
+              endPoint: .bottom
+            ),
+            lineWidth: 1
+          )
+      )
     } else {
-      // Light mode: Just shadow
-      content
-        .shadow(
-          color: shadowColor,
-          radius: shadowRadius,
-          x: 0,
-          y: shadowY
-        )
+      content.shadow(
+        color: shadowColor,
+        radius: shadowRadius,
+        x: 0,
+        y: shadowY
+      )
     }
   }
 
-  /// Corner radius for the glow overlay
   private var cornerRadius: CGFloat {
-    if let custom = customCornerRadius {
-      return custom
+    if let customCornerRadius {
+      return customCornerRadius
     }
+
     switch level {
     case .subtle:
       return 12
@@ -234,8 +222,7 @@ struct TidexCardShadowModifier: ViewModifier {
     }
   }
 
-  /// Glow opacity for dark mode rim effect
-  private var glowOpacity: Double {
+  private var rimOpacity: Double {
     switch level {
     case .subtle:
       return 0.06
@@ -252,85 +239,64 @@ struct TidexCardShadowModifier: ViewModifier {
   }
 
   private var shadowColor: Color {
-    switch colorScheme {
-    case .light:
-      switch level {
-      case .subtle:
-        return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.06)
+    switch level {
+    case .subtle:
+      return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.06)
 
-      case .card:
-        return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.10)
+    case .card:
+      return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.10)
 
-      case .elevated:
-        return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.15)
+    case .elevated:
+      return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.15)
 
-      case .floating:
-        return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.20)
-      }
-
-    case .dark:
-      switch level {
-      case .subtle:
-        return Color.black.opacity(0.15)
-
-      case .card:
-        return Color.black.opacity(0.30)
-
-      case .elevated:
-        return Color.black.opacity(0.40)
-
-      case .floating:
-        return Color.black.opacity(0.50)
-      }
-
-    @unknown default:
-      return Color.black.opacity(0.1)
+    case .floating:
+      return Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.20)
     }
   }
 
   private var shadowRadius: CGFloat {
     switch level {
     case .subtle:
-      return colorScheme == .light ? 4 : 3
+      return 4
 
     case .card:
-      return colorScheme == .light ? 8 : 6
+      return 8
 
     case .elevated:
-      return colorScheme == .light ? 16 : 10
+      return 16
 
     case .floating:
-      return colorScheme == .light ? 24 : 14
+      return 24
     }
   }
 
   private var shadowY: CGFloat {
     switch level {
     case .subtle:
-      return colorScheme == .light ? 1 : 1
+      return 1
 
     case .card:
-      return colorScheme == .light ? 2 : 2
+      return 2
 
     case .elevated:
-      return colorScheme == .light ? 4 : 3
+      return 4
 
     case .floating:
-      return colorScheme == .light ? 8 : 5
+      return 8
     }
   }
 }
 
 extension View {
   /// Applies a subtle card shadow that adapts to light/dark mode
-  /// - Light mode: Drop shadow for depth
-  /// - Dark mode: Subtle top-edge glow + shadow for definition
   /// Use on cards, list rows, and other elevated surfaces
   /// - Parameters:
   ///   - level: Shadow intensity level (default: .card)
-  ///   - cornerRadius: Custom corner radius for the glow overlay. If nil, uses default for the level.
-  func tidexCardShadow(_ level: TidexShadowLevel = .card, cornerRadius: CGFloat? = nil) -> some View
-  {
+  ///   - cornerRadius: Custom corner radius for the dark-mode rim.
+  func tidexCardShadow(
+    _ level: TidexShadowLevel = .card,
+    cornerRadius: CGFloat? = nil
+  ) -> some View {
     modifier(TidexCardShadowModifier(level: level, customCornerRadius: cornerRadius))
   }
 

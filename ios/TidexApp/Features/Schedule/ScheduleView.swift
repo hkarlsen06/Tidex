@@ -452,6 +452,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             return
           }
           refreshWorkSetupPresentationState()
+          handleDeepLink(coordinator.pendingDeepLink)
           guard !shouldShowWorkSetupRequiredPlaceholder else {
             return
           }
@@ -1028,7 +1029,9 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   /// Handle pending deep link from widget or notification
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-    guard case .shifts(let dates, let shiftIds, let action) = deepLink else {
+    guard selectedTab == .shifts,
+      case .shifts(let dates, let shiftIds, let action) = deepLink
+    else {
       return
     }
 
@@ -1044,6 +1047,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     // Avoid processing the same deep link twice
     if highlightedDateISO == dateISO {
       kLogger.debug(" Deep link already being processed for: \(dateISO)")
+      coordinator.clearPendingDeepLink()
       return
     }
 

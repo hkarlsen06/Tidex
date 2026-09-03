@@ -99,7 +99,7 @@ final class AppCoordinator: ObservableObject {
       navigationRequestId: UUID?
     )  // Navigate to a direct friend chat thread
     case wagey  // Navigate to Wagey
-    case addShift(mode: AddShiftMode?)  // Navigate to Add Shift tab, optionally selecting a mode
+    case addShift(mode: AddShiftMode?, date: String?)  // Navigate to Add Shift, optionally selecting a mode/date
     case settings(destination: SettingsDeepLinkDestination?)  // Open settings, optionally at a subpage
     case feedback  // Navigate to feedback settings (for users receiving response)
     case adminFeedback  // Navigate to admin panel with feedback tab (for admins receiving new feedback)
