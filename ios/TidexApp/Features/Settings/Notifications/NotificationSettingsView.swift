@@ -256,7 +256,7 @@ struct NotificationSettingsView: View {
         Image(systemName: "bell.fill")
           .font(.tidexBody)
           .foregroundColor(.tidexBlue)
-          .frame(width: 24)
+          .frame(width: TidexSettingsIcon.defaultSize)
 
         // Time label
         Text(viewModel.formatReminderTime(minutes, locale: Locale.current))

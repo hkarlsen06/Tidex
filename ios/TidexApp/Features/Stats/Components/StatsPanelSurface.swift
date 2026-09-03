@@ -12,9 +12,6 @@ struct StatsPanelSurfaceModifier: ViewModifier {  // swiftlint:disable:this expl
       .padding(padding)
       .background(shape.fill(Color.tidexSurfacePrimary))
       .clipShape(shape)
-      .overlay(
-        shape.strokeBorder(Color.tidexBorderSubtle.opacity(0.42), lineWidth: 1)  // swiftlint:disable:this line_length no_magic_numbers
-      )
       .tidexCardShadow(shadowLevel, cornerRadius: cornerRadius)
   }
 }
