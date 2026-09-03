@@ -4,12 +4,6 @@ import type { CSSProperties } from 'react';
 import { ArrowRight } from 'lucide-react';
 import dashboardEn from '@/public/hero/dashboard-en.png';
 import dashboardNo from '@/public/hero/dashboard-no.png';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/i18n/config';
 import type { Dictionary } from '@/lib/i18n/dictionaries';
@@ -141,7 +135,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
               className="h-11 w-11 rounded-[0.9rem] sm:h-12 sm:w-12 sm:rounded-[1rem]"
             />
           </a>
-          <MarketingLocaleToggle />
+          <MarketingLocaleToggle locale={locale} />
         </div>
 
         <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col lg:flex-row lg:items-center lg:gap-14 xl:gap-20">
@@ -252,22 +246,17 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             </p>
           </div>
 
-          <Accordion
-            type="single"
-            collapsible
-            defaultValue={faqs[0]?.question}
-            className="space-y-3"
-          >
-            {faqs.map((faq) => (
-              <AccordionItem
+          <div className="space-y-3">
+            {faqs.map((faq, index) => (
+              <details
                 key={faq.question}
-                value={faq.question}
+                open={index === 0}
                 className="rounded-[1.15rem] border border-white/8 bg-background/60 px-4 last:border-b sm:rounded-[1.4rem] sm:px-6"
               >
-                <AccordionTrigger className="py-5 text-left text-base font-medium hover:text-brand-highlight sm:py-6 sm:text-lg">
+                <summary className="cursor-pointer py-5 text-left text-base font-medium text-text-primary hover:text-brand-highlight sm:py-6 sm:text-lg">
                   {faq.question}
-                </AccordionTrigger>
-                <AccordionContent className="pb-5 sm:pb-6">
+                </summary>
+                <div className="pb-5 sm:pb-6">
                   {faq.answers.map((paragraph, answerIndex) => (
                     <p
                       key={`${faq.question}-${answerIndex}`}
@@ -276,10 +265,10 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
                       {paragraph}
                     </p>
                   ))}
-                </AccordionContent>
-              </AccordionItem>
+                </div>
+              </details>
             ))}
-          </Accordion>
+          </div>
         </div>
       </section>
 

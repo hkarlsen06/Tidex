@@ -1,12 +1,3 @@
-'use client';
-
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import typescript from 'react-syntax-highlighter/dist/esm/languages/hljs/typescript';
-import { vs2015 } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-
-// Register only the languages we need
-SyntaxHighlighter.registerLanguage('typescript', typescript);
-
 interface PayrollDocsRendererProps {
   section: {
     id: string;
@@ -32,6 +23,14 @@ interface PayrollDocsRendererProps {
 
 function isExampleText(text: string): boolean {
   return text.startsWith('Example:');
+}
+
+function CodeBlock({ content }: { content: string }) {
+  return (
+    <pre className="overflow-x-auto rounded-lg bg-[#1e1e1e] p-5 text-sm leading-relaxed text-[#d4d4d4] shadow-md sm:p-6">
+      <code>{content}</code>
+    </pre>
+  );
 }
 
 export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
@@ -98,21 +97,7 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
 
             {/* Code Block */}
             {subsection.code && (
-              <div className="overflow-hidden rounded-lg shadow-md">
-                <SyntaxHighlighter
-                  language={subsection.code.language}
-                  style={vs2015}
-                  customStyle={{
-                    margin: 0,
-                    padding: '1.5rem',
-                    fontSize: '0.875rem',
-                    borderRadius: '0.5rem',
-                    lineHeight: '1.6',
-                  }}
-                >
-                  {subsection.code.content}
-                </SyntaxHighlighter>
-              </div>
+              <CodeBlock content={subsection.code.content} />
             )}
 
             {/* Note */}
@@ -122,21 +107,7 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
 
             {/* Additional Code Block */}
             {subsection.additionalCode && (
-              <div className="overflow-hidden rounded-lg shadow-md">
-                <SyntaxHighlighter
-                  language={subsection.additionalCode.language}
-                  style={vs2015}
-                  customStyle={{
-                    margin: 0,
-                    padding: '1.5rem',
-                    fontSize: '0.875rem',
-                    borderRadius: '0.5rem',
-                    lineHeight: '1.6',
-                  }}
-                >
-                  {subsection.additionalCode.content}
-                </SyntaxHighlighter>
-              </div>
+              <CodeBlock content={subsection.additionalCode.content} />
             )}
 
             {/* Table */}
@@ -231,21 +202,7 @@ export function PayrollDocsRenderer({ section }: PayrollDocsRendererProps) {
                     )}
 
                     {step.code && (
-                      <div className="overflow-hidden rounded-lg shadow-md">
-                        <SyntaxHighlighter
-                          language={step.code.language}
-                          style={vs2015}
-                          customStyle={{
-                            margin: 0,
-                            padding: '1.25rem',
-                            fontSize: '0.875rem',
-                            borderRadius: '0.5rem',
-                            lineHeight: '1.6',
-                          }}
-                        >
-                          {step.code.content}
-                        </SyntaxHighlighter>
-                      </div>
+                      <CodeBlock content={step.code.content} />
                     )}
 
                     {step.note && (

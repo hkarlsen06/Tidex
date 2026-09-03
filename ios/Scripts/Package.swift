@@ -8,7 +8,6 @@ import PackageDescription
 // All non-Package.swift files in the directory — each target picks its own source and excludes the rest
 let allFiles: [String] = [
   "validate-localization.swift",
-  "add-strings.swift",
   "audit-strings.swift",
   "delete-strings.swift",
   "search-strings.swift",
@@ -29,7 +28,6 @@ let package = Package(
   platforms: [.macOS(.v13)],
   products: [
     .executable(name: "validate-localization", targets: ["ValidateLocalization"]),
-    .executable(name: "add-strings", targets: ["AddStrings"]),
     .executable(name: "audit-strings", targets: ["AuditStrings"]),
     .executable(name: "delete-strings", targets: ["DeleteStrings"]),
     .executable(name: "search-strings", targets: ["SearchStrings"]),
@@ -41,13 +39,6 @@ let package = Package(
       path: ".",
       exclude: excluding("validate-localization.swift"),
       sources: ["validate-localization.swift"]
-    ),
-    .executableTarget(
-      name: "AddStrings",
-      dependencies: [],
-      path: ".",
-      exclude: excluding("add-strings.swift"),
-      sources: ["add-strings.swift"]
     ),
     .executableTarget(
       name: "AuditStrings",

@@ -15,7 +15,7 @@ interface MarketingLegalPageProps {
 
 export function MarketingLegalPage({ locale, dictionary, variant }: MarketingLegalPageProps) {
   let content: ReactNode;
-  const localeSwitcher = <MarketingLocaleToggle />;
+  const localeSwitcher = <MarketingLocaleToggle locale={locale} path={`/${variant}`} />;
 
   switch (variant) {
     case 'terms':
