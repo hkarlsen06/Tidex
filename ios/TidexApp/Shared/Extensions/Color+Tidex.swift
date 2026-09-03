@@ -300,11 +300,11 @@ extension View {
     modifier(TidexCardShadowModifier(level: level, customCornerRadius: cornerRadius))
   }
 
-  /// Applies the standard contained row surface for custom lists and sheets.
+  /// Applies a flat contained row surface; opt into elevation only for standalone cards.
   func tidexRowSurface(
     cornerRadius: CGFloat,
     fillColor: Color = .tidexSurfacePrimary,
-    shadowLevel: TidexShadowLevel = .subtle
+    shadowLevel: TidexShadowLevel? = nil
   ) -> some View {
     modifier(
       TidexRowSurfaceModifier(
@@ -322,25 +322,24 @@ extension View {
 }
 
 struct TidexRowSurfaceModifier: ViewModifier {
-  @Environment(\.colorScheme) private var colorScheme
   let cornerRadius: CGFloat
   let fillColor: Color
-  let shadowLevel: TidexShadowLevel
+  let shadowLevel: TidexShadowLevel?
 
+  @ViewBuilder
   func body(content: Content) -> some View {
     let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
 
-    content
-      .background(shape.fill(fillColor))
-      .clipShape(shape)
-      .overlay(
-        shape.strokeBorder(Color.tidexBorderSubtle.opacity(borderOpacity), lineWidth: 1)
-      )
-      .tidexCardShadow(shadowLevel, cornerRadius: cornerRadius)
-  }
-
-  private var borderOpacity: Double {
-    colorScheme == .dark ? 0.48 : 0.28
+    if let shadowLevel {
+      content
+        .background(shape.fill(fillColor))
+        .clipShape(shape)
+        .tidexCardShadow(shadowLevel, cornerRadius: cornerRadius)
+    } else {
+      content
+        .background(shape.fill(fillColor))
+        .clipShape(shape)
+    }
   }
 }
 
