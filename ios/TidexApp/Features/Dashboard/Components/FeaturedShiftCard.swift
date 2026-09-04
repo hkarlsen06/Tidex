@@ -14,10 +14,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
   let shift: ShiftWithComputations  // swiftlint:disable:this explicit_acl
   let isToday: Bool  // swiftlint:disable:this explicit_acl
   let isBestShift: Bool  // true = showing best shift, false = showing next shift // swiftlint:disable:this explicit_acl
-  let countdownText: String?  // Countdown text shown below the card // swiftlint:disable:this explicit_acl
-  let showJobIndicator: Bool  // swiftlint:disable:this explicit_acl
-  let jobName: String?  // swiftlint:disable:this explicit_acl
-  let jobColorHex: String?  // swiftlint:disable:this explicit_acl
+  let countdownText: String?  // Countdown text shown below the amount // swiftlint:disable:this explicit_acl
   /// Progress through the shift (0-100), shows a subtle progress bar when provided (for active shifts)
   var progress: Double?  // swiftlint:disable:this explicit_acl
   /// Remaining seconds in the final countdown window for active shifts.
@@ -26,7 +23,7 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
   var showTimeRangeEndSkeleton: Bool = false  // swiftlint:disable:this explicit_acl
   /// When true, shows a "+" prefix and uses blue color for the amount (used in celebration overlay)
   var showIncreaseHighlight: Bool = false  // swiftlint:disable:this explicit_acl
-  /// Whether footer text/badge under the card should be shown.
+  /// Whether the countdown/status badge should be shown below the amount.
   var showFooter: Bool = true  // swiftlint:disable:this explicit_acl
   var surfaceStyle: SurfaceStyle = .standard  // swiftlint:disable:this explicit_acl
 
@@ -35,9 +32,6 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
     isToday: Bool,
     isBestShift: Bool,
     countdownText: String?,
-    showJobIndicator: Bool = false,
-    jobName: String? = nil,
-    jobColorHex: String? = nil,
     progress: Double? = nil,
     finalCountdownSeconds: Int? = nil,
     showTimeRangeEndSkeleton: Bool = false,
@@ -49,9 +43,6 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
     self.isToday = isToday
     self.isBestShift = isBestShift
     self.countdownText = countdownText
-    self.showJobIndicator = showJobIndicator
-    self.jobName = jobName
-    self.jobColorHex = jobColorHex
     self.progress = progress
     self.finalCountdownSeconds = finalCountdownSeconds
     self.showTimeRangeEndSkeleton = showTimeRangeEndSkeleton
@@ -60,7 +51,6 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
     self.surfaceStyle = surfaceStyle
   }
 
-  @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
   @Environment(\.layoutDirection) private var layoutDirection  // swiftlint:disable:this explicit_type_interface
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
 
@@ -70,10 +60,6 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
   @State private var previousHasTrailingBottomContent: Bool?  // swiftlint:disable:this discouraged_optional_boolean
 
   // MARK: - Computed Properties
-
-  private var showBreakdown: Bool {
-    shift.taxEnabled && shift.taxAmount > 0
-  }
 
   private var dateParts: ShiftCardDateParts {
     ShiftCardFormatter.dateParts(for: shift.shiftDate)
@@ -111,16 +97,8 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
     layoutDirection == .rightToLeft
   }
 
-  private var maxJobBadgeWidth: CGFloat {
-    96  // swiftlint:disable:this no_magic_numbers
-  }
-
-  private var shouldRenderJobBadge: Bool {
-    showJobIndicator && (jobName?.isEmpty == false)
-  }
-
   private var hasTrailingBottomContent: Bool {
-    shouldRenderJobBadge || showBreakdown
+    showFooter && footerText(countdown: countdownText) != nil
   }
 
   private var displayAmount: Double {
@@ -200,31 +178,21 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
           .foregroundColor(showIncreaseHighlight ? .tidexBlue : .tidexTextPrimary)
         }
       } trailingBottom: {
-        if shouldRenderJobBadge, let jobName, !jobName.isEmpty {
-          WorkplaceNameText(
-            name: jobName,
-            colorHex: jobColorHex,
-            font: .tidexCaptionRegular,
-            fallbackBadgeColor: .tidexBlue,
-            badgeHorizontalPadding: Spacing.xs,
-            badgeVerticalPadding: 2  // swiftlint:disable:this no_magic_numbers
-          )
-          .lineLimit(1)
-          .truncationMode(.tail)
-          .frame(maxWidth: maxJobBadgeWidth, alignment: .trailing)
-        } else if showBreakdown {
-          // Breakdown (gross - tax) when tax enabled
-          HStack(spacing: Spacing.xxs) {
-            Text(formatPlainAmount(shift.grossPay))
-              .contentTransition(.numericText(value: shift.grossPay))
-            Text("−")
-            Text(formatPlainAmount(shift.taxAmount))
-              .contentTransition(.numericText(value: shift.taxAmount))
+        if showFooter, let text = displayedFooterText {
+          if isBestShift {
+            HStack(spacing: Spacing.xxxs) {
+              Image(systemName: "star.fill")  // swiftlint:disable:this accessibility_label_for_image
+              Text(text)
+            }
+            .font(.tidexLabel)
+            .foregroundColor(.tidexTextSecondary)
+          } else {
+            ShiftCountdownBadge(
+              text: text,
+              status: status,
+              finalCountdownSeconds: finalCountdownSeconds
+            )
           }
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
-          .animation(.spring(duration: 0.8, bounce: 0), value: shift.grossPay)  // swiftlint:disable:this line_length no_magic_numbers
-          .animation(.spring(duration: 0.8, bounce: 0), value: shift.taxAmount)  // swiftlint:disable:this line_length no_magic_numbers
         }
       }
       .padding(.horizontal, surfaceStyle == .flat ? 0 : Spacing.mlg)
@@ -283,49 +251,10 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
         }
       }
 
-      // Footer text below the card (countdown or "Best shift")
-      // Uses fixed height to prevent layout shift during transitions
-      if showFooter {
-        Group {
-          if let text = displayedFooterText {
-            if isBestShift {
-              HStack(spacing: Spacing.xxxs) {
-                Image(systemName: "star.fill")  // swiftlint:disable:this accessibility_label_for_image
-                  .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexTextSecondary)
-                Text(text)
-                  .font(.tidexLabel)
-                  .foregroundColor(.tidexTextSecondary)
-              }
-            } else {
-              ShiftCountdownBadge(
-                text: text,
-                status: status,
-                finalCountdownSeconds: finalCountdownSeconds
-              )
-            }
-          } else {
-            // Skeleton placeholder bar matching other empty states
-            RoundedRectangle(cornerRadius: CornerRadius.xxs)
-              .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
-              .frame(width: 80, height: 14)  // swiftlint:disable:this no_magic_numbers
-          }
-        }
-        .frame(height: 20)  // Fixed height prevents vertical jerk // swiftlint:disable:this no_magic_numbers
-      }
     }
   }
 
   // MARK: - Formatting
-
-  private func formatCurrency(_ amount: Double) -> String {  // swiftlint:disable:this type_contents_order
-    CurrencyConfig.format(amount, currency: currency)
-  }
-
-  /// Format amount without currency symbol (for breakdown display)
-  private func formatPlainAmount(_ amount: Double) -> String {  // swiftlint:disable:this type_contents_order
-    CurrencyConfig.formatPlain(amount)
-  }
 
   private var timeRangeLabel: some View {
     HStack(spacing: Spacing.xxs) {

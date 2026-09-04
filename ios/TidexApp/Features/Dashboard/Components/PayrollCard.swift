@@ -3,8 +3,6 @@ import SwiftUI
 /// Card displaying previous month's earnings and payroll information
 /// Design matches NextPayrollCard from the Next.js app
 struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
-  private static let centeredTrailingAmountOffset: CGFloat = 11
-
   let payrollDate: Date  // swiftlint:disable:this explicit_acl
   let label: String  // swiftlint:disable:this explicit_acl
   var labelColorHex: String?  // swiftlint:disable:this explicit_acl
@@ -23,7 +21,6 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
   var showsLoadingShimmer: Bool = true  // swiftlint:disable:this explicit_acl
   var isElevated: Bool = true  // swiftlint:disable:this explicit_acl
 
-  @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
   @Environment(\.colorScheme) private var colorScheme  // swiftlint:disable:this explicit_type_interface
 
@@ -36,10 +33,6 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
   private var isPayrollToday: Bool {
     Calendar.current.isDateInToday(payrollDate)
-  }
-
-  private var showBreakdown: Bool {
-    taxEnabled && (tax ?? 0) > 0
   }
 
   private var hasPayoutData: Bool {
@@ -56,10 +49,6 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
   private var usesFixedCardHeight: Bool {
     !dynamicTypeSize.isAccessibilitySize
-  }
-
-  private var shouldCenterTrailingAmount: Bool {
-    showPayout && !showBreakdown
   }
 
   // MARK: - Body
@@ -119,7 +108,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
             animateFrom: ShiftCardAmountAnimationFallback.animateFrom(
               previousAmount: previousPrimaryAmount,
               previousHasTrailingBottomContent: previousHasTrailingBottomContent,
-              currentHasTrailingBottomContent: showBreakdown
+              currentHasTrailingBottomContent: showPayout
             )
           )
           .font(.tidexTitle)
@@ -132,7 +121,6 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
           }
         }
         .foregroundColor(.tidexTextPrimary)
-        .offset(y: shouldCenterTrailingAmount ? Self.centeredTrailingAmountOffset : 0)
       } else {
         ZStack {
           Text(verbatim: "00 000")
@@ -145,19 +133,13 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         }
       }
     } trailingBottom: {
-      // Breakdown (gross - tax) when tax enabled
-      if showPayout, showBreakdown {
-        HStack(spacing: Spacing.xxs) {
-          Text(formatPlainAmount(gross))
-            .contentTransition(.numericText(value: gross))
-          Text("−")
-          Text(formatPlainAmount(tax ?? 0))
-            .contentTransition(.numericText(value: tax ?? 0))
+      if showPayout {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+          Text(payrollCountdownText(at: context.date))
+            .contentTransition(.numericText())
         }
         .font(.tidexSubheadline)
         .foregroundColor(.tidexTextMuted)
-        .animation(.spring(duration: 0.8, bounce: 0), value: gross)  // swiftlint:disable:this no_magic_numbers
-        .animation(.spring(duration: 0.8, bounce: 0), value: tax)  // swiftlint:disable:this no_magic_numbers
       } else if !showPayout {
         ZStack {
           Text(verbatim: "00 000 − 00 000")
@@ -190,15 +172,19 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
       fillColor: isElevated ? .tidexSurfacePrimary : .clear,
       shadowLevel: isElevated ? .card : nil
     )
-    .overlay(alignment: .bottom) {
+    .overlay(alignment: .bottomLeading) {
       if !isElevated, !isLoading, hasProgress {
-        ProgressView(value: animatedProgress, total: 100)  // swiftlint:disable:this no_magic_numbers
-          .tint(.tidexBlue)
-          .frame(maxWidth: .infinity)
-          .offset(y: Spacing.xs)
+        GeometryReader { geometry in
+          Rectangle()
+            .fill(Color.tidexBlue)
+            .frame(
+              width: geometry.size.width * (animatedProgress / 100),
+              height: 3  // swiftlint:disable:this no_magic_numbers
+            )
+            .frame(maxHeight: .infinity, alignment: .bottom)
+        }
       }
     }
-    .padding(.bottom, !isElevated && !isLoading && hasProgress ? Spacing.md : 0)
     .shimmer(isActive: isLoading && showsLoadingShimmer)
     .onChange(of: progress) { _, newValue in
       guard !isLoading else {
@@ -222,12 +208,12 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
     .onChange(of: primaryAmount) { _, newValue in
       previousPrimaryAmount = newValue
     }
-    .onChange(of: showBreakdown) { _, newValue in
+    .onChange(of: showPayout) { _, newValue in
       previousHasTrailingBottomContent = newValue
     }
     .onAppear {
       previousPrimaryAmount = primaryAmount
-      previousHasTrailingBottomContent = showBreakdown
+      previousHasTrailingBottomContent = showPayout
 
       guard !isLoading, let progress, progress >= 1, progress <= 100 else {
         animatedProgress = 0
@@ -248,13 +234,10 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
     ShiftCardFormatter.dateParts(for: payrollDate)
   }
 
-  private func formatCurrency(_ amount: Double) -> String {  // swiftlint:disable:this type_contents_order
-    CurrencyConfig.format(amount, currency: currency)
-  }
-
-  /// Format amount without currency symbol (for breakdown display)
-  private func formatPlainAmount(_ amount: Double) -> String {  // swiftlint:disable:this type_contents_order
-    CurrencyConfig.formatPlain(amount)
+  private func payrollCountdownText(at now: Date) -> String {  // swiftlint:disable:this type_contents_order
+    Calendar.current.isDate(payrollDate, inSameDayAs: now)
+      ? String(localized: .commonToday)
+      : CountdownFormatter.formatRelativeCountdown(referenceDate: payrollDate, now: now)
   }
 
   private var adjustmentMarker: Text {
