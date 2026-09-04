@@ -254,7 +254,43 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
 
   private var comparisonProgressBar: some View {
-    HStack(spacing: Spacing.xs) {  // swiftlint:disable:this closure_body_length
+    let labelMaskColor: Color = isElevated ? .tidexSurfacePrimary : .tidexBackground
+
+    return Group {
+      if isLoading || percentageChange == nil {
+        Text(comparisonPercentText)
+          .hidden()
+      } else {
+        Text(comparisonPercentText)
+          .monospacedDigit()
+          .offset(y: -1)  // swiftlint:disable:this no_magic_numbers
+          .foregroundColor(
+            percentageChange.map { $0 < 0 } == true ? .tidexError : .tidexBlue
+          )
+          .background {
+            LinearGradient(
+              colors: [
+                .clear,
+                labelMaskColor.opacity(0.85),  // swiftlint:disable:this no_magic_numbers
+                labelMaskColor.opacity(0.85),  // swiftlint:disable:this no_magic_numbers
+                labelMaskColor.opacity(0.85),  // swiftlint:disable:this no_magic_numbers
+              ],
+              startPoint: .leading,
+              endPoint: .trailing
+            )
+            .padding(.leading, -Spacing.md)
+            .padding(.vertical, -Spacing.md)
+            .blur(radius: Spacing.xxs)
+          }
+      }
+    }
+    .font(.tidexLabel)
+    .lineLimit(1)
+    .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
+    .frame(width: 64, alignment: .trailing)  // swiftlint:disable:this no_magic_numbers
+    .frame(height: usesFixedTypographyFrames ? 18 : nil)  // swiftlint:disable:this no_magic_numbers
+    .frame(maxWidth: .infinity, alignment: .trailing)
+    .background {  // swiftlint:disable:this closure_body_length
       GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
         ZStack(alignment: .leading) {  // swiftlint:disable:this closure_body_length
           RoundedRectangle(cornerRadius: CornerRadius.xs)
@@ -300,35 +336,12 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
               }
             }
         }
+        .frame(
+          width: geometry.size.width,
+          height: geometry.size.height
+        )
       }
-      .frame(height: 8)  // swiftlint:disable:this no_magic_numbers
-
-      Group {
-        if isLoading {
-          RoundedRectangle(cornerRadius: CornerRadius.xxs)
-            .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
-            .frame(width: 46, height: 14)  // swiftlint:disable:this no_magic_numbers
-        } else {
-          Text(comparisonPercentText)
-            .monospacedDigit()
-            .foregroundColor(
-              percentageChange.map { $0 < 0 } == true ? .tidexError.opacity(0.72) : .tidexBlue  // swiftlint:disable:this line_length no_magic_numbers
-            )
-            .shadow(
-              color: showComparisonReachedOverlay ? Color.tidexBlue.opacity(0.35) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
-              radius: 6,  // swiftlint:disable:this no_magic_numbers
-              x: 0,
-              y: 0
-            )
-        }
-      }
-      .font(.tidexLabel)
-      .lineLimit(1)
-      .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
-      .frame(width: 64, alignment: .trailing)  // swiftlint:disable:this no_magic_numbers
-      .layoutPriority(1)
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.top, -Spacing.xxs)
     .padding(.bottom, Spacing.xs)
     .accessibilityElement(children: .ignore)

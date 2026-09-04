@@ -1,6 +1,14 @@
 import Combine
 import SwiftUI
 
+enum DashboardPayrollLabel {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  nonisolated static func nextPayout(gross: Double) -> String {  // swiftlint:disable:this explicit_acl
+    gross > 0
+      ? String(localized: .dashboardNextPayout)
+      : String(localized: .onboardingSettingsPaydayTitle)
+  }
+}
+
 private struct EventSheetSelection: Identifiable {
   let event: EventRow
   let startInEditMode: Bool
@@ -884,6 +892,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       fallback: data,
       defaultTitle: String(localized: .dashboardPayroll)
     )
+    let nextPayoutLabel = DashboardPayrollLabel.nextPayout(  // swiftlint:disable:this explicit_type_interface
+      gross: preliminaryPayrollVariants.first?.gross ?? 0
+    )
     let selectedPayoutDate: Date = preliminaryPayrollVariants.first?.payoutDate ?? data.payrollDate
     let payrollDayStart: Date = calendar.startOfDay(for: selectedPayoutDate)
     let payrollDayEnd =  // swiftlint:disable:this explicit_type_interface
@@ -923,7 +934,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       if isViewingCurrentMonth {
         return effectivePayrollHasPassed
           ? String(localized: .dashboardPreviousPayout)
-          : String(localized: .dashboardNextPayout)
+          : nextPayoutLabel
       }
 
       if selectedPayoutYM.year < current.year
@@ -933,7 +944,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }
 
       if isCurrentAdvancedNextPayout {
-        return String(localized: .dashboardNextPayout)
+        return nextPayoutLabel
       }
 
       if selectedPayoutYM.year > current.year
@@ -1010,7 +1021,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }()
 
       // Cards stay in place - only numbers animate on month change (like Next.js)
-      VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
+      VStack(spacing: Spacing.lg) {  // swiftlint:disable:this closure_body_length
         // Total Card (Displayed Month) - THE ANCHOR
         // Numbers animate smoothly when values change
         TotalCard(
@@ -1040,37 +1051,40 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           clockButtonsSection()
         }
 
-        if let previousPayrollVariant, !isPayrollCardLoading {
-          previousPayrollDetailsChip(for: previousPayrollVariant)
-        }
+        VStack(spacing: Spacing.sm) {
+          VStack(spacing: Spacing.md) {
+            if let previousPayrollVariant, !isPayrollCardLoading {
+              previousPayrollDetailsChip(for: previousPayrollVariant)
+            } else if usesFixedCardHeights {
+              Color.clear
+                .frame(height: 28)  // swiftlint:disable:this no_magic_numbers
+            }
 
-        Divider()
+            // Payroll Card (Previous Month relative to displayed month)
+            payrollCardSection(
+              selectedVariant: selectedPayrollVariant,
+              variantCount: payrollVariants.count,
+              canManuallySetPayrollStatus: canManuallySetPayrollStatus,
+              payrollMarkedReceived: payrollMarkedReceived,
+              payrollOverrideUserId: payrollOverrideUserId,
+              payrollProgress: isPayrollCardLoading ? nil : selectedPayrollProgress,
+              isLoading: isPayrollCardLoading,
+              showsLoadingShimmer: false
+            )
+            .frame(
+              height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
+              alignment: .top
+            )
+          }
 
-        // Payroll Card (Previous Month relative to displayed month)
-        payrollCardSection(
-          selectedVariant: selectedPayrollVariant,
-          variantCount: payrollVariants.count,
-          canManuallySetPayrollStatus: canManuallySetPayrollStatus,
-          payrollMarkedReceived: payrollMarkedReceived,
-          payrollOverrideUserId: payrollOverrideUserId,
-          payrollProgress: isPayrollCardLoading ? nil : selectedPayrollProgress,
-          isLoading: isPayrollCardLoading,
-          showsLoadingShimmer: false
-        )
-        .frame(
-          minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
-          alignment: .top
-        )
-
-        Divider()
-
-        // Featured Shift Card - exact height on regular Dynamic Type to avoid
-        // skeleton/content vertical recentering during the loading transition.
-        if usesFixedCardHeights {
-          featuredShiftSection(data: data)
-            .frame(height: featuredSectionMinHeight, alignment: .top)
-        } else {
-          featuredShiftSection(data: data)
+          // Featured Shift Card - exact height on regular Dynamic Type to avoid
+          // skeleton/content vertical recentering during the loading transition.
+          if usesFixedCardHeights {
+            featuredShiftSection(data: data)
+              .frame(height: featuredSectionMinHeight, alignment: .top)
+          } else {
+            featuredShiftSection(data: data)
+          }
         }
       }
       .contentShape(Rectangle())
@@ -1315,9 +1329,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           isToday: true,
           isBestShift: false,
           countdownText: String(localized: .commonInProgress),
-          showJobIndicator: viewModel.shouldShowJobIndicators,
-          jobName: shiftJob?.name,
-          jobColorHex: shiftJob?.color,
           progress: 0,
           finalCountdownSeconds: nil,
           showTimeRangeEndSkeleton: false,
@@ -1347,9 +1358,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             isToday: data.isFeaturedItemToday,
             isBestShift: data.featuredShiftIsBestShift,
             countdownText: countdownManager.shiftCountdownText,
-            showJobIndicator: viewModel.shouldShowJobIndicators,
-            jobName: shiftJob?.name,
-            jobColorHex: shiftJob?.color,
             progress: shiftProgress,
             finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds,
             surfaceStyle: .flat
@@ -1457,7 +1465,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           Spacer()
 
           // Skeleton cards matching the real dashboard layout
-          VStack(spacing: Spacing.md) {  // swiftlint:disable:this closure_body_length
+          VStack(spacing: Spacing.lg) {  // swiftlint:disable:this closure_body_length
             // Total Card skeleton
             TotalCard(
               gross: 0,
@@ -1476,32 +1484,37 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
               clockButtonsSkeletonSection()
             }
 
-            Divider()
+            VStack(spacing: Spacing.sm) {
+              VStack(spacing: Spacing.md) {
+                if usesFixedCardHeights {
+                  Color.clear
+                    .frame(height: 28)  // swiftlint:disable:this no_magic_numbers
+                }
 
-            // Payroll Card skeleton
-            PayrollCard(
-              payrollDate: Date(),
-              label: String(localized: .dashboardNextPayout),
-              gross: 0,
-              net: nil,
-              tax: nil,
-              taxEnabled: false,
-              isLoading: true,
-              isElevated: false
-            )
-            .frame(
-              minHeight: usesFixedCardHeights ? payrollSectionMinHeight : 0,
-              alignment: .top
-            )
+                // Payroll Card skeleton
+                PayrollCard(
+                  payrollDate: Date(),
+                  label: String(localized: .dashboardNextPayout),
+                  gross: 0,
+                  net: nil,
+                  tax: nil,
+                  taxEnabled: false,
+                  isLoading: true,
+                  isElevated: false
+                )
+                .frame(
+                  height: usesFixedCardHeights ? payrollSectionMinHeight : nil,
+                  alignment: .top
+                )
+              }
 
-            Divider()
-
-            // Featured Shift Card skeleton
-            if usesFixedCardHeights {
-              EmptyShiftCard(isLoading: true, isElevated: false)
-                .frame(height: featuredSectionMinHeight, alignment: .top)
-            } else {
-              EmptyShiftCard(isLoading: true, isElevated: false)
+              // Featured Shift Card skeleton
+              if usesFixedCardHeights {
+                EmptyShiftCard(isLoading: true, isElevated: false)
+                  .frame(height: featuredSectionMinHeight, alignment: .top)
+              } else {
+                EmptyShiftCard(isLoading: true, isElevated: false)
+              }
             }
           }
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
