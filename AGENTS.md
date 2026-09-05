@@ -1,7 +1,3 @@
-```
-
-```
-
 # AGENTS.md
 
 This file provides guidance to coding agents when working with code in this repository.
@@ -52,12 +48,8 @@ tidex/
 
 Use these skills for specialized tasks:
 
-- `ios` - Start iOS development mode for working on the native Tidex iOS app
-- `troubleshoot-supabase-cookies` - For "Refresh Token Not Found" errors
-- `add-shadcn-component` - For adding UI components
-- `motion-react` - For adding animations
-- `use-data-access-layer` - For DAL usage patterns
-- `create-server-action` - For server action patterns
+- `ios-whats-new` - App Store release notes and metadata updates
+- `supabase-postgres-best-practices` - Postgres performance and RLS guidance
 
 ## iOS Localization Scripts
 

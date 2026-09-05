@@ -1,0 +1,4 @@
+interface:
+  display_name: "iOS What's New"
+  short_description: "Generate Tidex iOS App Store release notes."
+  default_prompt: "Use $ios-whats-new to generate and apply Tidex iOS App Store release notes from recent commits."
