@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -15,7 +14,7 @@ internal final class SiriMessageRecipientMatcherTests: XCTestCase {
       in: recipients
     )
 
-    expect(matches.map(\.id)) == ["1"]
+    XCTAssertEqual(matches.map(\.id), ["1"])
   }
 
   internal func testReturnsDisambiguationCandidatesForEqualFirstNameMatches() {
@@ -30,7 +29,7 @@ internal final class SiriMessageRecipientMatcherTests: XCTestCase {
       in: recipients
     )
 
-    expect(matches.map(\.id)) == ["2", "1"]
+    XCTAssertEqual(matches.map(\.id), ["2", "1"])
   }
 
   internal func testMatchesStatusTextForUsername() {
@@ -44,7 +43,7 @@ internal final class SiriMessageRecipientMatcherTests: XCTestCase {
       in: recipients
     )
 
-    expect(matches.map(\.id)) == ["2"]
+    XCTAssertEqual(matches.map(\.id), ["2"])
   }
 
   private func recipient(

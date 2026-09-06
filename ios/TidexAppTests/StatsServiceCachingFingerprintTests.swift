@@ -43,7 +43,7 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {  // swiftlint:disa
     var independentlyComputed: [ShiftWithComputations] = []
 
     for month in 1...12 {
-      let window = PayrollReadWindow.month(year: 2_024, month: month).expandedToFullISOWeeks
+      let window = PayrollReadWindow.month(year: 2_024, month: month).expandedForOvertime
       let startISO = window.startDate.toISODateString()
       let endISO = window.endDate.toISODateString()
       let request = PayrollEngine.MonthComputationRequest(
@@ -120,6 +120,41 @@ final class StatsServiceCachingFingerprintTests: XCTestCase {  // swiftlint:disa
     XCTAssertEqual(cached.shifts(for: request).map(\.id), [row.id])
     XCTAssertEqual(cached.shifts(for: request), cached.shiftsByMonth[6])
     XCTAssertEqual(cached.shiftsByMonth[7], [])
+  }
+
+  func testAnnualPayrollIncludesPriorSundayOvernightHoursInFirstWeek() throws {
+    let rows =
+      [
+        TestFixtures.shift(
+          id: "sunday", shiftDate: "2026-05-31", startTime: "22:00", endTime: "06:00")
+      ]
+      + (1...4).map { day in
+        TestFixtures.shift(
+          id: "june-\(day)", shiftDate: "2026-06-0\(day)", startTime: "08:00", endTime: "18:00")
+      }
+    let window = PayrollReadWindow.month(year: 2_026, month: 6).expandedForOvertime
+    let startISO = window.startDate.toISODateString()
+    let endISO = window.endDate.toISODateString()
+    let settings = UserSettings.defaults(for: "user-1")
+    let snapshots = [
+      TestFixtures.wageSnapshot(hourlyWage: 200, breakEnabled: false, overtime: .seededDefaults)
+    ]
+    let cached = try StatsService.computeFullYearPayrollData(
+      year: 2_026, shifts: rows, recurring: [], snapshots: snapshots, settings: settings, jobs: []
+    )
+    let monthly = PayrollEngine.computeShiftsForMonth(
+      .init(
+        year: 2_026, month: 6,
+        shifts: rows.filter { $0.shift_date >= startISO && $0.shift_date <= endISO },
+        recurring: [], snapshots: snapshots, settings: settings, jobs: []
+      )
+    )
+
+    XCTAssertEqual(startISO, "2026-05-31")
+    XCTAssertEqual(cached.shiftsByMonth[6], monthly)
+    let thursday = try XCTUnwrap(monthly.first { $0.id == "june-4" })
+    XCTAssertEqual(thursday.computed.overtimeMinutes, 360, accuracy: 0.01)
+    XCTAssertEqual(monthly.map(\.id), ["june-1", "june-2", "june-3", "june-4"])
   }
 
   func testJanuaryComparisonComputesPreviousDecemberOutsideAnnualCache() throws {

@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -484,7 +483,7 @@ final class FriendsListOrderingTests: XCTestCase {
       current: (year: 2_026, month: 4)
     )
 
-    expect(targetMonth?.year) == 2_025
+    XCTAssertEqual(targetMonth?.year, 2_025)
     XCTAssertEqual(targetMonth?.month, 8)
   }
 

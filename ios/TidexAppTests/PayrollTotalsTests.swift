@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -33,10 +32,10 @@ final class PayrollTotalsTests: XCTestCase {
       now: now
     )
 
-    expect(totals.gross).to(beCloseTo(2_000, within: 0.01))
-    expect(totals.net).to(beCloseTo(1_800, within: 0.01))
-    expect(totals.completedGross).to(beCloseTo(2_000, within: 0.01))
-    expect(totals.completedNet).to(beCloseTo(1_800, within: 0.01))
+    XCTAssertLessThan(abs(totals.gross - 2_000), 0.01)
+    XCTAssertLessThan(abs(totals.net - 1_800), 0.01)
+    XCTAssertLessThan(abs(totals.completedGross - 2_000), 0.01)
+    XCTAssertLessThan(abs(totals.completedNet - 1_800), 0.01)
   }
 
   func testSummarizeShiftTotalsRespectsExcludedShiftIds() {
@@ -67,8 +66,8 @@ final class PayrollTotalsTests: XCTestCase {
       now: now
     )
 
-    expect(totals.gross).to(beCloseTo(1_000, within: 0.01))
-    expect(totals.net).to(beCloseTo(1_000, within: 0.01))
+    XCTAssertLessThan(abs(totals.gross - 1_000), 0.01)
+    XCTAssertLessThan(abs(totals.net - 1_000), 0.01)
   }
 
   func testSummarizeShiftTotalsClampsInvalidTaxPercentages() {
@@ -100,7 +99,7 @@ final class PayrollTotalsTests: XCTestCase {
       now: now
     )
 
-    expect(totals.gross).to(beCloseTo(2_000, within: 0.01))
-    expect(totals.net).to(beCloseTo(1_000, within: 0.01))
+    XCTAssertLessThan(abs(totals.gross - 2_000), 0.01)
+    XCTAssertLessThan(abs(totals.net - 1_000), 0.01)
   }
 }

@@ -189,6 +189,7 @@ struct StatsView: View {
             }
             .frame(minHeight: 280, alignment: .top)  // swiftlint:disable:this no_magic_numbers
           }
+          .userCurrency(monthlyCardCurrency)
 
           PrimaryButton(title: String(localized: .dataExportPdfButton)) {
             showExportSettings = true

@@ -130,6 +130,9 @@ final class AppCoordinator: ObservableObject {
   /// Current user's ID (lowercase UUID string)
   @Published private(set) var userId: String? {
     didSet {
+      if oldValue != userId {
+        resetPayrollCaches()
+      }
       syncFriendsRealtimeForCurrentUser()
     }
   }
@@ -1173,6 +1176,7 @@ final class AppCoordinator: ObservableObject {
   private func clearAllCachedData() async {
     // Cancel all tracked background tasks to prevent stale state updates
     cancelAllBackgroundTasks()
+    resetPayrollCaches()
 
     // Invalidate any queued widget refreshes before clearing shared state so
     // background tasks cannot repopulate App Group data after sign-out.
@@ -1222,6 +1226,11 @@ final class AppCoordinator: ObservableObject {
     await syncCoordinator.resetForUserChange()
 
     initialSyncComplete = false
+  }
+
+  private func resetPayrollCaches() {
+    StatsService.shared.clearCache()
+    MonthlyPayrollReadService.shared.invalidateSharedCache()
   }
 
   private func applySignedOutState() {

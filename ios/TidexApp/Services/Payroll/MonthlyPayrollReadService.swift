@@ -29,15 +29,17 @@ struct PayrollReadWindow: Hashable {
     return Self(startDate: range.start, endDate: range.end)
   }
 
-  internal var expandedToFullISOWeeks: Self {
+  /// Include full weeks and the preceding Sunday, whose overnight hours can count on Monday.
+  internal var expandedForOvertime: Self {
     var calendar = Calendar(identifier: .iso8601)
     calendar.timeZone = Date.localTimeZone
     let expandedStart =
       calendar.dateInterval(of: .weekOfYear, for: startDate)?.start ?? startDate
+    let carryInStart = calendar.date(byAdding: .day, value: -1, to: expandedStart) ?? expandedStart
     let endWeekStart = calendar.dateInterval(of: .weekOfYear, for: endDate)?.start ?? endDate
     let expandedEnd =
       calendar.date(byAdding: DateComponents(day: 6), to: endWeekStart) ?? endDate
-    return Self(startDate: expandedStart, endDate: expandedEnd)
+    return Self(startDate: carryInStart, endDate: expandedEnd)
   }
 }
 
@@ -187,7 +189,7 @@ final class MonthlyPayrollReadService {
     let startDate = Date.firstDayOfMonthDate(year: year, month: month)
     let endDate = Date.lastDayOfMonthDate(year: year, month: month)
     let expandedWindow = PayrollReadWindow(startDate: startDate, endDate: endDate)
-      .expandedToFullISOWeeks
+      .expandedForOvertime
 
     return await shiftsRepository.getShiftsOffMain(
       for: userId,
@@ -204,7 +206,7 @@ final class MonthlyPayrollReadService {
     jobId: String? = nil
   ) async -> [ShiftRow] {
     let expandedWindow = PayrollReadWindow(startDate: startDate, endDate: endDate)
-      .expandedToFullISOWeeks
+      .expandedForOvertime
     return await shiftsRepository.getShiftsOffMain(
       for: userId,
       startDate: expandedWindow.startDate,
@@ -248,7 +250,7 @@ final class MonthlyPayrollReadService {
     }
     let generation: Int = Self.cacheGenerationSnapshot()
 
-    let expandedWindow = window.expandedToFullISOWeeks
+    let expandedWindow = window.expandedForOvertime
 
     async let shifts = shiftsRepository.getShiftsOffMain(
       for: userId,

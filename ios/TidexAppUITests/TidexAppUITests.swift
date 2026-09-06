@@ -12,6 +12,10 @@ final class TidexAppUITests: XCTestCase {
     static let wageyHistoryConfirmDelete = "wagey-history.delete-confirm.ui-test-conversation-1"
     static let wageyHistoryCancelDelete = "wagey-history.delete-cancel.ui-test-conversation-1"
     static let popoverDismissRegion = "PopoverDismissRegion"
+    static let loginRevealEmail = "login.reveal-email"
+    static let loginEmailOrPhone = "login.email-or-phone"
+    static let loginCreateAccount = "login.create-account"
+    static let loginForgotPassword = "login.forgot-password"
   }
 
   private let defaultTimeout: TimeInterval = 15
@@ -25,6 +29,40 @@ final class TidexAppUITests: XCTestCase {
 
   override internal func setUpWithError() throws {
     continueAfterFailure = false
+  }
+
+  @MainActor
+  func testLoginProviderScreenCanScrollToEmailAtAccessibilitySize() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "login-accessibility"
+    app.launch()
+
+    let revealEmail = app.buttons[AccessibilityID.loginRevealEmail]
+    XCTAssertTrue(revealEmail.waitForExistence(timeout: defaultTimeout))
+    let createAccount = app.buttons[AccessibilityID.loginCreateAccount]
+    let forgotPassword = app.buttons[AccessibilityID.loginForgotPassword]
+    let scrollView = app.scrollViews.firstMatch
+    for _ in 0..<8 {
+      if forgotPassword.isHittable && app.frame.contains(forgotPassword.frame) { break }
+      scrollView.swipeUp()
+    }
+
+    XCTAssertTrue(revealEmail.isHittable, "Email sign-in must be reachable with large text")
+    XCTAssertGreaterThan(revealEmail.frame.height, 50, "Email sign-in must grow to fit its label")
+    XCTAssertTrue(createAccount.isHittable && app.frame.contains(createAccount.frame))
+    XCTAssertTrue(forgotPassword.isHittable && app.frame.contains(forgotPassword.frame))
+    XCTAssertGreaterThan(createAccount.frame.height, 44)
+    XCTAssertGreaterThan(forgotPassword.frame.height, 44)
+    XCTAssertGreaterThanOrEqual(forgotPassword.frame.minY, createAccount.frame.maxY)
+    let screenshot = XCTAttachment(screenshot: app.screenshot())
+    screenshot.name = "Login footer at largest accessibility text size"
+    screenshot.lifetime = .keepAlways
+    add(screenshot)
+    revealEmail.tap()
+    XCTAssertTrue(
+      app.textFields[AccessibilityID.loginEmailOrPhone].waitForExistence(timeout: defaultTimeout),
+      "Opening email sign-in should render the input form"
+    )
   }
 
   @MainActor

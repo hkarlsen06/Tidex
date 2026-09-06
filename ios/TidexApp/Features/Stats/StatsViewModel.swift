@@ -133,6 +133,8 @@ final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explic
     }
 
     if let inMemoryStats = statsService.stats,
+      statsService.statsUserId == userId,
+      statsService.statsJobId == selectedJobId,
       inMemoryStats.focusMonth.year == displayYear,
       inMemoryStats.focusMonth.month == displayMonth
     {

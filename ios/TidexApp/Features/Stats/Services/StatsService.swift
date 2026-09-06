@@ -51,16 +51,19 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   // MARK: - Dependencies
 
   private let monthlyPayrollReadService: MonthlyPayrollReadService
+  private let userIdProvider: @MainActor () async throws -> String
 
   // MARK: - Published State
 
   @Published private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
+  private(set) var statsUserId: String?
+  private(set) var statsJobId: String?
   @Published private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
   @Published private(set) var error: Error?  // swiftlint:disable:this explicit_acl
 
   // MARK: - Private State
 
-  private var cachedUserId: String?
+  private var computationGeneration: Int = 0
   private var fullYearCache: [FullYearCacheKey: FullYearComputedData] = [:]
 
   // MARK: - Initialization
@@ -71,8 +74,10 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     snapshotsRepository: SnapshotsRepository? = nil,
     recurringShiftsRepository: RecurringShiftsRepository? = nil,
     jobsRepository: JobsRepository? = nil,
-    monthlyPayrollReadService: MonthlyPayrollReadService? = nil
+    monthlyPayrollReadService: MonthlyPayrollReadService? = nil,
+    userIdProvider: (@MainActor () async throws -> String)? = nil
   ) {
+    self.userIdProvider = userIdProvider ?? Self.resolveUserIdForLocalStats
     let resolvedShiftsRepository = shiftsRepository ?? ShiftsRepository.shared  // swiftlint:disable:this explicit_type_interface line_length
     let resolvedSettingsRepository = settingsRepository ?? SettingsRepository.shared  // swiftlint:disable:this explicit_type_interface line_length
     let resolvedSnapshotsRepository = snapshotsRepository ?? SnapshotsRepository.shared  // swiftlint:disable:this explicit_type_interface line_length
@@ -109,18 +114,26 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     let targetYear = year ?? calendar.component(.year, from: now)  // swiftlint:disable:this explicit_type_interface
     let targetMonth = month ?? calendar.component(.month, from: now)  // swiftlint:disable:this explicit_type_interface
 
+    computationGeneration += 1
+    let generation = computationGeneration
     isLoading = true
     error = nil
-    defer { isLoading = false }
+    defer {
+      if generation == computationGeneration {
+        isLoading = false
+      }
+    }
 
     do {
-      let userId = try await resolveUserIdForLocalStats()  // swiftlint:disable:this explicit_type_interface
+      let userId = try await userIdProvider()  // swiftlint:disable:this explicit_type_interface
+      try checkCurrentComputation(generation)
 
       // Load shared payroll inputs through the DAL-backed read service
       let readContext: PayrollReadContext = await monthlyPayrollReadService.loadContextOffMain(
         for: userId,
         jobId: jobId
       )
+      try checkCurrentComputation(generation)
 
       guard let settings = readContext.settings else {
         throw StatsServiceError.noLocalData
@@ -161,6 +174,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         resolvedPreviousYearShiftsRaw = []
       }
       let resolvedYearShiftsRaw = await yearShiftsRaw  // swiftlint:disable:this explicit_type_interface
+      try checkCurrentComputation(generation)
 
       // Build a deterministic fingerprint so we only recompute full-year data when inputs changed.
       let cacheKey = FullYearCacheKey(  // swiftlint:disable:this explicit_type_interface
@@ -217,15 +231,22 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         let previousMonthIncluded = previousMonthPartition.includedShifts  // swiftlint:disable:this explicit_type_interface line_length
 
         let fallbackCurrency = settings.currency ?? "kr"  // swiftlint:disable:this explicit_type_interface
+        let aggregateJobs = jobId.map { selectedId in jobs.filter { $0.id == selectedId } } ?? jobs
         let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(  // swiftlint:disable:this explicit_type_interface line_length
           shifts: currentMonthIncluded,
-          jobs: jobs,
+          jobs: aggregateJobs,
           fallbackCurrency: fallbackCurrency,
           referenceDate: now
         )
         let primaryCurrentMonthShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface line_length
-          matching: currentMonthAggregate.primary,
           in: currentMonthIncluded,
+          currency: currentMonthAggregate.primary.currency,
+          jobs: jobs,
+          fallbackCurrency: fallbackCurrency
+        )
+        let primaryPreviousMonthShifts = JobCurrencyAggregateResolver.shifts(
+          in: previousMonthIncluded,
+          currency: currentMonthAggregate.primary.currency,
           jobs: jobs,
           fallbackCurrency: fallbackCurrency
         )
@@ -239,31 +260,13 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
           now: now
         )
         let previousTotals = PayrollEngine.summarizeShiftTotals(  // swiftlint:disable:this explicit_type_interface
-          shifts: previousMonthShifts,
-          excludedShiftIds: previousMonthPartition.analysis.excludedIds,
+          shifts: primaryPreviousMonthShifts,
           halfTaxMonth: halfTaxMonth,
           earningsMonth: previousYM.month,
           now: now
         )
 
-        let previousComparisonGross: Double
-        if currentMonthAggregate.hasMixedCurrency {
-          let previousPrimaryShifts = JobCurrencyAggregateResolver.shifts(  // swiftlint:disable:this explicit_type_interface line_length
-            matching: currentMonthAggregate.primary,
-            in: previousMonthIncluded,
-            jobs: jobs,
-            fallbackCurrency: fallbackCurrency
-          )
-          previousComparisonGross =
-            PayrollEngine.summarizeShiftTotals(
-              shifts: previousPrimaryShifts,
-              halfTaxMonth: halfTaxMonth,
-              earningsMonth: previousYM.month,
-              now: now
-            ).gross
-        } else {
-          previousComparisonGross = previousTotals.gross
-        }
+        let previousComparisonGross = previousTotals.gross
 
         // Calculate total hours (using filtered shifts that exclude conflicts)
         let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }  // swiftlint:disable:this explicit_type_interface line_length
@@ -289,8 +292,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
         // Build cumulative data for progress chart (using filtered shifts for earnings)
         let cumulativeData = Self.buildCumulativeData(  // swiftlint:disable:this explicit_type_interface
-          currentMonthShifts: currentMonthIncluded,
-          previousMonthShifts: previousMonthIncluded,
+          currentMonthShifts: primaryCurrentMonthShifts,
+          previousMonthShifts: primaryPreviousMonthShifts,
           targetYear: targetYear,
           targetMonth: targetMonth,
           previousYear: previousYM.year,
@@ -309,14 +312,14 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
         if isCurrentMonth {
           thisWeek = Self.buildThisWeekData(
-            shifts: currentMonthIncluded,
+            shifts: primaryCurrentMonthShifts,
             now: now
           )
           bestWeek = nil
         } else {
           thisWeek = nil
           bestWeek = Self.buildBestWeekData(
-            shifts: currentMonthIncluded,
+            shifts: primaryCurrentMonthShifts,
             focusYear: targetYear,
             focusMonth: targetMonth
           )
@@ -331,7 +334,12 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
         let yearlyIncomeData = Self.buildYearlyIncomeData(  // swiftlint:disable:this explicit_type_interface
           focusYear: targetYear,
-          shifts: fullYearData.includedShifts
+          shifts: JobCurrencyAggregateResolver.shifts(
+            in: fullYearData.includedShifts,
+            currency: currentMonthAggregate.primary.currency,
+            jobs: jobs,
+            fallbackCurrency: fallbackCurrency
+          )
         )
 
         let statsData = StatsData(  // swiftlint:disable:this explicit_type_interface
@@ -374,7 +382,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         computeTask.cancel()
       }
 
-      try Task.checkCancellation()
+      try checkCurrentComputation(generation)
 
       if let fullYearCacheData = result.fullYearCacheData {
         fullYearCache[cacheKey] = fullYearCacheData
@@ -383,6 +391,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         }
       }
 
+      statsUserId = userId
+      statsJobId = jobId
       stats = result.statsData
       logger.info(
         "Computed stats: \(result.currentShiftCount) shifts (\(result.excludedShiftCount) excluded), \(Int(result.currentHours))h, \(Int(result.currentGross)) gross"  // swiftlint:disable:this line_length
@@ -392,9 +402,11 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     } catch is CancellationError {
       throw CancellationError()
     } catch let error as StatsServiceError {
+      try checkCurrentComputation(generation)
       self.error = error
       throw error
     } catch {
+      try checkCurrentComputation(generation)
       let wrappedError = StatsServiceError.computationFailed(underlying: error)  // swiftlint:disable:this explicit_type_interface line_length
       self.error = wrappedError
       throw wrappedError
@@ -403,9 +415,20 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
   /// Clear cached data
   func clearCache() {  // swiftlint:disable:this explicit_acl type_contents_order
+    computationGeneration += 1
     stats = nil
-    cachedUserId = nil
+    statsUserId = nil
+    statsJobId = nil
+    isLoading = false
+    error = nil
     fullYearCache.removeAll(keepingCapacity: true)
+  }
+
+  private func checkCurrentComputation(_ generation: Int) throws {
+    try Task.checkCancellation()
+    guard generation == computationGeneration else {
+      throw CancellationError()
+    }
   }
 
   nonisolated static func computeFullYearPayrollData(  // swiftlint:disable:this explicit_acl function_parameter_count
@@ -422,8 +445,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
     for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
       try Task.checkCancellation()
-      // Match the monthly DAL read: overtime needs every regular shift in each ISO week.
-      let window = PayrollReadWindow.month(year: year, month: month).expandedToFullISOWeeks  // swiftlint:disable:this explicit_type_interface line_length
+      // Match the monthly DAL read, including overnight hours carried into the first ISO week.
+      let window = PayrollReadWindow.month(year: year, month: month).expandedForOvertime  // swiftlint:disable:this explicit_type_interface line_length
       let startISO = window.startDate.toISODateString()  // swiftlint:disable:this explicit_type_interface
       let endISO = window.endDate.toISODateString()  // swiftlint:disable:this explicit_type_interface
       let monthRows = shifts.filter { $0.shift_date >= startISO && $0.shift_date <= endISO }  // swiftlint:disable:this explicit_type_interface line_length
@@ -450,14 +473,10 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     )
   }
 
-  private func resolveUserIdForLocalStats() async throws -> String {  // swiftlint:disable:this type_contents_order
-    if let cachedUserId {
-      return cachedUserId
-    }
-
+  // swiftlint:disable:next type_contents_order
+  private static func resolveUserIdForLocalStats() async throws -> String {
     do {
       let session = try await AuthSessionManager.shared.getSession()  // swiftlint:disable:this explicit_type_interface
-      cachedUserId = session.normalizedUserId
       return session.normalizedUserId
     } catch {
       guard AuthSessionManager.shared.isTransientSessionResolutionError(error),
@@ -466,7 +485,6 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         throw error
       }
 
-      cachedUserId = offlineUserId
       logger.info("Using offline user id fallback for local stats")
       return offlineUserId
     }

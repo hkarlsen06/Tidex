@@ -142,11 +142,17 @@ final class ImageCache: @unchecked Sendable {
   static let shared = ImageCache()
 
   private let memoryCache = NSCache<NSString, CachedImageWrapper>()
+  private let memoryCacheLock = NSLock()
+  private var invalidationGeneration: UInt64 = 0
   private let fileManager = FileManager.default
-  private let diskCacheQueue = DispatchQueue(label: "com.tidex.imagecache.disk", qos: .utility)
+  private let diskCacheQueue: DispatchQueue
   private let diskCacheDirectory: URL
 
-  private init() {
+  init(
+    directory: URL? = nil,
+    queue: DispatchQueue = DispatchQueue(label: "com.tidex.imagecache.disk", qos: .utility)
+  ) {
+    diskCacheQueue = queue
     // Configure memory cache limits
     memoryCache.countLimit = 100  // Max 100 images
     memoryCache.totalCostLimit = 50 * 1_024 * 1_024  // 50MB max
@@ -158,7 +164,8 @@ final class ImageCache: @unchecked Sendable {
     if cacheDir == fileManager.temporaryDirectory {
       logger.error("⚠️ Falling back to temporary directory for image cache")
     }
-    diskCacheDirectory = cacheDir.appendingPathComponent("ImageCache", isDirectory: true)
+    diskCacheDirectory =
+      directory ?? cacheDir.appendingPathComponent("ImageCache", isDirectory: true)
 
     // Create directory if it doesn't exist
     try? fileManager.createDirectory(at: diskCacheDirectory, withIntermediateDirectories: true)
@@ -191,7 +198,8 @@ final class ImageCache: @unchecked Sendable {
     maxPixelSize: CGFloat? = nil,
     policy: ImageCachePolicy = .defaultImage
   ) async -> UIImage? {
-    await withCheckedContinuation { continuation in
+    let generation = memoryCacheGeneration()
+    let image: UIImage? = await withCheckedContinuation { continuation in
       diskCacheQueue.async { [weak self] in
         guard let self else {
           continuation.resume(returning: nil)
@@ -230,6 +238,9 @@ final class ImageCache: @unchecked Sendable {
           logger.debug("💾 Disk cache HIT for: \(url.lastPathComponent)")
           // Also populate memory cache
           DispatchQueue.main.async {
+            self.memoryCacheLock.lock()
+            defer { self.memoryCacheLock.unlock() }
+            guard self.invalidationGeneration == generation else { return }
             self.setMemoryCache(image, for: url, maxPixelSize: maxPixelSize, policy: policy)
           }
           continuation.resume(returning: image)
@@ -239,6 +250,22 @@ final class ImageCache: @unchecked Sendable {
         }
       }
     }
+    // A read may finish while removal or sign-out is clearing the cache.
+    guard memoryCacheGeneration() == generation else { return nil }
+    return image
+  }
+
+  private func memoryCacheGeneration() -> UInt64 {
+    memoryCacheLock.lock()
+    defer { memoryCacheLock.unlock() }
+    return invalidationGeneration
+  }
+
+  private func invalidateMemoryCache() {
+    memoryCacheLock.lock()
+    defer { memoryCacheLock.unlock() }
+    invalidationGeneration &+= 1
+    memoryCache.removeAllObjects()
   }
 
   /// Set image in memory cache only
@@ -288,7 +315,10 @@ final class ImageCache: @unchecked Sendable {
   }
 
   func remove(for url: URL) {
-    memoryCache.removeObject(forKey: cacheKey(for: url, maxPixelSize: nil) as NSString)
+    // NSCache cannot enumerate keys. Explicit removals are rare, so evict memory
+    // entries to invalidate every pixel-size and policy variant of this URL.
+    // Unrelated images remain available in the disk cache.
+    invalidateMemoryCache()
     NotificationAvatarSharedCache.shared.remove(for: url)
 
     diskCacheQueue.async { [weak self] in
@@ -300,15 +330,17 @@ final class ImageCache: @unchecked Sendable {
         )
       else { return }
 
-      let urlPrefix = cacheKey(for: url, maxPixelSize: nil, policy: .defaultImage)
-      for file in files where file.lastPathComponent.hasPrefix(urlPrefix) {
+      let urlPrefixes = [ImageCachePolicy.defaultImage, .messageAttachment].map {
+        self.cacheKey(for: url, maxPixelSize: nil, policy: $0)
+      }
+      for file in files where urlPrefixes.contains(where: file.lastPathComponent.hasPrefix) {
         try? fileManager.removeItem(at: file)
       }
     }
   }
 
   func clearAll() {
-    memoryCache.removeAllObjects()
+    invalidateMemoryCache()
     NotificationAvatarSharedCache.shared.clearAll()
 
     diskCacheQueue.async { [weak self] in

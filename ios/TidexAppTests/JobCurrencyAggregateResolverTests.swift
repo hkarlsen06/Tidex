@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -109,8 +108,8 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
 
     XCTAssertEqual(resolution.primary.jobId, "job-default")
     XCTAssertEqual(resolution.primary.currency, "kr")
-    expect(resolution.primary.grossAmount).to(beCloseTo(3_000, within: 0.0001))
-    expect(resolution.primary.displayAmount).to(beCloseTo(3_000, within: 0.0001))
+    XCTAssertLessThan(abs(resolution.primary.grossAmount - 3_000), 0.0001)
+    XCTAssertLessThan(abs(resolution.primary.displayAmount - 3_000), 0.0001)
     XCTAssertEqual(resolution.primary.shiftCount, 2)
     XCTAssertFalse(resolution.hasMixedCurrency)
     XCTAssertTrue(resolution.secondary.isEmpty)
@@ -165,7 +164,7 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
 
     XCTAssertEqual(resolution.primary.jobId, "job-default")
     XCTAssertEqual(resolution.primary.currency, "kr")
-    expect(resolution.primary.grossAmount).to(beCloseTo(1_500, within: 0.0001))
+    XCTAssertLessThan(abs(resolution.primary.grossAmount - 1_500), 0.0001)
     XCTAssertTrue(resolution.hasMixedCurrency)
     XCTAssertEqual(resolution.secondary.count, 1)
     XCTAssertEqual(resolution.secondary.first?.jobId, "job-usd")
@@ -213,6 +212,24 @@ final class JobCurrencyAggregateResolverTests: XCTestCase {
     XCTAssertEqual(resolution.primary.displayAmount, 0, accuracy: 0.0001)
     XCTAssertFalse(resolution.hasMixedCurrency)
     XCTAssertTrue(resolution.secondary.isEmpty)
+  }
+
+  func testCurrencySelectionIncludesOtherJobsAndLegacyRowsFromEarlierPeriods() {
+    let jobs = [
+      TestFixtures.job(id: "default", isDefault: true, currency: "kr"),
+      TestFixtures.job(id: "extra", isDefault: false, currency: "kr"),
+      TestFixtures.job(id: "usd", isDefault: false, currency: "$"),
+    ]
+    let shifts = ["default", "extra", "usd", nil].map { jobId in
+      TestFixtures.computedShift(
+        id: jobId ?? "legacy", shiftDate: "2026-04-01", startTime: "08:00", endTime: "16:00",
+        jobId: jobId, gross: 1_000
+      )
+    }
+    let selected = JobCurrencyAggregateResolver.shifts(
+      in: shifts, currency: "kr", jobs: jobs, fallbackCurrency: "kr")
+
+    XCTAssertEqual(selected.map(\.id), ["default", "extra", "legacy"])
   }
 
   func testResolveExcludesZeroSecondaryEntriesFromBreakdown() {

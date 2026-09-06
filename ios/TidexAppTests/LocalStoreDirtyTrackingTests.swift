@@ -1,4 +1,3 @@
-import Nimble
 import SwiftData
 import XCTest
 
@@ -9,7 +8,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
   private let userId: String = "user-1"
 
   private func makeStoreActor() throws -> LocalStoreActor {
-    let schema: _ = Schema([
+    let schema = Schema([
       LocalJob.self,
       LocalUserShift.self,
       LocalEvent.self,
@@ -27,13 +26,13 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       LocalConversation.self,
     ])
 
-    let configuration: _ = ModelConfiguration(
+    let configuration = ModelConfiguration(
       schema: schema,
       isStoredInMemoryOnly: true,
       allowsSave: true
     )
 
-    let container: _ = try ModelContainer(for: schema, configurations: [configuration])
+    let container = try ModelContainer(for: schema, configurations: [configuration])
     return LocalStoreActor(modelContainer: container)
   }
 
@@ -42,7 +41,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
   }
 
   internal func testCreateUserShiftMarksAllFieldsDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-1",
@@ -54,15 +53,15 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-1")
+    let localRecord = try await store.getUserShift(id: "shift-1")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == Set(UserShiftField.allCases)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set(UserShiftField.allCases))
   }
 
   internal func testUpdateUserShiftTracksOnlyChangedFieldsAfterClean() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-2",
@@ -86,16 +85,16 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-2")
+    let localRecord = try await store.getUserShift(id: "shift-2")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.startTime) == "10:00"
-    expect(local.dirtyFieldKeys) == Set([.startTime])
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.startTime, "10:00")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.startTime]))
   }
 
   internal func testUpdateUserShiftCustomPauseWindowsMarksOnlyPauseFieldDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-pause-1",
@@ -117,19 +116,21 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       ])
     )
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-pause-1")
-    let local: _ = try XCTUnwrap(localRecord)
+    let localRecord = try await store.getUserShift(id: "shift-pause-1")
+    let local = try XCTUnwrap(localRecord)
 
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == Set([.customPauseWindows])
-    expect(local.decodedCustomPauseWindows)
-      == CustomPauseWindows(
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.customPauseWindows]))
+    XCTAssertEqual(
+      local.decodedCustomPauseWindows,
+      CustomPauseWindows(
         windows: [PauseWindow(start: "12:00", end: "12:30")]
       )
+    )
   }
 
   internal func testMarkShiftPendingDeleteSetsPendingDeleteStatus() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-3",
@@ -143,14 +144,14 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     _ = try await store.markShiftPendingDelete(id: "shift-3")
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-3")
+    let localRecord = try await store.getUserShift(id: "shift-3")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .pendingDelete
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .pendingDelete)
   }
 
   internal func testResolveStoredShiftConflictKeepServerOverwritesLocal() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-4",
@@ -162,8 +163,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-04", "14:00")
-    let serverSnapshot: _ = UserShiftServerSnapshot.from(
+    let serverUpdatedAt = makeDate("2026-03-04", "14:00")
+    let serverSnapshot = UserShiftServerSnapshot.from(
       jobId: "job-server",
       shiftDate: "2026-03-10",
       startTime: "12:00",
@@ -185,30 +186,30 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredShiftConflictKeepServer(id: "shift-4")
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-4")
+    let localRecord = try await store.getUserShift(id: "shift-4")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .clean
-    expect(local.jobId) == "job-server"
-    expect(local.shiftDateString) == "2026-03-10"
-    expect(local.startTime) == "12:00"
-    expect(local.endTime) == "20:00"
-    expect(local.note) == "Server note"
-    expect(local.serverRevision) == 7
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
-    expect(local.dirtyFieldKeys.isEmpty) == true
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .clean)
+    XCTAssertEqual(local.jobId, "job-server")
+    XCTAssertEqual(local.shiftDateString, "2026-03-10")
+    XCTAssertEqual(local.startTime, "12:00")
+    XCTAssertEqual(local.endTime, "20:00")
+    XCTAssertEqual(local.note, "Server note")
+    XCTAssertEqual(local.serverRevision, 7)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
+    XCTAssertEqual(local.dirtyFieldKeys.isEmpty, true)
 
-    let syncedSnapshot: _ = try XCTUnwrap(
+    let syncedSnapshot = try XCTUnwrap(
       UserShiftServerSnapshot.decode(from: local.lastSyncedSnapshot)
     )
-    expect(syncedSnapshot) == serverSnapshot
+    XCTAssertEqual(syncedSnapshot, serverSnapshot)
   }
 
   internal func testResolveStoredShiftConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
     async throws
   {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-5",
@@ -232,8 +233,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-04", "16:00")
-    let serverSnapshot: _ = UserShiftServerSnapshot.from(
+    let serverUpdatedAt = makeDate("2026-03-04", "16:00")
+    let serverSnapshot = UserShiftServerSnapshot.from(
       jobId: "job-server",
       shiftDate: "2026-03-02",
       startTime: "07:00",
@@ -251,19 +252,19 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredShiftConflictKeepLocal(id: "shift-5")
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-5")
+    let localRecord = try await store.getUserShift(id: "shift-5")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.startTime) == "09:30"
-    expect(local.note) == nil
-    expect(local.serverRevision) == 9
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.startTime, "09:30")
+    XCTAssertNil(local.note)
+    XCTAssertEqual(local.serverRevision, 9)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
   }
 
   internal func testUpdateUserShiftNoteMarksOnlyNoteDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-note-1",
@@ -290,14 +291,14 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-note-1")
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.note) == "Dentist"
-    expect(local.dirtyFieldKeys) == Set([.note])
+    let localRecord = try await store.getUserShift(id: "shift-note-1")
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.note, "Dentist")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.note]))
   }
 
   internal func testUpdateUserShiftNoteCanBeClearedExplicitly() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserShift(
       id: "shift-note-2",
@@ -324,16 +325,16 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       customSupplements: nil
     )
 
-    let localRecord: _ = try await store.getUserShift(id: "shift-note-2")
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.note) == nil
-    expect(local.dirtyFieldKeys) == Set([.note])
+    let localRecord = try await store.getUserShift(id: "shift-note-2")
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertNil(local.note)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.note]))
   }
 
   internal func testAddRecurringShiftExclusionsAddsMultipleDatesInSingleMutation() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createRecurringShift(
+    let created = try await store.createRecurringShift(
       userId: userId,
       jobId: "job-1",
       startTime: "09:00",
@@ -350,22 +351,22 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     await store.markRecurringShiftClean(id: created.id)
     try await store.save()
 
-    let addedCount: _ = try await store.addRecurringShiftExclusions(
+    let addedCount = try await store.addRecurringShiftExclusions(
       id: created.id,
       dates: ["2026-03-16", "2026-03-23", "2026-03-16"]
     )
 
-    let localRecord: _ = try await store.getRecurringShift(id: created.id)
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(addedCount) == 2
-    expect(local.decodedExclusions) == ["2026-03-09", "2026-03-16", "2026-03-23"]
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == Set([.exclusions])
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(addedCount, 2)
+    XCTAssertEqual(local.decodedExclusions, ["2026-03-09", "2026-03-16", "2026-03-23"])
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.exclusions]))
   }
 
   internal func testUpdateRecurringShiftEndConditionPreservesOverrides() async throws {
-    let store: _ = try makeStoreActor()
-    let supplements: _ = [
+    let store = try makeStoreActor()
+    let supplements = [
       "2026-03-16": CustomSupplementsData(
         rules: [
           CustomSupplementRule(
@@ -378,9 +379,9 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
         ]
       )
     ]
-    let notes: _ = ["2026-03-16": "Late shift"]
+    let notes = ["2026-03-16": "Late shift"]
 
-    let created: _ = try await store.createRecurringShift(
+    let created = try await store.createRecurringShift(
       userId: userId,
       jobId: "job-1",
       startTime: "09:00",
@@ -409,21 +410,21 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       dateSpecificSupplements: nil
     )
 
-    let localRecord: _ = try await store.getRecurringShift(id: created.id)
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.decodedEndCondition) == .endDate(date: "2026-03-16")
-    expect(local.decodedExclusions) == ["2026-03-09"]
-    expect(local.decodedDateSpecificSupplements) == supplements
-    expect(local.decodedDateSpecificNotes) == notes
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == Set([.endCondition])
-    expect(local.serverDeletedAt) == nil
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.decodedEndCondition, .endDate(date: "2026-03-16"))
+    XCTAssertEqual(local.decodedExclusions, ["2026-03-09"])
+    XCTAssertEqual(local.decodedDateSpecificSupplements, supplements)
+    XCTAssertEqual(local.decodedDateSpecificNotes, notes)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.endCondition]))
+    XCTAssertNil(local.serverDeletedAt)
   }
 
   internal func testUpdateRecurringShiftDateSpecificNotesMarksOnlyNoteFieldDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createRecurringShift(
+    let created = try await store.createRecurringShift(
       userId: userId,
       jobId: "job-1",
       startTime: "09:00",
@@ -445,16 +446,16 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       dateSpecificNotes: ["2026-03-09": " Swap shift "]
     )
 
-    let localRecord: _ = try await store.getRecurringShift(id: created.id)
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.decodedDateSpecificNotes) == ["2026-03-09": "Swap shift"]
-    expect(local.dirtyFieldKeys) == Set([.dateSpecificNotes])
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.decodedDateSpecificNotes, ["2026-03-09": "Swap shift"])
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.dateSpecificNotes]))
   }
 
   internal func testUpdateRecurringShiftDateSpecificNotesCanRemoveOnlyTargetedDate() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createRecurringShift(
+    let created = try await store.createRecurringShift(
       userId: userId,
       jobId: "job-1",
       startTime: "09:00",
@@ -479,14 +480,14 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       dateSpecificNotes: ["2026-03-16": "Leave early"]
     )
 
-    let localRecord: _ = try await store.getRecurringShift(id: created.id)
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.decodedDateSpecificNotes) == ["2026-03-16": "Leave early"]
-    expect(local.dirtyFieldKeys) == Set([.dateSpecificNotes])
+    let localRecord = try await store.getRecurringShift(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.decodedDateSpecificNotes, ["2026-03-16": "Leave early"])
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.dateSpecificNotes]))
   }
 
   internal func testCreateEventMarksAllFieldsDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createEvent(
       id: "event-1",
@@ -500,17 +501,17 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       notificationMinutesArray: [60, 300]
     )
 
-    let localRecord: _ = try await store.getEvent(id: "event-1")
+    let localRecord = try await store.getEvent(id: "event-1")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == Set(EventField.allCases)
-    expect(local.notificationMinutesArray) == [300, 60]
-    expect(local.notificationAnchorTime) == nil
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set(EventField.allCases))
+    XCTAssertEqual(local.notificationMinutesArray, [300, 60])
+    XCTAssertNil(local.notificationAnchorTime)
   }
 
   internal func testUpdateEventTracksOnlyChangedFieldsAfterClean() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createEvent(
       id: "event-2",
@@ -536,18 +537,18 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       note: " Dentist "
     )
 
-    let localRecord: _ = try await store.getEvent(id: "event-2")
+    let localRecord = try await store.getEvent(id: "event-2")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.startTime) == "10:00"
-    expect(local.endTime) == "12:00"
-    expect(local.note) == "Dentist"
-    expect(local.dirtyFieldKeys) == Set([.startTime, .endTime, .note])
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.startTime, "10:00")
+    XCTAssertEqual(local.endTime, "12:00")
+    XCTAssertEqual(local.note, "Dentist")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.startTime, .endTime, .note]))
   }
 
   internal func testUpdateEventTracksReminderFieldsAfterClean() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createEvent(
       id: "event-2b",
@@ -575,20 +576,22 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       notificationAnchorTime: "09:30"
     )
 
-    let localRecord: _ = try await store.getEvent(id: "event-2b")
-    let local: _ = try XCTUnwrap(localRecord)
+    let localRecord = try await store.getEvent(id: "event-2b")
+    let local = try XCTUnwrap(localRecord)
 
-    expect(local.notificationMinutesArray) == [120, 15]
-    expect(local.notificationAnchorTime) == "09:30"
-    expect(local.dirtyFieldKeys)
-      == Set([
+    XCTAssertEqual(local.notificationMinutesArray, [120, 15])
+    XCTAssertEqual(local.notificationAnchorTime, "09:30")
+    XCTAssertEqual(
+      local.dirtyFieldKeys,
+      Set([
         .notificationMinutesArray,
         .notificationAnchorTime,
       ])
+    )
   }
 
   internal func testMarkEventPendingDeleteSetsPendingDeleteStatus() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createEvent(
       id: "event-3",
@@ -603,14 +606,14 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     _ = try await store.markEventPendingDelete(id: "event-3")
 
-    let localRecord: _ = try await store.getEvent(id: "event-3")
+    let localRecord = try await store.getEvent(id: "event-3")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .pendingDelete
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .pendingDelete)
   }
 
   internal func testResolveStoredEventConflictKeepServerOverwritesLocal() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createEvent(
       id: "event-4",
@@ -623,8 +626,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       note: "Doctor"
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-04", "14:00")
-    let serverSnapshot: _ = EventServerSnapshot.from(
+    let serverUpdatedAt = makeDate("2026-03-04", "14:00")
+    let serverSnapshot = EventServerSnapshot.from(
       eventRow: EventRow(
         id: "event-4",
         user_id: userId,
@@ -647,32 +650,32 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredEventConflictKeepServer(id: "event-4")
 
-    let localRecord: _ = try await store.getEvent(id: "event-4")
+    let localRecord = try await store.getEvent(id: "event-4")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .clean
-    expect(local.startDateString) == "2026-03-05"
-    expect(local.endDateString) == "2026-03-07"
-    expect(local.isAllDay) == true
-    expect(local.startTime) == nil
-    expect(local.endTime) == nil
-    expect(local.note) == "Conference"
-    expect(local.notificationMinutesArray) == [120]
-    expect(local.notificationAnchorTime) == "08:30"
-    expect(local.serverRevision) == 7
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
-    expect(local.dirtyFieldKeys.isEmpty) == true
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .clean)
+    XCTAssertEqual(local.startDateString, "2026-03-05")
+    XCTAssertEqual(local.endDateString, "2026-03-07")
+    XCTAssertEqual(local.isAllDay, true)
+    XCTAssertNil(local.startTime)
+    XCTAssertNil(local.endTime)
+    XCTAssertEqual(local.note, "Conference")
+    XCTAssertEqual(local.notificationMinutesArray, [120])
+    XCTAssertEqual(local.notificationAnchorTime, "08:30")
+    XCTAssertEqual(local.serverRevision, 7)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
+    XCTAssertEqual(local.dirtyFieldKeys.isEmpty, true)
 
-    let syncedSnapshot: _ = try XCTUnwrap(
+    let syncedSnapshot = try XCTUnwrap(
       EventServerSnapshot.decode(from: local.lastSyncedSnapshot))
-    expect(syncedSnapshot) == serverSnapshot
+    XCTAssertEqual(syncedSnapshot, serverSnapshot)
   }
 
   internal func testResolveStoredEventConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
     async throws
   {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createEvent(
       id: "event-5",
@@ -698,8 +701,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       note: nil
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-04", "16:00")
-    let serverSnapshot: _ = EventServerSnapshot.from(
+    let serverUpdatedAt = makeDate("2026-03-04", "16:00")
+    let serverSnapshot = EventServerSnapshot.from(
       eventRow: EventRow(
         id: "event-5",
         user_id: userId,
@@ -722,19 +725,19 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredEventConflictKeepLocal(id: "event-5")
 
-    let localRecord: _ = try await store.getEvent(id: "event-5")
+    let localRecord = try await store.getEvent(id: "event-5")
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.startTime) == "10:30"
-    expect(local.endTime) == "12:00"
-    expect(local.serverRevision) == 9
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.startTime, "10:30")
+    XCTAssertEqual(local.endTime, "12:00")
+    XCTAssertEqual(local.serverRevision, 9)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
   }
 
   internal func testFetchEventsReturnsTimedAndCoveredAllDayEvents() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createEvent(
       id: "event-6",
@@ -758,19 +761,19 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       note: "Vacation"
     )
 
-    let events: _ = await store.fetchEvents(
+    let events = await store.fetchEvents(
       userId: userId,
       startDate: makeDate("2026-03-10"),
       endDate: makeDate("2026-03-10", "23:59")
     )
 
-    expect(events.map(\.id)) == ["event-7", "event-6"]
+    XCTAssertEqual(events.map(\.id), ["event-7", "event-6"])
   }
 
   internal func testCreateJobMarksAllFieldsDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createJob(
+    let created = try await store.createJob(
       userId: userId,
       name: "Store",
       color: "#00AA00",
@@ -782,15 +785,15 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       monthlyGoal: 30_000
     )
 
-    let localRecord: _ = try await store.getJob(id: created.id)
+    let localRecord = try await store.getJob(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == Set(JobField.allCases)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set(JobField.allCases))
   }
 
   internal func testCreateJobDoesNotCreateBaselineSnapshot() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createJob(
       userId: userId,
@@ -804,15 +807,15 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       monthlyGoal: 30_000
     )
 
-    let snapshots: _ = try await store.getAllWageSnapshots(userId: userId)
+    let snapshots = try await store.getAllWageSnapshots(userId: userId)
 
-    expect(snapshots.isEmpty) == true
+    XCTAssertEqual(snapshots.isEmpty, true)
   }
 
   internal func testUpdateJobMetadataTracksChangedFieldsAfterClean() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createJob(
+    let created = try await store.createJob(
       userId: userId,
       name: "Store",
       color: nil,
@@ -833,18 +836,18 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       color: nil
     )
 
-    let localRecord: _ = try await store.getJob(id: created.id)
+    let localRecord = try await store.getJob(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.name) == "Store Updated"
-    expect(local.dirtyFieldKeys) == Set([.name])
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.name, "Store Updated")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.name]))
   }
 
   internal func testUpdateJobMetadataTracksCurrencyChangesAfterClean() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createJob(
+    let created = try await store.createJob(
       userId: userId,
       name: "Store",
       color: nil,
@@ -864,18 +867,18 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       currency: "$"
     )
 
-    let localRecord: _ = try await store.getJob(id: created.id)
+    let localRecord = try await store.getJob(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.currency) == "$"
-    expect(local.dirtyFieldKeys) == Set([.currency])
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.currency, "$")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.currency]))
   }
 
   internal func testMarkJobPendingDeleteMarksDeletedAtAndPendingStatus() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createJob(
+    let created = try await store.createJob(
       userId: userId,
       name: "Store",
       color: nil,
@@ -889,20 +892,20 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     _ = try await store.markJobPendingDelete(id: created.id)
 
-    let localRecord: _ = try await store.getJob(id: created.id)
+    let localRecord = try await store.getJob(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .pendingDelete
-    expect(local.isDefault) == false
-    expect(local.deletedAt) != nil
-    expect(local.dirtyFieldKeys.contains(.deletedAt)) == true
-    expect(local.dirtyFieldKeys.contains(.isDefault)) == true
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .pendingDelete)
+    XCTAssertEqual(local.isDefault, false)
+    XCTAssertNotNil(local.deletedAt)
+    XCTAssertEqual(local.dirtyFieldKeys.contains(.deletedAt), true)
+    XCTAssertEqual(local.dirtyFieldKeys.contains(.isDefault), true)
   }
 
   internal func testResolveStoredJobConflictKeepServerOverwritesLocal() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createJob(
+    let created = try await store.createJob(
       userId: userId,
       name: "Local Job",
       color: "#111111",
@@ -914,8 +917,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       monthlyGoal: 25_000
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-06", "12:00")
-    let serverSnapshot: _ = JobServerSnapshot(
+    let serverUpdatedAt = makeDate("2026-03-06", "12:00")
+    let serverSnapshot = JobServerSnapshot(
       name: "Server Job",
       color: "#222222",
       currency: "kr",
@@ -935,32 +938,32 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredJobConflictKeepServer(id: created.id)
 
-    let localRecord: _ = try await store.getJob(id: created.id)
+    let localRecord = try await store.getJob(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .clean
-    expect(local.name) == "Server Job"
-    expect(local.color) == "#222222"
-    expect(local.isDefault) == true
-    expect(local.sortOrder) == 2
-    expect(local.payrollDay) == 20
-    expect(local.halfTaxMonth) == 11
-    expect(local.monthlyGoal) == 35_000
-    expect(local.serverRevision) == 5
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
-    expect(local.dirtyFieldKeys.isEmpty) == true
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .clean)
+    XCTAssertEqual(local.name, "Server Job")
+    XCTAssertEqual(local.color, "#222222")
+    XCTAssertEqual(local.isDefault, true)
+    XCTAssertEqual(local.sortOrder, 2)
+    XCTAssertEqual(local.payrollDay, 20)
+    XCTAssertEqual(local.halfTaxMonth, 11)
+    XCTAssertEqual(local.monthlyGoal, 35_000)
+    XCTAssertEqual(local.serverRevision, 5)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
+    XCTAssertEqual(local.dirtyFieldKeys.isEmpty, true)
 
-    let syncedSnapshot: _ = try XCTUnwrap(JobServerSnapshot.decode(from: local.lastSyncedSnapshot))
-    expect(syncedSnapshot) == serverSnapshot
+    let syncedSnapshot = try XCTUnwrap(JobServerSnapshot.decode(from: local.lastSyncedSnapshot))
+    XCTAssertEqual(syncedSnapshot, serverSnapshot)
   }
 
   internal func testResolveStoredJobConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
     async throws
   {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createJob(
+    let created = try await store.createJob(
       userId: userId,
       name: "Local Job",
       color: "#111111",
@@ -981,8 +984,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       color: "#111111"
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-06", "17:00")
-    let serverSnapshot: _ = JobServerSnapshot(
+    let serverUpdatedAt = makeDate("2026-03-06", "17:00")
+    let serverSnapshot = JobServerSnapshot(
       name: "Server Job",
       color: "#222222",
       currency: "kr",
@@ -1002,20 +1005,20 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredJobConflictKeepLocal(id: created.id)
 
-    let localRecord: _ = try await store.getJob(id: created.id)
+    let localRecord = try await store.getJob(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.name) == "Local Edited Job"
-    expect(local.serverRevision) == 8
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.name, "Local Edited Job")
+    XCTAssertEqual(local.serverRevision, 8)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
   }
 
   internal func testCreateWageSnapshotMarksAllFieldsDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createWageSnapshot(
+    let created = try await store.createWageSnapshot(
       userId: userId,
       jobId: "job-1",
       fromDate: makeDate("2026-03-01"),
@@ -1031,17 +1034,17 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       breakDeductionMinutes: 30
     )
 
-    let localRecord: _ = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.getWageSnapshot(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == Set(WageSnapshotField.allCases)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set(WageSnapshotField.allCases))
   }
 
   internal func testUpdateWageSnapshotTracksChangedFieldsAfterClean() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createWageSnapshot(
+    let created = try await store.createWageSnapshot(
       userId: userId,
       jobId: nil,
       fromDate: nil,
@@ -1075,18 +1078,18 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       breakDeductionMinutes: nil
     )
 
-    let localRecord: _ = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.getWageSnapshot(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.hourlyWage) == 230
-    expect(local.dirtyFieldKeys) == Set([.hourlyWage])
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.hourlyWage, 230)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.hourlyWage]))
   }
 
   internal func testMarkWageSnapshotPendingDeleteSetsPendingDeleteStatus() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createWageSnapshot(
+    let created = try await store.createWageSnapshot(
       userId: userId,
       jobId: nil,
       fromDate: nil,
@@ -1104,16 +1107,16 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.markWageSnapshotPendingDelete(id: created.id)
 
-    let localRecord: _ = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.getWageSnapshot(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .pendingDelete
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .pendingDelete)
   }
 
   internal func testResolveStoredWageSnapshotConflictKeepServerOverwritesLocal() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
-    let created: _ = try await store.createWageSnapshot(
+    let created = try await store.createWageSnapshot(
       userId: userId,
       jobId: "job-local",
       fromDate: makeDate("2026-03-01"),
@@ -1129,14 +1132,14 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       breakDeductionMinutes: 30
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-09", "10:00")
-    let serverSnapshot: _ = WageSnapshotServerSnapshot(
+    let serverUpdatedAt = makeDate("2026-03-09", "10:00")
+    let serverSnapshot = WageSnapshotServerSnapshot(
       jobId: "job-server",
       fromDate: "2026-03-15",
       hourlyWage: 260,
       wageLevel: 4,
       tariffTypeId: "hk_retail",
-      supplements: try canonicalJSONEncoder.encode(
+      supplements: try kCanonicalJSONEncoder.encode(
         SupplementRulesSnapshot(
           rules: [SupplementRule(days: [1], from: "18:00", to: "24:00", rate: 22)]
         )
@@ -1157,34 +1160,34 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredWageSnapshotConflictKeepServer(id: created.id)
 
-    let localRecord: _ = try await store.getWageSnapshot(id: created.id)
+    let localRecord = try await store.getWageSnapshot(id: created.id)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .clean
-    expect(local.jobId) == "job-server"
-    expect(local.fromDateString) == "2026-03-15"
-    expect(local.hourlyWage) == 260
-    expect(local.wageLevel) == 4
-    expect(local.tariffTypeId) == "hk_retail"
-    expect(local.taxEnabled) == false
-    expect(local.taxPercentage) == 0
-    expect(local.breakEnabled) == false
-    expect(local.breakMethod) == "none"
-    expect(local.breakThresholdHours) == 6.0
-    expect(local.breakDeductionMinutes) == 0
-    expect(local.serverRevision) == 11
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
-    expect(local.dirtyFieldKeys.isEmpty) == true
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .clean)
+    XCTAssertEqual(local.jobId, "job-server")
+    XCTAssertEqual(local.fromDateString, "2026-03-15")
+    XCTAssertEqual(local.hourlyWage, 260)
+    XCTAssertEqual(local.wageLevel, 4)
+    XCTAssertEqual(local.tariffTypeId, "hk_retail")
+    XCTAssertEqual(local.taxEnabled, false)
+    XCTAssertEqual(local.taxPercentage, 0)
+    XCTAssertEqual(local.breakEnabled, false)
+    XCTAssertEqual(local.breakMethod, "none")
+    XCTAssertEqual(local.breakThresholdHours, 6.0)
+    XCTAssertEqual(local.breakDeductionMinutes, 0)
+    XCTAssertEqual(local.serverRevision, 11)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
+    XCTAssertEqual(local.dirtyFieldKeys.isEmpty, true)
 
-    let syncedSnapshot: _ = try XCTUnwrap(
+    let syncedSnapshot = try XCTUnwrap(
       WageSnapshotServerSnapshot.decode(from: local.lastSyncedSnapshot)
     )
-    expect(syncedSnapshot) == serverSnapshot
+    XCTAssertEqual(syncedSnapshot, serverSnapshot)
   }
 
   internal func testCreateUserSettingsMarksExpectedInitialDirtyFields() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserSettings(
       userId: userId,
@@ -1200,9 +1203,9 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: "stats"
     )
 
-    let localRecord: _ = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.getUserSettings(userId: userId)
 
-    let local: _ = try XCTUnwrap(localRecord)
+    let local = try XCTUnwrap(localRecord)
 
     let expected: Set<UserSettingsField> = [
       .theme,
@@ -1218,12 +1221,12 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       .defaultStartupTab,
     ]
 
-    expect(local.syncStatus) == .dirty
-    expect(local.dirtyFieldKeys) == expected
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, expected)
   }
 
   internal func testUpdateUserSettingsMarksThemeDirtyEvenWhenValueIsUnchanged() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserSettings(
       userId: userId,
@@ -1250,16 +1253,16 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: nil
     )
 
-    let localRecord: _ = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.getUserSettings(userId: userId)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.theme) == "dark"
-    expect(local.dirtyFieldKeys) == Set([.theme])
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.theme, "dark")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.theme]))
   }
 
   internal func testUpdateUserSettingsMarksCalendarContentColorStyleDirty() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserSettings(
       userId: userId,
@@ -1286,16 +1289,16 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: nil
     )
 
-    let localRecord: _ = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.getUserSettings(userId: userId)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.calendarContentColorStyle) == "monochrome"
-    expect(local.dirtyFieldKeys) == Set([.calendarContentColorStyle])
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.calendarContentColorStyle, "monochrome")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.calendarContentColorStyle]))
   }
 
   internal func testUpdateUserSettingsCanResetWageyShowcaseState() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserSettings(
       userId: userId,
@@ -1321,14 +1324,14 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: nil
     )
 
-    let localRecord: _ = try await store.getUserSettings(userId: userId)
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.wageyShowcaseSeen) == false
-    expect(local.dirtyFieldKeys) == Set([.wageyShowcaseSeen])
+    let localRecord = try await store.getUserSettings(userId: userId)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.wageyShowcaseSeen, false)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.wageyShowcaseSeen]))
   }
 
   internal func testResolveStoredUserSettingsConflictKeepServerOverwritesLocal() async throws {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserSettings(
       userId: userId,
@@ -1344,8 +1347,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: "stats"
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-08", "11:00")
-    let serverSnapshot: _ = UserSettingsServerSnapshot(
+    let serverUpdatedAt = makeDate("2026-03-08", "11:00")
+    let serverSnapshot = UserSettingsServerSnapshot(
       monthlyGoal: 42_000,
       monthlyGoalsByMonth: ["2026-03": 43_000],
       defaultShiftsView: "calendar",
@@ -1369,38 +1372,38 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredUserSettingsConflictKeepServer(userId: userId)
 
-    let localRecord: _ = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.getUserSettings(userId: userId)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .clean
-    expect(local.monthlyGoal) == 42_000
-    expect(local.monthlyGoalsByMonth) == ["2026-03": 43_000]
-    expect(local.defaultShiftsView) == "calendar"
-    expect(local.profilePictureUrl) == "https://tidex.no/avatar.png"
-    expect(local.payrollDay) == 20
-    expect(local.theme) == "light"
-    expect(local.calendarContentColorStyle) == "workplace"
-    expect(local.showDashboardClockButtons) == true
-    expect(local.halfTaxMonth) == nil
-    expect(local.currency) == "SEK"
-    expect(local.defaultStartupTab) == "home"
-    expect(local.lastActive) == serverUpdatedAt
-    expect(local.serverRevision) == 12
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
-    expect(local.dirtyFieldKeys.isEmpty) == true
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .clean)
+    XCTAssertEqual(local.monthlyGoal, 42_000)
+    XCTAssertEqual(local.monthlyGoalsByMonth, ["2026-03": 43_000])
+    XCTAssertEqual(local.defaultShiftsView, "calendar")
+    XCTAssertEqual(local.profilePictureUrl, "https://tidex.no/avatar.png")
+    XCTAssertEqual(local.payrollDay, 20)
+    XCTAssertEqual(local.theme, "light")
+    XCTAssertEqual(local.calendarContentColorStyle, "workplace")
+    XCTAssertEqual(local.showDashboardClockButtons, true)
+    XCTAssertNil(local.halfTaxMonth)
+    XCTAssertEqual(local.currency, "SEK")
+    XCTAssertEqual(local.defaultStartupTab, "home")
+    XCTAssertEqual(local.lastActive, serverUpdatedAt)
+    XCTAssertEqual(local.serverRevision, 12)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
+    XCTAssertEqual(local.dirtyFieldKeys.isEmpty, true)
 
-    let syncedSnapshot: _ = try XCTUnwrap(
+    let syncedSnapshot = try XCTUnwrap(
       UserSettingsServerSnapshot.decode(from: local.lastSyncedSnapshot)
     )
-    expect(syncedSnapshot) == serverSnapshot
+    XCTAssertEqual(syncedSnapshot, serverSnapshot)
   }
 
   internal func
     testResolveStoredUserSettingsConflictKeepLocalKeepsLocalValuesAndUpdatesServerMetadata()
     async throws
   {
-    let store: _ = try makeStoreActor()
+    let store = try makeStoreActor()
 
     _ = try await store.createUserSettings(
       userId: userId,
@@ -1427,8 +1430,8 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       defaultStartupTab: nil
     )
 
-    let serverUpdatedAt: _ = makeDate("2026-03-08", "18:00")
-    let serverSnapshot: _ = UserSettingsServerSnapshot(
+    let serverUpdatedAt = makeDate("2026-03-08", "18:00")
+    let serverSnapshot = UserSettingsServerSnapshot(
       monthlyGoal: 45_000,
       monthlyGoalsByMonth: [:],
       defaultShiftsView: "calendar",
@@ -1452,15 +1455,15 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
 
     try await store.resolveStoredUserSettingsConflictKeepLocal(userId: userId)
 
-    let localRecord: _ = try await store.getUserSettings(userId: userId)
+    let localRecord = try await store.getUserSettings(userId: userId)
 
-    let local: _ = try XCTUnwrap(localRecord)
-    expect(local.syncStatus) == .dirty
-    expect(local.theme) == "dark"
-    expect(local.currency) == "NOK"
-    expect(local.serverRevision) == 14
-    expect(local.serverUpdatedAt) == serverUpdatedAt
-    expect(local.conflictServerSnapshot) == nil
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.theme, "dark")
+    XCTAssertEqual(local.currency, "NOK")
+    XCTAssertEqual(local.serverRevision, 14)
+    XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
+    XCTAssertNil(local.conflictServerSnapshot)
   }
   deinit {
     // Required explicitly by the repository.s lifecycle lint policy.
