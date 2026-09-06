@@ -30,6 +30,6 @@ final class TotalCardComparisonTests: XCTestCase {
     XCTAssertEqual(TotalCard.comparisonPercentText(for: .infinity), "∞")
 
     XCTAssertEqual(TotalCard.comparisonProgressFraction(for: nil), 0)
-    XCTAssertEqual(TotalCard.comparisonPercentText(for: nil), "—")
+    XCTAssertEqual(TotalCard.comparisonPercentText(for: nil), "---%")
   }
 }

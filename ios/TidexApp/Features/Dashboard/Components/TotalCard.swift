@@ -1,12 +1,12 @@
 import SwiftUI
 
 /// Card displaying current month's total earnings
-/// Design matches OfflineTotalCard from the Capacitor app
+/// A quiet earnings headline with a stable month-over-month comparison.
 ///
 /// When there are future/planned shifts:
 /// - Main display shows projected total (all shifts)
 /// - Subtitle shows "earned to date" (completed shifts only)
-struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
+struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
   let gross: Double  // Projected total (all shifts) // swiftlint:disable:this explicit_acl type_contents_order
   let net: Double?  // Projected net (all shifts) // swiftlint:disable:this explicit_acl type_contents_order
   let completedGross: Double  // Earned to date (completed shifts) // swiftlint:disable:this explicit_acl line_length type_contents_order
@@ -25,38 +25,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   /// Animated fraction for the month-over-month comparison bar.
   @State private var animatedComparisonProgressFraction: Double = 0  // swiftlint:disable:this type_contents_order
-  /// Second-pass overlay progress (0...1) that sweeps gradient over the filled blue bar.
-  @State private var comparisonReachedOverlayProgress: Double = 0  // swiftlint:disable:this type_contents_order
-  /// Pending delayed task for activating positive-comparison visuals.
-  @State private var comparisonVisualTask: Task<Void, Never>?  // swiftlint:disable:this type_contents_order
-
   private let amountAnimationDuration: Double = 0.8  // swiftlint:disable:this type_contents_order
   private let comparisonFillAnimationDuration: Double = 0.52  // swiftlint:disable:this type_contents_order
-  private let comparisonReachedSweepDuration: Double = 0.4  // swiftlint:disable:this type_contents_order
-
-  private struct GlitterSpeck: Identifiable {
-    let id: Int
-    let x: CGFloat
-    let y: CGFloat
-    let size: CGFloat
-    let opacity: Double
-  }
-
-  // Deterministic sparkle texture so the bar feels premium, not noisy.
-  private static let glitterSpecks: [GlitterSpeck] = [  // swiftlint:disable:this type_contents_order
-    .init(id: 0, x: 0.07, y: 0.32, size: 1.6, opacity: 0.55),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 1, x: 0.13, y: 0.66, size: 1.2, opacity: 0.42),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 2, x: 0.21, y: 0.45, size: 1.4, opacity: 0.50),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 3, x: 0.30, y: 0.22, size: 1.8, opacity: 0.62),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 4, x: 0.37, y: 0.70, size: 1.1, opacity: 0.40),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 5, x: 0.46, y: 0.38, size: 1.5, opacity: 0.56),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 6, x: 0.54, y: 0.60, size: 1.3, opacity: 0.47),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 7, x: 0.63, y: 0.30, size: 1.7, opacity: 0.60),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 8, x: 0.72, y: 0.68, size: 1.2, opacity: 0.44),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 9, x: 0.81, y: 0.41, size: 1.6, opacity: 0.58),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 10, x: 0.90, y: 0.24, size: 1.4, opacity: 0.52),  // swiftlint:disable:this no_magic_numbers
-    .init(id: 11, x: 0.95, y: 0.62, size: 1.1, opacity: 0.38),  // swiftlint:disable:this no_magic_numbers
-  ]
 
   // MARK: - Computed Properties
 
@@ -88,33 +58,11 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
 
   private var comparisonPercentText: String {  // swiftlint:disable:this type_contents_order
-    Self.comparisonPercentText(for: percentageChange)
+    Self.comparisonPercentText(for: isLoading ? nil : percentageChange)
   }
 
   private var isAtOrAbovePreviousMonth: Bool {  // swiftlint:disable:this type_contents_order
     !isLoading && percentageChange.map { $0 >= 0 } == true
-  }
-
-  private var showComparisonReachedOverlay: Bool {  // swiftlint:disable:this type_contents_order
-    comparisonReachedOverlayProgress > 0
-  }
-
-  private var comparisonFillStyle: AnyShapeStyle {  // swiftlint:disable:this type_contents_order
-    guard isAtOrAbovePreviousMonth else {
-      return AnyShapeStyle(Color.tidexError.opacity(0.58))  // swiftlint:disable:this no_magic_numbers
-    }
-
-    return AnyShapeStyle(
-      LinearGradient(
-        colors: [
-          .tidexBrandPrimary,
-          .tidexBlue,
-          .tidexBlue.opacity(0.82),  // swiftlint:disable:this no_magic_numbers
-        ],
-        startPoint: .leading,
-        endPoint: .trailing
-      )
-    )
   }
 
   static func comparisonProgressFraction(for percentageChange: Double?) -> Double {
@@ -124,7 +72,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
 
   static func comparisonPercentText(for percentageChange: Double?) -> String {
-    guard let percentageChange else { return "—" }
+    guard let percentageChange else { return "---%" }
     if percentageChange.isInfinite { return "∞" }
     let rounded = Int(percentageChange.rounded())  // swiftlint:disable:this explicit_type_interface
     return "\(rounded > 0 ? "+" : "")\(rounded)%"
@@ -204,14 +152,9 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     .shimmer(isActive: isLoading)
     .onChange(of: renderedComparisonProgressFraction) { _, newValue in
       animateComparisonProgress(to: newValue)
-      syncComparisonReachedVisualsAfterProgressAnimation(for: newValue)
     }
     .onAppear {
       animateComparisonProgress(to: renderedComparisonProgressFraction)
-      syncComparisonReachedVisualsAfterProgressAnimation(for: renderedComparisonProgressFraction)
-    }
-    .onDisappear {
-      comparisonVisualTask?.cancel()
     }
   }
 
@@ -254,94 +197,28 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
 
   private var comparisonProgressBar: some View {
-    let labelMaskColor: Color = isElevated ? .tidexSurfacePrimary : .tidexBackground
-
-    return Group {
-      if isLoading || percentageChange == nil {
-        Text(comparisonPercentText)
-          .hidden()
-      } else {
-        Text(comparisonPercentText)
-          .monospacedDigit()
-          .offset(y: -1)  // swiftlint:disable:this no_magic_numbers
-          .foregroundColor(
-            percentageChange.map { $0 < 0 } == true ? .tidexError : .tidexBlue
-          )
-          .background {
-            LinearGradient(
-              colors: [
-                .clear,
-                labelMaskColor.opacity(0.85),  // swiftlint:disable:this no_magic_numbers
-                labelMaskColor.opacity(0.85),  // swiftlint:disable:this no_magic_numbers
-                labelMaskColor.opacity(0.85),  // swiftlint:disable:this no_magic_numbers
-              ],
-              startPoint: .leading,
-              endPoint: .trailing
-            )
-            .padding(.leading, -Spacing.md)
-            .padding(.vertical, -Spacing.md)
-            .blur(radius: Spacing.xxs)
-          }
-      }
-    }
-    .font(.tidexLabel)
-    .lineLimit(1)
-    .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
-    .frame(width: 64, alignment: .trailing)  // swiftlint:disable:this no_magic_numbers
-    .frame(height: usesFixedTypographyFrames ? 18 : nil)  // swiftlint:disable:this no_magic_numbers
-    .frame(maxWidth: .infinity, alignment: .trailing)
-    .background {  // swiftlint:disable:this closure_body_length
-      GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
-        ZStack(alignment: .leading) {  // swiftlint:disable:this closure_body_length
-          RoundedRectangle(cornerRadius: CornerRadius.xs)
+    HStack(spacing: Spacing.sm) {
+      GeometryReader { geometry in
+        ZStack(alignment: .leading) {
+          Capsule()
             .fill(Color.tidexSurfaceSecondary)
-            .frame(height: 8)  // swiftlint:disable:this no_magic_numbers
-
-          RoundedRectangle(cornerRadius: CornerRadius.xs)
-            .fill(comparisonFillStyle)
-            .frame(
-              width: geometry.size.width * animatedComparisonProgressFraction,
-              height: 8  // swiftlint:disable:this no_magic_numbers
-            )
-
-          RoundedRectangle(cornerRadius: CornerRadius.xs)
-            .fill(comparisonFillStyle)
-            .frame(
-              width: geometry.size.width
-                * animatedComparisonProgressFraction
-                * comparisonReachedOverlayProgress,
-              height: 8  // swiftlint:disable:this no_magic_numbers
-            )
-            .shadow(
-              color: showComparisonReachedOverlay ? Color.tidexBlue.opacity(0.4) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
-              radius: 8,  // swiftlint:disable:this no_magic_numbers
-              x: 0,
-              y: 0
-            )
-            .shadow(
-              color: showComparisonReachedOverlay ? Color.tidexBlue.opacity(0.28) : .clear,  // swiftlint:disable:this line_length no_magic_numbers
-              radius: 14,  // swiftlint:disable:this no_magic_numbers
-              x: 0,
-              y: 0
-            )
-            .overlay {
-              if showComparisonReachedOverlay {
-                RoundedRectangle(cornerRadius: CornerRadius.xs)
-                  .stroke(Color.white.opacity(0.28), lineWidth: 0.8)  // swiftlint:disable:this no_magic_numbers
-              }
-            }
-            .overlay {
-              if showComparisonReachedOverlay {
-                comparisonGlitterOverlay
-              }
-            }
+          Capsule()
+            .fill(isAtOrAbovePreviousMonth ? Color.tidexBlue : Color.tidexTextMuted)
+            .frame(width: geometry.size.width * animatedComparisonProgressFraction)
         }
-        .frame(
-          width: geometry.size.width,
-          height: geometry.size.height
-        )
       }
+      .frame(height: 6)  // swiftlint:disable:this no_magic_numbers
+
+      Text(comparisonPercentText)
+        .font(.tidexLabel)
+        .monospacedDigit()
+        .foregroundColor(.tidexTextSecondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
+        .frame(width: usesFixedTypographyFrames ? 64 : nil, alignment: .trailing)  // swiftlint:disable:this no_magic_numbers line_length
+        .fixedSize(horizontal: !usesFixedTypographyFrames, vertical: false)
     }
+    .frame(height: usesFixedTypographyFrames ? 18 : nil)  // swiftlint:disable:this no_magic_numbers
     .padding(.top, -Spacing.xxs)
     .padding(.bottom, Spacing.xs)
     .accessibilityElement(children: .ignore)
@@ -349,84 +226,12 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     .accessibilityValue(Text(verbatim: comparisonPercentText))
   }
 
-  private var comparisonGlitterOverlay: some View {
-    TimelineView(.animation(minimumInterval: reduceMotion ? 0.35 : 1.0 / 24.0)) { context in  // swiftlint:disable:this line_length no_magic_numbers
-      let time = context.date.timeIntervalSinceReferenceDate  // swiftlint:disable:this explicit_type_interface
-      GeometryReader { geometry in
-        ZStack {
-          ForEach(Self.glitterSpecks) { speck in
-            glitterSpeckView(speck, time: time, size: geometry.size)
-          }
-          glitterSheenOverlay
-        }
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs))
-      }
-    }
-  }
-
-  @ViewBuilder
-  private func glitterSpeckView(_ speck: GlitterSpeck, time: TimeInterval, size: CGSize)  // swiftlint:disable:this line_length type_contents_order
-    -> some View
-  {
-    let xRatio = glitterXRatio(for: speck, time: time)  // swiftlint:disable:this explicit_type_interface
-    let yRatio = glitterYRatio(for: speck, time: time)  // swiftlint:disable:this explicit_type_interface
-    let opacity = speck.opacity * glitterTwinkle(for: speck, time: time)  // swiftlint:disable:this explicit_type_interface line_length
-
-    Circle()
-      .fill(Color.white.opacity(opacity))
-      .frame(width: speck.size, height: speck.size)
-      .position(
-        x: size.width * xRatio,
-        y: size.height * yRatio
-      )
-  }
-
-  private var glitterSheenOverlay: some View {
-    LinearGradient(
-      colors: [
-        Color.white.opacity(0.20),  // swiftlint:disable:this no_magic_numbers
-        Color.clear,
-        Color.white.opacity(0.10),  // swiftlint:disable:this no_magic_numbers
-      ],
-      startPoint: .topLeading,
-      endPoint: .bottomTrailing
-    )
-  }
-
-  private func glitterXRatio(for speck: GlitterSpeck, time: TimeInterval) -> CGFloat {  // swiftlint:disable:this line_length type_contents_order
-    guard !reduceMotion else { return speck.x }  // swiftlint:disable:this conditional_returns_on_newline
-    let frequency = 0.9 + Double(speck.id % 4) * 0.16  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let phase = Double(speck.id)  // swiftlint:disable:this explicit_type_interface
-    let drift = CGFloat(sin(time * frequency + phase) * 0.018)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    return clamp(speck.x + drift, lower: 0.02, upper: 0.98)  // swiftlint:disable:this no_magic_numbers
-  }
-
-  private func glitterYRatio(for speck: GlitterSpeck, time: TimeInterval) -> CGFloat {  // swiftlint:disable:this line_length type_contents_order
-    guard !reduceMotion else { return speck.y }  // swiftlint:disable:this conditional_returns_on_newline
-    let frequency = 1.1 + Double(speck.id % 3) * 0.2  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let phase = Double(speck.id) * 0.6  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let drift = CGFloat(cos(time * frequency + phase) * 0.11)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    return clamp(speck.y + drift, lower: 0.12, upper: 0.88)  // swiftlint:disable:this no_magic_numbers
-  }
-
-  private func glitterTwinkle(for speck: GlitterSpeck, time: TimeInterval) -> Double {  // swiftlint:disable:this line_length type_contents_order
-    guard !reduceMotion else { return 1.0 }  // swiftlint:disable:this conditional_returns_on_newline
-    let frequency = 2.4 + Double(speck.id % 5) * 0.35  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let phase = Double(speck.id)  // swiftlint:disable:this explicit_type_interface
-    let normalizedSine = (sin(time * frequency + phase) + 1) / 2  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    return 0.78 + (normalizedSine * 0.22)  // swiftlint:disable:this no_magic_numbers
-  }
-
-  private func clamp(_ value: CGFloat, lower: CGFloat, upper: CGFloat) -> CGFloat {  // swiftlint:disable:this line_length type_contents_order
-    min(upper, max(lower, value))
-  }
-
   @ViewBuilder
   private var mainAmountDisplay: some View {
     if showDashes {
       // Skeleton placeholder line matching the height of the large text
       RoundedRectangle(cornerRadius: CornerRadius.lg)
-        .fill(Color.tidexBlue.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
+        .fill(Color.tidexTextMuted.opacity(0.2))  // swiftlint:disable:this no_magic_numbers
         .frame(width: 200, height: 56)  // swiftlint:disable:this no_magic_numbers
     } else {
       CurrencyCountUpText(
@@ -435,15 +240,20 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         animateOnAppear: false,
         animateChanges: true
       )
-      .font(.tidexHeroAmount)
-      .foregroundColor(.tidexBlue)
+      .font(usesFixedTypographyFrames ? .tidexHeroAmount : .tidexAmountDisplay)
+      .foregroundColor(.tidexTextPrimary)
       .minimumScaleFactor(0.4)  // swiftlint:disable:this no_magic_numbers
       .lineLimit(1)
     }
   }
 
   private func subtitleAmountRow(amount: Double, label: String) -> some View {
-    HStack(spacing: Spacing.xxs) {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.xxs))
+      : AnyLayout(HStackLayout(spacing: Spacing.xxs))
+
+    return layout {
       CurrencyCountUpText(
         amount: amount,
         duration: amountAnimationDuration,
@@ -467,31 +277,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   // MARK: - Formatting
 
   private func animateComparisonProgress(to newValue: Double) {
-    withAnimation(.spring(duration: comparisonFillAnimationDuration, bounce: 0.06)) {  // swiftlint:disable:this line_length no_magic_numbers
+    withAnimation(reduceMotion ? nil : .easeOut(duration: comparisonFillAnimationDuration)) {
       animatedComparisonProgressFraction = newValue
-    }
-  }
-
-  /// Keep the fill blue while it animates, then sweep a gradient overlay from left to right once full.
-  private func syncComparisonReachedVisualsAfterProgressAnimation(for renderedProgress: Double) {
-    comparisonVisualTask?.cancel()
-
-    guard isAtOrAbovePreviousMonth, renderedProgress >= 1 else {
-      withAnimation(.easeOut(duration: 0.2)) {  // swiftlint:disable:this no_magic_numbers
-        comparisonReachedOverlayProgress = 0
-      }
-      return
-    }
-
-    comparisonReachedOverlayProgress = 0
-    comparisonVisualTask = Task { @MainActor in
-      let delay = UInt64(comparisonFillAnimationDuration * 1_000_000_000)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-      try? await Task.sleep(nanoseconds: delay)
-      guard !Task.isCancelled, isAtOrAbovePreviousMonth else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-
-      withAnimation(.easeOut(duration: comparisonReachedSweepDuration)) {
-        comparisonReachedOverlayProgress = 1
-      }
     }
   }
 
@@ -561,4 +348,4 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   }
   .padding(.horizontal, Spacing.lg)
   .background(Color.tidexBackground)
-}  // swiftlint:disable:this file_length
+}

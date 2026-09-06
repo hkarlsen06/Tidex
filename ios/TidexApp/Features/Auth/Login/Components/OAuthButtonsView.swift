@@ -64,20 +64,20 @@ private struct OAuthProviderButton<Icon: View>: View {
           .frame(width: 19, height: 19)
 
         Text(title)
-          .font(.system(size: 18, weight: .semibold))
-          .lineLimit(1)
-          .minimumScaleFactor(0.9)
+          .font(.tidexButton)
+          .fixedSize(horizontal: false, vertical: true)
       }
       .foregroundColor(colorScheme == .dark ? .black : .white)
-      .padding(.leading, isIPad ? 0 : 64)
+      .padding(.horizontal, Spacing.lg)
       .frame(maxWidth: .infinity, alignment: isIPad ? .center : .leading)
-      .frame(height: 50)
+      .padding(.vertical, Spacing.sm)
+      .frame(minHeight: 50)
       .background(colorScheme == .dark ? Color.white : Color.black)
       .overlay {
-        RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
           .stroke(colorScheme == .dark ? Color.clear : Color.black.opacity(0.16), lineWidth: 1)
       }
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
     .disabled(isLoading)

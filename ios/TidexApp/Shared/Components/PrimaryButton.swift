@@ -22,27 +22,29 @@ struct PrimaryButton: View {
       UIImpactFeedbackGenerator(style: .medium).impactOccurred()
       action()
     } label: {
-      HStack(spacing: Spacing.xs) {
-        if isLoading {
-          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-            .scaleEffect(0.8)
+      Text(title)
+        .font(.tidexButton)
+        .opacity(isLoading ? 0 : 1)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, Spacing.sm)
+        .frame(minHeight: Spacing.buttonHeight)
+        .overlay {
+          if isLoading {
+            ProgressView()
+              .tint(.tidexTextOnBrand)
+              .accessibilityHidden(true)
+          }
         }
-
-        Text(title)
-          .font(.tidexButton)
-      }
-      .frame(maxWidth: .infinity)
-      .frame(height: Spacing.buttonHeight)
-      .background(
-        isDisabled
-          ? Color.tidexBrandPrimary.opacity(0.5)
-          : Color.tidexBrandPrimary
-      )
-      .foregroundColor(.tidexTextOnBrand)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+        .background(
+          isDisabled
+            ? Color.tidexBrandPrimary.opacity(0.5)
+            : Color.tidexBrandPrimary
+        )
+        .foregroundColor(.tidexTextOnBrand)
+        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .buttonStyle(SnappyPrimaryButtonStyle(reduceMotion: reduceMotion))
+    .accessibilityLabel(title)
     .disabled(isDisabled || isLoading)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isLoading)
   }

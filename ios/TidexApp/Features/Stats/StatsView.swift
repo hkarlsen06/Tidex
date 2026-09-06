@@ -459,7 +459,7 @@ private struct StatsOverviewLedger: View {
       earningsHeader
 
       Divider()
-        .overlay(Color.tidexBorderSubtle.opacity(0.55))  // swiftlint:disable:this no_magic_numbers
+        .overlay(Color.tidexSeparator)  // swiftlint:disable:this no_magic_numbers
 
       metricStrip
     }

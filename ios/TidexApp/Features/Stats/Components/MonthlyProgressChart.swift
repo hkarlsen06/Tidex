@@ -111,17 +111,18 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
           .lineStyle(StrokeStyle(lineWidth: 3, dash: [8, 4]))  // swiftlint:disable:this no_magic_numbers
         }
       }
-      .chartXScale(domain: 1...31)  // swiftlint:disable:this no_magic_numbers
+      .chartXScale(
+        domain: 1...31,  // swiftlint:disable:this no_magic_numbers
+        range: .plotDimension(padding: Spacing.xs)
+      )
       .chartYScale(domain: 0...maxYValue)
       .chartXAxis {
         AxisMarks(values: xAxisTicks) { value in
-          AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))  // swiftlint:disable:this no_magic_numbers
-            .foregroundStyle(Color.tidexBorderSubtle)
-          AxisValueLabel {
+          AxisValueLabel(centered: false, collisionResolution: .greedy) {
             if let day = value.as(Int.self) {
               let isToday = data.first(where: { $0.day == day })?.isToday ?? false  // swiftlint:disable:this explicit_type_interface line_length
               Text("\(day)")
-                .font(isToday ? .tidexLabelStrong : .tidexSubheadline)
+                .font(isToday ? .tidexCaptionStrong : .tidexCaptionRegular)
                 .foregroundColor(isToday ? .tidexBlue : .tidexTextPrimary)
             }
           }
@@ -129,12 +130,12 @@ struct MonthlyProgressChart: View {  // swiftlint:disable:this explicit_acl expl
       }
       .chartYAxis {
         AxisMarks(position: .leading, values: yAxisTicks) { value in
-          AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))  // swiftlint:disable:this no_magic_numbers
-            .foregroundStyle(Color.tidexBorderSubtle)
+          AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))  // swiftlint:disable:this no_magic_numbers
+            .foregroundStyle(Color.tidexSeparator)
           AxisValueLabel {
             if let amount = value.as(Double.self) {
               Text(formatAxisValue(amount))
-                .font(.tidexSubheadline)
+                .font(.tidexCaptionRegular)
                 .foregroundColor(.tidexTextPrimary)
             }
           }
@@ -200,7 +201,7 @@ struct MonthlyProgressChartEmpty: View {  // swiftlint:disable:this explicit_acl
         .foregroundColor(.tidexTextPrimary)
 
       Text(.statsChartsMonthlyProgressNoData)
-        .font(.tidexSubheadline)
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)

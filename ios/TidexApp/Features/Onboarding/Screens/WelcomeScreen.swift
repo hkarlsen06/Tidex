@@ -12,7 +12,7 @@ struct WelcomeScreen: View {
   @State private var showSubheadline = false
 
   private var heroTitleFont: Font {
-    let size = UIFontMetrics(forTextStyle: .largeTitle).scaledValue(for: 50)
+    let size = UIFontMetrics(forTextStyle: .largeTitle).scaledValue(for: 44)
     return .system(size: size, weight: .semibold, design: .default)
   }
 
@@ -151,7 +151,7 @@ struct WelcomeScreen: View {
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-          .stroke(Color.tidexBorder, lineWidth: 1)
+          .stroke(Color.tidexSeparator, lineWidth: 1)
       )
 
       // Gradient mask: top opaque → bottom transparent

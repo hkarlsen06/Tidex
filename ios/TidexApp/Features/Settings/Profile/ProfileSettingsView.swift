@@ -1,6 +1,6 @@
-import os.log
 import PhotosUI
 import SwiftUI
+import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSettings")
 
@@ -895,7 +895,7 @@ struct ProfileSettingsView: View {
 
   private var compactSettingsDivider: some View {
     Divider()
-      .background(Color.tidexBorderSubtle)
+      .background(Color.tidexSeparator)
       .padding(.leading, ProfileActionRowLayout.dividerLeadingPadding)
   }
 

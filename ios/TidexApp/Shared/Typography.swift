@@ -21,19 +21,19 @@ extension Font {
   // MARK: - Display (Large Numbers)
   // These use scaled fonts to maintain visual impact while respecting Dynamic Type
 
-  /// 56pt bold - Extra large currency displays (scales with Dynamic Type)
+  /// 56pt semibold - Extra large currency displays (scales with Dynamic Type)
   static var tidexDisplay: Font {
-    scaledFont(baseSize: 56, weight: .bold, relativeTo: .largeTitle)
+    scaledFont(baseSize: 56, weight: .semibold, relativeTo: .largeTitle)
   }
 
-  /// 56pt bold - Dashboard stat values (scales with Dynamic Type)
+  /// 56pt semibold - Dashboard stat values (scales with Dynamic Type)
   static var tidexStat: Font {
-    scaledFont(baseSize: 56, weight: .bold, relativeTo: .largeTitle)
+    scaledFont(baseSize: 56, weight: .semibold, relativeTo: .largeTitle)
   }
 
-  /// 40pt bold - Secondary stat values (scales with Dynamic Type)
+  /// 40pt semibold - Secondary stat values (scales with Dynamic Type)
   static var tidexStatSecondary: Font {
-    scaledFont(baseSize: 40, weight: .bold, relativeTo: .title)
+    scaledFont(baseSize: 40, weight: .semibold, relativeTo: .title)
   }
 
   /// 104pt bold - Celebration amount (scales with Dynamic Type)
@@ -41,19 +41,19 @@ extension Font {
     scaledFont(baseSize: 104, weight: .bold, relativeTo: .largeTitle)
   }
 
-  /// 88pt bold - Hero total card amount (scales with Dynamic Type)
+  /// 72pt medium - Hero total card amount (scales with Dynamic Type)
   static var tidexHeroAmount: Font {
-    scaledFont(baseSize: 88, weight: .bold, relativeTo: .largeTitle)
+    scaledFont(baseSize: 72, weight: .medium, relativeTo: .largeTitle)
   }
 
-  /// 52pt bold - Paycheck/display amounts (scales with Dynamic Type)
+  /// 48pt semibold - Paycheck/display amounts (scales with Dynamic Type)
   static var tidexAmountDisplay: Font {
-    scaledFont(baseSize: 52, weight: .bold, relativeTo: .largeTitle)
+    scaledFont(baseSize: 48, weight: .semibold, relativeTo: .largeTitle)
   }
 
-  /// 32pt bold rounded - Large amounts (scales with Dynamic Type)
+  /// 32pt semibold - Large amounts (scales with Dynamic Type)
   static var tidexAmountLarge: Font {
-    scaledFont(baseSize: 32, weight: .bold, relativeTo: .title2, design: .rounded)
+    scaledFont(baseSize: 32, weight: .semibold, relativeTo: .title2)
   }
 
   /// 32pt medium - Medium number displays (scales with Dynamic Type)
@@ -77,19 +77,19 @@ extension Font {
 
   // MARK: - Headings
 
-  /// 28pt bold - Screen titles, onboarding headings (scales with Dynamic Type)
+  /// 28pt semibold - Screen titles, onboarding headings (scales with Dynamic Type)
   static var tidexScreenTitle: Font {
-    scaledFont(baseSize: 28, weight: .bold, relativeTo: .title)
+    scaledFont(baseSize: 28, weight: .semibold, relativeTo: .title)
   }
 
-  /// 24pt bold - Screen titles, primary headings
-  static let tidexLargeTitle = Font.system(.title2, design: .default).weight(.bold)
+  /// 22pt semibold - Screen titles, primary headings
+  static let tidexLargeTitle = Font.system(.title2, design: .default).weight(.semibold)
 
-  /// 22pt bold - Card headers, secondary titles
-  static let tidexTitle = Font.system(.title3, design: .default).weight(.bold)
+  /// 20pt semibold - Card headers, secondary titles
+  static let tidexTitle = Font.system(.title3, design: .default).weight(.semibold)
 
-  /// 20pt bold - Tertiary titles
-  static let tidexTitle2 = Font.system(.headline, design: .default).weight(.bold)
+  /// 17pt semibold - Tertiary titles
+  static let tidexTitle2 = Font.system(.headline, design: .default).weight(.semibold)
 
   /// 18pt semibold - Section headers, emphasis
   static let tidexHeadline = Font.system(.headline, design: .default)

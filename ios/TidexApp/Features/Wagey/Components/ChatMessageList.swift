@@ -218,7 +218,7 @@ struct ChatMessageList: View {  // swiftlint:disable:this explicit_acl explicit_
 
           if index < suggestions.count - 1 {
             Divider()
-              .overlay(Color.tidexBorderSubtle.opacity(0.7))  // swiftlint:disable:this no_magic_numbers
+              .overlay(Color.tidexSeparator)  // swiftlint:disable:this no_magic_numbers
               .padding(.leading, 42)  // swiftlint:disable:this no_magic_numbers
           }
         }
@@ -228,10 +228,6 @@ struct ChatMessageList: View {  // swiftlint:disable:this explicit_acl explicit_
     .background(
       RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
         .fill(Color.tidexSurfacePrimary)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-        .stroke(Color.tidexBorderSubtle, lineWidth: 1)
     )
   }
 
@@ -323,7 +319,7 @@ struct ChatMessageList: View {  // swiftlint:disable:this explicit_acl explicit_
           .font(.tidexFootnoteStrong)
           .foregroundColor(.tidexBlue)
           .frame(width: 28, height: 28)  // swiftlint:disable:this no_magic_numbers
-          .background(Color.tidexBlue.opacity(0.09), in: Circle())  // swiftlint:disable:this no_magic_numbers
+          .background(Color.tidexSurfaceSecondary, in: Circle())  // swiftlint:disable:this no_magic_numbers
 
         Text(text)
           .font(.tidexFootnoteMedium)

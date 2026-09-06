@@ -120,12 +120,12 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
       }
       .chartYAxis {
         AxisMarks(position: .leading, values: yAxisScale.ticks) { value in
-          AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))  // swiftlint:disable:this no_magic_numbers
-            .foregroundStyle(Color.tidexBorderSubtle)
+          AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))  // swiftlint:disable:this no_magic_numbers
+            .foregroundStyle(Color.tidexSeparator)
           AxisValueLabel {
             if let amount = value.as(Double.self) {
               Text(formatAxisValue(amount))
-                .font(.tidexSubheadline)
+                .font(.tidexCaptionRegular)
                 .foregroundColor(.tidexTextPrimary)
             }
           }
@@ -151,7 +151,7 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
       return .tidexBlue
     }
 
-    return .tidexBlue.opacity(0.2)  // swiftlint:disable:this no_magic_numbers
+    return .tidexBorder
   }
 
   /// Build a nice scale for the Y-axis
@@ -360,7 +360,7 @@ struct YearlyIncomeChartEmpty: View {  // swiftlint:disable:this explicit_acl ex
         .foregroundColor(.tidexTextPrimary)
 
       Text(.statsChartsYearlyIncomeNoData)
-        .font(.tidexSubheadline)
+        .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextSecondary)
     }
     .frame(maxWidth: .infinity, alignment: .leading)

@@ -41,7 +41,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
 
   var body: some View {
     ZStack(alignment: .topTrailing) {
-      Color.tidexLightSurfacePrimary
+      Color.tidexSurfacePrimary
         .ignoresSafeArea()
 
       ScrollView(showsIndicators: false) {
@@ -55,23 +55,23 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
 
           timeline
             .padding(.horizontal, Spacing.md)
-            .padding(.top, 56)
+            .padding(.top, Spacing.xl)
             .frame(maxWidth: 462)
 
           lowerOptions
             .padding(.horizontal, Spacing.md)
-            .padding(.top, 112)
+            .padding(.top, Spacing.xxl)
             .frame(maxWidth: 462)
         }
         .frame(maxWidth: .infinity)
-        .padding(.bottom, 156)
+        .padding(.bottom, Spacing.xl)
       }
       .ignoresSafeArea(edges: .top)
     }
     .safeAreaInset(edge: .bottom) {
       bottomCTA
     }
-    .presentationBackground(Color.tidexLightSurfacePrimary)
+    .presentationBackground(Color.tidexSurfacePrimary)
   }
 
   private var mainOfferContent: some View {
@@ -104,26 +104,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
 
   private var artworkHeader: some View {
     ZStack(alignment: .topTrailing) {
-      LinearGradient(
-        colors: [
-          Color.tidexBlue.opacity(0.92),
-          Color.tidexPurple.opacity(0.88),
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-
-      LinearGradient(
-        stops: [
-          .init(color: Color.tidexLightSurfacePrimary.opacity(0), location: 0),
-          .init(color: Color.tidexLightSurfacePrimary.opacity(0.16), location: 0.48),
-          .init(color: Color.tidexLightSurfacePrimary.opacity(0.72), location: 0.8),
-          .init(color: Color.tidexLightSurfacePrimary, location: 1),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .frame(maxHeight: .infinity, alignment: .bottom)
+      Color.tidexSurfacePrimary
 
       heroOutcomePreview
         .frame(maxWidth: 462, alignment: .leading)
@@ -142,18 +123,18 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(heroSeasonTitle)
           .font(.tidexCaptionStrong)
-          .foregroundColor(Color.tidexTextOnBrand.opacity(0.72))
-          .textCase(.uppercase)
+          .foregroundColor(Color.tidexTextSecondary)
+          .textCase(nil)
 
         Text(verbatim: "50 000 kr")
-          .font(.system(size: 40, weight: .bold, design: .rounded))
-          .foregroundColor(.tidexTextOnBrand)
+          .font(.tidexStatSecondary)
+          .foregroundColor(.tidexTextPrimary)
           .lineLimit(1)
           .minimumScaleFactor(0.76)
 
         Text(.monthLimitHeroPreviewSubtitle)
           .font(.tidexFootnoteMedium)
-          .foregroundColor(Color.tidexTextOnBrand.opacity(0.84))
+          .foregroundColor(Color.tidexTextSecondary)
           .lineLimit(1)
           .minimumScaleFactor(0.78)
       }
@@ -161,7 +142,6 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       heroIncomeChart
     }
     .frame(maxWidth: .infinity, alignment: .leading)
-    .shadow(color: Color.tidexDarkBackgroundColor.opacity(0.18), radius: 10, y: 5)
   }
 
   private var heroIncomeChart: some View {
@@ -177,7 +157,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
           if shouldShowHeroMonthLabel(index) {
             Text(heroMonthLabel(for: index))
               .font(.system(size: 8, weight: .bold, design: .rounded))
-              .foregroundColor(Color.tidexPurple.opacity(0.72))
+              .foregroundColor(Color.tidexTextMuted)
               .frame(height: 9)
           } else {
             Color.clear
@@ -191,24 +171,16 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
     .padding(.top, Spacing.xxs)
   }
 
-  private func heroChartFill(for index: Int) -> LinearGradient {
-    let isHighlighted = isHighlightedHeroMonth(index)
-
-    return LinearGradient(
-      colors: isHighlighted
-        ? [Color.tidexBlue.opacity(0.9), Color.tidexPurple.opacity(0.84)]
-        : [Color.tidexPurple.opacity(0.42), Color.tidexPurple.opacity(0.24)],
-      startPoint: .top,
-      endPoint: .bottom
-    )
+  private func heroChartFill(for index: Int) -> Color {
+    isHighlightedHeroMonth(index) ? .tidexBlue : .tidexSurfaceSecondary
   }
 
   private var headlineBlock: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       HStack(alignment: .top, spacing: Spacing.sm) {
         Text(viewModel.hasConfiguredTrial ? .paywallTrialTitle : .paywallSubscribeTitle)
-          .font(.system(size: 30, weight: .bold))
-          .foregroundColor(Color.tidexLightTextPrimary)
+          .font(.tidexScreenTitle)
+          .foregroundColor(Color.tidexTextPrimary)
           .fixedSize(horizontal: false, vertical: true)
           .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -219,9 +191,9 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
         } label: {
           Image(systemName: "info.circle.fill")
             .font(.system(size: 22, weight: .semibold))
-            .foregroundColor(.tidexLightTextMuted)
-            .frame(width: 38, height: 38)
-            .background(Color.tidexLightSurfaceSecondary)
+            .foregroundColor(.tidexTextMuted)
+            .frame(width: 44, height: 44)
+            .background(Color.tidexSurfaceSecondary)
             .clipShape(Circle())
         }
         .buttonStyle(.plain)
@@ -230,7 +202,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
 
       Text(.monthLimitPaywallSubtitle)
         .font(.tidexSubheadline)
-        .foregroundColor(Color.tidexLightTextSecondary)
+        .foregroundColor(Color.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
 
       priceLineView
@@ -264,7 +236,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
 
       Text(title)
         .font(.tidexBodyMedium)
-        .foregroundColor(Color.tidexLightTextPrimary)
+        .foregroundColor(Color.tidexTextPrimary)
         .fixedSize(horizontal: false, vertical: true)
 
       Spacer(minLength: 0)
@@ -277,8 +249,8 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       billingOption(.yearly)
     }
     .padding(Spacing.xxs)
-    .background(Color.tidexLightSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .background(Color.tidexSurfaceSecondary)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
   }
 
   private func billingOption(_ period: BillingPeriod) -> some View {
@@ -292,7 +264,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       VStack(spacing: Spacing.micro) {
         Text(period.displayName)
           .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-          .foregroundColor(isSelected ? Color.tidexLightTextPrimary : Color.tidexLightTextMuted)
+          .foregroundColor(isSelected ? Color.tidexTextPrimary : Color.tidexTextMuted)
 
         if period == .yearly,
           let savings = viewModel.yearlySavingsPercent(for: .pro)
@@ -301,12 +273,12 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
             String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double(savings))))
           )
           .font(.tidexMicro.bold())
-          .foregroundColor(isSelected ? .tidexBlue : Color.tidexLightTextMuted)
+          .foregroundColor(isSelected ? .tidexBlue : Color.tidexTextMuted)
         }
       }
       .frame(maxWidth: .infinity)
       .frame(minHeight: 50)
-      .background(isSelected ? Color.tidexLightSurfacePrimary : Color.clear)
+      .background(isSelected ? Color.tidexSurfacePrimary : Color.clear)
       .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
     .buttonStyle(.plain)
@@ -331,19 +303,19 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       ZStack(alignment: .top) {
         if !isLast {
           Capsule()
-            .fill(item.isActive ? Color.tidexPurple.opacity(0.62) : Color.tidexLightBorderSubtle)
+            .fill(item.isActive ? Color.tidexSeparator : Color.tidexBorderSubtle)
             .frame(width: 2, height: connectorHeight)
             .offset(y: iconSize / 2)
         }
 
         ZStack {
           Circle()
-            .fill(item.isActive ? Color.tidexPurple : Color.tidexLightSurfaceSecondary)
+            .fill(item.isActive ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
             .frame(width: iconSize, height: iconSize)
 
           Image(systemName: item.icon)
             .font(.system(size: item.isActive ? 18 : 16, weight: .semibold))
-            .foregroundColor(item.isActive ? .tidexTextOnBrand : Color.tidexLightTextMuted)
+            .foregroundColor(item.isActive ? .tidexTextOnBrand : Color.tidexTextMuted)
         }
       }
       .frame(width: 48, height: isLast ? nil : rowHeight, alignment: .top)
@@ -351,11 +323,11 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(item.title)
           .font(.tidexLabelStrong)
-          .foregroundColor(Color.tidexLightTextPrimary)
+          .foregroundColor(Color.tidexTextPrimary)
 
         Text(item.body)
           .font(.tidexFootnote)
-          .foregroundColor(Color.tidexLightTextSecondary)
+          .foregroundColor(Color.tidexTextSecondary)
           .fixedSize(horizontal: false, vertical: true)
       }
       .frame(minHeight: isLast ? 0 : rowHeight, alignment: .top)
@@ -380,18 +352,9 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       }
       .foregroundColor(.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
-      .frame(height: 58)
-      .background(
-        LinearGradient(
-          colors: [
-            primaryCTAIsEnabled ? Color.tidexBlue : Color.tidexLightTextMuted.opacity(0.55),
-            primaryCTAIsEnabled ? Color.tidexPurple : Color.tidexLightTextMuted.opacity(0.55),
-          ],
-          startPoint: .leading,
-          endPoint: .trailing
-        )
-      )
-      .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .frame(minHeight: 52)
+      .background(primaryCTAIsEnabled ? Color.tidexBrandPrimary : Color.tidexTextMuted)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .buttonStyle(.plain)
     .disabled(!primaryCTAIsEnabled)
@@ -400,7 +363,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   private var cancellationLine: some View {
     Text(.paywallCancelAnytime)
       .font(.tidexFootnote)
-      .foregroundColor(Color.tidexLightTextMuted)
+      .foregroundColor(Color.tidexTextMuted)
       .frame(maxWidth: .infinity, alignment: .center)
   }
 
@@ -415,10 +378,10 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
     .background(
       LinearGradient(
         stops: [
-          .init(color: Color.tidexLightSurfacePrimary.opacity(0), location: 0),
-          .init(color: Color.tidexLightSurfacePrimary.opacity(0.98), location: 0.22),
-          .init(color: Color.tidexLightSurfacePrimary, location: 0.38),
-          .init(color: Color.tidexLightSurfacePrimary, location: 1),
+          .init(color: Color.tidexSurfacePrimary.opacity(0), location: 0),
+          .init(color: Color.tidexSurfacePrimary.opacity(0.98), location: 0.22),
+          .init(color: Color.tidexSurfacePrimary, location: 0.38),
+          .init(color: Color.tidexSurfacePrimary, location: 1),
         ],
         startPoint: .top,
         endPoint: .bottom
@@ -444,7 +407,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
     } else {
       Text(priceLine)
         .font(.tidexSubheadline)
-        .foregroundColor(Color.tidexLightTextPrimary)
+        .foregroundColor(Color.tidexTextPrimary)
         .fixedSize(horizontal: false, vertical: true)
     }
   }
@@ -452,7 +415,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   private func styledTrialPriceLine(freePrefix: String, suffix: String) -> AttributedString {
     var text = AttributedString(freePrefix + suffix)
     text.font = .tidexSubheadline
-    text.foregroundColor = .tidexLightTextPrimary
+    text.foregroundColor = .tidexTextPrimary
 
     if let range = text.range(of: freePrefix) {
       text[range].font = .tidexSubheadline.weight(.bold)
@@ -491,9 +454,9 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
     Button(action: { dismiss() }) {
       Image(systemName: "xmark")
         .font(.system(size: 18, weight: .bold))
-        .foregroundColor(.tidexTextOnBrand)
+        .foregroundColor(.tidexTextSecondary)
         .frame(width: 46, height: 46)
-        .background(Color.tidexTextOnBrand.opacity(0.18))
+        .background(Color.tidexSurfaceSecondary)
         .clipShape(Circle())
         .contentShape(Circle())
     }

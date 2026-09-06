@@ -371,7 +371,7 @@ struct MonthYearPickerSheet: View {
   private var pickerWheels: some View {
     VStack(spacing: 0) {
       Divider()
-        .background(Color.tidexBorderSubtle)
+        .background(Color.tidexSeparator)
 
       HStack(spacing: 0) {
         Picker("Month", selection: $selectedMonth) {
@@ -397,7 +397,7 @@ struct MonthYearPickerSheet: View {
       .frame(height: 174)
 
       Divider()
-        .background(Color.tidexBorderSubtle)
+        .background(Color.tidexSeparator)
     }
   }
 }

@@ -40,8 +40,8 @@ enum CornerRadius {
   /// 18pt - Chat bubbles
   static let bubble: CGFloat = 18
 
-  /// 24pt - Primary shift cards
-  static let card: CGFloat = 24
+  /// 20pt - Primary shift cards
+  static let card: CGFloat = 20
 
   /// 32pt - Pill shapes, large overlays
   static let pill: CGFloat = 32

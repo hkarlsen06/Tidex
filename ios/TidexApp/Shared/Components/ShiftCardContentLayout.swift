@@ -17,6 +17,7 @@ enum ShiftCardMetrics {
 struct ShiftCardContentLayout<
   LeadingTop: View, LeadingBottom: View, TrailingTop: View, TrailingBottom: View
 >: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   private let rowSpacing: CGFloat
   private let centerTrailing: Bool
   private let leadingLayoutPriority: Double
@@ -53,7 +54,24 @@ struct ShiftCardContentLayout<
   }
 
   var body: some View {
-    if centerTrailing {
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        VStack(alignment: .leading, spacing: rowSpacing) {
+          leadingTop
+          leadingBottom
+        }
+        .fixedSize(horizontal: false, vertical: true)
+
+        VStack(alignment: .leading, spacing: rowSpacing) {
+          trailingTop
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+          trailingBottom
+        }
+        .fixedSize(horizontal: false, vertical: true)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    } else if centerTrailing {
       // Column-based: trailing content floats centered vertically
       HStack(alignment: .center) {
         VStack(alignment: .leading, spacing: rowSpacing) {

@@ -238,7 +238,7 @@ internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_l
           )
 
           Divider()
-            .background(Color.tidexBorderSubtle)
+            .background(Color.tidexSeparator)
 
           NativeSecureField(
             placeholder: String(localized: .resetPasswordConfirmPasswordPlaceholder),
