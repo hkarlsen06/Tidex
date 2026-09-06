@@ -32,6 +32,7 @@
 		188D65FF4E96734657711265 /* TestFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */; };
 		1A7E00013090000000A1B2C3 /* LiveActivityPushTokenTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7E00023090000000A1B2C3 /* LiveActivityPushTokenTests.swift */; };
 		28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */; };
+		B60A4D723072000000000001 /* LocalStoreShiftReadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */; };
 		33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */; };
 		34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */; };
 		3F21A0B03061411100A1B2C3 /* FriendCardMessagePreviewTimestampFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */; };
@@ -39,6 +40,7 @@
 		614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */; };
 		67E4A33E30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */; };
 		804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */; };
+		A0B106063072000000000001 /* StatsServiceCachingFingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0B106063072000000000002 /* StatsServiceCachingFingerprintTests.swift */; };
 		88F1A2B33040111100A1B2C3 /* FriendsListOrderingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88F1A2B43040111100A1B2C4 /* FriendsListOrderingTests.swift */; };
 		91106E689CB197BE16533EF4 /* PayrollTotalsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */; };
 		9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */; };
@@ -58,6 +60,8 @@
 		B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */; };
 		BB30A0013060000100A1B2C3 /* JobsRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB30A0023060000100A1B2C3 /* JobsRepositoryTests.swift */; };
 		C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */; };
+		C1D2E3F6308A111100A1B2C5 /* SSEStreamParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F7308A111100A1B2C6 /* SSEStreamParserTests.swift */; };
+		C1D2E3F8308A111100A1B2C7 /* NotificationAvatarSharedCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F9308A111100A1B2C8 /* NotificationAvatarSharedCacheTests.swift */; };
 		C51778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
 		CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */; };
 		D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */; };
@@ -160,6 +164,7 @@
 
 /* Begin PBXFileReference section */
 		00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotsServiceSelectionTests.swift; sourceTree = "<group>"; };
+		A0B106063072000000000002 /* StatsServiceCachingFingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsServiceCachingFingerprintTests.swift; sourceTree = "<group>"; };
 		0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineDateLogicTests.swift; sourceTree = "<group>"; };
 		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
@@ -171,6 +176,7 @@
 		12B4A0043015000001000001 /* TidexShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ConflictExclusionTests.swift; sourceTree = "<group>"; };
 		17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalStoreDirtyTrackingTests.swift; sourceTree = "<group>"; };
+		B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreShiftReadTests.swift; sourceTree = "<group>"; };
 		1A7E00023090000000A1B2C3 /* LiveActivityPushTokenTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityPushTokenTests.swift; sourceTree = "<group>"; };
 		3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendCardMessagePreviewTimestampFormatterTests.swift; sourceTree = "<group>"; };
 		4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/ShareExtension/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
@@ -201,6 +207,8 @@
 		BB30A0023060000100A1B2C3 /* JobsRepositoryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JobsRepositoryTests.swift; sourceTree = "<group>"; };
 		BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TestFixtures.swift; path = TestSupport/TestFixtures.swift; sourceTree = "<group>"; };
 		C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageCompressorTests.swift; sourceTree = "<group>"; };
+		C1D2E3F7308A111100A1B2C6 /* SSEStreamParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SSEStreamParserTests.swift; sourceTree = "<group>"; };
+		C1D2E3F9308A111100A1B2C8 /* NotificationAvatarSharedCacheTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationAvatarSharedCacheTests.swift; sourceTree = "<group>"; };
 		CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftDetailsPresentationPolicyTests.swift; sourceTree = "<group>"; };
 		D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftReminderPlannerTests.swift; sourceTree = "<group>"; };
 		E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncErrorTests.swift; sourceTree = "<group>"; };
@@ -438,7 +446,10 @@
 				AA31C0083055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift */,
 				ABCD10013052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift */,
 				C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */,
+				C1D2E3F7308A111100A1B2C6 /* SSEStreamParserTests.swift */,
+				C1D2E3F9308A111100A1B2C8 /* NotificationAvatarSharedCacheTests.swift */,
 				00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */,
+				A0B106063072000000000002 /* StatsServiceCachingFingerprintTests.swift */,
 				BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */,
 				B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */,
 				E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */,
@@ -446,6 +457,7 @@
 				F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */,
 				6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */,
 				17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */,
+				B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */,
 				D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */,
 				B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */,
 				ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */,
@@ -1006,7 +1018,10 @@
 				AA31C0073055000000B4C5D6 /* CalendarSubscriptionStoreTests.swift in Sources */,
 				ABCD10003052000000B4C5D6 /* EmploymentDataCompletedAverageTests.swift in Sources */,
 				C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */,
+				C1D2E3F6308A111100A1B2C5 /* SSEStreamParserTests.swift in Sources */,
+				C1D2E3F8308A111100A1B2C7 /* NotificationAvatarSharedCacheTests.swift in Sources */,
 				804DF1DCB28379E68FDFFDB8 /* SnapshotsServiceSelectionTests.swift in Sources */,
+				A0B106063072000000000001 /* StatsServiceCachingFingerprintTests.swift in Sources */,
 				188D65FF4E96734657711265 /* TestFixtures.swift in Sources */,
 				FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */,
 				B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */,
@@ -1014,6 +1029,7 @@
 				A4460F5A061D70E12FA26564 /* SyncServerSnapshotDiffTests.swift in Sources */,
 				9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */,
 				28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */,
+				B60A4D723072000000000001 /* LocalStoreShiftReadTests.swift in Sources */,
 				D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */,
 				B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */,
 				3F21A0B03061411100A1B2C3 /* FriendCardMessagePreviewTimestampFormatterTests.swift in Sources */,

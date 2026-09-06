@@ -15,9 +15,20 @@ private struct FullYearCacheKey: Hashable {
   let shiftsFingerprint: Int
 }
 
-private struct FullYearComputedData {
+struct FullYearComputedData {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  let year: Int  // swiftlint:disable:this explicit_acl
+  let shiftsByMonth: [Int: [ShiftWithComputations]]  // swiftlint:disable:this explicit_acl
   let shifts: [ShiftWithComputations]
   let includedShifts: [ShiftWithComputations]
+
+  /// Reuse payroll already computed for the year, including empty months.
+  /// January still computes the previous December from its separate row read.
+  func shifts(for request: PayrollEngine.MonthComputationRequest) -> [ShiftWithComputations] {  // swiftlint:disable:this explicit_acl line_length
+    if request.year == year {
+      return shiftsByMonth[request.month] ?? []
+    }
+    return PayrollEngine.computeShiftsForMonth(request)
+  }
 }
 
 private struct StatsComputationResult {
@@ -123,8 +134,6 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       let currentYM = (year: targetYear, month: targetMonth)  // swiftlint:disable:this explicit_type_interface
       let previousYM = Date.previousYearMonth(from: currentYM)  // swiftlint:disable:this explicit_type_interface
 
-      let currentStartDate = Date.firstDayOfMonthDate(year: currentYM.year, month: currentYM.month)  // swiftlint:disable:this explicit_type_interface line_length
-      let currentEndDate = Date.lastDayOfMonthDate(year: currentYM.year, month: currentYM.month)  // swiftlint:disable:this explicit_type_interface line_length
       let previousStartDate = Date.firstDayOfMonthDate(  // swiftlint:disable:this explicit_type_interface
         year: previousYM.year, month: previousYM.month)  // swiftlint:disable:this multiline_arguments_brackets
       let previousEndDate = Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)  // swiftlint:disable:this explicit_type_interface line_length
@@ -132,19 +141,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       let yearStartDate = Date.firstDayOfMonthDate(year: targetYear, month: 1)  // swiftlint:disable:this explicit_type_interface line_length
       let yearEndDate = Date.lastDayOfMonthDate(year: targetYear, month: 12)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
 
-      // Load shifts from local repositories
-      async let currentMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(  // swiftlint:disable:this explicit_type_interface line_length
-        for: userId,
-        startDate: currentStartDate,
-        endDate: currentEndDate,
-        jobId: jobId
-      )
-      async let previousMonthShiftsRaw = monthlyPayrollReadService.loadShiftRows(  // swiftlint:disable:this explicit_type_interface line_length
-        for: userId,
-        startDate: previousStartDate,
-        endDate: previousEndDate,
-        jobId: jobId
-      )
+      // The annual read already contains the current and previous months, except in January.
       async let yearShiftsRaw = monthlyPayrollReadService.loadShiftRows(  // swiftlint:disable:this explicit_type_interface line_length
         for: userId,
         startDate: yearStartDate,
@@ -152,8 +149,18 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         jobId: jobId
       )
 
-      let (resolvedCurrentMonthShiftsRaw, resolvedPreviousMonthShiftsRaw, resolvedYearShiftsRaw) =  // swiftlint:disable:this explicit_type_interface line_length
-        await (currentMonthShiftsRaw, previousMonthShiftsRaw, yearShiftsRaw)
+      let resolvedPreviousYearShiftsRaw: [ShiftRow]
+      if previousYM.year != targetYear {
+        resolvedPreviousYearShiftsRaw = await monthlyPayrollReadService.loadShiftRows(
+          for: userId,
+          startDate: previousStartDate,
+          endDate: previousEndDate,
+          jobId: jobId
+        )
+      } else {
+        resolvedPreviousYearShiftsRaw = []
+      }
+      let resolvedYearShiftsRaw = await yearShiftsRaw  // swiftlint:disable:this explicit_type_interface
 
       // Build a deterministic fingerprint so we only recompute full-year data when inputs changed.
       let cacheKey = FullYearCacheKey(  // swiftlint:disable:this explicit_type_interface
@@ -173,73 +180,41 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       let computeTask = Task.detached(priority: .userInitiated) {  // swiftlint:disable:this closure_body_length explicit_type_interface line_length
         try Task.checkCancellation()
 
-        let currentMonthShifts = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
-          .init(
-            year: currentYM.year,
-            month: currentYM.month,
-            shifts: resolvedCurrentMonthShiftsRaw,
-            recurring: recurringShifts,
-            snapshots: snapshots,
-            settings: settings,
-            jobs: jobs
-          )
-        )
-
-        let previousMonthShifts: [ShiftWithComputations] = PayrollEngine.computeShiftsForMonth(
-          .init(
-            year: previousYM.year,
-            month: previousYM.month,
-            shifts: resolvedPreviousMonthShiftsRaw,
-            recurring: recurringShifts,
-            snapshots: snapshots,
-            settings: settings,
-            jobs: jobs
-          )
-        )
-
-        let currentMonthPartition = ConflictExclusion.partition(shifts: currentMonthShifts)  // swiftlint:disable:this explicit_type_interface line_length
-        let previousMonthPartition = ConflictExclusion.partition(shifts: previousMonthShifts)  // swiftlint:disable:this explicit_type_interface line_length
-        let currentMonthIncluded = currentMonthPartition.includedShifts  // swiftlint:disable:this explicit_type_interface line_length
-        let previousMonthIncluded = previousMonthPartition.includedShifts  // swiftlint:disable:this explicit_type_interface line_length
-
         let fullYearData: FullYearComputedData
         let newFullYearCacheData: FullYearComputedData?
         if let cachedFullYearData {
           fullYearData = cachedFullYearData
           newFullYearCacheData = nil
         } else {
-          let shiftsByMonth = Dictionary(grouping: resolvedYearShiftsRaw) { shift in  // swiftlint:disable:this explicit_type_interface line_length
-            Self.monthNumber(fromISODate: shift.shift_date)
-          }
-
-          var fullYearShifts: [ShiftWithComputations] = []
-          fullYearShifts.reserveCapacity(max(resolvedYearShiftsRaw.count, 64))  // swiftlint:disable:this line_length no_magic_numbers
-
-          for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
-            try Task.checkCancellation()
-            let monthShiftsRaw = shiftsByMonth[month] ?? []  // swiftlint:disable:this explicit_type_interface
-            let computedShifts = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
-              .init(
-                year: targetYear,
-                month: month,
-                shifts: monthShiftsRaw,
-                recurring: recurringShifts,
-                snapshots: snapshots,
-                settings: settings,
-                jobs: jobs
-              )
-            )
-            fullYearShifts.append(contentsOf: computedShifts)
-          }
-
-          let fullYearIncluded = ConflictExclusion.partition(shifts: fullYearShifts).includedShifts  // swiftlint:disable:this explicit_type_interface line_length
-          let computedData = FullYearComputedData(  // swiftlint:disable:this explicit_type_interface
-            shifts: fullYearShifts,
-            includedShifts: fullYearIncluded
+          let computedData = try Self.computeFullYearPayrollData(  // swiftlint:disable:this explicit_type_interface
+            year: targetYear,
+            shifts: resolvedYearShiftsRaw,
+            recurring: recurringShifts,
+            snapshots: snapshots,
+            settings: settings,
+            jobs: jobs
           )
           fullYearData = computedData
           newFullYearCacheData = computedData
         }
+
+        let currentMonthShifts = fullYearData.shiftsByMonth[currentYM.month] ?? []  // swiftlint:disable:this explicit_type_interface line_length
+        let previousMonthShifts = fullYearData.shifts(  // swiftlint:disable:this explicit_type_interface
+          for: .init(
+            year: previousYM.year,
+            month: previousYM.month,
+            shifts: resolvedPreviousYearShiftsRaw,
+            recurring: recurringShifts,
+            snapshots: snapshots,
+            settings: settings,
+            jobs: jobs
+          )
+        )
+        // Keep monthly conflict decisions separate from annual conflict exclusions.
+        let currentMonthPartition = ConflictExclusion.partition(shifts: currentMonthShifts)  // swiftlint:disable:this explicit_type_interface line_length
+        let previousMonthPartition = ConflictExclusion.partition(shifts: previousMonthShifts)  // swiftlint:disable:this explicit_type_interface line_length
+        let currentMonthIncluded = currentMonthPartition.includedShifts  // swiftlint:disable:this explicit_type_interface line_length
+        let previousMonthIncluded = previousMonthPartition.includedShifts  // swiftlint:disable:this explicit_type_interface line_length
 
         let fallbackCurrency = settings.currency ?? "kr"  // swiftlint:disable:this explicit_type_interface
         let currentMonthAggregate = JobCurrencyAggregateResolver.resolve(  // swiftlint:disable:this explicit_type_interface line_length
@@ -393,12 +368,10 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         )
       }
 
-      let result: StatsComputationResult
-      do {
-        result = try await computeTask.value
-      } catch {
+      let result = try await withTaskCancellationHandler {  // swiftlint:disable:this explicit_type_interface
+        try await computeTask.value
+      } onCancel: {
         computeTask.cancel()
-        throw error
       }
 
       try Task.checkCancellation()
@@ -435,6 +408,48 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     fullYearCache.removeAll(keepingCapacity: true)
   }
 
+  nonisolated static func computeFullYearPayrollData(  // swiftlint:disable:this explicit_acl function_parameter_count
+    year: Int,
+    shifts: [ShiftRow],
+    recurring: [RecurringShiftRow],
+    snapshots: [WageSnapshot],
+    settings: UserSettings,
+    jobs: [Job]
+  ) throws -> FullYearComputedData {
+    var shiftsByMonth: [Int: [ShiftWithComputations]] = [:]
+    var fullYearShifts: [ShiftWithComputations] = []
+    fullYearShifts.reserveCapacity(max(shifts.count, 64))  // swiftlint:disable:this no_magic_numbers
+
+    for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
+      try Task.checkCancellation()
+      // Match the monthly DAL read: overtime needs every regular shift in each ISO week.
+      let window = PayrollReadWindow.month(year: year, month: month).expandedToFullISOWeeks  // swiftlint:disable:this explicit_type_interface line_length
+      let startISO = window.startDate.toISODateString()  // swiftlint:disable:this explicit_type_interface
+      let endISO = window.endDate.toISODateString()  // swiftlint:disable:this explicit_type_interface
+      let monthRows = shifts.filter { $0.shift_date >= startISO && $0.shift_date <= endISO }  // swiftlint:disable:this explicit_type_interface line_length
+      let computedShifts = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
+        .init(
+          year: year,
+          month: month,
+          shifts: monthRows,
+          recurring: recurring,
+          snapshots: snapshots,
+          settings: settings,
+          jobs: jobs
+        )
+      )
+      shiftsByMonth[month] = computedShifts
+      fullYearShifts.append(contentsOf: computedShifts)
+    }
+
+    return FullYearComputedData(
+      year: year,
+      shiftsByMonth: shiftsByMonth,
+      shifts: fullYearShifts,
+      includedShifts: ConflictExclusion.partition(shifts: fullYearShifts).includedShifts
+    )
+  }
+
   private func resolveUserIdForLocalStats() async throws -> String {  // swiftlint:disable:this type_contents_order
     if let cachedUserId {
       return cachedUserId
@@ -460,6 +475,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   nonisolated static func fingerprintSettingsForCaching(_ settings: UserSettings) -> Int {  // swiftlint:disable:this explicit_acl line_length
     var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
     hasher.combine(settings.updated_at ?? "")
+    hasher.combine(settings.effectivePayrollDay)
     hasher.combine(settings.half_tax_month ?? -1)
     hasher.combine(settings.currency ?? "")
     return hasher.finalize()
@@ -467,7 +483,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
   nonisolated static func fingerprintSnapshotsForCaching(_ snapshots: [WageSnapshot]) -> Int {  // swiftlint:disable:this explicit_acl line_length
     var hasher = Hasher()  // swiftlint:disable:this explicit_type_interface
-    for snapshot in snapshots.sorted(by: { $0.id < $1.id }) {
+    // Snapshot lookup uses input order to break ties for identical effective dates.
+    for snapshot in snapshots {
       hasher.combine(snapshot.id)
       hasher.combine(snapshot.job_id ?? "")
       hasher.combine(snapshot.from_date ?? "")
@@ -478,8 +495,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       hasher.combine(snapshot.tax_percentage ?? 0)
       hasher.combine(snapshot.break_enabled ?? true)
       hasher.combine(snapshot.break_method ?? "")
-      hasher.combine(snapshot.break_threshold_hours ?? 0)
-      hasher.combine(snapshot.break_deduction_minutes ?? 0)
+      hasher.combine(snapshot.effectiveBreakThresholdHours)
+      hasher.combine(snapshot.effectiveBreakDeductionMinutes)
       hasher.combine(String(describing: snapshot.supplements.rules))
       hasher.combine(snapshot.overtime.enabled)
       hasher.combine(snapshot.overtime.weeklyThresholdHours)
@@ -550,13 +567,6 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       hasher.combine(String(describing: shift.custom_supplements))
     }
     return hasher.finalize()
-  }
-
-  nonisolated private static func monthNumber(fromISODate date: String) -> Int {
-    guard date.count >= 7 else { return -1 }  // swiftlint:disable:this conditional_returns_on_newline no_magic_numbers
-    let monthStart = date.index(date.startIndex, offsetBy: 5)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    let monthEnd = date.index(monthStart, offsetBy: 2)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    return Int(date[monthStart..<monthEnd]) ?? -1
   }
 
   // MARK: - Private Helpers

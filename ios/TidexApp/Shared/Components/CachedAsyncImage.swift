@@ -19,48 +19,56 @@ import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ImageCache")
 
-private enum NotificationAvatarSharedCache {
-  private static let appGroupId = "group.no.tidex.app"
-  private static let cacheDirectoryName = "NotificationAvatarCache"
+final class NotificationAvatarSharedCache: @unchecked Sendable {
+  static let shared = NotificationAvatarSharedCache(
+    directory: FileManager.default.containerURL(
+      forSecurityApplicationGroupIdentifier: "group.no.tidex.app"
+    )?.appendingPathComponent("NotificationAvatarCache", isDirectory: true)
+  )
 
-  private static var cacheDirectory: URL? {
-    guard
-      let containerURL = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: appGroupId)
-    else {
-      return nil
+  private let directory: URL?
+  private let queue: DispatchQueue
+
+  init(
+    directory: URL?,
+    queue: DispatchQueue = DispatchQueue(label: "com.tidex.notificationavatar.disk", qos: .utility)
+  ) {
+    self.directory = directory
+    self.queue = queue
+  }
+
+  func store(_ image: UIImage, for url: URL) {
+    queue.async { [self] in
+      guard let cacheFileURL = cacheFileURL(for: url) else { return }
+
+      let data = image.jpegData(compressionQuality: 0.85) ?? image.pngData()
+      guard let data else { return }
+      try? data.write(to: cacheFileURL, options: .atomic)
     }
+  }
 
-    let directory = containerURL.appendingPathComponent(cacheDirectoryName, isDirectory: true)
+  func remove(for url: URL) {
+    queue.async { [self] in
+      guard let cacheFileURL = cacheFileURL(for: url) else { return }
+      try? FileManager.default.removeItem(at: cacheFileURL)
+    }
+  }
+
+  func clearAll() {
+    queue.async { [self] in
+      guard let directory else { return }
+      try? FileManager.default.removeItem(at: directory)
+      try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+  }
+
+  private func cacheFileURL(for url: URL) -> URL? {
+    guard let directory else { return nil }
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    return directory
-  }
-
-  static func store(_ image: UIImage, for url: URL) {
-    guard let cacheFileURL = cacheFileURL(for: url) else { return }
-
-    let data = image.jpegData(compressionQuality: 0.85) ?? image.pngData()
-    guard let data else { return }
-    try? data.write(to: cacheFileURL, options: .atomic)
-  }
-
-  static func remove(for url: URL) {
-    guard let cacheFileURL = cacheFileURL(for: url) else { return }
-    try? FileManager.default.removeItem(at: cacheFileURL)
-  }
-
-  static func clearAll() {
-    guard let directory = cacheDirectory else { return }
-    try? FileManager.default.removeItem(at: directory)
-    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-  }
-
-  private static func cacheFileURL(for url: URL) -> URL? {
-    guard let directory = cacheDirectory else { return nil }
     return directory.appendingPathComponent(fileName(for: url))
   }
 
-  private static func fileName(for url: URL) -> String {
+  private func fileName(for url: URL) -> String {
     SHA256.hash(data: Data(url.absoluteString.utf8))
       .compactMap { String(format: "%02x", $0) }
       .joined()
@@ -281,7 +289,7 @@ final class ImageCache: @unchecked Sendable {
 
   func remove(for url: URL) {
     memoryCache.removeObject(forKey: cacheKey(for: url, maxPixelSize: nil) as NSString)
-    NotificationAvatarSharedCache.remove(for: url)
+    NotificationAvatarSharedCache.shared.remove(for: url)
 
     diskCacheQueue.async { [weak self] in
       guard let self else { return }
@@ -301,7 +309,7 @@ final class ImageCache: @unchecked Sendable {
 
   func clearAll() {
     memoryCache.removeAllObjects()
-    NotificationAvatarSharedCache.clearAll()
+    NotificationAvatarSharedCache.shared.clearAll()
 
     diskCacheQueue.async { [weak self] in
       guard let self else { return }
@@ -515,7 +523,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     // Check memory cache first (synchronous, fast)
     if let cached = ImageCache.shared.get(for: url, maxPixelSize: maxPixelSize) {
       if syncToNotificationServiceCache {
-        NotificationAvatarSharedCache.store(cached, for: url)
+        NotificationAvatarSharedCache.shared.store(cached, for: url)
       }
       loadedImage = cached
       return
@@ -531,7 +539,7 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
       ) {
         guard !Task.isCancelled else { return }
         if syncToNotificationServiceCache {
-          NotificationAvatarSharedCache.store(diskCached, for: url)
+          NotificationAvatarSharedCache.shared.store(diskCached, for: url)
         }
         await MainActor.run {
           guard self.url == url else { return }
@@ -546,11 +554,22 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
       do {
         let (data, _) = try await URLSession.shared.data(from: url)
         guard !Task.isCancelled else { return }
-        if let image = ImageCache.decodedImage(from: data, maxPixelSize: maxPixelSize) {
+        let pixelSize = maxPixelSize
+        let decodeTask = Task.detached(priority: .userInitiated) { () -> UIImage? in
+          guard !Task.isCancelled else { return nil }
+          return ImageCache.decodedImage(from: data, maxPixelSize: pixelSize)
+        }
+        let image = await withTaskCancellationHandler {
+          await decodeTask.value
+        } onCancel: {
+          decodeTask.cancel()
+        }
+        guard !Task.isCancelled else { return }
+        if let image {
           // Cache the image (memory + disk)
           ImageCache.shared.set(image, for: url, maxPixelSize: maxPixelSize)
           if syncToNotificationServiceCache {
-            NotificationAvatarSharedCache.store(image, for: url)
+            NotificationAvatarSharedCache.shared.store(image, for: url)
           }
 
           await MainActor.run {

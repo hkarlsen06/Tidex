@@ -386,12 +386,22 @@ internal actor LocalStoreActor {
     }
   }
 
-  internal func fetchShifts(userId: String, startDate: Date, endDate: Date) -> [ShiftRow] {
+  internal func fetchShifts(
+    userId: String,
+    startDate: Date,
+    endDate: Date,
+    jobId: String? = nil
+  ) -> [ShiftRow] {
+    let includeLegacyNil =
+      jobId.map {
+        shouldIncludeLegacyNilJobRows(userId: userId, selectedJobId: $0)
+      } ?? false
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { shift in
         shift.userId == userId && shift.serverDeletedAt == nil
           && shift.syncStatusRaw != "pendingDelete" && shift.shiftDate >= startDate
           && shift.shiftDate <= endDate
+          && (jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil))
       },
       sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
     )

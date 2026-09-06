@@ -1,8 +1,8 @@
 // swiftlint:disable explicit_type_interface
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsRepository")
 
@@ -93,6 +93,10 @@ final class ShiftsRepository: ObservableObject {
     jobId: String? = nil
   ) -> [ShiftRow] {
     let context = localStore.mainContext
+    let includeLegacyNil =
+      jobId.map {
+        shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: $0)
+      } ?? false
 
     do {
       let descriptor = FetchDescriptor<LocalUserShift>(
@@ -100,24 +104,11 @@ final class ShiftsRepository: ObservableObject {
           shift.userId == userId && shift.serverDeletedAt == nil
             && shift.syncStatusRaw != "pendingDelete" && shift.shiftDate >= startDate
             && shift.shiftDate <= endDate
+            && (jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil))
         },
         sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
       )
-      let fetchedShifts = try context.fetch(descriptor)
-
-      let localShifts: [LocalUserShift]
-      if let jobId {
-        let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
-        if includeLegacyNil {
-          localShifts = fetchedShifts.filter { $0.jobId == jobId || $0.jobId == nil }
-        } else {
-          localShifts = fetchedShifts.filter { $0.jobId == jobId }
-        }
-      } else {
-        localShifts = fetchedShifts
-      }
-
-      return localShifts.map { $0.toShiftRow() }
+      return try context.fetch(descriptor).map { $0.toShiftRow() }
     } catch {
       logger.error("Failed to fetch shifts: \(error.localizedDescription)")
       return []
@@ -132,21 +123,12 @@ final class ShiftsRepository: ObservableObject {
     endDate: Date,
     jobId: String? = nil
   ) async -> [ShiftRow] {
-    let fetchedShifts = await localStore.storeActor.fetchShifts(
+    await localStore.storeActor.fetchShifts(
       userId: userId,
       startDate: startDate,
-      endDate: endDate
+      endDate: endDate,
+      jobId: jobId
     )
-
-    guard let jobId else {
-      return fetchedShifts
-    }
-
-    let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
-    if includeLegacyNil {
-      return fetchedShifts.filter { $0.job_id == jobId || $0.job_id == nil }
-    }
-    return fetchedShifts.filter { $0.job_id == jobId }
   }
 
   /// Get all non-deleted shifts for a user (no date filter)
@@ -154,30 +136,21 @@ final class ShiftsRepository: ObservableObject {
   /// - Returns: Array of ShiftRow objects
   func getAllShifts(for userId: String, jobId: String? = nil) -> [ShiftRow] {
     let context = localStore.mainContext
+    let includeLegacyNil =
+      jobId.map {
+        shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: $0)
+      } ?? false
 
     do {
       let descriptor = FetchDescriptor<LocalUserShift>(
         predicate: #Predicate { shift in
           shift.userId == userId && shift.serverDeletedAt == nil
             && shift.syncStatusRaw != "pendingDelete"
+            && (jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil))
         },
         sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
       )
-      let fetchedShifts = try context.fetch(descriptor)
-
-      let localShifts: [LocalUserShift]
-      if let jobId {
-        let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
-        if includeLegacyNil {
-          localShifts = fetchedShifts.filter { $0.jobId == jobId || $0.jobId == nil }
-        } else {
-          localShifts = fetchedShifts.filter { $0.jobId == jobId }
-        }
-      } else {
-        localShifts = fetchedShifts
-      }
-
-      return localShifts.map { $0.toShiftRow() }
+      return try context.fetch(descriptor).map { $0.toShiftRow() }
     } catch {
       logger.error("Failed to fetch all shifts: \(error.localizedDescription)")
       return []

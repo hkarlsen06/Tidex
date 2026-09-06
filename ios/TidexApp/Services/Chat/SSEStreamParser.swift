@@ -58,10 +58,10 @@ enum SSEStreamParser {
   ///   - bytes: The async byte stream from URLSession
   ///   - type: The type to decode each event's JSON payload into
   /// - Returns: An async throwing stream of decoded objects
-  static func parse<T: Decodable>(
-    _ bytes: URLSession.AsyncBytes,
+  static func parse<Bytes: AsyncSequence, T: Decodable>(
+    _ bytes: Bytes,
     as type: T.Type
-  ) -> AsyncThrowingStream<T, Error> {
+  ) -> AsyncThrowingStream<T, Error> where Bytes.Element == UInt8 {
     AsyncThrowingStream { continuation in
       let task = Task {
         var buffer = Data()
@@ -73,13 +73,13 @@ enum SSEStreamParser {
             try Task.checkCancellation()
             buffer.append(byte)
 
-            while let range = eventBoundaryRange(in: buffer) {
-              let eventData = buffer.subdata(in: 0..<range.lowerBound)
-              buffer.removeSubrange(0..<range.upperBound)
+            if let boundaryLength = eventBoundaryLength(atEndOf: buffer) {
+              let eventData = buffer.dropLast(boundaryLength)
 
               if let decoded = try parseEventData(eventData, as: type, decoder: decoder) {
                 continuation.yield(decoded)
               }
+              buffer.removeAll(keepingCapacity: true)
             }
           }
 
@@ -116,32 +116,25 @@ enum SSEStreamParser {
     }
   }
 
-  private static func eventBoundaryRange(in buffer: Data) -> Range<Int>? {
-    let bytes = [UInt8](buffer)
+  private static func eventBoundaryLength(atEndOf buffer: Data) -> Int? {
+    // Every earlier byte was already checked. Only a delimiter ending at the newly
+    // appended byte can be new, so inspect at most four bytes without copying.
+    let end = buffer.endIndex
+    guard buffer.count >= 2 else { return nil }
 
-    var index = 0
-    while index < bytes.count {
-      if bytes[index] == 10 {
-        if index + 1 < bytes.count, bytes[index + 1] == 10 {
-          return index..<(index + 2)
-        }
+    if buffer[end - 1] == 10 {
+      if buffer[end - 2] == 10 {
+        return 2
       }
-
-      if bytes[index] == 13 {
-        if index + 3 < bytes.count,
-          bytes[index + 1] == 10,
-          bytes[index + 2] == 13,
-          bytes[index + 3] == 10
-        {
-          return index..<(index + 4)
-        }
-
-        if index + 1 < bytes.count, bytes[index + 1] == 13 {
-          return index..<(index + 2)
-        }
+      if buffer.count >= 4,
+        buffer[end - 4] == 13,
+        buffer[end - 3] == 10,
+        buffer[end - 2] == 13
+      {
+        return 4
       }
-
-      index += 1
+    } else if buffer[end - 1] == 13, buffer[end - 2] == 13 {
+      return 2
     }
 
     return nil
