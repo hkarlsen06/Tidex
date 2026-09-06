@@ -4,6 +4,7 @@
   /// Offline visual fixtures using production components. Launch with -ui-testing,
   /// TIDEX_UI_TEST_SCENARIO=design-review and TIDEX_DESIGN_SCREEN=<screen>.
   internal struct DesignReviewView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var selectedDates: Set<String> = []
     @State private var selectionEnabled: Bool = false
     @State private var isPinned: Bool = true
@@ -20,10 +21,11 @@
         case "settings":
           SettingsView()
             .environmentObject(AppCoordinator.shared)
-        case "login":
+        case "login", "login-accessibility":
           NavigationStack {
             LoginView(viewModel: loginModel, currency: "kr")
           }
+          .dynamicTypeSize(screen == "login-accessibility" ? .accessibility5 : dynamicTypeSize)
         case "paywall":
           TrialPaywallScaffold(
             viewModel: paywallModel,

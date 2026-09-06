@@ -40,8 +40,8 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
   func testRecurringShiftServerSnapshotChangedFields() throws {
     let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
-    let selectedDaysOriginal = try canonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays)
-    let selectedDaysUpdated = try canonicalJSONEncoder.encode(
+    let selectedDaysOriginal = try kCanonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays)
+    let selectedDaysUpdated = try kCanonicalJSONEncoder.encode(
       ["1": "2026-03-02", "2": "2026-03-03"] as SelectedDays)
 
     let original = RecurringShiftServerSnapshot(
@@ -70,7 +70,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       exclusions: nil,
       dateSpecificPauseWindows: nil,
       dateSpecificSupplements: nil,
-      dateSpecificNotes: try canonicalJSONEncoder.encode(["2026-03-09": "Swap with Alex"]),
+      dateSpecificNotes: try kCanonicalJSONEncoder.encode(["2026-03-09": "Swap with Alex"]),
       updatedAt: timestamp,
       revision: 2,
       deletedAt: nil
@@ -121,8 +121,8 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
   func testRecurringShiftServerSnapshotTracksDateSpecificPauseWindowChanges() throws {
     let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
-    let selectedDays = try canonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays)
-    let pauseWindows = try canonicalJSONEncoder.encode(
+    let selectedDays = try kCanonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays)
+    let pauseWindows = try kCanonicalJSONEncoder.encode(
       [
         "2026-03-09": CustomPauseWindows(windows: [PauseWindow(start: "12:00", end: "12:30")])
       ] as DateSpecificPauseWindows)
@@ -212,8 +212,8 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
 
   func testWageSnapshotServerSnapshotChangedFields() throws {
     let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
-    let originalSupplements = try canonicalJSONEncoder.encode(SupplementRulesSnapshot(rules: []))
-    let updatedSupplements = try canonicalJSONEncoder.encode(
+    let originalSupplements = try kCanonicalJSONEncoder.encode(SupplementRulesSnapshot(rules: []))
+    let updatedSupplements = try kCanonicalJSONEncoder.encode(
       SupplementRulesSnapshot(
         rules: [SupplementRule(days: [1], from: "18:00", to: "24:00", rate: 22)]
       )
@@ -374,7 +374,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       """
     let jsonData = Data(json.utf8)
 
-    let decoded = try syncJSONDecoder.decode(UserSettingsServerSnapshot.self, from: jsonData)
+    let decoded = try kSyncJSONDecoder.decode(UserSettingsServerSnapshot.self, from: jsonData)
 
     XCTAssertEqual(decoded.monthlyGoalsByMonth, [:])
     XCTAssertEqual(decoded.calendarContentColorStyle, "workplace")

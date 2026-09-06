@@ -137,9 +137,16 @@ struct PayrollEngine {
       result.append(computed)
     }
 
-    // Generate and process virtual shifts from recurring patterns
-    // Need to generate for all months that might have visible dates
-    let monthsToGenerate = getMonthsInRange(startDate: startDate, endDate: endDate)
+    // Recurring hours outside the visible dates still contribute to weekly overtime.
+    let outputWindow =
+      request.visibleRange.map {
+        PayrollReadWindow(startDate: $0.start, endDate: $0.end)
+      } ?? PayrollReadWindow.month(year: request.year, month: request.month)
+    let overtimeWindow = outputWindow.expandedForOvertime
+    let computationStartDate = overtimeWindow.startDate.toISODateString()
+    let computationEndDate = overtimeWindow.endDate.toISODateString()
+    let monthsToGenerate = getMonthsInRange(
+      startDate: computationStartDate, endDate: computationEndDate)
 
     for recurringShift in request.recurring {
       for (genYear, genMonth) in monthsToGenerate {
@@ -150,8 +157,9 @@ struct PayrollEngine {
         )
 
         for virtual in virtualShifts {
-          // Filter to visible date range
-          guard virtual.date >= startDate, virtual.date <= endDate else { continue }
+          guard virtual.date >= computationStartDate, virtual.date <= computationEndDate else {
+            continue
+          }
 
           // Skip if we already added this virtual shift (from another month generation)
           let virtualId = "virtual-\(recurringShift.id)-\(virtual.date)"

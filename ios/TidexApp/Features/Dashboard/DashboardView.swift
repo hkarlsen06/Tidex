@@ -321,6 +321,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       }
       .navigationDestination(isPresented: $showStatsView) {
         StatsView()
+          .id(coordinator.userId)
       }
       .iPadToolbarTransaction()
     }

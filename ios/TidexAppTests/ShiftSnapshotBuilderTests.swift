@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -68,9 +67,9 @@ final class ShiftSnapshotBuilderTests: XCTestCase {
       )
     )
 
-    expect(draft.snapshot.includesEarnings) == true
-    expect(draft.snapshot.grossPay) == ShiftSnapshotBuilderTestValues.shiftGross
-    expect(draft.snapshot.netPay) == 1_050
+    XCTAssertEqual(draft.snapshot.includesEarnings, true)
+    XCTAssertEqual(draft.snapshot.grossPay, ShiftSnapshotBuilderTestValues.shiftGross)
+    XCTAssertEqual(draft.snapshot.netPay, 1_050)
   }
 
   func testOwnShiftSnapshotBuilderUsesRecurringIdForVirtualShiftSnapshots() {

@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -99,10 +98,10 @@ final class PayrollEngineDateLogicTests: XCTestCase {
         now: try date("2026-05-12")
       ))
 
-    expect(selection.payoutYear) == 2_026
+    XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 5)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-05-20")
-    expect(selection.earningsYear) == 2_026
+    XCTAssertEqual(selection.earningsYear, 2_026)
     XCTAssertEqual(selection.earningsMonth, 4)
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
@@ -117,10 +116,10 @@ final class PayrollEngineDateLogicTests: XCTestCase {
         now: try date("2026-05-12")
       ))
 
-    expect(selection.payoutYear) == 2_026
+    XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 6)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-10")
-    expect(selection.earningsYear) == 2_026
+    XCTAssertEqual(selection.earningsYear, 2_026)
     XCTAssertEqual(selection.earningsMonth, 5)
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
@@ -135,10 +134,10 @@ final class PayrollEngineDateLogicTests: XCTestCase {
         now: try date("2026-05-31")
       ))
 
-    expect(selection.payoutYear) == 2_026
+    XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 6)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-30")
-    expect(selection.earningsYear) == 2_026
+    XCTAssertEqual(selection.earningsYear, 2_026)
     XCTAssertEqual(selection.earningsMonth, 5)
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
@@ -155,8 +154,8 @@ final class PayrollEngineDateLogicTests: XCTestCase {
       now: try date("2026-05-12")
     )
 
-    expect(selections.map { $0.payoutDate.toISODateString() }) == ["2026-05-08"]
-    expect(selections.first?.jobIds) == ["passed"]
+    XCTAssertEqual(selections.map { $0.payoutDate.toISODateString() }, ["2026-05-08"])
+    XCTAssertEqual(selections.first?.jobIds, ["passed"])
   }
 
   // swiftlint:disable:next explicit_acl
@@ -168,7 +167,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
       now: try date("2026-05-12")
     )
 
-    expect(selections).to(beEmpty())
+    XCTAssertTrue(selections.isEmpty)
   }
 
   // swiftlint:disable:next explicit_acl
@@ -183,10 +182,11 @@ final class PayrollEngineDateLogicTests: XCTestCase {
       now: try date("2026-05-22")
     )
 
-    expect(selections.map { $0.payoutDate.toISODateString() }) == [
-      "2026-05-20", "2026-05-08",
-    ]
-    expect(selections.first?.jobIds) == ["upcoming"]
+    XCTAssertEqual(
+      selections.map { $0.payoutDate.toISODateString() },
+      ["2026-05-20", "2026-05-08"]
+    )
+    XCTAssertEqual(selections.first?.jobIds, ["upcoming"])
   }
 
   func testDashboardPayrollPreviousPayoutStartUsesAdjustedPriorPayrollDate() throws {
@@ -246,7 +246,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
       ))
 
     XCTAssertEqual(selection.payoutMonth, 5)
-    expect(selection.payoutDate.toISODateString()) == "2026-05-20"
+    XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-05-20")
     XCTAssertEqual(selection.earningsMonth, 4)
     XCTAssertEqual(selection.jobIds, ["upcoming"])
   }
@@ -278,7 +278,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
         now: try date("2026-05-12")
       ))
 
-    expect(selection.payoutYear) == 2_026
+    XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 4)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-04-10")
     XCTAssertEqual(selection.earningsMonth, 3)

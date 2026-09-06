@@ -1,6 +1,5 @@
 // swiftlint:disable file_length
 
-import Nimble
 import SwiftData
 import XCTest
 
@@ -215,7 +214,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
 
     viewModel.draft = String(repeating: "a", count: 5_001)
 
-    expect(viewModel.draftCharacterCount) == 5_001
+    XCTAssertEqual(viewModel.draftCharacterCount, 5_001)
     XCTAssertEqual(
       viewModel.composerValidationMessage,
       String(localized: .friendsChatComposerMessageTooLong)
@@ -224,9 +223,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
 
     let didSend = await viewModel.sendDraft()
 
-    expect(didSend) == false
-    expect(mockService.sendMessageCallCount) == 0
-    expect(viewModel.draft) == String(repeating: "a", count: 5_001)
+    XCTAssertEqual(didSend, false)
+    XCTAssertEqual(mockService.sendMessageCallCount, 0)
+    XCTAssertEqual(viewModel.draft, String(repeating: "a", count: 5_001))
     XCTAssertTrue(
       repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").isEmpty)
   }
@@ -421,7 +420,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
       .trimmingCharacters(in: .whitespacesAndNewlines)
       .unicodeScalars.count
 
-    expect(expectedBackendCount) > 5_000
+    XCTAssertGreaterThan(expectedBackendCount, 5_000)
 
     viewModel.draft = draft
 

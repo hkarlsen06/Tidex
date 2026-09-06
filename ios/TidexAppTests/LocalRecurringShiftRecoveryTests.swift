@@ -5,7 +5,7 @@ import XCTest
 final class LocalRecurringShiftRecoveryTests: XCTestCase {
   func testDecodedSelectedDaysFallsBackToLastSyncedSnapshotWhenLocalBlobIsCorrupt() throws {
     let selectedDays = ["1": "2026-03-02", "3": "2026-02-25"] as SelectedDays
-    let selectedDaysData = try canonicalJSONEncoder.encode(selectedDays)
+    let selectedDaysData = try kCanonicalJSONEncoder.encode(selectedDays)
     let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
 
     let snapshot = RecurringShiftServerSnapshot(
@@ -52,7 +52,7 @@ final class LocalRecurringShiftRecoveryTests: XCTestCase {
 
   func testDecodedExclusionsFallsBackToLastSyncedSnapshotWhenLocalBlobIsCorrupt() throws {
     let exclusions = ["2026-03-16", "2026-03-30"]
-    let exclusionsData = try canonicalJSONEncoder.encode(exclusions)
+    let exclusionsData = try kCanonicalJSONEncoder.encode(exclusions)
     let timestamp = Date.fromDateAndTime("2026-03-02", time: "10:00") ?? Date()
 
     let snapshot = RecurringShiftServerSnapshot(
@@ -60,7 +60,7 @@ final class LocalRecurringShiftRecoveryTests: XCTestCase {
       startTime: "17:00",
       endTime: "23:15",
       repeatIntervalWeeks: 1,
-      selectedDays: try canonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays),
+      selectedDays: try kCanonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays),
       endCondition: nil,
       exclusions: exclusionsData,
       dateSpecificPauseWindows: nil,
@@ -78,7 +78,7 @@ final class LocalRecurringShiftRecoveryTests: XCTestCase {
       startTime: "17:00",
       endTime: "23:15",
       repeatIntervalWeeks: 1,
-      selectedDays: try canonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays),
+      selectedDays: try kCanonicalJSONEncoder.encode(["1": "2026-03-02"] as SelectedDays),
       endCondition: nil,
       exclusions: Data("not-json".utf8),
       dateSpecificPauseWindows: nil,

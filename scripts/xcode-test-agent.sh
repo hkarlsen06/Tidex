@@ -288,7 +288,8 @@ def extract_from_xcresult(data):
                     add_unique(errors, line)
 
             metrics = node.get("metrics")
-            if isinstance(metrics, dict):
+            # Invocation totals already aggregate actions; build metrics may be zero.
+            if node is data and isinstance(metrics, dict):
                 tests_count_value = unwrap(metrics.get("testsCount"))
                 tests_failed_value = unwrap(metrics.get("testsFailedCount"))
                 if tests_count_value is not None:

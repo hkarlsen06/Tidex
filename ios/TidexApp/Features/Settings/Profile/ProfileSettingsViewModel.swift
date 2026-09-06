@@ -408,7 +408,7 @@ final class ProfileSettingsViewModel: ObservableObject {
         .from(storageBucket)
         .remove(paths: [path])
     } catch {
-      // Non-fatal - continue with upload
+      // Best-effort cleanup after the settings change has been saved.
     }
   }
 
@@ -538,17 +538,10 @@ final class ProfileSettingsViewModel: ObservableObject {
 
     isUploadingAvatar = true
     errorMessage = nil
+    defer { isUploadingAvatar = false }
+    let previousUrl = profilePictureUrl
 
     do {
-      // Delete previous image from storage if exists
-      if let previousUrl = profilePictureUrl {
-        await deleteStorageFile(from: previousUrl)
-        // Clear from local cache
-        if let url = URL(string: previousUrl) {
-          ImageCache.shared.remove(for: url)
-        }
-      }
-
       // Convert to modern format for smaller file size off-main.
       // Priority: WebP > HEIC > JPEG.
       let preparedUpload = await Self.prepareAvatarUpload(imageData)
@@ -575,17 +568,18 @@ final class ProfileSettingsViewModel: ObservableObject {
         .getPublicURL(path: filename)
         .absoluteString
 
-      profilePictureUrl = publicUrl
-
-      // Update local settings (automatically triggers sync)
-      do {
-        _ = try await settingsRepository.updateSettings(
-          for: currentUserId,
-          profilePictureUrl: publicUrl
-        )
-      } catch {
-        // Non-fatal: storage upload succeeded, sync will retry later
+      try await Self.commitAvatarChange(from: previousUrl, to: publicUrl) {
+        try await self.settingsRepository.updateSettings(
+          for: currentUserId, profilePictureUrl: publicUrl
+        ) != nil
+      } removeStoredAvatar: { url in
+        await self.deleteStorageFile(from: url)
       }
+
+      if let previousUrl, let url = URL(string: previousUrl) {
+        ImageCache.shared.remove(for: url)
+      }
+      profilePictureUrl = publicUrl
 
       // Update AppCoordinator's avatar URL
       AppCoordinator.shared.updateAvatarUrl(publicUrl)
@@ -595,37 +589,57 @@ final class ProfileSettingsViewModel: ObservableObject {
       errorMessage = String(localized: .profileErrorsUploadFailed)
       Haptics.play(.error)
     }
-
-    isUploadingAvatar = false
   }
 
   /// Remove the profile picture directly from Supabase Storage
   func removeProfilePicture() async {
+    guard !isUploadingAvatar else { return }
     guard let currentUserId = userId else { return }
     guard let currentUrl = profilePictureUrl else { return }
 
     isUploadingAvatar = true
     errorMessage = nil
+    defer { isUploadingAvatar = false }
 
-    // Delete from storage
-    await deleteStorageFile(from: currentUrl)
+    do {
+      try await Self.commitAvatarChange(from: currentUrl, to: nil) {
+        try await self.settingsRepository.clearProfilePictureUrl(for: currentUserId) != nil
+      } removeStoredAvatar: { url in
+        await self.deleteStorageFile(from: url)
+      }
 
-    // Clear from local cache
-    if let url = URL(string: currentUrl) {
-      ImageCache.shared.remove(for: url)
+      if let url = URL(string: currentUrl) {
+        ImageCache.shared.remove(for: url)
+      }
+      profilePictureUrl = nil
+      AppCoordinator.shared.updateAvatarUrl(nil)
+
+      Haptics.play(.success)
+    } catch {
+      errorMessage = String(localized: .profileErrorsSaveFailed)
+      Haptics.play(.error)
+    }
+  }
+
+  /// Keep the saved avatar usable until persistence succeeds. A thrown save
+  /// may leave pending model changes, so preserve both files in that case.
+  static func commitAvatarChange(
+    from previousURL: String?,
+    to newURL: String?,
+    persist: () async throws -> Bool,
+    removeStoredAvatar: (String) async -> Void
+  ) async throws {
+    guard try await persist() else {
+      // Missing settings means no model was changed, so the new file is orphaned.
+      if let newURL, newURL != previousURL {
+        await removeStoredAvatar(newURL)
+      }
+      throw LocalStoreWriteError.notFound
     }
 
-    // Update local state immediately (optimistic UI)
-    profilePictureUrl = nil
-
-    // Update local settings (automatically triggers sync)
-    _ = try? await settingsRepository.clearProfilePictureUrl(for: currentUserId)
-
-    // Update AppCoordinator's avatar URL
-    AppCoordinator.shared.updateAvatarUrl(nil)
-
-    Haptics.play(.success)
-    isUploadingAvatar = false
+    if let previousURL, previousURL != newURL {
+      await removeStoredAvatar(previousURL)
+    }
   }
 
   // MARK: - Account Deletion

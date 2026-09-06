@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -48,11 +47,11 @@ final class OnboardingCurrencyResolverTests: XCTestCase {
   }
 
   func testHourlyRateInputParserHandlesGroupedDecimalValues() {
-    expect(HourlyRateInputFormatter.parse("1,234")) == 1_234
-    expect(HourlyRateInputFormatter.parse("1.234")) == 1_234
-    expect(HourlyRateInputFormatter.parse("1 234,56")) == 1_234.56
-    expect(HourlyRateInputFormatter.parse("1,234.56")) == 1_234.56
-    expect(HourlyRateInputFormatter.parse("1.234,56")) == 1_234.56
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1,234"), 1_234)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1.234"), 1_234)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1 234,56"), 1_234.56)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1,234.56"), 1_234.56)
+    XCTAssertEqual(HourlyRateInputFormatter.parse("1.234,56"), 1_234.56)
   }
 
   func testDetectDefaultCurrencyHandlesExpandedSupportedCurrencies() {

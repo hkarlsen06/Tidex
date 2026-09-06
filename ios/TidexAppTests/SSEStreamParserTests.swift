@@ -9,7 +9,7 @@ final class SSEStreamParserTests: XCTestCase {
   }
 
   func testRecognizesEachDelimiterAcrossIndividualBytes() async throws {
-    for delimiter in ["\n\n", "\r\n\r\n", "\r\r"] {
+    for delimiter in ["\n\n", "\r\n\r\n", "\r\r", "\n\r", "\n\r\n", "\r\n\r", "\r\n\n", "\r\r\n"] {
       let input = "data: {\"text\":\"first\"}\(delimiter)data: {\"text\":\"second\"}\(delimiter)"
       let events = try await parse(Data(input.utf8))
       XCTAssertEqual(events, [Event(text: "first"), Event(text: "second")])
@@ -25,6 +25,14 @@ final class SSEStreamParserTests: XCTestCase {
   func testParsesFinalEventWithoutTerminator() async throws {
     let events = try await parse(Data("data: {\"text\":\"last\"}".utf8))
     XCTAssertEqual(events, [Event(text: "last")])
+  }
+
+  func testNormalizesMultilineFinalEventWithoutTerminator() async throws {
+    for lineEnding in ["\r", "\r\n", "\n"] {
+      let input = "data: {\(lineEnding)data: \"text\": \"last\"}"
+      let events = try await parse(Data(input.utf8))
+      XCTAssertEqual(events, [Event(text: "last")])
+    }
   }
 
   func testPreservesLargeEventAndFollowingEvent() async throws {

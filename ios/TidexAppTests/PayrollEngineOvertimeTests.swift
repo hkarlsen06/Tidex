@@ -3,7 +3,7 @@ import XCTest
 @testable import Tidex
 
 final class PayrollEngineOvertimeTests: XCTestCase {
-  func testOvertimeSplitsMidShiftAndUsesTimeSpecificPercent() {
+  func testOvertimeSplitsMidShiftAndUsesTimeSpecificPercent() throws {
     let result = compute([
       shift(id: "mon", date: "2026-02-02", start: "08:00", end: "17:30"),
       shift(id: "tue", date: "2026-02-03", start: "08:00", end: "17:30"),
@@ -12,17 +12,17 @@ final class PayrollEngineOvertimeTests: XCTestCase {
       shift(id: "fri", date: "2026-02-06", start: "16:00", end: "22:00"),
     ])
 
-    let friday = result.first { $0.id == "fri" }
+    let friday = try XCTUnwrap(result.first { $0.id == "fri" })
 
-    XCTAssertEqual(friday?.computed.overtimeMinutes, 240, accuracy: 0.01)
-    XCTAssertEqual(friday?.computed.basePay, 1_200, accuracy: 0.01)
-    XCTAssertEqual(friday?.computed.supplementPay, 500, accuracy: 0.01)
-    XCTAssertEqual(friday?.computed.gross, 1_700, accuracy: 0.01)
+    XCTAssertEqual(friday.computed.overtimeMinutes, 240, accuracy: 0.01)
+    XCTAssertEqual(friday.computed.basePay, 1_200, accuracy: 0.01)
+    XCTAssertEqual(friday.computed.supplementPay, 500, accuracy: 0.01)
+    XCTAssertEqual(friday.computed.gross, 1_700, accuracy: 0.01)
   }
 
-  func testOvertimeReplacesCustomSupplementsAfterThreshold() {
+  func testOvertimeReplacesCustomSupplementsAfterThreshold() throws {
     let customSupplements = CustomSupplementsData(rules: [
-      SupplementRule(days: [5], from: "16:00", to: "22:00", rate: 1_000, percent: nil)
+      CustomSupplementRule(from: "16:00", to: "22:00", rate: 1_000, percent: nil, isCustom: true)
     ])
     let result = compute([
       shift(id: "mon", date: "2026-02-02", start: "08:00", end: "17:30"),
@@ -38,14 +38,14 @@ final class PayrollEngineOvertimeTests: XCTestCase {
       ),
     ])
 
-    let friday = result.first { $0.id == "fri" }
+    let friday = try XCTUnwrap(result.first { $0.id == "fri" })
 
-    XCTAssertEqual(friday?.computed.overtimeMinutes, 240, accuracy: 0.01)
-    XCTAssertEqual(friday?.computed.supplementPay, 2_500, accuracy: 0.01)
-    XCTAssertEqual(friday?.computed.gross, 3_700, accuracy: 0.01)
+    XCTAssertEqual(friday.computed.overtimeMinutes, 240, accuracy: 0.01)
+    XCTAssertEqual(friday.computed.supplementPay, 2_500, accuracy: 0.01)
+    XCTAssertEqual(friday.computed.gross, 3_700, accuracy: 0.01)
   }
 
-  func testOvertimeIsIndependentPerEffectiveJob() {
+  func testOvertimeIsIndependentPerEffectiveJob() throws {
     let jobA = TestFixtures.job(id: "job-a", isDefault: true)
     let jobB = TestFixtures.job(id: "job-b", isDefault: false)
     let snapshots = [
@@ -64,14 +64,14 @@ final class PayrollEngineOvertimeTests: XCTestCase {
       jobs: [jobA, jobB]
     )
 
-    let jobBFriday = result.first { $0.id == "b-fri" }
+    let jobBFriday = try XCTUnwrap(result.first { $0.id == "b-fri" })
 
-    XCTAssertEqual(jobBFriday?.computed.overtimeMinutes, 0, accuracy: 0.01)
-    XCTAssertEqual(jobBFriday?.computed.supplementPay, 0, accuracy: 0.01)
-    XCTAssertEqual(jobBFriday?.computed.gross, 400, accuracy: 0.01)
+    XCTAssertEqual(jobBFriday.computed.overtimeMinutes, 0, accuracy: 0.01)
+    XCTAssertEqual(jobBFriday.computed.supplementPay, 0, accuracy: 0.01)
+    XCTAssertEqual(jobBFriday.computed.gross, 400, accuracy: 0.01)
   }
 
-  func testOvertimeResetsAtIsoWeekBoundary() {
+  func testOvertimeResetsAtIsoWeekBoundary() throws {
     let result = compute([
       shift(id: "mon", date: "2026-02-02", start: "08:00", end: "16:00"),
       shift(id: "tue", date: "2026-02-03", start: "08:00", end: "16:00"),
@@ -81,14 +81,14 @@ final class PayrollEngineOvertimeTests: XCTestCase {
       shift(id: "next-mon", date: "2026-02-09", start: "08:00", end: "09:00"),
     ])
 
-    let nextMonday = result.first { $0.id == "next-mon" }
+    let nextMonday = try XCTUnwrap(result.first { $0.id == "next-mon" })
 
-    XCTAssertEqual(nextMonday?.computed.overtimeMinutes, 0, accuracy: 0.01)
-    XCTAssertEqual(nextMonday?.computed.supplementPay, 0, accuracy: 0.01)
-    XCTAssertEqual(nextMonday?.computed.gross, 200, accuracy: 0.01)
+    XCTAssertEqual(nextMonday.computed.overtimeMinutes, 0, accuracy: 0.01)
+    XCTAssertEqual(nextMonday.computed.supplementPay, 0, accuracy: 0.01)
+    XCTAssertEqual(nextMonday.computed.gross, 200, accuracy: 0.01)
   }
 
-  func testHolidayRuleUsesHolidayPercentAfterThreshold() {
+  func testHolidayRuleUsesHolidayPercentAfterThreshold() throws {
     let config = OvertimeConfig(
       enabled: true,
       weeklyThresholdHours: 0.5,
@@ -100,17 +100,87 @@ final class PayrollEngineOvertimeTests: XCTestCase {
       month: 5
     )
 
-    let shift = result.first { $0.id == "may-day" }
+    let shift = try XCTUnwrap(result.first { $0.id == "may-day" })
 
-    XCTAssertEqual(shift?.computed.overtimeMinutes, 90, accuracy: 0.01)
-    XCTAssertEqual(shift?.computed.supplementPay, 300, accuracy: 0.01)
-    XCTAssertEqual(shift?.computed.gross, 700, accuracy: 0.01)
+    XCTAssertEqual(shift.computed.overtimeMinutes, 90, accuracy: 0.01)
+    XCTAssertEqual(shift.computed.supplementPay, 300, accuracy: 0.01)
+    XCTAssertEqual(shift.computed.gross, 700, accuracy: 0.01)
+  }
+
+  func testPriorMonthRecurringHoursCountTowardWeeklyOvertime() throws {
+    let recurring = recurringShift(selectedDays: [
+      "1": "2026-04-27", "2": "2026-04-28",
+      "3": "2026-04-29", "4": "2026-04-30",
+    ])
+    let result = compute(
+      [shift(id: "friday", date: "2026-05-01", start: "08:00", end: "18:00")],
+      recurring: [recurring], month: 5
+    )
+
+    let friday = try XCTUnwrap(result.first { $0.id == "friday" })
+    XCTAssertEqual(friday.computed.overtimeMinutes, 600, accuracy: 0.01)
+    XCTAssertTrue(result.allSatisfy { $0.shiftDate.hasPrefix("2026-05-") })
+  }
+
+  func testPriorYearRecurringHoursRespectExclusionsBeforeOvertime() throws {
+    let selectedDays = ["1": "2025-12-29", "2": "2025-12-30", "3": "2025-12-31"]
+    let rows = [
+      shift(id: "thursday", date: "2026-01-01", start: "08:00", end: "18:00"),
+      shift(id: "friday", date: "2026-01-02", start: "08:00", end: "18:00"),
+    ]
+    let result = compute(rows, recurring: [recurringShift(selectedDays: selectedDays)], month: 1)
+    let excludingMonday = compute(
+      rows,
+      recurring: [recurringShift(selectedDays: selectedDays, exclusions: ["2025-12-29"])],
+      month: 1
+    )
+
+    let friday = try XCTUnwrap(result.first { $0.id == "friday" })
+    let fridayWithExclusion = try XCTUnwrap(excludingMonday.first { $0.id == "friday" })
+    XCTAssertEqual(friday.computed.overtimeMinutes, 600, accuracy: 0.01)
+    XCTAssertEqual(fridayWithExclusion.computed.overtimeMinutes, 0, accuracy: 0.01)
+    XCTAssertTrue(result.allSatisfy { $0.shiftDate.hasPrefix("2026-01-") })
+  }
+
+  func testPriorSundayRecurringOvernightHoursCountInMondayWeek() throws {
+    let recurring = recurringShift(
+      selectedDays: ["0": "2026-05-31"], start: "22:00", end: "06:00")
+    let rows = (1...4).map { day in
+      shift(id: "june-\(day)", date: "2026-06-0\(day)", start: "08:00", end: "18:00")
+    }
+    let result = compute(rows, recurring: [recurring], month: 6)
+
+    let thursday = try XCTUnwrap(result.first { $0.id == "june-4" })
+    let monday = try XCTUnwrap(result.first { $0.id == "june-1" })
+    XCTAssertEqual(thursday.computed.overtimeMinutes, 360, accuracy: 0.01)
+    XCTAssertEqual(monday.computed.overtimeMinutes, 0, accuracy: 0.01)
+    XCTAssertTrue(result.allSatisfy { $0.shiftDate.hasPrefix("2026-06-") })
+  }
+
+  func testRecurringOvertimeContextPreservesRequestedVisibleRange() throws {
+    let recurring = recurringShift(selectedDays: [
+      "1": "2026-04-27", "2": "2026-04-28",
+      "3": "2026-04-29", "4": "2026-04-30", "5": "2026-05-01",
+    ])
+    let visibleDate = try XCTUnwrap(Date.fromISODateString("2026-05-01"))
+    let result = PayrollEngine.computeShiftsForMonth(
+      .init(
+        year: 2_026, month: 5, shifts: [], recurring: [recurring],
+        snapshots: [snapshot(jobId: "job-a")], settings: UserSettings.defaults(for: "user-1"),
+        visibleRange: (start: visibleDate, end: visibleDate),
+        jobs: [TestFixtures.job(id: "job-a", isDefault: true)]
+      )
+    )
+
+    XCTAssertEqual(result.map(\.shiftDate), ["2026-05-01"])
+    XCTAssertEqual(try XCTUnwrap(result.first).computed.overtimeMinutes, 600, accuracy: 0.01)
   }
 
   private func compute(
     _ shifts: [ShiftRow],
     snapshots: [WageSnapshot]? = nil,
     jobs: [Job]? = nil,
+    recurring: [RecurringShiftRow] = [],
     month: Int = 2
   ) -> [ShiftWithComputations] {
     let effectiveJobs = jobs ?? [TestFixtures.job(id: "job-a", isDefault: true)]
@@ -120,11 +190,25 @@ final class PayrollEngineOvertimeTests: XCTestCase {
         year: 2_026,
         month: month,
         shifts: shifts,
-        recurring: [],
+        recurring: recurring,
         snapshots: effectiveSnapshots,
         settings: UserSettings.defaults(for: "user-1"),
         jobs: effectiveJobs
       ))
+  }
+
+  private func recurringShift(
+    selectedDays: [String: String],
+    start: String = "08:00",
+    end: String = "18:00",
+    exclusions: [String]? = nil
+  ) -> RecurringShiftRow {
+    RecurringShiftRow(
+      id: "weekly", user_id: "user-1", job_id: "job-a",
+      start_time: start, end_time: end, repeat_interval_weeks: 0,
+      selected_days: selectedDays, end_condition: nil, exclusions: exclusions,
+      date_specific_pause_windows: nil, date_specific_supplements: nil
+    )
   }
 
   private func snapshot(

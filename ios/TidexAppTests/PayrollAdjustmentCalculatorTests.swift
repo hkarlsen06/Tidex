@@ -1,4 +1,3 @@
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -15,7 +14,7 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
       payoutMonth: 6
     )
 
-    expect(totals.gross).to(beCloseTo(1_000, within: 0.01))
+    XCTAssertLessThan(abs(totals.gross - 1_000), 0.01)
     XCTAssertEqual(totals.net, 800, accuracy: 0.01)
   }
 
@@ -45,7 +44,7 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
       payoutMonth: 6
     )
 
-    expect(totals.gross).to(beCloseTo(1_000, within: 0.01))
+    XCTAssertLessThan(abs(totals.gross - 1_000), 0.01)
     XCTAssertEqual(totals.net, 800, accuracy: 0.01)
     XCTAssertTrue(totals.taxEnabled)
   }

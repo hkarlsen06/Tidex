@@ -1,5 +1,4 @@
 import Foundation
-import Nimble
 import XCTest
 
 @testable import Tidex
@@ -216,9 +215,9 @@ final class FriendsMessagingRichContentTests: XCTestCase {
       )
     )
 
-    expect(draft.snapshot.includesEarnings) == true
-    expect(draft.snapshot.grossPay) == FriendsMessagingRichContentTestValues.grossPay
-    expect(draft.snapshot.netPay) == FriendsMessagingRichContentTestValues.netPay
+    XCTAssertEqual(draft.snapshot.includesEarnings, true)
+    XCTAssertEqual(draft.snapshot.grossPay, FriendsMessagingRichContentTestValues.grossPay)
+    XCTAssertEqual(draft.snapshot.netPay, FriendsMessagingRichContentTestValues.netPay)
     XCTAssertTrue(draft.snapshot.taxEnabled)
   }
 

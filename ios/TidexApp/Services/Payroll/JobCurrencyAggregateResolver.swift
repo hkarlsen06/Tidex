@@ -147,6 +147,17 @@ enum JobCurrencyAggregateResolver {
     return effectiveJobId == entry.jobId && jobCurrency == entry.currency
   }
 
+  /// Compare earnings across periods by currency, even when the contributing jobs change.
+  static func shifts(
+    in shifts: [ShiftWithComputations],
+    currency: String,
+    jobs: [Job],
+    fallbackCurrency: String
+  ) -> [ShiftWithComputations] {
+    let context = ResolutionContext(jobs: jobs, fallbackCurrency: fallbackCurrency)
+    return shifts.filter { identity(for: $0, context: context)?.currency == currency }
+  }
+
   private static func selectPrimaryEntry(
     from entries: [JobCurrencyAggregateEntry],
     context: ResolutionContext

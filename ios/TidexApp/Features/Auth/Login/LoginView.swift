@@ -6,6 +6,7 @@ struct LoginView: View {
   @ObservedObject var viewModel: LoginViewModel
   let currency: String
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   private enum ScrollTarget {
     case bottom
@@ -76,7 +77,6 @@ struct LoginView: View {
             .frame(minHeight: geometry.size.height)
           }
           .scrollBounceBehavior(.basedOnSize)
-          .scrollDisabled(!allowsScrolling)
         }
       }
     }
@@ -91,10 +91,6 @@ struct LoginView: View {
     {
       NotificationCenter.default.post(name: .restartPreAuthOnboarding, object: nil)
     }
-  }
-
-  private var allowsScrolling: Bool {
-    viewModel.showEmailForm || viewModel.currentStep != .input
   }
 
   @ViewBuilder
@@ -159,6 +155,7 @@ struct LoginView: View {
           keyboardType: .emailAddress,
           textContentType: .emailAddress
         )
+        .accessibilityIdentifier("login.email-or-phone")
 
         Divider()
           .background(Color.tidexSeparator)
@@ -278,10 +275,14 @@ struct LoginView: View {
           .font(.tidexBodyMedium)
         Text(.loginEmailOrPhoneReveal)
           .font(.tidexBodyMedium)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
       }
       .foregroundColor(.tidexTextSecondary)
+      .padding(.horizontal, Spacing.md)
+      .padding(.vertical, Spacing.xs)
       .frame(maxWidth: .infinity)
-      .frame(height: 50)
+      .frame(minHeight: 50)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
@@ -290,6 +291,7 @@ struct LoginView: View {
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
+    .accessibilityIdentifier("login.reveal-email")
   }
 
   // MARK: - Divider
@@ -329,18 +331,27 @@ struct LoginView: View {
   }
 
   private var footerView: some View {
-    HStack(spacing: 0) {
+    let layout =
+      dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: 0))
+
+    return layout {
       footerLink(title: Text(.loginCreateAccount)) {
         onNavigateToSignup?()
       }
+      .accessibilityIdentifier("login.create-account")
 
-      Rectangle()
-        .fill(Color.tidexSeparator)
-        .frame(width: 1, height: 18)
+      if !dynamicTypeSize.isAccessibilitySize {
+        Rectangle()
+          .fill(Color.tidexSeparator)
+          .frame(width: 1, height: 18)
+      }
 
       footerLink(title: Text(.loginForgotPassword)) {
         onNavigateToResetPassword?()
       }
+      .accessibilityIdentifier("login.forgot-password")
     }
     .frame(maxWidth: .infinity)
   }
@@ -350,10 +361,13 @@ struct LoginView: View {
       title
         .font(.tidexLabelStrong)
         .foregroundColor(.tidexBlue)
-        .lineLimit(1)
-        .minimumScaleFactor(0.86)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+        .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.86)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? Spacing.xs : 0)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
     }
     .buttonStyle(.plain)

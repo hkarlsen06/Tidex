@@ -89,7 +89,7 @@ enum SSEStreamParser {
               let trimmed = eventText.trimmingCharacters(in: .whitespacesAndNewlines)
               if !trimmed.isEmpty {
                 logger.debug("Stream ended with incomplete buffer: \(trimmed.prefix(100))")
-                if let decoded = try parseEvent(trimmed, as: type, decoder: decoder) {
+                if let decoded = try parseEventData(buffer, as: type, decoder: decoder) {
                   continuation.yield(decoded)
                 }
               }
@@ -133,8 +133,15 @@ enum SSEStreamParser {
       {
         return 4
       }
-    } else if buffer[end - 1] == 13, buffer[end - 2] == 13 {
-      return 2
+    } else if buffer[end - 1] == 13 {
+      if buffer[end - 2] == 13 {
+        return 2
+      }
+      if buffer[end - 2] == 10 {
+        // SSE permits each line to use CR, LF, or CRLF independently. A CR
+        // after LF terminates the blank line, even before its optional LF.
+        return buffer.count >= 3 && buffer[end - 3] == 13 ? 3 : 2
+      }
     }
 
     return nil
