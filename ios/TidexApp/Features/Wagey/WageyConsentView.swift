@@ -244,7 +244,7 @@ struct WageyConsentView: View {  // swiftlint:disable:this explicit_acl explicit
       }
 
       Divider()
-        .background(Color.tidexBorderSubtle)
+        .background(Color.tidexSeparator)
 
       Button {
         if let url = Self.openAIPrivacyURL {

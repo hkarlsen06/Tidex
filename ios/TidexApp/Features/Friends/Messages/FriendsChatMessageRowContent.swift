@@ -1258,13 +1258,6 @@ struct FriendsChatReactionAnchoredBubbleCard<Content: View, Reaction: View, Stat
         bubbleShape
           .fill(isCurrentUser ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary)
       )
-      .overlay(
-        bubbleShape
-          .stroke(
-            isCurrentUser ? Color.clear : Color.tidexBorderSubtle.opacity(0.45),
-            lineWidth: 1
-          )
-      )
       .overlay(alignment: isCurrentUser ? .topLeading : .topTrailing) {
         reaction()
       }
@@ -1385,7 +1378,7 @@ private struct FriendsChatDateSeparator: View {
   var body: some View {
     HStack(spacing: Spacing.sm) {
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
 
       Text(separatorText)
@@ -1394,7 +1387,7 @@ private struct FriendsChatDateSeparator: View {
         .fixedSize(horizontal: true, vertical: false)
 
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
     }
     .frame(maxWidth: .infinity)

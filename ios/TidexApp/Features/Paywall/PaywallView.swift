@@ -139,27 +139,15 @@ struct PaywallView: View {
       .padding(.top, Spacing.mlg)
       .padding(.bottom, Spacing.lg)
     }
-    .background(Color.tidexLightSurfacePrimary)
+    .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: 32, style: .continuous)
-        .strokeBorder(Color.tidexLightBorderSubtle.opacity(0.55), lineWidth: 1)
-    )
-    .shadow(color: Color.tidexPurple.opacity(0.16), radius: 26, y: 14)
     .frame(maxWidth: 430)
     .frame(maxWidth: .infinity)
   }
 
   private var artworkHeader: some View {
     ZStack(alignment: .bottom) {
-      LinearGradient(
-        colors: [
-          Color.tidexBlue.opacity(0.95),
-          Color.tidexPurple.opacity(0.95),
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
+      Color.tidexSurfaceSecondary
 
       HStack(alignment: .bottom, spacing: Spacing.sm) {
         miniCalendar
@@ -172,9 +160,9 @@ struct PaywallView: View {
 
       LinearGradient(
         colors: [
-          Color.tidexLightSurfacePrimary.opacity(0),
-          Color.tidexLightSurfacePrimary.opacity(0.94),
-          Color.tidexLightSurfacePrimary,
+          Color.tidexSurfacePrimary.opacity(0),
+          Color.tidexSurfacePrimary.opacity(0.94),
+          Color.tidexSurfacePrimary,
         ],
         startPoint: .top,
         endPoint: .bottom
@@ -205,10 +193,10 @@ struct PaywallView: View {
         }
       }
     }
-    .foregroundColor(Color.tidexLightTextPrimary)
+    .foregroundColor(Color.tidexTextPrimary)
     .padding(Spacing.sm)
     .frame(width: 112, height: 92)
-    .background(Color.white.opacity(0.78))
+    .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     .shadow(color: Color.tidexDarkBackgroundColor.opacity(0.16), radius: 12, y: 6)
   }
@@ -217,7 +205,7 @@ struct PaywallView: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(verbatim: "29 430 kr")
         .font(.tidexHeadline)
-        .foregroundColor(Color.tidexLightTextPrimary)
+        .foregroundColor(Color.tidexTextPrimary)
 
       HStack(alignment: .bottom, spacing: 5) {
         ForEach([0.42, 0.72, 0.55, 0.88, 0.64], id: \.self) { value in
@@ -229,7 +217,7 @@ struct PaywallView: View {
     }
     .padding(Spacing.sm)
     .frame(width: 116, height: 106)
-    .background(Color.white.opacity(0.86))
+    .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     .shadow(color: Color.tidexDarkBackgroundColor.opacity(0.18), radius: 14, y: 7)
   }
@@ -241,9 +229,9 @@ struct PaywallView: View {
       Text("PDF")
         .font(.tidexCaptionStrong)
     }
-    .foregroundColor(Color.tidexLightTextPrimary)
+    .foregroundColor(Color.tidexTextPrimary)
     .frame(width: 70, height: 78)
-    .background(Color.white.opacity(0.76))
+    .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     .shadow(color: Color.tidexDarkBackgroundColor.opacity(0.14), radius: 10, y: 5)
   }
@@ -251,18 +239,18 @@ struct PaywallView: View {
   private var headlineBlock: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       Text(hasConfiguredTrial ? .paywallTrialTitle : .paywallSubscribeTitle)
-        .font(.system(size: 30, weight: .bold, design: .default))
-        .foregroundColor(Color.tidexLightTextPrimary)
+        .font(.tidexScreenTitle)
+        .foregroundColor(Color.tidexTextPrimary)
         .fixedSize(horizontal: false, vertical: true)
 
       Text(.paywallTrialSubtitle)
         .font(.tidexSubheadline)
-        .foregroundColor(Color.tidexLightTextSecondary)
+        .foregroundColor(Color.tidexTextSecondary)
         .fixedSize(horizontal: false, vertical: true)
 
       Text(priceLine)
         .font(.tidexSubheadline.weight(.semibold))
-        .foregroundColor(Color.tidexLightTextPrimary)
+        .foregroundColor(Color.tidexTextPrimary)
         .fixedSize(horizontal: false, vertical: true)
         .padding(.top, Spacing.xxs)
     }
@@ -274,7 +262,7 @@ struct PaywallView: View {
       billingOption(.yearly)
     }
     .padding(Spacing.xxs)
-    .background(Color.tidexLightSurfaceSecondary)
+    .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
   }
 
@@ -289,7 +277,7 @@ struct PaywallView: View {
       VStack(spacing: Spacing.micro) {
         Text(period.displayName)
           .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-          .foregroundColor(isSelected ? Color.tidexLightTextPrimary : Color.tidexLightTextMuted)
+          .foregroundColor(isSelected ? Color.tidexTextPrimary : Color.tidexTextMuted)
 
         if period == .yearly,
           let savings = viewModel.yearlySavingsPercent(for: .pro)
@@ -298,12 +286,12 @@ struct PaywallView: View {
             String(localized: .paywallSavePercent(FormatterCache.percentagePoints(Double(savings))))
           )
           .font(.tidexMicro.bold())
-          .foregroundColor(isSelected ? .tidexBlue : Color.tidexLightTextMuted)
+          .foregroundColor(isSelected ? .tidexBlue : Color.tidexTextMuted)
         }
       }
       .frame(maxWidth: .infinity)
       .frame(minHeight: 50)
-      .background(isSelected ? Color.tidexLightSurfacePrimary : Color.clear)
+      .background(isSelected ? Color.tidexSurfacePrimary : Color.clear)
       .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
     .buttonStyle(.plain)
@@ -326,17 +314,17 @@ struct PaywallView: View {
       VStack(spacing: 0) {
         ZStack {
           Circle()
-            .fill(item.isActive ? Color.tidexPurple : Color.tidexLightSurfaceSecondary)
+            .fill(item.isActive ? Color.tidexPurple : Color.tidexSurfaceSecondary)
             .frame(width: 42, height: 42)
 
           Image(systemName: item.icon)
             .font(.system(size: 18, weight: .semibold))
-            .foregroundColor(item.isActive ? .tidexTextOnBrand : Color.tidexLightTextMuted)
+            .foregroundColor(item.isActive ? .tidexTextOnBrand : Color.tidexTextMuted)
         }
 
         if !isLast {
           Rectangle()
-            .fill(item.isActive ? Color.tidexPurple.opacity(0.72) : Color.tidexLightBorderSubtle)
+            .fill(item.isActive ? Color.tidexPurple.opacity(0.72) : Color.tidexBorderSubtle)
             .frame(width: 3, height: 46)
         }
       }
@@ -345,11 +333,11 @@ struct PaywallView: View {
       VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(item.title)
           .font(.tidexHeadline)
-          .foregroundColor(Color.tidexLightTextPrimary)
+          .foregroundColor(Color.tidexTextPrimary)
 
         Text(item.body)
           .font(.tidexBody)
-          .foregroundColor(Color.tidexLightTextSecondary)
+          .foregroundColor(Color.tidexTextSecondary)
           .fixedSize(horizontal: false, vertical: true)
       }
       .padding(.top, Spacing.xxs)
@@ -374,16 +362,7 @@ struct PaywallView: View {
       .foregroundColor(.tidexTextOnBrand)
       .frame(maxWidth: .infinity)
       .frame(height: 58)
-      .background(
-        LinearGradient(
-          colors: [
-            primaryCTAIsEnabled ? Color.tidexBlue : Color.tidexLightTextMuted.opacity(0.55),
-            primaryCTAIsEnabled ? Color.tidexPurple : Color.tidexLightTextMuted.opacity(0.55),
-          ],
-          startPoint: .leading,
-          endPoint: .trailing
-        )
-      )
+      .background(primaryCTAIsEnabled ? Color.tidexBrandPrimary : Color.tidexTextMuted)
       .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
     .buttonStyle(.plain)
@@ -394,7 +373,7 @@ struct PaywallView: View {
   private var cancellationLine: some View {
     Text(.paywallCancelAnytime)
       .font(.tidexFootnote)
-      .foregroundColor(Color.tidexLightTextMuted)
+      .foregroundColor(Color.tidexTextMuted)
       .frame(maxWidth: .infinity, alignment: .center)
   }
 
@@ -419,9 +398,9 @@ struct PaywallView: View {
     Button(action: { dismiss() }) {
       Image(systemName: "xmark")
         .font(.system(size: 18, weight: .bold))
-        .foregroundColor(.white)
+        .foregroundColor(.tidexTextSecondary)
         .frame(width: 46, height: 46)
-        .background(Color.white.opacity(0.14))
+        .background(Color.tidexSurfaceSecondary)
         .clipShape(Circle())
         .contentShape(Circle())
     }

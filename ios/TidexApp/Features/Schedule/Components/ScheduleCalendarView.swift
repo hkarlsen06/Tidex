@@ -647,13 +647,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       )
     }
     if isToday {
-      return CalendarCellStyle(
-        backgroundColor: Color.tidexBlue.opacity(0.2),
-        borderColor: .clear,
-        borderWidth: 0,
-        dayNumberColor: .tidexTextPrimary,
-        showsTodayBadge: true
-      )
+      return .today()
     }
     return .default
   }

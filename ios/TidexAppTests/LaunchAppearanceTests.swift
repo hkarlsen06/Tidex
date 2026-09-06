@@ -34,6 +34,11 @@ final class SemanticColorContrastTests: XCTestCase {
       ContrastPair(foreground: "TidexTextPrimary", background: "TidexSurfacePrimary"),
       ContrastPair(foreground: "TidexTextSecondary", background: "TidexSurfacePrimary"),
       ContrastPair(foreground: "TidexTextMuted", background: "TidexSurfacePrimary"),
+      ContrastPair(foreground: "TidexTextPrimary", background: "TidexSurfaceSecondary"),
+      ContrastPair(foreground: "TidexTextSecondary", background: "TidexBackground"),
+      ContrastPair(foreground: "TidexTextSecondary", background: "TidexSurfaceSecondary"),
+      ContrastPair(foreground: "TidexTextMuted", background: "TidexBackground"),
+      ContrastPair(foreground: "TidexTextMuted", background: "TidexSurfaceSecondary"),
       ContrastPair(foreground: "TidexTextOnBrand", background: "TidexBlue"),
       ContrastPair(foreground: "TidexTextOnBrand", background: "TidexBrandPrimary"),
       ContrastPair(foreground: "TidexTextOnWarning", background: "TidexWarning"),
@@ -92,6 +97,50 @@ final class SemanticColorContrastTests: XCTestCase {
     }
 
     return color.resolvedColor(with: traits)
+  }
+}
+
+@MainActor
+final class PrimaryButtonLayoutTests: XCTestCase {
+  func testLargeTextExpandsButtonAndLoadingPreservesItsSize() {
+    let title = "Continue with your account"
+    let availableSize = CGSize(width: 280, height: 1_000)
+    let idle = UIHostingController(
+      rootView: PrimaryButton(title: title, action: {})
+        .environment(\.dynamicTypeSize, .accessibility3)
+    )
+    let loading = UIHostingController(
+      rootView: PrimaryButton(title: title, action: {}, isLoading: true)
+        .environment(\.dynamicTypeSize, .accessibility3)
+    )
+    let idleSize = idle.sizeThatFits(in: availableSize)
+    let loadingSize = loading.sizeThatFits(in: availableSize)
+
+    XCTAssertGreaterThan(idleSize.height, Spacing.buttonHeight)
+    XCTAssertEqual(idleSize.height, loadingSize.height, accuracy: 0.5)
+    XCTAssertEqual(idleSize.width, loadingSize.width, accuracy: 0.5)
+  }
+}
+
+@MainActor
+final class ShiftCardLayoutTests: XCTestCase {
+  func testLargeTextStacksDetailsWithinTheAvailableWidth() {
+    let card = ShiftCardContentLayout {
+      Text("Next payout")
+    } leadingBottom: {
+      Text("Tuesday, September 15")
+    } trailingTop: {
+      Text("24 380 kr")
+    } trailingBottom: {
+      Text("In 9 days")
+    }
+    .font(.body)
+    .environment(\.dynamicTypeSize, .accessibility3)
+    let host = UIHostingController(rootView: card)
+    let size = host.sizeThatFits(in: CGSize(width: 280, height: 1_000))
+
+    XCTAssertLessThanOrEqual(size.width, 280)
+    XCTAssertGreaterThan(size.height, ShiftCardMetrics.regularCardMinHeight)
   }
 }
 

@@ -179,8 +179,8 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
     }
     .chartYAxis {
       AxisMarks(position: .leading, values: yAxisScale.ticks) { value in
-        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))  // swiftlint:disable:this no_magic_numbers
-          .foregroundStyle(Color.tidexBorderSubtle)
+        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))  // swiftlint:disable:this no_magic_numbers
+          .foregroundStyle(Color.tidexSeparator)
         AxisValueLabel {
           if let amount = value.as(Double.self) {
             Text("\(Int(amount))%")

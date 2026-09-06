@@ -177,10 +177,10 @@ struct SignupView: View {
       .frame(height: 50)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
           .stroke(Color.tidexBorderSubtle, lineWidth: 1)
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
   }
@@ -190,7 +190,7 @@ struct SignupView: View {
   private var dividerView: some View {
     HStack(spacing: Spacing.md) {
       Rectangle()
-        .fill(Color.tidexBorderSubtle.opacity(0.9))
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
 
       Text(.loginSeparator)
@@ -198,7 +198,7 @@ struct SignupView: View {
         .foregroundColor(.tidexTextMuted)
 
       Rectangle()
-        .fill(Color.tidexBorderSubtle.opacity(0.9))
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
     }
   }
@@ -328,7 +328,7 @@ struct SignupForm: View {
         )
 
         Divider()
-          .background(Color.tidexBorderSubtle)
+          .background(Color.tidexSeparator)
 
         NativeSecureField(
           placeholder: String(localized: .signupPasswordPlaceholder),

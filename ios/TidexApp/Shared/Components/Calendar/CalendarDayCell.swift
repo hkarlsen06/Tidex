@@ -32,7 +32,7 @@ struct CalendarCellStyle {
 
   static func today() -> Self {
     Self(
-      backgroundColor: Color.tidexBlue.opacity(0.2),
+      backgroundColor: Color.tidexBlue.opacity(0.08),
       borderColor: .clear,
       borderWidth: 0,
       dayNumberColor: .tidexTextPrimary,
@@ -42,7 +42,7 @@ struct CalendarCellStyle {
 
   static func selected() -> Self {
     Self(
-      backgroundColor: Color.tidexBlue.opacity(0.15),
+      backgroundColor: Color.tidexBlue.opacity(0.10),
       borderColor: .tidexBlue,
       borderWidth: 2,
       dayNumberColor: .tidexTextPrimary,
@@ -193,7 +193,6 @@ struct CalendarDayCell<Content: View>: View {
         .padding(.bottom, eventIndicatorBottomInset)
       }
     }
-    .tidexCardShadow(cornerRadius: CornerRadius.sm)
     .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
   }
 
@@ -284,7 +283,7 @@ struct CalendarDayCell<Content: View>: View {
           secondValue: endDisplay,
           secondColor: endColor,
           fontSize: fontSize,
-          fontWeight: .bold
+          fontWeight: .semibold
         )
         .environment(\.layoutDirection, .leftToRight)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -297,7 +296,7 @@ struct CalendarDayCell<Content: View>: View {
           formattedAmount,
           color: color,
           fontSize: fontSize,
-          fontWeight: .bold
+          fontWeight: .semibold
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
@@ -314,7 +313,7 @@ struct CalendarDayCell<Content: View>: View {
               secondValue: gross,
               secondColor: beforeTaxColor,
               fontSize: fontSize,
-              fontWeight: .bold
+              fontWeight: .semibold
             )
             .environment(\.layoutDirection, .leftToRight)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -326,7 +325,7 @@ struct CalendarDayCell<Content: View>: View {
               gross,
               color: color,
               fontSize: fontSize,
-              fontWeight: .bold
+              fontWeight: .semibold
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
           }

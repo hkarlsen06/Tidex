@@ -1,7 +1,7 @@
-import os.log
 import SafariServices
 import Supabase
 import SwiftUI
+import os.log
 
 private let kAcceptTermsLogger: Logger = Logger(subsystem: "no.tidex.app", category: "AcceptTerms")
 
@@ -162,7 +162,7 @@ internal struct AcceptTermsView: View {
       )
 
       Divider()
-        .background(Color.tidexBorderSubtle)
+        .background(Color.tidexSeparator)
 
       legalLinkButton(
         title: Text(.acceptTermsViewPrivacy),

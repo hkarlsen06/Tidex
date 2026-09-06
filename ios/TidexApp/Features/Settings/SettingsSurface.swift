@@ -25,9 +25,9 @@ struct TidexSettingsSection<Footer: View, Content: View>: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       if let title {
         Text(title)
-          .font(.tidexFootnoteMedium)
+          .font(.tidexLabel)
           .foregroundColor(titleColor)
-          .textCase(.uppercase)
+          .textCase(nil)
           .padding(.horizontal, Spacing.sm)
       }
 
@@ -36,8 +36,7 @@ struct TidexSettingsSection<Footer: View, Content: View>: View {
       }
       .padding(contentPadding)
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .tidexCardShadow(cornerRadius: CornerRadius.lg)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
 
       footer
         .font(.tidexFootnote)
@@ -69,7 +68,7 @@ struct TidexSettingsDivider: View {
 
   var body: some View {
     Divider()
-      .background(Color.tidexBorderSubtle)
+      .background(Color.tidexSeparator)
       .padding(.leading, leadingPadding)
       .padding(.vertical, Spacing.sm)
   }
@@ -79,7 +78,7 @@ struct TidexSettingsIcon: View {
   static let defaultSize: CGFloat = 40
 
   let systemName: String
-  var foregroundColor: Color = .tidexBlue
+  var foregroundColor: Color = .tidexTextSecondary
   var backgroundColor: Color?  // swiftlint:disable:this explicit_acl
   var size: CGFloat = TidexSettingsIcon.defaultSize
   private var glyphBoxSize: CGFloat { size * 0.48 }
@@ -93,7 +92,7 @@ struct TidexSettingsIcon: View {
       .frame(width: size, height: size)
       .background(
         RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-          .fill(backgroundColor ?? foregroundColor.opacity(0.12))
+          .fill(backgroundColor ?? Color.tidexSurfaceSecondary)
       )
       .accessibilityHidden(true)
   }

@@ -1617,7 +1617,7 @@ private struct FriendsThreadDateSeparator: View {
   var body: some View {
     HStack(spacing: Spacing.sm) {
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
 
       Text(separatorText)
@@ -1626,7 +1626,7 @@ private struct FriendsThreadDateSeparator: View {
         .fixedSize(horizontal: true, vertical: false)
 
       Rectangle()
-        .fill(Color.tidexBorderSubtle)
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
     }
     .frame(maxWidth: .infinity)

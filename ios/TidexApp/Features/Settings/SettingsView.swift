@@ -403,9 +403,9 @@ struct SettingsView: View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       if let title {
         Text(title)
-          .font(.tidexFootnoteMedium)
+          .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
-          .textCase(.uppercase)
+          .textCase(nil)
           .padding(.horizontal, Spacing.sm)
       }
 
@@ -418,7 +418,7 @@ struct SettingsView: View {
 
   private var settingsMenuDivider: some View {
     Divider()
-      .background(Color.tidexBorderSubtle)
+      .background(Color.tidexSeparator)
       .padding(
         .leading, SettingsMenuLayout.iconEdgeInset + SettingsMenuLayout.iconBadgeSize + Spacing.sm)
   }
@@ -857,7 +857,7 @@ struct SettingsView: View {
             .padding(.vertical, Spacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
             .tidexRowSurface(cornerRadius: CornerRadius.lg)
-            .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
           }
           .buttonStyle(.plain)
           .frame(maxWidth: .infinity)
@@ -1038,7 +1038,7 @@ struct SettingsView: View {
         .padding(.vertical, Spacing.md)
         .frame(maxWidth: .infinity, alignment: .leading)
         .tidexRowSurface(cornerRadius: CornerRadius.lg)
-        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       }
       .buttonStyle(.plain)
       .accessibilityLabel(archivedPayJobsToggleAccessibilityLabel)
@@ -1126,7 +1126,7 @@ struct SettingsView: View {
     .padding(.vertical, Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
     .tidexRowSurface(cornerRadius: CornerRadius.lg)
-    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .contextMenu {
       activePayJobActions(job)
     }
@@ -1177,7 +1177,7 @@ struct SettingsView: View {
     .padding(.vertical, Spacing.md)
     .frame(maxWidth: .infinity, alignment: .leading)
     .tidexRowSurface(cornerRadius: CornerRadius.lg)
-    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .contextMenu {
       archivedPayJobActions(job)
     }
@@ -1432,7 +1432,6 @@ private struct RecurringShiftsSettingsView: View {
       .padding(Spacing.md)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(CornerRadius.lg)
-      .tidexCardShadow(cornerRadius: CornerRadius.lg)
     }
     .buttonStyle(.plain)
   }
@@ -1559,7 +1558,7 @@ private struct RecurringShiftsSettingsView: View {
 // MARK: - Settings Menu Item
 
 private enum SettingsMenuLayout {
-  static let rowHeight: CGFloat = 52
+  static let rowHeight: CGFloat = 56
   static let iconBadgeSize: CGFloat = 38
   static var iconEdgeInset: CGFloat { (rowHeight - iconBadgeSize) / 2 }
 }
@@ -1580,13 +1579,13 @@ struct SettingsMenuItem: View {
         SettingsRowIcon(
           systemName: icon,
           foregroundColor: .tidexTextSecondary,
-          backgroundColor: .tidexSurfaceSecondary
+          backgroundColor: .clear
         )
 
         Text(title)
           .font(.tidexBody)
           .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
+          .fixedSize(horizontal: false, vertical: true)
 
         Spacer()
 
@@ -1614,8 +1613,7 @@ private struct SettingsCardSurfaceModifier: ViewModifier {
   func body(content: Content) -> some View {
     content
       .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .tidexCardShadow(cornerRadius: CornerRadius.lg)
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
   }
 }
 

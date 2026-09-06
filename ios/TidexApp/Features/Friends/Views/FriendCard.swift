@@ -104,12 +104,7 @@ struct FriendCard: View {
             .font(.system(size: 16, weight: .semibold))
             .foregroundColor(.tidexBlue)
             .frame(width: actionButtonSize, height: actionButtonSize)
-            .tidexGlass(
-              shape: .circle,
-              tint: .tidexBlue.opacity(0.14),
-              interactive: true,
-              disabled: isOpeningMessage
-            )
+            .background(Color.tidexSurfaceSecondary, in: Circle())
         }
         .buttonStyle(.plain)
         .allowsHitTesting(!isOpeningMessage)

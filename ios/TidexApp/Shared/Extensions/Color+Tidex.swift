@@ -22,7 +22,7 @@ import UIKit
 extension Color {
   /// Launch screen background - adapts to light/dark mode
   /// Light: soft off-white (matches tidexBackground)
-  /// Dark: deep navy (matches tidexBackground)
+  /// Dark: deep ink (matches tidexBackground)
   static var tidexLaunchBackground: Color {
     Color("LaunchBackground")
   }
@@ -53,6 +53,11 @@ extension Color {
     tidexSuccess
   }
 
+  /// Decorative dividers; use tidexBorder for input and control boundaries.
+  static var tidexSeparator: Color {
+    tidexTextPrimary.opacity(0.10)
+  }
+
   // MARK: - Gradient Colors
 
   /// Logo gradient colors from short-logo-gradient.svg
@@ -71,40 +76,40 @@ extension Color {
 
 extension Color {
   /// Light mode background - soft off-white
-  static let tidexLightBackground = Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
+  static let tidexLightBackground = Color(red: 0.961, green: 0.961, blue: 0.953)
 
-  /// Dark mode background - deep navy
-  static let tidexDarkBackgroundColor = Color(hue: 222.2 / 360, saturation: 0.84, brightness: 0.11)
+  /// Dark mode background - deep ink
+  static let tidexDarkBackgroundColor = Color(red: 0.027, green: 0.043, blue: 0.071)
 
-  /// Light mode surface primary - Pure white for maximum contrast against blue-tinted background
-  static let tidexLightSurfacePrimary = Color.white
+  /// Light mode surface primary - white against the neutral canvas
+  static let tidexLightSurfacePrimary = Color(red: 1.000, green: 1.000, blue: 1.000)
 
-  /// Dark mode surface primary - same navy hue family as the app background (#151F32)
-  static let tidexDarkSurfacePrimary = Color(red: 0.082, green: 0.122, blue: 0.196)
+  /// Dark mode surface primary - lifted ink surface
+  static let tidexDarkSurfacePrimary = Color(red: 0.082, green: 0.114, blue: 0.165)
 
-  /// Light mode surface secondary - lifted blue-gray for contrast against app backgrounds (#EAF0F7)
-  static let tidexLightSurfaceSecondary = Color(red: 0.918, green: 0.941, blue: 0.969)
+  /// Light mode surface secondary - neutral gray for nested controls
+  static let tidexLightSurfaceSecondary = Color(red: 0.914, green: 0.922, blue: 0.929)
 
-  /// Dark mode surface secondary - lifted navy for nested controls (#1B2942)
-  static let tidexDarkSurfaceSecondary = Color(red: 0.106, green: 0.161, blue: 0.259)
+  /// Dark mode surface secondary - blue-gray for nested controls
+  static let tidexDarkSurfaceSecondary = Color(red: 0.125, green: 0.169, blue: 0.235)
 
   /// Light mode text primary
-  static let tidexLightTextPrimary = Color(hue: 222 / 360, saturation: 0.84, brightness: 0.08)
+  static let tidexLightTextPrimary = Color(red: 0.133, green: 0.149, blue: 0.176)
 
   /// Dark mode text primary
-  static let tidexDarkTextPrimary = Color(hue: 210 / 360, saturation: 0.40, brightness: 0.98)
+  static let tidexDarkTextPrimary = Color(red: 0.953, green: 0.957, blue: 0.965)
 
   /// Light mode text secondary
-  static let tidexLightTextSecondary = Color(hue: 214 / 360, saturation: 0.28, brightness: 0.35)
+  static let tidexLightTextSecondary = Color(red: 0.318, green: 0.345, blue: 0.380)
 
   /// Dark mode text secondary
-  static let tidexDarkTextSecondary = Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
+  static let tidexDarkTextSecondary = Color(red: 0.741, green: 0.765, blue: 0.796)
 
-  /// Light mode text muted - Darker for better contrast (#596B80)
-  static let tidexLightTextMuted = Color(red: 0.35, green: 0.42, blue: 0.50)
+  /// Light mode text muted - readable neutral gray
+  static let tidexLightTextMuted = Color(red: 0.384, green: 0.412, blue: 0.451)
 
   /// Dark mode text muted
-  static let tidexDarkTextMuted = Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
+  static let tidexDarkTextMuted = Color(red: 0.604, green: 0.639, blue: 0.686)
 
   /// Light mode brand blue - WCAG AA with tidexTextOnBrand
   static let tidexLightBlue = Color(red: 0.145, green: 0.388, blue: 0.922)
@@ -112,11 +117,11 @@ extension Color {
   /// Dark mode brand blue - WCAG AA with tidexTextOnBrand
   static let tidexDarkBlue = tidexLightBlue
 
-  /// Light mode border - WCAG non-text boundary against light surfaces (#838A94)
-  static let tidexLightBorder = Color(red: 0.514, green: 0.541, blue: 0.580)
+  /// Light mode border - WCAG non-text boundary against light surfaces (#7F858E)
+  static let tidexLightBorder = Color(red: 0.498, green: 0.522, blue: 0.557)
 
-  /// Dark mode border - WCAG non-text boundary against dark surfaces (#6B7280)
-  static let tidexDarkBorder = Color(red: 0.420, green: 0.447, blue: 0.502)
+  /// Dark mode border - WCAG non-text boundary against dark surfaces (#767E89)
+  static let tidexDarkBorder = Color(red: 0.463, green: 0.494, blue: 0.537)
 
   /// Light mode subtle border - intentionally shares the compliant surface boundary color.
   static let tidexLightBorderSubtle = tidexLightBorder
@@ -130,7 +135,7 @@ extension Color {
       UIColor { traitCollection in
         switch traitCollection.userInterfaceStyle {
         case .dark:
-          return UIColor(red: 0.082, green: 0.122, blue: 0.196, alpha: 1)
+          return UIColor(red: 0.082, green: 0.114, blue: 0.165, alpha: 1)
 
         default:
           return UIColor.white
@@ -158,10 +163,10 @@ extension Color {
 // Light mode uses drop shadows; dark mode uses a directional rim highlight.
 
 /// Shadow elevation levels for cards
-enum TidexShadowLevel {
-  /// Very light shadow for nested/inner cards
+enum TidexShadowLevel: Equatable {
+  /// Flat treatment for nested content
   case subtle
-  /// Subtle shadow for standard cards (shift cards, settings rows)
+  /// Flat treatment for standard cards (shift cards, settings rows)
   case card
   /// Medium shadow for modals and popovers
   case elevated
@@ -176,7 +181,9 @@ struct TidexCardShadowModifier: ViewModifier {
   let customCornerRadius: CGFloat?
 
   func body(content: Content) -> some View {
-    if colorScheme == .dark {
+    if level == .subtle || level == .card {
+      content
+    } else if colorScheme == .dark {
       content.overlay(
         RoundedRectangle(cornerRadius: cornerRadius)
           .strokeBorder(
@@ -288,8 +295,8 @@ struct TidexCardShadowModifier: ViewModifier {
 }
 
 extension View {
-  /// Applies a subtle card shadow that adapts to light/dark mode
-  /// Use on cards, list rows, and other elevated surfaces
+  /// Keeps content cards flat and elevates modal or floating surfaces
+  /// Reserve visible elevation for controls that float above the content.
   /// - Parameters:
   ///   - level: Shadow intensity level (default: .card)
   ///   - cornerRadius: Custom corner radius for the dark-mode rim.
@@ -314,8 +321,7 @@ extension View {
       ))
   }
 
-  /// Applies a subtle shadow for small chips and status badges
-  /// Creates consistent 3D appearance across all chip styles
+  /// Keeps chips flat within their containing surface.
   func tidexChipShadow() -> some View {
     modifier(TidexChipShadowModifier())
   }
@@ -343,32 +349,9 @@ struct TidexRowSurfaceModifier: ViewModifier {
   }
 }
 
-/// View modifier for subtle chip/badge shadows
-/// Lighter than card shadows, suitable for small UI elements
+/// Chips sit within content rather than floating above it.
 struct TidexChipShadowModifier: ViewModifier {
-  @Environment(\.colorScheme) private var colorScheme
-
   func body(content: Content) -> some View {
     content
-      .shadow(
-        color: shadowColor,
-        radius: shadowRadius,
-        x: 0,
-        y: shadowY
-      )
-  }
-
-  private var shadowColor: Color {
-    colorScheme == .light
-      ? Color(red: 0.4, green: 0.45, blue: 0.55).opacity(0.15)
-      : Color.black.opacity(0.35)
-  }
-
-  private var shadowRadius: CGFloat {
-    colorScheme == .light ? 3 : 2
-  }
-
-  private var shadowY: CGFloat {
-    1
   }
 }

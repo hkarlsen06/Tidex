@@ -161,7 +161,7 @@ struct LoginView: View {
         )
 
         Divider()
-          .background(Color.tidexBorderSubtle)
+          .background(Color.tidexSeparator)
 
         // Password field
         NativeSecureField(
@@ -284,10 +284,10 @@ struct LoginView: View {
       .frame(height: 50)
       .background(Color.tidexSurfaceSecondary)
       .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
+        RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
           .stroke(Color.tidexBorderSubtle, lineWidth: 1)
       )
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     }
     .buttonStyle(SnappyButtonStyle())
   }
@@ -297,7 +297,7 @@ struct LoginView: View {
   private var dividerView: some View {
     HStack(spacing: Spacing.md) {
       Rectangle()
-        .fill(Color.tidexBorderSubtle.opacity(0.9))
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
 
       Text(.loginSeparator)
@@ -305,7 +305,7 @@ struct LoginView: View {
         .foregroundColor(.tidexTextMuted)
 
       Rectangle()
-        .fill(Color.tidexBorderSubtle.opacity(0.9))
+        .fill(Color.tidexSeparator)
         .frame(height: 1)
     }
   }
@@ -335,7 +335,7 @@ struct LoginView: View {
       }
 
       Rectangle()
-        .fill(Color.tidexBorderSubtle.opacity(0.9))
+        .fill(Color.tidexSeparator)
         .frame(width: 1, height: 18)
 
       footerLink(title: Text(.loginForgotPassword)) {
@@ -368,41 +368,19 @@ struct AuthHeroVisual: View {
   var onLogoTap: (() -> Void)?
 
   var body: some View {
-    VStack(spacing: Spacing.xxs) {
+    VStack(spacing: Spacing.lg) {
       logoSection
-        .hidden()
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-
       ghostedPaycheckPreview
-        .padding(.top, -Spacing.huge)
-        .offset(y: -Spacing.md)
     }
   }
 
   @ViewBuilder
   private var logoSection: some View {
-    let content = ZStack {
-      RoundedRectangle(cornerRadius: CornerRadius.pill, style: .continuous)
-        .fill(
-          RadialGradient(
-            gradient: Gradient(colors: [
-              Color.tidexBlue.opacity(0.08),
-              Color.tidexBlue.opacity(0.02),
-              Color.clear,
-            ]),
-            center: .center,
-            startRadius: 20,
-            endRadius: 100
-          )
-        )
-        .frame(width: 180, height: 180)
-
-      Image("TidexLogo")
-        .resizable()
-        .scaledToFit()
-        .frame(width: logoSize, height: logoSize)
-    }
+    let content = Image("TidexLogo")
+      .resizable()
+      .scaledToFit()
+      .frame(width: min(logoSize, Spacing.huge), height: min(logoSize, Spacing.huge))
+      .accessibilityLabel(Text(verbatim: "Tidex"))
 
     if let onLogoTap {
       content
@@ -427,44 +405,44 @@ struct AuthHeroVisual: View {
     let card = ZStack {
       VStack(spacing: Spacing.xs) {
         RoundedRectangle(cornerRadius: CornerRadius.xxs)
-          .fill(heroAccentGradient(opacity: 0.55))
+          .fill(Color.tidexTextMuted.opacity(0.2))
           .frame(width: 80, height: 8)
 
         Spacer().frame(height: 4)
 
         Text(ghostedAmountText)
           .font(.tidexAmountLarge)
-          .foregroundStyle(heroAccentGradient(opacity: 0.55))
+          .foregroundStyle(Color.tidexTextPrimary)
 
         Spacer().frame(height: 8)
 
         HStack {
           RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .fill(Color.tidexTextMuted.opacity(0.2))
             .frame(width: 80, height: 6)
           Spacer()
           RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .fill(Color.tidexTextMuted.opacity(0.2))
             .frame(width: 55, height: 6)
         }
 
         HStack {
           RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .fill(Color.tidexTextMuted.opacity(0.2))
             .frame(width: 65, height: 6)
           Spacer()
           RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .fill(Color.tidexTextMuted.opacity(0.2))
             .frame(width: 50, height: 6)
         }
 
         HStack {
           RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .fill(Color.tidexTextMuted.opacity(0.2))
             .frame(width: 90, height: 6)
           Spacer()
           RoundedRectangle(cornerRadius: 3)
-            .fill(Color.tidexTextSecondary.opacity(0.7))
+            .fill(Color.tidexTextMuted.opacity(0.2))
             .frame(width: 60, height: 6)
         }
       }
@@ -475,25 +453,10 @@ struct AuthHeroVisual: View {
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
       .overlay(
         RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-          .stroke(heroBorderGradient, lineWidth: 1)
+          .stroke(Color.tidexSeparator, lineWidth: 1)
       )
 
-      LinearGradient(
-        gradient: Gradient(stops: [
-          .init(color: Color.tidexBackground, location: 0.0),
-          .init(color: Color.tidexBackground.opacity(0.85), location: 0.3),
-          .init(color: Color.tidexBackground.opacity(0.4), location: 0.7),
-          .init(color: Color.clear, location: 1.0),
-        ]),
-        startPoint: .top,
-        endPoint: .bottom
-      )
-      .frame(width: 280, height: 180)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-      .accessibilityHidden(true)
     }
-    .opacity(0.9)
-    .blur(radius: 0.5)
 
     if let onLogoTap {
       card
@@ -508,44 +471,9 @@ struct AuthHeroVisual: View {
   }
 
   private var heroCardBackground: some View {
-    ZStack {
-      Color.tidexSurfacePrimary
-
-      LinearGradient(
-        colors: [
-          Color.logoGradientColors[0].opacity(0.08),
-          Color.clear,
-          Color.logoGradientColors[2].opacity(0.06),
-        ],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-    }
+    Color.tidexSurfacePrimary
   }
 
-  private func heroAccentGradient(opacity: Double = 1) -> LinearGradient {
-    LinearGradient(
-      colors: [
-        Color.logoGradientColors[0].opacity(opacity),
-        Color.logoGradientColors[1].opacity(opacity),
-        Color.logoGradientColors[2].opacity(opacity),
-      ],
-      startPoint: .leading,
-      endPoint: .trailing
-    )
-  }
-
-  private var heroBorderGradient: LinearGradient {
-    LinearGradient(
-      colors: [
-        Color.logoGradientColors[0].opacity(0.28),
-        Color.tidexBorder.opacity(0.65),
-        Color.logoGradientColors[2].opacity(0.28),
-      ],
-      startPoint: .topLeading,
-      endPoint: .bottomTrailing
-    )
-  }
 }
 
 // MARK: - Native Text Field

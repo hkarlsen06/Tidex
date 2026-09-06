@@ -94,8 +94,8 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
       }
       .chartYAxis {
         AxisMarks(position: .leading, values: yAxisScale.ticks) { value in
-          AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [3, 3]))  // swiftlint:disable:this no_magic_numbers
-            .foregroundStyle(Color.tidexBorderSubtle)
+          AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))  // swiftlint:disable:this no_magic_numbers
+            .foregroundStyle(Color.tidexSeparator)
           AxisValueLabel {
             if let amount = value.as(Double.self) {
               Text(formatAxisValue(amount))
@@ -124,7 +124,7 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
 
     if highlightToday {
       // "This Week" mode: highlight today, fade others
-      return day.fullDate == todayISO ? .tidexBlue : .tidexBlue.opacity(0.2)  // swiftlint:disable:this no_magic_numbers
+      return day.fullDate == todayISO ? .tidexBlue : .tidexBorder
     }
     // "Best Week" mode: all bars full color
     return .tidexBlue

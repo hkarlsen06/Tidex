@@ -110,13 +110,6 @@ struct ChatBubbleCard<Content: View>: View {
         bubbleShape
           .fill(isCurrentUser ? Color.tidexBrandPrimary : Color.tidexSurfacePrimary)
       )
-      .overlay(
-        bubbleShape
-          .stroke(
-            isCurrentUser ? Color.clear : Color.tidexBorderSubtle.opacity(0.45),
-            lineWidth: 1
-          )
-      )
   }
 
   private var bubbleShape: some InsettableShape {
