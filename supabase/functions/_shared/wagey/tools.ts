@@ -776,19 +776,8 @@ const allTools: FunctionTool[] = [
   // ---------------------------------------------------------------------------
   {
     name: "manage_shift",
-    description: `Create, update, or delete shifts.
-
-Actions:
-- CREATE: action="create", dates (array of YYYY-MM-DD), start (HH:mm), end (HH:mm)
-- UPDATE: action="update", shiftId, plus fields to change (start, end, date)
-- DELETE: action="delete", shiftId (single) or shiftIds (bulk delete)
-
-Edge cases:
-- Cross-midnight shifts: If end time is before start time (e.g., 22:00-06:00), the shift spans to the next day
-- Multiple dates: Use dates array to create identical shifts on multiple days at once
-- Update requires ID: Always query_shifts first to get the shift ID before updating/deleting
-- Multiple jobs: Use jobId (from list_workplaces) to assign a shift to a specific job. Omit for the user's default job.
-- Pay setup required: The selected/default job must have paySetupStatus="configured" before a shift can be created. If list_workplaces shows requiresPaySetup=true, set up a baseline wage snapshot first.`,
+    description:
+      `Create identical shifts on one or more dates, update one shift, or delete one/multiple shifts. Create requires dates/start/end; update requires shiftId and changed start/end/date; delete requires shiftId or shiftIds. Query IDs before update/delete. End before start means overnight. Resolve named jobs with list_workplaces; omitted jobId uses the default. Creation requires the selected/default job's paySetupStatus="configured" (baseline wage snapshot).`,
     input_schema: {
       type: "object",
       properties: {
@@ -832,77 +821,14 @@ Edge cases:
       },
       required: ["action"],
     },
-    input_examples: [
-      // Create a shift on January 15th from 9am to 5pm
-      {
-        action: "create",
-        dates: ["2025-01-15"],
-        start: "09:00",
-        end: "17:00",
-      },
-      // Create shifts on multiple dates
-      {
-        action: "create",
-        dates: ["2025-01-15", "2025-01-16", "2025-01-17"],
-        start: "08:00",
-        end: "16:00",
-      },
-      // Update a shift's times (use short 5-char ID from query_shifts)
-      {
-        action: "update",
-        shiftId: "a1b2c",
-        start: "10:00",
-        end: "18:00",
-      },
-      // Delete a single shift (use short 5-char ID from query_shifts)
-      {
-        action: "delete",
-        shiftId: "a1b2c",
-      },
-      // Bulk delete multiple shifts
-      {
-        action: "delete",
-        shiftIds: ["a1b2c", "d3e4f", "g5h6i"],
-      },
-    ],
   },
 
   {
     name: "query_shifts",
     description:
-      `Get shifts with optional filters. Returns shift IDs needed for update/delete operations.
-
-Default behavior: Without parameters, returns shifts for the current week.
-
-Important:
-- For aggregate summaries, use get_statistics first and use query_shifts only when you need itemized shift rows
-- For all-time wording like "ever", "noensinne", or "har vært", pass an explicit broad date range (startDate "2000-01-01", endDate today's local date). Otherwise this tool defaults to the current week.
-- Use null for optional filters you are not using
-- Never send empty strings for startDate, endDate, minTime, maxTime, or jobId
-
-Response includes:
-- data: Array of shifts with id, date, day, start, end, hours, gross, net (if tax enabled), and workplace (name of the job/workplace)
-- summary: Aggregated statistics (shiftCount, totalHours, totalGross, totalNet, avgHoursPerShift, avgGrossPerShift)
-- currency: User's selected currency
-
-Filters:
-- Date range: startDate and endDate (YYYY-MM-DD)
-- Time of day: minTime/maxTime filter by shift start time
-- Weekdays: array of day numbers (0=Sunday through 6=Saturday)
-- Workplace: jobId (UUID from list_workplaces) to filter to one workplace
-- Sorting:
-  - date_latest (default): newest first
-  - date_earliest: oldest first
-  - date: legacy alias for date_latest
-  - day, start, end, hours, earnings/gross, net, workplace, id: sortable shift columns
-  - sortDirection: asc or desc. Use hours + asc for shortest shifts, hours + desc for longest shifts, gross/earnings + desc for highest gross pay.
-
-Use cases:
-- Before update/delete: Query to get shift IDs
-- Finding specific shifts: Use filters to narrow down results
-- Analytics: Sort by earnings to find highest-paying shifts
-- Period overview: Use summary for quick totals without separate calculate_wages call
-- Workplace breakdown: Omit jobId to see all shifts with their workplace labels`,
+      `Get itemized shifts and IDs for updates/deletes. Defaults to the current week; for all-time queries use 2000-01-01 through today's local date. Use get_statistics for aggregate summaries.
+Returns data (id, date, day, start, end, hours, gross, net if tax enabled, workplace), summary totals/averages, and currency. Omitted jobId includes all jobs.
+minTime/maxTime filter shift start time. date_latest (default) sorts newest first, date_earliest oldest; date aliases date_latest. For extrema, set the relevant sortBy and explicit sortDirection before limit (hours+asc shortest, hours+desc longest, gross+desc highest pay). Use null for unused filters, never empty strings.`,
     input_schema: {
       type: "object",
       properties: {
@@ -966,57 +892,12 @@ Use cases:
         },
       },
     },
-    input_examples: [
-      // Get this week's shifts (no parameters needed)
-      {},
-      // Get shifts for January 2025
-      {
-        startDate: "2025-01-01",
-        endDate: "2025-01-31",
-      },
-      // Get evening shifts (after 5pm)
-      {
-        startDate: "2025-01-01",
-        endDate: "2025-01-31",
-        minTime: "17:00",
-      },
-      // Get weekend shifts only
-      {
-        startDate: "2025-01-01",
-        endDate: "2025-01-31",
-        weekdays: [0, 6],
-      },
-      // Get top 10 highest earning shifts
-      {
-        startDate: "2025-01-01",
-        endDate: "2025-12-31",
-        limit: 10,
-        sortBy: "earnings",
-      },
-    ],
   },
 
   {
     name: "query_events",
-    description: `Get private calendar events with optional filters.
-
-Default behavior: Without parameters, returns events overlapping the current week.
-
-Response rows include:
-- id (short ID)
-- note
-- startDate / endDate
-- isAllDay
-- startTime / endTime
-- reminderMinutes
-- reminderAnchorTime
-
-Filters:
-- Date range overlap: startDate/endDate (YYYY-MM-DD)
-- kind: all (default), timed, or all_day
-- sortBy: start_earliest (default) or start_latest
-
-Use this for event lookup, agenda questions, and to get event IDs before update/delete.`,
+    description:
+      `Find private calendar events and IDs before update/delete. Filters by date overlap; defaults to the current week. Returns id, note, startDate/endDate, isAllDay, startTime/endTime, reminderMinutes, and reminderAnchorTime. Use plan_schedule for a merged shift/event agenda.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1045,34 +926,12 @@ Use this for event lookup, agenda questions, and to get event IDs before update/
         },
       },
     },
-    input_examples: [
-      {},
-      {
-        startDate: "2026-04-15",
-        endDate: "2026-04-21",
-      },
-      {
-        startDate: "2026-04-15",
-        endDate: "2026-04-30",
-        kind: "all_day",
-      },
-    ],
   },
 
   {
     name: "manage_event",
-    description: `Create, update, or delete private calendar events.
-
-Actions:
-- CREATE: action="create", note, startDate, endDate, isAllDay, plus startTime/endTime for timed events
-- UPDATE: action="update", eventId, and any fields to change
-- DELETE: action="delete", eventId
-
-Rules:
-- Timed events must stay on one date and require startTime/endTime
-- All-day events can span multiple days and must not include startTime/endTime
-- All-day reminders use notificationAnchorTime; timed reminders use the event start time automatically
-- Update/delete requires eventId. Query events first if you need the ID.`,
+    description:
+      `Create, update, or delete private calendar events. Create requires note, startDate/endDate, isAllDay; timed events also require startTime/endTime and must stay on one date. All-day events may span dates and must omit times. Their reminders use notificationAnchorTime; timed reminders use event start. Update/delete require eventId from query_events; update includes only changed fields.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1123,48 +982,23 @@ Rules:
     },
     input_examples: [
       {
-        action: "create",
-        note: "Doctor appointment",
-        startDate: "2026-04-18",
-        endDate: "2026-04-18",
-        isAllDay: false,
-        startTime: "14:00",
-        endTime: "15:00",
-      },
-      {
-        action: "create",
-        note: "Easter holiday",
-        startDate: "2026-04-17",
-        endDate: "2026-04-20",
-        isAllDay: true,
-        notificationMinutesArray: [120],
-        notificationAnchorTime: "09:00",
-      },
-      {
-        action: "update",
-        eventId: "a1b2c",
-        notificationMinutesArray: [60, 15],
-      },
-      {
-        action: "delete",
-        eventId: "a1b2c",
+        "action": "create",
+        "note": "Easter holiday",
+        "startDate": "2026-04-17",
+        "endDate": "2026-04-20",
+        "isAllDay": true,
+        "notificationMinutesArray": [
+          120,
+        ],
+        "notificationAnchorTime": "09:00",
       },
     ],
   },
 
   {
     name: "plan_schedule",
-    description: `Plan around shifts and private calendar events.
-
-Actions:
-- agenda: Return a merged chronological agenda of shifts and events for a date range
-- conflicts: Check whether a candidate event overlaps any existing shifts or events
-- free_slots: Find free time windows in a date range after subtracting shifts and events
-
-Notes:
-- This is read-only planning help. It does not create or block events.
-- conflicts can use excludeEventId to ignore one existing event while editing it.
-- free_slots requires durationMinutes and can be limited to a daily window with windowStart/windowEnd.`,
+    description:
+      `Read-only planning across shifts and private events: agenda returns chronological entries; conflicts checks a candidate event for overlaps (excludeEventId ignores the edited event); free_slots finds openings of durationMinutes within windowStart/windowEnd. Does not create or reserve events.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1226,25 +1060,12 @@ Notes:
     },
     input_examples: [
       {
-        action: "agenda",
-        startDate: "2026-04-15",
-        endDate: "2026-04-21",
-      },
-      {
-        action: "conflicts",
-        startDate: "2026-04-18",
-        endDate: "2026-04-18",
-        isAllDay: false,
-        startTime: "14:00",
-        endTime: "15:00",
-      },
-      {
-        action: "free_slots",
-        startDate: "2026-04-15",
-        endDate: "2026-04-17",
-        durationMinutes: 90,
-        windowStart: "08:00",
-        windowEnd: "20:00",
+        "action": "free_slots",
+        "startDate": "2026-04-15",
+        "endDate": "2026-04-17",
+        "durationMinutes": 90,
+        "windowStart": "08:00",
+        "windowEnd": "20:00",
       },
     ],
   },
@@ -1252,26 +1073,8 @@ Notes:
   {
     name: "calculate_wages",
     description:
-      `Calculate total wages for an earnings date range. Returns gross pay, net pay, hours worked, tax deducted, and payroll adjustments paid out for that earnings period.
-
-Required: Both startDate and endDate (YYYY-MM-DD format).
-
-Returns:
-- Gross pay (before tax), including relevant payroll adjustments
-- Net pay (after tax, if tax settings are configured), including relevant payroll adjustments
-- Shift-only gross/net and adjustment-only gross/net
-- Total hours worked
-- Tax deducted
-- Number of shifts in the period
-- Payroll adjustments whose payout date belongs to the payout period for this earnings range
-
-Optional: Use jobId (UUID from list_workplaces) to calculate wages for a specific workplace only.
-
-Important: The input dates are earnings dates, not payout dates. For example, June earnings are normally paid in July, so June 1-30 includes adjustments on the July payout, not adjustments on the June payout.
-
-Payout questions: this is the right tool when the user asks what is being PAID OUT ("utbetaling", "lønning", "lønnsslipp", "paycheck", "what do I get paid this month"). Pass the previous calendar month as the earnings range: a payout in month M covers work performed in month M-1. The returned payoutStart/payoutEnd confirm which payout month the range maps to.
-
-Note: For quick monthly/yearly EARNINGS totals, prefer get_statistics which is optimized for common time periods. Do not use get_statistics for payout questions.`,
+      `Calculate wages for an earnings date range, optionally scoped to jobId. Returns gross/net (when tax configured), hours, tax, shift count, shift-only and adjustment-only totals, and payroll adjustments for the corresponding payout period.
+For payout questions, pass the preceding full calendar month: payout in month M covers earnings in M-1. payoutStart/payoutEnd confirm the mapped payout period. June earnings include July payout adjustments, not June payout adjustments. Use get_statistics for common earnings summaries, never for payout questions.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1291,23 +1094,6 @@ Note: For quick monthly/yearly EARNINGS totals, prefer get_statistics which is o
       },
       required: ["startDate", "endDate"],
     },
-    input_examples: [
-      // Calculate wages for January 2025
-      {
-        startDate: "2025-01-01",
-        endDate: "2025-01-31",
-      },
-      // Calculate wages for a single day
-      {
-        startDate: "2025-01-15",
-        endDate: "2025-01-15",
-      },
-      // "What is this month's payout?" asked in February 2025 — pass January as the earnings range
-      {
-        startDate: "2025-01-01",
-        endDate: "2025-01-31",
-      },
-    ],
   },
 
   // ---------------------------------------------------------------------------
@@ -1563,26 +1349,9 @@ The recurring shift will be created and shifts generated according to the patter
   {
     name: "manage_recurring_shift",
     description:
-      `Draft, create, list, update, delete, or skip occurrences for recurring shifts.
-
-Actions:
-- DRAFT_CREATE: action="draft_create" - Preview a recurring pattern WITHOUT creating it; validates pattern and checks conflicts.
-- CONFIRM_CREATE: action="confirm_create" - Create after reviewing draft_create; include conflictResolution.
-- LIST: action="list" - Returns all recurring shifts with IDs, patterns, and schedules (weekdays array format)
-- UPDATE: action="update", recurringId, plus fields to change (weekdays, times, frequency, endType)
-- DELETE: action="delete", recurringId - Removes the recurring shift and ALL its virtual shifts disappear immediately
-- ADD_EXCLUSION: action="add_exclusion", recurringId, date - Skip one occurrence
-- REMOVE_EXCLUSION: action="remove_exclusion", recurringId, date - Restore one skipped occurrence
-
-Create workflow: use draft_create first. If conflicts exist, ask how to handle them, then call confirm_create with the same pattern, jobId, and conflictResolution.
-Modify workflow: Always list first to get recurring shift IDs before update/delete/exclusions.
-
-Note: Recurring shifts are virtual (not stored individually). Deleting a recurring shift removes all future occurrences.
-Only standalone shifts (manually created or converted) remain after deletion.
-When updating weekdays, provide the complete weekdays array (replaces all existing weekdays).
-Use weekdays array to create a SINGLE recurring shift with multiple weekdays. Do NOT create separate recurring shifts for each day.
-For alternating biweekly/every_N_weeks patterns, offset anchorDates by one week to alternate days between weeks.
-Pay setup required: The selected/default job must have paySetupStatus="configured" before recurring shifts can be created.`,
+      `Manage recurring shifts: draft_create previews/validates and checks conflicts; confirm_create writes the same pattern/jobId with conflictResolution. Ask the user how to resolve conflicts when present. Creation requires paySetupStatus="configured".
+Use ONE rule with multiple weekdays. Each anchorDate must match its weekday and intended starting week; offset anchors by a week for alternating biweekly/every_N_weeks patterns.
+list returns IDs/patterns/schedules; list before update/delete/exclusions. update requires recurringId and changed fields; weekdays replaces the entire array. delete removes the rule and its virtual occurrences immediately; standalone/converted shifts remain. add_exclusion/remove_exclusion require recurringId/date to skip/restore an occurrence.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1669,68 +1438,27 @@ Pay setup required: The selected/default job must have paySetupStatus="configure
       required: ["action"],
     },
     input_examples: [
-      // List all recurring shifts
       {
-        action: "list",
-      },
-      // Draft a new Mon/Wed/Fri recurring shift before creating it
-      {
-        action: "draft_create",
-        weekdays: [
-          { day: 1, anchorDate: "2025-01-20" },
-          { day: 3, anchorDate: "2025-01-22" },
-          { day: 5, anchorDate: "2025-01-24" },
+        "action": "draft_create",
+        "weekdays": [
+          {
+            "day": 1,
+            "anchorDate": "2025-01-20",
+          },
+          {
+            "day": 3,
+            "anchorDate": "2025-01-22",
+          },
+          {
+            "day": 5,
+            "anchorDate": "2025-01-24",
+          },
         ],
-        start: "09:00",
-        end: "17:00",
-        frequency: "weekly",
-        endType: "after_months",
-        endValue: 6,
-      },
-      // Confirm the same draft and skip conflicting dates
-      {
-        action: "confirm_create",
-        weekdays: [{ day: 1, anchorDate: "2025-01-20" }],
-        start: "09:00",
-        end: "17:00",
-        frequency: "weekly",
-        endType: "never",
-        conflictResolution: "skip_conflicts",
-      },
-      // Update recurring shift times (use short 5-char ID from list)
-      {
-        action: "update",
-        recurringId: "a1b2c",
-        start: "10:00",
-        end: "18:00",
-      },
-      // Change recurring shift weekdays from Mon only to Mon/Wed/Fri
-      {
-        action: "update",
-        recurringId: "a1b2c",
-        weekdays: [
-          { day: 1, anchorDate: "2025-01-20" },
-          { day: 3, anchorDate: "2025-01-22" },
-          { day: 5, anchorDate: "2025-01-24" },
-        ],
-      },
-      // Change recurring shift to end after 6 months
-      {
-        action: "update",
-        recurringId: "a1b2c",
-        endType: "after_months",
-        endValue: 6,
-      },
-      // Delete a recurring shift
-      {
-        action: "delete",
-        recurringId: "a1b2c",
-      },
-      // Skip one occurrence
-      {
-        action: "add_exclusion",
-        recurringId: "a1b2c",
-        date: "2025-12-25",
+        "start": "09:00",
+        "end": "17:00",
+        "frequency": "weekly",
+        "endType": "after_months",
+        "endValue": 6,
       },
     ],
   },
@@ -1791,31 +1519,17 @@ Note: The date must be one that would normally occur in the recurring shift patt
   {
     name: "get_statistics",
     description:
-      `Get pre-computed statistics and analytics. Always prefer this over manual calculations.
-
-Preferred first tool for summary questions about earnings, hours, or shift counts over a week, month, or year.
-Use query_shifts only if the user also wants the individual shift rows.
-
-All metrics are EARNINGS-based: they cover work performed inside the period, not money paid out during it. For payout questions ("utbetaling", "lønning", "lønnsslipp", "paycheck", "what am I getting paid this month"), use calculate_wages for the previous calendar month instead, since a payout in month M covers work from month M-1.
-
-Available metrics:
-- current_month: Earnings, hours, shift count for work performed in the current month (NOT the payout received this month)
-- last_month: Same metrics for previous month (good for comparison, and the earnings behind this month's payout)
-- year_to_date: Cumulative totals from Jan 1 up to today's date. For past years, uses same day-of-year as today (e.g., if today is Feb 4 2026, YTD for 2025 = Jan 1 - Feb 4 2025). Good for "same point in time" comparisons.
-- full_year: Complete calendar year totals (Jan 1 - Dec 31). Use for "how much did I earn in total last year" questions.
-- yearly_months: Monthly breakdown for all 12 months of the specified year. Returns array of {month, earnings, hours, shifts} for Jan-Dec. Use for trends, charts, or "show me my earnings by month".
-- this_week: Daily breakdown Monday through Sunday
-- monthly_goal: Progress toward user's monthly goal (if set)
-- supplement_breakdown: How much is base pay vs evening/weekend supplements
-- shift_gaps: Longest gaps/breaks between consecutive shifts in a date range. Use this for questions like "longest break between shifts", "longest I've gone without working", or "pauses between shifts".
-
-When to use year_to_date vs full_year:
-- "How much had I earned by this point last year?" → year_to_date with year parameter
-- "How much did I earn in total last year?" → full_year with year parameter
-
-Optional: year and month parameters to query specific periods (defaults to current).
-For shift_gaps, prefer explicit startDate/endDate when the user asks "since", "between", or names a custom period. limit controls how many longest gaps to return.
-Optional: jobId (UUID from list_workplaces) to get statistics for a specific workplace only.`,
+      `Precomputed earnings/hour/shift-count summaries; use instead of manual calculations. Use query_shifts only for itemized rows. For payouts use calculate_wages over the previous calendar month.
+Metrics:
+- current_month/last_month: earnings, hours, shift count for work in that month.
+- year_to_date: Jan 1 through today's date; past years stop at the equivalent date for same-point comparisons.
+- full_year: Jan 1–Dec 31 totals, including for past years.
+- yearly_months: all 12 months with earnings, hours, shifts.
+- this_week: Monday–Sunday daily breakdown.
+- monthly_goal: goal progress.
+- supplement_breakdown: base pay vs supplements.
+- shift_gaps: longest breaks between consecutive shifts; use explicit startDate/endDate for custom periods and limit for number of gaps.
+Optional year/month default to current; jobId scopes to a job.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1865,27 +1579,6 @@ Optional: jobId (UUID from list_workplaces) to get statistics for a specific wor
       },
       required: ["metric"],
     },
-    input_examples: [
-      // How much did I earn this month?
-      { metric: "current_month" },
-      // Compare to last month
-      { metric: "last_month" },
-      // Am I on track for my monthly goal?
-      { metric: "monthly_goal" },
-      // Show monthly breakdown for the year
-      { metric: "yearly_months" },
-      // How much had I earned by this point last year?
-      { metric: "year_to_date", year: 2025 },
-      // How many hours did I work in total last year / in 2025?
-      { metric: "full_year", year: 2025 },
-      // Longest breaks between shifts since last year
-      {
-        metric: "shift_gaps",
-        startDate: "2025-01-01",
-        endDate: "2026-05-16",
-        limit: 5,
-      },
-    ],
   },
 
   // ---------------------------------------------------------------------------
@@ -1908,12 +1601,12 @@ Actions:
 - list_feedback: returns previous feedback
 
 Settings categories and keys:
-- display: theme, defaultShiftsView, currency, showDashboardClockButtons
+- display: theme (light/dark), defaultShiftsView (calendar/list), currency (display symbol, default kr), showDashboardClockButtons (boolean, default true)
 - tax: halfTaxMonth (1-12, global half-tax month override only)
-- goals: monthlyGoal, payrollDay, monthlyGoalsByMonth
-- preferences: defaultStartupTab
+- goals: monthlyGoal (baseline gross target), payrollDay (1-31), monthlyGoalsByMonth (overrides; unset months use baseline)
+- preferences: defaultStartupTab (home/shifts/add/stats/sharing)
 
-Only include fields that should change. For monthlyGoalsByMonth, use { "YYYY-MM": amount } to set an override and null to remove one.`,
+Only include changed settings. For monthlyGoalsByMonth, use { "YYYY-MM": amount } to set an override and null to remove it. view_settings returns all overrides and the current month's effective goal.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1950,17 +1643,12 @@ Only include fields that should change. For monthlyGoalsByMonth, use { "YYYY-MM"
       required: ["action"],
     },
     input_examples: [
-      { action: "view_settings" },
       {
-        action: "update_settings",
-        category: "goals",
-        settings: { monthlyGoal: 50000 },
-      },
-      { action: "view_profile" },
-      { action: "update_name", firstName: "Hjalmar" },
-      {
-        action: "submit_feedback",
-        message: "Would love better weekend filters in stats.",
+        "action": "update_settings",
+        "category": "goals",
+        "settings": {
+          "monthlyGoal": 50000,
+        },
       },
     ],
   },
@@ -2073,25 +1761,8 @@ Note: Tax deduction enabled/percentage are per-snapshot — use get_wage_info in
   {
     name: "get_wage_info",
     description:
-      `Get wage configuration for a job: snapshot history plus pay settings.
-
-Returns:
-- workplace: Selected job context (id, name, isDefault) when available
-- hasBaselineSnapshot / requiresPaySetup / paySetupStatus
-- globalPaySettings: Pay configuration for the selected job when available
-- tariffs: Distinct tariff agreements referenced by the job's wage snapshots (id, displayName, description, country, isDefault)
-- current: The wage that applies today (id, fromDate, usingTariff, wageLevel, tariffTypeId, tariff, hourlyWage, supplements, overtime, taxEnabled, taxPercentage)
-- upcoming: Future scheduled wage changes (if any) - compact format showing only changed fields, includes id
-- history: Past wage entries for context (if any) - compact format showing only changed fields, includes id
-
-Input:
-- Optional jobId (UUID from list_workplaces)
-- If omitted, defaults to the user's default job
-
-Use this when the user asks about their wage, hourly rate, tax settings, payroll day, or wage history.
-For display/preference settings (theme, defaultStartupTab, etc.), use manage_account instead.
-To modify wage entries, use manage_wage_snapshots with the id from get_wage_info.
-To modify halfTaxMonth or payrollDay, use manage_account action="update_settings" with category="tax" or category="goals".`,
+      `Read a job's wage setup; omitted jobId uses the default job. Returns workplace, baseline/setup status, globalPaySettings, referenced tariffs, current wage (rate, tariff, supplements, overtime, tax), and upcoming/history entries with IDs and changed fields.
+Use for wage, tax, payroll-day, or wage-history questions, and before manage_wage_snapshots to resolve IDs/current configuration. Use manage_account for display/preferences and global halfTaxMonth (tax) or payrollDay (goals); manage_workplace for job settings.`,
     input_schema: {
       type: "object",
       properties: {
@@ -2102,10 +1773,6 @@ To modify halfTaxMonth or payrollDay, use manage_account action="update_settings
         },
       },
     },
-    input_examples: [
-      {},
-      { jobId: "5f5e8f67-8d36-4e47-bdb0-9ad6f2367d28" },
-    ],
   },
 
   {
@@ -2310,80 +1977,28 @@ Other notes:
       required: ["action"],
     },
     input_examples: [
-      // "From February I will have 5% tax"
       {
-        action: "create",
-        from_date: "2025-02-01",
-        tax_enabled: true,
-        tax_percentage: 5,
+        "action": "create",
+        "from_date": "2025-02-01",
+        "tax_enabled": true,
+        "tax_percentage": 5,
       },
-      // "Update my current hourly wage to 250" (automatically switches to custom mode, wage_level becomes null)
       {
-        action: "update",
-        snapshot_id: "a1b2c",
-        hourly_wage: 250,
-      },
-      // "Delete the upcoming wage change"
-      {
-        action: "delete",
-        snapshot_id: "d3e4f",
-      },
-      // "From March I want wage level 6 with 10% tax" (automatically looks up hourly rate from tariff)
-      {
-        action: "create",
-        from_date: "2025-03-01",
-        wage_level: 6,
-        tax_enabled: true,
-        tax_percentage: 10,
-      },
-      // "Change from tariff to custom rate of 220" (hourly_wage triggers custom mode, no need to set wage_level: null)
-      {
-        action: "update",
-        snapshot_id: "a1b2c",
-        hourly_wage: 220,
-      },
-      // "Switch to wage level 4" (automatically looks up rate 193.05 from tariff)
-      {
-        action: "update",
-        snapshot_id: "a1b2c",
-        wage_level: 4,
-      },
-      // "Enable 30 minute break deduction starting from next month"
-      {
-        action: "create",
-        from_date: "2025-02-01",
-        break_enabled: true,
-        break_method: "proportional",
-        break_threshold_hours: 5.5,
-        break_deduction_minutes: 30,
+        "action": "create",
+        "from_date": "2025-03-01",
+        "wage_level": 6,
+        "tax_enabled": true,
+        "tax_percentage": 10,
       },
     ],
   },
 
   {
     name: "manage_payroll_adjustment",
-    description: `List, create, update, or delete manual payroll adjustments.
-
-Use this only when the user clearly asks to inspect or change payroll adjustments. Do not create, update, or delete an adjustment unless the user has clearly requested that mutation.
-
-Actions:
-- LIST: action="list". Optional payoutStart/payoutEnd filter by payout_date range.
-- CREATE: action="create". Requires amount, description, and either payoutDate or payoutMonth. If tax is enabled for that payout, taxTreatment is also required. If tax is disabled, the backend uses net_manual automatically.
-- UPDATE: action="update". Requires adjustmentId and at least one field to change.
-- DELETE: action="delete". Requires adjustmentId. List/resolve first; if the user's reference is ambiguous, ask for confirmation instead of deleting.
-
-Parameter semantics:
-- adjustmentId: Short 4-8 hex prefix or full UUID from a prior list result.
-- amount: Numeric adjustment amount. Positive values increase payout; negative values reduce payout.
-- description: Short user-visible summary of what the adjustment is and why it exists. The category is displayed as the adjustment card title, so description must be specific context/reason, not just a category label. Required for create.
-- payoutDate: ISO date (YYYY-MM-DD) for the payout where this adjustment should appear.
-- payoutMonth: Month (YYYY-MM) for the payout. The backend derives the payout date from the user's payroll day or selected workplace payroll day.
-- earnedFromDate/earnedToDate: Optional ISO dates (YYYY-MM-DD) describing the earning period the adjustment belongs to. They do not move the payout date.
-- jobId: Full workplace UUID from list_workplaces. Omit/null for no specific workplace.
-- taxTreatment: gross_taxable means estimate tax from gross; net_manual means amount is already a direct net payout/deduction; excluded_from_tax_estimate means show in gross/net without estimated tax. Required for create only when tax is enabled for the payout date/month.
-- category: retro_pay, bonus, correction, or other. Use correction only when the user's wording does not clearly match retro pay or bonus.
-- currency: Display currency/symbol, usually from user settings or the relevant payroll context.
-- clearFields: For update only, explicitly clear nullable fields. Allowed values: jobId, note, earnedFromDate, earnedToDate.`,
+    description:
+      `Inspect manual payroll adjustments only when requested; create/update/delete only on a clear mutation request. list filters by payoutStart/payoutEnd. Resolve adjustmentId with list before update/delete and clarify ambiguous targets.
+Create requires amount, description, and payoutDate or payoutMonth. taxTreatment is required when tax is enabled for that payout; otherwise the backend defaults to net_manual. Update requires adjustmentId and changed fields; clearFields explicitly clears nullable fields.
+Infer category from the user's reason (retro_pay/bonus when applicable, otherwise correction). Description must explain the adjustment, not repeat its category; ask for the reason if missing. Earning-period dates do not change payout timing.`,
     strict: true,
     input_schema: {
       type: "object",
@@ -2508,43 +2123,15 @@ Parameter semantics:
     },
     input_examples: [
       {
-        action: "list",
-        adjustmentId: null,
-        payoutStart: "2026-05-01",
-        payoutEnd: "2026-05-31",
-        payoutDate: null,
-        payoutMonth: null,
-        jobId: null,
-        amount: null,
-        currency: null,
-        category: null,
-        taxTreatment: null,
-        description: null,
-        note: null,
-        earnedFromDate: null,
-        earnedToDate: null,
-        clearFields: null,
-        limit: 20,
-      },
-      {
-        action: "create",
-        adjustmentId: null,
-        payoutStart: null,
-        payoutEnd: null,
-        payoutDate: "2026-05-15",
-        payoutMonth: null,
-        jobId: null,
-        amount: 1200,
-        currency: null,
-        category: "retro_pay",
-        taxTreatment: "gross_taxable",
-        description:
+        "action": "create",
+        "payoutDate": "2026-05-15",
+        "amount": 1200,
+        "category": "retro_pay",
+        "taxTreatment": "gross_taxable",
+        "description":
           "Retro pay for April that was missing from the original payout.",
-        note: null,
-        earnedFromDate: "2026-04-01",
-        earnedToDate: "2026-04-30",
-        clearFields: null,
-        limit: null,
+        "earnedFromDate": "2026-04-01",
+        "earnedToDate": "2026-04-30",
       },
     ],
   },
@@ -2555,35 +2142,8 @@ Parameter semantics:
   {
     name: "calculate_earnings",
     description:
-      `Calculate hypothetical earnings for shifts that don't exist yet. Perfect for "what if" questions.
-
-THREE MODES (use exactly one):
-
-1. HYPOTHETICAL: Calculate earnings for a single hypothetical shift
-   - Use when: "How much would I earn working 15-23 on Monday?"
-   - Params: hypothetical: { date, start_time, end_time }
-
-2. COMPARE: Compare 2-5 hypothetical scenarios side-by-side
-   - Use when: "Would I earn more working 12-18 or 16-22 on Friday?"
-   - Params: compare: [{ date, start_time, end_time, label? }, ...]
-   - Returns: All scenarios + which is best and by how much
-
-3. HYPOTHETICAL_CHANGE: Calculate what would happen if an existing shift was different
-   - Use when: "How much more would I earn if my Monday shift started at 15 instead of 9?"
-   - Params: hypothetical_change: { shift_id, changes: { start_time?, end_time?, date? } }
-   - Returns: Original vs modified earnings with difference
-   - Note: Query the shift first to get its ID
-   - Virtual/recurring shifts have IDs like "virtual-a1b2c-2025-12-03" (5-char recurring ID + date)
-
-Returns for each scenario:
-- gross: Total earnings before tax
-- net: Earnings after tax (if tax settings configured)
-- paid_hours: Hours after break deduction
-- breakdown: base_pay, supplement_pay, break_deducted_minutes, break_source, applied_pause_windows, break_notes
-
-The date matters for supplements (weekend/evening rates vary by day).
-
-IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references like "Monday", "next Friday", "this weekend". Use today's date as reference to determine the exact calendar date.`,
+      `Calculate hypothetical shift earnings without writing. Use exactly one mode: hypothetical for one shift; compare for 2–5 scenarios; hypothetical_change for an existing shift plus changed times/date (query its ID first). Virtual IDs use virtual-<5-char recurring ID>-YYYY-MM-DD.
+Returns gross, net if tax configured, paid_hours, and breakdown (base/supplement pay, break deduction/source, pause windows/notes); comparisons include differences and the best scenario. Resolve relative dates to YYYY-MM-DD using today's date: supplements depend on the day.`,
     input_schema: {
       type: "object",
       properties: {
@@ -2650,60 +2210,28 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
       },
     },
     input_examples: [
-      // "How much would I earn working 15-23 on Monday Jan 20?"
       {
-        hypothetical: {
-          date: "2025-01-20",
-          start_time: "15:00",
-          end_time: "23:00",
-        },
-      },
-      // "Would I earn more working 12-18 or 16-22 on Friday?"
-      {
-        compare: [
+        "compare": [
           {
-            date: "2025-01-24",
-            start_time: "12:00",
-            end_time: "18:00",
-            label: "Day shift",
+            "date": "2025-01-24",
+            "start_time": "12:00",
+            "end_time": "18:00",
+            "label": "Day shift",
           },
           {
-            date: "2025-01-24",
-            start_time: "16:00",
-            end_time: "22:00",
-            label: "Evening shift",
+            "date": "2025-01-24",
+            "start_time": "16:00",
+            "end_time": "22:00",
+            "label": "Evening shift",
           },
         ],
       },
-      // "What if I worked Saturday vs Sunday same hours?"
       {
-        compare: [
-          {
-            date: "2025-01-25",
-            start_time: "10:00",
-            end_time: "18:00",
-            label: "Saturday",
+        "hypothetical_change": {
+          "shift_id": "virtual-b3c4d-2025-01-20",
+          "changes": {
+            "end_time": "22:00",
           },
-          {
-            date: "2025-01-26",
-            start_time: "10:00",
-            end_time: "18:00",
-            label: "Sunday",
-          },
-        ],
-      },
-      // "How much more would I earn if my shift started at 15 instead?"
-      {
-        hypothetical_change: {
-          shift_id: "a1b2c",
-          changes: { start_time: "15:00" },
-        },
-      },
-      // "What if my recurring Monday shift ended at 22 instead of 20?"
-      {
-        hypothetical_change: {
-          shift_id: "virtual-b3c4d-2025-01-20",
-          changes: { end_time: "22:00" },
         },
       },
     ],
@@ -2714,31 +2242,9 @@ IMPORTANT: Always calculate specific YYYY-MM-DD dates from relative references l
   // ---------------------------------------------------------------------------
   {
     name: "list_workplaces",
-    description: `List jobs configured by the user.
-
-By default, returns both active and archived jobs.
-Set includeArchived=false to return active jobs only.
-
-Returns each job with:
-- id (UUID)
-- name
-- color
-- isDefault
-- isArchived
-- archivedAt
-- hasBaselineSnapshot
-- requiresPaySetup
-- paySetupStatus ("configured", "pay_setup_required", or "archived")
-
-Use this tool when:
-- The user asks about their jobs
-- You need a jobId to filter shifts/wages by job
-- You need to know which job is the default
-- You need to find archived jobs before restoring them
-- Before creating a shift for a specific job
-- Before creating shifts, check paySetupStatus. If requiresPaySetup=true, create a baseline wage snapshot first.
-
-Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_statistics, and manage_shift.`,
+    description:
+      `List jobs with id, name, color, isDefault, isArchived, archivedAt, hasBaselineSnapshot, requiresPaySetup, and paySetupStatus (configured/pay_setup_required/archived). Includes archived jobs unless includeArchived=false.
+Resolve named jobs before filtering wages/shifts or mutating jobs. Pass returned UUID as jobId. Before creating shifts, ensure the job has configured pay; create its baseline wage snapshot if required.`,
     input_schema: {
       type: "object",
       properties: {
@@ -2748,35 +2254,14 @@ Note: Use the returned id (UUID) as jobId in query_shifts, calculate_wages, get_
         },
       },
     },
-    input_examples: [
-      // List active + archived workplaces (default)
-      {},
-      // List active jobs only
-      { includeArchived: false },
-    ],
   },
 
   {
     name: "manage_workplace",
     description:
-      `Create, update, set default, archive, unarchive, or delete jobs.
-
-Actions:
-- CREATE: action="create", name is required; optional color/payrollDay/monthlyGoal/halfTaxMonth
-- UPDATE: action="update", jobId (required), plus one or more fields to change
-- SET DEFAULT: action="set_default", jobId (required)
-- ARCHIVE: action="archive", jobId (required)
-- UNARCHIVE: action="unarchive", jobId (required)
-- DELETE: action="delete", jobId (required)
-
-Important:
-- To target an existing job, first call list_workplaces to get the jobId (UUID)
-- Archived jobs cannot be used for new shifts until unarchived
-- Default jobs cannot be archived or deleted
-- Last active job cannot be archived or deleted
-- Jobs with shifts or payroll adjustments should be archived, not deleted
-- After CREATE, the job exists but requires pay setup before shifts can be added
-- To finish setup, create a baseline wage snapshot with manage_wage_snapshots action="create", jobId, from_date=null`,
+      `Create a job with name and optional color/payrollDay/monthlyGoal/halfTaxMonth. Other actions require jobId from list_workplaces; update includes changed fields.
+Default jobs and the last active job cannot be archived/deleted. Archive jobs with shifts/payroll adjustments instead of deleting. Archived jobs must be unarchived before adding shifts.
+After create, explain pay setup is required; create a baseline via manage_wage_snapshots with jobId and from_date=null before shifts can be added.`,
     input_schema: {
       type: "object",
       properties: {
@@ -2821,36 +2306,6 @@ Important:
       },
       required: ["action"],
     },
-    input_examples: [
-      {
-        action: "create",
-        name: "Cafe Nord",
-        color: "#22C55E",
-        payrollDay: 15,
-        monthlyGoal: null,
-      },
-      {
-        action: "update",
-        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-        name: "Cafe Nord AS",
-      },
-      {
-        action: "set_default",
-        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-      },
-      {
-        action: "archive",
-        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-      },
-      {
-        action: "unarchive",
-        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-      },
-      {
-        action: "delete",
-        jobId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-      },
-    ],
   },
 
   // ---------------------------------------------------------------------------
@@ -2935,53 +2390,13 @@ Direction guardrails:
       },
       required: ["action"],
     },
-    input_examples: [
-      {
-        action: "share_by_identifier",
-        identifier: "friend@example.com",
-        showEarnings: false,
-      },
-      {
-        action: "share_back",
-        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-      },
-      {
-        action: "toggle_recipient_earnings",
-        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-        showEarnings: true,
-      },
-    ],
   },
 
   {
     name: "query_friend_shifts",
-    description: `Query a friend's shared shifts or featured shift preview.
-
-Access rules:
-- Friend must have sharesWithMe=true from list_friends
-- If blocked or no access, returns explicit no-access result
-
-Modes:
-- shifts (default): returns a filtered list of shared shifts
-- featured: returns the active > upcoming > past featured shift preview, using the same logic as the friends page
-
-Filters match query_shifts:
-- startDate/endDate (default current week)
-- minTime/maxTime
-- weekdays (0=Sun..6=Sat)
-- sortBy:
-  - date_latest (default): newest first
-  - date_earliest: oldest first
-  - date: legacy alias for date_latest
-  - day, start, end, hours, earnings/gross, net, workplace, id: sortable shift columns
-- sortDirection: asc or desc. Use hours + asc for shortest shifts, hours + desc for longest shifts, gross/earnings + desc for highest gross pay.
-- jobId (friend workplace UUID)
-- limit (default 30, max 100)
-
-Important:
-- For all-time wording like "ever", "noensinne", or "har vært", pass an explicit broad date range (startDate "2000-01-01", endDate today's local date). Otherwise this tool defaults to the current week.
-- Use null for optional filters you are not using
-- Never send empty strings for startDate, endDate, minTime, maxTime, or jobId`,
+    description:
+      `Read a friend's shared shifts; resolve friendId with list_friends and require sharesWithMe=true. Honor explicit no-access results.
+mode="featured" returns active > upcoming > past preview; mode="shifts" (default) returns filtered shifts. Filters/sorting match query_shifts; jobId refers to the friend's job. Default range is current week; use 2000-01-01 through today for all-time questions. Sort by the relevant column and explicit direction before limit for extrema. Use null for unused filters, never empty strings.`,
     input_schema: {
       type: "object",
       properties: {
@@ -3054,19 +2469,6 @@ Important:
       },
       required: ["friendId"],
     },
-    input_examples: [
-      { friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809" },
-      {
-        mode: "featured",
-        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-      },
-      {
-        friendId: "2d6bb2fa-7fe9-4f62-b5ce-fb5b8620f809",
-        startDate: "2026-03-01",
-        endDate: "2026-03-31",
-        sortBy: "hours",
-      },
-    ],
   },
 
   // ---------------------------------------------------------------------------
@@ -3173,10 +2575,6 @@ Actions:
       },
       required: ["action"],
     },
-    input_examples: [
-      { action: "copy_shifts", shiftIds: ["a1b2c"], targetDate: "2026-03-10" },
-      { action: "clear_shift_snapshots", shiftId: "a1b2c" },
-    ],
   },
 
   // ---------------------------------------------------------------------------
