@@ -2,7 +2,7 @@ import Foundation
 import Supabase
 
 /// Service for fetching and resolving wage snapshots from Supabase
-/// Uses binary search for efficient snapshot resolution by date
+/// Resolves snapshots in one pass without sorting or allocating a dated copy.
 @MainActor
 final class SnapshotsService: ObservableObject {
   static let shared = SnapshotsService()
@@ -41,7 +41,7 @@ final class SnapshotsService: ObservableObject {
     }
   }
 
-  /// Find the applicable snapshot for a specific date using binary search
+  /// Find the applicable snapshot for a specific date
   /// Instance method that delegates to the static version
   /// - Parameters:
   ///   - date: ISO date string (YYYY-MM-DD)
@@ -52,7 +52,7 @@ final class SnapshotsService: ObservableObject {
     Self.snapshotForDate(date, from: snapshots)
   }
 
-  /// Find the applicable snapshot for a specific date using binary search
+  /// Find the applicable snapshot for a specific date in one pass
   /// Static version for use in non-MainActor contexts (e.g., PayrollEngine)
   /// Marked nonisolated since it's a pure function with no side effects
   /// - Parameters:
@@ -62,30 +62,23 @@ final class SnapshotsService: ObservableObject {
   nonisolated static func snapshotForDate(_ date: String, from snapshots: [WageSnapshot])
     -> WageSnapshot?
   {
-    // Find baseline snapshot (from_date == nil) as fallback
-    let baseline = snapshots.first { $0.from_date == nil }
-
-    // Filter to only dated snapshots and sort ascending by from_date
-    // (DB returns DESC, so we need to filter and sort)
-    let dated =
-      snapshots
-      .filter { $0.from_date != nil }
-      .sorted { ($0.from_date ?? "") < ($1.from_date ?? "") }
-
-    // Binary search: find the latest snapshot where from_date <= date
-    var left = 0
-    var right = dated.count - 1
+    var baseline: WageSnapshot?
     var result: WageSnapshot?
+    var latestDate = ""
 
-    while left <= right {
-      let mid = (left + right) / 2
-      if let midDate = dated[mid].from_date, midDate <= date {
-        // This snapshot is valid, but there might be a later one
-        result = dated[mid]
-        left = mid + 1
-      } else {
-        // This snapshot starts after our target date
-        right = mid - 1
+    for snapshot in snapshots {
+      guard let fromDate = snapshot.from_date else {
+        if baseline == nil {
+          baseline = snapshot
+        }
+        continue
+      }
+
+      // Equal dates keep the last input entry, matching the previous stable sort
+      // followed by a search for the rightmost applicable snapshot.
+      if fromDate <= date, fromDate >= latestDate {
+        result = snapshot
+        latestDate = fromDate
       }
     }
 
