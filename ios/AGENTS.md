@@ -10,60 +10,13 @@ Run commands from the repository root unless explicitly stated otherwise.
 
 When running verification or diagnostic commands, prefer flags that reduce non-actionable output and preserve useful diagnostics. Examples: use `swiftlint --quiet` for fast Swift checks, use `--json` on repository build/test wrappers when you need structured diagnostics, and use focused test filters where possible. Avoid verbose command modes unless the extra output is needed to debug the issue.
 
-Use the repository build wrapper for any iOS build. Do not run `xcodebuild` directly. If the wrapper hangs or takes unusually long, stop and report.
-Use the repository test wrapper for any iOS test run. Do not run `xcodebuild test` directly.
+Use [the verification guide](docs/AGENT_VERIFICATION.md) when building or testing. Use the existing wrappers, investigate failures within scope, and do not bypass a hung wrapper with raw xcodebuild; report a concrete blocker if it cannot be resolved.
 
-### Build Wrapper
+## Backend access
 
-```bash
-./scripts/xcode-build-agent.sh
-```
+Use the existing Swift Supabase client with the user's JWT for RLS-protected queries and authorized public RPCs. Keep privileged operations server-side in the existing Edge Functions or reviewed SQL functions. Do not introduce a web API layer or put service-role credentials in the iOS app. Inspect the affected service and handler before choosing a route.
 
-Do NOT run `xcodebuild` directly.
-
-JSON output is available with:
-
-```bash
-./scripts/xcode-build-agent.sh --json
-```
-
-Interpretation rules:
-- Exit code `0` + `STATUS: SUCCESS` -> build succeeded
-- Non-zero exit code or `STATUS: FAILURE` -> build failed
-- If present, read the `WARNINGS` and `ERRORS` sections for diagnostics
-- During active debugging where the user is already rebuilding in Xcode or on device/simulator after each turn, do not auto-run the build wrapper for every small change.
-- In that mode, skip build execution when the edit is narrow and you are confident it should still compile; explicitly say you skipped the build so the user can validate in their normal loop.
-
-### Test Wrapper
-
-```bash
-./scripts/xcode-test-agent.sh
-```
-
-Do NOT run `xcodebuild test` directly.
-
-JSON output is available with:
-
-```bash
-./scripts/xcode-test-agent.sh --json
-```
-
-Pass focused test filters through to `xcodebuild test`, for example:
-
-```bash
-./scripts/xcode-test-agent.sh -- -only-testing:TidexAppTests/FriendsMessagesRepositoryTests
-```
-
-Interpretation rules:
-- Exit code `0` + `STATUS: SUCCESS` -> tests passed
-- Non-zero exit code or `STATUS: FAILURE` -> tests failed
-- If present, read the `TESTS`, `WARNINGS`, `ERRORS`, and `test_failures` diagnostics
-- During active debugging where the user is already rebuilding/rerunning manually after each turn, do not auto-run tests for every small change.
-- In that mode, skip test execution when the edit is narrow and low-risk, and say so clearly in the handoff.
-
-**ONLY create API routes when service role privileges are required.** Everything that can be done in the iOS binary using the user's JWT + RLS policies should stay there. Examples:
-- API route needed: `/api/delete-account` (needs admin API), `/api/push-device` (needs `internal` schema)
-- No API route: Subscription/entitlement data, settings, shifts - use Supabase client directly or RPC functions
+The current service layer uses `.rpc(...)` and `supabase.functions.invoke(...)`; examples include `Services/Data/FriendsMessagingService.swift`, `Services/Auth/ImpersonationManager.swift`, and `Services/Subscription/JWSUploadWorker.swift` under `ios/TidexApp/`. Backend source and self-hosted deployment guidance are in the root AGENTS.md. Static marketing and compatibility sites are not an authenticated application API server.
 
 ## Testing Requirements (REQUIRED for feature work)
 
@@ -102,67 +55,11 @@ Prefer small focused unit tests over broad UI tests unless the behavior is UI-on
 - Added/updated tests for new behavior.
 - Confirmed tests are included in the correct test target.
 - Ran fast validation (`swiftlint --quiet`) and reported results.
-- Asked the user to run tests/build in Xcode for final verification.
+- Completed focused verification, or reported exactly what remains unverified and why. Request user/device verification only for unavailable tooling, device-only behavior, or the active interactive Xcode loop.
 
-## Localization (REQUIRED for all UI strings)
+## Localization
 
-**NEVER hardcode user-visible strings.** Every string shown to users must be localized.
-
-### Adding new strings (AI workflow)
-
-1. **Add or update the plain string entry** with English, Norwegian, and translator context:
-   ```bash
-   ./scripts/xcstrings-set ios/Resources/Localization/App/Localizable.xcstrings feature.context.description \
-     --comment "Translator context" \
-     --en "English text" \
-     --nb "Norwegian text"
-   ```
-
-2. **Use the symbol in code:**
-   ```swift
-   // Simple strings
-   Text(.featureContextDescription)
-   String(localized: .featureContextDescription)
-
-   // Formatted strings (symbols become functions)
-   Text(String(localized: .commonInDays(Int32(days))))
-   ```
-
-3. **Remind the user** to run the translation script for other languages:
-   ```bash
-   bun ios/Scripts/translate-xcstrings.mjs
-   ```
-
-Use Xcode's String Catalog editor or XLIFF export/import instead of `xcstrings-set` for pluralization, substitutions, device variants, or bulk translator workflows.
-
-### Key naming convention
-
-- Format: `feature.context.description` (dot-separated, lowercase)
-- Symbol becomes camelCase: `feature.context.description` → `.featureContextDescription`
-- Examples:
-  - `settings.profile.saveButton` → `.settingsProfileSaveButton`
-  - `dashboard.earnings.title` → `.dashboardEarningsTitle`
-  - `common.cancel` → `.commonCancel`
-
-### Validation scripts
-
-```bash
-# Check for hardcoded strings in SwiftUI views
-./lint-strings
-
-# Validate string catalog integrity
-ios/Scripts/validate-localization.sh
-```
-
-### Rules
-
-- Use Xcode-generated `LocalizedStringResource` symbols, not raw string keys
-- Never call localization APIs with raw string keys such as `String(localized: "settings.saveButton")`, `Text("settings.saveButton", tableName: "Localizable")`, `LocalizedStringResource("settings.saveButton", table: "Localizable")`, or `NSLocalizedString("settings.saveButton", ...)`.
-- If a key has no generated symbol, add or rename the catalog entry to a dot-notation key that does generate one, then use the symbol.
-- `%lld` format specifiers generate `Int32` parameters - wrap `Int` with `Int32()`
-- Use system locale; do not override `.environment(\.locale, ...)`
-- Prefer `FormatStyle` for numbers/dates/currency instead of `String(format:)`
-- Catalog source: `ios/Resources/Localization/App/Localizable.xcstrings`
+All user-visible strings must be localized using generated `LocalizedStringResource` symbols, not raw string keys. Use the repository catalog helper and include English, Norwegian, and translator context. Read [the localization workflow](docs/AGENT_LOCALIZATION.md) for catalog edits, generated-symbol usage, and validation. Preserve the system locale and use FormatStyle for numbers, dates, and currency.
 
 ## Color System
 
@@ -179,23 +76,6 @@ Available colors (all adapt to light/dark mode):
 | Status | `tidexError`, `tidexSuccess`, `tidexWarning`, `tidexInfo` |
 
 Usage: `Color.tidexSurfacePrimary`, `Color.tidexTextSecondary`, etc.
-
-## API Routes for iOS
-
-**Only create API routes when service role privileges are required.** Most operations should use the Supabase client directly in Swift with the user's JWT.
-
-When an API route IS needed:
-
-1. **Auth is automatic** - Both `getSession()` and `createSupabaseServerClient()` handle Bearer tokens (iOS) and cookies (web)
-2. **Use DAL functions when available** - They work with Bearer auth automatically
-3. **Use service client for internal schema** - `createSupabaseServiceClient()` for `internal` schema (when no DAL function exists)
-4. **Return simple JSON responses** - Keep shapes flat and Swift-Codable friendly
-
-**Current iOS API routes (all require service role):**
-- `/api/delete-account` - Needs admin API to delete auth user
-- `/api/push-device` - Needs access to `internal` schema
-- `/api/profile-picture` - Needs storage operations with user context
-- `/api/sharing/previews` - Uses DAL function with Bearer auth
 
 ## Project Documentation
 
