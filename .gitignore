@@ -41,9 +41,6 @@ ios/build/
 # Generated at build time — never commit
 ios/BuildNumber.xcconfig
 
-# App Store screenshots
-ios/ASConnectScreenshots/
-
 # backups
 next/backups/
 

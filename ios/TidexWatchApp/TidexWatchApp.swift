@@ -22,6 +22,12 @@ internal struct TidexWatchApp: App {
   }
 
   internal init() {
+    #if DEBUG && targetEnvironment(simulator)
+      if WatchDataStore.isScreenshotMode {
+        WatchDataStore.shared.loadScreenshotFixture()
+        return
+      }
+    #endif
     // Activate Watch Connectivity on launch
     WatchConnectivityManager.shared.activateSession()
   }
@@ -29,6 +35,9 @@ internal struct TidexWatchApp: App {
   /// Fetch initial data when app launches
   /// Uses API first, falls back to iPhone if needed
   private func fetchInitialData() async {
+    #if DEBUG && targetEnvironment(simulator)
+      if WatchDataStore.isScreenshotMode { return }
+    #endif
     // Small delay to let connectivity activate
     try? await Task.sleep(for: .milliseconds(Constants.connectivityActivationDelayMilliseconds))
 

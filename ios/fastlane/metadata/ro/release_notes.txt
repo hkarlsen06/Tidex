@@ -1,9 +1,7 @@
-- Am adăugat suport Siri pentru trimiterea de mesaje prietenilor
-- Am adăugat autentificarea cu passkey pentru o conectare mai rapidă și mai sigură
-- Am adăugat un flux mai clar pentru perioada de probă și paywall, inclusiv o gestionare mai bună a limitelor de utilizare gratuită
-- Am îmbunătățit configurarea muncii, cu un flux mai fluid pentru adăugarea joburilor, salariilor și primelor ture
-- Am îmbunătățit cardurile de salarizare, cu detalii mai clare despre plata curentă și cea anterioară
-- Am îmbunătățit performanța secțiunilor Program și Acasă la trecerea între luni și la sincronizarea modificărilor
-- Am îmbunătățit chatul cu prietenii, cu o grupare mai bună a mesajelor, atașamente, ture partajate și marcaje temporale
-- Am remediat probleme de fiabilitate legate de abonamente, onboarding, calendar și notificări
-- Corecturi de erori și alte îmbunătățiri
+- Îmbunătățit panoul principal cu un design mai clar și comparații ale câștigurilor între luni
+- Adăugate reguli pentru ore suplimentare în istoricul salarial și detalii mai clare despre plata acestora
+- Adăugate actualizări în fundal pentru Activitățile live din timpul turelor
+- Îmbunătățită viteza la schimbarea lunii și consultarea statisticilor de câștiguri
+- Remediată revenirea la fotografii de profil anterioare după sincronizare și îmbunătățită deschiderea linkurilor partajate
+- Îmbunătățit suportul pentru text mai mare și VoiceOver
+- Îmbunătățită fiabilitatea aplicației

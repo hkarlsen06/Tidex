@@ -378,6 +378,7 @@ struct LoadingView: View {
   private struct UITestingConfiguration {
     enum Scenario: String {
       case designReview = "design-review"
+      case appStoreScreenshots = "app-store-screenshots"
       case friendsChat = "friends-chat"
       case friendsChatReply = "friends-chat-reply"
       case wageyHistoryDelete = "wagey-history-delete"
@@ -403,6 +404,9 @@ struct LoadingView: View {
       switch configuration.scenario {
       case .designReview:
         DesignReviewView()
+
+      case .appStoreScreenshots:
+        AppStoreScreenshotView()
 
       case .friendsChat, .friendsChatReply:
         FriendsThreadUITestHostView(configuration: configuration)

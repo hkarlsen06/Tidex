@@ -8,7 +8,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "screenshots": "./ASConnectScreenshots/resize-screenshots.sh",
+    "screenshots": "python3 ../scripts/capture-app-store-screenshots.py",
     "generate-metadata": "bun Scripts/generate-appstore-metadata.mjs",
     "generate-metadata:force": "bun Scripts/generate-appstore-metadata.mjs --force",
     "generate-metadata:source-only": "bun Scripts/generate-appstore-metadata.mjs --source-only",

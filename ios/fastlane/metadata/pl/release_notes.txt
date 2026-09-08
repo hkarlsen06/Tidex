@@ -1,9 +1,7 @@
-- Dodano obsługę Siri do wysyłania wiadomości do znajomych
-- Dodano logowanie za pomocą klucza dostępu, aby było szybsze i bezpieczniejsze
-- Dodano bardziej przejrzysty proces okresu próbnego i paywalla, w tym lepszą obsługę limitów darmowego użytkowania
-- Ulepszono konfigurację pracy dzięki płynniejszemu dodawaniu stanowisk, stawek i pierwszych zmian
-- Ulepszono karty wypłat, aby wyraźniej pokazywały szczegóły bieżącej i poprzedniej wypłaty
-- Poprawiono wydajność Grafiku i ekranu głównego podczas przechodzenia między miesiącami i synchronizowania zmian
-- Ulepszono czat ze znajomymi dzięki lepszemu grupowaniu wiadomości, załącznikom, udostępnionym zmianom i znacznikom czasu
-- Naprawiono problemy z niezawodnością subskrypcji, wdrożenia, kalendarza i powiadomień
-- Poprawki błędów i inne ulepszenia
+- Ulepszono panel dzięki czytelniejszemu wyglądowi i porównaniom zarobków między miesiącami
+- Dodano zasady nadgodzin do historii wynagrodzeń i czytelniejsze zestawienia płatności za nadgodziny
+- Dodano aktualizacje w tle dla aktywności na żywo podczas zmian
+- Przyspieszono wczytywanie po zmianie miesiąca i podczas przeglądania statystyk zarobków
+- Naprawiono przywracanie poprzednich zdjęć profilowych po synchronizacji i ulepszono otwieranie udostępnionych linków
+- Ulepszono obsługę większego tekstu i VoiceOver
+- Poprawiono niezawodność aplikacji

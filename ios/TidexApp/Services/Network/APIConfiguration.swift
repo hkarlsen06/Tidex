@@ -39,6 +39,12 @@ enum APIConfiguration {
   /// Cached Supabase URL - loaded once at app startup
   /// Falls back to production URL if Info.plist is misconfigured (should never happen in release builds)
   static let supabaseURL: URL = {
+    #if DEBUG
+      if AppStoreScreenshotFixture.isActive {
+        // Keep every Supabase request from the screenshot app off production.
+        return staticURL("http://127.0.0.1:1")
+      }
+    #endif
     guard let urlString = Bundle.main.infoDictionary?["SUPABASE_URL"] as? String else {
       logger.error("SUPABASE_URL not found in Info.plist - using fallback")
       return staticURL("https://api.tidex.no")

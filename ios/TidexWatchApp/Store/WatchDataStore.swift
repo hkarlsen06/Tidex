@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import WidgetKit
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WatchDataStore")
 
@@ -68,6 +68,33 @@ final class WatchDataStore {
   private init() {
     loadPersistedPayload()
   }
+
+  #if DEBUG && targetEnvironment(simulator)
+    nonisolated static var isScreenshotMode: Bool {
+      ProcessInfo.processInfo.arguments.contains("-ui-testing")
+        && ProcessInfo.processInfo.arguments.contains("-app-store-screenshots")
+    }
+
+    /// In-memory fictional data; never persisted or requested from an account.
+    func loadScreenshotFixture() {
+      userShift = WatchShiftDTO(
+        id: "screenshot-own-shift", personId: "screenshot-alex", personName: "Alex",
+        personProfilePictureUrl: nil, personOauthAvatarUrl: nil,
+        shiftDate: "2026-09-10", startTime: "09:00", endTime: "17:00",
+        status: .upcoming, avatarImageData: nil
+      )
+      friendShifts = [
+        WatchShiftDTO(
+          id: "screenshot-friend-shift", personId: "screenshot-emma", personName: "Emma",
+          personProfilePictureUrl: nil, personOauthAvatarUrl: nil,
+          shiftDate: "2026-09-10", startTime: "10:00", endTime: "18:00",
+          status: .upcoming, avatarImageData: nil
+        )
+      ]
+      lastUpdated = Date.now.addingTimeInterval(-120)
+      lastSyncTimestamp = lastUpdated
+    }
+  #endif
 
   /// Update store with new payload from iPhone
   func update(from payload: WatchDataPayload) {

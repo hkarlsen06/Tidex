@@ -1,9 +1,7 @@
-- Added Siri support for sending messages to friends
-- Added passkey sign-in for a faster and more secure login experience
-- Added a clearer trial and paywall flow, including better handling of free usage limits
-- Improved work setup with a smoother flow for adding jobs, wages, and first shifts
-- Improved payroll cards with clearer current and previous payout details
-- Improved Schedule and Home performance when moving between months and syncing changes
-- Improved friends chat with better message grouping, attachments, shared shifts, and timestamps
-- Fixed subscription, onboarding, calendar, and notification reliability issues
-- Bug fixes and other improvements
+- Improved the dashboard with a cleaner design and month-to-month earnings comparisons
+- Added overtime rules to wage history and clearer overtime breakdowns
+- Added background updates for shift Live Activities
+- Improved loading speed when switching months and viewing earnings statistics
+- Fixed profile photos reverting after sync and improved opening shared links
+- Improved support for larger text and VoiceOver
+- Improved app reliability

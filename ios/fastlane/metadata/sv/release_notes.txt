@@ -1,9 +1,7 @@
-- Lade till stöd för Siri för att skicka meddelanden till vänner
-- Lade till inloggning med passkey för en snabbare och säkrare inloggningsupplevelse
-- Lade till ett tydligare flöde för provperiod och betalvägg, inklusive bättre hantering av gränser för gratis användning
-- Förbättrade arbetsinställningarna med ett smidigare flöde för att lägga till jobb, lön och första arbetspass
-- Förbättrade lönekorten med tydligare information om nuvarande och föregående utbetalning
-- Förbättrade prestandan i Schema och Hem vid byte mellan månader och synkronisering av ändringar
-- Förbättrade vänchatten med bättre grupperingar av meddelanden, bilagor, delade arbetspass och tidsstämplar
-- Åtgärdade problem med tillförlitligheten för abonnemang, onboarding, kalender och notiser
-- Buggfixar och andra förbättringar
+- Förbättrat översikten med en renare design och jämförelser av inkomster mellan månader
+- Lagt till övertidsregler i lönehistoriken och tydligare redovisning av övertidsersättning
+- Lagt till bakgrundsuppdateringar för Liveaktiviteter under arbetspass
+- Förbättrat hastigheten när du byter månad och visar inkomststatistik
+- Åtgärdat att profilbilder kunde återställas efter synkronisering och förbättrat öppning av delade länkar
+- Förbättrat stöd för större text och VoiceOver
+- Förbättrat appens stabilitet

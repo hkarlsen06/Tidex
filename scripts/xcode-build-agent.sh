@@ -2,8 +2,19 @@
 set -euo pipefail
 
 MODE="text"
-if [ "${1:-}" = "--json" ]; then
-  MODE="json"
+EXTRA_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --json) MODE="json"; shift ;;
+    --) shift; EXTRA_ARGS+=("$@"); break ;;
+    *) EXTRA_ARGS+=("$1"); shift ;;
+  esac
+done
+ACTION="${XCODE_BUILD_AGENT_ACTION:-build}"
+DESTINATION="${XCODE_BUILD_AGENT_DESTINATION:-generic/platform=iOS Simulator}"
+if [[ "$ACTION" != "build" && "$ACTION" != "archive" && "$ACTION" != "exportArchive" ]]; then
+  echo "XCODE_BUILD_AGENT_ACTION must be build, archive, or exportArchive" >&2
+  exit 2
 fi
 
 DEFAULT_HEARTBEAT_INTERVAL=20
@@ -60,13 +71,22 @@ stop_heartbeat() {
 }
 
 set +e
-xcodebuild \
-  -quiet \
-  -resultBundlePath "$RESULT_BUNDLE" \
-  -project ios/Tidex.xcodeproj \
-  -scheme App \
-  -destination 'generic/platform=iOS Simulator' \
-  build >"$LOG_FILE" 2>&1 &
+if [[ "$ACTION" == "exportArchive" ]]; then
+  XCODEBUILD_ARGS=(-quiet -exportArchive)
+else
+  XCODEBUILD_ARGS=(
+    -quiet
+    -resultBundlePath "$RESULT_BUNDLE"
+    -project ios/Tidex.xcodeproj
+    -scheme App
+    -destination "$DESTINATION"
+    "$ACTION"
+  )
+fi
+if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
+  XCODEBUILD_ARGS+=("${EXTRA_ARGS[@]}")
+fi
+xcodebuild "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
 XCODEBUILD_PID=$!
 start_heartbeat
 wait "$XCODEBUILD_PID"
@@ -154,7 +174,7 @@ if not warnings and not errors:
     for line in text.splitlines():
         if " warning: " in line:
             add_unique(warnings, line)
-        elif " error: " in line:
+        elif re.search(r"(^|\s)error:", line):
             add_unique(errors, line)
 
 payload = {

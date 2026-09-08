@@ -32,6 +32,117 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testAppStoreScreenshots() {
+    for (language, locale, shiftsTitle, statsTitle) in [
+      ("en", "en_US", "Schedule", "Stats"),
+      ("nb", "nb_NO", "Agenda", "Statistikk"),
+    ] {
+      let app = XCUIApplication()
+      app.launchArguments = [
+        "-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale,
+        "-defaultStartupTab", "home", "-AppleInterfaceStyle", "Dark", "-cachedTheme", "dark",
+      ]
+      app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+      app.launch()
+      let earnings = app.staticTexts.matching(
+        NSPredicate(format: "label MATCHES %@", ".*22[^0-9]?400.*")
+      ).firstMatch
+      XCTAssertTrue(earnings.waitForExistence(timeout: 30), app.debugDescription)
+      XCTAssertFalse(app.staticTexts["screenshot.error"].exists)
+      if language == "en" {
+        assertHomeContentInsets(app)
+      }
+      attachAppStoreScreenshot(app, name: "\(language)-01-home")
+
+      capturePayrollScreenshot(app, language: language)
+
+      let statsButton = app.buttons[statsTitle]
+      XCTAssertTrue(statsButton.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+      statsButton.tap()
+      XCTAssertTrue(app.buttons["BackButton"].waitForExistence(timeout: defaultTimeout))
+      XCTAssertTrue(earnings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+      attachAppStoreScreenshot(app, name: "\(language)-02-statistics")
+
+      app.buttons["BackButton"].tap()
+      app.buttons[shiftsTitle].firstMatch.tap()
+      let calendarAmount = app.staticTexts.matching(
+        NSPredicate(format: "label == %@", "09:00")
+      ).firstMatch
+      XCTAssertTrue(calendarAmount.waitForExistence(timeout: 30), app.debugDescription)
+      XCTAssertTrue(app.buttons[shiftsTitle].firstMatch.exists, app.debugDescription)
+      attachAppStoreScreenshot(app, name: "\(language)-03-schedule")
+      captureAddAndWageyScreenshots(app, language: language)
+    }
+  }
+
+  @MainActor
+  private func assertHomeContentInsets(_ app: XCUIApplication) {
+    let clockIn = app.buttons["Clock in"]
+    let clockOut = app.buttons["Clock out"]
+    let payout = app.staticTexts["Next payout"]
+    XCTAssertTrue(clockIn.waitForExistence(timeout: defaultTimeout))
+    XCTAssertTrue(clockOut.exists)
+    XCTAssertTrue(payout.waitForExistence(timeout: defaultTimeout))
+    XCTAssertGreaterThanOrEqual(
+      clockIn.frame.minX - app.frame.minX, 39,
+      "Home content must leave a 40-point margin at each screen edge")
+    XCTAssertGreaterThanOrEqual(app.frame.maxX - clockOut.frame.maxX, 39)
+    XCTAssertEqual(payout.frame.minX, clockIn.frame.minX, accuracy: 1)
+  }
+
+  @MainActor
+  private func capturePayrollScreenshot(_ app: XCUIApplication, language: String) {
+    let payroll = app.staticTexts[language == "en" ? "Next payout" : "Neste utbetaling"]
+    XCTAssertTrue(payroll.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    payroll.tap()
+    let done = app.buttons[language == "en" ? "Done" : "Ferdig"]
+    XCTAssertTrue(done.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    let supplements = app.buttons.matching(
+      NSPredicate(
+        format: "label CONTAINS %@", language == "en" ? "Total Supplement" : "Totalt tillegg"
+      )
+    ).firstMatch
+    XCTAssertTrue(supplements.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    supplements.tap()
+    attachAppStoreScreenshot(app, name: "\(language)-04-payroll")
+    done.tap()
+  }
+
+  @MainActor
+  private func captureAddAndWageyScreenshots(_ app: XCUIApplication, language: String) {
+    app.buttons[language == "en" ? "Add" : "Legg til"].firstMatch.tap()
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+      .firstMatch
+    XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
+    let previewTotal = app.staticTexts.matching(
+      NSPredicate(format: "label MATCHES %@", ".*24[^0-9]?000.*")
+    ).firstMatch
+    // A restored draft may already have this range selected; tapping it again clears it.
+    if !previewTotal.waitForExistence(timeout: 2) {
+      recentTime.tap()
+    }
+    XCTAssertTrue(previewTotal.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-05-add")
+    app.buttons["Wagey"].firstMatch.tap()
+    let question = app.staticTexts[
+      language == "en"
+        ? "What am I earning this month?" : "Hvor mye tjener jeg denne måneden?"]
+    XCTAssertTrue(question.firstMatch.waitForExistence(timeout: 30), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-06-wagey")
+    app.terminate()
+  }
+
+  @MainActor
+  private func attachAppStoreScreenshot(_ app: XCUIApplication, name: String) {
+    // Currency transitions can still be animating after their accessibility value updates.
+    Thread.sleep(forTimeInterval: 1)
+    let attachment = XCTAttachment(screenshot: app.screenshot())
+    attachment.name = name
+    attachment.lifetime = .keepAlways
+    add(attachment)
+  }
+
+  @MainActor
   func testLoginProviderScreenCanScrollToEmailAtAccessibilitySize() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "login-accessibility"
