@@ -13,8 +13,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.join(__dirname, "../../.env.local") });
 
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
-const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-5.4";
-const OPENAI_REASONING_EFFORT = "low";
+const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
+const OPENAI_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT?.trim() || "high";
 
 const TARGET_LANGUAGES = [
   // Western Europe

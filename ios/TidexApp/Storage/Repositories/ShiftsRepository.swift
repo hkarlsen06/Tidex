@@ -1,5 +1,6 @@
 // swiftlint:disable explicit_type_interface
 // swiftlint:disable:previous blanket_disable_command
+import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -99,12 +100,20 @@ final class ShiftsRepository: ObservableObject {
       } ?? false
 
     do {
+      let visibleShifts = #Predicate<LocalUserShift> { shift in
+        shift.userId == userId && shift.serverDeletedAt == nil
+          && shift.syncStatusRaw != "pendingDelete"
+      }
+      let matchingJob = #Predicate<LocalUserShift> { shift in
+        jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil)
+      }
+      let withinDates = #Predicate<LocalUserShift> { shift in
+        shift.shiftDate >= startDate && shift.shiftDate <= endDate
+      }
       let descriptor = FetchDescriptor<LocalUserShift>(
-        predicate: #Predicate { shift in
-          shift.userId == userId && shift.serverDeletedAt == nil
-            && shift.syncStatusRaw != "pendingDelete" && shift.shiftDate >= startDate
-            && shift.shiftDate <= endDate
-            && (jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil))
+        predicate: #Predicate<LocalUserShift> { shift in
+          visibleShifts.evaluate(shift) && matchingJob.evaluate(shift)
+            && withinDates.evaluate(shift)
         },
         sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
       )
@@ -142,11 +151,16 @@ final class ShiftsRepository: ObservableObject {
       } ?? false
 
     do {
+      let visibleShifts = #Predicate<LocalUserShift> { shift in
+        shift.userId == userId && shift.serverDeletedAt == nil
+          && shift.syncStatusRaw != "pendingDelete"
+      }
+      let matchingJob = #Predicate<LocalUserShift> { shift in
+        jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil)
+      }
       let descriptor = FetchDescriptor<LocalUserShift>(
-        predicate: #Predicate { shift in
-          shift.userId == userId && shift.serverDeletedAt == nil
-            && shift.syncStatusRaw != "pendingDelete"
-            && (jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil))
+        predicate: #Predicate<LocalUserShift> { shift in
+          visibleShifts.evaluate(shift) && matchingJob.evaluate(shift)
         },
         sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
       )

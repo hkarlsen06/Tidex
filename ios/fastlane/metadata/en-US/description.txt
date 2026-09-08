@@ -1,11 +1,17 @@
-Track your work shifts and calculate your wages with Tidex.
+What's that extra shift really worth?
 
-Features:
-• Easy shift logging with start/end times
-• Automatic wage calculations
-• Calendar view of all shifts
-• Earnings overview and statistics
-• Widget for quick access
-• Sync across devices
+A late evening, a Sunday, a few hours of overtime. The hours might look similar on your calendar, but the pay can be very different. Tidex helps you see what your work adds up to, before payday.
 
-Perfect for employees who want to keep track of their work hours and earnings.
+KNOW WHAT GOES INTO YOUR PAY
+Add your shifts and let Tidex work out your estimated earnings using your hourly rate, supplements, overtime and break rules. See the breakdown behind the total, so you know where the money comes from.
+
+SEE WHAT AN EXTRA SHIFT CHANGES
+Put an upcoming shift in your calendar and see how it affects your estimated earnings. Get a clearer picture of the month ahead when you're deciding whether to pick up more hours.
+
+MORE THAN ONE JOB? KEEP THEM TOGETHER
+Keep shifts and pay settings for each job in one place. Follow your hours and earnings over time, without piecing together separate notes and calculations.
+
+HAVE SOMETHING TO CHECK YOUR PAYSLIP AGAINST
+Keep your own record of the work you've done. Export shifts as PDF or CSV when you want to compare hours, look into a difference or share a report.
+
+Your time is worth keeping track of. Start with your next shift.

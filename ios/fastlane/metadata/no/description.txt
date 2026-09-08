@@ -1,11 +1,17 @@
-Hold oversikt over arbeidsvaktene dine og beregn lønnen din med Tidex.
+Hva er den ekstravakten egentlig verdt?
 
-Funksjoner:
-• Enkel vaktregistrering med start- og sluttider
-• Automatisk lønnsberegning
-• Kalendervisning av alle vakter
-• Inntektsoversikt og statistikk
-• Widget for rask tilgang
-• Synkronisering på tvers av enheter
+En sen kveld, en søndag, noen timer overtid. Vaktene kan se ganske like ut i kalenderen, men gi helt ulik lønn. Tidex hjelper deg å se hva du ligger an til å tjene, før lønningsdagen.
 
-Perfekt for ansatte som ønsker å holde oversikt over arbeidstimer og inntekter.
+SE HVA DU FÅR BETALT FOR
+Legg inn vaktene dine, så beregner Tidex forventet lønn ut fra timelønn, tillegg, overtid og pauseregler. Se hvordan beløpet er satt sammen, så du vet hvor pengene kommer fra.
+
+SE HVA EN EKSTRAVAKT BETYR
+Legg en kommende vakt i kalenderen og se hvordan den påvirker forventet inntekt. Da har du mer å gå etter når du vurderer å jobbe noen ekstra timer.
+
+FLERE JOBBER? SAMLE OVERSIKTEN
+Hold styr på vakter og lønnsinnstillinger for hver jobb på ett sted. Følg med på timer og inntekt over tid, uten å samle løse notater og regnestykker.
+
+HA NOE Å SJEKKE LØNNSSLIPPEN MOT
+Ta vare på din egen oversikt over arbeidet du har gjort. Eksporter vakter som PDF eller CSV når du vil sammenligne timer, undersøke et avvik eller dele en rapport.
+
+Tiden din er verdt å holde styr på. Begynn med din neste vakt.

@@ -244,11 +244,6 @@ final class PaySettingsViewModel: ObservableObject {
     return !selectedJob.is_default && activeJobs.count > 1
   }
 
-  var canDeleteSelectedJob: Bool {
-    guard let selectedJob else { return false }
-    return !selectedJob.is_default && activeJobs.count > 1
-  }
-
   var selectedJobManagementHint: String? {
     guard let selectedJob else { return nil }
 
@@ -355,20 +350,20 @@ final class PaySettingsViewModel: ObservableObject {
     }
   }
 
-  func archiveSelectedJob() async {
+  func archiveSelectedJob() async -> Bool {
     guard let userId = currentLocalUserId() else {
       errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
-      return
+      return false
     }
     guard let selectedJob else {
       errorMessage = String(localized: .settingsPayErrorLoadFailed)
-      return
+      return false
     }
     guard canArchiveSelectedJob else {
       if let selectedJobManagementHint {
         errorMessage = selectedJobManagementHint
       }
-      return
+      return false
     }
 
     isProcessingJobAction = true
@@ -376,46 +371,14 @@ final class PaySettingsViewModel: ObservableObject {
 
     do {
       try await jobsRepository.archiveJob(userId: userId, jobId: selectedJob.id)
-      refreshData()
+      // Keep this job visible during dismissal instead of selecting another active job.
       notifyDashboardDataChanged()
       Haptics.play(.success)
+      return true
     } catch {
       logger.error("Failed to archive selected job: \(error.localizedDescription)")
       errorMessage = error.localizedDescription
-    }
-  }
-
-  func deleteSelectedJob() async {
-    guard let userId = currentLocalUserId() else {
-      errorMessage = String(localized: .settingsPayErrorNotAuthenticated)
-      return
-    }
-    guard let selectedJob else {
-      errorMessage = String(localized: .settingsPayErrorLoadFailed)
-      return
-    }
-    guard canDeleteSelectedJob else {
-      if let selectedJobManagementHint {
-        errorMessage = selectedJobManagementHint
-      }
-      return
-    }
-
-    isProcessingJobAction = true
-    defer { isProcessingJobAction = false }
-
-    do {
-      try await jobsRepository.deleteJob(
-        userId: userId,
-        jobId: selectedJob.id
-      )
-      refreshData()
-      notifyDashboardDataChanged()
-      Haptics.play(.success)
-    } catch {
-      logger.error("Failed to delete selected job: \(error.localizedDescription)")
-      errorTitle = (error as? JobsRepositoryError)?.alertTitle
-      errorMessage = error.localizedDescription
+      return false
     }
   }
 

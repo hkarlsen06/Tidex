@@ -55,6 +55,19 @@ Use these skills for specialized tasks:
 
 For native work, follow [ios/AGENTS.md](ios/AGENTS.md). Read [localization](ios/docs/AGENT_LOCALIZATION.md) when changing UI strings or catalogs and [verification](ios/docs/AGENT_VERIFICATION.md) when building or testing.
 
+## App Store Connect / Fastlane Access
+
+On Hjalmar's Mac, the existing Fastlane API configuration is saved in
+`/Users/hkarlsen06/Lokalt/Secrets/Tidex/fastlane.env` (`ASC_KEY_ID`,
+`ASC_ISSUER_ID`, `ASC_KEY_PATH`). `ios/fastlane/.env` is an ignored symlink
+to that file, which Fastlane loads automatically. In a fresh checkout,
+recreate the symlink or load the existing configuration before asking for
+credentials. Keep the configuration and private key out of Git.
+
+Use Homebrew Ruby at `/opt/homebrew/opt/ruby@3.4/bin`; the system Ruby is
+too old for the installed bundle. From the repository root, bundled commands
+use `BUNDLE_GEMFILE=ios/Gemfile BUNDLE_PATH=Vendor/bundle`.
+
 ## Local Chat Package Workflow
 
 The Exyte `Chat` dependency is forked at `hkarlsen06/Chat` and is also cloned locally at `../Chat` for day-to-day development.

@@ -400,12 +400,20 @@ internal actor LocalStoreActor {
       jobId.map {
         shouldIncludeLegacyNilJobRows(userId: userId, selectedJobId: $0)
       } ?? false
+    let visibleShifts = #Predicate<LocalUserShift> { shift in
+      shift.userId == userId && shift.serverDeletedAt == nil
+        && shift.syncStatusRaw != "pendingDelete"
+    }
+    let matchingJob = #Predicate<LocalUserShift> { shift in
+      jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil)
+    }
+    let withinDates = #Predicate<LocalUserShift> { shift in
+      shift.shiftDate >= startDate && shift.shiftDate <= endDate
+    }
     let descriptor = FetchDescriptor<LocalUserShift>(
-      predicate: #Predicate { shift in
-        shift.userId == userId && shift.serverDeletedAt == nil
-          && shift.syncStatusRaw != "pendingDelete" && shift.shiftDate >= startDate
-          && shift.shiftDate <= endDate
-          && (jobId == nil || shift.jobId == jobId || (includeLegacyNil && shift.jobId == nil))
+      predicate: #Predicate<LocalUserShift> { shift in
+        visibleShifts.evaluate(shift) && matchingJob.evaluate(shift)
+          && withinDates.evaluate(shift)
       },
       sortBy: [SortDescriptor(\LocalUserShift.shiftDate, order: .reverse)]
     )
@@ -870,6 +878,7 @@ internal actor LocalStoreActor {
     try modelContext.save()
   }
 
+  // Also used to roll back failed creation and discard incomplete onboarding jobs.
   internal func markJobPendingDelete(id: String) throws -> String {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
