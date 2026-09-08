@@ -250,6 +250,16 @@ final class AppCoordinator: ObservableObject {
     self.authService = authService ?? AuthService.shared
     self.settingsService = settingsService ?? SettingsService.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    #if DEBUG
+      if AppStoreScreenshotFixture.isActive {
+        userId = AppStoreScreenshotFixture.userId
+        userDisplayName = "Alex"
+        appState = .authenticated
+        initialSyncComplete = true
+        hasFinishedOnboardingRemotely = true
+        return
+      }
+    #endif
     AuthDiagnosticsReporter.shared.record(
       .appLaunch,
       appState: String(describing: appState),

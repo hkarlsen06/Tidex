@@ -1,9 +1,7 @@
-- Siri-támogatás hozzáadva az ismerősöknek küldött üzenetekhez
-- Jelszókulcsos bejelentkezés hozzáadva a gyorsabb és biztonságosabb belépés érdekében
-- Átláthatóbb próbaidőszak- és fizetőfal-folyamat hozzáadva, beleértve az ingyenes használati korlátok jobb kezelését
-- Javított munkabeállítás gördülékenyebb folyamattal az állások, bérek és első műszakok hozzáadásához
-- Javított bérkártyák az aktuális és előző kifizetés részleteinek átláthatóbb megjelenítésével
-- Javult a Beosztás és a Kezdőlap teljesítménye a hónapok közti váltás és a módosítások szinkronizálása során
-- Javított ismerősök közti chat jobb üzenetcsoportosítással, mellékletekkel, megosztott műszakokkal és időbélyegekkel
-- Javítva az előfizetéssel, bevezető folyamattal, naptárral és értesítésekkel kapcsolatos megbízhatósági problémák
-- Hibajavítások és egyéb fejlesztések
+- Áttekinthetőbb felület és a havi keresetek összehasonlítása az irányítópulton
+- Túlóraszabályok hozzáadása a bértörténethez és a túlóradíjak egyértelműbb részletezése
+- Háttérfrissítések hozzáadása a műszakok Élő tevékenységeihez
+- Gyorsabb betöltés hónapváltáskor és a kereseti statisztikák megtekintésekor
+- A szinkronizálás után visszaálló profilképek hibájának javítása és a megosztott hivatkozások megnyitásának fejlesztése
+- A nagyobb szöveg és a VoiceOver támogatásának fejlesztése
+- Az alkalmazás megbízhatóságának javítása

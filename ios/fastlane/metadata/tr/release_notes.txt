@@ -1,9 +1,7 @@
-- Arkadaşlara mesaj göndermek için Siri desteği eklendi
-- Daha hızlı ve daha güvenli giriş deneyimi için geçiş anahtarıyla giriş eklendi
-- Ücretsiz kullanım sınırlarının daha iyi yönetilmesiyle birlikte deneme ve ödeme duvarı akışı daha anlaşılır hale getirildi
-- İşler, ücretler ve ilk vardiyaları ekleme akışı iyileştirilerek çalışma kurulumu daha akıcı hale getirildi
-- Bordro kartları, mevcut ve önceki ödeme ayrıntılarını daha net gösterecek şekilde iyileştirildi
-- Aylar arasında geçiş yaparken ve değişiklikler eşitlenirken Program ve Ana Sayfa performansı iyileştirildi
-- Arkadaş sohbeti; daha iyi mesaj gruplama, ekler, paylaşılan vardiyalar ve zaman damgalarıyla iyileştirildi
-- Abonelik, ilk kullanım, takvim ve bildirimlerle ilgili güvenilirlik sorunları giderildi
-- Hata düzeltmeleri ve diğer iyileştirmeler
+- Daha sade bir tasarım ve aylar arası kazanç karşılaştırmalarıyla ana ekran iyileştirildi
+- Ücret geçmişine fazla mesai kuralları ve daha anlaşılır fazla mesai ücreti dökümleri eklendi
+- Vardiya Canlı Etkinlikleri için arka plan güncellemeleri eklendi
+- Ay değiştirirken ve kazanç istatistiklerini görüntülerken yükleme hızı iyileştirildi
+- Eşzamanlama sonrası profil fotoğraflarının eski hâline dönmesi düzeltildi ve paylaşılan bağlantıların açılması iyileştirildi
+- Büyük metin ve VoiceOver desteği iyileştirildi
+- Uygulama güvenilirliği artırıldı

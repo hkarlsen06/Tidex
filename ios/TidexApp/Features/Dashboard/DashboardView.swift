@@ -866,7 +866,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           // Animated card content - centered vertically
           animatedCardContent(data: data)
             .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-            .padding(.horizontal, Spacing.md)
+            .padding(.horizontal, Spacing.xxl)
 
           Spacer()
         }
@@ -1519,7 +1519,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             }
           }
           .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-          .padding(.horizontal, Spacing.md)
+          .padding(.horizontal, Spacing.xxl)
 
           Spacer()
         }

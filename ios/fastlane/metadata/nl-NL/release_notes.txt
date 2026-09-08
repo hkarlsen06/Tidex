@@ -1,9 +1,7 @@
-- Siri-ondersteuning toegevoegd voor het sturen van berichten naar vrienden
-- Inloggen met een passkey toegevoegd voor een snellere en veiligere login
-- Een duidelijkere proefperiode- en betaalmuurflow toegevoegd, met betere afhandeling van limieten voor gratis gebruik
-- Werkconfiguratie verbeterd met een soepelere flow voor het toevoegen van banen, lonen en eerste diensten
-- Salariskaarten verbeterd met duidelijkere details over huidige en vorige uitbetalingen
-- Prestaties van Rooster en Start verbeterd bij het wisselen tussen maanden en het synchroniseren van wijzigingen
-- Vriendenchat verbeterd met betere berichtgroepering, bijlagen, gedeelde diensten en tijdstempels
-- Betrouwbaarheidsproblemen opgelost met abonnementen, onboarding, agenda en meldingen
-- Bugfixes en andere verbeteringen
+- Verbeterd dashboard met een overzichtelijker ontwerp en vergelijkingen van inkomsten tussen maanden
+- Overwerkregels toegevoegd aan de loongeschiedenis en duidelijkere uitsplitsingen van overwerkvergoeding
+- Achtergrondupdates toegevoegd voor live activiteiten tijdens diensten
+- Laadsnelheid verbeterd bij het wisselen van maand en bekijken van inkomstenstatistieken
+- Terugzetten van profielfoto’s na synchronisatie opgelost en openen van gedeelde links verbeterd
+- Ondersteuning voor grotere tekst en VoiceOver verbeterd
+- Betrouwbaarheid van de app verbeterd

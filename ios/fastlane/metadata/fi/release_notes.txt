@@ -1,9 +1,7 @@
-- Lisätty Siri-tuki viestien lähettämiseen ystäville
-- Lisätty passkey-kirjautuminen nopeampaa ja turvallisempaa kirjautumista varten
-- Lisätty selkeämpi kokeilujakso- ja maksumuuripolku, mukaan lukien ilmaisrajoitusten parempi käsittely
-- Parannettu työn käyttöönottoa sujuvammalla työn, palkan ja ensimmäisten vuorojen lisäysprosessilla
-- Parannettu palkkakortteja selkeämmillä nykyisen ja edellisen palkanmaksun tiedoilla
-- Parannettu Aikataulun ja Koti-näkymän suorituskykyä kuukausien välillä siirryttäessä ja muutoksia synkronoitaessa
-- Parannettu ystävächatia paremmalla viestien ryhmittelyllä, liitteillä, jaetuilla vuoroilla ja aikaleimoilla
-- Korjattu tilauksiin, käyttöönottoon, kalenteriin ja ilmoituksiin liittyviä luotettavuusongelmia
-- Virheenkorjauksia ja muita parannuksia
+- Parannettu yleisnäkymää selkeämmällä ulkoasulla ja kuukausien välisillä ansiovertailuilla
+- Lisätty ylityösäännöt palkkahistoriaan ja selkeämmät ylityökorvausten erittelyt
+- Lisätty taustapäivitykset työvuorojen live-aktiviteetteihin
+- Nopeutettu lataamista kuukautta vaihdettaessa ja ansiotilastoja katseltaessa
+- Korjattu profiilikuvien palautuminen synkronoinnin jälkeen ja parannettu jaettujen linkkien avaamista
+- Parannettu suuren tekstin ja VoiceOverin tukea
+- Parannettu sovelluksen toimintavarmuutta

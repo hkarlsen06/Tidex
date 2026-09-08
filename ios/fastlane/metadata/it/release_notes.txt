@@ -1,9 +1,7 @@
-- Aggiunto il supporto a Siri per inviare messaggi agli amici
-- Aggiunto l'accesso con passkey per un login più rapido e sicuro
-- Aggiunto un flusso più chiaro per prova gratuita e paywall, con una migliore gestione dei limiti di utilizzo gratuito
-- Migliorata la configurazione del lavoro con un flusso più fluido per aggiungere lavori, retribuzioni e primi turni
-- Migliorate le schede paga con dettagli più chiari sui pagamenti attuali e precedenti
-- Migliorate le prestazioni di Programma e Home quando si passa da un mese all'altro e si sincronizzano le modifiche
-- Migliorata la chat con gli amici con un raggruppamento dei messaggi migliore, allegati, turni condivisi e timestamp
-- Risolti problemi di affidabilità relativi ad abbonamenti, onboarding, calendario e notifiche
-- Correzioni di bug e altri miglioramenti
+- Migliorata la panoramica con un design più chiaro e confronti dei guadagni tra un mese e l’altro
+- Aggiunte regole per gli straordinari allo storico delle retribuzioni e dettagli più chiari sui relativi compensi
+- Aggiunti aggiornamenti in background per le Attività in tempo reale durante i turni
+- Migliorata la velocità quando si cambia mese e si consultano le statistiche dei guadagni
+- Corretto il ripristino delle foto del profilo dopo la sincronizzazione e migliorata l’apertura dei link condivisi
+- Migliorato il supporto per testo più grande e VoiceOver
+- Migliorata l’affidabilità dell’app

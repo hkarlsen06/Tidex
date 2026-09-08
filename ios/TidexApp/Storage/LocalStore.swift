@@ -92,9 +92,13 @@ internal final class LocalStore {
     ])
 
     // Configure container for persistent storage
+    var usesScreenshotMemoryStore = false
+    #if DEBUG
+      usesScreenshotMemoryStore = AppStoreScreenshotFixture.isActive
+    #endif
     let configuration = ModelConfiguration(
       schema: schema,
-      isStoredInMemoryOnly: false,
+      isStoredInMemoryOnly: usesScreenshotMemoryStore,
       allowsSave: true
     )
 

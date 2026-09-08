@@ -101,6 +101,11 @@ final class AuthSessionManager: ObservableObject {
     allowProactiveRefresh: Bool = true,
     reportMissingSessionWarning: Bool = true
   ) async throws -> Session {
+    #if DEBUG
+      if AppStoreScreenshotFixture.isActive {
+        return AppStoreScreenshotFixture.session
+      }
+    #endif
     // If a session lookup/refresh flow is already in progress, await it.
     if let existingSessionTask = sessionTask {
       let existingAllowsProactiveRefresh = sessionTaskAllowsProactiveRefresh

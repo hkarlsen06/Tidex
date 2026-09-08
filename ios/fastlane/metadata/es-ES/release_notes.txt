@@ -1,9 +1,7 @@
-- Añadida compatibilidad con Siri para enviar mensajes a amigos
-- Añadido el inicio de sesión con passkey para una experiencia de acceso más rápida y segura
-- Añadido un flujo de prueba y muro de pago más claro, con una mejor gestión de los límites de uso gratuito
-- Mejorada la configuración del trabajo con un flujo más fluido para añadir empleos, salarios y primeros turnos
-- Mejoradas las tarjetas de nómina con detalles más claros sobre el pago actual y el anterior
-- Mejorado el rendimiento de Horario e Inicio al cambiar de mes y sincronizar cambios
-- Mejorado el chat con amigos con una mejor agrupación de mensajes, archivos adjuntos, turnos compartidos y marcas de tiempo
-- Corregidos problemas de fiabilidad en suscripciones, onboarding, calendario y notificaciones
-- Corrección de errores y otras mejoras
+- Mejorado el panel con un diseño más claro y comparaciones de ingresos entre meses
+- Añadidas reglas de horas extra al historial salarial y desgloses más claros de su remuneración
+- Añadidas actualizaciones en segundo plano para las Actividades en directo durante los turnos
+- Mejorada la velocidad al cambiar de mes y consultar las estadísticas de ingresos
+- Corregido el restablecimiento de las fotos de perfil tras sincronizar y mejorada la apertura de enlaces compartidos
+- Mejorada la compatibilidad con texto más grande y VoiceOver
+- Mejorada la fiabilidad de la app

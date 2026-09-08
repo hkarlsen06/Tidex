@@ -1,9 +1,7 @@
-- Siri-Unterstützung zum Senden von Nachrichten an Freunde hinzugefügt
-- Passkey-Anmeldung für eine schnellere und sicherere Anmeldung hinzugefügt
-- Einen klareren Test- und Paywall-Ablauf hinzugefügt, einschließlich einer besseren Handhabung kostenloser Nutzungslimits
-- Die Arbeitseinrichtung mit einem reibungsloseren Ablauf zum Hinzufügen von Jobs, Löhnen und ersten Schichten verbessert
-- Lohnkarten mit klareren Details zu aktuellen und vorherigen Auszahlungen verbessert
-- Die Leistung von Dienstplan und Startseite beim Wechseln zwischen Monaten und beim Synchronisieren von Änderungen verbessert
-- Den Freunde-Chat mit besserer Nachrichtengruppierung, Anhängen, geteilten Schichten und Zeitstempeln verbessert
-- Zuverlässigkeitsprobleme bei Abonnements, Onboarding, Kalender und Benachrichtigungen behoben
-- Fehlerbehebungen und weitere Verbesserungen
+- Verbesserte Übersicht mit klarerem Design und Einkommensvergleichen zwischen Monaten
+- Überstundenregeln zum Lohnverlauf hinzugefügt und Überstundenvergütung übersichtlicher aufgeschlüsselt
+- Hintergrundaktualisierungen für Live-Aktivitäten während Schichten hinzugefügt
+- Ladezeiten beim Monatswechsel und beim Anzeigen der Einkommensstatistik verbessert
+- Zurücksetzen von Profilbildern nach der Synchronisierung behoben und Öffnen geteilter Links verbessert
+- Unterstützung für größere Schrift und VoiceOver verbessert
+- Zuverlässigkeit der App verbessert

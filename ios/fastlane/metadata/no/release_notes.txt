@@ -1,9 +1,7 @@
-- Lagt til Siri-støtte for å sende meldinger til venner
-- Lagt til passkey-innlogging for raskere og sikrere innlogging
-- Lagt til en tydeligere prøveperiode og betalingsflyt, med bedre håndtering av gratisgrenser
-- Forbedret arbeidsoppsett med en smidigere flyt for jobber, lønn og første vakter
-- Forbedret lønnskortene med tydeligere detaljer for nåværende og forrige utbetaling
-- Forbedret ytelsen i Timeplan og Hjem når du bytter måned og synkroniserer endringer
-- Forbedret vennechat med bedre meldingsgruppering, vedlegg, delte vakter og tidsstempler
-- Rettet problemer med abonnement, onboarding, kalender og varsler
-- Feilrettinger og andre forbedringer
+- Forbedret oversikten med et ryddigere design og sammenligning av inntekt fra måned til måned
+- Lagt til overtidsregler i lønnshistorikken og tydeligere oversikt over overtidsbetaling
+- Lagt til bakgrunnsoppdateringer for direktesendte aktiviteter under vakter
+- Forbedret hastigheten når du bytter måned og ser på inntektsstatistikk
+- Rettet at profilbilder kunne bli tilbakestilt etter synkronisering, og forbedret åpning av delte lenker
+- Forbedret støtte for større tekst og VoiceOver
+- Forbedret stabiliteten i appen

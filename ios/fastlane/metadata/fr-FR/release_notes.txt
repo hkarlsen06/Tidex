@@ -1,9 +1,7 @@
-- Ajout de la prise en charge de Siri pour envoyer des messages à des amis
-- Ajout de la connexion par passkey pour une expérience de connexion plus rapide et plus sécurisée
-- Ajout d’un parcours d’essai et de paywall plus clair, avec une meilleure gestion des limites d’utilisation gratuite
-- Amélioration de la configuration du travail avec un flux plus fluide pour ajouter des emplois, des salaires et les premiers shifts
-- Amélioration des cartes de paie avec des détails plus clairs sur les paiements actuels et précédents
-- Amélioration des performances de Planning et Accueil lors du passage d’un mois à l’autre et de la synchronisation des changements
-- Amélioration du chat entre amis avec un meilleur regroupement des messages, les pièces jointes, les shifts partagés et les horodatages
-- Correction de problèmes de fiabilité liés aux abonnements, à l’onboarding, au calendrier et aux notifications
-- Corrections de bugs et autres améliorations
+- Amélioration du tableau de bord avec un design plus épuré et une comparaison des revenus entre les mois
+- Ajout de règles sur les heures supplémentaires à l’historique des salaires et de détails plus clairs sur leur rémunération
+- Ajout de mises à jour en arrière-plan pour les Activités en direct pendant les périodes de travail
+- Amélioration du chargement lors du changement de mois et de la consultation des statistiques de revenus
+- Correction des photos de profil rétablies après la synchronisation et amélioration de l’ouverture des liens partagés
+- Amélioration de la prise en charge des textes agrandis et de VoiceOver
+- Amélioration de la fiabilité de l’app

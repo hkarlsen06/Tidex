@@ -1,9 +1,7 @@
-- S'ha afegit compatibilitat amb Siri per enviar missatges als amics
-- S'ha afegit l'inici de sessió amb clau d'accés per a una experiència més ràpida i segura
-- S'ha afegit un flux de prova i mur de pagament més clar, amb una millor gestió dels límits d'ús gratuït
-- S'ha millorat la configuració de la feina amb un flux més fluid per afegir feines, sous i els primers torns
-- S'han millorat les targetes de nòmina amb detalls més clars del pagament actual i de l'anterior
-- S'ha millorat el rendiment de l'Horari i d'Inici en canviar de mes i sincronitzar els canvis
-- S'ha millorat el xat amb amics amb una millor agrupació de missatges, fitxers adjunts, torns compartits i marques de temps
-- S'han corregit problemes de fiabilitat amb les subscripcions, l'onboarding, el calendari i les notificacions
-- Correcció d'errors i altres millores
+- Millorat el tauler amb un disseny més clar i comparacions d’ingressos entre mesos
+- Afegides regles d’hores extres a l’historial salarial i desglossaments més clars de la remuneració
+- Afegides actualitzacions en segon pla per a les activitats en directe durant els torns
+- Millorada la velocitat en canviar de mes i consultar les estadístiques d’ingressos
+- Corregit el restabliment de les fotos de perfil després de sincronitzar i millorada l’obertura d’enllaços compartits
+- Millorada la compatibilitat amb text més gran i VoiceOver
+- Millorada la fiabilitat de l’app

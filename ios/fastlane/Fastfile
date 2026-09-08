@@ -2,6 +2,12 @@
 
 default_platform(:ios)
 
+def tidex_release_version
+  version = File.read(File.expand_path("../Version.xcconfig", __dir__))[/^MARKETING_VERSION\s*=\s*(\S+)/, 1]
+  UI.user_error!("MARKETING_VERSION is missing from Version.xcconfig") unless version
+  version
+end
+
 platform :ios do
   desc "Upload App Store metadata (no binary or screenshots)"
   lane :metadata do
@@ -37,6 +43,8 @@ platform :ios do
     # Upload metadata only (no binary, no screenshots)
     deliver(
       api_key: api_key,
+      app_version: tidex_release_version,
+      submit_for_review: false,
       skip_binary_upload: true,
       skip_screenshots: true,
       skip_metadata: false,
@@ -85,6 +93,8 @@ platform :ios do
     # Upload metadata only (no binary, no screenshots)
     deliver(
       api_key: api_key,
+      app_version: tidex_release_version,
+      submit_for_review: false,
       skip_binary_upload: true,
       skip_screenshots: true,
       skip_metadata: false,

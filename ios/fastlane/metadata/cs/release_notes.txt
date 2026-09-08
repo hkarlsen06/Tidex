@@ -1,9 +1,7 @@
-- Přidána podpora Siri pro posílání zpráv přátelům
-- Přidáno přihlášení pomocí passkey pro rychlejší a bezpečnější přihlášení
-- Přidán přehlednější tok zkušební verze a paywallu, včetně lepšího zpracování limitů bezplatného používání
-- Vylepšeno nastavení práce plynulejším postupem pro přidávání zaměstnání, mezd a prvních směn
-- Vylepšeny mzdové karty s přehlednějšími detaily o aktuální a předchozí výplatě
-- Zlepšen výkon v Rozvrhu a na Domů při přecházení mezi měsíci a synchronizaci změn
-- Vylepšen chat s přáteli díky lepšímu seskupování zpráv, přílohám, sdíleným směnám a časovým razítkům
-- Opraveny problémy se spolehlivostí předplatného, onboardingu, kalendáře a oznámení
-- Opravy chyb a další vylepšení
+- Vylepšen přehled díky čistšímu vzhledu a porovnání výdělků mezi měsíci
+- Přidána pravidla přesčasů do historie mezd a přehlednější rozpisy odměn za přesčasy
+- Přidány aktualizace na pozadí pro živé aktivity během směn
+- Zrychleno načítání při přepínání měsíců a prohlížení statistik výdělků
+- Opraveno vracení profilových fotek po synchronizaci a vylepšeno otevírání sdílených odkazů
+- Vylepšena podpora většího textu a VoiceOveru
+- Zlepšena spolehlivost aplikace

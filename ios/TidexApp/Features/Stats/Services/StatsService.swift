@@ -867,17 +867,28 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   }
 
   /// Get short weekday name (e.g., "Man", "Tir")
-  nonisolated private static func shortWeekdayName(for date: Date, calendar: Calendar) -> String {
-    let formatter = FormatterCache.shortWeekdayFormatter(locale: Locale(identifier: "nb_NO"))  // swiftlint:disable:this explicit_type_interface line_length
+  nonisolated static func shortWeekdayName(
+    for date: Date, calendar: Calendar, locale: Locale = .current
+  ) -> String {
+    let formatter = FormatterCache.shortWeekdayFormatter(locale: locale)  // swiftlint:disable:this explicit_type_interface line_length
     formatter.calendar = calendar
     return formatter.string(from: date).sentenceCased()
   }
 
   /// Get full weekday name (e.g., "Mandag", "Tirsdag")
-  nonisolated private static func fullWeekdayName(for date: Date, calendar: Calendar) -> String {
-    let formatter = FormatterCache.weekdayFormatter(locale: Locale(identifier: "nb_NO"))  // swiftlint:disable:this explicit_type_interface line_length
+  nonisolated static func fullWeekdayName(
+    for date: Date, calendar: Calendar, locale: Locale = .current
+  ) -> String {
+    let formatter = FormatterCache.weekdayFormatter(locale: locale)  // swiftlint:disable:this explicit_type_interface line_length
     formatter.calendar = calendar
     return formatter.string(from: date).sentenceCased()
+  }
+
+  nonisolated static func monthNames(locale: Locale = .current) -> (short: [String], full: [String])
+  {
+    var calendar: Calendar = Calendar(identifier: .gregorian)
+    calendar.locale = locale
+    return (calendar.shortMonthSymbols, calendar.monthSymbols.map { $0.sentenceCased() })
   }
 
   // MARK: - Employment Percentage Calculation
@@ -901,15 +912,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     let breakDeductionEnabled = baselineSnapshot?.effectiveBreakEnabled ?? true  // swiftlint:disable:this explicit_type_interface line_length
     let fullTimeHoursPerWeek: Double = breakDeductionEnabled ? 37.5 : 40  // swiftlint:disable:this no_magic_numbers
 
-    // Short and full month names (Norwegian)
-    let shortMonthNames = [  // swiftlint:disable:this explicit_type_interface
-      "jan.", "feb.", "mar.", "apr.", "mai", "jun.",
-      "jul.", "aug.", "sep.", "okt.", "nov.", "des.",
-    ]
-    let fullMonthNames = [  // swiftlint:disable:this explicit_type_interface
-      "Januar", "Februar", "Mars", "April", "Mai", "Juni",
-      "Juli", "August", "September", "Oktober", "November", "Desember",
-    ]
+    let (shortMonthNames, fullMonthNames) = Self.monthNames()
 
     var calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
     calendar.timeZone = Date.localTimeZone
@@ -1073,15 +1076,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     focusYear: Int,
     shifts: [ShiftWithComputations]
   ) -> [MonthlyIncomeData] {
-    // Short and full month names (Norwegian)
-    let shortMonthNames = [  // swiftlint:disable:this explicit_type_interface
-      "jan.", "feb.", "mar.", "apr.", "mai", "jun.",
-      "jul.", "aug.", "sep.", "okt.", "nov.", "des.",
-    ]
-    let fullMonthNames = [  // swiftlint:disable:this explicit_type_interface
-      "Januar", "Februar", "Mars", "April", "Mai", "Juni",
-      "Juli", "August", "September", "Oktober", "November", "Desember",
-    ]
+    let (shortMonthNames, fullMonthNames) = Self.monthNames()
 
     // Group shifts by month
     var monthlyEarnings: [Int: Double] = [:]

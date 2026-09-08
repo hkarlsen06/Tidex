@@ -5,6 +5,35 @@ import XCTest
 
 @MainActor
 final class StatsServiceCurrencyTests: XCTestCase {
+  func testMonthLabelsRespectLocale() {
+    let english = StatsService.monthNames(locale: Locale(identifier: "en_US"))
+    let norwegian = StatsService.monthNames(locale: Locale(identifier: "nb_NO"))
+    XCTAssertEqual(english.short.count, 12)
+    XCTAssertEqual(english.full.count, 12)
+    XCTAssertEqual(english.short[4], "May")
+    XCTAssertEqual(english.full[11], "December")
+    XCTAssertEqual(norwegian.short[4], "mai")
+    XCTAssertEqual(norwegian.full[11], "Desember")
+    XCTAssertEqual(StatsService.monthNames().short, StatsService.monthNames(locale: .current).short)
+  }
+
+  func testWeekdayLabelsRespectLocale() throws {
+    let date = try XCTUnwrap(Date.fromISODateString("2026-09-07"))
+    let calendar = Calendar(identifier: .gregorian)
+    let english = Locale(identifier: "en_US")
+    let norwegian = Locale(identifier: "nb_NO")
+    XCTAssertEqual(
+      StatsService.shortWeekdayName(for: date, calendar: calendar, locale: english), "Mon")
+    XCTAssertEqual(
+      StatsService.fullWeekdayName(for: date, calendar: calendar, locale: english), "Monday")
+    XCTAssertEqual(
+      StatsService.fullWeekdayName(for: date, calendar: calendar, locale: norwegian), "Mandag")
+    XCTAssertEqual(
+      StatsService.fullWeekdayName(for: date, calendar: calendar),
+      StatsService.fullWeekdayName(for: date, calendar: calendar, locale: .current)
+    )
+  }
+
   func testComparisonsAndChartsKeepOneCurrencyWhenContributingJobsChange() async throws {
     for hasCurrentUSD in [false, true] {
       let shifts =
