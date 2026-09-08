@@ -47,7 +47,7 @@ struct SettingsView: View {
   /// Job currently processing a row action.
   @State private var payJobManagementLoadingJobId: String?
   /// Job awaiting destructive delete confirmation from the pay chooser.
-  @State private var pendingPayChooserDeleteJob: Job?
+  @State private var pendingPayChooserDeleteJob: JobDeletionPreview?
   /// Job currently being configured with a baseline wage snapshot.
   @State private var paySetupJob: Job?
   /// Follow-up action after a pay setup sheet succeeds.
@@ -713,20 +713,39 @@ struct SettingsView: View {
     }
   }
 
-  private func deletePayJob(_ jobId: String) async {
+  private func preparePayJobDeletion(_ jobId: String) async {
+    guard let payChooserUserId, payJobManagementLoadingJobId == nil else { return }
+    clearPayChooserError()
+    payJobManagementLoadingJobId = jobId
+    defer { payJobManagementLoadingJobId = nil }
+
+    do {
+      let preview = try await jobsRepository.prepareJobDeletion(
+        userId: payChooserUserId, jobId: jobId)
+      guard self.payChooserUserId == payChooserUserId else { return }
+      pendingPayChooserDeleteJob = preview
+      refreshPayJobLists(for: payChooserUserId)
+    } catch {
+      presentPayChooserError(error)
+    }
+  }
+
+  private func deletePayJob(_ preview: JobDeletionPreview) async {
     guard let payChooserUserId else {
       presentPayChooserError(String(localized: .settingsPayChooseJobErrorNotAuthenticated))
       return
     }
 
     clearPayChooserError()
-    payJobManagementLoadingJobId = jobId
+    payJobManagementLoadingJobId = preview.jobId
     defer { payJobManagementLoadingJobId = nil }
 
     do {
-      try await jobsRepository.deleteJob(userId: payChooserUserId, jobId: jobId)
+      try await jobsRepository.deleteJob(userId: payChooserUserId, preview: preview)
       refreshPayJobLists(for: payChooserUserId)
+      Haptics.play(.success)
     } catch {
+      refreshPayJobLists(for: payChooserUserId)
       presentPayChooserError(error)
     }
   }
@@ -923,18 +942,18 @@ struct SettingsView: View {
         }
       }
       .confirmationDialog(
-        String(localized: .settingsPayJobActionsDeleteConfirmTitle),
+        String(localized: .settingsPayJobActionsDeleteHistoryConfirmTitle),
         isPresented: .init(
           get: { pendingPayChooserDeleteJob != nil },
           set: { if !$0 { pendingPayChooserDeleteJob = nil } }
         ),
-        titleVisibility: .visible
-      ) {
-        Button(String(localized: .settingsPayJobActionsDelete), role: .destructive) {
-          guard let job = pendingPayChooserDeleteJob else { return }
+        titleVisibility: .visible,
+        presenting: pendingPayChooserDeleteJob
+      ) { preview in
+        Button(String(localized: .settingsPayJobActionsDeleteHistory), role: .destructive) {
           pendingPayChooserDeleteJob = nil
           Task {
-            await deletePayJob(job.id)
+            await deletePayJob(preview)
           }
         }
 
@@ -943,8 +962,8 @@ struct SettingsView: View {
         } label: {
           Text(.commonCancel)
         }
-      } message: {
-        Text(.settingsPayJobActionsDeleteConfirmMessage)
+      } message: { preview in
+        Text(preview.confirmationMessage)
       }
       .sheet(item: $payChooserDetailRoute) { route in
         payChooserDetailSheet(route)
@@ -952,6 +971,11 @@ struct SettingsView: View {
       .simultaneousGesture(
         payChooserManagementExitGesture(isEnabled: !isPresentedAsNestedSheet)
       )
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
+      guard let payChooserUserId else { return }
+      refreshPayJobLists(for: payChooserUserId)
+      refreshPayChooserDefaults(for: payChooserUserId)
     }
   }
 
@@ -1157,19 +1181,17 @@ struct SettingsView: View {
           .controlSize(.small)
           .frame(width: 44, height: 44)
       } else {
-        Button {
-          Task {
-            await restorePayJob(job.id)
-          }
+        Menu {
+          archivedPayJobActions(job)
         } label: {
-          Image(systemName: "arrow.uturn.backward.circle")
+          Image(systemName: "ellipsis.circle")
             .font(.tidexBodyMedium)
-            .foregroundColor(.tidexBlue)
+            .foregroundColor(.tidexTextMuted)
             .frame(width: 44, height: 44)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: .settingsPayManageJobsRestore))
+        .disabled(payJobManagementLoadingJobId != nil)
+        .accessibilityLabel(payJobActionsAccessibilityLabel(for: job))
         .accessibilityValue(Text(job.name))
       }
     }
@@ -1265,17 +1287,6 @@ struct SettingsView: View {
         )
       }
     }
-
-    if !job.is_default {
-      Button(role: .destructive) {
-        pendingPayChooserDeleteJob = job
-      } label: {
-        Label(
-          String(localized: .settingsPayJobActionsDelete),
-          systemImage: "trash"
-        )
-      }
-    }
   }
 
   @ViewBuilder
@@ -1292,10 +1303,12 @@ struct SettingsView: View {
     }
 
     Button(role: .destructive) {
-      pendingPayChooserDeleteJob = job
+      Task {
+        await preparePayJobDeletion(job.id)
+      }
     } label: {
       Label(
-        String(localized: .settingsPayJobActionsDelete),
+        String(localized: .settingsPayJobActionsDeleteHistory),
         systemImage: "trash"
       )
     }

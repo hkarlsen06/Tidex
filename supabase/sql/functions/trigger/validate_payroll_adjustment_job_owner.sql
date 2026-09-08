@@ -20,6 +20,7 @@ BEGIN
       AND j.user_id = NEW.user_id
       AND j.deleted_at IS NULL
       AND j.archived_at IS NULL
+    FOR SHARE
   ) THEN
     RAISE EXCEPTION 'job_id must belong to same user';
   END IF;

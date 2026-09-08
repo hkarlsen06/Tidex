@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Supabase
 import SwiftData
 import os.log
 
@@ -26,9 +27,12 @@ enum JobsRepositoryError: LocalizedError {
   case cannotChangeTariffJobCurrency
   case cannotArchiveLastActiveJob
   case cannotArchiveDefaultJob
-  case cannotDeleteLastActiveJob
+  case cannotDeleteUnarchivedJob
   case cannotDeleteDefaultJob
   case cannotDeleteJobWithHistory
+  case deletionSyncRequired
+  case deletionChanged
+  case deletionRefreshFailed
   case cannotSetArchivedOrDeletedDefault
 
   var errorDescription: String? {
@@ -51,8 +55,8 @@ enum JobsRepositoryError: LocalizedError {
     case .cannotArchiveDefaultJob:
       return "Set another job as default before archiving this one."
 
-    case .cannotDeleteLastActiveJob:
-      return "Cannot delete the last active job."
+    case .cannotDeleteUnarchivedJob:
+      return String(localized: .settingsPayErrorArchiveBeforeDeleting)
 
     case .cannotDeleteDefaultJob:
       return "Set another job as default before deleting this one."
@@ -61,6 +65,15 @@ enum JobsRepositoryError: LocalizedError {
       return String(
         localized: "settings.pay.error.cannotDeleteWorkplaceWithHistory.message"
       )
+
+    case .deletionSyncRequired:
+      return String(localized: .settingsPayErrorDeletionSyncRequired)
+
+    case .deletionChanged:
+      return String(localized: .settingsPayErrorDeletionChanged)
+
+    case .deletionRefreshFailed:
+      return String(localized: .settingsPayErrorDeletionRefreshFailed)
 
     case .cannotSetArchivedOrDeletedDefault:
       return "Cannot set archived or deleted job as default."
@@ -612,29 +625,68 @@ final class JobsRepository: ObservableObject {
     triggerSync(userId: affectedUserId)
   }
 
-  func deleteJob(userId: String, jobId: String) async throws {
-    let nonDeletedJobs = getAllJobs(for: userId, includeArchived: true, includeDeleted: false)
-    guard let target = nonDeletedJobs.first(where: { $0.id == jobId }) else {
+  func prepareJobDeletion(userId: String, jobId: String) async throws -> JobDeletionPreview {
+    try await syncBeforeJobDeletion(userId: userId, jobId: jobId)
+    return try await requestJobDeletion(jobId: jobId, userId: userId, confirmationToken: nil)
+  }
+
+  func deleteJob(userId: String, preview: JobDeletionPreview) async throws {
+    guard preview.userId == userId, preview.deletedAtEpoch == nil else {
       throw JobsRepositoryError.jobNotFound
     }
+    try await syncBeforeJobDeletion(userId: userId, jobId: preview.jobId)
+    let receipt = try await requestJobDeletion(
+      jobId: preview.jobId, userId: userId, confirmationToken: preview.confirmationToken
+    )
 
-    let activeJobs = getActiveJobs(for: userId)
-    let isActiveTarget = target.archived_at == nil
-    if isActiveTarget, activeJobs.count <= 1 {
-      throw JobsRepositoryError.cannotDeleteLastActiveJob
-    }
-    if target.is_default {
-      throw JobsRepositoryError.cannotDeleteDefaultJob
-    }
-
-    let dependencyCounts = try deletionDependencyCounts(userId: userId, jobId: jobId)
-    if JobDeletionPolicy.shouldBlockDeletion(dependencyCounts: dependencyCounts) {
-      throw JobsRepositoryError.cannotDeleteJobWithHistory
+    do {
+      try await localStore.storeActor.applyConfirmedJobDeletion(userId: userId, receipt: receipt)
+    } catch {
+      // The server transaction has committed. A later pull also applies its tombstones.
+      triggerSync(userId: userId)
+      throw JobsRepositoryError.deletionRefreshFailed
     }
 
-    let affectedUserId = try await localStore.storeActor.markJobPendingDelete(id: jobId)
-    logger.info("Marked job pending delete: \(jobId)")
-    triggerSync(userId: affectedUserId)
+    NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
+    NativeWidgetStorage.updateWidgetStorage(for: userId)
+    WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
+    _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+    logger.info("Deleted archived job and history: \(preview.jobId)")
+  }
+
+  private func syncBeforeJobDeletion(userId: String, jobId: String) async throws {
+    let result = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+    guard result.success else {
+      throw JobsRepositoryError.deletionSyncRequired
+    }
+    try await localStore.storeActor.validateArchivedJobDeletion(userId: userId, jobId: jobId)
+  }
+
+  private func requestJobDeletion(
+    jobId: String, userId: String, confirmationToken: String?
+  ) async throws -> JobDeletionPreview {
+    var params: [String: AnyJSON] = ["p_job_id": .string(jobId)]
+    if let confirmationToken {
+      params["p_confirmation_token"] = .string(confirmationToken)
+    }
+    do {
+      let response: JobDeletionPreview =
+        try await supabase
+        .rpc("delete_archived_job", params: params)
+        .execute()
+        .value
+      guard response.jobId == jobId, response.userId == userId else {
+        throw JobsRepositoryError.jobNotFound
+      }
+      return response
+    } catch let error as PostgrestError {
+      switch error.code {
+      case "PT409": throw JobsRepositoryError.deletionChanged
+      case "PT400": throw JobsRepositoryError.cannotDeleteUnarchivedJob
+      case "PT404": throw JobsRepositoryError.jobNotFound
+      default: throw error
+      }
+    }
   }
 
   func reorderJobs(userId: String, orderedJobIds: [String]) async throws {

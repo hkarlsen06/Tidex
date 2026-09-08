@@ -5,15 +5,11 @@ import UIKit
 
 /// Main pay settings screen displaying wage history timeline and global settings
 struct PaySettingsView: View {
+  @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel: PaySettingsViewModel
   @State private var showingEditJobSheet = false
   @State private var paySetupJob: Job?
-  @State private var pendingJobAction: JobManagementAction?
-
-  private enum JobManagementAction {
-    case archive
-    case delete
-  }
+  @State private var showingArchiveConfirmation = false
 
   init(initialJobId: String? = nil) {
     _viewModel = StateObject(wrappedValue: PaySettingsViewModel(initialSelectedJobId: initialJobId))
@@ -112,38 +108,24 @@ struct PaySettingsView: View {
       Text(deleteConfirmationMessage)
     }
     .confirmationDialog(
-      jobActionConfirmationTitle,
-      isPresented: Binding(
-        get: { pendingJobAction != nil },
-        set: { if !$0 { pendingJobAction = nil } }
-      ),
+      String(localized: .settingsPayJobActionsArchiveConfirmTitle),
+      isPresented: $showingArchiveConfirmation,
       titleVisibility: .visible
     ) {
-      if pendingJobAction == .archive {
-        Button(String(localized: .settingsPayJobActionsArchive)) {
-          Task {
-            await viewModel.archiveSelectedJob()
-            pendingJobAction = nil
-          }
-        }
-      }
-
-      if pendingJobAction == .delete {
-        Button(String(localized: .settingsPayJobActionsDelete), role: .destructive) {
-          Task {
-            await viewModel.deleteSelectedJob()
-            pendingJobAction = nil
+      Button(String(localized: .settingsPayJobActionsArchive)) {
+        Task {
+          if await viewModel.archiveSelectedJob() {
+            dismiss()
           }
         }
       }
 
       Button(role: .cancel) {
-        pendingJobAction = nil
       } label: {
         Text(.commonCancel)
       }
     } message: {
-      Text(jobActionConfirmationMessage)
+      Text(.settingsPayJobActionsArchiveConfirmMessage)
     }
     .alert(
       viewModel.errorTitle ?? String(localized: .commonError),
@@ -335,7 +317,7 @@ struct PaySettingsView: View {
         }
 
         Button {
-          pendingJobAction = .archive
+          showingArchiveConfirmation = true
         } label: {
           jobActionRow(
             icon: "archivebox",
@@ -346,19 +328,6 @@ struct PaySettingsView: View {
         }
         .buttonStyle(.plain)
         .disabled(!viewModel.canArchiveSelectedJob || viewModel.isProcessingJobAction)
-
-        Button {
-          pendingJobAction = .delete
-        } label: {
-          jobActionRow(
-            icon: "trash",
-            title: String(localized: .settingsPayJobActionsDelete),
-            tint: .tidexError,
-            isEnabled: viewModel.canDeleteSelectedJob && !viewModel.isProcessingJobAction
-          )
-        }
-        .buttonStyle(.plain)
-        .disabled(!viewModel.canDeleteSelectedJob || viewModel.isProcessingJobAction)
 
         if let hint = viewModel.selectedJobManagementHint {
           Text(hint)
@@ -486,32 +455,6 @@ struct PaySettingsView: View {
       return String(localized: .settingsPayDeleteConfirmation)
     }
     return String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
-  }
-
-  private var jobActionConfirmationTitle: String {
-    switch pendingJobAction {
-    case .archive:
-      return String(localized: .settingsPayJobActionsArchiveConfirmTitle)
-
-    case .delete:
-      return String(localized: .settingsPayJobActionsDeleteConfirmTitle)
-
-    case .none:
-      return ""
-    }
-  }
-
-  private var jobActionConfirmationMessage: String {
-    switch pendingJobAction {
-    case .archive:
-      return String(localized: .settingsPayJobActionsArchiveConfirmMessage)
-
-    case .delete:
-      return String(localized: .settingsPayJobActionsDeleteConfirmMessage)
-
-    case .none:
-      return ""
-    }
   }
 }
 

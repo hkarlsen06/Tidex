@@ -14,6 +14,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       LocalEvent.self,
       LocalRecurringShift.self,
       LocalWageSnapshot.self,
+      LocalPayrollAdjustment.self,
       LocalUserSettings.self,
       LocalNotificationPreferences.self,
       LocalSyncState.self,
@@ -875,31 +876,157 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.currency]))
   }
 
-  internal func testMarkJobPendingDeleteMarksDeletedAtAndPendingStatus() async throws {
+  internal func testDeletingActiveOrRestoredJobRequiresArchivingWithoutMutatingJob() async throws {
     let store = try makeStoreActor()
-
     let created = try await store.createJob(
       userId: userId,
       name: "Store",
       color: nil,
       currency: "kr",
-      isDefault: true,
+      isDefault: false,
       sortOrder: 0,
       payrollDay: 25,
       halfTaxMonth: nil,
       monthlyGoal: nil
     )
 
-    _ = try await store.markJobPendingDelete(id: created.id)
+    for restored in [false, true] {
+      if restored {
+        _ = try await store.archiveJob(id: created.id)
+        _ = try await store.restoreJob(id: created.id, sortOrder: 0)
+      }
+      await store.markJobClean(id: created.id)
+      try await store.save()
 
-    let localRecord = try await store.getJob(id: created.id)
+      do {
+        try await store.validateArchivedJobDeletion(userId: userId, jobId: created.id)
+        XCTFail("Deleting an active job must require archiving first")
+      } catch JobsRepositoryError.cannotDeleteUnarchivedJob {
+        // Expected for both new and restored active jobs.
+      }
 
-    let local = try XCTUnwrap(localRecord)
-    XCTAssertEqual(local.syncStatus, .pendingDelete)
-    XCTAssertEqual(local.isDefault, false)
-    XCTAssertNotNil(local.deletedAt)
-    XCTAssertEqual(local.dirtyFieldKeys.contains(.deletedAt), true)
-    XCTAssertEqual(local.dirtyFieldKeys.contains(.isDefault), true)
+      let localRecord = try await store.getJob(id: created.id)
+      let local = try XCTUnwrap(localRecord)
+      XCTAssertNil(local.archivedAt)
+      XCTAssertNil(local.deletedAt)
+      XCTAssertEqual(local.syncStatus, .clean)
+      XCTAssertTrue(local.dirtyFieldKeys.isEmpty)
+    }
+  }
+
+  private func makeArchivedJobWithHistory(store: LocalStoreActor, ownerId: String) async throws
+    -> String
+  {
+    let job = try await store.createJob(
+      userId: ownerId, name: "Store", color: nil, currency: "kr", isDefault: false,
+      sortOrder: 0, payrollDay: 25, halfTaxMonth: nil, monthlyGoal: nil
+    )
+    _ = try await store.createUserShift(
+      id: job.id, userId: ownerId, jobId: job.id,
+      shiftDate: makeDate("2026-01-12"), startTime: "09:00", endTime: "17:00",
+      customSupplements: nil
+    )
+    let recurring = try await store.createRecurringShift(
+      userId: ownerId, jobId: job.id, startTime: "09:00", endTime: "17:00",
+      repeatIntervalWeeks: 1, selectedDays: ["1": "2026-01-12"], endCondition: nil,
+      exclusions: nil, dateSpecificSupplements: nil
+    )
+    let adjustment = try await store.createPayrollAdjustment(
+      userId: ownerId, jobId: job.id, amount: 100, currency: "kr", category: .bonus,
+      taxTreatment: .grossTaxable, description: "Bonus", note: nil, earnedFromDate: nil,
+      earnedToDate: nil, payoutDate: makeDate("2026-01-31")
+    )
+    let snapshot = try await store.createWageSnapshot(
+      userId: ownerId, jobId: job.id, fromDate: nil, hourlyWage: 200, wageLevel: nil,
+      tariffTypeId: nil, supplements: SupplementRulesSnapshot(rules: []), taxEnabled: nil,
+      taxPercentage: nil, breakEnabled: nil, breakMethod: nil, breakThresholdHours: nil,
+      breakDeductionMinutes: nil
+    )
+    _ = try await store.archiveJob(id: job.id)
+    await store.markJobClean(id: job.id)
+    await store.markShiftClean(id: job.id)
+    await store.markRecurringShiftClean(id: recurring.id)
+    await store.markPayrollAdjustmentClean(id: adjustment.id)
+    await store.markWageSnapshotClean(id: snapshot.id)
+    try await store.save()
+    return job.id
+  }
+
+  private func deletionReceipt(jobId: String, ownerId: String, deletedAt: Date?)
+    -> JobDeletionPreview
+  {
+    JobDeletionPreview(
+      jobId: jobId, userId: ownerId, jobName: "Store", jobRevision: 5,
+      confirmationToken: "reviewed",
+      userShifts: 1, recurringShifts: 1, payrollAdjustments: 1, wageSnapshots: 1,
+      deletedAtEpoch: deletedAt?.timeIntervalSince1970
+    )
+  }
+
+  internal func testConfirmedJobDeletionRemovesCachedHistoryAndPreservesOtherJobsAndUsers()
+    async throws
+  {
+    let store = try makeStoreActor()
+    let jobId = try await makeArchivedJobWithHistory(store: store, ownerId: userId)
+    let otherJobId = try await makeArchivedJobWithHistory(store: store, ownerId: userId)
+    let otherUserJobId = try await makeArchivedJobWithHistory(store: store, ownerId: "other-user")
+    try await store.validateArchivedJobDeletion(userId: userId, jobId: jobId)
+    let deletedAt = makeDate("2026-09-08")
+    try await store.applyConfirmedJobDeletion(
+      userId: userId, receipt: deletionReceipt(jobId: jobId, ownerId: userId, deletedAt: deletedAt)
+    )
+
+    let jobs = try await store.getAllJobs(userId: userId)
+    XCTAssertEqual(jobs.first { $0.id == jobId }?.deletedAt, deletedAt)
+    XCTAssertEqual(jobs.first { $0.id == jobId }?.serverRevision, 5)
+    XCTAssertEqual(jobs.first { $0.id == jobId }?.syncStatus, .clean)
+    XCTAssertNil(jobs.first { $0.id == otherJobId }?.deletedAt)
+    let shifts = try await store.getAllUserShifts(userId: userId)
+    XCTAssertEqual(shifts.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
+    XCTAssertEqual(shifts.first { $0.jobId == jobId }?.syncStatus, .clean)
+    XCTAssertNil(shifts.first { $0.jobId == otherJobId }?.serverDeletedAt)
+    let recurring = try await store.getAllRecurringShifts(userId: userId)
+    XCTAssertEqual(recurring.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
+    XCTAssertNil(recurring.first { $0.jobId == otherJobId }?.serverDeletedAt)
+    let adjustments = try await store.getAllPayrollAdjustments(userId: userId)
+    XCTAssertEqual(adjustments.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
+    XCTAssertNil(adjustments.first { $0.jobId == otherJobId }?.serverDeletedAt)
+    let snapshots = try await store.getAllWageSnapshots(userId: userId)
+    XCTAssertEqual(snapshots.first { $0.jobId == jobId }?.serverDeletedAt, deletedAt)
+    XCTAssertNil(snapshots.first { $0.jobId == otherJobId }?.serverDeletedAt)
+    try await store.validateArchivedJobDeletion(userId: "other-user", jobId: otherUserJobId)
+  }
+
+  internal func testJobDeletionRequiresSyncedHistoryAndConfirmedServerReceipt() async throws {
+    let store = try makeStoreActor()
+    let jobId = try await makeArchivedJobWithHistory(store: store, ownerId: userId)
+    _ = try await store.markShiftPendingDelete(id: jobId)
+    do {
+      try await store.validateArchivedJobDeletion(userId: userId, jobId: jobId)
+      XCTFail("Pending history must be synced before confirming deletion")
+    } catch JobsRepositoryError.deletionSyncRequired {}
+
+    do {
+      try await store.applyConfirmedJobDeletion(
+        userId: userId, receipt: deletionReceipt(jobId: jobId, ownerId: userId, deletedAt: nil)
+      )
+      XCTFail("A preview must not delete local history")
+    } catch JobsRepositoryError.deletionRefreshFailed {}
+    let job = try await store.getJob(id: jobId)
+    XCTAssertNil(job?.deletedAt)
+  }
+
+  internal func testConfirmedJobDeletionRejectsAnotherOwner() async throws {
+    let store = try makeStoreActor()
+    let jobId = try await makeArchivedJobWithHistory(store: store, ownerId: userId)
+    do {
+      try await store.applyConfirmedJobDeletion(
+        userId: "other-user",
+        receipt: deletionReceipt(jobId: jobId, ownerId: "other-user", deletedAt: Date())
+      )
+      XCTFail("A receipt cannot delete another account's cached job")
+    } catch JobsRepositoryError.jobNotFound {}
+    try await store.validateArchivedJobDeletion(userId: userId, jobId: jobId)
   }
 
   internal func testResolveStoredJobConflictKeepServerOverwritesLocal() async throws {
