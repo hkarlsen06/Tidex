@@ -29,7 +29,7 @@ struct BreakDeduction {
     // Only deduct if shift exceeds threshold (strict >)
     let sanitizedDeductionHours =
       deductionHours.isFinite ? min(max(deductionHours, 0), totalHours) : 0
-    let toDeduct = totalHours > thresholdHours ? sanitizedDeductionHours : 0
+    let toDeduct = method != .none && totalHours > thresholdHours ? sanitizedDeductionHours : 0
 
     var adjusted = periods
     var notes: [String] = []
@@ -106,13 +106,15 @@ struct BreakDeduction {
       adjusted = adjusted.filter { $0.toMin > $0.fromMin }
     }
 
+    let paidMinutes = adjusted.reduce(0.0) { $0 + max(0, $1.durationMinutes) }
+    let deductedHours = max(0, totalMinutes - paidMinutes) / 60
     return BreakDeductionResult(
       periods: adjusted,
       audit: BreakAudit(
         method: method,
         thresholdHours: thresholdHours,
-        deductedHours: toDeduct,
-        source: .automaticBreak,
+        deductedHours: deductedHours,
+        source: deductedHours > 0 ? .automaticBreak : .none,
         notes: notes
       )
     )

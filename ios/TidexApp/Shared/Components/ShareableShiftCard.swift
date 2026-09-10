@@ -72,54 +72,8 @@ struct ShareableShiftCard: View {
     return shift.computed.basePay / shift.computed.paidHours
   }
 
-  /// Supplement segments grouped by rate for display (same logic as ShiftDetailsSheet)
-  private var supplementSegments: [ShareableSupplementSegment] {
-    let original = shift.computed.originalWagePeriods
-    let adjusted = shift.computed.wagePeriods
-
-    var segments: [ShareableSupplementSegment] = []
-    var i = 0
-
-    while i < original.count {
-      let period = original[i]
-      guard period.supplementRate > 0 else {
-        i += 1
-        continue
-      }
-
-      let groupStart = period.fromMin
-      var groupEnd = period.toMin
-      let currentRate = period.supplementRate
-      var j = i + 1
-
-      while j < original.count, original[j].supplementRate == currentRate {
-        groupEnd = original[j].toMin
-        j += 1
-      }
-
-      var actualHours: Double = 0
-      for adj in adjusted where adj.supplementRate == currentRate {
-        let overlapStart = max(adj.fromMin, groupStart)
-        let overlapEnd = min(adj.toMin, groupEnd)
-        if overlapEnd > overlapStart {
-          actualHours += (overlapEnd - overlapStart) / 60.0
-        }
-      }
-
-      if actualHours > 0 {
-        segments.append(
-          ShareableSupplementSegment(
-            fromMin: groupStart,
-            toMin: groupEnd,
-            rate: currentRate,
-            actualHours: actualHours
-          ))
-      }
-
-      i = j
-    }
-
-    return segments
+  private var supplementSegments: [SupplementSegment] {
+    SupplementSegment.grouped(from: shift.computed.classifiedWagePeriods)
   }
 
   // MARK: - Body
@@ -284,9 +238,11 @@ struct ShareableShiftCard: View {
       // Total supplement header with optional "Customized" badge
       HStack {
         HStack(spacing: Spacing.xs) {
-          Text(.shiftsTotalSupplement)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
+          Text(
+            shift.computed.overtimeApplied ? .shiftsSupplementsAndOvertime : .shiftsTotalSupplement
+          )
+          .font(.tidexSubheadline)
+          .foregroundColor(.tidexTextSecondary)
 
           if hasCustomSupplements {
             Text(.shiftsCustomized)
@@ -318,7 +274,7 @@ struct ShareableShiftCard: View {
   }
 
   @ViewBuilder
-  private func supplementSegmentRow(_ segment: ShareableSupplementSegment) -> some View {
+  private func supplementSegmentRow(_ segment: SupplementSegment) -> some View {
     VStack(spacing: Spacing.xxxs) {
       // Time range and hours × rate
       HStack {
@@ -336,7 +292,7 @@ struct ShareableShiftCard: View {
 
       // Supplement label and amount
       HStack {
-        Text(.shiftsSupplementLabel)
+        Text(segment.isOvertime ? .shiftsOvertimeLabel : .shiftsSupplementLabel)
           .font(.tidexLabelStrong)
           .foregroundColor(.tidexTextPrimary)
 
@@ -383,10 +339,10 @@ struct ShareableShiftCard: View {
   }
 
   private func formatHoursValue(_ hours: Double) -> String {
-    return String(format: "%.2f t", hours)
+    ShiftCardFormatter.formattedHours(hours, locale: .appLocale)
   }
 
-  private func segmentTimeRange(_ segment: ShareableSupplementSegment) -> String {
+  private func segmentTimeRange(_ segment: SupplementSegment) -> String {
     let range = segment.timeRange
     guard layoutDirection == .rightToLeft else { return range }
     let parts = range.components(separatedBy: " – ")
@@ -394,45 +350,6 @@ struct ShareableShiftCard: View {
       return "\(parts[1]) – \(parts[0])"
     }
     return range
-  }
-}
-
-// MARK: - Supplement Segment (for shareable view)
-
-private struct ShareableSupplementSegment: Identifiable {
-  let fromMin: Double
-  let toMin: Double
-  let rate: Double
-  let actualHours: Double
-
-  var id: String { "\(fromMin)-\(toMin)-\(rate)" }
-
-  func formatTime(_ minutes: Double) -> String {
-    let dayOffset = Int(minutes / 1_440)
-    let remainder = Int(minutes) % 1_440
-    let normalizedMinutes = remainder < 0 ? remainder + 1_440 : remainder
-    let isFullDay = normalizedMinutes == 0 && Int(minutes) != 0
-    let hours = isFullDay ? 24 : normalizedMinutes / 60
-    let mins = isFullDay ? 0 : normalizedMinutes % 60
-    let base = String(format: "%02d:%02d", hours, mins)
-    if dayOffset > 0 {
-      return "\(base) (+\(dayOffset))"
-    }
-    if dayOffset < 0 {
-      return "\(base) (\(dayOffset))"
-    }
-    return base
-  }
-
-  var timeRange: String {
-    let from = formatTime(fromMin)
-    let to = formatTime(toMin)
-    let toDisplay = to == "23:59" ? "24:00" : to
-    return "\(from) – \(toDisplay)"
-  }
-
-  var amount: Double {
-    actualHours * rate
   }
 }
 

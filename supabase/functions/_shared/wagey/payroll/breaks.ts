@@ -6,11 +6,14 @@ export function applyBreakDeduction(
   thresholdHours: number,
   deductionHours: number
 ): { periods: WagePeriod[]; audit: BreakAudit } {
-  const totalMinutes = periods.reduce((s, p) => s + (p.toMin - p.fromMin), 0);
+  const totalMinutes = periods.reduce((s, p) => s + Math.max(0, p.toMin - p.fromMin), 0);
   const totalHours = totalMinutes / 60;
+  thresholdHours = Number.isFinite(thresholdHours) ? Math.max(0, thresholdHours) : totalHours;
 
   // Only deduct if shift exceeds threshold
-  let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
+  const sanitizedDeduction = Number.isFinite(deductionHours)
+    ? Math.min(Math.max(0, deductionHours), totalHours) : 0;
+  const toDeduct = method !== "none" && totalHours > thresholdHours ? sanitizedDeduction : 0;
 
   let adjusted = periods.map(p => ({ ...p }));
   const notes: string[] = [];
@@ -55,11 +58,13 @@ export function applyBreakDeduction(
     adjusted = adjusted.filter(p => p.toMin > p.fromMin);
   }
 
+  const paidMinutes = adjusted.reduce((sum, period) => sum + Math.max(0, period.toMin - period.fromMin), 0);
+  const deductedHours = Math.max(0, totalMinutes - paidMinutes) / 60;
   const audit: BreakAudit = {
     method,
     thresholdHours,
-    deductedHours: toDeduct,
-    source: "automatic_break",
+    deductedHours,
+    source: deductedHours > 0 ? "automatic_break" : "none",
     notes,
   };
   return { periods: adjusted, audit };

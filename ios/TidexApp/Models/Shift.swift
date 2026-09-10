@@ -126,6 +126,62 @@ struct ShiftComputed: Equatable {
   /// Paid minutes calculated as overtime
   var overtimeMinutes: Double = 0
 
+  /// Preserve explicit overtime intervals, including shifts spanning the weekly reset.
+  /// Older shared payloads only supply a total, so retain their trailing-hours fallback.
+  var classifiedWagePeriods: [WagePeriod] {
+    guard overtimeApplied, overtimeMinutes > 0,
+      !wagePeriods.contains(where: { $0.isOvertime != nil })
+    else { return wagePeriods }
+
+    var remaining = overtimeMinutes
+    var result: [WagePeriod] = []
+    for period in wagePeriods.reversed() {
+      let overtime = min(max(0, period.durationMinutes), remaining)
+      if overtime > 0 {
+        result.append(
+          WagePeriod(
+            fromMin: period.toMin - overtime, toMin: period.toMin,
+            baseRate: period.baseRate, supplementRate: period.supplementRate, isOvertime: true
+          ))
+        remaining -= overtime
+      }
+      if period.durationMinutes > overtime {
+        result.append(
+          WagePeriod(
+            fromMin: period.fromMin, toMin: period.toMin - overtime,
+            baseRate: period.baseRate, supplementRate: period.supplementRate, isOvertime: false
+          ))
+      }
+    }
+    return result.reversed()
+  }
+
+  /// Rates actually earned on paid intervals, with unpaid intervals restored at their original rates.
+  /// This makes the displayed break deduction exclude supplements replaced by overtime.
+  var preBreakWagePeriods: [WagePeriod] {
+    guard overtimeApplied else { return originalWagePeriods }
+    let paidPeriods = classifiedWagePeriods
+    return originalWagePeriods.flatMap { original -> [WagePeriod] in
+      let overlapping = paidPeriods.filter {
+        $0.toMin > original.fromMin && $0.fromMin < original.toMin
+      }
+      var points = Set([original.fromMin, original.toMin])
+      for period in overlapping {
+        points.insert(max(original.fromMin, period.fromMin))
+        points.insert(min(original.toMin, period.toMin))
+      }
+      let sorted = points.sorted()
+      return zip(sorted, sorted.dropFirst()).map { from, to in
+        let earned = overlapping.first { $0.fromMin <= from && $0.toMin >= to } ?? original
+        return WagePeriod(
+          fromMin: from, toMin: to,
+          baseRate: earned.baseRate, supplementRate: earned.supplementRate,
+          isOvertime: earned.isOvertime
+        )
+      }
+    }
+  }
+
   /// Net pay after tax (if tax settings provided)
   func netPay(taxEnabled: Bool, taxPercentage: Double) -> Double {
     guard taxEnabled else { return gross }

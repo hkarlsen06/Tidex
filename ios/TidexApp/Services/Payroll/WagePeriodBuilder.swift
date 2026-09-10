@@ -1,6 +1,11 @@
 /// Builds wage periods by splitting shift time according to supplement rule boundaries
 /// Port of lib/payroll/periods.ts
 struct WagePeriodBuilder {
+  struct RuleWindow {
+    let from: Int
+    let to: Int
+    let rule: SupplementRule
+  }
 
   // MARK: - Public API
 
@@ -19,45 +24,18 @@ struct WagePeriodBuilder {
     baseRate: Double,
     rules: [SupplementRule]
   ) -> [WagePeriod] {
-    guard let start = toMinutes(startTime),
-      var end = toMinutes(endTime)
-    else {
+    guard let (start, end) = shiftMinutes(startTime: startTime, endTime: endTime) else {
       return []
     }
-
-    // Handle cross-midnight: when end <= start, treat as next day
-    if end <= start {
-      end += 24 * 60
-    }
+    let windows = ruleWindows(weekday: weekday, rules: rules)
+      .filter { $0.to > start && $0.from < end }
 
     // Collect boundary points
     var points = Set<Int>([start, end])
 
-    for rule in rules {
-      guard rule.days.contains(weekday) else { continue }
-      guard let ruleFrom = toMinutes(rule.from),
-        var ruleTo = toMinutes(rule.to)
-      else {
-        continue
-      }
-
-      // Handle cross-midnight rules
-      if ruleTo < ruleFrom {
-        ruleTo += 24 * 60
-      }
-
-      // Consider both same-day and next-day windows
-      for base in [0, 24 * 60] {
-        let a = ruleFrom + base
-        let b = ruleTo + base
-
-        // Skip if rule window doesn't overlap with shift
-        if b < start || a > end { continue }
-
-        // Add boundary points within shift range
-        if a > start, a < end { points.insert(a) }
-        if b > start, b < end { points.insert(b) }
-      }
+    for window in windows {
+      points.insert(max(start, window.from))
+      points.insert(min(end, window.to))
     }
 
     let sorted = points.sorted()
@@ -74,32 +52,8 @@ struct WagePeriodBuilder {
       // Find highest matching supplement for this period
       var supplement: Double = 0
 
-      for rule in rules {
-        guard rule.days.contains(weekday) else { continue }
-        guard let baseRuleFrom = toMinutes(rule.from),
-          let baseRuleTo = toMinutes(rule.to)
-        else {
-          continue
-        }
-
-        for base in [0, 24 * 60] {
-          let ruleFrom = baseRuleFrom + base
-          var ruleTo = baseRuleTo + base
-
-          // Handle cross-midnight rules
-          if baseRuleTo < baseRuleFrom {
-            ruleTo += 24 * 60
-          }
-
-          // Check if period [a,b) is fully within rule [ruleFrom, ruleTo]
-          // Period [a,b) means from minute a (inclusive) to minute b (exclusive)
-          // So we need: a >= ruleFrom (period starts at or after rule starts)
-          //         and b-1 <= ruleTo (period ends at or before rule ends, since b is exclusive)
-          if a >= ruleFrom, (b - 1) <= ruleTo {
-            let supplementValue = resolveSupplementRate(rule: rule, baseRate: baseRate)
-            supplement = max(supplement, supplementValue)
-          }
-        }
+      for window in windows where a >= window.from && b <= window.to {
+        supplement = max(supplement, resolveSupplementRate(rule: window.rule, baseRate: baseRate))
       }
 
       // Convert Int to Double for WagePeriod (supports fractional break deductions)
@@ -113,6 +67,31 @@ struct WagePeriodBuilder {
     }
 
     return result
+  }
+
+  static func shiftMinutes(startTime: String, endTime: String) -> (Int, Int)? {
+    guard let start = toMinutes(startTime), let end = toMinutes(endTime) else { return nil }
+    return (start, end <= start ? end + 24 * 60 : end)
+  }
+
+  /// Weekdays identify the day a rule starts. Include overnight rules carried from yesterday.
+  static func ruleWindows(weekday: Int, rules: [SupplementRule]) -> [RuleWindow] {
+    guard (1...7).contains(weekday) else { return [] }
+    return rules.flatMap { rule -> [RuleWindow] in
+      guard let from = toMinutes(rule.from), let to = toMinutes(rule.to), from != to else {
+        return []
+      }
+      return (-1...1).compactMap { dayOffset in
+        let ruleWeekday = (weekday - 1 + dayOffset + 7) % 7 + 1
+        guard rule.days.contains(ruleWeekday) else { return nil }
+        let offset = dayOffset * 24 * 60
+        return RuleWindow(
+          from: from + offset,
+          to: to + offset + (to < from ? 24 * 60 : 0),
+          rule: rule
+        )
+      }
+    }
   }
 
   // MARK: - Private Helpers

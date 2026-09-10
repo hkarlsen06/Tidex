@@ -546,7 +546,8 @@ final class SharingService: ObservableObject {
         fromMin: $0.fromMin,
         toMin: $0.toMin,
         baseRate: $0.baseRate,
-        supplementRate: $0.supplementRate
+        supplementRate: $0.supplementRate,
+        isOvertime: $0.isOvertime
       )
     }
   }

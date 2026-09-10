@@ -11,8 +11,6 @@ struct PayrollCalculator {
 
   // MARK: - Constants
 
-  /// Precision for hour calculations (3 decimal places)
-  private static let hourPrecision: Double = 1_000
   /// Precision for currency calculations (2 decimal places)
   private static let currencyPrecision: Double = 100
 
@@ -64,7 +62,6 @@ struct PayrollCalculator {
 
     // Resolve supplement rules
     let rules = resolveSupplementRules(
-      weekday: weekday,
       snapshot: snapshot,
       customSupplements: shift.custom_supplements
     )
@@ -80,7 +77,7 @@ struct PayrollCalculator {
 
     // Calculate raw duration (durationMinutes is Double for precision)
     let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
-    let durationHours = round(totalMinutes / 60.0 * 100) / 100
+    let durationHours = totalMinutes / 60.0
 
     // Store original periods before break deduction (for display)
     let originalPeriods = periods
@@ -148,31 +145,18 @@ struct PayrollCalculator {
 
     // Calculate paid hours (after break deduction, with fractional precision)
     let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
-    let paidHours = round(paidMinutes / 60.0 * 100) / 100
+    let paidHours = paidMinutes / 60.0
 
     // Calculate pay
-    var basePay: Double = 0
-    var supplementPay: Double = 0
-
-    for period in periods {
-      // Round hours to 3 decimals to match old codebase behavior
-      let h = round(period.durationHours * hourPrecision) / hourPrecision
-      // Round each period's contribution to cents
-      basePay += round(h * period.baseRate * currencyPrecision) / currencyPrecision
-      supplementPay += round(h * period.supplementRate * currencyPrecision) / currencyPrecision
-    }
-
-    basePay = round(basePay * 100) / 100
-    supplementPay = round(supplementPay * 100) / 100
-    let gross = round((basePay + supplementPay) * 100) / 100
+    let pay = payTotals(for: periods)
 
     return ShiftComputed(
       id: shift.id,
       durationHours: durationHours,
       paidHours: paidHours,
-      basePay: basePay,
-      supplementPay: supplementPay,
-      gross: gross,
+      basePay: pay.base,
+      supplementPay: pay.supplement,
+      gross: pay.gross,
       wagePeriods: periods,
       originalWagePeriods: originalPeriods,
       breakAudit: breakAudit
@@ -184,31 +168,34 @@ struct PayrollCalculator {
     with periods: [WagePeriod],
     overtimeMinutes: Double
   ) -> ShiftComputed {
-    var basePay: Double = 0
-    var supplementPay: Double = 0
-
-    for period in periods {
-      let h = round(period.durationHours * hourPrecision) / hourPrecision
-      basePay += round(h * period.baseRate * currencyPrecision) / currencyPrecision
-      supplementPay += round(h * period.supplementRate * currencyPrecision) / currencyPrecision
-    }
-
-    basePay = round(basePay * currencyPrecision) / currencyPrecision
-    supplementPay = round(supplementPay * currencyPrecision) / currencyPrecision
-    let gross = round((basePay + supplementPay) * currencyPrecision) / currencyPrecision
+    let pay = payTotals(for: periods)
 
     return ShiftComputed(
       id: computed.id,
       durationHours: computed.durationHours,
       paidHours: computed.paidHours,
-      basePay: basePay,
-      supplementPay: supplementPay,
-      gross: gross,
+      basePay: pay.base,
+      supplementPay: pay.supplement,
+      gross: pay.gross,
       wagePeriods: periods,
       originalWagePeriods: computed.originalWagePeriods,
       breakAudit: computed.breakAudit,
       overtimeApplied: overtimeMinutes > 0,
       overtimeMinutes: round(overtimeMinutes * currencyPrecision) / currencyPrecision
+    )
+  }
+
+  /// Preserve minute precision and round once per pay component, independent of period splits.
+  static func payTotals(for periods: [WagePeriod]) -> (
+    base: Double, supplement: Double, gross: Double
+  ) {
+    let base = periods.reduce(0) { $0 + max(0, $1.durationHours) * $1.baseRate }
+    let supplement = periods.reduce(0) { $0 + max(0, $1.durationHours) * $1.supplementRate }
+    let basePay = round(base * currencyPrecision) / currencyPrecision
+    let supplementPay = round(supplement * currencyPrecision) / currencyPrecision
+    return (
+      basePay, supplementPay,
+      round((basePay + supplementPay) * currencyPrecision) / currencyPrecision
     )
   }
 
@@ -232,7 +219,6 @@ struct PayrollCalculator {
   /// Resolve supplement rules with custom supplements
   /// When custom supplements exist, they completely replace predefined rules
   private static func resolveSupplementRules(
-    weekday: Int,
     snapshot: WageSnapshot?,
     customSupplements: CustomSupplementsData?
   ) -> [SupplementRule] {
@@ -244,7 +230,7 @@ struct PayrollCalculator {
       }
       return custom.rules.map { rule in
         SupplementRule(
-          days: [weekday],
+          days: Array(1...7),
           from: rule.from,
           to: rule.to,
           rate: rule.rate,

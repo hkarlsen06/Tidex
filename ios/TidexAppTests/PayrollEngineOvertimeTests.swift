@@ -3,6 +3,70 @@ import XCTest
 @testable import Tidex
 
 final class PayrollEngineOvertimeTests: XCTestCase {
+  func testBreakBreakdownDoesNotTreatReplacedSupplementsAsUnpaidTime() throws {
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [SupplementRule(days: [1], from: "00:00", to: "24:00", rate: 20)],
+      breakEnabled: true, breakMethod: "end_of_shift", breakThresholdHours: 0,
+      breakDeductionMinutes: 30, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1,
+        rules: OvertimeConfig.seededDefaults.rules)
+    )
+    let computed = try XCTUnwrap(
+      compute(
+        [shift(id: "shift", date: "2026-02-02", start: "08:00", end: "12:00")],
+        snapshots: [snapshot]
+      ).first
+    ).computed
+    let beforeBreak = PayrollCalculator.payTotals(for: computed.preBreakWagePeriods)
+    let deduction = try XCTUnwrap(
+      BreakDeductionBreakdown.make(
+        originalPeriods: computed.preBreakWagePeriods, adjustedPeriods: computed.wagePeriods
+      ))
+    XCTAssertEqual(computed.gross, 970, accuracy: 0.001)
+    XCTAssertEqual(deduction.totalAmount, 110, accuracy: 0.001)
+    XCTAssertEqual(beforeBreak.gross - deduction.totalAmount, computed.gross, accuracy: 0.001)
+    let regular = computed.preBreakWagePeriods.filter { $0.isOvertime != true }
+    XCTAssertEqual(PayrollCalculator.payTotals(for: regular).supplement, 30, accuracy: 0.001)
+  }
+
+  func testSundayOvertimeIsIdentifiedBeforeMondayWeeklyReset() throws {
+    let result = compute([
+      shift(id: "mon", date: "2026-02-02", start: "08:00", end: "18:00"),
+      shift(id: "tue", date: "2026-02-03", start: "08:00", end: "18:00"),
+      shift(id: "wed", date: "2026-02-04", start: "08:00", end: "18:00"),
+      shift(id: "thu", date: "2026-02-05", start: "08:00", end: "18:00"),
+      shift(id: "sun", date: "2026-02-08", start: "22:00", end: "02:00"),
+    ])
+    let computed = try XCTUnwrap(result.first { $0.id == "sun" }).computed
+    let overtime = computed.classifiedWagePeriods.filter { $0.isOvertime == true }
+    XCTAssertEqual(computed.overtimeMinutes, 120, accuracy: 0.001)
+    XCTAssertEqual(overtime.first?.fromMin, 22 * 60)
+    XCTAssertEqual(overtime.last?.toMin, 24 * 60)
+    XCTAssertEqual(PayrollCalculator.payTotals(for: overtime).supplement, 400, accuracy: 0.001)
+  }
+
+  func testOvertimeRemainsIdentifiableWhenOrdinarySupplementHasSameRate() throws {
+    let snapshot = TestFixtures.wageSnapshot(
+      hourlyWage: 200,
+      supplements: [SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 200)],
+      breakEnabled: false, jobId: "job-a",
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1,
+        rules: OvertimeConfig.seededDefaults.rules)
+    )
+    let computed = try XCTUnwrap(
+      compute(
+        [shift(id: "sun", date: "2026-02-08", start: "08:00", end: "10:00")],
+        snapshots: [snapshot]
+      ).first
+    ).computed
+    XCTAssertEqual(computed.wagePeriods.count, 2)
+    XCTAssertEqual(computed.wagePeriods.first?.isOvertime, false)
+    XCTAssertEqual(computed.wagePeriods.last?.isOvertime, true)
+  }
+
   func testOvertimeSplitsMidShiftAndUsesTimeSpecificPercent() throws {
     let result = compute([
       shift(id: "mon", date: "2026-02-02", start: "08:00", end: "17:30"),

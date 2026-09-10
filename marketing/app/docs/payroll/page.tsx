@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 // Comprehensive payroll documentation based on PAYROLL_ENGINE_SPEC.md
 const payrollDocs = {
-  badge: 'PAYROLL ENGINE SPECIFICATION V3.3',
+  badge: 'PAYROLL ENGINE SPECIFICATION V3.4',
   title: 'How Tidex calculates your pay',
   subtitle:
     'A transparent, auditable reference for every payroll rule we apply. This specification enables re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results.',
@@ -82,7 +82,7 @@ const payrollDocs = {
             'Pure computation: Zero I/O, all inputs explicit',
             'Cross-midnight support: Shifts spanning midnight are calculated as continuous time',
             'Dual-date snapshot logic: Wage/supplements/breaks use shift date; tax uses payout date',
-            'Precision: 3 decimal places for hours, 2 decimal places for currency',
+            'Precision: Exact minute-based hours; round each shift pay component once to 2 decimal places',
             'Job-scoped snapshots: Each shift uses wage snapshots belonging to the same job; local rollout fallbacks may use default-job or legacy job-less snapshots when no scoped rows exist',
             'Job-scoped payroll day: payroll_day is resolved from the shift\'s job first, then the default job, then user settings',
           ],
@@ -258,7 +258,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
             content: `type SupplementRule = {
   days: number[];    // 1-7 (1=Monday, 7=Sunday)
   from: string;      // "HH:MM" (inclusive)
-  to: string;        // "HH:MM" (inclusive)
+  to: string;        // "HH:MM" (exclusive)
   rate?: number;     // Fixed amount per hour in the job currency (mutually exclusive with percent)
   percent?: number;  // Percentage of base rate (mutually exclusive with rate)
 };
@@ -575,7 +575,7 @@ if (end <= start) {
 }
 // Duration: 1800 - 1320 = 480 minutes = 8 hours`,
           },
-          note: 'Supplement rules are matched by the shift\'s weekday. For cross-midnight shifts, matching windows are projected into an extended timeline (0-2880 minutes), but rules from the next calendar day are not applied unless they are also configured for the shift weekday.',
+          note: 'Rule weekdays identify when each window starts. The engine includes overnight windows carried from the previous day and rules starting on the next day. Saturday supplements therefore give way to Sunday supplements at midnight; overlapping windows use the highest rate.',
         },
         {
           heading: 'Virtual shift identity',
@@ -734,7 +734,7 @@ const february = { from_date: "2025-02-01", hourly_wage: 190.00, tax_percentage:
           heading: 'Precision constants',
           code: {
             language: 'typescript',
-            content: `const HOUR_DECIMAL_PRECISION = 1000;  // 3 decimal places (0.001 hours)
+            content: `// Keep hours unrounded throughout calculation and aggregation.
 const CURRENCY_PRECISION = 100;       // 2 decimal places (cents)`,
           },
         },
@@ -770,7 +770,7 @@ if (end <= start) {
 }
 
 const totalMinutes = end - start;
-const durationHours = +(totalMinutes / 60).toFixed(2);`,
+const durationHours = totalMinutes / 60;`,
           },
         },
         {
@@ -823,15 +823,15 @@ const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7 (Mon-Sun)`,
           code: {
             language: 'typescript',
             content: `function resolveSupplementRules(
-  weekday: number,
   predefinedRules: SupplementRule[],
   customSupplements: CustomSupplementsData | null
 ): SupplementRule[] {
   // Custom supplements completely replace predefined rules
-  if (customSupplements?.rules?.length > 0) {
+  if (customSupplements) {
+    // An empty rules array explicitly disables supplements for this shift.
     return customSupplements.rules.map(rule => ({
       ...rule,
-      days: [weekday], // Apply to this shift's weekday only
+      days: [1, 2, 3, 4, 5, 6, 7], // Shift-specific clock windows also apply after midnight
     }));
   }
 
@@ -849,44 +849,49 @@ const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7 (Mon-Sun)`,
   endHHMM: string,
   weekday: number,
   baseRate: number,
-  rules: SupplementRule[]
+  rules: SupplementRule[],
 ): WagePeriod[] {
-  let start = toMin(startHHMM);
+  const start = toMin(startHHMM);
   let end = toMin(endHHMM);
+  if (start == null || end == null) return [];
   if (end <= start) end += 24 * 60;
 
-  // Collect boundaries
-  const points = new Set([start, end]);
+  const windows: { from: number; to: number; rate: number }[] = [];
   for (const rule of rules) {
-    if (!rule.days.includes(weekday)) continue;
-    // Add rule boundaries that fall within shift
-    // ... (handles cross-midnight rules)
+    const from = toMin(rule.from);
+    const to = toMin(rule.to);
+    if (from == null || to == null || from === to) continue;
+    // Weekdays identify the rule's start day, including overnight carry from yesterday.
+    for (const dayOffset of [-1, 0, 1]) {
+      const ruleWeekday = ((weekday - 1 + dayOffset + 7) % 7) + 1;
+      if (!rule.days.includes(ruleWeekday)) continue;
+      const windowFrom = from + dayOffset * 24 * 60;
+      const windowTo = to + dayOffset * 24 * 60 + (to < from ? 24 * 60 : 0);
+      if (windowTo <= start || windowFrom >= end) continue;
+      windows.push({ from: windowFrom, to: windowTo, rate: resolveSupplementRate(rule, baseRate) });
+    }
   }
 
+  const points = new Set<number>([start, end]);
+  for (const window of windows) {
+    points.add(Math.max(start, window.from));
+    points.add(Math.min(end, window.to));
+  }
   const sorted = Array.from(points).sort((a, b) => a - b);
   const periods: WagePeriod[] = [];
-
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const a = sorted[i], b = sorted[i + 1];
-
-    // Find highest supplement for this period
-    let supplement = 0;
-    for (const rule of rules) {
-      // ... check if period falls within rule
-      supplement = Math.max(supplement, resolveSupplementRate(rule, baseRate));
+  for (let index = 0; index < sorted.length - 1; index++) {
+    const fromMin = sorted[index], toMin = sorted[index + 1];
+    let supplementRate = 0;
+    for (const window of windows) {
+      if (fromMin >= window.from && toMin <= window.to) {
+        supplementRate = Math.max(supplementRate, window.rate);
+      }
     }
-
-    periods.push({
-      fromMin: a,
-      toMin: b,
-      baseRate,
-      supplementRate: supplement,
-      totalRate: baseRate + supplement,
-    });
+    periods.push({ fromMin, toMin, baseRate, supplementRate, totalRate: baseRate + supplementRate });
   }
-
   return periods;
-}`,
+}
+`,
           },
         },
         {
@@ -916,17 +921,16 @@ const weekday = WEEKDAYS[date.getUTCDay()]; // 1-7 (Mon-Sun)`,
             content: `let basePay = 0, supplementPay = 0;
 
 for (const period of periods) {
-  // Round hours to 3 decimals
-  const hours = Math.round((period.toMin - period.fromMin) / 60 * 1000) / 1000;
-
-  // Round each period's contribution to cents
-  basePay += Math.round(hours * period.baseRate * 100) / 100;
-  supplementPay += Math.round(hours * period.supplementRate * 100) / 100;
+  const hours = (period.toMin - period.fromMin) / 60;
+  basePay += hours * period.baseRate;
+  supplementPay += hours * period.supplementRate;
 }
 
-basePay = +basePay.toFixed(2);
-supplementPay = +supplementPay.toFixed(2);
-const gross = +(basePay + supplementPay).toFixed(2);`,
+// Round once per pay component, after summing exact-minute contributions.
+basePay = Math.round(basePay * 100) / 100;
+supplementPay = Math.round(supplementPay * 100) / 100;
+const gross = Math.round((basePay + supplementPay) * 100) / 100;
+`,
           },
         },
         {
@@ -977,7 +981,7 @@ const net = gross - taxAmount;`,
 
   // 6. Calculate raw duration
   totalMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
-  durationHours = ROUND(totalMinutes / 60, 2)
+  durationHours = totalMinutes / 60
 
   // 7. Apply pause handling
   IF shift.custom_pause_windows EXISTS THEN
@@ -1001,16 +1005,18 @@ const net = gross - taxAmount;`,
 
   // 8. Calculate paid hours
   paidMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
-  paidHours = ROUND(paidMinutes / 60, 2)
+  paidHours = paidMinutes / 60
 
   // 9. Calculate pay
   basePay = 0
   supplementPay = 0
   FOR period IN periods:
-    hours = ROUND((period.toMin - period.fromMin) / 60, 3)
-    basePay += ROUND(hours * period.baseRate, 2)
-    supplementPay += ROUND(hours * period.supplementRate, 2)
+    hours = (period.toMin - period.fromMin) / 60
+    basePay += hours * period.baseRate
+    supplementPay += hours * period.supplementRate
 
+  basePay = ROUND(basePay, 2)
+  supplementPay = ROUND(supplementPay, 2)
   gross = ROUND(basePay + supplementPay, 2)
 
   RETURN {
@@ -1088,7 +1094,8 @@ const net = gross - taxAmount;`,
           code: {
             language: 'typescript',
             content: `// Threshold comparison: strict greater than (>)
-let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
+const toDeduct = method !== "none" && totalHours > thresholdHours
+  ? Math.min(Math.max(0, deductionHours), totalHours) : 0;
 
 // Edge case: Shift exactly at threshold (e.g., 5.5h with 5.5h threshold)
 // NO break applied (uses >, not >=)`,
@@ -1170,7 +1177,7 @@ let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
         },
         {
           heading: 'Break audit',
-          paragraphs: ['Each computation includes a break audit for transparency:'],
+          paragraphs: ['The audit reports the time actually removed. Disabled deductions, the none method and shifts at or below the threshold report zero deducted hours and source none. Overtime premiums are shown separately from ordinary supplements; replaced supplements are not counted as break deductions.'],
           code: {
             language: 'typescript',
             content: `type BreakAudit = {
@@ -1608,12 +1615,11 @@ const snapshot = {
 {
   durationHours: 6.00,
   paidHours: 6.00,
-  // Current engine matches supplements by shift weekday only (Saturday = day 6)
   // 20:00-00:00 (4h) at Saturday rate 110
-  // 00:00-02:00 (2h) has no Sunday supplement in this model
+  // 00:00-02:00 (2h) at Sunday rate 115
   basePay: 1110.00,       // 6h x 185
-  supplementPay: 440.00,  // 4h x 110
-  gross: 1550.00,
+  supplementPay: 670.00,  // 4h x 110 + 2h x 115
+  gross: 1780.00,
 }`,
           },
         },

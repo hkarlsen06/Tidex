@@ -7,7 +7,7 @@ struct SupplementRule: Codable, Equatable {
   let days: [Int]
   /// Start time (HH:mm) inclusive
   let from: String
-  /// End time (HH:mm) inclusive
+  /// End time (HH:mm) exclusive
   let to: String
   /// Fixed NOK per hour supplement (e.g., 22, 45, 110)
   let rate: Double?
@@ -85,6 +85,8 @@ struct WagePeriod: Codable, Equatable {
   let baseRate: Double
   /// Supplement per hour in NOK
   let supplementRate: Double
+  /// Nil for older shared data that did not identify overtime periods.
+  var isOvertime: Bool? = nil
 
   /// Total rate (base + supplement)
   var totalRate: Double { baseRate + supplementRate }
