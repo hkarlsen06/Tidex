@@ -58,16 +58,6 @@ extension Color {
     tidexTextPrimary.opacity(0.10)
   }
 
-  // MARK: - Gradient Colors
-
-  /// Logo gradient colors from short-logo-gradient.svg
-  /// These remain constant regardless of appearance mode
-  static let logoGradientColors = [
-    Color(red: 0, green: 212 / 255, blue: 1),  // #00D4FF - cyan (top)
-    Color(red: 123 / 255, green: 97 / 255, blue: 1),  // #7B61FF - purple (middle)
-    Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255),  // #9B4DCA - magenta (bottom)
-  ]
-
 }
 
 // MARK: - Programmatic Adaptive Colors

@@ -11,6 +11,7 @@
     "dev": "bun run --filter marketing dev",
     "dev:https": "bun run --filter marketing dev",
     "build": "bun run --filter marketing build",
+    "brand:generate": "bun scripts/generate-brand-assets.mjs",
     "start": "bun run --filter marketing start",
     "lint": "bun run --filter marketing typecheck",
     "test": "bun run --filter marketing build",

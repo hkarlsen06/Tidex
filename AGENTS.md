@@ -186,3 +186,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 Run commands from the repository root unless explicitly stated otherwise.
 
 When running verification or diagnostic commands, prefer flags that reduce non-actionable output and preserve useful diagnostics. Examples: use `swiftlint --quiet` for fast Swift checks, use `--json` on repository build/test wrappers when you need structured diagnostics, and use focused test filters where possible. Avoid verbose command modes unless the extra output is needed to debug the issue.
+
+# Bro keep going
+
+Before you stop, ask yourself "is there a next step that the user would want me to do?" if so, keep going jobs not finished.

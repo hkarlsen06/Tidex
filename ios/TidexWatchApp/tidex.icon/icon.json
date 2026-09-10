@@ -1,17 +1,28 @@
 {
-  "fill" : "automatic",
+  "features" : [
+    "refractivity",
+    "specular-location"
+  ],
+  "fill-specializations" : [
+    {
+      "value" : {
+        "solid" : "srgb:0.14500,0.38800,0.92200,1.00000"
+      }
+    },
+    {
+      "appearance" : "dark",
+      "value" : {
+        "solid" : "srgb:0.02700,0.04300,0.07100,1.00000"
+      }
+    }
+  ],
   "groups" : [
     {
       "blend-mode" : "normal",
       "blur-material" : null,
+      "hidden" : false,
       "layers" : [
         {
-          "blend-mode-specializations" : [
-            {
-              "appearance" : "dark",
-              "value" : "normal"
-            }
-          ],
           "fill-specializations" : [
             {
               "value" : {
@@ -53,31 +64,132 @@
             {
               "appearance" : "tinted",
               "value" : {
-                "solid" : "display-p3:0.36117,0.49446,0.96662,1.00000"
+                "solid" : "extended-gray:1.00000,1.00000"
               }
             }
           ],
           "glass" : true,
-          "image-name" : "logo-filled-white.svg",
-          "name" : "logo-filled-white",
+          "image-name" : "Finishing-stroke.svg",
+          "name" : "Fifth tally",
           "position" : {
-            "scale" : 1.26,
+            "scale" : 1,
             "translation-in-points" : [
-              0,
-              11
+              -12,
+              0
             ]
           }
         }
       ],
       "lighting" : "individual",
+      "name" : "Pressure stroke",
+      "position" : {
+        "scale" : 1.2,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
+      "refractivity" : {
+        "depth" : 1,
+        "enabled" : true,
+        "strength" : -0.8526953125
+      },
       "shadow" : {
         "kind" : "layer-color",
-        "opacity" : 0.5
+        "opacity" : 0.62
+      },
+      "specular" : "inside",
+      "translucency" : {
+        "enabled" : false,
+        "value" : 0.06
+      }
+    },
+    {
+      "blur-material" : null,
+      "layers" : [
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : true,
+          "image-name" : "Count-1.svg",
+          "name" : "Count 1",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -12,
+              0
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : true,
+          "image-name" : "Count-2.svg",
+          "name" : "Count 2",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -12,
+              0
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : true,
+          "image-name" : "Count-3.svg",
+          "name" : "Count 3",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -12,
+              0
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          },
+          "glass" : true,
+          "image-name" : "Count-4.svg",
+          "name" : "Count 4",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -12,
+              0
+            ]
+          }
+        }
+      ],
+      "lighting" : "combined",
+      "name" : "Four counted hours",
+      "position" : {
+        "scale" : 1.2,
+        "translation-in-points" : [
+          0,
+          0
+        ]
+      },
+      "refractivity" : {
+        "depth" : 0,
+        "enabled" : true,
+        "strength" : 0.6803515625
+      },
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.56
       },
       "specular" : true,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.5
+        "value" : 0.16
       }
     }
   ],

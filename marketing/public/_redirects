@@ -16,6 +16,8 @@
 
 # Pass through static assets (must come before locale catch-all)
 /_next/* /_next/:splat 200
+/brand/* /brand/:splat 200
+/og/* /og/:splat 200
 /icons/* /icons/:splat 200
 /badges/* /badges/:splat 200
 /docs/* /docs/:splat 200
