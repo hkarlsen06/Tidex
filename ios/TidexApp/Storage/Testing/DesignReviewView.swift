@@ -8,6 +8,8 @@
     @State private var selectedDates: Set<String> = []
     @State private var selectionEnabled: Bool = false
     @State private var isPinned: Bool = true
+    @State private var startTime: Date? = EventSheetFormatter.date(from: "09:00")
+    @State private var endTime: Date? = EventSheetFormatter.date(from: "17:00")
     @StateObject private var paywallModel: PaywallViewModel = .init()
     @StateObject private var loginModel: LoginViewModel = .init()
 
@@ -36,6 +38,25 @@
           ) {
             EmptyView()
           }
+        case "time-input", "time-input-accessibility":
+          NavigationStack {
+            ScrollView {
+              TimeRangePicker(
+                startTime: $startTime,
+                endTime: $endTime,
+                presetRanges: [TimeRangeCount(startTime: "09:00", endTime: "17:00", count: 1)]
+              )
+              .padding(Spacing.mlg)
+            }
+            .background(Color.tidexBackground)
+            .toolbar {
+              ToolbarItem(placement: .confirmationAction) {
+                Button(String(localized: .commonSave)) {}
+                  .disabled(startTime == nil || endTime == nil)
+              }
+            }
+          }
+          .dynamicTypeSize(screen == "time-input-accessibility" ? .accessibility5 : dynamicTypeSize)
         default:
           NavigationStack {
             ScrollView {

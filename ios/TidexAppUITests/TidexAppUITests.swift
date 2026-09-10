@@ -143,6 +143,91 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testTimeInputInvalidEditClearsSavedValueAndCanBeCorrected() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input"
+    app.launch()
+
+    let start = app.textFields.element(boundBy: 0)
+    XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
+    let save = app.buttons["Save"]
+    XCTAssertTrue(save.isEnabled)
+    start.tap()
+    start.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2))
+    XCTAssertFalse(save.isEnabled, "An incomplete time must not retain the previous saved value")
+    start.typeText("99")
+    XCTAssertEqual(start.value as? String, "09:99")
+    XCTAssertFalse(save.isEnabled, "Invalid minutes must not leave the previous time ready to save")
+    XCTAssertTrue(app.staticTexts["Enter a valid time (HH:mm)."].exists)
+    let invalidTime = XCTAttachment(screenshot: app.screenshot())
+    invalidTime.name = "Invalid time with correction guidance"
+    invalidTime.lifetime = .keepAlways
+    add(invalidTime)
+    start.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2) + "30")
+    XCTAssertEqual(start.value as? String, "09:30")
+    XCTAssertTrue(save.isEnabled)
+  }
+
+  @MainActor
+  func testTimeInputCompletesPartialTimeWhenFocusMoves() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input"
+    app.launch()
+
+    let start = app.textFields["Start"]
+    let end = app.textFields["End"]
+    XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
+    start.tap()
+    start.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2) + "3")
+    XCTAssertFalse(app.buttons["Save"].isEnabled)
+    end.tap()
+    XCTAssertEqual(start.value as? String, "09:30")
+    XCTAssertTrue(app.buttons["Save"].isEnabled)
+  }
+
+  @MainActor
+  func testTimeInputControlsFitAtAccessibilitySize() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input-accessibility"
+    app.launch()
+
+    let start = app.textFields.element(boundBy: 0)
+    let end = app.textFields.element(boundBy: 1)
+    XCTAssertTrue(end.waitForExistence(timeout: defaultTimeout))
+    XCTAssertEqual(start.label, "Start")
+    XCTAssertEqual(end.label, "End")
+    for field in [start, end] {
+      XCTAssertGreaterThanOrEqual(field.frame.minX, app.frame.minX + 16)
+      XCTAssertLessThanOrEqual(field.frame.maxX, app.frame.maxX - 16)
+      XCTAssertTrue(field.isHittable)
+    }
+    XCTAssertGreaterThan(end.frame.minY, start.frame.maxY)
+    let attachment = XCTAttachment(screenshot: app.screenshot())
+    attachment.name = "Time input with accessibility text size"
+    attachment.lifetime = .keepAlways
+    add(attachment)
+  }
+
+  @MainActor
+  func testRecentTimePresetHasAccessibleTapTargetAndSelection() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input"
+    app.launch()
+
+    let preset = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+      .firstMatch
+    XCTAssertTrue(preset.waitForExistence(timeout: defaultTimeout))
+    XCTAssertGreaterThanOrEqual(preset.frame.height, 44)
+    XCTAssertTrue(preset.isSelected)
+    preset.tap()
+    XCTAssertFalse(app.buttons["Save"].isEnabled)
+    XCTAssertFalse(preset.isSelected)
+    preset.tap()
+    XCTAssertTrue(app.buttons["Save"].isEnabled)
+    XCTAssertTrue(preset.isSelected)
+  }
+
+  @MainActor
   func testLoginProviderScreenCanScrollToEmailAtAccessibilitySize() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "login-accessibility"

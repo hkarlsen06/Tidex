@@ -6,11 +6,11 @@ enum TimeInputField: Hashable {
   case end
 }
 
-final class TimeInputFocusController {
+final class TimeInputFocusController: ObservableObject {
   weak var startField: UITextField?
   weak var endField: UITextField?
   var onFocusChange: ((TimeInputField?) -> Void)?
-  private(set) var currentFocus: TimeInputField? {
+  @Published private(set) var currentFocus: TimeInputField? {
     didSet {
       if oldValue != currentFocus {
         onFocusChange?(currentFocus)
@@ -118,7 +118,9 @@ private struct TimeTextField: UIViewRepresentable {
   let field: TimeInputField
   let focusController: TimeInputFocusController
   let placeholder: String
+  let label: String
   let onTextChange: (Change) -> Void
+  @ScaledMetric(relativeTo: .body) private var fontSize: CGFloat = 24
 
   func makeUIView(context: Context) -> UITextField {
     let textField = TimeInputTextField()
@@ -128,10 +130,12 @@ private struct TimeTextField: UIViewRepresentable {
     textField.spellCheckingType = .no
     textField.autocapitalizationType = .none
     textField.textAlignment = .center
-    textField.font = .monospacedSystemFont(ofSize: 24, weight: .medium)
+    textField.font = .monospacedSystemFont(ofSize: fontSize, weight: .medium)
+    textField.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     textField.textColor = UIColor(Color.tidexTextPrimary)
     textField.tintColor = UIColor(Color.tidexBlue)
     textField.placeholder = placeholder
+    textField.accessibilityLabel = label
     textField.text = text
     focusController.register(textField, field: field)
     context.coordinator.attach(textField)
@@ -139,6 +143,9 @@ private struct TimeTextField: UIViewRepresentable {
   }
 
   func updateUIView(_ uiView: UITextField, context: Context) {
+    context.coordinator.parent = self
+    uiView.font = .monospacedSystemFont(ofSize: fontSize, weight: .medium)
+    uiView.accessibilityLabel = label
     if uiView.text != text {
       uiView.text = text
       if uiView.isFirstResponder {
@@ -160,7 +167,7 @@ private struct TimeTextField: UIViewRepresentable {
   }
 
   final class Coordinator: NSObject, UITextFieldDelegate {
-    private let parent: TimeTextField
+    var parent: TimeTextField
     private weak var textField: TimeInputTextField?
 
     init(parent: TimeTextField) {
@@ -310,58 +317,37 @@ private struct TimeTextField: UIViewRepresentable {
 struct NumericTimeInput: View {
   @Binding var time: Date?
   let label: String
-  let focusController: TimeInputFocusController
+  @ObservedObject var focusController: TimeInputFocusController
   let field: TimeInputField
   let nextField: TimeInputField?
   let previousField: TimeInputField?
   let onComplete: (() -> Void)?
 
   @State private var inputValue: String = ""
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @ScaledMetric(relativeTo: .body) private var textFieldHeight: CGFloat = 30
 
   private var isFocused: Bool {
     focusController.currentFocus == field
   }
 
-  var body: some View {
-    HStack(spacing: Spacing.sm) {
-      Text(label)
-        .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextMuted)
-        .textCase(.uppercase)
-        .tracking(0.5)
+  private var hasInvalidInput: Bool {
+    let digitCount = inputValue.filter(\.isNumber).count
+    return !inputValue.isEmpty && (digitCount == 4 || !isFocused) && parseTime(inputValue) == nil
+  }
 
-      TimeTextField(
-        text: $inputValue,
-        field: field,
-        focusController: focusController,
-        placeholder: "00:00",
-        onTextChange: { change in
-          handleTextChange(change)
-        }
-      )
-      .frame(maxWidth: .infinity)
-      .onChange(of: time) { _, newTime in
-        // Sync input display with time value
-        if let newTime {
-          let formatted = displayString(for: newTime)
-          if inputValue != formatted {
-            inputValue = formatted
-          }
-        } else if !inputValue.isEmpty {
-          inputValue = ""
-        }
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      inputLayout {
+        inputLabel
+        textField
       }
-      .onAppear {
-        // Initialize input from existing time value
-        if let time {
-          inputValue = displayString(for: time)
-        }
-      }
-      .onChange(of: isFocused) { wasFocused, nowFocused in
-        // When focus is lost, auto-complete partial hour input
-        if wasFocused, !nowFocused {
-          autoCompletePartialInput()
-        }
+
+      if hasInvalidInput {
+        Text(.addShiftTimeInputInvalid)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexError)
+          .fixedSize(horizontal: false, vertical: true)
       }
     }
     .padding(.horizontal, Spacing.sm)
@@ -370,12 +356,66 @@ struct NumericTimeInput: View {
     .background(Color.tidexSurfaceSecondary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
     .overlay {
-      if isFocused {
+      if isFocused || hasInvalidInput {
         RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
-          .strokeBorder(Color.tidexBlue, lineWidth: 1)
+          .strokeBorder(hasInvalidInput ? Color.tidexError : Color.tidexBlue, lineWidth: 1)
       }
     }
     .animation(.easeInOut(duration: 0.15), value: isFocused)
+  }
+
+  private var inputLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+  }
+
+  private var inputLabel: some View {
+    Text(label)
+      .font(.tidexCaptionStrong)
+      .foregroundColor(.tidexTextMuted)
+      .textCase(.uppercase)
+      .tracking(0.5)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityHidden(true)
+  }
+
+  private var textField: some View {
+    TimeTextField(
+      text: $inputValue,
+      field: field,
+      focusController: focusController,
+      placeholder: "00:00",
+      label: label,
+      onTextChange: { change in
+        handleTextChange(change)
+      }
+    )
+    .frame(maxWidth: .infinity)
+    .frame(height: textFieldHeight)
+    .onChange(of: time) { _, newTime in
+      // Sync input display with time value
+      if let newTime {
+        let formatted = displayString(for: newTime)
+        if inputValue != formatted {
+          inputValue = formatted
+        }
+      } else if !isFocused, !inputValue.isEmpty {
+        inputValue = ""
+      }
+    }
+    .onAppear {
+      // Initialize input from existing time value
+      if let time {
+        inputValue = displayString(for: time)
+      }
+    }
+    .onChange(of: isFocused) { wasFocused, nowFocused in
+      // When focus is lost, auto-complete partial hour input
+      if wasFocused, !nowFocused {
+        autoCompletePartialInput()
+      }
+    }
   }
 
   /// Auto-completes partial input when user taps away
@@ -440,6 +480,7 @@ struct NumericTimeInput: View {
       change.didInsert,
       !change.insertedDigits.isEmpty,
       change.priorDigits.count == 4,
+      parseTime(formatTimeInput(change.priorDigits)) != nil,
       change.digits == change.priorDigits,
       change.caretAtEnd,
       focusController.focusAndInsert(change.insertedDigits, into: next)
@@ -455,8 +496,10 @@ struct NumericTimeInput: View {
       return
     }
 
-    if change.digits.count == 4, let date = parseTime(change.formatted) {
-      time = date
+    // The bound value must describe the text currently visible, including incomplete edits.
+    // Keep the text in place so the user can correct it without saving an older valid time.
+    time = change.digits.count == 4 ? parseTime(change.formatted) : nil
+    if time != nil {
 
       let generator = UIImpactFeedbackGenerator(style: .light)
       generator.impactOccurred()
@@ -530,10 +573,9 @@ struct TimeRangePicker: View {
   var showsRecentTimeChips = true
   /// Optional accessory displayed to the left of recent time chips.
   var leadingChipAccessory: AnyView?  // swiftlint:disable:this explicit_acl
-  @State private var focusController = TimeInputFocusController()
+  @StateObject private var focusController = TimeInputFocusController()
   @ScaledMetric(relativeTo: .body) private var compactInputWidth: CGFloat = 156
   @ScaledMetric(relativeTo: .body) private var compactInputHeight: CGFloat = 58
-  private let chipRowHeight: CGFloat = 36
 
   /// Shortened label for start time field
   private var startLabel: String {
@@ -547,28 +589,15 @@ struct TimeRangePicker: View {
 
   var body: some View {
     VStack(spacing: Spacing.xs) {
-      HStack(spacing: Spacing.sm) {
-        NumericTimeInput(
-          time: $startTime,
-          label: startLabel,
-          focusController: focusController,
-          field: .start,
-          nextField: .end,
-          previousField: nil,
-          onComplete: nil
-        )
-        .frame(width: compactInputWidth, height: compactInputHeight)
-
-        NumericTimeInput(
-          time: $endTime,
-          label: endLabel,
-          focusController: focusController,
-          field: .end,
-          nextField: nil,
-          previousField: .start,
-          onComplete: nil
-        )
-        .frame(width: compactInputWidth, height: compactInputHeight)
+      ViewThatFits(in: .horizontal) {
+        HStack(alignment: .top, spacing: Spacing.sm) {
+          startInput.frame(width: compactInputWidth)
+          endInput.frame(width: compactInputWidth)
+        }
+        VStack(spacing: Spacing.sm) {
+          startInput
+          endInput
+        }
       }
       .frame(maxWidth: .infinity, alignment: .center)
 
@@ -590,7 +619,6 @@ struct TimeRangePicker: View {
         }
       }
     }
-    .frame(height: pickerHeight, alignment: .top)
     .id(scrollId)
     .onAppear {
       focusController.onFocusChange = { (focused: TimeInputField?) in
@@ -607,8 +635,20 @@ struct TimeRangePicker: View {
     }
   }
 
-  private var pickerHeight: CGFloat {
-    showsRecentTimeChips ? compactInputHeight + Spacing.xs + chipRowHeight : compactInputHeight
+  private var startInput: some View {
+    NumericTimeInput(
+      time: $startTime, label: startLabel, focusController: focusController,
+      field: .start, nextField: .end, previousField: nil, onComplete: nil
+    )
+    .frame(minHeight: compactInputHeight)
+  }
+
+  private var endInput: some View {
+    NumericTimeInput(
+      time: $endTime, label: endLabel, focusController: focusController,
+      field: .end, nextField: nil, previousField: .start, onComplete: nil
+    )
+    .frame(minHeight: compactInputHeight)
   }
 
   /// ID of the currently active time range chip, if start/end match a chip's times

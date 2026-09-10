@@ -346,7 +346,7 @@ struct LoadingView: View {
       launchBackgroundColor
 
       // Center the logo without reading container geometry during launch.
-      Image("SplashLaunch")
+      Image("TidexLaunchLogo")
         .resizable()
         .aspectRatio(contentMode: .fit)
         .frame(width: 150, height: 150)
