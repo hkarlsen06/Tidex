@@ -79,6 +79,39 @@ Deno.test("applyWeeklyOvertime splits at threshold and replaces custom supplemen
   assertEquals(friday?.computed.gross, 3_700);
 });
 
+Deno.test("Sunday overtime stays before Monday's weekly reset", () => {
+  const snapshot = makeSnapshot({ overtime });
+  const shifts = [
+    makeComputedShift(snapshot, "mon", "2026-02-02", "08:00", "18:00"),
+    makeComputedShift(snapshot, "tue", "2026-02-03", "08:00", "18:00"),
+    makeComputedShift(snapshot, "wed", "2026-02-04", "08:00", "18:00"),
+    makeComputedShift(snapshot, "thu", "2026-02-05", "08:00", "18:00"),
+    makeComputedShift(snapshot, "sun", "2026-02-08", "22:00", "02:00"),
+  ];
+  const sunday = applyWeeklyOvertime(shifts, {
+    snapshotForShift: () => snapshot,
+    effectiveJobIdForShift: () => "job-a",
+  }).find((shift) => shift.id === "sun")!;
+  const periods = sunday.computed.wagePeriods.filter((period) => period.isOvertime);
+  assertEquals(sunday.computed.overtimeMinutes, 120);
+  assertEquals(periods[0].fromMin, 22 * 60);
+  assertEquals(periods.at(-1)?.toMin, 24 * 60);
+});
+
+Deno.test("equal ordinary and overtime rates keep their distinct classification", () => {
+  const snapshot = makeSnapshot({ overtime: { ...overtime, weeklyThresholdHours: 1 } });
+  snapshot.supplements = { rules: [{ days: [7], from: "00:00", to: "24:00", rate: 200 }] };
+  const [sunday] = applyWeeklyOvertime([
+    makeComputedShift(snapshot, "sun", "2026-02-08", "08:00", "10:00"),
+  ], {
+    snapshotForShift: () => snapshot,
+    effectiveJobIdForShift: () => "job-a",
+  });
+  assertEquals(sunday.computed.wagePeriods.length, 2);
+  assertEquals(sunday.computed.wagePeriods[0].isOvertime, false);
+  assertEquals(sunday.computed.wagePeriods[1].isOvertime, true);
+});
+
 function makeComputedShift(
   snapshot: WageSnapshot,
   id: string,

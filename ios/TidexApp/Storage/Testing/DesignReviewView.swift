@@ -66,6 +66,9 @@
             ShiftDetailsSheet(shift: Self.shifts[0], onUpdate: { _ in }, startInEditMode: true)
               .environmentObject(AppCoordinator.shared)
           }
+        case "payroll-breakdown":
+          ShiftDetailsSheet(shift: Self.payrollBreakdownShift, jobName: "Harbour")
+            .environmentObject(AppCoordinator.shared)
         default:
           NavigationStack {
             ScrollView {
@@ -161,6 +164,32 @@
           title: String(localized: .oauthContinueWithApple), action: {}, isDisabled: true
         )
       }
+    }
+
+    private static var payrollBreakdownShift: ShiftWithComputations {
+      let row = ShiftRow(
+        id: "design-payroll", user_id: "design-preview",
+        shift_date: "2026-02-07", start_time: "22:00", end_time: "02:00", custom_supplements: nil
+      )
+      let snapshot = WageSnapshot(
+        id: "design-wage", user_id: "design-preview", from_date: nil,
+        hourly_wage: 200, wage_level: nil, tariff_type_id: nil,
+        supplements: SupplementRulesSnapshot(rules: [
+          SupplementRule(days: [6], from: "18:00", to: "24:00", rate: 50),
+          SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 100),
+        ]),
+        overtime: OvertimeConfig(
+          enabled: true, weeklyThresholdHours: 1,
+          rules: OvertimeConfig.seededDefaults.rules),
+        tax_enabled: false, tax_percentage: 0, break_enabled: true,
+        break_method: "end_of_shift", break_threshold_hours: 0,
+        break_deduction_minutes: 30, created_at: nil
+      )
+      return PayrollEngine.computeShiftsForMonth(
+        .init(
+          year: 2026, month: 2, shifts: [row], recurring: [], snapshots: [snapshot],
+          settings: nil, jobs: []
+        ))[0]
     }
 
     private static var shifts: [ShiftWithComputations] {

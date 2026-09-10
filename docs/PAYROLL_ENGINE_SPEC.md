@@ -1,7 +1,7 @@
 # Tidex Payroll Engine Specification
 
-> **Version:** 3.3
-> **Last Updated:** 2026-05-29
+> **Version:** 3.4
+> **Last Updated:** 2026-09-11
 > **Source of Truth:** Shared payroll logic in the Tidex monorepo (`ios` and `supabase/functions/_shared/wagey`)
 > **Purpose:** Enable re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results
 
@@ -34,7 +34,7 @@ The Tidex payroll engine computes wage earnings for work shifts. It takes shift 
 2. **Pure computation**: Zero I/O, all inputs explicit
 3. **Cross-midnight support**: Shifts spanning midnight are calculated as continuous time
 4. **Dual-date snapshot logic**: Wage/supplements/breaks use shift date; tax uses payout date
-5. **Precision**: 3 decimal places for hours, 2 decimal places for currency
+5. **Precision**: Exact minute-based hours; round each shift pay component once to 2 decimal places
 6. **Job-scoped snapshots**: Each shift is matched to wage snapshots that belong to the same job; legacy (job-less) snapshots serve as fallback
 7. **Job-scoped payroll day**: `payroll_day` is resolved from the shift's job first, then the default job, then `user_settings.payroll_day`
 
@@ -274,7 +274,7 @@ Used in `wage_snapshots.supplements` and `user_shifts.custom_supplements`:
 type SupplementRule = {
   days: number[];    // 1-7 (1=Monday, 7=Sunday)
   from: string;      // "HH:MM" (inclusive)
-  to: string;        // "HH:MM" (inclusive)
+  to: string;        // "HH:MM" (exclusive)
   rate?: number;     // Fixed amount per hour in the job currency (mutually exclusive with percent)
   percent?: number;  // Percentage of base rate (mutually exclusive with rate)
 };
@@ -722,9 +722,10 @@ if (end <= start) {
 ```
 
 **Supplement matching for cross-midnight:**
-- Supplement rules are matched by the shift's weekday, not by the next calendar day after midnight
-- Windows for that weekday are projected into the extended timeline (0-2880 minutes)
-- Example: a Saturday 20:00-02:00 shift can receive Saturday evening supplements after midnight only if the Saturday rule itself crosses midnight; Sunday-only rules are not applied to that shift
+- A rule's weekdays identify the days on which its window starts.
+- Build windows for the previous, current and next day, including overnight rules carried from yesterday.
+- Example: a Saturday 20:00-02:00 shift receives Saturday evening supplements until midnight and Sunday supplements after midnight. When windows overlap, only the highest rate applies.
+- The shift-specific editor clips these windows to the occurrence before saving overrides, preserving the weekday-specific amounts.
 
 ### D.5 Virtual Shift Identity
 
@@ -888,7 +889,7 @@ If multiple snapshots have the same `from_date` for the same `(user_id, job_id)`
 ### F.1 Precision Constants
 
 ```typescript
-const HOUR_DECIMAL_PRECISION = 1000;  // 3 decimal places (0.001 hours)
+// Keep hours unrounded throughout calculation and aggregation.
 const CURRENCY_PRECISION = 100;       // 2 decimal places (cents)
 ```
 
@@ -916,7 +917,7 @@ if (end <= start) {
 }
 
 const totalMinutes = end - start;
-const durationHours = +(totalMinutes / 60).toFixed(2);
+const durationHours = totalMinutes / 60;
 ```
 
 ### F.4 Weekday Calculation
@@ -951,7 +952,6 @@ function resolveBaseRate(shift: ShiftRow, snapshot: WageSnapshot | null): number
 
 ```typescript
 function resolveSupplementRules(
-  weekday: number,
   predefinedRules: SupplementRule[],
   customSupplements: CustomSupplementsData | null
 ): SupplementRule[] {
@@ -960,7 +960,7 @@ function resolveSupplementRules(
     if (customSupplements.rules.length === 0) return []; // explicitly no supplements
     return customSupplements.rules.map(rule => ({
       ...rule,
-      days: [weekday], // Apply to this shift's weekday only
+      days: [1, 2, 3, 4, 5, 6, 7], // Shift-specific clock windows also apply after midnight
     }));
   }
 
@@ -984,66 +984,46 @@ function buildWagePeriods(
   endHHMM: string,
   weekday: number,
   baseRate: number,
-  rules: SupplementRule[]
+  rules: SupplementRule[],
 ): WagePeriod[] {
-  let start = toMin(startHHMM);
+  const start = toMin(startHHMM);
   let end = toMin(endHHMM);
+  if (start == null || end == null) return [];
   if (end <= start) end += 24 * 60;
 
-  // Collect boundaries
-  const points = new Set([start, end]);
+  const windows: { from: number; to: number; rate: number }[] = [];
   for (const rule of rules) {
-    if (!rule.days.includes(weekday)) continue;
-
-    let ruleFrom = toMin(rule.from);
-    let ruleTo = toMin(rule.to);
-    // Handle cross-midnight rules
-    if (ruleTo < ruleFrom) ruleTo += 24 * 60;
-
-    // Consider both same-day and next-day projections
-    for (const base of [0, 24 * 60]) {
-      const a = ruleFrom + base;
-      const b = ruleTo + base;
-      if (b < start || a > end) continue;
-      if (a > start && a < end) points.add(a);
-      if (b > start && b < end) points.add(b);
+    const from = toMin(rule.from);
+    const to = toMin(rule.to);
+    if (from == null || to == null || from === to) continue;
+    // Weekdays identify the rule's start day, including overnight carry from yesterday.
+    for (const dayOffset of [-1, 0, 1]) {
+      const ruleWeekday = ((weekday - 1 + dayOffset + 7) % 7) + 1;
+      if (!rule.days.includes(ruleWeekday)) continue;
+      const windowFrom = from + dayOffset * 24 * 60;
+      const windowTo = to + dayOffset * 24 * 60 + (to < from ? 24 * 60 : 0);
+      if (windowTo <= start || windowFrom >= end) continue;
+      windows.push({ from: windowFrom, to: windowTo, rate: resolveSupplementRate(rule, baseRate) });
     }
   }
 
+  const points = new Set<number>([start, end]);
+  for (const window of windows) {
+    points.add(Math.max(start, window.from));
+    points.add(Math.min(end, window.to));
+  }
   const sorted = Array.from(points).sort((a, b) => a - b);
   const periods: WagePeriod[] = [];
-
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const a = sorted[i], b = sorted[i + 1];
-
-    // Find highest supplement for this period
-    let supplement = 0;
-    for (const rule of rules) {
-      if (!rule.days.includes(weekday)) continue;
-
-      for (const base of [0, 24 * 60]) {
-        let ruleFrom = toMin(rule.from) + base;
-        let ruleTo = toMin(rule.to) + base;
-        // Handle cross-midnight rules
-        if (toMin(rule.to) < toMin(rule.from)) ruleTo += 24 * 60;
-
-        // Period [a,b) must be fully within rule [ruleFrom, ruleTo] (inclusive)
-        if (a >= ruleFrom && b - 1 <= ruleTo) {
-          const rate = resolveSupplementRate(rule, baseRate);
-          supplement = Math.max(supplement, rate);
-        }
+  for (let index = 0; index < sorted.length - 1; index++) {
+    const fromMin = sorted[index], toMin = sorted[index + 1];
+    let supplementRate = 0;
+    for (const window of windows) {
+      if (fromMin >= window.from && toMin <= window.to) {
+        supplementRate = Math.max(supplementRate, window.rate);
       }
     }
-
-    periods.push({
-      fromMin: a,
-      toMin: b,
-      baseRate,
-      supplementRate: supplement,
-      totalRate: baseRate + supplement,
-    });
+    periods.push({ fromMin, toMin, baseRate, supplementRate, totalRate: baseRate + supplementRate });
   }
-
   return periods;
 }
 ```
@@ -1081,11 +1061,14 @@ function applyBreakDeduction(
   thresholdHours: number,
   deductionHours: number
 ): { periods: WagePeriod[]; audit: BreakAudit } {
-  const totalMinutes = periods.reduce((sum, p) => sum + (p.toMin - p.fromMin), 0);
+  const totalMinutes = periods.reduce((s, p) => s + Math.max(0, p.toMin - p.fromMin), 0);
   const totalHours = totalMinutes / 60;
+  thresholdHours = Number.isFinite(thresholdHours) ? Math.max(0, thresholdHours) : totalHours;
 
-  // Threshold comparison: strict greater than (>)
-  let toDeduct = totalHours > thresholdHours ? deductionHours : 0;
+  // Only deduct if shift exceeds threshold
+  const sanitizedDeduction = Number.isFinite(deductionHours)
+    ? Math.min(Math.max(0, deductionHours), totalHours) : 0;
+  const toDeduct = method !== "none" && totalHours > thresholdHours ? sanitizedDeduction : 0;
 
   let adjusted = periods.map(p => ({ ...p }));
   const notes: string[] = [];
@@ -1094,13 +1077,14 @@ function applyBreakDeduction(
     let remaining = Math.round(toDeduct * 60);
 
     if (method === "end_of_shift") {
-      // Subtract from the tail
+      // subtract from the tail
       for (let i = adjusted.length - 1; i >= 0 && remaining > 0; i--) {
         const span = adjusted[i].toMin - adjusted[i].fromMin;
         const cut = Math.min(span, remaining);
         adjusted[i].toMin -= cut;
         remaining -= cut;
       }
+      notes.push("Deducted at end of shift");
     } else if (method === "proportional") {
       // Deduct exact proportional fractions (not rounded to minutes)
       for (let i = 0; i < adjusted.length; i++) {
@@ -1109,35 +1093,36 @@ function applyBreakDeduction(
         const cutMinutes = proportion * toDeduct * 60;
         adjusted[i].toMin -= cutMinutes;
       }
+      notes.push("Deducted proportionally across periods");
     } else if (method === "base_only") {
-      // Deduct from periods with lowest supplement first
+      // prefer periods with lowest supplement
       const order = adjusted
         .map((p, idx) => ({ idx, supplement: p.supplementRate }))
-        .sort((a, b) => a.supplement - b.supplement);
-
-      for (const { idx } of order) {
+        .sort((a, b) => a.supplement - b.supplement)
+        .map(o => o.idx);
+      for (const i of order) {
         if (remaining <= 0) break;
-        const span = adjusted[idx].toMin - adjusted[idx].fromMin;
+        const span = adjusted[i].toMin - adjusted[i].fromMin;
         const cut = Math.min(span, remaining);
-        adjusted[idx].toMin -= cut;
+        adjusted[i].toMin -= cut;
         remaining -= cut;
       }
+      notes.push("Deducted from base/lowest supplement periods first");
     }
-
-    // Remove empty periods
+    // trim empty periods
     adjusted = adjusted.filter(p => p.toMin > p.fromMin);
   }
 
-  return {
-    periods: adjusted,
-    audit: {
-      method,
-      thresholdHours,
-      deductedHours: toDeduct,
-      source: "automatic_break",
-      notes,
-    },
+  const paidMinutes = adjusted.reduce((sum, period) => sum + Math.max(0, period.toMin - period.fromMin), 0);
+  const deductedHours = Math.max(0, totalMinutes - paidMinutes) / 60;
+  const audit: BreakAudit = {
+    method,
+    thresholdHours,
+    deductedHours,
+    source: deductedHours > 0 ? "automatic_break" : "none",
+    notes,
   };
+  return { periods: adjusted, audit };
 }
 ```
 
@@ -1160,18 +1145,20 @@ function applyBreakDeduction(
 let basePay = 0, supplementPay = 0;
 
 for (const period of periods) {
-  // Round hours to 3 decimals
-  const hours = Math.round((period.toMin - period.fromMin) / 60 * 1000) / 1000;
-
-  // Round each period's contribution to cents
-  basePay += Math.round(hours * period.baseRate * 100) / 100;
-  supplementPay += Math.round(hours * period.supplementRate * 100) / 100;
+  const hours = (period.toMin - period.fromMin) / 60;
+  basePay += hours * period.baseRate;
+  supplementPay += hours * period.supplementRate;
 }
 
-basePay = +basePay.toFixed(2);
-supplementPay = +supplementPay.toFixed(2);
-const gross = +(basePay + supplementPay).toFixed(2);
+// Round once per pay component, after summing exact-minute contributions.
+basePay = Math.round(basePay * 100) / 100;
+supplementPay = Math.round(supplementPay * 100) / 100;
+const gross = Math.round((basePay + supplementPay) * 100) / 100;
 ```
+
+Break audits report the time actually removed. Disabled deductions, the `none` method and shifts at or below the threshold report zero deducted hours and `source = "none"`.
+
+The earnings breakdown preserves explicit overtime intervals, including weekly resets at midnight. It restores only unpaid intervals at their original rates for the pre-deduction display, so an ordinary supplement replaced by overtime is never presented as a break deduction. Displayed deductions reconcile to the rounded pay components.
 
 ### F.11 Tax Calculation
 
@@ -1217,7 +1204,7 @@ FUNCTION computeShift(shift, snapshot, presetRules):
 
   // 6. Calculate raw duration
   totalMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
-  durationHours = ROUND(totalMinutes / 60, 2)
+  durationHours = totalMinutes / 60
 
   // 7. Apply pause handling
   IF shift.custom_pause_windows EXISTS THEN
@@ -1241,16 +1228,18 @@ FUNCTION computeShift(shift, snapshot, presetRules):
 
   // 8. Calculate paid hours
   paidMinutes = SUM(period.toMin - period.fromMin FOR period IN periods)
-  paidHours = ROUND(paidMinutes / 60, 2)
+  paidHours = paidMinutes / 60
 
   // 9. Calculate pay
   basePay = 0
   supplementPay = 0
   FOR period IN periods:
-    hours = ROUND((period.toMin - period.fromMin) / 60, 3)
-    basePay += ROUND(hours * period.baseRate, 2)
-    supplementPay += ROUND(hours * period.supplementRate, 2)
+    hours = (period.toMin - period.fromMin) / 60
+    basePay += hours * period.baseRate
+    supplementPay += hours * period.supplementRate
 
+  basePay = ROUND(basePay, 2)
+  supplementPay = ROUND(supplementPay, 2)
   gross = ROUND(basePay + supplementPay, 2)
 
   RETURN {
@@ -1929,10 +1918,10 @@ const snapshot = createSnapshot({
   durationHours: 6.00,
   paidHours: 6.00,
   // 20:00-00:00 (4h) at Saturday rate 110
-  // 00:00-02:00 (2h) has no Sunday supplement because rules are matched by shift weekday
+  // 00:00-02:00 (2h) at Sunday rate 115
   basePay: 1110.00,       // 6h × 185
-  supplementPay: 440.00,  // 4h×110
-  gross: 1550.00,
+  supplementPay: 670.00,  // 4h×110 + 2h×115
+  gross: 1780.00,
 }
 ```
 

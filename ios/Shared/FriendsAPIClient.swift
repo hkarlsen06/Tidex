@@ -882,6 +882,7 @@ struct SharingRPCWagePeriod: Equatable, Sendable {
   let toMin: Double
   let baseRate: Double
   let supplementRate: Double
+  var isOvertime: Bool? = nil
 
   var durationMinutes: Double { toMin - fromMin }
   var durationHours: Double { durationMinutes / 60.0 }
@@ -918,8 +919,6 @@ private struct SharingPayrollContext {
 // MARK: - Shared Compute Core (Foundation-only)
 
 enum SharingComputeCore {
-  private static let hourPrecision: Double = 1_000
-  private static let currencyPrecision: Double = 100
   private static let defaultBreakEnabled = true
   private static let defaultBreakThresholdHours = 5.5
   private static let defaultBreakDeductionMinutes = 30
@@ -1445,7 +1444,8 @@ enum SharingComputeCore {
             fromMin: minutesBetween(segment.shiftDayStart, cursor),
             toMin: minutesBetween(segment.shiftDayStart, next),
             baseRate: segment.period.baseRate,
-            supplementRate: supplementRate
+            supplementRate: supplementRate,
+            isOvertime: percent != nil
           ),
           overtimeMinutes: percent == nil ? 0 : durationMinutes
         ))
@@ -1466,9 +1466,8 @@ enum SharingComputeCore {
     var supplementPay: Double = 0
 
     for period in periods {
-      let hours = round(period.durationHours * hourPrecision) / hourPrecision
-      basePay += round(hours * period.baseRate * currencyPrecision) / currencyPrecision
-      supplementPay += round(hours * period.supplementRate * currencyPrecision) / currencyPrecision
+      basePay += max(0, period.durationHours) * period.baseRate
+      supplementPay += max(0, period.durationHours) * period.supplementRate
     }
 
     basePay = roundTo(basePay, decimals: 2)
@@ -1735,13 +1734,15 @@ enum SharingComputeCore {
       if let last = merged.last,
         abs(last.toMin - period.fromMin) < 0.0001,
         last.baseRate == period.baseRate,
-        last.supplementRate == period.supplementRate
+        last.supplementRate == period.supplementRate,
+        last.isOvertime == period.isOvertime
       {
         merged[merged.count - 1] = SharingRPCWagePeriod(
           fromMin: last.fromMin,
           toMin: period.toMin,
           baseRate: last.baseRate,
-          supplementRate: last.supplementRate
+          supplementRate: last.supplementRate,
+          isOvertime: last.isOvertime
         )
       } else {
         merged.append(period)
@@ -1821,7 +1822,6 @@ enum SharingComputeCore {
 
     let baseRate = resolveBaseRate(snapshot: snapshot, mode: mode)
     let rules = resolveSupplementRules(
-      weekday: weekday,
       snapshot: snapshot,
       customSupplements: shift.customSupplements,
       mode: mode
@@ -1837,7 +1837,7 @@ enum SharingComputeCore {
     let originalPeriods = periods
 
     let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
-    let durationHours = roundTo(totalMinutes / 60.0, decimals: 2)
+    let durationHours = totalMinutes / 60.0
     let breakAudit: SharingRPCBreakAudit
 
     if let normalizedPauseWindows {
@@ -1891,15 +1891,14 @@ enum SharingComputeCore {
     }
 
     let paidMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
-    let paidHours = roundTo(paidMinutes / 60.0, decimals: 2)
+    let paidHours = paidMinutes / 60.0
 
     var basePay: Double = 0
     var supplementPay: Double = 0
 
     for period in periods {
-      let hours = round(period.durationHours * hourPrecision) / hourPrecision
-      basePay += round(hours * period.baseRate * currencyPrecision) / currencyPrecision
-      supplementPay += round(hours * period.supplementRate * currencyPrecision) / currencyPrecision
+      basePay += max(0, period.durationHours) * period.baseRate
+      supplementPay += max(0, period.durationHours) * period.supplementRate
     }
 
     basePay = roundTo(basePay, decimals: 2)
@@ -1921,7 +1920,7 @@ enum SharingComputeCore {
   private static func resolveBaseRate(snapshot: SharingRPCWageSnapshot?, mode: SharingRPCMode)
     -> Double
   {
-    if let wage = snapshot?.hourlyWage, wage > 0 {
+    if let wage = snapshot?.hourlyWage, wage.isFinite, wage > 0 {
       return wage
     }
 
@@ -1933,7 +1932,6 @@ enum SharingComputeCore {
   }
 
   private static func resolveSupplementRules(
-    weekday: Int,
     snapshot: SharingRPCWageSnapshot?,
     customSupplements: SharingRPCCustomSupplements?,
     mode: SharingRPCMode
@@ -1945,7 +1943,7 @@ enum SharingComputeCore {
 
       return customSupplements.rules.map { rule in
         SharingRPCSupplementRule(
-          days: [weekday],
+          days: Array(1...7),
           from: rule.from,
           to: rule.to,
           rate: rule.rate,
@@ -1974,85 +1972,36 @@ enum SharingComputeCore {
     baseRate: Double,
     rules: [SharingRPCSupplementRule]
   ) -> [SharingRPCWagePeriod] {
-    let start = toMinutes(startTime)
-    var end = toMinutes(endTime)
+    guard let start = timeToMinutes(startTime), var end = timeToMinutes(endTime) else { return [] }
+    if end <= start { end += 24 * 60 }
 
-    if end <= start {
-      end += 24 * 60
-    }
-
-    var points = Set<Int>([start, end])
-
+    var windows: [(from: Int, to: Int, rate: Double)] = []
     for rule in rules {
-      guard rule.days.contains(weekday) else { continue }
-
-      let ruleFrom = toMinutes(rule.from)
-      var ruleTo = toMinutes(rule.to)
-
-      if ruleTo < ruleFrom {
-        ruleTo += 24 * 60
+      guard let from = timeToMinutes(rule.from), let to = timeToMinutes(rule.to), from != to else {
+        continue
       }
-
-      for base in [0, 24 * 60] {
-        let a = ruleFrom + base
-        let b = ruleTo + base
-
-        if b < start || a > end { continue }
-
-        if a > start, a < end { points.insert(a) }
-        if b > start, b < end { points.insert(b) }
+      for dayOffset in -1...1 {
+        let ruleWeekday = (weekday - 1 + dayOffset + 7) % 7 + 1
+        guard rule.days.contains(ruleWeekday) else { continue }
+        let windowFrom = from + dayOffset * 24 * 60
+        let windowTo = to + dayOffset * 24 * 60 + (to < from ? 24 * 60 : 0)
+        guard windowTo > start, windowFrom < end else { continue }
+        windows.append(
+          (windowFrom, windowTo, resolveSupplementRate(rule: rule, baseRate: baseRate)))
       }
     }
-
+    var points = Set([start, end])
+    for window in windows {
+      points.insert(max(start, window.from))
+      points.insert(min(end, window.to))
+    }
     let sorted = points.sorted()
-    guard sorted.count > 1 else {
-      return [
-        SharingRPCWagePeriod(
-          fromMin: Double(start),
-          toMin: Double(end),
-          baseRate: baseRate,
-          supplementRate: 0
-        )
-      ]
-    }
-
-    var result: [SharingRPCWagePeriod] = []
-
-    for idx in 0..<(sorted.count - 1) {
-      let periodStart = sorted[idx]
-      let periodEnd = sorted[idx + 1]
-
-      var supplement: Double = 0
-
-      for rule in rules {
-        guard rule.days.contains(weekday) else { continue }
-
-        for base in [0, 24 * 60] {
-          let ruleFrom = toMinutes(rule.from) + base
-          var ruleTo = toMinutes(rule.to) + base
-
-          if toMinutes(rule.to) < toMinutes(rule.from) {
-            ruleTo += 24 * 60
-          }
-
-          if periodStart >= ruleFrom, (periodEnd - 1) <= ruleTo {
-            let value = resolveSupplementRate(rule: rule, baseRate: baseRate)
-            supplement = max(supplement, value)
-          }
-        }
-      }
-
-      result.append(
-        SharingRPCWagePeriod(
-          fromMin: Double(periodStart),
-          toMin: Double(periodEnd),
-          baseRate: baseRate,
-          supplementRate: supplement
-        )
+    return zip(sorted, sorted.dropFirst()).map { from, to in
+      let supplement = windows.filter { from >= $0.from && to <= $0.to }.map(\.rate).max() ?? 0
+      return SharingRPCWagePeriod(
+        fromMin: Double(from), toMin: Double(to), baseRate: baseRate, supplementRate: supplement
       )
     }
-
-    return result
   }
 
   private static func applyBreakDeduction(
@@ -2061,10 +2010,12 @@ enum SharingComputeCore {
     thresholdHours: Double,
     deductionHours: Double
   ) -> SharingRPCBreakDeductionResult {
-    let totalMinutes = periods.reduce(0.0) { $0 + $1.durationMinutes }
+    let totalMinutes = periods.reduce(0.0) { $0 + max(0, $1.durationMinutes) }
     let totalHours = totalMinutes / 60.0
 
-    let toDeduct = totalHours > thresholdHours ? deductionHours : 0
+    let thresholdHours = thresholdHours.isFinite ? max(0, thresholdHours) : totalHours
+    let sanitizedDeduction = deductionHours.isFinite ? min(max(0, deductionHours), totalHours) : 0
+    let toDeduct = method != .none && totalHours > thresholdHours ? sanitizedDeduction : 0
 
     var adjusted = periods
     var notes: [String] = []
@@ -2138,13 +2089,15 @@ enum SharingComputeCore {
       adjusted = adjusted.filter { $0.toMin > $0.fromMin }
     }
 
+    let paidMinutes = adjusted.reduce(0.0) { $0 + max(0, $1.durationMinutes) }
+    let deductedHours = max(0, totalMinutes - paidMinutes) / 60
     return SharingRPCBreakDeductionResult(
       periods: adjusted,
       audit: SharingRPCBreakAudit(
         method: method,
         thresholdHours: thresholdHours,
-        deductedHours: toDeduct,
-        source: .automaticBreak,
+        deductedHours: deductedHours,
+        source: deductedHours > 0 ? .automaticBreak : .none,
         appliedPauseWindows: nil,
         notes: notes
       )
@@ -2154,11 +2107,11 @@ enum SharingComputeCore {
   private static func resolveSupplementRate(rule: SharingRPCSupplementRule, baseRate: Double)
     -> Double
   {
-    if let rate = rule.rate, !rate.isNaN {
+    if let rate = rule.rate, rate.isFinite, rate >= 0 {
       return rate
     }
 
-    if let percent = rule.percent, !percent.isNaN {
+    if let percent = rule.percent, percent.isFinite, percent >= 0 {
       return (baseRate * percent) / 100.0
     }
 
@@ -2465,12 +2418,6 @@ enum SharingComputeCore {
     }
 
     return calendar.component(.day, from: date)
-  }
-
-  private static func toMinutes(_ hhmm: String) -> Int {
-    let parts = hhmm.split(separator: ":").compactMap { Int($0) }
-    guard parts.count >= 2 else { return 0 }
-    return parts[0] * 60 + parts[1]
   }
 
   private static func roundTo(_ value: Double, decimals: Int) -> Double {

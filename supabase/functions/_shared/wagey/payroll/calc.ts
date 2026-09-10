@@ -51,12 +51,12 @@ function resolveBaseRate(
   snapshot: WageSnapshot | null,
 ): number {
   // Priority 1: Use new snapshot system
-  if (snapshot?.hourly_wage && snapshot.hourly_wage > 0) {
+  if (snapshot?.hourly_wage && Number.isFinite(snapshot.hourly_wage) && snapshot.hourly_wage > 0) {
     return snapshot.hourly_wage;
   }
 
   // Priority 2: Backward compatibility - old per-shift snapshot
-  if (s.hourly_wage_snapshot && s.hourly_wage_snapshot > 0) {
+  if (s.hourly_wage_snapshot && Number.isFinite(s.hourly_wage_snapshot) && s.hourly_wage_snapshot > 0) {
     return s.hourly_wage_snapshot;
   }
 
@@ -72,13 +72,11 @@ function resolveBaseRate(
  * The custom supplements array already contains ALL supplements the user wants
  * (both kept tariff supplements and custom-added ones).
  *
- * @param weekday - Weekday of the shift (1-7)
  * @param predefinedRules - Rules from snapshot or preset
  * @param customSupplements - Shift-specific custom supplements
  * @returns Final supplement rules to use
  */
 function resolveSupplementRules(
-  weekday: number,
   predefinedRules: SupplementRule[],
   customSupplements: CustomSupplementsData | null | undefined,
 ): SupplementRule[] {
@@ -95,12 +93,11 @@ function resolveSupplementRules(
   // Convert custom supplement rules to full SupplementRule format (add days field)
   return customSupplements.rules.map((rule) => ({
     ...rule,
-    days: [weekday], // Apply to this shift's weekday only
+    days: [1, 2, 3, 4, 5, 6, 7], // Shift-specific clock windows also apply after midnight.
   }));
 }
 
 // Precision constants for payroll calculations
-const HOUR_DECIMAL_PRECISION = 1000; // 3 decimal places (0.001 hours)
 const CURRENCY_PRECISION = 100; // 2 decimal places (cents)
 
 /**
@@ -146,7 +143,6 @@ export function computeShift(
 
   // Apply custom supplements (merge or replace based on mode)
   const rules = resolveSupplementRules(
-    weekday,
     predefinedRules,
     s.custom_supplements,
   );
@@ -164,7 +160,7 @@ export function computeShift(
     (sum, p) => sum + (p.toMin - p.fromMin),
     0,
   );
-  const durationHours = +(totalMinutes / 60).toFixed(2);
+  const durationHours = totalMinutes / 60;
 
   // Store original periods before break deduction (for display purposes)
   const originalWagePeriods = periods.map((p) => ({ ...p }));
@@ -216,23 +212,10 @@ export function computeShift(
     (sum, p) => sum + (p.toMin - p.fromMin),
     0,
   );
-  const paidHours = +(paidMinutes / 60).toFixed(2);
+  const paidHours = paidMinutes / 60;
 
   // pay
-  let basePay = 0, supplementPay = 0;
-  for (const p of periods) {
-    // Round hours to 3 decimals to match old codebase behavior
-    const h = Math.round((p.toMin - p.fromMin) / 60 * HOUR_DECIMAL_PRECISION) /
-      HOUR_DECIMAL_PRECISION;
-    // Round each period's contribution to cents
-    basePay += Math.round(h * p.baseRate * CURRENCY_PRECISION) /
-      CURRENCY_PRECISION;
-    supplementPay += Math.round(h * p.supplementRate * CURRENCY_PRECISION) /
-      CURRENCY_PRECISION;
-  }
-  basePay = +basePay.toFixed(2);
-  supplementPay = +supplementPay.toFixed(2);
-  const gross = +(basePay + supplementPay).toFixed(2);
+  const { basePay, supplementPay, gross } = payTotals(periods);
 
   return {
     id: s.id,
@@ -408,6 +391,7 @@ function applyOvertimeToSegment(
         minutesBetween(segment.shiftDayStart, next),
         segment.period.baseRate,
         supplementRate,
+        percent != null,
       ),
       overtimeMinutes: percent == null ? 0 : durationMinutes,
     });
@@ -460,31 +444,30 @@ function recomputeWithPeriods(
   periods: WagePeriod[],
   overtimeMinutes: number,
 ): ShiftComputed {
-  let basePay = 0;
-  let supplementPay = 0;
-  for (const period of periods) {
-    const h = Math.round(
-      (period.toMin - period.fromMin) / 60 * HOUR_DECIMAL_PRECISION,
-    ) /
-      HOUR_DECIMAL_PRECISION;
-    basePay += Math.round(h * period.baseRate * CURRENCY_PRECISION) /
-      CURRENCY_PRECISION;
-    supplementPay +=
-      Math.round(h * period.supplementRate * CURRENCY_PRECISION) /
-      CURRENCY_PRECISION;
-  }
-
-  basePay = +basePay.toFixed(2);
-  supplementPay = +supplementPay.toFixed(2);
-
   return {
     ...computed,
-    basePay,
-    supplementPay,
-    gross: +(basePay + supplementPay).toFixed(2),
+    ...payTotals(periods),
     wagePeriods: periods,
     overtimeApplied: overtimeMinutes > 0,
     overtimeMinutes: +overtimeMinutes.toFixed(2),
+  };
+}
+
+// Round once per pay component, never round hours or intermediate period amounts.
+function payTotals(periods: WagePeriod[]) {
+  let basePay = 0;
+  let supplementPay = 0;
+  for (const period of periods) {
+    const hours = Math.max(0, period.toMin - period.fromMin) / 60;
+    basePay += hours * period.baseRate;
+    supplementPay += hours * period.supplementRate;
+  }
+  basePay = Math.round(basePay * CURRENCY_PRECISION) / CURRENCY_PRECISION;
+  supplementPay = Math.round(supplementPay * CURRENCY_PRECISION) / CURRENCY_PRECISION;
+  return {
+    basePay,
+    supplementPay,
+    gross: Math.round((basePay + supplementPay) * CURRENCY_PRECISION) / CURRENCY_PRECISION,
   };
 }
 
@@ -640,6 +623,7 @@ function makePeriod(
   toMin: number,
   baseRate: number,
   supplementRate: number,
+  isOvertime?: boolean,
 ): WagePeriod {
   return {
     fromMin,
@@ -647,6 +631,7 @@ function makePeriod(
     baseRate,
     supplementRate,
     totalRate: baseRate + supplementRate,
+    ...(isOvertime == null ? {} : { isOvertime }),
   };
 }
 
@@ -659,13 +644,15 @@ function mergeAdjacentPeriods(periods: WagePeriod[]): WagePeriod[] {
       last &&
       Math.abs(last.toMin - period.fromMin) < 0.0001 &&
       last.baseRate === period.baseRate &&
-      last.supplementRate === period.supplementRate
+      last.supplementRate === period.supplementRate &&
+      last.isOvertime === period.isOvertime
     ) {
       merged[merged.length - 1] = makePeriod(
         last.fromMin,
         period.toMin,
         last.baseRate,
         last.supplementRate,
+        last.isOvertime,
       );
     } else {
       merged.push(period);

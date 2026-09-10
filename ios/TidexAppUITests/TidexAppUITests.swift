@@ -32,6 +32,28 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testOvernightPayrollBreakdownSeparatesOvertimeAndUnpaidBreak() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "payroll-breakdown"
+    app.launch()
+    let overtime = app.buttons["Overtime"]
+    XCTAssertTrue(overtime.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(app.staticTexts["Gross Pay"].exists, app.debugDescription)
+    overtime.tap()
+    let midnight = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "(+1)"))
+      .firstMatch
+    XCTAssertTrue(midnight.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    let deduction = app.buttons.matching(
+      NSPredicate(format: "label CONTAINS %@", "Break deduction")
+    )
+    .firstMatch
+    if !deduction.isHittable { app.swipeUp() }
+    XCTAssertTrue(deduction.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    deduction.tap()
+    attachAppStoreScreenshot(app, name: "payroll-night-overtime-and-break")
+  }
+
+  @MainActor
   func testAppStoreScreenshots() {
     for (language, locale, shiftsTitle, statsTitle) in [
       ("en", "en_US", "Schedule", "Stats"),

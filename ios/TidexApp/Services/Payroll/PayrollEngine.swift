@@ -464,7 +464,8 @@ struct PayrollEngine {
             fromMin: minutesBetween(segment.shiftDayStart, cursor),
             toMin: minutesBetween(segment.shiftDayStart, next),
             baseRate: segment.period.baseRate,
-            supplementRate: supplementRate
+            supplementRate: supplementRate,
+            isOvertime: overtimeMinutes > 0
           ),
           overtimeMinutes: overtimeMinutes
         ))
@@ -577,13 +578,15 @@ struct PayrollEngine {
       if let last = merged.last,
         abs(last.toMin - period.fromMin) < 0.0001,
         last.baseRate == period.baseRate,
-        last.supplementRate == period.supplementRate
+        last.supplementRate == period.supplementRate,
+        last.isOvertime == period.isOvertime
       {
         merged[merged.count - 1] = WagePeriod(
           fromMin: last.fromMin,
           toMin: period.toMin,
           baseRate: last.baseRate,
-          supplementRate: last.supplementRate
+          supplementRate: last.supplementRate,
+          isOvertime: last.isOvertime
         )
       } else {
         merged.append(period)

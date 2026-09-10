@@ -317,28 +317,24 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   private var displayedBasePay: Double {
     shouldShowBreakDeductionRow
-      ? BreakDeductionBreakdown.basePay(for: shift.computed.originalWagePeriods)
+      ? BreakDeductionBreakdown.basePay(for: shift.computed.preBreakWagePeriods)
       : shift.computed.basePay
   }
 
   private var displayedSupplementPay: Double {
-    if shouldShowBreakDeductionRow {
-      return displayedTotalSupplementPay
-    }
     return roundedCurrency(max(0, displayedTotalSupplementPay - displayedOvertimePay))
   }
 
   private var displayedTotalSupplementPay: Double {
     shouldShowBreakDeductionRow
-      ? BreakDeductionBreakdown.supplementPay(for: shift.computed.originalWagePeriods)
+      ? BreakDeductionBreakdown.supplementPay(for: shift.computed.preBreakWagePeriods)
       : shift.computed.supplementPay
   }
 
   private var displayedOvertimePay: Double {
-    roundedCurrency(
-      overtimeSegments.reduce(0) { total, segment in
-        total + roundedCurrency(segment.amount)
-      })
+    PayrollCalculator.payTotals(
+      for: shift.computed.classifiedWagePeriods.filter { $0.isOvertime == true }
+    ).supplement
   }
 
   /// Check if shift has custom supplements (including explicitly empty rules)
@@ -416,7 +412,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   private var breakDeductionBreakdown: BreakDeductionBreakdown? {
     BreakDeductionBreakdown.make(
-      originalPeriods: shift.computed.originalWagePeriods,
+      originalPeriods: shift.computed.preBreakWagePeriods,
       adjustedPeriods: shift.computed.wagePeriods
     )
   }
@@ -498,159 +494,17 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     return shift.computed.basePay / shift.computed.paidHours
   }
 
-  /// Supplement segments grouped by rate for display
-  /// Groups consecutive wage periods with the same supplement rate
   private var supplementSegments: [SupplementSegment] {
-    let original = shift.computed.originalWagePeriods
-    let adjusted = shouldShowBreakDeductionRow ? original : nonOvertimeWagePeriods
-
-    var segments: [SupplementSegment] = []
-    var periodIndex = 0
-
-    while periodIndex < original.count {
-      let period = original[periodIndex]
-      // Skip periods with no supplement
-      guard period.supplementRate > 0 else {
-        periodIndex += 1
-        continue
-      }
-
-      // Find consecutive periods with same supplement rate
-      let groupStart = period.fromMin
-      var groupEnd = period.toMin
-      let currentRate = period.supplementRate
-      var nextPeriodIndex = periodIndex + 1
-
-      while nextPeriodIndex < original.count,
-        original[nextPeriodIndex].supplementRate == currentRate
-      {
-        groupEnd = original[nextPeriodIndex].toMin
-        nextPeriodIndex += 1
-      }
-
-      // Calculate actual paid hours for this supplement rate group from adjusted periods
-      var actualHours: Double = 0
-      for adj in adjusted where adj.supplementRate == currentRate {
-        let overlapStart = max(adj.fromMin, groupStart)
-        let overlapEnd = min(adj.toMin, groupEnd)
-        if overlapEnd > overlapStart {
-          actualHours += (overlapEnd - overlapStart) / 60.0
-        }
-      }
-
-      if actualHours > 0 {
-        segments.append(
-          SupplementSegment(
-            fromMin: groupStart,
-            toMin: groupEnd,
-            rate: currentRate,
-            actualHours: actualHours
-          )
-        )
-      }
-
-      periodIndex = nextPeriodIndex
-    }
-
-    return segments
-  }
-
-  private var nonOvertimeWagePeriods: [WagePeriod] {
-    periodsRemovingTrailingOvertime(from: shift.computed.wagePeriods)
+    let periods =
+      shouldShowBreakDeductionRow
+      ? shift.computed.preBreakWagePeriods : shift.computed.classifiedWagePeriods
+    return SupplementSegment.grouped(from: periods.filter { $0.isOvertime != true })
   }
 
   private var overtimeSegments: [SupplementSegment] {
-    guard shift.computed.overtimeApplied, shift.computed.overtimeMinutes > 0 else {
-      return []
-    }
-
-    var remainingMinutes = shift.computed.overtimeMinutes
-    var segments: [SupplementSegment] = []
-
-    for period in shift.computed.wagePeriods.reversed() {
-      guard remainingMinutes > 0 else { break }
-
-      let durationMinutes = max(0, period.durationMinutes)
-      guard durationMinutes > 0 else { continue }
-
-      let overtimeMinutes = min(durationMinutes, remainingMinutes)
-      let fromMin = max(period.fromMin, period.toMin - overtimeMinutes)
-
-      if period.supplementRate > 0 {
-        segments.append(
-          SupplementSegment(
-            fromMin: fromMin,
-            toMin: period.toMin,
-            rate: period.supplementRate,
-            actualHours: overtimeMinutes / 60
-          )
-        )
-      }
-
-      remainingMinutes -= overtimeMinutes
-    }
-
-    return mergeAdjacentSupplementSegments(segments.reversed())
-  }
-
-  private func periodsRemovingTrailingOvertime(from periods: [WagePeriod]) -> [WagePeriod] {
-    guard shift.computed.overtimeApplied, shift.computed.overtimeMinutes > 0 else {
-      return periods
-    }
-
-    var remainingMinutes = shift.computed.overtimeMinutes
-    var result: [WagePeriod] = []
-
-    for period in periods.reversed() {
-      guard remainingMinutes > 0 else {
-        result.append(period)
-        continue
-      }
-
-      let durationMinutes = max(0, period.durationMinutes)
-      guard durationMinutes > 0 else { continue }
-
-      if remainingMinutes >= durationMinutes {
-        remainingMinutes -= durationMinutes
-        continue
-      }
-
-      result.append(
-        WagePeriod(
-          fromMin: period.fromMin,
-          toMin: period.toMin - remainingMinutes,
-          baseRate: period.baseRate,
-          supplementRate: period.supplementRate
-        ))
-      remainingMinutes = 0
-    }
-
-    return result.reversed()
-  }
-
-  private func mergeAdjacentSupplementSegments<S: Sequence>(
-    _ segments: S
-  ) -> [SupplementSegment] where S.Element == SupplementSegment {
-    var merged: [SupplementSegment] = []
-
-    for segment in segments {
-      guard let last = merged.last,
-        last.rate == segment.rate,
-        last.toMin == segment.fromMin
-      else {
-        merged.append(segment)
-        continue
-      }
-
-      merged[merged.count - 1] = SupplementSegment(
-        fromMin: last.fromMin,
-        toMin: segment.toMin,
-        rate: last.rate,
-        actualHours: last.actualHours + segment.actualHours
-      )
-    }
-
-    return merged
+    SupplementSegment.grouped(
+      from: shift.computed.classifiedWagePeriods.filter { $0.isOvertime == true }
+    )
   }
 
   private func roundedCurrency(_ amount: Double) -> Double {
@@ -1985,7 +1839,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Format hours value (e.g., "2.50 t")
   private func formatHoursValue(_ hours: Double) -> String {
-    return String(format: "%.2f t", hours)
+    ShiftCardFormatter.formattedHours(hours, locale: .appLocale)
   }
 
   private func formatPauseWindow(_ window: PauseWindow) -> String {
@@ -2305,17 +2159,39 @@ struct SupplementSegment: Identifiable, Equatable {
   let toMin: Double
   let rate: Double
   let actualHours: Double
+  var isOvertime: Bool = false
 
-  var id: String { "\(fromMin)-\(toMin)-\(rate)" }
+  var id: String { "\(fromMin)-\(toMin)-\(rate)-\(isOvertime)" }
+
+  static func grouped(from periods: [WagePeriod]) -> [Self] {
+    var result: [Self] = []
+    for period in periods where period.durationMinutes > 0 && period.supplementRate > 0 {
+      let isOvertime = period.isOvertime == true
+      if let last = result.last, last.toMin == period.fromMin,
+        last.rate == period.supplementRate, last.isOvertime == isOvertime
+      {
+        result[result.count - 1] = Self(
+          fromMin: last.fromMin, toMin: period.toMin, rate: last.rate,
+          actualHours: last.actualHours + period.durationHours, isOvertime: isOvertime
+        )
+      } else {
+        result.append(
+          Self(
+            fromMin: period.fromMin, toMin: period.toMin, rate: period.supplementRate,
+            actualHours: period.durationHours, isOvertime: isOvertime
+          ))
+      }
+    }
+    return result
+  }
 
   /// Format minutes to display time (e.g., "21:00")
   func formatTime(_ minutes: Double) -> String {
     let dayOffset = Int(minutes / 1_440)  // swiftlint:disable:this explicit_type_interface no_magic_numbers
     let remainder = Int(minutes) % 1_440  // swiftlint:disable:this explicit_type_interface no_magic_numbers
     let normalizedMinutes = remainder < 0 ? remainder + 1_440 : remainder  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    let isFullDay = normalizedMinutes == 0 && Int(minutes) != 0
-    let hours = isFullDay ? 24 : normalizedMinutes / 60
-    let mins = isFullDay ? 0 : normalizedMinutes % 60
+    let hours = normalizedMinutes / 60
+    let mins = normalizedMinutes % 60
     let base = String(format: "%02d:%02d", hours, mins)
     if dayOffset > 0 {
       return "\(base) (+\(dayOffset))"
@@ -2330,9 +2206,7 @@ struct SupplementSegment: Identifiable, Equatable {
   var timeRange: String {
     let from = formatTime(fromMin)
     let to = formatTime(toMin)
-    // Replace 23:59 with 24:00 for cleaner display
-    let toDisplay = to == "23:59" ? "24:00" : to
-    return "\(from) – \(toDisplay)"
+    return "\(from) – \(to)"
   }
 
   /// Total supplement amount for this segment
@@ -2349,19 +2223,11 @@ struct BreakDeductionBreakdown: Equatable {
   }
 
   static func basePay(for periods: [WagePeriod]) -> Double {
-    roundedCurrency(
-      periods.reduce(0) { total, period in
-        total + payFor(hours: max(0, period.durationHours), rate: period.baseRate)
-      }
-    )
+    PayrollCalculator.payTotals(for: periods).base
   }
 
   static func supplementPay(for periods: [WagePeriod]) -> Double {
-    roundedCurrency(
-      periods.reduce(0) { total, period in
-        total + payFor(hours: max(0, period.durationHours), rate: period.supplementRate)
-      }
-    )
+    PayrollCalculator.payTotals(for: periods).supplement
   }
 
   static func make(
@@ -2371,11 +2237,7 @@ struct BreakDeductionBreakdown: Equatable {
     var parts: [BreakDeductionPart] = []
 
     let baseAmount = roundedCurrency(
-      payDelta(
-        originalPeriods: originalPeriods,
-        adjustedPeriods: adjustedPeriods,
-        pay: { payFor(hours: max(0, $0.durationHours), rate: $0.baseRate) }
-      ))
+      max(0, basePay(for: originalPeriods) - basePay(for: adjustedPeriods)))
     let baseHours = deductedBaseHours(
       originalPeriods: originalPeriods,
       adjustedPeriods: adjustedPeriods
@@ -2447,7 +2309,7 @@ struct BreakDeductionBreakdown: Equatable {
       let deductedHours = max(0, originalMetrics.hours - adjustedMetrics.hours)
       let amount = roundedCurrency(max(0, originalMetrics.pay - adjustedMetrics.pay))
 
-      if isDisplayable(amount) {
+      if deductedHours > 0 {
         parts.append(
           BreakDeductionPart(
             id: "supplement-\(groupStart)-\(groupEnd)-\(rate)",
@@ -2467,7 +2329,22 @@ struct BreakDeductionBreakdown: Equatable {
       periodIndex = nextPeriodIndex
     }
 
-    return parts
+    // The visible deduction must equal the difference of the rounded pay components.
+    // Allocate any fractional-cent remainder without inventing an extra deduction row.
+    var remaining = roundedCurrency(
+      max(
+        0,
+        supplementPay(for: originalPeriods) - supplementPay(for: adjustedPeriods)
+      ))
+    return parts.enumerated().compactMap { index, part in
+      let amount = index == parts.count - 1 ? remaining : min(part.amount, remaining)
+      remaining = roundedCurrency(remaining - amount)
+      guard isDisplayable(amount) else { return nil }
+      return BreakDeductionPart(
+        id: part.id, kind: part.kind, supplementSegment: part.supplementSegment,
+        hours: part.hours, rate: part.rate, amount: amount
+      )
+    }
   }
 
   private static func overlappingMetrics(
@@ -2501,23 +2378,12 @@ struct BreakDeductionBreakdown: Equatable {
     return max(0, originalHours - adjustedHours)
   }
 
-  private static func payDelta(
-    originalPeriods: [WagePeriod],
-    adjustedPeriods: [WagePeriod],
-    pay: (WagePeriod) -> Double
-  ) -> Double {
-    let originalPay = originalPeriods.reduce(0) { $0 + pay($1) }
-    let adjustedPay = adjustedPeriods.reduce(0) { $0 + pay($1) }
-    return max(0, originalPay - adjustedPay)
-  }
-
   private static func roundedCurrency(_ amount: Double) -> Double {
     (amount * 100).rounded() / 100
   }
 
   private static func payFor(hours: Double, rate: Double) -> Double {
-    let roundedHours = (hours * 1_000).rounded() / 1_000  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    return roundedCurrency(roundedHours * rate)
+    hours * rate
   }
 
   private static func isDisplayable(_ amount: Double) -> Bool {

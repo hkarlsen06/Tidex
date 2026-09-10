@@ -102,6 +102,7 @@ export type WagePeriod = {
   baseRate: number;
   supplementRate: number; // supplement per hour
   totalRate: number; // base + supplement
+  isOvertime?: boolean;
 };
 
 export type BreakAudit = {

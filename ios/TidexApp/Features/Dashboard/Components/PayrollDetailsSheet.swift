@@ -412,9 +412,12 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     isExpanded: Bool
   ) -> some View {
     HStack(spacing: Spacing.xs) {
-      Text(.shiftsTotalSupplement)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
+      Text(
+        breakdown.supplementBreakdowns.contains(where: \.isOvertime)
+          ? .shiftsSupplementsAndOvertime : .shiftsTotalSupplement
+      )
+      .font(.tidexSubheadline)
+      .foregroundColor(.tidexTextSecondary)
 
       if showsChevron {
         Image(systemName: "chevron.down")  // swiftlint:disable:this accessibility_label_for_image
@@ -438,6 +441,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   ) -> some View {
     let segment = supplement.segment  // swiftlint:disable:this explicit_type_interface
     return EarningsSupplementBreakdownDetailCard(
+      title: String(
+        localized: supplement.isOvertime ? .shiftsOvertimeLabel : .shiftsSupplementLabel),
       timeRange: segment.timeRange,
       hoursAndRate:
         "\(formatHoursValue(supplement.hours)) × \(formatCurrency(supplement.rate, currency: currency))",
@@ -696,7 +701,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   }
 
   private func formatHoursValue(_ hours: Double) -> String {
-    String(format: "%.2f t", hours)
+    ShiftCardFormatter.formattedHours(hours, locale: .appLocale)
   }
 }
 

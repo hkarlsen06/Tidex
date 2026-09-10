@@ -592,14 +592,17 @@ struct PayrollSupplementBreakdown: Identifiable, Equatable {  // swiftlint:disab
   let hours: Double  // swiftlint:disable:this explicit_acl
   let amount: Double  // swiftlint:disable:this explicit_acl
 
-  var id: String { "\(fromMin)-\(toMin)-\(rate)" }  // swiftlint:disable:this explicit_acl
+  var isOvertime: Bool = false
+
+  var id: String { "\(fromMin)-\(toMin)-\(rate)-\(isOvertime)" }  // swiftlint:disable:this explicit_acl
 
   var segment: SupplementSegment {  // swiftlint:disable:this explicit_acl
     SupplementSegment(
       fromMin: fromMin,
       toMin: toMin,
       rate: rate,
-      actualHours: hours
+      actualHours: hours,
+      isOvertime: isOvertime
     )
   }
 }
@@ -1404,7 +1407,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     for shift: ShiftWithComputations
   ) -> Double {
     breakDeductionAmount(for: shift) > 0
-      ? BreakDeductionBreakdown.basePay(for: shift.computed.originalWagePeriods)
+      ? BreakDeductionBreakdown.basePay(for: shift.computed.preBreakWagePeriods)
       : shift.computed.basePay
   }
 
@@ -1412,7 +1415,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     for shift: ShiftWithComputations
   ) -> Double {
     breakDeductionAmount(for: shift) > 0
-      ? BreakDeductionBreakdown.supplementPay(for: shift.computed.originalWagePeriods)
+      ? BreakDeductionBreakdown.supplementPay(for: shift.computed.preBreakWagePeriods)
       : shift.computed.supplementPay
   }
 
@@ -1423,7 +1426,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       return 0
     }
     return BreakDeductionBreakdown.make(
-      originalPeriods: shift.computed.originalWagePeriods,
+      originalPeriods: shift.computed.preBreakWagePeriods,
       adjustedPeriods: shift.computed.wagePeriods
     )?.totalAmount ?? 0
   }
@@ -1434,7 +1437,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let parts = shifts.flatMap { shift -> [BreakDeductionPart] in  // swiftlint:disable:this explicit_type_interface
       guard shift.computed.breakAudit.deductedHours > 0 else { return [] }  // swiftlint:disable:this conditional_returns_on_newline line_length
       return BreakDeductionBreakdown.make(
-        originalPeriods: shift.computed.originalWagePeriods,
+        originalPeriods: shift.computed.preBreakWagePeriods,
         adjustedPeriods: shift.computed.wagePeriods
       )?.parts ?? []
     }
@@ -1489,64 +1492,24 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     }
   }
 
-  nonisolated private static func payrollSupplementBreakdowns(for shifts: [ShiftWithComputations])  // swiftlint:disable:this function_body_length line_length type_contents_order
+  nonisolated private static func payrollSupplementBreakdowns(for shifts: [ShiftWithComputations])
     -> [PayrollSupplementBreakdown]
   {
-    let segments = shifts.flatMap { shift -> [SupplementSegment] in  // swiftlint:disable:this closure_body_length explicit_type_interface line_length
-      let original = shift.computed.originalWagePeriods  // swiftlint:disable:this explicit_type_interface
-      let adjusted =  // swiftlint:disable:this explicit_type_interface
+    let segments = shifts.flatMap { shift -> [SupplementSegment] in
+      let periods =
         shift.computed.breakAudit.deductedHours > 0
-        ? original : shift.computed.wagePeriods
-      var segments: [SupplementSegment] = []
-      var i = 0  // swiftlint:disable:this explicit_type_interface identifier_name
-
-      while i < original.count {
-        let period = original[i]  // swiftlint:disable:this explicit_type_interface
-        guard period.supplementRate > 0 else {
-          i += 1
-          continue
-        }
-
-        let groupStart = period.fromMin  // swiftlint:disable:this explicit_type_interface
-        var groupEnd = period.toMin  // swiftlint:disable:this explicit_type_interface
-        let rate = period.supplementRate  // swiftlint:disable:this explicit_type_interface
-        var j = i + 1  // swiftlint:disable:this explicit_type_interface identifier_name
-
-        while j < original.count, original[j].supplementRate == rate {
-          groupEnd = original[j].toMin
-          j += 1
-        }
-
-        var actualHours: Double = 0
-        for adjustedPeriod in adjusted where adjustedPeriod.supplementRate == rate {
-          let overlapStart = max(adjustedPeriod.fromMin, groupStart)  // swiftlint:disable:this explicit_type_interface
-          let overlapEnd = min(adjustedPeriod.toMin, groupEnd)  // swiftlint:disable:this explicit_type_interface
-          if overlapEnd > overlapStart {
-            actualHours += (overlapEnd - overlapStart) / 60.0  // swiftlint:disable:this no_magic_numbers
-          }
-        }
-
-        if actualHours > 0 {
-          segments.append(
-            SupplementSegment(
-              fromMin: groupStart,
-              toMin: groupEnd,
-              rate: rate,
-              actualHours: actualHours
-            ))  // swiftlint:disable:this multiline_arguments_brackets
-        }
-
-        i = j
-      }
-
-      return segments
+        ? shift.computed.preBreakWagePeriods : shift.computed.classifiedWagePeriods
+      return SupplementSegment.grouped(from: periods)
     }
 
     let grouped = segments.reduce(  // swiftlint:disable:this explicit_type_interface
-      into: [String: (fromMin: Double, toMin: Double, rate: Double, hours: Double)]()
+      into: [
+        String: (fromMin: Double, toMin: Double, rate: Double, hours: Double, isOvertime: Bool)
+      ]()
     ) { result, segment in
       let key = segment.id  // swiftlint:disable:this explicit_type_interface
-      result[key, default: (segment.fromMin, segment.toMin, segment.rate, 0)].hours +=
+      result[key, default: (segment.fromMin, segment.toMin, segment.rate, 0, segment.isOvertime)]
+        .hours +=
         segment.actualHours
     }
 
@@ -1556,7 +1519,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         toMin: segment.toMin,
         rate: segment.rate,
         hours: segment.hours,
-        amount: segment.hours * segment.rate
+        amount: segment.hours * segment.rate,
+        isOvertime: segment.isOvertime
       )
     }
     .sorted { lhs, rhs in

@@ -6,34 +6,6 @@ import UIKit
 /// Helper functions for filtering applicable supplements by time window
 /// Ported from lib/payroll/applicable-supplements.ts
 enum ApplicableSupplements {
-  /// Get next weekday (1-7 Mon-Sun, wraps around)
-  private static func getNextWeekday(_ weekday: Int) -> Int {
-    weekday == 7 ? 1 : weekday + 1
-  }
-
-  /// Convert HH:MM time string to minutes from midnight
-  private static func toMinutes(_ hhmm: String) -> Int {
-    let components = hhmm.prefix(5).split(separator: ":")
-    guard components.count == 2,
-      let h = Int(components[0]),
-      let m = Int(components[1])
-    else {
-      return 0
-    }
-    return h * 60 + m
-  }
-
-  /// Check if two time ranges overlap
-  private static func rangesOverlap(
-    shiftStart: Int,
-    shiftEnd: Int,
-    ruleFrom: Int,
-    ruleTo: Int
-  ) -> Bool {
-    // Ranges overlap if neither ends before the other starts
-    shiftStart < ruleTo && ruleFrom < shiftEnd
-  }
-
   /// Get ALL supplement rules for a specific weekday (not filtered by time)
   /// Used to save non-visible rules alongside user edits
   static func getAllWeekdaySupplements(
@@ -64,122 +36,62 @@ enum ApplicableSupplements {
   ///   - weekday: Weekday number (1-7, Mon-Sun) of the shift start date
   ///   - rules: Predefined supplement rules from snapshot
   /// - Returns: Rules that apply to this shift
-  static func getApplicableSupplements(  // swiftlint:disable:this explicit_acl function_body_length
+  static func getApplicableSupplements(
     startTime: String,
     endTime: String,
     weekday: Int,
     rules: [SupplementRule]
   ) -> [CustomSupplementRuleWithId] {
-    let shiftStart = toMinutes(startTime)
-    var shiftEnd = toMinutes(endTime)
-
-    // Handle cross-midnight shifts
-    let isCrossMidnight = shiftEnd <= shiftStart
-    if isCrossMidnight {
-      shiftEnd += 24 * 60  // Add 24 hours
+    guard let (start, end) = WagePeriodBuilder.shiftMinutes(startTime: startTime, endTime: endTime)
+    else {
+      return []
     }
-
-    var applicable: [CustomSupplementRuleWithId] = []
-    let nextWeekday = getNextWeekday(weekday)
-
-    for rule in rules {
-      let appliesToStartDay = rule.days.contains(weekday)
-      let appliesToNextDay = rule.days.contains(nextWeekday)
-
-      // Skip rules that don't apply to either relevant day
-      guard appliesToStartDay || appliesToNextDay else { continue }
-
-      let ruleFrom = toMinutes(rule.from)
-      var ruleTo = toMinutes(rule.to)
-
-      // Handle cross-midnight rules
-      if ruleTo < ruleFrom {
-        ruleTo += 24 * 60
-      }
-
-      // Check overlap with start day
-      if appliesToStartDay,
-        rangesOverlap(
-          shiftStart: shiftStart,
-          shiftEnd: shiftEnd,
-          ruleFrom: ruleFrom,
-          ruleTo: ruleTo
+    // Clip weekday-specific rules to this occurrence before removing their weekday metadata.
+    // Otherwise saving a Sunday all-day rule would also apply it to Saturday evening.
+    let applicable = WagePeriodBuilder.ruleWindows(weekday: weekday, rules: rules)
+      .filter { $0.to > start && $0.from < end }
+      .map { window in
+        CustomSupplementRuleWithId(
+          from: clockTime(max(start, window.from), isEnd: false),
+          to: clockTime(min(end, window.to), isEnd: true),
+          rate: window.rule.rate,
+          percent: window.rule.percent,
+          isCustom: false
         )
-      {
-        applicable.append(
-          CustomSupplementRuleWithId(
-            from: rule.from,
-            to: rule.to,
-            rate: rule.rate,
-            percent: rule.percent,
-            isCustom: false
-          ))
-        continue
       }
-
-      // For cross-midnight shifts, check if next-day rules apply
-      if isCrossMidnight, appliesToNextDay {
-        let nextDayRuleFrom = ruleFrom + 24 * 60
-        let nextDayRuleTo = ruleTo + 24 * 60
-        if rangesOverlap(
-          shiftStart: shiftStart,
-          shiftEnd: shiftEnd,
-          ruleFrom: nextDayRuleFrom,
-          ruleTo: nextDayRuleTo
-        ) {
-          applicable.append(
-            CustomSupplementRuleWithId(
-              from: rule.from,
-              to: rule.to,
-              rate: rule.rate,
-              percent: rule.percent,
-              isCustom: false
-            ))
-        }
-      }
-    }
-
-    // Remove duplicates
     var seen = Set<String>()
     return applicable.filter { rule in
-      let key = "\(rule.from)-\(rule.to)-\(rule.rate ?? 0)-\(rule.percent ?? 0)"
-      if seen.contains(key) {
-        return false
-      }
-      seen.insert(key)
-      return true
+      let key =
+        "\(rule.from)-\(rule.to)-\(String(describing: rule.rate))-\(String(describing: rule.percent))"
+      return seen.insert(key).inserted
     }
   }
 
-  /// Filter custom supplement rules to only those that overlap with shift time
+  private static func clockTime(_ minutes: Int, isEnd: Bool) -> String {
+    let normalized = (minutes % 1_440 + 1_440) % 1_440
+    if isEnd, normalized == 0 { return "24:00" }
+    return String(format: "%02d:%02d", normalized / 60, normalized % 60)
+  }
+
+  /// Shift-specific clock windows can overlap before or after midnight.
   static func filterToApplicable(
     rules: [CustomSupplementRuleWithId],
     startTime: String,
     endTime: String
   ) -> [CustomSupplementRuleWithId] {
-    let shiftStart = toMinutes(startTime)
-    var shiftEnd = toMinutes(endTime)
-
-    // Handle cross-midnight shifts
-    if shiftEnd <= shiftStart {
-      shiftEnd += 24 * 60
+    guard let (start, end) = WagePeriodBuilder.shiftMinutes(startTime: startTime, endTime: endTime)
+    else {
+      return []
     }
-
     return rules.filter { rule in
-      let ruleFrom = toMinutes(rule.from)
-      var ruleTo = toMinutes(rule.to)
-
-      // Handle cross-midnight rules
-      if ruleTo < ruleFrom {
-        ruleTo += 24 * 60
-      }
-
-      return rangesOverlap(
-        shiftStart: shiftStart,
-        shiftEnd: shiftEnd,
-        ruleFrom: ruleFrom,
-        ruleTo: ruleTo
-      )
+      WagePeriodBuilder.ruleWindows(
+        weekday: 1,
+        rules: [
+          SupplementRule(
+            days: Array(1...7), from: rule.from, to: rule.to,
+            rate: rule.rate, percent: rule.percent)
+        ]
+      ).contains { $0.to > start && $0.from < end }
     }
   }
 
