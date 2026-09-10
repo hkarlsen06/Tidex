@@ -1,8 +1,10 @@
 // Version Configuration
-// Change these values to update version across all targets (App, Widget, Watch)
+// Single source for the user-visible version across all apps and extensions.
+// Change MARKETING_VERSION here, never in a target's Xcode build settings.
+// The build script validates that targets and Info.plists inherit these values.
 //
 // MARKETING_VERSION = User-visible version (e.g., 2.0.0)
-// CURRENT_PROJECT_VERSION = Generated at build time from BuildNumber.xcconfig (UTC timestamp)
+// CURRENT_PROJECT_VERSION = Generated at build time from BuildNumber.xcconfig (Europe/Oslo timestamp)
 
 MARKETING_VERSION = 2.7.1
 

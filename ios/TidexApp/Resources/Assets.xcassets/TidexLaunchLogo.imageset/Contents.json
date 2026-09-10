@@ -1,22 +1,22 @@
 {
   "images": [
     {
-      "filename": "splash-launch-1x.png",
+      "filename": "tidex-launch-logo-1x.png",
       "idiom": "universal",
       "scale": "1x"
     },
     {
-      "filename": "splash-launch-2x.png",
+      "filename": "tidex-launch-logo-2x.png",
       "idiom": "universal",
       "scale": "2x"
     },
     {
-      "filename": "splash-launch-3x.png",
+      "filename": "tidex-launch-logo-3x.png",
       "idiom": "universal",
       "scale": "3x"
     },
     {
-      "filename": "splash-launch-dark-1x.png",
+      "filename": "tidex-launch-logo-dark-1x.png",
       "idiom": "universal",
       "scale": "1x",
       "appearances": [
@@ -27,7 +27,7 @@
       ]
     },
     {
-      "filename": "splash-launch-dark-2x.png",
+      "filename": "tidex-launch-logo-dark-2x.png",
       "idiom": "universal",
       "scale": "2x",
       "appearances": [
@@ -38,7 +38,7 @@
       ]
     },
     {
-      "filename": "splash-launch-dark-3x.png",
+      "filename": "tidex-launch-logo-dark-3x.png",
       "idiom": "universal",
       "scale": "3x",
       "appearances": [

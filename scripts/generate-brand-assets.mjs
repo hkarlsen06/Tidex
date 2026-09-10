@@ -185,7 +185,7 @@ try {
     path.join(root, 'ios/TidexShiftWidget/Assets.xcassets/TidexLogo.imageset'), { recursive: true });
   await imageset('TidexWordmark', 'tidex-wordmark', Math.round(lockupWidth * 0.32), 32, lockups);
   await imageset('Splash', 'splash', 300, 300, marks, 40);
-  await imageset('SplashLaunch', 'splash-launch', 150, 150, marks, 20);
+  await imageset('TidexLaunchLogo', 'tidex-launch-logo', 150, 150, marks, 20);
   await sharp(Buffer.from(lockups.light)).resize({ width: 910, height: 350, fit: 'contain', background: transparent })
     .png().toFile(path.join(publicDir, 'icons/image.png'));
   await sharp(Buffer.from(lockups.light)).resize({ width: 910, height: 350, fit: 'contain', background: transparent })

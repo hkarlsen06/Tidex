@@ -928,7 +928,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "BUILD=\"$(TZ=Europe/Oslo date +%Y%m%d.%H%M)\"\nOUT=\"${SRCROOT}/BuildNumber.xcconfig\"\nprintf 'CURRENT_PROJECT_VERSION = %s\\n' \"$BUILD\" > \"$OUT\"\necho \"Generated CURRENT_PROJECT_VERSION=$BUILD\"\n";
+			shellScript = "set -eu\n/usr/bin/python3 \"${SRCROOT}/Scripts/validate-version-config.py\" \"${SRCROOT}\"\nBUILD=\"$(TZ=Europe/Oslo date +%Y%m%d.%H%M)\"\nOUT=\"${SRCROOT}/BuildNumber.xcconfig\"\nprintf 'CURRENT_PROJECT_VERSION = %s\\n' \"$BUILD\" > \"$OUT\"\necho \"Generated CURRENT_PROJECT_VERSION=$BUILD\"\n";
 			showEnvVarsInLog = 0;
 		};
 		2A769897854F4D269CC244B9 /* Include Giphy dSYM */ = {
@@ -1632,7 +1632,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;
@@ -1662,7 +1661,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.7.0;
 				"OTHER_SWIFT_FLAGS[arch=*]" = "-suppress-warnings";
 				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app;
 				PRODUCT_NAME = Tidex;

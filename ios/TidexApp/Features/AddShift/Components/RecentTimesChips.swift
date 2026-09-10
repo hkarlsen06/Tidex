@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// Fixed height for the recent times chips area
-private let recentTimesChipBarHeight: CGFloat = 36
-
 /// Spacing between chips
 private let chipSpacing: CGFloat = CornerRadius.sm
 
@@ -22,6 +19,7 @@ private let maxChipCount = 5
 /// Horizontal scrollable chips showing frequently used time range combinations
 /// Chips are sorted by popularity (most used on the left)
 struct RecentTimesChips: View {
+  @ScaledMetric(relativeTo: .caption) private var chipBarHeight: CGFloat = 44
   /// Callback when user taps a time range chip
   let onSelect: (TimeRangeCount) -> Void
 
@@ -47,18 +45,20 @@ struct RecentTimesChips: View {
     Group {
       if visibleRanges.isEmpty {
         Color.clear
-          .frame(height: recentTimesChipBarHeight)
+          .frame(height: chipBarHeight)
       } else {
         ScrollView(.horizontal, showsIndicators: false) {
           HStack(spacing: chipSpacing) {
             ForEach(visibleRanges) { range in
-              RecentTimeChip(range: range, isSelected: range.id == activeRangeId) {
+              RecentTimeChip(
+                range: range, isSelected: range.id == activeRangeId, height: chipBarHeight
+              ) {
                 onSelect(range)
               }
             }
           }
         }
-        .frame(height: recentTimesChipBarHeight)
+        .frame(height: chipBarHeight)
       }
     }
     .onAppear {
@@ -116,6 +116,7 @@ struct RecentTimesChips: View {
 private struct RecentTimeChip: View {
   let range: TimeRangeCount
   let isSelected: Bool
+  let height: CGFloat
   let onTap: () -> Void
 
   @Environment(\.layoutDirection) private var layoutDirection
@@ -134,14 +135,17 @@ private struct RecentTimeChip: View {
       Text(timeRangeText)
         .font(.tidexMonoCaption)
         .fixedSize(horizontal: true, vertical: false)
-        .foregroundColor(isSelected ? .white : .tidexBlue)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexBlue)
         .environment(\.layoutDirection, .leftToRight)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
         .background(isSelected ? Color.tidexBlue : Color.tidexBlue.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+        .frame(minHeight: height)
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 
