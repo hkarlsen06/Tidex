@@ -110,11 +110,12 @@ internal final class AddShiftCoordinator: ObservableObject {
   }
 
   internal func triggerModeCycle() {
+    guard !isLoading else { return }
     cycleModeSubject.send()
   }
 
   internal func triggerStartFresh() {
-    guard hasContent else { return }
+    guard hasContent, !isLoading else { return }
     startFreshSubject.send()
   }
 

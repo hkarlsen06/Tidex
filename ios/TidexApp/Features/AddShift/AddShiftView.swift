@@ -42,15 +42,12 @@ struct AddShiftView: View {
     }
   }
 
-  @discardableResult
-  private func refreshWorkSetupPresentationState() -> Bool {
-    let wasShowingPlaceholder = shouldShowWorkSetupRequiredPlaceholder
+  private func refreshWorkSetupPresentationState() {
     workSetupPresentationViewModel.refresh(
       userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
     addShiftCoordinator.updateCanShowStartFreshControl(!shouldShowWorkSetupRequiredPlaceholder)
-    return wasShowingPlaceholder && !shouldShowWorkSetupRequiredPlaceholder
   }
 
   private var shouldShowWorkSetupRequiredPlaceholder: Bool {
@@ -277,6 +274,7 @@ struct AddShiftView: View {
       .iPadToolbarTransaction()
       .userCurrency(viewModel.currency)
     }
+    .disabled(viewModel.isLoading)
     .task {
       refreshWorkSetupPresentationState()
       await loadAddShiftContent()
@@ -297,8 +295,8 @@ struct AddShiftView: View {
       refreshWorkSetupPresentationState()
     }
     .onReceive(NotificationCenter.default.publisher(for: .workSetupDataDidChange)) { _ in
-      let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
-      guard shouldLoadAfterSetupCompleted else { return }
+      refreshWorkSetupPresentationState()
+      guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       prepareVisibleAddShiftContent()
       Task {
         await loadAddShiftContent()
@@ -857,6 +855,7 @@ private struct AddShiftJobSelectionChip: View {
       .fixedSize(horizontal: true, vertical: false)
     }
     .buttonStyle(.plain)
+    .accessibilityIdentifier("add-shift.job-picker")
   }
 }
 

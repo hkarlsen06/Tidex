@@ -143,6 +143,93 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testEmptyPastMonthCanAddAShiftAfterUsingEventMode() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "home", "-shiftsViewMode", "YES"]
+    app.launch()
+    let addTab = app.tabBars.buttons["Add"]
+    XCTAssertTrue(addTab.waitForExistence(timeout: 30), app.debugDescription)
+    addTab.tap()
+    let eventsMode = app.buttons["add-shift.mode.events"]
+    XCTAssertTrue(eventsMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    eventsMode.tap()
+    XCTAssertTrue(eventsMode.isSelected)
+
+    app.tabBars.buttons["Schedule"].tap()
+    let september = app.staticTexts["September"].firstMatch
+    XCTAssertTrue(september.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    september.tap()
+    let monthWheel = app.pickerWheels.element(boundBy: 0)
+    XCTAssertTrue(monthWheel.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    monthWheel.adjust(toPickerWheelValue: "December")
+    app.pickerWheels.element(boundBy: 1).adjust(toPickerWheelValue: "2025")
+    app.buttons["Done"].tap()
+
+    let addShift = app.buttons["schedule-empty.add-shift"]
+    XCTAssertTrue(addShift.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(addShift.isHittable)
+    let attachment = XCTAttachment(screenshot: app.screenshot())
+    attachment.name = "Past month with an action to record a shift"
+    attachment.lifetime = .keepAlways
+    add(attachment)
+    addShift.tap()
+
+    let singleMode = app.buttons["add-shift.mode.single"]
+    XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(singleMode.isSelected, "Add shift must leave the previous event mode")
+    XCTAssertTrue(app.staticTexts["December"].firstMatch.exists)
+    XCTAssertTrue(app.staticTexts["2025"].firstMatch.exists)
+  }
+
+  @MainActor
+  func testAddDraftRefreshesWorkplaceAfterEditingSettings() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "home"]
+    app.launch()
+    let addTab = app.tabBars.buttons["Add"]
+    XCTAssertTrue(addTab.waitForExistence(timeout: 30))
+    addTab.tap()
+    let jobPicker = app.buttons["add-shift.job-picker"]
+    XCTAssertTrue(jobPicker.waitForExistence(timeout: defaultTimeout))
+    XCTAssertTrue(jobPicker.label.contains("Nord"))
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+      .firstMatch
+    XCTAssertTrue(recentTime.waitForExistence(timeout: defaultTimeout))
+    if app.textFields["Start"].value as? String != "09:00" {
+      recentTime.tap()
+    }
+    jobPicker.tap()
+    app.buttons["Jobs & Pay"].tap()
+    let workplace = app.buttons.containing(.staticText, identifier: "Nord").firstMatch
+    XCTAssertTrue(workplace.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    workplace.tap()
+    let edit = app.buttons["Edit workplace"]
+    XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
+    edit.tap()
+    let name = app.textFields["Job name"]
+    XCTAssertTrue(name.waitForExistence(timeout: defaultTimeout))
+    name.tap()
+    name.typeText(
+      String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4) + "Updated workplace")
+    app.buttons["Save"].tap()
+    XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
+
+    // The workplace detail sheet dismisses with the standard pull-down gesture.
+    app.navigationBars.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+      .press(
+        forDuration: 0.1,
+        thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.8)))
+    let done = app.buttons["Done"]
+    XCTAssertTrue(done.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    done.tap()
+
+    XCTAssertTrue(jobPicker.waitForExistence(timeout: defaultTimeout))
+    XCTAssertTrue(jobPicker.label.contains("Updated workplace"), app.debugDescription)
+    XCTAssertEqual(app.textFields["Start"].value as? String, "09:00")
+    XCTAssertEqual(app.textFields["End"].value as? String, "17:00")
+  }
+
+  @MainActor
   func testTimeInputInvalidEditClearsSavedValueAndCanBeCorrected() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input"
