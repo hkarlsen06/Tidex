@@ -10,7 +10,7 @@ export function MarketingLocaleToggle({ locale, path }: MarketingLocaleTogglePro
   return (
     <nav
       aria-label="Language"
-      className="inline-flex items-center rounded-full border border-white/6 bg-white/[0.015] p-[0.2rem] text-[0.95rem] font-medium text-text-muted backdrop-blur-sm"
+      className="inline-flex shrink-0 items-center rounded-full border border-white/6 bg-white/[0.015] p-[0.2rem] text-[0.95rem] font-medium text-text-muted backdrop-blur-sm"
     >
       {locales.map((item) => (
         <a

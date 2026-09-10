@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="345" height="106" viewBox="0 0 345 106">
+  <title>Tidex</title>
+  <g fill="#2563EB" transform="translate(2 2)">
+    <path d="M7 0 H71 Q77 0 77 6 V12 Q77 18 71 18 H48 V94 Q48 101 41 101 H35 Q28 101 28 94 V18 H7 Q1 18 1 12 V6 Q1 0 7 0 Z"/>
+    <g transform="translate(85 0)">
+      <rect x="0" y="0" width="19" height="19" rx="6.5"/>
+      <rect x="0" y="29" width="19" height="72" rx="6.5"/>
+    </g>
+    <path transform="translate(112 0)" fill-rule="evenodd" d="M34 26 C14 26 2 40 2 64 C2 88 14 102 34 102 C44 102 52 98 57 91 V95 Q57 101 63 101 H69 Q75 101 75 95 V6 Q75 0 69 0 H63 Q57 0 57 6 V36 C51 29 44 26 34 26 Z M37 43 C25 43 21 51 21 64 C21 77 26 85 37 85 C49 85 56 77 56 64 C56 51 49 43 37 43 Z"/>
+    <path transform="translate(196 0)" fill-rule="evenodd" d="M38 26 C15 26 1 41 1 64 C1 88 16 102 40 102 C52 102 62 98 69 91 Q72 88 69 85 L63 79 Q61 77 58 79 C53 83 48 86 40 86 C28 86 21 80 20 70 H66 Q71 70 71 65 V62 C71 40 58 26 38 26 Z M20 56 C22 46 28 41 38 41 C48 41 54 46 54 56 Z"/>
+    <path transform="translate(267 0)" d="M3 30 Q0 26 6 26 H19 Q23 26 25 30 L39 51 L54 30 Q56 26 60 26 H71 Q76 26 73 31 L50 63 L73 97 Q76 101 71 101 H57 Q53 101 51 97 L37 75 L22 97 Q20 101 16 101 H4 Q-1 101 2 97 L25 64 Z"/>
+  </g>
+</svg>

@@ -4,6 +4,8 @@ import type { CSSProperties } from 'react';
 import { ArrowRight } from 'lucide-react';
 import dashboardEn from '@/public/hero/dashboard-en.png';
 import dashboardNo from '@/public/hero/dashboard-no.png';
+import tidexAppIcon from '@/public/brand/tidex-app-icon.png';
+import tidexWordmark from '@/public/brand/tidex-wordmark-dark.svg';
 import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/i18n/config';
 import type { Dictionary } from '@/lib/i18n/dictionaries';
@@ -32,7 +34,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
   const mailtoHref = `mailto:${dictionary.legal.contactEmail}?subject=${encodeURIComponent(marketing.contact.emailSubject)}&body=${encodeURIComponent(marketing.contact.emailBody)}`;
   const heroScreenshotSrc =
     locale === 'no' ? dashboardNo : dashboardEn;
-  const screenAspectRatio = 1206 / 2622;
+  const screenAspectRatio = heroScreenshotSrc.width / heroScreenshotSrc.height;
   // Model the visible black bezel, not the full chassis/glass margin.
   // Apple does not publish bezel thickness directly; using 17 Pro screen-border
   // data commonly reported around 1.44mm on all four sides.
@@ -118,21 +120,25 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
           <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-brand-highlight/20 to-transparent" />
         </div>
 
-        <div className="mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between py-4">
+        <div className="mx-auto flex w-full max-w-6xl shrink-0 items-center justify-between gap-5 py-4">
           <a
             href={appStoreHref}
             target="_blank"
             rel="noopener noreferrer"
             aria-label={marketing.hero.appStoreCta}
-            className="rounded-[0.9rem] transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] sm:rounded-[1rem]"
+            className="grid w-36 min-w-0 grid-cols-[90fr_325fr] items-center gap-[1.891%] rounded-[0.9rem] transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-[10.575rem] sm:rounded-[1rem]"
           >
             <Image
-              src="/apple-touch-icon.png"
-              alt={marketing.hero.imageAlt}
-              width={180}
-              height={180}
+              src={tidexAppIcon}
+              alt=""
               priority
-              className="h-11 w-11 rounded-[0.9rem] sm:h-12 sm:w-12 sm:rounded-[1rem]"
+              className="h-auto w-full"
+            />
+            <Image
+              src={tidexWordmark}
+              alt={marketing.hero.imageAlt}
+              priority
+              className="h-auto w-full"
             />
           </a>
           <MarketingLocaleToggle locale={locale} />
