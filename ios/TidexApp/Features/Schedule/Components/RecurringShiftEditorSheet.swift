@@ -232,7 +232,7 @@ struct RecurringShiftEditorSheet: View {
     .onAppear {
       initializeEditState()
     }
-    .interactiveDismissDisabled(hasChanges)
+    .interactiveDismissDisabled(hasChanges || editedStartTime == nil || editedEndTime == nil)
     .alert(
       String(localized: .recurringDeleteConfirmTitle),
       isPresented: $showDeleteConfirmation

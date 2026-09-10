@@ -10,6 +10,7 @@
     @State private var isPinned: Bool = true
     @State private var startTime: Date? = EventSheetFormatter.date(from: "09:00")
     @State private var endTime: Date? = EventSheetFormatter.date(from: "17:00")
+    @State private var showingShiftEditor: Bool = false
     @StateObject private var paywallModel: PaywallViewModel = .init()
     @StateObject private var loginModel: LoginViewModel = .init()
 
@@ -57,6 +58,14 @@
             }
           }
           .dynamicTypeSize(screen == "time-input-accessibility" ? .accessibility5 : dynamicTypeSize)
+        case "shift-editor":
+          Button(String(localized: .shiftsActionsEdit)) {
+            showingShiftEditor = true
+          }
+          .sheet(isPresented: $showingShiftEditor) {
+            ShiftDetailsSheet(shift: Self.shifts[0], onUpdate: { _ in }, startInEditMode: true)
+              .environmentObject(AppCoordinator.shared)
+          }
         default:
           NavigationStack {
             ScrollView {

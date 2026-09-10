@@ -29,7 +29,9 @@ final class TimeInputFocusController: ObservableObject {
   }
 
   func focus(_ field: TimeInputField?) {
-    currentFocus = field
+    if currentFocus != field {
+      currentFocus = field
+    }
 
     switch field {
     case .start:
@@ -154,11 +156,20 @@ private struct TimeTextField: UIViewRepresentable {
     }
 
     let shouldFocus = focusController.currentFocus == field
-    if shouldFocus, uiView.window != nil, !uiView.isFirstResponder {
-      uiView.becomeFirstResponder()
-      context.coordinator.setCursor(uiView, position: text.count)
-    } else if !shouldFocus, uiView.isFirstResponder {
-      uiView.resignFirstResponder()
+    if shouldFocus != uiView.isFirstResponder {
+      // Changing the first responder during a SwiftUI update can reenter its view graph.
+      // Recheck the requested field after the update so rapid focus changes stay ordered.
+      DispatchQueue.main.async { [weak uiView, weak focusController] in
+        guard let uiView, let focusController else { return }
+        if focusController.currentFocus == field {
+          if uiView.window != nil, !uiView.isFirstResponder {
+            uiView.becomeFirstResponder()
+            context.coordinator.setCursor(uiView, position: uiView.text?.count ?? 0)
+          }
+        } else if uiView.isFirstResponder {
+          uiView.resignFirstResponder()
+        }
+      }
     }
   }
 

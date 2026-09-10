@@ -152,8 +152,9 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
     let save = app.buttons["Save"]
     XCTAssertTrue(save.isEnabled)
-    start.tap()
+    start.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
     start.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2))
+    XCTAssertEqual(start.value as? String, "09")
     XCTAssertFalse(save.isEnabled, "An incomplete time must not retain the previous saved value")
     start.typeText("99")
     XCTAssertEqual(start.value as? String, "09:99")
@@ -177,7 +178,7 @@ final class TidexAppUITests: XCTestCase {
     let start = app.textFields["Start"]
     let end = app.textFields["End"]
     XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
-    start.tap()
+    start.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
     start.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2) + "3")
     XCTAssertFalse(app.buttons["Save"].isEnabled)
     end.tap()
@@ -206,6 +207,33 @@ final class TidexAppUITests: XCTestCase {
     attachment.name = "Time input with accessibility text size"
     attachment.lifetime = .keepAlways
     add(attachment)
+  }
+
+  @MainActor
+  func testShiftEditorKeepsInvalidDraftWhenSwipedDown() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "shift-editor"
+    app.launch()
+    app.buttons["Edit"].tap()
+
+    let start = app.textFields["Start"]
+    XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
+    start.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+    start.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2) + "99")
+    XCTAssertEqual(start.value as? String, "09:99")
+    XCTAssertFalse(app.buttons["Save"].isEnabled)
+
+    let navigationBar = app.navigationBars.firstMatch
+    navigationBar.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+      .press(
+        forDuration: 0.1,
+        thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)))
+    XCTAssertTrue(
+      app.buttons["Cancel"].exists, "Invalid edits must survive a sheet dismissal gesture")
+    XCTAssertEqual(start.value as? String, "09:99")
+    app.buttons["Cancel"].tap()
+    XCTAssertFalse(start.exists)
+    XCTAssertTrue(app.buttons["Done"].exists, "Cancel must still allow leaving the editor")
   }
 
   @MainActor

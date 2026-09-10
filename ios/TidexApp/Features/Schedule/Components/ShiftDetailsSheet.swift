@@ -788,7 +788,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         optimisticNoteOverride = nil
       }
     }
-    .interactiveDismissDisabled(isEditing && hasChanges)
+    .interactiveDismissDisabled(
+      isEditing && (hasChanges || editedStartTime == nil || editedEndTime == nil)
+    )
     .sheet(isPresented: $showingShareDestinationPicker) {
       ShareDestinationSheet(
         onShareAsImage: {
