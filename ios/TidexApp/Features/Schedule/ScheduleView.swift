@@ -1799,10 +1799,13 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       self.selectedListJobId = nil
     }
 
+    let listMonth = ScheduleListMonth(
+      year: viewModel.committedYear, month: viewModel.committedMonth)
+    let monthShifts = viewModel.shifts.filter { listMonth.contains($0.shiftDate) }
     let filtered: [ShiftWithComputations]
     if let selectedListJobId {
       let defaultJobId = defaultActiveJobId
-      filtered = viewModel.shifts.filter { shift in
+      filtered = monthShifts.filter { shift in
         if shift.shift.job_id == selectedListJobId {
           return true
         }
@@ -1810,13 +1813,15 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         return shift.shift.job_id == nil && selectedListJobId == defaultJobId
       }
     } else {
-      filtered = viewModel.shifts
+      filtered = monthShifts
     }
     filteredListShiftsCache = filtered
 
     var items: [ShiftListItem] = filtered.map { .shift($0) }
     items.append(
-      contentsOf: viewModel.events.map {
+      contentsOf: viewModel.events.filter {
+        listMonth.overlaps(start: $0.start_date, end: $0.end_date)
+      }.map {
         .event(EventPresentation(event: $0, coveredDateISO: listCoveredDateISO(for: $0)))
       }
     )
@@ -2017,6 +2022,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   private func navigateToAddTab(preselectedDate dateISO: String? = nil) {
     SharedMonthContext.shared.preselectedDate = dateISO
+    coordinator.pendingDeepLink = .addShift(mode: .single, date: dateISO)
     selectedTab = .add
   }
 

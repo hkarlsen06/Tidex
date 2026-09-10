@@ -1,5 +1,22 @@
 import Foundation
 
+/// Limits the agenda list to its month while the calendar keeps adjacent grid days.
+internal struct ScheduleListMonth {
+  private let prefix: String
+
+  internal init(year: Int, month: Int) {
+    prefix = String(format: "%04d-%02d", year, month)
+  }
+
+  internal func contains(_ dateISO: String) -> Bool {
+    dateISO.hasPrefix(prefix + "-")
+  }
+
+  internal func overlaps(start: String, end: String) -> Bool {
+    String(start.prefix(7)) <= prefix && String(end.prefix(7)) >= prefix
+  }
+}
+
 internal enum DayPresentationItem: Identifiable, Equatable {
   case event(EventPresentation)
   case shift(ShiftWithComputations)

@@ -81,6 +81,7 @@ struct ShiftModeToggle: View {
     .buttonStyle(.plain)
     .accessibilityLabel(localizedTitle(for: modeOption))
     .accessibilityAddTraits(isSelected ? .isSelected : [])
+    .accessibilityIdentifier("add-shift.mode.\(modeOption.rawValue)")
   }
 
   @ViewBuilder

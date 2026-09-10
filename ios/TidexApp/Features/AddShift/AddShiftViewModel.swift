@@ -73,6 +73,7 @@ internal final class AddShiftViewModel: ObservableObject {
   private let jobPaySetupStatusService: JobPaySetupStatusService
   private let monthContext: SharedMonthContext
   private let addShiftCoordinator: AddShiftCoordinator
+  private let draftDefaults: UserDefaults
   private var eventRangeAnchorDate: Date?
   private var didEditEventCalendarSelectionSinceEnteringEventMode: Bool = false
   private var isSyncingCalendarSelectionAcrossModes: Bool = false
@@ -493,7 +494,8 @@ internal final class AddShiftViewModel: ObservableObject {
     snapshotsRepository: SnapshotsRepository? = nil,
     jobPaySetupStatusService: JobPaySetupStatusService? = nil,
     monthContext: SharedMonthContext? = nil,
-    addShiftCoordinator: AddShiftCoordinator? = nil
+    addShiftCoordinator: AddShiftCoordinator? = nil,
+    draftDefaults: UserDefaults = .standard
   ) {
     self.shiftsRepository = shiftsRepository ?? ShiftsRepository.shared
     self.eventsRepository = eventsRepository ?? EventsRepository.shared
@@ -504,6 +506,7 @@ internal final class AddShiftViewModel: ObservableObject {
     self.jobPaySetupStatusService = jobPaySetupStatusService ?? JobPaySetupStatusService.shared
     self.monthContext = monthContext ?? SharedMonthContext.shared
     self.addShiftCoordinator = addShiftCoordinator ?? AddShiftCoordinator.shared
+    self.draftDefaults = draftDefaults
 
     // Initialize tracking to current month context values
     self.lastObservedYear = self.monthContext.displayYear
@@ -565,6 +568,7 @@ internal final class AddShiftViewModel: ObservableObject {
     modeCycleCancellable = addShiftCoordinator.cycleModeAction
       .receive(on: DispatchQueue.main)
       .sink { [weak self] in
+        guard self?.isLoading == false else { return }
         self?.mode = self?.mode.nextMode ?? .single
       }
   }
@@ -1382,7 +1386,7 @@ internal final class AddShiftViewModel: ObservableObject {
 
   /// Submit single shifts
   func submitSingleShifts() async {
-    guard canSubmitSingle else {
+    guard canSubmitSingle, !isLoading else {
       return
     }
 
@@ -1401,44 +1405,48 @@ internal final class AddShiftViewModel: ObservableObject {
 
     isLoading = true
     error = nil
+    var createdDates: Set<String> = []
+    defer {
+      if !createdDates.isEmpty {
+        reloadShiftsForDisplayedMonth()
+        refreshDistinctShiftTimePairCount(for: userId)
+        NotificationCenter.default.postShiftsDidChange(
+          context: .affecting(isoDates: Array(createdDates))
+        )
+      }
+      isLoading = false
+    }
 
     // Get current tier for gating
     let tier = EntitlementService.shared.effectiveTier
 
     do {
-      let sortedDates = selectedDates.sorted()
       let jobId = effectiveSelectedJobId
+      let submittedStartTime = startTimeString
+      let submittedEndTime = endTimeString
 
-      for dateISO in sortedDates {
-        guard let shiftDate = Date.fromISODateString(dateISO) else {
-          kLogger.warning("Invalid date: \(dateISO)")
-          continue
-        }
-
+      try await saveSelectedSingleShifts { shiftDate in
         // Use tier-checked creation for free users
         _ = try await shiftsRepository.createShiftWithTierCheck(
           userId: userId,
           jobId: jobId,
           shiftDate: shiftDate,
-          startTime: startTimeString,
-          endTime: endTimeString,
+          startTime: submittedStartTime,
+          endTime: submittedEndTime,
           customSupplements: nil,
           tier: tier
         )
+        createdDates.insert(shiftDate.toISODateString())
       }
 
-      kLogger.info("Created \(sortedDates.count) shifts")
+      kLogger.info("Created \(createdDates.count) shifts")
 
       // Trigger celebration with the dates that were added
       // Use the current display month as the origin for confetti
       CelebrationManager.shared.celebrate(
-        dates: Set(sortedDates),
+        dates: createdDates,
         originMonth: (year: displayYear, month: displayMonthNumber)
       )
-
-      // Refresh month cache so newly created shifts are immediately visible in Add calendar.
-      reloadShiftsForDisplayedMonth()
-      refreshDistinctShiftTimePairCount(for: userId)
 
       // Clear form
       clearForm()
@@ -1446,21 +1454,19 @@ internal final class AddShiftViewModel: ObservableObject {
       // Success haptic
       Haptics.playShiftCreationSuccess()
 
-      // Notify that shifts changed (for dashboard refresh)
-      NotificationCenter.default.postShiftsDidChange(
-        context: .affecting(isoDates: sortedDates)
-      )
-
       // Notify completion
-      onShiftsCreated?(.single(dates: Set(sortedDates)))
+      onShiftsCreated?(.single(dates: createdDates))
 
     } catch ShiftCreationError.monthLimitReached(let months) {
       // Show month limit sheet instead of error
       kLogger.info(
         "Month limit reached, showing month limit sheet. Existing months: \(months.count)")
       existingShiftMonths = months
+      if !createdDates.isEmpty {
+        self.error = String(localized: .addShiftSinglePartialSave)
+      }
 
-      // Calculate target month from first selected date
+      // Saved dates have been removed, so this is the month that was actually blocked.
       if let firstDate = selectedDates.min(),
         let date = Date.fromISODateString(firstDate)
       {
@@ -1471,16 +1477,35 @@ internal final class AddShiftViewModel: ObservableObject {
       showMonthLimitSheet = true
     } catch {
       kLogger.error("Failed to create shifts: \(error.localizedDescription)")
-      self.error = error.localizedDescription
+      self.error =
+        createdDates.isEmpty
+        ? error.localizedDescription
+        : String(localized: .addShiftSinglePartialSave) + "\n" + error.localizedDescription
       Haptics.play(.error)
     }
+  }
 
-    isLoading = false
+  /// Check all dates before writing, then retire each saved date from the retryable draft.
+  /// A failure leaves only the failed and unattempted dates selected, including after relaunch.
+  func saveSelectedSingleShifts(
+    createShift: (Date) async throws -> Void
+  ) async throws {
+    let dates = try selectedDates.sorted().map { dateISO in
+      guard let date = Date.fromISODateString(dateISO) else {
+        throw ShiftSaveError.invalidDate
+      }
+      return (iso: dateISO, date: date)
+    }
+    for selection in dates {
+      try await createShift(selection.date)
+      selectedDates.remove(selection.iso)
+      saveDraft()
+    }
   }
 
   /// Submit a private event.
   func submitEvent() async {
-    guard canSubmitEvent else {
+    guard canSubmitEvent, !isLoading else {
       return
     }
 
@@ -1611,7 +1636,7 @@ internal final class AddShiftViewModel: ObservableObject {
 
   /// Submit recurring shift
   func submitRecurringShift() async {
-    guard canSubmitRecurring else {
+    guard canSubmitRecurring, !isLoading else {
       return
     }
 
@@ -2479,14 +2504,14 @@ internal final class AddShiftViewModel: ObservableObject {
     }
 
     if let data = try? JSONEncoder().encode(draft) {
-      UserDefaults.standard.set(data, forKey: ShiftDraft.userDefaultsKey)
+      draftDefaults.set(data, forKey: ShiftDraft.userDefaultsKey)
       kLogger.debug("Saved draft: mode=\(draft.mode.rawValue), dates=\(draft.selectedDates.count)")
     }
   }
 
   /// Load a saved draft if it exists and hasn't expired
   private func loadDraft() {
-    guard let data = UserDefaults.standard.data(forKey: ShiftDraft.userDefaultsKey),
+    guard let data = draftDefaults.data(forKey: ShiftDraft.userDefaultsKey),
       let draft = try? JSONDecoder().decode(ShiftDraft.self, from: data),
       !draft.isExpired,
       draft.hasContent
@@ -2547,12 +2572,13 @@ internal final class AddShiftViewModel: ObservableObject {
   func clearDraft() {
     draftSaveTask?.cancel()
     draftSaveTask = nil
-    UserDefaults.standard.removeObject(forKey: ShiftDraft.userDefaultsKey)
+    draftDefaults.removeObject(forKey: ShiftDraft.userDefaultsKey)
     kLogger.debug("Cleared draft")
   }
 
   /// Start fresh - clear all form data and the draft
   func startFresh() {
+    guard !isLoading else { return }
     clearDraft()
     clearSelectedDates()
     clearAnchors()

@@ -587,13 +587,13 @@ struct MainTabView: View {
         .accessibilityHidden(true)
     }
     .buttonStyle(.plain)
-    .disabled(!addShiftCoordinator.hasContent)
+    .disabled(!addShiftCoordinator.hasContent || addShiftCoordinator.isLoading)
     .tidexGlass(
       shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
       interactive: true
     )
     .transition(.opacity)
-    .accessibilityLabel(Text(.commonBack))
+    .accessibilityLabel(Text(.addShiftStartFreshConfirmAction))
   }
 
   private var shiftsBottomToolbarPill: some View {

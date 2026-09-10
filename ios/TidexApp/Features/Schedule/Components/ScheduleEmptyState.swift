@@ -61,7 +61,7 @@ struct ShiftsEmptyState: View {
         .multilineTextAlignment(.center)
         .padding(.horizontal, Spacing.xxl)
 
-      // Action buttons based on period
+      // Recording a shift is available for past months as well as future plans.
       actionButtons
         .padding(.top, Spacing.xs)
 
@@ -130,28 +130,22 @@ struct ShiftsEmptyState: View {
     }
   }
 
-  @ViewBuilder
   private var actionButtons: some View {
-    switch monthPeriod {
-    case .past:
-      // No action for past months
-      EmptyView()
-
-    case .current, .future:
-      Button(action: onAddShift) {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "plus")
-            .font(.tidexCaptionStrong)
-          Text(.shiftsEmptyAddShift)
-            .font(.tidexButton)
-        }
-        .foregroundColor(.tidexTextOnBrand)
-        .padding(.horizontal, Spacing.lg)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.tidexBlue)
-        .cornerRadius(CornerRadius.lg)
+    Button(action: onAddShift) {
+      HStack(spacing: Spacing.xs) {
+        Image(systemName: "plus")
+          .font(.tidexCaptionStrong)
+          .accessibilityHidden(true)
+        Text(.shiftsEmptyAddShift)
+          .font(.tidexButton)
       }
+      .foregroundColor(.tidexTextOnBrand)
+      .padding(.horizontal, Spacing.lg)
+      .padding(.vertical, Spacing.sm)
+      .background(Color.tidexBlue)
+      .cornerRadius(CornerRadius.lg)
     }
+    .accessibilityIdentifier("schedule-empty.add-shift")
   }
 }
 

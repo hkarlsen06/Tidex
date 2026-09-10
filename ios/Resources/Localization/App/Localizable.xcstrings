@@ -35095,6 +35095,288 @@
         }
       }
     },
+    "addShift.single.partialSave" : {
+      "comment" : "Shown when some selected shifts were saved but a later shift failed. Only unsaved dates remain selected for retry.",
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم حفظ بعض الورديات. ما زالت التواريخ غير المحفوظة فقط محددة. أعد المحاولة لإكمال حفظها."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Някои смени бяха запазени. Избрани остават само незапазените дати. Опитайте отново, за да завършите запазването им."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "কিছু শিফট সংরক্ষিত হয়েছে। শুধুমাত্র অসংরক্ষিত তারিখগুলো নির্বাচিত রয়েছে। সেগুলো সংরক্ষণ সম্পূর্ণ করতে আবার চেষ্টা করুন।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S'han desat alguns torns. Només les dates no desades continuen seleccionades. Torna-ho a provar per acabar de desar-les."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Některé směny byly uloženy. Stále jsou vybraná jen data, která se nepodařilo uložit. Zkuste to znovu a dokončete jejich uložení."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noen vagter blev gemt. Kun de datoer, der ikke blev gemt, er stadig valgt. Prøv igen for at gemme dem."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einige Schichten wurden gespeichert. Nur die nicht gespeicherten Daten sind weiterhin ausgewählt. Versuche es erneut, um sie vollständig zu speichern."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ορισμένες βάρδιες αποθηκεύτηκαν. Παραμένουν επιλεγμένες μόνο οι ημερομηνίες που δεν αποθηκεύτηκαν. Δοκιμάστε ξανά για να ολοκληρωθεί η αποθήκευσή τους."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some shifts were saved. Only the unsaved dates remain selected. Retry to finish saving them."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se guardaron algunos turnos. Solo las fechas no guardadas siguen seleccionadas. Inténtalo de nuevo para terminar de guardarlas."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mõned vahetused salvestati. Valituks jäävad ainult salvestamata kuupäevad. Proovi uuesti, et nende salvestamine lõpule viia."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برخی شیفت‌ها ذخیره شدند. فقط تاریخ‌های ذخیره‌نشده همچنان انتخاب شده‌اند. برای تکمیل ذخیره‌سازی آن‌ها دوباره تلاش کنید."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jotkin työvuorot tallennettiin. Vain tallentamattomat päivät ovat edelleen valittuina. Yritä uudelleen tallentaaksesi ne."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Na-save ang ilang shift. Nananatiling napili ang mga petsang hindi na-save. Subukang muli upang makumpleto ang pag-save ng mga ito."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Certaines périodes de travail ont été enregistrées. Seules les dates non enregistrées restent sélectionnées. Réessayez pour terminer leur enregistrement."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "חלק מהמשמרות נשמרו. רק התאריכים שלא נשמרו עדיין מסומנים. נסו שוב כדי לסיים את שמירתם."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कुछ शिफ्ट सहेजी गईं। केवल न सहेजी गई तारीखें चयनित हैं। उन्हें सहेजना पूरा करने के लिए फिर से प्रयास करें।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neke su smjene spremljene. Odabrani su samo datumi koji nisu spremljeni. Pokušajte ponovno da biste ih spremili."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Néhány műszak mentése sikerült. Csak a nem mentett dátumok maradtak kijelölve. Próbáld újra a mentésük befejezéséhez."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beberapa shift telah disimpan. Hanya tanggal yang belum disimpan yang tetap dipilih. Coba lagi untuk menyelesaikan penyimpanannya."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sumar vaktir voru vistaðar. Aðeins óvistaðar dagsetningar eru enn valdar. Reyndu aftur til að ljúka við að vista þær."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alcuni turni sono stati salvati. Solo le date non salvate restano selezionate. Riprova per completare il salvataggio."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一部のシフトを保存しました。未保存の日付のみ選択されたままです。再試行して保存を完了してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일부 근무가 저장되었습니다. 저장되지 않은 날짜만 계속 선택되어 있습니다. 저장을 완료하려면 다시 시도하세요."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kai kurios pamainos išsaugotos. Pažymėtos liko tik neišsaugotos datos. Bandykite dar kartą, kad jas išsaugotumėte."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dažas maiņas tika saglabātas. Atlasīti joprojām ir tikai nesaglabātie datumi. Mēģiniet vēlreiz, lai pabeigtu to saglabāšanu."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noen vakter ble lagret. Bare datoene som ikke ble lagret, er fortsatt valgt. Prøv igjen for å lagre resten."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sommige diensten zijn opgeslagen. Alleen de niet-opgeslagen datums blijven geselecteerd. Probeer het opnieuw om ze op te slaan."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nokre vakter vart lagra. Berre datoane som ikkje vart lagra, er framleis valde. Prøv på nytt for å lagre dei."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niektóre zmiany zostały zapisane. Zaznaczone pozostały tylko niezapisane daty. Spróbuj ponownie, aby je zapisać."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alguns turnos foram salvos. Apenas as datas não salvas continuam selecionadas. Tente novamente para concluir o salvamento."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unele ture au fost salvate. Doar datele nesalvate rămân selectate. Încearcă din nou pentru a finaliza salvarea."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Некоторые смены сохранены. Выбраны только даты, которые не удалось сохранить. Повторите попытку, чтобы завершить сохранение."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Niektoré zmeny boli uložené. Vybrané zostávajú iba neuložené dátumy. Skúste to znova a dokončite ich uloženie."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nekatere izmene so bile shranjene. Izbrani ostajajo samo datumi, ki niso bili shranjeni. Poskusite znova, da jih shranite."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Neke smene su sačuvane. Samo datumi koji nisu sačuvani ostaju izabrani. Pokušajte ponovo da ih sačuvate."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vissa pass sparades. Endast de osparade datumen är fortfarande markerade. Försök igen för att spara resten."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baadhi ya zamu zilihifadhiwa. Ni tarehe ambazo hazikuhifadhiwa pekee ndizo zimesalia kuchaguliwa. Jaribu tena ili ukamilishe kuzihifadhi."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "சில பணி நேரங்கள் சேமிக்கப்பட்டன. சேமிக்கப்படாத தேதிகள் மட்டுமே தேர்ந்தெடுக்கப்பட்டுள்ளன. அவற்றைச் சேமிப்பதை முடிக்க மீண்டும் முயற்சிக்கவும்."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "บันทึกบางกะแล้ว เฉพาะวันที่ยังไม่ได้บันทึกเท่านั้นที่ยังถูกเลือก ลองอีกครั้งเพื่อบันทึกวันที่เหลือ"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bazı vardiyalar kaydedildi. Yalnızca kaydedilmeyen tarihler seçili kaldı. Bunları kaydetmeyi tamamlamak için tekrar deneyin."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Деякі зміни збережено. Вибраними залишилися лише незбережені дати. Спробуйте ще раз, щоб завершити їх збереження."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کچھ شفٹیں محفوظ ہو گئیں۔ صرف غیر محفوظ تاریخیں منتخب ہیں۔ انہیں محفوظ کرنے کے لیے دوبارہ کوشش کریں۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Một số ca đã được lưu. Chỉ những ngày chưa lưu vẫn được chọn. Hãy thử lại để hoàn tất việc lưu."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部分班次已保存。仅未保存的日期仍处于选中状态。请重试以完成保存。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部分班次已儲存。僅未儲存的日期仍保持選取。請重試以完成儲存。"
+          }
+        }
+      }
+    },
     "addShift.single.successSaved" : {
       "extractionState" : "manual",
       "localizations" : {
