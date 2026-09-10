@@ -21,117 +21,21 @@ private enum TidexWidgetColors {
   static let lightBackground = Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
   /// Dark mode background
   static let darkBackground = Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
-
-  /// Logo gradient colors from short-logo-gradient.svg.
-  static let logoGradient = [
-    Color(red: 0, green: 212 / 255, blue: 1),  // #00D4FF - cyan (top)
-    Color(red: 123 / 255, green: 97 / 255, blue: 1),  // #7B61FF - purple (middle)
-    Color(red: 155 / 255, green: 77 / 255, blue: 202 / 255),  // #9B4DCA - magenta (bottom)
-  ]
 }
 
 // MARK: - Logo Watermark View
 
-/// Tidex "T" logo shape - exact path from short-logo-gradient.svg (converted via online tool)
-private struct TidexLogoShape: Shape {
-  func path(in rect: CGRect) -> Path {
-    var path = Path()
-
-    // Original path bounds
-    let pathMinX: CGFloat = 0.63993
-    let pathMaxX: CGFloat = 1.2635
-    let pathMinY: CGFloat = 1.7177
-    let pathMaxY: CGFloat = 2.311
-
-    let pathWidth = pathMaxX - pathMinX  // ~0.624
-    let pathHeight = pathMaxY - pathMinY  // ~0.593
-
-    // Use uniform scaling to preserve aspect ratio
-    let scale = min(rect.width / pathWidth, rect.height / pathHeight)
-
-    // Center the path in the rect
-    let scaledWidth = pathWidth * scale
-    let scaledHeight = pathHeight * scale
-    let offsetX = (rect.width - scaledWidth) / 2
-    let offsetY = (rect.height - scaledHeight) / 2
-
-    func pt(_ xPos: CGFloat, _ yPos: CGFloat) -> CGPoint {
-      CGPoint(
-        x: offsetX + (xPos - pathMinX) * scale,
-        y: offsetY + (yPos - pathMinY) * scale
-      )
-    }
-
-    path.move(to: pt(1.23732, 1.7177))
-    path.addCurve(
-      to: pt(0.66612, 1.7177), control1: pt(1.13775, 1.7179), control2: pt(0.76566, 1.71337)
-    )
-    path.addCurve(
-      to: pt(0.63993, 1.74003), control1: pt(0.65617, 1.71814), control2: pt(0.6412, 1.72111)
-    )
-    path.addCurve(
-      to: pt(0.63993, 1.81659), control1: pt(0.6388, 1.75702), control2: pt(0.6372, 1.79978)
-    )
-    path.addCurve(
-      to: pt(0.66612, 1.83892), control1: pt(0.6412, 1.82434), control2: pt(0.64969, 1.83921)
-    )
-    path.addCurve(
-      to: pt(0.83797, 1.83892), control1: pt(0.69934, 1.83832), control2: pt(0.80156, 1.83786)
-    )
-    path.addCurve(
-      to: pt(0.88052, 1.88038), control1: pt(0.85928, 1.83953), control2: pt(0.88041, 1.85613)
-    )
-    path.addCurve(
-      to: pt(0.88052, 2.311), control1: pt(0.88091, 1.95937), control2: pt(0.88011, 2.24337)
-    )
-    path.addCurve(
-      to: pt(1.02782, 2.25997), control1: pt(0.88095, 2.38083), control2: pt(1.02782, 2.32572)
-    )
-    path.addCurve(
-      to: pt(1.02782, 1.87719), control1: pt(1.02783, 2.18381), control2: pt(1.02715, 1.94768)
-    )
-    path.addCurve(
-      to: pt(1.06874, 1.83892), control1: pt(1.02797, 1.86204), control2: pt(1.04362, 1.83915)
-    )
-    path.addCurve(
-      to: pt(1.23568, 1.83892), control1: pt(1.10399, 1.83859), control2: pt(1.20286, 1.83973)
-    )
-    path.addCurve(
-      to: pt(1.2635, 1.81021), control1: pt(1.25067, 1.83854), control2: pt(1.26304, 1.83083)
-    )
-    path.addCurve(
-      to: pt(1.2635, 1.74482), control1: pt(1.26387, 1.79389), control2: pt(1.26396, 1.76203)
-    )
-    path.addCurve(
-      to: pt(1.23732, 1.7177), control1: pt(1.26317, 1.73255), control2: pt(1.25496, 1.71767)
-    )
-    path.closeSubpath()
-
-    return path
-  }
-}
-
-/// Gradient-filled logo watermark with brand colors from short-logo-gradient.svg
-/// Supports both full color gradient and tinted monochrome modes
+/// Uses the same generated artwork as the app, with a template for tinted widgets.
 private struct LogoWatermark: View {
   var useTint: Bool = false
 
   var body: some View {
-    if useTint {
-      // Tinted mode: solid fill that will receive the widget's accent color
-      TidexLogoShape()
-        .fill(Color.primary.opacity(0.6))
-    } else {
-      // Full color mode: gradient fill
-      TidexLogoShape()
-        .fill(
-          LinearGradient(
-            colors: TidexWidgetColors.logoGradient,
-            startPoint: .top,
-            endPoint: .bottom
-          )
-        )
-    }
+    Image("TidexLogo")
+      .renderingMode(useTint ? .template : .original)
+      .resizable()
+      .scaledToFit()
+      .foregroundStyle(Color.primary.opacity(0.6))
+      .accessibilityHidden(true)
   }
 }
 

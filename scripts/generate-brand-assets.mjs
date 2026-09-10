@@ -181,6 +181,8 @@ try {
   await writeFile(path.join(publicDir, 'safari-pinned-tab.svg'), await croppedSVG(await markSVG('light', true)) + '\n');
 
   await imageset('TidexLogo', 'tidex-logo', 140, 94, marks);
+  await cp(path.join(catalog, 'TidexLogo.imageset'),
+    path.join(root, 'ios/TidexShiftWidget/Assets.xcassets/TidexLogo.imageset'), { recursive: true });
   await imageset('TidexWordmark', 'tidex-wordmark', Math.round(lockupWidth * 0.32), 32, lockups);
   await imageset('Splash', 'splash', 300, 300, marks, 40);
   await imageset('SplashLaunch', 'splash-launch', 150, 150, marks, 20);
