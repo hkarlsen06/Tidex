@@ -462,8 +462,14 @@ function payTotals(periods: WagePeriod[]) {
     basePay += hours * period.baseRate;
     supplementPay += hours * period.supplementRate;
   }
-  basePay = Math.round(basePay * CURRENCY_PRECISION) / CURRENCY_PRECISION;
-  supplementPay = Math.round(supplementPay * CURRENCY_PRECISION) / CURRENCY_PRECISION;
+  const roundPay = (amount: number) => {
+    const cents = amount * CURRENCY_PRECISION;
+    // Allow for floating-point error from each contribution and the final scaling.
+    const tolerance = Math.abs(cents) * Number.EPSILON * (periods.length + 2);
+    return Math.round(cents + tolerance) / CURRENCY_PRECISION;
+  };
+  basePay = roundPay(basePay);
+  supplementPay = roundPay(supplementPay);
   return {
     basePay,
     supplementPay,

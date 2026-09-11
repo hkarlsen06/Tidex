@@ -315,7 +315,7 @@ internal final class AddShiftViewModel: ObservableObject {
     let previewEarnings: [String: CalendarEarningsData]
   }
 
-  private struct EarningsComputationContext {
+  struct EarningsComputationContext {
     let requiresExplicitJobSelection: Bool
     let selectedJobId: String?
     let effectiveJobId: String?
@@ -2201,7 +2201,7 @@ internal final class AddShiftViewModel: ObservableObject {
     )
   }
 
-  private nonisolated static func computeEarningsForDate(
+  nonisolated static func computeEarningsForDate(
     _ dateISO: String,
     startTime: String,
     endTime: String,
@@ -2247,13 +2247,17 @@ internal final class AddShiftViewModel: ObservableObject {
     )
 
     let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
-    let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
-    let net = computed.netPay(
-      taxEnabled: taxEnabled,
-      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
-    )
+    let job = context.jobs.first { $0.id == effectiveJobId }
+    let taxSettings = PayoutTaxSettings(
+      enabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+      percentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+    ).adjusted(
+      payoutMonth: PayrollEngine.payoutMonth(from: dateISO),
+      halfTaxMonth: job.map(\.half_tax_month) ?? context.settings?.half_tax_month)
 
-    return CalendarEarningsData(net: net, gross: computed.gross, hasTaxEnabled: taxEnabled)
+    return CalendarEarningsData(
+      net: taxSettings.netAmount(from: computed.gross), gross: computed.gross,
+      hasTaxEnabled: taxSettings.enabled)
   }
 
   private nonisolated static func snapshotsForJob(

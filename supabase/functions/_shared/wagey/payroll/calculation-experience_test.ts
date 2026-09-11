@@ -87,6 +87,26 @@ Deno.test("splitting periods cannot change pay for an unchanged rate", () => {
   assertEquals(split.supplementPay, 20);
 });
 
+Deno.test("tariff half-cent rounding is independent of period splits", () => {
+  for (const [rate, minutes, split, expected] of [
+    [184.54, 45, 7, 138.41], [185.38, 15, 4, 46.35],
+    [187.46, 15, 4, 46.87], [193.05, 10, 2, 32.18],
+    [210.81, 30, 9, 105.41], [256.14, 45, 3, 192.11],
+    [193.049999, 10, 2, 32.17],
+  ]) {
+    const end = `08:${String(minutes).padStart(2, "0")}` as SupplementRule["to"];
+    const cut = `08:${String(split).padStart(2, "0")}` as SupplementRule["from"];
+    const unsplit = compute("2026-02-02", "08:00", end, [], { hourly_wage: rate });
+    const splitShift = compute("2026-02-02", "08:00", end, [
+      { days: [1], from: "08:00", to: cut, rate },
+      { days: [1], from: cut, to: end, rate },
+    ], { hourly_wage: rate });
+    assertEquals(unsplit.basePay, expected);
+    assertEquals(splitShift.basePay, expected);
+    assertEquals(splitShift.supplementPay, expected);
+  }
+});
+
 Deno.test("overtime recomputation preserves exact minute pay", () => {
   const shift: ShiftRow = {
     id: "shift", user_id: "user", shift_date: "2026-02-02",

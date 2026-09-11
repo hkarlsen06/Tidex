@@ -8,6 +8,30 @@ final class AddShiftSubmissionTests: XCTestCase {
     case unavailable
   }
 
+  func testEarningsPreviewUsesTheWorkplacesPayoutTaxSettings() throws {
+    let settings = try JSONDecoder().decode(
+      UserSettings.self,
+      from: Data(#"{"user_id":"user-1","theme":"system","half_tax_month":11}"#.utf8))
+    for halfTaxMonth: Int? in [11, nil] {
+      let job = TestFixtures.job(id: "job", isDefault: true, halfTaxMonth: halfTaxMonth)
+      let snapshots = [
+        TestFixtures.wageSnapshot(
+          taxEnabled: true, taxPercentage: 20, breakEnabled: false, jobId: job.id),
+        TestFixtures.wageSnapshot(
+          fromDate: "2026-11-01", taxEnabled: true, taxPercentage: 30,
+          breakEnabled: false, jobId: job.id),
+      ]
+      let preview = try XCTUnwrap(
+        AddShiftViewModel.computeEarningsForDate(
+          "2026-10-31", startTime: "22:00", endTime: "02:00",
+          context: .init(
+            requiresExplicitJobSelection: false, selectedJobId: job.id, effectiveJobId: job.id,
+            snapshots: snapshots, jobs: [job], configuredJobIds: [job.id], settings: settings)))
+      XCTAssertEqual(preview.gross, 800, accuracy: 0.001)
+      XCTAssertEqual(preview.net, halfTaxMonth == 11 ? 680 : 560, accuracy: 0.001)
+    }
+  }
+
   func testPartialSaveRetainsOnlyUnsavedDatesAndRetryDoesNotDuplicateShifts() async throws {
     let (model, defaults) = try makeModel()
     defer { model.clearDraft() }
