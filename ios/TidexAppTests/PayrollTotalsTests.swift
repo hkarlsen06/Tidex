@@ -3,6 +3,70 @@ import XCTest
 @testable import Tidex
 
 final class PayrollTotalsTests: XCTestCase {
+  func testSharedShiftsUseTheSamePayoutTaxAsTheirOwner() throws {
+    let scenarios: [(jobs: [Job], jobId: String?, halfTaxMonth: Int?, expectedRate: Double)] = [
+      ([TestFixtures.job(id: "job", isDefault: true, halfTaxMonth: 11)], "job", nil, 15),
+      ([TestFixtures.job(id: "job", isDefault: true, halfTaxMonth: nil)], "job", 11, 30),
+      ([TestFixtures.job(id: "job", isDefault: true, halfTaxMonth: 11)], nil, nil, 15),
+      ([], nil, 11, 15),
+      ([], nil, 12, 30),
+    ]
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    for scenario in scenarios {
+      let settings = try decoder.decode(
+        UserSettings.self,
+        from: JSONSerialization.data(withJSONObject: [
+          "user_id": "user-1", "theme": "system",
+          "half_tax_month": scenario.halfTaxMonth.map { $0 as Any } ?? NSNull(),
+        ]))
+      let snapshots = [
+        TestFixtures.wageSnapshot(
+          taxEnabled: true, taxPercentage: 20, breakEnabled: false,
+          jobId: scenario.jobs.first?.id),
+        TestFixtures.wageSnapshot(
+          fromDate: "2026-11-01", taxEnabled: true, taxPercentage: 30,
+          breakEnabled: false, jobId: scenario.jobs.first?.id),
+      ]
+      let row = TestFixtures.shift(
+        shiftDate: "2026-10-31", startTime: "22:00", endTime: "02:00",
+        jobId: scenario.jobId)
+      let owner = try XCTUnwrap(
+        PayrollEngine.computeShiftsForMonth(
+          .init(
+            year: 2026, month: 10, shifts: [row], recurring: [], snapshots: snapshots,
+            settings: settings, jobs: scenario.jobs)
+        ).first)
+      let payload = SharingRPCPayloadInput(
+        ownerId: try XCTUnwrap(row.user_id), showEarnings: true,
+        settings: try decoder.decode(SharingRPCUserSettings.self, from: encoder.encode(settings)),
+        shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(row))],
+        recurringShifts: [],
+        snapshots: try snapshots.map {
+          try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode($0))
+        },
+        jobs: try scenario.jobs.map {
+          try decoder.decode(SharingRPCJobRow.self, from: encoder.encode($0))
+        })
+      let shared = try XCTUnwrap(
+        SharingComputeCore.computeShiftsInRange(
+          payload: payload, startDate: row.shift_date, endDate: row.shift_date, mode: .visible
+        ).first)
+      XCTAssertEqual(shared.taxPercentage, scenario.expectedRate)
+      XCTAssertEqual(shared.taxPercentage, owner.effectiveTaxPercentage)
+      XCTAssertEqual(
+        shared.computed.gross * (1 - shared.taxPercentage / 100), owner.netPay, accuracy: 0.001)
+
+      let hidden = try XCTUnwrap(
+        SharingComputeCore.computeShiftsInRange(
+          payload: payload, startDate: row.shift_date, endDate: row.shift_date, mode: .hidden
+        ).first)
+      XCTAssertFalse(hidden.taxEnabled)
+      XCTAssertEqual(hidden.taxPercentage, 0)
+      XCTAssertEqual(hidden.computed.gross, 0)
+    }
+  }
+
   func testWorkplaceTaxSettingsMatchShiftTotalsAndWidgetAmounts() throws {
     let jobs = [
       TestFixtures.job(id: "half-tax", isDefault: true, currency: "kr", halfTaxMonth: 11),

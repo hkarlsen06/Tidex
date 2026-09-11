@@ -3,6 +3,51 @@ import XCTest
 @testable import Tidex
 
 final class PayrollCalculatorBehaviorTests: XCTestCase {
+  func testTariffPayRoundsHalfCentsConsistentlyAcrossPeriodSplits() throws {
+    let scenarios: [(rate: Double, minutes: Int, split: Int, expected: Double)] = [
+      (184.54, 45, 7, 138.41), (185.38, 15, 4, 46.35),
+      (187.46, 15, 4, 46.87), (193.05, 10, 2, 32.18),
+      (210.81, 30, 9, 105.41), (256.14, 45, 3, 192.11),
+      (193.049999, 10, 2, 32.17),
+    ]
+    let encoder = JSONEncoder()
+    let decoder = JSONDecoder()
+    for scenario in scenarios {
+      let end = String(format: "08:%02d", scenario.minutes)
+      let cut = String(format: "08:%02d", scenario.split)
+      let row = TestFixtures.shift(shiftDate: "2026-02-02", startTime: "08:00", endTime: end)
+      let snapshot = TestFixtures.wageSnapshot(
+        hourlyWage: scenario.rate,
+        supplements: [
+          SupplementRule(days: [1], from: "08:00", to: cut, rate: scenario.rate),
+          SupplementRule(days: [1], from: cut, to: end, rate: scenario.rate),
+        ], breakEnabled: false)
+      let computed = PayrollCalculator.computeShift(row, snapshot: snapshot)
+      XCTAssertEqual(computed.basePay, scenario.expected)
+      XCTAssertEqual(computed.supplementPay, scenario.expected)
+      XCTAssertEqual(
+        PayrollCalculator.payTotals(for: [
+          WagePeriod(
+            fromMin: 0, toMin: Double(scenario.minutes), baseRate: scenario.rate, supplementRate: 0)
+        ]).base, scenario.expected)
+      let payload = SharingRPCPayloadInput(
+        ownerId: try XCTUnwrap(row.user_id), showEarnings: true,
+        settings: try decoder.decode(SharingRPCUserSettings.self, from: Data("{}".utf8)),
+        shifts: [try decoder.decode(SharingRPCShiftRow.self, from: encoder.encode(row))],
+        recurringShifts: [],
+        snapshots: [
+          try decoder.decode(SharingRPCWageSnapshot.self, from: encoder.encode(snapshot))
+        ],
+        jobs: [])
+      let shared = try XCTUnwrap(
+        SharingComputeCore.computeShiftsInRange(
+          payload: payload, startDate: row.shift_date, endDate: row.shift_date, mode: .visible
+        ).first)
+      XCTAssertEqual(shared.computed.basePay, scenario.expected)
+      XCTAssertEqual(shared.computed.supplementPay, scenario.expected)
+    }
+  }
+
   func testOvernightSupplementsFollowTheWeekdayAtEachRuleStart() {
     let saturday = SupplementRule(days: [6], from: "18:00", to: "24:00", rate: 50)
     let sunday = SupplementRule(days: [7], from: "00:00", to: "24:00", rate: 100)

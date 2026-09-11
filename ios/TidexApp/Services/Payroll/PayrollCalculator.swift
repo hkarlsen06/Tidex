@@ -191,8 +191,8 @@ struct PayrollCalculator {
   ) {
     let base = periods.reduce(0) { $0 + max(0, $1.durationHours) * $1.baseRate }
     let supplement = periods.reduce(0) { $0 + max(0, $1.durationHours) * $1.supplementRate }
-    let basePay = round(base * currencyPrecision) / currencyPrecision
-    let supplementPay = round(supplement * currencyPrecision) / currencyPrecision
+    let basePay = roundedPay(base, periodCount: periods.count)
+    let supplementPay = roundedPay(supplement, periodCount: periods.count)
     return (
       basePay, supplementPay,
       round((basePay + supplementPay) * currencyPrecision) / currencyPrecision
@@ -200,6 +200,13 @@ struct PayrollCalculator {
   }
 
   // MARK: - Private Helpers
+
+  private static func roundedPay(_ amount: Double, periodCount: Int) -> Double {
+    let cents = amount * currencyPrecision
+    // Allow for floating-point error from each contribution and the final scaling.
+    let tolerance = abs(cents) * Double.ulpOfOne * Double(periodCount + 2)
+    return round(cents + tolerance) / currencyPrecision
+  }
 
   /// Resolve the base hourly wage rate for a shift
   /// Priority: 1. Snapshot system, 2. Fallback to preset

@@ -909,6 +909,7 @@ private struct SharingRecurringVirtualShift: Equatable, Sendable {
 
 private struct SharingPayrollContext {
   let fallbackPayrollDay: Int
+  let fallbackHalfTaxMonth: Int?
   let jobsById: [String: SharingRPCJobRow]
   let defaultJobId: String?
   let snapshotsByJobId: [String?: [SharingRPCWageSnapshot]]
@@ -1244,8 +1245,15 @@ enum SharingComputeCore {
     var computed = computeShift(shift: shift, snapshot: wageSnapshot, mode: mode)
 
     let taxEnabled = mode == .hidden ? false : (taxSnapshot?.effectiveTaxEnabled ?? false)
-    let taxPercentage = mode == .hidden ? 0 : (taxSnapshot?.effectiveTaxPercentage ?? 0)
     let job = effectiveJobId.flatMap { context.jobsById[$0] }
+    let halfTaxMonth = job.map(\.halfTaxMonth) ?? context.fallbackHalfTaxMonth
+    let payoutMonth = dateFromISO(payoutDate).map { sharingCalendar.component(.month, from: $0) }
+    let savedTaxPercentage = taxSnapshot?.effectiveTaxPercentage ?? 0
+    let clampedTaxPercentage =
+      savedTaxPercentage.isFinite ? min(max(savedTaxPercentage, 0), 100) : 0
+    let taxPercentage =
+      taxEnabled
+      ? clampedTaxPercentage / (halfTaxMonth != nil && halfTaxMonth == payoutMonth ? 2 : 1) : 0
 
     if mode == .hidden {
       computed = SharingComputedShiftComputed(
@@ -1470,8 +1478,8 @@ enum SharingComputeCore {
       supplementPay += max(0, period.durationHours) * period.supplementRate
     }
 
-    basePay = roundTo(basePay, decimals: 2)
-    supplementPay = roundTo(supplementPay, decimals: 2)
+    basePay = roundedPay(basePay, periodCount: periods.count)
+    supplementPay = roundedPay(supplementPay, periodCount: periods.count)
     return SharingComputedShiftComputed(
       durationHours: computed.durationHours,
       paidHours: computed.paidHours,
@@ -1782,6 +1790,7 @@ enum SharingComputeCore {
 
     return SharingPayrollContext(
       fallbackPayrollDay: settings.effectivePayrollDay,
+      fallbackHalfTaxMonth: settings.halfTaxMonth,
       jobsById: jobsById,
       defaultJobId: defaultJobId,
       snapshotsByJobId: snapshotsByJobId,
@@ -1901,8 +1910,8 @@ enum SharingComputeCore {
       supplementPay += max(0, period.durationHours) * period.supplementRate
     }
 
-    basePay = roundTo(basePay, decimals: 2)
-    supplementPay = roundTo(supplementPay, decimals: 2)
+    basePay = roundedPay(basePay, periodCount: periods.count)
+    supplementPay = roundedPay(supplementPay, periodCount: periods.count)
     let gross = roundTo(basePay + supplementPay, decimals: 2)
 
     return SharingComputedShiftComputed(
@@ -2418,6 +2427,13 @@ enum SharingComputeCore {
     }
 
     return calendar.component(.day, from: date)
+  }
+
+  private static func roundedPay(_ amount: Double, periodCount: Int) -> Double {
+    let cents = amount * 100
+    // Allow for floating-point error from each contribution and the final scaling.
+    let tolerance = abs(cents) * Double.ulpOfOne * Double(periodCount + 2)
+    return round(cents + tolerance) / 100
   }
 
   private static func roundTo(_ value: Double, decimals: Int) -> Double {
