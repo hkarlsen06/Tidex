@@ -36,7 +36,14 @@ final class TidexAppUITests: XCTestCase {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-review"
     app.launch()
+    let review = app.buttons["pay-settings.review-disclosure"]
+    XCTAssertTrue(review.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(review.label.contains("Check pay settings for a date"), review.label)
+    XCTAssertTrue(review.label.contains("November 15, 2026"), review.label)
     let taxSettings = app.buttons["Review these tax settings"]
+    XCTAssertFalse(taxSettings.exists, "The pay-settings date review should start collapsed")
+    attachAppStoreScreenshot(app, name: "pay-review-collapsed")
+    review.tap()
     XCTAssertTrue(taxSettings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     attachAppStoreScreenshot(app, name: "pay-review-date-settings")
     if !taxSettings.isHittable { app.swipeUp() }
@@ -151,8 +158,10 @@ final class TidexAppUITests: XCTestCase {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-accessibility"
     app.launch()
-    XCTAssertTrue(app.staticTexts["Check a calculation"].waitForExistence(timeout: defaultTimeout))
+    let review = app.buttons["pay-settings.review-disclosure"]
+    XCTAssertTrue(review.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     attachAppStoreScreenshot(app, name: "pay-review-large-text-top")
+    review.tap()
     let taxSettings = app.buttons["Review these tax settings"]
     for _ in 0..<6 where !taxSettings.isHittable { app.swipeUp() }
     XCTAssertTrue(taxSettings.isHittable, app.debugDescription)

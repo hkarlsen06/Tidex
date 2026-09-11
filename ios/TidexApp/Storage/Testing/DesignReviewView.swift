@@ -12,6 +12,7 @@
     @State private var endTime: Date? = EventSheetFormatter.date(from: "17:00")
     @State private var showingShiftEditor: Bool = false
     @State private var payReviewDate = Date.fromISODateString("2026-11-15") ?? .now
+    @State private var isPayReviewExpanded = false
     @State private var payEditorSelection: PayEditorSelection?
     @State private var savedPayDescription = ""
     @StateObject private var paywallModel: PaywallViewModel = .init()
@@ -172,6 +173,7 @@
         ScrollView {
           VStack(spacing: Spacing.lg) {
             PaySettingsReviewCard(
+              isExpanded: $isPayReviewExpanded,
               workDate: $payReviewDate, snapshots: Self.payReviewSnapshots, entries: entries,
               currency: "kr", payrollDay: 15, halfTaxMonth: 12,
               onEdit: { snapshot, section in

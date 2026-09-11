@@ -328704,283 +328704,283 @@
       }
     },
     "settings.pay.review.title" : {
-      "comment" : "Heading for reviewing saved calculation inputs by work date.",
+      "comment" : "Button heading that expands pay settings for a chosen work date, so the user can check which saved settings applied then.",
       "extractionState" : "manual",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "تحقق من عملية حسابية"
+            "value" : "تحقّق من إعدادات الأجر ليوم معيّن"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Проверка на изчисление"
+            "value" : "Проверка на настройките за заплащане за дата"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "একটি হিসাব যাচাই করুন"
+            "value" : "একটি তারিখের বেতন সেটিংস দেখুন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Comprova un càlcul"
+            "value" : "Consulta la configuració salarial d’una data"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Zkontrolovat výpočet"
+            "value" : "Zkontrolovat nastavení odměny k datu"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tjek en beregning"
+            "value" : "Se lønindstillinger for en dato"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eine Berechnung prüfen"
+            "value" : "Gehaltsabrechnungseinstellungen für ein Datum prüfen"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ελέγξτε έναν υπολογισμό"
+            "value" : "Έλεγχος ρυθμίσεων αμοιβής για ημερομηνία"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Check a calculation"
+            "value" : "Check pay settings for a date"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Comprobar un cálculo"
+            "value" : "Consultar la configuración de pago de una fecha"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kontrolli arvutust"
+            "value" : "Kontrolli konkreetse kuupäeva palgaseadeid"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "یک محاسبه را بررسی کنید"
+            "value" : "تنظیمات پرداخت را برای یک تاریخ بررسی کنید"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tarkista laskelma"
+            "value" : "Tarkista päivämäärän palkka-asetukset"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suriin ang isang pagkalkula"
+            "value" : "Suriin ang mga setting ng sahod para sa isang petsa"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Vérifier un calcul"
+            "value" : "Vérifier les paramètres de paie pour une date"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "בדיקת חישוב"
+            "value" : "בדיקת הגדרות השכר לתאריך"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "किसी गणना की जाँच करें"
+            "value" : "किसी तारीख की वेतन सेटिंग देखें"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Provjera izračuna"
+            "value" : "Provjerite postavke plaće za datum"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Számítás ellenőrzése"
+            "value" : "Fizetési beállítások ellenőrzése egy dátumra"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Periksa perhitungan"
+            "value" : "Periksa pengaturan gaji untuk tanggal tertentu"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Controlla un calcolo"
+            "value" : "Controlla le impostazioni di paga per una data"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "計算を確認"
+            "value" : "日付の給与設定を確認"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "계산 확인"
+            "value" : "날짜별 급여 설정 확인"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Patikrinkite skaičiavimą"
+            "value" : "Patikrinti atlygio nustatymus pagal datą"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pārbaudi aprēķinu"
+            "value" : "Pārbaudīt algas iestatījumus datumam"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sjekk en beregning"
+            "value" : "Sjekk hva som gjaldt på en dato"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Een berekening controleren"
+            "value" : "Controleer de looninstellingen voor een datum"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sjekk ei berekning"
+            "value" : "Sjekk kva som gjaldt på ein dato"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sprawdź obliczenie"
+            "value" : "Sprawdź ustawienia wynagrodzenia dla daty"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Confira um cálculo"
+            "value" : "Ver configurações de pagamento de uma data"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verifică un calcul"
+            "value" : "Verifică setările de plată pentru o dată"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Проверить расчёт"
+            "value" : "Проверить настройки оплаты за дату"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kontrollera en beräkning"
+            "value" : "Kontrollera löneinställningar för ett datum"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ตรวจสอบการคำนวณ"
+            "value" : "ตรวจสอบการตั้งค่าค่าจ้างของวันที่"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Перевірте розрахунок"
+            "value" : "Перевірити налаштування оплати на дату"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kiểm tra một phép tính"
+            "value" : "Kiểm tra cài đặt lương cho một ngày"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "检查一项计算"
+            "value" : "查看某日期的薪资设置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "檢查計算結果"
+            "value" : "查看某日的薪資設定"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Athuga útreikning"
+            "value" : "Skoða launastillingar fyrir ákveðinn dag"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Skontrolovať výpočet"
+            "value" : "Skontrolovať nastavenia odmeny pre dátum"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Preveri izračun"
+            "value" : "Preverite nastavitve plačila za datum"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Proveri obračun"
+            "value" : "Proverite podešavanja zarade za datum"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bir hesaplamayı kontrol et"
+            "value" : "Bir tarihin ücret ayarlarını kontrol edin"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حساب چیک کریں"
+            "value" : "کسی تاریخ کی اجرت کی ترتیبات دیکھیں"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "கணக்கீட்டைச் சரிபார்க்கவும்"
+            "value" : "ஒரு தேதிக்கான ஊதிய அமைப்புகளைச் சரிபார்க்கவும்"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kagua hesabu"
+            "value" : "Angalia mipangilio ya malipo ya siku"
           }
         }
       }
@@ -455721,6 +455721,288 @@
           }
         }
       }
+    },
+    "settings.pay.review.activeOn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For work on %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For arbeid den %@"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für die Arbeit am %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour le travail du %@"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voor werk op %@"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para o trabalho em %@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para trabajar el %@"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "För arbete den %@"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For arbejde den %@"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per il lavoro del %@"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For arbeid den %@"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Työpäivänä %@"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Per a la feina del %@"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Par darbu %@"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Töö kuupäeval %@"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Už darbą %@"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za práci dne %@"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fyrir vinnu þann %@"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Munkavégzés ekkor: %@"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za prácu dňa %@"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Praca dnia %@"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za delo dne %@"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "За роботу на %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "За работу на %@"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "За работа на %@"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pentru munca din %@"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za rad na datum %@"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Za rad na dan %@"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "برای کار در تاریخ %@"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Για εργασία στις %@"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עבודה בתאריך %@"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "للعمل في %@"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ tarihinde çalışma için"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ کو کام کے لیے"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ அன்று செய்த பணிக்காக"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@の勤務"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ के काम के लिए"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@에 근무한 경우"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "适用于 %@"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "適用於 %@ 的工作"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ তারিখের কাজের জন্য"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สำหรับการทำงานในวันที่ %@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cho công việc vào ngày %@"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Untuk kerja pada %@"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para sa trabaho noong %@"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kwa kazi ya tarehe %@"
+          }
+        }
+      },
+      "comment" : "Subtitle visible even when pay settings are collapsed. The placeholder is the selected work date, formatted with day, month and year."
     }
   },
   "version" : "1.0"

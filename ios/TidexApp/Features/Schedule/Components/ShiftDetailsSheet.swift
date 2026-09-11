@@ -764,7 +764,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       }
     ) {
       if let date = Date.fromISODateString(shift.shiftDate) {
-        PaySettingsSheet(jobId: shift.shift.job_id, workDate: date)
+        PaySettingsSheet(
+          jobId: shift.shift.job_id, workDate: date, initiallyExpandPayReview: true)
       }
     }
     .sheet(isPresented: $showingSendToChatSheet) {

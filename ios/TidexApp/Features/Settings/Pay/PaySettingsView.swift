@@ -10,8 +10,13 @@ struct PaySettingsView: View {
   @State private var showingEditJobSheet = false
   @State private var paySetupJob: Job?
   @State private var showingArchiveConfirmation = false
+  @State private var isPayReviewExpanded: Bool
 
-  init(initialJobId: String? = nil, initialDate: Date = Date()) {
+  init(
+    initialJobId: String? = nil, initialDate: Date = Date(),
+    initiallyExpandPayReview: Bool = false
+  ) {
+    _isPayReviewExpanded = State(initialValue: initiallyExpandPayReview)
     _viewModel = StateObject(
       wrappedValue: PaySettingsViewModel(
         initialSelectedJobId: initialJobId, initialDate: initialDate
@@ -219,6 +224,7 @@ struct PaySettingsView: View {
 
         if viewModel.isSelectedJobConfigured {
           PaySettingsReviewCard(
+            isExpanded: $isPayReviewExpanded,
             workDate: $viewModel.reviewDate,
             snapshots: viewModel.snapshots,
             entries: viewModel.timelineEntries,
@@ -485,16 +491,20 @@ struct PaySettingsView: View {
 struct PaySettingsSheet: View {
   let jobId: String?
   let workDate: Date
+  var initiallyExpandPayReview = false
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {
     NavigationStack {
-      PaySettingsView(initialJobId: jobId, initialDate: workDate)
-        .toolbar {
-          ToolbarItem(placement: .confirmationAction) {
-            Button(String(localized: .commonDone)) { dismiss() }
-          }
+      PaySettingsView(
+        initialJobId: jobId, initialDate: workDate,
+        initiallyExpandPayReview: initiallyExpandPayReview
+      )
+      .toolbar {
+        ToolbarItem(placement: .confirmationAction) {
+          Button(String(localized: .commonDone)) { dismiss() }
         }
+      }
     }
     .presentationDetents([.large])
   }
