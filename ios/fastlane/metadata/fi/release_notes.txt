@@ -1,7 +1,6 @@
-- Parannettu yleisnäkymää selkeämmällä ulkoasulla ja kuukausien välisillä ansiovertailuilla
-- Lisätty ylityösäännöt palkkahistoriaan ja selkeämmät ylityökorvausten erittelyt
-- Lisätty taustapäivitykset työvuorojen live-aktiviteetteihin
-- Nopeutettu lataamista kuukautta vaihdettaessa ja ansiotilastoja katseltaessa
-- Korjattu profiilikuvien palautuminen synkronoinnin jälkeen ja parannettu jaettujen linkkien avaamista
-- Parannettu suuren tekstin ja VoiceOverin tukea
-- Parannettu sovelluksen toimintavarmuutta
+- Korjattu yövuorojen, palkkalisien, palkattomien taukojen ja ylityön palkkalaskelmat
+- Parannettu palkka-asetuksia ja palkkahistoriaa selkeämmillä voimaantulopäivillä ja maksuerittelyillä
+- Korjattu tuloennakot ja widgetit näyttämään puoliveroasetukset johdonmukaisesti
+- Parannettu vuoroaikojen syöttämistä ja tehty uudelleenyrityksestä turvallisempi, kun vain osa vuoroista tallentui
+- Korjattu aikataululuettelot, joissa näkyi vuoroja valitun kuukauden ulkopuolelta
+- Päivitetty sovelluskuvake ja visuaalinen ilme

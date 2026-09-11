@@ -833,8 +833,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				504EC3031FED79650016851F /* TidexApp */,
 				12B4A0083015000001000001 /* TidexShareExtension */,
+				504EC3031FED79650016851F /* TidexApp */,
 				11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */,
 				114F0F412F2150EA00B587F0 /* TidexWatchApp */,
 				11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */,

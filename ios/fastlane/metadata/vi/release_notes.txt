@@ -1,7 +1,6 @@
-- Cải thiện bảng tổng quan với thiết kế gọn gàng hơn và tính năng so sánh thu nhập giữa các tháng
-- Thêm quy tắc làm thêm giờ vào lịch sử tiền lương và chi tiết rõ ràng hơn về tiền làm thêm giờ
-- Thêm cập nhật nền cho Hoạt động trực tiếp trong ca làm
-- Cải thiện tốc độ tải khi chuyển tháng và xem thống kê thu nhập
-- Khắc phục việc ảnh hồ sơ trở lại ảnh cũ sau khi đồng bộ và cải thiện khả năng mở liên kết được chia sẻ
-- Cải thiện hỗ trợ chữ lớn và VoiceOver
-- Cải thiện độ ổn định của ứng dụng
+- Đã sửa cách tính lương cho ca đêm, phụ cấp, nghỉ không lương và làm thêm giờ
+- Đã cải thiện cài đặt lương và lịch sử lương với ngày hiệu lực rõ ràng hơn và chi tiết phân tách khoản chi trả
+- Đã sửa phần xem trước thu nhập và tiện ích để phản ánh cài đặt thuế 50% một cách nhất quán
+- Đã cải thiện việc nhập giờ làm và giúp an toàn hơn khi thử lại nếu chỉ một số ca được lưu
+- Đã sửa lỗi danh sách lịch làm hiển thị các ca ngoài tháng đã chọn
+- Đã cập nhật biểu tượng ứng dụng và giao diện hình ảnh

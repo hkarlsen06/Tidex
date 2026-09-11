@@ -275,6 +275,16 @@ final class TidexAppUITests: XCTestCase {
     ).firstMatch
     XCTAssertTrue(supplements.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     supplements.tap()
+    // The expanded breakdown includes the pay-settings link and needs the large detent.
+    let header = done.coordinate(withNormalizedOffset: CGVector(dx: -1, dy: 0.5))
+    let expandedPosition = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
+    header.press(forDuration: 0.1, thenDragTo: expandedPosition)
+    let paySettings = app.buttons[
+      language == "en" ? "Check the pay settings" : "Sjekk lønnsinnstillingene"
+    ]
+    XCTAssertTrue(paySettings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(
+      app.frame.contains(paySettings.frame), "Pay-settings link must fit in the screenshot")
     attachAppStoreScreenshot(app, name: "\(language)-04-payroll")
     done.tap()
   }

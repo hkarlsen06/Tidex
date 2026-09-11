@@ -1,7 +1,6 @@
-- Poboljšana nadzorna ploča s preglednijim dizajnom i usporedbom zarade između mjeseci
-- Dodana pravila za prekovremeni rad u povijest plaća i jasniji prikaz naknada za prekovremeni rad
-- Dodana ažuriranja u pozadini za Aktivnosti uživo tijekom smjena
-- Ubrzano učitavanje pri promjeni mjeseca i pregledu statistike zarade
-- Ispravljeno vraćanje starih profilnih fotografija nakon sinkronizacije i poboljšano otvaranje dijeljenih poveznica
-- Poboljšana podrška za veći tekst i VoiceOver
-- Poboljšana pouzdanost aplikacije
+- Ispravljeni izračuni plaće za noćne smjene, dodatke, neplaćene pauze i prekovremeni rad
+- Poboljšane postavke plaće i povijest plaće s jasnijim datumima stupanja na snagu i pregledom isplata
+- Ispravljeni pregledi zarade i widgeti kako bi dosljedno odražavali postavke polovice poreza
+- Poboljšan unos vremena smjena i povećana sigurnost pri ponovnom pokušaju kada su spremljene samo neke smjene
+- Ispravljeni popisi rasporeda koji su prikazivali smjene izvan odabranog mjeseca
+- Ažurirana ikona aplikacije i vizualni dizajn

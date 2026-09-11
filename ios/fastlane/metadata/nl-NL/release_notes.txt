@@ -1,7 +1,6 @@
-- Verbeterd dashboard met een overzichtelijker ontwerp en vergelijkingen van inkomsten tussen maanden
-- Overwerkregels toegevoegd aan de loongeschiedenis en duidelijkere uitsplitsingen van overwerkvergoeding
-- Achtergrondupdates toegevoegd voor live activiteiten tijdens diensten
-- Laadsnelheid verbeterd bij het wisselen van maand en bekijken van inkomstenstatistieken
-- Terugzetten van profielfoto’s na synchronisatie opgelost en openen van gedeelde links verbeterd
-- Ondersteuning voor grotere tekst en VoiceOver verbeterd
-- Betrouwbaarheid van de app verbeterd
+- Loonberekeningen voor nachtdiensten, toeslagen, onbetaalde pauzes en overuren opgelost
+- Looninstellingen en loongeschiedenis verbeterd met duidelijkere ingangsdata en een helder overzicht van uitbetalingen
+- Voorvertoningen van inkomsten en widgets gecorrigeerd zodat de halftariefbelasting consequent wordt toegepast
+- Invoer van diensttijden verbeterd en veiliger gemaakt om opnieuw te proberen wanneer slechts een deel van de diensten was opgeslagen
+- Opgelost dat roosterlijsten diensten buiten de geselecteerde maand toonden
+- Het appicoon en het visuele ontwerp bijgewerkt

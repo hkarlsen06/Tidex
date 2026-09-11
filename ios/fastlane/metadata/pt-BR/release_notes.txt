@@ -1,7 +1,6 @@
-- Melhorado o painel com um visual mais organizado e comparações de ganhos entre meses
-- Adicionadas regras de horas extras ao histórico salarial e detalhamentos mais claros da remuneração
-- Adicionadas atualizações em segundo plano para as Atividades ao Vivo durante os turnos
-- Melhorada a velocidade ao mudar de mês e consultar estatísticas de ganhos
-- Corrigida a restauração de fotos de perfil após a sincronização e melhorada a abertura de links compartilhados
-- Melhorado o suporte a textos maiores e ao VoiceOver
-- Melhorada a estabilidade do app
+- Corrigidos os cálculos de pagamento para turnos noturnos, adicionais, pausas não remuneradas e horas extras
+- Melhoradas as configurações de pagamento e o histórico salarial com datas de vigência mais claras e detalhamento dos pagamentos
+- Corrigidas as prévias de ganhos e os widgets para refletirem a configuração de meia tributação de forma consistente
+- Melhorado o lançamento dos horários dos turnos e tornado mais seguro tentar novamente quando apenas alguns turnos foram salvos
+- Corrigidas as listas de escalas que mostravam turnos fora do mês selecionado
+- Atualizados o ícone do app e o design visual

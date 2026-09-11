@@ -328,7 +328,7 @@ async function translateMetadata(sourceMetadata, norwegianMetadata, targetLocale
 
 CRITICAL RULES:
 1. Maintain the same structure and formatting (bullet points, line breaks)
-2. Keep keywords comma-separated WITHOUT spaces after commas
+2. Use natural punctuation and spacing in prose.${fields.includes("keywords") ? " Only the keywords field must be comma-separated WITHOUT spaces after commas." : ""}
 3. Make translations natural and idiomatic for ${languageName} speakers${limitText}
 
 Source metadata (English):

@@ -1,7 +1,6 @@
-- Vylepšen přehled díky čistšímu vzhledu a porovnání výdělků mezi měsíci
-- Přidána pravidla přesčasů do historie mezd a přehlednější rozpisy odměn za přesčasy
-- Přidány aktualizace na pozadí pro živé aktivity během směn
-- Zrychleno načítání při přepínání měsíců a prohlížení statistik výdělků
-- Opraveno vracení profilových fotek po synchronizaci a vylepšeno otevírání sdílených odkazů
-- Vylepšena podpora většího textu a VoiceOveru
-- Zlepšena spolehlivost aplikace
+- Opravili jsme výpočet mzdy pro noční směny, příplatky, neplacené přestávky a přesčasy
+- Vylepšili jsme nastavení mzdy a historii mezd pomocí přehlednějších dat účinnosti a rozpisu výplat
+- Opravili jsme náhledy výdělků a widgety, aby konzistentně zohledňovaly nastavení poloviční daně
+- Vylepšili jsme zadávání časů směn a zvýšili bezpečnost opakování pokusu, pokud se uložily jen některé směny
+- Opravili jsme seznamy rozvrhů, které zobrazovaly směny mimo vybraný měsíc
+- Aktualizovali jsme ikonu aplikace a vizuální vzhled

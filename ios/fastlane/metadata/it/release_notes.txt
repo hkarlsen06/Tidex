@@ -1,7 +1,6 @@
-- Migliorata la panoramica con un design più chiaro e confronti dei guadagni tra un mese e l’altro
-- Aggiunte regole per gli straordinari allo storico delle retribuzioni e dettagli più chiari sui relativi compensi
-- Aggiunti aggiornamenti in background per le Attività in tempo reale durante i turni
-- Migliorata la velocità quando si cambia mese e si consultano le statistiche dei guadagni
-- Corretto il ripristino delle foto del profilo dopo la sincronizzazione e migliorata l’apertura dei link condivisi
-- Migliorato il supporto per testo più grande e VoiceOver
-- Migliorata l’affidabilità dell’app
+- Corretto il calcolo della retribuzione per turni notturni, indennità, pause non retribuite e straordinari
+- Migliorate le impostazioni della retribuzione e lo storico salariale con date di decorrenza più chiare e dettagli dei pagamenti
+- Corrette le anteprime dei guadagni e i widget per riflettere in modo coerente le impostazioni della tassazione ridotta
+- Migliorato l'inserimento degli orari dei turni e resa più sicura la ripetizione del tentativo quando solo alcuni turni sono stati salvati
+- Corrette le liste dei turni che mostravano turni al di fuori del mese selezionato
+- Aggiornati l'icona dell'app e il design visivo
