@@ -32,7 +32,7 @@ struct CalendarCellStyle {
 
   static func today() -> Self {
     Self(
-      backgroundColor: Color.tidexBlue.opacity(0.08),
+      backgroundColor: Color.tidexBlue.opacity(0.2),
       borderColor: .clear,
       borderWidth: 0,
       dayNumberColor: .tidexTextPrimary,
