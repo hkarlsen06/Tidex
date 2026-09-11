@@ -7,9 +7,7 @@
     },
     {
       "appearance" : "dark",
-      "value" : {
-        "solid" : "srgb:0.02700,0.04300,0.07100,1.00000"
-      }
+      "value" : "automatic"
     }
   ],
   "groups" : [
@@ -28,12 +26,12 @@
                 ],
                 "orientation" : {
                   "start" : {
-                    "x" : 0.1173620810055866,
-                    "y" : 0
+                    "x" : 0.3457708174057085,
+                    "y" : -0.06229889288830704
                   },
                   "stop" : {
-                    "x" : 0.5,
-                    "y" : 0.9192755424954792
+                    "x" : 0.8548177083333333,
+                    "y" : 1.3257492092059335
                   }
                 }
               }
@@ -42,26 +40,24 @@
               "appearance" : "dark",
               "value" : {
                 "linear-gradient" : [
-                  "display-p3:0.50335,0.89951,0.98512,1.00000",
+                  "display-p3:0.46867,0.78136,1.00000,1.00000",
                   "display-p3:0.44310,0.17082,0.88701,1.00000"
                 ],
                 "orientation" : {
                   "start" : {
-                    "x" : 0.1173620810055866,
-                    "y" : 0
+                    "x" : 0.34484502420998986,
+                    "y" : -0.06069685318499116
                   },
                   "stop" : {
-                    "x" : 0.5,
-                    "y" : 0.9192755424954792
+                    "x" : 0.9416829924821609,
+                    "y" : 1.3611304264834205
                   }
                 }
               }
             },
             {
               "appearance" : "tinted",
-              "value" : {
-                "solid" : "extended-gray:1.00000,1.00000"
-              }
+              "value" : "system-light"
             }
           ],
           "glass" : true,
@@ -99,10 +95,22 @@
       "blur-material" : null,
       "layers" : [
         {
-          "fill" : {
-            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
-          },
+          "blend-mode" : "normal",
+          "fill-specializations" : [
+            {
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : "system-dark"
+            }
+          ],
           "glass" : true,
+          "hidden" : false,
           "image-name" : "Count-1.svg",
           "name" : "Count 1",
           "position" : {
@@ -114,10 +122,22 @@
           }
         },
         {
-          "fill" : {
-            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
-          },
+          "blend-mode" : "normal",
+          "fill-specializations" : [
+            {
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : "system-dark"
+            }
+          ],
           "glass" : true,
+          "hidden" : false,
           "image-name" : "Count-2.svg",
           "name" : "Count 2",
           "position" : {
@@ -129,10 +149,22 @@
           }
         },
         {
-          "fill" : {
-            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
-          },
+          "blend-mode" : "normal",
+          "fill-specializations" : [
+            {
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : "system-dark"
+            }
+          ],
           "glass" : true,
+          "hidden" : false,
           "image-name" : "Count-3.svg",
           "name" : "Count 3",
           "position" : {
@@ -144,10 +176,22 @@
           }
         },
         {
-          "fill" : {
-            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
-          },
+          "blend-mode" : "normal",
+          "fill-specializations" : [
+            {
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "dark",
+              "value" : "system-light"
+            },
+            {
+              "appearance" : "tinted",
+              "value" : "system-dark"
+            }
+          ],
           "glass" : true,
+          "hidden" : false,
           "image-name" : "Count-4.svg",
           "name" : "Count 4",
           "position" : {

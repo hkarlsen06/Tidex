@@ -230,7 +230,7 @@ private struct AddShiftCalendarDayCell: View {
       return hasConflict ? Color.tidexWarning.opacity(opacity) : Color.tidexBlue.opacity(opacity)
     }
     if isToday, !dayInfo.isOutsideMonth {
-      return Color.tidexBlue.opacity(0.2)
+      return CalendarCellStyle.today().backgroundColor
     }
     return Color.tidexSurfacePrimary
   }
