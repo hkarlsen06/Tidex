@@ -1,7 +1,6 @@
-- Áttekinthetőbb felület és a havi keresetek összehasonlítása az irányítópulton
-- Túlóraszabályok hozzáadása a bértörténethez és a túlóradíjak egyértelműbb részletezése
-- Háttérfrissítések hozzáadása a műszakok Élő tevékenységeihez
-- Gyorsabb betöltés hónapváltáskor és a kereseti statisztikák megtekintésekor
-- A szinkronizálás után visszaálló profilképek hibájának javítása és a megosztott hivatkozások megnyitásának fejlesztése
-- A nagyobb szöveg és a VoiceOver támogatásának fejlesztése
-- Az alkalmazás megbízhatóságának javítása
+- Javítottuk a bérszámítást az éjszakai műszakok, a pótlékok, a fizetetlen szünetek és a túlóra esetén
+- Továbbfejlesztettük a bérbeállításokat és a bértörténetet egyértelműbb érvényességi dátumokkal és részletesebb kifizetési bontással
+- Javítottuk a kereseti előnézeteket és a widgeteket, hogy következetesen tükrözzék a féladó-beállításokat
+- Javítottuk a műszakidők megadását, és biztonságosabbá tettük az újrapróbálkozást, amikor csak néhány műszak mentődött el
+- Javítottuk, hogy a beosztáslisták ne jelenítsenek meg a kiválasztott hónapon kívüli műszakokat
+- Frissítettük az alkalmazás ikonját és a vizuális megjelenést

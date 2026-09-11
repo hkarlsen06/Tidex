@@ -1,7 +1,6 @@
-- Förbättrat översikten med en renare design och jämförelser av inkomster mellan månader
-- Lagt till övertidsregler i lönehistoriken och tydligare redovisning av övertidsersättning
-- Lagt till bakgrundsuppdateringar för Liveaktiviteter under arbetspass
-- Förbättrat hastigheten när du byter månad och visar inkomststatistik
-- Åtgärdat att profilbilder kunde återställas efter synkronisering och förbättrat öppning av delade länkar
-- Förbättrat stöd för större text och VoiceOver
-- Förbättrat appens stabilitet
+- Åtgärdade löneberäkningar för nattpass, tillägg, obetalda raster och övertid
+- Förbättrade löneinställningar och lönehistorik med tydligare ikraftträdandedatum och utbetalningsöversikter
+- Åtgärdade förhandsvisningar av intjänad lön och widgetar så att de konsekvent återspeglar inställningar för halv skatt
+- Förbättrade inmatning av arbetstid och gjorde det säkrare att försöka igen när bara vissa pass hade sparats
+- Åtgärdade att schemalistor visade pass utanför den valda månaden
+- Uppdaterade appikonen och den visuella designen

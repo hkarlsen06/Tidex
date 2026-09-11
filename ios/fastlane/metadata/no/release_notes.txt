@@ -1,7 +1,6 @@
-- Forbedret oversikten med et ryddigere design og sammenligning av inntekt fra måned til måned
-- Lagt til overtidsregler i lønnshistorikken og tydeligere oversikt over overtidsbetaling
-- Lagt til bakgrunnsoppdateringer for direktesendte aktiviteter under vakter
-- Forbedret hastigheten når du bytter måned og ser på inntektsstatistikk
-- Rettet at profilbilder kunne bli tilbakestilt etter synkronisering, og forbedret åpning av delte lenker
-- Forbedret støtte for større tekst og VoiceOver
-- Forbedret stabiliteten i appen
+- Rettet lønnsberegning for nattevakter, tillegg, ubetalte pauser og overtid
+- Forbedret lønnsinnstillinger og lønnshistorikk med tydeligere virkningsdatoer og utbetalingsoversikt
+- Rettet at forhåndsvisning av lønn og widgeter ikke alltid tok hensyn til halv skatt
+- Forbedret inntasting av vakttider og gjort det tryggere å prøve igjen når bare noen vakter ble lagret
+- Rettet at vaktlisten kunne vise vakter utenfor valgt måned
+- Oppdatert appikonet og det visuelle uttrykket

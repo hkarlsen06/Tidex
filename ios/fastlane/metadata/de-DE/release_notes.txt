@@ -1,7 +1,6 @@
-- Verbesserte Übersicht mit klarerem Design und Einkommensvergleichen zwischen Monaten
-- Überstundenregeln zum Lohnverlauf hinzugefügt und Überstundenvergütung übersichtlicher aufgeschlüsselt
-- Hintergrundaktualisierungen für Live-Aktivitäten während Schichten hinzugefügt
-- Ladezeiten beim Monatswechsel und beim Anzeigen der Einkommensstatistik verbessert
-- Zurücksetzen von Profilbildern nach der Synchronisierung behoben und Öffnen geteilter Links verbessert
-- Unterstützung für größere Schrift und VoiceOver verbessert
-- Zuverlässigkeit der App verbessert
+- Fehler bei der Lohnberechnung für Nachtschichten, Zulagen, unbezahlte Pausen und Überstunden behoben
+- Lohneinstellungen und Lohnverlauf mit klareren Gültigkeitsdaten und detaillierterer Auszahlungsübersicht verbessert
+- Fehler bei Verdienstvorschauen und Widgets behoben, damit Einstellungen zum halben Steuerabzug konsistent berücksichtigt werden
+- Eingabe von Schichtzeiten verbessert und Wiederholungen sicherer gemacht, wenn nur einige Schichten gespeichert wurden
+- Fehler behoben, durch den in Dienstplänen Schichten außerhalb des ausgewählten Monats angezeigt wurden
+- App-Symbol und visuelles Design aktualisiert

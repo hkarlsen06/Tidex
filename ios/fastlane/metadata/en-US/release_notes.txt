@@ -1,7 +1,6 @@
-- Improved the dashboard with a cleaner design and month-to-month earnings comparisons
-- Added overtime rules to wage history and clearer overtime breakdowns
-- Added background updates for shift Live Activities
-- Improved loading speed when switching months and viewing earnings statistics
-- Fixed profile photos reverting after sync and improved opening shared links
-- Improved support for larger text and VoiceOver
-- Improved app reliability
+- Fixed pay calculations for overnight shifts, supplements, unpaid breaks and overtime
+- Improved pay settings and wage history with clearer effective dates and payout breakdowns
+- Fixed earnings previews and widgets to reflect half-tax settings consistently
+- Improved shift time entry and made it safer to retry when only some shifts were saved
+- Fixed schedule lists showing shifts outside the selected month
+- Updated the app icon and visual design

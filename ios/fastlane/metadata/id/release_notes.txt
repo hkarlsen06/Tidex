@@ -1,7 +1,6 @@
-- Meningkatkan dasbor dengan desain lebih rapi dan perbandingan penghasilan antarbulan
-- Menambahkan aturan lembur ke riwayat upah dan rincian pembayaran lembur yang lebih jelas
-- Menambahkan pembaruan latar belakang untuk Aktivitas Langsung selama sif
-- Meningkatkan kecepatan pemuatan saat berganti bulan dan melihat statistik penghasilan
-- Memperbaiki foto profil yang kembali ke foto lama setelah sinkronisasi dan meningkatkan pembukaan tautan bersama
-- Meningkatkan dukungan teks besar dan VoiceOver
-- Meningkatkan keandalan aplikasi
+- Memperbaiki perhitungan gaji untuk shift malam, tunjangan, istirahat tidak dibayar, dan lembur
+- Meningkatkan pengaturan gaji dan riwayat upah dengan tanggal berlaku yang lebih jelas serta rincian pembayaran
+- Memperbaiki pratinjau penghasilan dan widget agar secara konsisten mencerminkan pengaturan pajak setengah
+- Meningkatkan input waktu shift dan membuatnya lebih aman untuk mencoba lagi saat hanya sebagian shift yang tersimpan
+- Memperbaiki daftar jadwal yang menampilkan shift di luar bulan yang dipilih
+- Memperbarui ikon aplikasi dan desain visual

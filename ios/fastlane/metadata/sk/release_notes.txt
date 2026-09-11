@@ -1,7 +1,6 @@
-- Vylepšený prehľad vďaka čistejšiemu dizajnu a porovnaniu zárobkov medzi mesiacmi
-- Pridané pravidlá nadčasov do histórie miezd a prehľadnejšie rozpisy odmien za nadčasy
-- Pridané aktualizácie na pozadí pre živé aktivity počas zmien
-- Zrýchlené načítanie pri prepínaní mesiacov a prezeraní štatistík zárobkov
-- Opravené obnovovanie starých profilových fotiek po synchronizácii a vylepšené otváranie zdieľaných odkazov
-- Vylepšená podpora väčšieho textu a VoiceOveru
-- Zlepšená spoľahlivosť aplikácie
+- Opravené výpočty mzdy pre nočné zmeny, príplatky, neplatené prestávky a nadčasy
+- Vylepšené nastavenia mzdy a história miezd s jasnejšími dátumami účinnosti a prehľadom vyplatených súm
+- Opravené náhľady zárobkov a widgety, aby konzistentne zohľadňovali nastavenie polovičnej dane
+- Vylepšené zadávanie času zmien a bezpečnejšie opätovné skúšanie, keď sa uložili len niektoré zmeny
+- Opravené zobrazovanie zmien mimo vybraného mesiaca v zoznamoch rozpisu
+- Aktualizovaná ikona aplikácie a vizuálny dizajn

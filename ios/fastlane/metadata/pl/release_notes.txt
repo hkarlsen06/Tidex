@@ -1,7 +1,6 @@
-- Ulepszono panel dzięki czytelniejszemu wyglądowi i porównaniom zarobków między miesiącami
-- Dodano zasady nadgodzin do historii wynagrodzeń i czytelniejsze zestawienia płatności za nadgodziny
-- Dodano aktualizacje w tle dla aktywności na żywo podczas zmian
-- Przyspieszono wczytywanie po zmianie miesiąca i podczas przeglądania statystyk zarobków
-- Naprawiono przywracanie poprzednich zdjęć profilowych po synchronizacji i ulepszono otwieranie udostępnionych linków
-- Ulepszono obsługę większego tekstu i VoiceOver
-- Poprawiono niezawodność aplikacji
+- Naprawiono obliczanie wynagrodzenia za nocne zmiany, dodatki, niepłatne przerwy i nadgodziny
+- Ulepszono ustawienia wynagrodzenia i historię stawek, dodając czytelniejsze daty wejścia w życie oraz zestawienia wypłat
+- Naprawiono podgląd zarobków i widżety, aby konsekwentnie uwzględniały ustawienie połowy podatku
+- Ulepszono wprowadzanie godzin zmian i zwiększono bezpieczeństwo ponawiania próby, gdy zapisano tylko część zmian
+- Naprawiono listy grafików, które pokazywały zmiany spoza wybranego miesiąca
+- Zaktualizowano ikonę aplikacji i wygląd wizualny

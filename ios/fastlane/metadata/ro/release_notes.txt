@@ -1,7 +1,6 @@
-- Îmbunătățit panoul principal cu un design mai clar și comparații ale câștigurilor între luni
-- Adăugate reguli pentru ore suplimentare în istoricul salarial și detalii mai clare despre plata acestora
-- Adăugate actualizări în fundal pentru Activitățile live din timpul turelor
-- Îmbunătățită viteza la schimbarea lunii și consultarea statisticilor de câștiguri
-- Remediată revenirea la fotografii de profil anterioare după sincronizare și îmbunătățită deschiderea linkurilor partajate
-- Îmbunătățit suportul pentru text mai mare și VoiceOver
-- Îmbunătățită fiabilitatea aplicației
+- Am corectat calculele salariale pentru turele de noapte, sporuri, pauze neplătite și ore suplimentare
+- Am îmbunătățit setările de salarizare și istoricul salariilor, cu date de intrare în vigoare mai clare și detalii mai clare despre plăți
+- Am corectat previzualizările câștigurilor și widgeturile pentru a reflecta consecvent setările de impozitare la jumătate
+- Am îmbunătățit introducerea orelor de tură și am făcut mai sigură reîncercarea atunci când au fost salvate doar unele ture
+- Am corectat listele de programări care afișau ture din afara lunii selectate
+- Am actualizat pictograma aplicației și designul vizual

@@ -1,7 +1,6 @@
-- Daha sade bir tasarım ve aylar arası kazanç karşılaştırmalarıyla ana ekran iyileştirildi
-- Ücret geçmişine fazla mesai kuralları ve daha anlaşılır fazla mesai ücreti dökümleri eklendi
-- Vardiya Canlı Etkinlikleri için arka plan güncellemeleri eklendi
-- Ay değiştirirken ve kazanç istatistiklerini görüntülerken yükleme hızı iyileştirildi
-- Eşzamanlama sonrası profil fotoğraflarının eski hâline dönmesi düzeltildi ve paylaşılan bağlantıların açılması iyileştirildi
-- Büyük metin ve VoiceOver desteği iyileştirildi
-- Uygulama güvenilirliği artırıldı
+- Gece vardiyaları, ek ödemeler, ücretsiz molalar ve fazla mesai için ücret hesaplamaları düzeltildi
+- Ücret ayarları ve ücret geçmişi, daha net geçerlilik tarihleri ve ödeme dökümleriyle iyileştirildi
+- Kazanç önizlemeleri ve araç takımları, yarı vergi ayarlarını tutarlı şekilde yansıtacak şekilde düzeltildi
+- Vardiya saati girişi iyileştirildi ve yalnızca bazı vardiyalar kaydedildiğinde yeniden denemek daha güvenli hale getirildi
+- Seçilen ayın dışındaki vardiyaların program listelerinde görünmesine neden olan sorun düzeltildi
+- Uygulama simgesi ve görsel tasarım güncellendi

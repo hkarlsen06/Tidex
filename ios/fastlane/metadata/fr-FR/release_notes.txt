@@ -1,7 +1,6 @@
-- Amélioration du tableau de bord avec un design plus épuré et une comparaison des revenus entre les mois
-- Ajout de règles sur les heures supplémentaires à l’historique des salaires et de détails plus clairs sur leur rémunération
-- Ajout de mises à jour en arrière-plan pour les Activités en direct pendant les périodes de travail
-- Amélioration du chargement lors du changement de mois et de la consultation des statistiques de revenus
-- Correction des photos de profil rétablies après la synchronisation et amélioration de l’ouverture des liens partagés
-- Amélioration de la prise en charge des textes agrandis et de VoiceOver
-- Amélioration de la fiabilité de l’app
+- Correction des calculs de salaire pour le travail de nuit, les majorations, les pauses non rémunérées et les heures supplémentaires
+- Amélioration des paramètres de salaire et de l’historique des salaires avec des dates d’effet plus claires et un détail des paiements
+- Correction des aperçus de revenus et des widgets pour refléter de manière cohérente les paramètres de demi-impôt
+- Amélioration de la saisie des horaires de travail et sécurisation de la nouvelle tentative lorsque seuls certains shifts ont été enregistrés
+- Correction des listes de planning qui affichaient des shifts en dehors du mois sélectionné
+- Mise à jour de l’icône de l’app et du design visuel

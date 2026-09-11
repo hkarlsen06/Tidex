@@ -1,8 +1,4 @@
 {
-  "features" : [
-    "refractivity",
-    "specular-location"
-  ],
   "fill-specializations" : [
     {
       "value" : {
@@ -89,16 +85,11 @@
           0
         ]
       },
-      "refractivity" : {
-        "depth" : 1,
-        "enabled" : true,
-        "strength" : -0.8526953125
-      },
       "shadow" : {
         "kind" : "layer-color",
         "opacity" : 0.62
       },
-      "specular" : "inside",
+      "specular" : true,
       "translucency" : {
         "enabled" : false,
         "value" : 0.06
@@ -176,11 +167,6 @@
           0,
           0
         ]
-      },
-      "refractivity" : {
-        "depth" : 0,
-        "enabled" : true,
-        "strength" : 0.6803515625
       },
       "shadow" : {
         "kind" : "neutral",
