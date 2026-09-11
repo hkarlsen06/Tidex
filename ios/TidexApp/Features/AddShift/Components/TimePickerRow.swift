@@ -33,20 +33,20 @@ final class TimeInputFocusController: ObservableObject {
       currentFocus = field
     }
 
+    // Let the destination take over before releasing the current responder. During
+    // SwiftUI layout it may not be attached yet; updateUIView will retry the handoff.
     switch field {
     case .start:
       if let startField {
         startField.becomeFirstResponder()
         setCursorToEnd(startField)
       }
-      endField?.resignFirstResponder()
 
     case .end:
       if let endField {
         endField.becomeFirstResponder()
         setCursorToEnd(endField)
       }
-      startField?.resignFirstResponder()
 
     case .none:
       startField?.resignFirstResponder()
@@ -166,7 +166,7 @@ private struct TimeTextField: UIViewRepresentable {
             uiView.becomeFirstResponder()
             context.coordinator.setCursor(uiView, position: uiView.text?.count ?? 0)
           }
-        } else if uiView.isFirstResponder {
+        } else if focusController.currentFocus == nil, uiView.isFirstResponder {
           uiView.resignFirstResponder()
         }
       }

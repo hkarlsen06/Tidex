@@ -420,6 +420,39 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testAddShiftAutoAdvanceKeepsKeyboardVisible() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "home"]
+    app.launchEnvironment["TIDEX_TEST_KEYBOARD"] = "1"
+    app.launch()
+    let addTab = app.tabBars.buttons["Add"]
+    XCTAssertTrue(addTab.waitForExistence(timeout: 30))
+    addTab.tap()
+
+    let start = app.textFields["Start"]
+    let end = app.textFields["End"]
+    XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
+    if start.value as? String != "09:00" || end.value as? String != "17:00" {
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00")).firstMatch
+        .tap()
+    }
+    let hides = app.staticTexts["ui-testing.keyboard-hide-count"]
+    start.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+    start.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2))
+    XCTAssertEqual(start.value as? String, "09")
+    let hidesBeforeAdvance = hides.label
+    app.typeText("30")
+    XCTAssertEqual(start.value as? String, "09:30")
+    XCTAssertTrue(app.keyboards.firstMatch.exists)
+    XCTAssertEqual(hides.label, hidesBeforeAdvance, "Auto-advance must not dismiss the keyboard")
+
+    app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2) + "30")
+    XCTAssertEqual(end.value as? String, "17:30")
+    XCTAssertFalse(app.keyboards.firstMatch.exists)
+    XCTAssertEqual(Int(hides.label), (Int(hidesBeforeAdvance) ?? 0) + 1)
+  }
+
+  @MainActor
   func testTimeInputInvalidEditClearsSavedValueAndCanBeCorrected() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input"
