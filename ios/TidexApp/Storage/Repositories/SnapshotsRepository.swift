@@ -65,6 +65,10 @@ final class SnapshotsRepository: ObservableObject {
   /// - Returns: Array of WageSnapshot objects
   func getSnapshots(for userId: String, jobId: String? = nil) -> [WageSnapshot] {
     let context = localStore.mainContext
+    let visibleSnapshots = #Predicate<LocalWageSnapshot> { snapshot in
+      snapshot.userId == userId && snapshot.serverDeletedAt == nil
+        && snapshot.syncStatusRaw != "pendingDelete"
+    }
 
     do {
       let localSnapshots: [LocalWageSnapshot]
@@ -72,18 +76,16 @@ final class SnapshotsRepository: ObservableObject {
       if let jobId {
         let includeLegacyNil = shouldIncludeLegacyNilJobRows(for: userId, selectedJobId: jobId)
         let primaryDescriptor = FetchDescriptor<LocalWageSnapshot>(
-          predicate: #Predicate { snapshot in
-            snapshot.userId == userId && snapshot.serverDeletedAt == nil
-              && snapshot.syncStatusRaw != "pendingDelete" && snapshot.jobId == jobId
+          predicate: #Predicate<LocalWageSnapshot> { snapshot in
+            visibleSnapshots.evaluate(snapshot) && snapshot.jobId == jobId
           },
           sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
         )
 
         if includeLegacyNil {
           let legacyDescriptor = FetchDescriptor<LocalWageSnapshot>(
-            predicate: #Predicate { snapshot in
-              snapshot.userId == userId && snapshot.serverDeletedAt == nil
-                && snapshot.syncStatusRaw != "pendingDelete" && snapshot.jobId == nil
+            predicate: #Predicate<LocalWageSnapshot> { snapshot in
+              visibleSnapshots.evaluate(snapshot) && snapshot.jobId == nil
             },
             sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
           )
@@ -109,10 +111,7 @@ final class SnapshotsRepository: ObservableObject {
         }
       } else {
         let descriptor = FetchDescriptor<LocalWageSnapshot>(
-          predicate: #Predicate { snapshot in
-            snapshot.userId == userId && snapshot.serverDeletedAt == nil
-              && snapshot.syncStatusRaw != "pendingDelete"
-          },
+          predicate: visibleSnapshots,
           sortBy: [SortDescriptor(\.fromDate, order: .reverse)]
         )
         localSnapshots = try context.fetch(descriptor)
@@ -182,12 +181,15 @@ final class SnapshotsRepository: ObservableObject {
   /// - Returns: Baseline WageSnapshot if found
   func getBaselineSnapshot(for userId: String, jobId: String? = nil) -> WageSnapshot? {
     let context = localStore.mainContext
+    let visibleSnapshots = #Predicate<LocalWageSnapshot> { snapshot in
+      snapshot.userId == userId && snapshot.serverDeletedAt == nil
+        && snapshot.syncStatusRaw != "pendingDelete"
+    }
 
     do {
       let baselineDescriptor = FetchDescriptor<LocalWageSnapshot>(
-        predicate: #Predicate { snapshot in
-          snapshot.userId == userId && snapshot.fromDate == nil && snapshot.serverDeletedAt == nil
-            && snapshot.syncStatusRaw != "pendingDelete"
+        predicate: #Predicate<LocalWageSnapshot> { snapshot in
+          visibleSnapshots.evaluate(snapshot) && snapshot.fromDate == nil
         }
       )
       let baselineRows = try context.fetch(baselineDescriptor)
