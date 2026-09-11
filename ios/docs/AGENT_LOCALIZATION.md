@@ -31,7 +31,7 @@ bun run ios:l10n:validate
 - Use Xcode's String Catalog editor or XLIFF export/import for pluralization, substitutions, device variants, or bulk translator workflows.
 - After adding English/Norwegian copy, remind the user to run `bun ios/Scripts/translate-xcstrings.mjs` when other supported languages should be generated.
 - The translator uses six shared request slots across languages, preserves catalog order, and atomically saves each completed batch. Reruns fill missing translations and target-language units marked `needs_review` or `new`; other existing translations are retained.
-- When source wording changes, mark affected generated translations `needs_review` before running the translator. Changing English/Norwegian text alone does not invalidate existing translations automatically.
+- When English or Norwegian wording changes through `xcstrings-set`, the helper automatically marks other existing translations `needs_review`, except languages supplied in the same command. Unchanged wording and metadata-only edits do not trigger this. For source edits made outside the helper, mark affected translations `needs_review` before running the translator.
 - Request failures and invalid translations are reported immediately and return a nonzero exit status. Interrupting saves completed work and aborts pending requests; rerun to resume.
 - Run `bun test ios/Scripts/translate-xcstrings.test.mjs` for translator regression checks without API calls.
 

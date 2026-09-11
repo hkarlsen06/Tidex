@@ -3,6 +3,7 @@ import SwiftUI
 /// A date-based entry point to the saved inputs behind a pay estimate.
 struct PaySettingsReviewCard: View {
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Binding var isExpanded: Bool
   @Binding var workDate: Date
   let snapshots: [WageSnapshot]
   let entries: [WageTimelineEntry]
@@ -18,29 +19,39 @@ struct PaySettingsReviewCard: View {
   }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
+    DisclosureGroup(isExpanded: $isExpanded) {
       reviewContent
-        .padding(Spacing.md)
-        .background(
-          Color.tidexSurfacePrimary,
-          in: RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
-        )
+        .padding(.top, Spacing.md)
 
       Text(.settingsPayReviewDateExplanation)
         .font(.tidexFootnote)
         .foregroundStyle(Color.tidexTextSecondary)
-        .padding(.horizontal, Spacing.xxs)
+        .padding(.top, Spacing.sm)
+    } label: {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        Text(.settingsPayReviewTitle)
+          .font(.tidexTitle2)
+          .accessibilityAddTraits(.isHeader)
+        Text(.settingsPayReviewActiveOn(workDate.formatted(.dateTime.day().month(.wide).year())))
+          .font(.tidexSubheadline)
+          .foregroundStyle(Color.tidexTextSecondary)
+      }
+      .multilineTextAlignment(.leading)
+      .frame(minHeight: 44, alignment: .leading)
     }
+    .tint(Color.tidexTextSecondary)
+    .accessibilityIdentifier("pay-settings.review-disclosure")
+    .padding(Spacing.md)
+    .background(
+      Color.tidexSurfacePrimary,
+      in: RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous)
+    )
     .foregroundStyle(Color.tidexTextPrimary)
     .fixedSize(horizontal: false, vertical: true)
   }
 
   private var reviewContent: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
-      Text(.settingsPayReviewTitle)
-        .font(.tidexTitle2)
-        .accessibilityAddTraits(.isHeader)
-
       if dynamicTypeSize.isAccessibilitySize {
         VStack(alignment: .leading, spacing: Spacing.sm) {
           Text(.settingsPayReviewWorkDate)

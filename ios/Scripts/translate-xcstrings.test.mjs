@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -54,6 +55,12 @@ async function writeCatalog(data) {
   const file = path.join(directory, "Localizable.xcstrings");
   await fs.writeFile(file, xcstringsStringify(data));
   return file;
+}
+
+function setCatalogString(file, ...args) {
+  execFileSync(path.resolve(import.meta.dir, "../../scripts/xcstrings-set"), [
+    file, "z.pay", "--skip-xcstringstool-check", ...args,
+  ], { encoding: "utf8" });
 }
 
 function request(init) {
@@ -171,6 +178,61 @@ test("valid empty translations are retained and never regenerate existing empty 
   expect(saved.strings["z.pay"].localizations.de.stringUnit.value).toBe("");
   expect(collectTranslationWork(saved).stringsNeedingEnglish).toHaveLength(0);
   expect(collectTranslationWork(saved).stringsToTranslate).toHaveLength(0);
+});
+
+for (const sourceLocale of ["en", "nb"]) {
+  test(`editing ${sourceLocale} through xcstrings-set queues other translations and preserves their text`, async () => {
+    const original = catalog();
+    const file = await writeCatalog(original);
+    setCatalogString(file, `--${sourceLocale}`, "Updated pay %@", "--locale", "de=Updated German %@");
+    const saved = JSON.parse(await fs.readFile(file, "utf8"));
+    const localizations = saved.strings["z.pay"].localizations;
+    expect(Object.keys(saved.strings)).toEqual(Object.keys(original.strings));
+    expect(saved.strings["a.untouched"]).toEqual(original.strings["a.untouched"]);
+    expect(localizations[sourceLocale]).toEqual(unit("Updated pay %@"));
+    const otherSource = sourceLocale === "en" ? "nb" : "en";
+    expect(localizations[otherSource]).toEqual(original.strings["z.pay"].localizations[otherSource]);
+    expect(localizations.de).toEqual(unit("Updated German %@"));
+    const expectedLocales = TARGET_LANGUAGES.map(({ code }) => code)
+      .filter((locale) => locale !== "nb" && locale !== "de");
+    for (const locale of expectedLocales) {
+      expect(localizations[locale]).toEqual(unit("Existing %@", "needs_review"));
+    }
+    const work = collectTranslationWork(saved).stringsToTranslate;
+    expect(work.map(({ targetLang }) => targetLang.code)).toEqual(expectedLocales);
+    expect(work.every((item) => item.english === localizations.en.stringUnit.value
+      && item.norwegian === localizations.nb.stringUnit.value)).toBe(true);
+  });
+}
+
+test("unchanged source text, metadata and target-only edits do not queue other translations", async () => {
+  const original = catalog();
+  const file = await writeCatalog(original);
+  setCatalogString(file, "--en", "Pay %@", "--nb", "Existing %@");
+  expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(original);
+  setCatalogString(file, "--comment", "Updated context");
+  setCatalogString(file, "--locale", "de=Updated German %@");
+  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  const expected = structuredClone(original);
+  expected.strings["z.pay"].comment = "Updated context";
+  expected.strings["z.pay"].localizations.de = unit("Updated German %@");
+  expect(saved).toEqual(expected);
+  expect(collectTranslationWork(saved).stringsToTranslate).toHaveLength(0);
+});
+
+test("source edits mark nested translation units without replacing their structure", async () => {
+  const original = catalog();
+  original.strings["z.pay"].localizations.de = { variations: { plural: {
+    one: unit("One %@"), other: unit("Many %@"),
+  } } };
+  const file = await writeCatalog(original);
+  expect(() => setCatalogString(file, "--en", "Updated pay %@")).toThrow();
+  expect(JSON.parse(await fs.readFile(file, "utf8"))).toEqual(original);
+  setCatalogString(file, "--en", "Updated pay %@", "--allow-complex");
+  const saved = JSON.parse(await fs.readFile(file, "utf8"));
+  expect(saved.strings["z.pay"].localizations.de).toEqual({ variations: { plural: {
+    one: unit("One %@", "needs_review"), other: unit("Many %@", "needs_review"),
+  } } });
 });
 
 test("needs_review entries are refreshed without retranslating other locales", async () => {

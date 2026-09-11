@@ -24,7 +24,11 @@ def parse_args() -> argparse.Namespace:
         raw_args = raw_args[1:]
 
     parser = argparse.ArgumentParser(
-        description="Add or update a plain stringUnit entry in an Xcode .xcstrings catalog.",
+        description=(
+            "Add or update a plain stringUnit entry in an Xcode .xcstrings catalog. "
+            "Changing English or Norwegian marks other existing translations as needs_review, "
+            "except locales supplied in the same command."
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""examples:
   scripts/xcstrings-set ios/Resources/Localization/App/Localizable.xcstrings settings.saveButton \\
@@ -186,6 +190,16 @@ def entry_is_plain_string_unit(entry: dict) -> bool:
     return True
 
 
+def mark_translation_needs_review(value: dict) -> None:
+    for key, child in value.items():
+        if not isinstance(child, dict):
+            continue
+        if key == "stringUnit":
+            child["state"] = "needs_review"
+        else:
+            mark_translation_needs_review(child)
+
+
 def update_catalog(
     catalog: dict,
     key: str,
@@ -241,6 +255,7 @@ def update_catalog(
     if not isinstance(localizations, dict):
         fail(f"{key}.localizations is not an object")
 
+    source_changed = False
     for locale, value in locale_values.items():
         locale_entry = localizations.setdefault(locale, {})
         if not isinstance(locale_entry, dict):
@@ -250,10 +265,23 @@ def update_catalog(
                 f"{key}.localizations.{locale} is not a plain stringUnit; "
                 "use Xcode/XLIFF for complex entries"
             )
+        previous_unit = locale_entry.get("stringUnit")
+        if locale in DEFAULT_REQUIRED_LOCALES and (
+            not isinstance(previous_unit, dict) or previous_unit.get("value") != value
+        ):
+            source_changed = True
         locale_entry["stringUnit"] = {
             "state": state,
             "value": value,
         }
+
+    changed_locales = list(locale_values.keys())
+    if source_changed:
+        for locale, locale_entry in localizations.items():
+            if locale not in DEFAULT_REQUIRED_LOCALES and locale not in locale_values:
+                if isinstance(locale_entry, dict):
+                    mark_translation_needs_review(locale_entry)
+                    changed_locales.append(locale)
 
     if sort_keys:
         catalog["strings"] = {
@@ -261,7 +289,6 @@ def update_catalog(
             for sorted_key in sorted(strings.keys())
         }
 
-    changed_locales = list(locale_values.keys())
     return is_new_entry, changed_locales
 
 
