@@ -7,6 +7,9 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
   @Bindable var data: OnboardingData
   let onContinue: () -> Void
   var onBack: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
+  var showsPayday: Bool = true
+  var continueTitle: String = String(localized: .commonContinue)
+  @ScaledMetric(relativeTo: .subheadline) private var taxPresetMinimumWidth: CGFloat = 64
 
   @State private var currentSection: SettingsSection? = .breakDeduction
   @State private var completedSections: Set<SettingsSection> = []
@@ -49,6 +52,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
                       .font(.tidexBody)
                   }
                   .foregroundColor(.tidexBlue)
+                  .frame(minHeight: 44)
                 }
                 .buttonStyle(.plain)
                 Spacer()
@@ -88,7 +92,9 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
               taxSection
 
               // Payday section
-              paydaySection
+              if showsPayday {
+                paydaySection
+              }
             }
             .padding(.horizontal, Spacing.lg)
             .adaptiveContentWidth()
@@ -101,7 +107,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         // Final continue button (visible when all sections complete)
         if allSectionsComplete {
           OnboardingButton(
-            title: String(localized: .commonContinue),
+            title: continueTitle,
             action: {
               UINotificationFeedbackGenerator().notificationOccurred(.success)
               onContinue()
@@ -119,7 +125,8 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
   }
 
   private var allSectionsComplete: Bool {
-    completedSections.count == SettingsSection.allCases.count
+    completedSections.contains(.breakDeduction) && completedSections.contains(.tax)
+      && (!showsPayday || completedSections.contains(.payday))
   }
 
   // MARK: - Break Section
@@ -137,26 +144,23 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     ) {
       VStack(alignment: .leading, spacing: Spacing.md) {
         Toggle(isOn: $data.breakEnabled) {
-          VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(.onboardingSettingsBreakEnable)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(.onboardingSettingsBreakHint)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-          }
+          Text(.onboardingSettingsBreakEnable)
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextPrimary)
         }
         .tint(.tidexBrandPrimary)
+
+        Text(.onboardingSettingsBreakHint)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
 
         if data.breakEnabled {
           Text(.onboardingSettingsBreakDefault)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextSecondary)
-            .padding(Spacing.sm)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.tidexBackground)
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+            .fixedSize(horizontal: false, vertical: true)
         }
       }
     }
@@ -192,17 +196,16 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
     ) {
       VStack(alignment: .leading, spacing: Spacing.md) {
         Toggle(isOn: $data.taxEnabled) {
-          VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(.onboardingSettingsTaxEnable)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(.onboardingSettingsTaxHint)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-          }
+          Text(.onboardingSettingsTaxEnable)
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextPrimary)
         }
         .tint(.tidexBrandPrimary)
+
+        Text(.onboardingSettingsTaxHint)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
 
         if data.taxEnabled {
           VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -211,7 +214,10 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
               .foregroundColor(.tidexTextSecondary)
 
             // Tax preset buttons
-            HStack(spacing: Spacing.xs) {
+            LazyVGrid(
+              columns: [GridItem(.adaptive(minimum: taxPresetMinimumWidth), spacing: Spacing.xs)],
+              spacing: Spacing.xs
+            ) {
               ForEach(taxPresets, id: \.self) { preset in
                 TaxPresetButton(
                   value: preset,
@@ -489,7 +495,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
         currentSection = .tax
 
       case .tax:
-        currentSection = .payday
+        currentSection = showsPayday ? .payday : nil
 
       case .payday:
         // All done - collapse the final section so its completed state is visible.
@@ -545,9 +551,10 @@ private struct TaxPresetButton: View {
     }) {
       Text("\(Int(value))%")
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, Spacing.xs)
+        .frame(maxWidth: .infinity, minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexBackground)
         .clipShape(Capsule())
         .overlay(
@@ -556,6 +563,7 @@ private struct TaxPresetButton: View {
         )
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 

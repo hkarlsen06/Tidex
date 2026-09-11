@@ -346,6 +346,8 @@ struct PayrollCardJobBreakdown: Identifiable, Equatable {  // swiftlint:disable:
   let tax: Double?  // swiftlint:disable:this explicit_acl
   let taxEnabled: Bool  // swiftlint:disable:this explicit_acl
   let adjustments: [PayrollAdjustment]  // swiftlint:disable:this explicit_acl
+  var earningsPeriodStart: Date? = nil
+  var payoutTaxSettings: PayoutTaxSettings? = nil
 }
 
 struct DashboardPayrollCardSnapshot: Equatable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
@@ -1074,7 +1076,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
         let totals = PayrollEngine.summarizeShiftTotals(  // swiftlint:disable:this explicit_type_interface
           shifts: jobShifts,
-          halfTaxMonth: halfTaxMonth,
+          halfTaxMonth: job.half_tax_month,
           earningsMonth: earningsYM.month,
           now: now
         )
@@ -1089,7 +1091,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         }
         let fallbackTaxSettings = payrollTaxSettings(  // swiftlint:disable:this explicit_type_interface
           from: jobShifts,
-          fallbackDate: payoutDate.toISODateString(),
+          fallbackDate: PayrollEngine.calculatePayoutDate(
+            shiftDate: Date.firstDayOfMonth(year: earningsYM.year, month: earningsYM.month),
+            payrollDay: job.payroll_day ?? fallbackPayrollDay),
           snapshots: snapshots,
           jobs: jobs,
           jobId: job.id
@@ -1107,7 +1111,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
             )
           },
           halfTaxMonth: halfTaxMonth,
-          payoutMonth: selection.payoutMonth
+          payoutMonth: selection.payoutMonth,
+          jobs: jobs
         )
         let taxEnabled: Bool =
           jobShifts.contains(where: \.taxEnabled) || adjustmentTotals.taxEnabled
@@ -1162,7 +1167,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
               net: taxEnabled ? net : nil,
               tax: tax,
               taxEnabled: taxEnabled,
-              adjustments: jobAdjustments
+              adjustments: jobAdjustments,
+              earningsPeriodStart: Date.firstDayOfMonthDate(
+                year: earningsYM.year, month: earningsYM.month),
+              payoutTaxSettings: fallbackTaxSettings.adjusted(
+                payoutMonth: selection.payoutMonth, halfTaxMonth: job.half_tax_month)
             )
           ]
         )
@@ -3267,7 +3276,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         )
       },
       halfTaxMonth: halfTaxMonth,
-      payoutMonth: displayYM.month
+      payoutMonth: displayYM.month,
+      jobs: displayJobs
     )
     let prevTaxEnabled =  // swiftlint:disable:this explicit_type_interface
       previousMonthShifts.contains(where: \.taxEnabled) || adjustmentTotals.taxEnabled
@@ -3326,7 +3336,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           )
         },
         halfTaxMonth: halfTaxMonth,
-        payoutMonth: displayYM.month
+        payoutMonth: displayYM.month,
+        jobs: displayJobs
       )
       previousComparisonGross =
         PayrollEngine.summarizeShiftTotals(
@@ -3445,7 +3456,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         )
       },
       halfTaxMonth: halfTaxMonth,
-      payoutMonth: displayYM.month
+      payoutMonth: displayYM.month,
+      jobs: jobs
     )
     let prevTaxEnabled =  // swiftlint:disable:this explicit_type_interface
       previousMonthShifts.contains(where: \.taxEnabled) || adjustmentTotals.taxEnabled
@@ -3503,7 +3515,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           )
         },
         halfTaxMonth: halfTaxMonth,
-        payoutMonth: displayYM.month
+        payoutMonth: displayYM.month,
+        jobs: jobs
       )
       previousComparisonGross =
         PayrollEngine.summarizeShiftTotals(
@@ -3718,8 +3731,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     return ShiftWithComputations(
       shift: reconstructedShift,
       computed: computed,
-      taxEnabled: snapshot?.effectiveTaxEnabled ?? shift.taxEnabled,
-      taxPercentage: snapshot?.effectiveTaxPercentage ?? shift.taxPercentage
+      taxEnabled: shift.taxEnabled,
+      taxPercentage: shift.taxPercentage,
+      calculationContext: shift.calculationContext
     )
   }
 

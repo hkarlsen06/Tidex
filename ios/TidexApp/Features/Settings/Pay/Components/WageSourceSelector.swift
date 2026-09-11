@@ -15,6 +15,8 @@ struct WageSourceSelector: View {
   var showTariffOption: Bool = true
   /// Optional tariff version to use for rates (when nil, uses static fallback)
   var tariffVersion: TariffVersion?  // swiftlint:disable:this explicit_acl
+  /// Preserve a saved rate until the user explicitly selects a tariff rate.
+  var savedTariffRate: Double?
   /// Optional content shown between selector buttons and the tariff/custom input list.
   var selectorFooterContent: AnyView?  // swiftlint:disable:this explicit_acl
 
@@ -28,6 +30,9 @@ struct WageSourceSelector: View {
 
   /// Get wage rate for a specific level
   private func wageRate(for level: Int) -> Double {
+    if level == wageLevel, let savedTariffRate {
+      return savedTariffRate
+    }
     if let version = tariffVersion {
       return version.rate(forLevel: level) ?? PayrollCalculator.presetWageRates[String(level)]
         ?? 184.54
@@ -97,7 +102,9 @@ struct WageSourceSelector: View {
     VStack(spacing: Spacing.xs) {
       ForEach(tariffLevels) { level in
         TariffLevelSelectionRow(
-          level: level,
+          level: TariffLevel(
+            level: level.level, rate: wageRate(for: level.level), displayName: level.displayName
+          ),
           isSelected: wageLevel == level.level,
           action: {
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -138,6 +145,7 @@ struct WageSourceSelector: View {
       Spacer()
 
       Text(formatWage(currentWage))
+        .accessibilityIdentifier("pay-settings.hourly-wage")
         .font(.tidexButton)
         .foregroundColor(.tidexTextPrimary)
     }
@@ -151,7 +159,7 @@ struct WageSourceSelector: View {
     formatter.numberStyle = .decimal
     formatter.minimumFractionDigits = 2
     formatter.maximumFractionDigits = 2
-    formatter.locale = Locale(identifier: "nb_NO")
+    formatter.locale = .appLocale
     let formatted = formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
 
     let currencyConfig = CurrencyConfig.get(currency)

@@ -42,6 +42,7 @@ struct PayrollEngine {
 
   private struct ComputationContext {
     let fallbackPayrollDay: Int
+    let fallbackHalfTaxMonth: Int?
     let jobsById: [String: Job]
     let defaultJobId: String?
     let snapshotsByJobId: [String?: [WageSnapshot]]
@@ -113,6 +114,7 @@ struct PayrollEngine {
     let snapshotsByJobId = Dictionary(grouping: request.snapshots, by: { $0.job_id })
     let context = ComputationContext(
       fallbackPayrollDay: fallbackPayrollDay,
+      fallbackHalfTaxMonth: request.settings?.half_tax_month,
       jobsById: Dictionary(uniqueKeysWithValues: request.jobs.map { ($0.id, $0) }),
       defaultJobId: request.jobs.first(where: \.is_default)?.id,
       snapshotsByJobId: snapshotsByJobId,
@@ -270,12 +272,27 @@ struct PayrollEngine {
     // 4. Compute payroll with wage snapshot
     let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 
+    let job = effectiveJobId.flatMap { context.jobsById[$0] }
+    let halfTaxMonth = job.map(\.half_tax_month) ?? context.fallbackHalfTaxMonth
+    let month = payoutMonth(from: shift.shift_date)
+    let taxSettings = PayoutTaxSettings(
+      enabled: taxSnapshot?.effectiveTaxEnabled ?? false,
+      percentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+    ).adjusted(payoutMonth: month, halfTaxMonth: halfTaxMonth)
+
     // 5. Return with tax settings from payout snapshot
     return ShiftWithComputations(
       shift: shift,
       computed: computed,
       taxEnabled: taxSnapshot?.effectiveTaxEnabled ?? false,
-      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0
+      taxPercentage: taxSnapshot?.effectiveTaxPercentage ?? 0,
+      calculationContext: ShiftCalculationContext(
+        wageSnapshotId: wageSnapshot?.id,
+        taxSnapshotId: taxSnapshot?.id,
+        scheduledPayoutDate: payoutDate,
+        effectiveTaxPercentage: taxSettings.percentage,
+        halfTaxApplied: taxSettings.enabled && halfTaxMonth == month
+      )
     )
   }
 
@@ -407,7 +424,8 @@ struct PayrollEngine {
         shift: shift.shift,
         computed: computed,
         taxEnabled: shift.taxEnabled,
-        taxPercentage: shift.taxPercentage
+        taxPercentage: shift.taxPercentage,
+        calculationContext: shift.calculationContext
       )
     }
   }
@@ -726,6 +744,9 @@ struct PayrollEngine {
     payoutMonth: Int,
     halfTaxMonth: Int?
   ) -> Double {
+    if shift.calculationContext != nil {
+      return shift.netPay
+    }
     let gross = shift.grossPay
 
     guard shift.taxEnabled else {

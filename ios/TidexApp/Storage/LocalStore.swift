@@ -2234,6 +2234,7 @@ internal actor LocalStoreActor {
   internal func updateWageSnapshot(
     id: String,
     jobId: String? = nil,
+    fromDate: Date? = nil,
     hourlyWage: Double?,
     wageLevel: Int?,
     updateWageLevel: Bool = false,
@@ -2257,8 +2258,35 @@ internal actor LocalStoreActor {
       throw LocalStoreWriteError.notFound
     }
 
+    if let fromDate {
+      guard !localSnapshot.isBaseline else {
+        throw WageSnapshotDateError.baselineMustRemainUndated
+      }
+      let userId = localSnapshot.userId
+      let effectiveJobId = jobId ?? localSnapshot.jobId
+      let snapshots = try modelContext.fetch(
+        FetchDescriptor<LocalWageSnapshot>(
+          predicate: #Predicate {
+            $0.userId == userId && $0.serverDeletedAt == nil && $0.syncStatusRaw != "pendingDelete"
+          }
+        ))
+      guard
+        !snapshots.contains(where: {
+          $0.id != id && $0.jobId == effectiveJobId
+            && $0.fromDateString == fromDate.toISODateString()
+        })
+      else {
+        throw WageSnapshotDateError.dateConflict
+      }
+    }
+
     var newDirtyFields = localSnapshot.dirtyFieldKeys
     let now = Date()
+
+    if let fromDate, fromDate.toISODateString() != localSnapshot.fromDateString {
+      localSnapshot.fromDate = Calendar.current.startOfDay(for: fromDate)
+      newDirtyFields.insert(.fromDate)
+    }
 
     if let newJobId = jobId, newJobId != localSnapshot.jobId {
       localSnapshot.jobId = newJobId

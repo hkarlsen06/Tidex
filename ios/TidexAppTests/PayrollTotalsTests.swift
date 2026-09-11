@@ -3,6 +3,74 @@ import XCTest
 @testable import Tidex
 
 final class PayrollTotalsTests: XCTestCase {
+  func testWorkplaceTaxSettingsMatchShiftTotalsAndWidgetAmounts() throws {
+    let jobs = [
+      TestFixtures.job(id: "half-tax", isDefault: true, currency: "kr", halfTaxMonth: 11),
+      TestFixtures.job(id: "full-tax", isDefault: false, currency: "$", halfTaxMonth: nil),
+    ]
+    let snapshots = jobs.map {
+      TestFixtures.wageSnapshot(
+        id: $0.id, taxEnabled: true, taxPercentage: 30,
+        breakEnabled: false, jobId: $0.id)
+    }
+    let shifts = jobs.enumerated().map { index, job in
+      TestFixtures.shift(
+        id: job.id, shiftDate: "2026-10-0\(index + 1)",
+        startTime: "08:00", endTime: "16:00", jobId: job.id)
+    }
+    let settings = try JSONDecoder().decode(
+      UserSettings.self,
+      from: Data(
+        #"{"user_id":"user-1","theme":"system","half_tax_month":11}"#.utf8))
+    let result = PayrollEngine.computeShiftsForMonth(
+      .init(
+        year: 2026, month: 10, shifts: shifts, recurring: [], snapshots: snapshots,
+        settings: settings, jobs: jobs))
+    let half = try XCTUnwrap(result.first { $0.id == "half-tax" })
+    let full = try XCTUnwrap(result.first { $0.id == "full-tax" })
+
+    XCTAssertEqual(half.netPay, 1360, accuracy: 0.001)
+    XCTAssertEqual(half.taxAmount, 240, accuracy: 0.001)
+    XCTAssertEqual(full.netPay, 1120, accuracy: 0.001)
+    XCTAssertEqual(half.calculationContext?.wageSnapshotId, "half-tax")
+    XCTAssertEqual(half.calculationContext?.scheduledPayoutDate, "2026-11-25")
+    XCTAssertEqual(half.calculationContext?.halfTaxApplied, true)
+    XCTAssertEqual(full.calculationContext?.halfTaxApplied, false)
+
+    let totals = PayrollEngine.summarizeShiftTotals(
+      shifts: result, halfTaxMonth: 11, earningsMonth: 10)
+    XCTAssertEqual(totals.net, half.netPay + full.netPay, accuracy: 0.001)
+
+    let widget = NativeWidgetStorage.storedShift(full, jobs: jobs, fallbackCurrency: "kr")
+    XCTAssertEqual(widget.currencySymbol, "$")
+    XCTAssertEqual(widget.taxRate, 0.3)
+    XCTAssertEqual(
+      widget.totalGrossEstimate * (1 - (widget.taxRate ?? 0)), full.netPay,
+      accuracy: 0.001)
+  }
+
+  func testPayoutTaxContextSurvivesOvertimeCalculation() throws {
+    let job = TestFixtures.job(id: "job", isDefault: true, halfTaxMonth: 11)
+    let snapshot = TestFixtures.wageSnapshot(
+      taxEnabled: true, taxPercentage: 20,
+      breakEnabled: false, jobId: job.id,
+      overtime: OvertimeConfig(
+        enabled: true, weeklyThresholdHours: 1,
+        rules: OvertimeConfig.seededDefaults.rules))
+    let result = PayrollEngine.computeShiftsForMonth(
+      .init(
+        year: 2026, month: 10,
+        shifts: [
+          TestFixtures.shift(
+            shiftDate: "2026-10-01", startTime: "08:00", endTime: "10:00",
+            jobId: job.id)
+        ], recurring: [], snapshots: [snapshot], settings: nil, jobs: [job]))
+    let shift = try XCTUnwrap(result.first)
+    XCTAssertEqual(shift.grossPay, 500, accuracy: 0.001)
+    XCTAssertEqual(shift.effectiveTaxPercentage, 10)
+    XCTAssertEqual(shift.netPay, 450, accuracy: 0.001)
+  }
+
   func testSummarizeShiftTotalsAppliesHalfTaxOnPayoutMonth() {
     let taxedOne = TestFixtures.computedShift(
       id: "s1",

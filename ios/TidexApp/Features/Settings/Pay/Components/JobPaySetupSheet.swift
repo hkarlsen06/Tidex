@@ -12,6 +12,7 @@ struct JobPaySetupSheet: View {
     case schedule
     case wage
     case supplements
+    case deductions
   }
 
   @Environment(\.dismiss) private var dismiss
@@ -53,6 +54,16 @@ struct JobPaySetupSheet: View {
 
       case .supplements:
         supplementsStep
+
+      case .deductions:
+        SettingsAccordionScreen(
+          data: onboardingData,
+          onContinue: { Task { await submit() } },
+          onBack: { step = onboardingData.wageType == .custom ? .supplements : .wage },
+          showsPayday: false,
+          continueTitle: String(localized: .commonSave)
+        )
+        .overlay(alignment: .topTrailing) { dismissButton }
       }
 
       if isSaving {
@@ -62,6 +73,17 @@ struct JobPaySetupSheet: View {
     .onAppear {
       onboardingData.currency = initialCurrency
       onboardingData.payrollDay = payrollDay
+    }
+    .interactiveDismissDisabled(isSaving)
+    .alert(
+      String(localized: .commonError),
+      isPresented: Binding(
+        get: { saveError != nil }, set: { if !$0 { saveError = nil } }
+      )
+    ) {
+      Button(String(localized: .commonOk)) { saveError = nil }
+    } message: {
+      Text(saveError ?? "")
     }
   }
 
@@ -94,7 +116,7 @@ struct JobPaySetupSheet: View {
         if onboardingData.wageType == .custom {
           step = .supplements
         } else {
-          Task { await submit() }
+          step = .deductions
         }
       },
       onBack: {
@@ -112,7 +134,7 @@ struct JobPaySetupSheet: View {
       SupplementsScreen(
         data: onboardingData,
         onContinue: {
-          Task { await submit() }
+          step = .deductions
         },
         onBack: {
           step = .wage
@@ -164,6 +186,7 @@ struct JobPaySetupSheet: View {
   }
 
   private func submit() async {
+    guard !isSaving else { return }
     isSaving = true
     saveError = nil
 
@@ -194,7 +217,6 @@ struct JobPaySetupSheet: View {
       dismiss()
     } else {
       saveError = String(localized: .settingsPayErrorSaveFailed)
-      step = .schedule
     }
   }
 }

@@ -1213,6 +1213,72 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.hourlyWage]))
   }
 
+  internal func testMovingPayHistoryDatePersistsAndMarksDateForSync() async throws {
+    let store = try makeStoreActor()
+    let created = try await createPayHistorySnapshot(in: store, fromDate: "2026-01-01")
+    await store.markWageSnapshotClean(id: created.id)
+    let updated = try await movePayHistorySnapshot(created.id, in: store, to: "2026-02-01")
+    let record = try await store.getWageSnapshot(id: created.id)
+    let local = try XCTUnwrap(record)
+
+    XCTAssertEqual(updated.from_date, "2026-02-01")
+    XCTAssertEqual(local.fromDateString, "2026-02-01")
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.fromDate]))
+    XCTAssertEqual(local.syncStatus, .dirty)
+  }
+
+  internal func testMovingPayHistoryRejectsConflictingDateBeforeChangingAnyValues() async throws {
+    let store = try makeStoreActor()
+    let created = try await createPayHistorySnapshot(in: store, fromDate: "2026-01-01")
+    _ = try await createPayHistorySnapshot(in: store, fromDate: "2026-02-01")
+    await store.markWageSnapshotClean(id: created.id)
+    do {
+      _ = try await movePayHistorySnapshot(created.id, in: store, to: "2026-02-01", wage: 999)
+      XCTFail("A second period on the same date must be rejected")
+    } catch {
+      XCTAssertEqual(error as? WageSnapshotDateError, .dateConflict)
+    }
+    let record = try await store.getWageSnapshot(id: created.id)
+    let local = try XCTUnwrap(record)
+    XCTAssertEqual(local.fromDateString, "2026-01-01")
+    XCTAssertEqual(local.hourlyWage, 200)
+    XCTAssertEqual(local.syncStatus, .clean)
+  }
+
+  internal func testBaselineCannotBeTurnedIntoADatedEntry() async throws {
+    let store = try makeStoreActor()
+    let created = try await createPayHistorySnapshot(in: store, fromDate: nil)
+    do {
+      _ = try await movePayHistorySnapshot(created.id, in: store, to: "2026-02-01")
+      XCTFail("The baseline must continue covering earlier work")
+    } catch {
+      XCTAssertEqual(error as? WageSnapshotDateError, .baselineMustRemainUndated)
+    }
+    let record = try await store.getWageSnapshot(id: created.id)
+    XCTAssertNil(record?.fromDate)
+  }
+
+  private func createPayHistorySnapshot(in store: LocalStoreActor, fromDate: String?) async throws
+    -> WageSnapshot
+  {
+    try await store.createWageSnapshot(
+      userId: userId, jobId: "job-1", fromDate: fromDate.flatMap { Date.fromISODateString($0) },
+      hourlyWage: 200, wageLevel: nil, tariffTypeId: nil,
+      supplements: SupplementRulesSnapshot(rules: []), taxEnabled: nil, taxPercentage: nil,
+      breakEnabled: nil, breakMethod: nil, breakThresholdHours: nil, breakDeductionMinutes: nil
+    )
+  }
+
+  private func movePayHistorySnapshot(
+    _ id: String, in store: LocalStoreActor, to date: String, wage: Double? = nil
+  ) async throws -> WageSnapshot {
+    try await store.updateWageSnapshot(
+      id: id, fromDate: makeDate(date), hourlyWage: wage, wageLevel: nil, tariffTypeId: nil,
+      supplements: nil, taxEnabled: nil, taxPercentage: nil, breakEnabled: nil, breakMethod: nil,
+      breakThresholdHours: nil, breakDeductionMinutes: nil
+    )
+  }
+
   internal func testMarkWageSnapshotPendingDeleteSetsPendingDeleteStatus() async throws {
     let store = try makeStoreActor()
 

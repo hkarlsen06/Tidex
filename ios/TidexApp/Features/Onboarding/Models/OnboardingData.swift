@@ -343,19 +343,19 @@ struct OnboardingSupplementRule: Identifiable, Equatable {
   }
 
   /// Human-readable value with localization and currency
-  func valueDescription(locale _: Locale, currency: String = "kr") -> String {  // swiftlint:disable:this explicit_acl
+  func valueDescription(locale: Locale, currency: String = "kr") -> String {  // swiftlint:disable:this explicit_acl
+    let formatted = value.formatted(.number.precision(.fractionLength(0...2)).locale(locale))
     switch type {
     case .fixed:
       let currencyConfig = CurrencyConfig.get(currency)
       let hourPart = String(localized: .commonPerHourShort)
-      let suffix =
+      let amount =
         currencyConfig.display == .prefix
-        ? "\(currencyConfig.value)\(hourPart)"
-        : "\(currencyConfig.value)\(hourPart)"
-      return "+\(Int(value)) \(suffix)"
+        ? "\(currencyConfig.value)\(formatted)" : "\(formatted) \(currencyConfig.value)"
+      return "+\(amount)\(hourPart)"
 
     case .percent:
-      return "+\(Int(value))%"
+      return "+\(formatted)%"
     }
   }
 }

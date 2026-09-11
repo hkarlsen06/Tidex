@@ -16,6 +16,7 @@ let allFiles: [String] = [
   "generate-appstore-metadata.mjs",
   "reset-translations.mjs",
   "translate-xcstrings.mjs",
+  "translate-xcstrings.test.mjs",
   "appstore-metadata-source.json",
 ]
 

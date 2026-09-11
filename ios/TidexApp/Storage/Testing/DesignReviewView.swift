@@ -11,12 +11,21 @@
     @State private var startTime: Date? = EventSheetFormatter.date(from: "09:00")
     @State private var endTime: Date? = EventSheetFormatter.date(from: "17:00")
     @State private var showingShiftEditor: Bool = false
+    @State private var payReviewDate = Date.fromISODateString("2026-11-15") ?? .now
+    @State private var payEditorSelection: PayEditorSelection?
+    @State private var savedPayDescription = ""
     @StateObject private var paywallModel: PaywallViewModel = .init()
     @StateObject private var loginModel: LoginViewModel = .init()
 
     private let screen: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_SCREEN"] ?? "home"
     private let month: Date = Date.fromISODateString("2026-09-01") ?? .now
+
+    private struct PayEditorSelection: Identifiable {
+      let id = UUID()
+      let snapshot: WageSnapshot?
+      let section: WageSnapshotEditorSection?
+    }
 
     internal var body: some View {
       Group {  // swiftlint:disable:this closure_body_length
@@ -69,6 +78,45 @@
         case "payroll-breakdown":
           ShiftDetailsSheet(shift: Self.payrollBreakdownShift, jobName: "Harbour")
             .environmentObject(AppCoordinator.shared)
+        case "pay-settings-review", "pay-settings-accessibility":
+          paySettingsReview
+            .dynamicTypeSize(
+              screen == "pay-settings-accessibility" ? .accessibility3 : dynamicTypeSize)
+        case "pay-history-tariff-editor":
+          if savedPayDescription.isEmpty {
+            WageSnapshotEditorSheet(
+              mode: .edit, snapshot: Self.savedTariffSnapshot,
+              snapshots: [Self.savedTariffSnapshot],
+              initialSection: .tax,
+              onSave: { input in
+                savedPayDescription =
+                  "\(input.hourlyWage)|\(input.supplements.rules.count)|\(input.taxEnabled)"
+                return true
+              }, onDelete: { _ in }, onCancel: {}
+            )
+          } else {
+            Text(verbatim: savedPayDescription).accessibilityIdentifier("pay-history.saved-result")
+          }
+        case "job-pay-setup":
+          if savedPayDescription.isEmpty {
+            JobPaySetupSheet(job: Self.payReviewJob, initialCurrency: "$") { input in
+              savedPayDescription =
+                "\(input.baselineSnapshot.breakEnabled ?? false)|\(input.baselineSnapshot.taxEnabled ?? false)"
+              return true
+            }
+          } else {
+            Text(verbatim: savedPayDescription).accessibilityIdentifier("pay-history.saved-result")
+          }
+        case "add-job-setup":
+          if savedPayDescription.isEmpty {
+            AddJobSheet(initialCurrency: "$", prefilledBasicJob: Self.payReviewJob) { input in
+              savedPayDescription =
+                "\(input.baselineSnapshot.breakEnabled ?? false)|\(input.baselineSnapshot.taxEnabled ?? false)"
+              return true
+            }
+          } else {
+            Text(verbatim: savedPayDescription).accessibilityIdentifier("pay-history.saved-result")
+          }
         default:
           NavigationStack {
             ScrollView {
@@ -114,6 +162,91 @@
         }
         PrimaryButton(title: String(localized: .commonContinue), action: {})
       }
+    }
+
+    private var paySettingsReview: some View {
+      let entries = WageTimelineProcessor.processSnapshots(
+        Self.payReviewSnapshots, locale: .appLocale, currency: "kr",
+        today: Date.fromISODateString("2026-11-15") ?? .now)
+      return NavigationStack {
+        ScrollView {
+          VStack(spacing: Spacing.lg) {
+            PaySettingsReviewCard(
+              workDate: $payReviewDate, snapshots: Self.payReviewSnapshots, entries: entries,
+              currency: "kr", payrollDay: 15, halfTaxMonth: 12,
+              onEdit: { snapshot, section in
+                payEditorSelection = PayEditorSelection(snapshot: snapshot, section: section)
+              })
+            WageHistoryTimelineView(
+              entries: entries, currency: "kr",
+              onAddNew: {
+                payEditorSelection = PayEditorSelection(snapshot: nil, section: nil)
+              },
+              onEdit: { snapshot in
+                payEditorSelection = PayEditorSelection(snapshot: snapshot, section: nil)
+              })
+            if !savedPayDescription.isEmpty {
+              Text(verbatim: savedPayDescription).accessibilityIdentifier(
+                "pay-history.saved-result")
+            }
+          }
+          .padding(Spacing.md)
+        }
+        .background(Color.tidexBackground)
+        .navigationTitle(String(localized: .settingsPayTitle))
+        .navigationBarTitleDisplayMode(.inline)
+      }
+      .sheet(item: $payEditorSelection) { selection in
+        WageSnapshotEditorSheet(
+          mode: selection.snapshot == nil ? .create : .edit,
+          snapshot: selection.snapshot, snapshots: Self.payReviewSnapshots,
+          initialDate: payReviewDate,
+          initialSection: selection.section,
+          onSave: { input in
+            savedPayDescription =
+              "\(input.hourlyWage)|\(input.fromDate?.toISODateString() ?? "baseline")"
+            payEditorSelection = nil
+            return true
+          }, onDelete: { _ in }, onCancel: { payEditorSelection = nil }
+        )
+        .dynamicTypeSize(screen == "pay-settings-accessibility" ? .accessibility3 : dynamicTypeSize)
+      }
+    }
+
+    private static var payReviewJob: Job {
+      Job(
+        id: "pay-review", user_id: "design-preview", name: "Harbour", color: nil, currency: "$",
+        is_default: true, sort_order: 0, payroll_day: 15, half_tax_month: 12, monthly_goal: nil,
+        archived_at: nil, deleted_at: nil, created_at: nil, updated_at: nil)
+    }
+
+    private static var payReviewSnapshots: [WageSnapshot] {
+      [
+        payReviewSnapshot(id: "future", date: "2026-12-01", wage: 250, tax: 30),
+        payReviewSnapshot(id: "baseline", date: nil, wage: 200, tax: 20),
+      ]
+    }
+
+    private static var savedTariffSnapshot: WageSnapshot {
+      WageSnapshot(
+        id: "saved-tariff", user_id: "design-preview", from_date: nil,
+        hourly_wage: 184.12, wage_level: 1, tariff_type_id: "hk_retail",
+        supplements: SupplementRulesSnapshot(rules: [
+          SupplementRule(days: [1, 2, 3, 4, 5], from: "18:00", to: "21:00", rate: 11.25)
+        ]), tax_enabled: false, tax_percentage: 20, break_enabled: false,
+        break_method: "proportional", break_threshold_hours: 5.5,
+        break_deduction_minutes: 30, created_at: nil)
+    }
+
+    private static func payReviewSnapshot(id: String, date: String?, wage: Double, tax: Double)
+      -> WageSnapshot
+    {
+      WageSnapshot(
+        id: id, user_id: "design-preview", job_id: "pay-review", from_date: date,
+        hourly_wage: wage, wage_level: nil, tariff_type_id: nil,
+        supplements: SupplementRulesSnapshot(rules: []), tax_enabled: true, tax_percentage: tax,
+        break_enabled: true, break_method: "proportional", break_threshold_hours: 5.5,
+        break_deduction_minutes: 30, created_at: nil)
     }
 
     private var calendar: some View {

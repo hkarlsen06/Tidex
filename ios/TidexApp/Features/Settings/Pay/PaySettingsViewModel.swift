@@ -19,6 +19,8 @@ final class PaySettingsViewModel: ObservableObject {
   /// Processed timeline entries for display
   @Published private(set) var timelineEntries: [WageTimelineEntry] = []
 
+  @Published var reviewDate: Date
+
   /// Global user settings
   @Published private(set) var globalSettings: UserSettings?
 
@@ -72,6 +74,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Selected snapshot for editing (nil for create mode)
   @Published var selectedSnapshot: WageSnapshot?
+  @Published var editorSection: WageSnapshotEditorSection?
 
   // MARK: - Delete Confirmation State
 
@@ -107,8 +110,9 @@ final class PaySettingsViewModel: ObservableObject {
 
   // MARK: - Init
 
-  init(initialSelectedJobId: String? = nil) {
+  init(initialSelectedJobId: String? = nil, initialDate: Date = Date()) {
     pendingInitialSelectedJobId = initialSelectedJobId
+    reviewDate = initialDate
   }
 
   deinit {
@@ -189,13 +193,13 @@ final class PaySettingsViewModel: ObservableObject {
         return
       }
 
-      // Selected job was archived/deleted before load. Force user to pick again when multiple jobs exist.
-      if jobs.count > 1 {
-        selectedJobId = nil
-        requiresJobReselection = true
-        return
-      }
+      // A calculation link must never silently open a different workplace's settings.
+      selectedJobId = nil
+      requiresJobReselection = true
+      return
     }
+
+    if requiresJobReselection, selectedJobId == nil { return }
 
     if let selectedJobId, jobs.contains(where: { $0.id == selectedJobId }) {
       requiresJobReselection = false
@@ -209,7 +213,7 @@ final class PaySettingsViewModel: ObservableObject {
   }
 
   var shouldRequireJobReselectionSheet: Bool {
-    requiresJobReselection && activeJobs.count > 1 && selectedJobId == nil
+    requiresJobReselection && !activeJobs.isEmpty && selectedJobId == nil
   }
 
   var shouldShowWorkplaceHeader: Bool {
@@ -492,14 +496,18 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Open editor in create mode
   func openCreateEditor() {
+    clearError()
     editorMode = .create
+    editorSection = nil
     selectedSnapshot = nil
     showingEditor = true
   }
 
   /// Open editor in edit mode for a specific snapshot
-  func openEditEditor(snapshot: WageSnapshot) {
+  func openEditEditor(snapshot: WageSnapshot, section: WageSnapshotEditorSection? = nil) {
+    clearError()
     editorMode = .edit
+    editorSection = section
     selectedSnapshot = snapshot
     showingEditor = true
   }
@@ -584,24 +592,30 @@ final class PaySettingsViewModel: ObservableObject {
     }
 
     do {
-      _ = try await snapshotsRepository.updateSnapshot(
-        id: id,
-        jobId: selectedJobId,
-        hourlyWage: input.hourlyWage,
-        wageLevel: input.wageLevel,
-        updateWageLevel: true,
-        tariffTypeId: input.tariffTypeId,
-        updateTariffTypeId: true,
-        supplements: input.supplements,
-        overtime: input.overtime,
-        taxEnabled: input.taxEnabled,
-        taxPercentage: input.taxPercentage,
-        updateTaxPercentage: true,
-        breakEnabled: input.breakEnabled,
-        breakMethod: input.breakMethod.rawValue,
-        breakThresholdHours: input.breakThresholdHours,
-        breakDeductionMinutes: input.breakDeductionMinutes
-      )
+      guard
+        try await snapshotsRepository.updateSnapshot(
+          id: id,
+          jobId: selectedJobId,
+          fromDate: input.fromDate,
+          hourlyWage: input.hourlyWage,
+          wageLevel: input.wageLevel,
+          updateWageLevel: true,
+          tariffTypeId: input.tariffTypeId,
+          updateTariffTypeId: true,
+          supplements: input.supplements,
+          overtime: input.overtime,
+          taxEnabled: input.taxEnabled,
+          taxPercentage: input.taxPercentage,
+          updateTaxPercentage: true,
+          breakEnabled: input.breakEnabled,
+          breakMethod: input.breakMethod.rawValue,
+          breakThresholdHours: input.breakThresholdHours,
+          breakDeductionMinutes: input.breakDeductionMinutes
+        ) != nil
+      else {
+        errorMessage = String(localized: .settingsPayErrorUpdateFailed)
+        return false
+      }
 
       // Refresh UI
       refreshData()
@@ -622,13 +636,9 @@ final class PaySettingsViewModel: ObservableObject {
 
   /// Request deletion of a snapshot (shows confirmation)
   func requestDelete(snapshot: WageSnapshot) {
-    // Check if this is baseline and there are other snapshots
     if snapshot.isBaseline {
-      let datedSnapshots = snapshots.filter { !$0.isBaseline }
-      if !datedSnapshots.isEmpty {
-        errorMessage = String(localized: .settingsPayErrorCannotDeleteBaseline)
-        return
-      }
+      errorMessage = String(localized: .settingsPayErrorCannotDeleteBaseline)
+      return
     }
 
     // Count affected shifts
@@ -682,33 +692,12 @@ final class PaySettingsViewModel: ObservableObject {
     let effectiveJobId = snapshot.job_id ?? selectedJobId
     let shifts = shiftsRepository.getAllShifts(for: userId, jobId: effectiveJobId)
 
-    // Sort snapshots by date
-    let sortedSnapshots = snapshots.sorted { s1, s2 in
-      let d1 = s1.from_date ?? ""
-      let d2 = s2.from_date ?? ""
-      return d1 > d2
-    }
-
-    // Find this snapshot's index
-    guard let index = sortedSnapshots.firstIndex(where: { $0.id == snapshot.id }),
-      let fromDate = snapshot.from_date
-    else {
-      return 0
-    }
-
-    // Get the date range: from this snapshot's date to the next snapshot's date (or nil if none)
-    let nextFromDate = index > 0 ? sortedSnapshots[index - 1].from_date : nil
-
     return shifts.filter { shift in
-      let shiftDate = shift.shift_date
-      let afterStart = shiftDate >= fromDate
-      let beforeEnd: Bool
-      if let nextDate = nextFromDate {
-        beforeEnd = shiftDate < nextDate
-      } else {
-        beforeEnd = true
-      }
-      return afterStart && beforeEnd
+      guard let date = Date.fromISODateString(shift.shift_date) else { return false }
+      let context = PaySettingsContext(
+        workDate: date, snapshots: snapshots, payrollDay: selectedJobPayrollDay,
+        halfTaxMonth: selectedJobHalfTaxMonth)
+      return context.wageSnapshot?.id == snapshot.id || context.taxSnapshot?.id == snapshot.id
     }.count
   }
 
@@ -817,6 +806,50 @@ struct WageSnapshotEditorInput {
   /// Tariff type ID when using tariff rates (e.g., "hk_retail")
   var tariffTypeId: String?
 
+  init(effectiveDate: Date, snapshots: [WageSnapshot]) {
+    self.init(
+      prefillFrom: SnapshotsService.snapshotForDate(
+        effectiveDate.toISODateString(), from: snapshots
+      ))
+    fromDate = effectiveDate
+  }
+
+  /// When a new change moves to another period, carry forward that period's
+  /// settings while retaining the fields the user has deliberately changed.
+  func rebasingUneditedSettings(from previous: WageSnapshot, onto next: WageSnapshot) -> Self {
+    let original = Self(from: previous)
+    let replacement = Self(from: next)
+    var result = self
+
+    if hourlyWage == original.hourlyWage, wageLevel == original.wageLevel,
+      tariffTypeId == original.tariffTypeId
+    {
+      result.hourlyWage = replacement.hourlyWage
+      result.wageLevel = replacement.wageLevel
+      result.tariffTypeId = replacement.tariffTypeId
+    }
+    if supplements == original.supplements {
+      result.supplements = replacement.supplements
+    }
+    if overtime == original.overtime {
+      result.overtime = replacement.overtime
+    }
+    if taxEnabled == original.taxEnabled, taxPercentage == original.taxPercentage {
+      result.taxEnabled = replacement.taxEnabled
+      result.taxPercentage = replacement.taxPercentage
+    }
+    if breakEnabled == original.breakEnabled, breakMethod == original.breakMethod,
+      breakThresholdHours == original.breakThresholdHours,
+      breakDeductionMinutes == original.breakDeductionMinutes
+    {
+      result.breakEnabled = replacement.breakEnabled
+      result.breakMethod = replacement.breakMethod
+      result.breakThresholdHours = replacement.breakThresholdHours
+      result.breakDeductionMinutes = replacement.breakDeductionMinutes
+    }
+    return result
+  }
+
   /// Create input from an existing snapshot
   init(from snapshot: WageSnapshot) {
     if let fromDateString = snapshot.from_date {
@@ -830,7 +863,7 @@ struct WageSnapshotEditorInput {
     self.overtime = snapshot.overtime
     self.taxEnabled = snapshot.effectiveTaxEnabled
     self.taxPercentage = snapshot.effectiveTaxPercentage
-    self.breakEnabled = snapshot.effectiveBreakEnabled
+    self.breakEnabled = snapshot.effectiveBreakEnabled && snapshot.breakMethod != .none
     self.breakMethod = snapshot.breakMethod
     self.breakThresholdHours = snapshot.effectiveBreakThresholdHours
     self.breakDeductionMinutes = snapshot.effectiveBreakDeductionMinutes
@@ -848,7 +881,7 @@ struct WageSnapshotEditorInput {
       self.overtime = snapshot.overtime
       self.taxEnabled = snapshot.effectiveTaxEnabled
       self.taxPercentage = snapshot.effectiveTaxPercentage
-      self.breakEnabled = snapshot.effectiveBreakEnabled
+      self.breakEnabled = snapshot.effectiveBreakEnabled && snapshot.breakMethod != .none
       self.breakMethod = snapshot.breakMethod
       self.breakThresholdHours = snapshot.effectiveBreakThresholdHours
       self.breakDeductionMinutes = snapshot.effectiveBreakDeductionMinutes

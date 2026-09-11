@@ -99,7 +99,12 @@ struct ShiftDetailsPresentationPolicy: Equatable {
 }
 
 struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
-  let shift: ShiftWithComputations
+  private let initialShift: ShiftWithComputations
+  @State private var recalculatedShift: ShiftWithComputations?
+  @State private var recalculatedTariffRules: [SupplementRule]?
+  @State private var showingPaySettings = false
+
+  private var shift: ShiftWithComputations { recalculatedShift ?? initialShift }
   /// Job name to display in the header badge (only set when user has multiple jobs)
   let jobName: String?
   /// Job color hex for the badge (e.g. "#3B82F6")
@@ -114,7 +119,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   var onSendToChatCompleted: ((SendShiftToChatResult) -> Void)?
   let snapshotShareContext: ShiftSnapshotShareContext
   /// Tariff supplement rules from the applicable snapshot (used for supplements editor)
-  let tariffRules: [SupplementRule]
+  private let initialTariffRules: [SupplementRule]
+  private var tariffRules: [SupplementRule] { recalculatedTariffRules ?? initialTariffRules }
 
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.userCurrency) private var currency
@@ -233,7 +239,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     startInEditMode: Bool = false,
     tariffRules: [SupplementRule] = []
   ) {
-    self.shift = shift
+    self.initialShift = shift
     self.jobName = jobName
     self.jobColorHex = jobColorHex
     self.onDelete = onDelete
@@ -246,7 +252,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     self.onSendToChatCompleted = onSendToChatCompleted
     self.snapshotShareContext = snapshotShareContext
     self.startInEditMode = startInEditMode
-    self.tariffRules = tariffRules
+    self.initialTariffRules = tariffRules
   }
 
   private var formattedDate: String {
@@ -751,6 +757,16 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
         }
       )
     }
+    .sheet(
+      isPresented: $showingPaySettings,
+      onDismiss: {
+        Task { await refreshCalculation() }
+      }
+    ) {
+      if let date = Date.fromISODateString(shift.shiftDate) {
+        PaySettingsSheet(jobId: shift.shift.job_id, workDate: date)
+      }
+    }
     .sheet(isPresented: $showingSendToChatSheet) {
       if let viewerUserId, canSendShiftSnapshots {
         SendShiftToChatSheet(
@@ -809,6 +825,35 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   }
 
   // MARK: - Edit State Management
+
+  private func refreshCalculation() async {
+    guard snapshotShareContext == .own,
+      let userId = AuthSessionManager.shared.offlineUserIdFallback(),
+      shift.shift.user_id == userId,
+      let date = Date.fromISODateString(shift.shiftDate)
+    else { return }
+    let reader = MonthlyPayrollReadService.shared
+    reader.invalidateSharedCache(for: userId)
+    let context = await reader.loadContextOffMain(for: userId, jobId: shift.shift.job_id)
+    let month = date.yearMonth()
+    let rows = await reader.loadShiftRows(
+      for: userId, year: month.year, month: month.month, jobId: shift.shift.job_id
+    )
+    let results = PayrollEngine.computeShiftsForMonth(
+      .init(
+        year: month.year, month: month.month, shifts: rows, recurring: context.recurringShifts,
+        snapshots: context.snapshots, settings: context.settings, jobs: context.jobs
+      ))
+    if let updated = results.first(where: { $0.id == shift.id }) {
+      recalculatedTariffRules =
+        context.snapshots.first {
+          $0.id == updated.calculationContext?.wageSnapshotId
+        }?.supplements.rules ?? []
+      recalculatedShift = updated
+    } else {
+      errorMessage = String(localized: .settingsPayErrorLoadFailed)
+    }
+  }
 
   /// Initialize edit state from the shift data
   private func initializeEditState() {
@@ -1577,6 +1622,46 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
             showingSupplementsEditor = true
           }
         }
+      }
+
+      if let context = shift.calculationContext {
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+          Text(
+            .settingsPayReviewTaxDate(
+              Date.fromISODateString(context.scheduledPayoutDate)?
+                .formatted(.dateTime.day().month(.wide).year()) ?? context.scheduledPayoutDate)
+          )
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          if context.halfTaxApplied {
+            Text(.settingsPayReviewHalfTax)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+              .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+      }
+
+      if snapshotShareContext == .own {
+        Button {
+          showingPaySettings = true
+        } label: {
+          HStack(spacing: Spacing.sm) {
+            Label(.settingsPayReviewOpen, systemImage: "slider.horizontal.3")
+              .font(.tidexLabel)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+              .font(.tidexCaption)
+              .foregroundColor(.tidexTextMuted)
+              .accessibilityHidden(true)
+          }
+          .frame(minHeight: 44)
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(.tidexBlue)
       }
     }
   }

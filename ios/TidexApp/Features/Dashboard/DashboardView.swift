@@ -479,6 +479,16 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .sheet(item: $selectedPayrollDetailsVariant) { variant in
         payrollDetailsSheet(for: variant)
       }
+      .onChange(of: viewModel.payrollCardSnapshot) { _, snapshot in
+        guard let selected = selectedPayrollDetailsVariant, let snapshot else { return }
+        if let updated = (snapshot.variants + snapshot.previousPayoutVariants).first(where: {
+          $0.id == selected.id
+            && $0.jobBreakdowns.first?.earningsPeriodStart
+              == selected.jobBreakdowns.first?.earningsPeriodStart
+        }) {
+          selectedPayrollDetailsVariant = updated
+        }
+      }
       .sheet(item: $temporaryClockReviewSession) { session in
         let clockJobs = viewModel.clockSelectableJobsSnapshot()  // swiftlint:disable:this explicit_type_interface
         ClockOutReviewSheet(

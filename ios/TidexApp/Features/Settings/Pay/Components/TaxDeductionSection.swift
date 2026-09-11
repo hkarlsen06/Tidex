@@ -5,6 +5,9 @@ import UIKit
 
 /// Section for configuring tax deduction settings
 struct TaxDeductionSection: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @ScaledMetric(relativeTo: .subheadline) private var presetMinimumWidth: CGFloat = 52
+  @ScaledMetric(relativeTo: .headline) private var percentageInputWidth: CGFloat = 64
   @Binding var enabled: Bool
   @Binding var percentage: Double
 
@@ -15,34 +18,34 @@ struct TaxDeductionSection: View {
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
       // Section header with toggle
-      HStack {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(.settingsPayEditorTaxTitle)
-            .font(.tidexButton)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(.settingsPayEditorTaxDescription)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        Toggle("", isOn: $enabled)
-          .labelsHidden()
-          .tint(.tidexBrandPrimary)
-          .onChange(of: enabled) { _, _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-          }
+      Toggle(isOn: $enabled) {
+        Text(.settingsPayEditorTaxTitle)
+          .font(.tidexButton)
+          .foregroundColor(.tidexTextPrimary)
       }
+      .accessibilityIdentifier("pay-settings.tax-toggle")
+      .tint(.tidexBrandPrimary)
+      .onChange(of: enabled) { _, _ in
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      }
+
+      Text(.settingsPayEditorTaxDescription)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
 
       // Percentage input (only shown when enabled)
       if enabled {
         percentageInput
           .transition(.opacity.combined(with: .move(edge: .top)))
       }
+
+      Text(.settingsPayReviewDateExplanation)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
-    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enabled)
+    .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: enabled)
   }
 
   // MARK: - Percentage Input
@@ -56,14 +59,17 @@ struct TaxDeductionSection: View {
 
       VStack(spacing: Spacing.sm) {
         // Quick percentage buttons
-        HStack(spacing: Spacing.xs) {
+        LazyVGrid(
+          columns: [GridItem(.adaptive(minimum: presetMinimumWidth), spacing: Spacing.xs)],
+          spacing: Spacing.xs
+        ) {
           ForEach([0, 20, 22, 25, 30], id: \.self) { value in
             QuickPercentageButton(
               value: value,
-              isSelected: Int(percentage) == value,
+              isSelected: percentage == Double(value),
               action: {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.8)) {
                   percentage = Double(value)
                 }
               }
@@ -82,7 +88,9 @@ struct TaxDeductionSection: View {
                 .keyboardType(.decimalPad)
                 .multilineTextAlignment(.trailing)
                 .focused($isPercentageInputFocused)
-                .frame(width: 50)
+                .frame(width: percentageInputWidth)
+                .frame(minHeight: 44)
+                .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
                 .padding(.horizontal, Spacing.xxs)
                 .padding(.vertical, Spacing.micro)
                 .background(Color.tidexBlue.opacity(0.15))
@@ -124,17 +132,17 @@ struct TaxDeductionSection: View {
                   .font(.tidexTitle2)
                   .foregroundColor(.tidexBlue)
                   .contentTransition(.numericText())
-                  .padding(.horizontal, Spacing.xxs)
-                  .padding(.vertical, Spacing.micro)
-                  .background(Color.tidexBlue.opacity(0.08))
-                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous))
 
                 Text("%")
                   .font(.tidexLabel)
                   .foregroundColor(.tidexTextMuted)
               }
+              .frame(minWidth: 44, minHeight: 44)
+              .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
+            .accessibilityValue(FormatterCache.percentagePoints(percentage))
           }
 
           Slider(
@@ -148,6 +156,8 @@ struct TaxDeductionSection: View {
             }
           )
           .tint(.tidexBlue)
+          .accessibilityLabel(Text(.settingsPayEditorTaxPercentage))
+          .accessibilityValue(FormatterCache.percentagePoints(percentage))
         }
         .padding(Spacing.sm)
         .background(Color.tidexSurfaceSecondary)
@@ -161,7 +171,7 @@ struct TaxDeductionSection: View {
     formatter.numberStyle = .decimal
     formatter.minimumFractionDigits = 0
     formatter.maximumFractionDigits = 1
-    formatter.locale = Locale(identifier: "nb_NO")
+    formatter.locale = .appLocale
     return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
   }
 
@@ -189,9 +199,10 @@ private struct QuickPercentageButton: View {
     Button(action: action) {
       Text("\(value)%")
         .font(isSelected ? .tidexLabelStrong : .tidexLabel)
-        .foregroundColor(isSelected ? .white : .tidexTextSecondary)
+        .foregroundColor(isSelected ? .tidexTextOnBrand : .tidexTextSecondary)
         .frame(maxWidth: .infinity)
-        .frame(height: 44)
+        .padding(.vertical, Spacing.xs)
+        .frame(minHeight: 44)
         .background(isSelected ? Color.tidexBrandPrimary : Color.tidexSurfaceSecondary)
         .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
         .overlay(
@@ -200,6 +211,7 @@ private struct QuickPercentageButton: View {
         )
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
 
