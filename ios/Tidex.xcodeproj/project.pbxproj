@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AF93110130C8000000A1B2C3 /* AddShiftSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */; };
-		AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */; };
 		11263D3C2F2FF22700233D63 /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3B2F2FF22700233D63 /* CropViewController */; };
 		11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3F2F2FF3F700233D63 /* TOCropViewController */; };
 		114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -60,6 +58,8 @@
 		ABCD20023070000000ABCDEF /* TidexSiriIntents.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = ABCD20013070000000ABCDEF /* TidexSiriIntents.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		ABCD200D3070000000ABCDEF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */; };
 		ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */; };
+		AF93110130C8000000A1B2C3 /* AddShiftSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */; };
+		AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */; };
 		B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */; };
 		B60A4D723072000000000001 /* LocalStoreShiftReadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */; };
 		B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */; };
@@ -170,8 +170,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSubmissionTests.swift; sourceTree = "<group>"; };
-		AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleListMonthTests.swift; sourceTree = "<group>"; };
 		00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotsServiceSelectionTests.swift; sourceTree = "<group>"; };
 		0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineDateLogicTests.swift; sourceTree = "<group>"; };
 		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -214,6 +212,8 @@
 		ABCD20013070000000ABCDEF /* TidexSiriIntents.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexSiriIntents.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SiriMessageRecipientMatcherTests.swift; sourceTree = "<group>"; };
 		ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheInvalidationTests.swift; sourceTree = "<group>"; };
+		AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSubmissionTests.swift; sourceTree = "<group>"; };
+		AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleListMonthTests.swift; sourceTree = "<group>"; };
 		B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreShiftReadTests.swift; sourceTree = "<group>"; };
 		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };
 		B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedKeychainAccessTokenPayloadTests.swift; sourceTree = "<group>"; };

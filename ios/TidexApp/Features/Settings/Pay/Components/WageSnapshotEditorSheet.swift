@@ -6,13 +6,19 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "WageSnapshotE
 
 // MARK: - Wage Snapshot Editor Sheet
 
+enum WageSnapshotEditorSection: Hashable {
+  case wage, supplements, overtime, tax, breaks
+}
+
 /// Sheet for creating or editing a wage snapshot
 struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   let mode: PaySettingsViewModel.EditorMode
   let snapshot: WageSnapshot?
-  let mostRecentSnapshot: WageSnapshot?
+  let snapshots: [WageSnapshot]
   /// User's currency from settings
   let userCurrency: String
+  let saveError: String?
+  let initialSection: WageSnapshotEditorSection?
   let onSave: (WageSnapshotEditorInput) async -> Bool
   let onDelete: (WageSnapshot) -> Void
   let onCancel: () -> Void
@@ -32,6 +38,10 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   @State private var breakDeductionMinutes: Int = 30
   @State private var taxEnabled: Bool = false
   @State private var taxPercentage: Double = 0
+  @State private var inheritedSnapshot: WageSnapshot?
+  @State private var usesSavedTariffRates = false
+  @State private var savedTariffSupplements = SupplementRulesSnapshot(rules: [])
+  @State private var shouldApplyTariffOvertime = false
 
   @State private var isSaving = false
   @State private var errorMessage: String?
@@ -70,16 +80,21 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   init(
     mode: PaySettingsViewModel.EditorMode,
     snapshot: WageSnapshot?,
-    mostRecentSnapshot: WageSnapshot?,
+    snapshots: [WageSnapshot],
+    initialDate: Date = Date(),
     userCurrency: String = "kr",
+    saveError: String? = nil,
+    initialSection: WageSnapshotEditorSection? = nil,
     onSave: @escaping (WageSnapshotEditorInput) async -> Bool,
     onDelete: @escaping (WageSnapshot) -> Void,
     onCancel: @escaping () -> Void
   ) {
     self.mode = mode
     self.snapshot = snapshot
-    self.mostRecentSnapshot = mostRecentSnapshot
+    self.snapshots = snapshots
     self.userCurrency = userCurrency
+    self.saveError = saveError
+    self.initialSection = initialSection
     self.onSave = onSave
     self.onDelete = onDelete
     self.onCancel = onCancel
@@ -87,51 +102,36 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     // Tariff is only available for Norwegian krone
     let canUseTariff = userCurrency == "kr"
 
-    // Initialize form state
-    if mode == .edit, let snapshot {
-      // Editing existing snapshot
-      if let fromDateString = snapshot.from_date,
-        let date = ISO8601DateFormatter.dateFromDateOnlyString(fromDateString)
-      {
-        _fromDate = State(initialValue: date)
-      }
-      // Only use preset if tariff is available AND snapshot uses tariff
-      _usePreset = State(initialValue: canUseTariff && snapshot.wage_level != nil)
-      _wageLevel = State(initialValue: snapshot.wage_level ?? 1)
-      _customWage = State(initialValue: snapshot.hourly_wage)
+    let source =
+      mode == .edit
+      ? snapshot
+      : SnapshotsService.snapshotForDate(
+        initialDate.toISODateString(), from: snapshots
+      )
+    _fromDate = State(
+      initialValue: mode == .edit
+        ? source?.from_date.flatMap { Date.fromISODateString($0) } ?? initialDate : initialDate)
+    _inheritedSnapshot = State(initialValue: source)
+
+    if let source {
+      _usePreset = State(initialValue: canUseTariff && source.wage_level != nil)
+      _wageLevel = State(initialValue: source.wage_level ?? 1)
+      _customWage = State(initialValue: source.hourly_wage)
       _supplements = State(
-        initialValue: snapshot.supplements.rules.map { OnboardingSupplementRule(from: $0) })
-      _overtimeEnabled = State(initialValue: snapshot.overtime.enabled)
-      _overtimeThresholdHours = State(initialValue: snapshot.overtime.weeklyThresholdHours)
-      _overtimeRules = State(initialValue: snapshot.overtime.rules.map { OvertimeRuleDraft($0) })
-      _breakEnabled = State(initialValue: snapshot.effectiveBreakEnabled)
-      _breakMethod = State(initialValue: snapshot.breakMethod)
-      _breakThresholdHours = State(initialValue: snapshot.effectiveBreakThresholdHours)
-      _breakDeductionMinutes = State(initialValue: snapshot.effectiveBreakDeductionMinutes)
-      _taxEnabled = State(initialValue: snapshot.effectiveTaxEnabled)
-      _taxPercentage = State(initialValue: snapshot.effectiveTaxPercentage)
-      // Initialize tariff type ID from snapshot
-      _tariffTypeId = State(initialValue: snapshot.tariff_type_id)
-    } else if let mostRecent = mostRecentSnapshot {
-      // Creating new snapshot - prefill from most recent
-      _fromDate = State(initialValue: Date())
-      // Only use preset if tariff is available AND most recent uses tariff
-      _usePreset = State(initialValue: canUseTariff && mostRecent.wage_level != nil)
-      _wageLevel = State(initialValue: mostRecent.wage_level ?? 1)
-      _customWage = State(initialValue: mostRecent.hourly_wage)
-      _supplements = State(
-        initialValue: mostRecent.supplements.rules.map { OnboardingSupplementRule(from: $0) })
-      _overtimeEnabled = State(initialValue: mostRecent.overtime.enabled)
-      _overtimeThresholdHours = State(initialValue: mostRecent.overtime.weeklyThresholdHours)
-      _overtimeRules = State(initialValue: mostRecent.overtime.rules.map { OvertimeRuleDraft($0) })
-      _breakEnabled = State(initialValue: mostRecent.effectiveBreakEnabled)
-      _breakMethod = State(initialValue: mostRecent.breakMethod)
-      _breakThresholdHours = State(initialValue: mostRecent.effectiveBreakThresholdHours)
-      _breakDeductionMinutes = State(initialValue: mostRecent.effectiveBreakDeductionMinutes)
-      _taxEnabled = State(initialValue: mostRecent.effectiveTaxEnabled)
-      _taxPercentage = State(initialValue: mostRecent.effectiveTaxPercentage)
-      // Initialize tariff type ID from most recent snapshot
-      _tariffTypeId = State(initialValue: mostRecent.tariff_type_id)
+        initialValue: source.supplements.rules.map(OnboardingSupplementRule.init))
+      _overtimeEnabled = State(initialValue: source.overtime.enabled)
+      _overtimeThresholdHours = State(initialValue: source.overtime.weeklyThresholdHours)
+      _overtimeRules = State(initialValue: source.overtime.rules.map(OvertimeRuleDraft.init))
+      _breakEnabled = State(
+        initialValue: source.effectiveBreakEnabled && source.breakMethod != .none)
+      _breakMethod = State(initialValue: source.breakMethod)
+      _breakThresholdHours = State(initialValue: source.effectiveBreakThresholdHours)
+      _breakDeductionMinutes = State(initialValue: source.effectiveBreakDeductionMinutes)
+      _taxEnabled = State(initialValue: source.effectiveTaxEnabled)
+      _taxPercentage = State(initialValue: source.effectiveTaxPercentage)
+      _tariffTypeId = State(initialValue: source.tariff_type_id)
+      _usesSavedTariffRates = State(initialValue: source.wage_level != nil)
+      _savedTariffSupplements = State(initialValue: source.supplements)
     } else {
       // No existing snapshot - default to custom wage if tariff not available
       _usePreset = State(initialValue: canUseTariff)
@@ -148,93 +148,103 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         Color.tidexBackground
           .ignoresSafeArea()
 
-        ScrollView {
-          VStack(spacing: Spacing.lg) {
-            // Date section (or baseline indicator)
-            dateSection
+        ScrollViewReader { proxy in
+          ScrollView {
+            VStack(spacing: Spacing.lg) {
+              // Date section (or baseline indicator)
+              dateSection
 
-            Divider()
-              .padding(.horizontal)
-
-            // Wage source selector
-            WageSourceSelector(
-              usePreset: $usePreset,
-              wageLevel: $wageLevel,
-              customWage: $customWage,
-              currency: currency,
-              showTariffOption: showTariffOption,
-              tariffVersion: tariffVersion,
-              selectorFooterContent: showTariffOption && usePreset
-                ? AnyView(tariffVersionIndicator)
-                : nil
-            )
-            .padding(.horizontal)
-
-            Divider()
-              .padding(.horizontal)
-
-            // Supplements section
-            supplementsSection
-
-            Divider()
-              .padding(.horizontal)
-
-            // Overtime section
-            overtimeSection
-
-            Divider()
-              .padding(.horizontal)
-
-            // Tax deduction section
-            TaxDeductionSection(
-              enabled: $taxEnabled,
-              percentage: $taxPercentage
-            )
-            .padding(.horizontal)
-
-            Divider()
-              .padding(.horizontal)
-
-            // Break deduction section
-            BreakDeductionSection(
-              enabled: $breakEnabled,
-              method: $breakMethod,
-              thresholdHours: $breakThresholdHours,
-              deductionMinutes: $breakDeductionMinutes
-            )
-            .padding(.horizontal)
-
-            // Error message
-            if let error = errorMessage {
-              errorBanner(error)
+              Divider()
                 .padding(.horizontal)
-            }
-          }
-          .padding(.vertical, Spacing.lg)
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-          if mode == .edit, !isBaseline {
-            VStack(spacing: 0) {
-              deleteButton
-                .padding(.horizontal, Spacing.lg)
-                .padding(.top, Spacing.sm)
-                .padding(.bottom, Spacing.sm)
-            }
-            .frame(maxWidth: .infinity)
-            .background(
-              ZStack {
-                Rectangle()
-                  .fill(.ultraThinMaterial)
-                LinearGradient(
-                  colors: [Color.tidexBackground.opacity(0), Color.tidexBackground.opacity(0.92)],
-                  startPoint: .top,
-                  endPoint: .bottom
-                )
+
+              // Wage source selector
+              WageSourceSelector(
+                usePreset: Binding(
+                  get: { usePreset },
+                  set: {
+                    guard usePreset != $0 else { return }
+                    usePreset = $0
+                    usesSavedTariffRates = false
+                  }
+                ),
+                wageLevel: Binding(
+                  get: { wageLevel },
+                  set: {
+                    guard wageLevel != $0 else { return }
+                    wageLevel = $0
+                    usesSavedTariffRates = false
+                  }
+                ),
+                customWage: $customWage,
+                currency: currency,
+                showTariffOption: showTariffOption,
+                tariffVersion: tariffVersion,
+                savedTariffRate: usesSavedTariffRates ? customWage : nil,
+                selectorFooterContent: showTariffOption && usePreset
+                  ? AnyView(tariffVersionIndicator)
+                  : nil
+              )
+              .padding(.horizontal)
+              .id(WageSnapshotEditorSection.wage)
+
+              Divider()
+                .padding(.horizontal)
+
+              // Supplements section
+              supplementsSection
+                .id(WageSnapshotEditorSection.supplements)
+
+              Divider()
+                .padding(.horizontal)
+
+              // Overtime section
+              overtimeSection
+                .id(WageSnapshotEditorSection.overtime)
+
+              Divider()
+                .padding(.horizontal)
+
+              // Tax deduction section
+              TaxDeductionSection(
+                enabled: $taxEnabled,
+                percentage: $taxPercentage
+              )
+              .padding(.horizontal)
+              .id(WageSnapshotEditorSection.tax)
+
+              Divider()
+                .padding(.horizontal)
+
+              // Break deduction section
+              BreakDeductionSection(
+                enabled: $breakEnabled,
+                method: $breakMethod,
+                thresholdHours: $breakThresholdHours,
+                deductionMinutes: $breakDeductionMinutes
+              )
+              .padding(.horizontal)
+              .id(WageSnapshotEditorSection.breaks)
+
+              if mode == .edit, !isBaseline {
+                Divider()
+                  .padding(.horizontal, Spacing.md)
+                deleteButton
+                  .padding(.horizontal, Spacing.md)
               }
-              .ignoresSafeArea(edges: .bottom)
-              .allowsHitTesting(false)
-            )
+
+              // Error message
+              if let error = errorMessage ?? saveError {
+                errorBanner(error)
+                  .padding(.horizontal)
+              }
+            }
+            .padding(.vertical, Spacing.lg)
+          }
+          .scrollDismissesKeyboard(.interactively)
+          .onAppear {
+            if let initialSection {
+              proxy.scrollTo(initialSection, anchor: .top)
+            }
           }
         }
       }
@@ -249,6 +259,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           Button(String(localized: .commonCancel)) {
             onCancel()
           }
+          .disabled(isSaving)
         }
         ToolbarItem(placement: .confirmationAction) {
           Button(String(localized: .commonSave)) {
@@ -281,12 +292,15 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           }
         )
       }
+      .interactiveDismissDisabled(isSaving)
       .task {
         await loadTariffVersion()
       }
+      .task(id: tariffLookupID) {
+        await loadTariffVersionForDate(fromDate)
+      }
       .onChange(of: fromDate) { _, newDate in
-        // Reload tariff version when date changes (for historical versions)
-        Task { await loadTariffVersionForDate(newDate) }
+        rebaseInheritedSettings(for: newDate)
       }
       .onChange(of: overtimeEnabled) { _, enabled in
         if enabled, overtimeRules.isEmpty {
@@ -299,12 +313,13 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
   // MARK: - Tariff Version Loading
 
+  private var tariffLookupID: String {
+    "\(tariffTypeId ?? ""): \(fromDate.toISODateString())"
+  }
+
   /// Load tariff version based on mode and date
   private func loadTariffVersion() async {
     guard showTariffOption else { return }
-
-    isLoadingTariff = true
-    defer { isLoadingTariff = false }
 
     do {
       // First, load all available tariff types
@@ -333,17 +348,8 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         tariffTypeName = types.first { $0.id == effectiveTariffTypeId }?.display_name
       }
 
-      let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
-      tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
-        tariffType: effectiveTariffTypeId,
-        date: isoDate
-      )
-      applyTariffOvertimeDefaultIfNeeded()
-
-      logger.info("Loaded tariff version: \(tariffVersion?.effective_date ?? "none")")
     } catch {
       logger.error("Failed to load tariff version: \(error.localizedDescription)")
-      // Fall back to static rates - tariffVersion remains nil
     }
   }
 
@@ -352,19 +358,28 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     guard showTariffOption, let typeId = tariffTypeId else { return }
 
     isLoadingTariff = true
-    defer { isLoadingTariff = false }
+    tariffVersion = nil
+    defer {
+      if !Task.isCancelled { isLoadingTariff = false }
+    }
 
     let isoDate = ISO8601DateFormatter.dateOnlyString(from: date)
 
     do {
-      tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
+      let version = try await TariffVersionService.shared.getTariffVersionForDate(
         tariffType: typeId,
         date: isoDate
       )
-      applyTariffOvertimeDefaultIfNeeded()
+      guard !Task.isCancelled, tariffTypeId == typeId,
+        fromDate.toISODateString() == isoDate
+      else { return }
+      tariffVersion = version
+      applyTariffOvertimeDefaultIfNeeded(force: shouldApplyTariffOvertime)
+      shouldApplyTariffOvertime = false
       logger.info(
         "Reloaded tariff version for date \(isoDate): \(tariffVersion?.effective_date ?? "none")")
     } catch {
+      guard !Task.isCancelled else { return }
       logger.error("Failed to reload tariff version for date: \(error.localizedDescription)")
     }
   }
@@ -372,26 +387,28 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   // MARK: - Can Save
 
   private var canSave: Bool {
+    guard !hasDateConflict else { return false }
     guard currentOvertimeConfig.isValidForEditing else {
       return false
     }
     if usePreset {
-      return true  // Tariff always valid
+      return usesSavedTariffRates
+        || (!isLoadingTariff && tariffVersion?.rate(forLevel: wageLevel) != nil)
     }
-    return customWage > 0
+    return customWage.isFinite && customWage > 0
   }
 
   private var currentOvertimeConfig: OvertimeConfig {
     OvertimeConfig(
       enabled: overtimeEnabled,
       weeklyThresholdHours: overtimeThresholdHours,
-      rules: overtimeEnabled ? overtimeRules.map { $0.toRule() } : []
+      rules: overtimeRules.map { $0.toRule() }
     )
   }
 
   private func applyTariffOvertimeDefaultIfNeeded(force: Bool = false) {
     guard showTariffOption, usePreset else { return }
-    guard force || (snapshot == nil && mostRecentSnapshot == nil) else { return }
+    guard force || (snapshot == nil && inheritedSnapshot == nil) else { return }
     let defaultOvertime = tariffVersion?.effectiveOvertime ?? PayrollCalculator.presetOvertimeConfig
     overtimeEnabled = defaultOvertime.enabled
     overtimeThresholdHours = defaultOvertime.weeklyThresholdHours
@@ -418,8 +435,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
                 guard newValue != tariffTypeId else { return }
                 tariffTypeId = newValue
                 tariffTypeName = tariffTypes.first { $0.id == newValue }?.display_name
-                // Reload tariff version for the new type
-                Task { await loadTariffVersionForSelectedType() }
+                wageLevel = 1
+                usesSavedTariffRates = false
+                shouldApplyTariffOvertime = true
               }
             )
           ) {
@@ -464,6 +482,27 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           Spacer()
         }
       }
+
+      if usesSavedTariffRates {
+        Text(.settingsPayEditorSavedTariff)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+        Button(String(localized: .settingsPayEditorRefreshTariff)) {
+          usesSavedTariffRates = false
+          applyTariffOvertimeDefaultIfNeeded(force: true)
+        }
+        .disabled(isLoadingTariff || tariffVersion?.rate(forLevel: wageLevel) == nil)
+      } else if !isLoadingTariff, tariffVersion?.rate(forLevel: wageLevel) == nil {
+        Text(.settingsPayEditorTariffUnavailable)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexWarning)
+        Button(String(localized: .commonRetry)) {
+          Task {
+            await loadTariffVersion()
+            await loadTariffVersionForDate(fromDate)
+          }
+        }
+      }
     }
   }
 
@@ -478,31 +517,6 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
     return displayFormatter.string(from: date)
   }
 
-  /// Reload tariff version when tariff type changes
-  private func loadTariffVersionForSelectedType() async {
-    guard showTariffOption, let typeId = tariffTypeId else { return }
-
-    isLoadingTariff = true
-    defer { isLoadingTariff = false }
-
-    do {
-      // Reset wage level when changing tariff type
-      wageLevel = 1
-
-      let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
-      tariffVersion = try await TariffVersionService.shared.getTariffVersionForDate(
-        tariffType: typeId,
-        date: isoDate
-      )
-      applyTariffOvertimeDefaultIfNeeded(force: true)
-      logger.info(
-        "Loaded tariff version for type \(typeId): \(tariffVersion?.effective_date ?? "none")")
-    } catch {
-      logger.error(
-        "Failed to load tariff version for type \(typeId): \(error.localizedDescription)")
-    }
-  }
-
   // MARK: - Date Section
 
   @ViewBuilder
@@ -515,8 +529,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       if isBaseline {
         // Baseline indicator
         HStack {
-          Image(systemName: "star.fill")
-            .foregroundColor(.tidexWarning)
+          Image(systemName: "clock.arrow.circlepath")
+            .foregroundColor(.tidexTextSecondary)
+            .accessibilityHidden(true)
 
           Text(.settingsPayEditorBaselineIndicator)
             .font(.tidexSubheadline)
@@ -524,29 +539,42 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
           Spacer()
         }
-        .padding(Spacing.sm)
-        .background(Color.tidexWarning.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
 
         Text(.settingsPayEditorBaselineHelp)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
       } else {
         // Date picker
-        DatePicker(
-          "",
-          selection: $fromDate,
-          displayedComponents: .date
-        )
-        .datePickerStyle(.graphical)
+        DatePicker(selection: $fromDate, displayedComponents: .date) {
+          Text(.settingsPayEditorFromDateLabel)
+        }
+        .labelsHidden()
+        .datePickerStyle(.compact)
+        .accessibilityLabel(Text(.settingsPayEditorFromDateLabel))
         .tint(.tidexBrandPrimary)
-        .padding(Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
 
         Text(.settingsPayEditorFromDateHelp)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+      }
+
+      Text(mode == .edit ? .settingsPayEditorEditImpact : .settingsPayEditorCreateImpact)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      if let nextDate = nextChangeDate {
+        Text(.settingsPayEditorNextChange(nextDate.formatted(.dateTime.day().month().year())))
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
+      if hasDateConflict {
+        Text(.settingsPayEditorDateConflictHelp)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexError)
       }
     }
     .padding(.horizontal)
@@ -572,7 +600,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
             Image(systemName: "plus")
               .font(.tidexBodyMedium)
               .foregroundColor(.tidexBlue)
+              .frame(minWidth: 44, minHeight: 44)
           }
+          .accessibilityLabel(Text(.supplementsAddRule))
         }
       }
 
@@ -582,8 +612,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
 
-        let presetRules =
-          tariffVersion?.supplements.rules ?? PayrollCalculator.presetSupplementRules
+        let presetRules = resolvedSupplements.rules
         ForEach(presetRules.indices, id: \.self) { index in
           presetSupplementRow(presetRules[index])
         }
@@ -704,13 +733,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   }
 
   private func formatRuleValue(_ rule: SupplementRule) -> String {
-    if let rate = rule.rate {
-      return "+\(Int(rate)) kr/t"
-    }
-    if let percent = rule.percent {
-      return "+\(Int(percent))%"
-    }
-    return ""
+    OnboardingSupplementRule(from: rule).valueDescription(locale: .appLocale, currency: currency)
   }
 
   // MARK: - Overtime Section
@@ -889,81 +912,96 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         Text(.settingsPayEditorDelete)
           .font(.tidexButton)
       }
-      .foregroundColor(.tidexTextOnDanger)
-      .frame(maxWidth: .infinity)
-      .frame(height: Spacing.buttonHeight)
-      .background(Color.tidexError)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+      .foregroundColor(.tidexError)
+      .frame(maxWidth: .infinity, minHeight: Spacing.buttonHeight)
+      .contentShape(Rectangle())
     }
+    .buttonStyle(.plain)
+    .disabled(isSaving)
   }
 
   // MARK: - Save
 
-  private func save() async {
-    isSaving = true
-    errorMessage = nil
+  private var hasDateConflict: Bool {
+    guard !isBaseline else { return false }
+    return snapshots.contains {
+      $0.id != snapshot?.id && $0.from_date == fromDate.toISODateString()
+    }
+  }
 
-    // Build input - only use preset if tariff is available and selected
+  private var nextChangeDate: Date? {
+    snapshots.filter { $0.id != snapshot?.id }
+      .compactMap(\.from_date)
+      .filter { isBaseline || $0 > fromDate.toISODateString() }
+      .min()
+      .flatMap { Date.fromISODateString($0) }
+  }
+
+  private var resolvedSupplements: SupplementRulesSnapshot {
+    guard showTariffOption, usePreset else {
+      return SupplementRulesSnapshot(rules: supplements.map { $0.toSupplementRule() })
+    }
+    if usesSavedTariffRates { return savedTariffSupplements }
+    return tariffVersion?.supplements ?? SupplementRulesSnapshot(rules: [])
+  }
+
+  private var editorInput: WageSnapshotEditorInput {
     let effectiveUsePreset = showTariffOption && usePreset
-
-    // Resolve hourly wage: use tariff version rates if available, otherwise fallback
-    let resolvedHourlyWage: Double
-    if effectiveUsePreset {
-      if let version = tariffVersion, let rate = version.rate(forLevel: wageLevel) {
-        resolvedHourlyWage = rate
-      } else {
-        // Fallback to static preset rates
-        resolvedHourlyWage = PayrollCalculator.presetWageRates[String(wageLevel)] ?? 184.54
-      }
-    } else {
-      resolvedHourlyWage = customWage
-    }
-
-    let resolvedWageLevel = effectiveUsePreset ? wageLevel : nil
-
-    // Resolve supplements: use tariff version supplements if available, otherwise fallback
-    let resolvedSupplements: SupplementRulesSnapshot
-    if effectiveUsePreset {
-      if let version = tariffVersion {
-        resolvedSupplements = version.supplements
-      } else {
-        // Fallback to static preset supplements
-        resolvedSupplements = SupplementRulesSnapshot(
-          rules: PayrollCalculator.presetSupplementRules)
-      }
-    } else {
-      resolvedSupplements = SupplementRulesSnapshot(
-        rules: supplements.map { $0.toSupplementRule() })
-    }
-
-    // Resolve tariff type ID: only set if using preset
-    let resolvedTariffTypeId = effectiveUsePreset ? tariffTypeId : nil
-    let resolvedBreakMethod: BreakMethod =
-      breakEnabled && breakMethod == .none ? .proportional : breakMethod
-    let resolvedOvertime = currentOvertimeConfig
-
-    guard resolvedOvertime.isValidForEditing else {
-      errorMessage = String(localized: .settingsPayEditorOvertimeInvalid)
-      isSaving = false
-      return
-    }
-
-    let input = WageSnapshotEditorInput(
+    let wage =
+      effectiveUsePreset && !usesSavedTariffRates
+      ? tariffVersion?.rate(forLevel: wageLevel) ?? customWage : customWage
+    return WageSnapshotEditorInput(
       fromDate: isBaseline ? nil : fromDate,
-      hourlyWage: resolvedHourlyWage,
-      wageLevel: resolvedWageLevel,
+      hourlyWage: wage,
+      wageLevel: effectiveUsePreset ? wageLevel : nil,
       supplements: resolvedSupplements,
-      overtime: resolvedOvertime,
+      overtime: currentOvertimeConfig,
       taxEnabled: taxEnabled,
       taxPercentage: taxPercentage,
       breakEnabled: breakEnabled,
-      breakMethod: resolvedBreakMethod,
+      breakMethod: breakEnabled && breakMethod == .none ? .proportional : breakMethod,
       breakThresholdHours: breakThresholdHours,
       breakDeductionMinutes: breakDeductionMinutes,
-      tariffTypeId: resolvedTariffTypeId
+      tariffTypeId: effectiveUsePreset
+        ? (usesSavedTariffRates ? inheritedSnapshot?.tariff_type_id : tariffTypeId) : nil
     )
+  }
 
-    let success = await onSave(input)
+  private func rebaseInheritedSettings(for date: Date) {
+    guard mode == .create, let previous = inheritedSnapshot,
+      let next = SnapshotsService.snapshotForDate(date.toISODateString(), from: snapshots),
+      previous.id != next.id
+    else { return }
+
+    let current = editorInput
+    let inheritsWage =
+      current.hourlyWage == previous.hourly_wage
+      && current.wageLevel == previous.wage_level && current.tariffTypeId == previous.tariff_type_id
+    let input = current.rebasingUneditedSettings(from: previous, onto: next)
+    inheritedSnapshot = next
+    usePreset = showTariffOption && input.wageLevel != nil
+    wageLevel = input.wageLevel ?? 1
+    customWage = input.hourlyWage
+    supplements = input.supplements.rules.map(OnboardingSupplementRule.init)
+    savedTariffSupplements = input.supplements
+    tariffTypeId = input.tariffTypeId
+    if inheritsWage { usesSavedTariffRates = usePreset }
+    overtimeEnabled = input.overtime.enabled
+    overtimeThresholdHours = input.overtime.weeklyThresholdHours
+    overtimeRules = input.overtime.rules.map(OvertimeRuleDraft.init)
+    taxEnabled = input.taxEnabled
+    taxPercentage = input.taxPercentage
+    breakEnabled = input.breakEnabled
+    breakMethod = input.breakMethod
+    breakThresholdHours = input.breakThresholdHours
+    breakDeductionMinutes = input.breakDeductionMinutes
+  }
+
+  private func save() async {
+    guard canSave, !isSaving else { return }
+    isSaving = true
+    errorMessage = nil
+    let success = await onSave(editorInput)
 
     if !success {
       // Error message should be set by the view model
@@ -1079,7 +1117,7 @@ extension WageSnapshotEditorInput {
   WageSnapshotEditorSheet(
     mode: .create,
     snapshot: nil,
-    mostRecentSnapshot: nil,
+    snapshots: [],
     onSave: { _ in true },
     onDelete: { _ in },
     onCancel: {}

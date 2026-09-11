@@ -60,7 +60,8 @@ struct AccordionSectionView<Content: View>: View {
                 .font(.tidexLabelStrong)
                 .foregroundColor(.tidexTextOnBrand)
                 .frame(maxWidth: .infinity)
-                .frame(height: 44)
+                .padding(.vertical, Spacing.xs)
+                .frame(minHeight: 44)
                 .background(Color.tidexBrandPrimary)
                 .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
             }

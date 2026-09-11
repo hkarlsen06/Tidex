@@ -1,9 +1,9 @@
 // swiftlint:disable explicit_type_interface
 // swiftlint:disable:previous blanket_disable_command
 import Foundation
-import os.log
 import UIKit
 import WidgetKit
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "NativeWidgetStorage")
 
@@ -116,6 +116,29 @@ enum NativeWidgetStorage {
   /// Storage window: previous month through 90 days ahead
   private static let futureDaysWindow = 90
 
+  static func storedShift(
+    _ shift: ShiftWithComputations, jobs: [Job], fallbackCurrency: String
+  ) -> StoredShift {
+    let job =
+      shift.shift.job_id.flatMap { jobId in jobs.first { $0.id == jobId } }
+      ?? jobs.first(where: \.is_default)
+    let computed = shift.computed
+    let hourlyWage =
+      computed.paidHours > 0
+      ? computed.basePay / computed.paidHours : computed.originalWagePeriods.first?.baseRate ?? 0
+    return StoredShift(
+      shiftId: shift.id,
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      hourlyWage: hourlyWage,
+      supplementRatePerHour: calculateAverageSupplementRate(periods: computed.wagePeriods),
+      totalGrossEstimate: computed.gross,
+      currencySymbol: job?.currency ?? fallbackCurrency,
+      taxRate: shift.taxEnabled ? shift.effectiveTaxPercentage / 100 : nil
+    )
+  }
+
   // MARK: - Public API
 
   /// Update widget storage with current local shift data
@@ -168,41 +191,25 @@ enum NativeWidgetStorage {
     // 90 days from now
     let endDate = calendar.date(byAdding: .day, value: futureDaysWindow, to: now) ?? now
 
-    // Fetch regular shifts in date range
+    let computationWindow = PayrollReadWindow(startDate: startDate, endDate: endDate)
+      .expandedForOvertime
     let regularShifts = await storeActor.fetchShifts(
       userId: userId,
-      startDate: startDate,
-      endDate: endDate
+      startDate: computationWindow.startDate,
+      endDate: computationWindow.endDate
     )
-
-    // Generate virtual shifts for each month in the date range
-    var virtualShifts: [ShiftRow] = []
-    let monthsInRange = getMonthsInRange(startDate: startDate, endDate: endDate)
-
-    for (year, month) in monthsInRange {
-      for recurring in recurringPatterns {
-        let generated = RecurringShiftGenerator.generateVirtualShiftsForMonth(
-          year: year,
-          month: month,
-          recurring: recurring
-        )
-
-        for virtual in generated {
-          // Create virtual shift row
-          let virtualRow = recurring.makeVirtualShift(
-            date: virtual.date,
-            weekday: virtual.weekday
-          )
-          virtualShifts.append(virtualRow)
-        }
-      }
-    }
-
-    // Combine regular and virtual shifts, removing duplicates
-    // (A real shift on a date takes precedence over a virtual one)
-    let regularDates = Set(regularShifts.map(\.shift_date))
-    let dedupedVirtualShifts = virtualShifts.filter { !regularDates.contains($0.shift_date) }
-    let allShifts = regularShifts + dedupedVirtualShifts
+    let yearMonth = now.yearMonth()
+    let allShifts = PayrollEngine.computeShiftsForMonth(
+      .init(
+        year: yearMonth.year,
+        month: yearMonth.month,
+        shifts: regularShifts,
+        recurring: recurringPatterns,
+        snapshots: snapshots,
+        settings: settings,
+        visibleRange: (start: startDate, end: endDate),
+        jobs: jobs
+      ))
 
     if allShifts.isEmpty {
       guard
@@ -221,45 +228,8 @@ enum NativeWidgetStorage {
       return
     }
 
-    // Sort all shifts by date for consistent ordering
-    let shifts = allShifts.sorted { $0.shift_date < $1.shift_date }
-
-    // Convert to StoredShift format with computed wages
-    let storedShifts = shifts.compactMap { shift -> StoredShift? in
-      // Find applicable snapshot for this shift date
-      let snapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: snapshots)
-
-      // Compute payroll for the shift
-      let computed = PayrollCalculator.computeShift(shift, snapshot: snapshot)
-
-      // Calculate weighted average supplement rate
-      let supplementRate = calculateAverageSupplementRate(periods: computed.wagePeriods)
-
-      // Calculate hourly wage from base pay
-      let hourlyWage =
-        computed.paidHours > 0
-        ? computed.basePay / computed.paidHours
-        : (snapshot?.hourly_wage ?? 0)
-
-      // Get tax rate from snapshot
-      let taxRate: Double?
-      if let snap = snapshot, snap.tax_enabled == true {
-        taxRate = (snap.tax_percentage ?? 0) / 100.0
-      } else {
-        taxRate = nil
-      }
-
-      return StoredShift(
-        shiftId: shift.id,
-        shiftDate: shift.shift_date,
-        startTime: shift.start_time,
-        endTime: shift.end_time,
-        hourlyWage: hourlyWage,
-        supplementRatePerHour: supplementRate,
-        totalGrossEstimate: computed.gross,
-        currencySymbol: currencySymbol,
-        taxRate: taxRate
-      )
+    let storedShifts = allShifts.map { shift in
+      storedShift(shift, jobs: jobs, fallbackCurrency: currencySymbol)
     }
 
     // Write to App Group UserDefaults
@@ -296,20 +266,7 @@ enum NativeWidgetStorage {
 
     logger.info("Widget storage updated with \(storedShifts.count) shifts")
 
-    // Also update monthly totals for TotalCard widget
-    let currentYear = calendar.component(.year, from: now)
-    let currentMonth = calendar.component(.month, from: now)
-    let previousYM = Date.previousYearMonth(from: (year: currentYear, month: currentMonth))
-    let currentMonthShifts = await storeActor.fetchShifts(
-      userId: userId,
-      startDate: Date.firstDayOfMonthDate(year: currentYear, month: currentMonth),
-      endDate: Date.lastDayOfMonthDate(year: currentYear, month: currentMonth)
-    )
-    let previousMonthShifts = await storeActor.fetchShifts(
-      userId: userId,
-      startDate: Date.firstDayOfMonthDate(year: previousYM.year, month: previousYM.month),
-      endDate: Date.lastDayOfMonthDate(year: previousYM.year, month: previousYM.month)
-    )
+    // Reuse the complete work weeks already loaded for both monthly totals.
     guard
       await NativeWidgetStorageRefreshCoordinator.shared.shouldApplyResults(
         for: userId,
@@ -322,8 +279,8 @@ enum NativeWidgetStorage {
       recurringPatterns: recurringPatterns,
       currencySymbol: currencySymbol,
       jobs: jobs,
-      currentMonthShifts: currentMonthShifts,
-      previousMonthShifts: previousMonthShifts,
+      currentMonthShifts: regularShifts,
+      previousMonthShifts: regularShifts,
       now: now
     )
   }
@@ -608,30 +565,6 @@ enum NativeWidgetStorage {
   private static func reloadWidgetTimelines() {
     WidgetCenter.shared.reloadAllTimelines()
     logger.debug("Widget timelines reloaded")
-  }
-
-  /// Get all (year, month) tuples in the date range
-  /// - Parameters:
-  ///   - startDate: Start of range
-  ///   - endDate: End of range
-  /// - Returns: Array of (year, month) tuples
-  private static func getMonthsInRange(startDate: Date, endDate: Date) -> [(Int, Int)] {
-    var months: [(Int, Int)] = []
-    let calendar = Calendar.current
-
-    var current =
-      calendar.date(from: calendar.dateComponents([.year, .month], from: startDate)) ?? startDate
-    let endMonth =
-      calendar.date(from: calendar.dateComponents([.year, .month], from: endDate)) ?? endDate
-
-    while current <= endMonth {
-      let year = calendar.component(.year, from: current)
-      let month = calendar.component(.month, from: current)
-      months.append((year, month))
-      current = calendar.date(byAdding: .month, value: 1, to: current) ?? current
-    }
-
-    return months
   }
 
   /// Calculate weighted average supplement rate from wage periods

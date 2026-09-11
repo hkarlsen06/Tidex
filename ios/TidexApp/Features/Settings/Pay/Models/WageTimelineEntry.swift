@@ -34,6 +34,7 @@ struct WageChange: Identifiable {
     case tax
     case breaks
     case supplements
+    case overtime
   }
 }
 
@@ -50,11 +51,13 @@ enum WageTimelineProcessor {
   static func processSnapshots(
     _ snapshots: [WageSnapshot],
     locale: Locale,
-    currency: String
+    currency: String,
+    today: Date = Date()
   ) -> [WageTimelineEntry] {
     guard !snapshots.isEmpty else { return [] }
 
-    let today = ISO8601DateFormatter.dateOnlyString(from: Date())
+    let snapshots = snapshots.sorted { ($0.from_date ?? "") > ($1.from_date ?? "") }
+    let today = today.toISODateString()
     var entries: [WageTimelineEntry] = []
 
     // Find the current entry (first snapshot where from_date <= today or baseline)
@@ -90,8 +93,6 @@ enum WageTimelineProcessor {
       let dateRange = formatDateRange(
         fromDate: snapshot.from_date,
         endDate: endDate,
-        isCurrent: entryType == .current,
-        isPast: entryType == .past,
         locale: locale
       )
 
@@ -143,33 +144,22 @@ enum WageTimelineProcessor {
   private static func formatDateRange(
     fromDate: String?,
     endDate: String?,
-    isCurrent: Bool,
-    isPast: Bool,
     locale: Locale
   ) -> String {
-    let nowText = String(localized: .commonNow)
-
-    // Baseline with no date
     guard let fromDate else {
-      // If baseline has an end date and is past, show "- {endDate}"
-      if let endDate, isPast {
-        let formattedEnd = formatDate(endDate, locale: locale)
-        return "- \(formattedEnd)"
+      if let endDate {
+        return String(localized: .settingsPayPeriodThrough(formatDate(endDate, locale: locale)))
       }
-      // Otherwise show "- nå" (it's the only entry or current)
-      return "- \(nowText)"
+      return String(localized: .settingsPayPeriodAllDates)
     }
 
     let formattedFrom = formatDate(fromDate, locale: locale)
 
-    if isCurrent {
-      return "\(formattedFrom) - \(nowText)"
-    }
     if let endDate {
       let formattedEnd = formatDate(endDate, locale: locale)
-      return "\(formattedFrom) - \(formattedEnd)"
+      return "\(formattedFrom) – \(formattedEnd)"
     }
-    return formattedFrom
+    return String(localized: .settingsPayPeriodFrom(formattedFrom))
   }
 
   /// Format a single date, hiding year if it's the current year
@@ -283,10 +273,14 @@ enum WageTimelineProcessor {
             : String(localized: .timelineBreakDisabled),
           type: .breaks
         ))
-    } else if current.effectiveBreakEnabled, current.breakMethod != previous.breakMethod {
+    } else if current.effectiveBreakEnabled,
+      current.breakMethod != previous.breakMethod
+        || current.effectiveBreakThresholdHours != previous.effectiveBreakThresholdHours
+        || current.effectiveBreakDeductionMinutes != previous.effectiveBreakDeductionMinutes
+    {
       changes.append(
         WageChange(
-          description: String(localized: .timelineBreakMethodChanged),
+          description: String(localized: .timelineBreakSettingsChanged),
           type: .breaks
         ))
     }
@@ -307,6 +301,27 @@ enum WageTimelineProcessor {
             type: .supplements
           ))
       }
+    } else if current.supplements != previous.supplements {
+      changes.append(
+        WageChange(
+          description: String(localized: .timelineSupplementsChanged), type: .supplements
+        ))
+    }
+
+    if current.overtime != previous.overtime {
+      changes.append(
+        WageChange(
+          description: String(localized: .timelineOvertimeChanged), type: .overtime
+        ))
+    }
+
+    if current.tariff_type_id != previous.tariff_type_id,
+      current.wage_level != nil, previous.wage_level != nil
+    {
+      changes.append(
+        WageChange(
+          description: String(localized: .timelineTariffChanged), type: .tariffLevel
+        ))
     }
 
     return changes

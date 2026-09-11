@@ -29,6 +29,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
   @State private var deletedAdjustmentIds: Set<String> = []
   @State private var adjustmentFormContext: PayrollAdjustmentFormContext?
   @State private var curatedAdjustmentContext: PayrollAdjustmentCuratedContext?
+  @State private var paySettingsBreakdown: PayrollCardJobBreakdown?
 
   private var totalNet: Double {
     displayedBreakdowns.reduce(0) { $0 + displayAmount(for: $1) }
@@ -51,6 +52,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       ScrollView {
         VStack(spacing: Spacing.lg) {
           earningsSection
+
+          Text(.dashboardPayrollDetailsEstimateHelp)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, Spacing.lg)
         .padding(.top, Spacing.lg)
@@ -97,6 +103,16 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
     }
+    .sheet(item: $paySettingsBreakdown) { breakdown in
+      if let workDate = breakdown.earningsPeriodStart {
+        PaySettingsSheet(jobId: breakdown.id, workDate: workDate)
+      }
+    }
+    .onChange(of: variant) { _, _ in
+      createdAdjustmentsByJobId = [:]
+      editedAdjustmentsById = [:]
+      deletedAdjustmentIds = []
+    }
   }
 
   private var earningsSection: some View {
@@ -112,16 +128,11 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       if displayedBreakdowns.count > 1 {
         workplaceDivider
 
-        earningsRow(
-          label: String(
-            localized: showTaxBreakdown
-              ? .dashboardPayrollDetailsTotalGross : .dashboardPayrollDetailsTotalNet),  // swiftlint:disable:this line_length multiline_arguments_brackets
-          value: formatCurrency(
-            showTaxBreakdown ? totalGross : totalNet, currency: variant.currency),  // swiftlint:disable:this line_length multiline_arguments_brackets
-          isHighlighted: !showTaxBreakdown
-        )
-
         if showTaxBreakdown {
+          earningsRow(
+            label: String(localized: .dashboardPayrollDetailsTotalGross),
+            value: formatCurrency(totalGross, currency: variant.currency)
+          )
           earningsRow(
             label: String(localized: .dashboardPayrollDetailsTotalTax),
             value: "−\(formatCurrency(totalTax, currency: variant.currency))",
@@ -130,7 +141,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         }
 
         earningsRow(
-          label: String(localized: .dashboardPayrollDetailsTotalNet),
+          label: String(localized: .dashboardPayrollDetailsTotalEstimate),
           value: formatCurrency(totalNet, currency: variant.currency),
           isHighlighted: true
         )
@@ -167,7 +178,10 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         return editedAdjustmentsById[adjustment.id] ?? adjustment
       }
       let additions = (createdAdjustmentsByJobId[breakdown.id] ?? [])  // swiftlint:disable:this explicit_type_interface
-        .filter { !deletedAdjustmentIds.contains($0.id) && editedAdjustmentsById[$0.id] == nil }
+        .filter { addition in
+          !deletedAdjustmentIds.contains(addition.id) && editedAdjustmentsById[addition.id] == nil
+            && !persisted.contains(where: { $0.id == addition.id })
+        }
       return breakdown.withAdjustments(persisted + additions)
     }
   }
@@ -198,6 +212,15 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           .font(.tidexLabel)
           .foregroundColor(.tidexTextMuted)
           .lineLimit(1)
+      }
+
+      if let period = breakdown.earningsPeriodStart {
+        Text(
+          .dashboardPayrollDetailsEarningsPeriod(period.formatted(.dateTime.month(.wide).year()))
+        )
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
       }
 
       EarningsBreakdownCard<EmptyView>.Row(
@@ -254,10 +277,39 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
       Divider()
 
       EarningsBreakdownCard<EmptyView>.Row(
-        label: String(localized: .dashboardPayrollDetailsNet),
+        label: String(
+          localized: breakdown.taxEnabled
+            ? .dashboardPayrollDetailsNet : .dashboardPayrollDetailsBeforeTax),
         value: formatCurrency(displayAmount(for: breakdown), currency: breakdown.currency),
         isHighlighted: true
       )
+
+      if !breakdown.taxEnabled {
+        Text(.settingsPayReviewTaxOff)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+
+      if breakdown.earningsPeriodStart != nil {
+        Button {
+          paySettingsBreakdown = breakdown
+        } label: {
+          HStack(spacing: Spacing.sm) {
+            Label(.settingsPayReviewOpen, systemImage: "slider.horizontal.3")
+              .font(.tidexLabel)
+            Spacer(minLength: 0)
+            Image(systemName: "chevron.right")
+              .font(.tidexCaption)
+              .foregroundColor(.tidexTextMuted)
+              .accessibilityHidden(true)
+          }
+          .frame(minHeight: 44)
+          .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundColor(.tidexBlue)
+      }
     }
   }
 
@@ -1177,13 +1229,17 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
 }
 
 extension PayrollCardJobBreakdown {
-  fileprivate func withAdjustments(_ nextAdjustments: [PayrollAdjustment])  // swiftlint:disable:this strict_fileprivate
+  func withAdjustments(_ nextAdjustments: [PayrollAdjustment])
     -> PayrollCardJobBreakdown
   {
     let originalTotals = adjustmentDisplayTotals(adjustments)  // swiftlint:disable:this explicit_type_interface
     let nextTotals = adjustmentDisplayTotals(nextAdjustments)  // swiftlint:disable:this explicit_type_interface
     let grossDelta = nextTotals.gross - originalTotals.gross  // swiftlint:disable:this explicit_type_interface
     let netDelta = nextTotals.net - originalTotals.net  // swiftlint:disable:this explicit_type_interface
+    let nextTaxEnabled =
+      taxEnabled
+      || (payoutTaxSettings?.enabled == true
+        && nextAdjustments.contains { $0.tax_treatment == .grossTaxable })
 
     return PayrollCardJobBreakdown(
       id: id,
@@ -1197,17 +1253,29 @@ extension PayrollCardJobBreakdown {
       postDeductionParts: postDeductionParts,
       payoutDate: payoutDate,
       gross: gross + grossDelta,
-      net: net.map { $0 + netDelta },
-      tax: tax,
-      taxEnabled: taxEnabled,
-      adjustments: nextAdjustments
+      net: nextTaxEnabled ? (net ?? gross) + netDelta : nil,
+      tax: nextTaxEnabled ? (tax ?? 0) + grossDelta - netDelta : nil,
+      taxEnabled: nextTaxEnabled,
+      adjustments: nextAdjustments,
+      earningsPeriodStart: earningsPeriodStart,
+      payoutTaxSettings: payoutTaxSettings
     )
   }
 
   private func adjustmentDisplayTotals(_ adjustments: [PayrollAdjustment]) -> (
     gross: Double, net: Double
   ) {
-    adjustments.reduce((gross: 0, net: 0)) { total, adjustment in
+    if let payoutTaxSettings {
+      let totals = PayrollAdjustmentCalculator.totals(
+        adjustments: adjustments,
+        taxEnabled: payoutTaxSettings.enabled,
+        taxPercentage: payoutTaxSettings.percentage,
+        halfTaxMonth: nil,
+        payoutMonth: 1
+      )
+      return (gross: totals.gross, net: totals.net)
+    }
+    return adjustments.reduce((gross: 0, net: 0)) { total, adjustment in
       var next = total  // swiftlint:disable:this explicit_type_interface
       guard taxEnabled else {
         next.gross += adjustment.amount

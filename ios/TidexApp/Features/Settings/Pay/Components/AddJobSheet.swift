@@ -22,6 +22,7 @@ struct AddJobSheet: View {
     case jobDetails
     case wage
     case supplements
+    case deductions
     case existingJobSetup
   }
 
@@ -83,6 +84,16 @@ struct AddJobSheet: View {
       case .supplements:
         supplementsStep
 
+      case .deductions:
+        SettingsAccordionScreen(
+          data: onboardingData,
+          onContinue: proceedFromDeductions,
+          onBack: { step = onboardingData.wageType == .custom ? .supplements : .wage },
+          showsPayday: false,
+          continueTitle: String(localized: shouldSetupExistingJob ? .commonContinue : .commonSave)
+        )
+        .overlay(alignment: .topTrailing) { dismissButton }
+
       case .existingJobSetup:
         existingJobSetupStep
       }
@@ -111,6 +122,7 @@ struct AddJobSheet: View {
     } message: {
       Text(.settingsPayErrorSaveFailed)
     }
+    .interactiveDismissDisabled(isSaving)
   }
 
   private var jobDetailsStep: some View {
@@ -401,7 +413,7 @@ struct AddJobSheet: View {
         if onboardingData.wageType == .custom {
           step = .supplements
         } else {
-          proceedFromWageConfiguration()
+          step = .deductions
         }
       },
       onBack: wageBackAction,
@@ -424,7 +436,7 @@ struct AddJobSheet: View {
       SupplementsScreen(
         data: onboardingData,
         onContinue: {
-          proceedFromWageConfiguration()
+          step = .deductions
         },
         onBack: {
           step = .wage
@@ -615,7 +627,7 @@ struct AddJobSheet: View {
     step = .wage
   }
 
-  private func proceedFromWageConfiguration() {
+  private func proceedFromDeductions() {
     if shouldSetupExistingJob {
       step = .existingJobSetup
       return
@@ -624,7 +636,7 @@ struct AddJobSheet: View {
   }
 
   private func backFromExistingJobSetup() {
-    step = onboardingData.wageType == .custom ? .supplements : .wage
+    step = .deductions
   }
 
   private func applyPaydayInput() {
@@ -636,6 +648,7 @@ struct AddJobSheet: View {
   }
 
   private func submit() async {
+    guard !isSaving else { return }
     validationError = nil
 
     var existingJobSetupInput: ExistingJobSetupInput?

@@ -3,6 +3,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import { randomUUID } from "node:crypto";
 import { config } from "dotenv";
 import cliProgress from "cli-progress";
 import pLimit from "p-limit";
@@ -10,11 +11,15 @@ import pLimit from "p-limit";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Load env properly with dotenv
-config({ path: path.join(__dirname, "../../.env.local") });
+config({ path: path.join(__dirname, "../../.env.local"), quiet: true });
 
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
 const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
 const OPENAI_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT?.trim() || "high";
+const REQUEST_TIMEOUT_MS = 120_000;
+const MAX_OUTPUT_TOKENS = 16_384;
+const BATCH_SIZE = 30;
+const CONCURRENCY = 6;
 
 const TARGET_LANGUAGES = [
   // Western Europe
@@ -109,15 +114,16 @@ const stats = {
 };
 
 // Track current file state for graceful shutdown
-let currentFileData = null;
-let currentFilePath = null;
+let currentSave = null;
 let currentMultibar = null;
 let isShuttingDown = false;
+const shutdownController = new AbortController();
 
 // Graceful shutdown handler
-async function saveAndExit() {
+async function saveAndExit(signal) {
   if (isShuttingDown) return;
   isShuttingDown = true;
+  shutdownController.abort();
 
   // Stop progress bars first to clean up terminal
   if (currentMultibar) {
@@ -126,23 +132,17 @@ async function saveAndExit() {
 
   console.log("\n⚠ Interrupt received, saving progress...");
 
-  if (currentFileData && currentFilePath) {
-    try {
-      await fs.writeFile(currentFilePath, xcstringsStringify(currentFileData));
-      console.log(`✓ Saved: ${currentFilePath}`);
-    } catch (error) {
-      console.error(`✗ Failed to save: ${error.message}`);
-    }
+  try {
+    await currentSave?.();
+  } catch (error) {
+    console.error(`✗ Failed to save: ${error.message}`);
+    process.exit(1);
   }
 
   console.log(`\nProgress: ${stats.translated} strings translated before shutdown.`);
   console.log("Run the script again to continue from where you left off.\n");
-  process.exit(0);
+  process.exit(signal === "SIGINT" ? 130 : 143);
 }
-
-// Register signal handlers
-process.on("SIGINT", saveAndExit);
-process.on("SIGTERM", saveAndExit);
 
 // Extract all format specifiers from a string
 function extractFormatSpecifiers(str) {
@@ -179,15 +179,18 @@ function shouldSkipString(key, englishValue) {
 // Retry with exponential backoff
 async function withRetry(fn, maxRetries = 3) {
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    shutdownController.signal.throwIfAborted();
     try {
       return await fn();
     } catch (error) {
-      const isRetryable = error.status === 429 || error.status >= 500;
+      const isRetryable = error.status === 429 || error.status >= 500 ||
+        error.name === "TimeoutError" || error instanceof TypeError;
+      if (shutdownController.signal.aborted) throw error;
       if (!isRetryable || attempt === maxRetries - 1) {
         throw error;
       }
       const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-      console.log(`    Rate limited, retrying in ${Math.round(delay / 1000)}s...`);
+      reportProgress(`Retrying after ${error.message} in ${Math.round(delay / 1000)}s...`);
       await new Promise((r) => setTimeout(r, delay));
     }
   }
@@ -289,22 +292,24 @@ function extractOpenAIParsedPayload(responseJson) {
   return null;
 }
 
-function normalizeTranslationsPayload(payload) {
+function normalizeTranslationsPayload(payload, expectedIds) {
   if (!payload || typeof payload !== "object" || !Array.isArray(payload.translations)) {
     throw new Error("OpenAI translation payload did not match the expected schema");
   }
 
-  return Object.fromEntries(
-    payload.translations
-      .filter(
-        (entry) =>
-          entry &&
-          typeof entry === "object" &&
-          typeof entry.id === "string" &&
-          typeof entry.translation === "string"
-      )
-      .map((entry) => [entry.id, entry.translation])
-  );
+  const remaining = new Set(expectedIds);
+  const translations = Object.create(null);
+  for (const entry of payload.translations) {
+    if (!entry || typeof entry.id !== "string" || typeof entry.translation !== "string" ||
+        !remaining.delete(entry.id)) {
+      throw new Error("Translation response contains an invalid, duplicate, or unexpected ID");
+    }
+    translations[entry.id] = entry.translation;
+  }
+  if (remaining.size > 0) {
+    throw new Error(`Translation response is missing ${remaining.size} requested entries`);
+  }
+  return translations;
 }
 
 async function createStructuredOpenAIResponse({
@@ -312,11 +317,17 @@ async function createStructuredOpenAIResponse({
   instructions,
   prompt,
   maxOutputTokens,
+  expectedIds,
+  retryIncomplete = true,
 }) {
   const { apiKey, model } = getOpenAIConfig();
 
   const response = await fetch(OPENAI_RESPONSES_API_URL, {
     method: "POST",
+    signal: AbortSignal.any([
+      shutdownController.signal,
+      AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    ]),
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
@@ -351,7 +362,10 @@ async function createStructuredOpenAIResponse({
     }),
   });
 
-  const responseJson = await response.json().catch(() => null);
+  const responseJson = await response.json().catch((error) => {
+    if (error instanceof SyntaxError) return null;
+    throw error;
+  });
 
   if (!response.ok) {
     const errorMessage =
@@ -364,98 +378,29 @@ async function createStructuredOpenAIResponse({
     );
   }
 
+  if (responseJson?.status === "incomplete") {
+    const reason = responseJson.incomplete_details?.reason || "unknown reason";
+    if (reason === "max_output_tokens" && retryIncomplete) {
+      reportProgress(`${schemaName}: output limit reached; retrying with more room for reasoning and text.`);
+      return createStructuredOpenAIResponse({
+        schemaName, instructions, prompt, expectedIds,
+        maxOutputTokens: maxOutputTokens * 2,
+        retryIncomplete: false,
+      });
+    }
+    throw new Error(`OpenAI response incomplete: ${reason}`);
+  }
+  if (responseJson?.status !== "completed") {
+    throw new Error(`OpenAI response failed: ${responseJson?.error?.message || responseJson?.status || "invalid response"}`);
+  }
+
   const parsedPayload = extractOpenAIParsedPayload(responseJson);
   if (parsedPayload) {
-    return normalizeTranslationsPayload(parsedPayload);
+    return normalizeTranslationsPayload(parsedPayload, expectedIds);
   }
 
   const text = extractOpenAIText(responseJson);
-  return normalizeTranslationsPayload(extractJson(text));
-}
-
-// Extract JSON from potentially messy response
-function extractJson(text) {
-  // Try to find JSON object boundaries
-  const firstBrace = text.indexOf("{");
-  const lastBrace = text.lastIndexOf("}");
-
-  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
-    throw new Error("No valid JSON object found in response");
-  }
-
-  let jsonText = text.slice(firstBrace, lastBrace + 1);
-
-  // Try parsing as-is first
-  try {
-    return JSON.parse(jsonText);
-  } catch {
-    // Continue with fixes
-  }
-
-  // Apply progressive fixes
-  const fixes = [
-    // 1. Replace smart quotes
-    (s) => s.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'"),
-
-    // 2. Remove trailing commas
-    (s) => s.replace(/,(\s*[}\]])/g, "$1"),
-
-    // 3. Fix unescaped newlines inside string values
-    (s) =>
-      s.replace(/"([^"]*?)"/g, (match, content) =>
-        `"${content.replace(/\n/g, "\\n").replace(/\r/g, "\\r")}"`
-      ),
-
-    // 4. Fix missing commas between properties: "value""key" -> "value","key"
-    (s) => s.replace(/"\s*\n\s*"/g, '",\n"'),
-
-    // 5. Fix unescaped quotes inside values (heuristic: quote followed by lowercase letter)
-    (s) =>
-      s.replace(/"([^"]*?)"/g, (match, content) => {
-        // Don't modify if it looks like a clean value
-        if (!content.includes('"')) return match;
-        // Escape internal quotes that aren't already escaped
-        const fixed = content.replace(/(?<!\\)"/g, '\\"');
-        return `"${fixed}"`;
-      }),
-
-    // 6. Remove control characters that break JSON
-    (s) => s.replace(/[\x00-\x1F\x7F]/g, (char) => {
-      if (char === "\n" || char === "\r" || char === "\t") return char;
-      return "";
-    }),
-  ];
-
-  // Apply fixes cumulatively and try parsing after each
-  for (let i = 0; i < fixes.length; i++) {
-    jsonText = fixes[i](jsonText);
-    try {
-      return JSON.parse(jsonText);
-    } catch {
-      // Continue applying more fixes
-    }
-  }
-
-  // Last resort: try to extract key-value pairs manually
-  try {
-    const result = {};
-    // Match "key": "value" patterns more flexibly
-    const kvRegex = /"(s\d+|ip\d+)"\s*:\s*"((?:[^"\\]|\\.)*)"/g;
-    let match;
-    while ((match = kvRegex.exec(jsonText)) !== null) {
-      result[match[1]] = match[2].replace(/\\"/g, '"').replace(/\\n/g, "\n");
-    }
-    if (Object.keys(result).length > 0) {
-      return result;
-    }
-  } catch {
-    // Fall through to error
-  }
-
-  // If all else fails, throw with context
-  throw new Error(
-    `Failed to parse JSON after all fixes. First 200 chars: ${jsonText.slice(0, 200)}`
-  );
+  return normalizeTranslationsPayload(JSON.parse(text), expectedIds);
 }
 
 // Translate a batch using KEY-BASED mapping to avoid context collision
@@ -468,6 +413,7 @@ async function translateBatch(items, targetLang) {
       entry.norwegian = item.norwegian;
     }
     entry.context = item.key;
+    if (item.comment) entry.comment = item.comment;
     return entry;
   });
 
@@ -503,7 +449,8 @@ Return one translation per input item.`;
       schemaName: `translation_batch_${targetLang.code.replace(/[^a-z0-9_]/gi, "_")}`,
       instructions,
       prompt,
-      maxOutputTokens: 4096,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      expectedIds: items.map((item) => item.id),
     })
   );
 }
@@ -545,7 +492,8 @@ Return one translation per input item.`;
       schemaName: "translation_batch_en",
       instructions,
       prompt,
-      maxOutputTokens: 4096,
+      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      expectedIds: items.map((item) => item.id),
     })
   );
 }
@@ -563,35 +511,51 @@ function deepSet(obj, path, value) {
   current[path[path.length - 1]] = value;
 }
 
-// Recursively sort all object keys to match Xcode's alphabetical ordering
-function sortKeysDeep(obj) {
-  if (Array.isArray(obj)) return obj.map(sortKeysDeep);
-  if (obj !== null && typeof obj === "object") {
-    return Object.fromEntries(
-      Object.keys(obj).sort().map((k) => [k, sortKeysDeep(obj[k])])
-    );
-  }
-  return obj;
-}
-
-// Serialize xcstrings data to match Xcode's exact formatting:
-// - Sorted keys (alphabetical)
-// - Spaced colons ("key" : "value" instead of "key": "value")
+// Keep the catalog's existing order; sorting moves unrelated entries in diffs.
 function xcstringsStringify(data) {
-  const json = JSON.stringify(sortKeysDeep(data), null, 2);
+  const json = JSON.stringify(data, null, 2);
   return json.replace(/^(\s*"(?:[^"\\]|\\.)*"): /gm, "$1 : ") + "\n";
 }
 
-async function translateXcstrings(filePath) {
-  console.log(`\nProcessing: ${filePath}`);
+function reportProgress(message) {
+  if (currentMultibar && process.stderr.isTTY) {
+    currentMultibar.log(message + "\n");
+  } else {
+    console.error(message);
+  }
+}
 
-  const content = await fs.readFile(filePath, "utf-8");
-  const data = JSON.parse(content);
+// Concurrent requests must never write the catalog concurrently or overwrite edits.
+function createCatalogSaver(filePath, data, originalContent) {
+  let lastSavedContent = originalContent;
+  const saveLimit = pLimit(1);
+  return () => saveLimit(async () => {
+    const content = xcstringsStringify(data);
+    if (content === lastSavedContent) return;
+    const assertUnchanged = async () => {
+      if (await fs.readFile(filePath, "utf-8") !== lastSavedContent) {
+        throw new Error(`Catalog changed on disk during translation: ${filePath}. Existing edits were preserved; rerun to resume.`);
+      }
+    };
+    await assertUnchanged();
+    const temporaryPath = `${filePath}.${randomUUID()}.tmp`;
+    try {
+      const { mode } = await fs.stat(filePath);
+      await fs.writeFile(temporaryPath, content, { mode, flag: "wx" });
+      await assertUnchanged();
+      await fs.rename(temporaryPath, filePath);
+      lastSavedContent = content;
+    } finally {
+      await fs.rm(temporaryPath, { force: true });
+    }
+  });
+}
 
-  // Track for graceful shutdown
-  currentFilePath = filePath;
-  currentFileData = data;
+function needsTranslation(unit) {
+  return unit?.value === undefined || unit.state === "needs_review" || unit.state === "new";
+}
 
+function collectTranslationWork(data) {
   // Collect ALL strings that need translation with unique IDs
   const stringsToTranslate = [];
   const stringsNeedingEnglish = []; // Strings with Norwegian but missing English
@@ -610,11 +574,11 @@ async function translateXcstrings(filePath) {
 
     // In xcstrings, the key itself is the English value when no explicit en localization exists
     // BUT only use key fallback if there are no plural variations (those need special handling)
-    const englishValue = enStringUnit?.value ?? (hasPluralVariations ? null : key);
     const norwegianValue = nbStringUnit?.value;
+    const englishValue = enStringUnit?.value ?? (hasPluralVariations || hasNbPluralVariations || norwegianValue !== undefined ? null : key);
 
     // Check if English is missing but Norwegian exists (for simple strings)
-    if (!enStringUnit?.value && norwegianValue && !hasPluralVariations && !shouldSkipString(key, norwegianValue)) {
+    if (enStringUnit?.value === undefined && norwegianValue !== undefined && !hasPluralVariations && !shouldSkipString(key, norwegianValue)) {
       stringsNeedingEnglish.push({
         id: `en${idCounter++}`,
         key,
@@ -625,12 +589,12 @@ async function translateXcstrings(filePath) {
 
     if (englishValue !== null) {
       for (const targetLang of TARGET_LANGUAGES) {
-        const hasTranslation =
-          value.localizations?.[targetLang.code]?.stringUnit?.value !== undefined;
+        const hasTranslation = !needsTranslation(value.localizations?.[targetLang.code]?.stringUnit);
         if (!hasTranslation && !shouldSkipString(key, englishValue)) {
           const item = {
             id: `s${idCounter++}`,
             key,
+            comment: value.comment,
             english: englishValue,
             targetLang,
             type: "simple",
@@ -655,14 +619,14 @@ async function translateXcstrings(filePath) {
           value.localizations?.nb?.variations?.plural?.[pluralForm]?.stringUnit?.value;
 
         for (const targetLang of TARGET_LANGUAGES) {
-          const hasTranslation =
-            value.localizations?.[targetLang.code]?.variations?.plural?.[
-              pluralForm
-            ]?.stringUnit?.value !== undefined;
+          const hasTranslation = !needsTranslation(
+            value.localizations?.[targetLang.code]?.variations?.plural?.[pluralForm]?.stringUnit
+          );
           if (!hasTranslation && !shouldSkipString(key, englishValue)) {
             const item = {
               id: `s${idCounter++}`,
               key,
+              comment: value.comment,
               english: englishValue,
               targetLang,
               type: "plural",
@@ -694,11 +658,21 @@ async function translateXcstrings(filePath) {
     }
   }
 
+  return { stringsToTranslate, stringsNeedingEnglish };
+}
+
+async function translateXcstrings(filePath) {
+  console.log(`\nProcessing: ${filePath}`);
+  const content = await fs.readFile(filePath, "utf-8");
+  const data = JSON.parse(content);
+  const save = createCatalogSaver(filePath, data, content);
+  currentSave = save;
+  let { stringsToTranslate, stringsNeedingEnglish } = collectTranslationWork(data);
+
   // First, translate Norwegian to English for strings missing English
   if (stringsNeedingEnglish.length > 0) {
     console.log(`Found ${stringsNeedingEnglish.length} strings needing English translation (from Norwegian)`);
 
-    const BATCH_SIZE = 30;
     const batches = [];
     for (let i = 0; i < stringsNeedingEnglish.length; i += BATCH_SIZE) {
       batches.push(stringsNeedingEnglish.slice(i, i + BATCH_SIZE));
@@ -708,9 +682,10 @@ async function translateXcstrings(filePath) {
       try {
         const translations = await translateBatchToEnglish(batch);
 
+        if (isShuttingDown) return;
         for (const item of batch) {
           const translation = translations[item.id];
-          if (!translation) {
+          if (typeof translation !== "string" || (translation === "" && item.norwegian !== "")) {
             stats.skippedNoTranslation++;
             continue;
           }
@@ -746,177 +721,102 @@ async function translateXcstrings(filePath) {
     }
 
     // Save progress after English translations
-    await fs.writeFile(filePath, xcstringsStringify(data));
-    console.log(`✓ Added ${stringsNeedingEnglish.length} English translations from Norwegian`);
+    await save();
+    ({ stringsToTranslate } = collectTranslationWork(data));
   }
 
   console.log(`Found ${stringsToTranslate.length} strings needing translation to other languages`);
 
   if (stringsToTranslate.length === 0 && stringsNeedingEnglish.length === 0) {
+    currentSave = null;
     console.log("Nothing to translate!");
     return;
   }
 
   if (stringsToTranslate.length === 0) {
     // Only had English translations to add, we're done
-    currentFileData = null;
-    currentFilePath = null;
+    currentSave = null;
     console.log(`\n✓ Completed: ${filePath}`);
     return;
   }
 
-  // Process by language for clearer progress.
-  // Keep batches small enough to reduce format-specifier drift.
-  const BATCH_SIZE = 30;
-  const CONCURRENCY = 6;
-
-  // Count languages with work to do
-  const langsWithWork = TARGET_LANGUAGES.filter(
-    (lang) => stringsToTranslate.some((s) => s.targetLang.code === lang.code)
-  );
-
-  // Create progress bars
-  const multibar = (currentMultibar = new cliProgress.MultiBar(
+  // One queue across all languages keeps every request slot useful for small updates.
+  const batches = TARGET_LANGUAGES.flatMap((targetLang) => {
+    const items = stringsToTranslate.filter((item) => item.targetLang.code === targetLang.code);
+    const batches = [];
+    for (let i = 0; i < items.length; i += BATCH_SIZE) {
+      batches.push({ targetLang, items: items.slice(i, i + BATCH_SIZE) });
+    }
+    return batches;
+  });
+  console.log(`${batches.length} batches, up to ${CONCURRENCY} concurrent requests across languages.`);
+  const multibar = process.stderr.isTTY ? new cliProgress.MultiBar(
     {
       clearOnComplete: false,
       hideCursor: true,
-      format: " {bar} | {label} | {value}/{total} | {status}",
-      barCompleteChar: "\u2588",
-      barIncompleteChar: "\u2591",
+      format: " {bar} | {value}/{total} processed | {status}",
     },
     cliProgress.Presets.shades_classic
-  ));
+  ) : null;
+  currentMultibar = multibar;
+  const overallBar = multibar?.create(stringsToTranslate.length, 0, { status: "starting..." });
+  const limit = pLimit(CONCURRENCY);
+  const formatWarnings = [];
+  let completedStrings = 0;
+  let translatedStrings = 0;
+  let failedBatches = 0;
+  let saveError = null;
 
-  const overallBar = multibar.create(langsWithWork.length, 0, {
-    label: "Overall ".padEnd(12),
-    status: "starting...",
-  });
-
-  let langBar = null;
-  let completedLangs = 0;
-  const formatWarnings = []; // Collect warnings to show at end
-
-  for (const targetLang of TARGET_LANGUAGES) {
-    // Check for shutdown request
-    if (isShuttingDown) break;
-
-    const stringsForLang = stringsToTranslate.filter(
-      (s) => s.targetLang.code === targetLang.code
-    );
-
-    if (stringsForLang.length === 0) {
-      continue;
-    }
-
-    // Create/update language progress bar
-    if (langBar) multibar.remove(langBar);
-    langBar = multibar.create(stringsForLang.length, 0, {
-      label: targetLang.name.padEnd(12).slice(0, 12),
-      status: "translating...",
-    });
-
-    overallBar.update(completedLangs, {
-      status: `${targetLang.name}...`,
-    });
-
-    // Split into batches
-    const batches = [];
-    for (let i = 0; i < stringsForLang.length; i += BATCH_SIZE) {
-      batches.push(stringsForLang.slice(i, i + BATCH_SIZE));
-    }
-
-    // Track progress across parallel batches
-    let translatedThisLang = 0;
-    let skippedThisLang = 0;
-    let completedStrings = 0;
-
-    // Process batches in parallel with concurrency limit
-    const limit = pLimit(CONCURRENCY);
-
-    const batchPromises = batches.map((batch, batchIndex) =>
-      limit(async () => {
-        if (isShuttingDown) return;
-
-        try {
-          const translations = await translateBatch(batch, targetLang);
-
-          // Apply translations using ID mapping
-          for (const item of batch) {
-            const translation = translations[item.id];
-
-            if (!translation) {
-              stats.skippedNoTranslation++;
-              continue;
-            }
-
-            // Validate format specifiers
-            if (!validateFormatSpecifiers(item.english, translation)) {
-              formatWarnings.push(
-                `${targetLang.code}: "${item.english}" -> "${translation}"`
-              );
-              stats.skippedFormatMismatch++;
-              skippedThisLang++;
-              continue;
-            }
-
-            // Apply translation using deep-set to preserve existing metadata
-            if (item.type === "simple") {
-              deepSet(
-                data.strings[item.key],
-                ["localizations", targetLang.code, "stringUnit"],
-                { state: "translated", value: translation }
-              );
-            } else if (item.type === "plural") {
-              deepSet(
-                data.strings[item.key],
-                [
-                  "localizations",
-                  targetLang.code,
-                  "variations",
-                  "plural",
-                  item.pluralForm,
-                  "stringUnit",
-                ],
-                { state: "translated", value: translation }
-              );
-            }
-
-            translatedThisLang++;
-            stats.translated++;
-          }
-
-          // Update progress
-          completedStrings += batch.length;
-          langBar.update(completedStrings, {
-            status: `${translatedThisLang} translated (${CONCURRENCY}x)`,
-          });
-        } catch (error) {
-          const errorMsg = `Batch ${batchIndex + 1} error for ${targetLang.name}: ${error.message}`;
-          stats.errors.push(errorMsg);
+  await Promise.all(batches.map(({ targetLang, items }, batchIndex) => limit(async () => {
+    if (isShuttingDown || saveError) return;
+    try {
+      const translations = await translateBatch(items, targetLang);
+      if (isShuttingDown || saveError) return;
+      for (const item of items) {
+        const translation = translations[item.id];
+        if (typeof translation !== "string" || (translation === "" && item.english !== "")) {
+          stats.skippedNoTranslation++;
+          reportProgress(`${targetLang.code}: missing translation for ${item.key}`);
+          continue;
         }
-      })
-    );
-
-    // Wait for all batches to complete
-    await Promise.all(batchPromises);
-
-    // Save after each language completes (incremental progress)
-    langBar.update(stringsForLang.length, {
-      status: skippedThisLang
-        ? `done (${skippedThisLang} skipped), saving...`
-        : "done, saving...",
-    });
-    await fs.writeFile(filePath, xcstringsStringify(data));
-    langBar.update({ status: "saved" });
-
-    completedLangs++;
-    overallBar.update(completedLangs);
-  }
-
-  // Finalize progress bars
-  if (langBar) multibar.remove(langBar);
-  overallBar.update(completedLangs, { status: "complete" });
-  multibar.stop();
+        if (!validateFormatSpecifiers(item.english, translation)) {
+          const warning = `${targetLang.code}: format mismatch for ${item.key}`;
+          formatWarnings.push(warning);
+          reportProgress(warning);
+          stats.skippedFormatMismatch++;
+          continue;
+        }
+        const unitPath = item.type === "simple"
+          ? ["localizations", targetLang.code, "stringUnit"]
+          : ["localizations", targetLang.code, "variations", "plural", item.pluralForm, "stringUnit"];
+        deepSet(data.strings[item.key], unitPath, { state: "translated", value: translation });
+        translatedStrings++;
+        stats.translated++;
+      }
+      try {
+        await save();
+      } catch (error) {
+        saveError = error;
+        throw error;
+      }
+      reportProgress(`${targetLang.name}: saved batch ${batchIndex + 1}/${batches.length}.`);
+    } catch (error) {
+      if (isShuttingDown) return;
+      const message = `Batch ${batchIndex + 1} error for ${targetLang.name}: ${error.message}`;
+      stats.errors.push(message);
+      failedBatches++;
+      reportProgress(message);
+    } finally {
+      completedStrings += items.length;
+      overallBar?.update(completedStrings, {
+        status: `${translatedStrings} translated, ${stats.skippedFormatMismatch + stats.skippedNoTranslation} skipped, ${failedBatches} failed batches`,
+      });
+    }
+  })));
+  multibar?.stop();
+  currentMultibar = null;
+  if (isShuttingDown) return;
+  if (saveError) throw saveError;
 
   // Show format warnings if any
   if (formatWarnings.length > 0) {
@@ -928,11 +828,10 @@ async function translateXcstrings(filePath) {
   }
 
   // Clear tracking (file is fully saved)
-  currentFileData = null;
-  currentFilePath = null;
+  currentSave = null;
   currentMultibar = null;
 
-  console.log(`\n✓ Completed: ${filePath}`);
+  console.log(`\nSaved progress: ${filePath}`);
 }
 
 // Sync languages to Xcode project's knownRegions
@@ -1124,7 +1023,8 @@ Return one translation per input item.`;
             schemaName: `infoplist_batch_${targetLang.code.replace(/[^a-z0-9_]/gi, "_")}`,
             instructions,
             prompt,
-            maxOutputTokens: 1024,
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
+            expectedIds: items.map((item) => item.id),
           })
         );
 
@@ -1165,63 +1065,77 @@ Return one translation per input item.`;
   }
 }
 
-// Main
-const defaultXcstringsFiles = [
-  path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
-  path.join(__dirname, "../Resources/Localization/ShareExtension/Localizable.xcstrings"),
-  path.join(__dirname, "../Resources/Localization/Watch/Localizable.xcstrings"),
-  path.join(__dirname, "../Resources/Localization/Widget/Localizable.xcstrings"),
-];
-const cliXcstringsFiles = process.argv
-  .slice(2)
-  .filter((file) => file.endsWith(".xcstrings"))
-  .map((file) => path.resolve(process.cwd(), file));
-const xcstringsFiles = cliXcstringsFiles.length > 0 ? cliXcstringsFiles : defaultXcstringsFiles;
-const isTargetedRun = cliXcstringsFiles.length > 0;
+async function main(args = process.argv.slice(2)) {
+  Object.assign(stats, { translated: 0, skippedFormatMismatch: 0, skippedNoTranslation: 0, errors: [] });
+  const defaultXcstringsFiles = [
+    path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
+    path.join(__dirname, "../Resources/Localization/ShareExtension/Localizable.xcstrings"),
+    path.join(__dirname, "../Resources/Localization/Watch/Localizable.xcstrings"),
+    path.join(__dirname, "../Resources/Localization/Widget/Localizable.xcstrings"),
+  ];
+  const cliXcstringsFiles = args
+    .filter((file) => file.endsWith(".xcstrings"))
+    .map((file) => path.resolve(process.cwd(), file));
+  const xcstringsFiles = cliXcstringsFiles.length > 0 ? cliXcstringsFiles : defaultXcstringsFiles;
+  const isTargetedRun = cliXcstringsFiles.length > 0;
 
-console.log("XCStrings Translator v2");
-console.log("=======================");
-console.log(`Target languages: ${TARGET_LANGUAGES.map((l) => l.name).join(", ")}`);
-if (isTargetedRun) {
-  console.log(`Target files: ${xcstringsFiles.join(", ")}`);
-}
-
-for (const file of xcstringsFiles) {
-  try {
-    await translateXcstrings(file);
-  } catch (error) {
-    console.error(`Error processing ${file}: ${error.message}`);
-    stats.errors.push(`File error: ${error.message}`);
+  console.log("XCStrings Translator v2");
+  console.log("=======================");
+  console.log(`Target languages: ${TARGET_LANGUAGES.map((l) => l.name).join(", ")}`);
+  if (isTargetedRun) {
+    console.log(`Target files: ${xcstringsFiles.join(", ")}`);
   }
+
+  for (const file of xcstringsFiles) {
+    if (isShuttingDown) break;
+    try {
+      await translateXcstrings(file);
+    } catch (error) {
+      console.error(`Error processing ${file}: ${error.message}`);
+      stats.errors.push(`File error: ${error.message}`);
+    }
+  }
+
+  if (isShuttingDown) return 1;
+
+  if (!isTargetedRun) {
+    // Translate InfoPlist.strings (permission descriptions)
+    await translateInfoPlistStrings();
+
+    // Sync languages to Xcode project (makes them selectable in iOS Settings)
+    await syncXcodeProjectLanguages();
+  }
+
+  // Print summary
+  console.log("\n" + "=".repeat(40));
+  console.log("SUMMARY");
+  console.log("=".repeat(40));
+  console.log(`✓ Translated: ${stats.translated}`);
+  if (stats.skippedFormatMismatch > 0) {
+    console.log(`⚠ Skipped (format mismatch): ${stats.skippedFormatMismatch}`);
+  }
+  if (stats.skippedNoTranslation > 0) {
+    console.log(`⚠ Skipped (no translation): ${stats.skippedNoTranslation}`);
+  }
+  if (stats.errors.length > 0) {
+    console.log(`✗ Errors: ${stats.errors.length}`);
+    stats.errors.forEach((e) => console.log(`  - ${e}`));
+  }
+
+  // Exit with error code if any failures
+  if (stats.errors.length > 0 || stats.skippedFormatMismatch > 0 || stats.skippedNoTranslation > 0) {
+    return 1;
+  }
+
+  console.log("\n✓ Done!");
+  return 0;
 }
 
-if (!isTargetedRun) {
-  // Translate InfoPlist.strings (permission descriptions)
-  await translateInfoPlistStrings();
+export { main, translateXcstrings, collectTranslationWork, createCatalogSaver,
+  createStructuredOpenAIResponse, normalizeTranslationsPayload, xcstringsStringify, TARGET_LANGUAGES };
 
-  // Sync languages to Xcode project (makes them selectable in iOS Settings)
-  await syncXcodeProjectLanguages();
+if (import.meta.main) {
+  process.on("SIGINT", () => { void saveAndExit("SIGINT"); });
+  process.on("SIGTERM", () => { void saveAndExit("SIGTERM"); });
+  process.exitCode = await main();
 }
-
-// Print summary
-console.log("\n" + "=".repeat(40));
-console.log("SUMMARY");
-console.log("=".repeat(40));
-console.log(`✓ Translated: ${stats.translated}`);
-if (stats.skippedFormatMismatch > 0) {
-  console.log(`⚠ Skipped (format mismatch): ${stats.skippedFormatMismatch}`);
-}
-if (stats.skippedNoTranslation > 0) {
-  console.log(`⚠ Skipped (no translation): ${stats.skippedNoTranslation}`);
-}
-if (stats.errors.length > 0) {
-  console.log(`✗ Errors: ${stats.errors.length}`);
-  stats.errors.forEach((e) => console.log(`  - ${e}`));
-}
-
-// Exit with error code if any failures
-if (stats.errors.length > 0) {
-  process.exit(1);
-}
-
-console.log("\n✓ Done!");

@@ -20,12 +20,17 @@ enum PayrollAdjustmentCalculator {
     adjustments: [PayrollAdjustment],
     taxSettings: (PayrollAdjustment) -> PayoutTaxSettings,
     halfTaxMonth: Int?,
-    payoutMonth: Int
+    payoutMonth: Int,
+    jobs: [Job] = []
   ) -> PayrollAdjustmentTotals {
     adjustments
       .filter { !$0.isDeleted }
       .reduce(.zero) { partial, adjustment in
         let settings = taxSettings(adjustment)
+        let job =
+          adjustment.job_id.flatMap { jobId in jobs.first { $0.id == jobId } }
+          ?? (adjustment.job_id == nil ? jobs.first(where: \.is_default) : nil)
+        let resolvedHalfTaxMonth = job.map(\.half_tax_month) ?? halfTaxMonth
         let grossContribution: Double
         let netContribution: Double
         let usesTaxEstimate: Bool
@@ -37,7 +42,7 @@ enum PayrollAdjustmentCalculator {
             from: adjustment.amount,
             taxEnabled: settings.enabled,
             taxPercentage: settings.percentage,
-            halfTaxMonth: halfTaxMonth,
+            halfTaxMonth: resolvedHalfTaxMonth,
             payoutMonth: payoutMonth
           )
           usesTaxEstimate = settings.enabled
@@ -68,13 +73,8 @@ enum PayrollAdjustmentCalculator {
     halfTaxMonth: Int?,
     payoutMonth: Int
   ) -> Double {
-    guard taxEnabled else { return gross }
-
-    var effectiveTaxRate = min(max(taxPercentage, 0), 100)
-    if let halfTaxMonth, halfTaxMonth == payoutMonth {
-      effectiveTaxRate /= 2
-    }
-
-    return gross * (1 - effectiveTaxRate / 100)
+    PayoutTaxSettings(enabled: taxEnabled, percentage: taxPercentage)
+      .adjusted(payoutMonth: payoutMonth, halfTaxMonth: halfTaxMonth)
+      .netAmount(from: gross)
   }
 }

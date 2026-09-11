@@ -5,6 +5,7 @@ import UIKit
 
 /// Visual timeline displaying wage snapshots with change detection
 struct WageHistoryTimelineView: View {
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   let entries: [WageTimelineEntry]
   let currency: String
   let onAddNew: () -> Void
@@ -13,37 +14,24 @@ struct WageHistoryTimelineView: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       // Header with add button
-      HStack {
-        Text(.settingsPayTimelineTitle)
-          .font(.tidexButton)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        Button(action: {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
-          onAddNew()
-        }) {
-          Text(.settingsPayTimelineAddChange)
-            .font(.tidexLabel)
-            .foregroundColor(.tidexBlue)
-            .lineLimit(1)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.xxxs)
+      ViewThatFits(in: .horizontal) {
+        HStack(spacing: Spacing.sm) {
+          title
+          Spacer(minLength: Spacing.xs)
+          addChangeButton
         }
-        .buttonStyle(.plain)
-        .tidexGlass(shape: .capsule, interactive: true)
-        .accessibilityHint(Text(.settingsPayTimelineAddChangeHint))
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+          title
+          addChangeButton
+        }
       }
       .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.md)
+      .padding(.vertical, Spacing.sm)
 
       if entries.isEmpty {
-        // Empty state
         emptyState
           .padding(.bottom, Spacing.md)
       } else {
-        // Timeline entries
         VStack(spacing: 0) {
           ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
             TimelineEntryRow(
@@ -52,8 +40,6 @@ struct WageHistoryTimelineView: View {
               isFirst: index == 0,
               isLast: index == entries.count - 1,
               hasFutureAbove: hasFutureAbove(at: index),
-              wageChanged: didWageChange(at: index),
-              shouldHighlightWage: shouldHighlightWage(at: index),
               onEdit: { onEdit(entry.snapshot) }
             )
           }
@@ -62,8 +48,32 @@ struct WageHistoryTimelineView: View {
       }
     }
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .tidexCardShadow(cornerRadius: CornerRadius.lg)
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+  }
+
+  private var title: some View {
+    Text(.settingsPayTimelineTitle)
+      .font(.tidexTitle2)
+      .foregroundColor(.tidexTextPrimary)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityAddTraits(.isHeader)
+  }
+
+  private var addChangeButton: some View {
+    Button(action: {
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      onAddNew()
+    }) {
+      Label(.settingsPayTimelineAddChange, systemImage: "plus")
+        .font(.tidexLabel)
+        .foregroundColor(.tidexBlue)
+        .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
+        .frame(minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityIdentifier("pay-history.add-change")
+    .accessibilityHint(Text(.settingsPayTimelineAddChangeHint))
   }
 
   // MARK: - Empty State
@@ -72,8 +82,9 @@ struct WageHistoryTimelineView: View {
   private var emptyState: some View {
     VStack(spacing: Spacing.sm) {
       Image(systemName: "clock.badge.questionmark")
-        .font(.system(size: 32))
+        .font(.tidexAmountLarge)
         .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
 
       Text(.settingsPayTimelineEmpty)
         .font(.tidexSubheadline)
@@ -92,48 +103,6 @@ struct WageHistoryTimelineView: View {
     return entries[index - 1].type == .future
   }
 
-  /// Check if the entry at this index changed the wage from the previous (older) entry
-  private func didWageChange(at index: Int) -> Bool {
-    guard index < entries.count - 1 else { return false }
-    let currentWage = entries[index].snapshot.hourly_wage
-    let previousWage = entries[index + 1].snapshot.hourly_wage
-    return currentWage != previousWage
-  }
-
-  /// Check if this past entry should have its wage highlighted in blue
-  /// This happens when it introduced the current wage, but the current entry only changed settings
-  private func shouldHighlightWage(at index: Int) -> Bool {
-    let entry = entries[index]
-
-    // Only highlight past entries (not future or current)
-    guard entry.type == .past else { return false }
-
-    // Find the current entry and its wage
-    guard let currentEntryIndex = entries.firstIndex(where: { $0.type == .current }) else {
-      return false
-    }
-    let currentEntry = entries[currentEntryIndex]
-    let currentWage = currentEntry.snapshot.hourly_wage
-
-    // Check if the current entry changed the wage
-    let currentEntryChangedWage = didWageChange(at: currentEntryIndex)
-
-    // If current entry changed the wage, no past entry should be highlighted
-    if currentEntryChangedWage { return false }
-
-    // This entry should be highlighted if it introduced the current wage
-    // (it has the current wage, but the entry after it (older) doesn't)
-    if entry.snapshot.hourly_wage != currentWage { return false }
-
-    // Check if the next entry (older) has a different wage
-    if index < entries.count - 1 {
-      let olderWage = entries[index + 1].snapshot.hourly_wage
-      return olderWage != currentWage
-    }
-
-    // This is the oldest entry with the current wage
-    return true
-  }
 }
 
 // MARK: - Timeline Entry Row
@@ -145,8 +114,6 @@ private struct TimelineEntryRow: View {
   let isFirst: Bool
   let isLast: Bool
   let hasFutureAbove: Bool
-  let wageChanged: Bool
-  let shouldHighlightWage: Bool
   let onEdit: () -> Void
 
   /// Non-wage changes (excludes wage changes from the list)
@@ -155,49 +122,63 @@ private struct TimelineEntryRow: View {
   }
 
   private var verticalPadding: CGFloat {
-    entry.type == .current ? 16 : 10
+    entry.type == .current ? Spacing.md : Spacing.sm
   }
 
   var body: some View {
-    HStack(alignment: .center, spacing: 0) {
-      // Timeline indicator (dot and lines) - no vertical padding
-      timelineIndicator
-        .frame(width: 40)
-        .padding(.leading, Spacing.md)
+    Button {
+      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      onEdit()
+    } label: {
+      HStack(alignment: .center, spacing: 0) {
+        // Timeline indicator (dot and lines) - no vertical padding
+        timelineIndicator
+          .frame(width: Spacing.lg)
+          .padding(.leading, Spacing.md)
+          .padding(.trailing, Spacing.xs)
+          .accessibilityHidden(true)
 
-      // Content with vertical padding
-      HStack {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          // Title: wage rate or change description
-          titleView
+        // Content with vertical padding
+        HStack {
+          VStack(alignment: .leading, spacing: Spacing.xxs) {
+            Text(statusTitle)
+              .font(.tidexCaption)
+              .foregroundColor(entry.type == .current ? .tidexBlue : .tidexTextSecondary)
 
-          // Date range
-          Text(entry.dateRange)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
+            wageTitle
 
-        Spacer()
+            changesTitle
 
-        // Edit button
-        Button(action: {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
-          onEdit()
-        }) {
-          Image(systemName: "pencil")
-            .font(.tidexSubheadline)
+            // Date range
+            Text(entry.dateRange)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+          }
+
+          Spacer()
+
+          Image(systemName: "chevron.right")
+            .font(.tidexCaption)
             .foregroundColor(.tidexTextMuted)
-            .padding(Spacing.xs)
+            .accessibilityHidden(true)
         }
+        .padding(.vertical, verticalPadding)
+        .padding(.trailing, Spacing.md)
       }
-      .padding(.vertical, verticalPadding)
-      .padding(.trailing, Spacing.md)
+      .background(
+        entry.type == .current
+          ? Color.tidexBrandPrimary.opacity(0.08)
+          : Color.clear
+      )
+      .contentShape(Rectangle())
     }
-    .background(
-      entry.type == .current
-        ? Color.tidexBrandPrimary.opacity(0.08)
-        : Color.clear
+    .buttonStyle(.plain)
+    .accessibilityLabel(Text(.settingsPayTimelineEditPeriod(entry.dateRange)))
+    .accessibilityValue(
+      ([String(localized: statusTitle), formattedWage] + nonWageChanges.map(\.description))
+        .joined(separator: ", ")
     )
+    .accessibilityIdentifier("pay-history.period.\(entry.id)")
   }
 
   // MARK: - Timeline Indicator
@@ -245,7 +226,7 @@ private struct TimelineEntryRow: View {
       return .tidexBrandPrimary
 
     case .past:
-      return .tidexBrandPrimary.opacity(0.6)
+      return .tidexTextMuted
     }
   }
 
@@ -255,7 +236,7 @@ private struct TimelineEntryRow: View {
       DashedLineRect(color: .tidexBorder)
     } else {
       Rectangle()
-        .fill(Color.tidexBrandPrimary.opacity(0.3))
+        .fill(Color.tidexBorder)
     }
   }
 
@@ -265,7 +246,7 @@ private struct TimelineEntryRow: View {
       DashedLineRect(color: .tidexBorder)
     } else {
       Rectangle()
-        .fill(Color.tidexBrandPrimary.opacity(0.3))
+        .fill(Color.tidexBorder)
     }
   }
 
@@ -291,30 +272,24 @@ private struct TimelineEntryRow: View {
     }
   }
 
-  /// Determine what to show as the title
-  /// - If wage changed or should be highlighted: show wage (blue if highlighted)
-  /// - If only settings changed: show the changes as title
-  /// - Fallback: show wage (baseline or first entry)
-  @ViewBuilder
-  private var titleView: some View {
-    if wageChanged || shouldHighlightWage || nonWageChanges.isEmpty {
-      // Show wage as title
-      wageTitle
-    } else {
-      // Show changes as title (settings changed but not wage)
-      changesTitle
+  private var statusTitle: LocalizedStringResource {
+    switch entry.type {
+    case .current:
+      return .settingsPayTimelineCurrent
+    case .future:
+      return .settingsPayTimelineScheduled
+    case .past:
+      return .settingsPayTimelinePrevious
     }
   }
 
   @ViewBuilder
   private var wageTitle: some View {
     Text(formattedWage)
-      .font(
-        .system(
-          size: entry.type == .current ? 24 : 16, weight: entry.type == .current ? .bold : .semibold
-        )
-      )
-      .foregroundColor(shouldHighlightWage ? .tidexBlue : .tidexTextPrimary)
+      .font(entry.type == .current ? .tidexTitle : .tidexBodyMedium)
+      .foregroundColor(.tidexTextPrimary)
+      .monospacedDigit()
+      .fixedSize(horizontal: false, vertical: true)
   }
 
   @ViewBuilder
@@ -322,12 +297,9 @@ private struct TimelineEntryRow: View {
     VStack(alignment: .leading, spacing: Spacing.micro) {
       ForEach(nonWageChanges) { change in
         Text(rtlAdjustedChangeDescription(change.description))
-          .font(
-            .system(
-              size: entry.type == .current ? 20 : 15,
-              weight: entry.type == .current ? .bold : .semibold)
-          )
-          .foregroundColor(.tidexTextPrimary)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
     }
   }

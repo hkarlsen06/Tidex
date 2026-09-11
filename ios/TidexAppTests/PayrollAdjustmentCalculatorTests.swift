@@ -3,6 +3,47 @@ import XCTest
 @testable import Tidex
 
 final class PayrollAdjustmentCalculatorTests: XCTestCase {
+  func testAdjustmentsUseEachWorkplacesHalfTaxSettingIncludingExplicitOff() {
+    let jobs = [
+      TestFixtures.job(id: "half", isDefault: true, halfTaxMonth: 11),
+      TestFixtures.job(id: "full", isDefault: false, halfTaxMonth: nil),
+    ]
+    let totals = PayrollAdjustmentCalculator.totals(
+      adjustments: [
+        makeAdjustment(amount: 1000, taxTreatment: .grossTaxable, jobId: "half"),
+        makeAdjustment(amount: 1000, taxTreatment: .grossTaxable, jobId: "full"),
+      ],
+      taxSettings: { _ in PayoutTaxSettings(enabled: true, percentage: 20) },
+      halfTaxMonth: 11, payoutMonth: 11, jobs: jobs
+    )
+    XCTAssertEqual(totals.net, 1700, accuracy: 0.001)
+  }
+
+  func testPayoutBreakdownRecalculatesTaxWhenAnAdjustmentIsAddedChangedOrRemoved() throws {
+    let start = try XCTUnwrap(Date.fromISODateString("2026-05-01"))
+    let breakdown = PayrollCardJobBreakdown(
+      id: "job", title: "Work", colorHex: nil, currency: "kr", basePay: 1000,
+      supplementPay: 0, supplementBreakdowns: [], postDeductions: 0, postDeductionParts: [],
+      payoutDate: try XCTUnwrap(Date.fromISODateString("2026-06-15")),
+      gross: 1000, net: 800, tax: 200, taxEnabled: true, adjustments: [],
+      earningsPeriodStart: start,
+      payoutTaxSettings: PayoutTaxSettings(enabled: true, percentage: 20))
+
+    let added = breakdown.withAdjustments([
+      makeAdjustment(amount: 1000, taxTreatment: .grossTaxable)
+    ])
+    XCTAssertEqual(added.gross, 2000, accuracy: 0.001)
+    XCTAssertEqual(try XCTUnwrap(added.net), 1600, accuracy: 0.001)
+    XCTAssertEqual(try XCTUnwrap(added.tax), 400, accuracy: 0.001)
+    XCTAssertEqual(added.earningsPeriodStart, start)
+
+    let edited = added.withAdjustments([makeAdjustment(amount: 500, taxTreatment: .grossTaxable)])
+    XCTAssertEqual(try XCTUnwrap(edited.net), 1200, accuracy: 0.001)
+    XCTAssertEqual(try XCTUnwrap(edited.tax), 300, accuracy: 0.001)
+    let removed = edited.withAdjustments([])
+    XCTAssertEqual(removed, breakdown)
+  }
+
   func testGrossTaxableAdjustmentUsesPayoutMonthTax() {
     let adjustment: PayrollAdjustment = makeAdjustment(amount: 1_000, taxTreatment: .grossTaxable)
 
@@ -71,12 +112,13 @@ final class PayrollAdjustmentCalculatorTests: XCTestCase {
     amount: Double,
     taxTreatment: PayrollAdjustmentTaxTreatment,
     category: PayrollAdjustmentCategory = .retroPay,
-    deletedAt: String? = nil
+    deletedAt: String? = nil,
+    jobId: String? = nil
   ) -> PayrollAdjustment {
     PayrollAdjustment(
       id: "a1",
       user_id: "user-1",
-      job_id: nil,
+      job_id: jobId,
       amount: amount,
       currency: "kr",
       category: category,

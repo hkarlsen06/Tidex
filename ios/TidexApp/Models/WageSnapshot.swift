@@ -1,3 +1,19 @@
+import Foundation
+
+enum WageSnapshotDateError: Error, LocalizedError, Equatable {
+  case baselineMustRemainUndated
+  case dateConflict
+
+  var errorDescription: String? {
+    switch self {
+    case .baselineMustRemainUndated:
+      return String(localized: .settingsPayEditorBaselineHelp)
+    case .dateConflict:
+      return String(localized: .settingsPayErrorDateConflict)
+    }
+  }
+}
+
 // MARK: - Wage Snapshot
 
 struct OvertimeRule: Codable, Equatable {
@@ -330,6 +346,14 @@ struct WageSnapshot: Codable, Identifiable, Equatable {
 struct PayoutTaxSettings: Equatable {
   let enabled: Bool
   let percentage: Double
+
+  func adjusted(payoutMonth: Int, halfTaxMonth: Int?) -> PayoutTaxSettings {
+    let rate = percentage.isFinite ? min(max(percentage, 0), 100) : 0
+    return PayoutTaxSettings(
+      enabled: enabled,
+      percentage: enabled ? (halfTaxMonth == payoutMonth ? rate / 2 : rate) : 0
+    )
+  }
 
   /// Calculate net amount after tax
   func netAmount(from gross: Double) -> Double {

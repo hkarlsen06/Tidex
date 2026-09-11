@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -336,6 +337,7 @@ final class SnapshotsRepository: ObservableObject {
   func updateSnapshot(
     id: String,
     jobId: String? = nil,
+    fromDate: Date? = nil,
     hourlyWage: Double? = nil,
     wageLevel: Int? = nil,
     updateWageLevel: Bool = false,
@@ -355,6 +357,7 @@ final class SnapshotsRepository: ObservableObject {
       let updatedSnapshot = try await localStore.storeActor.updateWageSnapshot(
         id: id,
         jobId: jobId,
+        fromDate: fromDate,
         hourlyWage: hourlyWage,
         wageLevel: wageLevel,
         updateWageLevel: updateWageLevel,

@@ -11,8 +11,11 @@ struct PaySettingsView: View {
   @State private var paySetupJob: Job?
   @State private var showingArchiveConfirmation = false
 
-  init(initialJobId: String? = nil) {
-    _viewModel = StateObject(wrappedValue: PaySettingsViewModel(initialSelectedJobId: initialJobId))
+  init(initialJobId: String? = nil, initialDate: Date = Date()) {
+    _viewModel = StateObject(
+      wrappedValue: PaySettingsViewModel(
+        initialSelectedJobId: initialJobId, initialDate: initialDate
+      ))
   }
 
   var body: some View {
@@ -42,8 +45,11 @@ struct PaySettingsView: View {
       WageSnapshotEditorSheet(
         mode: viewModel.editorMode,
         snapshot: viewModel.selectedSnapshot,
-        mostRecentSnapshot: viewModel.snapshots.first,
+        snapshots: viewModel.snapshots,
+        initialDate: viewModel.reviewDate,
         userCurrency: viewModel.userCurrency,
+        saveError: viewModel.errorMessage,
+        initialSection: viewModel.editorSection,
         onSave: { input in
           if viewModel.editorMode == .create {
             return await viewModel.createSnapshot(input: input)
@@ -60,6 +66,25 @@ struct PaySettingsView: View {
           viewModel.closeEditor()
         }
       )
+      .confirmationDialog(
+        String(localized: .settingsPayDeleteConfirmTitle),
+        isPresented: $viewModel.showingDeleteConfirmation,
+        titleVisibility: .visible
+      ) {
+        Button(role: .destructive) {
+          Task { await viewModel.confirmDelete() }
+        } label: {
+          Text(.commonDelete)
+        }
+
+        Button(role: .cancel) {
+          viewModel.cancelDelete()
+        } label: {
+          Text(.commonCancel)
+        }
+      } message: {
+        Text(deleteConfirmationMessage)
+      }
     }
     .sheet(item: $paySetupJob) { job in
       JobPaySetupSheet(
@@ -89,25 +114,6 @@ struct PaySettingsView: View {
         .interactiveDismissDisabled(true)
     }
     .confirmationDialog(
-      String(localized: .settingsPayDeleteConfirmTitle),
-      isPresented: $viewModel.showingDeleteConfirmation,
-      titleVisibility: .visible
-    ) {
-      Button(role: .destructive) {
-        Task { await viewModel.confirmDelete() }
-      } label: {
-        Text(.commonDelete)
-      }
-
-      Button(role: .cancel) {
-        viewModel.cancelDelete()
-      } label: {
-        Text(.commonCancel)
-      }
-    } message: {
-      Text(deleteConfirmationMessage)
-    }
-    .confirmationDialog(
       String(localized: .settingsPayJobActionsArchiveConfirmTitle),
       isPresented: $showingArchiveConfirmation,
       titleVisibility: .visible
@@ -130,7 +136,7 @@ struct PaySettingsView: View {
     .alert(
       viewModel.errorTitle ?? String(localized: .commonError),
       isPresented: .init(
-        get: { viewModel.errorMessage != nil },
+        get: { viewModel.errorMessage != nil && !viewModel.showingEditor },
         set: { if !$0 { viewModel.clearError() } }
       )
     ) {
@@ -152,6 +158,8 @@ struct PaySettingsView: View {
     NavigationStack {
       List {
         Section {
+          Text(.settingsPayChooseJobUnavailable)
+            .foregroundStyle(Color.tidexTextSecondary)
           ForEach(viewModel.activeJobs) { job in
             Button {
               viewModel.resolveRequiredJobSelection(job.id)
@@ -176,6 +184,11 @@ struct PaySettingsView: View {
       }
       .navigationTitle(String(localized: .settingsMenuPayLabel))
       .navigationBarTitleDisplayMode(.inline)
+      .toolbar {
+        ToolbarItem(placement: .cancellationAction) {
+          Button(String(localized: .commonCancel)) { dismiss() }
+        }
+      }
     }
   }
 
@@ -205,6 +218,17 @@ struct PaySettingsView: View {
         }
 
         if viewModel.isSelectedJobConfigured {
+          PaySettingsReviewCard(
+            workDate: $viewModel.reviewDate,
+            snapshots: viewModel.snapshots,
+            entries: viewModel.timelineEntries,
+            currency: viewModel.userCurrency,
+            payrollDay: viewModel.selectedJobPayrollDay,
+            halfTaxMonth: viewModel.selectedJobHalfTaxMonth,
+            onEdit: { viewModel.openEditEditor(snapshot: $0, section: $1) }
+          )
+          .padding(.horizontal, Spacing.md)
+
           WageHistoryTimelineView(
             entries: viewModel.timelineEntries,
             currency: viewModel.userCurrency,
@@ -450,11 +474,29 @@ struct PaySettingsView: View {
 
   private var deleteConfirmationMessage: String {
     let count = viewModel.affectedShiftCount
+    let confirmation =
+      count == 0
+      ? String(localized: .settingsPayDeleteConfirmation)
+      : String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
+    return confirmation + "\n\n" + String(localized: .settingsPayDeleteImpact)
+  }
+}
 
-    if count == 0 {
-      return String(localized: .settingsPayDeleteConfirmation)
+struct PaySettingsSheet: View {
+  let jobId: String?
+  let workDate: Date
+  @Environment(\.dismiss) private var dismiss
+
+  var body: some View {
+    NavigationStack {
+      PaySettingsView(initialJobId: jobId, initialDate: workDate)
+        .toolbar {
+          ToolbarItem(placement: .confirmationAction) {
+            Button(String(localized: .commonDone)) { dismiss() }
+          }
+        }
     }
-    return String(localized: .settingsPayDeleteConfirmationWithShifts(Int(count)))
+    .presentationDetents([.large])
   }
 }
 

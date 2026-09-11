@@ -197,6 +197,16 @@ struct ShiftComputed: Equatable {
 
 // MARK: - Shift With Computations
 
+/// The saved periods and final tax rate used by the engine for this shift.
+/// Keeping this on the result prevents views from reapplying account-wide tax defaults.
+struct ShiftCalculationContext: Equatable {
+  let wageSnapshotId: String?
+  let taxSnapshotId: String?
+  let scheduledPayoutDate: String
+  let effectiveTaxPercentage: Double
+  let halfTaxApplied: Bool
+}
+
 /// Shift combined with computed payroll data and tax settings
 struct ShiftWithComputations: Identifiable, Equatable {
   let shift: ShiftRow
@@ -205,6 +215,11 @@ struct ShiftWithComputations: Identifiable, Equatable {
   let taxEnabled: Bool
   /// Tax percentage for this shift's payout
   let taxPercentage: Double
+  var calculationContext: ShiftCalculationContext? = nil
+
+  var effectiveTaxPercentage: Double {
+    calculationContext?.effectiveTaxPercentage ?? taxPercentage
+  }
 
   var id: String { shift.id }
   var shiftDate: String { shift.shift_date }
@@ -219,12 +234,12 @@ struct ShiftWithComputations: Identifiable, Equatable {
 
   /// Net pay after tax
   var netPay: Double {
-    computed.netPay(taxEnabled: taxEnabled, taxPercentage: taxPercentage)
+    computed.netPay(taxEnabled: taxEnabled, taxPercentage: effectiveTaxPercentage)
   }
 
   /// Tax amount
   var taxAmount: Double {
-    computed.taxAmount(taxEnabled: taxEnabled, taxPercentage: taxPercentage)
+    computed.taxAmount(taxEnabled: taxEnabled, taxPercentage: effectiveTaxPercentage)
   }
 
   /// Gross pay

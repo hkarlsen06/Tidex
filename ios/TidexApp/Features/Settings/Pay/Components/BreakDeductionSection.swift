@@ -5,6 +5,8 @@ import UIKit
 
 /// Section for configuring break deduction settings
 struct BreakDeductionSection: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Binding var enabled: Bool
   @Binding var method: BreakMethod
   @Binding var thresholdHours: Double
@@ -14,36 +16,39 @@ struct BreakDeductionSection: View {
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
       // Section header with toggle
-      HStack {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(.settingsPayEditorBreakTitle)
-            .font(.tidexButton)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(.settingsPayEditorBreakDescription)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        Toggle("", isOn: $enabled)
-          .labelsHidden()
-          .tint(.tidexBrandPrimary)
-          .onChange(of: enabled) { _, _ in
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-          }
+      Toggle(isOn: $enabled) {
+        Text(.settingsPayEditorBreakTitle)
+          .font(.tidexButton)
+          .foregroundColor(.tidexTextPrimary)
       }
+      .tint(.tidexBrandPrimary)
+      .onChange(of: enabled) { _, _ in
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      }
+
+      Text(.settingsPayEditorBreakDescription)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .fixedSize(horizontal: false, vertical: true)
 
       // Settings (only shown when enabled)
       if enabled {
         VStack(spacing: Spacing.md) {
+          Text(
+            .settingsPayReviewBreakSummary(
+              formatDeduction(deductionMinutes), formatThreshold(thresholdHours))
+          )
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .fixedSize(horizontal: false, vertical: true)
+
           advancedMethodDisclosure
         }
         .transition(.opacity.combined(with: .move(edge: .top)))
       }
     }
-    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: enabled)
+    .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.8), value: enabled)
     .onAppear {
       normalizeMethodIfNeeded()
     }
@@ -60,7 +65,7 @@ struct BreakDeductionSection: View {
     VStack(alignment: .leading, spacing: 0) {
       Button {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
           isAdvancedExpanded.toggle()
         }
       } label: {
@@ -89,6 +94,7 @@ struct BreakDeductionSection: View {
         )
       }
       .buttonStyle(.plain)
+      .accessibilityIdentifier("pay-settings.break-method")
 
       if isAdvancedExpanded {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -104,13 +110,6 @@ struct BreakDeductionSection: View {
             .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.top, Spacing.sm)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.bottom, Spacing.sm)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
-            .fill(Color.tidexSurfaceSecondary.opacity(0.55))
-        )
-        .padding(.top, Spacing.xs)
         .transition(.opacity.combined(with: .move(edge: .top)))
       }
     }
@@ -130,7 +129,7 @@ struct BreakDeductionSection: View {
             isSelected: method == breakMethod,
             action: {
               UIImpactFeedbackGenerator(style: .light).impactOccurred()
-              withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+              withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.8)) {
                 method = breakMethod
               }
             }
@@ -149,18 +148,20 @@ struct BreakDeductionSection: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack {
+      inputLayout {
         Text(formatThreshold(thresholdHours))
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
+          .frame(maxWidth: .infinity, alignment: .leading)
 
         Stepper("", value: $thresholdHours, in: 1...12, step: 0.5)
           .labelsHidden()
+          .accessibilityLabel(Text(.settingsPayEditorBreakThreshold))
+          .accessibilityValue(formatThreshold(thresholdHours))
+          .accessibilityIdentifier("pay-settings.break-threshold")
       }
       .padding(Spacing.sm)
-      .background(Color.tidexBackground)
+      .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
   }
@@ -187,24 +188,31 @@ struct BreakDeductionSection: View {
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
 
-      HStack {
+      inputLayout {
         Text(formatDeduction(deductionMinutes))
           .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
+          .frame(maxWidth: .infinity, alignment: .leading)
 
         Stepper("", value: $deductionMinutes, in: 5...120, step: 5)
           .labelsHidden()
+          .accessibilityLabel(Text(.settingsPayEditorBreakDeduction))
+          .accessibilityValue(formatDeduction(deductionMinutes))
       }
       .padding(Spacing.sm)
-      .background(Color.tidexBackground)
+      .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
     }
   }
 
   private func formatDeduction(_ minutes: Int) -> String {
     return String(localized: .settingsPayBreakMinutes(Int32(minutes)))
+  }
+
+  private var inputLayout: AnyLayout {
+    dynamicTypeSize.isAccessibilitySize
+      ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.xs))
+      : AnyLayout(HStackLayout(spacing: Spacing.sm))
   }
 
   private func methodTitle(for method: BreakMethod) -> String {
@@ -251,7 +259,7 @@ private struct BreakMethodRow: View {
           Text(methodDescription)
             .font(.tidexCaptionRegular)
             .foregroundColor(.tidexTextSecondary)
-            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
         }
 
         Spacer()
@@ -270,10 +278,13 @@ private struct BreakMethodRow: View {
         }
       }
       .padding(Spacing.xs)
-      .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.tidexBackground)
+      .frame(minHeight: 44)
+      .background(isSelected ? Color.tidexBrandPrimary.opacity(0.08) : Color.clear)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
+      .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 
   private var methodTitle: String {

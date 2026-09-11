@@ -32,6 +32,155 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testPayReviewOpensThePayoutTaxPeriodDirectly() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-review"
+    app.launch()
+    let taxSettings = app.buttons["Review these tax settings"]
+    XCTAssertTrue(taxSettings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "pay-review-date-settings")
+    if !taxSettings.isHittable { app.swipeUp() }
+    taxSettings.tap()
+    let taxToggle = app.switches["pay-settings.tax-toggle"]
+    XCTAssertTrue(taxToggle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(taxToggle.isHittable, "Tax settings should open at the tax section")
+    attachAppStoreScreenshot(app, name: "pay-review-payout-tax-period")
+    app.buttons["Save"].tap()
+    let saved = app.staticTexts["pay-history.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertEqual(saved.label, "250.0|2026-12-01")
+  }
+
+  @MainActor
+  func testAddingPayHistoryUsesTheSelectedWorkDateSettings() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-review"
+    app.launch()
+    let add = app.buttons["pay-history.add-change"]
+    XCTAssertTrue(add.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    if !add.isHittable { app.swipeUp() }
+    add.tap()
+    let rate = app.staticTexts["pay-settings.hourly-wage"]
+    XCTAssertTrue(rate.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(rate.label.contains("200"), rate.label)
+    app.buttons["Save"].tap()
+    let saved = app.staticTexts["pay-history.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertEqual(saved.label, "200.0|2026-11-15")
+  }
+
+  @MainActor
+  func testPayHistoryPeriodRowOpensItsSettings() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-review"
+    app.launch()
+    let period = app.buttons["pay-history.period.future"]
+    XCTAssertTrue(period.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    for _ in 0..<4 where !period.isHittable { app.swipeUp() }
+    XCTAssertTrue(period.isHittable, app.debugDescription)
+    attachAppStoreScreenshot(app, name: "pay-history-periods")
+    period.tap()
+    let rate = app.staticTexts["pay-settings.hourly-wage"]
+    XCTAssertTrue(rate.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(rate.label.contains("250"), rate.label)
+    attachAppStoreScreenshot(app, name: "pay-history-period-editor")
+    app.buttons["Save"].tap()
+    let saved = app.staticTexts["pay-history.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertEqual(saved.label, "250.0|2026-12-01")
+  }
+
+  @MainActor
+  func testEditingTaxPreservesSavedTariffWageAndSupplements() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-history-tariff-editor"
+    app.launch()
+    let taxToggle = app.switches["pay-settings.tax-toggle"]
+    XCTAssertTrue(taxToggle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(taxToggle.isHittable, app.debugDescription)
+    taxToggle.tap()
+    app.buttons["Save"].tap()
+    let saved = app.staticTexts["pay-history.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertEqual(saved.label, "184.12|1|true")
+  }
+
+  @MainActor
+  func testAdditionalWorkplaceSetupIncludesBreakAndTaxChoices() {
+    verifyWorkplaceDeductionsSetup(screen: "job-pay-setup")
+  }
+
+  @MainActor
+  func testAddingAWorkplaceIncludesBreakAndTaxChoices() {
+    verifyWorkplaceDeductionsSetup(screen: "add-job-setup")
+  }
+
+  @MainActor
+  private func verifyWorkplaceDeductionsSetup(screen: String) {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = screen
+    app.launch()
+    let proceed = app.buttons["Continue"]
+    XCTAssertTrue(proceed.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    proceed.tap()
+    XCTAssertTrue(
+      app.staticTexts["Choose your wage type"].waitForExistence(timeout: defaultTimeout))
+    proceed.tap()
+    let skip = app.buttons["Skip"]
+    XCTAssertTrue(skip.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    skip.tap()
+    XCTAssertTrue(app.staticTexts["Break deduction"].waitForExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(app, name: "\(screen)-deductions")
+    proceed.tap()
+    let taxChoice = app.switches.matching(
+      NSPredicate(format: "label CONTAINS %@", "Show pay after tax")
+    )
+    .firstMatch
+    XCTAssertTrue(taxChoice.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    taxChoice.tap()
+    if !proceed.isHittable { app.swipeUp() }
+    proceed.tap()
+    app.buttons["Save"].tap()
+    let saved = app.staticTexts["pay-history.saved-result"]
+    XCTAssertTrue(saved.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertEqual(saved.label, "true|true")
+  }
+
+  @MainActor
+  func testPayReviewRemainsUsableWithLargeText() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-accessibility"
+    app.launch()
+    XCTAssertTrue(app.staticTexts["Check a calculation"].waitForExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(app, name: "pay-review-large-text-top")
+    let taxSettings = app.buttons["Review these tax settings"]
+    for _ in 0..<6 where !taxSettings.isHittable { app.swipeUp() }
+    XCTAssertTrue(taxSettings.isHittable, app.debugDescription)
+    attachAppStoreScreenshot(app, name: "pay-review-large-text")
+    taxSettings.tap()
+    let toggle = app.switches["pay-settings.tax-toggle"]
+    XCTAssertTrue(toggle.waitForExistence(timeout: defaultTimeout))
+    XCTAssertTrue(toggle.isHittable, app.debugDescription)
+    let preset = app.buttons["25%"]
+    for _ in 0..<3 where !preset.isHittable { app.swipeUp() }
+    XCTAssertTrue(preset.isHittable, app.debugDescription)
+    XCTAssertGreaterThanOrEqual(preset.frame.height, 44)
+    preset.tap()
+    XCTAssertTrue(preset.isSelected, app.debugDescription)
+    attachAppStoreScreenshot(app, name: "pay-review-large-text-tax-editor")
+    let methods = app.buttons["pay-settings.break-method"]
+    for _ in 0..<5 where !methods.isHittable { app.swipeUp() }
+    XCTAssertTrue(methods.isHittable, app.debugDescription)
+    methods.tap()
+    let threshold = app.steppers["pay-settings.break-threshold"]
+    for _ in 0..<3 where !threshold.isHittable { app.swipeUp() }
+    XCTAssertTrue(threshold.isHittable, app.debugDescription)
+    threshold.buttons["pay-settings.break-threshold-Increment"].tap()
+    XCTAssertEqual(threshold.value as? String, "6 hours")
+    attachAppStoreScreenshot(app, name: "pay-review-large-text-break-editor")
+  }
+
+  @MainActor
   func testOvernightPayrollBreakdownSeparatesOvertimeAndUnpaidBreak() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "payroll-breakdown"
