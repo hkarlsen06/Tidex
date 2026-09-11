@@ -95,17 +95,28 @@ async function markSVG(appearance, monochrome = false) {
       let inner = source.replace(/^.*?<svg\b[^>]*>/s, '').replace(/<\/svg>\s*$/, '');
       inner = inner.replace(/id="([^"]+)"/g, (_, id) => `id="${prefix}${id}"`)
         .replace(/url\(#([^)]+)\)/g, (_, id) => `url(#${prefix}${id})`);
-      let fill = monochrome ? '#000000' : appearance === 'dark' ? '#FFFFFF' : brandBlue;
+      const fill = monochrome ? '#000000' : appearance === 'dark' ? '#FFFFFF' : brandBlue;
       let gradient = '';
       if (!monochrome && layer['fill-specializations']) {
         const value = appearanceValue(layer['fill-specializations'], appearance);
         const stops = value['linear-gradient'];
-        if (!stops) throw new Error(`Expected a gradient for ${layer['image-name']}`);
-        const id = `${prefix}brand`;
-        gradient = `<defs><linearGradient id="${id}" x1="0" y1="0.5" x2="1" y2="0.5">`
-          + stops.map((color, i) => `<stop offset="${i / (stops.length - 1)}" stop-color="${colors[color]}"/>`).join('')
-          + '</linearGradient></defs>';
-        fill = `url(#${id})`;
+        if (stops) {
+          const { start, stop } = value.orientation;
+          const id = `${prefix}brand`;
+          const shape = inner.match(/^<g transform="([^"]+)">(<path\b[^>]+\/>)<\/g>$/);
+          if (!shape) throw new Error(`Update the gradient silhouette conversion for ${layer['image-name']}`);
+          // Icon Composer uses the layer's full canvas, before its drawing transforms.
+          // Clip a canvas-sized gradient so the stroke's rotation cannot rotate it again.
+          // A clipPath requires a direct shape, so move the SVG group's transform onto it.
+          gradient = `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse"`
+            + ` x1="${start.x * 1024}" y1="${start.y * 1024}" x2="${stop.x * 1024}" y2="${stop.y * 1024}">`
+            + stops.map((color, i) => `<stop offset="${i / (stops.length - 1)}" stop-color="${colors[color]}"/>`).join('')
+            + `</linearGradient><clipPath id="${id}-shape" clipPathUnits="userSpaceOnUse" transform="${shape[1]}">${shape[2]}</clipPath></defs>`;
+          inner = `<rect width="1024" height="1024" fill="url(#${id})" clip-path="url(#${id}-shape)"/>`;
+        } else if (!['system-light', 'system-dark'].includes(value)) {
+          throw new Error(`Unsupported flat-mark fill for ${layer['image-name']}`);
+        }
+        // System-coloured tally bars keep the flat logo's adaptive blue/white fill.
       }
       // Only recolour the drawing, leaving the cutout geometry intact.
       const endOfDefs = inner.lastIndexOf('</defs>') + '</defs>'.length;
