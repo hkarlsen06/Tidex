@@ -119,6 +119,7 @@
   internal struct AppStoreScreenshotView: View {
     @State private var isReady: Bool = false
     @State private var errorMessage: String?
+    @State private var keyboardHideCount = 0
 
     internal var body: some View {
       Group {
@@ -129,6 +130,18 @@
             .environmentObject(AppCoordinator.shared)
         } else {
           ProgressView()
+        }
+      }
+      .overlay(alignment: .topLeading) {
+        if ProcessInfo.processInfo.environment["TIDEX_TEST_KEYBOARD"] == "1" {
+          Text(verbatim: String(keyboardHideCount))
+            .accessibilityIdentifier("ui-testing.keyboard-hide-count")
+            .allowsHitTesting(false)
+            .onReceive(
+              NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)
+            ) { _ in
+              keyboardHideCount += 1
+            }
         }
       }
       .task {
