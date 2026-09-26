@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import os.log
 import SwiftUI
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SharingViewModel")
 
@@ -613,11 +613,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
     }
 
     isRefreshing = false
-
-    // Update Apple Watch with refreshed friend data
-    if let userId = cachedUserId {
-      WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
-    }
   }
 
   /// Select a sharer to view their shifts

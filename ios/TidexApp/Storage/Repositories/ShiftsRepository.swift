@@ -279,9 +279,6 @@ final class ShiftsRepository: ObservableObject {
     // Update widget storage with the new shift
     NativeWidgetStorage.updateWidgetStorage(for: userId)
 
-    // Update Apple Watch with new shift data
-    WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
-
     // Trigger sync to upload immediately
     triggerSync(userId: userId)
 
@@ -323,8 +320,6 @@ final class ShiftsRepository: ObservableObject {
 
       if let userId = updatedShift.user_id {
         NativeWidgetStorage.updateWidgetStorage(for: userId)
-        // Update Apple Watch with new shift data
-        WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
         // Trigger sync to upload immediately
         triggerSync(userId: userId)
       }
@@ -352,7 +347,6 @@ final class ShiftsRepository: ObservableObject {
 
       if let userId = updatedShift.user_id {
         NativeWidgetStorage.updateWidgetStorage(for: userId)
-        WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
         triggerSync(userId: userId)
       }
 
@@ -377,9 +371,6 @@ final class ShiftsRepository: ObservableObject {
       // Update widget storage to remove the deleted shift
       NativeWidgetStorage.updateWidgetStorage(for: userId)
 
-      // Update Apple Watch with new shift data
-      WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
-
       // Trigger sync to upload immediately
       triggerSync(userId: userId)
     } catch LocalStoreWriteError.notFound {
@@ -390,7 +381,7 @@ final class ShiftsRepository: ObservableObject {
   }
 
   /// Mark multiple shifts for deletion in one write transaction.
-  /// Side effects (widget/watch/sync) are dispatched once per affected user.
+  /// Widget updates and sync are dispatched once per affected user.
   func deleteShifts(ids: [String]) async throws {
     let uniqueIds = Array(Set(ids))
     guard !uniqueIds.isEmpty else {
@@ -405,7 +396,6 @@ final class ShiftsRepository: ObservableObject {
 
     for userId in userIds {
       NativeWidgetStorage.updateWidgetStorage(for: userId)
-      WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
       triggerSync(userId: userId)
     }
 

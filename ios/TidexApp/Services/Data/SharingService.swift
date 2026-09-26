@@ -35,7 +35,7 @@ struct SharerShiftPreview: Equatable {
 }
 
 // Note: ShiftPreviewStatus is now defined in Shared/ShiftPreviewStatus.swift
-// for use by both iOS and Watch targets
+// for use by the app and extensions
 
 // MARK: - Errors
 

@@ -6,7 +6,7 @@ You are now in iOS development mode, ready to work on the native Tidex iOS app.
 
 ## Project Structure
 
-The iOS project has 3 targets inside `ios/`:
+The iOS app and extensions are inside `ios/`.
 
 **Main App** (`ios/TidexApp/`):
 - `App/` - App entry point, AppCoordinator, RootView, MainTabView, push notifications
@@ -18,11 +18,9 @@ The iOS project has 3 targets inside `ios/`:
 
 **Widgets** (`ios/TidexShiftWidget/`) - Home screen, lock screen widgets, live activities
 
-**Watch App** (`ios/TidexWatchApp/`) - Apple Watch companion with complications
-
 **Shared** (`ios/Shared/`) - Cross-target shared APIs and models
 
-**Resources** (`ios/Resources/Localization/`) - Xcode String Catalogs (App, Widget, Watch)
+**Resources** (`ios/Resources/Localization/`) - Xcode String Catalogs for the app, widgets, and share extension
 
 ## Key Patterns
 

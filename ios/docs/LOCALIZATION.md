@@ -6,7 +6,6 @@ This document covers how Tidex iOS localization works and how to add a new langu
 
 - **Main app**: `ios/Resources/Localization/App/Localizable.xcstrings`
 - **Widget extension**: `ios/Resources/Localization/Widget/Localizable.xcstrings`
-- **Watch app**: `ios/Resources/Localization/Watch/Localizable.xcstrings`
 - Symbols are generated automatically by Xcode when `STRING_CATALOG_GENERATE_SYMBOLS = YES`.
 - Runtime access: Xcode-generated `LocalizedStringResource` symbols and `String(localized:)`.
 
@@ -85,16 +84,15 @@ let title = locale == "no" ? "Vakter" : "Shifts"
 let greeting = isNorwegian ? "Hei" : "Hello"
 
 // GOOD - use String Catalog symbols
-let title = String(localized: .watchShifts)
+let title = String(localized: .widgetShifts)
 let greeting = String(localized: .commonGreeting)
 ```
 
-## Widget and Watch extension localization
+## Widget extension localization
 
 Each extension target has its own String Catalog. Symbols are scoped to the target's bundle:
 
 - Widgets use symbols like `.widgetToday`, `.widgetShifts`
-- Watch uses symbols like `.watchShifts`, `.watchActive`
 
 When the main app and extensions need the same strings (e.g., `common.hours.short`),
 add the key to each target's String Catalog.
@@ -109,7 +107,6 @@ and fill in translations. Keep `state: translated` for each string unit.
 Files to update:
 - `ios/Resources/Localization/App/Localizable.xcstrings`
 - `ios/Resources/Localization/Widget/Localizable.xcstrings`
-- `ios/Resources/Localization/Watch/Localizable.xcstrings`
 
 ### 2) Update formatter locale helpers
 
@@ -155,7 +152,7 @@ swift run --package-path ios/Scripts validate-localization
 ## Notes
 
 - The app uses system locale by default (no explicit locale override in `RootView`).
-- Widgets and Watch app use the app group locale value; ensure the new locale raw value
+- Widgets use the app group locale value; ensure the new locale raw value
   matches the language code you want persisted.
 - Prefer `FormatStyle` for numbers/dates. If you must format a year without grouping,
   pass a string (ex: `String(focusYear)`) to the localization call.

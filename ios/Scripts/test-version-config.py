@@ -2,9 +2,11 @@
 """Run with python3 ios/Scripts/test-version-config.py from the repository root."""
 
 import importlib.util
+import json
 from pathlib import Path
 import plistlib
 import shutil
+import subprocess
 import tempfile
 import unittest
 
@@ -27,7 +29,7 @@ class VersionConfigTests(unittest.TestCase):
         for path in (
             "TidexApp/Supporting/Info.plist", "TidexShareExtension/Info.plist",
             "TidexSiriIntents/Info.plist", "TidexNotificationService/Info.plist",
-            "TidexShiftWidget/Info.plist", "WatchShiftWidget/Supporting/Info.plist",
+            "TidexShiftWidget/Info.plist",
         ):
             destination = self.root / path
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -54,7 +56,7 @@ class VersionConfigTests(unittest.TestCase):
         for setting in (
             "MARKETING_VERSION", "CURRENT_PROJECT_VERSION",
             "INFOPLIST_KEY_CFBundleShortVersionString", "INFOPLIST_KEY_CFBundleVersion",
-            '"MARKETING_VERSION[sdk=watchos*]"',
+            '"MARKETING_VERSION[sdk=iphoneos*]"',
         ):
             with self.subTest(setting=setting):
                 self.project_path.write_text(original.replace(
@@ -62,7 +64,31 @@ class VersionConfigTests(unittest.TestCase):
                 ))
                 errors = version_config.validate(self.root)
                 self.assertEqual(len(errors), 1)
-                self.assertIn("TidexWatchApp (Debug)", errors[0])
+                self.assertIn("TidexShiftWidgetExtension (Debug)", errors[0])
+
+    def test_shipping_targets_and_embedded_extensions_are_ios_only(self):
+        project = json.loads(subprocess.check_output([
+            "/usr/bin/plutil", "-convert", "json", "-o", "-", str(self.project_path),
+        ]))
+        objects = project["objects"]
+        targets = [objects[target] for target in objects[project["rootObject"]]["targets"]]
+        for target in targets:
+            configurations = objects[target["buildConfigurationList"]]["buildConfigurations"]
+            for configuration in configurations:
+                settings = objects[configuration]["buildSettings"]
+                self.assertEqual(settings.get("SDKROOT", "iphoneos"), "iphoneos", target["name"])
+
+        app = next(target for target in targets if target["name"] == "TidexApp")
+        embedded = {
+            objects[objects[file]["fileRef"]]["path"]
+            for phase in app["buildPhases"]
+            if objects[phase]["isa"] == "PBXCopyFilesBuildPhase"
+            for file in objects[phase]["files"]
+        }
+        self.assertEqual(embedded, {
+            "TidexShiftWidgetExtension.appex", "TidexNotificationService.appex",
+            "TidexShareExtension.appex", "TidexSiriIntents.appex",
+        })
 
     def test_rejects_hardcoded_or_missing_plist_versions(self):
         path = self.root / "TidexShareExtension/Info.plist"

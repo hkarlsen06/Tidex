@@ -964,14 +964,6 @@ final class AppCoordinator: ObservableObject {
           )
         }
       }
-
-      // Update Apple Watch with latest shift data after initial sync
-      let shouldNotifyWatch = await MainActor.run { self.userId == userId }
-      if shouldNotifyWatch {
-        await MainActor.run {
-          WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
-        }
-      }
     }
   }
 
@@ -1005,16 +997,12 @@ final class AppCoordinator: ObservableObject {
         await syncCoordinator.loadTrackingState(userId: userId)
         _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
 
-        // Update Apple Watch with latest shift data after foreground sync
         let currentUserIdAfterSync = await Task { @MainActor in self.userId }.value
         if let currentUserIdAfterSync, currentUserIdAfterSync != userId {
           return
         }
         await Task { @MainActor in
           await NotificationService.shared.refreshApplicationBadgeCount(viewerUserId: userId)
-        }.value
-        await Task { @MainActor in
-          WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
         }.value
 
         // Re-evaluate completed-shift celebration after foreground sync (or sync skip).
@@ -1203,10 +1191,7 @@ final class AppCoordinator: ObservableObject {
     NativeWidgetStorage.clearWidgetStorage()
     NativeWidgetStorage.clearFriendWidgetStorage()
 
-    // Clear paired Watch payload so stale shifts are not shown after sign-out.
-    WatchConnectivityManager.shared.sendClearedData()
-
-    // Clear shared keychain (widget/watch access token)
+    // Clear the access token shared with iPhone extensions.
     AuthSessionManager.shared.clearSharedKeychain()
     CalendarSubscriptionStore.shared.resetForUserChange()
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
@@ -1495,10 +1480,6 @@ final class AppCoordinator: ObservableObject {
           forKey: Self.startupTabCacheKey
         )
       }
-
-      // Update Apple Watch
-      WatchConnectivityManager.shared.sendUpdatedData(userId: currentUserId)
-
     } catch {
       userDisplayName = "User"
     }

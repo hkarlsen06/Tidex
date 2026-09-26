@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Compose the existing Tidex marketing layout around unmodified simulator captures.
-import { readFile, mkdir, copyFile } from 'node:fs/promises';
+import { readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -102,7 +102,6 @@ try {
       await preview.close();
       console.log(`Rendered ${screens.length} ${locale} ${family} marketing screenshots`);
     }
-    await copyFile(path.join(raw, locale, 'Watch-01-shifts.png'), path.join(folder, 'Watch-01-shifts.png'));
   }
 } finally {
   await browser.close();

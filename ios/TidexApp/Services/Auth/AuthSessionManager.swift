@@ -91,7 +91,7 @@ final class AuthSessionManager: ObservableObject {
   /// 1. Checks if a refresh is already in progress and waits for it if so
   /// 2. Gets the current session from Supabase
   /// 3. Proactively refreshes if the token is close to expiry
-  /// 4. Stores the token in shared keychain for widget/watch access
+  /// 4. Stores the token in shared keychain for iPhone extensions
   ///
   /// - Parameter allowProactiveRefresh: When false, skips the pre-expiry refresh optimization.
   ///   Useful during launch where fastest possible handoff is preferred.
@@ -153,7 +153,7 @@ final class AuthSessionManager: ObservableObject {
         return try await performRefresh()
       }
 
-      // Store token in shared keychain for widget/watch access
+      // Store token in shared keychain for iPhone extensions
       storeTokenInSharedKeychain(session)
 
       return session
@@ -532,7 +532,7 @@ final class AuthSessionManager: ObservableObject {
 
   // MARK: - Shared Keychain Storage
 
-  /// Store the access token in shared keychain for widget/watch access
+  /// Store the access token in shared keychain for iPhone extensions
   private func storeTokenInSharedKeychain(_ session: Session) {
     let payload = SharedKeychainAccessTokenPayload(session: session)
     do {
@@ -542,7 +542,7 @@ final class AuthSessionManager: ObservableObject {
       )
       logger.debug("Stored access token in shared keychain (expires: \(session.expiresAt))")
     } catch {
-      // Non-fatal: widget/watch will fall back to cached data
+      // Extensions can fall back to cached data if storing the token fails.
       logger.warning("Failed to store token in shared keychain: \(error.localizedDescription)")
     }
   }

@@ -186,9 +186,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     NotificationService.shared.registerNotificationCategories()
     LiveActivityPushTokenService.shared.startObserving()
 
-    // Apple recommends activating WCSession early in launch
-    WatchConnectivityManager.shared.activateSession()
-
     // Prewarm the cached theme before SwiftUI builds the first frame.
     _ = AppearanceManager.shared
 

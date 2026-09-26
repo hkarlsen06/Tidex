@@ -78,7 +78,7 @@ private actor SyncStateStore {
     }
 
     let requiresIntervalCheck =
-      reason != .manualRefresh && reason != .localChange && reason != .watchRefresh
+      reason != .manualRefresh && reason != .localChange
     if requiresIntervalCheck,
       let lastAuto = lastAutoSyncAt,
       Date().timeIntervalSince(lastAuto) < minimumSyncInterval
@@ -111,7 +111,7 @@ private actor SyncStateStore {
 extension SyncReason {
   fileprivate var shouldQueueFollowUp: Bool {
     switch self {
-    case .localChange, .manualRefresh, .watchRefresh:
+    case .localChange, .manualRefresh:
       return true
 
     case .appLaunch, .foreground:

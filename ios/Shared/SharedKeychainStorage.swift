@@ -5,12 +5,12 @@
 import Foundation
 import Security
 
-/// Shared Keychain storage accessible from all targets (main app, widget, watch)
+/// Keychain storage shared by the main app and iPhone extensions.
 /// Uses a shared access group to allow cross-target access to auth tokens
 ///
 /// ## Usage
 /// The main app writes the JWT token after successful authentication.
-/// Widget and Watch can read this token to make authenticated API calls directly.
+/// Extensions read this token to make authenticated API calls directly.
 enum SharedKeychainStorage {
   // MARK: - Configuration
 
@@ -139,7 +139,7 @@ enum SharedKeychainStorage {
     try deleteItem(forKey: tokenExpiryKey)
   }
 
-  // MARK: - Token Retrieval (Widget/Watch)
+  // MARK: - Token Retrieval
 
   /// Retrieve the access token if it hasn't expired
   /// Returns nil if no token exists or if expired
@@ -183,7 +183,7 @@ enum SharedKeychainStorage {
     // Add new item with shared access
     var newItem = query
     newItem[kSecValueData as String] = data
-    // Use WhenUnlocked for widget/watch background access
+    // Allow extensions to read the token after the first device unlock.
     newItem[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 
     let status = SecItemAdd(newItem as CFDictionary, nil)
