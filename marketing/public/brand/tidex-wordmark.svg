@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="345" height="106" viewBox="0 0 345 106">
   <title>Tidex</title>
   <g fill="#2563EB" transform="translate(2 2)">
-    <path d="M7 0 H71 Q77 0 77 6 V12 Q77 18 71 18 H48 V94 Q48 101 41 101 H35 Q28 101 28 94 V18 H7 Q1 18 1 12 V6 Q1 0 7 0 Z"/>
+    <path d="M7 0 H71 Q77 0 77 6 V12 Q77 18 71 18 H48 V90.4 Q48 92 47.07 93.3 L43.93 97.7 Q43 99 42.07 97.7 L38.93 93.3 Q38 92 37.07 93.3 L33.93 97.7 Q33 99 32.07 97.7 L28.93 93.3 Q28 92 28 90.4 V18 H7 Q1 18 1 12 V6 Q1 0 7 0 Z"/>
     <g transform="translate(85 0)">
       <rect x="0" y="0" width="19" height="19" rx="6.5"/>
       <rect x="0" y="29" width="19" height="72" rx="6.5"/>

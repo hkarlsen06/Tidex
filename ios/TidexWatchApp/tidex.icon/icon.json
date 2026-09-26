@@ -19,41 +19,7 @@
         {
           "fill-specializations" : [
             {
-              "value" : {
-                "linear-gradient" : [
-                  "display-p3:0.46867,0.78136,1.00000,1.00000",
-                  "display-p3:0.44310,0.17082,0.88701,1.00000"
-                ],
-                "orientation" : {
-                  "start" : {
-                    "x" : 0.3457708174057085,
-                    "y" : -0.06229889288830704
-                  },
-                  "stop" : {
-                    "x" : 0.8548177083333333,
-                    "y" : 1.3257492092059335
-                  }
-                }
-              }
-            },
-            {
-              "appearance" : "dark",
-              "value" : {
-                "linear-gradient" : [
-                  "display-p3:0.46867,0.78136,1.00000,1.00000",
-                  "display-p3:0.44310,0.17082,0.88701,1.00000"
-                ],
-                "orientation" : {
-                  "start" : {
-                    "x" : 0.34484502420998986,
-                    "y" : -0.06069685318499116
-                  },
-                  "stop" : {
-                    "x" : 0.9416829924821609,
-                    "y" : 1.3611304264834205
-                  }
-                }
-              }
+              "value" : "system-light"
             },
             {
               "appearance" : "tinted",
@@ -61,34 +27,34 @@
             }
           ],
           "glass" : true,
-          "image-name" : "Finishing-stroke.svg",
-          "name" : "Fifth tally",
+          "image-name" : "Hour-ruler.svg",
+          "name" : "Hour ruler",
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              -12,
+              0,
               0
             ]
           }
         }
       ],
       "lighting" : "individual",
-      "name" : "Pressure stroke",
+      "name" : "Hour ruler",
       "position" : {
-        "scale" : 1.2,
+        "scale" : 0.92,
         "translation-in-points" : [
           0,
           0
         ]
       },
       "shadow" : {
-        "kind" : "layer-color",
-        "opacity" : 0.62
+        "kind" : "neutral",
+        "opacity" : 0.6
       },
       "specular" : true,
       "translucency" : {
-        "enabled" : false,
-        "value" : 0.06
+        "enabled" : true,
+        "value" : 0.5
       }
     },
     {
@@ -101,112 +67,27 @@
               "value" : "system-light"
             },
             {
-              "appearance" : "dark",
-              "value" : "system-light"
-            },
-            {
               "appearance" : "tinted",
-              "value" : "system-dark"
+              "value" : "system-light"
             }
           ],
           "glass" : true,
           "hidden" : false,
-          "image-name" : "Count-1.svg",
-          "name" : "Count 1",
+          "image-name" : "Payslip.svg",
+          "name" : "Payslip",
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              -12,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill-specializations" : [
-            {
-              "value" : "system-light"
-            },
-            {
-              "appearance" : "dark",
-              "value" : "system-light"
-            },
-            {
-              "appearance" : "tinted",
-              "value" : "system-dark"
-            }
-          ],
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "Count-2.svg",
-          "name" : "Count 2",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              -12,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill-specializations" : [
-            {
-              "value" : "system-light"
-            },
-            {
-              "appearance" : "dark",
-              "value" : "system-light"
-            },
-            {
-              "appearance" : "tinted",
-              "value" : "system-dark"
-            }
-          ],
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "Count-3.svg",
-          "name" : "Count 3",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              -12,
-              0
-            ]
-          }
-        },
-        {
-          "blend-mode" : "normal",
-          "fill-specializations" : [
-            {
-              "value" : "system-light"
-            },
-            {
-              "appearance" : "dark",
-              "value" : "system-light"
-            },
-            {
-              "appearance" : "tinted",
-              "value" : "system-dark"
-            }
-          ],
-          "glass" : true,
-          "hidden" : false,
-          "image-name" : "Count-4.svg",
-          "name" : "Count 4",
-          "position" : {
-            "scale" : 1,
-            "translation-in-points" : [
-              -12,
+              0,
               0
             ]
           }
         }
       ],
       "lighting" : "combined",
-      "name" : "Four counted hours",
+      "name" : "Payslip",
       "position" : {
-        "scale" : 1.2,
+        "scale" : 0.92,
         "translation-in-points" : [
           0,
           0
@@ -214,12 +95,12 @@
       },
       "shadow" : {
         "kind" : "neutral",
-        "opacity" : 0.56
+        "opacity" : 0.6
       },
       "specular" : true,
       "translucency" : {
         "enabled" : true,
-        "value" : 0.16
+        "value" : 0.35
       }
     }
   ],

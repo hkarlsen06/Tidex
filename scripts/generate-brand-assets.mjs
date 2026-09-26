@@ -48,83 +48,23 @@ function appearanceValue(specializations, appearance) {
 }
 const brandBlue = colors[appearanceValue(config['fill-specializations']).solid];
 
-const flatLayerSources = new Map();
-const cutoutOutlines = new Map();
-async function flatLayerSource(filename) {
-  if (flatLayerSources.has(filename)) return flatLayerSources.get(filename);
-  const source = await readFile(path.join(icon, 'Assets', filename), 'utf8');
-  const flattened = source.replace(/<mask\b[\s\S]*?<\/mask>/g, mask => {
-    const id = mask.match(/\bid="([^"]+)"/)?.[1];
-    const d = mask.match(/<path\b[^>]*\bd="([^"]+)"/)?.[1];
-    const width = mask.match(/\bstroke-width="([\d.]+)"/)?.[1];
-    const transform = mask.match(/\btransform="translate\(([-\d.]+) ([-\d.]+)\) rotate\(([-\d.]+)\) scale\(([-\d.]+) ([-\d.]+)\)"/);
-    if (!id || !d || !width || !transform || !mask.includes('stroke-linejoin="round"')
-      || !mask.includes('maskUnits="userSpaceOnUse"')) {
-      throw new Error(`Update the vector cutout conversion for ${filename}.`);
-    }
-    const tokens = d.match(/[A-Za-z]|[-+]?(?:\d*\.)?\d+(?:[eE][-+]?\d+)?/g);
-    if (tokens.some(token => /^[A-Za-z]$/.test(token) && !['M', 'L', 'C', 'Z'].includes(token))) {
-      throw new Error(`Unsupported SVG path command in ${filename}.`);
-    }
-    const [tx, ty, angle, sx, sy] = transform.slice(1).map(Number);
-    const radians = angle * Math.PI / 180;
-    const contour = { tokens, strokeWidth: Number(width), transform: [
-      Math.cos(radians) * sx, Math.sin(radians) * sx,
-      -Math.sin(radians) * sy, Math.cos(radians) * sy, tx, ty,
-    ] };
-    const key = JSON.stringify(contour);
-    if (!cutoutOutlines.has(key)) {
-      cutoutOutlines.set(key, execFileSync('swift', [path.join(root, 'scripts/assets/brand/outline-cutout.swift')],
-        { input: key, encoding: 'utf8' }).trim());
-    }
-    // The outer canvas and inner contour form a transparent hole using even-odd clipping.
-    return `<clipPath id="${id}" clipPathUnits="userSpaceOnUse"><path clip-rule="evenodd" d="M 0 0 H 1024 V 1024 H 0 Z ${cutoutOutlines.get(key)}"/></clipPath>`;
-  }).replaceAll('mask="url(', 'clip-path="url(');
-  flatLayerSources.set(filename, flattened);
-  return flattened;
-}
-
 async function markSVG(appearance, monochrome = false) {
   const groups = [];
   // Icon Composer lists the foremost group first; SVG paints it last.
-  for (const [groupIndex, group] of [...config.groups].reverse().entries()) {
+  for (const group of [...config.groups].reverse()) {
     const layers = [];
-    for (const [layerIndex, layer] of group.layers.entries()) {
-      const prefix = `g${groupIndex}l${layerIndex}-`;
-      const source = await flatLayerSource(layer['image-name']);
-      let inner = source.replace(/^.*?<svg\b[^>]*>/s, '').replace(/<\/svg>\s*$/, '');
-      inner = inner.replace(/id="([^"]+)"/g, (_, id) => `id="${prefix}${id}"`)
-        .replace(/url\(#([^)]+)\)/g, (_, id) => `url(#${prefix}${id})`);
-      const fill = monochrome ? '#000000' : appearance === 'dark' ? '#FFFFFF' : brandBlue;
-      let gradient = '';
-      if (!monochrome && layer['fill-specializations']) {
-        const value = appearanceValue(layer['fill-specializations'], appearance);
-        const stops = value['linear-gradient'];
-        if (stops) {
-          const { start, stop } = value.orientation;
-          const id = `${prefix}brand`;
-          const shape = inner.match(/^<g transform="([^"]+)">(<path\b[^>]+\/>)<\/g>$/);
-          if (!shape) throw new Error(`Update the gradient silhouette conversion for ${layer['image-name']}`);
-          // Icon Composer uses the layer's full canvas, before its drawing transforms.
-          // Clip a canvas-sized gradient so the stroke's rotation cannot rotate it again.
-          // A clipPath requires a direct shape, so move the SVG group's transform onto it.
-          gradient = `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse"`
-            + ` x1="${start.x * 1024}" y1="${start.y * 1024}" x2="${stop.x * 1024}" y2="${stop.y * 1024}">`
-            + stops.map((color, i) => `<stop offset="${i / (stops.length - 1)}" stop-color="${colors[color]}"/>`).join('')
-            + `</linearGradient><clipPath id="${id}-shape" clipPathUnits="userSpaceOnUse" transform="${shape[1]}">${shape[2]}</clipPath></defs>`;
-          inner = `<rect width="1024" height="1024" fill="url(#${id})" clip-path="url(#${id}-shape)"/>`;
-        } else if (!['system-light', 'system-dark'].includes(value)) {
-          throw new Error(`Unsupported flat-mark fill for ${layer['image-name']}`);
-        }
-        // System-coloured tally bars keep the flat logo's adaptive blue/white fill.
-      }
-      // Only recolour the drawing, leaving the cutout geometry intact.
-      const endOfDefs = inner.lastIndexOf('</defs>') + '</defs>'.length;
-      const split = inner.includes('</defs>') ? endOfDefs : 0;
-      inner = inner.slice(0, split) + inner.slice(split).replaceAll('fill="white"', `fill="${fill}"`);
+    for (const layer of group.layers) {
+      const source = await readFile(path.join(icon, 'Assets', layer['image-name']), 'utf8');
+      const value = appearanceValue(layer['fill-specializations'], appearance);
+      let fill = colors[value.solid];
+      // System-coloured layers use the flat logo's adaptive blue/white fill.
+      if (['system-light', 'system-dark'].includes(value)) fill = appearance === 'dark' ? '#FFFFFF' : brandBlue;
+      if (!fill) throw new Error(`Unsupported flat-mark fill for ${layer['image-name']}`);
+      const inner = source.replace(/^.*?<svg\b[^>]*>/s, '').replace(/<\/svg>\s*$/, '')
+        .replaceAll('fill="white"', `fill="${monochrome ? '#000000' : fill}"`);
       const { scale, 'translation-in-points': [x, y] } = layer.position;
       if (scale !== 1) throw new Error('Update the flat-mark transform for the new Icon Composer layer scale.');
-      layers.push(`<g transform="translate(${x} ${y})">${gradient}${inner}</g>`);
+      layers.push(`<g transform="translate(${x} ${y})">${inner}</g>`);
     }
     const { scale = 1, 'translation-in-points': [x, y] = [0, 0] } = group.position ?? {};
     groups.push(`<g transform="translate(${512 + x} ${512 + y}) scale(${scale}) translate(-512 -512)">${layers.join('')}</g>`);
@@ -243,7 +183,9 @@ try {
       .png().toFile(path.join(publicDir, `og/landing-${locale}.png`));
   }
   await cp(path.join(publicDir, 'og/landing-no.png'), path.join(publicDir, 'og/landing.png'));
-  await cp(icon, path.join(root, 'ios/TidexWatchApp/tidex.icon'), { recursive: true });
+  const watchIcon = path.join(root, 'ios/TidexWatchApp/tidex.icon');
+  await rm(watchIcon, { recursive: true, force: true });
+  await cp(icon, watchIcon, { recursive: true });
   console.log('Generated iOS/watchOS branding, adaptive marks, website icons, and localized social previews.');
 } finally {
   await rm(work, { recursive: true, force: true });
