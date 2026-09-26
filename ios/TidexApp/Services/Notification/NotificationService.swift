@@ -1,12 +1,12 @@
 import Foundation
-import os.log
 import UIKit
 import UserNotifications
+import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "Notifications")
 
 /// Handles push notification permission and registration
-/// Call `requestPermissionAndRegister()` only after the user explicitly opts in.
+/// Request permission after a notification-related action, never during startup.
 @MainActor
 final class NotificationService {
   static let shared = NotificationService()
@@ -15,27 +15,51 @@ final class NotificationService {
   static let threadMessageMarkReadActionIdentifier = "THREAD_MESSAGE_MARK_READ"
   static let wageyResponseCategoryIdentifier = "WAGEY_RESPONSE"
 
-  private init() {}
+  private let authorizationStatus: @MainActor () async -> UNAuthorizationStatus
+  private let requestAuthorization: @MainActor () async throws -> Bool
+  private let registerForPush: @MainActor () -> Void
+  private let isAppActive: @MainActor () -> Bool
+  private var permissionRequestInFlight = false
+
+  init(
+    authorizationStatus: @escaping @MainActor () async -> UNAuthorizationStatus = {
+      await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+    },
+    requestAuthorization: @escaping @MainActor () async throws -> Bool = {
+      try await UNUserNotificationCenter.current().requestAuthorization(options: [
+        .alert, .badge, .sound,
+      ])
+    },
+    registerForPush: @escaping @MainActor () -> Void = {
+      UIApplication.shared.registerForRemoteNotifications()
+    },
+    isAppActive: @escaping @MainActor () -> Bool = {
+      UIApplication.shared.applicationState == .active
+    }
+  ) {
+    self.authorizationStatus = authorizationStatus
+    self.requestAuthorization = requestAuthorization
+    self.registerForPush = registerForPush
+    self.isAppActive = isAppActive
+  }
 
   /// Request notification permission and register for APNs
   /// Safe to call multiple times - will only prompt user once
-  func requestPermissionAndRegister() async {
-    let center = UNUserNotificationCenter.current()
+  func requestPermissionAndRegister(for userId: String? = nil) async {
+    guard isAppActive(), !permissionRequestInFlight else { return }
+    permissionRequestInFlight = true
+    defer { permissionRequestInFlight = false }
 
-    // Check current authorization status first
-    let settings = await center.notificationSettings()
-
-    switch settings.authorizationStatus {
+    switch await authorizationStatus() {
     case .notDetermined:
-      // First time - request permission
-      await requestPermission()
+      // The save/send may have completed after the app entered the background.
+      guard isAppActive() else { return }
+      await requestPermission(for: userId)
 
     case .authorized, .provisional, .ephemeral:
-      // Already authorized - just register for remote notifications
       registerForRemoteNotifications()
 
     case .denied:
-      // User denied - don't bother registering
       logger.info("Permission denied by user")
       PushNotificationManager.shared.permissionDenied()
 
@@ -47,10 +71,7 @@ final class NotificationService {
   /// Register for APNs only when the user has already granted notification permission.
   /// Use during sign-in/startup so first-run onboarding is not interrupted by a system prompt.
   func registerIfPermissionAlreadyGranted() async {
-    let center = UNUserNotificationCenter.current()
-    let settings = await center.notificationSettings()
-
-    switch settings.authorizationStatus {
+    switch await authorizationStatus() {
     case .authorized, .provisional, .ephemeral:
       registerForRemoteNotifications()
 
@@ -66,15 +87,16 @@ final class NotificationService {
   }
 
   /// Request notification permission from the user
-  private func requestPermission() async {
-    let center = UNUserNotificationCenter.current()
-
+  private func requestPermission(for userId: String?) async {
     do {
-      let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
+      let granted = try await requestAuthorization()
 
       if granted {
         logger.info("Permission granted")
         registerForRemoteNotifications()
+        if let userId {
+          NativeWidgetStorage.updateWidgetStorage(for: userId)
+        }
       } else {
         logger.info("Permission denied")
         PushNotificationManager.shared.permissionDenied()
@@ -88,7 +110,7 @@ final class NotificationService {
   /// Register with APNs to receive the device token
   /// This triggers `didRegisterForRemoteNotificationsWithDeviceToken` in AppDelegate
   private func registerForRemoteNotifications() {
-    UIApplication.shared.registerForRemoteNotifications()
+    registerForPush()
   }
 
   func registerNotificationCategories() {

@@ -243,3 +243,8 @@ Cut AI tells from all prose you write or edit, including docs, comments, release
 # Bro keep going
 
 Before you stop, ask yourself "is there a next step that the user would want me to do?" if so, keep going jobs not finished.
+
+## Keep going without input
+
+When a step doesn't need my input, keep going. Put status notes in the same message as your next action.
+Stop and ask only when you can't continue without me, or before anything destructive: deleting data, force-pushing, or changing anything outside this repository.

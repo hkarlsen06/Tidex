@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import os.log
 import UIKit
+import os.log
 
 private let kThreadLogger: Logger = Logger(
   subsystem: "com.tidex.app",
@@ -1616,6 +1616,7 @@ internal final class FriendsThreadViewModel: ObservableObject {
           for: viewerUserId
         )
         loadFromCache()
+        await NotificationService.shared.requestPermissionAndRegister(for: viewerUserId)
 
       case .failure(let error):
         let sendState: FriendMessageSendState = isConnectivityError(error) ? .sending : .failed

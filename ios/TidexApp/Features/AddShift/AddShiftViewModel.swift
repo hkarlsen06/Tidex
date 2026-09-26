@@ -1456,6 +1456,7 @@ internal final class AddShiftViewModel: ObservableObject {
 
       // Notify completion
       onShiftsCreated?(.single(dates: createdDates))
+      await requestShiftReminderPermission(for: userId)
 
     } catch ShiftCreationError.monthLimitReached(let months) {
       // Show month limit sheet instead of error
@@ -1483,6 +1484,14 @@ internal final class AddShiftViewModel: ObservableObject {
         : String(localized: .addShiftSinglePartialSave) + "\n" + error.localizedDescription
       Haptics.play(.error)
     }
+  }
+
+  private func requestShiftReminderPermission(for userId: String) async {
+    let preferences = NotificationPreferencesRepository.shared.getOrCreatePreferences(for: userId)
+    guard preferences.shiftRemindersEnabled, !preferences.shiftReminderMinutesArray.isEmpty else {
+      return
+    }
+    await NotificationService.shared.requestPermissionAndRegister(for: userId)
   }
 
   /// Check all dates before writing, then retire each saved date from the retryable draft.
@@ -1550,6 +1559,9 @@ internal final class AddShiftViewModel: ObservableObject {
         context: .affecting(dateRangeStart: startDate, end: endDate)
       )
       onShiftsCreated?(.event)
+      if notificationMinutesArray != nil {
+        await NotificationService.shared.requestPermissionAndRegister(for: userId)
+      }
     } catch {
       kLogger.error("Failed to create event: \(error.localizedDescription)")
       self.error = error.localizedDescription
@@ -1702,6 +1714,7 @@ internal final class AddShiftViewModel: ObservableObject {
 
       // Notify completion
       onShiftsCreated?(.recurring)
+      await requestShiftReminderPermission(for: userId)
 
     } catch {
       kLogger.error("Failed to create recurring shift: \(error.localizedDescription)")
