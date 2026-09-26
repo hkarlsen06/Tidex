@@ -1,7 +1,7 @@
 import Foundation
-import os.log
 import UIKit
 import UserNotifications
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "NotificationSettingsViewModel")
 
@@ -137,27 +137,8 @@ final class NotificationSettingsViewModel: ObservableObject {
 
   /// Request notification permission
   func requestNotificationPermission() async {
-    let center = UNUserNotificationCenter.current()
-
-    do {
-      let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound])
-
-      if granted {
-        // Register for remote notifications
-        await MainActor.run {
-          UIApplication.shared.registerForRemoteNotifications()
-        }
-        logger.info("Notification permission granted")
-      } else {
-        logger.info("Notification permission denied")
-      }
-
-      // Refresh status
-      await checkNotificationStatus()
-    } catch {
-      logger.error("Failed to request notification permission: \(error.localizedDescription)")
-      errorMessage = "Could not request notification permission"
-    }
+    await NotificationService.shared.requestPermissionAndRegister(for: userId)
+    await checkNotificationStatus()
   }
 
   /// Open system settings
