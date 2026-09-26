@@ -1070,7 +1070,6 @@ async function main(args = process.argv.slice(2)) {
   const defaultXcstringsFiles = [
     path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
     path.join(__dirname, "../Resources/Localization/ShareExtension/Localizable.xcstrings"),
-    path.join(__dirname, "../Resources/Localization/Watch/Localizable.xcstrings"),
     path.join(__dirname, "../Resources/Localization/Widget/Localizable.xcstrings"),
   ];
   const cliXcstringsFiles = args

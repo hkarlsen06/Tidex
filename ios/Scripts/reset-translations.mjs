@@ -14,7 +14,6 @@ const KEEP_LANGUAGES = ["en", "nb"];
 const xcstringsFiles = [
   path.join(__dirname, "../Resources/Localization/App/Localizable.xcstrings"),
   path.join(__dirname, "../Resources/Localization/ShareExtension/Localizable.xcstrings"),
-  path.join(__dirname, "../Resources/Localization/Watch/Localizable.xcstrings"),
   path.join(__dirname, "../Resources/Localization/Widget/Localizable.xcstrings"),
 ];
 

@@ -42,9 +42,8 @@ ios/
 │       ├── Managers/          # AppearanceManager, CelebrationManager, etc.
 │       └── DesignSystem/      # Typography, Spacing
 ├── TidexShiftWidget/          # Home/lock screen widgets, live activities
-├── TidexWatchApp/             # Apple Watch companion app
 ├── Shared/                    # Cross-target shared code (APIs, models)
-├── Resources/Localization/    # Xcode String Catalogs (App, Widget, Watch)
+├── Resources/Localization/    # String Catalogs for app, widgets, share extension
 ├── Scripts/                   # Localization & build scripts
 ├── fastlane/                  # App Store deployment automation
 └── docs/                      # Architecture documentation

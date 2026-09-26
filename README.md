@@ -35,7 +35,6 @@ tidex/
 ├── ios/                # Native iOS application
 │   ├── TidexApp/       # iOS app target (Swift source)
 │   ├── TidexShiftWidget/ # Widget extension
-│   ├── TidexWatchApp/  # watchOS app
 │   └── docs/           # iOS-specific documentation
 ├── supabase/           # Shared backend
 │   ├── functions/      # Edge functions

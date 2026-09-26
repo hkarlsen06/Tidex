@@ -19,7 +19,7 @@ import Foundation
   import UIKit
 #endif
 
-// MARK: - Shared RPC Models (App + Watch + Widget)
+// MARK: - Shared RPC Models
 
 enum SharingRPCMode: Sendable {
   case visible
@@ -2442,7 +2442,7 @@ enum SharingComputeCore {
   }
 }
 
-// MARK: - Shift Status (Widget/Watch output)
+// MARK: - Widget Shift Status
 
 /// Status of a shift preview
 /// Note: This mirrors the app's ShiftPreviewStatus but is local to shared extension code.
@@ -2455,7 +2455,7 @@ enum FriendShiftStatus: String, Codable, Sendable {
 // MARK: - Combined Friends Data
 
 /// Combined data for a friend with their shift preview
-/// Used by widget and watch for display
+/// Shift data for the friends widget.
 struct FriendWithShift: Sendable {
   let id: String
   let displayName: String
@@ -2534,7 +2534,7 @@ private struct RPCErrorResponse: Codable {
 // MARK: - Friends API Client
 
 /// Lightweight API client for fetching friends data directly
-/// Used by widget and watch to bypass the main app's data flow
+/// Fetches friend data for widgets without launching the main app.
 ///
 /// This client fetches from the consolidated Supabase Friends bootstrap RPC.
 ///
@@ -2567,7 +2567,7 @@ enum FriendsAPIClient {
   // MARK: - Public API
 
   /// Fetch all friends with their shift previews in a single call
-  /// This is the main entry point for widget and watch
+  /// Main entry point for the friends widget.
   /// - Returns: Array of friends with their shift data
   static func fetchFriendsWithShifts() async throws -> [FriendWithShift] {
     guard let accessToken = SharedKeychainStorage.getValidAccessToken() else {

@@ -9,11 +9,7 @@
 /* Begin PBXBuildFile section */
 		11263D3C2F2FF22700233D63 /* CropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3B2F2FF22700233D63 /* CropViewController */; };
 		11263D402F2FF3F700233D63 /* TOCropViewController in Frameworks */ = {isa = PBXBuildFile; productRef = 11263D3F2F2FF3F700233D63 /* TOCropViewController */; };
-		114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		1152D0CB2F01E2A7002FD5ED /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */; };
-		11546CEB2F3E989700FC832F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD2F2F101283002BAC91 /* WidgetKit.framework */; };
-		11546CEC2F3E989700FC832F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 11A5CD312F101283002BAC91 /* SwiftUI.framework */; };
-		11546CF92F3E989800FC832F /* WatchShiftWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		11923C192F16B94B0076AFD6 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C182F16B94B0076AFD6 /* Auth */; };
 		11923C1B2F16B94B0076AFD6 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1A2F16B94B0076AFD6 /* Functions */; };
 		11923C1D2F16B94B0076AFD6 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 11923C1C2F16B94B0076AFD6 /* PostgREST */; };
@@ -74,20 +70,12 @@
 		CE6A572385D358D6118E6A56 /* ProfileAvatarPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C2C17EEC256EA2C671E15 /* ProfileAvatarPersistenceTests.swift */; };
 		D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */; };
 		DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */; };
-		E61778127607441CA2BF1FBF /* Resources/Localization/Watch/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */; };
 		F00DC0013059000000ABCDEF /* OnboardingCurrencyResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00DC0023059000000ABCDEF /* OnboardingCurrencyResolverTests.swift */; };
 		F7C518BFF353DDA1605E05BE /* ImageCacheInvalidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */; };
 		FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		11546CF72F3E989800FC832F /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 11546CE92F3E989700FC832F;
-			remoteInfo = WatchShiftWidgetExtension;
-		};
 		11A5CD3F2F101284002BAC91 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
@@ -133,28 +121,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		114F0F502F2150EA00B587F0 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				114F0F4C2F2150EA00B587F0 /* TidexWatchApp.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		11546CFE2F3E989800FC832F /* Embed Foundation Extensions */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 13;
-			files = (
-				11546CF92F3E989800FC832F /* WatchShiftWidgetExtension.appex in Embed Foundation Extensions */,
-			);
-			name = "Embed Foundation Extensions";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		11A5CD462F101284002BAC91 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -174,9 +140,7 @@
 /* Begin PBXFileReference section */
 		00812533F4DF31764F2D8922 /* SnapshotsServiceSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SnapshotsServiceSelectionTests.swift; sourceTree = "<group>"; };
 		0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineDateLogicTests.swift; sourceTree = "<group>"; };
-		114F0F422F2150EA00B587F0 /* TidexWatchApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TidexWatchApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		1152D0CA2F01E2A7002FD5ED /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
-		11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WatchShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TidexShiftWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		11A5CD2F2F101283002BAC91 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		11A5CD312F101283002BAC91 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
@@ -204,7 +168,6 @@
 		A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LaunchAppearanceTests.swift; sourceTree = "<group>"; };
 		AF93110630C8000000A1B2C3 /* TimeInputFocusTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeInputFocusTests.swift; sourceTree = "<group>"; };
 		A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TidexAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/Watch/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		A7F10A0230C6000000DAD001 /* HomeScheduleLoadingHelperTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HomeScheduleLoadingHelperTests.swift; sourceTree = "<group>"; };
 		A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingSaveManagerTests.swift; sourceTree = "<group>"; };
 		AA31C0023051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardFeaturedItemSelectorTests.swift; sourceTree = "<group>"; };
@@ -243,36 +206,6 @@
 				Info.plist,
 			);
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
-		};
-		11546CFD2F3E989900FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Supporting/Info.plist,
-			);
-			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
-		};
-		1154802F2F3E9BA700FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				ShiftPreviewStatus.swift,
-				WatchDataPayload.swift,
-				WatchShiftDTO.swift,
-			);
-			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
-		};
-		115480332F3E9BCD00FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Store/WatchDataStore.swift,
-			);
-			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
-		};
-		115480352F3E9BF500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Localization/Watch/Localizable.xcstrings,
-			);
-			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
 		};
 		115480372F3E9C1500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
@@ -320,11 +253,9 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1140276C2F305643004065AD /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (115480372F3E9C1500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, 115480352F3E9BF500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
-		114F0F432F2150EA00B587F0 /* TidexWatchApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (115480332F3E9BCD00FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexWatchApp; sourceTree = "<group>"; };
-		11546CED2F3E989700FC832F /* WatchShiftWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11546CFD2F3E989900FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = WatchShiftWidget; sourceTree = "<group>"; };
+		1140276C2F305643004065AD /* Resources */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (115480372F3E9C1500FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Resources; sourceTree = "<group>"; };
 		11828D5E2F2828A1008A1A80 /* TidexApp */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828E5A2F2828A1008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexApp; sourceTree = "<group>"; };
-		11828EAF2F2AE096008A1A80 /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828EBC2F2AE096008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, 1154802F2F3E9BA700FC832F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
+		11828EAF2F2AE096008A1A80 /* Shared */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11828EBC2F2AE096008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = Shared; sourceTree = "<group>"; };
 		11A5CD332F101283002BAC91 /* TidexShiftWidget */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (113F7F842F1017390078A6D8 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexShiftWidget; sourceTree = "<group>"; };
 		11DC87D72F5D35990080D9F5 /* TidexNotificationService */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (11DC87E12F5D35990080D9F5 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexNotificationService; sourceTree = "<group>"; };
 		12B4A0063015000001000001 /* TidexShareExtension */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (12B4A0053015000001000001 /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = TidexShareExtension; sourceTree = "<group>"; };
@@ -332,22 +263,6 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		114F0F3F2F2150EA00B587F0 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		11546CE72F3E989700FC832F /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				11546CEC2F3E989700FC832F /* SwiftUI.framework in Frameworks */,
-				11546CEB2F3E989700FC832F /* WidgetKit.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		11A5CD2B2F101283002BAC91 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -420,7 +335,6 @@
 			children = (
 				855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */,
 				4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */,
-				A55621F053164F42944E9C0F /* Resources/Localization/Watch/Localizable.xcstrings */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -505,8 +419,6 @@
 				12B4A0063015000001000001 /* TidexShareExtension */,
 				ABCD20033070000000ABCDEF /* TidexSiriIntents */,
 				11A5CD332F101283002BAC91 /* TidexShiftWidget */,
-				114F0F432F2150EA00B587F0 /* TidexWatchApp */,
-				11546CED2F3E989700FC832F /* WatchShiftWidget */,
 				11DC87D72F5D35990080D9F5 /* TidexNotificationService */,
 				1152D0C92F01E2A7002FD5ED /* Frameworks */,
 				504EC3051FED79650016851F /* Products */,
@@ -522,8 +434,6 @@
 				504EC3041FED79650016851F /* Tidex.app */,
 				12B4A0043015000001000001 /* TidexShareExtension.appex */,
 				11A5CD2E2F101283002BAC91 /* TidexShiftWidgetExtension.appex */,
-				114F0F422F2150EA00B587F0 /* TidexWatchApp.app */,
-				11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */,
 				A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */,
 				6BCA863EB86543B1471C227F /* TidexAppUITests.xctest */,
 				11DC87D62F5D35990080D9F5 /* TidexNotificationService.appex */,
@@ -535,49 +445,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		114F0F412F2150EA00B587F0 /* TidexWatchApp */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 114F0F4D2F2150EA00B587F0 /* Build configuration list for PBXNativeTarget "TidexWatchApp" */;
-			buildPhases = (
-				114F0F3E2F2150EA00B587F0 /* Sources */,
-				114F0F3F2F2150EA00B587F0 /* Frameworks */,
-				114F0F402F2150EA00B587F0 /* Resources */,
-				11546CFE2F3E989800FC832F /* Embed Foundation Extensions */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				11546CF82F3E989800FC832F /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				114F0F432F2150EA00B587F0 /* TidexWatchApp */,
-				11828EAF2F2AE096008A1A80 /* Shared */,
-			);
-			name = TidexWatchApp;
-			productName = "TidexWatchApp Watch App";
-			productReference = 114F0F422F2150EA00B587F0 /* TidexWatchApp.app */;
-			productType = "com.apple.product-type.application";
-		};
-		11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 11546CFB2F3E989800FC832F /* Build configuration list for PBXNativeTarget "WatchShiftWidgetExtension" */;
-			buildPhases = (
-				11546CE62F3E989700FC832F /* Sources */,
-				11546CE72F3E989700FC832F /* Frameworks */,
-				11546CE82F3E989700FC832F /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				11546CED2F3E989700FC832F /* WatchShiftWidget */,
-			);
-			name = WatchShiftWidgetExtension;
-			productName = WatchShiftWidgetExtension;
-			productReference = 11546CEA2F3E989700FC832F /* WatchShiftWidgetExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 		11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 11A5CD432F101284002BAC91 /* Build configuration list for PBXNativeTarget "TidexShiftWidgetExtension" */;
@@ -669,7 +536,6 @@
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
 				11A5CD462F101284002BAC91 /* Embed Foundation Extensions */,
-				114F0F502F2150EA00B587F0 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
@@ -750,12 +616,6 @@
 				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
-					114F0F412F2150EA00B587F0 = {
-						CreatedOnToolsVersion = 26.2;
-					};
-					11546CE92F3E989700FC832F = {
-						CreatedOnToolsVersion = 26.3;
-					};
 					11A5CD2D2F101283002BAC91 = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -842,8 +702,6 @@
 				12B4A0083015000001000001 /* TidexShareExtension */,
 				504EC3031FED79650016851F /* TidexApp */,
 				11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */,
-				114F0F412F2150EA00B587F0 /* TidexWatchApp */,
-				11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */,
 				15E19F36EFB14A527CF41BEB /* TidexAppTests */,
 				8BA2D8E28A988E2E920ACBE5 /* TidexAppUITests */,
 				11DC87D52F5D35990080D9F5 /* TidexNotificationService */,
@@ -853,21 +711,6 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		114F0F402F2150EA00B587F0 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				E61778127607441CA2BF1FBF /* Resources/Localization/Watch/Localizable.xcstrings in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		11546CE82F3E989700FC832F /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		11A5CD2C2F101283002BAC91 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -967,20 +810,6 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		114F0F3E2F2150EA00B587F0 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		11546CE62F3E989700FC832F /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		11A5CD2A2F101283002BAC91 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1083,11 +912,6 @@
 			target = 504EC3031FED79650016851F /* TidexApp */;
 			targetProxy = FEF500599A80FDC2692DE54C /* PBXContainerItemProxy */;
 		};
-		11546CF82F3E989800FC832F /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 11546CE92F3E989700FC832F /* WatchShiftWidgetExtension */;
-			targetProxy = 11546CF72F3E989800FC832F /* PBXContainerItemProxy */;
-		};
 		11A5CD402F101284002BAC91 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 11A5CD2D2F101283002BAC91 /* TidexShiftWidgetExtension */;
@@ -1117,164 +941,6 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-		114F0F4E2F2150EA00B587F0 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = TidexWatchApp/TidexWatchApp.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				ENABLE_PREVIEWS = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Tidex;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = no.tidex.app;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Debug;
-		};
-		114F0F4F2F2150EA00B587F0 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 958DCC732DB07C7200EA8C5F /* release.xcconfig */;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = tidex;
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = TidexWatchApp/TidexWatchApp.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				ENABLE_PREVIEWS = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Tidex;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = no.tidex.app;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Release;
-		};
-		11546CFC2F3E989800FC832F /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = WatchShiftWidget/Supporting/WatchShiftWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = WatchShiftWidget/Supporting/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WatchShiftWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.watchkitapp.watchshiftwidgetextension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Debug;
-		};
-		11546CFD2F3E989800FC832F /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 958DCC732DB07C7200EA8C5F /* release.xcconfig */;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CODE_SIGN_ENTITLEMENTS = WatchShiftWidget/Supporting/WatchShiftWidget.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				GCC_C_LANGUAGE_STANDARD = gnu17;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = WatchShiftWidget/Supporting/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = WatchShiftWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-					"@executable_path/../../../../Frameworks",
-				);
-				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MTL_FAST_MATH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = no.tidex.app.watchkitapp.watchshiftwidgetextension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = 26.2;
-			};
-			name = Release;
-		};
 		11A5CD442F101284002BAC91 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -1823,24 +1489,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		114F0F4D2F2150EA00B587F0 /* Build configuration list for PBXNativeTarget "TidexWatchApp" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				114F0F4E2F2150EA00B587F0 /* Debug */,
-				114F0F4F2F2150EA00B587F0 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		11546CFB2F3E989800FC832F /* Build configuration list for PBXNativeTarget "WatchShiftWidgetExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				11546CFC2F3E989800FC832F /* Debug */,
-				11546CFD2F3E989800FC832F /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 		11A5CD432F101284002BAC91 /* Build configuration list for PBXNativeTarget "TidexShiftWidgetExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

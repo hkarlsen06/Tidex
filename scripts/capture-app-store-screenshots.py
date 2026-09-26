@@ -14,7 +14,6 @@ import shutil
 import struct
 import subprocess
 import tempfile
-import time
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,12 +23,12 @@ def run(*args, **kwargs):
     return subprocess.run(args, check=True, cwd=ROOT, text=True, **kwargs)
 
 
-def default_device(name, platform="iOS"):
+def default_device(name):
     inventory = json.loads(run(
         "xcrun", "simctl", "list", "devices", "available", "--json", capture_output=True
     ).stdout)
     for runtime, devices in sorted(inventory["devices"].items()):
-        if f".{platform}-" not in runtime:
+        if ".iOS-" not in runtime:
             continue
         for device in devices:
             if device["name"] == name:
@@ -102,56 +101,10 @@ def capture(device, family, output):
             run("xcrun", "simctl", "shutdown", device)
 
 
-def capture_watch(device, iphone, output):
-    inventory = json.loads(run("xcrun", "simctl", "list", "devices", "available", "--json",
-                               capture_output=True).stdout)
-    phone = next(d for ds in inventory["devices"].values() for d in ds if d["udid"] == iphone)
-    phone_was_booted = phone["state"] == "Booted"
-    if not phone_was_booted:
-        run("xcrun", "simctl", "boot", iphone)
-        run("xcrun", "simctl", "bootstatus", iphone, "-b")
-    try:
-        app = Path(run("xcrun", "simctl", "get_app_container", iphone, "no.tidex.app",
-                       capture_output=True).stdout.strip()) / "Watch/TidexWatchApp.app"
-    finally:
-        if not phone_was_booted:
-            run("xcrun", "simctl", "shutdown", iphone)
-    if not app.is_dir():
-        raise SystemExit(f"Embedded Watch app is missing: {app}")
-    selected = next((d for ds in inventory["devices"].values() for d in ds if d["udid"] == device), None)
-    if selected is None:
-        raise SystemExit(f"Watch simulator unavailable: {device}")
-    was_booted = selected["state"] == "Booted"
-    if not was_booted:
-        run("xcrun", "simctl", "boot", device)
-    run("xcrun", "simctl", "bootstatus", device, "-b")
-    try:
-        run("xcrun", "simctl", "install", device, str(app))
-        for language, locale, folder in [("en", "en_US", "en-US"), ("nb", "nb_NO", "no")]:
-            # watchOS does not support simctl status-bar overrides.
-            run("xcrun", "simctl", "launch", "--terminate-running-process", device,
-                "no.tidex.app.watchkitapp", "-ui-testing", "-app-store-screenshots",
-                "-AppleLanguages", f"({language})", "-AppleLocale", locale,
-                "-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXS")
-            time.sleep(3)  # Allow the launch transition to finish before the native capture.
-            destination = output / folder / "Watch-01-shifts.png"
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            run("xcrun", "simctl", "io", device, "screenshot", str(destination))
-            size = struct.unpack(">II", destination.read_bytes()[16:24])
-            if size != (416, 496):
-                raise SystemExit(f"Expected Series 11 46mm screenshot, got {size}")
-        run("xcrun", "simctl", "terminate", device, "no.tidex.app.watchkitapp")
-        print(f"Saved English and Norwegian Watch captures to {output}; visually review before upload.")
-    finally:
-        if not was_booted:
-            run("xcrun", "simctl", "shutdown", device)
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--iphone", help="iPhone simulator UUID")
     parser.add_argument("--ipad", help="iPad simulator UUID")
-    parser.add_argument("--watch", help="Apple Watch Series 11 (46mm) simulator UUID")
     parser.add_argument("--output", type=Path, help="Output directory; defaults to ASConnectScreenshots/<version>")
     args = parser.parse_args()
     version = re.search(r"^MARKETING_VERSION = (\S+)",
@@ -161,7 +114,6 @@ def main():
     raw = output / "raw-dark"
     capture(iphone, "iPhone", raw)
     capture(args.ipad or default_device("iPad Pro 13-inch (M5)"), "iPad", raw)
-    capture_watch(args.watch or default_device("Apple Watch Series 11 (46mm)", "watchOS"), iphone, raw)
     run("node", str(ROOT / "scripts/render-app-store-screenshots.mjs"), str(output))
 
 

@@ -649,7 +649,6 @@ final class JobsRepository: ObservableObject {
 
     NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
     NativeWidgetStorage.updateWidgetStorage(for: userId)
-    WatchConnectivityManager.shared.sendUpdatedData(userId: userId)
     _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
     logger.info("Deleted archived job and history: \(preview.jobId)")
   }

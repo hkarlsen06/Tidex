@@ -183,10 +183,7 @@ try {
       .png().toFile(path.join(publicDir, `og/landing-${locale}.png`));
   }
   await cp(path.join(publicDir, 'og/landing-no.png'), path.join(publicDir, 'og/landing.png'));
-  const watchIcon = path.join(root, 'ios/TidexWatchApp/tidex.icon');
-  await rm(watchIcon, { recursive: true, force: true });
-  await cp(icon, watchIcon, { recursive: true });
-  console.log('Generated iOS/watchOS branding, adaptive marks, website icons, and localized social previews.');
+  console.log('Generated iOS branding, adaptive marks, website icons, and localized social previews.');
 } finally {
   await rm(work, { recursive: true, force: true });
 }
