@@ -16,6 +16,17 @@ Run these from `video/`.
 - `npm run export` renders every cut to `out/Tidex-<composition>.mp4`. Pass ids to render a subset, for example `npm run export -- AppStore-en`.
 - `npm run audio` regenerates the music bed and sound effects in `public/audio/`. The script synthesizes all audio, so there is nothing to license.
 
+## Showreel
+
+`reel/` holds a separate 15-second 1080 x 1920 showreel at 60 fps that does not use Remotion. `reel/reel.py` draws every frame with skia-python, synthesizes the soundtrack with numpy and writes `out/Tidex-Reel.mp4`. It needs `uv` and `ffmpeg`, and it downloads Manrope and JetBrains Mono into `out/reel/fonts/` on the first run. Run these from the repository root:
+
+```bash
+/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python video/reel/icon3d.py
+uv run video/reel/reel.py
+```
+
+`icon3d.py` renders the glass icon for the end card into `out/reel/icon/`. It takes about 12 minutes on an M3 Pro, plus about 7 minutes of one-time Metal shader compilation on the first run. Without those frames the reel uses the flat app icon. `uv run video/reel/reel.py --still 1.5 6.2` writes single frames and a contact sheet, and `--check` runs the self-checks.
+
 ## Footage
 
 The app footage is a screen recording of the `testAppStoreScreenshots` UI test running on the offline App Store fixture, on an iPhone 17 Pro Max simulator. `public/footage/en.mp4` and `public/footage/no.mp4` are the English and Norwegian halves of that recording at 30 fps. `public/stills/` holds full-resolution frames from the same recording for the lift-out crops.
