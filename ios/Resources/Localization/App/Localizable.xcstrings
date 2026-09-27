@@ -110086,280 +110086,281 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حذف"
+            "value" : "حذف للجميع"
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Изтриване"
+            "value" : "Изтрий за всички"
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "মুছুন"
+            "value" : "সবার জন্য মুছুন"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Suprimeix"
+            "value" : "Eliminar per a tothom"
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Smazat"
+            "value" : "Smazat pro všechny"
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Slet"
+            "value" : "Slet for alle"
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Löschen"
+            "value" : "Für alle löschen"
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Διαγραφή"
+            "value" : "Διαγραφή για όλους"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Delete"
+            "value" : "Delete for everyone"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eliminar"
+            "value" : "Eliminar para todos"
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kustuta"
+            "value" : "Kustuta kõigi jaoks"
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حذف"
+            "value" : "حذف برای همه"
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Poista"
+            "value" : "Poista kaikilta"
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tanggalin"
+            "value" : "Tanggalin para sa lahat"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Supprimer"
+            "value" : "Supprimer pour tout le monde"
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "מחק"
+            "value" : "מחק לכולם"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "हटाएं"
+            "value" : "सबके लिए हटाएँ"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Izbriši"
+            "value" : "Izbriši za sve"
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Törlés"
+            "value" : "Törlés mindenkinél"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hapus"
+            "value" : "Hapus untuk semua"
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Eyða"
+            "value" : "Eyða fyrir alla"
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Elimina"
+            "value" : "Elimina per tutti"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "削除"
+            "value" : "全員から削除"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "삭제"
+            "value" : "모두에게서 삭제"
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ištrinti"
+            "value" : "Ištrinti visiems"
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dzēst"
+            "value" : "Dzēst visiem"
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Slett"
+            "value" : "Slett for alle"
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verwijderen"
+            "value" : "Verwijderen voor iedereen"
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Slett"
+            "value" : "Slett for alle"
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Usuń"
+            "value" : "Usuń dla wszystkich"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Excluir"
+            "value" : "Excluir para todos"
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Șterge"
+            "value" : "Șterge pentru toți"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Удалить"
+            "value" : "Удалить для всех"
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Odstrániť"
+            "value" : "Odstrániť pre všetkých"
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Izbriši"
+            "value" : "Izbriši za vse"
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Obriši"
+            "value" : "Obriši za sve"
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Radera"
+            "value" : "Radera för alla"
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Futa"
+            "value" : "Futa kwa kila mtu"
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "நீக்கு"
+            "value" : "அனைவருக்கும் நீக்கு"
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ลบ"
+            "value" : "ลบสำหรับทุกคน"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sil"
+            "value" : "Herkes için sil"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Видалити"
+            "value" : "Видалити для всіх"
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "حذف کریں"
+            "value" : "سب کے لیے حذف کریں"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Xóa"
+            "value" : "Xóa cho mọi người"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "删除"
+            "value" : "为所有人删除"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "刪除"
+            "value" : "為所有人刪除"
           }
         }
-      }
+      },
+      "comment" : "Chat message menu action. Deletes your message for both you and the other person."
     },
     "friends.chat.action.edit" : {
       "extractionState" : "manual",
@@ -457608,6 +457609,2826 @@
         }
       },
       "comment" : "VoiceOver label for the trash button on a custom pay supplement rule. %@ is the rule's days and time range, for example 'Weekdays, 18:00 - 21:00'."
+    },
+    "sharing.addFriend.sharesRightAway" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The person you add sees your shifts right away. You can stop sharing at any time."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen du legger til ser vaktene dine med en gang. Du kan slutte å dele når som helst."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Person, die du hinzufügst, sieht deine Schichten sofort. Du kannst die Freigabe jederzeit beenden."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pessoa que você adicionar verá seus turnos imediatamente. Você pode parar de compartilhar a qualquer momento."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De persoon die je toevoegt, ziet je diensten meteen. Je kunt op elk moment stoppen met delen."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La persona che aggiungi vede subito i tuoi turni. Puoi interrompere la condivisione in qualsiasi momento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La personne que vous ajoutez voit immédiatement vos shifts. Vous pouvez arrêter le partage à tout moment."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La persona que añadas verá tus turnos de inmediato. Puedes dejar de compartirlos en cualquier momento."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den person, du tilføjer, kan se dine vagter med det samme. Du kan stoppe delingen når som helst."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La persona que afegeixis veurà els teus torns de seguida. Pots deixar de compartir-los en qualsevol moment."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen du lägger till ser dina arbetspass direkt. Du kan sluta dela när som helst."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henkilö, jonka lisäät, näkee työvuorosi heti. Voit lopettaa jakamisen milloin tahansa."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aðilinn sem þú bætir við sér vaktirnar þínar strax. Þú getur hætt að deila hvenær sem er."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persona, ko pievienosi, uzreiz redzēs tavas maiņas. Kopīgošanu vari pārtraukt jebkurā laikā."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inimene, kelle lisad, näeb su vahetusi kohe. Jagamise saad igal ajal lõpetada."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asmuo, kurį pridėsite, iškart matys jūsų pamainas. Bendrinimą galite bet kada sustabdyti."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A hozzáadott személy azonnal látja a műszakjaidat. A megosztást bármikor leállíthatod."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba, kterou přidáte, uvidí vaše směny okamžitě. Sdílení můžete kdykoli zastavit."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen du legg til ser vaktene dine med ein gong. Du kan slutte å dele når som helst."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba, ktorú pridáte, uvidí vaše smeny okamžite. Zdieľanie môžete kedykoľvek zastaviť."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba, którą dodasz, od razu zobaczy Twoje zmiany. W każdej chwili możesz przestać je udostępniać."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавленный вами человек сразу увидит ваши смены. Вы можете прекратить делиться ими в любое время."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persoana pe care o adaugi îți vede turele imediat. Poți opri partajarea oricând."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Додана вами особа одразу бачить ваші зміни. Ви можете припинити ділитися ними будь-коли."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba koju dodaš odmah vidi tvoje smjene. Dijeljenje možeš zaustaviti u bilo kojem trenutku."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oseba, ki jo dodate, bo vaše izmene videla takoj. Deljenje lahko kadar koli prekinete."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الشخص الذي تضيفه يرى نوبات عملك فورًا. يمكنك إيقاف المشاركة في أي وقت."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba koju dodaš odmah vidi tvoje smene. Deljenje možeš da prekineš u bilo kom trenutku."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το άτομο που προσθέτεις βλέπει αμέσως τις βάρδιές σου. Μπορείς να διακόψεις την κοινοποίηση ανά πάσα στιγμή."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eklediğiniz kişi vardiyalarınızı hemen görür. Paylaşmayı istediğiniz zaman durdurabilirsiniz."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Човекът, когото добавите, веднага вижда смените ви. Можете да спрете споделянето по всяко време."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האדם שתוסיף יראה את המשמרות שלך מיד. אפשר להפסיק את השיתוף בכל עת."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جسے آپ شامل کرتے ہیں، وہ آپ کی شفٹیں فوراً دیکھ سکتا ہے۔ آپ کسی بھی وقت شیئرنگ روک سکتے ہیں۔"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فردی که اضافه می‌کنید، شیفت‌های شما را بلافاصله می‌بیند. هر زمان بخواهید می‌توانید اشتراک‌گذاری را متوقف کنید."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "நீங்கள் சேர்க்கும் நபர் உங்கள் ஷிப்ட்களை உடனே பார்க்கலாம். எப்போது வேண்டுமானாலும் பகிர்வதை நிறுத்தலாம்."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जिस व्यक्ति को आप जोड़ते हैं, वह आपकी शिफ्टें तुरंत देख सकता है। आप कभी भी शेयर करना बंद कर सकते हैं।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加した相手には、すぐにあなたのシフトが表示されます。いつでも共有を停止できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你添加的人会立即看到你的班次。你可以随时停止分享。"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "আপনি যাকে যোগ করবেন, তিনি আপনার শিফটগুলো সঙ্গে সঙ্গেই দেখতে পাবেন। যেকোনো সময় শেয়ার করা বন্ধ করতে পারেন।"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "추가한 사람은 내 근무를 바로 볼 수 있습니다. 언제든 공유를 중지할 수 있습니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你新增的人會立即看到你的班次。你可以隨時停止分享。"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang yang Anda tambahkan langsung dapat melihat shift Anda. Anda dapat berhenti berbagi kapan saja."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Người bạn thêm sẽ thấy các ca làm của bạn ngay lập tức. Bạn có thể ngừng chia sẻ bất cứ lúc nào."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makikita agad ng taong idinadagdag mo ang mga shift mo. Maaari mong ihinto ang pagbabahagi anumang oras."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คนที่คุณเพิ่มจะเห็นกะงานของคุณทันที คุณหยุดแชร์ได้ทุกเมื่อ"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mtu unayemuongeza anaona zamu zako mara moja. Unaweza kuacha kushiriki wakati wowote."
+          }
+        }
+      },
+      "comment" : "Note under the add friend form. Adding a friend starts sharing your shifts with them immediately, with no request step."
+    },
+    "sharing.addFriend.sharesRightAwayWithEarnings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The person you add sees your shifts and earnings right away. You can stop sharing at any time."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen du legger til ser vaktene og inntjeningen din med en gang. Du kan slutte å dele når som helst."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Person, die du hinzufügst, sieht deine Schichten und Einnahmen sofort. Du kannst die Freigabe jederzeit beenden."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pessoa que você adicionar verá seus turnos e ganhos imediatamente. Você pode parar de compartilhar a qualquer momento."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "De persoon die je toevoegt, ziet je diensten en inkomsten meteen. Je kunt op elk moment stoppen met delen."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La persona che aggiungi vede subito i tuoi turni e i tuoi guadagni. Puoi interrompere la condivisione in qualsiasi momento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La personne que vous ajoutez voit immédiatement vos shifts et vos revenus. Vous pouvez arrêter le partage à tout moment."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La persona que añadas verá tus turnos e ingresos de inmediato. Puedes dejar de compartirlos en cualquier momento."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den person, du tilføjer, kan se dine vagter og din indtjening med det samme. Du kan stoppe delingen når som helst."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La persona que afegeixis veurà els teus torns i els teus ingressos de seguida. Pots deixar de compartir-ho en qualsevol moment."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen du lägger till ser dina arbetspass och inkomster direkt. Du kan sluta dela när som helst."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Henkilö, jonka lisäät, näkee työvuorosi ja ansiosi heti. Voit lopettaa jakamisen milloin tahansa."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aðilinn sem þú bætir við sér vaktirnar þínar og tekjurnar þínar strax. Þú getur hætt að deila hvenær sem er."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persona, ko pievienosi, uzreiz redzēs tavas maiņas un ienākumus. Kopīgošanu vari pārtraukt jebkurā laikā."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inimene, kelle lisad, näeb su vahetusi ja teenistust kohe. Jagamise saad igal ajal lõpetada."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Asmuo, kurį pridėsite, iškart matys jūsų pamainas ir uždarbį. Bendrinimą galite bet kada sustabdyti."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A hozzáadott személy azonnal látja a műszakjaidat és a keresetedet. A megosztást bármikor leállíthatod."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba, kterou přidáte, uvidí vaše směny a výdělky okamžitě. Sdílení můžete kdykoli zastavit."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Personen du legg til ser vaktene og innteninga di med ein gong. Du kan slutte å dele når som helst."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba, ktorú pridáte, uvidí vaše smeny a zárobky okamžite. Zdieľanie môžete kedykoľvek zastaviť."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba, którą dodasz, od razu zobaczy Twoje zmiany i zarobki. W każdej chwili możesz przestać je udostępniać."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавленный вами человек сразу увидит ваши смены и заработок. Вы можете прекратить делиться ими в любое время."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Persoana pe care o adaugi îți vede turele și veniturile imediat. Poți opri partajarea oricând."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Додана вами особа одразу бачить ваші зміни й заробіток. Ви можете припинити ділитися ними будь-коли."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba koju dodaš odmah vidi tvoje smjene i zaradu. Dijeljenje možeš zaustaviti u bilo kojem trenutku."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oseba, ki jo dodate, bo vaše izmene in zaslužek videla takoj. Deljenje lahko kadar koli prekinete."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الشخص الذي تضيفه يرى نوبات عملك وأرباحك فورًا. يمكنك إيقاف المشاركة في أي وقت."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba koju dodaš odmah vidi tvoje smene i zaradu. Deljenje možeš da prekineš u bilo kom trenutku."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το άτομο που προσθέτεις βλέπει αμέσως τις βάρδιες και τις αποδοχές σου. Μπορείς να διακόψεις την κοινοποίηση ανά πάσα στιγμή."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eklediğiniz kişi vardiyalarınızı ve kazançlarınızı hemen görür. Paylaşmayı istediğiniz zaman durdurabilirsiniz."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Човекът, когото добавите, веднага вижда смените и приходите ви. Можете да спрете споделянето по всяко време."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "האדם שתוסיף יראה מיד את המשמרות ואת ההכנסות שלך. אפשר להפסיק את השיתוף בכל עת."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "جسے آپ شامل کرتے ہیں، وہ آپ کی شفٹیں اور آمدنی فوراً دیکھ سکتا ہے۔ آپ کسی بھی وقت شیئرنگ روک سکتے ہیں۔"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "فردی که اضافه می‌کنید، شیفت‌ها و درآمد شما را بلافاصله می‌بیند. هر زمان بخواهید می‌توانید اشتراک‌گذاری را متوقف کنید."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "நீங்கள் சேர்க்கும் நபர் உங்கள் ஷிப்ட்களையும் வருவாயையும் உடனே பார்க்கலாம். எப்போது வேண்டுமானாலும் பகிர்வதை நிறுத்தலாம்."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "जिस व्यक्ति को आप जोड़ते हैं, वह आपकी शिफ्टें और कमाई तुरंत देख सकता है। आप कभी भी शेयर करना बंद कर सकते हैं।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "追加した相手には、すぐにあなたのシフトと収入が表示されます。いつでも共有を停止できます。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你添加的人会立即看到你的班次和收入。你可以随时停止分享。"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "আপনি যাকে যোগ করবেন, তিনি আপনার শিফট ও উপার্জন সঙ্গে সঙ্গেই দেখতে পাবেন। যেকোনো সময় শেয়ার করা বন্ধ করতে পারেন।"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "추가한 사람은 내 근무와 수입을 바로 볼 수 있습니다. 언제든 공유를 중지할 수 있습니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你新增的人會立即看到你的班次和收入。你可以隨時停止分享。"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Orang yang Anda tambahkan langsung dapat melihat shift dan penghasilan Anda. Anda dapat berhenti berbagi kapan saja."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Người bạn thêm sẽ thấy các ca làm và thu nhập của bạn ngay lập tức. Bạn có thể ngừng chia sẻ bất cứ lúc nào."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Makikita agad ng taong idinadagdag mo ang mga shift at kinikita mo. Maaari mong ihinto ang pagbabahagi anumang oras."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "คนที่คุณเพิ่มจะเห็นกะงานและรายได้ของคุณทันที คุณหยุดแชร์ได้ทุกเมื่อ"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mtu unayemuongeza anaona zamu zako na mapato yako mara moja. Unaweza kuacha kushiriki wakati wowote."
+          }
+        }
+      },
+      "comment" : "Note under the add friend form when Show earnings is on. Adding a friend starts sharing your shifts and earnings immediately, with no request step."
+    },
+    "sharing.capacity.display" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sharing with %1$lld of %2$lld"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deler med %1$lld av %2$lld"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geteilt mit %1$lld von %2$lld"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartilhando com %1$lld de %2$lld"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delen met %1$lld van %2$lld"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Condivisione con %1$lld di %2$lld"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partage avec %1$lld sur %2$lld"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartiendo con %1$lld de %2$lld"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deler med %1$lld af %2$lld"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Compartint amb %1$lld de %2$lld"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delar med %1$lld av %2$lld"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jaetaan %1$lld/%2$lld henkilön kanssa"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deilt með %1$lld af %2$lld"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopīgošana ar %1$lld no %2$lld"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jagad %1$lld inimesega %2$lld-st"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bendrinama su %1$lld iš %2$lld"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Megosztás: %1$lld/%2$lld"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sdílíte s %1$lld z %2$lld"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deler med %1$lld av %2$lld"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zdieľate s %1$lld z %2$lld"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udostępnianie: %1$lld z %2$lld"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Делитесь с %1$lld из %2$lld"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Partajezi cu %1$lld din %2$lld"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ділюся з %1$lld із %2$lld"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dijeliš s %1$lld od %2$lld"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delite z %1$lld od %2$lld"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المشاركة مع %1$lld من أصل %2$lld"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deliš sa %1$lld od %2$lld"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Κοινή χρήση με %1$lld από %2$lld"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld kişiyle paylaşım yapılıyor"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Споделяне с %1$lld от %2$lld"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "משתף עם %1$lld מתוך %2$lld"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اشتراک: %2$lld میں سے %1$lld افراد کے ساتھ"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اشتراک‌گذاری با %1$lld نفر از %2$lld نفر"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld பேரில் %1$lld பேருடன் பகிரப்படுகிறது"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld लोगों के साथ शेयर कर रहे हैं"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "共有中 %1$lld/%2$lld"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已与 %1$lld/%2$lld 人分享"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$lld/%2$lld জনের সঙ্গে শেয়ার করা হচ্ছে"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%2$lld명 중 %1$lld명과 공유 중"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "與 %1$lld/%2$lld 人分享"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berbagi dengan %1$lld dari %2$lld"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang chia sẻ với %1$lld/%2$lld"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ibinabahagi sa %1$lld sa %2$lld"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "แชร์กับ %1$lld จาก %2$lld คน"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unashiriki na %1$lld kati ya %2$lld"
+          }
+        }
+      },
+      "comment" : "Compact counter next to Add friend. First number is how many people you share your shifts with, second is the plan limit. Example: Sharing with 4 of 5"
+    },
+    "sharing.capacity.accessibilityLabel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Friend limit. Sharing your shifts with %1$lld of %2$lld."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vennegrense. Deler vaktene dine med %1$lld av %2$lld."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Freundeslimit. Du teilst deine Schichten mit %1$lld von %2$lld."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite de amigos. Compartilhando seus turnos com %1$lld de %2$lld."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vriendenlimiet. Je deelt je diensten met %1$lld van %2$lld."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite di amici. Condividi i tuoi turni con %1$lld di %2$lld."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limite d’amis. Vous partagez vos shifts avec %1$lld sur %2$lld."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Límite de amigos. Compartes tus turnos con %1$lld de %2$lld."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vennegrænse. Deler dine vagter med %1$lld af %2$lld."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Límit d'amics. Comparteixes els teus torns amb %1$lld de %2$lld."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gräns för antal vänner. Delar dina arbetspass med %1$lld av %2$lld."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ystäväraja. Jaat työvuorosi %1$lld/%2$lld henkilön kanssa."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vinatakmörk. Deilt er vöktunum þínum með %1$lld af %2$lld."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draugu limits. Tavas maiņas tiek kopīgotas ar %1$lld no %2$lld."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sõprade limiit. Jagad oma vahetusi %1$lld inimesega %2$lld-st."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Draugų limitas. Savo pamainomis dalijatės su %1$lld iš %2$lld."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Barátlimit. A műszakaidat %1$lld/%2$lld személlyel osztod meg."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit přátel. Sdílíte své směny s %1$lld z %2$lld."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vennegrense. Deler vaktene dine med %1$lld av %2$lld."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit priateľov. Svoje smeny zdieľate s %1$lld z %2$lld."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limit znajomych. Udostępniasz zmiany %1$lld z %2$lld osobom."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимит друзей. Вы делитесь сменами с %1$lld из %2$lld."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limită de prieteni. Îți partajezi turele cu %1$lld din %2$lld."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ліміт друзів. Ви ділитеся своїми змінами з %1$lld із %2$lld."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ograničenje broja prijatelja. Dijeliš svoje smjene s %1$lld od %2$lld."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Omejitev števila prijateljev. Svoje izmene delite z %1$lld od %2$lld."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حد الأصدقاء. تتم مشاركة نوبات عملك مع %1$lld من أصل %2$lld."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ograničenje broja prijatelja. Svoje smene deliš sa %1$lld od %2$lld."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Όριο φίλων. Κοινοποιείς τις βάρδιές σου σε %1$lld από %2$lld."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arkadaş sınırı. Vardiyalarınız %1$lld/%2$lld kişiyle paylaşılıyor."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Лимит за приятели. Споделяте смените си с %1$lld от %2$lld."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מגבלת חברים. משתף את המשמרות שלך עם %1$lld מתוך %2$lld."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "دوستوں کی حد۔ آپ اپنی شفٹیں %2$lld میں سے %1$lld افراد کے ساتھ شیئر کر رہے ہیں۔"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "محدودیت دوستان. شیفت‌های شما با %1$lld نفر از %2$lld نفر به اشتراک گذاشته می‌شود."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "நண்பர் வரம்பு. %2$lld பேரில் %1$lld பேருடன் உங்கள் ஷிப்ட்களைப் பகிர்கிறீர்கள்."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "दोस्तों की सीमा। आप अपनी शिफ्टें %2$lld में से %1$lld दोस्तों के साथ शेयर कर रहे हैं।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "友達の上限。シフトを%1$lld/%2$lld人と共有中。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好友上限。正在与 %1$lld/%2$lld 人分享你的班次。"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "বন্ধুর সীমা। %1$lld/%2$lld জনের সঙ্গে আপনার শিফট শেয়ার করা হচ্ছে।"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "친구 한도. %2$lld명 중 %1$lld명과 근무를 공유 중입니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "好友上限。你正在與 %1$lld/%2$lld 人分享班次。"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Batas teman. Berbagi shift Anda dengan %1$lld dari %2$lld."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giới hạn bạn bè. Đang chia sẻ ca làm của bạn với %1$lld/%2$lld."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Limitasyon sa kaibigan. Ibinabahagi ang mga shift mo sa %1$lld sa %2$lld."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ขีดจำกัดเพื่อน กำลังแชร์กะงานของคุณกับ %1$lld จาก %2$lld คน"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kikomo cha marafiki. Unashiriki zamu zako na %1$lld kati ya %2$lld."
+          }
+        }
+      },
+      "comment" : "VoiceOver label for the friend limit counter. First number is how many people you share your shifts with, second is the plan limit."
+    },
+    "friends.chat.deleteConfirm.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete this message for everyone?"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slette meldingen for alle?"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diese Nachricht für alle löschen?"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Excluir esta mensagem para todos?"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit bericht voor iedereen verwijderen?"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminare questo messaggio per tutti?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer ce message pour tout le monde ?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Eliminar este mensaje para todos?"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slet denne besked for alle?"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vols eliminar aquest missatge per a tothom?"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Radera meddelandet för alla?"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Poistetaanko tämä viesti kaikilta?"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eyða þessum skilaboðum fyrir alla?"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dzēst šo ziņojumu visiem?"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kas kustutada see sõnum kõigi jaoks?"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ištrinti šią žinutę visiems?"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Törlöd ezt az üzenetet mindenkinél?"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smazat tuto zprávu pro všechny?"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slette meldinga for alle?"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Odstrániť túto správu pre všetkých?"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usunąć tę wiadomość dla wszystkich?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить это сообщение для всех?"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ștergi acest mesaj pentru toți?"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Видалити це повідомлення для всіх?"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izbrisati ovu poruku za sve?"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Izbrisati to sporočilo za vse?"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "حذف هذه الرسالة للجميع؟"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obrisati ovu poruku za sve?"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Διαγραφή αυτού του μηνύματος για όλους;"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu mesaj herkes için silinsin mi?"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изтриване на това съобщение за всички?"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "למחוק את ההודעה הזו לכולם?"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "کیا یہ پیغام سب کے لیے حذف کرنا ہے؟"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "آیا این پیام برای همه حذف شود؟"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இந்தச் செய்தியை அனைவருக்கும் நீக்கவா?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह संदेश सभी के लिए हटाएँ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このメッセージを全員から削除しますか？"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要为所有人删除这条消息吗？"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "সবার জন্য এই বার্তাটি মুছবেন?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모두에게서 이 메시지를 삭제할까요?"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "要為所有人刪除此訊息嗎？"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hapus pesan ini untuk semua?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa tin nhắn này cho mọi người?"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tanggalin ang mensaheng ito para sa lahat?"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ลบข้อความนี้สำหรับทุกคนไหม?"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Futa ujumbe huu kwa kila mtu?"
+          }
+        }
+      },
+      "comment" : "Title of the confirmation dialog shown before deleting a chat message for both people."
+    },
+    "friends.chat.deleteConfirm.message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This removes the message for you and %@. You can't undo this."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette fjerner meldingen for deg og %@. Du kan ikke angre dette."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dadurch wird die Nachricht für dich und %@ gelöscht. Dies kann nicht rückgängig gemacht werden."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isso remove a mensagem para você e %@. Não é possível desfazer."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dit verwijdert het bericht voor jou en %@. Dit kun je niet ongedaan maken."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il messaggio verrà eliminato per te e %@. Non puoi annullare questa azione."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cela supprime le message pour vous et %@. Cette action est irréversible."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El mensaje se eliminará para ti y para %@. No puedes deshacerlo."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette fjerner beskeden for dig og %@. Du kan ikke fortryde dette."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Això eliminarà el missatge per a tu i per a %@. No es pot desfer."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Det här tar bort meddelandet för dig och %@. Det går inte att ångra."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tämä poistaa viestin sinulta ja käyttäjältä %@. Tätä ei voi kumota."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Þetta fjarlægir skilaboðin fyrir þig og %@. Þú getur ekki afturkallað þetta."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Šī darbība noņems ziņojumu tev un %@. To nevar atsaukt."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "See eemaldab sõnumi sinult ja kasutajalt %@. Seda ei saa tagasi võtta."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tai pašalins žinutę jums ir %@. Šio veiksmo atšaukti negalėsite."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az üzenet nálad és %@ esetében is törlődik. Ezt nem lehet visszavonni."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tím se zpráva odstraní vám i %@. Tuto akci nelze vrátit zpět."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dette fjernar meldinga for deg og %@. Du kan ikkje angre på dette."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Správa sa odstráni vám aj osobe %@. Túto akciu nemožno vrátiť späť."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spowoduje to usunięcie wiadomości u Ciebie i u %@. Tej czynności nie można cofnąć."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это удалит сообщение у вас и у %@. Отменить действие нельзя."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acest lucru elimină mesajul pentru tine și %@. Nu poți anula această acțiune."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Це видалить повідомлення у вас і в %@. Ви не зможете скасувати цю дію."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ova radnja uklanja poruku i tebi i osobi %@. Ne možeš je poništiti."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sporočilo bo odstranjeno pri vas in pri osebi %@. Tega ni mogoče razveljaviti."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ستُحذف الرسالة لديك ولدى %@. لا يمكنك التراجع عن ذلك."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ovo uklanja poruku kod tebe i kod %@. Ovu radnju ne možeš da opozoveš."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το μήνυμα θα αφαιρεθεί για εσένα και %@. Δεν μπορείς να αναιρέσεις αυτή την ενέργεια."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bu işlem mesajı sizden ve %@ kişisinden kaldırır. Bunu geri alamazsınız."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Това премахва съобщението за вас и %@. Действието не може да бъде отменено."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ההודעה תוסר עבורך ועבור %@. אי אפשר לבטל זאת."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "یہ پیغام آپ اور %@ کے لیے حذف ہو جائے گا۔ آپ اسے واپس نہیں لا سکتے۔"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "این پیام برای شما و %@ حذف می‌شود. امکان لغو این کار وجود ندارد."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "இது உங்களுக்கும் %@க்கும் செய்தியை நீக்கும். இதைச் செயல்தவிர்க்க முடியாது."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "यह संदेश आपके और %@ के लिए हट जाएगा। इसे वापस नहीं लिया जा सकता।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このメッセージはあなたと%@から削除されます。この操作は取り消せません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这会从你和 %@ 的聊天中删除这条消息。此操作无法撤销。"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "এতে আপনার ও %@-এর কাছ থেকে বার্তাটি মুছে যাবে। এটি পূর্বাবস্থায় ফেরানো যাবে না।"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "나와 %@ 모두에게서 이 메시지가 삭제됩니다. 되돌릴 수 없습니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "這會為你和 %@ 移除此訊息。此操作無法復原。"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pesan ini akan dihapus untuk Anda dan %@. Anda tidak dapat membatalkan tindakan ini."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tin nhắn sẽ bị xóa đối với bạn và %@. Bạn không thể hoàn tác việc này."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tatanggalin nito ang mensahe para sa iyo at kay %@. Hindi mo na ito maa-undo."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "การดำเนินการนี้จะลบข้อความสำหรับคุณและ %@ คุณยกเลิกไม่ได้"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hii itaondoa ujumbe kwako na kwa %@. Huwezi kutendua kitendo hiki."
+          }
+        }
+      },
+      "comment" : "Message in the delete chat message confirmation. %@ is the other person's first name."
+    },
+    "friends.chat.scrollToLatest" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Scroll to latest message"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gå til siste melding"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zur neuesten Nachricht springen"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ir para a mensagem mais recente"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naar het nieuwste bericht scrollen"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vai all'ultimo messaggio"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aller au dernier message"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ir al último mensaje"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rul til seneste besked"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ves a l'últim missatge"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gå till senaste meddelandet"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vieritä uusimpaan viestiin"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Skruna að nýjustu skilaboðunum"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ritināt līdz jaunākajam ziņojumam"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keri uusima sõnumini"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slinkti iki naujausios žinutės"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ugrás a legújabb üzenethez"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přejít na nejnovější zprávu"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gå til siste melding"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Prejsť na najnovšiu správu"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przewiń do najnowszej wiadomości"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перейти к последнему сообщению"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Derulează până la ultimul mesaj"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перейти до останнього повідомлення"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idi na najnoviju poruku"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pomakni se do najnovejšega sporočila"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "الانتقال إلى أحدث رسالة"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Idi do najnovije poruke"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Μετάβαση στο πιο πρόσφατο μήνυμα"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Son mesaja git"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Превъртане до последното съобщение"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "גלול להודעה האחרונה"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تازہ ترین پیغام پر جائیں"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رفتن به آخرین پیام"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "சமீபத்திய செய்திக்குச் செல்லவும்"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नवीनतम संदेश तक स्क्रॉल करें"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最新のメッセージへスクロール"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "滚动到最新消息"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "সর্বশেষ বার্তায় স্ক্রল করুন"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최신 메시지로 이동"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "捲動至最新訊息"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gulir ke pesan terbaru"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cuộn đến tin nhắn mới nhất"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mag-scroll sa pinakabagong mensahe"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "เลื่อนไปที่ข้อความล่าสุด"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tembeza hadi ujumbe wa hivi punde"
+          }
+        }
+      },
+      "comment" : "VoiceOver label for the button that scrolls a chat to the newest message."
+    },
+    "friends.card.endsNextDay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ends %@ the next day"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slutter %@ neste dag"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Endet %@ am nächsten Tag"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termina %@ no dia seguinte"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eindigt %@ op de volgende dag"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termina %@ il giorno successivo"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se termine à %@ le lendemain"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Termina %@ al día siguiente"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slutter %@ næste dag"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acaba a les %@ l'endemà"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slutar %@ nästa dag"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Päättyy %@ seuraavana päivänä"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lýkur %@ daginn eftir"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Beidzas %@ nākamajā dienā"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lõpeb järgmisel päeval kell %@"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Baigiasi %@ kitą dieną"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Másnap, %@-kor ér véget"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Končí %@ následující den"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sluttar %@ neste dag"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Končí o %@ nasledujúci deň"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kończy się o %@ następnego dnia"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заканчивается в %@ на следующий день"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se termină %@ în ziua următoare"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Закінчується о %@ наступного дня"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Završava %@ sljedećeg dana"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Konča se ob %@ naslednji dan"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تنتهي %@ في اليوم التالي"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Završava se %@ narednog dana"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Λήγει %@ την επόμενη μέρα"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ertesi gün %@'da sona erer"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Завършва в %@ на следващия ден"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מסתיימת ב־%@ ביום הבא"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اگلے دن %@ پر ختم ہوتی ہے"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "در %@ روز بعد تمام می‌شود"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "அடுத்த நாள் %@ மணிக்கு முடியும்"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "अगले दिन %@ पर समाप्त होती है"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "終了は翌日の%@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "于次日 %@ 结束"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "পরের দিন %@-এ শেষ হয়"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 날 %@에 종료됩니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "於隔日 %@ 結束"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berakhir %@ keesokan harinya"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kết thúc lúc %@ vào ngày hôm sau"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nagtatapos ng %@ sa susunod na araw"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "สิ้นสุดเวลา %@ ในวันถัดไป"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inaisha %@ siku inayofuata"
+          }
+        }
+      },
+      "comment" : "VoiceOver label for a friend's shift end time that falls on the next day. %@ is the end time, for example 06:00. The visible text shows the time followed by +1."
+    },
+    "sharing.screenshotNotified" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ was notified"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ble varslet"
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ wurde benachrichtigt"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ recebeu uma notificação"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ is op de hoogte gebracht"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ha ricevuto una notifica"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a reçu une notification"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se notificó a %@"
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fik besked"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ha rebut una notificació"
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ har fått en avisering"
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sai ilmoituksen"
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ fékk tilkynningu"
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ saņēma paziņojumu"
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ sai teavituse"
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apie tai pranešta asmeniui %@"
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ értesítést kapott"
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Upozornění bylo odesláno uživateli %@"
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ vart varsla"
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Osoba %@ bola upozornená"
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Powiadomiono %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ получил(а) уведомление"
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ a primit o notificare"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ отримав(-ла) сповіщення"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obavijest je poslana osobi %@"
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oseba %@ je bila obveščena"
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تم إشعار %@"
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Obaveštenje je poslato osobi %@"
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Το %@ ειδοποιήθηκε"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ bilgilendirildi"
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "На %@ е изпратено известие"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ קיבל/ה התראה"
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ کو اطلاع دے دی گئی"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "به %@ اطلاع داده شد"
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@க்கு அறிவிக்கப்பட்டது"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ को सूचित किया गया"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@に通知しました"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 已收到通知"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@-কে জানানো হয়েছে"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@님에게 알림이 전송됨"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 已收到通知"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ telah diberi tahu"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ đã được thông báo"
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naabisuhan si %@"
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ได้รับแจ้งเตือนแล้ว"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ aliarifiwa"
+          }
+        }
+      },
+      "comment" : "Shown in the screenshot bubble after the other person gets a notification that you took a screenshot. %@ is their first name."
+    },
+    "sharing.profile.orderAndVisibilityFooter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move to bottom only changes the order. Hiding removes %@ from the friends list until you show them again. Neither one stops sharing."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytt til bunnen endrer bare rekkefølgen. Skjul fjerner %@ fra vennelisten til du viser personen igjen. Ingen av delene stopper delingen."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach unten verschieben ändert nur die Reihenfolge. Ausblenden entfernt %@ aus der Freundesliste, bis du die Person wieder einblendest. Keine der beiden Optionen beendet die Freigabe."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover para o fim apenas altera a ordem. Ocultar remove %@ da lista de amigos até que você o mostre novamente. Nenhuma das duas opções interrompe o compartilhamento."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Naar onderaan verplaatsen verandert alleen de volgorde. Verbergen verwijdert %@ uit de vriendenlijst totdat je diegene weer toont. Geen van beide stopt het delen."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spostare in fondo cambia solo l'ordine. Nascondere rimuove %@ dall'elenco degli amici finché non lo rendi di nuovo visibile. Nessuna delle due interrompe la condivisione."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déplacer en bas ne change que l’ordre. Masquer retire %@ de la liste d’amis jusqu’à ce que vous l’affichiez à nouveau. Aucun des deux n’arrête le partage."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover al final solo cambia el orden. Ocultar elimina a %@ de la lista de amigos hasta que vuelvas a mostrar a esa persona. Ninguna de las dos opciones detiene el uso compartido."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flyt til bunden ændrer kun rækkefølgen. Skjul fjerner %@ fra vennelisten, indtil du viser personen igen. Ingen af delene stopper delingen."
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moure al final només canvia l'ordre. Amagar elimina %@ de la llista d'amics fins que el tornis a fer visible. Cap de les dues opcions atura la compartició."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Att flytta längst ned ändrar bara ordningen. Att dölja tar bort %@ från vänlistan tills du visar personen igen. Inget av detta stoppar delningen."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siirrä alimmaksi muuttaa vain järjestystä. Piilottaminen poistaa henkilön %@ ystävälistalta, kunnes tuot hänet taas näkyviin. Kumpikaan ei lopeta jakamista."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Að færa neðst breytir aðeins röðinni. Að fela fjarlægir %@ af vinalistanum þar til þú sýnir viðkomandi aftur. Hvorugt stöðvar deilingu."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pārvietošana uz apakšu maina tikai secību. Paslēpjot %@, persona tiks noņemta no draugu saraksta, līdz to atkal parādīsi. Neviena no šīm darbībām nepārtrauc kopīgošanu."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alla liigutamine muudab ainult järjekorda. Peitmine eemaldab %@ sõprade loendist, kuni ta uuesti kuvatakse. Kumbki ei peata jagamist."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Perkėlimas į apačią keičia tik tvarką. Paslėpus %@, asmuo pašalinamas iš draugų sąrašo, kol vėl bus rodomas. Nė vienas iš šių veiksmų nenutraukia bendrinimo."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az alulra helyezés csak a sorrendet módosítja. Az elrejtés miatt %@ eltűnik a barátlistáról, amíg újra meg nem jeleníted. Egyik sem állítja le a megosztást."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Přesun dolů mění pouze pořadí. Skrytí odebere %@ ze seznamu přátel až do opětovného zobrazení. Ani jedna možnost nezastaví sdílení."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flytt til botnen endrar berre rekkjefølgja. Skjul fjernar %@ frå vennelista til du viser personen igjen. Ingen av delane stoppar delinga."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Presunutie na koniec zmení iba poradie. Skrytie odstráni %@ zo zoznamu priateľov, kým túto osobu znova nezobrazíte. Ani jedna z možností nezastaví zdieľanie."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Przeniesienie na dół zmienia tylko kolejność. Ukrycie usuwa %@ z listy znajomych do czasu ponownego wyświetlenia. Żadna z tych opcji nie przerywa udostępniania."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перемещение вниз меняет только порядок. Скрытие удаляет %@ из списка друзей, пока вы снова его не покажете. Ни одно из действий не прекращает доступ к вашим сменам."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mutarea la final schimbă doar ordinea. Ascunderea elimină %@ din lista de prieteni până la reafișare. Niciuna dintre ele nu oprește partajarea."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переміщення вниз змінює лише порядок. Приховування вилучає %@ зі списку друзів, доки ви знову не покажете цю особу. Жодна з цих дій не припиняє спільний доступ."
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Premještanje na dno mijenja samo redoslijed. Skrivanje uklanja %@ s popisa prijatelja dok tu osobu ponovno ne prikažeš. Nijedna opcija ne zaustavlja dijeljenje."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Premik na dno spremeni le vrstni red. Skrivanje odstrani %@ s seznama prijateljev do ponovnega prikaza. Nobena od možnosti ne ustavi deljenja."
+          }
+        },
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "النقل إلى الأسفل يغيّر الترتيب فقط. يؤدي الإخفاء إلى إزالة %@ من قائمة الأصدقاء حتى تُظهره مرة أخرى. ولا يوقف أيٌّ منهما المشاركة."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Premeštanje na dno samo menja redosled. Sakrivanje uklanja osobu %@ sa liste prijatelja dok je ponovo ne prikažeš. Nijedna opcija ne prekida deljenje."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Η μετακίνηση στο κάτω μέρος αλλάζει μόνο τη σειρά. Η απόκρυψη αφαιρεί το άτομο %@ από τη λίστα φίλων μέχρι να το εμφανίσεις ξανά. Κανένα από τα δύο δεν διακόπτει την κοινοποίηση."
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En alta taşıma yalnızca sıralamayı değiştirir. Gizleme, siz tekrar gösterene kadar %@ adlı kişiyi arkadaş listesinden kaldırır. Hiçbiri paylaşımı durdurmaz."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Преместването най-долу променя само подредбата. Скриването премахва %@ от списъка с приятели, докато не отмените скриването. Нито едното не спира споделянето."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "העברה לתחתית משנה רק את הסדר. הסתרה מסירה את %@ מרשימת החברים עד להצגה מחדש. אף אחת מהפעולות לא מפסיקה את השיתוף."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "نیچے منتقل کرنا صرف ترتیب بدلتا ہے۔ چھپانے سے %@ دوستوں کی فہرست سے اس وقت تک ہٹ جاتا ہے جب تک آپ اسے دوبارہ نہ دکھائیں۔ ان میں سے کوئی بھی شیئرنگ نہیں روکتا۔"
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "انتقال به پایین فقط ترتیب را تغییر می‌دهد. مخفی‌کردن، %@ را تا زمانی که دوباره نشانش دهید، از فهرست دوستان حذف می‌کند. هیچ‌کدام اشتراک‌گذاری را متوقف نمی‌کنند."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "கீழே நகர்த்துவது வரிசையை மட்டுமே மாற்றும். மறைப்பது, நீங்கள் மீண்டும் காட்டும் வரை, நண்பர்கள் பட்டியலிலிருந்து %@-ஐ அகற்றும். இரண்டுமே பகிர்வதை நிறுத்தாது."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "नीचे ले जाने से केवल क्रम बदलता है। छिपाने पर %@ मित्र सूची से तब तक हट जाता है, जब तक आप उसे फिर से न दिखाएँ। इनमें से कोई भी शेयर करना बंद नहीं करता।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下に移動しても順番が変わるだけです。非表示にすると、再表示するまで%@は友達リストに表示されません。どちらも共有を停止するものではありません。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移至底部只会改变顺序。隐藏会将 %@ 从好友列表中移除，直到你再次显示对方。这两种操作都不会停止分享。"
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "নিচে সরানো শুধু ক্রম পরিবর্তন করে। লুকিয়ে রাখলে আবার দেখানো পর্যন্ত %@-কে বন্ধুদের তালিকা থেকে সরিয়ে রাখা হয়। কোনোটিই শেয়ার করা বন্ধ করে না।"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "맨 아래로 이동은 순서만 변경합니다. 숨기면 %@님이 다시 표시할 때까지 친구 목록에서 사라집니다. 어느 쪽도 공유를 중지하지 않습니다."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移至底部只會變更順序。隱藏會將 %@ 從好友列表中移除，直到你再次顯示對方。這兩者都不會停止分享。"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pindahkan ke bawah hanya mengubah urutan. Menyembunyikan akan menghapus %@ dari daftar teman sampai Anda menampilkannya lagi. Keduanya tidak menghentikan berbagi."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di chuyển xuống cuối chỉ thay đổi thứ tự. Ẩn sẽ xóa %@ khỏi danh sách bạn bè cho đến khi bạn hiển thị lại. Cả hai đều không dừng chia sẻ."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ang paglipat sa ibaba ay binabago lang ang pagkakasunod-sunod. Itinatago si %@ sa listahan ng mga kaibigan hanggang sa ipakita mo siyang muli. Hindi pinipigilan ng alinman sa mga ito ang pagbabahagi."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ย้ายไปด้านล่างจะเปลี่ยนแค่ลำดับ การซ่อนจะนำ %@ ออกจากรายชื่อเพื่อนจนกว่าคุณจะแสดงอีกครั้ง ทั้งสองอย่างไม่หยุดการแชร์"
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kupeleka chini hubadilisha mpangilio pekee. Kumficha %@ humwondoa kwenye orodha ya marafiki hadi umuonyeshe tena. Hakuna kati ya hayo mawili kinachositisha kushiriki."
+          }
+        }
+      },
+      "comment" : "Footer under Move to bottom and Hide from the friends list on a friend's profile. %@ is the friend's first name."
     }
   },
   "version" : "1.0"

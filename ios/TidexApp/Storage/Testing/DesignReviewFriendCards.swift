@@ -1,12 +1,86 @@
 #if DEBUG
   import SwiftUI
 
-  /// Friend cards in their main states, for TIDEX_DESIGN_SCREEN=friends.
+  /// Friend cards in their main states, for TIDEX_DESIGN_SCREEN=friends. Set
+  /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend or profile for the other Friends screens.
   internal struct DesignReviewFriendCards: View {
+    @State private var identifier = "ella@example.com"
+    @State private var showEarnings = true
+    @State private var isExpanded = true
+    @State private var isCollapsed = false
+    @State private var addError: String?
+    @StateObject private var capacityModel = ManageSharingViewModel(
+      initialSnapshot: FriendsManagementSnapshot(
+        friends: [], blockedFriends: [],
+        capacity: ShareCapacity(canAdd: true, currentCount: 4, limit: 5)))
+
+    private let view: String =
+      ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_VIEW"] ?? "cards"
+
     internal var body: some View {
+      switch view {
+      case "add-friend": addFriend
+      case "profile": profile
+      default: cards
+      }
+    }
+
+    private var addFriend: some View {
+      NavigationStack {
+        List {
+          Section {
+            AddFriendForm(
+              isExpanded: $isCollapsed, identifier: .constant(""), showEarnings: .constant(false),
+              error: $addError, isLoading: false, canAdd: capacityModel.canAddMore,
+              isOfflineUnavailable: false, capacityDisplay: capacityModel.capacityDisplay,
+              capacityAccessibilityLabel: capacityModel.capacityAccessibilityLabel,
+              shouldShowCapacity: capacityModel.shouldShowCapacity, onAdd: {}, onCancel: {})
+          }
+          .listRowInsets(EdgeInsets())
+          Section {
+            AddFriendForm(
+              isExpanded: $isExpanded, identifier: $identifier, showEarnings: $showEarnings,
+              error: $addError, isLoading: false, canAdd: true, isOfflineUnavailable: false,
+              capacityDisplay: capacityModel.capacityDisplay,
+              capacityAccessibilityLabel: capacityModel.capacityAccessibilityLabel,
+              shouldShowCapacity: false, onAdd: {}, onCancel: {})
+          }
+          .listRowInsets(EdgeInsets())
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.tidexBackground)
+        .navigationTitle(String(localized: .sharingSeeFriends))
+        .navigationBarTitleDisplayMode(.inline)
+      }
+    }
+
+    private var profile: some View {
+      let friend = Friend(
+        id: "ella", email: "ella@example.com", phone: nil, username: nil, firstName: "Ella",
+        profilePictureUrl: nil, oauthAvatarUrl: nil,
+        sharesWithMe: Friend.SharesWithMe(
+          hidden: false, showEarningsToMe: true, sharedAt: "2026-01-01",
+          notificationFrequency: .instant),
+        iShareWith: Friend.IShareWith(showEarningsToThem: false, sharedAt: "2026-01-01"))
+      return FriendProfileView(
+        sharedUser: SharedUser(
+          id: "ella", email: "ella@example.com", phone: nil, firstName: "Ella",
+          profilePictureUrl: nil, oauthAvatarUrl: nil, sharedAt: "2026-01-01",
+          showEarnings: true, hidden: false),
+        onMessageTapped: {},
+        initialSnapshot: FriendsManagementSnapshot(
+          friends: [friend], blockedFriends: [],
+          capacity: ShareCapacity(canAdd: true, currentCount: 1, limit: 5)))
+    }
+
+    private var cards: some View {
       NavigationStack {
         ScrollView {
           VStack(spacing: Spacing.sm) {
+            ScreenshotNotificationBubble(
+              notifiedName: "Ella", showNotifiedIcon: true, bellShakeTrigger: false)
+            card("Henrik", minutesAgo: 30, shift: (Self.minutesUntilTomorrow(atHour: 22), 480))
             card("Ella", minutesAgo: 12, state: .incomingUnread, unread: 2, shift: (-120, 180))
             card("Jonas Berg", minutesAgo: 90, state: .outgoingOpened, shift: (1_200, 480))
             card("Maja", isTyping: true, shift: (-1_800, 420))
@@ -48,6 +122,14 @@
         messagePreview: message, isTyping: isTyping, isSelected: false, isRefreshing: false,
         onChatTap: {}, onCalendarTap: {}, isCalendarAvailable: isCalendarAvailable,
         unreadMessageCount: unread)
+    }
+
+    private static func minutesUntilTomorrow(atHour hour: Int) -> Double {
+      let tomorrow =
+        Calendar.current.date(
+          byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now)) ?? .now
+      let start = Calendar.current.date(byAdding: .hour, value: hour, to: tomorrow) ?? tomorrow
+      return start.timeIntervalSinceNow / 60
     }
 
     private static func preview(for id: String, startOffset: Double, duration: Double)

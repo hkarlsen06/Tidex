@@ -7,6 +7,8 @@
 import SwiftUI
 
 struct ScreenshotNotificationBubble: View {
+  /// First name of the person who gets the screenshot notification.
+  let notifiedName: String
   let showNotifiedIcon: Bool
   let bellShakeTrigger: Bool
 
@@ -15,6 +17,7 @@ struct ScreenshotNotificationBubble: View {
       Image(systemName: "camera.viewfinder")
         .font(.tidexLabel)
         .foregroundColor(.tidexTextSecondary)
+        .accessibilityHidden(true)
 
       Text(.sharingScreenshotTaken)
         .font(.tidexFootnoteMedium)
@@ -38,8 +41,16 @@ struct ScreenshotNotificationBubble: View {
             }
           }
           .transition(.scale.combined(with: .opacity))
+          .accessibilityHidden(true)
+
+        Text(.sharingScreenshotNotified(notifiedName))
+          .font(.tidexFootnoteMedium)
+          .foregroundColor(.tidexTextSecondary)
+          .lineLimit(1)
+          .transition(.opacity)
       }
     }
+    .accessibilityElement(children: .combine)
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
     .background(Color.tidexSurfacePrimary)

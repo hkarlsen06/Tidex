@@ -54,6 +54,7 @@ struct FriendsThreadView: View {
   @StateObject private var chatProjectionStore = FriendsThreadChatProjectionStore()
 
   @State private var pendingReportTarget: ReportTarget?
+  @State private var pendingDeleteMessageId: String?
   @State private var showBlockConfirmation = false
   @State private var showSafetySupport = false
   @State private var safariURL: URL?
@@ -390,6 +391,30 @@ struct FriendsThreadView: View {
       Button(String(localized: .commonCancel), role: .cancel) {
         pendingReportTarget = nil
       }
+    }
+    .confirmationDialog(
+      String(localized: .friendsChatDeleteConfirmTitle),
+      isPresented: .init(
+        get: { pendingDeleteMessageId != nil },
+        set: {
+          if !$0 { pendingDeleteMessageId = nil }
+        }
+      ),
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .friendsChatActionDelete), role: .destructive) {
+        guard let messageId = pendingDeleteMessageId else { return }
+        pendingDeleteMessageId = nil
+        Task {
+          await viewModel.deleteMessage(messageId: messageId)
+        }
+      }
+
+      Button(String(localized: .commonCancel), role: .cancel) {
+        pendingDeleteMessageId = nil
+      }
+    } message: {
+      Text(.friendsChatDeleteConfirmMessage(firstName(from: counterpartDisplayName)))
     }
     .confirmationDialog(
       blockConfirmTitle,
@@ -837,6 +862,7 @@ struct FriendsThreadView: View {
 
   private var screenshotBubble: some View {
     ScreenshotNotificationBubble(
+      notifiedName: firstName(from: counterpartDisplayName),
       showNotifiedIcon: showScreenshotNotifiedIcon,
       bellShakeTrigger: screenshotBellShakeTrigger
     )
@@ -855,6 +881,7 @@ struct FriendsThreadView: View {
         Image(systemName: "chevron.down")
           .font(.system(size: 17, weight: .semibold))
           .frame(width: 20, height: 20)
+          .accessibilityLabel(Text(.friendsChatScrollToLatest))
 
         if showsNewMessagesPill {
           Text(.friendsChatNewMessages)
@@ -1084,9 +1111,8 @@ struct FriendsThreadView: View {
       )
 
     case .delete:
-      Task {
-        await viewModel.deleteMessage(messageId: friendMessage.id)
-      }
+      // Deleting removes the message for both people, so confirm first.
+      pendingDeleteMessageId = friendMessage.id
 
     case .report:
       pendingReportTarget = .message(messageId: friendMessage.id)
