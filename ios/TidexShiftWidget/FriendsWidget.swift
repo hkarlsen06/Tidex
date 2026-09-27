@@ -1,4 +1,4 @@
-// swiftlint:disable file_length function_body_length cyclomatic_complexity
+// swiftlint:disable file_length function_body_length cyclomatic_complexity type_body_length
 // Widget files require multiple size-specific views that cannot be easily split
 import SwiftUI
 import WidgetKit
@@ -15,6 +15,7 @@ struct FriendPreview: Equatable, Identifiable {
   let timeRange: String?  // "09:00 – 17:00"
   let status: FriendShiftStatus
   let daysRemaining: Int?
+  var avatar: UIImage?
 
   enum FriendShiftStatus: Equatable {
     case active
@@ -230,7 +231,19 @@ struct FriendsWidgetProvider: TimelineProvider {
     }
 
     // Take top 5
-    let topFriends = Array(previews.prefix(5))
+    let avatarDirectory = FileManager.default
+      .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
+      .appendingPathComponent("friend-avatars", isDirectory: true)
+    // Sorting already puts friends with shifts first. The view shows the first
+    // few as rows and the rest as avatars, so only those need image files.
+    let topFriends = previews.enumerated().map { index, preview in
+      var preview = preview
+      if index < FriendsWidgetView.maxRows + FriendsWidgetView.maxFooterAvatars,
+        let path = avatarDirectory?.appendingPathComponent("\(preview.id).jpg").path {
+        preview.avatar = UIImage(contentsOfFile: path)
+      }
+      return preview
+    }
 
     return FriendsWidgetEntry(
       date: Date(),
@@ -489,10 +502,6 @@ struct FriendsWidgetView: View {
     String(localized: .widgetAddFriendsToSeeTheirShifts)
   }
 
-  private var noShiftText: String {
-    String(localized: .widgetNoShift)
-  }
-
   // MARK: - Body
 
   var body: some View {
@@ -507,86 +516,241 @@ struct FriendsWidgetView: View {
     }
   }
 
-  private var contentView: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      // Header
-      Text(headerTitle)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundColor(secondaryTextColor)
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 8)
+  static let maxRows = 4
+  static let maxFooterAvatars = 7
 
-      // Friend rows
-      VStack(spacing: 0) {
-        ForEach(entry.friends) { friend in
-          friendRow(friend)
-
-          if friend.id != entry.friends.last?.id {
-            Divider()
-              .background(mutedTextColor.opacity(0.3))
-              .padding(.horizontal, 16)
-          }
-        }
-      }
-
-      Spacer(minLength: 0)
-    }
+  /// Friends shown as the card and rows: the nearest shifts that fit.
+  private var shiftFriends: [FriendPreview] {
+    Array(entry.friends.filter { $0.status != .none }.prefix(Self.maxRows))
   }
 
-  private func friendRow(_ friend: FriendPreview) -> some View {
-    HStack(spacing: 12) {
-      // Initials circle
-      ZStack {
-        Circle()
-          .fill(initialsBackground)
+  /// Everyone else: friends without a shift and shift friends that didn't fit.
+  private var footerFriends: [FriendPreview] {
+    let shown = Set(shiftFriends.map(\.id))
+    return entry.friends.filter { !shown.contains($0.id) }
+  }
 
-        Text(friend.initials)
-          .font(.system(size: 14, weight: .semibold))
+  private var contentView: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(spacing: 6) {
+        Image(systemName: "person.2.fill")
+          .font(.system(size: 12, weight: .semibold))
           .foregroundColor(initialsTextColor)
+          .widgetAccentable()
+          .accessibilityHidden(true)
+        Text(headerTitle)
+          .font(.system(size: 14, weight: .semibold))
+          .foregroundColor(secondaryTextColor)
       }
-      .frame(width: 36, height: 36)
 
-      // Name and shift info
-      VStack(alignment: .leading, spacing: 2) {
-        // Name
-        Text(firstName(from: friend.displayName))
-          .font(.system(size: 15, weight: .semibold))
-          .foregroundColor(primaryTextColor)
-          .lineLimit(1)
+      if let first = shiftFriends.first {
+        heroCard(first)
+      }
 
-        // Shift date and time
-        if let shiftDate = friend.shiftDate, let timeRange = friend.timeRange {
-          HStack(spacing: 4) {
-            Text("\(shiftDate) · \(timeRange)")
-              .font(.system(size: 13, weight: .regular))
+      VStack(spacing: 10) {
+        ForEach(shiftFriends.dropFirst()) { friend in
+          compactRow(friend)
+        }
+      }
+      .padding(.horizontal, 4)
+
+      Spacer(minLength: 0)
+
+      if !footerFriends.isEmpty {
+        footer
+      }
+    }
+    .padding(16)
+  }
+
+  /// The friend whose shift is closest in time gets the large card.
+  private func heroCard(_ friend: FriendPreview) -> some View {
+    let isActive = friend.status == .active
+    return VStack(alignment: .leading, spacing: 14) {
+      HStack(spacing: 12) {
+        avatar(friend, size: 44, fontSize: 16)
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text(firstName(from: friend.displayName))
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundColor(primaryTextColor)
+            .lineLimit(1)
+          if isActive {
+            activeBadge
+          } else if let shiftDate = friend.shiftDate {
+            Text(shiftDate)
+              .font(.system(size: 13, weight: .medium))
               .foregroundColor(secondaryTextColor)
               .lineLimit(1)
           }
-        } else {
-          Text(noShiftText)
-            .font(.system(size: 13, weight: .regular))
-            .foregroundColor(mutedTextColor)
+        }
+
+        Spacer(minLength: 8)
+
+        if let timeRange = friend.timeRange {
+          Text(timeRange)
+            .font(.system(size: 22, weight: .bold, design: .rounded))
+            .monospacedDigit()
+            .foregroundColor(primaryTextColor)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .fixedSize(horizontal: true, vertical: false)
         }
       }
 
-      Spacer()
+      if let span = shiftSpan(friend) {
+        dayBar(span: span, showNow: isActive)
+      }
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(
+      RoundedRectangle(cornerRadius: 18, style: .continuous)
+        .fill(isActive ? activeColor.opacity(0.14) : initialsBackground.opacity(0.5))
+    )
+  }
 
-      // Status indicator for active shifts
-      if friend.status == .active {
-        HStack(spacing: 4) {
-          Circle()
-            .fill(activeColor)
-            .frame(width: 8, height: 8)
+  /// A 24-hour track with the shift drawn as a filled segment.
+  private func dayBar(span: ClosedRange<Double>, showNow: Bool) -> some View {
+    let accent = showNow ? activeColor : initialsTextColor
+    let now = Calendar.current.dateComponents([.hour, .minute], from: entry.date)
+    let nowFraction = (Double(now.hour ?? 0) * 60 + Double(now.minute ?? 0)) / 1_440
+    return VStack(spacing: 4) {
+      GeometryReader { geo in
+        ZStack(alignment: .leading) {
+          Capsule().fill(mutedTextColor.opacity(0.18))
+          Capsule()
+            .fill(accent)
+            .frame(width: max(6, geo.size.width * (span.upperBound - span.lowerBound)))
+            .offset(x: geo.size.width * span.lowerBound)
+            .widgetAccentable()
+          if showNow {
+            Circle()
+              .fill(primaryTextColor)
+              .frame(width: 10, height: 10)
+              .offset(x: geo.size.width * nowFraction - 5)
+          }
+        }
+      }
+      .frame(height: 6)
 
-          Text(.widgetActive)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(activeColor)
+      HStack {
+        ForEach(["00", "06", "12", "18", "24"], id: \.self) { label in
+          Text(label)
+            .font(.system(size: 10, weight: .medium).monospacedDigit())
+            .foregroundColor(mutedTextColor)
+          if label != "24" { Spacer(minLength: 0) }
         }
       }
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 10)
+    .accessibilityHidden(true)
+  }
+
+  /// Shift start and end as fractions of the day. Cross-midnight shifts are clipped at 24:00.
+  private func shiftSpan(_ friend: FriendPreview) -> ClosedRange<Double>? {
+    guard let parts = friend.timeRange?.components(separatedBy: " – "), parts.count == 2 else {
+      return nil
+    }
+    let minutes = parts.map { part -> Double? in
+      let hourMinute = part.split(separator: ":").compactMap { Double($0) }
+      return hourMinute.count == 2 ? hourMinute[0] * 60 + hourMinute[1] : nil
+    }
+    guard let start = minutes[0], let end = minutes[1] else { return nil }
+    let clippedEnd = end > start ? end : 1_440
+    return (start / 1_440)...(clippedEnd / 1_440)
+  }
+
+  private func compactRow(_ friend: FriendPreview) -> some View {
+    HStack(spacing: 12) {
+      avatar(friend, size: 34, fontSize: 13)
+
+      VStack(alignment: .leading, spacing: 1) {
+        Text(firstName(from: friend.displayName))
+          .font(.system(size: 15, weight: .semibold))
+          .foregroundColor(primaryTextColor)
+        if friend.status == .active {
+          activeBadge
+        } else if let shiftDate = friend.shiftDate {
+          Text(shiftDate)
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(secondaryTextColor)
+        }
+      }
+      .lineLimit(1)
+
+      Spacer(minLength: 8)
+
+      if let timeRange = friend.timeRange {
+        Text(timeRange)
+          .font(.system(size: 15, weight: .semibold, design: .rounded))
+          .monospacedDigit()
+          .foregroundColor(primaryTextColor)
+          .fixedSize()
+      }
+    }
+  }
+
+  /// Friends not shown above, as a centered row of overlapping avatars.
+  private var footer: some View {
+    let visible = footerFriends.prefix(Self.maxFooterAvatars)
+    let overflow = footerFriends.count - visible.count
+    return HStack(spacing: -8) {
+      ForEach(visible) { friend in
+        avatar(friend, size: 28, fontSize: 11)
+          .overlay(Circle().stroke(WidgetPalette.background, lineWidth: 2))
+      }
+      if overflow > 0 {
+        Text("+\(overflow)")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(secondaryTextColor)
+          .frame(width: 28, height: 28)
+          .background(Circle().fill(mutedTextColor.opacity(0.25)))
+          .background(Circle().fill(WidgetPalette.background))
+          .overlay(Circle().stroke(WidgetPalette.background, lineWidth: 2))
+      }
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  private func avatar(_ friend: FriendPreview, size: CGFloat, fontSize: CGFloat) -> some View {
+    Group {
+      if let image = friend.avatar {
+        Image(uiImage: image)
+          .resizable()
+          .widgetAccentedRenderingMode(.fullColor)
+          .scaledToFill()
+          .accessibilityHidden(true)
+      } else {
+        Text(friend.initials)
+          .font(.system(size: fontSize, weight: .semibold))
+          .foregroundColor(initialsTextColor)
+          .frame(width: size, height: size)
+          .background(Circle().fill(initialsBackground))
+          .background(Circle().fill(WidgetPalette.background))
+      }
+    }
+    .frame(width: size, height: size)
+    .clipShape(Circle())
+      .overlay {
+        if friend.status == .active {
+          Circle().strokeBorder(activeColor, lineWidth: 2)
+        }
+      }
+  }
+
+  private var activeBadge: some View {
+    HStack(spacing: 4) {
+      Circle()
+        .fill(activeColor)
+        .frame(width: 6, height: 6)
+      Text(.widgetActive)
+        .font(.system(size: 12, weight: .semibold))
+    }
+    .foregroundColor(activeColor)
+    .padding(.horizontal, 8)
+    .padding(.vertical, 4)
+    .background(Capsule().fill(activeColor.opacity(0.15)))
+    .widgetAccentable()
   }
 
   private var emptyStateView: some View {
@@ -698,4 +862,4 @@ struct FriendsWidget: Widget {
     FriendsWidgetEntry.empty()
   }
 #endif
-// swiftlint:enable file_length function_body_length cyclomatic_complexity
+// swiftlint:enable file_length function_body_length cyclomatic_complexity type_body_length

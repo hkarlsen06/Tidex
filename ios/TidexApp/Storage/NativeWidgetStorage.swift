@@ -478,6 +478,14 @@ enum NativeWidgetStorage {
     // Reload widget timelines
     reloadWidgetTimelines()
 
+    let avatarURLs = Dictionary(
+      sharers.compactMap { sharer in sharer.avatarUrl.flatMap(URL.init(string:)).map { (sharer.id, $0) } },
+      uniquingKeysWith: { first, _ in first }
+    )
+    Task.detached(priority: .utility) {
+      await cacheFriendAvatars(avatarURLs)
+    }
+
     logger.info(
       "Friend widget storage updated with \(widgetSharers.count) sharers and \(storedShifts.count) shifts"
     )
@@ -492,9 +500,46 @@ enum NativeWidgetStorage {
 
     userDefaults.removeObject(forKey: friendSharersKey)
     userDefaults.removeObject(forKey: friendShiftsKey)
+    if let directory = friendAvatarsDirectory() {
+      try? FileManager.default.removeItem(at: directory)
+    }
     reloadWidgetTimelines()
 
     logger.info("Friend widget storage cleared")
+  }
+
+  /// Widgets can't fetch remote images, so the app saves small avatar files
+  /// named `<sharer id>.jpg` in the App Group for the Friends widget to read.
+  private static func cacheFriendAvatars(_ urls: [String: URL]) async {
+    guard let directory = friendAvatarsDirectory() else { return }
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    let existing = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+    for file in existing where urls[(file as NSString).deletingPathExtension] == nil {
+      try? FileManager.default.removeItem(at: directory.appendingPathComponent(file))
+    }
+
+    var changed = false
+    for (id, url) in urls {
+      guard let (data, _) = try? await URLSession.shared.data(from: url),
+        let image = UIImage(data: data),
+        let thumbnail = await image.byPreparingThumbnail(ofSize: CGSize(width: 120, height: 120)),
+        let jpeg = thumbnail.jpegData(compressionQuality: 0.85)
+      else { continue }
+      let fileURL = directory.appendingPathComponent("\(id).jpg")
+      if (try? Data(contentsOf: fileURL)) != jpeg {
+        try? jpeg.write(to: fileURL, options: .atomic)
+        changed = true
+      }
+    }
+    if changed {
+      await MainActor.run { reloadWidgetTimelines() }
+    }
+  }
+
+  private static func friendAvatarsDirectory() -> URL? {
+    FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
+      .appendingPathComponent("friend-avatars", isDirectory: true)
   }
 
   private static func writeFriendSharersToAppGroup(
