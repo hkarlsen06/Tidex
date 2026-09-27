@@ -129,9 +129,11 @@ struct FriendCard: View {
 
   private func conversation(at now: Date) -> some View {
     HStack(spacing: Spacing.xs) {
-      avatar(progress: shiftTiming.flatMap { timing in
-        timing.status(at: now) == .active ? timing.progress(at: now) : nil
-      })
+      avatar(
+        progress: shiftTiming.flatMap { timing in
+          timing.status(at: now) == .active ? timing.progress(at: now) : nil
+        }
+      )
       .contentShape(Circle())
       .onTapGesture {
         onProfileRequested?()

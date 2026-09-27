@@ -378,6 +378,86 @@ final class TidexAppUITests: XCTestCase {
     add(attachment)
   }
 
+  /// Walks the screens that show money amounts and checks that each amount says what it is.
+  @MainActor
+  func testMoneyAmountsSayWhatTheyAre() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += [
+      "-defaultStartupTab", "home", "-AppleInterfaceStyle", "Dark", "-cachedTheme", "dark",
+    ]
+    app.launch()
+    let earnings = app.staticTexts.matching(
+      NSPredicate(format: "label MATCHES %@", ".*22[^0-9]?400.*")
+    )
+    .firstMatch
+    XCTAssertTrue(earnings.waitForExistence(timeout: 30), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "After tax in September", in: app).exists)
+    XCTAssertTrue(text(containingLabel: "+17% vs previous month", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-01-home")
+
+    app.buttons["Stats"].tap()
+    XCTAssertTrue(app.buttons["BackButton"].waitForExistence(timeout: defaultTimeout))
+    XCTAssertTrue(earnings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "+17% vs previous month", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-02-stats")
+
+    app.buttons["BackButton"].tap()
+    app.buttons["Schedule"].firstMatch.tap()
+    let shiftTime = app.staticTexts.matching(NSPredicate(format: "label == %@", "09:00")).firstMatch
+    XCTAssertTrue(shiftTime.waitForExistence(timeout: 30), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "before tax", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-03-schedule")
+
+    app.buttons["Add"].firstMatch.tap()
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+      .firstMatch
+    XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
+    let previewTotal = app.staticTexts.matching(
+      NSPredicate(format: "label MATCHES %@", ".*24[^0-9]?000.*")
+    ).firstMatch
+    if !previewTotal.waitForExistence(timeout: 2) {
+      recentTime.tap()
+    }
+    XCTAssertTrue(previewTotal.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "after tax", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-04-add")
+    app.terminate()
+    captureMoneyFixtureScreens()
+  }
+
+  /// Payday, adjustments and mixed-basis totals, which the fixture account doesn't reach.
+  @MainActor
+  private func captureMoneyFixtureScreens() {
+    let cards = makeApp(scenario: "design-review")
+    cards.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "money"
+    cards.launch()
+    let markReceived = cards.buttons["Mark as received"].firstMatch
+    XCTAssertTrue(markReceived.waitForExistence(timeout: defaultTimeout), cards.debugDescription)
+    XCTAssertTrue(text(containingLabel: "Includes adjustments", in: cards).exists)
+    attachAppStoreScreenshot(cards, name: "money-05-payday")
+    markReceived.tap()
+    XCTAssertTrue(cards.buttons["Received"].firstMatch.waitForExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(cards, name: "money-06-received")
+    cards.terminate()
+
+    let details = makeApp(scenario: "design-review")
+    details.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "money-payroll"
+    details.launch()
+    let adjustments = details.buttons.matching(
+      NSPredicate(format: "label BEGINSWITH %@", "Adjustments")
+    )
+    .firstMatch
+    XCTAssertTrue(adjustments.waitForExistence(timeout: defaultTimeout), details.debugDescription)
+    adjustments.tap()
+    attachAppStoreScreenshot(details, name: "money-07-payroll-details")
+    details.swipeUp()
+    XCTAssertTrue(
+      text(containingLabel: "Total estimate", in: details).waitForExistence(timeout: defaultTimeout)
+    )
+    XCTAssertTrue(text(containingLabel: "for jobs without", in: details).exists)
+    attachAppStoreScreenshot(details, name: "money-08-payroll-total")
+  }
+
   @MainActor
   func testEmptyPastMonthCanAddAShiftAfterUsingEventMode() {
     let app = makeApp(scenario: "app-store-screenshots")

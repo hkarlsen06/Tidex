@@ -1,14 +1,6 @@
 import Combine
 import SwiftUI
 
-enum DashboardPayrollLabel {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
-  nonisolated static func nextPayout(gross: Double) -> String {  // swiftlint:disable:this explicit_acl
-    gross > 0
-      ? String(localized: .dashboardNextPayout)
-      : String(localized: .onboardingSettingsPaydayTitle)
-  }
-}
-
 private struct EventSheetSelection: Identifiable {
   let event: EventRow
   let startInEditMode: Bool
@@ -905,9 +897,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       fallback: data,
       defaultTitle: String(localized: .dashboardPayroll)
     )
-    let nextPayoutLabel = DashboardPayrollLabel.nextPayout(  // swiftlint:disable:this explicit_type_interface
-      gross: preliminaryPayrollVariants.first?.gross ?? 0
-    )
+    let nextPayoutLabel = String(localized: .dashboardNextPayout)  // swiftlint:disable:this explicit_type_interface
     let selectedPayoutDate: Date = preliminaryPayrollVariants.first?.payoutDate ?? data.payrollDate
     let payrollDayStart: Date = calendar.startOfDay(for: selectedPayoutDate)
     let payrollDayEnd =  // swiftlint:disable:this explicit_type_interface
@@ -1047,6 +1037,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           plannedCount: data.currentMonthPlannedCount,
           percentageChange: data.percentageChangeVsPrevious,
           taxEnabled: data.currentMonthTaxEnabled,
+          monthName: data.currentMonthName,
+          showsCurrencyBreakdownCue: data.currentMonthCurrencyAggregate.hasMixedCurrency,
           isElevated: false
         )
         .contentShape(Rectangle())
@@ -1056,7 +1048,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             showMixedCurrencyBreakdownPopover.toggle()
           }
         }
-        .accessibilityAddTraits(data.currentMonthCurrencyAggregate.hasMixedCurrency ? .isButton : [])
+        .accessibilityAddTraits(
+          data.currentMonthCurrencyAggregate.hasMixedCurrency ? .isButton : []
+        )
         .accessibilityHint(
           data.currentMonthCurrencyAggregate.hasMixedCurrency
             ? Text(.dashboardTotalMixedCurrencyHint) : Text(verbatim: "")
@@ -1252,6 +1246,18 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   ) -> some View {
     let showsWorkplaceVariants = variantCount > 1  // swiftlint:disable:this explicit_type_interface
     let showsGroupedWorkplaces = !selectedVariant.badges.isEmpty  // swiftlint:disable:this explicit_type_interface
+    // The received override only changes anything on payday, so the visible toggle is payday-only.
+    let showsReceivedToggle =  // swiftlint:disable:this explicit_type_interface
+      canManuallySetPayrollStatus && !isLoading
+      && Calendar.current.isDateInToday(selectedVariant.payoutDate)
+    let toggleReceived = {  // swiftlint:disable:this explicit_type_interface
+      impactHaptic.impactOccurred()
+      if payrollMarkedReceived {
+        viewModel.clearPayrollReceivedOverrideForDisplayedMonth(userId: payrollOverrideUserId)
+      } else {
+        viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
+      }
+    }
 
     let card = PayrollCard(  // swiftlint:disable:this explicit_type_interface
       payrollDate: selectedVariant.payoutDate,
@@ -1267,7 +1273,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       progress: payrollProgress,
       isLoading: isLoading,
       showsLoadingShimmer: showsLoadingShimmer,
-      isElevated: false
+      isElevated: false,
+      isMarkedReceived: payrollMarkedReceived,
+      onToggleReceived: showsReceivedToggle ? toggleReceived : nil
     )
 
     card
@@ -1281,6 +1289,16 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .accessibilityElement(children: .combine)
       .accessibilityAddTraits(.isButton)
       .accessibilityHint(Text(.dashboardPayrollDetailsTitle))
+      .accessibilityActions {
+        if showsReceivedToggle {
+          Button(
+            payrollMarkedReceived
+              ? String(localized: .dashboardPayrollStatusNotReceived)
+              : String(localized: .dashboardPayrollMarkReceived),
+            action: toggleReceived
+          )
+        }
+      }
       .contextMenu {
         if canManuallySetPayrollStatus, !isLoading {
           Button {
