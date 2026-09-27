@@ -695,9 +695,11 @@ struct FriendsWidgetView: View {
     let visible = footerFriends.prefix(Self.maxFooterAvatars)
     let overflow = footerFriends.count - visible.count
     return HStack(spacing: -8) {
-      ForEach(visible) { friend in
+      // Leftmost is the next friend in order, so it draws on top. The overflow badge keeps zIndex 0, under all of them.
+      ForEach(Array(visible.enumerated()), id: \.element.id) { index, friend in
         avatar(friend, size: 28, fontSize: 11)
           .overlay(Circle().stroke(WidgetPalette.background, lineWidth: 2))
+          .zIndex(Double(visible.count - index))
       }
       if overflow > 0 {
         Text("+\(overflow)")
