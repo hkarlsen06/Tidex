@@ -15,6 +15,7 @@ struct AddFriendForm: View {
   let canAdd: Bool
   let isOfflineUnavailable: Bool
   let capacityDisplay: String
+  let capacityAccessibilityLabel: String
   let shouldShowCapacity: Bool
   let onAdd: () -> Void
   let onCancel: () -> Void
@@ -45,8 +46,11 @@ struct AddFriendForm: View {
                   Image(systemName: "exclamationmark.circle.fill")
                     .font(.tidexCaptionRegular)
                     .foregroundColor(.tidexWarning)
+                    .accessibilityHidden(true)
                 }
               }
+              .accessibilityElement(children: .ignore)
+              .accessibilityLabel(capacityAccessibilityLabel)
             }
 
             if canAdd, !isOfflineUnavailable {
@@ -121,6 +125,16 @@ struct AddFriendForm: View {
           }
           .padding(.horizontal, Spacing.xxs)
           .disabled(isLoading || isOfflineUnavailable)
+
+          // Adding someone starts sharing at once; there is no request for them to accept.
+          Text(
+            showEarnings
+              ? .sharingAddFriendSharesRightAwayWithEarnings : .sharingAddFriendSharesRightAway
+          )
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .fixedSize(horizontal: false, vertical: true)
 
           // Action buttons
           HStack(spacing: Spacing.sm) {
@@ -206,7 +220,8 @@ struct TidexTextFieldStyle: TextFieldStyle {
       isLoading: false,
       canAdd: true,
       isOfflineUnavailable: false,
-      capacityDisplay: "2/5 delinger",
+      capacityDisplay: "Sharing with 2 of 5",
+      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 2 of 5.",
       shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
@@ -221,7 +236,8 @@ struct TidexTextFieldStyle: TextFieldStyle {
       isLoading: false,
       canAdd: true,
       isOfflineUnavailable: false,
-      capacityDisplay: "2/5 delinger",
+      capacityDisplay: "Sharing with 2 of 5",
+      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 2 of 5.",
       shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
@@ -236,7 +252,8 @@ struct TidexTextFieldStyle: TextFieldStyle {
       isLoading: false,
       canAdd: true,
       isOfflineUnavailable: false,
-      capacityDisplay: "2/5 delinger",
+      capacityDisplay: "Sharing with 2 of 5",
+      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 2 of 5.",
       shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
@@ -251,7 +268,8 @@ struct TidexTextFieldStyle: TextFieldStyle {
       isLoading: false,
       canAdd: false,
       isOfflineUnavailable: false,
-      capacityDisplay: "5/5 delinger",
+      capacityDisplay: "Sharing with 5 of 5",
+      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 5 of 5.",
       shouldShowCapacity: true,
       onAdd: {},
       onCancel: {}

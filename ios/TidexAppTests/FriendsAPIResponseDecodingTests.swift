@@ -65,4 +65,20 @@ final class FriendsAPIResponseDecodingTests: XCTestCase {
     XCTAssertEqual(response.friends.count, 0)
     XCTAssertNil(response.blockedFriends)
   }
+
+  @MainActor
+  func testCapacityCounterNamesWhatItCountsAndHasALabel() {
+    let viewModel = ManageSharingViewModel(
+      initialSnapshot: FriendsManagementSnapshot(
+        friends: [], blockedFriends: [],
+        capacity: ShareCapacity(canAdd: true, currentCount: 4, limit: 5)))
+
+    XCTAssertEqual(viewModel.capacityDisplay, String(localized: .sharingCapacityDisplay(4, 5)))
+    XCTAssertNotEqual(viewModel.capacityDisplay, "4/5")
+    XCTAssertEqual(
+      viewModel.capacityAccessibilityLabel,
+      String(localized: .sharingCapacityAccessibilityLabel(4, 5)))
+    XCTAssertNotEqual(viewModel.capacityAccessibilityLabel, viewModel.capacityDisplay)
+    XCTAssertTrue(viewModel.shouldShowCapacity)
+  }
 }
