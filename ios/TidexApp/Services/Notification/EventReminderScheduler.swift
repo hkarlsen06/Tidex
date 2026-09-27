@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import UserNotifications
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "EventReminderScheduler")
 
@@ -243,11 +243,9 @@ final class EventReminderScheduler {
     ]
     content.threadIdentifier = "event-reminders"
 
-    if #available(iOS 15.0, *) {
-      content.targetContentIdentifier = "event-reminder:\(event.id)"
-      content.interruptionLevel = .active
-      content.relevanceScore = schedule.minutesBefore <= 60 ? 0.85 : 0.7
-    }
+    content.targetContentIdentifier = "event-reminder:\(event.id)"
+    content.interruptionLevel = .active
+    content.relevanceScore = schedule.minutesBefore <= 60 ? 0.85 : 0.7
 
     content.categoryIdentifier = "EVENT_REMINDER"
     return content

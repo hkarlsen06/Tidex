@@ -4,7 +4,7 @@ iOS-specific development guidance for the Tidex native app.
 
 ## iOS Development Rules
 
-**Current iOS version: iOS 26** (released September 2025). Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
+**Deployment target: iOS 27.0** for every target, so don't add `#available` checks or fallbacks for iOS 27 or earlier. Apple changed version numbering at WWDC 2025 to align all operating systems. iOS 26 introduced the "Liquid Glass" design language.
 
 Run commands from the repository root unless explicitly stated otherwise.
 

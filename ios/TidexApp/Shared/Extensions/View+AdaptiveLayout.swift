@@ -222,13 +222,7 @@ class OrientationTracker: ObservableObject {
   private func updateOrientation() {
     // Use window scene for more reliable orientation detection
     if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-      if #available(iOS 26.0, *) {
-        let orientation = windowScene.effectiveGeometry.interfaceOrientation
-        isLandscape = orientation.isLandscape
-      } else {
-        let orientation = windowScene.interfaceOrientation
-        isLandscape = orientation.isLandscape
-      }
+      isLandscape = windowScene.effectiveGeometry.interfaceOrientation.isLandscape
     } else {
       // Fallback to device orientation
       let orientation = UIDevice.current.orientation

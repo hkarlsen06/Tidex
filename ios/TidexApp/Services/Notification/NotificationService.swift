@@ -199,14 +199,10 @@ final class NotificationService {
   func setApplicationBadgeCount(_ count: Int) {
     let sanitizedCount = max(0, count)
 
-    if #available(iOS 17.0, *) {
-      UNUserNotificationCenter.current().setBadgeCount(sanitizedCount) { error in
-        if let error {
-          logger.error("Failed to update app badge count: \(error.localizedDescription)")
-        }
+    UNUserNotificationCenter.current().setBadgeCount(sanitizedCount) { error in
+      if let error {
+        logger.error("Failed to update app badge count: \(error.localizedDescription)")
       }
-    } else {
-      UIApplication.shared.applicationIconBadgeNumber = sanitizedCount
     }
   }
 
@@ -296,7 +292,8 @@ final class NotificationService {
     do {
       try await UNUserNotificationCenter.current().add(request)
     } catch {
-      logger.error("Failed to schedule quick reply failure notification: \(error.localizedDescription)")
+      logger.error(
+        "Failed to schedule quick reply failure notification: \(error.localizedDescription)")
     }
   }
 
