@@ -11,6 +11,29 @@ import SwiftUI
 struct CalendarHeaderTotals: Equatable {
   let primary: Double?
   let secondary: Double?
+  /// Whether `primary` is after estimated tax. Labels the added amount in the delta style.
+  var primaryIsAfterTax: Bool = false
+}
+
+/// "+1,600 kr after tax": an added amount written as a signed number with its tax basis,
+/// so it doesn't look like an add button.
+struct CalendarHeaderDeltaLabel<Amount: View>: View {
+  let isAfterTax: Bool
+  @ViewBuilder let amount: Amount
+
+  var body: some View {
+    HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
+      HStack(alignment: .firstTextBaseline, spacing: 0) {
+        Text(verbatim: "+")
+        amount
+      }
+      .foregroundColor(.tidexSuccess)
+
+      Text(isAfterTax ? .dashboardAfterTax : .dashboardBeforeTax)
+        .foregroundColor(.tidexTextMuted)
+    }
+    .accessibilityElement(children: .combine)
+  }
 }
 
 enum CalendarHeaderSecondaryStyle {
@@ -96,7 +119,7 @@ struct CalendarHeaderRow: View {
     if let secondary = totals.secondary {
       VStack(alignment: .trailing, spacing: Spacing.micro) {
         primaryAmountText(totals.primary)
-        secondaryAmountText(secondary)
+        secondaryAmountText(secondary, isAfterTax: totals.primaryIsAfterTax)
       }
     } else {
       primaryAmountText(totals.primary)
@@ -128,7 +151,7 @@ struct CalendarHeaderRow: View {
   }
 
   @ViewBuilder
-  private func secondaryAmountText(_ amount: Double) -> some View {
+  private func secondaryAmountText(_ amount: Double, isAfterTax: Bool) -> some View {
     let amountText = animatedAmount(
       amount,
       animateFrom: lastDisplayedSecondary > 0 ? lastDisplayedSecondary : nil
@@ -145,16 +168,20 @@ struct CalendarHeaderRow: View {
 
     switch secondaryStyle {
     case .detail:
-      amountText
-        .foregroundColor(.tidexTextMuted)
+      // The secondary amount is gross pay. The label keeps it from reading as "earned X of Y".
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.xxxs) {
+        amountText
+        Text(.dashboardBeforeTax)
+      }
+      .font(.tidexFootnote)
+      .foregroundColor(.tidexTextMuted)
+      .accessibilityElement(children: .combine)
 
     case .delta:
-      HStack(alignment: .center, spacing: Spacing.xxxs) {
-        Image(systemName: "plus")
-          .font(.caption2.weight(.bold))
+      CalendarHeaderDeltaLabel(isAfterTax: isAfterTax) {
         amountText
       }
-      .foregroundColor(.tidexBlue)
+      .font(.tidexFootnote)
       .transition(.offset(y: -4).combined(with: .opacity))
     }
   }

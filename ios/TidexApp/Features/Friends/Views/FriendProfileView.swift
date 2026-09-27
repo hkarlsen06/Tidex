@@ -9,6 +9,8 @@ struct FriendProfileView: View {
   var onFeedPlacementChange: (() -> Void)?
   var onFriendRemoved: (() -> Void)?
   var onMessageTapped: (() -> Void)?
+  /// Skips the network load. Used by offline design review fixtures.
+  var initialSnapshot: FriendsManagementSnapshot?
 
   @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel = ManageSharingViewModel()
@@ -65,7 +67,11 @@ struct FriendProfileView: View {
       Haptics.play(.light)
     }
     .task {
-      await viewModel.loadFriends()
+      if let initialSnapshot {
+        viewModel.applyManagementSnapshot(initialSnapshot)
+      } else {
+        await viewModel.loadFriends()
+      }
       await refreshFeedPlacement()
     }
     .sheet(isPresented: $showManageSheet) {
@@ -219,8 +225,8 @@ struct FriendProfileView: View {
 
   @ViewBuilder
   private func actionsSection(friend: Friend, sectionType: FriendSectionType) -> some View {
-    Section {
-      if let onMessageTapped {
+    if let onMessageTapped {
+      Section {
         Button {
           onMessageTapped()
         } label: {
@@ -230,8 +236,11 @@ struct FriendProfileView: View {
           )
         }
       }
+    }
 
-      if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
+    if sectionType == .mutual || sectionType == .incoming || sectionType == .outgoing {
+      // A separate section so the footer can say what each option does and doesn't do.
+      Section {
         Button {
           Task { await toggleFeedPlacement() }
         } label: {
@@ -259,8 +268,12 @@ struct FriendProfileView: View {
             systemImage: isHidden ? "eye" : "eye.slash"
           )
         }
+      } footer: {
+        Text(.sharingProfileOrderAndVisibilityFooter(friend.firstNameOnly))
       }
+    }
 
+    Section {
       ForEach(FriendSharingRemovalAction.availableActions(for: sectionType), id: \.self) {
         removalAction in
         Button(role: .destructive) {

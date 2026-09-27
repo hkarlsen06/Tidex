@@ -451,7 +451,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
     return CalendarHeaderTotals(
       primary: primaryAmount,
-      secondary: delta > 0 ? delta : nil
+      secondary: delta > 0 ? delta : nil,
+      primaryIsAfterTax: totals.hasTaxEnabled
     )
   }
 
@@ -555,7 +556,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       )
       // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
       .accessibilityElement(children: .ignore)
-      .accessibilityLabel(dayAccessibilityLabel(dateISO: dayInfo.dateISO, shiftCount: shiftsOnDay.count))
+      .accessibilityLabel(
+        dayAccessibilityLabel(dateISO: dayInfo.dateISO, shiftCount: shiftsOnDay.count)
+      )
       .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
       .accessibilityHidden(dayInfo.dateISO == nil)
     }

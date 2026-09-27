@@ -84,9 +84,13 @@ final class ManageSharingViewModel: ObservableObject {
     capacity.canAdd
   }
 
-  /// Capacity display string (e.g., "2/5 delinger")
+  /// Capacity display string (e.g., "Sharing with 4 of 5")
   var capacityDisplay: String {
-    "\(capacity.currentCount)/\(capacity.limit)"
+    String(localized: .sharingCapacityDisplay(capacity.currentCount, capacity.limit))
+  }
+
+  var capacityAccessibilityLabel: String {
+    String(localized: .sharingCapacityAccessibilityLabel(capacity.currentCount, capacity.limit))
   }
 
   /// Avoid showing quota chrome until it is useful.
@@ -176,7 +180,7 @@ final class ManageSharingViewModel: ObservableObject {
     await loadFriends()
   }
 
-  private func applyManagementSnapshot(_ snapshot: FriendsManagementSnapshot) {
+  func applyManagementSnapshot(_ snapshot: FriendsManagementSnapshot) {
     friends = snapshot.friends
     blockedFriends = snapshot.blockedFriends
     capacity = snapshot.capacity

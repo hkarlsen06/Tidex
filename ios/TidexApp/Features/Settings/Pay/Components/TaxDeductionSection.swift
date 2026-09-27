@@ -38,6 +38,12 @@ struct TaxDeductionSection: View {
       if enabled {
         percentageInput
           .transition(.opacity.combined(with: .move(edge: .top)))
+
+        Text(.settingsPayEditorTaxFlatRateHint)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+          .transition(.opacity)
       }
 
       Text(.settingsPayReviewDateExplanation)

@@ -434,30 +434,6 @@ private struct StatsOverviewLedger: View {
     stats.tax.enabled && stats.currentMonth.totalEarnings != stats.currentMonth.totalEarningsNet
   }
 
-  private var hasChange: Bool {
-    stats.percentageChange != nil && stats.percentageChange != 0
-  }
-
-  private var isPositiveChange: Bool {
-    (stats.percentageChange ?? 0) >= 0
-  }
-
-  private var changeText: String {
-    let change = stats.percentageChange ?? 0  // swiftlint:disable:this explicit_type_interface
-    let prefix: String
-
-    if change > 0 {
-      prefix = "+"
-    } else if change < 0 {
-      prefix = "-"
-    } else {
-      prefix = ""
-    }
-
-    return
-      "\(prefix)\(Int(abs(change)))% \(String(localized: .statsFromPreviousMonth))"
-  }
-
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.mlg) {
       earningsHeader
@@ -504,14 +480,14 @@ private struct StatsOverviewLedger: View {
 
         if showsCurrencyBreakdown {
           Button(action: onEarningsTap) {
-            Image(systemName: "ellipsis.circle")
+            Image(systemName: "info.circle")
               .font(.tidexTitle2)
               .foregroundColor(.tidexTextMuted)
               .frame(width: 44, height: 44)  // swiftlint:disable:this no_magic_numbers
               .contentShape(Rectangle())
           }
           .buttonStyle(.plain)
-          .accessibilityLabel(Text(.statsMonthlyEarnings))
+          .accessibilityLabel(Text(.statsCurrencyBreakdownShow))
         }
       }
 
@@ -523,24 +499,8 @@ private struct StatsOverviewLedger: View {
           )
         }
 
-        if hasChange {
-          HStack(spacing: Spacing.xs) {
-            Image(  // swiftlint:disable:this accessibility_label_for_image
-              systemName: isPositiveChange
-                ? "chart.line.uptrend.xyaxis" : "chart.line.downtrend.xyaxis"
-            )
-            .font(.tidexCaptionStrong)
-
-            Text(changeText)
-              .font(.tidexFootnoteMedium)
-          }
-          .foregroundColor(isPositiveChange ? .tidexSuccess : .tidexError)
-          .padding(.horizontal, Spacing.xs)
-          .padding(.vertical, Spacing.xxxs)
-          .background(
-            Capsule(style: .continuous)
-              .fill((isPositiveChange ? Color.tidexSuccess : Color.tidexError).opacity(0.12))  // swiftlint:disable:this line_length no_magic_numbers
-          )
+        if let percentageChange = stats.percentageChange {
+          MonthlyEarningsChangeBadge(percentageChange: percentageChange)
         }
       }
     }
