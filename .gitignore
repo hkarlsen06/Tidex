@@ -63,3 +63,7 @@ next/backups/
 
 # certificates
 certificates
+
+# Python bytecode
+__pycache__/
+*.pyc
