@@ -165,7 +165,7 @@ struct WageyView: View {
         set: { if !$0 { viewModel.dismissError() } }
       )
     ) {
-      Button("OK", role: .cancel) {
+      Button(String(localized: .commonOk), role: .cancel) {
         viewModel.dismissError()
       }
     } message: {
@@ -430,10 +430,11 @@ struct WageyView: View {
       Haptics.play(.light)
       showHistory = true
     } label: {
-      Image(systemName: "clock.arrow.circlepath")  // swiftlint:disable:this accessibility_label_for_image
+      Image(systemName: "clock.arrow.circlepath")
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
     }
+    .accessibilityLabel(Text(.wageyChatConversationHistory))
   }
 
   private var newChatButton: some View {
@@ -441,11 +442,12 @@ struct WageyView: View {
       Haptics.play(.light)
       viewModel.startNewConversation()
     } label: {
-      Image(systemName: "square.and.pencil")  // swiftlint:disable:this accessibility_label_for_image
+      Image(systemName: "square.and.pencil")
         .font(.tidexBodyMedium)
         .foregroundColor(.tidexTextSecondary)
         .offset(y: -1)
     }
+    .accessibilityLabel(Text(.wageyNewConversation))
     .disabled(viewModel.messages.isEmpty && !viewModel.isStreaming)
     .opacity(viewModel.messages.isEmpty && !viewModel.isStreaming ? 0.4 : 1)  // swiftlint:disable:this no_magic_numbers
   }

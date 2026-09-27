@@ -426,7 +426,7 @@ struct ChatInputField: View {  // swiftlint:disable:this explicit_acl explicit_t
           .frame(minWidth: 44, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
           .contentShape(Rectangle())
       }
-      .accessibilityLabel(Text(.screenshotShareDismiss))
+      .accessibilityLabel(Text(.commonDismiss))
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.xs)
