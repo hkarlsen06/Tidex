@@ -28,6 +28,38 @@ enum MonthlyEarningsChange {  // swiftlint:disable:this explicit_acl explicit_to
     return (current - previous) / previous * 100  // swiftlint:disable:this no_magic_numbers
   }
 
+  /// Picks the primary currency the way Stats does, after dropping conflicting shifts, so a
+  /// conflict can't make Home compare in a different currency than Stats.
+  static func percent(  // swiftlint:disable:this explicit_acl function_parameter_count
+    monthShifts: [ShiftWithComputations],
+    previousMonthShifts: [ShiftWithComputations],
+    jobs: [Job],
+    fallbackCurrency: String,
+    halfTaxMonth: Int?,
+    currentMonth: Int,
+    previousMonth: Int,
+    now: Date
+  ) -> Double? {
+    let current = ConflictExclusion.partition(shifts: monthShifts).includedShifts  // swiftlint:disable:this explicit_type_interface line_length
+    let previous = ConflictExclusion.partition(shifts: previousMonthShifts).includedShifts  // swiftlint:disable:this explicit_type_interface line_length
+    let currency = JobCurrencyAggregateResolver.resolve(  // swiftlint:disable:this explicit_type_interface
+      shifts: current,
+      jobs: jobs,
+      fallbackCurrency: fallbackCurrency,
+      referenceDate: now
+    ).primary.currency
+    return percent(
+      currentShifts: JobCurrencyAggregateResolver.shifts(
+        in: current, currency: currency, jobs: jobs, fallbackCurrency: fallbackCurrency),
+      previousShifts: JobCurrencyAggregateResolver.shifts(
+        in: previous, currency: currency, jobs: jobs, fallbackCurrency: fallbackCurrency),
+      halfTaxMonth: halfTaxMonth,
+      currentMonth: currentMonth,
+      previousMonth: previousMonth,
+      now: now
+    )
+  }
+
   /// Whole-percent text with an explicit sign, for example "+17%" or "-8%".
   static func percentText(_ change: Double, locale: Locale = .appLocale) -> String {  // swiftlint:disable:this explicit_acl line_length
     let whole = change.rounded()  // swiftlint:disable:this explicit_type_interface

@@ -28,6 +28,41 @@ final class MonthlyEarningsChangeTests: XCTestCase {
     XCTAssertEqual(MonthlyEarningsChange.percentText(change, locale: english), "-7%")
   }
 
+  func testConflictingShiftDoesNotPickTheComparisonCurrency() throws {
+    let jobs = [
+      TestFixtures.job(id: "job-kr", isDefault: true, currency: "kr"),
+      TestFixtures.job(id: "job-usd", isDefault: false, currency: "$"),
+    ]
+    // The default job's only shift overlaps a cheaper one, so conflict exclusion drops it.
+    let current = [
+      TestFixtures.computedShift(
+        id: "kr", shiftDate: "2026-09-01", startTime: "08:00", endTime: "16:00",
+        jobId: "job-kr", gross: 2_000),
+      TestFixtures.computedShift(
+        id: "usd", shiftDate: "2026-09-01", startTime: "09:00", endTime: "15:00",
+        jobId: "job-usd", gross: 500),
+    ]
+    let previous = [
+      TestFixtures.computedShift(
+        id: "usd-prev", shiftDate: "2026-08-01", startTime: "08:00", endTime: "16:00",
+        jobId: "job-usd", gross: 1_000)
+    ]
+
+    let change = try XCTUnwrap(
+      MonthlyEarningsChange.percent(
+        monthShifts: current,
+        previousMonthShifts: previous,
+        jobs: jobs,
+        fallbackCurrency: "kr",
+        halfTaxMonth: nil,
+        currentMonth: 9,
+        previousMonth: 8,
+        now: Date()
+      ))
+
+    XCTAssertEqual(change, -50, accuracy: 0.001)
+  }
+
   func testPercentTextRoundsToWholePercentWithoutNegativeZero() {
     XCTAssertEqual(MonthlyEarningsChange.percentText(7, locale: english), "+7%")
     XCTAssertEqual(MonthlyEarningsChange.percentText(0.3, locale: english), "0%")

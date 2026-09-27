@@ -3307,13 +3307,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
     // Same computation as Stats: gross shift pay in the primary currency, without payroll adjustments.
     let percentChange = MonthlyEarningsChange.percent(  // swiftlint:disable:this explicit_type_interface
-      currentShifts: primaryMonthShifts,
-      previousShifts: JobCurrencyAggregateResolver.shifts(
-        matching: currentMonthAggregate.primary,
-        in: previousMonthShifts,
-        jobs: displayJobs,
-        fallbackCurrency: fallbackCurrency
-      ),
+      monthShifts: displayedMonthShifts,
+      previousMonthShifts: previousMonthShifts,
+      jobs: displayJobs,
+      fallbackCurrency: fallbackCurrency,
       halfTaxMonth: halfTaxMonth,
       currentMonth: displayYM.month,
       previousMonth: previousYM.month,
@@ -3455,13 +3452,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
     // Same computation as Stats: gross shift pay in the primary currency, without payroll adjustments.
     let percentChange = MonthlyEarningsChange.percent(  // swiftlint:disable:this explicit_type_interface
-      currentShifts: primaryMonthShifts,
-      previousShifts: JobCurrencyAggregateResolver.shifts(
-        matching: currentMonthAggregate.primary,
-        in: previousMonthShifts,
-        jobs: jobs,
-        fallbackCurrency: currency
-      ),
+      monthShifts: displayedMonthShifts,
+      previousMonthShifts: previousMonthShifts,
+      jobs: jobs,
+      fallbackCurrency: currency,
       halfTaxMonth: halfTaxMonth,
       currentMonth: displayYM.month,
       previousMonth: previousYM.month,
