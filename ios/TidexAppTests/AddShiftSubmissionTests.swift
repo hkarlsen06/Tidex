@@ -125,6 +125,35 @@ final class AddShiftSubmissionTests: XCTestCase {
     XCTAssertEqual(model.selectedDates, ["2026-09-10"])
   }
 
+  func testOvernightEventExplainsWhyItCannotBeSaved() throws {
+    let (model, _) = try makeModel()
+    defer { model.clearDraft() }
+    model.mode = .events
+    model.eventNote = "Dentist"
+    model.startTime = try time(hour: 22)
+    model.endTime = try time(hour: 2)
+
+    XCTAssertTrue(model.eventTimesCrossMidnight)
+    XCTAssertFalse(model.canSubmitEvent)
+    XCTAssertEqual(model.submitBlockers, [.eventCrossesMidnight])
+
+    model.endTime = try time(hour: 23)
+    XCTAssertFalse(model.eventTimesCrossMidnight)
+    XCTAssertTrue(model.submitBlockers.isEmpty)
+
+    // Ending at midnight is the end of the same day, not an overnight event.
+    model.endTime = try time(hour: 0)
+    XCTAssertFalse(model.eventTimesCrossMidnight)
+
+    model.endTime = nil
+    XCTAssertFalse(model.eventTimesCrossMidnight)
+    XCTAssertEqual(model.submitBlockers, [.missingTimes])
+  }
+
+  private func time(hour: Int) throws -> Date {
+    try XCTUnwrap(Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: .now))
+  }
+
   private func makeModel() throws -> (AddShiftViewModel, UserDefaults) {
     let defaults = try XCTUnwrap(
       UserDefaults(suiteName: "AddShiftSubmissionTests.\(UUID().uuidString)"))

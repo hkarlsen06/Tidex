@@ -23573,6 +23573,288 @@
         }
       }
     },
+    "addShift.submitRequirements.eventSameDay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "يجب أن ينتهي الحدث في وقت لاحق من اليوم نفسه. لا يمكن أن يمتد إلى ما بعد منتصف الليل."
+          }
+        },
+        "bg" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Събитието трябва да приключва по-късно същия ден. То не може да продължава след полунощ."
+          }
+        },
+        "bn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "একটি ইভেন্টকে একই দিনে পরে শেষ হতে হবে। এটি মধ্যরাত পেরিয়ে চলতে পারবে না।"
+          }
+        },
+        "ca" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un esdeveniment ha d'acabar més tard el mateix dia. No pot passar de mitjanit."
+          }
+        },
+        "cs" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Událost musí skončit později tentýž den. Nemůže pokračovat přes půlnoc."
+          }
+        },
+        "da" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En begivenhed skal slutte senere samme dag. Den kan ikke gå over midnat."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Ereignis muss noch am selben Tag enden. Es darf nicht über Mitternacht hinausgehen."
+          }
+        },
+        "el" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ένα συμβάν πρέπει να ολοκληρώνεται αργότερα την ίδια ημέρα. Δεν μπορεί να διαρκεί μετά τα μεσάνυχτα."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "An event must end later the same day. It can't run past midnight."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un evento debe terminar más tarde el mismo día. No puede pasar de medianoche."
+          }
+        },
+        "et" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sündmus peab lõppema hiljem samal päeval. See ei tohi ulatuda üle südaöö."
+          }
+        },
+        "fa" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "رویداد باید همان روز، دیرتر به پایان برسد. نمی‌تواند از نیمه‌شب عبور کند."
+          }
+        },
+        "fi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tapahtuman on päätyttävä myöhemmin samana päivänä. Se ei voi jatkua yli keskiyön."
+          }
+        },
+        "fil" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dapat magtapos ang event sa parehong araw, pagkatapos ng oras ng pagsisimula. Hindi ito maaaring lumampas ng hatinggabi."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un événement doit se terminer plus tard le même jour. Il ne peut pas dépasser minuit."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "אירוע חייב להסתיים מאוחר יותר באותו יום. הוא לא יכול להימשך מעבר לחצות."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "किसी इवेंट का समापन उसी दिन बाद में होना चाहिए। यह आधी रात के बाद तक नहीं चल सकता।"
+          }
+        },
+        "hr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Događaj mora završiti kasnije istog dana. Ne može trajati nakon ponoći."
+          }
+        },
+        "hu" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Az eseménynek ugyanazon a napon később kell véget érnie. Nem tarthat éjfélen túl."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Acara harus berakhir lebih lambat pada hari yang sama. Acara tidak dapat melewati tengah malam."
+          }
+        },
+        "is" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Viðburður verður að ljúka síðar sama dag. Hann má ekki ná yfir miðnætti."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un evento deve terminare più tardi lo stesso giorno. Non può protrarsi oltre la mezzanotte."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "イベントは同じ日の後の時間に終了する必要があります。深夜をまたぐことはできません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이벤트는 같은 날 더 늦은 시간에 종료되어야 합니다. 자정을 넘길 수 없습니다."
+          }
+        },
+        "lt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Įvykis turi baigtis vėliau tą pačią dieną. Jis negali tęstis po vidurnakčio."
+          }
+        },
+        "lv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pasākumam jābeidzas vēlāk tajā pašā dienā. Tas nevar turpināties pēc pusnakts."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En hendelse må slutte senere samme dag. Den kan ikke gå over midnatt."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Een gebeurtenis moet later op dezelfde dag eindigen. Deze kan niet over middernacht heen lopen."
+          }
+        },
+        "nn" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ei hending må slutte seinare same dag. Ho kan ikkje gå over midnatt."
+          }
+        },
+        "pl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wydarzenie musi zakończyć się później tego samego dnia. Nie może trwać po północy."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um evento deve terminar mais tarde no mesmo dia. Ele não pode ultrapassar a meia-noite."
+          }
+        },
+        "ro" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un eveniment trebuie să se încheie mai târziu în aceeași zi. Nu poate trece de miezul nopții."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Событие должно заканчиваться позже в тот же день. Оно не может переходить через полночь."
+          }
+        },
+        "sk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Udalosť sa musí skončiť neskôr v ten istý deň. Nemôže pokračovať cez polnoc."
+          }
+        },
+        "sl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En hendelse må slutte senere samme dag. Den kan ikke gå over midnatt."
+          }
+        },
+        "sr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Događaj mora da se završi kasnije istog dana. Ne može trajati posle ponoći."
+          }
+        },
+        "sv" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En händelse måste sluta senare samma dag. Den kan inte gå över midnatt."
+          }
+        },
+        "sw" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tukio lazima limalizike baadaye siku hiyo hiyo. Haliwezi kuvuka hadi siku inayofuata."
+          }
+        },
+        "ta" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ஒரு நிகழ்வு அதே நாளில் பின்னர் முடிவடைய வேண்டும். அது நள்ளிரவைத் தாண்டிச் செல்ல முடியாது."
+          }
+        },
+        "th" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "กิจกรรมต้องสิ้นสุดในวันเดียวกันหลังเวลาเริ่มต้น ไม่สามารถข้ามเที่ยงคืนได้"
+          }
+        },
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bir etkinlik aynı gün içinde daha geç sona ermelidir. Gece yarısını geçemez."
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подія має завершуватися пізніше того самого дня. Вона не може тривати після опівночі."
+          }
+        },
+        "ur" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ایونٹ اسی دن بعد میں ختم ہونا چاہیے۔ یہ آدھی رات سے آگے نہیں جا سکتا۔"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sự kiện phải kết thúc muộn hơn trong cùng ngày. Không thể kéo dài qua nửa đêm."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "事件必须在当天较晚时间结束，不能跨越午夜。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "事件必須在同一天較晚時間結束，不能跨越午夜。"
+          }
+        }
+      },
+      "comment" : "Shown under an event's time fields, and in the list of missing fields, when the end time is not after the start time. Timed events must start and end on the same day."
+    },
     "addShift.submitRequirements.generic" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -369943,280 +370225,281 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "سيتم استبعاد هذا التاريخ من النوبة المتكررة. لن تظهر النوبة بعد الآن."
+            "value" : "تتم إزالة هذا التاريخ فقط. وتبقى بقية الوردية المتكررة كما هي."
           }
         },
         "bg" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Тази дата ще бъде изключена от повтарящата се смяна. Смяната вече няма да се показва."
+            "value" : "Премахва се само тази дата. Останалата част от повтарящата се смяна остава без промяна."
           }
         },
         "bn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "এই তারিখটি পুনরাবৃত্ত শিফট থেকে বাদ দেওয়া হবে। শিফটটি আর প্রদর্শিত হবে না।"
+            "value" : "শুধু এই তারিখটি সরানো হবে। পুনরাবৃত্ত শিফটের বাকি অংশ আগের মতোই থাকবে।"
           }
         },
         "ca" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aquesta data s'exclourà de la vàcua recurrent. La vàcua ja no apareixerà."
+            "value" : "Només s'elimina aquesta data. La resta del torn recurrent es manté igual."
           }
         },
         "cs" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tento datum bude vyloučen z pravidelné směny. Směna se již nebude zobrazovat."
+            "value" : "Odstraní se pouze toto datum. Zbytek opakující se směny zůstane beze změny."
           }
         },
         "da" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Denne datoen blir ekskludert fra den faste vakten. Vakten vil ikke lenger vises."
+            "value" : "Kun denne dato fjernes. Resten af den gentagne vagt forbliver, som den er."
           }
         },
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieses Datum wird aus der wiederkehrenden Schicht ausgeschlossen. Die Schicht wird nicht mehr angezeigt."
+            "value" : "Nur dieses Datum wird entfernt. Der Rest der wiederkehrenden Schicht bleibt unverändert."
           }
         },
         "el" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Αυτή η ημερομηνία θα εξαιρεθεί από την επαναλαμβανόμενη βάρδια. Η βάρδια δεν θα εμφανίζεται πλέον."
+            "value" : "Αφαιρείται μόνο αυτή η ημερομηνία. Η υπόλοιπη επαναλαμβανόμενη βάρδια παραμένει ως έχει."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "This date will be excluded from the recurring shift. The shift will no longer appear."
+            "value" : "Only this date is removed. The rest of the recurring shift stays as it is."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esta fecha será excluida de la vakt recurrente. La vakt ya no aparecerá."
+            "value" : "Solo se elimina esta fecha. El resto del turno recurrente permanece igual."
           }
         },
         "et" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "See kuupäev jäetakse välja korduva vahetus'est. Vahetus ei kuvata enam."
+            "value" : "Eemaldatakse ainult see kuupäev. Korduv vahetus jääb muus osas samaks."
           }
         },
         "fa" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "این تاریخ از شیفت تکراری حذف خواهد شد. شیفت دیگر نمایش داده نخواهد شد."
+            "value" : "فقط این تاریخ حذف می‌شود. بقیه شیفت تکرارشونده بدون تغییر باقی می‌ماند."
           }
         },
         "fi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tämä päivämäärä jätetään pois jaksoittaisesta vuorosta. Vuoro ei näy enää."
+            "value" : "Vain tämä päivämäärä poistetaan. Muu toistuva työvuoro säilyy ennallaan."
           }
         },
         "fil" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ang petsa na ito ay hindi kasama sa paulit-ulit na shift. Ang shift ay hindi na lalabas."
+            "value" : "Ang petsang ito lamang ang aalisin. Mananatili ang iba pang petsa ng paulit-ulit na shift."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cette date sera exclue de la vaction récurrente. La vaction n'apparaîtra plus."
+            "value" : "Seule cette date est supprimée. Le reste du poste récurrent reste inchangé."
           }
         },
         "he" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "תאריך זה יוחרג משיבוץ החוזר. השיבוץ לא יופיע עוד."
+            "value" : "רק תאריך זה יוסר. שאר המשמרת החוזרת תישאר כפי שהיא."
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "यह तारीख आवर्ती शिफ्ट से बाहर रखी जाएगी। शिफ्ट अब प्रदर्शित नहीं होगी।"
+            "value" : "केवल यह तारीख हटाई जाती है। बाकी दोहराई जाने वाली शिफ्ट पहले जैसी रहती है।"
           }
         },
         "hr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ovaj će se datum isključiti iz ponavljajuće smjene. Smjena se više neće prikazati."
+            "value" : "Uklanja se samo ovaj datum. Ostatak ponavljajuće smjene ostaje kao i prije."
           }
         },
         "hu" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ez a dátum ki lesz zárva az ismétlődő műszakból. A műszak többé nem jelenik meg."
+            "value" : "Csak ez a dátum kerül eltávolításra. Az ismétlődő műszak többi része változatlan marad."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tanggal ini akan dikecualikan dari vakt berulang. Vakt tidak akan lagi ditampilkan."
+            "value" : "Hanya tanggal ini yang dihapus. Shift berulang lainnya tetap seperti semula."
           }
         },
         "is" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Þessi dagsetning verður útilokuð frá endurteknu vaktinni. Vaktin mun ekki lengur birtast."
+            "value" : "Aðeins þessi dagsetning er fjarlægð. Restin af endurteknu vaktinni helst óbreytt."
           }
         },
         "it" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Questa data verrà esclusa dalla vakt ricorrente. La vakt non verrà più visualizzata."
+            "value" : "Viene rimossa solo questa data. Il resto del turno ricorrente rimane invariato."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "この日付は固定シフトから除外されます。シフトは表示されなくなります。"
+            "value" : "この日付のみ削除されます。繰り返しシフトの残りはそのままです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 날짜는 반복 근무에서 제외됩니다. 근무가 더 이상 표시되지 않습니다."
+            "value" : "이 날짜만 삭제됩니다. 반복 근무의 나머지 일정은 그대로 유지됩니다."
           }
         },
         "lt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ši data bus išskirta iš pasikartojančio darbo. Darbas nebebus rodomas."
+            "value" : "Pašalinama tik ši data. Likusi pasikartojančios pamainos dalis lieka nepakitusi."
           }
         },
         "lv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Šis datums tiks izslēgts no atkārtojošās maiņas. Maiņa vairs netiks rādīta."
+            "value" : "Tiek noņemts tikai šis datums. Pārējā atkārtotā maiņa paliek nemainīga."
           }
         },
         "nb" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Denne datoen blir ekskludert fra den faste vakten. Vakten vil ikke lenger vises."
+            "value" : "Bare denne datoen fjernes. Resten av den faste vakten blir som før."
           }
         },
         "nl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Denne datoen blir ekskludert fra den faste vakten. Vakten vil ikke lenger vises."
+            "value" : "Alleen deze datum wordt verwijderd. De rest van de terugkerende dienst blijft ongewijzigd."
           }
         },
         "nn" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Denne datoen blir ekskludert fra den faste vakten. Vakten vil ikke lenger vises."
+            "value" : "Berre denne datoen blir fjerna. Resten av den gjentakande vakta held fram som før."
           }
         },
         "pl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ta data zostanie wykluczona z powtarzającej się zmiany. Zmiana nie będzie już wyświetlana."
+            "value" : "Usunięta zostanie tylko ta data. Pozostałe daty cyklicznej zmiany pozostaną bez zmian."
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Esta data será excluída do turno recorrente. O turno não será mais exibido."
+            "value" : "Somente esta data será removida. O restante do turno recorrente continuará igual."
           }
         },
         "ro" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Această dată va fi exclusă din schimbul recurent. Schimbul nu va mai apărea."
+            "value" : "Se elimină doar această dată. Restul turei recurente rămâne neschimbat."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Эта дата будет исключена из повторяющейся смены. Смена больше не будет отображаться."
+            "value" : "Удаляется только эта дата. Остальные даты повторяющейся смены остаются без изменений."
           }
         },
         "sk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tento dátum bude vylúčený z pravidelnej zmeny. Zmena sa už nebude zobrazovať."
+            "value" : "Odstráni sa iba tento dátum. Zvyšok opakujúcej sa zmeny zostane nezmenený."
           }
         },
         "sl" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ta datum bo bil ekskludiran iz ponavljajuče izmene. Izmena bo več ne bo prikazana."
+            "value" : "Fjernes kun for denne datoen. Resten av den gjentakende vakten forblir som den er."
           }
         },
         "sr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ovaj datum će biti isključen iz ponavljajuće smene. Smena se neće više prikazati."
+            "value" : "Uklanja se samo ovaj datum. Ostatak ponavljajuće smene ostaje kao što jeste."
           }
         },
         "sv" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Detta datum kommer att exkluderas från det återkommande arbetspassen. Arbetspassen visas inte längre."
+            "value" : "Endast detta datum tas bort. Resten av det återkommande passet förblir oförändrat."
           }
         },
         "sw" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tarehe hii itaondolewa kutoka kwa zamu inayorudia. Zamu haitaonekana tena."
+            "value" : "Ni tarehe hii pekee imeondolewa. Zamu nyingine za kurudia zinaendelea kama zilivyo."
           }
         },
         "ta" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "இந்த தேதி மீண்டும் வரும் shift இல் இருந்து除外 செய்யப்படும். Shift இனி தோன்றாது."
+            "value" : "இந்தத் தேதி மட்டும் நீக்கப்படும். மீதமுள்ள மீண்டும் நிகழும் ஷிப்ட் அப்படியே இருக்கும்."
           }
         },
         "th" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "วันที่นี้จะถูกแยกออกจากการเลื่อนเวลาปกติ การเลื่อนเวลาจะไม่แสดงอีกต่อไป"
+            "value" : "ลบเฉพาะวันที่นี้ ส่วนวันที่เหลือของกะที่เกิดซ้ำยังคงเดิม"
           }
         },
         "tr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bu tarih tekrarlanan vardiyadan hariç tutulacak. Vardiya artık görünmeyecek."
+            "value" : "Yalnızca bu tarih kaldırılır. Yinelenen vardiyanın geri kalanı olduğu gibi kalır."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ця дата буде виключена з повторюваної зміни. Зміна більше не буде відображатися."
+            "value" : "Видаляється лише ця дата. Решта повторюваної зміни залишається без змін."
           }
         },
         "ur" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "یہ تاریخ بار بار آنے والی شفٹ سے خارج کر دی جائے گی۔ شفٹ اب ظاہر نہیں ہوگی۔"
+            "value" : "صرف یہ تاریخ ہٹائی جائے گی۔ باقی دہرائی جانے والی شفٹ جوں کی توں رہے گی۔"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ngày này sẽ bị loại trừ khỏi ca làm việc định kỳ. Ca làm việc sẽ không còn hiển thị."
+            "value" : "Chỉ xóa ngày này. Phần còn lại của ca lặp lại vẫn giữ nguyên."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此日期将从循环班次中排除。该班次将不再显示。"
+            "value" : "仅删除此日期。其余重复班次保持不变。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "此日期將從重複班次中排除。該班次將不再顯示。"
+            "value" : "僅移除此日期。其餘重複班次維持不變。"
           }
         }
-      }
+      },
+      "comment" : "Message in the confirmation alert when removing one date of a recurring shift. Only that date is removed; the recurring shift keeps its other dates."
     },
     "shifts.excludeConfirmTitle" : {
       "extractionState" : "manual",

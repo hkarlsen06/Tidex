@@ -163,7 +163,7 @@ struct MainTabView: View {
   }
 
   /// Custom binding that detects tab reselection
-  /// Re-tapping scrollable tabs scrolls to top first, then navigates to current month
+  /// Re-tapping the Schedule list scrolls to top first, then goes to today
   private var tabSelection: Binding<Tab> {
     Binding(
       get: { selectedTab },
@@ -499,20 +499,23 @@ struct MainTabView: View {
         Button {
           handleAddButtonTap()
         } label: {
-          Group {
-            if addShiftCoordinator.isLoading {
-              ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                .scaleEffect(MonthPickerLayout.progressIndicatorScale)
-            } else {
-              Image(systemName: "checkmark.circle.badge.plus.fill")
-                .font(.tidexHeadline)
-                .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
-                .accessibilityHidden(true)
+          Label(String(localized: .commonSave), systemImage: "checkmark")
+            .font(.tidexButton)
+            .lineLimit(1)
+            .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
+            // Keep the width while saving so the month picker doesn't jump.
+            .opacity(addShiftCoordinator.isLoading ? 0 : 1)
+            .overlay {
+              if addShiftCoordinator.isLoading {
+                ProgressView()
+                  .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+                  .scaleEffect(MonthPickerLayout.progressIndicatorScale)
+              }
             }
-          }
-          .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-          .contentShape(Rectangle())
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            .padding(.horizontal, Spacing.md)
+            .frame(height: MonthPickerLayout.height)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(addShiftCoordinator.isLoading)
@@ -526,7 +529,7 @@ struct MainTabView: View {
             : MonthPickerLayout.disabledOpacity
         )
         .transition(.opacity)
-        .accessibilityLabel(Text(.commonSave))
+        .accessibilityIdentifier("add-shift.save")
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -571,7 +574,8 @@ struct MainTabView: View {
       value: monthContext.hasConflictsInMonth,
       reduceMotion: shouldReduceEffects
     )
-    .accessibilityLabel(showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList))
+    .accessibilityLabel(
+      showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList))
   }
 
   private var addShiftUndoButton: some View {
@@ -646,14 +650,6 @@ struct MainTabView: View {
     MotionTokens.transition(.pageTransition, reduceMotion: shouldReduceEffects)
   }
 
-  /// Whether this tab has scrollable list content that should scroll-to-top before navigating to current month
-  private func tabHasScrollableContent(_ tab: Tab) -> Bool {
-    switch tab {
-    case .shifts: return showListView
-    default: return false
-    }
-  }
-
   /// Current transition phase for month picker animations
   private var transitionPhase: MonthTransitionPhase {
     MonthTransitionPhase(
@@ -696,14 +692,14 @@ struct MainTabView: View {
     } else if tab == .sharing {
       NotificationCenter.default.post(
         name: .tabReselected, object: nil, userInfo: ["tab": tab])
-    } else if tabHasScrollableContent(tab), pendingCurrentMonthTab != tab {
+    } else if tab == .shifts, showListView, pendingCurrentMonthTab != tab {
+      // First re-tap scrolls the list to the top, like other iOS lists.
       NotificationCenter.default.post(
         name: .tabReselected, object: nil, userInfo: ["tab": tab])
       pendingCurrentMonthTab = tab
-    } else if !monthContext.isCurrentMonth {
-      monthContext.goToCurrentMonth()
-      pendingCurrentMonthTab = nil
     } else {
+      // The next re-tap goes to today, switching month first if needed.
+      monthContext.goToCurrentMonth()
       NotificationCenter.default.post(
         name: .tabReselected, object: nil,
         userInfo: ["tab": tab, "scrollToToday": true])
@@ -747,6 +743,9 @@ struct MainTabView: View {
 
     case .invalidEventDateRange:
       return .addShiftSubmitRequirementsValidEventRange
+
+    case .eventCrossesMidnight:
+      return .addShiftSubmitRequirementsEventSameDay
 
     case .missingEventNote:
       return .addShiftSubmitRequirementsEventNote

@@ -333,6 +333,92 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testAddTabNamesItsModesAndSaveAction() {
+    for (language, locale, addTitle, singleTitle, saveTitle) in [
+      ("en", "en_US", "Add", "Single", "Save"),
+      ("nb", "nb_NO", "Legg til", "Enkel", "Lagre"),
+    ] {
+      let app = XCUIApplication()
+      app.launchArguments = [
+        "-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale,
+        "-defaultStartupTab", "home", "-AppleInterfaceStyle", "Dark", "-cachedTheme", "dark",
+      ]
+      app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+      app.launch()
+      let addTab = app.tabBars.buttons[addTitle]
+      XCTAssertTrue(addTab.waitForExistence(timeout: 30), app.debugDescription)
+      addTab.tap()
+
+      let singleMode = app.buttons["add-shift.mode.single"]
+      XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+      XCTAssertTrue(singleMode.staticTexts[singleTitle].exists, "The selected mode shows its name")
+      let save = app.buttons["add-shift.save"]
+      XCTAssertTrue(save.exists, app.debugDescription)
+      XCTAssertTrue(save.staticTexts[saveTitle].exists, "The save button shows its label")
+      attachAppStoreScreenshot(app, name: "\(language)-add-single")
+
+      if language == "en" {
+        captureOvernightEventHint(app)
+      }
+      app.terminate()
+    }
+  }
+
+  @MainActor
+  private func captureOvernightEventHint(_ app: XCUIApplication) {
+    app.buttons["add-shift.mode.events"].tap()
+    let start = app.textFields["Start"]
+    let end = app.textFields["End"]
+    XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    // The time fields sit below the event calendar.
+    app.scrollViews.firstMatch.swipeUp()
+    Thread.sleep(forTimeInterval: 1)
+    // Four deletes empty "HH:mm"; a fifth would move focus back to the start field.
+    let clear = String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4)
+    let focused = NSPredicate(format: "hasKeyboardFocus == true")
+    start.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+    XCTAssertEqual(
+      XCTWaiter.wait(
+        for: [expectation(for: focused, evaluatedWith: start)], timeout: defaultTimeout),
+      .completed)
+    app.typeText(clear + "2200")
+    XCTAssertEqual(
+      XCTWaiter.wait(
+        for: [expectation(for: focused, evaluatedWith: end)], timeout: defaultTimeout),
+      .completed)
+    app.typeText(clear + "0200")
+    XCTAssertEqual(start.value as? String, "22:00")
+    XCTAssertEqual(end.value as? String, "02:00")
+    let hint = app.staticTexts["event.time-range-hint"]
+    XCTAssertTrue(hint.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(app, name: "en-add-event-overnight")
+  }
+
+  @MainActor
+  func testScheduleRetapScrollsToTopThenGoesToToday() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "shifts", "-shiftsViewMode", "YES"]
+    app.launch()
+    let scheduleTab = app.tabBars.buttons["Schedule"]
+    XCTAssertTrue(scheduleTab.waitForExistence(timeout: 30), app.debugDescription)
+    let currentMonth = app.buttons[
+      Date.now.formatted(.dateTime.month(.wide).locale(Locale(identifier: "en_US")))]
+    XCTAssertTrue(currentMonth.waitForExistence(timeout: 30), app.debugDescription)
+
+    app.buttons["Next month"].firstMatch.tap()
+    XCTAssertTrue(currentMonth.waitForNonExistence(timeout: 5))
+    scheduleTab.tap()
+    // The first re-tap only scrolls the list, so the month stays the same.
+    Thread.sleep(forTimeInterval: 1)
+    XCTAssertFalse(currentMonth.exists)
+    scheduleTab.tap()
+    XCTAssertTrue(
+      currentMonth.waitForExistence(timeout: defaultTimeout),
+      "The second re-tap goes to today")
+  }
+
+  @MainActor
   func testEmptyPastMonthCanAddAShiftAfterUsingEventMode() {
     let app = makeApp(scenario: "app-store-screenshots")
     app.launchArguments += ["-defaultStartupTab", "home", "-shiftsViewMode", "YES"]

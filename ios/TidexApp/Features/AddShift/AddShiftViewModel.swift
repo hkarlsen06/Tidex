@@ -874,6 +874,12 @@ internal final class AddShiftViewModel: ObservableObject {
     return endTimeString > startTimeString
   }
 
+  /// Both event times are set, but the end isn't after the start. Timed events can't run
+  /// past midnight, so the form explains why it can't be saved.
+  var eventTimesCrossMidnight: Bool {
+    startTime != nil && endTime != nil && !hasValidEventTimes
+  }
+
   private var hasEventNote: Bool {
     !eventNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
@@ -889,7 +895,7 @@ internal final class AddShiftViewModel: ObservableObject {
     return eventReminderAnchorTime != nil
   }
 
-  private var submitBlockers: [AddShiftSubmitBlocker] {
+  var submitBlockers: [AddShiftSubmitBlocker] {
     var blockers: [AddShiftSubmitBlocker] = []
 
     switch mode {
@@ -925,7 +931,9 @@ internal final class AddShiftViewModel: ObservableObject {
           blockers.append(.invalidEventDateRange)
         }
       } else {
-        if !hasValidEventTimes {
+        if eventTimesCrossMidnight {
+          blockers.append(.eventCrossesMidnight)
+        } else if !hasValidEventTimes {
           blockers.append(.missingTimes)
         }
       }

@@ -1,6 +1,7 @@
 import Combine
 
 internal enum AddShiftSubmitBlocker: Hashable {
+  case eventCrossesMidnight
   case invalidEventDateRange
   case missingEventNote
   case missingTimes
