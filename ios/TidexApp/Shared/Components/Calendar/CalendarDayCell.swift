@@ -107,13 +107,14 @@ struct CalendarDayCell<Content: View>: View {
   private let eventIndicatorBottomInset: CGFloat = 3
   private let eventIndicatorHeight: CGFloat = 2
   private let eventIndicatorSegmentSpacing: CGFloat = 3
+  private let beforeTaxFontScale: CGFloat = 0.8
 
   /// Shows a small friends icon indicator (e.g., when both user and friend have shifts)
   var showOverlapIndicator: Bool = false
   /// Shows a small single-person icon indicator (e.g., when only one user has shifts)
   var showSingleUserIndicator: Bool = false
-  /// Tint color for the single-person indicator (e.g., green for you, red for friend)
-  var singleUserIndicatorColor: Color = .tidexSuccess
+  /// Tint color for the single-person indicator (a neutral identity color, not a status color)
+  var singleUserIndicatorColor: Color = .tidexTextPrimary
   /// Shows a small event-presence indicator in the cell.
   var showEventIndicator: Bool = false
   /// Number of events on this day. Controls how many segments the bottom indicator shows.
@@ -128,7 +129,7 @@ struct CalendarDayCell<Content: View>: View {
     content: CalendarCellContent,
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
-    singleUserIndicatorColor: Color = .tidexSuccess,
+    singleUserIndicatorColor: Color = .tidexTextPrimary,
     showEventIndicator: Bool = false,
     eventIndicatorCount: Int = 0,
     @ViewBuilder customContent: @escaping () -> Content
@@ -196,23 +197,27 @@ struct CalendarDayCell<Content: View>: View {
     .opacity(dayInfo.isOutsideMonth ? 0.4 : 1.0)
   }
 
-  @ViewBuilder
+  /// Week number and person indicator sit side by side, so the indicator never hides the week.
   private var leadingMarkerContent: some View {
-    if showOverlapIndicator {
-      Image(systemName: "person.2.fill")
-        .font(.tidexMicro)
-        .imageScale(.small)
-        .foregroundColor(.tidexBlue)
-    } else if showSingleUserIndicator {
-      Image(systemName: "person.fill")
-        .font(.tidexMicro)
-        .imageScale(.small)
-        .foregroundColor(singleUserIndicatorColor)
-    } else if let weekNum = dayInfo.weekNumber {
-      Text("\(weekNum)")
-        .font(.tidexMicro)
-        .foregroundColor(.tidexTextMuted)
+    HStack(spacing: 1) {
+      if let weekNum = dayInfo.weekNumber {
+        Text("\(weekNum)")
+          .font(.tidexMicro)
+          .foregroundColor(.tidexTextMuted)
+      }
+      if showOverlapIndicator {
+        Image(systemName: "person.2.fill")
+          .font(.tidexMicro)
+          .imageScale(.small)
+          .foregroundColor(.tidexBlue)
+      } else if showSingleUserIndicator {
+        Image(systemName: "person.fill")
+          .font(.tidexMicro)
+          .imageScale(.small)
+          .foregroundColor(singleUserIndicatorColor)
+      }
     }
+    .fixedSize()
   }
 
   private var leadingMarkerSlot: some View {
@@ -274,7 +279,8 @@ struct CalendarDayCell<Content: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
     case .hours(let hoursData, let color, let secondaryColor):
-      let endDisplay = hoursData.end + (hoursData.crossesMidnight ? "*" : "")
+      let endDisplay =
+        hoursData.end + (hoursData.crossesMidnight ? CalendarGridHelper.nextDayMarker : "")
       let endColor = secondaryColor ?? color
       metricContainer(lineCount: 2) { fontSize in
         calendarStackedMetricText(
@@ -288,6 +294,14 @@ struct CalendarDayCell<Content: View>: View {
         .environment(\.layoutDirection, .leftToRight)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(
+        Text(
+          verbatim: CalendarGridHelper.timeRangeAccessibilityText(
+            start: hoursData.start,
+            end: hoursData.end,
+            crossesMidnight: hoursData.crossesMidnight
+          )))
 
     case .earnings(let amount, let color):
       let formattedAmount = CalendarGridHelper.formatCompactCurrency(amount)
@@ -307,13 +321,16 @@ struct CalendarDayCell<Content: View>: View {
           let net = CalendarGridHelper.formatCompactCurrency(earnings.net)
           let gross = CalendarGridHelper.formatCompactCurrency(earnings.gross)
           metricContainer(lineCount: 2) { fontSize in
+            // Before-tax amount is smaller and lighter, like the header totals.
             calendarStackedMetricText(
               firstValue: net,
               firstColor: color,
               secondValue: gross,
               secondColor: beforeTaxColor,
               fontSize: fontSize,
-              fontWeight: .semibold
+              fontWeight: .semibold,
+              secondFontScale: beforeTaxFontScale,
+              secondFontWeight: .regular
             )
             .environment(\.layoutDirection, .leftToRight)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -331,6 +348,8 @@ struct CalendarDayCell<Content: View>: View {
           }
         }
       }
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(Text(verbatim: CalendarGridHelper.earningsAccessibilityText(earnings)))
 
     case .starIcon(let color):
       Image(systemName: "star.fill")
@@ -400,12 +419,15 @@ struct CalendarDayCell<Content: View>: View {
     secondValue: String,
     secondColor: Color,
     fontSize: CGFloat,
-    fontWeight: Font.Weight
+    fontWeight: Font.Weight,
+    secondFontScale: CGFloat = 1,
+    secondFontWeight: Font.Weight? = nil
   ) -> some View {
     VStack(spacing: stackedMetricSpacing) {
       calendarMetricText(firstValue, color: firstColor, fontSize: fontSize, fontWeight: fontWeight)
       calendarMetricText(
-        secondValue, color: secondColor, fontSize: fontSize, fontWeight: fontWeight)
+        secondValue, color: secondColor, fontSize: fontSize * secondFontScale,
+        fontWeight: secondFontWeight ?? fontWeight)
     }
     .frame(maxWidth: .infinity, alignment: .center)
   }
@@ -452,7 +474,7 @@ extension CalendarDayCell where Content == EmptyView {
     content: CalendarCellContent,
     showOverlapIndicator: Bool = false,
     showSingleUserIndicator: Bool = false,
-    singleUserIndicatorColor: Color = .tidexSuccess,
+    singleUserIndicatorColor: Color = .tidexTextPrimary,
     showEventIndicator: Bool = false,
     eventIndicatorCount: Int = 0
   ) {

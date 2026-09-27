@@ -47,6 +47,11 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
   private static let deepLinkHighlightColor = Color.tidexPurple
 
+  /// Superimpose indicator colors mark whose shift it is. They avoid the error and success
+  /// colors so neither person's shift reads as a problem or a confirmation.
+  private static let yourIndicatorColor = Color.tidexTextPrimary
+  private static let friendIndicatorColor = Color.tidexPurple
+
   private struct DayJobTimeColors {
     let topColor: Color
     let bottomColor: Color
@@ -422,12 +427,12 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
       )
       superimposeLegendRow(
         icon: "person.fill",
-        iconColor: .tidexSuccess,
+        iconColor: Self.yourIndicatorColor,
         description: Text(.sharingSuperimposeLegendOnlyYou)
       )
       superimposeLegendRow(
         icon: "person.fill",
-        iconColor: .tidexError,
+        iconColor: Self.friendIndicatorColor,
         description: Text(.sharingSuperimposeLegendOnlyFriend(friendFirstName))
       )
     }
@@ -497,7 +502,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     let showOnlyUserIndicator = isSuperimposing && userHasShift && !friendHasShift
     let showOnlyFriendIndicator = isSuperimposing && friendHasShift && !userHasShift
     let showSingleUserIndicator = showOnlyUserIndicator || showOnlyFriendIndicator
-    let singleUserIndicatorColor: Color = showOnlyFriendIndicator ? .tidexError : .tidexSuccess
+    let singleUserIndicatorColor: Color =
+      showOnlyFriendIndicator ? Self.friendIndicatorColor : Self.yourIndicatorColor
     let showHiddenFriendMetrics = showOnlyFriendIndicator
 
     Group {
@@ -528,12 +534,68 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
         )
       }
     }
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      dayAccessibilityLabel(
+        dayInfo: dayInfo, friendShifts: shiftsOnDay, userShifts: userShiftsOnDay,
+        showOverlap: showOverlap, metrics: metrics)
+    )
+    .accessibilityAddTraits(
+      shiftsOnDay.isEmpty ? [] : isSelected ? [.isButton, .isSelected] : .isButton
+    )
     .onTapGesture {
       handleDayTap(dayInfo: dayInfo, metrics: metrics)
     }
     .onLongPressGesture {
       handleDayLongPress(dayInfo: dayInfo, metrics: metrics)
     }
+  }
+
+  /// Spoken label for a day cell: date, today, whose shifts it has, their times and earnings.
+  private func dayAccessibilityLabel(
+    dayInfo: CalendarDayInfo,
+    friendShifts: [ShiftWithComputations],
+    userShifts: [ShiftRow],
+    showOverlap: Bool,
+    metrics: CalendarMetrics
+  ) -> Text {
+    guard let dateISO = dayInfo.dateISO, let date = Date.fromISODateString(dateISO) else {
+      return Text(verbatim: "")
+    }
+    let showsMoney = showEarnings && viewMode == .money
+    var parts: [String] = [
+      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale))
+    ]
+    if dateISO == metrics.todayISO {
+      parts.append(String(localized: .commonToday))
+    }
+    if isSuperimposing, userHoursByDate?[dateISO] != nil {
+      parts.append(String(localized: .calendarAccessibilityYourShift))
+      parts += userShifts.map { shift in
+        CalendarGridHelper.shiftTimesAccessibilityText(
+          startTime: shift.start_time, endTime: shift.end_time)
+      }
+      if showsMoney, let earnings = userEarningsByDate?[dateISO] {
+        parts.append(CalendarGridHelper.earningsAccessibilityText(earnings))
+      }
+    }
+    if !friendShifts.isEmpty {
+      parts.append(String(localized: .calendarAccessibilityFriendShift(friendFirstName)))
+      // Superimpose mode hides the friend's times and pay in the cell, so VoiceOver does too.
+      if !isSuperimposing {
+        parts += friendShifts.map { shift in
+          CalendarGridHelper.shiftTimesAccessibilityText(
+            startTime: shift.startTime, endTime: shift.endTime)
+        }
+        if showsMoney, let earnings = metrics.earningsByDate[dateISO] {
+          parts.append(CalendarGridHelper.earningsAccessibilityText(earnings))
+        }
+      }
+    }
+    if showOverlap {
+      parts.append(String(localized: .sharingSuperimposeLegendBoth))
+    }
+    return Text(verbatim: parts.joined(separator: ", "))
   }
 
   /// Check if a date should be highlighted (from notification deeplink)

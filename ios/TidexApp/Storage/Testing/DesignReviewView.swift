@@ -137,6 +137,7 @@
               VStack(spacing: Spacing.lg) {
                 switch screen {
                 case "calendar": calendar
+                case "shared-calendar": sharedCalendar
                 case "stats": charts
                 case "wagey": wagey
                 case "controls": controls
@@ -360,6 +361,35 @@
           taxEnabled: true, taxPercentage: 20
         )
       }
+    }
+  }
+
+  extension DesignReviewView {
+    /// Friend's shifts from `shifts`, overlaid with the viewer's own shifts, including an
+    /// overnight one and two on Mondays so week numbers and person indicators share a cell.
+    var sharedCalendar: some View {
+      let userShifts: [ShiftRow] = [
+        (7, "09:00", "17:00"), (8, "12:00", "20:00"), (14, "22:00", "06:00"),
+        (28, "09:00", "17:00"),
+      ].map { day, start, end in
+        ShiftRow(
+          id: "design-own-\(day)", user_id: nil, shift_date: String(format: "2026-09-%02d", day),
+          start_time: start, end_time: end, custom_supplements: nil)
+      }
+      return SharedShiftsCalendarView(
+        shifts: Self.shifts, jobs: [], year: 2_026, month: 9, currency: "kr",
+        showEarnings: false, friendFirstName: "Sam", isSuperimposing: true,
+        userHoursByDate: Dictionary(
+          uniqueKeysWithValues: userShifts.map { row in
+            (
+              row.shift_date,
+              HoursData(
+                start: row.start_time, end: row.end_time,
+                crossesMidnight: row.end_time < row.start_time)
+            )
+          }),
+        userShiftsByDate: Dictionary(grouping: userShifts, by: \.shift_date)
+      )
     }
   }
 #endif
