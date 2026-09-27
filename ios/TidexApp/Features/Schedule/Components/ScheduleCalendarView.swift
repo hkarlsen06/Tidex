@@ -553,6 +553,11 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         ),
         eventIndicatorCount: eventIndicatorCount
       )
+      // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(dayAccessibilityLabel(dateISO: dayInfo.dateISO, shiftCount: shiftsOnDay.count))
+      .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+      .accessibilityHidden(dayInfo.dateISO == nil)
     }
     .coordinateSpace(name: "calendar")
     .overlay(
@@ -592,13 +597,24 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     )
   }
 
+  private func dayAccessibilityLabel(dateISO: String?, shiftCount: Int) -> Text {
+    guard let date = dateISO.flatMap({ Date.fromISODateString($0) }) else {
+      return Text(verbatim: "")
+    }
+    let dateText = date.formatted(.dateTime.weekday(.wide).day().month(.wide))  // swiftlint:disable:this explicit_type_interface line_length
+    guard shiftCount > 0 else {
+      return Text(verbatim: dateText)
+    }
+    return Text(verbatim: "\(dateText), \(String(localized: .commonShiftCount(shiftCount)))")
+  }
+
   // MARK: - Cell Styling
 
   /// Celebration green color for newly added shifts
-  private static let celebrationColor = Color(red: 0.298, green: 0.686, blue: 0.314)
+  private static let celebrationColor = Color.tidexSuccess
 
   /// Purple/violet color for deep link highlight from widgets
-  private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
+  private static let deepLinkHighlightColor = Color.tidexPurple
 
   private func cellStyle(
     isToday: Bool,

@@ -95,6 +95,20 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Du kan ikke dele med deg selv');
   END IF;
 
+  -- A block lives on the pair's shift_shares rows. Refuse a new share in
+  -- either direction while one exists.
+  IF EXISTS (
+    SELECT 1
+    FROM public.shift_shares
+    WHERE (
+      (owner_id = v_user_id AND viewer_id = v_target_id)
+      OR (owner_id = v_target_id AND viewer_id = v_user_id)
+    )
+      AND blocked_by_user_id IS NOT NULL
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Du kan ikke dele vaktene dine med denne brukeren');
+  END IF;
+
   IF EXISTS (
     SELECT 1
     FROM public.shift_shares

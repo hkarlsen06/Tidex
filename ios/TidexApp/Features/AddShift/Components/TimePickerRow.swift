@@ -729,42 +729,6 @@ struct TimeRangePicker: View {
   }
 }
 
-// MARK: - Legacy Time Picker Row (for backward compatibility)
-
-/// Reusable time picker with label
-/// Uses native DatePicker with compact style
-struct TimePickerRow: View {
-  let label: String
-  @Binding var time: Date
-  var onTimeChange: (() -> Void)?
-
-  var body: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(label)
-        .font(.tidexCaptionStrong)
-        .foregroundColor(.tidexTextMuted)
-        .textCase(.uppercase)
-        .tracking(0.5)
-
-      DatePicker(
-        "",
-        selection: $time,
-        displayedComponents: .hourAndMinute
-      )
-      .datePickerStyle(.compact)
-      .labelsHidden()
-      .tint(.tidexBlue)
-      .onChange(of: time) { _, _ in
-        onTimeChange?()
-      }
-    }
-    .padding(Spacing.md)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.tidexSurfaceSecondary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-  }
-}
-
 // MARK: - Preview
 
 #Preview {

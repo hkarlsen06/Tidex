@@ -51,7 +51,6 @@ final class JWSUploadWorker {
 
   private var uploadTask: Task<Void, Never>?
   private let repository = EntitlementRepository.shared
-  private let maxAttempts: Int = 10
 
   private init() {
     // Singleton instance.
@@ -108,11 +107,18 @@ final class JWSUploadWorker {
     var successfulUserIds = Set<String>()  // Track users who had successful uploads
 
     while !Task.isCancelled {
+      // The server rejects receipts uploaded under another user's session, so only
+      // process the signed-in user's uploads. Others stay queued until that user returns.
+      guard let currentUserId = AppCoordinator.shared.getCurrentUserId() else {
+        logger.debug("No signed-in user, worker stopping")
+        return
+      }
       let readyUploads = repository.getPendingUploads()  // Only returns nextAttemptAt <= now
+        .filter { $0.userId == currentUserId }
 
       if readyUploads.isEmpty {
         // No uploads ready NOW - but there might be some scheduled for later
-        let allPending = repository.getAllPendingUploads()
+        let allPending = repository.getAllPendingUploads().filter { $0.userId == currentUserId }
 
         if allPending.isEmpty {
           // Truly no uploads left - we're done
@@ -143,7 +149,6 @@ final class JWSUploadWorker {
           return
         }
 
-        // Skip if max attempts reached
         if let userId = await processReadyUpload(upload) {
           successfulUserIds.insert(userId)
         }
@@ -155,10 +160,8 @@ final class JWSUploadWorker {
   }
 
   private func processReadyUpload(_ upload: LocalPendingJWSUpload) async -> String? {
-    if await removeUploadIfMaxAttemptsReached(upload) {
-      return nil
-    }
-
+    // Never drop a queued receipt: it may be a paid purchase. The retry delay is capped
+    // at 10 minutes by LocalPendingJWSUpload.scheduleNextRetry().
     do {
       try await uploadToServer(upload)
       try await repository.removePendingUpload(transactionId: upload.transactionId)
@@ -171,16 +174,6 @@ final class JWSUploadWorker {
       try? await repository.schedulePendingUploadRetry(transactionId: upload.transactionId)
       return nil
     }
-  }
-
-  private func removeUploadIfMaxAttemptsReached(_ upload: LocalPendingJWSUpload) async -> Bool {
-    guard upload.attemptCount >= maxAttempts else {
-      return false
-    }
-
-    logger.warning("Max attempts reached for upload \(upload.transactionId), removing from queue")
-    try? await repository.removePendingUpload(transactionId: upload.transactionId)
-    return true
   }
 
   private func refreshEntitlements(for userIds: Set<String>) async {

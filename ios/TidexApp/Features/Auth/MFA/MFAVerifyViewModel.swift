@@ -129,10 +129,15 @@ final class MFAVerifyViewModel: ObservableObject {
       coordinator?.handleMFASuccess()
     } catch {
       isLoading = false
-      errorMessage = ErrorTranslations.translate(error)
+      let message = ErrorTranslations.translate(error)
       // Clear the code on error
       code = ""
       focusedIndex = 0
+      // GoTrue deletes a challenge after 5 minutes, so the old one may be gone.
+      // Start a fresh challenge for the next attempt.
+      self.challengeId = nil
+      await createChallenge()
+      errorMessage = message
     }
   }
 

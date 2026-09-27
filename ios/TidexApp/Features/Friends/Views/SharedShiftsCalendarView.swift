@@ -45,7 +45,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   private let calendar = Calendar.current
 
   /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
-  private static let deepLinkHighlightColor = Color(red: 0.545, green: 0.361, blue: 0.965)
+  private static let deepLinkHighlightColor = Color.tidexPurple
 
   private struct DayJobTimeColors {
     let topColor: Color

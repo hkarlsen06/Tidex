@@ -5,7 +5,7 @@ import { TermsOfService } from '@/components/legal/TermsOfService';
 import { PrivacyPolicy } from '@/components/legal/PrivacyPolicy';
 import { SecurityPolicy } from '@/components/legal/SecurityPolicy';
 import { MarketingLocaleToggle } from './MarketingLocaleToggle';
-import { LocaleLangSetter } from './LocaleLangSetter';
+import { MarketingHomeLink } from './MarketingHomeLink';
 
 interface MarketingLegalPageProps {
   locale: Locale;
@@ -31,8 +31,10 @@ export function MarketingLegalPage({ locale, dictionary, variant }: MarketingLeg
 
   return (
     <div className="min-h-screen bg-background">
-      <LocaleLangSetter locale={locale} />
       <div className="container mx-auto max-w-4xl px-4 py-12">
+        <div className="mb-8">
+          <MarketingHomeLink locale={locale} />
+        </div>
         {content}
       </div>
     </div>

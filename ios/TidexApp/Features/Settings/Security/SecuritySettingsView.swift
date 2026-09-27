@@ -17,24 +17,7 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       VStack(alignment: .leading, spacing: Spacing.lg) {
         // Error message
         if let error = viewModel.errorMessage {
-          HStack(spacing: Spacing.xs) {
-            Image(systemName: "exclamationmark.circle.fill")
-              .foregroundColor(.tidexError)
-            Text(error)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexError)
-            Spacer()
-            Button {
-              viewModel.clearMessages()
-            } label: {
-              Image(systemName: "xmark")
-                .font(.tidexCaptionStrong)
-                .foregroundColor(.tidexError)
-            }
-          }
-          .padding(Spacing.sm)
-          .background(Color.tidexError.opacity(0.1))
-          .cornerRadius(CornerRadius.sm)
+          ErrorBanner(message: error, onDismiss: { viewModel.clearMessages() })
         }
 
         // AI data sharing section
@@ -267,26 +250,28 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       title: String(localized: .securityConnectionsSectionTitle),
       footer: String(localized: .securityConnectionsSectionSubtitle)
     ) {
-      // Phone connection
-      connectionRow(
-        icon: "phone.fill",
-        iconColor: .tidexBlue,
-        title: String(localized: .securityConnectionsPhoneTitle),
-        isConnected: viewModel.hasPhoneConnected,
-        connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
-          ?? String(localized: .securityConnectionsPhoneConnected),
-        notConnectedText: String(localized: .securityConnectionsPhoneNotConnected),
-        canDisconnect: viewModel.canUnlinkPhone,
-        onConnect: {
-          viewModel.showPhoneLinkingSheet = true
-        },
-        onDisconnect: {
-          Task { await viewModel.disconnectProvider("phone") }
-        },
-        connectDisabled: viewModel.isOfflineLimited
-      )
+      // Phone connection (linking needs an SMS; keep the row so existing numbers can be removed)
+      if AuthService.isSMSAvailable || viewModel.hasPhoneConnected {
+        connectionRow(
+          icon: "phone.fill",
+          iconColor: .tidexBlue,
+          title: String(localized: .securityConnectionsPhoneTitle),
+          isConnected: viewModel.hasPhoneConnected,
+          connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
+            ?? String(localized: .securityConnectionsPhoneConnected),
+          notConnectedText: String(localized: .securityConnectionsPhoneNotConnected),
+          canDisconnect: viewModel.canUnlinkPhone,
+          onConnect: {
+            viewModel.showPhoneLinkingSheet = true
+          },
+          onDisconnect: {
+            Task { await viewModel.disconnectProvider("phone") }
+          },
+          connectDisabled: viewModel.isOfflineLimited
+        )
 
-      settingsDivider
+        settingsDivider
+      }
 
       // Google connection
       connectionRow(

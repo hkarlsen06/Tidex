@@ -1,19 +1,35 @@
 import { Metadata } from 'next';
+import socialPreviewEn from '@/public/og/landing-en.png';
+import { marketingEn } from '@/lib/i18n/dictionaries/marketing.en';
 import { PayrollDocsPage } from './PayrollDocsPage';
 
+const title = 'How Tidex calculates your pay | Payroll engine specification';
+const description =
+  'Complete technical specification for the Tidex payroll engine. Enables re-implementation in any language with identical results.';
+
 export const metadata: Metadata = {
-  title: 'Payroll Engine Specification - How Tidex calculates your pay',
-  description:
-    'Complete technical specification for the Tidex payroll engine. Enables re-implementation in any language with identical results.',
+  title,
+  description,
+  alternates: { canonical: '/docs/payroll/' },
   openGraph: {
-    title: 'Payroll Engine Specification - How Tidex calculates your pay',
-    description:
-      'Complete technical specification for the Tidex payroll engine. Enables re-implementation in any language with identical results.',
+    title,
+    description,
+    url: '/docs/payroll/',
+    type: 'website',
+    images: [
+      {
+        url: socialPreviewEn.src,
+        width: socialPreviewEn.width,
+        height: socialPreviewEn.height,
+        alt: marketingEn.meta.ogImageAlt,
+      },
+    ],
   },
   twitter: {
-    title: 'Payroll Engine Specification - How Tidex calculates your pay',
-    description:
-      'Complete technical specification for the Tidex payroll engine. Enables re-implementation in any language with identical results.',
+    card: 'summary_large_image',
+    title,
+    description,
+    images: [socialPreviewEn.src],
   },
 };
 
@@ -61,8 +77,8 @@ const payrollDocs = {
           heading: 'Inputs',
           list: [
             'Shift data: shift_date (ISO), start_time (HH:MM), end_time (HH:MM), optional custom pause windows, optional custom supplements, job_id',
-            'Wage snapshot: Hourly wage, supplement rules, tax settings, break deduction settings — scoped to a job',
-            'Job: Name, color, immutable currency, payroll_day, half_tax_month, monthly_goal — primary source for payroll configuration',
+            'Wage snapshot: Hourly wage, supplement rules, tax settings, break deduction settings, scoped to a job',
+            'Job: Name, color, immutable currency, payroll_day, and half_tax_month. The job is the primary source for payroll configuration',
             'Payroll adjustments: Manual payout-level additions or corrections with amount, payout date, job scope, and tax treatment',
             'User settings: Global preferences; payroll_day/half_tax_month/monthly_goal kept as legacy fallback during compatibility window',
           ],
@@ -95,7 +111,7 @@ const payrollDocs = {
             rows: [
               ['Shift', 'A stored work period with date, start time, end time'],
               ['Virtual shift', 'A computed occurrence from a recurring shift template (not persisted)'],
-              ['Wage snapshot', 'Point-in-time capture of wage, supplement, tax, and break settings — scoped to a job'],
+              ['Wage snapshot', 'Point-in-time capture of wage, supplement, tax, and break settings, scoped to a job'],
               ['Baseline snapshot', 'Snapshot with from_date = NULL, serves as fallback within its job bucket'],
               ['Supplement window', 'Time-of-day range when a supplement rate applies'],
               ['Pause window', 'An exact unpaid interval clipped out of a shift before automatic break rules are considered'],
@@ -112,7 +128,7 @@ const payrollDocs = {
         {
           heading: 'Entry points',
           paragraphs: [
-            'The active payroll stack is split between the iOS app and the shared Supabase TypeScript module. The legacy Effect wrapper and ShiftsService wording no longer describe the live product.',
+            'The active payroll stack is split between the iOS app and the shared Supabase TypeScript module.',
             'The Swift iOS layer orchestrates month-level loading and tax/snapshot selection, while the shared TypeScript calculator is still used by Wagey and server-side tooling. In the TypeScript compatibility signature, settings and job are retained for compatibility but are not required for the current core calculation path.',
           ],
           code: {
@@ -177,7 +193,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['date_specific_notes', 'jsonb', 'Per-date private notes keyed by ISO date'],
             ],
           },
-          note: 'Virtual shifts are generated at runtime, never persisted. selected_days keys are weekday numbers (0=Sunday to 6=Saturday). A recurring pattern and all its virtual shifts belong to one job — there is no per-occurrence job override. Generated virtual shifts inherit any date-specific pause windows, date-specific supplements, and date-specific private notes for their occurrence date.',
+          note: 'Virtual shifts are generated at runtime, never persisted. selected_days keys are weekday numbers (0=Sunday to 6=Saturday). A recurring pattern and all its virtual shifts belong to one job. There is no per-occurrence job override. Generated virtual shifts inherit any date-specific pause windows, date-specific supplements, and date-specific private notes for their occurrence date.',
         },
         {
           heading: 'wage_snapshots - Point-in-time wage settings',
@@ -214,8 +230,8 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['user_id', 'uuid', '-', 'Primary key, FK to auth.users'],
               ['payroll_day', 'integer', '15 (legacy mirror)', 'Kept in sync with default job\'s payroll_day for backwards compatibility'],
               ['half_tax_month', 'integer', '-', 'Kept in sync with default job\'s half_tax_month for backwards compatibility'],
-              ['monthly_goal', 'integer', '20000 (legacy mirror)', 'Kept in sync with default job\'s monthly_goal for backwards compatibility'],
-              ['monthly_goals_by_month', 'jsonb', '{}', 'Sparse YYYY-MM goal overrides used by the dashboard goal display'],
+              ['monthly_goal', 'integer', '20000 (legacy mirror)', 'Legacy and unused. Kept in sync with the default job\'s monthly_goal for backwards compatibility'],
+              ['monthly_goals_by_month', 'jsonb', '{}', 'Legacy and unused. Sparse YYYY-MM goal overrides from before monthly goals were removed from the app'],
               ['currency', 'text', 'kr', 'Legacy display currency fallback when job currency is unavailable'],
             ],
           },
@@ -314,7 +330,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
           heading: 'What is a job?',
           paragraphs: [
             'A job represents an employer or workplace. Each user starts with one default job ("Jobb") and can add more. Jobs group shifts and wage snapshots together, and own per-employer payroll configuration.',
-            'The multi-job feature is invisible for single-job users — the default job is assigned automatically and all existing flows remain unchanged.',
+            'The multi-job feature is invisible for single-job users. The default job is assigned automatically and all existing flows remain unchanged.',
           ],
         },
         {
@@ -333,12 +349,12 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['sort_order', 'smallint', 'Display ordering'],
               ['payroll_day', 'integer', 'Day of month (1-31) payroll is received for this job'],
               ['half_tax_month', 'integer', 'Month (11 or 12) for half-tax; NULL = disabled'],
-              ['monthly_goal', 'integer', 'Monthly earnings goal for this job'],
+              ['monthly_goal', 'integer', 'Legacy and unused. The app no longer has monthly goals but keeps this value when saving the job'],
               ['archived_at', 'timestamptz', 'Set when archived; job is hidden from Add Shift pickers but remains in historical views'],
               ['deleted_at', 'timestamptz', 'Soft-delete; shifts remain queryable for history'],
             ],
           },
-          note: 'Unique constraint: UNIQUE (user_id) WHERE is_default = true AND deleted_at IS NULL AND archived_at IS NULL — exactly one active default per user.',
+          note: 'Unique constraint: UNIQUE (user_id) WHERE is_default = true AND deleted_at IS NULL AND archived_at IS NULL. Each user has exactly one active default job.',
         },
         {
           heading: 'Backward compatibility',
@@ -677,7 +693,7 @@ const resolveSnapshotForDate = (
   // Try job-specific bucket first, then legacy fallback
   const preferredKeys = [jobId ?? '__legacy__', '__legacy__'];
 
-  // 1. Try dated snapshots (bucket is sorted DESC — first match = latest valid)
+  // 1. Try dated snapshots (bucket is sorted DESC, so the first match is the latest valid one)
   for (const key of preferredKeys) {
     const dated = buckets.get(key)?.dated.find(s => s.from_date <= date);
     if (dated) return dated;

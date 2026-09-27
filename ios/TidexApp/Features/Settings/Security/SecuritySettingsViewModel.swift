@@ -412,119 +412,44 @@ final class SecuritySettingsViewModel: ObservableObject {
 
   // MARK: - Identity Linking
 
-  /// Connect Google account using OAuth flow with in-app browser
+  /// Connect Google account with the native Google sheet
   func connectGoogle() async {
-    await linkIdentity(provider: .google)
+    await linkIdentity(provider: .google) {
+      try await GoogleAuthProvider.shared.signIn()
+    }
   }
 
-  /// Connect Apple account using OAuth flow with in-app browser
+  /// Connect Apple account with the native Apple sheet
   func connectApple() async {
-    await linkIdentity(provider: .apple)
+    await linkIdentity(provider: .apple) {
+      try await AppleAuthProvider.shared.signIn().idToken
+    }
   }
 
-  /// Link an identity using ASWebAuthenticationSession for in-app browser overlay
-  private func linkIdentity(provider: Provider) async {
+  /// Link an identity by exchanging a native ID token, so no web OAuth client secret is needed.
+  private func linkIdentity(
+    provider: OpenIDConnectCredentials.Provider,
+    idToken: () async throws -> String
+  ) async {
     isConnectingProvider = true
     errorMessage = nil
 
     do {
-      // Get current session for access token
-      let session = try await AuthSessionManager.shared.getSession()
-      let accessToken = session.accessToken
-
-      // Use OAuthWebAuthSession to show in-app browser overlay
-      let callbackURL = try await OAuthWebAuthSession.shared.linkIdentity(
-        provider: provider.rawValue,
-        accessToken: accessToken
+      _ = try await supabase.auth.linkIdentityWithIdToken(
+        credentials: OpenIDConnectCredentials(provider: provider, idToken: idToken())
       )
-
-      // Process the callback URL to complete the identity linking
-      // The callback URL contains the auth result that Supabase needs to process
-      logger.debug("OAuth callback received: \(callbackURL)")
-
-      // Parse both fragment and query for parameters
-      // Errors can be in either location depending on the flow
-      var allParams: [String: String] = [:]
-      if let fragment = callbackURL.fragment {
-        allParams.merge(parseQueryString(fragment)) { _, new in new }
-      }
-      if let query = callbackURL.query {
-        allParams.merge(parseQueryString(query)) { _, new in new }
-      }
-
-      // Validate CSRF state parameter before processing any tokens
-      try OAuthWebAuthSession.shared.validateAndClearState(allParams["state"])
-
-      // Check for errors first
-      if let error = allParams["error"] {
-        // URL decode the error description (+ becomes space, then percent decode)
-        let rawDescription = allParams["error_description"] ?? error
-        let errorDescription =
-          rawDescription
-          .replacingOccurrences(of: "+", with: " ")
-          .removingPercentEncoding ?? rawDescription
-        logger.error("OAuth error: \(error) - \(errorDescription)")
-        errorMessage = errorDescription
-        isConnectingProvider = false
-        return
-      }
-
-      // Extract tokens/code from callback and refresh session
-      // The callback format is: tidex://auth/callback#access_token=...&refresh_token=...
-      // or: tidex://auth/callback?code=...
-      var linkingSucceeded = false
-
-      if let accessToken = allParams["access_token"],
-        let refreshToken = allParams["refresh_token"]
-      {
-        // Set the new session
-        try await supabase.auth.setSession(accessToken: accessToken, refreshToken: refreshToken)
-        linkingSucceeded = true
-      } else if let code = allParams["code"] {
-        // Exchange code for session
-        _ = try await supabase.auth.exchangeCodeForSession(authCode: code)
-        linkingSucceeded = true
-      }
-
-      if linkingSucceeded {
-        Haptics.play(.success)
-      } else {
-        // No tokens or code found - something went wrong
-        logger.warning("No tokens or code in callback URL")
-        errorMessage = String(localized: .securityConnectionsErrorsLinkFailed)
-      }
-
-      // Reload to update state
+      Haptics.play(.success)
       await loadSecurityInfo()
-
-    } catch let error as OAuthWebAuthError where error.isCancellation {
-      // User cancelled - don't show error
+    } catch let error as GoogleAuthError where error.isCancellation {
       logger.debug("User cancelled \(provider.rawValue) linking")
-    } catch OAuthWebAuthError.stateMismatch {
-      // State validation failed - potential CSRF attack
-      logger.error("OAuth state validation failed for \(provider.rawValue) - possible CSRF attack")
-      errorMessage = String(localized: .securityConnectionsErrorsLinkFailed)
+    } catch let error as AppleAuthError where error.isCancellation {
+      logger.debug("User cancelled \(provider.rawValue) linking")
     } catch {
       logger.error("Failed to link \(provider.rawValue): \(error)")
       errorMessage = String(localized: .securityConnectionsErrorsLinkFailed)
     }
 
     isConnectingProvider = false
-  }
-
-  /// Parse a query string into a dictionary
-  private func parseQueryString(_ queryString: String) -> [String: String] {
-    var params: [String: String] = [:]
-    let pairs = queryString.split(separator: "&")
-    for pair in pairs {
-      let parts = pair.split(separator: "=", maxSplits: 1)
-      if parts.count == 2 {
-        let key = String(parts[0])
-        let value = String(parts[1]).removingPercentEncoding ?? String(parts[1])
-        params[key] = value
-      }
-    }
-    return params
   }
 
   /// Disconnect a provider identity

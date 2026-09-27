@@ -4,7 +4,7 @@ export const marketingNo = {
     description: 'Få oversikt over lønn, tillegg og overtid med Tidex. En moderne lønnskalkulator som gir full kontroll.',
     ogTitle: 'Tidex | Timelønn',
     ogDescription: 'Hold styr på lønnen din, planlegg vakter og håndter tillegg automatisk med Tidex.',
-    ogImageAlt: 'Tidex — Kontroll på lønnen din',
+    ogImageAlt: 'Tidex gir deg kontroll på lønnen din',
   },
   hero: {
     eyebrow: 'iPhone-app',
@@ -14,6 +14,7 @@ export const marketingNo = {
     appStoreCta: 'Se neste lønning',
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex-logo',
+    logoLinkLabel: 'Tidex i App Store',
     screenshotAlt: 'Skjermbilde av Tidex iPhone-appen som viser dashbordet og vaktoversikten.',
     trustNote: 'Gratis å starte. Bygget for ekte arbeid.',
   },
@@ -95,7 +96,7 @@ export const marketingNo = {
   ctaPrimary: {
     heading: 'Klar til å teste med dine egne vakter?',
     description: 'Opprett en konto gratis og få kontroll på tillegg, overtid og rapporter før neste lønning går ut.',
-    button: 'Start nå – gratis',
+    button: 'Kom i gang gratis',
   },
   contact: {
     heading: 'Har du spørsmål?',
@@ -108,6 +109,7 @@ export const marketingNo = {
     payrollDocs: 'Lønnsdokumentasjon',
     privacy: 'Personvernerklæring',
     terms: 'Vilkår for bruk',
+    support: 'Support',
     copyright: '© 2026 Hjalmar Karlsen',
   },
 } as const;

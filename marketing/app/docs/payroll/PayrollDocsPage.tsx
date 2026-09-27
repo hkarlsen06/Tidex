@@ -49,6 +49,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
             {/* Back Button */}
             <a
               href="/"
+              aria-label="Back to Tidex"
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-secondary hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <svg
@@ -62,6 +63,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 className="shrink-0"
+                aria-hidden="true"
               >
                 <path d="m15 18-6-6 6-6" />
               </svg>
@@ -123,7 +125,7 @@ export function PayrollDocsPage({ docs }: PayrollDocsPageProps) {
       <footer className="border-t border-border-subtle py-8">
         <div className="container mx-auto px-6 text-center sm:px-8">
           <p className="text-sm text-text-muted">
-            © 2026 Tidex — Complete transparency in payroll calculations
+            © 2026 Tidex. Complete transparency in payroll calculations.
           </p>
         </div>
       </footer>

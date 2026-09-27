@@ -235,6 +235,7 @@ struct StatsView: View {
         Image(systemName: "line.3.horizontal.decrease.circle")
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
         Text(.jobsFilterTitle)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
@@ -313,6 +314,7 @@ struct StatsView: View {
       Image(systemName: "chevron.down")
         .font(.tidexCaptionRegular)
         .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, Spacing.xs)
@@ -390,6 +392,7 @@ struct StatsView: View {
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: 48))  // swiftlint:disable:this no_magic_numbers
         .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
 
       Text(.statsErrorsCouldNotUpdate)
         .font(.tidexBodyMedium)

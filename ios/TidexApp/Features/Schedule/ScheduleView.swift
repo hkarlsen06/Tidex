@@ -284,7 +284,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   private var mainContentLayer: some View {
     if shouldShowWorkSetupRequiredPlaceholder {
       WorkSetupRequiredPlaceholder()
-    } else if let error = viewModel.error {
+    } else if let error = viewModel.error, viewModel.shifts.isEmpty {
       errorView(error: error)
     } else {
       // Unified content view - handles both empty and populated states
@@ -304,6 +304,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             .accessibilityHidden(true)
             .offset(y: -1)
         }
+        .accessibilityLabel(Text(.shiftsShareMonthTitle))
       }
     }
 
@@ -2181,6 +2182,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: 48))
         .foregroundColor(.tidexWarning)
+        .accessibilityHidden(true)
 
       Text(.shiftsLoadError)
         .font(.tidexBodyMedium)

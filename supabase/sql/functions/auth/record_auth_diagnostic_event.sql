@@ -73,11 +73,16 @@ BEGIN
       SELECT COUNT(*)
       FROM internal.auth_diagnostic_events
       WHERE metadata ->> 'install_id' = v_install_id
-        AND created_at >= now() - interval '1 hour'
+        AND occurred_at >= now() - interval '1 hour'
     ) >= 120 THEN
       RAISE EXCEPTION 'Diagnostic rate limit exceeded';
     END IF;
 
+    -- The caller can claim any user id here, so keep it in metadata as
+    -- diagnostic context instead of user_id.
+    IF p_user_id IS NOT NULL THEN
+      v_metadata := v_metadata || jsonb_build_object('reported_user_id', p_user_id);
+    END IF;
     v_user_id := NULL;
   END IF;
 

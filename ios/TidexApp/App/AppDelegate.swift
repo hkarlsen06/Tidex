@@ -534,7 +534,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     do {
       let activity = try Activity.request(
         attributes: attributes,
-        content: .init(state: initialState, staleDate: nil),
+        content: .init(state: initialState, staleDate: endDate),
         pushType: .token
       )
       LiveActivityPushTokenService.shared.observe(activity, locallyStarted: true)
@@ -731,6 +731,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     await LiveActivityPushTokenService.shared.registerCachedTokensIfNeeded()
+  }
+
+  /// Removes this device's push registration for the signed-in user. Call before
+  /// sign-out while the session is still valid. The token stays cached so the next
+  /// user can register it after login.
+  func unregisterCachedAPNsToken() async {
+    guard let token = cachedAPNsToken() else { return }
+    do {
+      try await supabase
+        .rpc("unregister_my_push_device", params: ["p_device_token": token])
+        .execute()
+    } catch {
+      print("[APNs] Failed to unregister token: \(error)")
+    }
   }
 
   private func prefetchThreadMessageFromNotification(

@@ -794,19 +794,43 @@ final class FriendsMessagingService: ObservableObject {
             upsert: false
           )
         )
-
-      let dimensions = imageDimensions(from: image.data)
-      return FriendOutgoingAttachment(
-        attachmentId: image.id,
-        storagePath: path,
-        mimeType: image.mediaType,
-        byteSize: Int64(image.data.count),
-        width: dimensions.width,
-        height: dimensions.height
-      )
     } catch {
-      throw FriendsMessagingServiceError.networkError(underlying: error)
+      // The path is unique per attachment. A duplicate means an earlier attempt uploaded
+      // it before the send RPC failed, so the retry can reuse it. upsert: true would need
+      // an UPDATE policy on storage.objects that this bucket doesn't have.
+      if let failure = Self.attachmentUploadFailure(error) {
+        throw failure
+      }
     }
+
+    let dimensions = imageDimensions(from: image.data)
+    return FriendOutgoingAttachment(
+      attachmentId: image.id,
+      storagePath: path,
+      mimeType: image.mediaType,
+      byteSize: Int64(image.data.count),
+      width: dimensions.width,
+      height: dimensions.height
+    )
+  }
+
+  /// Maps an attachment upload error. Returns nil when the object already exists.
+  /// Only transport errors become `.networkError`, so server rejections reach the
+  /// failed state instead of waiting for the network forever.
+  nonisolated static func attachmentUploadFailure(_ error: Error) -> Error? {
+    if let storageError = error as? StorageError {
+      if storageError.statusCode == "409" || storageError.error?.lowercased() == "duplicate" {
+        return nil
+      }
+      return FriendsMessagingServiceError.httpError(
+        statusCode: Int(storageError.statusCode ?? "") ?? 0,
+        message: storageError.message
+      )
+    }
+    if error is URLError {
+      return FriendsMessagingServiceError.networkError(underlying: error)
+    }
+    return error
   }
 
   func downloadAttachmentData(path: String) async throws -> Data {

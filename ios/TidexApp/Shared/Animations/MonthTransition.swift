@@ -1,7 +1,7 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable line_length superfluous_disable_command
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable accessibility_label_for_image accessibility_trait_for_button closure_body_length conditional_returns_on_newline
+// swiftlint:disable closure_body_length conditional_returns_on_newline
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_length
 // swiftlint:disable:next blanket_disable_command
@@ -522,7 +522,7 @@ struct AnimatedMonthHeader: View {
   private var compactLayout: some View {
     HStack(spacing: Spacing.xs) {
       // Previous button
-      pillNavigationButton(icon: previousIcon, action: onPrevious)
+      pillNavigationButton(icon: previousIcon, label: .commonPreviousMonth, action: onPrevious)
 
       // Month and Year - vertically stacked, centered, takes available space
       // Shows full year when space allows, truncates to 2 digits if needed
@@ -552,9 +552,10 @@ struct AnimatedMonthHeader: View {
         tapHaptic.impactOccurred()
         showMonthPicker()
       }
+      .accessibilityAddTraits(.isButton)
 
       // Next button
-      pillNavigationButton(icon: nextIcon, action: onNext)
+      pillNavigationButton(icon: nextIcon, label: .commonNextMonth, action: onNext)
     }
     .contentShape(Rectangle())
     .gesture(swipeGesture)
@@ -597,13 +598,14 @@ struct AnimatedMonthHeader: View {
         tapHaptic.impactOccurred()
         showMonthPicker()
       }
+      .accessibilityAddTraits(.isButton)
     }
     .frame(maxWidth: .infinity)
     .overlay(alignment: .leading) {
-      edgeNavigationButton(icon: previousIcon, action: onPrevious)
+      edgeNavigationButton(icon: previousIcon, label: .commonPreviousMonth, action: onPrevious)
     }
     .overlay(alignment: .trailing) {
-      edgeNavigationButton(icon: nextIcon, action: onNext)
+      edgeNavigationButton(icon: nextIcon, label: .commonNextMonth, action: onNext)
     }
     .padding(.horizontal, Spacing.xsm)
     .padding(.vertical, Spacing.sm)
@@ -711,7 +713,9 @@ struct AnimatedMonthHeader: View {
   // MARK: - Subviews
 
   @ViewBuilder
-  private func pillNavigationButton(icon: String, action: @escaping () -> Void) -> some View {
+  private func pillNavigationButton(
+    icon: String, label: LocalizedStringResource, action: @escaping () -> Void
+  ) -> some View {
     Button {
       swipeHaptic.impactOccurred()
       action()
@@ -719,6 +723,7 @@ struct AnimatedMonthHeader: View {
       Image(systemName: icon)
         .font(.system(size: navIconSize, weight: .semibold))
         .foregroundColor(.tidexBlue)
+        .accessibilityLabel(Text(label))
         .frame(width: navPillVisualSize, height: navPillVisualSize)
         .background(Color.tidexBlue.opacity(0.1))
         .clipShape(Circle())
@@ -732,7 +737,9 @@ struct AnimatedMonthHeader: View {
   }
 
   @ViewBuilder
-  private func edgeNavigationButton(icon: String, action: @escaping () -> Void) -> some View {
+  private func edgeNavigationButton(
+    icon: String, label: LocalizedStringResource, action: @escaping () -> Void
+  ) -> some View {
     Button {
       swipeHaptic.impactOccurred()
       action()
@@ -740,6 +747,7 @@ struct AnimatedMonthHeader: View {
       Image(systemName: icon)
         .font(.system(size: navIconSize, weight: .semibold))
         .foregroundColor(.tidexBlue)
+        .accessibilityLabel(Text(label))
         .frame(width: navTapTargetSize, height: navTapTargetSize)
         .contentShape(Rectangle())
     }

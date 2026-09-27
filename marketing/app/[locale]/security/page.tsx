@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { MarketingLegalPage } from '../../../components/MarketingLegalPage';
 import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
 import { locales, type Locale } from '@/lib/i18n/config';
+import { localizedPageMetadata } from '@/lib/metadata';
 
 interface LocaleSecurityPageProps {
   params: Promise<{ locale: string }>;
@@ -20,18 +21,8 @@ export async function generateMetadata({ params }: LocaleSecurityPageProps): Pro
   }
 
   const dictionary = getMarketingDictionary(locale as Locale);
-  const url = `https://tidex.no/${locale}/security`;
 
-  return {
-    title: dictionary.legal.security.meta.title,
-    description: dictionary.legal.security.meta.description,
-    openGraph: {
-      title: dictionary.legal.security.meta.title,
-      description: dictionary.legal.security.meta.description,
-      url,
-      type: 'website',
-    },
-  };
+  return localizedPageMetadata(locale as Locale, '/security', dictionary.legal.security.meta);
 }
 
 export default async function LocaleSecurityPage({ params }: LocaleSecurityPageProps) {

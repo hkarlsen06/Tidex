@@ -12,7 +12,7 @@ export const legalEn = {
   contactEmail: 'contact@tidex.no',
   terms: {
     meta: {
-      title: 'Terms of use — Tidex',
+      title: 'Terms of use | Tidex',
       description: 'Understand the rules for using Tidex and what we expect from every user.',
     },
     title: 'Terms of use',
@@ -190,12 +190,12 @@ export const legalEn = {
   },
   privacy: {
     meta: {
-      title: 'Privacy policy — Tidex',
+      title: 'Privacy policy | Tidex',
       description: 'Learn how Tidex collects, uses and protects your personal data.',
     },
     title: 'Privacy policy',
     lastUpdatedLabel: 'Last updated',
-    lastUpdatedDate: '2026-07-10',
+    lastUpdatedDate: '2026-09-27',
     dateLocale: 'en-US',
     sections: [
       {
@@ -234,16 +234,18 @@ export const legalEn = {
         ],
         importantNote: {
           label: 'Important:',
-          text: 'All salary calculations happen on the server or your device. We only store raw shift data — no final salary results are saved.',
+          text: 'All salary calculations happen on the server or your device. We only store raw shift data. No final salary results are saved.',
         },
       },
       {
         heading: '4. Storage and processing',
         list: [
-          { boldLabel: 'Storage:', text: 'Core account, app, and file data is stored with Supabase (PostgreSQL and Storage).' },
+          { boldLabel: 'Storage:', text: 'Account, app, and file data is stored on servers we run ourselves, rented from netcup in Germany. We run the open-source Supabase software (PostgreSQL, authentication, and file storage) on these servers.' },
+          { boldLabel: 'Backups:', text: 'We back up the database every night and every hour. Backups are kept for up to 28 days, on our server and in Cloudflare R2 storage in the EU.' },
+          { boldLabel: 'Email:', text: 'Emails about your account, such as password reset links, are sent from our own mail server.' },
           { boldLabel: 'On-device storage:', text: 'The iOS app stores session tokens in the iOS Keychain and may cache app data locally on your device to support sign-in and app performance.' },
           { boldLabel: 'Retention:', text: 'Data is kept for as long as you maintain an active account. We do not guarantee long-term archival.' },
-          { boldLabel: 'Deletion:', text: 'If you delete your account, we delete your account data from our active systems as part of the deletion process.' },
+          { boldLabel: 'Deletion:', text: 'If you delete your account, we delete your account data from our active systems as part of the deletion process. Copies in backups are removed as the backups expire, within 28 days.' },
           { boldLabel: 'Safety review:', text: 'If content is reported or linked to abusive behaviour, authorised reviewers may inspect relevant messages, attachments, account metadata, and report records to investigate and enforce our rules.' },
         ],
       },
@@ -252,10 +254,18 @@ export const legalEn = {
         paragraphs: ['We rely on the following third parties that process personal data:'],
         list: [
           {
-            boldLabel: 'Supabase:',
-            text: 'Database, authentication, realtime features, and file storage. Read their {link}.',
+            boldLabel: 'netcup:',
+            text: 'Hosting provider. netcup rents us the servers in Germany where your data is stored. Read their {link}.',
             link: {
-              href: 'https://supabase.com/privacy',
+              href: 'https://www.netcup.com/en/contact/data-privacy',
+              text: 'privacy policy',
+            },
+          },
+          {
+            boldLabel: 'Cloudflare:',
+            text: 'Network security and delivery. Traffic between the app and our servers passes through Cloudflare, which also hosts this website and stores our backups in the EU. Read their {link}.',
+            link: {
+              href: 'https://www.cloudflare.com/privacypolicy/',
               text: 'privacy policy',
             },
           },
@@ -300,7 +310,7 @@ export const legalEn = {
       },
       {
         heading: '7. Security',
-        paragraphs: ['We use industry-standard security measures including hashed passwords, HTTPS encryption, secure authentication through Supabase, and iOS Keychain storage for session tokens on your device.'],
+        paragraphs: ['We use industry-standard security measures including hashed passwords, HTTPS encryption, secure authentication, and iOS Keychain storage for session tokens on your device.'],
       },
       {
         heading: '8. Changes to this policy',
@@ -314,7 +324,7 @@ export const legalEn = {
   },
   security: {
     meta: {
-      title: 'Security Disclosure Policy — Tidex',
+      title: 'Security Disclosure Policy | Tidex',
       description: 'How to report security vulnerabilities to Tidex responsibly.',
     },
     title: 'Security Disclosure Policy',

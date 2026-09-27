@@ -58,8 +58,6 @@ private let placeholderMappings: [String: [PlaceholderSpec]] = [
   "stats.charts.employment.info": [PlaceholderSpec(placeholder: "{hours}", specifier: "%@")],
   "stats.charts.weeklyChart.bestWeek": [PlaceholderSpec(placeholder: "{week}", specifier: "%lld")],
   "stats.charts.yearlyIncome.title": [PlaceholderSpec(placeholder: "{year}", specifier: "%@")],
-  "stats.monthlyGoal.overTarget": [PlaceholderSpec(placeholder: "{amount}", specifier: "%@")],
-  "stats.monthlyGoal.remaining": [PlaceholderSpec(placeholder: "{amount}", specifier: "%@")],
 ]
 
 private enum ValidationError: Error, CustomStringConvertible {

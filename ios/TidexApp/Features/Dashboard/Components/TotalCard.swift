@@ -170,18 +170,10 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       subtitleAmountRow(amount: amount, label: String(localized: .dashboardBeforeTax))
 
     case .plannedCount(let count):
-      let plannedLabel =  // swiftlint:disable:this explicit_type_interface
-        count == 1
-        ? String(localized: .dashboardShiftPlanned)
-        : String(localized: .dashboardShiftsPlanned)
-      animatedCountLabel(count: count, label: plannedLabel)
+      animatedCountLabel(Text(.dashboardPlannedShiftCount(count)), count: count)
 
     case .shiftCount(let count):
-      let shiftsLabel =  // swiftlint:disable:this explicit_type_interface
-        count == 1
-        ? String(localized: .dashboardShift)
-        : String(localized: .dashboardShifts)
-      animatedCountLabel(count: count, label: shiftsLabel)
+      animatedCountLabel(Text(.commonShiftCount(count)), count: count)
 
     case .none:
       if showDashes {
@@ -266,8 +258,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     .foregroundColor(.tidexTextSecondary)
   }
 
-  private func animatedCountLabel(count: Int, label: String) -> some View {
-    Text("\(count) \(label)")
+  private func animatedCountLabel(_ text: Text, count: Int) -> some View {
+    text
       .font(.tidexBody)
       .foregroundColor(.tidexTextSecondary)
       .contentTransition(.numericText(value: Double(count)))

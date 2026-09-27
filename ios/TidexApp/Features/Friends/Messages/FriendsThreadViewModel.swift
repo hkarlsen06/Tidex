@@ -1020,6 +1020,8 @@ internal final class FriendsThreadViewModel: ObservableObject {
         }
 
         await refreshFromServer()
+        // Resend messages queued while offline without waiting for the thread to reopen.
+        retryQueuedMessagesIfNeeded()
       }
     }
   }

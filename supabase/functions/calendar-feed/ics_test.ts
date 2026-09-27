@@ -120,3 +120,53 @@ Deno.test("buildICalendarFeed localizes shift summaries", async () => {
 
   assertStringIncludes(feed, "SUMMARY:Vakt: Extra");
 });
+
+Deno.test("buildICalendarFeed writes 24:00 ends as midnight of the next day", async () => {
+  const feed = await buildICalendarFeed(
+    {
+      jobs: [],
+      shifts: [
+        {
+          id: "shift-1",
+          shift_date: "2026-05-14",
+          start_time: "16:00:00+02:00",
+          end_time: "24:00:00+02:00",
+          note: null,
+          job_id: null,
+          updated_at: "2026-05-14T10:00:00Z",
+        },
+      ],
+      recurringShifts: [],
+      events: [
+        {
+          id: "event-1",
+          start_date: "2026-05-31",
+          end_date: "2026-05-31",
+          is_all_day: false,
+          start_time: "20:00:00+02:00",
+          end_time: "24:00:00+02:00",
+          note: "Kveld",
+          updated_at: "2026-05-14T10:00:00Z",
+        },
+      ],
+    },
+    [
+      {
+        id: "recurring-1",
+        occurrenceDate: "2026-05-20",
+        start_time: "00:00:00+02:00",
+        end_time: "24:00:00+02:00",
+        note: null,
+        job_id: null,
+        updated_at: "2026-05-14T10:00:00Z",
+      },
+    ],
+    { startDate: "2026-05-01", endDate: "2026-06-01" },
+  );
+
+  assert(!feed.includes("T240000"));
+  assertStringIncludes(feed, "DTEND:20260515T000000");
+  assertStringIncludes(feed, "DTSTART:20260520T000000");
+  assertStringIncludes(feed, "DTEND:20260521T000000");
+  assertStringIncludes(feed, "DTEND:20260601T000000");
+});

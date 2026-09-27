@@ -4,12 +4,14 @@ import {
   buildApsPayload,
   buildPrefetchApnsHeaders,
   buildPrefetchPayload,
+  classifyApnsFailure,
   coalesceNotifications,
   didAnyDeliverySucceed,
   hasDeliverableNotificationContent,
   type OutboxNotification,
   publicNotificationDataPayload,
   refreshDeliveryJobFromCurrentRows,
+  retryOrFailOutboxUpdate,
   usesMessagePrefetch,
   usesRichFormatting,
   usesThreadActions,
@@ -439,4 +441,51 @@ Deno.test("apns environment order prefers stored environment when known", () => 
     "production",
     "sandbox",
   ]);
+});
+
+Deno.test("APNs failures only invalidate tokens for token-specific reasons", () => {
+  const bad = JSON.stringify({ reason: "BadDeviceToken" });
+  assertEquals(classifyApnsFailure(400, bad, false), "try_next_environment");
+  assertEquals(classifyApnsFailure(400, bad, true), "invalid_token");
+  assertEquals(
+    classifyApnsFailure(
+      400,
+      JSON.stringify({ reason: "DeviceTokenNotForTopic" }),
+      false,
+    ),
+    "invalid_token",
+  );
+  assertEquals(
+    classifyApnsFailure(410, JSON.stringify({ reason: "Unregistered" }), false),
+    "invalid_token",
+  );
+  assertEquals(
+    classifyApnsFailure(
+      400,
+      JSON.stringify({ reason: "PayloadTooLarge" }),
+      true,
+    ),
+    "failed",
+  );
+  assertEquals(classifyApnsFailure(503, "<html>", true), "retryable");
+  assertEquals(classifyApnsFailure(429, "{}", true), "retryable");
+});
+
+Deno.test("transient outbox failures requeue until the attempt cap", () => {
+  const now = new Date("2026-09-27T12:00:00Z");
+  assertEquals(retryOrFailOutboxUpdate([{ attempts: 0 }], "boom", now), {
+    status: "pending",
+    attempts: 1,
+    claimed_at: null,
+    error_message: "boom",
+  });
+  assertEquals(
+    retryOrFailOutboxUpdate([{ attempts: 3 }, { attempts: 9 }], "boom", now),
+    {
+      status: "failed",
+      attempts: 10,
+      error_message: "boom",
+      processed_at: now.toISOString(),
+    },
+  );
 });

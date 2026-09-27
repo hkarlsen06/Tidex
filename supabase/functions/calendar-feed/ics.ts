@@ -64,7 +64,10 @@ export function escapeICalendarText(value: string): string {
 }
 
 function formatDateTime(date: string, time: string): string {
-  return `${date.replaceAll("-", "")}T${cleanTime(time).replace(":", "")}00`;
+  const cleaned = cleanTime(time);
+  // iCalendar has no 24:00, so end-of-day becomes midnight of the next day.
+  if (cleaned === "24:00") return `${formatDate(addDays(date, 1))}T000000`;
+  return `${formatDate(date)}T${cleaned.replace(":", "")}00`;
 }
 
 function formatDate(date: string): string {

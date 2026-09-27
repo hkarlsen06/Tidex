@@ -142,13 +142,13 @@ try {
   await sharp(Buffer.from(lockups.light)).resize({ width: 910, height: 350, fit: 'contain', background: transparent })
     .webp({ lossless: true }).toFile(path.join(publicDir, 'icons/tidex-wordmark.webp'));
 
-  for (const size of [16, 32, 48, 192]) {
-    await sharp(appIcon).resize(size, size).flatten({ background: brandBlue }).png()
-      .toFile(path.join(publicDir, `favicon-${size}x${size}.png`));
+  for (const [file, size] of [['favicon-16x16.png', 16], ['favicon-32x32.png', 32], ['favicon-48x48.png', 48],
+    ['favicon-192x192.png', 192], ['android-chrome-512x512.png', 512]]) {
+    await sharp(appIcon).resize(size, size).png().toFile(path.join(publicDir, file));
   }
-  for (const [file, size] of [['apple-touch-icon.png', 180], ['android-chrome-512x512.png', 512]]) {
-    await sharp(appIcon).resize(size, size).flatten({ background: brandBlue }).png().toFile(path.join(publicDir, file));
-  }
+  // iOS shows transparent touch-icon pixels as black and masks the corners itself.
+  await sharp(appIcon).resize(180, 180).flatten({ background: brandBlue }).png()
+    .toFile(path.join(publicDir, 'apple-touch-icon.png'));
   await cp(path.join(publicDir, 'apple-touch-icon.png'), path.join(catalog, 'MarketingAppIcon.imageset/apple-touch-icon.png'));
 
   const sizes = [16, 32, 48, 256];

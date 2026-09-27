@@ -12,8 +12,42 @@ internal enum WidgetLayoutState {
   case todayOrTomorrow
 }
 
+/// A timeline entry that shows one shift with its real start and end instants.
+internal protocol ShiftTimelineEntry: TimelineEntry {
+  var hasShift: Bool { get }
+  var layoutState: WidgetLayoutState { get }
+  var daysRemaining: Int { get }
+  var shiftHasStarted: Bool { get }
+  var shiftHasEnded: Bool { get }
+  var shiftStart: Date? { get }
+  var shiftEnd: Date? { get }
+}
+
+extension ShiftTimelineEntry {
+  /// Start of today's shift while it is still upcoming, for a live countdown.
+  internal var upcomingStartToday: Date? {
+    guard hasShift,
+      layoutState == .todayOrTomorrow,
+      daysRemaining == 0,
+      !shiftHasStarted,
+      !shiftHasEnded
+    else {
+      return nil
+    }
+    return shiftStart
+  }
+
+  /// End of the shift in progress, for a live countdown. Nil once the shift is over.
+  internal var activeShiftEnd: Date? {
+    guard hasShift, shiftHasStarted, !shiftHasEnded, let shiftEnd, shiftEnd > date else {
+      return nil
+    }
+    return shiftEnd
+  }
+}
+
 /// Timeline entry for the Shift Home Widget
-internal struct ShiftWidgetEntry: TimelineEntry {
+internal struct ShiftWidgetEntry: ShiftTimelineEntry {
   /// The date for this timeline entry (used by WidgetKit for scheduling)
   internal let date: Date
 
@@ -49,6 +83,12 @@ internal struct ShiftWidgetEntry: TimelineEntry {
 
   /// Deep link URL to open the shift in the app (e.g., "tidex://shifts?dates=2025-01-15")
   internal let deepLinkURL: URL?
+
+  /// Real start instant of the shift
+  internal var shiftStart: Date?
+
+  /// Real end instant of the shift (next day for night shifts)
+  internal var shiftEnd: Date?
 
   /// Placeholder entry for widget gallery and loading states
   internal static func placeholder() -> Self {

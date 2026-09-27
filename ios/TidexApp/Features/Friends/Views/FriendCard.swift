@@ -56,7 +56,7 @@ struct FriendCard: View {
           .frame(maxWidth: .infinity, alignment: .leading)
           .contentShape(Rectangle())
           .allowsHitTesting(!isOpeningMessage)
-          .accessibilityLabel(Text(verbatim: "\(sharer.displayName) chat"))
+          .accessibilityLabel(Text(.friendsChatRowLabel(sharer.displayName)))
           .accessibilityHint(Text(.friendsChatMessageAction))
           .accessibilityAddTraits(.isButton)
 

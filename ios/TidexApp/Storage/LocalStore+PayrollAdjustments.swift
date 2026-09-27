@@ -149,11 +149,8 @@ extension LocalStoreActor {
     guard let existing = try getPayrollAdjustment(id: id) else {
       throw LocalStoreWriteError.notFound
     }
-    if existing.serverRevision == 0 {
-      modelContext.delete(existing)
-      try modelContext.save()
-      return
-    }
+    // Keep the row even before its first push. An insert may be in flight, and its completion
+    // needs the row to learn the server revision so the delete reaches the server.
     existing.syncStatus = .pendingDelete
     existing.localUpdatedAt = Date()
     try modelContext.save()
@@ -226,13 +223,27 @@ extension LocalStoreActor {
     existing.localUpdatedAt = Date()
   }
 
+  // swiftlint:disable:next function_parameter_count
   func markPayrollAdjustmentPushed(
     id: String,
     serverRow: SyncPayrollAdjustmentRow,
     serverUpdatedAt: Date,
     serverDeletedAt: Date?,
-    snapshot: PayrollAdjustmentServerSnapshot
+    snapshot: PayrollAdjustmentServerSnapshot,
+    baseline: SyncPushBaseline
   ) {
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
+    if keepChangesMadeDuringPush(
+      existing,
+      baseline: baseline,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      snapshot: snapshot.encoded()
+    ) {
+      return
+    }
     updatePayrollAdjustmentFromServer(
       id: id,
       serverRow: serverRow,
@@ -240,12 +251,43 @@ extension LocalStoreActor {
       serverDeletedAt: serverDeletedAt,
       snapshot: snapshot
     )
-    guard let existing = try? getPayrollAdjustment(id: id) else {
-      return
-    }
     existing.syncStatus = .clean
     existing.dirtyFieldKeys = []
     existing.conflictServerSnapshot = nil
+  }
+
+  /// Merges a newer server row into a dirty local adjustment.
+  /// Pushes send the whole row, so this merges whole rows. The server row replaces the local
+  /// values when no local value still needs pushing. Otherwise the local values stay and only
+  /// the server revision is adopted, so the next push updates the server row.
+  func mergePayrollAdjustmentFromServer(
+    id: String,
+    serverRow: SyncPayrollAdjustmentRow,
+    serverUpdatedAt: Date,
+    serverDeletedAt: Date?,
+    snapshot: PayrollAdjustmentServerSnapshot
+  ) {
+    guard let existing = try? getPayrollAdjustment(id: id) else {
+      return
+    }
+    let keepLocal = SyncMerge.fieldsToKeepLocally(existing, server: snapshot)
+    if keepLocal.isEmpty {
+      updatePayrollAdjustmentFromServer(
+        id: id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        snapshot: snapshot
+      )
+    } else {
+      adoptServerRevision(
+        existing,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        snapshot: snapshot.encoded()
+      )
+    }
+    settleMergedDirtyFields(existing, keepingLocal: keepLocal)
   }
 
   func markPayrollAdjustmentClean(id: String) {

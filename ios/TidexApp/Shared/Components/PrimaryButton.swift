@@ -62,21 +62,6 @@ private struct SnappyPrimaryButtonStyle: ButtonStyle {
   }
 }
 
-/// Loading button that shows a spinner while loading
-struct LoadingButton: View {
-  let title: String
-  let isLoading: Bool
-  let action: () -> Void
-
-  var body: some View {
-    PrimaryButton(
-      title: title,
-      action: action,
-      isLoading: isLoading
-    )
-  }
-}
-
 #Preview {
   VStack(spacing: Spacing.md) {
     PrimaryButton(title: "Log in", action: {})

@@ -448,7 +448,7 @@ final class TidexAppUITests: XCTestCase {
 
     app.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 2) + "30")
     XCTAssertEqual(end.value as? String, "17:30")
-    XCTAssertFalse(app.keyboards.firstMatch.exists)
+    XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: defaultTimeout))
     XCTAssertEqual(Int(hides.label), (Int(hidesBeforeAdvance) ?? 0) + 1)
   }
 

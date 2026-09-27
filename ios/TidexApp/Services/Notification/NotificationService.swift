@@ -247,15 +247,8 @@ final class NotificationService {
     let trimmedBody = body.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !threadId.isEmpty, !trimmedBody.isEmpty else { return }
 
+    // Send first so a failed mark-read can't drop the reply.
     do {
-      if let messageId, !messageId.isEmpty {
-        let state = try await FriendsMessagingService.shared.markThreadRead(
-          threadId: threadId,
-          throughMessageId: messageId
-        )
-        await FriendsMessagesRepository.shared.saveThreadState(state)
-      }
-
       _ = try await FriendsMessagingService.shared.sendMessage(
         threadId: threadId,
         clientId: UUID().uuidString.lowercased(),
@@ -264,10 +257,46 @@ final class NotificationService {
         attachments: [],
         metadataData: nil
       )
-      await refreshApplicationBadgeCount(viewerUserId: AppCoordinator.shared.getCurrentUserId())
-      await clearDeliveredFriendChatNotifications(for: threadId)
     } catch {
       logger.error("Failed to send quick reply from notification: \(error.localizedDescription)")
+      await scheduleQuickReplyFailedNotification(threadId: threadId, body: trimmedBody)
+      return
+    }
+
+    if let messageId, !messageId.isEmpty,
+      let state = try? await FriendsMessagingService.shared.markThreadRead(
+        threadId: threadId,
+        throughMessageId: messageId
+      )
+    {
+      await FriendsMessagesRepository.shared.saveThreadState(state)
+    }
+    await refreshApplicationBadgeCount(viewerUserId: AppCoordinator.shared.getCurrentUserId())
+    await clearDeliveredFriendChatNotifications(for: threadId)
+  }
+
+  /// Tells the user a notification quick reply wasn't sent. The body repeats the reply
+  /// so it isn't lost, and tapping opens the thread.
+  private func scheduleQuickReplyFailedNotification(threadId: String, body: String) async {
+    let content = UNMutableNotificationContent()
+    content.title = String(localized: .notificationsChatQuickReplyFailedTitle)
+    content.body = body
+    content.sound = .default
+    content.userInfo = [
+      "type": "thread_message",
+      "thread_id": threadId,
+    ]
+
+    let request = UNNotificationRequest(
+      identifier: "quick-reply-failed-\(threadId)-\(UUID().uuidString)",
+      content: content,
+      trigger: nil
+    )
+
+    do {
+      try await UNUserNotificationCenter.current().add(request)
+    } catch {
+      logger.error("Failed to schedule quick reply failure notification: \(error.localizedDescription)")
     }
   }
 

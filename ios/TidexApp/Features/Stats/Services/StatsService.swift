@@ -311,8 +311,18 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         let bestWeek: BestWeekData?
 
         if isCurrentMonth {
+          // The Mon-Sun week can start in the previous month (or year).
+          let weekCandidates =
+            previousYM.year == targetYear
+            ? fullYearData.includedShifts
+            : previousMonthIncluded + fullYearData.includedShifts
           thisWeek = Self.buildThisWeekData(
-            shifts: primaryCurrentMonthShifts,
+            shifts: JobCurrencyAggregateResolver.shifts(
+              in: weekCandidates,
+              currency: currentMonthAggregate.primary.currency,
+              jobs: jobs,
+              fallbackCurrency: fallbackCurrency
+            ),
             now: now
           )
           bestWeek = nil
@@ -325,10 +335,10 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
           )
         }
 
-        // Build employment data for the focus year (uses all shifts for hours worked)
+        // Build employment data for the focus year from shifts that count toward totals
         let employmentData = Self.buildEmploymentData(  // swiftlint:disable:this explicit_type_interface
           focusYear: targetYear,
-          shifts: fullYearData.shifts,
+          shifts: fullYearData.includedShifts,
           snapshots: snapshots
         )
 
@@ -349,14 +359,14 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
             totalEarnings: currentTotals.gross,
             totalEarningsNet: currentTotals.net,
             totalHours: currentHours,
-            shiftCount: currentMonthShifts.count
+            shiftCount: currentMonthIncluded.count
           ),
           currentMonthCurrencyAggregate: currentMonthAggregate,
           lastMonth: MonthStats(
             totalEarnings: previousTotals.gross,
             totalEarningsNet: previousTotals.net,
             totalHours: previousHours,
-            shiftCount: previousMonthShifts.count
+            shiftCount: previousMonthIncluded.count
           ),
           percentageChange: percentageChange,
           thisMonthCumulative: cumulativeData,
@@ -599,7 +609,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   ///   - previousMonth: Month number (1-12) of previous month
   ///   - now: Current date for determining today/future
   /// - Returns: Array of cumulative data for each day of the month
-  nonisolated private static func buildCumulativeData(  // swiftlint:disable:this function_body_length function_parameter_count line_length
+  nonisolated static func buildCumulativeData(  // swiftlint:disable:this cyclomatic_complexity explicit_acl function_body_length function_parameter_count line_length
     currentMonthShifts: [ShiftWithComputations],
     previousMonthShifts: [ShiftWithComputations],
     targetYear: Int,
@@ -672,6 +682,12 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       if day <= daysInPreviousMonth {
         previousCumulative += previousMonthEarningsPerDay[day] ?? 0
       }
+      // A longer previous month folds its remaining days into the last point.
+      if day == daysInCurrentMonth, daysInPreviousMonth > daysInCurrentMonth {
+        for extraDay in (day + 1)...daysInPreviousMonth {
+          previousCumulative += previousMonthEarningsPerDay[extraDay] ?? 0
+        }
+      }
 
       let dataPoint = DailyCumulativeData(  // swiftlint:disable:this explicit_type_interface
         day: day,
@@ -691,7 +707,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   ///   - shifts: Computed shifts for the current month
   ///   - now: Current date
   /// - Returns: Array of daily data for Mon-Sun of current week
-  nonisolated private static func buildThisWeekData(
+  nonisolated static func buildThisWeekData(  // swiftlint:disable:this explicit_acl
     shifts: [ShiftWithComputations],
     now: Date
   ) -> [DailyData] {
@@ -755,16 +771,16 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   ///   - focusYear: Year of focus month
   ///   - focusMonth: Month number (1-12) of focus month
   /// - Returns: Best week data or nil if no shifts
-  nonisolated private static func buildBestWeekData(  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length
+  nonisolated static func buildBestWeekData(  // swiftlint:disable:this cyclomatic_complexity explicit_acl function_body_length line_length
     shifts: [ShiftWithComputations],
     focusYear _: Int,
     focusMonth: Int
   ) -> BestWeekData? {
     guard !shifts.isEmpty else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
 
-    var calendar = Calendar(identifier: .gregorian)  // swiftlint:disable:this explicit_type_interface
+    // ISO 8601 weeks start on Monday and week 1 contains the first Thursday.
+    var calendar = Calendar(identifier: .iso8601)  // swiftlint:disable:this explicit_type_interface
     calendar.timeZone = Date.localTimeZone
-    calendar.firstWeekday = 2  // Monday // swiftlint:disable:this no_magic_numbers
 
     // Group shifts by ISO week number
     var weeklyEarnings:
@@ -895,13 +911,13 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
   /// Build employment percentage data for the focus year
   /// Calculates average employment percentage per month based on hours worked
-  /// Uses weighted distribution for weeks spanning multiple months
+  /// Compares hours worked in each month with full-time hours for that month's weekdays
   /// - Parameters:
   ///   - focusYear: The year to calculate employment data for
   ///   - shifts: All computed shifts for the year
   ///   - snapshots: Wage snapshots to determine break deduction settings
   /// - Returns: Employment data with monthly breakdown and yearly average
-  nonisolated private static func buildEmploymentData(  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length
+  nonisolated static func buildEmploymentData(  // swiftlint:disable:this cyclomatic_complexity explicit_acl function_body_length line_length
     focusYear: Int,
     shifts: [ShiftWithComputations],
     snapshots: [WageSnapshot]
@@ -937,81 +953,25 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
       }
     }
 
-    // Accumulators for monthly employment percentages
-    struct MonthAccumulator {
-      var totalWeightedPercentage: Double = 0
-      var totalWeight: Double = 0
+    // A full-time month is its weekdays at a fifth of the weekly full-time hours,
+    // so someone working every weekday shows 100% whether the month has 20 or 23 of them.
+    var hoursPerMonth: [Int: Double] = [:]
+    for (dateStr, hours) in hoursPerDay where dateStr.hasPrefix("\(focusYear)-") {
+      if let month = Int(dateStr.split(separator: "-")[1]) {
+        hoursPerMonth[month, default: 0] += hours
+      }
     }
-    var monthlyAccumulators: [Int: MonthAccumulator] = [:]
+    var fullTimeHoursPerMonth: [Int: Double] = [:]
     for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
-      monthlyAccumulators[month] = MonthAccumulator()
-    }
-
-    // Find Monday of the first week of the year
-    guard let yearStart = calendar.date(from: DateComponents(year: focusYear, month: 1, day: 1))
-    else {
-      return EmploymentData(
-        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)  // swiftlint:disable:this line_length multiline_arguments_brackets
-    }
-    let weekday = calendar.component(.weekday, from: yearStart)  // swiftlint:disable:this explicit_type_interface
-    let daysBackToMonday = weekday == 1 ? 6 : weekday - 2  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    guard var currentMonday = calendar.date(byAdding: .day, value: -daysBackToMonday, to: yearStart)
-    else {
-      return EmploymentData(
-        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)  // swiftlint:disable:this line_length multiline_arguments_brackets
-    }
-
-    // End of the focus year
-    guard let yearEnd = calendar.date(from: DateComponents(year: focusYear, month: 12, day: 31))  // swiftlint:disable:this line_length no_magic_numbers
-    else {
-      return EmploymentData(
-        monthlyData: [], yearlyAverage: nil, fullTimeHoursPerWeek: fullTimeHoursPerWeek)  // swiftlint:disable:this line_length multiline_arguments_brackets
-    }
-
-    // Process all weeks until we pass the end of the year
-    while currentMonday <= yearEnd {
-      // Build the 7 days of this week
-      var weekDays: [Date] = []
-      for i in 0..<7 {  // swiftlint:disable:this identifier_name no_magic_numbers
-        if let day = calendar.date(byAdding: .day, value: i, to: currentMonday) {
-          weekDays.append(day)
-        }
-      }
-
-      // Calculate hours worked per month within this week
-      // Only count hours towards the month they were actually worked in
-      var hoursPerMonthInWeek: [Int: Double] = [:]
-      var daysPerMonth: [Int: Int] = [:]
-
-      for day in weekDays {
-        let month = calendar.component(.month, from: day)  // swiftlint:disable:this explicit_type_interface
-        let year = calendar.component(.year, from: day)  // swiftlint:disable:this explicit_type_interface
-
-        // Only count days in the focus year
-        if year == focusYear {
-          daysPerMonth[month, default: 0] += 1
-
-          // Add hours worked on this day to the appropriate month
-          let dateStr = day.toISODateString()  // swiftlint:disable:this explicit_type_interface
-          let hoursOnDay = hoursPerDay[dateStr] ?? 0  // swiftlint:disable:this explicit_type_interface
-          hoursPerMonthInWeek[month, default: 0] += hoursOnDay
-        }
-      }
-
-      // Add weighted contribution to each month based on hours worked IN that month
-      for (month, dayCount) in daysPerMonth {
-        let weight = Double(dayCount) / 7.0  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-        let hoursInMonth = hoursPerMonthInWeek[month] ?? 0  // swiftlint:disable:this explicit_type_interface
-
-        // Calculate employment percentage based only on hours worked in this month's portion
-        let monthEmploymentPct = (hoursInMonth / fullTimeHoursPerWeek) * 100  // swiftlint:disable:this explicit_type_interface line_length
-
-        monthlyAccumulators[month]?.totalWeightedPercentage += monthEmploymentPct * weight
-        monthlyAccumulators[month]?.totalWeight += weight
-      }
-
-      // Move to next week
-      currentMonday = calendar.date(byAdding: .day, value: 7, to: currentMonday) ?? currentMonday  // swiftlint:disable:this line_length no_magic_numbers
+      guard
+        let monthStart = calendar.date(from: DateComponents(year: focusYear, month: month, day: 1)),
+        let days = calendar.range(of: .day, in: .month, for: monthStart)
+      else { continue }
+      let weekdayCount = days.filter { day in  // swiftlint:disable:this explicit_type_interface
+        guard let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) else { return false }
+        return !calendar.isDateInWeekend(date)
+      }.count
+      fullTimeHoursPerMonth[month] = Double(weekdayCount) * fullTimeHoursPerWeek / 5  // swiftlint:disable:this no_magic_numbers
     }
 
     // Build monthly data
@@ -1020,13 +980,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
     var monthsWithShifts = 0  // swiftlint:disable:this explicit_type_interface
 
     for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
-      let accumulator = monthlyAccumulators[month] ?? MonthAccumulator()  // swiftlint:disable:this explicit_type_interface line_length
-      let averagePercentage: Double
-      if accumulator.totalWeight > 0 {
-        averagePercentage = accumulator.totalWeightedPercentage / accumulator.totalWeight
-      } else {
-        averagePercentage = 0
-      }
+      let fullTimeHours = fullTimeHoursPerMonth[month] ?? 0  // swiftlint:disable:this explicit_type_interface
+      let averagePercentage = fullTimeHours > 0 ? (hoursPerMonth[month] ?? 0) / fullTimeHours * 100 : 0  // swiftlint:disable:this explicit_type_interface line_length
 
       let hasShifts = !(daysWithShiftsPerMonth[month]?.isEmpty ?? true)  // swiftlint:disable:this explicit_type_interface line_length
 
@@ -1044,7 +999,7 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         ))  // swiftlint:disable:this multiline_arguments_brackets
 
       // Add to yearly sum if month has shifts
-      if hasShifts, accumulator.totalWeight > 0 {
+      if hasShifts, fullTimeHours > 0 {
         yearlySum += averagePercentage
         monthsWithShifts += 1
       }

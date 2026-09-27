@@ -11,7 +11,7 @@ struct AppearanceSettingsView: View {
       VStack(alignment: .leading, spacing: Spacing.lg) {
         // Error message
         if let error = viewModel.errorMessage {
-          errorBanner(error)
+          ErrorBanner(message: error, onDismiss: { viewModel.clearError() })
         }
 
         // Theme selection
@@ -35,33 +35,6 @@ struct AppearanceSettingsView: View {
     .task {
       await viewModel.loadSettings()
     }
-  }
-
-  // MARK: - Error Banner
-
-  private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: "exclamationmark.triangle.fill")
-        .font(.tidexBody)
-        .foregroundColor(.tidexError)
-
-      Text(message)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
-
-      Spacer()
-
-      Button {
-        viewModel.clearError()
-      } label: {
-        Image(systemName: "xmark")
-          .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
-    .padding(Spacing.sm)
-    .background(Color.tidexError.opacity(0.1))
-    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Theme Selection Section

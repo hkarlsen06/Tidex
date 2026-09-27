@@ -10,7 +10,7 @@ private let kServerUploadFailureCode: Int = -2
 // MARK: - StoreKit Manager
 
 /// Manages StoreKit 2 operations: product loading, purchases, and transaction listening
-/// Finishes transactions immediately after local verification, queues JWS for async server upload
+/// Persists the JWS upload before finishing a transaction, then uploads it to the server
 @MainActor
 final class StoreKitManager: ObservableObject {
   internal static let shared: StoreKitManager = .init()
@@ -159,23 +159,28 @@ final class StoreKitManager: ObservableObject {
       await updateCurrentEntitlements()
       EntitlementService.shared.updateEffectiveTier()
 
-      // 3. Finish transaction locally
-      await transaction.finish()
-      logger.info("Transaction finished: \(transaction.productID)")
+      // 3. Persist the receipt, then upload it and wait so the server knows about the
+      // subscription before the user tries to use features.
+      let makeUpload = {
+        LocalPendingJWSUpload(
+          userId: userId,
+          jwsRepresentation: jwsRepresentation,
+          transactionId: String(transaction.id),
+          originalTransactionId: String(transaction.originalID),
+          productId: transaction.productID,
+          environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
+          priceDisplay: product.displayPrice
+        )
+      }
+      let queued = await enqueueBeforeFinishing(makeUpload())
+      let uploadSuccess = await JWSUploadWorker.shared.uploadImmediately(makeUpload())
 
-      // 4. Upload JWS to server IMMEDIATELY and wait for it
-      // This ensures the server knows about the subscription before user tries to use features
-      let upload = LocalPendingJWSUpload(
-        userId: userId,
-        jwsRepresentation: jwsRepresentation,
-        transactionId: String(transaction.id),
-        originalTransactionId: String(transaction.originalID),
-        productId: transaction.productID,
-        environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
-        priceDisplay: product.displayPrice
-      )
-
-      let uploadSuccess = await JWSUploadWorker.shared.uploadImmediately(upload)
+      // 4. Finish only once the receipt is uploaded or queued. Otherwise StoreKit
+      // redelivers the transaction through Transaction.updates.
+      if queued || uploadSuccess {
+        await transaction.finish()
+        logger.info("Transaction finished: \(transaction.productID)")
+      }
       if !uploadSuccess {
         // Upload failed but will retry in background
         // Log but don't fail the purchase - user still has local entitlement
@@ -233,20 +238,26 @@ final class StoreKitManager: ObservableObject {
       // jwsRepresentation is on VerificationResult, not Transaction — access after verified guard
       let jwsRepresentation = verification.jwsRepresentation
 
-      await transaction.finish()
-      logger.info("Consumable transaction finished: \(transaction.productID)")
-
-      let upload = LocalPendingJWSUpload(
-        userId: userId,
-        jwsRepresentation: jwsRepresentation,
-        transactionId: String(transaction.id),
-        originalTransactionId: String(transaction.originalID),
-        productId: transaction.productID,
-        environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
-        priceDisplay: product.displayPrice
-      )
-
-      return await JWSUploadWorker.shared.uploadImmediately(upload)
+      // Persist the receipt before finishing so the credits cannot be lost if the
+      // upload fails or the app is killed.
+      let makeUpload = {
+        LocalPendingJWSUpload(
+          userId: userId,
+          jwsRepresentation: jwsRepresentation,
+          transactionId: String(transaction.id),
+          originalTransactionId: String(transaction.originalID),
+          productId: transaction.productID,
+          environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
+          priceDisplay: product.displayPrice
+        )
+      }
+      let queued = await enqueueBeforeFinishing(makeUpload())
+      let uploadSuccess = await JWSUploadWorker.shared.uploadImmediately(makeUpload())
+      if queued || uploadSuccess {
+        await transaction.finish()
+        logger.info("Consumable transaction finished: \(transaction.productID)")
+      }
+      return uploadSuccess
 
     case .userCancelled:
       logger.info("Consumable purchase cancelled by user")
@@ -367,8 +378,8 @@ final class StoreKitManager: ObservableObject {
     do {
       expectedAppAccountToken = try await appAccountToken(for: userId)
     } catch {
+      // Keep the previous tier. Offline launches must not downgrade a paying user.
       logger.error("Unable to verify StoreKit entitlement owner: \(error.localizedDescription)")
-      setCurrentEntitlement(tier: .free, productId: nil)
       return
     }
 
@@ -425,24 +436,31 @@ final class StoreKitManager: ObservableObject {
         // Update local entitlements - this also notifies EntitlementService of tier changes
         await self?.updateCurrentEntitlements()
 
+        // Leave the transaction unfinished when the owner can't be verified (signed out
+        // or offline without a stored token). StoreKit redelivers it on the next launch.
+        guard let userId = await self?.userId,
+          let expectedAppAccountToken = try? await self?.appAccountToken(for: userId)
+        else {
+          continue
+        }
+
         // Queue JWS upload even if products aren't loaded
         // priceDisplay can be nil - server doesn't require it
-        if let userId = await self?.userId,
-          let expectedAppAccountToken = try? await self?.appAccountToken(for: userId),
-          await self?.transactionBelongsToCurrentUser(
-            transaction,
-            expectedAppAccountToken: expectedAppAccountToken
-          ) == true
-        {
+        if await self?.transactionBelongsToCurrentUser(
+          transaction,
+          expectedAppAccountToken: expectedAppAccountToken
+        ) == true {
           // Try to find product for display price, but don't skip if not found
           let displayPrice = await self?.products.first(where: { $0.id == transaction.productID })?
             .displayPrice
-          await self?.queueJWSUpload(
-            transaction: transaction,
-            jwsRepresentation: jwsRepresentation,
-            userId: userId,
-            priceDisplay: displayPrice
-          )
+          let queued =
+            await self?.queueJWSUpload(
+              transaction: transaction,
+              jwsRepresentation: jwsRepresentation,
+              userId: userId,
+              priceDisplay: displayPrice
+            ) ?? false
+          guard queued else { continue }
         }
 
         // Finish the transaction
@@ -468,9 +486,11 @@ final class StoreKitManager: ObservableObject {
   /// Queue JWS upload (core implementation)
   /// jwsRepresentation must be passed from VerificationResult (not available on Transaction)
   /// priceDisplay is optional - queue upload even without it
+  /// - Returns: false if the upload could not be persisted
+  @discardableResult
   private func queueJWSUpload(
     transaction: Transaction, jwsRepresentation: String, userId: String, priceDisplay: String?
-  ) async {
+  ) async -> Bool {
     let upload = LocalPendingJWSUpload(
       userId: userId,
       jwsRepresentation: jwsRepresentation,
@@ -487,8 +507,22 @@ final class StoreKitManager: ObservableObject {
 
       // Trigger upload worker
       JWSUploadWorker.shared.processQueue()
+      return true
     } catch {
       logger.error("Failed to queue JWS upload: \(error.localizedDescription)")
+      return false
+    }
+  }
+
+  /// Persists an upload before its transaction is finished. Returns false if the
+  /// queue write failed, in which case the caller leaves the transaction unfinished.
+  private func enqueueBeforeFinishing(_ upload: LocalPendingJWSUpload) async -> Bool {
+    do {
+      try await EntitlementRepository.shared.enqueuePendingUpload(upload)
+      return true
+    } catch {
+      logger.error("Failed to queue JWS upload before finishing: \(error.localizedDescription)")
+      return false
     }
   }
 
@@ -529,6 +563,13 @@ final class StoreKitManager: ObservableObject {
       return cachedAppAccountToken
     }
 
+    // The token is stable per user, so a stored copy lets offline launches verify
+    // StoreKit entitlements without the RPC.
+    if let storedToken = Self.storedAppAccountToken(for: userId) {
+      cachedAppAccountToken = storedToken
+      return storedToken
+    }
+
     guard UUID(uuidString: userId) != nil else {
       throw PurchaseError.networkError(
         underlying: NSError(
@@ -554,10 +595,33 @@ final class StoreKitManager: ObservableObject {
       }
 
       cachedAppAccountToken = uuid
+      Self.storeAppAccountToken(uuid, for: userId)
       return uuid
     } catch {
       logger.error("Failed to get app account token: \(error.localizedDescription)")
       throw PurchaseError.networkError(underlying: error)
     }
+  }
+
+  // MARK: - App Account Token Storage
+
+  /// The token isn't secret; it only links StoreKit transactions to a Tidex user.
+  nonisolated static func storedAppAccountToken(
+    for userId: String,
+    defaults: UserDefaults = .standard
+  ) -> UUID? {
+    defaults.string(forKey: appAccountTokenKey(for: userId)).flatMap(UUID.init(uuidString:))
+  }
+
+  nonisolated static func storeAppAccountToken(
+    _ token: UUID,
+    for userId: String,
+    defaults: UserDefaults = .standard
+  ) {
+    defaults.set(token.uuidString, forKey: appAccountTokenKey(for: userId))
+  }
+
+  private nonisolated static func appAccountTokenKey(for userId: String) -> String {
+    "storekit.appAccountToken.\(userId.lowercased())"
   }
 }

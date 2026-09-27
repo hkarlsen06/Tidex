@@ -6,11 +6,11 @@
  *
  * Endpoints:
  * - POST /start: Start impersonation, mint tokens for target user
- * - POST /stop: End impersonation session (for audit logging)
+ * - POST /stop: End impersonation session and revoke the minted auth session
  *
  * Security:
  * - Authenticates admin via @supabase/server user auth
- * - Verifies admin role via app_metadata
+ * - Verifies admin role via app_metadata and an aal2 (MFA) session
  * - Rate limiting (10 per hour per admin)
  * - Prevents nested impersonation
  * - Audit logging in database
@@ -326,6 +326,46 @@ async function createImpersonationSession(params: {
   return { id: row.session_id, expiresAt };
 }
 
+function accessTokenSessionId(accessToken: string): string | null {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(accessToken.split(".")[1] ?? "", "base64url").toString(
+        "utf8",
+      ),
+    );
+    return typeof payload.session_id === "string" &&
+        isValidUUID(payload.session_id)
+      ? payload.session_id
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+// Ties the minted auth session to the impersonation record so that
+// is_impersonation_session() only matches that session, and ending or
+// expiring the record revokes it.
+async function bindImpersonationAuthSession(
+  sessionId: string,
+  accessToken: string,
+): Promise<void> {
+  const authSessionId = accessTokenSessionId(accessToken);
+  if (!authSessionId) {
+    throw new Error("Minted access token has no session_id");
+  }
+
+  const { error } = await supabaseAdmin.rpc(
+    "bind_impersonation_auth_session",
+    {
+      p_session_id: sessionId,
+      p_auth_session_id: authSessionId,
+    },
+  );
+  if (error) {
+    throw new Error(`Failed to bind auth session: ${error.message}`);
+  }
+}
+
 async function getImpersonationSession(
   sessionId: string,
 ): Promise<ImpersonationSession | null> {
@@ -414,7 +454,11 @@ async function insertAuditLog(params: {
 }
 
 // ---------- Request Handlers ----------
-async function handleStart(req: Request, caller: User): Promise<Response> {
+async function handleStart(
+  req: Request,
+  caller: User,
+  callerAal: unknown,
+): Promise<Response> {
   // Initialize long-lived DB/RPC client (lazy initialization)
   const dbClient = getSupabaseAdmin();
   if (!dbClient) {
@@ -428,10 +472,10 @@ async function handleStart(req: Request, caller: User): Promise<Response> {
     return json({ ok: false, error: "Service not configured" }, 503);
   }
 
-  // 1. Verify caller is an admin
+  // 1. Verify caller is an admin whose session completed MFA
   const callerIsAdmin = caller.app_metadata?.role === "admin";
-  if (!callerIsAdmin) {
-    return json({ ok: false, error: "Admin access required" }, 403);
+  if (!callerIsAdmin || callerAal !== "aal2") {
+    return json({ ok: false, error: "Admin access with MFA required" }, 403);
   }
 
   // 2. Check if caller is currently being impersonated (prevent nested impersonation)
@@ -590,13 +634,30 @@ async function handleStart(req: Request, caller: User): Promise<Response> {
     console.error("[impersonation] Failed to create session record:", error);
     // Clean up the minted session
     await authClient.auth.admin
-      .signOut(verifyData.session.access_token)
+      .signOut(verifyData.session.access_token, "local")
       .catch(() => {});
 
     const errorMessage = error instanceof Error
       ? error.message
       : "Failed to create session record";
     return json({ ok: false, error: errorMessage }, 500);
+  }
+
+  try {
+    await bindImpersonationAuthSession(
+      dbSession.id,
+      verifyData.session.access_token,
+    );
+  } catch (error) {
+    console.error("[impersonation] Failed to bind auth session:", error);
+    await endImpersonationSession(dbSession.id, caller.id);
+    await authClient.auth.admin
+      .signOut(verifyData.session.access_token, "local")
+      .catch(() => {});
+    return json(
+      { ok: false, error: "Failed to create impersonation session" },
+      500,
+    );
   }
 
   // Note: Audit log and rate limit recording are now handled by the RPC function
@@ -765,7 +826,7 @@ export default {
 
         switch (action) {
           case "start":
-            return await handleStart(req, caller);
+            return await handleStart(req, caller, ctx.jwtClaims?.aal);
           case "stop":
             return await handleStop(req, caller);
           default:
@@ -774,7 +835,7 @@ export default {
             try {
               const body = await req.clone().json();
               if (body.action === "start") {
-                return await handleStart(req, caller);
+                return await handleStart(req, caller, ctx.jwtClaims?.aal);
               } else if (body.action === "stop") {
                 return await handleStop(req, caller);
               }

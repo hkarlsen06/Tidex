@@ -23,6 +23,15 @@ or make task-authorized service changes, and use
 inspection or task-authorized data mutations. Direct SSH is the normal
 production access path, so do not block on Supabase MCP or the hosted dashboard.
 
+After any change to the auth service, `.env`, `gotrue-extra.env`, Caddy, or
+the compose stack, run `ssh mdr /srv/tidex/auth-smoke.sh`. It prints nothing
+when auth works the way the iOS app needs and one line per problem otherwise.
+The watchdog also runs it every 5 minutes and emails failures. The source is
+`supabase/ops/auth-smoke.sh`, so copy it back to mdr when you change it. In the
+compose stack, a variable set under `environment:` in `docker-compose.yml`
+overrides the same variable in `env_file`. Change those in `.env`, then confirm
+the live value with `docker compose exec -T auth env`.
+
 Use migrations rather than ad hoc SQL for schema changes. When a Supabase CLI
 operation is required, pass the explicit, percent-encoded MDR connection as
 `--db-url "$TIDEX_MDR_DB_URL"`. Do not use bare remote CLI commands or
@@ -152,6 +161,7 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 | `purge-messaging-sync-events-v2`    | `0 4 * * *`         | Purge expired messaging sync events    |
 | `queue-subscription-trial-reminders` | `15 * * * *`       | Queue subscription trial reminders     |
 | `process-live-activities`           | `1,16,31,46 * * * *` | Process Live Activity updates          |
+| `purge-auth-diagnostic-events`      | `45 4 * * 0`        | Purge auth diagnostics older than 90 days |
 
 ## Agent Behavior Guidelines
 

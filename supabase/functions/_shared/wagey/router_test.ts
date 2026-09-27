@@ -210,7 +210,7 @@ async function readChunksUntil(
 
     while (!didMatch && Date.now() < deadline) {
       const remainingMs = Math.max(1, deadline - Date.now());
-      let timeoutId: number | undefined;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const next = await Promise.race([
         reader.read(),
         new Promise<"timeout">((resolve) => {

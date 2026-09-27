@@ -163,7 +163,14 @@ struct TotalCardWidgetProvider: TimelineProvider {
       decoder.dateDecodingStrategy = .iso8601
       let totals = try decoder.decode(StoredMonthlyTotals.self, from: data)
 
-      // Always show cached data - a potentially stale value is more useful than a skeleton
+      // Totals saved last month would show the wrong month's earnings once the month changes.
+      let now = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: Date())
+      let currentYearMonth = String(format: "%04d-%02d", now.year ?? 0, now.month ?? 0)
+      guard totals.yearMonth == currentYearMonth else {
+        return TotalCardWidgetEntry.empty(currency: totals.currencySymbol)
+      }
+
+      // Show cached data for this month even if slightly stale, rather than a skeleton
       return TotalCardWidgetEntry(
         date: Date(),
         gross: totals.gross,
@@ -191,41 +198,13 @@ struct TotalCardWidgetProvider: TimelineProvider {
 struct TotalCardWidgetView: View {
   let entry: TotalCardWidgetEntry
   @Environment(\.widgetRenderingMode) var renderingMode
-  @Environment(\.colorScheme) var colorScheme
 
   // MARK: - Colors (matching TotalCard.swift)
 
-  private var isLightMode: Bool {
-    colorScheme == .light
-  }
-
-  /// tidexBlue - matches Color.tidexBlue from Color+Tidex.swift
-  private var tidexBlue: Color {
-    isLightMode
-      ? Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
-      : Color(red: 77 / 255, green: 137 / 255, blue: 249 / 255)
-  }
-
-  /// tidexTextSecondary - matches Color.tidexTextSecondary
-  private var tidexTextSecondary: Color {
-    isLightMode
-      ? Color(hue: 214 / 360, saturation: 0.28, brightness: 0.35)
-      : Color(hue: 214 / 360, saturation: 0.32, brightness: 0.85)
-  }
-
-  /// tidexTextMuted - matches Color.tidexTextMuted
-  private var tidexTextMuted: Color {
-    isLightMode
-      ? Color(red: 0x59 / 255, green: 0x6B / 255, blue: 0x80 / 255)
-      : Color(hue: 215 / 360, saturation: 0.20, brightness: 0.70)
-  }
-
-  /// Matches the background used by the small home screen widgets.
-  private var tidexWidgetBackground: Color {
-    isLightMode
-      ? Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
-      : Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
-  }
+  private var tidexBlue: Color { WidgetPalette.blue }
+  private var tidexTextSecondary: Color { WidgetPalette.textSecondary }
+  private var tidexTextMuted: Color { WidgetPalette.textMuted }
+  private var tidexWidgetBackground: Color { WidgetPalette.background }
 
   /// Adaptive colors for widget rendering modes
   private var accentColor: Color {
@@ -409,10 +388,10 @@ struct TotalCardWidgetView: View {
     .padding(.leading, 16)
   }
 
-  /// Total hours formatted (e.g., "64.00" or "64.50")
+  /// Total hours in the user's locale with up to two decimals (e.g., "64" or "37,5")
   private var formattedHours: String {
     guard entry.totalHours > 0 else { return "—" }
-    return String(format: "%.2f", entry.totalHours)
+    return entry.totalHours.formatted(.number.precision(.fractionLength(0...2)))
   }
 
   private func statRow(icon: String, value: String, label: String) -> some View {
@@ -465,7 +444,7 @@ struct TotalCardWidgetView: View {
       return .primary
 
     default:
-      return isLightMode ? .black : .white
+      return WidgetPalette.textPrimary
     }
   }
 

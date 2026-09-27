@@ -184,24 +184,34 @@ struct PayrollEngine {
       }
     }
 
-    let overtimeAdjusted = applyOvertime(
-      to: result,
-      allSnapshots: request.snapshots,
-      context: context
-    )
+    // Conflict-excluded shifts are not paid, so their hours must not count toward overtime.
+    // Decide exclusions in output order so later partitions keep the same shifts.
+    let ordered = result.sorted(by: isInOutputOrder)
+    let excludedIds = ConflictExclusion.buildExcludedShiftIds(shifts: ordered)
+    let overtimeAdjusted =
+      applyOvertime(
+        to: ordered.filter { !excludedIds.contains($0.id) },
+        allSnapshots: request.snapshots,
+        context: context
+      ) + ordered.filter { excludedIds.contains($0.id) }
 
     return
       overtimeAdjusted
       .filter { $0.shiftDate >= startDate && $0.shiftDate <= endDate }
-      .sorted {
-        if $0.shiftDate != $1.shiftDate {
-          return $0.shiftDate < $1.shiftDate
-        }
-        if $0.startTime != $1.startTime {
-          return $0.startTime < $1.startTime
-        }
-        return $0.id < $1.id
-      }
+      .sorted(by: isInOutputOrder)
+  }
+
+  private static func isInOutputOrder(
+    _ lhs: ShiftWithComputations,
+    _ rhs: ShiftWithComputations
+  ) -> Bool {
+    if lhs.shiftDate != rhs.shiftDate {
+      return lhs.shiftDate < rhs.shiftDate
+    }
+    if lhs.startTime != rhs.startTime {
+      return lhs.startTime < rhs.startTime
+    }
+    return lhs.id < rhs.id
   }
 
   /// Get all (year, month) pairs that fall within a date range
@@ -415,11 +425,14 @@ struct PayrollEngine {
       }
       let periods = mergeAdjacentPeriods(sortedPieces.map(\.period))
       let overtimeMinutes = sortedPieces.reduce(0.0) { $0 + $1.overtimeMinutes }
-      let computed = PayrollCalculator.replacingWagePeriods(
+      var computed = PayrollCalculator.replacingWagePeriods(
         in: shift.computed,
         with: periods,
         overtimeMinutes: overtimeMinutes
       )
+      if overtimeMinutes > 0 {
+        computed.preOvertimeGross = shift.computed.gross
+      }
       return ShiftWithComputations(
         shift: shift.shift,
         computed: computed,

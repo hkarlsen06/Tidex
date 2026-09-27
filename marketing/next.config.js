@@ -19,6 +19,12 @@ const nextConfig = {
   turbopack: {
     root: path.join(__dirname, '..'),
   },
+
+  // Each segment has its own root layout (for a per-locale <html lang>), so the
+  // 404 page is app/global-not-found.tsx.
+  experimental: {
+    globalNotFound: true,
+  },
 };
 
 module.exports = nextConfig;
