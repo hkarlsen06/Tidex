@@ -32,6 +32,52 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testPaywallWithoutConfirmedTrialEligibilityDoesNotPromiseATrial() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "paywall"
+    app.launch()
+    XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(app, name: "billing-paywall")
+    XCTAssertTrue(app.staticTexts["Unlock Tidex Pro"].exists, app.debugDescription)
+    XCTAssertFalse(app.staticTexts["Try Tidex Pro free"].exists)
+    XCTAssertFalse(app.buttons["Start my free trial"].exists)
+  }
+
+  @MainActor
+  func testDeleteAccountWarnsThatTheAppStoreSubscriptionKeepsBilling() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "profile-subscribed"
+    app.launch()
+    let signOut = app.buttons["Log out"]
+    XCTAssertTrue(signOut.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    for _ in 0..<3 where !app.buttons["Delete Account"].isHittable { app.swipeUp() }
+    attachAppStoreScreenshot(app, name: "billing-profile-sessions")
+    app.buttons["Delete Account"].tap()
+    let alert = app.alerts.firstMatch
+    XCTAssertTrue(alert.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "billing-delete-account-dialog")
+    XCTAssertTrue(
+      alert.staticTexts.matching(
+        NSPredicate(format: "label CONTAINS %@", "doesn't cancel your App Store subscription")
+      ).firstMatch.exists, alert.debugDescription)
+    XCTAssertTrue(alert.buttons["Manage subscription"].exists, alert.debugDescription)
+  }
+
+  @MainActor
+  func testTaxSettingExplainsTheFlatPercentage() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-history-tariff-editor"
+    app.launch()
+    let taxToggle = app.switches["pay-settings.tax-toggle"]
+    XCTAssertTrue(taxToggle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    taxToggle.tap()
+    let hint = text(containingLabel: "one flat percentage", in: app)
+    _ = hint.waitForExistence(timeout: 3)
+    attachAppStoreScreenshot(app, name: "billing-tax-flat-rate")
+    XCTAssertTrue(hint.exists, app.debugDescription)
+  }
+
+  @MainActor
   func testPayReviewOpensThePayoutTaxPeriodDirectly() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-review"
@@ -215,7 +261,7 @@ final class TidexAppUITests: XCTestCase {
   func testAppStoreScreenshots() {
     for (language, locale, shiftsTitle, statsTitle) in [
       ("en", "en_US", "Schedule", "Stats"),
-      ("nb", "nb_NO", "Agenda", "Statistikk"),
+      ("nb", "nb_NO", "Vaktplan", "Statistikk"),
     ] {
       let app = XCUIApplication()
       app.launchArguments = [
@@ -330,6 +376,86 @@ final class TidexAppUITests: XCTestCase {
     attachment.name = name
     attachment.lifetime = .keepAlways
     add(attachment)
+  }
+
+  /// Walks the screens that show money amounts and checks that each amount says what it is.
+  @MainActor
+  func testMoneyAmountsSayWhatTheyAre() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += [
+      "-defaultStartupTab", "home", "-AppleInterfaceStyle", "Dark", "-cachedTheme", "dark",
+    ]
+    app.launch()
+    let earnings = app.staticTexts.matching(
+      NSPredicate(format: "label MATCHES %@", ".*22[^0-9]?400.*")
+    )
+    .firstMatch
+    XCTAssertTrue(earnings.waitForExistence(timeout: 30), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "After tax in September", in: app).exists)
+    XCTAssertTrue(text(containingLabel: "+17% vs previous month", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-01-home")
+
+    app.buttons["Stats"].tap()
+    XCTAssertTrue(app.buttons["BackButton"].waitForExistence(timeout: defaultTimeout))
+    XCTAssertTrue(earnings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "+17% vs previous month", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-02-stats")
+
+    app.buttons["BackButton"].tap()
+    app.buttons["Schedule"].firstMatch.tap()
+    let shiftTime = app.staticTexts.matching(NSPredicate(format: "label == %@", "09:00")).firstMatch
+    XCTAssertTrue(shiftTime.waitForExistence(timeout: 30), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "before tax", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-03-schedule")
+
+    app.buttons["Add"].firstMatch.tap()
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+      .firstMatch
+    XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
+    let previewTotal = app.staticTexts.matching(
+      NSPredicate(format: "label MATCHES %@", ".*24[^0-9]?000.*")
+    ).firstMatch
+    if !previewTotal.waitForExistence(timeout: 2) {
+      recentTime.tap()
+    }
+    XCTAssertTrue(previewTotal.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(text(containingLabel: "after tax", in: app).exists)
+    attachAppStoreScreenshot(app, name: "money-04-add")
+    app.terminate()
+    captureMoneyFixtureScreens()
+  }
+
+  /// Payday, adjustments and mixed-basis totals, which the fixture account doesn't reach.
+  @MainActor
+  private func captureMoneyFixtureScreens() {
+    let cards = makeApp(scenario: "design-review")
+    cards.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "money"
+    cards.launch()
+    let markReceived = cards.buttons["Mark as received"].firstMatch
+    XCTAssertTrue(markReceived.waitForExistence(timeout: defaultTimeout), cards.debugDescription)
+    XCTAssertTrue(text(containingLabel: "Includes adjustments", in: cards).exists)
+    attachAppStoreScreenshot(cards, name: "money-05-payday")
+    markReceived.tap()
+    XCTAssertTrue(cards.buttons["Received"].firstMatch.waitForExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(cards, name: "money-06-received")
+    cards.terminate()
+
+    let details = makeApp(scenario: "design-review")
+    details.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "money-payroll"
+    details.launch()
+    let adjustments = details.buttons.matching(
+      NSPredicate(format: "label BEGINSWITH %@", "Adjustments")
+    )
+    .firstMatch
+    XCTAssertTrue(adjustments.waitForExistence(timeout: defaultTimeout), details.debugDescription)
+    adjustments.tap()
+    attachAppStoreScreenshot(details, name: "money-07-payroll-details")
+    details.swipeUp()
+    XCTAssertTrue(
+      text(containingLabel: "Total estimate", in: details).waitForExistence(timeout: defaultTimeout)
+    )
+    XCTAssertTrue(text(containingLabel: "for jobs without", in: details).exists)
+    attachAppStoreScreenshot(details, name: "money-08-payroll-total")
   }
 
   @MainActor
@@ -479,7 +605,7 @@ final class TidexAppUITests: XCTestCase {
     let workplace = app.buttons.containing(.staticText, identifier: "Nord").firstMatch
     XCTAssertTrue(workplace.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     workplace.tap()
-    let edit = app.buttons["Edit workplace"]
+    let edit = app.buttons["Edit job"]
     XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
     edit.tap()
     let name = app.textFields["Job name"]
@@ -685,6 +811,102 @@ final class TidexAppUITests: XCTestCase {
     )
   }
 
+  private struct TerminologyLabels {
+    let language: String
+    let locale: String
+    let login: String
+    let signup: String
+    let payoutDetails: String
+    let schedule: String
+    let add: String
+    let jobsAndPay: String
+    let manageJobs: String
+    let defaultJob: String
+  }
+
+  @MainActor
+  func testTerminologyScreens() {
+    for labels in [
+      TerminologyLabels(
+        language: "en", locale: "en_US", login: "Log in", signup: "Create account",
+        payoutDetails: "Payout details", schedule: "Schedule", add: "Add",
+        jobsAndPay: "Jobs & Pay", manageJobs: "Manage jobs", defaultJob: "Default job"),
+      TerminologyLabels(
+        language: "nb", locale: "nb_NO", login: "Logg inn", signup: "Opprett konto",
+        payoutDetails: "Utbetalingsdetaljer", schedule: "Vaktplan", add: "Legg til",
+        jobsAndPay: "Jobber og lønn", manageJobs: "Administrer jobber", defaultJob: "Standardjobb"),
+    ] {
+      captureTerminologyScreens(labels)
+    }
+  }
+
+  @MainActor
+  private func captureTerminologyScreens(_ labels: TerminologyLabels) {
+    let language = labels.language
+    let localeArguments = [
+      "-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", labels.locale,
+    ]
+    for (screen, heading) in [("login", labels.login), ("signup", labels.signup)] {
+      let app = XCUIApplication()
+      app.launchArguments = localeArguments
+      app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "design-review"
+      app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = screen
+      app.launch()
+      let title = app.staticTexts[heading].firstMatch
+      XCTAssertTrue(title.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+      attachAppStoreScreenshot(app, name: "\(language)-\(screen)")
+      app.terminate()
+    }
+
+    let app = XCUIApplication()
+    app.launchArguments = localeArguments + ["-defaultStartupTab", "home"]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launch()
+    let payout = app.staticTexts[language == "en" ? "Next payout" : "Neste utbetaling"]
+    XCTAssertTrue(payout.waitForExistence(timeout: 30), app.debugDescription)
+    payout.tap()
+    let details = app.navigationBars[labels.payoutDetails]
+    XCTAssertTrue(details.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-payout-details")
+    app.buttons[language == "en" ? "Done" : "Ferdig"].tap()
+
+    let schedule = app.buttons[labels.schedule].firstMatch
+    XCTAssertTrue(schedule.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    schedule.tap()
+    attachAppStoreScreenshot(app, name: "\(language)-schedule-tab")
+
+    app.buttons[labels.add].firstMatch.tap()
+    let jobPicker = app.buttons["add-shift.job-picker"]
+    XCTAssertTrue(jobPicker.waitForExistence(timeout: 30), app.debugDescription)
+    jobPicker.tap()
+    app.buttons[labels.jobsAndPay].tap()
+    XCTAssertTrue(
+      app.navigationBars[labels.manageJobs].waitForExistence(timeout: defaultTimeout),
+      app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-manage-jobs")
+    app.buttons.containing(.staticText, identifier: "Nord").firstMatch.tap()
+    let defaultJob = app.staticTexts[labels.defaultJob]
+    XCTAssertTrue(defaultJob.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    for _ in 0..<6 where !defaultJob.isHittable { app.swipeUp() }
+    XCTAssertTrue(defaultJob.isHittable, app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-job-actions")
+    app.terminate()
+  }
+
+  @MainActor
+  func testWageyToolbarButtonsHaveAccessibilityLabels() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "home"]
+    app.launch()
+    let wagey = app.buttons["Wagey"].firstMatch
+    XCTAssertTrue(wagey.waitForExistence(timeout: 30), app.debugDescription)
+    wagey.tap()
+    XCTAssertTrue(
+      app.buttons["Conversation History"].waitForExistence(timeout: defaultTimeout),
+      app.debugDescription)
+    XCTAssertTrue(app.buttons["New Conversation"].exists, app.debugDescription)
+  }
+
   @MainActor
   func testFriendsChatScenarioRendersThread() {
     let app = makeApp(scenario: "friends-chat")
@@ -801,6 +1023,100 @@ final class TidexAppUITests: XCTestCase {
       timeout: defaultTimeout,
       message: "Expected reply banner to remain visible when attachment drawer opens"
     )
+  }
+
+  @MainActor
+  func testFriendsScreensStateTheirConsequences() {
+    let cards = makeFriendsDesignApp(view: "cards")
+    cards.launch()
+    assertExists(
+      text(containingLabel: "Ella was notified", in: cards), in: cards, timeout: defaultTimeout,
+      message: "Expected the screenshot bubble to say who was notified")
+    assertExists(
+      text(containingLabel: "the next day", in: cards), in: cards, timeout: 0,
+      message: "Expected an overnight end time to read as ending the next day")
+    attachAppStoreScreenshot(cards, name: "friends-cards")
+    cards.terminate()
+
+    let addFriend = makeFriendsDesignApp(view: "add-friend")
+    addFriend.launch()
+    assertExists(
+      text(containingLabel: "sees your shifts and earnings right away", in: addFriend),
+      in: addFriend, timeout: defaultTimeout,
+      message: "Expected the add friend form to say sharing starts right away")
+    assertExists(
+      text(containingLabel: "Friend limit. Sharing your shifts with 4 of 5.", in: addFriend),
+      in: addFriend, timeout: 0, message: "Expected the friend limit counter to have a label")
+    attachAppStoreScreenshot(addFriend, name: "friends-add-friend")
+    addFriend.terminate()
+
+    let profile = makeFriendsDesignApp(view: "profile")
+    profile.launch()
+    assertExists(
+      text(containingLabel: "Move to bottom only changes the order", in: profile),
+      in: profile, timeout: defaultTimeout,
+      message: "Expected the profile to explain Move to bottom and Hide")
+    attachAppStoreScreenshot(profile, name: "friends-profile")
+  }
+
+  @MainActor
+  func testFriendsChatDeleteAsksBeforeDeletingForEveryone() {
+    let chat = makeApp(scenario: "friends-chat")
+    chat.launch()
+    let outgoing = staticText(withExactLabel: "Earlier outgoing message", in: chat)
+    assertExists(
+      outgoing, in: chat, timeout: defaultTimeout, message: "Expected the outgoing message")
+    outgoing.press(forDuration: 1)
+    let deleteAction = text(containingLabel: "Delete for everyone", in: chat)
+    assertExists(
+      deleteAction, in: chat, timeout: defaultTimeout,
+      message: "Expected the message menu to say delete removes it for everyone")
+    attachAppStoreScreenshot(chat, name: "friends-chat-menu")
+    deleteAction.tap()
+    assertExists(
+      text(containingLabel: "Delete this message for everyone?", in: chat), in: chat,
+      timeout: defaultTimeout, message: "Expected a delete confirmation")
+    attachAppStoreScreenshot(chat, name: "friends-chat-delete-confirm")
+    // iPhone confirmation dialogs may drop the Cancel button, so fall back to tapping outside.
+    if chat.buttons[commonCancelLabel].waitForExistence(timeout: 1) {
+      chat.buttons[commonCancelLabel].firstMatch.tap()
+    } else {
+      chat.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
+    }
+    assertExists(
+      outgoing, in: chat, timeout: defaultTimeout,
+      message: "Expected the message to remain after cancelling")
+  }
+
+  @MainActor
+  func testFriendsChatDeleteConfirmRemovesMessage() {
+    let chat = makeApp(scenario: "friends-chat")
+    chat.launch()
+    let outgoing = staticText(withExactLabel: "Earlier outgoing message", in: chat)
+    assertExists(
+      outgoing, in: chat, timeout: defaultTimeout, message: "Expected the outgoing message")
+    outgoing.press(forDuration: 1)
+    let deleteAction = text(containingLabel: "Delete for everyone", in: chat)
+    assertExists(
+      deleteAction, in: chat, timeout: defaultTimeout, message: "Expected the message menu")
+    deleteAction.tap()
+    let confirm = chat.buttons.matching(
+      NSPredicate(format: "label CONTAINS %@", "Delete for everyone")
+    ).firstMatch
+    assertExists(
+      confirm, in: chat, timeout: defaultTimeout, message: "Expected the destructive confirm button"
+    )
+    confirm.tap()
+    XCTAssertTrue(
+      outgoing.waitForNonExistence(timeout: defaultTimeout),
+      "Expected the message to be deleted after confirming")
+  }
+
+  private func makeFriendsDesignApp(view: String) -> XCUIApplication {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "friends"
+    app.launchEnvironment["TIDEX_DESIGN_FRIENDS_VIEW"] = view
+    return app
   }
 
   @MainActor

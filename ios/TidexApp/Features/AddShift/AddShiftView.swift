@@ -1146,19 +1146,15 @@ private struct AddShiftToolbarTotals: View {
           .foregroundColor(.tidexTextPrimary)
 
           if let secondary = totals.secondary {
-            HStack(alignment: .center, spacing: Spacing.xxxs) {
-              Image(systemName: "plus")
-                .font(.caption2.weight(.bold))
-
+            CalendarHeaderDeltaLabel(isAfterTax: totals.primaryIsAfterTax) {
               animatedAmount(
                 secondary,
                 lastDisplayed: lastDisplayedSecondary,
                 onUpdate: { lastDisplayedSecondary = $0 },
                 allowsZero: true
               )
-              .font(.tidexFootnote)
             }
-            .foregroundColor(.tidexBlue)
+            .font(.tidexFootnote)
             .transition(.offset(y: -4).combined(with: .opacity))
           }
         }

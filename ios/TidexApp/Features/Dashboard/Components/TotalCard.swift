@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Card displaying current month's total earnings
-/// A quiet earnings headline with a stable month-over-month comparison.
+/// Card displaying the displayed month's total earnings with a month-over-month comparison.
 ///
 /// When there are future/planned shifts:
 /// - Main display shows projected total (all shifts)
@@ -15,18 +14,18 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
   let plannedCount: Int  // Future/planned shift count // swiftlint:disable:this explicit_acl type_contents_order
   let percentageChange: Double?  // swiftlint:disable:this explicit_acl type_contents_order
   let taxEnabled: Bool  // swiftlint:disable:this explicit_acl type_contents_order
+  /// Name of the displayed month, used in the caption above the amount.
+  var monthName: String = ""  // swiftlint:disable:this explicit_acl type_contents_order
+  /// Shows an info icon when tapping the card opens totals in other currencies.
+  var showsCurrencyBreakdownCue: Bool = false  // swiftlint:disable:this explicit_acl type_contents_order
   var isElevated: Bool = true  // swiftlint:disable:this explicit_acl type_contents_order
   /// When true, shows skeleton state with shimmer animation (for loading)
   var isLoading: Bool = false  // swiftlint:disable:this explicit_acl type_contents_order
 
   @Environment(\.userCurrency) private var currency  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
 
-  /// Animated fraction for the month-over-month comparison bar.
-  @State private var animatedComparisonProgressFraction: Double = 0  // swiftlint:disable:this type_contents_order
   private let amountAnimationDuration: Double = 0.8  // swiftlint:disable:this type_contents_order
-  private let comparisonFillAnimationDuration: Double = 0.52  // swiftlint:disable:this type_contents_order
 
   // MARK: - Computed Properties
 
@@ -53,29 +52,10 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     !dynamicTypeSize.isAccessibilitySize
   }
 
-  private var renderedComparisonProgressFraction: Double {  // swiftlint:disable:this type_contents_order
-    isLoading ? 0 : Self.comparisonProgressFraction(for: percentageChange)
-  }
-
-  private var comparisonPercentText: String {  // swiftlint:disable:this type_contents_order
-    Self.comparisonPercentText(for: isLoading ? nil : percentageChange)
-  }
-
-  private var isAtOrAbovePreviousMonth: Bool {  // swiftlint:disable:this type_contents_order
-    !isLoading && percentageChange.map { $0 >= 0 } == true
-  }
-
-  static func comparisonProgressFraction(for percentageChange: Double?) -> Double {
-    guard let percentageChange else { return 0 }
-    if percentageChange.isInfinite { return 1 }
-    return min(max(1 + percentageChange / 100, 0), 1)
-  }
-
-  static func comparisonPercentText(for percentageChange: Double?) -> String {
-    guard let percentageChange else { return "---%" }
-    if percentageChange.isInfinite { return "∞" }
-    let rounded = Int(percentageChange.rounded())  // swiftlint:disable:this explicit_type_interface
-    return "\(rounded > 0 ? "+" : "")\(rounded)%"
+  /// Says whether the headline is net or gross, and for which month.
+  private var captionText: LocalizedStringResource {  // swiftlint:disable:this type_contents_order
+    taxEnabled
+      ? .dashboardTotalCaptionAfterTax(monthName) : .dashboardTotalCaptionBeforeTax(monthName)
   }
 
   // MARK: - Subtitle Text
@@ -132,10 +112,14 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
 
   var body: some View {  // swiftlint:disable:this explicit_acl
     VStack(spacing: Spacing.xxs) {
+      captionRow
+        .frame(height: usesFixedTypographyFrames ? 20 : nil)  // swiftlint:disable:this no_magic_numbers
+
       mainAmountDisplay
         .frame(height: usesFixedTypographyFrames ? 88 : nil)  // swiftlint:disable:this no_magic_numbers
 
-      comparisonProgressBar
+      comparisonRow
+        .frame(height: usesFixedTypographyFrames ? 24 : nil)  // swiftlint:disable:this no_magic_numbers
 
       subtitleContent
         .frame(height: usesFixedTypographyFrames ? 24 : nil)  // swiftlint:disable:this no_magic_numbers
@@ -150,12 +134,6 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shadowLevel: isElevated ? .card : nil
     )
     .shimmer(isActive: isLoading)
-    .onChange(of: renderedComparisonProgressFraction) { _, newValue in
-      animateComparisonProgress(to: newValue)
-    }
-    .onAppear {
-      animateComparisonProgress(to: renderedComparisonProgressFraction)
-    }
   }
 
   // MARK: - Subviews
@@ -188,34 +166,33 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     }
   }
 
-  private var comparisonProgressBar: some View {
-    HStack(spacing: Spacing.sm) {
-      GeometryReader { geometry in
-        ZStack(alignment: .leading) {
-          Capsule()
-            .fill(Color.tidexSurfaceSecondary)
-          Capsule()
-            .fill(isAtOrAbovePreviousMonth ? Color.tidexBlue : Color.tidexTextMuted)
-            .frame(width: geometry.size.width * animatedComparisonProgressFraction)
+  @ViewBuilder
+  private var captionRow: some View {
+    if !showDashes {
+      HStack(spacing: Spacing.xxs) {
+        Text(captionText)
+
+        if showsCurrencyBreakdownCue {
+          Image(systemName: "info.circle")
+            .accessibilityHidden(true)
         }
       }
-      .frame(height: 6)  // swiftlint:disable:this no_magic_numbers
-
-      Text(comparisonPercentText)
-        .font(.tidexLabel)
-        .monospacedDigit()
-        .foregroundColor(.tidexTextSecondary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)  // swiftlint:disable:this no_magic_numbers
-        .frame(width: usesFixedTypographyFrames ? 64 : nil, alignment: .trailing)  // swiftlint:disable:this no_magic_numbers line_length
-        .fixedSize(horizontal: !usesFixedTypographyFrames, vertical: false)
+      .font(.tidexLabel)
+      .foregroundColor(.tidexTextSecondary)
+      .lineLimit(1)
+    } else {
+      Color.clear
     }
-    .frame(height: usesFixedTypographyFrames ? 18 : nil)  // swiftlint:disable:this no_magic_numbers
-    .padding(.top, -Spacing.xxs)
-    .padding(.bottom, Spacing.xs)
-    .accessibilityElement(children: .ignore)
-    .accessibilityLabel(Text(.statsFromPreviousMonth))
-    .accessibilityValue(Text(verbatim: comparisonPercentText))
+  }
+
+  /// Month-over-month change. Hidden when there is nothing to compare with.
+  @ViewBuilder
+  private var comparisonRow: some View {
+    if !isLoading, let percentageChange {
+      MonthlyEarningsChangeBadge(percentageChange: percentageChange)
+    } else {
+      Color.clear
+    }
   }
 
   @ViewBuilder
@@ -266,14 +243,6 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       .animation(.spring(duration: amountAnimationDuration, bounce: 0), value: count)
   }
 
-  // MARK: - Formatting
-
-  private func animateComparisonProgress(to newValue: Double) {
-    withAnimation(reduceMotion ? nil : .easeOut(duration: comparisonFillAnimationDuration)) {
-      animatedComparisonProgressFraction = newValue
-    }
-  }
-
 }
 
 #Preview {  // swiftlint:disable:this closure_body_length
@@ -287,7 +256,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 8,
       plannedCount: 3,
       percentageChange: 15,
-      taxEnabled: true
+      taxEnabled: true,
+      monthName: "September"
     )
 
     // Case 2: No future shifts, tax enabled → "12 000 kr før skatt"
@@ -299,7 +269,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 5,
       plannedCount: 0,
       percentageChange: -8,
-      taxEnabled: true
+      taxEnabled: true,
+      monthName: "September"
     )
 
     // Case 3: No future shifts, no tax → "5 vakter"
@@ -311,7 +282,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 5,
       plannedCount: 0,
       percentageChange: -8,
-      taxEnabled: false
+      taxEnabled: false,
+      monthName: "September"
     )
 
     // Case 4: Has future/planned shifts but NO real earnings yet → "3 vakter planlagt"
@@ -323,7 +295,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 3,
       plannedCount: 3,
       percentageChange: nil,
-      taxEnabled: false
+      taxEnabled: false,
+      monthName: "September"
     )
 
     // Case 5: Zero earnings (shows dashes with skeleton subtitle)
@@ -335,7 +308,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
       shiftCount: 0,
       plannedCount: 0,
       percentageChange: nil,
-      taxEnabled: false
+      taxEnabled: false,
+      monthName: "September"
     )
   }
   .padding(.horizontal, Spacing.lg)

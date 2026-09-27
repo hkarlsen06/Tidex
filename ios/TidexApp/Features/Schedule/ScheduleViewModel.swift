@@ -339,8 +339,15 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Cached summary for the current selection to avoid recomputing on every access.
   @Published private var selectionSummary: SelectionSummary?
 
-  /// Whether selection mode is enabled (tap/drag to select vs swipe to navigate)
-  @Published var isSelectionModeEnabled: Bool = false
+  /// Whether selection mode is enabled (tap/drag to select vs swipe to navigate).
+  /// Leaving selection mode clears the selection, like Select/Done in Photos or Mail.
+  @Published var isSelectionModeEnabled: Bool = false {
+    didSet {
+      if oldValue, !isSelectionModeEnabled {
+        clearSelection()
+      }
+    }
+  }
 
   /// Two-click delete confirmation state
   @Published var confirmingDelete: Bool = false
@@ -853,36 +860,36 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Selection Actions
 
-  /// Handle day tap - manages single/multi selection logic
-  func handleDayTapped(dateISO: String, shiftsOnDay: [ShiftWithComputations]) {
+  /// Handle a tap on a day that has shifts or events.
+  /// Outside selection mode a tap opens the day, so this returns `true` and leaves the
+  /// selection alone. In selection mode it toggles the day and returns `false`.
+  @discardableResult
+  func handleDayTapped(dateISO: String, shiftsOnDay: [ShiftWithComputations]) -> Bool {
     // Reset delete confirmation on any tap
     confirmingDelete = false
 
+    guard isSelectionModeEnabled else {
+      return true
+    }
+
     // If tapping a date with no shifts, ignore (don't clear selection)
     guard !shiftsOnDay.isEmpty else {
-      return
+      return false
     }
 
-    // If no current selection, select this date
-    if selectedDates.isEmpty {
-      selectedDates = [dateISO]
-      return
-    }
-
-    // If tapping already selected date
     if selectedDates.contains(dateISO) {
-      if selectedDates.count == 1 {
-        // Single selection - deselect
-        clearSelection()
-      } else {
-        // Multi-selection - remove this date
-        selectedDates.remove(dateISO)
-      }
-      return
+      selectedDates.remove(dateISO)
+    } else {
+      selectedDates.insert(dateISO)
     }
+    return false
+  }
 
-    // Tapping a different date - add to selection (enter multi-select)
-    selectedDates.insert(dateISO)
+  /// Long-press on a day with shifts: enter selection mode with that day selected.
+  func beginSelection(dateISO: String) {
+    confirmingDelete = false
+    selectedDates = [dateISO]
+    isSelectionModeEnabled = true
   }
 
   /// Clear all selection state

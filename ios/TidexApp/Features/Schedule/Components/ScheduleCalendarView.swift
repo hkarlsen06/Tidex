@@ -20,7 +20,8 @@ private enum SingleSelectionActionMode: Equatable {
 
 /// Full-featured calendar for the Shifts tab
 /// Shows shift times or earnings per day, ISO week numbers, and monthly totals
-/// Supports multi-date selection via long-press + drag
+/// Tap opens a day. Long-press or the Select toolbar button enters selection mode,
+/// where taps toggle days and drags select a range.
 struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ObservedObject private var appearanceManager = AppearanceManager.shared
@@ -39,9 +40,9 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   /// Transition phase for header text animations
   var phase: MonthTransitionPhase?
 
-  // Day tap callback (single tap for selection toggle)
+  // Day tap callback: opens the day, or toggles it in selection mode
   var onDayTapped: ((String, [ShiftWithComputations]) -> Void)?
-  // Day long-press callback (normal mode details/picker presentation)
+  // Day long-press callback on a day with shifts (outside selection mode)
   var onDayLongPressed: ((String, [ShiftWithComputations]) -> Void)?
   var onSwipeLeft: (() -> Void)?
   var onSwipeRight: (() -> Void)?
@@ -451,7 +452,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
     return CalendarHeaderTotals(
       primary: primaryAmount,
-      secondary: delta > 0 ? delta : nil
+      secondary: delta > 0 ? delta : nil,
+      primaryIsAfterTax: totals.hasTaxEnabled
     )
   }
 
@@ -555,7 +557,15 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       )
       // VoiceOver activation taps the cell center, which the coordinate tap overlay handles
       .accessibilityElement(children: .ignore)
-      .accessibilityLabel(dayAccessibilityLabel(dateISO: dayInfo.dateISO, shiftCount: shiftsOnDay.count))
+      .accessibilityLabel(
+        dayAccessibilityLabel(
+          dateISO: dayInfo.dateISO,
+          isToday: isToday,
+          shiftsOnDay: shiftsOnDay,
+          earnings: dayInfo.dateISO.flatMap { earningsByDate[$0] },
+          eventCount: eventsOnDay.count
+        )
+      )
       .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
       .accessibilityHidden(dayInfo.dateISO == nil)
     }
@@ -597,15 +607,39 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     )
   }
 
-  private func dayAccessibilityLabel(dateISO: String?, shiftCount: Int) -> Text {
+  private func dayAccessibilityLabel(
+    dateISO: String?,
+    isToday: Bool,
+    shiftsOnDay: [ShiftWithComputations],
+    earnings: CalendarEarningsData?,
+    eventCount: Int
+  ) -> Text {
     guard let date = dateISO.flatMap({ Date.fromISODateString($0) }) else {
       return Text(verbatim: "")
     }
-    let dateText = date.formatted(.dateTime.weekday(.wide).day().month(.wide))  // swiftlint:disable:this explicit_type_interface line_length
-    guard shiftCount > 0 else {
-      return Text(verbatim: dateText)
+    var parts: [String] = [
+      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale))
+    ]
+    if isToday {
+      parts.append(String(localized: .commonToday))
     }
-    return Text(verbatim: "\(dateText), \(String(localized: .commonShiftCount(shiftCount)))")
+    if !shiftsOnDay.isEmpty {
+      parts.append(String(localized: .commonShiftCount(shiftsOnDay.count)))
+      let sortedShifts = shiftsOnDay.sorted {
+        CalendarGridHelper.timeToMinutes($0.startTime)
+          < CalendarGridHelper.timeToMinutes($1.startTime)
+      }
+      parts += sortedShifts.map {
+        CalendarGridHelper.shiftTimesAccessibilityText(startTime: $0.startTime, endTime: $0.endTime)
+      }
+      if let earnings {
+        parts.append(CalendarGridHelper.earningsAccessibilityText(earnings))
+      }
+    }
+    if eventCount > 0 {
+      parts.append(String(localized: .calendarAccessibilityEventCount(eventCount)))
+    }
+    return Text(verbatim: parts.joined(separator: ", "))
   }
 
   // MARK: - Cell Styling
@@ -1119,6 +1153,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           )
       }
       .buttonStyle(.plain)
+      .accessibilityLabel(Text(.shiftsActionsEdit))
 
       Button {
         toggleHaptic.impactOccurred()

@@ -1390,15 +1390,13 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
-                if !shiftsOnDay.isEmpty {
-                  viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
-                } else {
+                if viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay) {
                   presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
                 }
               },
-              onDayLongPressed: { dateISO, shiftsOnDay in
+              onDayLongPressed: { dateISO, _ in
                 selectionHaptic.selectionChanged()
-                presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
+                viewModel.beginSelection(dateISO: dateISO)
               },
               onSwipeLeft: {
                 AppearanceTracker.shared.reset()
@@ -1607,15 +1605,13 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               jobs: viewModel.activeJobs,
               phase: transitionPhase,
               onDayTapped: { dateISO, shiftsOnDay in
-                if !shiftsOnDay.isEmpty {
-                  viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay)
-                } else {
+                if viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay) {
                   presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
                 }
               },
-              onDayLongPressed: { dateISO, shiftsOnDay in
+              onDayLongPressed: { dateISO, _ in
                 selectionHaptic.selectionChanged()
-                presentDayItems(dateISO: dateISO, shifts: shiftsOnDay)
+                viewModel.beginSelection(dateISO: dateISO)
               },
               onSwipeLeft: {
                 AppearanceTracker.shared.reset()
