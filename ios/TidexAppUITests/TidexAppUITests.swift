@@ -780,6 +780,30 @@ final class TidexAppUITests: XCTestCase {
       message: "Expected the message to remain after cancelling")
   }
 
+  @MainActor
+  func testFriendsChatDeleteConfirmRemovesMessage() {
+    let chat = makeApp(scenario: "friends-chat")
+    chat.launch()
+    let outgoing = staticText(withExactLabel: "Earlier outgoing message", in: chat)
+    assertExists(
+      outgoing, in: chat, timeout: defaultTimeout, message: "Expected the outgoing message")
+    outgoing.press(forDuration: 1)
+    let deleteAction = text(containingLabel: "Delete for everyone", in: chat)
+    assertExists(
+      deleteAction, in: chat, timeout: defaultTimeout, message: "Expected the message menu")
+    deleteAction.tap()
+    let confirm = chat.buttons.matching(
+      NSPredicate(format: "label CONTAINS %@", "Delete for everyone")
+    ).firstMatch
+    assertExists(
+      confirm, in: chat, timeout: defaultTimeout, message: "Expected the destructive confirm button"
+    )
+    confirm.tap()
+    XCTAssertTrue(
+      outgoing.waitForNonExistence(timeout: defaultTimeout),
+      "Expected the message to be deleted after confirming")
+  }
+
   private func makeFriendsDesignApp(view: String) -> XCUIApplication {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "friends"
