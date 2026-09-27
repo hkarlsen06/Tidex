@@ -26,7 +26,7 @@ final class FriendsMessagingRichContentTests: XCTestCase {
 
     XCTAssertEqual(message.richContentKind, .shiftSnapshot)
     XCTAssertEqual(message.previewKind, .shiftSnapshot)
-    XCTAssertEqual(message.previewText, "Shared a shift")
+    XCTAssertEqual(message.previewText, String(localized: .friendsChatPreviewSharedShift))
     XCTAssertEqual(message.shiftSnapshot?.ownerDisplayName, "Hjalmar")
     XCTAssertEqual(message.shiftSnapshot?.jobName, "Cafe")
   }
@@ -56,7 +56,7 @@ final class FriendsMessagingRichContentTests: XCTestCase {
 
     XCTAssertEqual(message.richContentKind, .unsupported("mystery_card"))
     XCTAssertEqual(message.previewKind, .unknown)
-    XCTAssertEqual(message.previewText, "Unsupported message")
+    XCTAssertEqual(message.previewText, String(localized: .friendsChatPreviewUnsupported))
     XCTAssertNil(message.richContent)
   }
 
@@ -79,7 +79,7 @@ final class FriendsMessagingRichContentTests: XCTestCase {
     )
 
     XCTAssertEqual(thread.resolvedLastMessagePreviewKind, .shiftSnapshot)
-    XCTAssertEqual(thread.lastMessagePreviewText, "Shared a shift")
+    XCTAssertEqual(thread.lastMessagePreviewText, String(localized: .friendsChatPreviewSharedShift))
   }
 
   func testReplyPreviewModelUsesShiftSnapshotFallback() {
@@ -100,7 +100,7 @@ final class FriendsMessagingRichContentTests: XCTestCase {
     let preview = FriendsChatReplyPreviewModel(senderName: "Hjalmar", message: message)
 
     XCTAssertEqual(preview.previewKind, .shiftSnapshot)
-    XCTAssertEqual(preview.snippet, "Shared a shift")
+    XCTAssertEqual(preview.snippet, String(localized: .friendsChatPreviewSharedShift))
   }
 
   func testReplyPreviewModelUsesImageFallback() {
@@ -123,7 +123,7 @@ final class FriendsMessagingRichContentTests: XCTestCase {
 
     XCTAssertEqual(preview.previewKind, .image)
     XCTAssertEqual(preview.iconPreviewKind, .image)
-    XCTAssertEqual(preview.snippet, "Photo")
+    XCTAssertEqual(preview.snippet, String(localized: .friendsChatPreviewImage))
     XCTAssertEqual(preview.imageAttachments.map(\.id), ["attachment-1"])
   }
 

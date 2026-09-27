@@ -323,10 +323,17 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
   private var deleteConfirmMessage: String {
     let count = deleteTargetCount
-    if count == 1 {
-      return String(localized: .shiftsDeleteConfirmMessage)
-    }
-    return String(localized: .shiftsDeleteConfirmPluralMessage(count))
+    let message =
+      count == 1
+      ? String(localized: .shiftsDeleteConfirmMessage)
+      : String(localized: .shiftsDeleteConfirmPluralMessage(count))
+    guard selectionIncludesRecurringShift else { return message }
+    return message + " " + String(localized: .shiftsDeleteConfirmRecurringNote)
+  }
+
+  /// Recurring shifts in a selection are only removed on the selected dates.
+  private var selectionIncludesRecurringShift: Bool {
+    shifts.contains { selectedDates.contains($0.shiftDate) && $0.shift.recurring_id != nil }
   }
 
   private var deleteTargetCount: Int {

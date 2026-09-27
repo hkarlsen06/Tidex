@@ -100,7 +100,7 @@ final class FriendsThreadShareVisibilityResolverTests: XCTestCase {
 @MainActor
 private final class MockShareRelationshipProvider: FriendsThreadShareRelationshipProviding {
   // swiftlint:disable:next large_tuple
-  private typealias FetchAllFriendsResult = (
+  typealias FetchAllFriendsResult = (
     friends: [Friend],
     blockedFriends: [Friend],
     capacity: ShareCapacity

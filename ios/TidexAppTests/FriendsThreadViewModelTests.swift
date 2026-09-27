@@ -510,6 +510,10 @@ final class FriendsThreadViewModelTests: XCTestCase {
     viewModel.setReplyTarget(repliedToMessage)
     viewModel.draft = "Reply"
     let didSend = await viewModel.sendDraft()
+    await waitUntil {
+      repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").last?.sendState
+        == .sent
+    }
 
     XCTAssertTrue(didSend)
     XCTAssertEqual(mockService.lastSentReplyToMessageId, repliedToMessage.id)
@@ -607,6 +611,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     await viewModel.setComposerAttachment(
       .image(ImageAttachment(id: "image-1", data: Data([0x00]), mediaType: "image/jpeg"))
     )
+    let focusTokenBeforeEditing = viewModel.composerFocusRequestToken
     await viewModel.startEditing(originalMessage)
 
     XCTAssertEqual(viewModel.composerMode, .edit)
@@ -614,7 +619,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertNil(viewModel.draftReplyTarget)
     XCTAssertNil(viewModel.stagedComposerAttachment)
     XCTAssertEqual(viewModel.draft, "Original message")
-    XCTAssertEqual(viewModel.composerFocusRequestToken, 1)
+    XCTAssertEqual(viewModel.composerFocusRequestToken, focusTokenBeforeEditing + 1)
   }
 
   func testCancelComposerModeAfterEditingRestoresSuspendedComposerState() async throws {
@@ -833,7 +838,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     await repository.saveMessages([originalMessage], in: route.threadId, for: "viewer-1")
 
     let mockService = MockFriendsMessagingService()
-    mockService.editError = FriendsMessagingServiceError.networkError(underlying: TestError.failed)
+    mockService.editError = FriendsMessagingServiceError.httpError(statusCode: 500, message: nil)
     mockService.threadSummary = makeThread()
     let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
       service: mockService,
@@ -986,8 +991,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     await repository.saveMessages([originalMessage], in: route.threadId, for: "viewer-1")
 
     let mockService = MockFriendsMessagingService()
-    mockService.deleteError = FriendsMessagingServiceError.networkError(
-      underlying: TestError.failed)
+    mockService.deleteError = FriendsMessagingServiceError.httpError(statusCode: 500, message: nil)
     mockService.threadSummary = thread
     let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
       service: mockService,
@@ -1198,7 +1202,7 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
 
     let mockService = MockFriendsMessagingService()
-    mockService.sendError = FriendsMessagingServiceError.networkError(underlying: TestError.failed)
+    mockService.sendError = FriendsMessagingServiceError.httpError(statusCode: 500, message: nil)
 
     let realtimeCoordinator = FriendsMessagingRealtimeCoordinator(
       service: mockService,
@@ -1216,10 +1220,23 @@ final class FriendsThreadViewModelTests: XCTestCase {
     viewModel.draft = "Hello again"
     let didSend = await viewModel.sendDraft()
 
-    XCTAssertFalse(didSend)
-    XCTAssertEqual(viewModel.draft, "Hello again")
-    XCTAssertEqual(viewModel.sendErrorMessage, String(localized: .friendsChatSendFailed))
-    XCTAssertTrue(repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").isEmpty)
+    // A failure that arrives before sendDraft returns restores the draft. One that arrives later
+    // leaves the message in the thread marked as failed, with retry. Either way the user sees it.
+    if didSend {
+      await waitUntil {
+        repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").last?.sendState
+          == .failed
+      }
+      let message = try XCTUnwrap(
+        repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").last)
+      XCTAssertEqual(message.body, "Hello again")
+      XCTAssertEqual(message.sendState, .failed)
+    } else {
+      XCTAssertEqual(viewModel.draft, "Hello again")
+      XCTAssertEqual(viewModel.sendErrorMessage, String(localized: .friendsChatSendFailed))
+      XCTAssertTrue(
+        repository.getMessages(threadId: "thread-1", viewerUserId: "viewer-1").isEmpty)
+    }
   }
 
   func testSubmitReportUsesCounterpartAndMessageId() async throws {
@@ -1270,7 +1287,8 @@ final class FriendsThreadViewModelTests: XCTestCase {
     XCTAssertEqual(mockService.blockedUserId, "friend-1")
     XCTAssertTrue(viewModel.isThreadReadOnly)
     XCTAssertEqual(viewModel.draft, "")
-    XCTAssertEqual(viewModel.sendErrorMessage, String(localized: .friendsChatBlockedReadOnly))
+    // The composer shows the read-only notice itself, so no send error is set.
+    XCTAssertNil(viewModel.sendErrorMessage)
   }
 
   func testLoadOlderMessagesAppendsOlderPageAndSetsRestoreTarget() async throws {
@@ -2542,11 +2560,11 @@ final class FriendsThreadViewModelTests: XCTestCase {
 
     await viewModel.setComposerAttachment(snapshotDraft)
     let didSend = await viewModel.sendDraft()
-    await Task.yield()
+    await waitUntil { mockService.sendMessageCallCount == 1 }
 
     XCTAssertTrue(didSend)
     XCTAssertNil(viewModel.stagedComposerAttachment)
-    XCTAssertEqual(mockService.lastSentMetadataData, snapshotDraft.metadataData)
+    try assertSameJSON(mockService.lastSentMetadataData, snapshotDraft.metadataData)
     XCTAssertNotNil(
       repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").last?.metadataData
     )
@@ -2641,7 +2659,10 @@ final class FriendsThreadViewModelTests: XCTestCase {
     await viewModel.setComposerAttachments(imageDrafts)
     viewModel.draft = "Two images"
     let didSend = await viewModel.sendDraft()
-    await Task.yield()
+    await waitUntil {
+      repository.getMessages(threadId: route.threadId, viewerUserId: "viewer-1").last?.sendState
+        == .sent
+    }
 
     XCTAssertTrue(didSend)
     XCTAssertTrue(viewModel.stagedComposerAttachments.isEmpty)
@@ -2725,9 +2746,9 @@ final class FriendsThreadViewModelTests: XCTestCase {
     )
 
     await viewModel.retryMessage(messageId: "message-failed")
-    await Task.yield()
+    await waitUntil { mockService.sendMessageCallCount == 1 }
 
-    XCTAssertEqual(mockService.lastSentMetadataData, metadataData)
+    try assertSameJSON(mockService.lastSentMetadataData, metadataData)
   }
 
   func testSendDraftWithDisabledShiftSnapshotGateKeepsDraftAndShowsError() async throws {
@@ -2868,7 +2889,8 @@ final class FriendsThreadViewModelTests: XCTestCase {
         recurring_anchor_weekday: nil
       ),
       status: .upcoming,
-      showEarnings: true
+      showEarnings: true,
+      currency: "NOK"
     )
 
     let previewService = MockSharingPreviewService(previews: [preview])
@@ -3000,7 +3022,8 @@ final class FriendsThreadViewModelTests: XCTestCase {
         recurring_anchor_weekday: nil
       ),
       status: .upcoming,
-      showEarnings: true
+      showEarnings: true,
+      currency: "NOK"
     )
 
     let previewService = MockSharingPreviewService(previews: [preview])
@@ -3070,7 +3093,8 @@ final class FriendsThreadViewModelTests: XCTestCase {
         recurring_anchor_weekday: nil
       ),
       status: .upcoming,
-      showEarnings: true
+      showEarnings: true,
+      currency: "NOK"
     )
     let previewService = MockSharingPreviewService(previews: [preview])
     let sharedShiftsCache = MockSharedShiftsCache(
@@ -3325,7 +3349,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
 
   func listMyThreads(limit _: Int, before _: FriendThreadCursor?) async -> [FriendThread] {
     await Task.yield()
-    []
+    return []
   }
 
   func listThreadMessages(
@@ -3339,7 +3363,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     if let listThreadMessagesHandler {
       return try await listThreadMessagesHandler(threadId, limit, cursor)
     }
-    threadMessages
+    return threadMessages
   }
 
   func sendMessage(
@@ -3398,7 +3422,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
 
   func setThreadMuted(threadId _: String, muted _: Bool) async -> FriendThreadState {
     await Task.yield()
-    FriendThreadState(
+    return FriendThreadState(
       threadId: "thread-1",
       userId: "viewer-1",
       lastReadMessageId: nil,
@@ -3420,7 +3444,7 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
 
   func fetchThreadSummary(threadId _: String) async throws -> FriendThread {
     await Task.yield()
-    try XCTUnwrap(threadSummary)
+    return try XCTUnwrap(threadSummary)
   }
 
   func fetchThreadState(threadId _: String, userId _: String) async -> FriendThreadState? {
@@ -3441,12 +3465,12 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
 
   func fetchMessagePayload(messageId _: String) async throws -> FriendMessage {
     await Task.yield()
-    try XCTUnwrap(sentMessage)
+    return try XCTUnwrap(sentMessage)
   }
 
   func fetchMessageSyncPayloadV2(messageId _: String) async throws -> FriendMessage {
     await Task.yield()
-    try XCTUnwrap(sentMessage)
+    return try XCTUnwrap(sentMessage)
   }
 
   func toggleMessageReaction(
@@ -3495,6 +3519,79 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
   func downloadAttachmentData(path _: String) async -> Data {
     await Task.yield()
     return Data()
+  }
+
+  func fetchInboxSyncSnapshotV2(limit _: Int, before _: FriendThreadCursor?) async throws
+    -> FriendInboxSyncSnapshot
+  {
+    await Task.yield()
+    throw TestError.failed
+  }
+
+  func listInboxEventsV2(afterVersion _: Int64, limit _: Int) async throws
+    -> FriendInboxSyncEventsPage
+  {
+    await Task.yield()
+    throw TestError.failed
+  }
+
+  func listThreadEventsV2(threadId _: String, afterVersion _: Int64, limit _: Int) async throws
+    -> FriendThreadSyncEventsPage
+  {
+    await Task.yield()
+    throw TestError.failed
+  }
+
+  func fetchUnreadDirectMessageCount(userId _: String) async -> Int {
+    await Task.yield()
+    return 0
+  }
+
+  // V2 sync calls are built from the V1 mock data so existing tests keep exercising them.
+  // A non-empty page reports more history, like the tests written against V1 expect.
+  func listThreadMessagesV2(threadId: String, limit: Int, before cursor: FriendMessageCursor?)
+    async throws -> FriendThreadMessagesPage
+  {
+    let messages = try await listThreadMessages(threadId: threadId, limit: limit, before: cursor)
+    return FriendThreadMessagesPage(
+      messages: messages,
+      nextCursor: Self.oldestCursor(in: messages),
+      hasMore: !messages.isEmpty
+    )
+  }
+
+  func fetchThreadSyncSnapshotV2(threadId: String, messageLimit: Int) async throws
+    -> FriendThreadSyncSnapshot
+  {
+    let thread = try await fetchThreadSummary(threadId: threadId)
+    let messages = try await listThreadMessages(
+      threadId: threadId, limit: messageLimit, before: nil)
+    let viewerState =
+      threadStates.first { $0.threadId == threadId }
+      ?? FriendThreadState(
+        threadId: threadId,
+        userId: "viewer-1",
+        lastReadMessageId: nil,
+        lastReadAt: nil,
+        muted: false,
+        updatedAt: Date()
+      )
+    return FriendThreadSyncSnapshot(
+      thread: thread,
+      viewerState: viewerState,
+      counterpartPresence: nil,
+      messages: messages,
+      nextCursor: Self.oldestCursor(in: messages),
+      snapshotVersion: 0,
+      retainedFromVersion: 0,
+      hasMore: !messages.isEmpty
+    )
+  }
+
+  private static func oldestCursor(in messages: [FriendMessage]) -> FriendMessageCursor? {
+    messages.min { $0.createdAt < $1.createdAt }.map {
+      FriendMessageCursor(createdAt: $0.createdAt, messageId: $0.id)
+    }
   }
 }
 
@@ -3571,8 +3668,35 @@ private enum FriendsThreadViewModelTestValues {
   static let paidHours: Double = 7.5
   static let grossPay: Double = 1_200
   static let netPay: Double = 1_050
-  static let uploadedAttachmentByteSize: Int = 1_024
+  static let uploadedAttachmentByteSize: Int64 = 1_024
   static let attachmentPixelSize: Int = 200
 }
 
 // swiftlint:enable file_length
+
+/// Waits for work the view model finishes in the background, such as sending a message.
+@MainActor
+private func waitUntil(
+  timeout: Duration = .seconds(2),
+  _ condition: @MainActor () -> Bool
+) async {
+  let clock = ContinuousClock()
+  let deadline = clock.now.advanced(by: timeout)
+  while !condition(), clock.now < deadline {
+    try? await Task.sleep(for: .milliseconds(10))
+  }
+}
+
+/// Compares JSON payloads by content, since key order can differ after re-encoding.
+private func assertSameJSON(
+  _ lhs: Data?,
+  _ rhs: Data?,
+  file: StaticString = #filePath,
+  line: UInt = #line
+) throws {
+  let lhsData = try XCTUnwrap(lhs, file: file, line: line)
+  let rhsData = try XCTUnwrap(rhs, file: file, line: line)
+  let lhsObject = try JSONSerialization.jsonObject(with: lhsData) as? NSDictionary
+  let rhsObject = try JSONSerialization.jsonObject(with: rhsData) as? NSDictionary
+  XCTAssertEqual(lhsObject, rhsObject, file: file, line: line)
+}

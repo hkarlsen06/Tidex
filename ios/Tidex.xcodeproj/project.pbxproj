@@ -78,6 +78,40 @@
 		F7C518BFF353DDA1605E05BE /* ImageCacheInvalidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */; };
 		F821E1003092000000000001 /* NotificationPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F821E1003092000000000002 /* NotificationPermissionTests.swift */; };
 		FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */; };
+		C105B7F12E25702BDBD3A7BA /* AppDeepLinkResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CDB8BEA1226D21E2FA73AB5 /* AppDeepLinkResolverTests.swift */; };
+		2F7E9FAC43F6393E634E973C /* AuthAndPurchaseRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1650602ADB90C944DDD80DC /* AuthAndPurchaseRecoveryTests.swift */; };
+		12B93B421A92B27C8EE9E455 /* AuthErrorTranslationsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FDD235FEE994CE22FFBC5F8 /* AuthErrorTranslationsTests.swift */; };
+		020705327889E2CC9EEB25AE /* AuthIdentityInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 976E576E1642B64EE7E0E1FA /* AuthIdentityInputTests.swift */; };
+		E7E6B256C5C90B42640D5176 /* EventDetailsSummaryBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33275F166F2F09029A5C1A22 /* EventDetailsSummaryBuilderTests.swift */; };
+		3DF443C2C293E16F9A4E9C99 /* FriendNotificationMessagePrefetcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CDF8C4565592D34AD761BEC /* FriendNotificationMessagePrefetcherTests.swift */; };
+		75D3AD7184F6294BEF65BF09 /* FriendsAPIResponseDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0101D84EA694A80B323B9F0 /* FriendsAPIResponseDecodingTests.swift */; };
+		E29A3657DB37A9E7B0BA9A38 /* FriendsChatMessageGroupingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */; };
+		850A44218362AE63CCB3736D /* FriendsComposerAttachmentControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 568D0E37F2DA4AE43D386E42 /* FriendsComposerAttachmentControllerTests.swift */; };
+		476274EAA87579B5D555F33E /* FriendsComposerDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */; };
+		1633DC21C02D2D11F7ED4C0E /* FriendsMessagesRepositoryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BFB7767F7B12834B1480B4E /* FriendsMessagesRepositoryTests.swift */; };
+		798A63BCB40DB451D63BFE52 /* FriendsMessagingRealtimeCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4289F8A28BA4A1B40DF97B9 /* FriendsMessagingRealtimeCoordinatorTests.swift */; };
+		81E2A55FD8229B909EECCF7D /* FriendsMessagingRichContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74680137314542BB189059D7 /* FriendsMessagingRichContentTests.swift */; };
+		EC7EDB603A0433D9D7EEF5BC /* FriendsThreadComposerBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A4602BA603F2FB144FF579 /* FriendsThreadComposerBridgeTests.swift */; };
+		4B3D7651AE9F32BEEA034C5C /* FriendsThreadExyteChatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22B2C74EE4D759997785799C /* FriendsThreadExyteChatTests.swift */; };
+		4E346A3A0E58579B880E41D7 /* FriendsThreadShareVisibilityResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7E4A0F5573D74A1AF23E91D /* FriendsThreadShareVisibilityResolverTests.swift */; };
+		9FB74791B62FBB9668D255E5 /* FriendsThreadViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CBA8DBD0E3907C5C8593B4 /* FriendsThreadViewModelTests.swift */; };
+		8042B8933D1A03D96E5ACBFC /* LocalRecurringShiftRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E66782B9FBBC17A73FF9D181 /* LocalRecurringShiftRecoveryTests.swift */; };
+		F673BFD095B29F66F51AADEB /* PauseWindowSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E35CE4061C4F93FBD8F872 /* PauseWindowSupportTests.swift */; };
+		52E5C48354F6DFB96205FB31 /* PayrollAdjustmentCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFFDB9FCC210711C89BECC5E /* PayrollAdjustmentCalculatorTests.swift */; };
+		187C439FFD28216C513407EB /* PayrollEngineConflictOvertimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AAE5FF58725F2F0724396956 /* PayrollEngineConflictOvertimeTests.swift */; };
+		6203D73C76B6C0769010928A /* RecurringAnchorSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C3AEC90755C61373FD2D6F4 /* RecurringAnchorSelectionTests.swift */; };
+		54F4461E60171452C47629DE /* SMSUnavailableAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98EADBE6776C3205FCE196FA /* SMSUnavailableAuthTests.swift */; };
+		888442D289F5EA1FDBAFCE84 /* SensitiveContentPresentationStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86B4CAD84B9F8931BF39EDE8 /* SensitiveContentPresentationStateTests.swift */; };
+		37377B2AF7146099827F00AD /* SharedShiftBreakAuditTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D53B6172993158CEC284C4F /* SharedShiftBreakAuditTests.swift */; };
+		A86AE5652DBD6465CB0DDC19 /* ShiftCardAmountAnimationFallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8BD21DB21AE8305C882A4F /* ShiftCardAmountAnimationFallbackTests.swift */; };
+		28C10B903E33F0DFF859FCA4 /* ShiftDateBoundaryRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE0AF155B55AC0FCE8512CE5 /* ShiftDateBoundaryRegressionTests.swift */; };
+		3011C0E8ABBE7045378E86A5 /* ShiftSnapshotBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EB27D3B4BDC6919F1A4C4DD /* ShiftSnapshotBuilderTests.swift */; };
+		73DF04E4285F329FD78D7171 /* ShiftsListPlaceholderPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA87CB237E9D3D643F34BB55 /* ShiftsListPlaceholderPolicyTests.swift */; };
+		A5273AA3A4591450FD0F92D0 /* SignupViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3462439DA1D8205E2375A5D /* SignupViewModelTests.swift */; };
+		6F4297BFD94E7970B1B1D546 /* StatsServiceCalendarMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */; };
+		4B15848ACE7F18869FF4DF32 /* SyncPushMergeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3711A751DD492A879351F57 /* SyncPushMergeTests.swift */; };
+		0CAFF4D07519EB3CA52D024A /* TabErrorDescriptionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2697029EDB6D873113D79AAF /* TabErrorDescriptionTests.swift */; };
+		4ED7B1067119677EE782EF19 /* WorkSetupStatusResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F127D6D1264B4630495885E /* WorkSetupStatusResolverTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -207,6 +241,40 @@
 		F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollCalculatorBehaviorTests.swift; sourceTree = "<group>"; };
 		F6595302ED840034D4E34591 /* StatsServiceCurrencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsServiceCurrencyTests.swift; sourceTree = "<group>"; };
 		F821E1003092000000000002 /* NotificationPermissionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationPermissionTests.swift; sourceTree = "<group>"; };
+		6CDB8BEA1226D21E2FA73AB5 /* AppDeepLinkResolverTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDeepLinkResolverTests.swift; sourceTree = "<group>"; };
+		B1650602ADB90C944DDD80DC /* AuthAndPurchaseRecoveryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthAndPurchaseRecoveryTests.swift; sourceTree = "<group>"; };
+		3FDD235FEE994CE22FFBC5F8 /* AuthErrorTranslationsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthErrorTranslationsTests.swift; sourceTree = "<group>"; };
+		976E576E1642B64EE7E0E1FA /* AuthIdentityInputTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthIdentityInputTests.swift; sourceTree = "<group>"; };
+		33275F166F2F09029A5C1A22 /* EventDetailsSummaryBuilderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventDetailsSummaryBuilderTests.swift; sourceTree = "<group>"; };
+		1CDF8C4565592D34AD761BEC /* FriendNotificationMessagePrefetcherTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendNotificationMessagePrefetcherTests.swift; sourceTree = "<group>"; };
+		D0101D84EA694A80B323B9F0 /* FriendsAPIResponseDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsAPIResponseDecodingTests.swift; sourceTree = "<group>"; };
+		45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsChatMessageGroupingTests.swift; sourceTree = "<group>"; };
+		568D0E37F2DA4AE43D386E42 /* FriendsComposerAttachmentControllerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsComposerAttachmentControllerTests.swift; sourceTree = "<group>"; };
+		AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsComposerDraftStoreTests.swift; sourceTree = "<group>"; };
+		0BFB7767F7B12834B1480B4E /* FriendsMessagesRepositoryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsMessagesRepositoryTests.swift; sourceTree = "<group>"; };
+		B4289F8A28BA4A1B40DF97B9 /* FriendsMessagingRealtimeCoordinatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsMessagingRealtimeCoordinatorTests.swift; sourceTree = "<group>"; };
+		74680137314542BB189059D7 /* FriendsMessagingRichContentTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsMessagingRichContentTests.swift; sourceTree = "<group>"; };
+		04A4602BA603F2FB144FF579 /* FriendsThreadComposerBridgeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsThreadComposerBridgeTests.swift; sourceTree = "<group>"; };
+		22B2C74EE4D759997785799C /* FriendsThreadExyteChatTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsThreadExyteChatTests.swift; sourceTree = "<group>"; };
+		A7E4A0F5573D74A1AF23E91D /* FriendsThreadShareVisibilityResolverTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsThreadShareVisibilityResolverTests.swift; sourceTree = "<group>"; };
+		22CBA8DBD0E3907C5C8593B4 /* FriendsThreadViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsThreadViewModelTests.swift; sourceTree = "<group>"; };
+		E66782B9FBBC17A73FF9D181 /* LocalRecurringShiftRecoveryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalRecurringShiftRecoveryTests.swift; sourceTree = "<group>"; };
+		01E35CE4061C4F93FBD8F872 /* PauseWindowSupportTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PauseWindowSupportTests.swift; sourceTree = "<group>"; };
+		DFFDB9FCC210711C89BECC5E /* PayrollAdjustmentCalculatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollAdjustmentCalculatorTests.swift; sourceTree = "<group>"; };
+		AAE5FF58725F2F0724396956 /* PayrollEngineConflictOvertimeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineConflictOvertimeTests.swift; sourceTree = "<group>"; };
+		8C3AEC90755C61373FD2D6F4 /* RecurringAnchorSelectionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecurringAnchorSelectionTests.swift; sourceTree = "<group>"; };
+		98EADBE6776C3205FCE196FA /* SMSUnavailableAuthTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SMSUnavailableAuthTests.swift; sourceTree = "<group>"; };
+		86B4CAD84B9F8931BF39EDE8 /* SensitiveContentPresentationStateTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SensitiveContentPresentationStateTests.swift; sourceTree = "<group>"; };
+		4D53B6172993158CEC284C4F /* SharedShiftBreakAuditTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedShiftBreakAuditTests.swift; sourceTree = "<group>"; };
+		5B8BD21DB21AE8305C882A4F /* ShiftCardAmountAnimationFallbackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftCardAmountAnimationFallbackTests.swift; sourceTree = "<group>"; };
+		BE0AF155B55AC0FCE8512CE5 /* ShiftDateBoundaryRegressionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftDateBoundaryRegressionTests.swift; sourceTree = "<group>"; };
+		7EB27D3B4BDC6919F1A4C4DD /* ShiftSnapshotBuilderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftSnapshotBuilderTests.swift; sourceTree = "<group>"; };
+		DA87CB237E9D3D643F34BB55 /* ShiftsListPlaceholderPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftsListPlaceholderPolicyTests.swift; sourceTree = "<group>"; };
+		A3462439DA1D8205E2375A5D /* SignupViewModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SignupViewModelTests.swift; sourceTree = "<group>"; };
+		5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsServiceCalendarMathTests.swift; sourceTree = "<group>"; };
+		F3711A751DD492A879351F57 /* SyncPushMergeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncPushMergeTests.swift; sourceTree = "<group>"; };
+		2697029EDB6D873113D79AAF /* TabErrorDescriptionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TabErrorDescriptionTests.swift; sourceTree = "<group>"; };
+		9F127D6D1264B4630495885E /* WorkSetupStatusResolverTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkSetupStatusResolverTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -418,6 +486,40 @@
 				B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */,
 				ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */,
 				CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */,
+				6CDB8BEA1226D21E2FA73AB5 /* AppDeepLinkResolverTests.swift */,
+				B1650602ADB90C944DDD80DC /* AuthAndPurchaseRecoveryTests.swift */,
+				3FDD235FEE994CE22FFBC5F8 /* AuthErrorTranslationsTests.swift */,
+				976E576E1642B64EE7E0E1FA /* AuthIdentityInputTests.swift */,
+				33275F166F2F09029A5C1A22 /* EventDetailsSummaryBuilderTests.swift */,
+				1CDF8C4565592D34AD761BEC /* FriendNotificationMessagePrefetcherTests.swift */,
+				D0101D84EA694A80B323B9F0 /* FriendsAPIResponseDecodingTests.swift */,
+				45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */,
+				568D0E37F2DA4AE43D386E42 /* FriendsComposerAttachmentControllerTests.swift */,
+				AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */,
+				0BFB7767F7B12834B1480B4E /* FriendsMessagesRepositoryTests.swift */,
+				B4289F8A28BA4A1B40DF97B9 /* FriendsMessagingRealtimeCoordinatorTests.swift */,
+				74680137314542BB189059D7 /* FriendsMessagingRichContentTests.swift */,
+				04A4602BA603F2FB144FF579 /* FriendsThreadComposerBridgeTests.swift */,
+				22B2C74EE4D759997785799C /* FriendsThreadExyteChatTests.swift */,
+				A7E4A0F5573D74A1AF23E91D /* FriendsThreadShareVisibilityResolverTests.swift */,
+				22CBA8DBD0E3907C5C8593B4 /* FriendsThreadViewModelTests.swift */,
+				E66782B9FBBC17A73FF9D181 /* LocalRecurringShiftRecoveryTests.swift */,
+				01E35CE4061C4F93FBD8F872 /* PauseWindowSupportTests.swift */,
+				DFFDB9FCC210711C89BECC5E /* PayrollAdjustmentCalculatorTests.swift */,
+				AAE5FF58725F2F0724396956 /* PayrollEngineConflictOvertimeTests.swift */,
+				8C3AEC90755C61373FD2D6F4 /* RecurringAnchorSelectionTests.swift */,
+				98EADBE6776C3205FCE196FA /* SMSUnavailableAuthTests.swift */,
+				86B4CAD84B9F8931BF39EDE8 /* SensitiveContentPresentationStateTests.swift */,
+				4D53B6172993158CEC284C4F /* SharedShiftBreakAuditTests.swift */,
+				5B8BD21DB21AE8305C882A4F /* ShiftCardAmountAnimationFallbackTests.swift */,
+				BE0AF155B55AC0FCE8512CE5 /* ShiftDateBoundaryRegressionTests.swift */,
+				7EB27D3B4BDC6919F1A4C4DD /* ShiftSnapshotBuilderTests.swift */,
+				DA87CB237E9D3D643F34BB55 /* ShiftsListPlaceholderPolicyTests.swift */,
+				A3462439DA1D8205E2375A5D /* SignupViewModelTests.swift */,
+				5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */,
+				F3711A751DD492A879351F57 /* SyncPushMergeTests.swift */,
+				2697029EDB6D873113D79AAF /* TabErrorDescriptionTests.swift */,
+				9F127D6D1264B4630495885E /* WorkSetupStatusResolverTests.swift */,
 			);
 			path = TidexAppTests;
 			sourceTree = "<group>";
@@ -920,6 +1022,40 @@
 				AB5C10013070000000F1E2D3 /* FriendShiftTimingTests.swift in Sources */,
 				ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */,
 				CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */,
+				C105B7F12E25702BDBD3A7BA /* AppDeepLinkResolverTests.swift in Sources */,
+				2F7E9FAC43F6393E634E973C /* AuthAndPurchaseRecoveryTests.swift in Sources */,
+				12B93B421A92B27C8EE9E455 /* AuthErrorTranslationsTests.swift in Sources */,
+				020705327889E2CC9EEB25AE /* AuthIdentityInputTests.swift in Sources */,
+				E7E6B256C5C90B42640D5176 /* EventDetailsSummaryBuilderTests.swift in Sources */,
+				3DF443C2C293E16F9A4E9C99 /* FriendNotificationMessagePrefetcherTests.swift in Sources */,
+				75D3AD7184F6294BEF65BF09 /* FriendsAPIResponseDecodingTests.swift in Sources */,
+				E29A3657DB37A9E7B0BA9A38 /* FriendsChatMessageGroupingTests.swift in Sources */,
+				850A44218362AE63CCB3736D /* FriendsComposerAttachmentControllerTests.swift in Sources */,
+				476274EAA87579B5D555F33E /* FriendsComposerDraftStoreTests.swift in Sources */,
+				1633DC21C02D2D11F7ED4C0E /* FriendsMessagesRepositoryTests.swift in Sources */,
+				798A63BCB40DB451D63BFE52 /* FriendsMessagingRealtimeCoordinatorTests.swift in Sources */,
+				81E2A55FD8229B909EECCF7D /* FriendsMessagingRichContentTests.swift in Sources */,
+				EC7EDB603A0433D9D7EEF5BC /* FriendsThreadComposerBridgeTests.swift in Sources */,
+				4B3D7651AE9F32BEEA034C5C /* FriendsThreadExyteChatTests.swift in Sources */,
+				4E346A3A0E58579B880E41D7 /* FriendsThreadShareVisibilityResolverTests.swift in Sources */,
+				9FB74791B62FBB9668D255E5 /* FriendsThreadViewModelTests.swift in Sources */,
+				8042B8933D1A03D96E5ACBFC /* LocalRecurringShiftRecoveryTests.swift in Sources */,
+				F673BFD095B29F66F51AADEB /* PauseWindowSupportTests.swift in Sources */,
+				52E5C48354F6DFB96205FB31 /* PayrollAdjustmentCalculatorTests.swift in Sources */,
+				187C439FFD28216C513407EB /* PayrollEngineConflictOvertimeTests.swift in Sources */,
+				6203D73C76B6C0769010928A /* RecurringAnchorSelectionTests.swift in Sources */,
+				54F4461E60171452C47629DE /* SMSUnavailableAuthTests.swift in Sources */,
+				888442D289F5EA1FDBAFCE84 /* SensitiveContentPresentationStateTests.swift in Sources */,
+				37377B2AF7146099827F00AD /* SharedShiftBreakAuditTests.swift in Sources */,
+				A86AE5652DBD6465CB0DDC19 /* ShiftCardAmountAnimationFallbackTests.swift in Sources */,
+				28C10B903E33F0DFF859FCA4 /* ShiftDateBoundaryRegressionTests.swift in Sources */,
+				3011C0E8ABBE7045378E86A5 /* ShiftSnapshotBuilderTests.swift in Sources */,
+				73DF04E4285F329FD78D7171 /* ShiftsListPlaceholderPolicyTests.swift in Sources */,
+				A5273AA3A4591450FD0F92D0 /* SignupViewModelTests.swift in Sources */,
+				6F4297BFD94E7970B1B1D546 /* StatsServiceCalendarMathTests.swift in Sources */,
+				4B15848ACE7F18869FF4DF32 /* SyncPushMergeTests.swift in Sources */,
+				0CAFF4D07519EB3CA52D024A /* TabErrorDescriptionTests.swift in Sources */,
+				4ED7B1067119677EE782EF19 /* WorkSetupStatusResolverTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

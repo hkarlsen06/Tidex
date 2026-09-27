@@ -7,102 +7,65 @@ import XCTest
 @MainActor
 final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
   func testExtractThreadIdPrefersThreadIdFieldForMessageActions() {
-    let action = AnyAction.insert(
-      InsertAction(
-        columns: [],
-        commitTimestamp: Date(),
-        record: [
-          "id": "message-1",
-          "thread_id": "thread-1",
-        ],
-        rawMessage: Self.rawMessage()
-      ))
+    let record: JSONObject = [
+        "id": "message-1",
+        "thread_id": "thread-1",
+      ]
 
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractThreadId(from: action), "thread-1")
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(from: action), "message-1")
+    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractThreadId(fromRecord: record), "thread-1")
+    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(fromRecord: record), "message-1")
   }
 
   func testExtractThreadIdFallsBackToPrimaryIdForThreadActions() {
-    let action = AnyAction.update(
-      UpdateAction(
-        columns: [],
-        commitTimestamp: Date(),
-        record: [
-          "id": "thread-22",
-          "kind": "direct",
-        ],
-        oldRecord: [:],
-        rawMessage: Self.rawMessage()
-      ))
+    let record: JSONObject = [
+        "id": "thread-22",
+        "kind": "direct",
+      ]
 
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractThreadId(from: action), "thread-22")
-    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(from: action), "thread-22")
+    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractThreadId(fromRecord: record), "thread-22")
+    XCTAssertEqual(FriendsMessagingRealtimeCoordinator.extractMessageId(fromRecord: record), "thread-22")
   }
 
   func testExtractReactionMessageIdUsesMessageIdInsteadOfReactionPrimaryId() {
-    let action = AnyAction.insert(
-      InsertAction(
-        columns: [],
-        commitTimestamp: Date(),
-        record: [
-          "id": "reaction-1",
-          "thread_id": "thread-1",
-          "message_id": "message-1",
-        ],
-        rawMessage: Self.rawMessage()
-      ))
+    let record: JSONObject = [
+        "id": "reaction-1",
+        "thread_id": "thread-1",
+        "message_id": "message-1",
+      ]
 
     XCTAssertEqual(
-      FriendsMessagingRealtimeCoordinator.extractReactionMessageId(from: action),
+      FriendsMessagingRealtimeCoordinator.extractReactionMessageId(fromRecord: record),
       "message-1"
     )
   }
 
-  func testDecodeThreadUserStateParsesInsertedPayload() {
+  func testDecodeThreadUserStateParsesInsertedPayload() throws {
     let updatedAt = Date(timeIntervalSince1970: 1_700_000_000)
     let lastReadAt = Date(timeIntervalSince1970: 1_699_999_900)
 
-    let action = AnyAction.insert(
-      InsertAction(
-        columns: [],
-        commitTimestamp: updatedAt,
-        record: [
-          "thread_id": "thread-1",
-          "user_id": "viewer-1",
-          "last_read_message_id": "message-9",
-          "last_read_at": .string(ISO8601DateFormatter().string(from: lastReadAt)),
-          "muted": true,
-          "updated_at": .string(ISO8601DateFormatter().string(from: updatedAt)),
-        ],
-        rawMessage: Self.rawMessage()
-      ))
+    let record: JSONObject = [
+        "thread_id": "thread-1",
+        "user_id": "viewer-1",
+        "last_read_message_id": "message-9",
+        "last_read_at": .string(ISO8601DateFormatter().string(from: lastReadAt)),
+        "muted": true,
+        "updated_at": .string(ISO8601DateFormatter().string(from: updatedAt)),
+      ]
 
-    let state = FriendsMessagingRealtimeCoordinator.decodeThreadUserState(from: action)
+    let state = FriendsMessagingRealtimeCoordinator.decodeThreadUserState(fromRecord: record)
 
     XCTAssertEqual(state?.threadId, "thread-1")
     XCTAssertEqual(state?.userId, "viewer-1")
     XCTAssertEqual(state?.lastReadMessageId, "message-9")
     XCTAssertEqual(state?.muted, true)
     XCTAssertEqual(
-      state?.lastReadAt?.timeIntervalSince1970, lastReadAt.timeIntervalSince1970, accuracy: 1)
+      try XCTUnwrap(state?.lastReadAt).timeIntervalSince1970, lastReadAt.timeIntervalSince1970,
+      accuracy: 1)
     XCTAssertEqual(
-      state?.updatedAt.timeIntervalSince1970, updatedAt.timeIntervalSince1970, accuracy: 1)
+      try XCTUnwrap(state?.updatedAt).timeIntervalSince1970, updatedAt.timeIntervalSince1970,
+      accuracy: 1)
   }
 
-  func testDecodeThreadUserStateIgnoresDeletePayloads() {
-    let action = AnyAction.delete(
-      DeleteAction(
-        columns: [],
-        commitTimestamp: Date(),
-        oldRecord: [
-          "thread_id": "thread-1",
-          "user_id": "viewer-1",
-        ],
-        rawMessage: Self.rawMessage()
-      ))
-
-    XCTAssertNil(FriendsMessagingRealtimeCoordinator.decodeThreadUserState(from: action))
-  }
 
   func testDecodeTypingPayloadParsesRealtimeBroadcastEnvelope() throws {
     let payload: JSONObject = [
@@ -211,13 +174,4 @@ final class FriendsMessagingRealtimeCoordinatorTests: XCTestCase {
     )
   }
 
-  private static func rawMessage() -> RealtimeMessageV2 {
-    RealtimeMessageV2(
-      joinRef: nil,
-      ref: nil,
-      topic: "realtime:public:messages",
-      event: .postgresChanges,
-      payload: [:]
-    )
-  }
 }

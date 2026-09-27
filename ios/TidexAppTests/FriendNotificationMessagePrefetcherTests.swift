@@ -217,7 +217,7 @@ private final class MockPrefetchContext: FriendNotificationMessagePrefetchContex
 
   func currentUserId() async -> String? {
     await Task.yield()
-    userId
+    return userId
   }
 }
 
@@ -266,6 +266,22 @@ private final class MockFriendsMessagesRepository: FriendsMessagesRepositoryProv
   func deleteMessage(id: String, viewerUserId _: String) async {
     await Task.yield()
     messages[id] = nil
+  }
+
+  func getMessagingSyncState(viewerUserId _: String, scope _: FriendMessagingSyncScope) async
+    -> FriendMessagingSyncState?
+  {
+    await Task.yield()
+    return nil
+  }
+
+  func saveMessagingSyncState(_: FriendMessagingSyncState) async {
+    await Task.yield()
+  }
+
+  func deleteThread(id: String, viewerUserId _: String) async {
+    await Task.yield()
+    threads[id] = nil
   }
 }
 
@@ -434,6 +450,61 @@ private final class MockFriendsMessagingService: FriendsMessagingServiceProvidin
     await Task.yield()
     XCTFail("Unexpected call to downloadAttachmentData in FriendNotificationMessagePrefetcherTests")
     throw TestError.failed
+  }
+
+  func fetchInboxSyncSnapshotV2(limit _: Int, before _: FriendThreadCursor?) async throws
+    -> FriendInboxSyncSnapshot
+  {
+    await Task.yield()
+    throw TestError.failed
+  }
+
+  func listInboxEventsV2(afterVersion _: Int64, limit _: Int) async throws
+    -> FriendInboxSyncEventsPage
+  {
+    await Task.yield()
+    throw TestError.failed
+  }
+
+  func listThreadEventsV2(threadId _: String, afterVersion _: Int64, limit _: Int) async throws
+    -> FriendThreadSyncEventsPage
+  {
+    await Task.yield()
+    throw TestError.failed
+  }
+
+  func listThreadMessagesV2(threadId _: String, limit _: Int, before _: FriendMessageCursor?)
+    async throws -> FriendThreadMessagesPage
+  {
+    await Task.yield()
+    throw TestError.failed
+  }
+
+  func fetchThreadSyncSnapshotV2(threadId: String, messageLimit _: Int) async throws
+    -> FriendThreadSyncSnapshot
+  {
+    let thread = await fetchThreadSummary(threadId: threadId)
+    return FriendThreadSyncSnapshot(
+      thread: thread,
+      viewerState: FriendThreadState(
+        threadId: threadId,
+        userId: "viewer-1",
+        lastReadMessageId: nil,
+        lastReadAt: nil,
+        muted: false,
+        updatedAt: Date()
+      ),
+      counterpartPresence: nil,
+      messages: [],
+      nextCursor: nil,
+      snapshotVersion: 0,
+      retainedFromVersion: 0,
+      hasMore: false
+    )
+  }
+
+  func fetchMessageSyncPayloadV2(messageId: String) async throws -> FriendMessage {
+    try await fetchMessagePayload(messageId: messageId)
   }
 }
 

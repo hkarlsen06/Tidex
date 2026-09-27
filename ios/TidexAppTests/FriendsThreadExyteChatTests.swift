@@ -1302,7 +1302,8 @@ final class FriendsThreadExyteChatTests: XCTestCase {
   }
 
   func testChatProjectionPrecomputesLookupsAndRowContext() {
-    let baseDate = Date(timeIntervalSince1970: 1_731_000_000)
+    // The typing indicator only joins a recent message, so the fixture uses current times.
+    let baseDate = Date().addingTimeInterval(-120)
     let outgoing = makeMessage(
       id: "outgoing",
       senderUserId: "viewer",

@@ -677,7 +677,12 @@ extension LocalStoreActor {
       viewerUserId: viewerUserId
     )
     let resolvedCreatedAt =
-      shouldPreserveLocalCreatedAt(for: message, existing: localMessage, viewerUserId: viewerUserId)
+      shouldPreserveLocalCreatedAt(
+        for: message,
+        resolvedClientId: resolvedClientId,
+        existing: localMessage,
+        viewerUserId: viewerUserId
+      )
       ? localMessage.createdAt : message.createdAt
 
     guard resolvedCreatedAt != message.createdAt || resolvedClientId != message.clientId else {
@@ -703,8 +708,11 @@ extension LocalStoreActor {
     )
   }
 
+  /// Keeps the local send time for the viewer's own message so it doesn't jump in the thread.
+  /// Uses the resolved client id, because the server can echo a message without its client id.
   private func shouldPreserveLocalCreatedAt(
     for message: FriendMessage,
+    resolvedClientId: String,
     existing localMessage: LocalMessage,
     viewerUserId: String
   ) -> Bool {
@@ -712,7 +720,7 @@ extension LocalStoreActor {
       return false
     }
 
-    let normalizedIncomingClientId = normalizedClientId(message.clientId)
+    let normalizedIncomingClientId = normalizedClientId(resolvedClientId)
     let normalizedExistingClientId = normalizedClientId(localMessage.clientId)
 
     guard

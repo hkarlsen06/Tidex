@@ -88,8 +88,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
 
     await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
 
-    XCTAssertEqual(
-      await repository.getActiveBottomedFriendIds(for: viewerUserId), Set(["friend-1"]))
+    let bottomedIds = await repository.getActiveBottomedFriendIds(for: viewerUserId)
+    XCTAssertEqual(bottomedIds, Set(["friend-1"]))
   }
 
   func testFriendFeedPlacementCanBeClearedManually() async throws {
@@ -99,7 +99,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     await repository.setFriendMovedToBottom(friendUserId: "friend-1", viewerUserId: viewerUserId)
     await repository.clearFriendFeedPlacement(friendUserId: "friend-1", viewerUserId: viewerUserId)
 
-    XCTAssertEqual(await repository.getActiveBottomedFriendIds(for: viewerUserId), Set<String>())
+    let bottomedIds = await repository.getActiveBottomedFriendIds(for: viewerUserId)
+    XCTAssertEqual(bottomedIds, Set<String>())
   }
 
   func testFriendFeedPlacementClearsWhenThreadLastMessageChanges() async throws {
@@ -115,7 +116,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
       for: viewerUserId
     )
 
-    XCTAssertEqual(await repository.getActiveBottomedFriendIds(for: viewerUserId), Set<String>())
+    let bottomedIds = await repository.getActiveBottomedFriendIds(for: viewerUserId)
+    XCTAssertEqual(bottomedIds, Set<String>())
   }
 
   func testFriendFeedPlacementSurvivesUnchangedThreadRefresh() async throws {
@@ -132,8 +134,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
       for: viewerUserId
     )
 
-    XCTAssertEqual(
-      await repository.getActiveBottomedFriendIds(for: viewerUserId), Set(["friend-1"]))
+    let bottomedIds = await repository.getActiveBottomedFriendIds(for: viewerUserId)
+    XCTAssertEqual(bottomedIds, Set(["friend-1"]))
   }
 
   func testFriendFeedPlacementSurvivesLastMessageIdChangeAtSameTimestamp() async throws {
@@ -150,8 +152,8 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
       for: viewerUserId
     )
 
-    XCTAssertEqual(
-      await repository.getActiveBottomedFriendIds(for: viewerUserId), Set(["friend-1"]))
+    let bottomedIds = await repository.getActiveBottomedFriendIds(for: viewerUserId)
+    XCTAssertEqual(bottomedIds, Set(["friend-1"]))
   }
 
   func testSaveMessagesRoundTripsAttachmentsInAscendingOrder() async throws {
@@ -678,7 +680,7 @@ final class FriendsMessagesRepositoryTests: XCTestCase {
     let storedThread = try XCTUnwrap(
       repository.getThread(id: "thread-1", viewerUserId: viewerUserId))
     XCTAssertEqual(storedThread.lastMessagePreviewKind, .shiftSnapshot)
-    XCTAssertEqual(storedThread.lastMessagePreviewText, "Shared a shift")
+    XCTAssertEqual(storedThread.lastMessagePreviewText, String(localized: .friendsChatPreviewSharedShift))
     XCTAssertFalse(storedThread.lastMessageHasImage)
   }
 

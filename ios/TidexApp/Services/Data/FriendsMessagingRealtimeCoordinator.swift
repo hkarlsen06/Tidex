@@ -1279,62 +1279,52 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
     }
   }
 
-  static func extractThreadId(from action: AnyAction) -> String? {
+  /// The row a realtime action carries: the new row for inserts and updates, the old row for deletes.
+  static func changedRecord(of action: AnyAction) -> JSONObject {
     switch action {
     case .insert(let insert):
-      return insert.record["thread_id"]?.stringValue ?? insert.record["id"]?.stringValue
+      return insert.record
 
     case .update(let update):
-      return update.record["thread_id"]?.stringValue ?? update.record["id"]?.stringValue
+      return update.record
 
     case .delete(let delete):
-      return delete.oldRecord["thread_id"]?.stringValue ?? delete.oldRecord["id"]?.stringValue
+      return delete.oldRecord
     }
+  }
+
+  static func extractThreadId(from action: AnyAction) -> String? {
+    extractThreadId(fromRecord: changedRecord(of: action))
+  }
+
+  static func extractThreadId(fromRecord record: JSONObject) -> String? {
+    record["thread_id"]?.stringValue ?? record["id"]?.stringValue
   }
 
   static func extractMessageId(from action: AnyAction) -> String? {
-    switch action {
-    case .insert(let insert):
-      return insert.record["id"]?.stringValue ?? insert.record["message_id"]?.stringValue
+    extractMessageId(fromRecord: changedRecord(of: action))
+  }
 
-    case .update(let update):
-      return update.record["id"]?.stringValue ?? update.record["message_id"]?.stringValue
-
-    case .delete(let delete):
-      return delete.oldRecord["id"]?.stringValue ?? delete.oldRecord["message_id"]?.stringValue
-    }
+  static func extractMessageId(fromRecord record: JSONObject) -> String? {
+    record["id"]?.stringValue ?? record["message_id"]?.stringValue
   }
 
   static func extractReactionMessageId(from action: AnyAction) -> String? {
-    switch action {
-    case .insert(let insert):
-      return insert.record["message_id"]?.stringValue
+    extractReactionMessageId(fromRecord: changedRecord(of: action))
+  }
 
-    case .update(let update):
-      return update.record["message_id"]?.stringValue
-
-    case .delete(let delete):
-      return delete.oldRecord["message_id"]?.stringValue
-    }
+  static func extractReactionMessageId(fromRecord record: JSONObject) -> String? {
+    record["message_id"]?.stringValue
   }
 
   static func decodeThreadUserState(from action: AnyAction) -> FriendThreadState? {
-    let payload: JSONObject?
-    switch action {
-    case .insert(let insert):
-      payload = insert.record
+    if case .delete = action { return nil }
+    return decodeThreadUserState(fromRecord: changedRecord(of: action))
+  }
 
-    case .update(let update):
-      payload = update.record
-
-    case .delete:
-      payload = nil
-    }
-
-    guard let payload else { return nil }
-
+  static func decodeThreadUserState(fromRecord record: JSONObject) -> FriendThreadState? {
     do {
-      let row = try payload.decode(as: MessagingThreadUserStateRow.self)
+      let row = try record.decode(as: MessagingThreadUserStateRow.self)
       return row.toFriendThreadState()
     } catch {
       realtimeLogger.error(

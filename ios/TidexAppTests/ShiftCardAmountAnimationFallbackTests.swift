@@ -4,7 +4,7 @@ import XCTest
 
 internal final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
   internal func testReturnsPreviousAmountWhenTrailingBottomContentAppears() {
-    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
+    let animateFrom: Double? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 12_500,
       previousHasTrailingBottomContent: false,
       currentHasTrailingBottomContent: true
@@ -14,7 +14,7 @@ internal final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
   }
 
   internal func testReturnsPreviousAmountWhenTrailingBottomContentDisappears() {
-    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
+    let animateFrom: Double? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 18_900,
       previousHasTrailingBottomContent: true,
       currentHasTrailingBottomContent: false
@@ -24,7 +24,7 @@ internal final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
   }
 
   internal func testReturnsNilWhenLayoutModeDoesNotChange() {
-    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
+    let animateFrom: Double? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 9_750,
       previousHasTrailingBottomContent: true,
       currentHasTrailingBottomContent: true
@@ -34,7 +34,7 @@ internal final class ShiftCardAmountAnimationFallbackTests: XCTestCase {
   }
 
   internal func testReturnsNilWithoutPreviousLayoutState() {
-    let animateFrom: Decimal? = ShiftCardAmountAnimationFallback.animateFrom(
+    let animateFrom: Double? = ShiftCardAmountAnimationFallback.animateFrom(
       previousAmount: 9_750,
       previousHasTrailingBottomContent: nil,
       currentHasTrailingBottomContent: true

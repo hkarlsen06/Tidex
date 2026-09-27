@@ -427333,6 +427333,24 @@
         }
       },
       "comment" : "VoiceOver text in the shared calendar with a friend, for a day where the friend has a shift. %@ is the friend's first name."
+    },
+    "shifts.deleteConfirmRecurringNote" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recurring shifts are only removed on the selected dates. Their other dates stay as they are."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Faste vakter fjernes bare på de valgte datoene. De andre datoene blir som før."
+          }
+        }
+      },
+      "comment" : "Sentence added to the delete confirmation when the selected days include a recurring shift. Only the selected dates of the recurring shift are removed; its other dates stay."
     }
   },
   "version" : "1.0"

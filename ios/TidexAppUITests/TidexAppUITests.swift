@@ -548,9 +548,9 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(eventsMode.isSelected)
 
     app.tabBars.buttons["Schedule"].tap()
-    let september = app.staticTexts["September"].firstMatch
-    XCTAssertTrue(september.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    september.tap()
+    let monthTitle = app.buttons["month-header.title"].firstMatch
+    XCTAssertTrue(monthTitle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    monthTitle.tap()
     let monthWheel = app.pickerWheels.element(boundBy: 0)
     XCTAssertTrue(monthWheel.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     monthWheel.adjust(toPickerWheelValue: "December")
@@ -569,8 +569,10 @@ final class TidexAppUITests: XCTestCase {
     let singleMode = app.buttons["add-shift.mode.single"]
     XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     XCTAssertTrue(singleMode.isSelected, "Add shift must leave the previous event mode")
-    XCTAssertTrue(app.staticTexts["December"].firstMatch.exists)
-    XCTAssertTrue(app.staticTexts["2025"].firstMatch.exists)
+    let addMonthTitle = app.buttons["month-header.title"].firstMatch
+    XCTAssertTrue(addMonthTitle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(addMonthTitle.label.contains("December"), addMonthTitle.label)
+    XCTAssertTrue(addMonthTitle.label.contains("2025"), addMonthTitle.label)
   }
 
   @MainActor

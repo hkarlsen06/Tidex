@@ -553,6 +553,7 @@ struct AnimatedMonthHeader: View {
         showMonthPicker()
       }
       .accessibilityAddTraits(.isButton)
+      .accessibilityIdentifier("month-header.title")
 
       // Next button
       pillNavigationButton(icon: nextIcon, label: .commonNextMonth, action: onNext)
@@ -599,6 +600,7 @@ struct AnimatedMonthHeader: View {
         showMonthPicker()
       }
       .accessibilityAddTraits(.isButton)
+      .accessibilityIdentifier("month-header.title")
     }
     .frame(maxWidth: .infinity)
     .overlay(alignment: .leading) {
