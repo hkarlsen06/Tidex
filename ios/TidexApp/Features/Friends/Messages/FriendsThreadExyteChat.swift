@@ -585,6 +585,7 @@ enum FriendsThreadChatViewportScrollDeferralResolver {
 
 enum FriendsThreadChatViewportResolver {
   private static let pinnedToBottomThreshold: CGFloat = 1
+  private static let pullUpToFocusThreshold: CGFloat = 24
 
   struct LayoutSnapshot {
     private let messageIDsSignature: [String]
@@ -664,6 +665,12 @@ enum FriendsThreadChatViewportResolver {
 
   static func isPinnedToBottom(contentOffsetY: CGFloat) -> Bool {
     contentOffsetY <= pinnedToBottomThreshold
+  }
+
+  /// The chat table is inverted, so pulling up past the newest message overscrolls
+  /// to a negative offset.
+  static func isPulledUpPastBottom(contentOffsetY: CGFloat, topInset: CGFloat) -> Bool {
+    contentOffsetY < -topInset - pullUpToFocusThreshold
   }
 
   static func layoutSnapshot(messages: [ExyteChat.Message]) -> LayoutSnapshot {
@@ -1611,6 +1618,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
   let onLatestVisiblePresentedMessageIDChanged: (String?) -> Void
   let onObservedPresentedMessageVisible: (String) -> Void
   let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
+  var onPulledUpPastBottom: () -> Void = {}
 
   func makeCoordinator() -> Coordinator {
     Coordinator()
@@ -1635,7 +1643,8 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
         onPinnedToBottomChanged: onPinnedToBottomChanged,
         onLatestVisiblePresentedMessageIDChanged: onLatestVisiblePresentedMessageIDChanged,
         onObservedPresentedMessageVisible: onObservedPresentedMessageVisible,
-        onDidHandleScrollRequest: onDidHandleScrollRequest
+        onDidHandleScrollRequest: onDidHandleScrollRequest,
+        onPulledUpPastBottom: onPulledUpPastBottom
       )
     )
   }
@@ -1651,6 +1660,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       let onLatestVisiblePresentedMessageIDChanged: (String?) -> Void
       let onObservedPresentedMessageVisible: (String) -> Void
       let onDidHandleScrollRequest: (FriendsThreadChatViewportScrollRequest) -> Void
+      let onPulledUpPastBottom: () -> Void
     }
 
     private weak var tableView: UITableView?
@@ -1672,6 +1682,8 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
     private var onLatestVisiblePresentedMessageIDChanged: ((String?) -> Void)?
     private var onObservedPresentedMessageVisible: ((String) -> Void)?
     private var onDidHandleScrollRequest: ((FriendsThreadChatViewportScrollRequest) -> Void)?
+    private var onPulledUpPastBottom: (() -> Void)?
+    private var didReportPullUpInCurrentDrag = false
 
     func update(
       from view: UIView,
@@ -1691,6 +1703,7 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       onLatestVisiblePresentedMessageIDChanged = input.onLatestVisiblePresentedMessageIDChanged
       onObservedPresentedMessageVisible = input.onObservedPresentedMessageVisible
       onDidHandleScrollRequest = input.onDidHandleScrollRequest
+      onPulledUpPastBottom = input.onPulledUpPastBottom
 
       if input.scrollRequest == nil {
         handledScrollRequest = nil
@@ -1727,6 +1740,8 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
       guard tableView !== self.tableView else { return }
 
       self.tableView = tableView
+      // Lets short threads overscroll so the pull-up-to-type gesture still works.
+      tableView.alwaysBounceVertical = true
       contentOffsetObservation = tableView.observe(\.contentOffset, options: [.initial, .new]) {
         [weak self] tableView, _ in
         Task { @MainActor [weak self] in
@@ -1746,9 +1761,29 @@ struct FriendsThreadChatViewportBridge: UIViewRepresentable {
 
     private func handleContentOffsetChange(for tableView: UITableView) {
       guard tableView === self.tableView else { return }
+      reportPulledUpPastBottomIfNeeded(for: tableView)
       reportPinnedToBottomIfNeeded()
       reportLatestVisiblePresentedMessageIDIfNeeded()
       reportObservedPresentedMessageVisibleIfNeeded()
+    }
+
+    private func reportPulledUpPastBottomIfNeeded(for tableView: UITableView) {
+      guard tableView.isDragging else {
+        didReportPullUpInCurrentDrag = false
+        return
+      }
+      guard !didReportPullUpInCurrentDrag else { return }
+      guard
+        FriendsThreadChatViewportResolver.isPulledUpPastBottom(
+          contentOffsetY: tableView.contentOffset.y,
+          topInset: tableView.adjustedContentInset.top
+        )
+      else { return }
+
+      didReportPullUpInCurrentDrag = true
+      DispatchQueue.main.async { [weak self] in
+        self?.onPulledUpPastBottom?()
+      }
     }
 
     private func reportPinnedToBottomIfNeeded() {
