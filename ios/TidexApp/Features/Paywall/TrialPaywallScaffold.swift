@@ -3,7 +3,7 @@ import StoreKit
 import SwiftUI
 
 /// Shared Pro trial paywall shell. The section below the "or" divider is supplied by the
-/// caller so month-limit and Wagey can share the same offer surface.
+/// caller.
 struct TrialPaywallScaffold<AlternativeContent: View>: View {
   @Environment(\.dismiss) private var dismiss
   @ObservedObject var viewModel: PaywallViewModel
@@ -219,7 +219,6 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   private var proFeatureList: some View {
     VStack(spacing: Spacing.xs) {
       proFeatureRow(icon: "calendar.badge.plus", title: String(localized: .paywallProFeature1))
-      proFeatureRow(icon: "sparkles", title: String(localized: .paywallProFeature2))
       proFeatureRow(icon: "person.2.fill", title: String(localized: .paywallProFeature3))
       proFeatureRow(icon: "bolt.heart.fill", title: String(localized: .paywallProFeature4))
     }

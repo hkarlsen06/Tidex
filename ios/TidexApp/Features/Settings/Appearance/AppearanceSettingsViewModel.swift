@@ -12,9 +12,8 @@ internal enum StartupTabOption: String, CaseIterable {
   case home
   case sharing
   case shifts
-  case wagey
 
-  internal static let allCases: [Self] = [.home, .shifts, .add, .wagey, .sharing]
+  internal static let allCases: [Self] = [.home, .shifts, .add, .sharing]
 }
 
 /// ViewModel for appearance settings

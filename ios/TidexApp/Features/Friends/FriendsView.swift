@@ -392,7 +392,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       // Not handled here - AddShiftView will handle this
       break
 
-    case .wagey, .settings, .feedback, .adminFeedback, .adminReport:
+    case .settings, .feedback, .adminFeedback, .adminReport:
       // Not handled here - MainTabView handles these
       break
     }

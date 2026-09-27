@@ -87,7 +87,7 @@ def capture(device, family, output):
                         raise SystemExit(f"Unexpected {family} screenshot size: {size}")
                     screenshots[(language, screen)] = source
             expected = {(language, screen) for language in ("en", "nb")
-                        for screen in ("01-home", "02-statistics", "03-schedule", "04-payroll", "05-add", "06-wagey")}
+                        for screen in ("01-home", "02-statistics", "03-schedule", "04-payroll", "05-add")}
             if set(screenshots) != expected:
                 raise SystemExit(f"Incomplete screenshots: expected {expected}, got {set(screenshots)}")
             for (language, screen), source in screenshots.items():

@@ -7,11 +7,6 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   @Environment(\.dismiss) private var dismiss
   @StateObject private var viewModel = SecuritySettingsViewModel()
 
-  /// Whether AI data sharing is enabled (Wagey consent)
-  @State private var aiDataSharingEnabled = WageyViewModel.shared.hasConsentedToAISharing
-  /// Whether to show the consent view when re-enabling AI data sharing
-  @State private var showAIConsentSheet = false
-
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: Spacing.lg) {
@@ -19,9 +14,6 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
         if let error = viewModel.errorMessage {
           ErrorBanner(message: error, onDismiss: { viewModel.clearMessages() })
         }
-
-        // AI data sharing section
-        aiDataSharingSection
 
         if viewModel.isOfflineLimited {
           Text(.securityOfflineManageUnavailable)
@@ -48,27 +40,8 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     .background(Color.tidexBackground)
     .navigationTitle(String(localized: .securityTitle))
     .navigationBarTitleDisplayMode(.inline)
-    .onAppear {
-      refreshAIDataSharingState()
-    }
-    .onChange(of: WageyViewModel.shared.hasConsentedToAISharing) { _, newValue in
-      aiDataSharingEnabled = newValue
-    }
     .task {
       await viewModel.loadSecurityInfo()
-    }
-    .sheet(isPresented: $showAIConsentSheet) {
-      WageyConsentView(
-        onAgree: {
-          WageyViewModel.shared.grantAIConsent()
-          refreshAIDataSharingState()
-          showAIConsentSheet = false
-        },
-        onDecline: {
-          aiDataSharingEnabled = false
-          showAIConsentSheet = false
-        }
-      )
     }
     .sheet(isPresented: $viewModel.showPasswordForm) {
       passwordFormSheet
@@ -156,44 +129,6 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
 
   private var settingsDivider: some View {
     TidexSettingsDivider()
-  }
-
-  private func refreshAIDataSharingState() {
-    let wageyViewModel = WageyViewModel.shared
-    wageyViewModel.refreshEntryState()
-    aiDataSharingEnabled = wageyViewModel.hasConsentedToAISharing
-  }
-
-  // MARK: - AI Data Sharing Section
-
-  private var aiDataSharingSection: some View {
-    settingsSection(
-      title: String(localized: .settingsWageyAiDataSharing),
-      footer: String(localized: .settingsWageyAiDataSharingDescription)
-    ) {
-      Toggle(
-        isOn: Binding(
-          get: { aiDataSharingEnabled },
-          set: { newValue in
-            if newValue {
-              showAIConsentSheet = true
-            } else {
-              aiDataSharingEnabled = false
-              WageyViewModel.shared.revokeAIConsent()
-            }
-          }
-        )
-      ) {
-        HStack(spacing: Spacing.sm) {
-          TidexSettingsIcon(systemName: "sparkles", foregroundColor: .tidexBlue, size: 29)
-
-          Text(.settingsWageyAiDataSharing)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-        }
-      }
-      .tint(.tidexBlue)
-    }
   }
 
   // MARK: - Password Section

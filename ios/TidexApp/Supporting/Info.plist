@@ -52,7 +52,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Tidex needs camera access to take profile pictures and attach images in chat and Wagey.</string>
+	<string>Tidex needs camera access to take profile pictures and attach images in chat.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -60,7 +60,7 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Tidex needs photo library access to show recent images you can attach in chat and Wagey.</string>
+	<string>Tidex needs photo library access to show recent images you can attach in chat.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSUserActivityTypes</key>

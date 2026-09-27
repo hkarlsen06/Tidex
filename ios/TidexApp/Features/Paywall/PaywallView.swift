@@ -48,8 +48,6 @@ struct PaywallView: View {
   private var paywallContent: some View {
     if contextType == .upgrade {
       upgradePaywall
-    } else if contextType == .wageyLimit {
-      wageyLimitPaywall
     } else {
       legacyPaywall
     }
@@ -72,25 +70,6 @@ struct PaywallView: View {
       }
     ) {
       EmptyView()
-    }
-  }
-
-  private var wageyLimitPaywall: some View {
-    TrialPaywallScaffold(
-      viewModel: viewModel,
-      showsRestorePurchases: true,
-      onStartSubscription: { product in
-        Task {
-          await viewModel.purchase(product)
-        }
-      },
-      onRestorePurchases: {
-        Task {
-          await viewModel.restorePurchases()
-        }
-      }
-    ) {
-      bonusCard
     }
   }
 
@@ -431,62 +410,6 @@ struct PaywallView: View {
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
   }
 
-  private var bonusCard: some View {
-    let bonusProduct = viewModel.bonusProduct
-
-    return VStack(alignment: .leading, spacing: Spacing.md) {
-      HStack(spacing: Spacing.sm) {
-        Image(systemName: "sparkles")
-          .font(.system(size: 18, weight: .semibold))
-          .foregroundColor(.tidexBlue)
-
-        Text(bonusProduct?.displayName ?? String(localized: .paywallLoading))
-          .font(.tidexTitle2)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-      }
-
-      if let productDescription = bonusProduct?.description,
-        !productDescription.isEmpty
-      {
-        Text(productDescription)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .fixedSize(horizontal: false, vertical: true)
-      }
-
-      Button(action: {
-        Task {
-          await viewModel.purchaseBonus()
-        }
-      }) {
-        if viewModel.isPurchasing {
-          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-            .frame(maxWidth: .infinity)
-        } else if let price = bonusProduct?.displayPrice {
-          Text(String(localized: .paywallBonusBuyFor(price)))
-            .font(.tidexButton)
-            .frame(maxWidth: .infinity)
-        } else {
-          Text(.paywallLoadingButton)
-            .font(.tidexButton)
-            .frame(maxWidth: .infinity)
-        }
-      }
-      .frame(height: 48)
-      .foregroundColor(.tidexTextOnBrand)
-      .background(viewModel.bonusProduct != nil ? Color.tidexBlue : Color.tidexTextMuted)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-      .disabled(viewModel.bonusProduct == nil || viewModel.isPurchasing)
-    }
-    .padding(Spacing.mlg)
-    .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-    .tidexCardShadow(cornerRadius: CornerRadius.xxl)
-  }
-
   // swiftlint:disable force_unwrapping
   private var termsURL: URL {
     URL(string: "https://tidex.no/\(Locale.current.urlLanguageCode)/terms")!
@@ -685,13 +608,11 @@ private struct PaywallTimelineItem: Identifiable {
 enum PaywallContextType {
   case monthLimit
   case upgrade
-  case wageyLimit
 
   var icon: String {
     switch self {
     case .monthLimit: return "calendar.badge.exclamationmark"
     case .upgrade: return "crown.fill"
-    case .wageyLimit: return "bubble.left.and.exclamationmark.bubble.right"
     }
   }
 
@@ -699,7 +620,6 @@ enum PaywallContextType {
     switch self {
     case .monthLimit: return String(localized: .paywallShiftLimitTitle)
     case .upgrade: return String(localized: .paywallUpgradeTitle)
-    case .wageyLimit: return String(localized: .paywallWageyLimitTitle)
     }
   }
 
@@ -707,7 +627,6 @@ enum PaywallContextType {
     switch self {
     case .monthLimit: return String(localized: .paywallShiftLimitMessage)
     case .upgrade: return String(localized: .paywallUpgradeMessage)
-    case .wageyLimit: return String(localized: .paywallWageyLimitMessage)
     }
   }
 }
@@ -736,14 +655,7 @@ struct PaywallContext {
   static let upgrade = Self(
     icon: "crown.fill",
     title: "Unlock Premium Features",
-    message: "Get unlimited months, advanced statistics, Wagey AI, and more."
-  )
-
-  // swiftlint:disable:next explicit_acl explicit_type_interface
-  static let wageyLimit = Self(
-    icon: "bubble.left.and.exclamationmark.bubble.right",
-    title: "Message Limit Reached",
-    message: "You've used all your messages this month. Upgrade to continue chatting with Wagey."
+    message: "Get unlimited months, advanced statistics, and more."
   )
 
   private init(icon: String, title: String, message: String) {

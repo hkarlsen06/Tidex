@@ -7,7 +7,6 @@
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var selectedDates: Set<String> = []
     @State private var selectionEnabled: Bool = false
-    @State private var isPinned: Bool = true
     @State private var startTime: Date? = EventSheetFormatter.date(from: "09:00")
     @State private var endTime: Date? = EventSheetFormatter.date(from: "17:00")
     @State private var showingShiftEditor: Bool = false
@@ -139,7 +138,6 @@
                 case "calendar": calendar
                 case "shared-calendar": sharedCalendar
                 case "stats": charts
-                case "wagey": wagey
                 case "controls": controls
                 default: dashboard
                 }
@@ -292,15 +290,6 @@
           })
         YearlyIncomeChart(data: MonthlyIncomeData.previewData, focusYear: 2_026)
       }
-    }
-
-    private var wagey: some View {
-      ChatMessageList(
-        messages: [], streamingMessages: [], streamingContentBlocks: [],
-        isStreaming: false, isThinking: false, remainingMessagesText: nil,
-        showsHistoryButton: true, isScrolledToBottom: $isPinned
-      )
-      .frame(minHeight: 500)
     }
 
     private var controls: some View {

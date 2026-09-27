@@ -98,7 +98,6 @@ final class AppCoordinator: ObservableObject {
       typingUserId: String?,
       navigationRequestId: UUID?
     )  // Navigate to a direct friend chat thread
-    case wagey  // Navigate to Wagey
     case addShift(mode: AddShiftMode?, date: String?)  // Navigate to Add Shift, optionally selecting a mode/date
     case settings(destination: SettingsDeepLinkDestination?)  // Open settings, optionally at a subpage
     case feedback  // Navigate to feedback settings (for users receiving response)
@@ -944,7 +943,6 @@ final class AppCoordinator: ObservableObject {
           settings.effectiveDefaultStartupTab,
           forKey: Self.startupTabCacheKey
         )
-        WageyViewModel.shared.refreshEntryState()
       }
 
     } catch {
@@ -1003,7 +1001,6 @@ final class AppCoordinator: ObservableObject {
         guard self.userId == userId else { return nil }
         self.initialSyncComplete = true
         let settings = SettingsRepository.shared.getSettings(for: userId)
-        WageyViewModel.shared.refreshEntryState()
         return settings
       }
 
@@ -1269,8 +1266,6 @@ final class AppCoordinator: ObservableObject {
 
     await clearSignedOutDeviceState()
 
-    // Reset in-memory Wagey state so consent/chat state cannot leak across users
-    WageyViewModel.shared.resetForUserChange()
     CalendarSubscriptionStore.shared.resetForUserChange()
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
 

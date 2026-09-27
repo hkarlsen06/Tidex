@@ -291,7 +291,6 @@ struct SubscriptionSettingsView: View {
     case .pro:
       return [
         String(localized: .paywallProFeature1),
-        String(localized: .paywallProFeature2),
         String(localized: .paywallProFeature3),
         String(localized: .paywallProFeature4),
       ]
@@ -299,7 +298,6 @@ struct SubscriptionSettingsView: View {
     case .max:
       return [
         String(localized: .paywallMaxFeature1),
-        String(localized: .paywallMaxFeature2),
         String(localized: .paywallMaxFeature3),
         String(localized: .paywallMaxFeature4),
         String(localized: .paywallMaxFeature5),

@@ -111,7 +111,6 @@ struct MainTabView: View {
     case home
     case shifts
     case add
-    case wagey
     case sharing
 
     var icon: String {
@@ -125,9 +124,6 @@ struct MainTabView: View {
       case .add:
         return "plus.capsule.fill"
 
-      case .wagey:
-        return "sparkles"
-
       case .sharing:
         return "person.2.fill"
       }
@@ -138,12 +134,11 @@ struct MainTabView: View {
       case .home: return .tabsHome
       case .shifts: return .tabsShifts
       case .add: return .tabsAdd
-      case .wagey: return .tabsWagey
       case .sharing: return .tabsSharing
       }
     }
 
-    static let orderedTabs: [Self] = [.home, .shifts, .add, .wagey, .sharing]
+    static let orderedTabs: [Self] = [.home, .shifts, .add, .sharing]
 
     var index: Int {
       Self.orderedTabs.firstIndex(of: self) ?? 0
@@ -236,16 +231,6 @@ struct MainTabView: View {
                     presentSettingsSheet(initialDestination: .pay(jobId: nil))
                   }
                 )
-              }
-            }
-
-            SwiftUI.Tab(
-              String(localized: Tab.wagey.localizationKey),
-              systemImage: Tab.wagey.icon,
-              value: Tab.wagey
-            ) {
-              tabHost(for: .wagey) {
-                WageyView(selectedTab: tabSelection)
               }
             }
 
@@ -439,9 +424,6 @@ struct MainTabView: View {
     case .add:
       // Hide when keyboard is visible
       return !isKeyboardVisible
-
-    case .wagey:
-      return false
 
     case .sharing:
       // Only show when a sharer is selected
@@ -687,8 +669,6 @@ struct MainTabView: View {
     } else if tab == .add {
       addShiftCoordinator.triggerModeCycle()
       pendingCurrentMonthTab = nil
-    } else if tab == .wagey {
-      pendingCurrentMonthTab = nil
     } else if tab == .sharing {
       NotificationCenter.default.post(
         name: .tabReselected, object: nil, userInfo: ["tab": tab])
@@ -777,12 +757,6 @@ struct MainTabView: View {
       if selectedTab != .add {
         activateTab(.add)
       }
-
-    case .wagey:
-      if selectedTab != .wagey {
-        activateTab(.wagey)
-      }
-      coordinator.clearPendingDeepLink()
 
     case .settings(let destination):
       presentSettingsSheet(initialDestination: destination?.settingsDestination)

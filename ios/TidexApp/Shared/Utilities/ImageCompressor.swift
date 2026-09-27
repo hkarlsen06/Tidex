@@ -20,7 +20,7 @@ enum ImageCompressor {
     let fileExtension: String
   }
 
-  /// Maximum dimension for images sent to Wagey provider APIs
+  /// Maximum dimension for compressed images
   /// Larger images are downscaled to fit within this dimension
   private static let maxDimension: CGFloat = 1_568
 

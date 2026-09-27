@@ -13,7 +13,7 @@
 "CFBundleName" = "Tidex";
 
 /* Camera usage description */
-"NSCameraUsageDescription" = "Tidex trenger tilgang til kameraet for å ta profilbilder og legge ved bilder i chat og Wagey.";
+"NSCameraUsageDescription" = "Tidex trenger tilgang til kameraet for å ta profilbilder og legge ved bilder i chat.";
 
 /* Face ID usage description */
 "NSFaceIDUsageDescription" = "Tidex bruker Face ID for å beskytte inntektsdataene dine mot nysgjerrige blikk. Bare du bør se inntekten din.";
@@ -25,7 +25,7 @@
 "NSPhotoLibraryAddUsageDescription" = "Tidex trenger tilgang til å lagre delte kalendre og skiftbilder i fotobiblioteket ditt.";
 
 /* Photo library usage description */
-"NSPhotoLibraryUsageDescription" = "Tidex trenger tilgang til bildebiblioteket for å vise nylige bilder du kan legge ved i chat og Wagey.";
+"NSPhotoLibraryUsageDescription" = "Tidex trenger tilgang til bildebiblioteket for å vise nylige bilder du kan legge ved i chat.";
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex trenger tilgang til kalenderen din for å legge til og oppdatere vakter.";

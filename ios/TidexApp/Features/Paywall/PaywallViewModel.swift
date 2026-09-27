@@ -99,11 +99,6 @@ final class PaywallViewModel: ObservableObject {
     return storeKitManager.product(for: productId)
   }
 
-  /// Wagey consumable bonus product
-  var bonusProduct: Product? {
-    storeKitManager.consumableProduct(for: .wageyBonus20)
-  }
-
   /// Current effective tier
   var currentTier: SubscriptionTier {
     entitlementService.effectiveTier
@@ -270,31 +265,6 @@ final class PaywallViewModel: ObservableObject {
       return false
     } catch {
       logger.error("Purchase failed: \(error.localizedDescription)")
-      self.error = error.localizedDescription
-      isPurchasing = false
-      return false
-    }
-  }
-
-  /// Purchase Wagey bonus consumable
-  @discardableResult
-  func purchaseBonus() async -> Bool {
-    guard let product = bonusProduct else { return false }
-
-    isPurchasing = true
-    error = nil
-
-    do {
-      let uploadSucceeded = try await storeKitManager.purchaseConsumable(product)
-      if uploadSucceeded {
-        purchaseSucceeded = true
-      } else {
-        logger.info("Bonus purchase did not complete")
-      }
-      isPurchasing = false
-      return uploadSucceeded
-    } catch {
-      logger.error("Bonus purchase failed: \(error.localizedDescription)")
       self.error = error.localizedDescription
       isPurchasing = false
       return false

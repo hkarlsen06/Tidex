@@ -65,12 +65,9 @@
           lastSyncedSnapshot: Data(), localUpdatedAt: fixtureDate
         ))
       seedShifts(in: context)
-      let conversationId: String = seedConversation(in: context)
       try context.save()
       SharedMonthContext.shared.navigateTo(year: 2_026, month: 9)
       SharedMonthContext.shared.preselectedDate = "2026-09-21"
-      WageyViewModel.shared.loadConversations()
-      WageyViewModel.shared.loadConversation(id: conversationId)
     }
 
     @MainActor
@@ -92,27 +89,6 @@
             ))
         }
       }
-    }
-
-    @MainActor
-    private static func seedConversation(in context: ModelContext) -> String {
-      let isNorwegian: Bool = Locale.current.language.languageCode?.identifier == "nb"
-      let question: String =
-        isNorwegian
-        ? "Hvor mye tjener jeg denne måneden?" : "What am I earning this month?"
-      let answer: String =
-        isNorwegian
-        ? "Denne måneden ligger du an til å tjene **28 000 kr brutto** og **22 400 kr netto**."
-          + "\n\nDu har **112 timer** fordelt på **14 vakter**, med en gjennomsnittlig timelønn på **250 kr**."
-        : "This month, you're on track to earn **28,000 kr gross** and **22,400 kr net**."
-          + "\n\nYou have **112 hours** across **14 shifts**, averaging **250 kr per hour**."
-      let conversation: LocalConversation = .init(
-        id: "screenshot-conversation", userId: userId, title: question,
-        messages: [ChatMessage.user(question), ChatMessage.assistant(content: answer)]
-          .map { StoredChatMessage(from: $0) }
-      )
-      context.insert(conversation)
-      return conversation.id
     }
   }
 

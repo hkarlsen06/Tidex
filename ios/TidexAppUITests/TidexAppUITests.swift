@@ -7,10 +7,6 @@ final class TidexAppUITests: XCTestCase {
     static let replyCancelButton = "friends-thread-composer.reply-cancel"
     static let attachmentToggleButton = "friends-thread-composer.attachment-toggle"
     static let uiTestingError = "ui-testing.error"
-    static let wageyHistoryFirstRow = "wagey-history.row.ui-test-conversation-1"
-    static let wageyHistorySwipeDelete = "wagey-history.delete-swipe.ui-test-conversation-1"
-    static let wageyHistoryConfirmDelete = "wagey-history.delete-confirm.ui-test-conversation-1"
-    static let wageyHistoryCancelDelete = "wagey-history.delete-cancel.ui-test-conversation-1"
     static let popoverDismissRegion = "PopoverDismissRegion"
     static let loginRevealEmail = "login.reveal-email"
     static let loginEmailOrPhone = "login.email-or-phone"
@@ -297,7 +293,7 @@ final class TidexAppUITests: XCTestCase {
       XCTAssertTrue(calendarAmount.waitForExistence(timeout: 30), app.debugDescription)
       XCTAssertTrue(app.buttons[shiftsTitle].firstMatch.exists, app.debugDescription)
       attachAppStoreScreenshot(app, name: "\(language)-03-schedule")
-      captureAddAndWageyScreenshots(app, language: language)
+      captureAddScreenshot(app, language: language)
     }
   }
 
@@ -345,7 +341,7 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
-  private func captureAddAndWageyScreenshots(_ app: XCUIApplication, language: String) {
+  private func captureAddScreenshot(_ app: XCUIApplication, language: String) {
     app.buttons[language == "en" ? "Add" : "Legg til"].firstMatch.tap()
     let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
       .firstMatch
@@ -359,12 +355,6 @@ final class TidexAppUITests: XCTestCase {
     }
     XCTAssertTrue(previewTotal.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     attachAppStoreScreenshot(app, name: "\(language)-05-add")
-    app.buttons["Wagey"].firstMatch.tap()
-    let question = app.staticTexts[
-      language == "en"
-        ? "What am I earning this month?" : "Hvor mye tjener jeg denne måneden?"]
-    XCTAssertTrue(question.firstMatch.waitForExistence(timeout: 30), app.debugDescription)
-    attachAppStoreScreenshot(app, name: "\(language)-06-wagey")
     app.terminate()
   }
 
@@ -894,20 +884,6 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
-  func testWageyToolbarButtonsHaveAccessibilityLabels() {
-    let app = makeApp(scenario: "app-store-screenshots")
-    app.launchArguments += ["-defaultStartupTab", "home"]
-    app.launch()
-    let wagey = app.buttons["Wagey"].firstMatch
-    XCTAssertTrue(wagey.waitForExistence(timeout: 30), app.debugDescription)
-    wagey.tap()
-    XCTAssertTrue(
-      app.buttons["Conversation History"].waitForExistence(timeout: defaultTimeout),
-      app.debugDescription)
-    XCTAssertTrue(app.buttons["New Conversation"].exists, app.debugDescription)
-  }
-
-  @MainActor
   func testFriendsChatScenarioRendersThread() {
     let app = makeApp(scenario: "friends-chat")
     app.launch()
@@ -1119,87 +1095,6 @@ final class TidexAppUITests: XCTestCase {
     return app
   }
 
-  @MainActor
-  func testWageyHistoryDeleteScenarioCancelKeepsConversation() {
-    let app = makeApp(scenario: "wagey-history-delete")
-    app.launch()
-
-    let row = wageyHistoryRow(in: app)
-    assertExists(
-      row,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected Wagey history row to render"
-    )
-
-    row.swipeLeft()
-
-    let swipeDeleteButton = wageyHistorySwipeDeleteButton(in: app)
-    assertExists(
-      swipeDeleteButton,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected swipe delete action to appear"
-    )
-    swipeDeleteButton.tap()
-
-    let confirmation = wageyHistoryDeleteConfirmation(in: app)
-    assertExists(
-      confirmation,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected delete confirmation to appear"
-    )
-
-    dismissWageyHistoryDeleteConfirmation(in: app)
-
-    assertExists(
-      row,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected row to remain after cancelling delete"
-    )
-  }
-
-  @MainActor
-  func testWageyHistoryDeleteScenarioConfirmRemovesConversation() {
-    let app = makeApp(scenario: "wagey-history-delete")
-    app.launch()
-
-    let row = wageyHistoryRow(in: app)
-    assertExists(
-      row,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected Wagey history row to render"
-    )
-
-    row.swipeLeft()
-
-    let swipeDeleteButton = wageyHistorySwipeDeleteButton(in: app)
-    assertExists(
-      swipeDeleteButton,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected swipe delete action to appear"
-    )
-    swipeDeleteButton.tap()
-
-    let confirmButton = wageyHistoryConfirmDeleteButton(in: app)
-    assertExists(
-      confirmButton,
-      in: app,
-      timeout: defaultTimeout,
-      message: "Expected delete confirmation button to appear"
-    )
-    confirmButton.tap()
-
-    XCTAssertFalse(
-      row.waitForExistence(timeout: defaultTimeout),
-      "Expected row to be removed after confirming delete"
-    )
-  }
-
   private func makeApp(scenario: String) -> XCUIApplication {
     let app = XCUIApplication()
     app.launchArguments += ["-ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
@@ -1318,116 +1213,6 @@ final class TidexAppUITests: XCTestCase {
   private func uiTestingError(in app: XCUIApplication) -> XCUIElement? {
     let errorElement = app.descendants(matching: .any)[AccessibilityID.uiTestingError]
     return errorElement.exists ? errorElement : nil
-  }
-
-  private func wageyHistoryRow(in app: XCUIApplication) -> XCUIElement {
-    let candidates = [
-      app.buttons[AccessibilityID.wageyHistoryFirstRow],
-      app.cells[AccessibilityID.wageyHistoryFirstRow],
-      app.otherElements[AccessibilityID.wageyHistoryFirstRow],
-    ]
-
-    return candidates.first(where: \.exists)
-      ?? app.descendants(matching: .any)[AccessibilityID.wageyHistoryFirstRow]
-  }
-
-  private func wageyHistorySwipeDeleteButton(in app: XCUIApplication) -> XCUIElement {
-    app.buttons[AccessibilityID.wageyHistorySwipeDelete]
-  }
-
-  private func wageyHistoryConfirmDeleteButton(in app: XCUIApplication) -> XCUIElement {
-    let candidates = [
-      app.sheets[deleteConfirmationTitle]
-        .descendants(matching: .button)
-        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
-        .firstMatch,
-      app.sheets[deleteConfirmationTitle].buttons[commonDeleteLabel],
-      app.descendants(matching: .button)
-        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
-        .firstMatch,
-      app.buttons[commonDeleteLabel],
-    ]
-
-    return firstExistingElement(
-      among: candidates,
-      timeout: 1,
-      fallback: app.descendants(matching: .button)
-        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
-        .firstMatch
-    )
-  }
-
-  private func wageyHistoryDeleteConfirmation(in app: XCUIApplication) -> XCUIElement {
-    let candidates = [
-      app.sheets[deleteConfirmationTitle],
-      app.staticTexts[deleteConfirmationTitle],
-      app.descendants(matching: .button)
-        .matching(identifier: AccessibilityID.wageyHistoryConfirmDelete)
-        .firstMatch,
-      app.buttons[commonDeleteLabel],
-    ]
-
-    return candidates.first(where: \.exists) ?? app.sheets[deleteConfirmationTitle]
-  }
-
-  private func wageyHistoryCancelDeleteButton(in app: XCUIApplication) -> XCUIElement {
-    let candidates = [
-      app.sheets[deleteConfirmationTitle]
-        .descendants(matching: .button)
-        .matching(identifier: AccessibilityID.wageyHistoryCancelDelete)
-        .firstMatch,
-      app.sheets[deleteConfirmationTitle].buttons[commonCancelLabel],
-      app.descendants(matching: .button)
-        .matching(identifier: AccessibilityID.wageyHistoryCancelDelete)
-        .firstMatch,
-      app.buttons[AccessibilityID.popoverDismissRegion],
-      app.buttons["dismiss popup"],
-      app.buttons[commonCancelLabel],
-    ]
-
-    return firstExistingElement(
-      among: candidates,
-      timeout: 1,
-      fallback: app.descendants(matching: .button)
-        .matching(
-          NSPredicate(
-            format: "identifier == %@ OR identifier == %@ OR label == %@ OR label == %@",
-            AccessibilityID.wageyHistoryCancelDelete,
-            AccessibilityID.popoverDismissRegion,
-            "dismiss popup",
-            commonCancelLabel
-          )
-        )
-        .firstMatch
-    )
-  }
-
-  private func dismissWageyHistoryDeleteConfirmation(in app: XCUIApplication) {
-    let cancelButton = wageyHistoryCancelDeleteButton(in: app)
-    if cancelButton.waitForExistence(timeout: 1) {
-      cancelButton.tap()
-      return
-    }
-
-    app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
-  }
-
-  private func firstExistingElement(
-    among candidates: [XCUIElement],
-    timeout: TimeInterval,
-    fallback: XCUIElement
-  ) -> XCUIElement {
-    let deadline = Date().addingTimeInterval(timeout)
-
-    while Date() < deadline {
-      if let candidate = candidates.first(where: \.exists) {
-        return candidate
-      }
-
-      RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-    }
-
-    return fallback
   }
 
   private func assertExists(

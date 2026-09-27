@@ -703,7 +703,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       }
     }
 
-    // Local writes can happen from other tabs, including Wagey-driven event creation.
+    // Local writes can happen from other tabs.
     // Reload from local storage so cached month data reflects those writes immediately.
     shiftsDidChangeObserver = NotificationCenter.default.addObserver(
       forName: .shiftsDidChange,

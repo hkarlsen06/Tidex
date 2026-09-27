@@ -350,9 +350,6 @@ struct AppearanceSettingsView: View {
     case .add:
       return String(localized: .tabsAdd)
 
-    case .wagey:
-      return String(localized: .tabsWagey)
-
     case .sharing:
       return String(localized: .tabsSharing)
     }
@@ -368,9 +365,6 @@ struct AppearanceSettingsView: View {
 
     case .add:
       return "plus.capsule.fill"
-
-    case .wagey:
-      return "sparkles"
 
     case .sharing:
       return "person.2.fill"

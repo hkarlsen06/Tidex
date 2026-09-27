@@ -17,7 +17,6 @@ const captions = {
     ['05-add', 'Calculate pay<br>for every shift'],
     ['03-schedule', 'Get the full overview'],
     ['04-payroll', 'See every<br>supplement'],
-    ['06-wagey', 'Ask anything<br>about your shifts'],
     ['02-statistics', 'Follow your<br>earnings over time'],
   ],
   no: [
@@ -25,7 +24,6 @@ const captions = {
     ['05-add', 'Beregn lønn<br>for hver vakt'],
     ['03-schedule', 'Få full oversikt'],
     ['04-payroll', 'Se alle<br>lønnstillegg'],
-    ['06-wagey', 'Spør om alt<br>rundt vaktene dine'],
     ['02-statistics', 'Følg inntekten<br>over tid'],
   ],
 };
