@@ -157,6 +157,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   // List scroll state (hidden until scrolled to today to prevent flash)
   @State private var listReady: Bool = false
+  @State private var scrollToTodayWhenCurrentMonthLoads: Bool = false
 
   // Deep link navigation state
   @State private var highlightedDateISO: String?
@@ -1947,10 +1948,21 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           tab == .shifts, showListView
         else { return }
         let scrollToToday = notification.userInfo?["scrollToToday"] as? Bool ?? false
-        if scrollToToday {
+        if scrollToToday, !viewModel.isCurrentMonth {
+          // The current month is still loading; scroll once it is shown.
+          scrollToTodayWhenCurrentMonthLoads = true
+        } else if scrollToToday {
           withAnimation { scrollToTodayItem(using: proxy) }
         } else if let firstId = weekGroupsWithPlaceholder.first?.items.first?.id {
           withAnimation { proxy.scrollTo(firstId, anchor: .top) }
+        }
+      }
+      .onChange(of: viewModel.isCurrentMonth) { _, isCurrentMonth in
+        guard isCurrentMonth, scrollToTodayWhenCurrentMonthLoads else { return }
+        scrollToTodayWhenCurrentMonthLoads = false
+        // Wait for the list rows of the new month before scrolling.
+        Task { @MainActor in
+          withAnimation { scrollToTodayItem(using: proxy) }
         }
       }
     }

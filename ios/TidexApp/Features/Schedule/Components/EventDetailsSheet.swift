@@ -102,6 +102,17 @@ enum EventDetailsSummaryBuilder {
   }
 }
 
+/// Explains why an event with an overnight time range can't be saved.
+struct EventTimeRangeHint: View {
+  var body: some View {
+    Text(.addShiftSubmitRequirementsEventSameDay)
+      .font(.tidexCaptionRegular)
+      .foregroundColor(.tidexError)
+      .fixedSize(horizontal: false, vertical: true)
+      .accessibilityIdentifier("event.time-range-hint")
+  }
+}
+
 struct EventDetailsSheet: View {
   let event: EventRow
   let onDelete: (() -> Void)?
@@ -175,6 +186,11 @@ struct EventDetailsSheet: View {
   private var isTimeRangeValid: Bool {
     guard let normalizedStartTimeString, let normalizedEndTimeString else { return false }
     return normalizedEndTimeString > normalizedStartTimeString
+  }
+
+  /// Both times are set, but the end isn't after the start on the same day.
+  private var showsTimeRangeHint: Bool {
+    normalizedStartTimeString != nil && normalizedEndTimeString != nil && !isTimeRangeValid
   }
 
   private var canSave: Bool {
@@ -447,18 +463,7 @@ struct EventDetailsSheet: View {
             eventRangeSummary
           }
         } else {
-          VStack(alignment: .leading, spacing: Spacing.md) {
-            dateEditor(title: String(localized: .addShiftEventDate), selection: $eventDate)
-
-            TimeRangePicker(
-              startTime: $editedStartTime,
-              endTime: $editedEndTime,
-              scrollProxy: nil,
-              scrollId: "event-details-time-range",
-              focusedFieldBinding: $focusedTimeField,
-              leadingChipAccessory: nil
-            )
-          }
+          timedEventEditor
         }
       }
       .padding(.top, Spacing.md)
@@ -468,6 +473,25 @@ struct EventDetailsSheet: View {
         isTitleFieldFocused = false
       }
     )
+  }
+
+  private var timedEventEditor: some View {
+    VStack(alignment: .leading, spacing: Spacing.md) {
+      dateEditor(title: String(localized: .addShiftEventDate), selection: $eventDate)
+
+      TimeRangePicker(
+        startTime: $editedStartTime,
+        endTime: $editedEndTime,
+        scrollProxy: nil,
+        scrollId: "event-details-time-range",
+        focusedFieldBinding: $focusedTimeField,
+        leadingChipAccessory: nil
+      )
+
+      if showsTimeRangeHint {
+        EventTimeRangeHint()
+      }
+    }
   }
 
   private var allDayToggleRow: some View {

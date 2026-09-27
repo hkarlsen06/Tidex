@@ -116,19 +116,25 @@ struct ShiftModeToggle: View {
   ) -> some View {
     let selectedForeground: Color = style == .toolbar ? .tidexBlue : .white
 
-    return Label(localizedTitle(for: modeOption), systemImage: iconName(for: modeOption))
-      .labelStyle(.iconOnly)
-      .font(.system(size: metrics.iconFontSize, weight: .semibold))
-      .foregroundStyle(isSelected ? selectedForeground : .tidexTextSecondary)
-      .padding(.horizontal, metrics.horizontalPadding)
-      .padding(.vertical, metrics.verticalPadding)
-      .contentShape(Capsule())
+    // Show the selected mode's name next to its icon.
+    return HStack(spacing: Spacing.xxs) {
+      Image(systemName: iconName(for: modeOption))
+      if isSelected {
+        Text(localizedTitle(for: modeOption))
+          .lineLimit(1)
+      }
+    }
+    .font(.system(size: metrics.iconFontSize, weight: .semibold))
+    .foregroundStyle(isSelected ? selectedForeground : .tidexTextSecondary)
+    .padding(.horizontal, metrics.horizontalPadding)
+    .padding(.vertical, metrics.verticalPadding)
+    .contentShape(Capsule())
   }
 
   private func iconName(for mode: AddShiftMode) -> String {
     switch mode {
     case .single:
-      return "banknote"
+      return "1.calendar"
 
     case .recurring:
       return "repeat"

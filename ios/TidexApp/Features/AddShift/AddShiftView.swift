@@ -760,6 +760,11 @@ private struct EventContent: View {
             focusedFieldBinding: $focusedTimeField,
             leadingChipAccessory: nil
           )
+
+          if viewModel.eventTimesCrossMidnight {
+            EventTimeRangeHint()
+              .padding(.horizontal, Spacing.sm)
+          }
         }
       }
       .padding(.top, Spacing.md)
