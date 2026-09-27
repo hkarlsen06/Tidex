@@ -2226,7 +2226,7 @@ enum FriendsThreadExyteMessageFactory {
       return .delivered
 
     case .read:
-      return .read
+      return .readBy([])
 
     case .failed:
       return .error(
