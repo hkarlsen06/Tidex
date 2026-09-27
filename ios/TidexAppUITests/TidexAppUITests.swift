@@ -32,6 +32,52 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testPaywallWithoutConfirmedTrialEligibilityDoesNotPromiseATrial() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "paywall"
+    app.launch()
+    XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(app, name: "billing-paywall")
+    XCTAssertTrue(app.staticTexts["Unlock Tidex Pro"].exists, app.debugDescription)
+    XCTAssertFalse(app.staticTexts["Try Tidex Pro free"].exists)
+    XCTAssertFalse(app.buttons["Start my free trial"].exists)
+  }
+
+  @MainActor
+  func testDeleteAccountWarnsThatTheAppStoreSubscriptionKeepsBilling() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "profile-subscribed"
+    app.launch()
+    let signOut = app.buttons["Log out"]
+    XCTAssertTrue(signOut.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    for _ in 0..<3 where !app.buttons["Delete Account"].isHittable { app.swipeUp() }
+    attachAppStoreScreenshot(app, name: "billing-profile-sessions")
+    app.buttons["Delete Account"].tap()
+    let alert = app.alerts.firstMatch
+    XCTAssertTrue(alert.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "billing-delete-account-dialog")
+    XCTAssertTrue(
+      alert.staticTexts.matching(
+        NSPredicate(format: "label CONTAINS %@", "doesn't cancel your App Store subscription")
+      ).firstMatch.exists, alert.debugDescription)
+    XCTAssertTrue(alert.buttons["Manage subscription"].exists, alert.debugDescription)
+  }
+
+  @MainActor
+  func testTaxSettingExplainsTheFlatPercentage() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-history-tariff-editor"
+    app.launch()
+    let taxToggle = app.switches["pay-settings.tax-toggle"]
+    XCTAssertTrue(taxToggle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    taxToggle.tap()
+    let hint = text(containingLabel: "one flat percentage", in: app)
+    _ = hint.waitForExistence(timeout: 3)
+    attachAppStoreScreenshot(app, name: "billing-tax-flat-rate")
+    XCTAssertTrue(hint.exists, app.debugDescription)
+  }
+
+  @MainActor
   func testPayReviewOpensThePayoutTaxPeriodDirectly() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-review"

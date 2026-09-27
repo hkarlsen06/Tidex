@@ -178,7 +178,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   private var headlineBlock: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
       HStack(alignment: .top, spacing: Spacing.sm) {
-        Text(viewModel.hasConfiguredTrial ? .paywallTrialTitle : .paywallSubscribeTitle)
+        Text(viewModel.offersFreeTrial ? .paywallTrialTitle : .paywallSubscribeTitle)
           .font(.tidexScreenTitle)
           .foregroundColor(Color.tidexTextPrimary)
           .fixedSize(horizontal: false, vertical: true)
@@ -392,7 +392,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
 
   @ViewBuilder
   private var priceLineView: some View {
-    if let product = viewModel.proProduct, viewModel.hasConfiguredTrial {
+    if let product = viewModel.proProduct, viewModel.offersFreeTrial {
       let renewal = compactRenewalText(for: product)
       let freePrefix =
         "\(trialDurationDaysText(days: viewModel.trialDurationDays)) \(String(localized: .paywallTrialFreeWord))"
@@ -556,7 +556,8 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   }
 
   private var primaryCTAIsEnabled: Bool {
-    viewModel.proProduct != nil && !viewModel.isPurchasing && !isCurrentPlan && !isAlternativeBusy
+    viewModel.proProduct != nil && viewModel.trialOffer != .checking && !viewModel.isPurchasing
+      && !isCurrentPlan && !isAlternativeBusy
   }
 
   private var primaryCTATitle: String {
@@ -564,11 +565,11 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
       return String(localized: .paywallCtaCurrentPlan)
     }
 
-    guard viewModel.proProduct != nil else {
+    guard viewModel.proProduct != nil, viewModel.trialOffer != .checking else {
       return String(localized: .paywallLoadingButton)
     }
 
-    if viewModel.hasConfiguredTrial {
+    if viewModel.offersFreeTrial {
       return String(localized: .paywallCtaFreeTrial)
     }
 
@@ -576,13 +577,13 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   }
 
   private var priceLine: String {
-    guard let product = viewModel.proProduct else {
+    guard let product = viewModel.proProduct, viewModel.trialOffer != .checking else {
       return String(localized: .paywallLoading)
     }
 
     let renewal = "\(product.displayPrice) \(periodLabel)"
 
-    if viewModel.hasConfiguredTrial {
+    if viewModel.offersFreeTrial {
       return String(
         localized: .paywallTrialPriceLine(
           trialDurationDaysText(days: viewModel.trialDurationDays),
@@ -607,7 +608,7 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
   }
 
   private var timelineItems: [TrialPaywallTimelineItem] {
-    if viewModel.hasConfiguredTrial {
+    if viewModel.offersFreeTrial {
       return [
         TrialPaywallTimelineItem(
           id: "today",

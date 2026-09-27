@@ -688,6 +688,8 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
       }
+      .accessibilityLabel(
+        Text(.supplementsEditRuleAccessibility("\(rule.daysDescription), \(rule.timeDescription)")))
 
       // Delete button
       Button(action: {
@@ -700,6 +702,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
           .font(.tidexSubheadline)
           .foregroundColor(.tidexError)
       }
+      .accessibilityLabel(
+        Text(
+          .supplementsDeleteRuleAccessibility("\(rule.daysDescription), \(rule.timeDescription)")))
     }
     .padding(Spacing.xs)
     .background(Color.tidexSurfaceSecondary)
