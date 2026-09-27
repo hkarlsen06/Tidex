@@ -18,12 +18,12 @@ final class CalendarSubscriptionStoreTests: XCTestCase {
     )
   }
 
-  func testTokenStoreScopesTokensByUserAndSubscription() throws {
+  func testTokenStoreScopesTokensByUserAndSubscription() {
     let metadata = makeMetadata(id: "subscription-1", suffix: "aaaaaaaa")
     let otherMetadata = makeMetadata(id: "subscription-2", suffix: "bbbbbbbb")
     let tokenStore = InMemoryCalendarSubscriptionTokenStore()
 
-    try tokenStore.saveToken(
+    tokenStore.saveToken(
       CalendarSubscriptionKeychainToken(
         userId: "user-1",
         subscriptionId: metadata.id,
