@@ -43,7 +43,6 @@
 		9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */; };
 		A0B106063072000000000001 /* StatsServiceCachingFingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0B106063072000000000002 /* StatsServiceCachingFingerprintTests.swift */; };
 		A1B2C3D43031111100A1B2C3 /* LaunchAppearanceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */; };
-		AF93110530C8000000A1B2C3 /* TimeInputFocusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110630C8000000A1B2C3 /* TimeInputFocusTests.swift */; };
 		A4460F5A061D70E12FA26564 /* SyncServerSnapshotDiffTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */; };
 		A7F10A0130C6000000DAD001 /* HomeScheduleLoadingHelperTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F10A0230C6000000DAD001 /* HomeScheduleLoadingHelperTests.swift */; };
 		A9B8C7D63041ABCD00A1B2C3 /* OnboardingSaveManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */; };
@@ -57,6 +56,7 @@
 		ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABCD20103070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift */; };
 		AF93110130C8000000A1B2C3 /* AddShiftSubmissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */; };
 		AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */; };
+		AF93110530C8000000A1B2C3 /* TimeInputFocusTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF93110630C8000000A1B2C3 /* TimeInputFocusTests.swift */; };
 		B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */; };
 		B60A4D723072000000000001 /* LocalStoreShiftReadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */; };
 		B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */; };
@@ -64,7 +64,6 @@
 		C1D2E3F4308A111100A1B2C3 /* ImageCompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */; };
 		C1D2E3F6308A111100A1B2C5 /* SSEStreamParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F7308A111100A1B2C6 /* SSEStreamParserTests.swift */; };
 		C1D2E3F8308A111100A1B2C7 /* NotificationAvatarSharedCacheTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1D2E3F9308A111100A1B2C8 /* NotificationAvatarSharedCacheTests.swift */; };
-		F821E1003092000000000001 /* NotificationPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F821E1003092000000000002 /* NotificationPermissionTests.swift */; };
 		C51778127607441CA2BF1FBF /* Resources/Localization/App/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 855621F053164F42944E9C0F /* Resources/Localization/App/Localizable.xcstrings */; };
 		CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */; };
 		CE6A572385D358D6118E6A56 /* ProfileAvatarPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C2C17EEC256EA2C671E15 /* ProfileAvatarPersistenceTests.swift */; };
@@ -72,6 +71,7 @@
 		DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */; };
 		F00DC0013059000000ABCDEF /* OnboardingCurrencyResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00DC0023059000000ABCDEF /* OnboardingCurrencyResolverTests.swift */; };
 		F7C518BFF353DDA1605E05BE /* ImageCacheInvalidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */; };
+		F821E1003092000000000001 /* NotificationPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F821E1003092000000000002 /* NotificationPermissionTests.swift */; };
 		FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -166,7 +166,6 @@
 		9A402FE07B31117F181E6ACB /* JobCurrencyAggregateResolverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobCurrencyAggregateResolverTests.swift; sourceTree = "<group>"; };
 		A0B106063072000000000002 /* StatsServiceCachingFingerprintTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsServiceCachingFingerprintTests.swift; sourceTree = "<group>"; };
 		A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LaunchAppearanceTests.swift; sourceTree = "<group>"; };
-		AF93110630C8000000A1B2C3 /* TimeInputFocusTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeInputFocusTests.swift; sourceTree = "<group>"; };
 		A4248071679BBCCA5D3CCBC5 /* TidexAppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TidexAppTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A7F10A0230C6000000DAD001 /* HomeScheduleLoadingHelperTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HomeScheduleLoadingHelperTests.swift; sourceTree = "<group>"; };
 		A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingSaveManagerTests.swift; sourceTree = "<group>"; };
@@ -180,6 +179,7 @@
 		ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCacheInvalidationTests.swift; sourceTree = "<group>"; };
 		AF93110230C8000000A1B2C3 /* AddShiftSubmissionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddShiftSubmissionTests.swift; sourceTree = "<group>"; };
 		AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleListMonthTests.swift; sourceTree = "<group>"; };
+		AF93110630C8000000A1B2C3 /* TimeInputFocusTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TimeInputFocusTests.swift; sourceTree = "<group>"; };
 		B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreShiftReadTests.swift; sourceTree = "<group>"; };
 		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };
 		B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedKeychainAccessTokenPayloadTests.swift; sourceTree = "<group>"; };
@@ -188,7 +188,6 @@
 		C1D2E3F5308A111100A1B2C4 /* ImageCompressorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ImageCompressorTests.swift; sourceTree = "<group>"; };
 		C1D2E3F7308A111100A1B2C6 /* SSEStreamParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SSEStreamParserTests.swift; sourceTree = "<group>"; };
 		C1D2E3F9308A111100A1B2C8 /* NotificationAvatarSharedCacheTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationAvatarSharedCacheTests.swift; sourceTree = "<group>"; };
-		F821E1003092000000000002 /* NotificationPermissionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationPermissionTests.swift; sourceTree = "<group>"; };
 		CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftDetailsPresentationPolicyTests.swift; sourceTree = "<group>"; };
 		D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftReminderPlannerTests.swift; sourceTree = "<group>"; };
 		E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncErrorTests.swift; sourceTree = "<group>"; };
@@ -197,6 +196,7 @@
 		F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncServerSnapshotDiffTests.swift; sourceTree = "<group>"; };
 		F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollCalculatorBehaviorTests.swift; sourceTree = "<group>"; };
 		F6595302ED840034D4E34591 /* StatsServiceCurrencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsServiceCurrencyTests.swift; sourceTree = "<group>"; };
+		F821E1003092000000000002 /* NotificationPermissionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationPermissionTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */

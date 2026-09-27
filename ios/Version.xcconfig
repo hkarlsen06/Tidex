@@ -6,7 +6,7 @@
 // MARKETING_VERSION = User-visible version (e.g., 2.0.0)
 // CURRENT_PROJECT_VERSION = Generated at build time from BuildNumber.xcconfig (Europe/Oslo timestamp)
 
-MARKETING_VERSION = 2.7.1
+MARKETING_VERSION = 2.7.2
 
 // Build number is generated at build time by the "Generate BuildNumber.xcconfig"
 // Run Script phase. BuildNumber.xcconfig is git-ignored and never committed.
