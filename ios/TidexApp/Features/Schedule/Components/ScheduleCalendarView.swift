@@ -452,7 +452,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
     return CalendarHeaderTotals(
       primary: primaryAmount,
-      secondary: delta > 0 ? delta : nil
+      secondary: delta > 0 ? delta : nil,
+      primaryIsAfterTax: totals.hasTaxEnabled
     )
   }
 

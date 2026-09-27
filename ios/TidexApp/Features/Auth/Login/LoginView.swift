@@ -42,6 +42,7 @@ struct LoginView: View {
 
               VStack(spacing: authSectionSpacing) {
                 AuthHeroVisual(
+                  title: .loginTitle,
                   logoSize: 132,
                   currency: currency,
                   onLogoTap: restartOnboarding
@@ -240,7 +241,7 @@ struct LoginView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(.screenshotShareDismiss))
+        .accessibilityLabel(Text(.commonDismiss))
       }
 
       PrimaryButton(
@@ -377,6 +378,7 @@ struct LoginView: View {
 // MARK: - Shared Auth Hero Visual
 
 struct AuthHeroVisual: View {
+  let title: LocalizedStringResource
   let logoSize: CGFloat
   let currency: String
   var onLogoTap: (() -> Void)?
@@ -385,6 +387,11 @@ struct AuthHeroVisual: View {
     VStack(spacing: Spacing.lg) {
       logoSection
       ghostedPaycheckPreview
+      Text(title)
+        .font(.tidexTitle)
+        .foregroundColor(.tidexTextPrimary)
+        .multilineTextAlignment(.center)
+        .accessibilityAddTraits(.isHeader)
     }
   }
 

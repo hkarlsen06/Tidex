@@ -1,8 +1,8 @@
 import Combine
 import Foundation
 import Network
-import os.log
 import StoreKit
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SubscriptionSettingsViewModel")
 
@@ -242,6 +242,9 @@ final class SubscriptionSettingsViewModel: ObservableObject {
 
   // MARK: - Actions
 
+  /// Apple's subscription management page for the signed-in Apple ID
+  static let manageSubscriptionsURL = URL(string: "https://apps.apple.com/account/subscriptions")
+
   /// Open Apple's subscription management page
   func manageSubscription() {
     guard !isStoreKitOffline else {
@@ -250,7 +253,7 @@ final class SubscriptionSettingsViewModel: ObservableObject {
     }
 
     // iOS deep link to subscription management
-    if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
+    if let url = Self.manageSubscriptionsURL {
       UIApplication.shared.open(url)
       logger.info("Opened Apple subscription management")
     }

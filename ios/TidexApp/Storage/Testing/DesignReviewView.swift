@@ -17,6 +17,7 @@
     @State private var savedPayDescription = ""
     @StateObject private var paywallModel: PaywallViewModel = .init()
     @StateObject private var loginModel: LoginViewModel = .init()
+    @StateObject private var signupModel: SignupViewModel = .init()
 
     private let screen: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_SCREEN"] ?? "home"
@@ -33,14 +34,24 @@
         switch screen {
         case "friends":
           DesignReviewFriendCards()
+        case "money", "money-payroll":
+          DesignReviewMoneyCards(screen: screen)
         case "settings":
           SettingsView()
             .environmentObject(AppCoordinator.shared)
+        case "profile-subscribed":
+          NavigationStack {
+            ProfileSettingsView(
+              viewModel: ProfileSettingsViewModel(hasAppStoreSubscription: { true }))
+          }
+          .environmentObject(AppCoordinator.shared)
         case "login", "login-accessibility":
           NavigationStack {
             LoginView(viewModel: loginModel, currency: "kr")
           }
           .dynamicTypeSize(screen == "login-accessibility" ? .accessibility5 : dynamicTypeSize)
+        case "signup":
+          SignupView(viewModel: signupModel, currency: "kr")
         case "paywall":
           TrialPaywallScaffold(
             viewModel: paywallModel,
@@ -150,7 +161,7 @@
         TotalCard(
           gross: 28_400, net: 22_720, completedGross: 12_200, completedNet: 9_760,
           shiftCount: 14, plannedCount: 8, percentageChange: 12, taxEnabled: true,
-          isElevated: false
+          monthName: "September", isElevated: false
         )
         PayrollCard(
           payrollDate: month.addingTimeInterval(14 * 86_400),

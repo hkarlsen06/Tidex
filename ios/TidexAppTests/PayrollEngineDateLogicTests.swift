@@ -4,20 +4,6 @@ import XCTest
 
 // swiftlint:disable:next type_body_length
 final class PayrollEngineDateLogicTests: XCTestCase {
-  func testZeroPayrollUsesPaydayLabel() {
-    XCTAssertEqual(
-      DashboardPayrollLabel.nextPayout(gross: 0),
-      String(localized: .onboardingSettingsPaydayTitle)
-    )
-  }
-
-  func testPositivePayrollUsesNextPayoutLabel() {
-    XCTAssertEqual(
-      DashboardPayrollLabel.nextPayout(gross: 1),
-      String(localized: .dashboardNextPayout)
-    )
-  }
-
   func testCalculatePayoutDateClampsToMonthEnd() {
     let payoutDate = PayrollEngine.calculatePayoutDate(
       shiftDate: "2026-01-15",

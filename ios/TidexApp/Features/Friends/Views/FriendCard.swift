@@ -129,9 +129,11 @@ struct FriendCard: View {
 
   private func conversation(at now: Date) -> some View {
     HStack(spacing: Spacing.xs) {
-      avatar(progress: shiftTiming.flatMap { timing in
-        timing.status(at: now) == .active ? timing.progress(at: now) : nil
-      })
+      avatar(
+        progress: shiftTiming.flatMap { timing in
+          timing.status(at: now) == .active ? timing.progress(at: now) : nil
+        }
+      )
       .contentShape(Circle())
       .onTapGesture {
         onProfileRequested?()
@@ -222,8 +224,8 @@ struct FriendCard: View {
     }
   }
 
-  /// Status over stacked start and end times, like the calendar day cell. An asterisk marks an
-  /// end time on the next day.
+  /// Status over stacked start and end times, like the calendar day cell. "+1" marks an end time
+  /// on the next day.
   private func shiftTileLabel(at now: Date) -> some View {
     let isStacked = dynamicTypeSize.isAccessibilitySize
 
@@ -244,12 +246,13 @@ struct FriendCard: View {
           .foregroundColor(statusColor(status))
           .minimumScaleFactor(0.7)
 
+        let endTime = ShiftCardFormatter.localizedTime(shift.end_time, locale: Locale.appLocale)
+
         Group {
           Text(ShiftCardFormatter.localizedTime(shift.start_time, locale: Locale.appLocale))
-          Text(
-            ShiftCardFormatter.localizedTime(shift.end_time, locale: Locale.appLocale)
-              + (crossesMidnight ? "*" : "")
-          )
+          Text(verbatim: endTime + (crossesMidnight ? "+1" : ""))
+            .accessibilityLabel(
+              crossesMidnight ? Text(.friendsCardEndsNextDay(endTime)) : Text(verbatim: endTime))
         }
         .font(.tidexSubheadline.weight(.semibold))
         .foregroundColor(status == .past ? .tidexTextSecondary : .tidexTextPrimary)
