@@ -1,11 +1,17 @@
-Theo dõi ca làm việc và tính lương của bạn với Tidex.
+Ca làm thêm đó thực sự đáng giá bao nhiêu?
 
-Tính năng:
-• Ghi ca dễ dàng với thời gian bắt đầu/kết thúc
-• Tự động tính lương
-• Xem lịch của tất cả ca làm
-• Tổng quan thu nhập và thống kê
-• Tiện ích để truy cập nhanh
-• Đồng bộ trên nhiều thiết bị
+Một buổi tối muộn, một ngày Chủ nhật, vài giờ tăng ca. Các ca làm có thể trông giống nhau trên lịch, nhưng tiền công có thể rất khác. Tidex giúp bạn thấy mình sẽ kiếm được bao nhiêu, ngay cả trước ngày lĩnh lương.
 
-Hoàn hảo cho nhân viên muốn theo dõi giờ làm và thu nhập của mình.
+BIẾT RÕ THU NHẬP CỦA BẠN ĐẾN TỪ ĐÂU
+Thêm các ca làm và để Tidex tính thu nhập ước tính dựa trên lương theo giờ, phụ cấp, tăng ca và quy định giờ nghỉ. Xem chi tiết cách tổng thu nhập được tạo thành, để bạn biết tiền đến từ đâu.
+
+XEM MỘT CA LÀM THÊM SẼ THAY ĐỔI ĐIỀU GÌ
+Thêm một ca sắp tới vào lịch và xem nó ảnh hưởng thế nào đến thu nhập ước tính của bạn. Có cái nhìn rõ hơn về tháng sắp tới khi bạn cân nhắc có nên nhận thêm giờ làm hay không.
+
+LÀM NHIỀU HƠN MỘT CÔNG VIỆC? QUẢN LÝ CÙNG MỘT NƠI
+Lưu ca làm và thiết lập lương cho từng công việc ở một nơi. Theo dõi số giờ và thu nhập theo thời gian mà không cần ghép các ghi chú và phép tính rời rạc.
+
+LUÔN CÓ CƠ SỞ ĐỂ ĐỐI CHIẾU PHIẾU LƯƠNG
+Lưu lại hồ sơ riêng về những ca làm bạn đã hoàn thành. Xuất ca làm dưới dạng PDF hoặc CSV khi bạn muốn đối chiếu số giờ, kiểm tra chênh lệch hoặc chia sẻ báo cáo.
+
+Thời gian của bạn rất đáng để theo dõi. Hãy bắt đầu với ca làm tiếp theo.

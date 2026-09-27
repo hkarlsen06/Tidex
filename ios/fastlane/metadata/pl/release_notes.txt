@@ -1,6 +1,9 @@
-- Naprawiono obliczanie wynagrodzenia za nocne zmiany, dodatki, niepłatne przerwy i nadgodziny
-- Ulepszono ustawienia wynagrodzenia i historię stawek, dodając czytelniejsze daty wejścia w życie oraz zestawienia wypłat
-- Naprawiono podgląd zarobków i widżety, aby konsekwentnie uwzględniały ustawienie połowy podatku
-- Ulepszono wprowadzanie godzin zmian i zwiększono bezpieczeństwo ponawiania próby, gdy zapisano tylko część zmian
-- Naprawiono listy grafików, które pokazywały zmiany spoza wybranego miesiąca
-- Zaktualizowano ikonę aplikacji i wygląd wizualny
+- Przeprojektowano widżet Zmiany znajomych — dodano zdjęcia profilowe i oś czasu z następną zmianą każdego znajomego
+- Tidex prosi teraz o zgodę na powiadomienia dopiero wtedy, gdy są potrzebne, a nie przy uruchomieniu
+- Naprawiono błąd, przez który nadgodziny uwzględniały godziny z nakładających się zmian, które nie są opłacane
+- Naprawiono miesięczny procent etatu i tygodniowe statystyki dla tygodni obejmujących dwa miesiące
+- Eksport danych korzysta teraz z tych samych sum wynagrodzenia co aplikacja
+- Zwiększono bezpieczeństwo logowania i współdzielonych zmian
+- Zaktualizowano dźwięk powiadomień
+- Usunięto aplikację Apple Watch
+- Poprawki błędów i inne ulepszenia

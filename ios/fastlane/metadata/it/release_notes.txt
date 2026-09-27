@@ -1,6 +1,9 @@
-- Corretto il calcolo della retribuzione per turni notturni, indennità, pause non retribuite e straordinari
-- Migliorate le impostazioni della retribuzione e lo storico salariale con date di decorrenza più chiare e dettagli dei pagamenti
-- Corrette le anteprime dei guadagni e i widget per riflettere in modo coerente le impostazioni della tassazione ridotta
-- Migliorato l'inserimento degli orari dei turni e resa più sicura la ripetizione del tentativo quando solo alcuni turni sono stati salvati
-- Corrette le liste dei turni che mostravano turni al di fuori del mese selezionato
-- Aggiornati l'icona dell'app e il design visivo
+- Il widget Turni degli amici ha un nuovo design con foto profilo e una timeline del prossimo turno di ogni amico
+- Tidex ora chiede il permesso per le notifiche solo quando serve davvero, non all'avvio
+- Risolto un problema per cui gli straordinari conteggiavano ore di turni sovrapposti non retribuite
+- Corrette le percentuali di impiego mensili e le statistiche settimanali per le settimane che coprono due mesi
+- Le esportazioni dei dati ora usano gli stessi totali di paga dell'app
+- Migliorata la sicurezza per l'accesso e i turni condivisi
+- Aggiornato il suono delle notifiche
+- Rimossa l'app per Apple Watch
+- Correzioni di bug e altri miglioramenti

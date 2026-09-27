@@ -1,6 +1,9 @@
-- Gece vardiyaları, ek ödemeler, ücretsiz molalar ve fazla mesai için ücret hesaplamaları düzeltildi
-- Ücret ayarları ve ücret geçmişi, daha net geçerlilik tarihleri ve ödeme dökümleriyle iyileştirildi
-- Kazanç önizlemeleri ve araç takımları, yarı vergi ayarlarını tutarlı şekilde yansıtacak şekilde düzeltildi
-- Vardiya saati girişi iyileştirildi ve yalnızca bazı vardiyalar kaydedildiğinde yeniden denemek daha güvenli hale getirildi
-- Seçilen ayın dışındaki vardiyaların program listelerinde görünmesine neden olan sorun düzeltildi
-- Uygulama simgesi ve görsel tasarım güncellendi
+- Arkadaşların Vardiyaları araç takımı, profil fotoğrafları ve her arkadaşın bir sonraki vardiyasını gösteren zaman akışıyla yeniden tasarlandı
+- Tidex artık bildirim iznini uygulama açılışında değil, ilk gerektiğinde istiyor
+- Ücreti ödenmeyen çakışan vardiyalardaki saatlerin fazla mesaiye sayılması sorunu düzeltildi
+- İki aya yayılan haftalar için aylık çalışma yüzdeleri ve haftalık istatistikler düzeltildi
+- Veri dışa aktarımları artık uygulamayla aynı ücret toplamlarını kullanıyor
+- Giriş yapma ve paylaşılan vardiyalar için güvenlik iyileştirildi
+- Bildirim sesi güncellendi
+- Apple Watch uygulaması kaldırıldı
+- Hata düzeltmeleri ve diğer iyileştirmeler

@@ -1,11 +1,17 @@
-Pratite svoje radne smjene i izračunajte svoju plaću uz Tidex.
+Koliko dodatna smjena zapravo vrijedi?
 
-Značajke:
-• Jednostavno bilježenje smjena s vremenom početka i završetka
-• Automatski izračun plaće
-• Kalendarski prikaz svih smjena
-• Pregled zarade i statistika
-• Widget za brzi pristup
-• Sinkronizacija između uređaja
+Kasna večer, nedjelja, nekoliko sati prekovremenog rada. Na kalendaru sati mogu izgledati slično, ali plaća može biti vrlo različita. Tidex ti pomaže vidjeti koliko ćeš zaraditi prije isplate plaće.
 
-Savršeno za zaposlenike koji žele pratiti svoje radne sate i zaradu.
+ZNAJ ŠTO ULAZI U TVOJU PLAĆU
+Dodaj svoje smjene, a Tidex će izračunati tvoju procijenjenu zaradu na temelju satnice, dodataka, prekovremenih sati i pravila za pauze. Pogledaj raščlambu ukupnog iznosa kako bi znao/la odakle novac dolazi.
+
+VIDI ŠTO MIJENJA DODATNA SMJENA
+Unesi nadolazeću smjenu u kalendar i vidi kako utječe na tvoju procijenjenu zaradu. Tako ćeš imati jasniju sliku mjeseca koji je pred tobom kad odlučuješ hoćeš li odraditi još sati.
+
+VIŠE OD JEDNOG POSLA? DRŽI SVE NA JEDNOM MJESTU
+Drži smjene i postavke plaće za svaki posao na jednom mjestu. Prati svoje sate i zaradu kroz vrijeme, bez sastavljanja odvojenih bilješki i izračuna.
+
+IMAJ NEŠTO S ČIME MOŽEŠ USPOREDITI PLATNU LISTU
+Vodi vlastitu evidenciju odrađenog rada. Izvezi smjene kao PDF ili CSV kada želiš usporediti sate, provjeriti razliku ili podijeliti izvještaj.
+
+Vrijedi pratiti svoje vrijeme. Kreni sa svojom sljedećom smjenom.

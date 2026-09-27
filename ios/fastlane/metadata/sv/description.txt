@@ -1,11 +1,17 @@
-Håll koll på dina arbetspass och beräkna din lön med Tidex.
+Vad är det där extrapasset egentligen värt?
 
-Funktioner:
-• Enkel registrering av arbetspass med start- och sluttider
-• Automatisk löneberäkning
-• Kalendervy över alla pass
-• Översikt över intäkter och statistik
-• Widget för snabb åtkomst
-• Synkronisering mellan enheter
+En sen kväll, en söndag, några timmars övertid. Timmarna kan se likadana ut i kalendern, men ge väldigt olika lön. Tidex hjälper dig att se vad ditt arbete blir värt, innan löning.
 
-Perfekt för anställda som vill hålla koll på sina arbetstider och intäkter.
+SE VAD SOM INGÅR I DIN LÖN
+Lägg till dina arbetspass så räknar Tidex ut din beräknade lön utifrån timlön, tillägg, övertid och rastregler. Se hur summan är uppbyggd, så att du vet var pengarna kommer ifrån.
+
+SE VAD ETT EXTRAPASS GÖR FÖR SKILLNAD
+Lägg in ett kommande pass i kalendern och se hur det påverkar din beräknade lön. Få en tydligare bild av månaden framför dig när du funderar på om du ska ta fler timmar.
+
+MER ÄN ETT JOBB? SAML A ALLT PÅ ETT STÄLLE
+Spara arbetspass och löneinställningar för varje jobb på ett ställe. Följ dina timmar och din lön över tid, utan att pussla ihop anteckningar och uträkningar från olika håll.
+
+HA NÅGOT ATT JÄMFÖRA DIN LÖNESPECIFIKATION MED
+Spara din egen översikt över arbetet du har gjort. Exportera pass som PDF eller CSV när du vill jämföra timmar, undersöka en avvikelse eller dela en rapport.
+
+Din tid är värd att hålla koll på. Börja med ditt nästa pass.

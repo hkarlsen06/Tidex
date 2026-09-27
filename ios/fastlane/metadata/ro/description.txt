@@ -1,11 +1,17 @@
-Urmărește-ți turele de lucru și calculează-ți salariul cu Tidex.
+Cât valorează, de fapt, tura aceea în plus?
 
-Funcții:
-• Înregistrare ușoară a turelor cu ore de început și de sfârșit
-• Calcul automat al salariului
-• Vizualizare în calendar a tuturor turelor
-• Prezentare generală a câștigurilor și statistici
-• Widget pentru acces rapid
-• Sincronizare pe toate dispozitivele
+O seară târzie, o duminică, câteva ore suplimentare. Orele pot părea asemănătoare în calendar, dar plata poate fi foarte diferită. Tidex te ajută să vezi cât se adună din munca ta, înainte de ziua de salariu.
 
-Perfect pentru angajații care vor să își țină evidența orelor de muncă și a câștigurilor.
+ȘTII CE INTRĂ ÎN SALARIUL TĂU
+Adaugă-ți turele, iar Tidex îți calculează câștigurile estimate pe baza tarifului orar, sporurilor, orelor suplimentare și regulilor de pauză. Vezi cum se formează suma totală, ca să știi de unde vin banii.
+
+VEZI CE SCHIMBĂ O TURĂ ÎN PLUS
+Adaugă o tură viitoare în calendar și vezi cum îți influențează câștigurile estimate. Obții o imagine mai clară asupra lunii care urmează când decizi dacă merită să mai iei câteva ore.
+
+MAI MULTE JOBURI? ȚINE-LE LA UN LOC
+Păstrează într-un singur loc turele și setările de plată pentru fiecare job. Urmărește-ți orele și câștigurile în timp, fără să aduni notițe și calcule separate.
+
+AI CEVA CU CARE SĂ-ȚI VERIFICI FLUTURAȘUL DE SALARIU
+Păstrează propria evidență a muncii pe care ai făcut-o. Exportă turele ca PDF sau CSV când vrei să compari orele, să verifici o diferență sau să trimiți un raport.
+
+Timpul tău merită urmărit. Începe cu următoarea ta tură.

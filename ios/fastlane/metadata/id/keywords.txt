@@ -1,1 +1,1 @@
-gaji,kerja,jam,waktu,absen,jadwal,penghasilan,kalkulator,lembur,gajian,kalender,perencana,catatan
+gaji,kerja,jam,waktu,jadwal,penghasilan,kalkulator,lembur,gajian,kalender,planner,catatan

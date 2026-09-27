@@ -1,11 +1,17 @@
-Sledujte svoje pracovné zmeny a vypočítajte si mzdu s Tidexom.
+Koľko má tá extra smena naozaj hodnotu?
 
-Funkcie:
-• Jednoduché zaznamenávanie zmien s časom začiatku a konca
-• Automatický výpočet mzdy
-• Kalendárové zobrazenie všetkých zmien
-• Prehľad zárobkov a štatistiky
-• Widget na rýchly prístup
-• Synchronizácia medzi zariadeniami
+Neskorý večer, nedeľa, pár hodín nadčasov. V kalendári môžu vyzerať rovnako, no výplata za ne môže byť veľmi odlišná. Tidex vám pomôže zistiť, koľko vaša práca vynesie, ešte pred výplatným termínom.
 
-Ideálne pre zamestnancov, ktorí chcú mať prehľad o odpracovaných hodinách a zárobkoch.
+VEDZTE, Z ČOHO SA SKLADÁ VAŠA MZDA
+Pridajte svoje smeny a Tidex vypočíta váš odhadovaný zárobok podľa hodinovej sadzby, príplatkov, nadčasov a pravidiel prestávok. Pozrite si rozpis celkovej sumy, aby ste vedeli, odkiaľ peniaze pochádzajú.
+
+ZISTITE, ČO ZMENÍ EXTRA SMENA
+Pridajte si nadchádzajúcu smenu do kalendára a zistite, ako ovplyvní váš odhadovaný zárobok. Získate jasnejší prehľad o mesiaci, keď sa rozhodujete, či si vziať viac hodín.
+
+VIAC AKO JEDNA PRÁCA? MAJTE ICH SPOLU
+Majte smeny a nastavenia mzdy pre každú prácu na jednom mieste. Sledujte svoje hodiny a zárobky v priebehu času bez skladania poznámok a výpočtov z rôznych miest.
+
+MAJTE SI S ČÍM POROVNAŤ VÝPLATNÚ PÁSKU
+Veďte si vlastný záznam o odpracovanej práci. Exportujte smeny ako PDF alebo CSV, keď chcete porovnať hodiny, preveriť rozdiel alebo zdieľať prehľad.
+
+Váš čas stojí za to sledovať. Začnite svojou najbližšou smenou.

@@ -1,11 +1,17 @@
-Śledź swoje zmiany w pracy i obliczaj wynagrodzenie z Tidex.
+Ile naprawdę warta jest dodatkowa zmiana?
 
-Funkcje:
-• Łatwe rejestrowanie zmian z godziną rozpoczęcia i zakończenia
-• Automatyczne obliczanie wynagrodzenia
-• Widok kalendarza ze wszystkimi zmianami
-• Przegląd zarobków i statystyki
-• Widget zapewniający szybki dostęp
-• Synchronizacja między urządzeniami
+Późny wieczór, niedziela, kilka godzin nadgodzin. W kalendarzu te godziny mogą wyglądać podobnie, ale wynagrodzenie może się bardzo różnić. Tidex pomaga sprawdzić, ile zarobisz, jeszcze przed wypłatą.
 
-Idealne dla pracowników, którzy chcą kontrolować swoje godziny pracy i zarobki.
+SPRAWDŹ, CO SKŁADA SIĘ NA TWOJĄ WYPŁATĘ
+Dodaj swoje zmiany, a Tidex obliczy szacowane zarobki na podstawie stawki godzinowej, dodatków, nadgodzin i zasad dotyczących przerw. Zobacz, z czego wynika łączna kwota, aby wiedzieć, skąd biorą się pieniądze.
+
+ZOBACZ, CO ZMIENIA DODATKOWA ZMIANA
+Dodaj nadchodzącą zmianę do kalendarza i sprawdź, jak wpłynie na Twoje szacowane zarobki. Łatwiej ocenisz kolejny miesiąc, gdy zastanawiasz się, czy wziąć więcej godzin.
+
+WIĘCEJ NIŻ JEDNA PRACA? MIEJ WSZYSTKO RAZEM
+Przechowuj zmiany i ustawienia płacowe dla każdej pracy w jednym miejscu. Śledź swoje godziny i zarobki w czasie, bez składania wszystkiego z osobnych notatek i obliczeń.
+
+MIEJ Z CZYM PORÓWNAĆ PASEK WYPŁATY
+Prowadź własny zapis wykonanej pracy. Eksportuj zmiany do PDF lub CSV, gdy chcesz porównać godziny, sprawdzić różnicę lub udostępnić raport.
+
+Twój czas warto śledzić. Zacznij od następnej zmiany.

@@ -1,6 +1,9 @@
-- Fixed pay calculations for overnight shifts, supplements, unpaid breaks and overtime
-- Improved pay settings and wage history with clearer effective dates and payout breakdowns
-- Fixed earnings previews and widgets to reflect half-tax settings consistently
-- Improved shift time entry and made it safer to retry when only some shifts were saved
-- Fixed schedule lists showing shifts outside the selected month
-- Updated the app icon and visual design
+- Redesigned the Friends' Shifts widget with profile photos and a timeline of each friend's next shift
+- Tidex now asks for notification permission when you first need it, not at launch
+- Fixed overtime counting hours from overlapping shifts that aren't paid
+- Fixed monthly employment percentages and weekly stats for weeks that span two months
+- Data exports now use the same pay totals as the app
+- Improved security for sign-in and shared shifts
+- Updated the notification sound
+- Removed the Apple Watch app
+- Bug fixes and other improvements

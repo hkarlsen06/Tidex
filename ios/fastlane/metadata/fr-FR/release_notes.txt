@@ -1,6 +1,9 @@
-- Correction des calculs de salaire pour le travail de nuit, les majorations, les pauses non rémunérées et les heures supplémentaires
-- Amélioration des paramètres de salaire et de l’historique des salaires avec des dates d’effet plus claires et un détail des paiements
-- Correction des aperçus de revenus et des widgets pour refléter de manière cohérente les paramètres de demi-impôt
-- Amélioration de la saisie des horaires de travail et sécurisation de la nouvelle tentative lorsque seuls certains shifts ont été enregistrés
-- Correction des listes de planning qui affichaient des shifts en dehors du mois sélectionné
-- Mise à jour de l’icône de l’app et du design visuel
+- Nouveau design du widget des services des amis, avec photos de profil et frise du prochain service de chaque ami
+- Tidex demande désormais l’autorisation pour les notifications au moment où vous en avez besoin, et non au lancement
+- Correction d’un problème où les heures supplémentaires comptaient des heures de services qui se chevauchent sans être payées
+- Correction des pourcentages mensuels d’emploi et des statistiques hebdomadaires pour les semaines sur deux mois
+- Les exportations de données utilisent désormais les mêmes totaux de paie que l’app
+- Sécurité renforcée pour la connexion et les services partagés
+- Son de notification mis à jour
+- Suppression de l’app Apple Watch
+- Corrections de bugs et autres améliorations

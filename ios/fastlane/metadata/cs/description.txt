@@ -1,11 +1,17 @@
-Sledujte své pracovní směny a počítejte si mzdu s Tidexem.
+Kolik ta směna navíc vlastně vynese?
 
-Funkce:
-• Snadné zaznamenávání směn s časem začátku a konce
-• Automatické výpočty mzdy
-• Kalendářní přehled všech směn
-• Přehled výdělků a statistiky
-• Widget pro rychlý přístup
-• Synchronizace mezi zařízeními
+Pozdní večer, neděle, pár hodin přesčas. V kalendáři mohou hodiny vypadat podobně, ale odměna za ně může být úplně jiná. Tidex vám pomůže zjistit, kolik si za svou práci pravděpodobně vyděláte, ještě před výplatou.
 
-Ideální pro zaměstnance, kteří chtějí mít přehled o odpracovaných hodinách a výdělcích.
+MĚJTE PŘEHLED O TOM, Z ČEHO SE SKLÁDÁ VAŠE MZDA
+Přidejte své směny a Tidex vypočítá odhadovaný výdělek podle vaší hodinové sazby, příplatků, přesčasů a pravidel pro přestávky. Uvidíte rozpis celkové částky, abyste věděli, odkud se peníze berou.
+
+PODÍVEJTE SE, CO ZMĚNÍ SMĚNA NAVÍC
+Přidejte si nadcházející směnu do kalendáře a podívejte se, jak ovlivní váš odhadovaný výdělek. Získáte jasnější představu o tom, co vás v měsíci čeká, když se rozhodujete, jestli vzít další hodiny.
+
+VÍC NEŽ JEDNA PRÁCE? MĚJTE VŠE POHROMADĚ
+Mějte směny i nastavení odměňování pro každou práci na jednom místě. Sledujte své hodiny a výdělky v průběhu času, aniž byste museli skládat dohromady poznámky a vlastní výpočty.
+
+MĚJTE SI ČÍM ZKONTROLOVAT VÝPLATNÍ PÁSKU
+Veďte si vlastní záznam o odvedené práci. Exportujte směny jako PDF nebo CSV, když chcete porovnat odpracované hodiny, prověřit nesrovnalost nebo sdílet přehled.
+
+Váš čas stojí za to sledovat. Začněte svou příští směnou.

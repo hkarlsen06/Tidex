@@ -1,11 +1,17 @@
-Acompanhe seus turnos de trabalho e calcule seu salário com o Tidex.
+Quanto vale aquele turno extra de verdade?
 
-Recursos:
-• Registro fácil de turnos com horários de início e término
-• Cálculo automático de salário
-• Visualização de todos os turnos no calendário
-• Visão geral dos ganhos e estatísticas
-• Widget para acesso rápido
-• Sincronização entre dispositivos
+Uma noite até mais tarde, um domingo, algumas horas extras. As horas podem parecer parecidas no seu calendário, mas o pagamento pode ser bem diferente. O Tidex ajuda você a ver quanto o seu trabalho rende, antes do dia do pagamento.
 
-Perfeito para funcionários que querem acompanhar suas horas de trabalho e ganhos.
+SAIBA O QUE ENTRA NO SEU PAGAMENTO
+Adicione seus turnos e deixe o Tidex calcular seus ganhos estimados com base no seu valor por hora, adicionais, horas extras e regras de intervalo. Veja como o total é composto, para entender de onde vem o dinheiro.
+
+VEJA O QUE UM TURNO EXTRA MUDA
+Coloque um turno futuro no seu calendário e veja como ele afeta seus ganhos estimados. Tenha uma visão mais clara do mês pela frente quando estiver decidindo se vale a pena pegar mais horas.
+
+TEM MAIS DE UM TRABALHO? JUNTE TUDO EM UM SÓ LUGAR
+Mantenha os turnos e as configurações de pagamento de cada trabalho em um só lugar. Acompanhe suas horas e ganhos ao longo do tempo, sem precisar juntar anotações e cálculos separados.
+
+TENHA ALGO PARA CONFERIR COM O SEU HOLERITE
+Mantenha seu próprio registro do trabalho que você fez. Exporte os turnos em PDF ou CSV quando quiser comparar horas, investigar uma diferença ou compartilhar um relatório.
+
+Seu tempo vale a pena ser acompanhado. Comece pelo seu próximo turno.

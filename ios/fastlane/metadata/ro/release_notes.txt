@@ -1,6 +1,9 @@
-- Am corectat calculele salariale pentru turele de noapte, sporuri, pauze neplătite și ore suplimentare
-- Am îmbunătățit setările de salarizare și istoricul salariilor, cu date de intrare în vigoare mai clare și detalii mai clare despre plăți
-- Am corectat previzualizările câștigurilor și widgeturile pentru a reflecta consecvent setările de impozitare la jumătate
-- Am îmbunătățit introducerea orelor de tură și am făcut mai sigură reîncercarea atunci când au fost salvate doar unele ture
-- Am corectat listele de programări care afișau ture din afara lunii selectate
-- Am actualizat pictograma aplicației și designul vizual
+- Widgetul Turele prietenilor a fost redesenat, cu poze de profil și o cronologie a următoarei ture a fiecărui prieten
+- Tidex cere acum permisiunea pentru notificări atunci când ai nevoie de ea, nu la lansare
+- Am corectat calculul orelor suplimentare care includea ore din ture suprapuse neplătite
+- Am corectat procentele lunare de angajare și statisticile săptămânale pentru săptămânile care se întind pe două luni
+- Exporturile de date folosesc acum aceleași totaluri salariale ca aplicația
+- Am îmbunătățit securitatea pentru autentificare și turele partajate
+- Am actualizat sunetul notificărilor
+- Am eliminat aplicația pentru Apple Watch
+- Corecții de erori și alte îmbunătățiri

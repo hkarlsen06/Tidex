@@ -1,6 +1,9 @@
-- Loonberekeningen voor nachtdiensten, toeslagen, onbetaalde pauzes en overuren opgelost
-- Looninstellingen en loongeschiedenis verbeterd met duidelijkere ingangsdata en een helder overzicht van uitbetalingen
-- Voorvertoningen van inkomsten en widgets gecorrigeerd zodat de halftariefbelasting consequent wordt toegepast
-- Invoer van diensttijden verbeterd en veiliger gemaakt om opnieuw te proberen wanneer slechts een deel van de diensten was opgeslagen
-- Opgelost dat roosterlijsten diensten buiten de geselecteerde maand toonden
-- Het appicoon en het visuele ontwerp bijgewerkt
+- De widget Vriendendiensten heeft een nieuw ontwerp met profielfoto's en een tijdlijn van de volgende dienst van elke vriend
+- Tidex vraagt nu om toestemming voor meldingen wanneer je die voor het eerst nodig hebt, niet bij het opstarten
+- Opgelost: overwerk telde uren mee van overlappende diensten die niet worden betaald
+- Opgelost: maandelijkse arbeidspercentages en wekelijkse statistieken voor weken die over twee maanden lopen
+- Gegevensexport gebruikt nu dezelfde loontotalen als de app
+- Beveiliging voor inloggen en gedeelde diensten verbeterd
+- Het meldingsgeluid is bijgewerkt
+- De Apple Watch-app is verwijderd
+- Bugfixes en andere verbeteringen

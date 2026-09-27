@@ -1,11 +1,17 @@
-Houd je werkdiensten bij en bereken je loon met Tidex.
+Wat is die extra dienst nu echt waard?
 
-Functies:
-• Eenvoudig diensten registreren met begin- en eindtijden
-• Automatische loonberekeningen
-• Agendaweergave van alle diensten
-• Overzicht van inkomsten en statistieken
-• Widget voor snelle toegang
-• Synchronisatie tussen apparaten
+Een late avond, een zondag, een paar uur overwerk. De uren lijken in je agenda misschien op elkaar, maar de beloning kan heel anders zijn. Tidex helpt je te zien wat je werk oplevert, nog vóór je loon wordt uitbetaald.
 
-Perfect voor werknemers die hun werkuren en inkomsten willen bijhouden.
+WEET WAT ER IN JE LOOST ZIT
+Voeg je diensten toe en laat Tidex je geschatte inkomsten berekenen op basis van je uurloon, toeslagen, overwerk en pauzeregels. Bekijk hoe het totaal is opgebouwd, zodat je weet waar het geld vandaan komt.
+
+ZIE WAT EEN EXTRA DIENST VERANDERT
+Zet een komende dienst in je agenda en zie hoe die je geschatte inkomsten beïnvloedt. Zo krijg je een duidelijker beeld van de maand die voor je ligt wanneer je beslist of je extra uren wilt werken.
+
+MEER DAN ÉÉN BAAN? HOUD ALLES BIJ ELKAAR
+Bewaar diensten en looninstellingen voor elke baan op één plek. Volg je uren en inkomsten in de loop van de tijd, zonder losse notities en berekeningen bij elkaar te moeten zoeken.
+
+HEB IETS OM JE LOONSTROOK MEE TE CONTROLEREN
+Houd je eigen overzicht bij van het werk dat je hebt gedaan. Exporteer diensten als pdf of csv wanneer je uren wilt vergelijken, een verschil wilt uitzoeken of een rapport wilt delen.
+
+Je tijd is het waard om bij te houden. Begin met je volgende dienst.

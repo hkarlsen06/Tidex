@@ -1,6 +1,9 @@
-- Fehler bei der Lohnberechnung für Nachtschichten, Zulagen, unbezahlte Pausen und Überstunden behoben
-- Lohneinstellungen und Lohnverlauf mit klareren Gültigkeitsdaten und detaillierterer Auszahlungsübersicht verbessert
-- Fehler bei Verdienstvorschauen und Widgets behoben, damit Einstellungen zum halben Steuerabzug konsistent berücksichtigt werden
-- Eingabe von Schichtzeiten verbessert und Wiederholungen sicherer gemacht, wenn nur einige Schichten gespeichert wurden
-- Fehler behoben, durch den in Dienstplänen Schichten außerhalb des ausgewählten Monats angezeigt wurden
-- App-Symbol und visuelles Design aktualisiert
+- Das Widget „Schichten von Freunden“ wurde mit Profilfotos und einer Zeitleiste für die nächste Schicht jedes Freundes neu gestaltet
+- Tidex fragt jetzt erst dann nach Mitteilungserlaubnis, wenn sie benötigt wird, nicht direkt beim Start
+- Behoben: Bei Überstunden wurden Stunden aus sich überschneidenden, unbezahlten Schichten mitgezählt
+- Behoben: monatliche Beschäftigungsgrade und Wochenstatistiken für Wochen, die sich über zwei Monate erstrecken
+- Datenexporte verwenden jetzt dieselben Lohnsummen wie die App
+- Sicherheit für Anmeldung und geteilte Schichten verbessert
+- Benachrichtigungston aktualisiert
+- Apple Watch-App entfernt
+- Fehlerbehebungen und weitere Verbesserungen

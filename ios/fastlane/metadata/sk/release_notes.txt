@@ -1,6 +1,9 @@
-- Opravené výpočty mzdy pre nočné zmeny, príplatky, neplatené prestávky a nadčasy
-- Vylepšené nastavenia mzdy a história miezd s jasnejšími dátumami účinnosti a prehľadom vyplatených súm
-- Opravené náhľady zárobkov a widgety, aby konzistentne zohľadňovali nastavenie polovičnej dane
-- Vylepšené zadávanie času zmien a bezpečnejšie opätovné skúšanie, keď sa uložili len niektoré zmeny
-- Opravené zobrazovanie zmien mimo vybraného mesiaca v zoznamoch rozpisu
-- Aktualizovaná ikona aplikácie a vizuálny dizajn
+- Prepracovali sme widget Smeny priateľov: teraz obsahuje profilové fotky a časovú os najbližšej smeny každého priateľa
+- Tidex teraz požiada o povolenie upozornení až vtedy, keď ich prvýkrát potrebujete, nie pri spustení
+- Opravili sme započítavanie nadčasov z prekrývajúcich sa smien, ktoré nie sú platené
+- Opravili sme mesačné percentá pracovného úväzku a týždenné štatistiky pre týždne, ktoré zasahujú do dvoch mesiacov
+- Exporty dát teraz používajú rovnaké súčty mzdy ako aplikácia
+- Zlepšili sme zabezpečenie prihlásenia a zdieľaných smien
+- Aktualizovali sme zvuk upozornení
+- Odstránili sme aplikáciu pre Apple Watch
+- Opravy chýb a ďalšie vylepšenia

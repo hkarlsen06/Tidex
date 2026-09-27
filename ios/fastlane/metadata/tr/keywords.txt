@@ -1,1 +1,1 @@
-maaş,iş,saat,mesai,vardiya,kazanç,hesaplayıcı,takvim,planlayıcı,kayıt,fazlamesai,çalışma
+maaş,iş,saat,zaman,vardiya,çizelge,kazanç,hesaplayıcı,fazlamesai,bordro,takvim,planlayıcı,kayıt

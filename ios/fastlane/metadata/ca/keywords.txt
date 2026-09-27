@@ -1,1 +1,1 @@
-sou,feina,hores,temps,rellotge,horari,ingressos,calculadora,horesextra,nomina,calendari,registre
+sou,feina,hores,temps,torns,horari,guanys,calculadora,extres,nòmina,calendari,registre

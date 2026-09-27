@@ -1,6 +1,9 @@
-- Corregidos los cálculos salariales de turnos nocturnos, complementos, pausas no remuneradas y horas extra
-- Mejorados los ajustes salariales y el historial salarial con fechas de entrada en vigor más claras y desglose de pagos
-- Corregidas las vistas previas de ganancias y los widgets para reflejar de forma coherente la configuración de media retención
-- Mejorada la introducción de horas de turno y hecho más seguro volver a intentarlo cuando solo se habían guardado algunos turnos
-- Corregidas las listas de horarios que mostraban turnos fuera del mes seleccionado
-- Actualizados el icono de la app y el diseño visual
+- Hemos rediseñado el widget Turnos de amigos con fotos de perfil y una línea de tiempo del próximo turno de cada amigo
+- Tidex ahora solicita permiso para las notificaciones cuando lo necesitas por primera vez, no al iniciar la app
+- Corregido un problema por el que las horas extra contaban horas de turnos superpuestos que no se pagan
+- Corregidos los porcentajes mensuales de empleo y las estadísticas semanales en semanas que abarcan dos meses
+- Las exportaciones de datos ahora usan los mismos totales salariales que la app
+- Mejorada la seguridad del inicio de sesión y de los turnos compartidos
+- Actualizado el sonido de las notificaciones
+- Eliminada la app para Apple Watch
+- Corrección de errores y otras mejoras
