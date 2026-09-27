@@ -31,6 +31,7 @@
 		33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */; };
 		34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */; };
 		3F21A0B03061411100A1B2C3 /* FriendCardMessagePreviewTimestampFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */; };
+		AB5C10013070000000F1E2D3 /* FriendShiftTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5C10023070000000F1E2D3 /* FriendShiftTimingTests.swift */; };
 		49C89D7374B5AC5DFB1FB072 /* StatsServiceUserIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CAD23D585847B9F1CFA03FB /* StatsServiceUserIsolationTests.swift */; };
 		4E61778127607441CA2BF1FBF /* Resources/Localization/ShareExtension/Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */; };
 		56EFCBFF1B16E496DCBB7418 /* StatsServiceCurrencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6595302ED840034D4E34591 /* StatsServiceCurrencyTests.swift */; };
@@ -150,6 +151,7 @@
 		17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LocalStoreDirtyTrackingTests.swift; sourceTree = "<group>"; };
 		1A7E00023090000000A1B2C3 /* LiveActivityPushTokenTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LiveActivityPushTokenTests.swift; sourceTree = "<group>"; };
 		3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendCardMessagePreviewTimestampFormatterTests.swift; sourceTree = "<group>"; };
+		AB5C10023070000000F1E2D3 /* FriendShiftTimingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendShiftTimingTests.swift; sourceTree = "<group>"; };
 		4A55621F053164F42944E9C0F /* Resources/Localization/ShareExtension/Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Resources/Localization/ShareExtension/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
 		504EC3041FED79650016851F /* Tidex.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tidex.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		578C2C17EEC256EA2C671E15 /* ProfileAvatarPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarPersistenceTests.swift; sourceTree = "<group>"; };
@@ -369,6 +371,7 @@
 				67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */,
 				86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */,
 				3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */,
+				AB5C10023070000000F1E2D3 /* FriendShiftTimingTests.swift */,
 				88F1A2B43040111100A1B2C4 /* FriendsListOrderingTests.swift */,
 				A1B2C3D53031111100A1B2C4 /* LaunchAppearanceTests.swift */,
 				AF93110630C8000000A1B2C3 /* TimeInputFocusTests.swift */,
@@ -898,6 +901,7 @@
 				D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */,
 				B75A10013060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift in Sources */,
 				3F21A0B03061411100A1B2C3 /* FriendCardMessagePreviewTimestampFormatterTests.swift in Sources */,
+				AB5C10013070000000F1E2D3 /* FriendShiftTimingTests.swift in Sources */,
 				ABCD20113070000000ABCDEF /* SiriMessageRecipientMatcherTests.swift in Sources */,
 				CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */,
 			);

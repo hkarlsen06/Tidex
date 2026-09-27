@@ -3353,6 +3353,12 @@
             "state" : "translated",
             "value" : "+%lld"
           }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "+%lld"
+          }
         }
       }
     },

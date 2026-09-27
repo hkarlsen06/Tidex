@@ -31,6 +31,8 @@
     internal var body: some View {
       Group {  // swiftlint:disable:this closure_body_length
         switch screen {
+        case "friends":
+          DesignReviewFriendCards()
         case "settings":
           SettingsView()
             .environmentObject(AppCoordinator.shared)

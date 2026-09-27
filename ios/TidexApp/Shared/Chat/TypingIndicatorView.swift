@@ -6,6 +6,7 @@ import SwiftUI
 
 /// Three pulsing dots indicator, similar to iMessage typing indicator.
 struct TypingIndicatorView: View {
+  var background: Color = .tidexSurfacePrimary
   @State private var dotScales: [Bool] = [false, false, false]
 
   var body: some View {
@@ -20,7 +21,7 @@ struct TypingIndicatorView: View {
     }
     .padding(.horizontal, Spacing.md)
     .padding(.vertical, Spacing.msm)
-    .background(Color.tidexSurfacePrimary)
+    .background(background)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.bubble, style: .continuous))
     .onAppear {
       for index in 0..<3 {

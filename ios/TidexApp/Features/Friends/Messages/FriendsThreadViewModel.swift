@@ -421,6 +421,10 @@ internal final class FriendsThreadViewModel: ObservableObject {
     replyScrollTargetMessageId = nil
   }
 
+  func requestComposerFocus() {
+    composerFocusRequestToken += 1
+  }
+
   func setReplyTarget(_ message: FriendMessage) {
     composerState = .reply(message)
     composerFocusRequestToken += 1

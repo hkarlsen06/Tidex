@@ -593,7 +593,8 @@ struct FriendsThreadView: View {
             )
           },
           onObservedPresentedMessageVisible: { _ in },
-          onDidHandleScrollRequest: handleViewportScrollRequest
+          onDidHandleScrollRequest: handleViewportScrollRequest,
+          onPulledUpPastBottom: focusComposerAfterPullUp
         )
 
         FriendsThreadNavigationGestureBridge {
@@ -608,6 +609,11 @@ struct FriendsThreadView: View {
       }
       .allowsHitTesting(false)
     }
+  }
+
+  private func focusComposerAfterPullUp() {
+    guard !isComposerFocused else { return }
+    viewModel.requestComposerFocus()
   }
 
   @ViewBuilder
