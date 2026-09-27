@@ -30,6 +30,8 @@
 		28F6FF06BC66336F6EB302EB /* LocalStoreDirtyTrackingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17C231CE19CFAA490DE81FF7 /* LocalStoreDirtyTrackingTests.swift */; };
 		33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */; };
 		34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */; };
+		CA1E5E000000000000000001 /* CalendarSemanticsUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E5E000000000000000002 /* CalendarSemanticsUITests.swift */; };
+		CA1E5E000000000000000003 /* CalendarSemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E5E000000000000000004 /* CalendarSemanticsTests.swift */; };
 		3F21A0B03061411100A1B2C3 /* FriendCardMessagePreviewTimestampFormatterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */; };
 		AB5C10013070000000F1E2D3 /* FriendShiftTimingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB5C10023070000000F1E2D3 /* FriendShiftTimingTests.swift */; };
 		49C89D7374B5AC5DFB1FB072 /* StatsServiceUserIsolationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CAD23D585847B9F1CFA03FB /* StatsServiceUserIsolationTests.swift */; };
@@ -194,6 +196,8 @@
 		D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftReminderPlannerTests.swift; sourceTree = "<group>"; };
 		E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncErrorTests.swift; sourceTree = "<group>"; };
 		E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TidexAppUITests.swift; sourceTree = "<group>"; };
+		CA1E5E000000000000000002 /* CalendarSemanticsUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSemanticsUITests.swift; sourceTree = "<group>"; };
+		CA1E5E000000000000000004 /* CalendarSemanticsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSemanticsTests.swift; sourceTree = "<group>"; };
 		F00DC0023059000000ABCDEF /* OnboardingCurrencyResolverTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingCurrencyResolverTests.swift; sourceTree = "<group>"; };
 		F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SyncServerSnapshotDiffTests.swift; sourceTree = "<group>"; };
 		F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollCalculatorBehaviorTests.swift; sourceTree = "<group>"; };
@@ -355,6 +359,7 @@
 			isa = PBXGroup;
 			children = (
 				E83FE4169BADDD77256A8876 /* TidexAppUITests.swift */,
+				CA1E5E000000000000000002 /* CalendarSemanticsUITests.swift */,
 			);
 			path = TidexAppUITests;
 			sourceTree = "<group>";
@@ -366,6 +371,7 @@
 				AF93110430C8000000A1B2C3 /* ScheduleListMonthTests.swift */,
 				1A7E00023090000000A1B2C3 /* LiveActivityPushTokenTests.swift */,
 				130A8BEBFDD69FBC1ABE1989 /* ConflictExclusionTests.swift */,
+				CA1E5E000000000000000004 /* CalendarSemanticsTests.swift */,
 				F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */,
 				0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */,
 				67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */,
@@ -846,6 +852,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				34B9BE74C916732F72B5D562 /* TidexAppUITests.swift in Sources */,
+				CA1E5E000000000000000001 /* CalendarSemanticsUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -864,6 +871,7 @@
 				AF93110330C8000000A1B2C3 /* ScheduleListMonthTests.swift in Sources */,
 				1A7E00013090000000A1B2C3 /* LiveActivityPushTokenTests.swift in Sources */,
 				33850FE44507426B0A15C5E8 /* ConflictExclusionTests.swift in Sources */,
+				CA1E5E000000000000000003 /* CalendarSemanticsTests.swift in Sources */,
 				DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */,
 				614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */,
 				67E4A33E30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift in Sources */,

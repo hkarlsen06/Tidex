@@ -160,10 +160,41 @@ enum CalendarGridHelper {
 
   // MARK: - Formatting
 
-  /// Format currency amount for calendar cells (compact, no symbol)
+  /// Format currency amount for calendar cells (compact, no symbol).
+  /// Uses the app locale so cells group digits the same way as the totals around them.
   static func formatCompactCurrency(_ amount: Double) -> String {
-    let formatter = FormatterCache.compactCurrencyFormatter(locale: .current)
-    return formatter.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
+    CurrencyConfig.formatPlain(amount)
+  }
+
+  /// Overnight marker appended to an end time that falls on the next day.
+  static let nextDayMarker = "\u{207A}\u{00B9}"
+
+  /// Spoken time range for a cell, e.g. "22:00 to 06:00, ends the next day".
+  static func timeRangeAccessibilityText(start: String, end: String, crossesMidnight: Bool)
+    -> String
+  {
+    let range = String(localized: .calendarAccessibilityTimeRange(start, end))
+    guard crossesMidnight else { return range }
+    return "\(range), \(String(localized: .calendarAccessibilityEndsNextDay))"
+  }
+
+  /// Spoken time range for a stored shift ("HH:mm:ss" times).
+  static func shiftTimesAccessibilityText(startTime: String, endTime: String) -> String {
+    timeRangeAccessibilityText(
+      start: formatTime(startTime),
+      end: formatTime(endTime),
+      crossesMidnight: timeToMinutes(endTime) <= timeToMinutes(startTime)
+    )
+  }
+
+  /// Spoken earnings for a cell, naming which amount is after tax and which is before.
+  static func earningsAccessibilityText(_ earnings: CalendarEarningsData) -> String {
+    guard earnings.hasTaxEnabled else { return formatCompactCurrency(earnings.gross) }
+    return String(
+      localized: .calendarAccessibilityEarningsAfterBeforeTax(
+        formatCompactCurrency(earnings.net),
+        formatCompactCurrency(earnings.gross)
+      ))
   }
 
   /// Format time string for display (removes seconds, keeps leading zero)
