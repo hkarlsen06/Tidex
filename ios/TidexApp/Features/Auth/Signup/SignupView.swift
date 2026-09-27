@@ -37,6 +37,7 @@ struct SignupView: View {
 
               VStack(spacing: authSectionSpacing) {
                 AuthHeroVisual(
+                  title: .signupTitle,
                   logoSize: 132,
                   currency: currency,
                   onLogoTap: restartOnboarding

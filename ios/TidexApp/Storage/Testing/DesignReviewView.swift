@@ -17,6 +17,7 @@
     @State private var savedPayDescription = ""
     @StateObject private var paywallModel: PaywallViewModel = .init()
     @StateObject private var loginModel: LoginViewModel = .init()
+    @StateObject private var signupModel: SignupViewModel = .init()
 
     private let screen: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_SCREEN"] ?? "home"
@@ -41,6 +42,8 @@
             LoginView(viewModel: loginModel, currency: "kr")
           }
           .dynamicTypeSize(screen == "login-accessibility" ? .accessibility5 : dynamicTypeSize)
+        case "signup":
+          SignupView(viewModel: signupModel, currency: "kr")
         case "paywall":
           TrialPaywallScaffold(
             viewModel: paywallModel,

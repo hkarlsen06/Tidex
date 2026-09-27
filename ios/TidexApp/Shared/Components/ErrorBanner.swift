@@ -49,7 +49,7 @@ struct ErrorBanner: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(Text(.screenshotShareDismiss))
+        .accessibilityLabel(Text(.commonDismiss))
       }
     }
     .padding(Spacing.md)
@@ -148,7 +148,7 @@ struct SuccessBanner: View {
         }
         .buttonStyle(.plain)
         .fixedSize(horizontal: true, vertical: false)
-        .accessibilityLabel(Text(.screenshotShareDismiss))
+        .accessibilityLabel(Text(.commonDismiss))
       }
     }
     .padding(.horizontal, isToast ? Spacing.sm : Spacing.md)

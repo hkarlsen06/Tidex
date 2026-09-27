@@ -215,7 +215,7 @@ final class TidexAppUITests: XCTestCase {
   func testAppStoreScreenshots() {
     for (language, locale, shiftsTitle, statsTitle) in [
       ("en", "en_US", "Schedule", "Stats"),
-      ("nb", "nb_NO", "Agenda", "Statistikk"),
+      ("nb", "nb_NO", "Vaktplan", "Statistikk"),
     ] {
       let app = XCUIApplication()
       app.launchArguments = [
@@ -393,7 +393,7 @@ final class TidexAppUITests: XCTestCase {
     let workplace = app.buttons.containing(.staticText, identifier: "Nord").firstMatch
     XCTAssertTrue(workplace.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     workplace.tap()
-    let edit = app.buttons["Edit workplace"]
+    let edit = app.buttons["Edit job"]
     XCTAssertTrue(edit.waitForExistence(timeout: defaultTimeout))
     edit.tap()
     let name = app.textFields["Job name"]
@@ -597,6 +597,101 @@ final class TidexAppUITests: XCTestCase {
       app.textFields[AccessibilityID.loginEmailOrPhone].waitForExistence(timeout: defaultTimeout),
       "Opening email sign-in should render the input form"
     )
+  }
+
+  private struct TerminologyLabels {
+    let language: String
+    let locale: String
+    let login: String
+    let signup: String
+    let payoutDetails: String
+    let schedule: String
+    let add: String
+    let jobsAndPay: String
+    let manageJobs: String
+    let defaultJob: String
+  }
+
+  @MainActor
+  func testTerminologyScreens() {
+    for labels in [
+      TerminologyLabels(
+        language: "en", locale: "en_US", login: "Log in", signup: "Create account",
+        payoutDetails: "Payout details", schedule: "Schedule", add: "Add",
+        jobsAndPay: "Jobs & Pay", manageJobs: "Manage jobs", defaultJob: "Default job"),
+      TerminologyLabels(
+        language: "nb", locale: "nb_NO", login: "Logg inn", signup: "Opprett konto",
+        payoutDetails: "Utbetalingsdetaljer", schedule: "Vaktplan", add: "Legg til",
+        jobsAndPay: "Jobber og lønn", manageJobs: "Administrer jobber", defaultJob: "Standardjobb"),
+    ] {
+      captureTerminologyScreens(labels)
+    }
+  }
+
+  @MainActor
+  private func captureTerminologyScreens(_ labels: TerminologyLabels) {
+    let language = labels.language
+    let localeArguments = [
+      "-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", labels.locale,
+    ]
+    for (screen, heading) in [("login", labels.login), ("signup", labels.signup)] {
+      let app = XCUIApplication()
+      app.launchArguments = localeArguments
+      app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "design-review"
+      app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = screen
+      app.launch()
+      let title = app.staticTexts[heading].firstMatch
+      XCTAssertTrue(title.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+      attachAppStoreScreenshot(app, name: "\(language)-\(screen)")
+      app.terminate()
+    }
+
+    let app = XCUIApplication()
+    app.launchArguments = localeArguments + ["-defaultStartupTab", "home"]
+    app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
+    app.launch()
+    let payout = app.staticTexts[language == "en" ? "Next payout" : "Neste utbetaling"]
+    XCTAssertTrue(payout.waitForExistence(timeout: 30), app.debugDescription)
+    payout.tap()
+    let details = app.navigationBars[labels.payoutDetails]
+    XCTAssertTrue(details.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-payout-details")
+    app.buttons[language == "en" ? "Done" : "Ferdig"].tap()
+
+    let schedule = app.buttons[labels.schedule].firstMatch
+    XCTAssertTrue(schedule.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    schedule.tap()
+    attachAppStoreScreenshot(app, name: "\(language)-schedule-tab")
+
+    app.buttons[labels.add].firstMatch.tap()
+    let jobPicker = app.buttons["add-shift.job-picker"]
+    XCTAssertTrue(jobPicker.waitForExistence(timeout: 30), app.debugDescription)
+    jobPicker.tap()
+    app.buttons[labels.jobsAndPay].tap()
+    XCTAssertTrue(
+      app.navigationBars[labels.manageJobs].waitForExistence(timeout: defaultTimeout),
+      app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-manage-jobs")
+    app.buttons.containing(.staticText, identifier: "Nord").firstMatch.tap()
+    XCTAssertTrue(
+      app.staticTexts[labels.defaultJob].waitForExistence(timeout: defaultTimeout),
+      app.debugDescription)
+    attachAppStoreScreenshot(app, name: "\(language)-job-actions")
+    app.terminate()
+  }
+
+  @MainActor
+  func testWageyToolbarButtonsHaveAccessibilityLabels() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "home"]
+    app.launch()
+    let wagey = app.buttons["Wagey"].firstMatch
+    XCTAssertTrue(wagey.waitForExistence(timeout: 30), app.debugDescription)
+    wagey.tap()
+    XCTAssertTrue(
+      app.buttons["Conversation History"].waitForExistence(timeout: defaultTimeout),
+      app.debugDescription)
+    XCTAssertTrue(app.buttons["New Conversation"].exists, app.debugDescription)
   }
 
   @MainActor
