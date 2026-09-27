@@ -673,9 +673,10 @@ final class TidexAppUITests: XCTestCase {
       app.debugDescription)
     attachAppStoreScreenshot(app, name: "\(language)-manage-jobs")
     app.buttons.containing(.staticText, identifier: "Nord").firstMatch.tap()
-    XCTAssertTrue(
-      app.staticTexts[labels.defaultJob].waitForExistence(timeout: defaultTimeout),
-      app.debugDescription)
+    let defaultJob = app.staticTexts[labels.defaultJob]
+    XCTAssertTrue(defaultJob.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    for _ in 0..<6 where !defaultJob.isHittable { app.swipeUp() }
+    XCTAssertTrue(defaultJob.isHittable, app.debugDescription)
     attachAppStoreScreenshot(app, name: "\(language)-job-actions")
     app.terminate()
   }
