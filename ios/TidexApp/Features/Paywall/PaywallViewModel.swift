@@ -175,6 +175,7 @@ final class PaywallViewModel: ObservableObject {
   func loadProducts() async {
     isLoading = true
     error = nil
+    trialEligibility = [:]
 
     await loadPaywallConfig()
     await storeKitManager.loadProducts()

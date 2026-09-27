@@ -3,7 +3,7 @@ import XCTest
 @testable import Tidex
 
 final class PaywallTrialOfferTests: XCTestCase {
-  private let monthly = "no.tidex.pro.monthly"
+  private let monthly = ProductID.proMonthly.rawValue
 
   func testEligibleProductWithTrialEnabledOffersTheTrial() {
     XCTAssertEqual(resolve(eligibility: [monthly: true]), .freeTrial)
@@ -26,7 +26,7 @@ final class PaywallTrialOfferTests: XCTestCase {
   }
 
   func testEligibilityForAnotherProductDoesNotCarryOver() {
-    XCTAssertEqual(resolve(eligibility: ["no.tidex.pro.yearly": true]), .noTrial)
+    XCTAssertEqual(resolve(eligibility: [ProductID.proYearly.rawValue: true]), .noTrial)
   }
 
   func testMissingProductHasNoTrial() {
@@ -35,7 +35,7 @@ final class PaywallTrialOfferTests: XCTestCase {
 
   private func resolve(
     trialEnabled: Bool = true,
-    productID: String? = "no.tidex.pro.monthly",
+    productID: String? = ProductID.proMonthly.rawValue,
     eligibility: [String: Bool],
     isLoading: Bool = false
   ) -> PaywallTrialOffer {
