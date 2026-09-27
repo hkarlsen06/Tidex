@@ -1,10 +1,10 @@
-#!/usr/bin/env swift  // swiftlint:disable:next blanket_disable_command  // swiftlint:disable:next blanket_disable_command  // swiftlint:disable closure_body_length cyclomatic_complexity
+#!/usr/bin/env swift
+import Foundation
+
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable discouraged_optional_collection
+// swiftlint:disable closure_body_length cyclomatic_complexity discouraged_optional_collection
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable explicit_type_interface function_body_length no_direct_print sorted_enum_cases
-
-import Foundation
 
 #if canImport(Darwin)
   import Darwin
@@ -186,6 +186,37 @@ private func withExclusiveCatalogLock<T>(catalogPath: String, body: () throws ->
   return try body()
 }
 
+/// Removes one entry from Xcode's pretty-printed catalog, where each entry under "strings"
+/// starts with `    "key" : {` and ends at the next line that is exactly `    }` or `    },`.
+/// Empty entries sit on one line: `    "key" : {},`.
+private func removingEntry(key: String, from text: String) throws -> String {
+  let keyEncoder = JSONEncoder()
+  keyEncoder.outputFormatting = [.withoutEscapingSlashes]
+  guard let quotedKey = String(data: try keyEncoder.encode(key), encoding: .utf8) else {
+    throw DeleteStringError.invalidUTF8Encoding
+  }
+
+  var lines = text.components(separatedBy: "\n")
+  let opening = "    \(quotedKey) : {"
+  let empty: Set<String> = ["\(opening)}", "\(opening)},"]
+  guard
+    let start = lines.firstIndex(where: { $0 == opening || empty.contains($0) }),
+    let end = empty.contains(lines[start])
+      ? start : lines[start...].firstIndex(where: { $0 == "    }" || $0 == "    }," })
+  else {
+    throw DeleteStringError.keyNotFound(key)
+  }
+
+  // The last entry has no trailing comma, so the entry before it must lose its comma.
+  if !lines[end].hasSuffix(","), start > 0, lines[start - 1].hasPrefix("    "),
+    lines[start - 1].hasSuffix("},")
+  {
+    lines[start - 1].removeLast()
+  }
+  lines.removeSubrange(start...end)
+  return lines.joined(separator: "\n")
+}
+
 private func run() throws {
   let config = try parseArgs()
 
@@ -197,7 +228,7 @@ private func run() throws {
     // Read catalog
     let catalogURL = URL(fileURLWithPath: config.catalogPath)
     let catalogData = try Data(contentsOf: catalogURL)
-    var catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
+    let catalog = try JSONDecoder().decode(Catalog.self, from: catalogData)
 
     // Validate all keys exist first
     var notFound: [String] = []
@@ -227,25 +258,28 @@ private func run() throws {
     if config.dryRun {
       print("")
       print("[dry-run] Would delete \(config.keys.count) key(s) from catalog")
-      return
+      exit(0)
     }
 
-    // Remove all keys
-    for key in config.keys {
-      catalog.strings.removeValue(forKey: key)
-    }
-
-    // Write back (same approach as add-strings to avoid mangling)
-    let encoder = JSONEncoder()
-    encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    let outputData = try encoder.encode(catalog)
-
-    guard var outputString = String(data: outputData, encoding: .utf8) else {
+    // Cut each entry out of the raw text. Re-encoding would re-sort the catalog and drop
+    // fields the structs above don't model, such as translator comments.
+    guard var text = String(data: catalogData, encoding: .utf8) else {
       throw DeleteStringError.invalidUTF8Encoding
     }
-    outputString = outputString.replacingOccurrences(of: "\\/", with: "/")
+    for key in config.keys {
+      text = try removingEntry(key: key, from: text)
+    }
 
-    try outputString.write(toFile: config.catalogPath, atomically: true, encoding: .utf8)
+    // Check the edit produced valid JSON with exactly those keys gone.
+    guard let outputData = text.data(using: .utf8),
+      let updated = try? JSONDecoder().decode(Catalog.self, from: outputData),
+      updated.strings.count == catalog.strings.count - config.keys.count,
+      config.keys.allSatisfy({ updated.strings[$0] == nil })
+    else {
+      throw DeleteStringError.invalidJSON
+    }
+
+    try text.write(toFile: config.catalogPath, atomically: true, encoding: .utf8)
   }
 
   print("")
