@@ -20,6 +20,10 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
   /// Allows transition placeholders to use the loading layout without starting shimmer.
   var showsLoadingShimmer: Bool = true  // swiftlint:disable:this explicit_acl
   var isElevated: Bool = true  // swiftlint:disable:this explicit_acl
+  /// Payday only: whether the user has marked this payout as received.
+  var isMarkedReceived: Bool = false  // swiftlint:disable:this explicit_acl
+  /// Payday only: toggles the received state. The button is hidden when nil.
+  var onToggleReceived: (() -> Void)?  // swiftlint:disable:this explicit_acl
 
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface
   @Environment(\.colorScheme) private var colorScheme  // swiftlint:disable:this explicit_type_interface
@@ -114,10 +118,11 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
           .font(.tidexTitle)
 
           if hasPayrollAdjustments {
-            adjustmentMarker
-              .font(.tidexSubheadline.weight(.semibold))
-              .offset(y: -6)  // swiftlint:disable:this no_magic_numbers
-              .accessibilityHidden(true)
+            Image(systemName: "plus.forwardslash.minus")
+              .font(.tidexCaption)
+              .foregroundColor(.tidexTextSecondary)
+              .padding(.leading, Spacing.xxxs)
+              .accessibilityLabel(Text(.dashboardPayrollCardIncludesAdjustments))
           }
         }
         .foregroundColor(.tidexTextPrimary)
@@ -133,7 +138,9 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
         }
       }
     } trailingBottom: {
-      if showPayout {
+      if showPayout, let onToggleReceived {
+        receivedButton(action: onToggleReceived)
+      } else if showPayout {
         TimelineView(.periodic(from: .now, by: 1)) { context in
           Text(payrollCountdownText(at: context.date))
             .contentTransition(.numericText())
@@ -240,10 +247,6 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
       : CountdownFormatter.formatRelativeCountdown(referenceDate: payrollDate, now: now)
   }
 
-  private var adjustmentMarker: Text {
-    Text(verbatim: "*")
-  }
-
   private var progressFillColor: Color {
     colorScheme == .light ? Color.tidexBlue.opacity(0.035) : Color.tidexBlue.opacity(0.1)  // swiftlint:disable:this line_length no_magic_numbers
   }
@@ -276,6 +279,27 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
     }
   }
 
+}
+
+extension PayrollCard {
+  fileprivate func receivedButton(action: @escaping () -> Void) -> some View {
+    let tint: Color = isMarkedReceived ? .tidexSuccess : .tidexBlue  // swiftlint:disable:this explicit_type_interface
+    return Button(action: action) {
+      Label(
+        isMarkedReceived
+          ? String(localized: .dashboardPayrollMarkedReceived)
+          : String(localized: .dashboardPayrollMarkReceived),
+        systemImage: isMarkedReceived ? "checkmark.circle.fill" : "circle"
+      )
+      .font(.tidexLabel)
+      .foregroundColor(tint)
+      .padding(.horizontal, Spacing.xs)
+      .padding(.vertical, Spacing.xxxs)
+      .background(Capsule(style: .continuous).fill(tint.opacity(0.12)))  // swiftlint:disable:this no_magic_numbers
+      .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
+  }
 }
 
 #Preview {

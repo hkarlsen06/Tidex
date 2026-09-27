@@ -33,6 +33,8 @@
         switch screen {
         case "friends":
           DesignReviewFriendCards()
+        case "money", "money-payroll":
+          DesignReviewMoneyCards(screen: screen)
         case "settings":
           SettingsView()
             .environmentObject(AppCoordinator.shared)
@@ -149,7 +151,7 @@
         TotalCard(
           gross: 28_400, net: 22_720, completedGross: 12_200, completedNet: 9_760,
           shiftCount: 14, plannedCount: 8, percentageChange: 12, taxEnabled: true,
-          isElevated: false
+          monthName: "September", isElevated: false
         )
         PayrollCard(
           payrollDate: month.addingTimeInterval(14 * 86_400),

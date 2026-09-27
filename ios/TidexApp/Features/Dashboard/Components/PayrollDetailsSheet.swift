@@ -47,6 +47,22 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     totalTax > 0
   }
 
+  /// True when the total adds net pay for some jobs and pay before tax for others.
+  private var hasMixedTaxBasis: Bool {
+    Set(displayedBreakdowns.map(\.taxEnabled)).count > 1
+  }
+
+  private var totalLabel: LocalizedStringResource {
+    Self.totalLabel(taxEnabledByJob: displayedBreakdowns.map(\.taxEnabled))
+  }
+
+  /// Names the tax basis of the summed total, or falls back to "Total estimate" when jobs mix net and gross.
+  static func totalLabel(taxEnabledByJob: [Bool]) -> LocalizedStringResource {  // swiftlint:disable:this explicit_acl
+    if Set(taxEnabledByJob).count > 1 { return .dashboardPayrollDetailsTotalEstimate }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    return taxEnabledByJob.first == true
+      ? .dashboardPayrollDetailsTotalNetAfterTax : .dashboardPayrollDetailsTotalBeforeTax
+  }
+
   var body: some View {  // swiftlint:disable:this explicit_acl
     NavigationStack {
       ScrollView {
@@ -135,16 +151,22 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           )
           earningsRow(
             label: String(localized: .dashboardPayrollDetailsTotalTax),
-            value: "−\(formatCurrency(totalTax, currency: variant.currency))",
-            valueColor: .tidexError
+            value: "−\(formatCurrency(totalTax, currency: variant.currency))"
           )
         }
 
         earningsRow(
-          label: String(localized: .dashboardPayrollDetailsTotalEstimate),
+          label: String(localized: totalLabel),
           value: formatCurrency(totalNet, currency: variant.currency),
           isHighlighted: true
         )
+
+        if hasMixedTaxBasis {
+          Text(.dashboardPayrollDetailsMixedBasisNote)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
       }
     }
   }
@@ -257,8 +279,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
         EarningsBreakdownCard<EmptyView>.Row(
           label: String(localized: .dashboardPayrollDetailsEstimatedTax),
-          value: "−\(formatCurrency(tax, currency: breakdown.currency))",
-          valueColor: .tidexError
+          value: "−\(formatCurrency(tax, currency: breakdown.currency))"
         )
       }
 
@@ -423,7 +444,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       Text(total == 0 ? "–" : formatCurrency(total, currency: breakdown.currency))
         .font(.tidexLabel)
-        .foregroundColor(total < 0 ? .tidexError : .tidexTextPrimary)
+        .foregroundColor(.tidexTextPrimary)
     }
     .contentShape(Rectangle())
   }
@@ -553,7 +574,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       Text("−\(formatCurrency(breakdown.postDeductions, currency: breakdown.currency))")
         .font(.tidexLabel)
-        .foregroundColor(.tidexError)
+        .foregroundColor(.tidexTextPrimary)
     }
     .contentShape(Rectangle())
   }
@@ -569,7 +590,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         detailValue: part.rate.map {
           "\(formatHoursValue(part.hours)) × \(formatCurrency($0, currency: currency))"  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
         }
-          ?? formatHoursValue(part.hours)
+          ?? formatHoursValue(part.hours),
+        valueColor: .tidexTextPrimary
       )
 
     case .supplement:
@@ -580,6 +602,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           detailTitle: segment.timeRange,
           detailValue:
             "\(formatHoursValue(part.hours)) × \(formatCurrency(segment.rate, currency: currency))",
+          valueColor: .tidexTextPrimary,
           forcesLeftToRight: true
         )
       } else {
@@ -588,7 +611,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           amount: "−\(formatCurrency(part.amount, currency: currency))",
           detailTitle:
             "\(formatHoursValue(part.hours)) × \(formatCurrency(part.rate ?? 0, currency: currency))",
-          detailValue: nil
+          detailValue: nil,
+          valueColor: .tidexTextPrimary
         )
       }
     }
@@ -607,7 +631,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
           Text(formatCurrency(adjustment.amount, currency: currency))
             .font(.tidexLabelStrong)
-            .foregroundColor(adjustment.amount < 0 ? .tidexError : .tidexTextPrimary)
+            .foregroundColor(.tidexTextPrimary)
             .lineLimit(1)
             .layoutPriority(1)
         }

@@ -269,11 +269,6 @@ struct DashboardData: Equatable {  // swiftlint:disable:this explicit_acl explic
   let currency: String  // User's selected currency (e.g., "kr", "$", "€") // swiftlint:disable:this explicit_acl
   let currentMonthCurrencyAggregate: JobCurrencyAggregateResolution  // swiftlint:disable:this explicit_acl
 
-  static func percentageChange(current: Double, previous: Double) -> Double? {
-    guard previous > 0 else { return current > 0 ? .infinity : nil }
-    return ((current - previous) / previous) * 100
-  }
-
   /// Whether there are future shifts (main display should be projected total)
   var hasFutureShifts: Bool {  // swiftlint:disable:this explicit_acl
     currentMonthPlannedCount > 0
@@ -3310,49 +3305,19 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
     let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
 
-    // Percentage change vs previous month (same currency scope as the primary bucket)
-    let previousComparisonGross: Double
-    if currentMonthAggregate.hasMixedCurrency {
-      let previousPrimaryShifts: [ShiftWithComputations] = JobCurrencyAggregateResolver.shifts(
+    // Same computation as Stats: gross shift pay in the primary currency, without payroll adjustments.
+    let percentChange = MonthlyEarningsChange.percent(  // swiftlint:disable:this explicit_type_interface
+      currentShifts: primaryMonthShifts,
+      previousShifts: JobCurrencyAggregateResolver.shifts(
         matching: currentMonthAggregate.primary,
         in: previousMonthShifts,
         jobs: displayJobs,
         fallbackCurrency: fallbackCurrency
-      )
-      let previousPrimaryAdjustments = Self.payrollAdjustments(  // swiftlint:disable:this explicit_type_interface
-        previousAdjustments,
-        matching: currentMonthAggregate.primary,
-        jobs: displayJobs,
-        fallbackCurrency: fallbackCurrency
-      )
-      let previousPrimaryAdjustmentTotals = PayrollAdjustmentCalculator.totals(  // swiftlint:disable:this explicit_type_interface line_length
-        adjustments: previousPrimaryAdjustments,
-        taxSettings: { adjustment in
-          payrollTaxSettings(
-            for: adjustment,
-            fallback: fallbackTaxSettings,
-            jobId: adjustment.job_id,
-            defaultJobId: displayJobs.first(where: \.is_default)?.id
-          )
-        },
-        halfTaxMonth: halfTaxMonth,
-        payoutMonth: displayYM.month,
-        jobs: displayJobs
-      )
-      previousComparisonGross =
-        PayrollEngine.summarizeShiftTotals(
-          shifts: previousPrimaryShifts,
-          halfTaxMonth: halfTaxMonth,
-          earningsMonth: previousYM.month,
-          now: now
-        ).gross + previousPrimaryAdjustmentTotals.gross
-    } else {
-      previousComparisonGross = previousGross
-    }
-
-    let percentChange = DashboardData.percentageChange(  // swiftlint:disable:this explicit_type_interface
-      current: displayTotals.gross,
-      previous: previousComparisonGross
+      ),
+      halfTaxMonth: halfTaxMonth,
+      currentMonth: displayYM.month,
+      previousMonth: previousYM.month,
+      now: now
     )
 
     // Featured shift logic:
@@ -3488,50 +3453,19 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let completedShiftsCount = currentMonthAggregate.primary.completedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
     let plannedShiftsCount = currentMonthAggregate.primary.plannedShiftCount  // swiftlint:disable:this explicit_type_interface line_length
 
-    let previousComparisonGross: Double
-    if currentMonthAggregate.hasMixedCurrency {
-      let previousPrimaryShifts: [ShiftWithComputations] = JobCurrencyAggregateResolver.shifts(
+    // Same computation as Stats: gross shift pay in the primary currency, without payroll adjustments.
+    let percentChange = MonthlyEarningsChange.percent(  // swiftlint:disable:this explicit_type_interface
+      currentShifts: primaryMonthShifts,
+      previousShifts: JobCurrencyAggregateResolver.shifts(
         matching: currentMonthAggregate.primary,
         in: previousMonthShifts,
         jobs: jobs,
         fallbackCurrency: currency
-      )
-      let previousPrimaryAdjustments = payrollAdjustments(  // swiftlint:disable:this explicit_type_interface
-        previousPayrollAdjustments,
-        matching: currentMonthAggregate.primary,
-        jobs: jobs,
-        fallbackCurrency: currency
-      )
-      let previousPrimaryAdjustmentTotals = PayrollAdjustmentCalculator.totals(  // swiftlint:disable:this explicit_type_interface line_length
-        adjustments: previousPrimaryAdjustments,
-        taxSettings: { adjustment in
-          payrollTaxSettings(
-            for: adjustment,
-            fallback: fallbackTaxSettings,
-            snapshots: snapshots,
-            jobs: jobs,
-            jobId: adjustment.job_id,
-            defaultJobId: jobs.first(where: \.is_default)?.id
-          )
-        },
-        halfTaxMonth: halfTaxMonth,
-        payoutMonth: displayYM.month,
-        jobs: jobs
-      )
-      previousComparisonGross =
-        PayrollEngine.summarizeShiftTotals(
-          shifts: previousPrimaryShifts,
-          halfTaxMonth: halfTaxMonth,
-          earningsMonth: previousYM.month,
-          now: now
-        ).gross + previousPrimaryAdjustmentTotals.gross
-    } else {
-      previousComparisonGross = previousGross
-    }
-
-    let percentChange = DashboardData.percentageChange(  // swiftlint:disable:this explicit_type_interface
-      current: displayTotals.gross,
-      previous: previousComparisonGross
+      ),
+      halfTaxMonth: halfTaxMonth,
+      currentMonth: displayYM.month,
+      previousMonth: previousYM.month,
+      now: now
     )
 
     let current = Date.currentYearMonth()  // swiftlint:disable:this explicit_type_interface
@@ -3585,29 +3519,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     components.day = 1
     guard let date = gregorianCalendar.date(from: components) else { return "" }  // swiftlint:disable:this conditional_returns_on_newline line_length
     return FormatterCache.monthNameFormatter(locale: .appLocale).string(from: date)
-  }
-
-  nonisolated private static func payrollAdjustments(  // swiftlint:disable:this type_contents_order
-    _ adjustments: [PayrollAdjustment],
-    matching entry: JobCurrencyAggregateEntry,
-    jobs: [Job],
-    fallbackCurrency: String
-  ) -> [PayrollAdjustment] {
-    let activeJobs = jobs.filter { $0.deleted_at == nil && $0.archived_at == nil }  // swiftlint:disable:this explicit_type_interface line_length
-    let defaultJobId =  // swiftlint:disable:this explicit_type_interface
-      activeJobs.first(where: \.is_default)?.id
-      ?? activeJobs.first?.id
-      ?? jobs.first(where: \.is_default)?.id
-      ?? jobs.first?.id
-    return adjustments.filter { adjustment in
-      JobCurrencyAggregateResolver.matches(
-        entry: entry,
-        jobId: adjustment.job_id,
-        jobs: jobs,
-        fallbackCurrency: fallbackCurrency,
-        defaultJobId: defaultJobId
-      )
-    }
   }
 
   nonisolated private static func findBestShiftStatic(in shifts: [ShiftWithComputations])  // swiftlint:disable:this line_length type_contents_order
