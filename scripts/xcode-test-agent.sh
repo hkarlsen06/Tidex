@@ -92,8 +92,8 @@ import re
 import subprocess
 import sys
 
-preferred_name = "iPhone 17 Pro"
-preferred_runtime_fragment = "iOS 26.4"
+preferred_name = "iPhone 18 Pro"
+preferred_runtime_fragment = "iOS 27"
 
 try:
     output = subprocess.check_output(

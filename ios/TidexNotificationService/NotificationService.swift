@@ -13,8 +13,8 @@
 import CryptoKit
 import Foundation
 import Intents
-import os
 import UserNotifications
+import os
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "NotificationServiceExtension")
 private let avatarFetchBudget = Duration.milliseconds(250)
@@ -198,9 +198,7 @@ final class NotificationService: UNNotificationServiceExtension {
       )
     }
     content.threadIdentifier = payload.threadId
-    if #available(iOS 15.0, *) {
-      content.targetContentIdentifier = payload.targetContentIdentifier
-    }
+    content.targetContentIdentifier = payload.targetContentIdentifier
 
     let senderImage = await loadSenderImage(from: payload.senderAvatarUrl)
     let sender = INPerson(
@@ -238,9 +236,7 @@ final class NotificationService: UNNotificationServiceExtension {
 
       mutableUpdatedContent.threadIdentifier = payload.threadId
 
-      if #available(iOS 15.0, *) {
-        mutableUpdatedContent.targetContentIdentifier = payload.targetContentIdentifier
-      }
+      mutableUpdatedContent.targetContentIdentifier = payload.targetContentIdentifier
 
       logger.debug(
         "Notification content updated in \(Self.elapsedMilliseconds(since: contentUpdateStartedAt), privacy: .public) ms"

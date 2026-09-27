@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import UserNotifications
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SmartNotificationScheduler")
 
@@ -256,11 +256,9 @@ final class SmartNotificationScheduler {
     ]
     content.threadIdentifier = "smart-prompts"
 
-    if #available(iOS 15.0, *) {
-      content.targetContentIdentifier = "smart-prompt:morning:\(date.toISODateString())"
-      content.interruptionLevel = .passive
-      content.relevanceScore = 0.35
-    }
+    content.targetContentIdentifier = "smart-prompt:morning:\(date.toISODateString())"
+    content.interruptionLevel = .passive
+    content.relevanceScore = 0.35
 
     content.categoryIdentifier = "SMART_PROMPT"
 
@@ -284,11 +282,9 @@ final class SmartNotificationScheduler {
     ]
     content.threadIdentifier = "smart-prompts"
 
-    if #available(iOS 15.0, *) {
-      content.targetContentIdentifier = "smart-prompt:evening:\(dateISO)"
-      content.interruptionLevel = .passive
-      content.relevanceScore = 0.4
-    }
+    content.targetContentIdentifier = "smart-prompt:evening:\(dateISO)"
+    content.interruptionLevel = .passive
+    content.relevanceScore = 0.4
 
     content.categoryIdentifier = "SMART_PROMPT"
 
