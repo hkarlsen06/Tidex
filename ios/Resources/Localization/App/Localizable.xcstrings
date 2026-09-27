@@ -456482,6 +456482,78 @@
           }
         }
       }
+    },
+    "profile.dangerZone.deleteAccount.dialogSubscriptionNote" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deleting your account doesn't cancel your App Store subscription. Cancel it in the App Store, or you'll keep being charged."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Å slette kontoen avslutter ikke App Store-abonnementet ditt. Avslutt det i App Store, ellers blir du fortsatt belastet."
+          }
+        }
+      },
+      "comment" : "Extra line in the delete-account confirmation dialog, shown only when the user has an active App Store subscription. Deleting the account does not stop Apple billing."
+    },
+    "settings.pay.editor.taxFlatRateHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex estimates tax with one flat percentage. If your tax card uses a tax table, enter the percentage shown on your tax card or a recent payslip."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidex beregner skatt med én fast prosentsats. Har du tabelltrekk, bruk prosentsatsen på skattekortet eller en nylig lønnsslipp."
+          }
+        }
+      },
+      "comment" : "Footnote under the tax percentage picker in pay settings. Explains the estimate uses one flat percentage, not a Norwegian tax table (tabelltrekk), and tells the user where to find a matching percentage."
+    },
+    "supplements.editRuleAccessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit supplement for %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rediger tillegg for %@"
+          }
+        }
+      },
+      "comment" : "VoiceOver label for the pencil button on a custom pay supplement rule. %@ is the rule's days and time range, for example 'Weekdays, 18:00 - 21:00'."
+    },
+    "supplements.deleteRuleAccessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete supplement for %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Slett tillegg for %@"
+          }
+        }
+      },
+      "comment" : "VoiceOver label for the trash button on a custom pay supplement rule. %@ is the rule's days and time range, for example 'Weekdays, 18:00 - 21:00'."
     }
   },
   "version" : "1.0"

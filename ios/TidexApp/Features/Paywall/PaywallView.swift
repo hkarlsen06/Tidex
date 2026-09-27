@@ -19,8 +19,8 @@ struct PaywallView: View {
     viewModel.proProduct
   }
 
-  private var hasConfiguredTrial: Bool {
-    viewModel.hasConfiguredTrial
+  private var offersFreeTrial: Bool {
+    viewModel.offersFreeTrial
   }
 
   private var isCurrentPlan: Bool {
@@ -238,7 +238,7 @@ struct PaywallView: View {
 
   private var headlineBlock: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(hasConfiguredTrial ? .paywallTrialTitle : .paywallSubscribeTitle)
+      Text(offersFreeTrial ? .paywallTrialTitle : .paywallSubscribeTitle)
         .font(.tidexScreenTitle)
         .foregroundColor(Color.tidexTextPrimary)
         .fixedSize(horizontal: false, vertical: true)
@@ -531,7 +531,8 @@ struct PaywallView: View {
   // MARK: - Actions and Derived Copy
 
   private var primaryCTAIsEnabled: Bool {
-    primaryProduct != nil && !viewModel.isPurchasing && !isCurrentPlan
+    primaryProduct != nil && viewModel.trialOffer != .checking && !viewModel.isPurchasing
+      && !isCurrentPlan
   }
 
   private var sampleMonthLabel: String {
@@ -543,11 +544,11 @@ struct PaywallView: View {
       return String(localized: .paywallCtaCurrentPlan)
     }
 
-    guard primaryProduct != nil else {
+    guard primaryProduct != nil, viewModel.trialOffer != .checking else {
       return String(localized: .paywallLoadingButton)
     }
 
-    if hasConfiguredTrial {
+    if offersFreeTrial {
       return String(localized: .paywallCtaFreeTrial)
     }
 
@@ -555,13 +556,13 @@ struct PaywallView: View {
   }
 
   private var priceLine: String {
-    guard let product = primaryProduct else {
+    guard let product = primaryProduct, viewModel.trialOffer != .checking else {
       return String(localized: .paywallLoading)
     }
 
     let renewal = "\(product.displayPrice) \(periodLabel(for: product))"
 
-    if hasConfiguredTrial {
+    if offersFreeTrial {
       return String(
         localized: .paywallTrialPriceLine(
           trialDurationText(days: viewModel.trialDurationDays),
@@ -574,7 +575,7 @@ struct PaywallView: View {
   }
 
   private var timelineItems: [PaywallTimelineItem] {
-    if hasConfiguredTrial {
+    if offersFreeTrial {
       return [
         PaywallTimelineItem(
           id: "today",

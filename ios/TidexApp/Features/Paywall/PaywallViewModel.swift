@@ -1,7 +1,7 @@
 import Combine
 import Foundation
-import os.log
 import StoreKit
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "PaywallViewModel")
 
@@ -20,6 +20,33 @@ enum BillingPeriod: String, CaseIterable {
   }
 }
 
+// MARK: - Trial Offer
+
+/// Whether the paywall may promise a free trial for the product being bought.
+enum PaywallTrialOffer: Equatable {
+  /// StoreKit hasn't answered yet, so show neither trial nor price copy.
+  case checking
+  /// The trial is switched on and StoreKit confirmed this Apple ID can still redeem it.
+  case freeTrial
+  /// No trial for this purchase. Show the plain subscribe copy.
+  case noTrial
+
+  /// - Parameters:
+  ///   - eligibility: StoreKit's answer per product ID. A missing entry means not checked.
+  ///   - isLoading: Whether products and eligibility are still loading. An unchecked product
+  ///     after loading gets the plain subscribe copy rather than a loading state that never ends.
+  static func resolve(
+    trialEnabled: Bool,
+    productID: String?,
+    eligibility: [String: Bool],
+    isLoading: Bool
+  ) -> Self {
+    guard trialEnabled, let productID else { return .noTrial }
+    guard let isEligible = eligibility[productID] else { return isLoading ? .checking : .noTrial }
+    return isEligible ? .freeTrial : .noTrial
+  }
+}
+
 // MARK: - Paywall ViewModel
 
 /// ViewModel for PaywallView
@@ -35,6 +62,8 @@ final class PaywallViewModel: ObservableObject {
   @Published private(set) var error: String?
   @Published private(set) var purchaseSucceeded = false
   @Published private(set) var paywallConfig = PaywallConfig.fallback
+  /// StoreKit free-trial eligibility per product ID
+  @Published private(set) var trialEligibility: [String: Bool] = [:]
 
   // MARK: - Dependencies
 
@@ -85,8 +114,18 @@ final class PaywallViewModel: ObservableObject {
     currentTier != .free
   }
 
-  var hasConfiguredTrial: Bool {
-    paywallConfig.hasFreeTrial
+  var trialOffer: PaywallTrialOffer {
+    .resolve(
+      trialEnabled: paywallConfig.hasFreeTrial,
+      productID: proProduct?.id,
+      eligibility: trialEligibility,
+      isLoading: isLoading
+    )
+  }
+
+  /// Only promise a trial the App Store will actually give to this Apple ID.
+  var offersFreeTrial: Bool {
+    trialOffer == .freeTrial
   }
 
   var trialDurationDays: Int {
@@ -139,6 +178,7 @@ final class PaywallViewModel: ObservableObject {
 
     await loadPaywallConfig()
     await storeKitManager.loadProducts()
+    await loadTrialEligibility()
 
     if storeKitManager.products.isEmpty {
       error = String(localized: .paywallErrorsLoadProductsFailed)
@@ -164,6 +204,21 @@ final class PaywallViewModel: ObservableObject {
       paywallConfig = PaywallConfig.fallback
       logger.error("Failed to load paywall config: \(error.localizedDescription)")
     }
+  }
+
+  /// Returning subscribers can't redeem the introductory offer again, and a product without a
+  /// free-trial offer charges right away, so both count as not eligible.
+  private func loadTrialEligibility() async {
+    var eligibility: [String: Bool] = [:]
+    for productID in [ProductID.proMonthly, .proYearly] {
+      guard let subscription = storeKitManager.product(for: productID)?.subscription else {
+        continue
+      }
+      let hasFreeTrialOffer = subscription.introductoryOffer?.paymentMode == .freeTrial
+      eligibility[productID.rawValue] =
+        hasFreeTrialOffer ? await subscription.isEligibleForIntroOffer : false
+    }
+    trialEligibility = eligibility
   }
 
   /// Purchase a product
