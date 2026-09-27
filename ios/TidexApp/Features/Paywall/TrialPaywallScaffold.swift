@@ -154,21 +154,21 @@ struct TrialPaywallScaffold<AlternativeContent: View>: View {
             .fill(heroChartFill(for: index))
             .frame(height: max(18, value * 62))
 
-          if shouldShowHeroMonthLabel(index) {
-            Text(heroMonthLabel(for: index))
-              .font(.system(size: 8, weight: .bold, design: .rounded))
-              .foregroundColor(Color.tidexTextMuted)
-              .frame(height: 9)
-          } else {
-            Color.clear
-              .frame(height: 9)
-          }
+          // Unlabeled bars keep a hidden label so every column has the same height at any text size
+          Text(heroMonthLabel(for: index))
+            .font(.tidexMicro.weight(.bold))
+            .foregroundColor(Color.tidexTextMuted)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .opacity(shouldShowHeroMonthLabel(index) ? 1 : 0)
         }
         .frame(maxWidth: .infinity)
       }
     }
-    .frame(height: 88)
+    .frame(minHeight: 88)
     .padding(.top, Spacing.xxs)
+    // Decorative illustration of a pay chart
+    .accessibilityHidden(true)
   }
 
   private func heroChartFill(for index: Int) -> Color {

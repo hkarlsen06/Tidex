@@ -979,41 +979,22 @@ final class SyncCoordinator: ObservableObject {
         return .noChange
       }
 
-      guard let lastSnapshot = JobServerSnapshot.decode(from: existing.lastSyncedSnapshot) else {
-        await storeActor.markJobConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
-      }
-
-      let serverChangedFields = serverSnapshot.changedFields(from: lastSnapshot)
-      let localDirtyFields = existing.dirtyFieldKeys
-      let conflictingFields = serverChangedFields.intersection(
-        Set(localDirtyFields.map { convertToJobField($0) }))
-
-      if conflictingFields.isEmpty {
-        await storeActor.autoMergeJob(
-          id: serverRow.id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: serverRow.revision,
-          archivedAt: serverArchivedAt,
-          deletedAt: serverDeletedAt,
-          newSnapshot: serverSnapshot,
-          localDirtyFields: localDirtyFields
-        )
-        return .autoMerged
-      }
-
-      await storeActor.markJobConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-      return .conflict
+      await storeActor.autoMergeJob(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        archivedAt: serverArchivedAt,
+        deletedAt: serverDeletedAt,
+        newSnapshot: serverSnapshot,
+        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+      )
+      return .autoMerged
 
     case .conflict:
       await storeActor.updateJobConflictSnapshot(id: serverRow.id, serverSnapshot: serverSnapshot)
       return .noChange
     }
-  }
-
-  private func convertToJobField(_ field: JobField) -> JobField {
-    field
   }
 
   // MARK: - User Shifts Pull
@@ -1197,43 +1178,23 @@ final class SyncCoordinator: ObservableObject {
       return .updated
 
     case .dirty, .pendingDelete:
-      // Check for conflict
       if serverRow.revision == existing.serverRevision {
         // Server unchanged, keep local edits
         return .noChange
       }
 
-      // Server changed - check for field-level merge
-      guard let lastSnapshot = UserShiftServerSnapshot.decode(from: existing.lastSyncedSnapshot)
-      else {
-        // Cannot decode snapshot, mark conflict
-        await storeActor.markShiftConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
-      }
-
-      let serverChangedFields = serverSnapshot.changedFields(from: lastSnapshot)
-      let localDirtyFields = existing.dirtyFieldKeys
-
-      // Check for overlap
-      let conflictingFields = serverChangedFields.intersection(
-        Set(localDirtyFields.map { convertToUserShiftField($0) }))
-
-      if conflictingFields.isEmpty {
-        // Auto-merge: apply server changes for non-dirty fields, keep local for dirty
-        await storeActor.autoMergeShift(
-          id: serverRow.id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: serverRow.revision,
-          serverDeletedAt: serverDeletedAt,
-          newSnapshot: serverSnapshot,
-          localDirtyFields: localDirtyFields
-        )
-        return .autoMerged
-      }
-      // Conflict - overlapping fields
-      await storeActor.markShiftConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-      return .conflict
+      // Server changed. Keep local values that still differ. The later write wins a real
+      // conflict, so the row never gets stuck in conflict.
+      await storeActor.autoMergeShift(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        serverDeletedAt: serverDeletedAt,
+        newSnapshot: serverSnapshot,
+        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+      )
+      return .autoMerged
 
     case .conflict:
       // Already in conflict, update conflict snapshot
@@ -1296,11 +1257,6 @@ final class SyncCoordinator: ObservableObject {
     )
 
     try await storeActor.upsertUserShift(localShift)
-  }
-
-  // Helper to convert UserShiftField to itself (for type safety in intersection)
-  private func convertToUserShiftField(_ field: UserShiftField) -> UserShiftField {
-    field
   }
 
   // MARK: - Events Pull
@@ -1468,30 +1424,16 @@ final class SyncCoordinator: ObservableObject {
         return .noChange
       }
 
-      guard let lastSnapshot = EventServerSnapshot.decode(from: existing.lastSyncedSnapshot) else {
-        await storeActor.markEventConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
-      }
-
-      let serverChangedFields = serverSnapshot.changedFields(from: lastSnapshot)
-      let localDirtyFields = existing.dirtyFieldKeys
-      let conflictingFields = serverChangedFields.intersection(
-        Set(localDirtyFields.map { convertToEventField($0) }))
-
-      if conflictingFields.isEmpty {
-        await storeActor.autoMergeEvent(
-          id: serverRow.id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: serverRow.revision,
-          serverDeletedAt: serverDeletedAt,
-          newSnapshot: serverSnapshot,
-          localDirtyFields: localDirtyFields
-        )
-        return .autoMerged
-      }
-      await storeActor.markEventConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-      return .conflict
+      await storeActor.autoMergeEvent(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        serverDeletedAt: serverDeletedAt,
+        newSnapshot: serverSnapshot,
+        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+      )
+      return .autoMerged
 
     case .conflict:
       await storeActor.updateEventConflictSnapshot(id: serverRow.id, serverSnapshot: serverSnapshot)
@@ -1547,10 +1489,6 @@ final class SyncCoordinator: ObservableObject {
     )
 
     try await storeActor.upsertEvent(localEvent)
-  }
-
-  private func convertToEventField(_ field: EventField) -> EventField {
-    field
   }
 
   // MARK: - Recurring Shifts Pull
@@ -1718,34 +1656,16 @@ final class SyncCoordinator: ObservableObject {
         return .noChange
       }
 
-      guard
-        let lastSnapshot = RecurringShiftServerSnapshot.decode(from: existing.lastSyncedSnapshot)
-      else {
-        await storeActor.markRecurringShiftConflict(
-          id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
-      }
-
-      let serverChangedFields = serverSnapshot.changedFields(from: lastSnapshot)
-      let localDirtyFields = existing.dirtyFieldKeys
-      let conflictingFields = serverChangedFields.intersection(
-        Set(localDirtyFields.map { convertToRecurringShiftField($0) }))
-
-      if conflictingFields.isEmpty {
-        await storeActor.autoMergeRecurringShift(
-          id: serverRow.id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: serverRow.revision,
-          serverDeletedAt: serverDeletedAt,
-          newSnapshot: serverSnapshot,
-          localDirtyFields: localDirtyFields
-        )
-        return .autoMerged
-      }
-      await storeActor.markRecurringShiftConflict(
-        id: serverRow.id, serverSnapshot: serverSnapshot)
-      return .conflict
+      await storeActor.autoMergeRecurringShift(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        serverDeletedAt: serverDeletedAt,
+        newSnapshot: serverSnapshot,
+        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+      )
+      return .autoMerged
 
     case .conflict:
       await storeActor.updateRecurringShiftConflictSnapshot(
@@ -1795,10 +1715,6 @@ final class SyncCoordinator: ObservableObject {
     )
 
     try await storeActor.upsertRecurringShift(localShift)
-  }
-
-  private func convertToRecurringShiftField(_ field: RecurringShiftField) -> RecurringShiftField {
-    field
   }
 
   // MARK: - Wage Snapshots Pull
@@ -1965,31 +1881,16 @@ final class SyncCoordinator: ObservableObject {
         return .noChange
       }
 
-      guard let lastSnapshot = WageSnapshotServerSnapshot.decode(from: existing.lastSyncedSnapshot)
-      else {
-        await storeActor.markWageSnapshotConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-        return .conflict
-      }
-
-      let serverChangedFields = serverSnapshot.changedFields(from: lastSnapshot)
-      let localDirtyFields = existing.dirtyFieldKeys
-      let conflictingFields = serverChangedFields.intersection(
-        Set(localDirtyFields.map { convertToWageSnapshotField($0) }))
-
-      if conflictingFields.isEmpty {
-        await storeActor.autoMergeWageSnapshot(
-          id: serverRow.id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: serverRow.revision,
-          serverDeletedAt: serverDeletedAt,
-          newSnapshot: serverSnapshot,
-          localDirtyFields: localDirtyFields
-        )
-        return .autoMerged
-      }
-      await storeActor.markWageSnapshotConflict(id: serverRow.id, serverSnapshot: serverSnapshot)
-      return .conflict
+      await storeActor.autoMergeWageSnapshot(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        serverDeletedAt: serverDeletedAt,
+        newSnapshot: serverSnapshot,
+        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+      )
+      return .autoMerged
 
     case .conflict:
       await storeActor.updateWageSnapshotConflictSnapshot(
@@ -2044,10 +1945,6 @@ final class SyncCoordinator: ObservableObject {
     try await storeActor.upsertWageSnapshot(localSnapshot)
   }
 
-  private func convertToWageSnapshotField(_ field: WageSnapshotField) -> WageSnapshotField {
-    field
-  }
-
   // MARK: - Payroll Adjustments Push
 
   private func pushPayrollAdjustments(userId: String) async throws -> TablePushResult {
@@ -2067,11 +1964,21 @@ final class SyncCoordinator: ObservableObject {
     var newConflicts = 0
 
     for adjustment in dirtyAdjustments {
-      let result = try await pushPayrollAdjustment(
-        adjustment,
-        userId: userId,
-        storeActor: storeActor
-      )
+      let adjustmentId = adjustment.id
+      let result: PushResult
+      do {
+        result = try await pushPayrollAdjustment(
+          adjustment,
+          userId: userId,
+          storeActor: storeActor
+        )
+      } catch let error where Self.isRowRejection(error) {
+        logger.error(
+          "Server rejected payroll adjustment \(adjustmentId.prefix(8)): \(error.localizedDescription)"
+        )
+        await storeActor.markPayrollAdjustmentConflict(id: adjustmentId, serverSnapshot: nil)
+        result = .conflict
+      }
       switch result {
       case .success, .deleted:
         rowsPushed += 1
@@ -2118,6 +2025,7 @@ final class SyncCoordinator: ObservableObject {
       return try await insertPayrollAdjustment(adjustment, userId: userId, storeActor: storeActor)
     }
 
+    let baseline = SyncPushBaseline(adjustment)
     let updateData = payrollAdjustmentPayload(adjustment, includeIdentity: false, userId: userId)
     try requireNonEmptyUpdate(updateData, table: .payrollAdjustments, id: adjustment.id)
 
@@ -2138,7 +2046,7 @@ final class SyncCoordinator: ObservableObject {
       return .conflict
     }
 
-    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor)
+    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor, baseline: baseline)
     return .success
   }
 
@@ -2147,21 +2055,51 @@ final class SyncCoordinator: ObservableObject {
     userId: String,
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
+    let baseline = SyncPushBaseline(adjustment)
     let insertData = payrollAdjustmentPayload(adjustment, includeIdentity: true, userId: userId)
-    let returnedRows: [SyncPayrollAdjustmentRow] =
-      try await supabase
-      .from("payroll_adjustments")
-      .insert(insertData)
-      .select()
-      .execute()
-      .value
+    let returnedRows: [SyncPayrollAdjustmentRow]
+    do {
+      returnedRows =
+        try await supabase
+        .from("payroll_adjustments")
+        .insert(insertData)
+        .select()
+        .execute()
+        .value
+    } catch let error as PostgrestError where error.code == "23505" {
+      // The row exists, usually because an earlier insert committed after the request timed
+      // out locally. Adopt the server row instead of failing on every sync.
+      let serverRows: [SyncPayrollAdjustmentRow] =
+        try await supabase
+        .from("payroll_adjustments")
+        .select()
+        .eq("id", value: adjustment.id)
+        .execute()
+        .value
+      guard let serverRow = serverRows.first else { throw error }
+      let serverUpdatedAt = try requireISO8601(
+        serverRow.updated_at, table: .payrollAdjustments, id: serverRow.id)
+      let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+      await storeActor.mergePayrollAdjustmentFromServer(
+        id: serverRow.id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverDeletedAt: serverDeletedAt,
+        snapshot: PayrollAdjustmentServerSnapshot.from(
+          row: serverRow,
+          updatedAt: serverUpdatedAt,
+          deletedAt: serverDeletedAt
+        )
+      )
+      return .rebased
+    }
 
     guard let returnedRow = returnedRows.first else {
       await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
       return .conflict
     }
 
-    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor)
+    try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor, baseline: baseline)
     return .success
   }
 
@@ -2170,6 +2108,18 @@ final class SyncCoordinator: ObservableObject {
     userId: String,
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
+    // Never pushed, so there is no server row to soft-delete. Retire the local row.
+    if adjustment.serverRevision == 0 {
+      let deletedAt = Date()
+      await storeActor.markPayrollAdjustmentDeleted(
+        id: adjustment.id,
+        serverUpdatedAt: deletedAt,
+        serverRevision: 0,
+        serverDeletedAt: deletedAt
+      )
+      return .deleted
+    }
+
     let returnedRows: [SyncPayrollAdjustmentRow] =
       try await supabase
       .from("payroll_adjustments")
@@ -2231,7 +2181,8 @@ final class SyncCoordinator: ObservableObject {
 
   private func markPayrollAdjustmentPushed(
     _ row: SyncPayrollAdjustmentRow,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    baseline: SyncPushBaseline
   ) async throws {
     let serverUpdatedAt = try requireISO8601(
       row.updated_at, table: .payrollAdjustments, id: row.id)
@@ -2246,7 +2197,8 @@ final class SyncCoordinator: ObservableObject {
       serverRow: row,
       serverUpdatedAt: serverUpdatedAt,
       serverDeletedAt: serverDeletedAt,
-      snapshot: snapshot
+      snapshot: snapshot,
+      baseline: baseline
     )
   }
 
@@ -2368,11 +2320,14 @@ final class SyncCoordinator: ObservableObject {
 
       case .dirty, .pendingDelete:
         if serverRow.revision == existing.serverRevision { return .noChange }
-        await storeActor.markPayrollAdjustmentConflict(
+        await storeActor.mergePayrollAdjustmentFromServer(
           id: serverRow.id,
-          serverSnapshot: serverSnapshot
+          serverRow: serverRow,
+          serverUpdatedAt: serverUpdatedAt,
+          serverDeletedAt: serverDeletedAt,
+          snapshot: serverSnapshot
         )
-        return .conflict
+        return .autoMerged
 
       case .conflict:
         await storeActor.markPayrollAdjustmentConflict(
@@ -2546,32 +2501,15 @@ final class SyncCoordinator: ObservableObject {
         return .noChange
       }
 
-      guard let lastSnapshot = UserSettingsServerSnapshot.decode(from: existing.lastSyncedSnapshot)
-      else {
-        await storeActor.markUserSettingsConflict(
-          userId: serverRow.user_id, serverSnapshot: serverSnapshot)
-        return .conflict
-      }
-
-      let serverChangedFields = serverSnapshot.changedFields(from: lastSnapshot)
-      let localDirtyFields = existing.dirtyFieldKeys
-      let conflictingFields = serverChangedFields.intersection(
-        Set(localDirtyFields.map { convertToUserSettingsField($0) }))
-
-      if conflictingFields.isEmpty {
-        await storeActor.autoMergeUserSettings(
-          userId: serverRow.user_id,
-          serverRow: serverRow,
-          serverUpdatedAt: serverUpdatedAt,
-          serverRevision: serverRow.revision,
-          newSnapshot: serverSnapshot,
-          localDirtyFields: localDirtyFields
-        )
-        return .autoMerged
-      }
-      await storeActor.markUserSettingsConflict(
-        userId: serverRow.user_id, serverSnapshot: serverSnapshot)
-      return .conflict
+      await storeActor.autoMergeUserSettings(
+        userId: serverRow.user_id,
+        serverRow: serverRow,
+        serverUpdatedAt: serverUpdatedAt,
+        serverRevision: serverRow.revision,
+        newSnapshot: serverSnapshot,
+        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+      )
+      return .autoMerged
 
     case .pendingDelete, .conflict:
       // Settings don't have pendingDelete, treat as conflict
@@ -2628,10 +2566,6 @@ final class SyncCoordinator: ObservableObject {
     try await storeActor.upsertUserSettings(localSettings)
   }
 
-  private func convertToUserSettingsField(_ field: UserSettingsField) -> UserSettingsField {
-    field
-  }
-
   // MARK: - Push Implementation
 
   /// Push dirty records for a single table
@@ -2665,6 +2599,7 @@ final class SyncCoordinator: ObservableObject {
     }
   }
 
+  // swiftlint:disable:next cyclomatic_complexity
   private func pushJobs(userId: String) async throws -> TablePushResult {
     let storeActor = await MainActor.run { LocalStore.shared.storeActor }
     let dirtyJobs = try await storeActor.getDirtyJobs(userId: userId)
@@ -2697,7 +2632,15 @@ final class SyncCoordinator: ObservableObject {
     }
 
     for job in orderedDirtyJobs {
-      let result = try await pushJob(job, userId: userId, storeActor: storeActor, isRetry: false)
+      let jobId = job.id
+      let result: PushResult
+      do {
+        result = try await pushJob(job, userId: userId, storeActor: storeActor, isRetry: false)
+      } catch let error where Self.isRowRejection(error) {
+        logger.error("Server rejected job \(jobId.prefix(8)): \(error.localizedDescription)")
+        await storeActor.markJobConflict(id: jobId, serverSnapshot: nil)
+        result = .conflict
+      }
       switch result {
       case .success, .deleted:
         rowsPushed += 1
@@ -2749,6 +2692,7 @@ final class SyncCoordinator: ObservableObject {
       return try await insertJob(job, userId: userId, storeActor: storeActor)
     }
 
+    let baseline = SyncPushBaseline(job)
     var updateData: [String: AnyJSON] = [:]
 
     if dirtyFields.contains(.name) {
@@ -2836,7 +2780,8 @@ final class SyncCoordinator: ObservableObject {
           serverRevision: returnedRow.revision,
           archivedAt: serverArchivedAt,
           deletedAt: serverDeletedAt,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Pushed job \(jobId.prefix(8))")
@@ -2944,6 +2889,7 @@ final class SyncCoordinator: ObservableObject {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let jobId = job.id
+    let baseline = SyncPushBaseline(job)
     var insertData: [String: AnyJSON] = [
       "id": .string(jobId),
       "user_id": .string(userId),
@@ -2991,7 +2937,8 @@ final class SyncCoordinator: ObservableObject {
           serverRevision: returnedRow.revision,
           archivedAt: serverArchivedAt,
           deletedAt: serverDeletedAt,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Inserted new job \(jobId.prefix(8))")
@@ -3012,10 +2959,11 @@ final class SyncCoordinator: ObservableObject {
           .execute()
           .value
 
-        if let serverRow = serverRows.first {
-          let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .jobs, id: jobId)
-          let serverSnapshot = JobServerSnapshot.from(row: serverRow, updatedAt: serverUpdatedAt)
-          await storeActor.markJobConflict(id: jobId, serverSnapshot: serverSnapshot)
+        // The row exists, usually because an earlier insert committed after the request timed
+        // out locally. Merge onto it. A missing row means another unique constraint failed.
+        if !serverRows.isEmpty {
+          return try await handleJobPushConflict(
+            job: job, userId: userId, storeActor: storeActor, isRetry: false)
         }
         return .conflict
       }
@@ -3077,42 +3025,31 @@ final class SyncCoordinator: ObservableObject {
       return .conflict
     }
 
-    guard let lastSnapshot = JobServerSnapshot.decode(from: job.lastSyncedSnapshot) else {
-      let serverSnapshot = JobServerSnapshot.from(row: serverRow, updatedAt: serverUpdatedAt)
-      await storeActor.markJobConflict(id: jobId, serverSnapshot: serverSnapshot)
-      return .conflict
-    }
-
     let newServerSnapshot = JobServerSnapshot.from(row: serverRow, updatedAt: serverUpdatedAt)
-    let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
-    let localDirtyFields = job.dirtyFieldKeys
-    let conflictingFields = serverChangedFields.intersection(
-      Set(localDirtyFields.map { convertToJobField($0) }))
-
-    if conflictingFields.isEmpty, !isRetry {
-      await storeActor.rebaseJob(
-        id: jobId,
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverRevision: serverRow.revision,
-        archivedAt: serverArchivedAt,
-        deletedAt: serverDeletedAt,
-        newSnapshot: newServerSnapshot,
-        localDirtyFields: localDirtyFields
-      )
-
-      if let rebasedJob = try await storeActor.getJob(id: jobId) {
-        let retryResult = try await pushJob(
-          rebasedJob, userId: userId, storeActor: storeActor, isRetry: true)
-        if retryResult == .success {
-          return .rebased
-        }
-        return retryResult
-      }
+    guard !isRetry else {
+      await storeActor.markJobConflict(id: jobId, serverSnapshot: newServerSnapshot)
       return .conflict
     }
 
-    await storeActor.markJobConflict(id: jobId, serverSnapshot: newServerSnapshot)
+    await storeActor.rebaseJob(
+      id: jobId,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      archivedAt: serverArchivedAt,
+      deletedAt: serverDeletedAt,
+      newSnapshot: newServerSnapshot,
+      localDirtyFields: SyncMerge.fieldsToKeepLocally(job, server: newServerSnapshot)
+    )
+
+    if let rebasedJob = try await storeActor.getJob(id: jobId) {
+      let retryResult = try await pushJob(
+        rebasedJob, userId: userId, storeActor: storeActor, isRetry: true)
+      if retryResult == .success {
+        return .rebased
+      }
+      return retryResult
+    }
     return .conflict
   }
 
@@ -3131,8 +3068,16 @@ final class SyncCoordinator: ObservableObject {
     var rebased = 0
 
     for shift in dirtyShifts {
-      let result = try await pushUserShift(
-        shift, userId: userId, storeActor: storeActor, isRetry: false)
+      let shiftId = shift.id
+      let result: PushResult
+      do {
+        result = try await pushUserShift(
+          shift, userId: userId, storeActor: storeActor, isRetry: false)
+      } catch let error where Self.isRowRejection(error) {
+        logger.error("Server rejected shift \(shiftId.prefix(8)): \(error.localizedDescription)")
+        await storeActor.markShiftConflict(id: shiftId, serverSnapshot: nil)
+        result = .conflict
+      }
       switch result {
       case .success, .deleted:
         rowsPushed += 1
@@ -3180,6 +3125,7 @@ final class SyncCoordinator: ObservableObject {
       return try await insertUserShift(shift, userId: userId, storeActor: storeActor)
     }
 
+    let baseline = SyncPushBaseline(shift)
     // Build partial update
     var updateData: [String: AnyJSON] = [:]
     if dirtyFields.contains(.jobId) {
@@ -3274,7 +3220,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Pushed shift \(shiftId.prefix(8))")
@@ -3389,6 +3336,7 @@ final class SyncCoordinator: ObservableObject {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let shiftId = shift.id
+    let baseline = SyncPushBaseline(shift)
 
     // Build full insert data
     var insertData: [String: AnyJSON] = [
@@ -3455,7 +3403,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Inserted new shift \(shiftId.prefix(8))")
@@ -3469,7 +3418,6 @@ final class SyncCoordinator: ObservableObject {
       // Check if it's a duplicate key error (row already exists on server)
       if errorString.contains("duplicate") || errorString.contains("23505") {
         logger.warning("Shift \(shiftId.prefix(8)) already exists on server, fetching and merging")
-        // Fetch the existing server row and treat as conflict
         let serverRows: [SyncShiftRow] =
           try await supabase
           .from("user_shifts")
@@ -3478,22 +3426,11 @@ final class SyncCoordinator: ObservableObject {
           .execute()
           .value
 
-        if let serverRow = serverRows.first {
-          let serverUpdatedAt = parseUpdatedAt(
-            serverRow.updated_at, table: .userShifts, id: shiftId)
-          let serverSnapshot = UserShiftServerSnapshot.from(
-            jobId: serverRow.job_id,
-            shiftDate: serverRow.shift_date,
-            startTime: serverRow.start_time,
-            endTime: serverRow.end_time,
-            note: serverRow.note,
-            customPauseWindows: serverRow.custom_pause_windows,
-            customSupplements: serverRow.custom_supplements,
-            updatedAt: serverUpdatedAt,
-            revision: serverRow.revision,
-            deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
-          )
-          await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+        // The row exists, usually because an earlier insert committed after the request timed
+        // out locally. Merge onto it. A missing row means another unique constraint failed.
+        if !serverRows.isEmpty {
+          return try await handleShiftPushConflict(
+            shift: shift, userId: userId, storeActor: storeActor, isRetry: false)
         }
         return .conflict
       }
@@ -3558,25 +3495,6 @@ final class SyncCoordinator: ObservableObject {
       return .conflict
     }
 
-    // Try field-level merge
-    guard let lastSnapshot = UserShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot) else {
-      // Cannot decode snapshot, mark conflict
-      let serverSnapshot = UserShiftServerSnapshot.from(
-        jobId: serverRow.job_id,
-        shiftDate: serverRow.shift_date,
-        startTime: serverRow.start_time,
-        endTime: serverRow.end_time,
-        note: serverRow.note,
-        customPauseWindows: serverRow.custom_pause_windows,
-        customSupplements: serverRow.custom_supplements,
-        updatedAt: serverUpdatedAt,
-        revision: serverRow.revision,
-        deletedAt: serverDeletedAt
-      )
-      await storeActor.markShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
-      return .conflict
-    }
-
     let newServerSnapshot = UserShiftServerSnapshot.from(
       jobId: serverRow.job_id,
       shiftDate: serverRow.shift_date,
@@ -3590,36 +3508,33 @@ final class SyncCoordinator: ObservableObject {
       deletedAt: serverDeletedAt
     )
 
-    let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
-    let localDirtyFields = shift.dirtyFieldKeys
-    let conflictingFields = serverChangedFields.intersection(
-      Set(localDirtyFields.map { convertToUserShiftField($0) }))
-
-    if conflictingFields.isEmpty, !isRetry {
-      // Auto-merge possible: rebase and retry once
-      await storeActor.rebaseShift(
-        id: shiftId,
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverRevision: serverRow.revision,
-        serverDeletedAt: serverDeletedAt,
-        newSnapshot: newServerSnapshot,
-        localDirtyFields: localDirtyFields
-      )
-
-      // Reload and retry
-      if let rebasedShift = try await storeActor.getUserShift(id: shiftId) {
-        let retryResult = try await pushUserShift(
-          rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
-        if retryResult == .success {
-          return .rebased
-        }
-        return retryResult
-      }
+    guard !isRetry else {
+      // The server moved again during the retry
+      await storeActor.markShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
       return .conflict
     }
-    // Conflict - overlapping fields or retry failed
-    await storeActor.markShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
+
+    // Rebase onto the server row and retry once. Local values that still differ stay, and the
+    // later write wins a real conflict.
+    await storeActor.rebaseShift(
+      id: shiftId,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      serverDeletedAt: serverDeletedAt,
+      newSnapshot: newServerSnapshot,
+      localDirtyFields: SyncMerge.fieldsToKeepLocally(shift, server: newServerSnapshot)
+    )
+
+    // Reload and retry
+    if let rebasedShift = try await storeActor.getUserShift(id: shiftId) {
+      let retryResult = try await pushUserShift(
+        rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
+      if retryResult == .success {
+        return .rebased
+      }
+      return retryResult
+    }
     return .conflict
   }
 
@@ -3638,8 +3553,16 @@ final class SyncCoordinator: ObservableObject {
     var rebased = 0
 
     for event in dirtyEvents {
-      let result = try await pushEvent(
-        event, userId: userId, storeActor: storeActor, isRetry: false)
+      let eventId = event.id
+      let result: PushResult
+      do {
+        result = try await pushEvent(
+          event, userId: userId, storeActor: storeActor, isRetry: false)
+      } catch let error where Self.isRowRejection(error) {
+        logger.error("Server rejected event \(eventId.prefix(8)): \(error.localizedDescription)")
+        await storeActor.markEventConflict(id: eventId, serverSnapshot: nil)
+        result = .conflict
+      }
       switch result {
       case .success, .deleted:
         rowsPushed += 1
@@ -3687,6 +3610,7 @@ final class SyncCoordinator: ObservableObject {
       return try await insertEvent(event, userId: userId, storeActor: storeActor)
     }
 
+    let baseline = SyncPushBaseline(event)
     var updateData: [String: AnyJSON] = [:]
     if dirtyFields.contains(.startDate) {
       updateData["start_date"] = .string(event.startDateString)
@@ -3759,7 +3683,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Pushed event \(eventId.prefix(8))")
@@ -3872,6 +3797,7 @@ final class SyncCoordinator: ObservableObject {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let eventId = event.id
+    let baseline = SyncPushBaseline(event)
     var insertData: [String: AnyJSON] = [
       "id": .string(eventId),
       "user_id": .string(userId),
@@ -3919,7 +3845,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Inserted new event \(eventId.prefix(8))")
@@ -3939,14 +3866,11 @@ final class SyncCoordinator: ObservableObject {
           .execute()
           .value
 
-        if let serverRow = serverRows.first {
-          let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .events, id: eventId)
-          let serverSnapshot = EventServerSnapshot.from(
-            serverRow: serverRow,
-            updatedAt: serverUpdatedAt,
-            deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
-          )
-          await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
+        // The row exists, usually because an earlier insert committed after the request timed
+        // out locally. Merge onto it. A missing row means another unique constraint failed.
+        if !serverRows.isEmpty {
+          return try await handleEventPushConflict(
+            event: event, userId: userId, storeActor: storeActor, isRetry: false)
         }
         return .conflict
       }
@@ -3999,49 +3923,34 @@ final class SyncCoordinator: ObservableObject {
       return .conflict
     }
 
-    guard let lastSnapshot = EventServerSnapshot.decode(from: event.lastSyncedSnapshot) else {
-      let serverSnapshot = EventServerSnapshot.from(
-        serverRow: serverRow,
-        updatedAt: serverUpdatedAt,
-        deletedAt: serverDeletedAt
-      )
-      await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
-      return .conflict
-    }
-
     let newServerSnapshot = EventServerSnapshot.from(
       serverRow: serverRow,
       updatedAt: serverUpdatedAt,
       deletedAt: serverDeletedAt
     )
-
-    let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
-    let localDirtyFields = event.dirtyFieldKeys
-    let conflictingFields = serverChangedFields.intersection(
-      Set(localDirtyFields.map { convertToEventField($0) }))
-
-    if conflictingFields.isEmpty, !isRetry {
-      await storeActor.rebaseEvent(
-        id: eventId,
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverRevision: serverRow.revision,
-        serverDeletedAt: serverDeletedAt,
-        newSnapshot: newServerSnapshot,
-        localDirtyFields: localDirtyFields
-      )
-
-      if let rebasedEvent = try await storeActor.getEvent(id: eventId) {
-        let retryResult = try await pushEvent(
-          rebasedEvent, userId: userId, storeActor: storeActor, isRetry: true)
-        if retryResult == .success {
-          return .rebased
-        }
-        return retryResult
-      }
+    guard !isRetry else {
+      await storeActor.markEventConflict(id: eventId, serverSnapshot: newServerSnapshot)
       return .conflict
     }
-    await storeActor.markEventConflict(id: eventId, serverSnapshot: newServerSnapshot)
+
+    await storeActor.rebaseEvent(
+      id: eventId,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      serverDeletedAt: serverDeletedAt,
+      newSnapshot: newServerSnapshot,
+      localDirtyFields: SyncMerge.fieldsToKeepLocally(event, server: newServerSnapshot)
+    )
+
+    if let rebasedEvent = try await storeActor.getEvent(id: eventId) {
+      let retryResult = try await pushEvent(
+        rebasedEvent, userId: userId, storeActor: storeActor, isRetry: true)
+      if retryResult == .success {
+        return .rebased
+      }
+      return retryResult
+    }
     return .conflict
   }
 
@@ -4060,8 +3969,17 @@ final class SyncCoordinator: ObservableObject {
     var rebased = 0
 
     for shift in dirtyShifts {
-      let result = try await pushRecurringShift(
-        shift, userId: userId, storeActor: storeActor, isRetry: false)
+      let shiftId = shift.id
+      let result: PushResult
+      do {
+        result = try await pushRecurringShift(
+          shift, userId: userId, storeActor: storeActor, isRetry: false)
+      } catch let error where Self.isRowRejection(error) {
+        logger.error(
+          "Server rejected recurring shift \(shiftId.prefix(8)): \(error.localizedDescription)")
+        await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: nil)
+        result = .conflict
+      }
       switch result {
       case .success, .deleted:
         rowsPushed += 1
@@ -4106,6 +4024,7 @@ final class SyncCoordinator: ObservableObject {
       return try await insertRecurringShift(shift, userId: userId, storeActor: storeActor)
     }
 
+    let baseline = SyncPushBaseline(shift)
     // Build partial update
     var updateData: [String: AnyJSON] = [:]
     if dirtyFields.contains(.jobId) {
@@ -4232,7 +4151,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Pushed recurring shift \(shiftId.prefix(8))")
@@ -4337,6 +4257,7 @@ final class SyncCoordinator: ObservableObject {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let shiftId = shift.id
+    let baseline = SyncPushBaseline(shift)
 
     // Build full insert data
     var insertData: [String: AnyJSON] = [
@@ -4412,7 +4333,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Inserted new recurring shift \(shiftId.prefix(8))")
@@ -4434,16 +4356,11 @@ final class SyncCoordinator: ObservableObject {
           .execute()
           .value
 
-        if let serverRow = serverRows.first {
-          let serverUpdatedAt = parseUpdatedAt(
-            serverRow.updated_at, table: .recurringShifts, id: shiftId)
-          let serverSnapshot = RecurringShiftServerSnapshot.from(
-            row: serverRow.toRecurringShiftRow(),
-            updatedAt: serverUpdatedAt,
-            revision: serverRow.revision,
-            deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
-          )
-          await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
+        // The row exists, usually because an earlier insert committed after the request timed
+        // out locally. Merge onto it. A missing row means another unique constraint failed.
+        if !serverRows.isEmpty {
+          return try await handleRecurringShiftPushConflict(
+            shift: shift, userId: userId, storeActor: storeActor, isRetry: false)
         }
         return .conflict
       }
@@ -4501,52 +4418,35 @@ final class SyncCoordinator: ObservableObject {
       return .conflict
     }
 
-    guard let lastSnapshot = RecurringShiftServerSnapshot.decode(from: shift.lastSyncedSnapshot)
-    else {
-      let serverSnapshot = RecurringShiftServerSnapshot.from(
-        row: serverRow.toRecurringShiftRow(),
-        updatedAt: serverUpdatedAt,
-        revision: serverRow.revision,
-        deletedAt: serverDeletedAt
-      )
-      await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: serverSnapshot)
-      return .conflict
-    }
-
     let newServerSnapshot = RecurringShiftServerSnapshot.from(
       row: serverRow.toRecurringShiftRow(),
       updatedAt: serverUpdatedAt,
       revision: serverRow.revision,
       deletedAt: serverDeletedAt
     )
-
-    let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
-    let localDirtyFields = shift.dirtyFieldKeys
-    let conflictingFields = serverChangedFields.intersection(
-      Set(localDirtyFields.map { convertToRecurringShiftField($0) }))
-
-    if conflictingFields.isEmpty, !isRetry {
-      await storeActor.rebaseRecurringShift(
-        id: shiftId,
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverRevision: serverRow.revision,
-        serverDeletedAt: serverDeletedAt,
-        newSnapshot: newServerSnapshot,
-        localDirtyFields: localDirtyFields
-      )
-
-      if let rebasedShift = try await storeActor.getRecurringShift(id: shiftId) {
-        let retryResult = try await pushRecurringShift(
-          rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
-        if retryResult == .success {
-          return .rebased
-        }
-        return retryResult
-      }
+    guard !isRetry else {
+      await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
       return .conflict
     }
-    await storeActor.markRecurringShiftConflict(id: shiftId, serverSnapshot: newServerSnapshot)
+
+    await storeActor.rebaseRecurringShift(
+      id: shiftId,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      serverDeletedAt: serverDeletedAt,
+      newSnapshot: newServerSnapshot,
+      localDirtyFields: SyncMerge.fieldsToKeepLocally(shift, server: newServerSnapshot)
+    )
+
+    if let rebasedShift = try await storeActor.getRecurringShift(id: shiftId) {
+      let retryResult = try await pushRecurringShift(
+        rebasedShift, userId: userId, storeActor: storeActor, isRetry: true)
+      if retryResult == .success {
+        return .rebased
+      }
+      return retryResult
+    }
     return .conflict
   }
 
@@ -4565,8 +4465,17 @@ final class SyncCoordinator: ObservableObject {
     var rebased = 0
 
     for snapshot in dirtySnapshots {
-      let result = try await pushWageSnapshot(
-        snapshot, userId: userId, storeActor: storeActor, isRetry: false)
+      let snapshotId = snapshot.id
+      let result: PushResult
+      do {
+        result = try await pushWageSnapshot(
+          snapshot, userId: userId, storeActor: storeActor, isRetry: false)
+      } catch let error where Self.isRowRejection(error) {
+        logger.error(
+          "Server rejected wage snapshot \(snapshotId.prefix(8)): \(error.localizedDescription)")
+        await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: nil)
+        result = .conflict
+      }
       switch result {
       case .success, .deleted:
         rowsPushed += 1
@@ -4611,6 +4520,7 @@ final class SyncCoordinator: ObservableObject {
       return try await insertWageSnapshot(snapshot, userId: userId, storeActor: storeActor)
     }
 
+    let baseline = SyncPushBaseline(snapshot)
     // Build partial update
     var updateData: [String: AnyJSON] = [:]
     if dirtyFields.contains(.jobId) {
@@ -4738,7 +4648,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Pushed wage snapshot \(snapshotId.prefix(8))")
@@ -4842,6 +4753,7 @@ final class SyncCoordinator: ObservableObject {
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
     let snapshotId = snapshot.id
+    let baseline = SyncPushBaseline(snapshot)
 
     // Build full insert data
     var insertData: [String: AnyJSON] = [
@@ -4927,7 +4839,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Inserted new wage snapshot \(snapshotId.prefix(8))")
@@ -4949,16 +4862,11 @@ final class SyncCoordinator: ObservableObject {
           .execute()
           .value
 
-        if let serverRow = serverRows.first {
-          let serverUpdatedAt = parseUpdatedAt(
-            serverRow.updated_at, table: .wageSnapshots, id: snapshotId)
-          let serverSnapshot = WageSnapshotServerSnapshot.from(
-            row: serverRow.toWageSnapshot(),
-            updatedAt: serverUpdatedAt,
-            revision: serverRow.revision,
-            deletedAt: serverRow.deleted_at.flatMap { parseISO8601($0) }
-          )
-          await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
+        // The row exists, usually because an earlier insert committed after the request timed
+        // out locally. Merge onto it. A missing row means another unique constraint failed.
+        if !serverRows.isEmpty {
+          return try await handleWageSnapshotPushConflict(
+            snapshot: snapshot, userId: userId, storeActor: storeActor, isRetry: false)
         }
         return .conflict
       }
@@ -5017,52 +4925,35 @@ final class SyncCoordinator: ObservableObject {
       return .conflict
     }
 
-    guard let lastSnapshot = WageSnapshotServerSnapshot.decode(from: snapshot.lastSyncedSnapshot)
-    else {
-      let serverSnapshot = WageSnapshotServerSnapshot.from(
-        row: serverRow.toWageSnapshot(),
-        updatedAt: serverUpdatedAt,
-        revision: serverRow.revision,
-        deletedAt: serverDeletedAt
-      )
-      await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: serverSnapshot)
-      return .conflict
-    }
-
     let newServerSnapshot = WageSnapshotServerSnapshot.from(
       row: serverRow.toWageSnapshot(),
       updatedAt: serverUpdatedAt,
       revision: serverRow.revision,
       deletedAt: serverDeletedAt
     )
-
-    let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
-    let localDirtyFields = snapshot.dirtyFieldKeys
-    let conflictingFields = serverChangedFields.intersection(
-      Set(localDirtyFields.map { convertToWageSnapshotField($0) }))
-
-    if conflictingFields.isEmpty, !isRetry {
-      await storeActor.rebaseWageSnapshot(
-        id: snapshotId,
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverRevision: serverRow.revision,
-        serverDeletedAt: serverDeletedAt,
-        newSnapshot: newServerSnapshot,
-        localDirtyFields: localDirtyFields
-      )
-
-      if let rebasedSnapshot = try await storeActor.getWageSnapshot(id: snapshotId) {
-        let retryResult = try await pushWageSnapshot(
-          rebasedSnapshot, userId: userId, storeActor: storeActor, isRetry: true)
-        if retryResult == .success {
-          return .rebased
-        }
-        return retryResult
-      }
+    guard !isRetry else {
+      await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: newServerSnapshot)
       return .conflict
     }
-    await storeActor.markWageSnapshotConflict(id: snapshotId, serverSnapshot: newServerSnapshot)
+
+    await storeActor.rebaseWageSnapshot(
+      id: snapshotId,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      serverDeletedAt: serverDeletedAt,
+      newSnapshot: newServerSnapshot,
+      localDirtyFields: SyncMerge.fieldsToKeepLocally(snapshot, server: newServerSnapshot)
+    )
+
+    if let rebasedSnapshot = try await storeActor.getWageSnapshot(id: snapshotId) {
+      let retryResult = try await pushWageSnapshot(
+        rebasedSnapshot, userId: userId, storeActor: storeActor, isRetry: true)
+      if retryResult == .success {
+        return .rebased
+      }
+      return retryResult
+    }
     return .conflict
   }
 
@@ -5074,8 +4965,15 @@ final class SyncCoordinator: ObservableObject {
       return TablePushResult(table: .userSettings, rowsPushed: 0, newConflicts: 0, rebased: 0)
     }
 
-    let result = try await pushUserSettingsRow(
-      settings, userId: userId, storeActor: storeActor, isRetry: false)
+    let result: PushResult
+    do {
+      result = try await pushUserSettingsRow(
+        settings, userId: userId, storeActor: storeActor, isRetry: false)
+    } catch let error where Self.isRowRejection(error) {
+      logger.error("Server rejected user settings: \(error.localizedDescription)")
+      await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: nil)
+      result = .conflict
+    }
 
     var rowsPushed = 0
     var newConflicts = 0
@@ -5118,6 +5016,7 @@ final class SyncCoordinator: ObservableObject {
       return try await insertUserSettings(settings, userId: userId, storeActor: storeActor)
     }
 
+    let baseline = SyncPushBaseline(settings)
     // Build partial update
     var updateData: [String: AnyJSON] = [:]
     if dirtyFields.contains(.monthlyGoal) {
@@ -5231,7 +5130,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Pushed user settings for \(userId.prefix(8))")
@@ -5264,6 +5164,7 @@ final class SyncCoordinator: ObservableObject {
     userId: String,
     storeActor: LocalStoreActor
   ) async throws -> PushResult {
+    let baseline = SyncPushBaseline(settings)
     // Build full insert data
     var insertData: [String: AnyJSON] = [
       "user_id": .string(userId),
@@ -5333,7 +5234,8 @@ final class SyncCoordinator: ObservableObject {
           serverRow: returnedRow,
           serverUpdatedAt: serverUpdatedAt,
           serverRevision: returnedRow.revision,
-          snapshot: serverSnapshot
+          snapshot: serverSnapshot,
+          baseline: baseline
         )
 
         logger.debug("Inserted new user settings for \(userId.prefix(8))")
@@ -5355,15 +5257,11 @@ final class SyncCoordinator: ObservableObject {
           .execute()
           .value
 
-        if let serverRow = serverRows.first {
-          let serverUpdatedAt = parseUpdatedAt(
-            serverRow.updated_at, table: .userSettings, id: userId)
-          let serverSnapshot = UserSettingsServerSnapshot.from(
-            row: serverRow.toUserSettings(),
-            updatedAt: serverUpdatedAt,
-            revision: serverRow.revision
-          )
-          await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: serverSnapshot)
+        // The row exists, usually because an earlier insert committed after the request timed
+        // out locally or the server created it. Merge onto it.
+        if !serverRows.isEmpty {
+          return try await handleUserSettingsPushConflict(
+            settings: settings, userId: userId, storeActor: storeActor, isRetry: false)
         }
         return .conflict
       }
@@ -5407,49 +5305,33 @@ final class SyncCoordinator: ObservableObject {
 
     let serverUpdatedAt = parseUpdatedAt(serverRow.updated_at, table: .userSettings, id: userId)
 
-    guard let lastSnapshot = UserSettingsServerSnapshot.decode(from: settings.lastSyncedSnapshot)
-    else {
-      let serverSnapshot = UserSettingsServerSnapshot.from(
-        row: serverRow.toUserSettings(),
-        updatedAt: serverUpdatedAt,
-        revision: serverRow.revision
-      )
-      await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: serverSnapshot)
-      return .conflict
-    }
-
     let newServerSnapshot = UserSettingsServerSnapshot.from(
       row: serverRow.toUserSettings(),
       updatedAt: serverUpdatedAt,
       revision: serverRow.revision
     )
-
-    let serverChangedFields = newServerSnapshot.changedFields(from: lastSnapshot)
-    let localDirtyFields = settings.dirtyFieldKeys
-    let conflictingFields = serverChangedFields.intersection(
-      Set(localDirtyFields.map { convertToUserSettingsField($0) }))
-
-    if conflictingFields.isEmpty, !isRetry {
-      await storeActor.rebaseUserSettings(
-        userId: userId,
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverRevision: serverRow.revision,
-        newSnapshot: newServerSnapshot,
-        localDirtyFields: localDirtyFields
-      )
-
-      if let rebasedSettings = try await storeActor.getUserSettings(userId: userId) {
-        let retryResult = try await pushUserSettingsRow(
-          rebasedSettings, userId: userId, storeActor: storeActor, isRetry: true)
-        if retryResult == .success {
-          return .rebased
-        }
-        return retryResult
-      }
+    guard !isRetry else {
+      await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: newServerSnapshot)
       return .conflict
     }
-    await storeActor.markUserSettingsConflict(userId: userId, serverSnapshot: newServerSnapshot)
+
+    await storeActor.rebaseUserSettings(
+      userId: userId,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRow.revision,
+      newSnapshot: newServerSnapshot,
+      localDirtyFields: SyncMerge.fieldsToKeepLocally(settings, server: newServerSnapshot)
+    )
+
+    if let rebasedSettings = try await storeActor.getUserSettings(userId: userId) {
+      let retryResult = try await pushUserSettingsRow(
+        rebasedSettings, userId: userId, storeActor: storeActor, isRetry: true)
+      if retryResult == .success {
+        return .rebased
+      }
+      return retryResult
+    }
     return .conflict
   }
 
@@ -5823,6 +5705,22 @@ final class SyncCoordinator: ObservableObject {
   }
 
   // MARK: - Helpers
+
+  /// Whether the server or the local encoder rejected one row's data.
+  /// The push loops mark such a row as conflicted and move on to the next row. Every other
+  /// error, such as network, auth, or cancellation errors, still stops the sync.
+  static func isRowRejection(_ error: Error) -> Bool {
+    if error is SyncEncodingError {
+      return true
+    }
+    guard let code = (error as? PostgrestError)?.code else {
+      return false
+    }
+    // SQLSTATE class 22 is a data exception, 23 an integrity constraint violation, and P0 an
+    // error raised by a trigger or function. 42501 is a row-level security denial.
+    return code.hasPrefix("22") || code.hasPrefix("23") || code.hasPrefix("P0")
+      || code == "42501"
+  }
 
   private enum ApplyResult {
     case inserted

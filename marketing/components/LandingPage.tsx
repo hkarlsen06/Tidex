@@ -10,7 +10,6 @@ import { Button } from '@/components/ui/button';
 import type { Locale } from '@/lib/i18n/config';
 import type { Dictionary } from '@/lib/i18n/dictionaries';
 import { buildLocalizedMarketingPath } from '@/lib/paths';
-import { LocaleLangSetter } from './LocaleLangSetter';
 import { MarketingLocaleToggle } from './MarketingLocaleToggle';
 
 interface LandingPageProps {
@@ -29,6 +28,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
   const faqs = marketing.faq.items;
   const privacyHref = buildLocalizedMarketingPath(locale, '/privacy');
   const termsHref = buildLocalizedMarketingPath(locale, '/terms');
+  const supportHref = buildLocalizedMarketingPath(locale, '/support');
   const payrollDocsHref = '/docs/payroll';
   const appStoreHref = 'https://apps.apple.com/app/id6757129790';
   const mailtoHref = `mailto:${dictionary.legal.contactEmail}?subject=${encodeURIComponent(marketing.contact.emailSubject)}&body=${encodeURIComponent(marketing.contact.emailBody)}`;
@@ -108,8 +108,6 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
     <main
       className="relative pb-[calc(6.5rem+env(safe-area-inset-bottom))] text-text-primary lg:pb-0"
     >
-      <LocaleLangSetter locale={locale} />
-
       <section
         className="relative flex min-h-[var(--mobile-hero-height)] flex-col overflow-hidden px-5 pb-[var(--mobile-bottom-cta-height)] pt-[max(1rem,env(safe-area-inset-top))] sm:pb-8 sm:px-8 lg:min-h-dvh lg:pb-10"
         style={mobileHeroStyle}
@@ -125,7 +123,7 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             href={appStoreHref}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={marketing.hero.appStoreCta}
+            aria-label={marketing.hero.logoLinkLabel}
             className="grid w-36 min-w-0 grid-cols-[90fr_325fr] items-center gap-[1.891%] rounded-[0.9rem] transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] sm:w-[10.575rem] sm:rounded-[1rem]"
           >
             <Image
@@ -360,6 +358,9 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
             </Link>
             <Link href={termsHref} className="text-text-secondary transition-colors hover:text-text-primary">
               {marketing.footer.terms}
+            </Link>
+            <Link href={supportHref} className="text-text-secondary transition-colors hover:text-text-primary">
+              {marketing.footer.support}
             </Link>
           </div>
         </div>

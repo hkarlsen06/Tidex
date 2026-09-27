@@ -47,13 +47,13 @@ enum SharingError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .notAuthenticated:
-      return "Not authenticated"
+      return String(localized: .commonErrorNotAuthenticated)
 
-    case .loadFailed(let error):
-      return "Failed to load: \(error.localizedDescription)"
+    case .loadFailed:
+      return String(localized: .commonErrorLoadFailed)
 
     case .noSharers:
-      return "No one has shared shifts with you yet"
+      return String(localized: .friendsErrorNoSharers)
     }
   }
 }

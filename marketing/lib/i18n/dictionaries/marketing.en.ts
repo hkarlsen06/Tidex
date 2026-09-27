@@ -4,7 +4,7 @@ export const marketingEn = {
     description: 'Stay on top of salary, supplements and overtime with Tidex. A modern wage calculator that keeps you in control.',
     ogTitle: 'Tidex | Hourly Pay',
     ogDescription: 'Track your salary, plan shifts and handle supplements automatically with Tidex.',
-    ogImageAlt: 'Tidex — Full control over your salary',
+    ogImageAlt: 'Tidex gives you full control over your salary',
   },
   hero: {
     eyebrow: 'iPhone app',
@@ -14,6 +14,7 @@ export const marketingEn = {
     appStoreCta: 'See next paycheck',
     secondaryCta: 'FAQ',
     imageAlt: 'Tidex logo',
+    logoLinkLabel: 'Tidex on the App Store',
     screenshotAlt: 'Screenshot of the Tidex iPhone app showing the dashboard and shifts overview.',
     trustNote: 'Free to start. Built for real shift work.',
   },
@@ -95,7 +96,7 @@ export const marketingEn = {
   ctaPrimary: {
     heading: 'Ready to try with your own shifts?',
     description: 'Create a free account and get control over supplements, overtime and reports before the next payday.',
-    button: 'Get started — free',
+    button: 'Get started for free',
   },
   contact: {
     heading: 'Have questions?',
@@ -108,6 +109,7 @@ export const marketingEn = {
     payrollDocs: 'Payroll Documentation',
     privacy: 'Privacy policy',
     terms: 'Terms of use',
+    support: 'Support',
     copyright: '© 2026 Hjalmar Karlsen',
   },
 } as const;

@@ -226,30 +226,6 @@ struct MonthSwipeContainer<Content: View>: View {
   }
 }
 
-// MARK: - Animated Month Content
-
-/// A view that animates content transitions when changing months
-struct AnimatedMonthContent<Content: View>: View {
-  let year: Int
-  let month: Int
-  let direction: MonthNavigationDirection?
-  @ViewBuilder let content: () -> Content
-
-  var body: some View {
-    content()
-      .id("\(year)-\(month)")
-      .transition(
-        .asymmetric(
-          insertion: .move(edge: direction == .next ? .trailing : .leading)
-            .combined(with: .opacity),
-          removal: .move(edge: direction == .next ? .leading : .trailing)
-            .combined(with: .opacity)
-        )
-      )
-      .animation(.spring(response: 0.35, dampingFraction: 0.85), value: "\(year)-\(month)")
-  }
-}
-
 // MARK: - View Extension
 
 extension View {

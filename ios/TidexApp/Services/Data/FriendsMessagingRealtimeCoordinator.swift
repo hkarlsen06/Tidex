@@ -272,7 +272,8 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
     do {
       try await subscribeWithTimeout(channel)
-      guard authenticatedViewerUserId == nil || authenticatedViewerUserId == viewerUserId else {
+      // A nil viewer means sign-out happened during the subscribe; drop the channel.
+      guard authenticatedViewerUserId == viewerUserId else {
         await supabase.removeChannel(channel)
         return
       }
@@ -375,6 +376,10 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
     do {
       try await subscribeWithTimeout(channel)
+      guard authenticatedViewerUserId == viewerUserId else {
+        await supabase.removeChannel(channel)
+        return
+      }
       threadChannels[threadId] = channel
 
       threadTasks[threadId] = [
@@ -461,6 +466,8 @@ final class FriendsMessagingRealtimeCoordinator: ObservableObject {
 
     do {
       let snapshot = try await service.fetchInboxSyncSnapshotV2(limit: 100, before: nil)
+      // Don't write the previous user's inbox back after sign-out or a user switch.
+      guard authenticatedViewerUserId == viewerUserId else { return }
       await repository.saveThreads(snapshot.threads, for: viewerUserId)
       await saveMessagingSyncState(
         viewerUserId: viewerUserId,

@@ -261,6 +261,11 @@ final class ResetPasswordViewModel: ObservableObject {
       return false
     }
 
+    if inputType == .phone, !AuthService.isSMSAvailable {
+      fieldErrors.emailOrPhone = String(localized: .resetPasswordErrorsPhoneUnavailable)
+      return false
+    }
+
     return true
   }
 

@@ -638,7 +638,7 @@ export async function handleWageyRequest(
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let streamClosed = false;
-      let heartbeatHandle: number | null = null;
+      let heartbeatHandle: ReturnType<typeof setInterval> | null = null;
 
       const stopHeartbeat = () => {
         if (heartbeatHandle !== null) {

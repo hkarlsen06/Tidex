@@ -206,11 +206,6 @@ const WAGEY_LIMITS = {
   pro: 40,
   max: 90,
 } as const;
-const SHARE_LIMITS = {
-  free: 5,
-  pro: 200,
-  max: 200,
-} as const;
 const FALLBACK_WAGEY_ACCESS: WageyAccessResult = {
   level: "free",
   hasAccess: false,
@@ -715,7 +710,7 @@ export async function getUserSettings(
         .select("*")
         .eq("user_id", userId)
         .maybeSingle();
-      return ((data ?? {}) as UserSettings) ?? {};
+      return (data ?? {}) as UserSettings;
     },
   );
 }
@@ -930,7 +925,7 @@ async function loadShiftResources(
             .eq("user_id", userId)
             .maybeSingle();
           if (error) throw new Error(error.message);
-          return ((data ?? {}) as UserSettings) ?? {};
+          return (data ?? {}) as UserSettings;
         })(),
         (async () => {
           let query = client
@@ -2567,21 +2562,21 @@ function normalizeShareIdentifier(
   return local.length === 8 ? { type: "phone", value: `+47${local}` } : null;
 }
 
-async function canAddMoreRecipients(
+// Shares are created through manage_sharing_action, which enforces the share
+// limit and blocks. Direct inserts into shift_shares are denied by RLS.
+async function manageSharingAction(
   ctx: WageyRequestContext,
-): Promise<{ currentCount: number; limit: number }> {
-  const { profile, subscription } = await getProfileAndSubscription(
-    ctx,
-    ctx.user.id,
+  params: Record<string, unknown>,
+): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await ctx.supabase.rpc(
+    "manage_sharing_action",
+    params,
   );
-  const tier = getUserTier(subscription, profile);
-  const limit = SHARE_LIMITS[tier];
-  const { count, error } = await ctx.supabase
-    .from("shift_shares")
-    .select("*", { count: "exact", head: true })
-    .eq("owner_id", ctx.user.id);
   if (error) throw new Error(error.message);
-  return { currentCount: count ?? 0, limit };
+  const result = (data ?? {}) as { success?: boolean; error?: string };
+  return result.success
+    ? { success: true }
+    : { success: false, error: result.error ?? "Kunne ikke dele vaktene" };
 }
 
 export async function createShare(
@@ -2597,55 +2592,11 @@ export async function createShare(
     };
   }
 
-  const { currentCount, limit } = await canAddMoreRecipients(ctx);
-  if (currentCount >= limit) {
-    return {
-      success: false,
-      error: "Du har nådd maksimalt antall delinger for ditt abonnement",
-    };
-  }
-
-  let recipientId: string | null = null;
-  if (normalized.type === "email") {
-    const { data, error } = await ctx.supabaseAdmin.rpc("find_user_by_email", {
-      search_email: normalized.value,
-    });
-    if (error) throw new Error(error.message);
-    recipientId = data as string | null;
-  } else {
-    const { data, error } = await ctx.supabaseAdmin.rpc("find_user_by_phone", {
-      search_phone: normalized.value,
-    });
-    if (error) throw new Error(error.message);
-    recipientId = data as string | null;
-  }
-
-  if (!recipientId) {
-    return {
-      success: false,
-      error: "Fant ingen bruker med denne e-posten eller telefonnummeret",
-    };
-  }
-  if (recipientId === ctx.user.id) {
-    return { success: false, error: "Du kan ikke dele med deg selv" };
-  }
-
-  const { error } = await ctx.supabase.from("shift_shares").insert({
-    owner_id: ctx.user.id,
-    viewer_id: recipientId,
-    show_earnings: options?.showEarnings ?? false,
+  return await manageSharingAction(ctx, {
+    p_action: "createShare",
+    p_identifier: normalized.value,
+    p_show_earnings: options?.showEarnings ?? false,
   });
-  if (error) {
-    if (error.code === "23505") {
-      return {
-        success: false,
-        error: "Du deler allerede vaktene dine med denne brukeren",
-      };
-    }
-    throw new Error(error.message);
-  }
-
-  return { success: true };
 }
 
 export async function removeShare(
@@ -2705,29 +2656,11 @@ export async function shareBack(
   ctx: WageyRequestContext,
   recipientId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const { currentCount, limit } = await canAddMoreRecipients(ctx);
-  if (currentCount >= limit) {
-    return {
-      success: false,
-      error: "Du har nådd maksimalt antall delinger for ditt abonnement",
-    };
-  }
-
-  const { error } = await ctx.supabase.from("shift_shares").insert({
-    owner_id: ctx.user.id,
-    viewer_id: recipientId,
-    show_earnings: false,
+  return await manageSharingAction(ctx, {
+    p_action: "shareBack",
+    p_recipient_id: recipientId,
+    p_show_earnings: false,
   });
-  if (error) {
-    if (error.code === "23505") {
-      return {
-        success: false,
-        error: "Du deler allerede vaktene dine med denne brukeren",
-      };
-    }
-    throw new Error(error.message);
-  }
-  return { success: true };
 }
 
 export async function toggleSharerMuted(

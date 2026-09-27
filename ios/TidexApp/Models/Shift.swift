@@ -125,6 +125,8 @@ struct ShiftComputed: Equatable {
   var overtimeApplied: Bool = false
   /// Paid minutes calculated as overtime
   var overtimeMinutes: Double = 0
+  /// Gross before weekly overtime. Conflict exclusion ranks by this so overtime cannot flip the kept shift.
+  var preOvertimeGross: Double?
 
   /// Preserve explicit overtime intervals, including shifts spanning the weekly reset.
   /// Older shared payloads only supply a total, so retain their trailing-hours fallback.

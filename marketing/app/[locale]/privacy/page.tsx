@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { MarketingLegalPage } from '../../../components/MarketingLegalPage';
 import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
 import { locales, type Locale } from '@/lib/i18n/config';
+import { localizedPageMetadata } from '@/lib/metadata';
 
 interface LocalePrivacyPageProps {
   params: Promise<{ locale: string }>;
@@ -20,18 +21,8 @@ export async function generateMetadata({ params }: LocalePrivacyPageProps): Prom
   }
 
   const dictionary = getMarketingDictionary(locale as Locale);
-  const url = `https://tidex.no/${locale}/privacy`;
 
-  return {
-    title: dictionary.legal.privacy.meta.title,
-    description: dictionary.legal.privacy.meta.description,
-    openGraph: {
-      title: dictionary.legal.privacy.meta.title,
-      description: dictionary.legal.privacy.meta.description,
-      url,
-      type: 'website',
-    },
-  };
+  return localizedPageMetadata(locale as Locale, '/privacy', dictionary.legal.privacy.meta);
 }
 
 export default async function LocalePrivacyPage({ params }: LocalePrivacyPageProps) {

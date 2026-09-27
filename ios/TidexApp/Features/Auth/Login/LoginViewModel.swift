@@ -258,8 +258,8 @@ final class LoginViewModel: ObservableObject {
       return false
     }
 
-    // Password is required for email login
-    if inputType == .email, password.isEmpty {
+    // Password is required unless the phone OTP flow can send an SMS
+    if inputType == .email || !AuthService.isSMSAvailable, password.isEmpty {
       fieldErrors.password = String(localized: .loginErrorsPasswordRequired)
       return false
     }

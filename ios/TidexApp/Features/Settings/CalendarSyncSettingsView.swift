@@ -16,7 +16,7 @@ struct CalendarSyncSettingsView: View {
       ScrollView {
         VStack(spacing: Spacing.lg) {
           if let error = viewModel.errorMessage {
-            errorBanner(error)
+            ErrorBanner(message: error, onDismiss: { viewModel.clearError() })
           }
 
           calendarSubscriptionSection
@@ -320,31 +320,6 @@ struct CalendarSyncSettingsView: View {
       RoundedRectangle(cornerRadius: CornerRadius.md)
         .fill(Color.tidexBlue)
     )
-  }
-
-  private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: "exclamationmark.triangle.fill")
-        .font(.tidexBody)
-        .foregroundColor(.tidexError)
-
-      Text(message)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextPrimary)
-
-      Spacer()
-
-      Button {
-        viewModel.clearError()
-      } label: {
-        Image(systemName: "xmark")
-          .font(.tidexCaption)
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
-    .padding(Spacing.sm)
-    .background(Color.tidexError.opacity(0.1))
-    .cornerRadius(CornerRadius.sm)
   }
 }
 

@@ -38,7 +38,8 @@ function localeFromAcceptLanguage(value) {
 export function onRequest({ request }) {
   const url = new URL(request.url);
   const locale = localeFromAcceptLanguage(request.headers.get("Accept-Language") ?? "");
-  url.pathname = `/${locale}/`;
+  // "/" becomes "/<locale>/", "/support" becomes "/<locale>/support/".
+  url.pathname = `/${locale}${url.pathname.replace(/\/?$/, "/")}`;
 
   return new Response(null, {
     status: 302,

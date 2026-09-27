@@ -12,7 +12,7 @@ export const legalNo = {
   contactEmail: 'contact@tidex.no',
   terms: {
     meta: {
-      title: 'Vilkår for bruk — Tidex',
+      title: 'Vilkår for bruk | Tidex',
       description: 'Les vilkårene for bruk av Tidex og hva som forventes av brukere av tjenesten.',
     },
     title: 'Vilkår for bruk',
@@ -190,12 +190,12 @@ export const legalNo = {
   },
   privacy: {
     meta: {
-      title: 'Personvernerklæring — Tidex',
+      title: 'Personvernerklæring | Tidex',
       description: 'Les om hvordan Tidex samler inn, bruker og beskytter dine personopplysninger.',
     },
     title: 'Personvernerklæring',
     lastUpdatedLabel: 'Sist oppdatert',
-    lastUpdatedDate: '2026-07-10',
+    lastUpdatedDate: '2026-09-27',
     dateLocale: 'nb-NO',
     sections: [
       {
@@ -240,10 +240,12 @@ export const legalNo = {
       {
         heading: '4. Datalagring og -behandling',
         list: [
-          { boldLabel: 'Lagring:', text: 'Kjerneinformasjon om konto, appdata og filer lagres hos Supabase (PostgreSQL og Storage).' },
+          { boldLabel: 'Lagring:', text: 'Konto-, app- og fildata lagres på servere vi drifter selv, leid av netcup i Tyskland. Vi kjører programvaren Supabase med åpen kildekode (PostgreSQL, autentisering og fillagring) på disse serverne.' },
+          { boldLabel: 'Sikkerhetskopier:', text: 'Vi tar sikkerhetskopi av databasen hver natt og hver time. Sikkerhetskopiene oppbevares i opptil 28 dager, på serveren vår og i Cloudflare R2-lagring i EU.' },
+          { boldLabel: 'E-post:', text: 'E-post om kontoen din, som lenker for å tilbakestille passord, sendes fra vår egen e-postserver.' },
           { boldLabel: 'Lagring på enheten:', text: 'iOS-appen lagrer økttokens i iOS-nøkkelringen og kan mellomlagre appdata lokalt på enheten for å støtte innlogging og appytelse.' },
           { boldLabel: 'Oppbevaring:', text: 'Data oppbevares så lenge du har en aktiv konto. Vi garanterer ikke langtidsoppbevaring.' },
-          { boldLabel: 'Sletting:', text: 'Når du sletter kontoen din, sletter vi kontodataene dine fra våre aktive systemer som en del av sletteprosessen.' },
+          { boldLabel: 'Sletting:', text: 'Når du sletter kontoen din, sletter vi kontodataene dine fra våre aktive systemer som en del av sletteprosessen. Kopier i sikkerhetskopier forsvinner etter hvert som sikkerhetskopiene utløper, innen 28 dager.' },
           { boldLabel: 'Sikkerhetsgjennomgang:', text: 'Hvis innhold rapporteres eller knyttes til misbruk, kan autoriserte behandlere gjennomgå relevante meldinger, vedlegg, kontometadata og rapportdata for å undersøke og håndheve reglene våre.' },
         ],
       },
@@ -252,10 +254,18 @@ export const legalNo = {
         paragraphs: ['Vi bruker følgende tredjepartstjenester som behandler persondata:'],
         list: [
           {
-            boldLabel: 'Supabase:',
-            text: 'Database, autentisering, realtime-funksjoner og fillagring. Les deres {link}.',
+            boldLabel: 'netcup:',
+            text: 'Serverleverandør. netcup leier ut serverne i Tyskland der dataene dine lagres. Les deres {link}.',
             link: {
-              href: 'https://supabase.com/privacy',
+              href: 'https://www.netcup.com/de/kontakt/datenschutzerklaerung',
+              text: 'personvernerklæring',
+            },
+          },
+          {
+            boldLabel: 'Cloudflare:',
+            text: 'Nettverkssikkerhet og levering. Trafikken mellom appen og serverne våre går gjennom Cloudflare, som også drifter denne nettsiden og lagrer sikkerhetskopiene våre i EU. Les deres {link}.',
+            link: {
+              href: 'https://www.cloudflare.com/privacypolicy/',
               text: 'personvernerklæring',
             },
           },
@@ -300,7 +310,7 @@ export const legalNo = {
       },
       {
         heading: '7. Sikkerhet',
-        paragraphs: ['Vi bruker bransjestandard sikkerhetstiltak inkludert passordhasher, HTTPS-kryptering, sikre autentiseringsmekanismer via Supabase og lagring av økttokens i iOS-nøkkelringen på enheten din.'],
+        paragraphs: ['Vi bruker bransjestandard sikkerhetstiltak inkludert passordhasher, HTTPS-kryptering, sikre autentiseringsmekanismer og lagring av økttokens i iOS-nøkkelringen på enheten din.'],
       },
       {
         heading: '8. Endringer i personvernerklæringen',
@@ -314,7 +324,7 @@ export const legalNo = {
   },
   security: {
     meta: {
-      title: 'Retningslinjer for sikkerhetsrapportering — Tidex',
+      title: 'Retningslinjer for sikkerhetsrapportering | Tidex',
       description: 'Hvordan rapportere sikkerhetssårbarheter til Tidex på en ansvarlig måte.',
     },
     title: 'Retningslinjer for sikkerhetsrapportering',

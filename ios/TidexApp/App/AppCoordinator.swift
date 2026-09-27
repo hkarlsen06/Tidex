@@ -235,6 +235,7 @@ final class AppCoordinator: ObservableObject {
   private var friendsRealtimeTask: Task<Void, Never>?
   private var appActiveObserver: AnyCancellable?
   private var backgroundTasks: [Task<Void, Never>] = []
+  private var foregroundTask: Task<Void, Never>?
   private var didReceiveInitialSession = false
   private var isUpdatingAuthState = false
   private var isUserInitiatedSignOutInProgress = false
@@ -282,6 +283,7 @@ final class AppCoordinator: ObservableObject {
     friendsRealtimeTask?.cancel()
     appActiveObserver?.cancel()
     backgroundTasks.forEach { $0.cancel() }
+    foregroundTask?.cancel()
   }
 
   private func setupFriendsRealtimeLifecycle() {
@@ -368,7 +370,7 @@ final class AppCoordinator: ObservableObject {
       let session = try await AuthSessionManager.shared.getSession(allowProactiveRefresh: false)
       resetLaunchSessionTimeoutCount()
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-      // Returning user — skip MFA, go straight to terms check
+      if routeToMFAIfRequired(session) { return }
       await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
     } catch {
       if isLaunchSessionTimeoutError(error) {
@@ -441,6 +443,7 @@ final class AppCoordinator: ObservableObject {
         isUpdatingAuthState = false
 
         if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+          if routeToMFAIfRequired(session) { return }
           launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
           AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
           loadOnboardingStateFromUser(session.user)
@@ -500,9 +503,9 @@ final class AppCoordinator: ObservableObject {
           if let session {
             AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
             resetLaunchSessionTimeoutCount()
-            // Returning user with existing session — skip MFA (already at AAL2
-            // from a previous login) and go straight to terms check.
-            // MFA is only checked on fresh login (.signedIn).
+            // A session left at aal1 (for example the app was killed on the MFA
+            // screen) must still verify MFA. The check is local, so it works offline.
+            if routeToMFAIfRequired(session) { break }
             await checkTermsAndUpdateState(
               initialSession: session,
               allowProactiveRefresh: false
@@ -541,6 +544,11 @@ final class AppCoordinator: ObservableObject {
               "is_expected_sign_out": .bool(isExpectedSignOut),
             ]
           )
+          if !isExpectedSignOut {
+            // The SDK ended the session (for example a revoked refresh token). The
+            // server calls need a session, but the device-local cleanup still applies.
+            await clearSignedOutDeviceState()
+          }
           applySignedOutState()
 
         case .tokenRefreshed:
@@ -602,6 +610,7 @@ final class AppCoordinator: ObservableObject {
       // will be re-checked on the next foreground or successful network call.
       launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
       if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
+        if routeToMFAIfRequired(session) { return }
         loadOnboardingStateFromUser(session.user)
         userId = session.user.normalizedId
       }
@@ -632,9 +641,54 @@ final class AppCoordinator: ObservableObject {
         await checkTermsAndUpdateState()
       }
     } catch {
-      // If MFA check fails, check terms and let backend handle MFA
+      // Fall back to the stored session so a failed check can't skip MFA.
+      if let session = await AuthSessionManager.shared.getSessionIfAvailable(
+        allowProactiveRefresh: false
+      ), routeToMFAIfRequired(session) {
+        return
+      }
       await checkTermsAndUpdateState()
     }
+  }
+
+  /// Routes to MFA when the session is aal1 and the user has a verified TOTP factor.
+  /// Reads the aal claim from the access token and factors from the stored user, so it
+  /// needs no network.
+  /// - Returns: true if the app moved to `.mfaRequired`.
+  private func routeToMFAIfRequired(_ session: Session) -> Bool {
+    guard
+      Self.assuranceLevel(fromAccessToken: session.accessToken) != "aal2",
+      let factor = session.user.factors?.first(where: {
+        $0.factorType == "totp" && $0.status == .verified
+      })
+    else {
+      return false
+    }
+
+    pendingMFAFactor = AuthService.MFAFactor(
+      id: factor.id,
+      type: factor.factorType,
+      friendlyName: factor.friendlyName,
+      status: factor.status.rawValue
+    )
+    appState = .mfaRequired
+    return true
+  }
+
+  /// Decodes the `aal` claim from a JWT access token without verifying it.
+  nonisolated static func assuranceLevel(fromAccessToken token: String) -> String? {
+    let segments = token.split(separator: ".")
+    guard segments.count == 3 else { return nil }
+    var base64 = segments[1]
+      .replacingOccurrences(of: "-", with: "+")
+      .replacingOccurrences(of: "_", with: "/")
+    base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
+    guard let data = Data(base64Encoded: base64),
+      let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    else {
+      return nil
+    }
+    return payload["aal"] as? String
   }
 
   // MARK: - Terms Acceptance Check
@@ -741,6 +795,7 @@ final class AppCoordinator: ObservableObject {
   private func cancelAllBackgroundTasks() {
     backgroundTasks.forEach { $0.cancel() }
     backgroundTasks.removeAll()
+    cancelForegroundWork()
   }
 
   /// Run a background task and track it for cancellation/cleanup.
@@ -967,116 +1022,133 @@ final class AppCoordinator: ObservableObject {
     }
   }
 
+  /// Delay before foreground work starts. iOS 26 and later can post didBecomeActive
+  /// while the device locks or the app moves to the background.
+  private static let foregroundDebounce: Duration = .milliseconds(300)
+
   /// Called when app returns to foreground
   /// Triggers a sync with interval guard (won't sync if recent sync occurred)
   func handleAppForeground() {
     guard appState == .authenticated else { return }
 
-    runTrackedTask { [weak self] in
-      guard let self else { return }
-      do {
-        // Use AuthSessionManager to prevent concurrent refresh race conditions
-        let session = try await AuthSessionManager.shared.getSession()
-        await MainActor.run {
-          self.resetLaunchSessionTimeoutCount()
-        }
-        let userId = session.normalizedUserId
-
-        // If userId already exists, ensure it matches the current session
-        let currentUserId = await Task { @MainActor in self.userId }.value
-        if let currentUserId, currentUserId != userId {
-          return
-        }
-
-        if let appDelegate = await MainActor.run(body: {
-          (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
-        }) {
-          await appDelegate.registerCachedAPNsTokenIfNeeded()
-        }
-
-        await syncCoordinator.loadTrackingState(userId: userId)
-        _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
-
-        let currentUserIdAfterSync = await Task { @MainActor in self.userId }.value
-        if let currentUserIdAfterSync, currentUserIdAfterSync != userId {
-          return
-        }
-        await Task { @MainActor in
-          await NotificationService.shared.refreshApplicationBadgeCount(viewerUserId: userId)
-        }.value
-
-        // Re-evaluate completed-shift celebration after foreground sync (or sync skip).
-        await Task { @MainActor in
-          if let currentUserId = self.userId, currentUserId != userId { return }
-          ShiftCompletionCelebrationManager.shared.checkForCelebrationFromLocal(userId: userId)
-        }.value
-      } catch {
-        if await AuthSessionManager.shared.isSessionRevokedError(error) {
-          launchLog.warning(
-            "[Auth] Foreground session fetch detected revoked session; transitioning to unauthenticated"
-          )
-          await MainActor.run {
-            AuthDiagnosticsReporter.shared.record(
-              .revokedSessionDetected,
-              severity: .error,
-              userId: self.userId,
-              appState: String(describing: self.appState),
-              error: error,
-              metadata: self.authFailureMetadata(
-                error,
-                reason: "foreground_revoked_session",
-                previousState: self.appState
-              )
-            )
-          }
-          try? await supabase.auth.signOut(scope: .local)
-          Task { @MainActor [weak self] in
-            guard let self else { return }
-            await clearAllCachedData()
-            applySignedOutState()
-          }
-          return
-        }
-
-        if await AuthSessionManager.shared.isTransientNetworkError(error)
-          || (error as? AuthSessionManagerError) != nil
-        {
-          launchLog.warning(
-            "[Auth] Foreground session fetch transient failure; keeping authenticated state")
-          await MainActor.run {
-            AuthDiagnosticsReporter.shared.record(
-              .foregroundSessionFailed,
-              severity: .warning,
-              userId: self.userId,
-              appState: String(describing: self.appState),
-              error: error,
-              metadata: self.authFailureMetadata(
-                error,
-                reason: "foreground_transient_failure",
-                previousState: self.appState
-              )
-            )
-          }
-          return
-        }
-
-        launchLog.warning(
-          "[Auth] Foreground session fetch failed: \(error.localizedDescription, privacy: .public)")
-        await MainActor.run {
-          AuthDiagnosticsReporter.shared.record(
-            .foregroundSessionFailed,
-            severity: .warning,
-            userId: self.userId,
-            appState: String(describing: self.appState),
-            error: error,
-            metadata: self.authFailureMetadata(
-              error,
-              reason: "foreground_session_failure",
-              previousState: self.appState
-            )
-          )
-        }
+    foregroundTask?.cancel()
+    foregroundTask = Task { [weak self] in
+      try? await Task.sleep(for: Self.foregroundDebounce)
+      guard !Task.isCancelled, let self, self.appState == .authenticated,
+        Self.hasForegroundActiveScene()
+      else {
+        return
       }
+      await refreshAfterForeground()
+    }
+  }
+
+  /// Cancels pending foreground work. Called when the app resigns active or enters
+  /// the background.
+  func cancelForegroundWork() {
+    foregroundTask?.cancel()
+    foregroundTask = nil
+  }
+
+  private static func hasForegroundActiveScene() -> Bool {
+    UIApplication.shared.connectedScenes.contains { $0.activationState == .foregroundActive }
+  }
+
+  private func refreshAfterForeground() async {
+    do {
+      // Use AuthSessionManager to prevent concurrent refresh race conditions
+      let session = try await AuthSessionManager.shared.getSession()
+      guard !Task.isCancelled else { return }
+      resetLaunchSessionTimeoutCount()
+      let userId = session.normalizedUserId
+
+      // If userId already exists, ensure it matches the current session
+      if let currentUserId = self.userId, currentUserId != userId {
+        return
+      }
+
+      if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
+        await appDelegate.registerCachedAPNsTokenIfNeeded()
+      }
+
+      // An offline launch may have skipped StoreKit verification.
+      await StoreKitManager.shared.updateCurrentEntitlements()
+
+      await syncCoordinator.loadTrackingState(userId: userId)
+      _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
+
+      if let currentUserIdAfterSync = self.userId, currentUserIdAfterSync != userId {
+        return
+      }
+      await NotificationService.shared.refreshApplicationBadgeCount(viewerUserId: userId)
+
+      // Re-evaluate completed-shift celebration after foreground sync (or sync skip).
+      if let currentUserId = self.userId, currentUserId != userId { return }
+      ShiftCompletionCelebrationManager.shared.checkForCelebrationFromLocal(userId: userId)
+    } catch {
+      // Work cancelled by resign-active or background is not a session failure.
+      guard !Task.isCancelled else { return }
+
+      if AuthSessionManager.shared.isSessionRevokedError(error) {
+        launchLog.warning(
+          "[Auth] Foreground session fetch detected revoked session; transitioning to unauthenticated"
+        )
+        AuthDiagnosticsReporter.shared.record(
+          .revokedSessionDetected,
+          severity: .error,
+          userId: userId,
+          appState: String(describing: appState),
+          error: error,
+          metadata: authFailureMetadata(
+            error,
+            reason: "foreground_revoked_session",
+            previousState: appState
+          )
+        )
+        try? await supabase.auth.signOut(scope: .local)
+        // Run outside this task: clearAllCachedData() cancels foregroundTask.
+        Task { @MainActor [weak self] in
+          guard let self else { return }
+          await clearAllCachedData()
+          applySignedOutState()
+        }
+        return
+      }
+
+      if AuthSessionManager.shared.isTransientNetworkError(error)
+        || (error as? AuthSessionManagerError) != nil
+      {
+        launchLog.warning(
+          "[Auth] Foreground session fetch transient failure; keeping authenticated state")
+        AuthDiagnosticsReporter.shared.record(
+          .foregroundSessionFailed,
+          severity: .warning,
+          userId: userId,
+          appState: String(describing: appState),
+          error: error,
+          metadata: authFailureMetadata(
+            error,
+            reason: "foreground_transient_failure",
+            previousState: appState
+          )
+        )
+        return
+      }
+
+      launchLog.warning(
+        "[Auth] Foreground session fetch failed: \(error.localizedDescription, privacy: .public)")
+      AuthDiagnosticsReporter.shared.record(
+        .foregroundSessionFailed,
+        severity: .warning,
+        userId: userId,
+        appState: String(describing: appState),
+        error: error,
+        metadata: authFailureMetadata(
+          error,
+          reason: "foreground_session_failure",
+          previousState: appState
+        )
+      )
     }
   }
 
@@ -1134,6 +1206,16 @@ final class AppCoordinator: ObservableObject {
     await performSignOut(global: true)
   }
 
+  /// Pushes local changes before a user-initiated sign-out.
+  /// - Returns: false when changes are still unsynced, so signing out would delete them.
+  func syncPendingChangesBeforeSignOut() async -> Bool {
+    guard let userId else { return true }
+    _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+    let hasPendingChanges =
+      (try? await LocalStore.shared.storeActor.hasPendingChanges(userId: userId)) ?? true
+    return !hasPendingChanges
+  }
+
   /// Internal sign out implementation
   /// - Parameter global: If true, signs out from all devices; if false, only this device
   private func performSignOut(global: Bool) async {
@@ -1150,6 +1232,10 @@ final class AppCoordinator: ObservableObject {
     // Remove the authenticated device association before destroying the session so
     // a signed-out device cannot receive push-to-start Live Activity notifications.
     await LiveActivityPushTokenService.shared.unregisterCurrentDevice()
+    // Same for APNs, so the next user of this device doesn't get this user's pushes.
+    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
+      await appDelegate.unregisterCachedAPNsToken()
+    }
 
     // Clear all cached data
     await clearAllCachedData()
@@ -1172,27 +1258,19 @@ final class AppCoordinator: ObservableObject {
   /// Clear all cached data without signing out
   /// Used during sign out and when switching user context (impersonation)
   private func clearAllCachedData() async {
+    // Stop messaging realtime first so in-flight callbacks can't write the previous
+    // user's threads back after the local store is reset.
+    friendsRealtimeTask?.cancel()
+    await FriendsMessagingRealtimeCoordinator.shared.stopForAuthenticatedUser()
+
     // Cancel all tracked background tasks to prevent stale state updates
     cancelAllBackgroundTasks()
     resetPayrollCaches()
 
-    // Invalidate any queued widget refreshes before clearing shared state so
-    // background tasks cannot repopulate App Group data after sign-out.
-    await NativeWidgetStorage.invalidatePendingRefreshes()
-
-    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
-      await appDelegate.endAllLiveActivities(reason: "auth/session context reset")
-    }
+    await clearSignedOutDeviceState()
 
     // Reset in-memory Wagey state so consent/chat state cannot leak across users
     WageyViewModel.shared.resetForUserChange()
-
-    // Clear widget storage
-    NativeWidgetStorage.clearWidgetStorage()
-    NativeWidgetStorage.clearFriendWidgetStorage()
-
-    // Clear the access token shared with iPhone extensions.
-    AuthSessionManager.shared.clearSharedKeychain()
     CalendarSubscriptionStore.shared.resetForUserChange()
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
 
@@ -1223,6 +1301,24 @@ final class AppCoordinator: ObservableObject {
     initialSyncComplete = false
   }
 
+  /// Device-local cleanup that needs no session: widgets, the extension keychain token,
+  /// and Live Activities. Also runs when the SDK signs the user out on its own.
+  private func clearSignedOutDeviceState() async {
+    // Invalidate any queued widget refreshes before clearing shared state so
+    // background tasks cannot repopulate App Group data after sign-out.
+    await NativeWidgetStorage.invalidatePendingRefreshes()
+
+    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
+      await appDelegate.endAllLiveActivities(reason: "auth/session context reset")
+    }
+
+    NativeWidgetStorage.clearWidgetStorage()
+    NativeWidgetStorage.clearFriendWidgetStorage()
+
+    // Clear the access token shared with iPhone extensions.
+    AuthSessionManager.shared.clearSharedKeychain()
+  }
+
   private func resetPayrollCaches() {
     StatsService.shared.clearCache()
     MonthlyPayrollReadService.shared.invalidateSharedCache()
@@ -1233,6 +1329,7 @@ final class AppCoordinator: ObservableObject {
     isUserInitiatedSignOutInProgress = false
     appState = .unauthenticated
     pendingMFAFactor = nil
+    pendingDeepLink = nil
     userId = nil
     userDisplayName = ""
     userAvatarUrl = nil
@@ -1248,9 +1345,9 @@ final class AppCoordinator: ObservableObject {
     appState = .loading
 
     do {
-      if try await authService.getSession() != nil {
+      if let session = try await authService.getSession() {
         resetLaunchSessionTimeoutCount()
-        // Recovery / manual refresh — skip MFA, just check terms
+        if routeToMFAIfRequired(session) { return }
         await checkTermsAndUpdateState()
       } else {
         appState = .unauthenticated

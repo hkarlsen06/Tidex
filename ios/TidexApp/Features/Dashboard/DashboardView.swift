@@ -282,10 +282,11 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         Group {
           if shouldShowWorkSetupRequiredPlaceholder {
             WorkSetupRequiredPlaceholder()
+          } else if let data = viewModel.dashboardData {
+            // Keep loaded content visible when a later refresh fails
+            cardContent(data: data)
           } else if let error = viewModel.error {
             errorView(error: error)
-          } else if let data = viewModel.dashboardData {
-            cardContent(data: data)
           } else {
             // Show skeleton cards with shimmer while loading or waiting for sync
             // This provides a consistent visual preview of the layout
@@ -839,6 +840,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         Image(systemName: "calendar")
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextSecondary)
+          .accessibilityHidden(true)
         Text(.addShiftEventAllDay)
           .font(.tidexLabel)
           .foregroundColor(.tidexTextSecondary)
@@ -1035,7 +1037,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       VStack(spacing: Spacing.lg) {  // swiftlint:disable:this closure_body_length
         // Total Card (Displayed Month) - THE ANCHOR
         // Numbers animate smoothly when values change
-        TotalCard(
+        // The button trait is conditional: the tap only acts with mixed currencies
+        TotalCard(  // swiftlint:disable:this accessibility_trait_for_button
           gross: data.currentMonthGross,
           net: data.currentMonthNet,
           completedGross: data.currentMonthCompletedGross,
@@ -1053,6 +1056,11 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             showMixedCurrencyBreakdownPopover.toggle()
           }
         }
+        .accessibilityAddTraits(data.currentMonthCurrencyAggregate.hasMixedCurrency ? .isButton : [])
+        .accessibilityHint(
+          data.currentMonthCurrencyAggregate.hasMixedCurrency
+            ? Text(.dashboardTotalMixedCurrencyHint) : Text(verbatim: "")
+        )
         .popover(isPresented: $showMixedCurrencyBreakdownPopover) {
           MixedCurrencyBreakdownPopover(entries: data.currentMonthCurrencyAggregate.secondary)
             .presentationCompactAdaptation(.popover)
@@ -1270,6 +1278,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         impactHaptic.impactOccurred()
         selectedPayrollDetailsVariant = selectedVariant
       }
+      .accessibilityElement(children: .combine)
+      .accessibilityAddTraits(.isButton)
+      .accessibilityHint(Text(.dashboardPayrollDetailsTitle))
       .contextMenu {
         if canManuallySetPayrollStatus, !isLoading {
           Button {
@@ -1305,6 +1316,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         Image(systemName: "clock.arrow.circlepath")
           .font(.tidexCaptionRegular.weight(.semibold))
           .foregroundColor(.tidexTextSecondary)
+          .accessibilityHidden(true)
 
         Text(.dashboardSeePreviousPayout)
           .font(.tidexLabelStrong)
@@ -1353,6 +1365,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             await presentTemporaryClockReview(session)
           }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
       } else if let featuredItem = data.featuredItem {
         switch featuredItem {
         case .shift(let featuredShift):
@@ -1388,6 +1402,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
               selectedShift = featuredShift
             }
           }
+          .accessibilityElement(children: .combine)
+          .accessibilityAddTraits(.isButton)
 
         case .event(let event, let coveredDateISO):  // swiftlint:disable:this pattern_matching_keywords
           VStack(spacing: Spacing.sm) {
@@ -1551,6 +1567,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       Image(systemName: "exclamationmark.triangle")
         .font(.system(size: 48))  // swiftlint:disable:this no_magic_numbers
         .foregroundColor(.tidexWarning)
+        .accessibilityHidden(true)
 
       Text(.dashboardLoadError)
         .font(.tidexBodyMedium)

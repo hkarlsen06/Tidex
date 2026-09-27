@@ -1,21 +1,7 @@
 import SwiftUI
 import WidgetKit
 
-// MARK: - Tidex Brand Color
-
-/// Tidex brand blue color - matches the app's brand gradient
-private let tidexBlue = Color(red: 77 / 255, green: 137 / 255, blue: 249 / 255)
-
-// MARK: - Currency Formatter
-
-private func formatCurrency(_ value: Double) -> String {
-  let formatter = NumberFormatter()
-  formatter.numberStyle = .decimal
-  formatter.minimumFractionDigits = 0
-  formatter.maximumFractionDigits = 0
-  formatter.groupingSeparator = " "
-  return formatter.string(from: NSNumber(value: value)) ?? "\(Int(value))"
-}
+private let tidexBlue = WidgetPalette.blue
 
 // MARK: - Before Tax Helper
 
@@ -24,8 +10,19 @@ private func beforeTaxText(
   currencySymbol: String
 ) -> String {
   let label = String(localized: .widgetBeforeTax)
-  let amount = formatCurrency(context.attributes.totalGrossEstimate)
-  return "\(label): \(amount) \(currencySymbol)"
+  let amount = WidgetCurrencyFormatter.format(
+    context.attributes.totalGrossEstimate, currency: currencySymbol)
+  return "\(label): \(amount)"
+}
+
+/// Shift timers count down and stop at zero when the shift ends.
+/// Temporary clocks have no planned end, so they keep counting up from their start.
+private func shiftTimerText(_ attributes: ShiftActivityAttributes) -> Text {
+  if isTemporaryClockActivity(attributes) {
+    return Text(attributes.endDate, style: .timer)
+  }
+  let end = max(attributes.startDate, attributes.endDate)
+  return Text(timerInterval: attributes.startDate...end, countsDown: true)
 }
 
 private func isTemporaryClockActivity(_ attributes: ShiftActivityAttributes) -> Bool {
@@ -80,7 +77,7 @@ struct LockScreenLiveActivityView: View {
           Image(systemName: "clock.fill")
             .font(.system(size: 14))
             .foregroundColor(tidexBlue)
-          Text(context.attributes.endDate, style: .timer)
+          shiftTimerText(context.attributes)
             .font(.system(size: 20, weight: .bold, design: .rounded))
             .monospacedDigit()
             .lineLimit(1)
@@ -109,7 +106,7 @@ struct LockScreenLiveActivityView: View {
             .foregroundColor(tidexBlue)
         } else {
           // Primary amount (net or gross)
-          Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
+          Text(WidgetCurrencyFormatter.format(displayAmount, currency: currencySymbol))
             .font(.system(size: 22, weight: .bold, design: .rounded))
             .monospacedDigit()
             .foregroundColor(tidexBlue)
@@ -139,7 +136,7 @@ struct CompactLeadingView: View {
         .font(.system(size: 12))
         .foregroundColor(tidexBlue)
       // SwiftUI timer automatically counts down
-      Text(context.attributes.endDate, style: .timer)
+      shiftTimerText(context.attributes)
         .font(.system(size: 13, weight: .semibold, design: .rounded))
         .monospacedDigit()
     }
@@ -168,7 +165,7 @@ struct CompactTrailingView: View {
         .font(.system(size: 13, weight: .semibold, design: .rounded))
         .foregroundColor(tidexBlue)
     } else {
-      Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
+      Text(WidgetCurrencyFormatter.format(displayAmount, currency: currencySymbol))
         .font(.system(size: 13, weight: .semibold, design: .rounded))
         .monospacedDigit()
         .foregroundColor(tidexBlue)
@@ -208,7 +205,7 @@ struct ExpandedView: View {
           Image(systemName: "clock.fill")
             .font(.system(size: 12))
             .foregroundColor(tidexBlue)
-          Text(context.attributes.endDate, style: .timer)
+          shiftTimerText(context.attributes)
             .font(.system(size: 16, weight: .bold, design: .rounded))
             .monospacedDigit()
         }
@@ -235,7 +232,7 @@ struct ExpandedView: View {
             .foregroundColor(tidexBlue)
         } else {
           // Net amount
-          Text("\(formatCurrency(displayAmount)) \(currencySymbol)")
+          Text(WidgetCurrencyFormatter.format(displayAmount, currency: currencySymbol))
             .font(.system(size: 18, weight: .bold, design: .rounded))
             .monospacedDigit()
             .foregroundColor(tidexBlue)

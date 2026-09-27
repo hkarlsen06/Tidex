@@ -89,9 +89,12 @@ struct ConflictExclusion {
 
         // Sort by gross earnings ascending (lowest first).
         // Keep original order for equal gross values to match web behavior.
+        // Rank by gross before overtime: PayrollEngine decides exclusions before applying it.
         let sorted = cluster.enumerated().sorted { lhs, rhs in
-          if lhs.element.grossPay != rhs.element.grossPay {
-            return lhs.element.grossPay < rhs.element.grossPay
+          let lhsGross = lhs.element.computed.preOvertimeGross ?? lhs.element.grossPay
+          let rhsGross = rhs.element.computed.preOvertimeGross ?? rhs.element.grossPay
+          if lhsGross != rhsGross {
+            return lhsGross < rhsGross
           }
           return lhs.offset < rhs.offset
         }.map(\.element)

@@ -1,7 +1,7 @@
 import WidgetKit
 
 /// Timeline entry for the Friend's Shift Widget
-internal struct FriendShiftWidgetEntry: TimelineEntry {
+internal struct FriendShiftWidgetEntry: ShiftTimelineEntry {
   /// The date for this timeline entry (used by WidgetKit for scheduling)
   internal let date: Date
 
@@ -50,6 +50,12 @@ internal struct FriendShiftWidgetEntry: TimelineEntry {
 
   /// Deep link URL to open the friend in the app
   internal let deepLinkURL: URL?
+
+  /// Real start instant of the shift
+  internal var shiftStart: Date?
+
+  /// Real end instant of the shift (next day for night shifts)
+  internal var shiftEnd: Date?
 
   // MARK: - Factory Methods
 

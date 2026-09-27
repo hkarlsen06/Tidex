@@ -51,6 +51,10 @@ struct ProfileSettingsView: View {
   @State private var isSigningOutGlobal = false
   /// Whether to show the global sign out confirmation alert
   @State private var showSignOutEverywhereAlert = false
+  /// Whether to warn that signing out deletes unsynced changes
+  @State private var showUnsyncedSignOutAlert = false
+  /// Whether the unsynced-changes warning belongs to a global sign out
+  @State private var unsyncedSignOutIsGlobal = false
   /// Whether to show the display name edit alert
   @State private var showNameEditAlert = false
   /// Whether to show the username edit alert
@@ -180,6 +184,23 @@ struct ProfileSettingsView: View {
       }
     } message: {
       Text(.userMenuLogoutEverywhereConfirmDescription)
+    }
+    .alert(
+      String(localized: .profileSignOutUnsyncedTitle),
+      isPresented: $showUnsyncedSignOutAlert
+    ) {
+      Button(String(localized: .commonCancel), role: .cancel) {}
+      Button(String(localized: .profileSignOutUnsyncedConfirm), role: .destructive) {
+        Task {
+          if unsyncedSignOutIsGlobal {
+            await signOutGlobal(discardingUnsyncedChanges: true)
+          } else {
+            await signOut(discardingUnsyncedChanges: true)
+          }
+        }
+      }
+    } message: {
+      Text(.profileSignOutUnsyncedMessage)
     }
     .photosPicker(
       isPresented: $showGalleryPicker,
@@ -922,15 +943,27 @@ struct ProfileSettingsView: View {
     showImageSourcePicker = true
   }
 
-  private func signOut() async {
+  private func signOut(discardingUnsyncedChanges: Bool = false) async {
     isSigningOut = true
+    if !discardingUnsyncedChanges, !(await coordinator.syncPendingChangesBeforeSignOut()) {
+      isSigningOut = false
+      unsyncedSignOutIsGlobal = false
+      showUnsyncedSignOutAlert = true
+      return
+    }
     await coordinator.signOut()
     dismiss()
     isSigningOut = false
   }
 
-  private func signOutGlobal() async {
+  private func signOutGlobal(discardingUnsyncedChanges: Bool = false) async {
     isSigningOutGlobal = true
+    if !discardingUnsyncedChanges, !(await coordinator.syncPendingChangesBeforeSignOut()) {
+      isSigningOutGlobal = false
+      unsyncedSignOutIsGlobal = true
+      showUnsyncedSignOutAlert = true
+      return
+    }
     await coordinator.signOutGlobal()
     dismiss()
     isSigningOutGlobal = false

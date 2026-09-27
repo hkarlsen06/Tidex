@@ -411,8 +411,21 @@ async function markNotificationSeen(
 
     if (error) {
       if (error.code === "23505") {
-        // Duplicate notification
-        return { ok: true, isDuplicate: true };
+        // Seen before. Only skip it if an earlier delivery finished processing;
+        // otherwise this is Apple retrying after a failure.
+        const { data: seen, error: seenError } = await supabaseAdmin
+          .schema("internal").from("apple_notifications")
+          .select("processed_at")
+          .eq("id", notificationUUID)
+          .maybeSingle();
+        if (seenError) {
+          console.error(
+            "[apple-notifications] processed_at lookup failed:",
+            seenError.message,
+          );
+          return { ok: false, isDuplicate: false };
+        }
+        return { ok: true, isDuplicate: !!seen?.processed_at };
       }
       console.error(
         "[apple-notifications] markNotificationSeen failed:",
@@ -592,12 +605,13 @@ async function upsertSubscriptionFromNotification(
     if (error) {
       // Handle unique constraint violation
       if (error.code === "23505") {
-        // Try update instead
+        // subscriptions has one row per user. The user already has a row from
+        // another provider (Stripe, admin trial), so take it over like
+        // apple-verify-purchase does.
         const { error: updateError } = await supabaseAdmin
           .from("subscriptions")
           .update(payload)
-          .eq("user_id", userId)
-          .eq("provider", "apple");
+          .eq("user_id", userId);
 
         if (updateError) {
           console.error(
@@ -763,6 +777,22 @@ async function handleRequest(req: Request): Promise<Response> {
       );
     }
 
+    // Consumables (Wagey credits) and other one-time purchases are not
+    // subscriptions. apple-verify-purchase credits them.
+    if (transactionInfo.type !== "Auto-Renewable Subscription") {
+      console.log(
+        `[apple-notifications] Ignoring ${notificationType} for non-subscription transaction type=${transactionInfo.type}, product=${transactionInfo.productId}`,
+      );
+      await markNotificationProcessed(notificationUUID);
+      return new Response(
+        JSON.stringify({ received: true, ignored: "not a subscription" }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
     // Update subscription
     const result = await upsertSubscriptionFromNotification(
       transactionInfo,
@@ -780,11 +810,11 @@ async function handleRequest(req: Request): Promise<Response> {
       );
     }
 
-    // Always return 200 to Apple (they retry on non-200)
+    // Apple retries non-200 responses, which is what we want after a failure.
     return new Response(
       JSON.stringify({ received: true, processed: result.success }),
       {
-        status: 200,
+        status: result.success ? 200 : 500,
         headers: { "Content-Type": "application/json" },
       },
     );
@@ -793,11 +823,11 @@ async function handleRequest(req: Request): Promise<Response> {
       "[apple-notifications] Exception:",
       e instanceof Error ? e.message : e,
     );
-    // Return 200 to prevent Apple from retrying indefinitely
+    // Apple retries with backoff for a limited period, so a 500 is safe.
     return new Response(
       JSON.stringify({ received: true, error: "Processing error" }),
       {
-        status: 200,
+        status: 500,
         headers: { "Content-Type": "application/json" },
       },
     );

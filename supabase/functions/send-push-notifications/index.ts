@@ -61,6 +61,7 @@ export interface OutboxNotification {
   idempotency_key: string;
   created_at: string;
   claimed_at?: string | null;
+  attempts?: number;
 }
 
 type ApnsEnvironment = "production" | "sandbox";
@@ -93,6 +94,7 @@ interface DeviceSendAttemptResult {
   alertLatencyMs?: number;
   prefetchLatencyMs?: number;
   confirmedApnsEnvironment?: ApnsEnvironment;
+  retryable?: boolean;
 }
 
 const richFormattingTypes = new Set([
@@ -1028,12 +1030,7 @@ async function sendPayloadToApns(
   apnsHeaders: Record<string, string>,
   logLabel: string,
   preferredEnvironment?: ApnsEnvironment | null,
-): Promise<{
-  success: boolean;
-  invalidToken?: boolean;
-  environment?: ApnsEnvironment;
-  latencyMs?: number;
-}> {
+): Promise<ApnsSendResult> {
   // Try production first, then sandbox
   // This handles mixed environments (App Store + TestFlight users)
   const environments = buildApnsEnvironmentOrder(preferredEnvironment).map(
@@ -1046,15 +1043,13 @@ async function sendPayloadToApns(
     }),
   );
 
-  // Check if sandbox credentials are configured
+  // Skip sandbox if its credentials are not configured
   const sandboxConfigured = !!(APNS_SANDBOX_KEY_ID && APNS_SANDBOX_PRIVATE_KEY);
+  const attemptEnvironments = environments.filter((env) =>
+    !env.sandbox || sandboxConfigured
+  );
 
-  for (const env of environments) {
-    // Skip sandbox if not configured
-    if (env.sandbox && !sandboxConfigured) {
-      continue;
-    }
-
+  for (const [index, env] of attemptEnvironments.entries()) {
     const jwtToken = await getApnsToken(env.sandbox);
     const apnsUrl = `https://${env.host}/3/device/${apnsToken}`;
     const requestStartedAt = performance.now();
@@ -1090,30 +1085,95 @@ async function sendPayloadToApns(
       errorBody,
     );
 
-    // If BadDeviceToken on production, try sandbox (device might be from TestFlight)
-    if (
-      status === 400 && errorBody.includes("BadDeviceToken") && !env.sandbox
-    ) {
-      console.log("[APNs] BadDeviceToken on production, trying sandbox...");
+    const outcome = classifyApnsFailure(
+      status,
+      errorBody,
+      index === attemptEnvironments.length - 1,
+    );
+    if (outcome === "try_next_environment") {
+      console.log(`[APNs] BadDeviceToken via ${env.host}, trying next...`);
       continue;
     }
-
-    // 410 Unregistered means token is truly invalid (user uninstalled app)
-    if (status === 410) {
-      return { success: false, invalidToken: true };
-    }
-
-    // Other 400 errors (BadDeviceToken after both attempts) mean invalid token
-    if (status === 400) {
-      // Only mark as invalid if this is the last attempt
-      if (env.sandbox || !sandboxConfigured) {
-        return { success: false, invalidToken: true };
-      }
-    }
+    return {
+      success: false,
+      invalidToken: outcome === "invalid_token",
+      retryable: outcome === "retryable",
+    };
   }
 
-  // All attempts failed for a delivery reason that does not prove the token is invalid.
+  // Only reached when no environment was attempted.
   return { success: false };
+}
+
+type ApnsSendResult = {
+  success: boolean;
+  invalidToken?: boolean;
+  retryable?: boolean;
+  environment?: ApnsEnvironment;
+  latencyMs?: number;
+};
+
+const INVALID_APNS_TOKEN_REASONS = new Set([
+  "BadDeviceToken",
+  "DeviceTokenNotForTopic",
+]);
+
+/**
+ * Only 410 Unregistered and the token-specific 400 reasons prove the token is
+ * dead. A token from the other APNs environment also reads as BadDeviceToken,
+ * so that reason only counts on the last environment. Other 400s (bad payload,
+ * bad topic) and 403s are our bug, not the device's.
+ */
+export function classifyApnsFailure(
+  status: number,
+  errorBody: string,
+  isLastEnvironment: boolean,
+): "try_next_environment" | "invalid_token" | "retryable" | "failed" {
+  let reason: unknown = null;
+  try {
+    reason = JSON.parse(errorBody)?.reason ?? null;
+  } catch {
+    // APNs always sends JSON, but a proxy error page may not be.
+  }
+
+  if (reason === "BadDeviceToken" && !isLastEnvironment) {
+    return "try_next_environment";
+  }
+  if (
+    status === 410 ||
+    (status === 400 && INVALID_APNS_TOKEN_REASONS.has(reason as string))
+  ) {
+    return "invalid_token";
+  }
+  if (status === 429 || status >= 500) return "retryable";
+  return "failed";
+}
+
+// Matches the attempts < 10 cap in internal.claim_outbox_notifications.
+const MAX_OUTBOX_ATTEMPTS = 10;
+
+/** Put a transient failure back in the queue until the attempt cap. */
+export function retryOrFailOutboxUpdate(
+  notifications: Array<Pick<OutboxNotification, "attempts">>,
+  errorMessage: string,
+  now = new Date(),
+): Record<string, unknown> {
+  const attempts =
+    Math.max(0, ...notifications.map((entry) => entry.attempts ?? 0)) + 1;
+  if (attempts >= MAX_OUTBOX_ATTEMPTS) {
+    return {
+      status: "failed",
+      attempts,
+      error_message: errorMessage,
+      processed_at: now.toISOString(),
+    };
+  }
+  return {
+    status: "pending",
+    attempts,
+    claimed_at: null,
+    error_message: errorMessage,
+  };
 }
 
 /**
@@ -1126,12 +1186,7 @@ async function sendToApns(
   notification: OutboxNotification,
   badgeCount: number,
   preferredEnvironment?: ApnsEnvironment | null,
-): Promise<{
-  success: boolean;
-  invalidToken?: boolean;
-  environment?: ApnsEnvironment;
-  latencyMs?: number;
-}> {
+): Promise<ApnsSendResult> {
   const dataPayload = publicNotificationDataPayload(notification.data_payload);
   const customData: Record<string, unknown> = {
     type: notification.notification_type,
@@ -1154,12 +1209,7 @@ async function sendPrefetchToApns(
   apnsToken: string,
   notification: OutboxNotification,
   preferredEnvironment?: ApnsEnvironment | null,
-): Promise<{
-  success: boolean;
-  invalidToken?: boolean;
-  environment?: ApnsEnvironment;
-  latencyMs?: number;
-}> {
+): Promise<ApnsSendResult> {
   const payload = buildPrefetchPayload(notification);
   const headers = buildPrefetchApnsHeaders(notification);
   if (!payload || !headers) {
@@ -1312,6 +1362,7 @@ async function sendToDevice(
     return {
       success: result.success,
       clearApnsTokenDeviceId: result.invalidToken ? device.id : undefined,
+      retryable: result.retryable,
       prefetchEligible,
       prefetchAttempted,
       prefetchSucceeded,
@@ -1635,11 +1686,26 @@ async function handleRequest(
           const anySuccess = didAnyDeliverySucceed(results);
 
           // Mark notification status
-          await markOutboxNotifications(supabase, deliverableNotificationIds, {
-            status: anySuccess ? "sent" : "failed",
-            error_message: anySuccess ? null : "All devices failed",
-            processed_at: new Date().toISOString(),
-          });
+          await markOutboxNotifications(
+            supabase,
+            deliverableNotificationIds,
+            anySuccess
+              ? {
+                status: "sent",
+                error_message: null,
+                processed_at: new Date().toISOString(),
+              }
+              : results.some((result) => result.retryable)
+              ? retryOrFailOutboxUpdate(
+                deliverableJob.notifications,
+                "All devices failed, retrying",
+              )
+              : {
+                status: "failed",
+                error_message: "All devices failed",
+                processed_at: new Date().toISOString(),
+              },
+          );
 
           if (anySuccess) processed += deliverableNotificationIds.length;
           else failed += deliverableNotificationIds.length;
@@ -1677,13 +1743,14 @@ async function handleRequest(
             error,
           );
 
-          await markOutboxNotifications(supabase, notificationIds, {
-            status: "failed",
-            error_message: error instanceof Error
-              ? error.message
-              : "Unknown error",
-            processed_at: new Date().toISOString(),
-          });
+          await markOutboxNotifications(
+            supabase,
+            notificationIds,
+            retryOrFailOutboxUpdate(
+              job.notifications,
+              error instanceof Error ? error.message : "Unknown error",
+            ),
+          );
 
           failed += notificationIds.length;
         }

@@ -56,6 +56,7 @@ final class AppLifecycleHandler {
   }
 
   func handleWillResignActive() {
+    AppCoordinator.shared.cancelForegroundWork()
     clockSessionReconciliationTask?.cancel()
     clockSessionReconciliationTask = nil
     if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
@@ -64,6 +65,7 @@ final class AppLifecycleHandler {
   }
 
   func handleDidEnterBackground() {
+    AppCoordinator.shared.cancelForegroundWork()
     clockSessionReconciliationTask?.cancel()
     clockSessionReconciliationTask = nil
     ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?.startBackgroundTask()
@@ -116,11 +118,11 @@ final class AppLifecycleHandler {
   }
 
   private func handleSupabaseCallback(_ url: URL) async {
-    let callbackParameters = authCallbackParameters(from: url)
+    let isRecovery = Self.isPasswordRecoveryCallback(url)
     do {
       _ = try await supabase.auth.session(from: url)
       print("[AppLifecycleHandler] Auth callback handled: \(url)")
-      if callbackParameters["type"] == "recovery" {
+      if isRecovery {
         NotificationCenter.default.post(name: .tidexPasswordRecoveryRequested, object: nil)
       }
     } catch {
@@ -195,7 +197,13 @@ final class AppLifecycleHandler {
     return value
   }
 
-  private func authCallbackParameters(from url: URL) -> [String: String] {
+  /// Implicit-flow recovery links carry `type=recovery`. PKCE links only carry a code,
+  /// so the reset email redirects to tidex://login-callback/recovery instead.
+  nonisolated static func isPasswordRecoveryCallback(_ url: URL) -> Bool {
+    authCallbackParameters(from: url)["type"] == "recovery" || url.path == "/recovery"
+  }
+
+  private nonisolated static func authCallbackParameters(from url: URL) -> [String: String] {
     var parameters: [String: String] = [:]
 
     if let fragment = url.fragment {
@@ -209,7 +217,7 @@ final class AppLifecycleHandler {
     return parameters
   }
 
-  private func parseQueryString(_ queryString: String) -> [String: String] {
+  private nonisolated static func parseQueryString(_ queryString: String) -> [String: String] {
     var parameters: [String: String] = [:]
 
     for pair in queryString.split(separator: "&") {

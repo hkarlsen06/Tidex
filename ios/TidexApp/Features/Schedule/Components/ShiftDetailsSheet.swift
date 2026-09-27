@@ -864,12 +864,12 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
 
     // Parse start time
-    if let startTime = parseTimeToDate(shift.startTime) {
+    if let startTime = ShiftTimeFieldFormat.pickerDate(from: shift.startTime) {
       editedStartTime = startTime
     }
 
     // Parse end time
-    if let endTime = parseTimeToDate(shift.endTime) {
+    if let endTime = ShiftTimeFieldFormat.pickerDate(from: shift.endTime) {
       editedEndTime = endTime
     }
 
@@ -877,35 +877,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     noteWasEdited = false
   }
 
-  /// Parse HH:mm string to Date (using today as base)
-  private func parseTimeToDate(_ timeString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    guard let time = formatter.date(from: String(timeString.prefix(5))) else {
-      return nil
-    }
-
-    // Combine with today's date
-    let calendar = Calendar.current
-    let now = Date()
-    var components = calendar.dateComponents([.year, .month, .day], from: now)
-    components.hour = calendar.component(.hour, from: time)
-    components.minute = calendar.component(.minute, from: time)
-    return calendar.date(from: components)
-  }
-
   /// Format Date to HH:mm string
   private func formatTimeToString(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
-  }
-
-  /// Format Date to ISO date string (YYYY-MM-DD)
-  private func formatDateToISO(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.string(from: date)
+    date.toHourMinuteString()
   }
 
   /// Check if any changes have been made
@@ -913,9 +887,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     guard let start = editedStartTime, let end = editedEndTime else {
       return false
     }
-    let newDate = formatDateToISO(editedDate)
-    let newStartTime = formatTimeToString(start)
-    let newEndTime = formatTimeToString(end)
+    let newDate = editedDate.toISODateString()
+    let newStartTime = ShiftTimeFieldFormat.storedTime(from: start, original: shift.startTime)
+    let newEndTime = ShiftTimeFieldFormat.storedTime(from: end, original: shift.endTime)
 
     return newDate != shift.shiftDate || newStartTime != String(shift.startTime.prefix(5))
       || newEndTime != String(shift.endTime.prefix(5)) || supplementsWereEdited || noteWasEdited
@@ -1025,9 +999,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       return
     }
     // Validate times (basic validation)
-    let newDate = formatDateToISO(editedDate)
-    let newStartTime = formatTimeToString(startTime)
-    let newEndTime = formatTimeToString(endTime)
+    let newDate = editedDate.toISODateString()
+    let newStartTime = ShiftTimeFieldFormat.storedTime(from: startTime, original: shift.startTime)
+    let newEndTime = ShiftTimeFieldFormat.storedTime(from: endTime, original: shift.endTime)
 
     // Clear any previous error
     errorMessage = nil

@@ -1,68 +1,6 @@
 import SwiftUI
 import WidgetKit
 
-extension ShiftWidgetEntry {
-  /// Shift start timestamp for today's upcoming shifts (used for lock screen countdown timer)
-  fileprivate var lockScreenCountdownTargetDate: Date? {
-    guard hasShift,
-      layoutState == .todayOrTomorrow,
-      daysRemaining == 0,
-      !shiftHasStarted,
-      !shiftHasEnded
-    else {
-      return nil
-    }
-
-    let timeComponents = startTime.split(separator: ":").compactMap { Int($0) }
-    guard timeComponents.count >= 2 else {
-      return nil
-    }
-
-    let calendar = Calendar.current
-    var components = calendar.dateComponents([.year, .month, .day], from: date)
-    components.hour = timeComponents[0]
-    components.minute = timeComponents[1]
-    components.second = 0
-
-    return calendar.date(from: components)
-  }
-
-  /// Shift end timestamp for active shifts (used for countdown to shift end)
-  fileprivate var shiftEndDateTime: Date? {
-    guard hasShift,
-      shiftHasStarted,
-      !shiftHasEnded
-    else {
-      return nil
-    }
-
-    let calendar = Calendar.current
-    let startComponents = startTime.split(separator: ":").compactMap { Int($0) }
-    let endComponents = endTime.split(separator: ":").compactMap { Int($0) }
-    guard startComponents.count >= 2, endComponents.count >= 2 else {
-      return nil
-    }
-
-    var components = calendar.dateComponents([.year, .month, .day], from: date)
-    components.hour = endComponents[0]
-    components.minute = endComponents[1]
-    components.second = 0
-
-    guard var endDate = calendar.date(from: components) else {
-      return nil
-    }
-
-    // Handle cross-midnight shifts (end time <= start time)
-    let startMinutes = startComponents[0] * 60 + startComponents[1]
-    let endMinutes = endComponents[0] * 60 + endComponents[1]
-    if endMinutes <= startMinutes {
-      endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
-    }
-
-    return endDate
-  }
-}
-
 // MARK: - Lock Screen Widget Views (iOS 16+)
 
 /// Circular lock screen widget - shows time until shift or current shift indicator
@@ -107,7 +45,7 @@ struct ShiftAccessoryCircularView: View {
               .font(.system(size: 9, weight: .medium))
               .textCase(.uppercase)
           }
-        } else if let countdownTarget = entry.lockScreenCountdownTargetDate {
+        } else if let countdownTarget = entry.upcomingStartToday {
           // Today's upcoming shift: show live countdown to shift start
           VStack(spacing: 0) {
             Text(countdownTarget, style: .timer)
@@ -119,7 +57,7 @@ struct ShiftAccessoryCircularView: View {
               .font(.system(size: 9, weight: .medium))
               .textCase(.uppercase)
           }
-        } else if let shiftEnd = entry.shiftEndDateTime {
+        } else if let shiftEnd = entry.activeShiftEnd {
           // Shift in progress: show live countdown to end
           VStack(spacing: 0) {
             Text(shiftEnd, style: .timer)
@@ -170,12 +108,12 @@ struct ShiftAccessoryRectangularView: View {
 
           Spacer(minLength: 4)
 
-          if let countdownTarget = entry.lockScreenCountdownTargetDate {
+          if let countdownTarget = entry.upcomingStartToday {
             Text(countdownTarget, style: .timer)
               .font(.system(size: 11, weight: .semibold, design: .rounded))
               .monospacedDigit()
               .lineLimit(1)
-          } else if let shiftEnd = entry.shiftEndDateTime {
+          } else if let shiftEnd = entry.activeShiftEnd {
             Text(shiftEnd, style: .timer)
               .font(.system(size: 11, weight: .semibold, design: .rounded))
               .monospacedDigit()
@@ -236,7 +174,7 @@ struct ShiftAccessoryInlineView: View {
       } else if entry.shiftHasEnded {
         // Shift ended today: "Done"
         Label(String(localized: .widgetDoneCapitalized), systemImage: "checkmark.circle")
-      } else if let countdownTarget = entry.lockScreenCountdownTargetDate {
+      } else if let countdownTarget = entry.upcomingStartToday {
         // Today's upcoming shift: live countdown to shift start
         Label {
           Text(countdownTarget, style: .timer)
@@ -244,7 +182,7 @@ struct ShiftAccessoryInlineView: View {
         } icon: {
           Image(systemName: "hourglass")
         }
-      } else if let shiftEnd = entry.shiftEndDateTime {
+      } else if let shiftEnd = entry.activeShiftEnd {
         // In progress: live countdown to end
         Label {
           Text(shiftEnd, style: .timer)

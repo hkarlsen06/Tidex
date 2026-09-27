@@ -22,6 +22,9 @@ enum AuthError: Error, LocalizedError {
 @MainActor
 final class AuthService: ObservableObject {
   static let shared = AuthService()
+  // ponytail: production has no SMS provider since the 2026-09 self-hosting move.
+  // Flip back to true once GOTRUE_SMS_* is configured on the auth server.
+  static let isSMSAvailable = false
   static let passwordRecoveryRedirectURL: URL = {
     guard let url = URL(string: "tidex://login-callback/recovery") else {
       preconditionFailure("Invalid password recovery redirect URL")

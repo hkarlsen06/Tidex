@@ -37,28 +37,6 @@ enum AppTab: String, CaseIterable, Identifiable {
     }
   }
 
-  /// Title localization key for navigation bar
-  var titleKey: LocalizedStringResource {
-    switch self {
-    case .home: return .dashboardTitle
-    case .shifts: return .tabsShifts
-    case .add: return .placeholderAddShift
-    case .wagey: return .tabsWagey
-    case .sharing: return .tabsSharing
-    }
-  }
-
-  /// Description key for placeholder views
-  var descriptionKey: LocalizedStringResource {
-    switch self {
-    case .home: return .placeholderDashboardDescription
-    case .shifts: return .placeholderShiftsDescription
-    case .add: return .placeholderAddShiftDescription
-    case .wagey: return .wageyEmptyStateTitle
-    case .sharing: return .placeholderSharingDescription
-    }
-  }
-
   /// Whether this tab supports pull-to-refresh
   var supportsRefresh: Bool {
     switch self {

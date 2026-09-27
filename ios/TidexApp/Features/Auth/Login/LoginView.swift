@@ -162,7 +162,7 @@ struct LoginView: View {
 
         // Password field
         NativeSecureField(
-          placeholder: viewModel.inputType == .phone
+          placeholder: viewModel.inputType == .phone && AuthService.isSMSAvailable
             ? String(localized: .loginPasswordOptionalLabel)
             : String(localized: .loginPasswordPlaceholder),
           text: $viewModel.password,
@@ -196,7 +196,7 @@ struct LoginView: View {
       }
 
       // Phone hint - password is optional for OTP flow
-      if viewModel.inputType == .phone {
+      if viewModel.inputType == .phone, AuthService.isSMSAvailable {
         Text(.loginPhonePasswordHint)
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
@@ -557,17 +557,26 @@ struct NativeSecureField: View {
           }
       }
 
-      Button {
-        isSecure.toggle()
-      } label: {
-        Image(systemName: isSecure ? "eye" : "eye.slash")
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextMuted)
-      }
-      .buttonStyle(.plain)
+      visibilityToggle
     }
     .padding(.horizontal, Spacing.contentHorizontal)
     .padding(.vertical, Spacing.sm)
+  }
+
+  private var visibilityToggle: some View {
+    Button {
+      isSecure.toggle()
+    } label: {
+      Image(systemName: isSecure ? "eye" : "eye.slash")
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextMuted)
+        .frame(minWidth: 44, minHeight: 44)  // swiftlint:disable:this no_magic_numbers
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .accessibilityLabel(isSecure ? Text(.authPasswordShow) : Text(.authPasswordHide))
+    // Let the 44pt target extend into the row padding without making the row taller
+    .padding(.vertical, -Spacing.sm)
   }
 }
 

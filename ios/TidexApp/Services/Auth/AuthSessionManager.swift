@@ -174,13 +174,18 @@ final class AuthSessionManager: ObservableObject {
         AuthDiagnosticsReporter.shared.hasRememberedAuthenticatedUserId
       let shouldReportMissingSessionWarning: Bool =
         reportMissingSessionWarning && hadRememberedAuthenticatedUserId
+      // A cancelled caller (for example foreground work cancelled on resign-active)
+      // is expected, so don't escalate it to a warning.
+      let isCallerCancelled: Bool = Task.isCancelled
       let severity: AuthDiagnosticsReporter.Severity =
-        isMissingSessionError && !shouldReportMissingSessionWarning ? .debug : .warning
+        isCallerCancelled || (isMissingSessionError && !shouldReportMissingSessionWarning)
+        ? .debug : .warning
       AuthDiagnosticsReporter.shared.record(
         .sessionFetchFailed,
         severity: severity,
         error: error,
         metadata: [
+          "is_caller_cancelled": .bool(isCallerCancelled),
           "allow_proactive_refresh": .bool(allowProactiveRefresh),
           "report_missing_session_warning": .bool(reportMissingSessionWarning),
           "had_remembered_authenticated_user_id": .bool(hadRememberedAuthenticatedUserId),

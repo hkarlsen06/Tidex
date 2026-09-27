@@ -3,8 +3,7 @@ import { notFound } from 'next/navigation';
 import { LandingPage } from '../../components/LandingPage';
 import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
 import { locales, type Locale } from '@/lib/i18n/config';
-import socialPreviewEn from '@/public/og/landing-en.png';
-import socialPreviewNo from '@/public/og/landing-no.png';
+import { localizedPageMetadata } from '@/lib/metadata';
 
 interface LocalePageProps {
   params: Promise<{ locale: string }>;
@@ -21,34 +20,9 @@ export async function generateMetadata({ params }: LocalePageProps): Promise<Met
     return {};
   }
 
-  const dictionary = getMarketingDictionary(locale as Locale);
-  const socialPreview = locale === 'no' ? socialPreviewNo : socialPreviewEn;
-  const url = `https://tidex.no/${locale}`;
+  const meta = getMarketingDictionary(locale as Locale).marketing.meta;
 
-  return {
-    title: dictionary.marketing.meta.title,
-    description: dictionary.marketing.meta.description,
-    openGraph: {
-      title: dictionary.marketing.meta.ogTitle,
-      description: dictionary.marketing.meta.ogDescription,
-      url,
-      type: 'website',
-      images: [
-        {
-          url: socialPreview.src,
-          width: socialPreview.width,
-          height: socialPreview.height,
-          alt: dictionary.marketing.meta.ogImageAlt,
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: dictionary.marketing.meta.title,
-      description: dictionary.marketing.meta.description,
-      images: [socialPreview.src],
-    },
-  };
+  return localizedPageMetadata(locale as Locale, '', meta);
 }
 
 export default async function LocaleLandingPage({ params }: LocalePageProps) {

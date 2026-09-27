@@ -1,17 +1,15 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Inter, Manrope } from 'next/font/google';
-import './globals.css';
+import '@/app/globals.css';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 const manrope = Manrope({ subsets: ['latin'], display: 'swap', variable: '--font-display' });
 
-export const metadata: Metadata = {
-  title: 'Lønnskalkulator | Tidex',
-  description:
-    'Få oversikt over lønn, tillegg og overtid med Tidex. En moderne lønnskalkulator som hjelper deg og teamet ditt å holde kontroll.',
+// Shared by every root layout. Each segment has its own root layout so the
+// server-rendered <html lang> matches the page locale.
+export const rootMetadata: Metadata = {
   metadataBase: new URL('https://tidex.no'),
-  manifest: '/site.webmanifest',
   icons: {
     icon: [
       { url: '/favicon.svg', type: 'image/svg+xml' },
@@ -22,34 +20,12 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
     other: [{ rel: 'mask-icon', url: '/safari-pinned-tab.svg' }],
   },
-  openGraph: {
-    title: 'Lønnskalkulator | Tidex',
-    description:
-      'Hold styr på lønnen din, planlegg vakter og håndter tillegg automatisk med Tidex.',
-    url: 'https://tidex.no',
-    type: 'website',
-    images: [
-      {
-        url: '/og/landing.png',
-        width: 1200,
-        height: 630,
-        alt: 'Tidex — Kontroll på lønnen din',
-      },
-    ],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Lønnskalkulator | Tidex',
-    description:
-      'Planlegg vakter, beregn tillegg og få kontroll på lønnen din med Tidex.',
-    images: ['/og/landing.png'],
-  },
   other: {
     'apple-itunes-app': 'app-id=6757129790',
   },
 };
 
-export const viewport: Viewport = {
+export const rootViewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -57,13 +33,9 @@ export const viewport: Viewport = {
   colorScheme: 'dark',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export function RootShell({ lang, children }: { lang: string; children: ReactNode }) {
   return (
-    <html lang="no" className="dark">
+    <html lang={lang} className="dark">
       <body className={`${inter.className} ${manrope.variable} bg-background text-foreground`}>
         {children}
       </body>

@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 import { getMarketingDictionary } from '@/lib/i18n/dictionaries';
 import { locales, type Locale } from '@/lib/i18n/config';
 import { MarketingLocaleToggle } from '../../../components/MarketingLocaleToggle';
-import { LocaleLangSetter } from '../../../components/LocaleLangSetter';
+import { MarketingHomeLink } from '../../../components/MarketingHomeLink';
+import { localizedPageMetadata } from '@/lib/metadata';
 
 interface LocaleSupportPageProps {
   params: Promise<{ locale: string }>;
@@ -18,11 +19,10 @@ function supportCopy(locale: Locale) {
       responseLabel: 'Response time',
       responseValue: 'Usually within 2 business days',
       retiredTitle: 'Web app retired',
-      retiredBody: 'The old Tidex web app has been retired. `app.tidex.no` now only exists to redirect old links and preserve Apple associated-domain support.',
+      retiredBody: 'The old Tidex web app has been retired. app.tidex.no now only exists to redirect old links and preserve Apple associated-domain support.',
       accountTitle: 'Account and billing',
       accountBody: 'Include the email address or phone number tied to your Tidex account when you contact us. Legacy website billing issues are handled manually by support.',
       legalTitle: 'Legal documents',
-      legalBody: 'Privacy Policy and Terms of Service are available on the marketing site.',
     };
   }
 
@@ -33,11 +33,10 @@ function supportCopy(locale: Locale) {
     responseLabel: 'Svartid',
     responseValue: 'Vanligvis innen 2 virkedager',
     retiredTitle: 'Nettappen er avviklet',
-    retiredBody: 'Den gamle Tidex-nettappen er avviklet. `app.tidex.no` brukes nå bare til å videresende gamle lenker og bevare Apple-tilknyttede domener.',
+    retiredBody: 'Den gamle Tidex-nettappen er avviklet. app.tidex.no brukes nå bare til å videresende gamle lenker og bevare Apple-tilknyttede domener.',
     accountTitle: 'Konto og betaling',
     accountBody: 'Oppgi e-postadressen eller telefonnummeret som er knyttet til Tidex-kontoen din når du kontakter oss. Eldre webbetalinger håndteres manuelt av support.',
     legalTitle: 'Juridiske dokumenter',
-    legalBody: 'Personvernerklæring og vilkår for bruk finnes på markedsnettstedet.',
   };
 }
 
@@ -53,18 +52,11 @@ export async function generateMetadata({ params }: LocaleSupportPageProps): Prom
   }
 
   const copy = supportCopy(locale as Locale);
-  const url = `https://tidex.no/${locale}/support`;
 
-  return {
-    title: `${copy.title} - Tidex`,
+  return localizedPageMetadata(locale as Locale, '/support', {
+    title: `${copy.title} | Tidex`,
     description: copy.description,
-    openGraph: {
-      title: `${copy.title} - Tidex`,
-      description: copy.description,
-      url,
-      type: 'website',
-    },
-  };
+  });
 }
 
 export default async function LocaleSupportPage({ params }: LocaleSupportPageProps) {
@@ -81,9 +73,9 @@ export default async function LocaleSupportPage({ params }: LocaleSupportPagePro
 
   return (
     <main className="min-h-screen bg-background text-text-primary">
-      <LocaleLangSetter locale={typedLocale} />
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-6 py-12">
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between gap-4">
+          <MarketingHomeLink locale={typedLocale} />
           <MarketingLocaleToggle locale={typedLocale} path="/support" />
         </div>
 
@@ -116,7 +108,18 @@ export default async function LocaleSupportPage({ params }: LocaleSupportPagePro
           </section>
           <section className="rounded-xl border border-border-subtle bg-surface-primary p-6">
             <h2 className="text-lg font-semibold">{copy.legalTitle}</h2>
-            <p className="mt-3 text-sm leading-6 text-text-secondary">{copy.legalBody}</p>
+            <ul className="mt-3 space-y-2 text-sm leading-6">
+              <li>
+                <a className="text-text-secondary hover:text-text-primary hover:underline" href={`/${typedLocale}/privacy/`}>
+                  {dictionary.marketing.footer.privacy}
+                </a>
+              </li>
+              <li>
+                <a className="text-text-secondary hover:text-text-primary hover:underline" href={`/${typedLocale}/terms/`}>
+                  {dictionary.marketing.footer.terms}
+                </a>
+              </li>
+            </ul>
           </section>
         </div>
       </div>

@@ -40,20 +40,20 @@ internal enum ShiftsError: Error, LocalizedError {
 
   internal var errorDescription: String? {
     switch self {
-    case .dataLoadFailed(let error):
-      return "Failed to load data: \(error.localizedDescription)"
+    case .dataLoadFailed:
+      return String(localized: .commonErrorLoadFailed)
 
     case .eventNotFound:
-      return "Event not found. Please refresh and try again."
+      return String(localized: .shiftsErrorEventNotFound)
 
     case .invalidEventDateRange:
-      return "Invalid event date range"
+      return String(localized: .shiftsErrorInvalidEventDateRange)
 
     case .noLocalData:
-      return "No local data available. Please wait for sync to complete."
+      return String(localized: .commonErrorNoLocalData)
 
     case .notAuthenticated:
-      return "Not authenticated"
+      return String(localized: .commonErrorNotAuthenticated)
     }
   }
 }

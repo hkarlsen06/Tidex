@@ -41,8 +41,10 @@ struct RecurringShiftEditorSheet: View {
     guard let startTime = editedStartTime, let endTime = editedEndTime else {
       return false
     }
-    let newStartTime = formatTimeToString(startTime)
-    let newEndTime = formatTimeToString(endTime)
+    let newStartTime = ShiftTimeFieldFormat.storedTime(
+      from: startTime, original: recurringShift.cleanStartTime)
+    let newEndTime = ShiftTimeFieldFormat.storedTime(
+      from: endTime, original: recurringShift.cleanEndTime)
 
     return newStartTime != recurringShift.cleanStartTime
       || newEndTime != recurringShift.cleanEndTime
@@ -392,10 +394,10 @@ struct RecurringShiftEditorSheet: View {
 
   private func initializeEditState() {
     // Parse start time
-    editedStartTime = parseTimeToDate(recurringShift.cleanStartTime)
+    editedStartTime = ShiftTimeFieldFormat.pickerDate(from: recurringShift.cleanStartTime)
 
     // Parse end time
-    editedEndTime = parseTimeToDate(recurringShift.cleanEndTime)
+    editedEndTime = ShiftTimeFieldFormat.pickerDate(from: recurringShift.cleanEndTime)
 
     // Set repeat interval
     editedRepeatInterval = recurringShift.repeat_interval_weeks
@@ -431,25 +433,6 @@ struct RecurringShiftEditorSheet: View {
     displayMonth = calendar.date(from: components) ?? Date()
   }
 
-  private func parseTimeToDate(_ timeString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    guard let time = formatter.date(from: String(timeString.prefix(5))) else { return nil }
-
-    let calendar = Calendar.current
-    let now = Date()
-    var components = calendar.dateComponents([.year, .month, .day], from: now)
-    components.hour = calendar.component(.hour, from: time)
-    components.minute = calendar.component(.minute, from: time)
-    return calendar.date(from: components)
-  }
-
-  private func formatTimeToString(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
-  }
-
   private func saveChanges() {
     guard hasChanges, canSave,
       let startTime = editedStartTime,
@@ -462,8 +445,9 @@ struct RecurringShiftEditorSheet: View {
 
     let result = RecurringShiftEditResult(
       recurringId: recurringShift.id,
-      startTime: formatTimeToString(startTime),
-      endTime: formatTimeToString(endTime),
+      startTime: ShiftTimeFieldFormat.storedTime(
+        from: startTime, original: recurringShift.cleanStartTime),
+      endTime: ShiftTimeFieldFormat.storedTime(from: endTime, original: recurringShift.cleanEndTime),
       repeatIntervalWeeks: editedRepeatInterval,
       selectedDays: editedSelectedDays,
       endCondition: editedEndCondition,
@@ -496,6 +480,24 @@ struct RecurringShiftEditorSheet: View {
 }
 
 // MARK: - Supporting Types
+
+/// Converts between stored "HH:mm" shift times and the Date values used by time pickers.
+enum ShiftTimeFieldFormat {
+  /// Places a stored time on `day`. "24:00" becomes midnight, since pickers only read hour and minute.
+  static func pickerDate(from time: String, on day: Date = Date()) -> Date? {
+    let hourMinute = String(time.prefix(5))
+    return Date.fromDateAndTime(
+      day.toISODateString(),
+      time: hourMinute == "24:00" ? "00:00" : hourMinute
+    )
+  }
+
+  /// Formats a picker value, keeping a stored "24:00" end when the user left it at midnight.
+  static func storedTime(from date: Date, original: String) -> String {
+    let formatted = date.toHourMinuteString()
+    return formatted == "00:00" && original.hasPrefix("24:00") ? "24:00" : formatted
+  }
+}
 
 /// Result of editing a recurring shift
 struct RecurringShiftEditResult {

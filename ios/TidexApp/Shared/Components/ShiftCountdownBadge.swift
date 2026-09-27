@@ -23,9 +23,9 @@ struct ShiftCountdownBadge: View {
         .padding(.vertical, Spacing.xxs)
         .background(
           RoundedRectangle(cornerRadius: CornerRadius.sm)
-            .fill(Color.green.opacity(0.2))
+            .fill(Color.tidexSuccess.opacity(0.2))
         )
-        .foregroundColor(.green)
+        .foregroundColor(.tidexSuccess)
         .contentTransition(.numericText())
         .animation(.default, value: finalCountdownSeconds)
     } else {
@@ -47,10 +47,10 @@ struct ShiftCountdownBadge: View {
   private var backgroundColor: Color {
     switch status {
     case .active:
-      return Color.green.opacity(0.15)
+      return Color.tidexSuccess.opacity(0.15)
 
     case .upcoming:
-      return Color.blue.opacity(0.15)
+      return Color.tidexBlue.opacity(0.15)
 
     case .past:
       return Color.tidexTextMuted.opacity(0.15)
@@ -60,10 +60,10 @@ struct ShiftCountdownBadge: View {
   private var textColor: Color {
     switch status {
     case .active:
-      return .green
+      return .tidexSuccess
 
     case .upcoming:
-      return .blue
+      return .tidexBlue
 
     case .past:
       return .tidexTextMuted

@@ -623,13 +623,13 @@ enum DashboardError: Error, LocalizedError {  // swiftlint:disable:this explicit
   var errorDescription: String? {  // swiftlint:disable:this explicit_acl
     switch self {
     case .notAuthenticated:
-      return "Not authenticated"
+      return String(localized: .commonErrorNotAuthenticated)
 
-    case .dataLoadFailed(let error):
-      return "Failed to load data: \(error.localizedDescription)"
+    case .dataLoadFailed:
+      return String(localized: .commonErrorLoadFailed)
 
     case .noLocalData:
-      return "No local data available. Please wait for sync to complete."
+      return String(localized: .commonErrorNoLocalData)
     }
   }
 }
@@ -809,13 +809,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     var errorDescription: String? {  // swiftlint:disable:this explicit_acl
       switch self {
       case .invalidRange:
-        return "End time must be after start time."
+        return String(localized: .dashboardClockErrorInvalidRange)
 
       case .noActiveSession:
-        return "No active clock session was found."
+        return String(localized: .dashboardClockErrorNoActiveSession)
 
       case .endOfDayLimitExceeded:
-        return "This clock session can only be saved before midnight on the start day."
+        return String(localized: .dashboardClockErrorEndOfDayLimitExceeded)
       }
     }
   }

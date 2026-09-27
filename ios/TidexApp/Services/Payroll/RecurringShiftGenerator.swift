@@ -103,7 +103,6 @@ struct RecurringShiftGenerator {
 
         // Check if within recurring shift window (end condition)
         let withinWindow = checkEndCondition(
-          currentDate: current,
           currentISO: currentISO,
           endCondition: recurring.end_condition,
           selectedDays: recurring.selected_days
@@ -138,7 +137,6 @@ struct RecurringShiftGenerator {
 
   /// Check if date is within the recurring shift's end condition window
   private static func checkEndCondition(
-    currentDate: Date,
     currentISO: String,
     endCondition: EndCondition?,
     selectedDays: SelectedDays
@@ -166,14 +164,15 @@ struct RecurringShiftGenerator {
       guard let endDate = calendar.date(byAdding: .month, value: value, to: anchorDate) else {
         return true
       }
-      return currentDate <= endDate
+      // Compare calendar days: occurrences sit at noon while the anchor parses to midnight.
+      return currentISO <= endDate.toISODateString()
 
     case .years(let value):
       // End date is anchor + N years
       guard let endDate = calendar.date(byAdding: .year, value: value, to: anchorDate) else {
         return true
       }
-      return currentDate <= endDate
+      return currentISO <= endDate.toISODateString()
 
     case .endDate(let dateString):
       // Specific end date

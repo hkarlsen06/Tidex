@@ -3,26 +3,6 @@
 import SwiftUI
 import WidgetKit
 
-// MARK: - Tidex Adaptive Colors for Widgets
-//
-// These colors adapt to iOS system appearance (light/dark mode).
-// The widget respects user's system appearance preference for a native feel.
-
-/// Tidex brand blue color - adapts to light/dark mode for optimal contrast
-/// Light: HSL(221, 83%, 53%) - vibrant blue
-/// Dark: HSL(217, 91%, 65%) - bright blue
-private enum TidexWidgetColors {
-  /// Light mode brand blue
-  static let lightBlue = Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
-  /// Dark mode brand blue
-  static let darkBlue = Color(red: 77 / 255, green: 137 / 255, blue: 249 / 255)
-
-  /// Light mode background
-  static let lightBackground = Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
-  /// Dark mode background
-  static let darkBackground = Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
-}
-
 // MARK: - Logo Watermark View
 
 /// Uses the same generated artwork as the app, with a template for tinted widgets.
@@ -44,22 +24,6 @@ private struct LogoWatermark: View {
 internal struct ShiftHomeWidgetView: View {
   internal let entry: ShiftWidgetEntry
   @Environment(\.widgetRenderingMode) internal var renderingMode: WidgetRenderingMode
-  @Environment(\.colorScheme) internal var colorScheme: ColorScheme
-
-  /// Whether we're in light mode
-  private var isLightMode: Bool {
-    colorScheme == .light
-  }
-
-  /// Adaptive brand blue color based on color scheme
-  private var tidexBlue: Color {
-    isLightMode ? TidexWidgetColors.lightBlue : TidexWidgetColors.darkBlue
-  }
-
-  /// Adaptive background color based on color scheme
-  private var tidexDarkBackground: Color {
-    isLightMode ? TidexWidgetColors.lightBackground : TidexWidgetColors.darkBackground
-  }
 
   /// Localized "days" label
   private var daysLabel: String {
@@ -96,7 +60,7 @@ internal struct ShiftHomeWidgetView: View {
       return Color.black.opacity(0.4)
 
     default:
-      return tidexDarkBackground
+      return WidgetPalette.background
     }
   }
 
@@ -107,7 +71,7 @@ internal struct ShiftHomeWidgetView: View {
       return .primary
 
     default:
-      return .white
+      return WidgetPalette.textPrimary
     }
   }
 
@@ -118,7 +82,7 @@ internal struct ShiftHomeWidgetView: View {
       return .secondary
 
     default:
-      return .white.opacity(0.6)
+      return WidgetPalette.textSecondary
     }
   }
 
@@ -129,7 +93,7 @@ internal struct ShiftHomeWidgetView: View {
       return .primary  // Will receive user's tint via widgetAccentable
 
     default:
-      return tidexBlue
+      return WidgetPalette.blue
     }
   }
 
@@ -140,7 +104,7 @@ internal struct ShiftHomeWidgetView: View {
       return .secondary
 
     default:
-      return .white.opacity(0.4)
+      return WidgetPalette.textMuted
     }
   }
 
@@ -163,68 +127,6 @@ internal struct ShiftHomeWidgetView: View {
   /// Whether to use tinted monochrome logo (for accented/vibrant modes)
   private var useTintedLogo: Bool {
     renderingMode != .fullColor
-  }
-
-  /// Shift start timestamp for today's upcoming shifts (used for live countdown timer)
-  private var todayShiftStartDateTime: Date? {
-    guard entry.hasShift,
-      entry.layoutState == .todayOrTomorrow,
-      entry.daysRemaining == 0,
-      !entry.shiftHasStarted,
-      !entry.shiftHasEnded
-    else {
-      return nil
-    }
-
-    let timeComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
-    guard timeComponents.count >= 2 else {
-      return nil
-    }
-
-    let calendar = Calendar.current
-    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
-    components.hour = timeComponents[0]
-    components.minute = timeComponents[1]
-    components.second = 0
-
-    return calendar.date(from: components)
-  }
-
-  /// Shift end timestamp for active shifts (used for live countdown to shift end)
-  private var todayShiftEndDateTime: Date? {
-    guard entry.hasShift,
-      entry.layoutState == .todayOrTomorrow,
-      entry.daysRemaining == 0,
-      entry.shiftHasStarted,
-      !entry.shiftHasEnded
-    else {
-      return nil
-    }
-
-    let calendar = Calendar.current
-    let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
-    let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
-    guard startComponents.count >= 2, endComponents.count >= 2 else {
-      return nil
-    }
-
-    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
-    components.hour = endComponents[0]
-    components.minute = endComponents[1]
-    components.second = 0
-
-    guard var endDate = calendar.date(from: components) else {
-      return nil
-    }
-
-    // Handle cross-midnight shifts (end time <= start time)
-    let startMinutes = startComponents[0] * 60 + startComponents[1]
-    let endMinutes = endComponents[0] * 60 + endComponents[1]
-    if endMinutes <= startMinutes {
-      endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
-    }
-
-    return endDate
   }
 
   internal var body: some View {
@@ -290,7 +192,7 @@ internal struct ShiftHomeWidgetView: View {
   /// Top header row: Date and Earnings centered
   private var topHeaderRow: some View {
     Group {
-      if let countdownTarget = todayShiftStartDateTime {
+      if let countdownTarget = entry.upcomingStartToday {
         // Timer countdown to shift start + earnings
         Text("\(countdownTarget, style: .timer)  \(entry.netEarnings)")
           .font(.system(size: 15, weight: .semibold))
@@ -299,7 +201,7 @@ internal struct ShiftHomeWidgetView: View {
           .multilineTextAlignment(.center)
           .widgetAccentable()
           .lineLimit(1)
-      } else if let shiftEnd = todayShiftEndDateTime {
+      } else if let shiftEnd = entry.activeShiftEnd {
         // Timer countdown to shift end + earnings
         Text("\(shiftEnd, style: .timer)  \(entry.netEarnings)")
           .font(.system(size: 15, weight: .semibold))
@@ -587,51 +489,15 @@ internal struct ShiftWidgetProvider: TimelineProvider {
     let calendar = Calendar.current
     let entry: ShiftWidgetEntry = helper.createEntry(at: now)
 
-    var entries = [entry]
-
-    // For today's shift, add transition entries at start/end times so the widget
-    // updates exactly when the shift state changes (no stale countdown/timer).
-    if entry.hasShift,
-      entry.layoutState == .todayOrTomorrow,
-      entry.daysRemaining == 0
-    {
-      let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
-      let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
-
-      // Transition entry at shift start
-      if !entry.shiftHasStarted, startComponents.count >= 2 {
-        var sc = calendar.dateComponents([.year, .month, .day], from: now)
-        sc.hour = startComponents[0]
-        sc.minute = startComponents[1]
-        sc.second = 0
-        if let shiftStart = calendar.date(from: sc), shiftStart > now {
-          entries.append(helper.createEntry(at: shiftStart))
-        }
-      }
-
-      // Transition entry at shift end
-      if !entry.shiftHasEnded, endComponents.count >= 2, startComponents.count >= 2 {
-        var ec = calendar.dateComponents([.year, .month, .day], from: now)
-        ec.hour = endComponents[0]
-        ec.minute = endComponents[1]
-        ec.second = 0
-        if var shiftEnd = calendar.date(from: ec) {
-          // Handle cross-midnight shifts (end time <= start time)
-          let startMinutes = startComponents[0] * 60 + startComponents[1]
-          let endMinutes = endComponents[0] * 60 + endComponents[1]
-          if endMinutes <= startMinutes {
-            shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
-          }
-          if shiftEnd > now {
-            entries.append(helper.createEntry(at: shiftEnd))
-          }
-        }
-      }
-    }
-
     // Refresh at next midnight to pick up day transitions and new shift data
     let tomorrow = calendar.startOfDay(
       for: calendar.date(byAdding: .day, value: 1, to: now) ?? now)
+
+    // Add an entry at every shift start and end before the refresh, including a second
+    // shift on the same day, so the widget never shows a stale countdown.
+    let entries =
+      [entry]
+      + helper.transitionDates(after: now, before: tomorrow).map { helper.createEntry(at: $0) }
     let timeline = Timeline(entries: entries, policy: .after(tomorrow))
     completion(timeline)
   }
@@ -813,16 +679,31 @@ internal struct ShiftWidgetProviderHelper {
     return (.countdown, daysRemaining)
   }
 
+  private func loadShifts() -> [StoredShift] {
+    guard let json = sharedUserDefaults()?.string(forKey: shiftsKey),
+      let data = json.data(using: .utf8),
+      let shifts = try? JSONDecoder().decode([StoredShift].self, from: data)
+    else {
+      return []
+    }
+    return shifts
+  }
+
+  /// Start and end instants of stored shifts inside (now, limit), sorted and unique.
+  internal func transitionDates(after now: Date, before limit: Date) -> [Date] {
+    let dates = loadShifts().compactMap { shift in
+      shiftInterval(
+        shiftDateString: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
+    }.flatMap { [$0.start, $0.end] }
+    return Set(dates.filter { $0 > now && $0 < limit }).sorted()
+  }
+
   internal func createEntry(at now: Date) -> ShiftWidgetEntry {
     // Get stored currency (may be nil if never set)
     let storedCurrency = getStoredCurrency()
 
-    guard let userDefaults = sharedUserDefaults(),
-      let shiftsJson = userDefaults.string(forKey: shiftsKey),
-      let data = shiftsJson.data(using: .utf8),
-      let shifts = try? JSONDecoder().decode([StoredShift].self, from: data),
-      !shifts.isEmpty
-    else {
+    let shifts = loadShifts()
+    guard !shifts.isEmpty else {
       // No shifts - use stored currency if available
       return ShiftWidgetEntry.empty(currency: storedCurrency)
     }
@@ -901,6 +782,8 @@ internal struct ShiftWidgetProviderHelper {
     // Using action=highlight so tapping the widget only highlights the shift in the calendar
     // (as opposed to action=open which opens the shift details sheet - used by notifications)
     let deepLinkURL = URL(string: "tidex://shifts?dates=\(shift.shiftDate)&action=highlight")
+    let interval = shiftInterval(
+      shiftDateString: shift.shiftDate, startTime: shift.startTime, endTime: shift.endTime)
 
     return ShiftWidgetEntry(
       date: now,
@@ -914,7 +797,9 @@ internal struct ShiftWidgetProviderHelper {
       layoutState: layoutState,
       shiftHasStarted: shiftStarted,
       shiftHasEnded: shiftEnded,
-      deepLinkURL: deepLinkURL
+      deepLinkURL: deepLinkURL,
+      shiftStart: interval?.start,
+      shiftEnd: interval?.end
     )
   }
 

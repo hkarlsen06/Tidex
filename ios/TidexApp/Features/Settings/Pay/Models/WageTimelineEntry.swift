@@ -128,16 +128,13 @@ enum WageTimelineProcessor {
     guard let previousFromDate = previousSnapshot?.from_date else { return nil }
 
     // Parse the date and subtract one day
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-
-    guard let date = formatter.date(from: previousFromDate),
+    guard let date = Date.fromISODateString(previousFromDate),
       let oneDayBefore = Calendar.current.date(byAdding: .day, value: -1, to: date)
     else {
       return nil
     }
 
-    return formatter.string(from: oneDayBefore)
+    return oneDayBefore.toISODateString()
   }
 
   /// Format date range for display
@@ -164,10 +161,7 @@ enum WageTimelineProcessor {
 
   /// Format a single date, hiding year if it's the current year
   private static func formatDate(_ isoDate: String, locale: Locale) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-
-    guard let date = formatter.date(from: isoDate) else { return isoDate }
+    guard let date = Date.fromISODateString(isoDate) else { return isoDate }
 
     let calendar = Calendar.current
     let isCurrentYear =

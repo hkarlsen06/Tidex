@@ -15,7 +15,7 @@ struct SubscriptionSettingsView: View {
       VStack(spacing: Spacing.lg) {
         // Error message
         if let error = viewModel.errorMessage {
-          errorBanner(error)
+          ErrorBanner(message: error, onDismiss: { viewModel.errorMessage = nil })
         }
 
         // Grandfathered banner (early supporter)
@@ -72,30 +72,6 @@ struct SubscriptionSettingsView: View {
       SubscriptionSafariView(url: url)
         .ignoresSafeArea()
     }
-  }
-
-  // MARK: - Error Banner
-
-  @ViewBuilder
-  private func errorBanner(_ error: String) -> some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "exclamationmark.circle.fill")
-        .foregroundColor(.tidexError)
-      Text(error)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexError)
-      Spacer()
-      Button {
-        viewModel.errorMessage = nil
-      } label: {
-        Image(systemName: "xmark")
-          .font(.tidexCaptionStrong)
-          .foregroundColor(.tidexError)
-      }
-    }
-    .padding(Spacing.sm)
-    .background(Color.tidexError.opacity(0.1))
-    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Grandfathered Banner

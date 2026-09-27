@@ -405,18 +405,11 @@ private func appLocale() -> Locale {
 struct FriendsWidgetView: View {
   let entry: FriendsWidgetEntry
   @Environment(\.widgetRenderingMode) var renderingMode
-  @Environment(\.colorScheme) var colorScheme
 
   // MARK: - Colors
 
-  private var isLightMode: Bool {
-    colorScheme == .light
-  }
-
   private var tidexBlue: Color {
-    isLightMode
-      ? Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
-      : Color(red: 77 / 255, green: 137 / 255, blue: 249 / 255)
+    WidgetPalette.blue
   }
 
   private var backgroundColor: Color {
@@ -428,9 +421,7 @@ struct FriendsWidgetView: View {
       return Color.black.opacity(0.4)
 
     default:
-      return isLightMode
-        ? Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
-        : Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
+      return WidgetPalette.background
     }
   }
 
@@ -440,7 +431,7 @@ struct FriendsWidgetView: View {
       return .primary
 
     default:
-      return isLightMode ? .black : .white
+      return WidgetPalette.textPrimary
     }
   }
 
@@ -450,7 +441,7 @@ struct FriendsWidgetView: View {
       return .secondary
 
     default:
-      return isLightMode ? .black.opacity(0.6) : .white.opacity(0.6)
+      return WidgetPalette.textSecondary
     }
   }
 
@@ -460,7 +451,7 @@ struct FriendsWidgetView: View {
       return .secondary
 
     default:
-      return isLightMode ? .black.opacity(0.4) : .white.opacity(0.4)
+      return WidgetPalette.textMuted
     }
   }
 

@@ -203,36 +203,9 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       entry.layoutState == .todayOrTomorrow,
       entry.daysRemaining == 0
     {
-      let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
-      let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
-
-      // Transition entry at shift start
-      if !entry.shiftHasStarted, startComponents.count >= 2 {
-        var sc = calendar.dateComponents([.year, .month, .day], from: now)
-        sc.hour = startComponents[0]
-        sc.minute = startComponents[1]
-        sc.second = 0
-        if let shiftStart = calendar.date(from: sc), shiftStart > now {
-          entries.append(createEntry(for: friend, fromAPI: apiFriend, at: shiftStart))
-        }
-      }
-
-      // Transition entry at shift end
-      if !entry.shiftHasEnded, endComponents.count >= 2, startComponents.count >= 2 {
-        var ec = calendar.dateComponents([.year, .month, .day], from: now)
-        ec.hour = endComponents[0]
-        ec.minute = endComponents[1]
-        ec.second = 0
-        if var shiftEnd = calendar.date(from: ec) {
-          let startMinutes = startComponents[0] * 60 + startComponents[1]
-          let endMinutes = endComponents[0] * 60 + endComponents[1]
-          if endMinutes <= startMinutes {
-            shiftEnd = calendar.date(byAdding: .day, value: 1, to: shiftEnd) ?? shiftEnd
-          }
-          if shiftEnd > now {
-            entries.append(createEntry(for: friend, fromAPI: apiFriend, at: shiftEnd))
-          }
-        }
+      for transition in [entry.shiftStart, entry.shiftEnd].compactMap(\.self)
+      where transition > now {
+        entries.append(createEntry(for: friend, fromAPI: apiFriend, at: transition))
       }
     }
 
@@ -421,6 +394,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     // Build deep link (use "user" param to match AppCoordinator.handleDeepLink)
     let deepLinkURL = URL(string: "tidex://sharing?user=\(friend.id)&dates=\(shiftDate)")
+    let interval = shiftInterval(
+      shiftDateString: shiftDate, startTime: startTime, endTime: endTime)
 
     return FriendShiftWidgetEntry(
       date: now,
@@ -437,7 +412,9 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       layoutState: layoutState,
       shiftHasStarted: shiftStarted,
       shiftHasEnded: shiftEnded,
-      deepLinkURL: deepLinkURL
+      deepLinkURL: deepLinkURL,
+      shiftStart: interval?.start,
+      shiftEnd: interval?.end
     )
   }
 
@@ -644,24 +621,6 @@ private struct InitialsCircle: View {
 struct FriendShiftWidgetView: View {
   let entry: FriendShiftWidgetEntry
   @Environment(\.widgetRenderingMode) var renderingMode
-  @Environment(\.colorScheme) var colorScheme
-
-  private var isLightMode: Bool {
-    colorScheme == .light
-  }
-
-  // Reuse color definitions from ShiftHomeWidget
-  private var tidexBlue: Color {
-    isLightMode
-      ? Color(hue: 221 / 360, saturation: 0.83, brightness: 0.53)
-      : Color(red: 77 / 255, green: 137 / 255, blue: 249 / 255)
-  }
-
-  private var tidexDarkBackground: Color {
-    isLightMode
-      ? Color(hue: 220 / 360, saturation: 0.40, brightness: 0.98)
-      : Color(red: 10 / 255, green: 15 / 255, blue: 26 / 255)
-  }
 
   private var daysLabel: String {
     String(localized: .widgetDays)
@@ -685,7 +644,7 @@ struct FriendShiftWidgetView: View {
       return Color.black.opacity(0.4)
 
     default:
-      return tidexDarkBackground
+      return WidgetPalette.background
     }
   }
 
@@ -695,7 +654,7 @@ struct FriendShiftWidgetView: View {
       return .primary
 
     default:
-      return .white
+      return WidgetPalette.textPrimary
     }
   }
 
@@ -705,7 +664,7 @@ struct FriendShiftWidgetView: View {
       return .secondary
 
     default:
-      return .white.opacity(0.6)
+      return WidgetPalette.textSecondary
     }
   }
 
@@ -715,7 +674,7 @@ struct FriendShiftWidgetView: View {
       return .primary
 
     default:
-      return tidexBlue
+      return WidgetPalette.blue
     }
   }
 
@@ -725,7 +684,7 @@ struct FriendShiftWidgetView: View {
       return .secondary
 
     default:
-      return .white.opacity(0.4)
+      return WidgetPalette.textMuted
     }
   }
 
@@ -741,68 +700,6 @@ struct FriendShiftWidgetView: View {
       return entry.hasShift ? primaryTextColor : mutedTextColor
     }
     return secondaryTextColor
-  }
-
-  /// Shift start timestamp for today's upcoming friend shifts (countdown to start)
-  private var todayShiftStartDateTime: Date? {
-    guard entry.hasShift,
-      entry.layoutState == .todayOrTomorrow,
-      entry.daysRemaining == 0,
-      !entry.shiftHasStarted,
-      !entry.shiftHasEnded
-    else {
-      return nil
-    }
-
-    let timeComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
-    guard timeComponents.count >= 2 else {
-      return nil
-    }
-
-    let calendar = Calendar.current
-    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
-    components.hour = timeComponents[0]
-    components.minute = timeComponents[1]
-    components.second = 0
-
-    return calendar.date(from: components)
-  }
-
-  /// Shift end timestamp for active friend shifts (countdown to end)
-  private var todayShiftEndDateTime: Date? {
-    guard entry.hasShift,
-      entry.layoutState == .todayOrTomorrow,
-      entry.daysRemaining == 0,
-      entry.shiftHasStarted,
-      !entry.shiftHasEnded
-    else {
-      return nil
-    }
-
-    let calendar = Calendar.current
-    let startComponents = entry.startTime.split(separator: ":").compactMap { Int($0) }
-    let endComponents = entry.endTime.split(separator: ":").compactMap { Int($0) }
-    guard startComponents.count >= 2, endComponents.count >= 2 else {
-      return nil
-    }
-
-    var components = calendar.dateComponents([.year, .month, .day], from: entry.date)
-    components.hour = endComponents[0]
-    components.minute = endComponents[1]
-    components.second = 0
-
-    guard var endDate = calendar.date(from: components) else {
-      return nil
-    }
-
-    // Handle cross-midnight shifts (end time <= start time)
-    let startMinutes = startComponents[0] * 60 + startComponents[1]
-    let endMinutes = endComponents[0] * 60 + endComponents[1]
-    if endMinutes <= startMinutes {
-      endDate = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
-    }
-
-    return endDate
   }
 
   var body: some View {
@@ -848,8 +745,8 @@ struct FriendShiftWidgetView: View {
         initials: entry.friendInitials,
         size: 48,
         backgroundColor: renderingMode == .fullColor
-          ? .white.opacity(0.15) : .secondary.opacity(0.2),
-        textColor: renderingMode == .fullColor ? .white : .primary
+          ? WidgetPalette.textPrimary.opacity(0.15) : .secondary.opacity(0.2),
+        textColor: renderingMode == .fullColor ? WidgetPalette.textPrimary : .primary
       )
 
       Text(.widgetNoShifts)
@@ -879,7 +776,7 @@ struct FriendShiftWidgetView: View {
 
   private var topHeaderRow: some View {
     Group {
-      if let countdownTarget = todayShiftStartDateTime {
+      if let countdownTarget = entry.upcomingStartToday {
         // Timer countdown to shift start + earnings
         if entry.showEarnings {
           Text("\(countdownTarget, style: .timer)  \(entry.netEarnings)")
@@ -897,7 +794,7 @@ struct FriendShiftWidgetView: View {
             .widgetAccentable()
             .lineLimit(1)
         }
-      } else if let shiftEnd = todayShiftEndDateTime {
+      } else if let shiftEnd = entry.activeShiftEnd {
         // Timer countdown to shift end + earnings
         if entry.showEarnings {
           Text("\(shiftEnd, style: .timer)  \(entry.netEarnings)")

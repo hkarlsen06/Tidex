@@ -1,6 +1,8 @@
 # Cloudflare Pages: all locales use explicit prefix (/no/, /en/)
 
-# Unprefixed informational paths → English
+# Unprefixed informational paths. functions/<page>.js picks the locale from
+# Accept-Language like "/" does, and _redirects does not apply to requests a
+# Function serves. These rules are the English fallback if no Function runs.
 /terms /en/terms/ 302
 /terms/ /en/terms/ 302
 /privacy /en/privacy/ 302
@@ -22,6 +24,7 @@
 /badges/* /badges/:splat 200
 /docs/* /docs/:splat 200
 /.well-known/* /.well-known/:splat 200
+/legal/* /legal/:splat 200
 
 # Pass through supported locales
 /no/* /no/:splat 200

@@ -19,79 +19,97 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
-function parsePublicStorageURL(
-  value: string | null | undefined,
-): StorageObjectRow | null {
-  if (!value) return null;
+const PROFILE_PICTURES_BUCKET = "profile-pictures";
+const MESSAGE_ATTACHMENTS_BUCKET = "message-attachments";
+const STORAGE_LIST_PAGE_SIZE = 1000;
 
-  try {
-    const url = new URL(value);
-    const marker = "/storage/v1/object/public/";
-    const index = url.pathname.indexOf(marker);
-    if (index === -1) return null;
-
-    const suffix = url.pathname.slice(index + marker.length);
-    const [bucket, ...pathParts] = suffix.split("/").filter(Boolean);
-    if (!bucket || pathParts.length === 0) return null;
-
-    return {
-      bucket_id: bucket,
-      path: pathParts.join("/"),
-    };
-  } catch {
-    return null;
-  }
-}
-
-async function listOwnedStorageObjects(
+// Profile pictures live under "<user id>/". List the folder instead of trusting
+// the user-writable profile_picture_url, which could name any object.
+async function listProfilePictureObjects(
   adminClient: any,
   userId: string,
 ): Promise<StorageObjectRow[]> {
   const objects: StorageObjectRow[] = [];
 
-  const { data: settings, error: settingsError } = await adminClient
-    .from("user_settings")
-    .select("profile_picture_url")
-    .eq("user_id", userId)
-    .maybeSingle();
+  for (let offset = 0;; offset += STORAGE_LIST_PAGE_SIZE) {
+    const { data, error } = await adminClient.storage
+      .from(PROFILE_PICTURES_BUCKET)
+      .list(userId, { limit: STORAGE_LIST_PAGE_SIZE, offset });
 
-  if (settingsError) {
+    if (error) {
+      throw new Error(`Failed to list profile pictures: ${error.message}`);
+    }
+
+    for (const item of data ?? []) {
+      // Folders come back with a null id.
+      if (item.id) {
+        objects.push({
+          bucket_id: PROFILE_PICTURES_BUCKET,
+          path: `${userId}/${item.name}`,
+        });
+      }
+    }
+
+    if (!data || data.length < STORAGE_LIST_PAGE_SIZE) return objects;
+  }
+}
+
+// Must run before prepare_user_for_deletion, which deletes the user's messages
+// and direct threads and cascades their message_attachments rows.
+async function listMessageAttachmentObjects(
+  adminClient: any,
+  userId: string,
+): Promise<StorageObjectRow[]> {
+  const { data: directThreads, error: threadsError } = await adminClient
+    .from("direct_threads")
+    .select("thread_id")
+    .or(`user_low_id.eq.${userId},user_high_id.eq.${userId}`);
+
+  if (threadsError) {
     throw new Error(
-      `Failed to load profile picture path: ${settingsError.message}`,
+      `Failed to load direct threads: ${threadsError.message}`,
     );
   }
 
-  const profilePictureObject = parsePublicStorageURL(
-    settings?.profile_picture_url,
-  );
-  if (profilePictureObject) {
-    objects.push(profilePictureObject);
-  }
+  const directThreadIds = (directThreads ?? []).map((
+    row: { thread_id: string },
+  ) => row.thread_id);
 
-  const { data: attachments, error: attachmentsError } = await adminClient
-    .from("message_attachments")
-    .select("storage_bucket, storage_path, messages!inner(sender_user_id)")
-    .eq("messages.sender_user_id", userId);
-
-  if (attachmentsError) {
-    throw new Error(
-      `Failed to load message attachment paths: ${attachmentsError.message}`,
+  const queries = [
+    adminClient
+      .from("message_attachments")
+      .select("storage_bucket, storage_path, messages!inner(sender_user_id)")
+      .eq("messages.sender_user_id", userId),
+  ];
+  for (const threadIds of chunk(directThreadIds, STORAGE_REMOVE_BATCH_SIZE)) {
+    queries.push(
+      adminClient
+        .from("message_attachments")
+        .select("storage_bucket, storage_path, messages!inner(thread_id)")
+        .in("messages.thread_id", threadIds),
     );
   }
 
-  for (const attachment of attachments ?? []) {
-    const row = attachment as { storage_bucket: string; storage_path: string };
-    objects.push({
-      bucket_id: row.storage_bucket,
-      path: row.storage_path,
-    });
+  const objects: StorageObjectRow[] = [];
+  for (const { data, error } of await Promise.all(queries)) {
+    if (error) {
+      throw new Error(
+        `Failed to load message attachment paths: ${error.message}`,
+      );
+    }
+    for (const row of data ?? []) {
+      if (row.storage_bucket !== MESSAGE_ATTACHMENTS_BUCKET) continue;
+      objects.push({ bucket_id: row.storage_bucket, path: row.storage_path });
+    }
   }
 
   return objects;
 }
 
-async function deleteOwnedStorageObjects(adminClient: any, userId: string) {
-  const ownedObjects = await listOwnedStorageObjects(adminClient, userId);
+async function deleteStorageObjects(
+  adminClient: any,
+  ownedObjects: StorageObjectRow[],
+) {
   const pathsByBucket = new Map<string, string[]>();
   const seen = new Set<string>();
 
@@ -143,6 +161,20 @@ export default {
         });
       }
 
+      let ownedObjects: StorageObjectRow[];
+      try {
+        ownedObjects = [
+          ...(await listProfilePictureObjects(ctx.supabaseAdmin, user.id)),
+          ...(await listMessageAttachmentObjects(ctx.supabaseAdmin, user.id)),
+        ];
+      } catch (listError) {
+        console.error("[delete-account] storage listing failed", listError);
+        return jsonResponse(500, {
+          success: false,
+          error: "Failed to clean up account storage",
+        });
+      }
+
       const { error: cleanupError } = await ctx.supabase.rpc(
         "prepare_user_for_deletion",
         {
@@ -162,7 +194,7 @@ export default {
       }
 
       try {
-        await deleteOwnedStorageObjects(ctx.supabaseAdmin, user.id);
+        await deleteStorageObjects(ctx.supabaseAdmin, ownedObjects);
       } catch (storageError) {
         console.error("[delete-account] storage cleanup failed", storageError);
         return jsonResponse(500, {

@@ -1,5 +1,5 @@
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable accessibility_label_for_image closure_body_length conditional_returns_on_newline
+// swiftlint:disable closure_body_length conditional_returns_on_newline
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable cyclomatic_complexity explicit_acl explicit_enum_raw_value explicit_top_level_acl
 // swiftlint:disable:next blanket_disable_command
@@ -571,7 +571,7 @@ struct MainTabView: View {
       value: monthContext.hasConflictsInMonth,
       reduceMotion: shouldReduceEffects
     )
-    .accessibilityLabel(Text(.tabsShifts))
+    .accessibilityLabel(showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList))
   }
 
   private var addShiftUndoButton: some View {
@@ -949,130 +949,6 @@ private struct TabBarTapObserver: UIViewControllerRepresentable {
         .filter { ($0 as? UITapGestureRecognizer)?.name == "MainTabView.TabBarTapObserver" }
         .forEach { coordinator?.tabBar?.removeGestureRecognizer($0) }
     }
-  }
-}
-
-// MARK: - Placeholder Views
-
-/// Generic placeholder tab view that reduces duplication
-/// Used for tabs that are not yet implemented
-struct PlaceholderTabView: View {
-  let icon: String
-  let titleKey: LocalizedStringResource
-  let descriptionKey: LocalizedStringResource
-  let supportsRefresh: Bool
-
-  @EnvironmentObject private var coordinator: AppCoordinator
-
-  init(
-    icon: String,
-    titleKey: LocalizedStringResource,
-    descriptionKey: LocalizedStringResource,
-    supportsRefresh: Bool = true
-  ) {
-    self.icon = icon
-    self.titleKey = titleKey
-    self.descriptionKey = descriptionKey
-    self.supportsRefresh = supportsRefresh
-  }
-
-  var body: some View {
-    NavigationStack {
-      GeometryReader { geometry in
-        ZStack {
-          // Background that fills entire screen including safe areas
-          // Prevents black bars from showing in status bar and home indicator areas
-          Color.tidexBackground
-            .ignoresSafeArea()
-
-          ScrollView {
-            PlaceholderContent(
-              icon: icon,
-              title: String(localized: titleKey),
-              description: String(localized: descriptionKey)
-            )
-            .frame(maxWidth: .infinity, minHeight: geometry.size.height - 200)
-          }
-          .applyRefreshable(enabled: supportsRefresh)
-        }
-      }
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbarBackground(Color.tidexBackground, for: .navigationBar)
-      .toolbar {
-        ToolbarItem(placement: .principal) {
-          Image("TidexWordmark")
-            .resizable()
-            .scaledToFit()
-            .frame(height: 22)
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-          UserMenuButton(
-            displayName: coordinator.userDisplayName,
-            avatarUrl: coordinator.userAvatarUrl
-          )
-        }
-      }
-    }
-  }
-}
-
-// MARK: - Refreshable Extension
-
-extension View {
-  @ViewBuilder
-  fileprivate func applyRefreshable(enabled: Bool) -> some View {
-    if enabled {
-      self.refreshable {
-        // Placeholder for future data refresh
-        try? await Task.sleep(nanoseconds: 500_000_000)
-      }
-    } else {
-      self
-    }
-  }
-}
-
-// MARK: - Concrete Placeholder Views
-
-/// These type aliases maintain backwards compatibility while using the generic PlaceholderTabView
-struct ShiftsPlaceholderView: View {
-  var body: some View {
-    PlaceholderTabView(
-      icon: "calendar",
-      titleKey: .tabsShifts,
-      descriptionKey: .placeholderShiftsDescription
-    )
-  }
-}
-
-struct AddShiftPlaceholderView: View {
-  var body: some View {
-    PlaceholderTabView(
-      icon: "plus.capsule.fill",
-      titleKey: .tabsAdd,
-      descriptionKey: .placeholderAddShiftDescription,
-      supportsRefresh: false
-    )
-  }
-}
-
-struct StatsPlaceholderView: View {
-  var body: some View {
-    PlaceholderTabView(
-      icon: "chart.bar.xaxis",
-      titleKey: .tabsStats,
-      descriptionKey: .placeholderStatsDescription
-    )
-  }
-}
-
-struct SharingPlaceholderView: View {
-  var body: some View {
-    PlaceholderTabView(
-      icon: "person.2.fill",
-      titleKey: .tabsSharing,
-      descriptionKey: .placeholderSharingDescription
-    )
   }
 }
 

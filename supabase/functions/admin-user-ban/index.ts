@@ -13,8 +13,9 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
   return Response.json(body, { status });
 }
 
-function isAdmin(user: User) {
-  return user.app_metadata?.role === "admin";
+// Admin actions need a session that completed MFA (aal2), not just the role.
+function isAdmin(user: User, aal: unknown) {
+  return user.app_metadata?.role === "admin" && aal === "aal2";
 }
 
 async function logAction(
@@ -59,10 +60,10 @@ export default {
         });
       }
 
-      if (!isAdmin(adminUser)) {
+      if (!isAdmin(adminUser, ctx.jwtClaims?.aal)) {
         return jsonResponse(403, {
           success: false,
-          error: "Admin access required",
+          error: "Admin access with MFA required",
         });
       }
 

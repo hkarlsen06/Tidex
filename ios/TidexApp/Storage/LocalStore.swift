@@ -193,7 +193,8 @@ internal actor LocalStoreActor {
       try modelContext.delete(model: LocalNotificationPreferences.self)
       try modelContext.delete(model: LocalSyncState.self)
       try modelContext.delete(model: LocalEntitlementCache.self)
-      try modelContext.delete(model: LocalPendingJWSUpload.self)
+      // Keep LocalPendingJWSUpload rows. They hold paid receipts that JWSUploadWorker
+      // uploads the next time their owner signs in.
       try modelContext.delete(model: LocalSharedShift.self)
       try modelContext.delete(model: LocalSharer.self)
       try modelContext.delete(model: LocalShiftPreview.self)
@@ -3086,6 +3087,7 @@ internal actor LocalStoreActor {
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.lastSyncedSnapshot = newSnapshot.encoded()
+    settleMergedDirtyFields(existing, keepingLocal: localDirtyFields)
   }
 
   // MARK: - Sync Update Operations for User Shifts
@@ -3214,7 +3216,7 @@ internal actor LocalStoreActor {
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = newSnapshot.encoded()
-    // Keep syncStatus = dirty (still needs push)
+    settleMergedDirtyFields(existing, keepingLocal: localDirtyFields)
   }
 
   // MARK: - Sync Update Operations for Events
@@ -3338,6 +3340,7 @@ internal actor LocalStoreActor {
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = newSnapshot.encoded()
+    settleMergedDirtyFields(existing, keepingLocal: localDirtyFields)
   }
 
   // MARK: - Sync Update Operations for Recurring Shifts
@@ -3426,7 +3429,7 @@ internal actor LocalStoreActor {
     existing.conflictServerSnapshot = serverSnapshot.encoded()
   }
 
-  // swiftlint:disable:next function_parameter_count
+  // swiftlint:disable:next function_parameter_count function_body_length
   internal func autoMergeRecurringShift(
     id: String,
     serverRow: SyncRecurringShiftRow,
@@ -3489,6 +3492,7 @@ internal actor LocalStoreActor {
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = newSnapshot.encoded()
+    settleMergedDirtyFields(existing, keepingLocal: localDirtyFields)
   }
 
   // MARK: - Sync Update Operations for Wage Snapshots
@@ -3632,6 +3636,7 @@ internal actor LocalStoreActor {
     existing.serverRevision = serverRevision
     existing.serverDeletedAt = serverDeletedAt
     existing.lastSyncedSnapshot = newSnapshot.encoded()
+    settleMergedDirtyFields(existing, keepingLocal: localDirtyFields)
   }
 
   // MARK: - Sync Update Operations for User Settings
@@ -3775,6 +3780,7 @@ internal actor LocalStoreActor {
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRevision
     existing.lastSyncedSnapshot = newSnapshot.encoded()
+    settleMergedDirtyFields(existing, keepingLocal: localDirtyFields)
   }
 
   // MARK: - Push Operations for User Shifts
@@ -3789,7 +3795,8 @@ internal actor LocalStoreActor {
     serverRevision: Int64,
     archivedAt: Date?,
     deletedAt: Date?,
-    snapshot: JobServerSnapshot
+    snapshot: JobServerSnapshot,
+    baseline: SyncPushBaseline
   ) {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
@@ -3799,6 +3806,16 @@ internal actor LocalStoreActor {
 
       return
 
+    }
+
+    if keepChangesMadeDuringPush(
+      existing,
+      baseline: baseline,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      snapshot: snapshot.encoded()
+    ) {
+      return
     }
 
     existing.name = serverRow.name
@@ -3931,12 +3948,13 @@ internal actor LocalStoreActor {
   }
 
   /// Mark a shift as successfully pushed (clean)
-  internal func markShiftPushed(
+  internal func markShiftPushed(  // swiftlint:disable:this function_parameter_count
     id: String,
     serverRow: SyncShiftRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    snapshot: UserShiftServerSnapshot
+    snapshot: UserShiftServerSnapshot,
+    baseline: SyncPushBaseline
   ) {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
@@ -3946,6 +3964,16 @@ internal actor LocalStoreActor {
 
       return
 
+    }
+
+    if keepChangesMadeDuringPush(
+      existing,
+      baseline: baseline,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      snapshot: snapshot.encoded()
+    ) {
+      return
     }
 
     let dateFormatter = isoDateFormatter
@@ -4090,12 +4118,14 @@ internal actor LocalStoreActor {
 
   // MARK: - Push Operations for Events
 
+  // swiftlint:disable:next function_parameter_count
   internal func markEventPushed(
     id: String,
     serverRow: SyncEventRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    snapshot: EventServerSnapshot
+    snapshot: EventServerSnapshot,
+    baseline: SyncPushBaseline
   ) {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
@@ -4105,6 +4135,16 @@ internal actor LocalStoreActor {
 
       return
 
+    }
+
+    if keepChangesMadeDuringPush(
+      existing,
+      baseline: baseline,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      snapshot: snapshot.encoded()
+    ) {
+      return
     }
 
     let dateFormatter = isoDateFormatter
@@ -4240,12 +4280,14 @@ internal actor LocalStoreActor {
 
   // MARK: - Push Operations for Recurring Shifts
 
+  // swiftlint:disable:next function_parameter_count function_body_length
   internal func markRecurringShiftPushed(
     id: String,
     serverRow: SyncRecurringShiftRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    snapshot: RecurringShiftServerSnapshot
+    snapshot: RecurringShiftServerSnapshot,
+    baseline: SyncPushBaseline
   ) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
@@ -4255,6 +4297,16 @@ internal actor LocalStoreActor {
 
       return
 
+    }
+
+    if keepChangesMadeDuringPush(
+      existing,
+      baseline: baseline,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      snapshot: snapshot.encoded()
+    ) {
+      return
     }
 
     existing.jobId = serverRow.job_id
@@ -4404,12 +4456,14 @@ internal actor LocalStoreActor {
 
   // MARK: - Push Operations for Wage Snapshots
 
+  // swiftlint:disable:next function_parameter_count
   internal func markWageSnapshotPushed(
     id: String,
     serverRow: SyncWageSnapshotRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    snapshot: WageSnapshotServerSnapshot
+    snapshot: WageSnapshotServerSnapshot,
+    baseline: SyncPushBaseline
   ) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
@@ -4419,6 +4473,16 @@ internal actor LocalStoreActor {
 
       return
 
+    }
+
+    if keepChangesMadeDuringPush(
+      existing,
+      baseline: baseline,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      snapshot: snapshot.encoded()
+    ) {
+      return
     }
 
     let dateFormatter = isoDateFormatter
@@ -4563,12 +4627,14 @@ internal actor LocalStoreActor {
 
   // MARK: - Push Operations for User Settings
 
+  // swiftlint:disable:next function_parameter_count
   internal func markUserSettingsPushed(
     userId: String,
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    snapshot: UserSettingsServerSnapshot
+    snapshot: UserSettingsServerSnapshot,
+    baseline: SyncPushBaseline
   ) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
@@ -4578,6 +4644,16 @@ internal actor LocalStoreActor {
 
       return
 
+    }
+
+    if keepChangesMadeDuringPush(
+      existing,
+      baseline: baseline,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      snapshot: snapshot.encoded()
+    ) {
+      return
     }
 
     let dateFormatter = FormatterCache.iso8601Formatter()
@@ -4961,5 +5037,289 @@ internal actor LocalStoreActor {
     }
 
     try modelContext.save()
+  }
+}
+
+// MARK: - Sync Merge Support
+
+/// A server snapshot that can list the fields that differ from another snapshot.
+internal protocol SyncFieldSnapshot {
+  associatedtype Field: Hashable
+
+  var updatedAt: Date { get }
+
+  static func decode(from data: Data) -> Self?
+
+  func changedFields(from other: Self) -> Set<Field>
+}
+
+/// Sync metadata shared by the local models that the sync coordinator pushes.
+internal protocol SyncPushTrackedModel: AnyObject {
+  associatedtype Snapshot: SyncFieldSnapshot
+
+  var localUpdatedAt: Date { get }
+  var syncStatus: SyncStatus { get set }
+  var dirtyFieldKeys: Set<Snapshot.Field> { get set }
+  var serverUpdatedAt: Date { get set }
+  var serverRevision: Int64 { get set }
+  var lastSyncedSnapshot: Data { get set }
+  var conflictServerSnapshot: Data? { get set }
+
+  /// The row's current local values in server snapshot form.
+  var localValuesSnapshot: Snapshot { get }
+}
+
+/// Local row state captured when a push request is built.
+/// Every local edit or delete updates `localUpdatedAt` or `syncStatus`, so a mismatch after the
+/// request returns means the row changed while the push was in flight.
+internal struct SyncPushBaseline: Equatable, Sendable {
+  internal let localUpdatedAt: Date
+  internal let syncStatus: SyncStatus
+
+  internal init(_ row: some SyncPushTrackedModel) {
+    localUpdatedAt = row.localUpdatedAt
+    syncStatus = row.syncStatus
+  }
+}
+
+internal enum SyncMerge {
+  /// Returns the dirty local fields to keep when a newer server row arrives for a dirty row.
+  /// Dirty fields whose local value already matches the server are dropped, so a push that the
+  /// server committed after the request timed out locally settles without a conflict. A field
+  /// conflicts only when the server changed it to a different value. The later write wins it.
+  internal static func fieldsToKeepLocally<Row: SyncPushTrackedModel>(
+    _ row: Row,
+    server: Row.Snapshot
+  ) -> Set<Row.Snapshot.Field> {
+    let differing = row.dirtyFieldKeys.intersection(
+      row.localValuesSnapshot.changedFields(from: server))
+    guard row.localUpdatedAt < server.updatedAt else { return differing }
+    // Without a readable base snapshot, every differing field counts as changed on the server.
+    guard let base = Row.Snapshot.decode(from: row.lastSyncedSnapshot) else { return [] }
+    return differing.subtracting(server.changedFields(from: base))
+  }
+}
+
+extension LocalStoreActor {
+  /// Records a server revision without touching local values or dirty fields.
+  /// The next push sends the local values against this revision.
+  internal func adoptServerRevision(
+    _ row: some SyncPushTrackedModel,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    snapshot: Data
+  ) {
+    row.serverUpdatedAt = serverUpdatedAt
+    row.serverRevision = serverRevision
+    row.lastSyncedSnapshot = snapshot
+    row.conflictServerSnapshot = nil
+    if row.syncStatus == .conflict {
+      row.syncStatus = .dirty
+    }
+  }
+
+  /// Keeps an edit or delete made while a push was in flight.
+  /// Returns `true` when the row changed after `baseline` was captured. In that case only the
+  /// returned server revision is recorded, and the caller must not overwrite the row.
+  internal func keepChangesMadeDuringPush(
+    _ row: some SyncPushTrackedModel,
+    baseline: SyncPushBaseline,
+    serverUpdatedAt: Date,
+    serverRevision: Int64,
+    snapshot: Data
+  ) -> Bool {
+    guard SyncPushBaseline(row) != baseline else { return false }
+    adoptServerRevision(
+      row,
+      serverUpdatedAt: serverUpdatedAt,
+      serverRevision: serverRevision,
+      snapshot: snapshot
+    )
+    return true
+  }
+
+  /// Drops the dirty fields a server merge settled and sets the status to match.
+  /// A pending delete stays pending.
+  internal func settleMergedDirtyFields<Row: SyncPushTrackedModel>(
+    _ row: Row,
+    keepingLocal keep: Set<Row.Snapshot.Field>
+  ) {
+    row.dirtyFieldKeys = row.dirtyFieldKeys.intersection(keep)
+    row.conflictServerSnapshot = nil
+    guard row.syncStatus != .pendingDelete else { return }
+    row.syncStatus = row.dirtyFieldKeys.isEmpty ? .clean : .dirty
+  }
+}
+
+extension JobServerSnapshot: SyncFieldSnapshot {
+  internal typealias Field = JobField
+}
+
+extension UserShiftServerSnapshot: SyncFieldSnapshot {
+  internal typealias Field = UserShiftField
+}
+
+extension EventServerSnapshot: SyncFieldSnapshot {
+  internal typealias Field = EventField
+}
+
+extension RecurringShiftServerSnapshot: SyncFieldSnapshot {
+  internal typealias Field = RecurringShiftField
+}
+
+extension WageSnapshotServerSnapshot: SyncFieldSnapshot {
+  internal typealias Field = WageSnapshotField
+}
+
+extension UserSettingsServerSnapshot: SyncFieldSnapshot {
+  internal typealias Field = UserSettingsField
+}
+
+extension PayrollAdjustmentServerSnapshot: SyncFieldSnapshot {
+  internal typealias Field = PayrollAdjustmentField
+}
+
+extension LocalJob: SyncPushTrackedModel {
+  internal var localValuesSnapshot: JobServerSnapshot {
+    JobServerSnapshot(
+      name: name,
+      color: color,
+      currency: currency,
+      isDefault: isDefault,
+      sortOrder: sortOrder,
+      payrollDay: payrollDay,
+      halfTaxMonth: halfTaxMonth,
+      monthlyGoal: monthlyGoal,
+      archivedAt: archivedAt,
+      deletedAt: deletedAt,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision
+    )
+  }
+}
+
+extension LocalUserShift: SyncPushTrackedModel {
+  internal var localValuesSnapshot: UserShiftServerSnapshot {
+    UserShiftServerSnapshot(
+      jobId: jobId,
+      shiftDate: shiftDateString,
+      startTime: startTime,
+      endTime: endTime,
+      note: note,
+      customPauseWindows: customPauseWindows,
+      customSupplements: customSupplements,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision,
+      deletedAt: serverDeletedAt
+    )
+  }
+}
+
+extension LocalEvent: SyncPushTrackedModel {
+  internal var localValuesSnapshot: EventServerSnapshot {
+    EventServerSnapshot(
+      startDate: startDateString,
+      endDate: endDateString,
+      isAllDay: isAllDay,
+      startTime: startTime,
+      endTime: endTime,
+      note: note,
+      notificationMinutesArray: LocalEvent.normalizedReminderMinutesOptional(
+        notificationMinutesArray),
+      notificationAnchorTime: notificationAnchorTime,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision,
+      deletedAt: serverDeletedAt
+    )
+  }
+}
+
+extension LocalRecurringShift: SyncPushTrackedModel {
+  internal var localValuesSnapshot: RecurringShiftServerSnapshot {
+    RecurringShiftServerSnapshot(
+      jobId: jobId,
+      startTime: startTime,
+      endTime: endTime,
+      repeatIntervalWeeks: repeatIntervalWeeks,
+      selectedDays: selectedDays,
+      endCondition: endCondition,
+      exclusions: exclusions,
+      dateSpecificPauseWindows: dateSpecificPauseWindows,
+      dateSpecificSupplements: dateSpecificSupplements,
+      dateSpecificNotes: dateSpecificNotes,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision,
+      deletedAt: serverDeletedAt
+    )
+  }
+}
+
+extension LocalWageSnapshot: SyncPushTrackedModel {
+  internal var localValuesSnapshot: WageSnapshotServerSnapshot {
+    WageSnapshotServerSnapshot(
+      jobId: jobId,
+      fromDate: fromDateString,
+      hourlyWage: hourlyWage,
+      wageLevel: wageLevel,
+      tariffTypeId: tariffTypeId,
+      supplements: supplements,
+      overtime: overtime,
+      taxEnabled: taxEnabled,
+      taxPercentage: taxPercentage,
+      breakEnabled: breakEnabled,
+      breakMethod: breakMethod,
+      breakThresholdHours: breakThresholdHours,
+      breakDeductionMinutes: breakDeductionMinutes,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision,
+      deletedAt: serverDeletedAt
+    )
+  }
+}
+
+extension LocalUserSettings: SyncPushTrackedModel {
+  internal var localValuesSnapshot: UserSettingsServerSnapshot {
+    UserSettingsServerSnapshot(
+      monthlyGoal: monthlyGoal,
+      monthlyGoalsByMonth: monthlyGoalsByMonth,
+      defaultShiftsView: defaultShiftsView,
+      profilePictureUrl: profilePictureUrl,
+      payrollDay: payrollDay,
+      theme: theme,
+      calendarContentColorStyle: effectiveCalendarContentColorStyle,
+      showDashboardClockButtons: effectiveShowDashboardClockButtons,
+      aiDataSharingEnabled: aiDataSharingEnabled ?? false,
+      halfTaxMonth: halfTaxMonth,
+      currency: currency,
+      defaultStartupTab: defaultStartupTab,
+      wageyShowcaseSeen: wageyShowcaseSeen ?? false,
+      lastActive: lastActive,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision
+    )
+  }
+}
+
+extension LocalPayrollAdjustment: SyncPushTrackedModel {
+  internal var localValuesSnapshot: PayrollAdjustmentServerSnapshot {
+    PayrollAdjustmentServerSnapshot(
+      jobId: jobId,
+      amount: amount,
+      currency: currency,
+      category: category,
+      taxTreatment: taxTreatment,
+      description: descriptionText,
+      note: note,
+      curatedNote: curatedNote,
+      curatedDescription: curatedDescription,
+      curatedLink: curatedLink,
+      curatedLinkTitle: curatedLinkTitle,
+      earnedFromDate: earnedFromDateString,
+      earnedToDate: earnedToDateString,
+      payoutDate: payoutDateString,
+      updatedAt: serverUpdatedAt,
+      revision: serverRevision,
+      deletedAt: serverDeletedAt
+    )
   }
 }
