@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidexで勤務シフトをカレンダーに追加・管理するため、カレンダーへのフルアクセスを許可してください。";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidexは位置情報を使用しません。チャットライブラリには位置情報の共有機能が含まれていますが、Tidexでは無効になっています。";

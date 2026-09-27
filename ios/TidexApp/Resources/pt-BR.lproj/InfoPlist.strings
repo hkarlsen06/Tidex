@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "O Tidex usa seus calendários para sincronizar e gerenciar seus turnos de trabalho.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "O Tidex não usa sua localização. A biblioteca de chat inclui o compartilhamento de localização, mas esse recurso está desativado no Tidex.";

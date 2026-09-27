@@ -55,6 +55,8 @@
 	<string>Tidex needs camera access to take profile pictures and attach images in chat and Wagey.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Tidex does not use your location. The chat library includes location sharing, which is disabled in Tidex.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

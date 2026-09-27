@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Το Tidex χρειάζεται πλήρη πρόσβαση στο Ημερολόγιό σας για να προσθέτει και να διαχειρίζεται τις βάρδιές σας.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Το Tidex δεν χρησιμοποιεί την τοποθεσία σας. Η βιβλιοθήκη συνομιλίας περιλαμβάνει κοινοποίηση τοποθεσίας, η οποία είναι απενεργοποιημένη στο Tidex.";

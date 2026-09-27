@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex ต้องการเข้าถึงปฏิทินของคุณเพื่อเพิ่มและจัดการกะงานของคุณ";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex ไม่ได้ใช้ตำแหน่งที่ตั้งของคุณ ไลบรารีแชทมีฟีเจอร์แชร์ตำแหน่งที่ตั้ง แต่ Tidex ปิดใช้งานฟีเจอร์นี้";

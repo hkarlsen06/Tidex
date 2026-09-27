@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex کو آپ کی شفٹیں کیلنڈر میں شامل کرنے اور اپ ڈیٹ رکھنے کے لیے کیلنڈر تک مکمل رسائی درکار ہے۔";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex آپ کے مقام کا استعمال نہیں کرتا۔ چیٹ لائبریری میں مقام شیئر کرنے کی سہولت شامل ہے، لیکن Tidex میں یہ غیر فعال ہے۔";

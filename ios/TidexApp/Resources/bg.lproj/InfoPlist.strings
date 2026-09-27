@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex използва календара ви, за да добавя и управлява работните ви смени.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex не използва местоположението ви. Библиотеката за чат включва споделяне на местоположение, но тази функция е деактивирана в Tidex.";

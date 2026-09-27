@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex treng tilgang til kalenderen din for å synkronisere vaktene dine.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex brukar ikkje posisjonen din. Chat-biblioteket inneheld posisjonsdeling, men dette er deaktivert i Tidex.";

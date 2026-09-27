@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex potrzebuje pełnego dostępu do Kalendarza, aby dodawać i aktualizować Twoje zmiany.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex nie korzysta z Twojej lokalizacji. Biblioteka czatu umożliwia udostępnianie lokalizacji, ale ta funkcja jest wyłączona w Tidex.";

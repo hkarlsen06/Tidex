@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex потребує доступу до вашого календаря, щоб додавати та оновлювати робочі зміни.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex не використовує ваше місцезнаходження. Бібліотека чату підтримує обмін геоданими, але в Tidex цю функцію вимкнено.";

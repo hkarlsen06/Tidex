@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex צריכה גישה מלאה ללוח השנה כדי להוסיף ולעדכן את המשמרות שלך.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex אינה משתמשת במיקום שלך. ספריית הצ׳אט כוללת אפשרות לשיתוף מיקום, אך היא מושבתת ב-Tidex.";

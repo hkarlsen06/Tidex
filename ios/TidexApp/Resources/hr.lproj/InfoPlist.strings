@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex treba potpuni pristup vašem kalendaru kako bi dodao i upravljao vašim smjenama.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex ne koristi vašu lokaciju. Biblioteka za chat uključuje dijeljenje lokacije, ali ono je u Tidexu onemogućeno.";

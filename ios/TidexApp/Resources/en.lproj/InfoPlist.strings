@@ -12,6 +12,9 @@
 /* Face ID usage description */
 "NSFaceIDUsageDescription" = "Tidex uses Face ID to protect your earnings data from prying eyes. Only you should see your income.";
 
+/* Required by the bundled chat library. Location sharing is disabled in Tidex. */
+"NSLocationWhenInUseUsageDescription" = "Tidex does not use your location. The chat library includes location sharing, which is disabled in Tidex.";
+
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex needs access to save shared calendar and shift images to your photo library.";
 

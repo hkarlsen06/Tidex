@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex reikia prieigos prie jūsų kalendoriaus, kad galėtų pridėti ir tvarkyti darbo pamainas.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex nenaudoja jūsų buvimo vietos. Pokalbių bibliotekoje yra vietos bendrinimo funkcija, tačiau Tidex ji išjungta.";

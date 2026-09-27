@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "A Tidex a naptáradhoz való teljes hozzáférést kéri, hogy a műszakjaidat elmenthesd és kezelhesd.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "A Tidex nem használja az Ön tartózkodási helyét. A csevegési könyvtár tartalmaz helymegosztási funkciót, de ez a Tidexben ki van kapcsolva.";
