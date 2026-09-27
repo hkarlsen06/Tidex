@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex behöver åtkomst till din kalender för att lägga till och hantera dina arbetspass.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex använder inte din platsinformation. Chattbiblioteket har stöd för platsdelning, men funktionen är inaktiverad i Tidex.";

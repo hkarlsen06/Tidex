@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex tarvitsee pääsyn kalenteriisi, jotta voit lisätä työvuorosi kalenteriin.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex ei käytä sijaintiasi. Keskustelukirjasto sisältää sijainnin jakamisen, joka on poistettu käytöstä Tidexissä.";

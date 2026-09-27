@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex kasutab kalendri täisjuurdepääsu, et lisada ja hallata teie töövahetusi.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex ei kasuta sinu asukohta. Vestlusteek sisaldab asukoha jagamise võimalust, kuid Tidexis on see keelatud.";

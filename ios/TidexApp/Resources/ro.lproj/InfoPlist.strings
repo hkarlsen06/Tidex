@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex are nevoie de acces complet la calendarul tău pentru a adăuga și gestiona turele.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex nu folosește locația dvs. Biblioteca de chat include funcția de partajare a locației, dar aceasta este dezactivată în Tidex.";

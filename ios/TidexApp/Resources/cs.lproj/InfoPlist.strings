@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex potřebuje úplný přístup ke Kalendáři, aby mohl přidávat a spravovat vaše směny.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex nepoužívá vaši polohu. Knihovna chatu podporuje sdílení polohy, které je v aplikaci Tidex vypnuté.";

@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex inahitaji ufikiaji wa kalenda yako ili kusawazisha zamu zako na ratiba yako.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex haitumii eneo lako. Maktaba ya mazungumzo inajumuisha kushiriki eneo, lakini kipengele hiki kimezimwa katika Tidex.";

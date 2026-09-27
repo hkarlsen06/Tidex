@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "يحتاج Tidex إلى الوصول الكامل إلى التقويم لمزامنة نوبات عملك وإدارتها بسهولة.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "لا يستخدم Tidex موقعك. تتضمن مكتبة الدردشة ميزة مشاركة الموقع، لكنها معطّلة في Tidex.";

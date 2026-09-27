@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex traži pristup vašem kalendaru kako bi mogao da dodaje i uređuje vaše smene.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex ne koristi vašu lokaciju. Biblioteka za čet uključuje deljenje lokacije, ali je ono onemogućeno u aplikaciji Tidex.";

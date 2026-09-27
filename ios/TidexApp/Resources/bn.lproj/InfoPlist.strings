@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex-কে আপনার ক্যালেন্ডারে পূর্ণ অ্যাক্সেস দিন, যাতে শিফটগুলো যোগ ও পরিচালনা করা যায়।";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex আপনার অবস্থান ব্যবহার করে না। চ্যাট লাইব্রেরিতে অবস্থান শেয়ার করার সুবিধা রয়েছে, তবে Tidex-এ এটি নিষ্ক্রিয়।";

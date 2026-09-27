@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex necessita accés al teu calendari per afegir i gestionar els teus torns de feina.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex no utilitza la teva ubicació. La biblioteca de xat inclou l’opció de compartir la ubicació, però està desactivada a Tidex.";

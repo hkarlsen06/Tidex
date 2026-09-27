@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex þarf aðgang að dagatalinu þínu til að bæta við og halda utan um vaktir.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex notar ekki staðsetningu þína. Spjallkerfið býður upp á staðsetningardeilingu, en hún er óvirk í Tidex.";

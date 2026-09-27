@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex برای افزودن و مدیریت شیفت‌های کاری شما در تقویم، به دسترسی کامل به تقویم نیاز دارد.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex از موقعیت مکانی شما استفاده نمی‌کند. کتابخانهٔ گفت‌وگو قابلیت اشتراک‌گذاری موقعیت مکانی را دارد که در Tidex غیرفعال است.";

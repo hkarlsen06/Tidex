@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex a besoin d’un accès complet à votre calendrier pour enregistrer et gérer vos horaires de travail.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex n’utilise pas votre position. La bibliothèque de discussion inclut le partage de position, qui est désactivé dans Tidex.";

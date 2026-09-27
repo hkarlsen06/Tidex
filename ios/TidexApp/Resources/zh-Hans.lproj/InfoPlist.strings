@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex 需要访问您的日历，以便同步和管理您的班次安排。";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex 不会使用您的位置。聊天库包含位置共享功能，但 Tidex 已将其禁用。";

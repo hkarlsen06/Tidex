@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex memerlukan akses ke kalender Anda untuk menambahkan dan mengelola jadwal kerja.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex tidak menggunakan lokasi Anda. Pustaka chat menyertakan fitur berbagi lokasi, tetapi fitur ini dinonaktifkan di Tidex.";

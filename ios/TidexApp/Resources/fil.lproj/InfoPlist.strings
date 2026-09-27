@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Kailangan ng Tidex ng ganap na access sa iyong Kalendaryo para maidagdag at mapamahalaan ang iyong mga shift.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Hindi ginagamit ng Tidex ang iyong lokasyon. May kasamang pagbabahagi ng lokasyon ang chat library, ngunit hindi ito pinagana sa Tidex.";

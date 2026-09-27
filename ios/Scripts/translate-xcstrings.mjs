@@ -101,6 +101,7 @@ const TIDEX_APP_PATH = path.join(__dirname, "../TidexApp/Resources");
 const INFO_PLIST_TRANSLATABLE_KEYS = [
   "NSCameraUsageDescription",
   "NSFaceIDUsageDescription",
+  "NSLocationWhenInUseUsageDescription",
   "NSPhotoLibraryAddUsageDescription",
   "NSCalendarsFullAccessUsageDescription",
 ];

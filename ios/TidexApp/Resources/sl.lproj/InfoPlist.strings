@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex potrebuje popoln dostop do koledarja za dodajanje in upravljanje vaših delovnih izmen.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex ne uporablja vaše lokacije. Knjižnica za klepet vključuje deljenje lokacije, ki je v Tidexu onemogočeno.";

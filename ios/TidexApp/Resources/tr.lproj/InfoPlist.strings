@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex, vardiyalarınızı takviminize eklemek ve yönetmek için takviminize tam erişim ister.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex konumunuzu kullanmaz. Sohbet kütüphanesinde konum paylaşımı bulunur, ancak bu özellik Tidex'te devre dışıdır.";

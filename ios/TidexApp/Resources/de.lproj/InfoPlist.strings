@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex benötigt Zugriff auf deinen Kalender, um deine Schichten in deinem Kalender anzuzeigen und zu synchronisieren.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex verwendet deinen Standort nicht. Die Chat-Bibliothek unterstützt das Teilen des Standorts, diese Funktion ist in Tidex jedoch deaktiviert.";

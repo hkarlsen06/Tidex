@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex에서 근무 일정을 캘린더에 추가하고 관리하려면 캘린더 전체 접근 권한이 필요해요.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex는 사용자의 위치를 사용하지 않습니다. 채팅 라이브러리에 위치 공유 기능이 포함되어 있지만, Tidex에서는 비활성화되어 있습니다.";

@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex nepieciešama pilna piekļuve kalendāram, lai pievienotu un pārvaldītu jūsu darba maiņas.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex neizmanto jūsu atrašanās vietu. Tērzēšanas bibliotēkā ir iekļauta atrašanās vietas kopīgošana, taču Tidex tā ir atspējota.";

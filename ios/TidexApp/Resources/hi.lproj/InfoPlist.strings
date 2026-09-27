@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex को आपकी शिफ्ट और काम के समय को आपके कैलेंडर में जोड़ने और प्रबंधित करने के लिए पूर्ण कैलेंडर एक्सेस चाहिए।";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex आपके स्थान का उपयोग नहीं करता। चैट लाइब्रेरी में स्थान साझा करने की सुविधा शामिल है, लेकिन Tidex में यह बंद है।";

@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex 需要完整存取你的行事曆，以同步班表。";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex 不會使用您的位置。聊天函式庫包含位置分享功能，但 Tidex 已停用此功能。";

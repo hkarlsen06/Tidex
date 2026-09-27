@@ -23,3 +23,6 @@
 
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex har brug for adgang til din kalender for at kunne tilføje og administrere dine vagter.";
+
+/* NSLocationWhenInUseUsageDescription */
+"NSLocationWhenInUseUsageDescription" = "Tidex bruger ikke din placering. Chatbiblioteket understøtter deling af placering, men det er deaktiveret i Tidex.";
