@@ -334,6 +334,7 @@ struct SharedShiftsListView: View {
   /// Screenshot notification bubble (matches SyncStatusIndicator styling)
   private var screenshotBubble: some View {
     ScreenshotNotificationBubble(
+      notifiedName: sharer.firstNameOnly,
       showNotifiedIcon: screenshotFeedback.showsNotifiedIcon,
       bellShakeTrigger: screenshotFeedback.bellShakeTrigger
     )

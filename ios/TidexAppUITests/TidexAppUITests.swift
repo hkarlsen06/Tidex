@@ -32,6 +32,52 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testPaywallWithoutConfirmedTrialEligibilityDoesNotPromiseATrial() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "paywall"
+    app.launch()
+    XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: defaultTimeout))
+    attachAppStoreScreenshot(app, name: "billing-paywall")
+    XCTAssertTrue(app.staticTexts["Unlock Tidex Pro"].exists, app.debugDescription)
+    XCTAssertFalse(app.staticTexts["Try Tidex Pro free"].exists)
+    XCTAssertFalse(app.buttons["Start my free trial"].exists)
+  }
+
+  @MainActor
+  func testDeleteAccountWarnsThatTheAppStoreSubscriptionKeepsBilling() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "profile-subscribed"
+    app.launch()
+    let signOut = app.buttons["Log out"]
+    XCTAssertTrue(signOut.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    for _ in 0..<3 where !app.buttons["Delete Account"].isHittable { app.swipeUp() }
+    attachAppStoreScreenshot(app, name: "billing-profile-sessions")
+    app.buttons["Delete Account"].tap()
+    let alert = app.alerts.firstMatch
+    XCTAssertTrue(alert.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    attachAppStoreScreenshot(app, name: "billing-delete-account-dialog")
+    XCTAssertTrue(
+      alert.staticTexts.matching(
+        NSPredicate(format: "label CONTAINS %@", "doesn't cancel your App Store subscription")
+      ).firstMatch.exists, alert.debugDescription)
+    XCTAssertTrue(alert.buttons["Manage subscription"].exists, alert.debugDescription)
+  }
+
+  @MainActor
+  func testTaxSettingExplainsTheFlatPercentage() {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-history-tariff-editor"
+    app.launch()
+    let taxToggle = app.switches["pay-settings.tax-toggle"]
+    XCTAssertTrue(taxToggle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    taxToggle.tap()
+    let hint = text(containingLabel: "one flat percentage", in: app)
+    _ = hint.waitForExistence(timeout: 3)
+    attachAppStoreScreenshot(app, name: "billing-tax-flat-rate")
+    XCTAssertTrue(hint.exists, app.debugDescription)
+  }
+
+  @MainActor
   func testPayReviewOpensThePayoutTaxPeriodDirectly() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-settings-review"
@@ -795,6 +841,100 @@ final class TidexAppUITests: XCTestCase {
       timeout: defaultTimeout,
       message: "Expected reply banner to remain visible when attachment drawer opens"
     )
+  }
+
+  @MainActor
+  func testFriendsScreensStateTheirConsequences() {
+    let cards = makeFriendsDesignApp(view: "cards")
+    cards.launch()
+    assertExists(
+      text(containingLabel: "Ella was notified", in: cards), in: cards, timeout: defaultTimeout,
+      message: "Expected the screenshot bubble to say who was notified")
+    assertExists(
+      text(containingLabel: "the next day", in: cards), in: cards, timeout: 0,
+      message: "Expected an overnight end time to read as ending the next day")
+    attachAppStoreScreenshot(cards, name: "friends-cards")
+    cards.terminate()
+
+    let addFriend = makeFriendsDesignApp(view: "add-friend")
+    addFriend.launch()
+    assertExists(
+      text(containingLabel: "sees your shifts and earnings right away", in: addFriend),
+      in: addFriend, timeout: defaultTimeout,
+      message: "Expected the add friend form to say sharing starts right away")
+    assertExists(
+      text(containingLabel: "Friend limit. Sharing your shifts with 4 of 5.", in: addFriend),
+      in: addFriend, timeout: 0, message: "Expected the friend limit counter to have a label")
+    attachAppStoreScreenshot(addFriend, name: "friends-add-friend")
+    addFriend.terminate()
+
+    let profile = makeFriendsDesignApp(view: "profile")
+    profile.launch()
+    assertExists(
+      text(containingLabel: "Move to bottom only changes the order", in: profile),
+      in: profile, timeout: defaultTimeout,
+      message: "Expected the profile to explain Move to bottom and Hide")
+    attachAppStoreScreenshot(profile, name: "friends-profile")
+  }
+
+  @MainActor
+  func testFriendsChatDeleteAsksBeforeDeletingForEveryone() {
+    let chat = makeApp(scenario: "friends-chat")
+    chat.launch()
+    let outgoing = staticText(withExactLabel: "Earlier outgoing message", in: chat)
+    assertExists(
+      outgoing, in: chat, timeout: defaultTimeout, message: "Expected the outgoing message")
+    outgoing.press(forDuration: 1)
+    let deleteAction = text(containingLabel: "Delete for everyone", in: chat)
+    assertExists(
+      deleteAction, in: chat, timeout: defaultTimeout,
+      message: "Expected the message menu to say delete removes it for everyone")
+    attachAppStoreScreenshot(chat, name: "friends-chat-menu")
+    deleteAction.tap()
+    assertExists(
+      text(containingLabel: "Delete this message for everyone?", in: chat), in: chat,
+      timeout: defaultTimeout, message: "Expected a delete confirmation")
+    attachAppStoreScreenshot(chat, name: "friends-chat-delete-confirm")
+    // iPhone confirmation dialogs may drop the Cancel button, so fall back to tapping outside.
+    if chat.buttons[commonCancelLabel].waitForExistence(timeout: 1) {
+      chat.buttons[commonCancelLabel].firstMatch.tap()
+    } else {
+      chat.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.05)).tap()
+    }
+    assertExists(
+      outgoing, in: chat, timeout: defaultTimeout,
+      message: "Expected the message to remain after cancelling")
+  }
+
+  @MainActor
+  func testFriendsChatDeleteConfirmRemovesMessage() {
+    let chat = makeApp(scenario: "friends-chat")
+    chat.launch()
+    let outgoing = staticText(withExactLabel: "Earlier outgoing message", in: chat)
+    assertExists(
+      outgoing, in: chat, timeout: defaultTimeout, message: "Expected the outgoing message")
+    outgoing.press(forDuration: 1)
+    let deleteAction = text(containingLabel: "Delete for everyone", in: chat)
+    assertExists(
+      deleteAction, in: chat, timeout: defaultTimeout, message: "Expected the message menu")
+    deleteAction.tap()
+    let confirm = chat.buttons.matching(
+      NSPredicate(format: "label CONTAINS %@", "Delete for everyone")
+    ).firstMatch
+    assertExists(
+      confirm, in: chat, timeout: defaultTimeout, message: "Expected the destructive confirm button"
+    )
+    confirm.tap()
+    XCTAssertTrue(
+      outgoing.waitForNonExistence(timeout: defaultTimeout),
+      "Expected the message to be deleted after confirming")
+  }
+
+  private func makeFriendsDesignApp(view: String) -> XCUIApplication {
+    let app = makeApp(scenario: "design-review")
+    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "friends"
+    app.launchEnvironment["TIDEX_DESIGN_FRIENDS_VIEW"] = view
+    return app
   }
 
   @MainActor

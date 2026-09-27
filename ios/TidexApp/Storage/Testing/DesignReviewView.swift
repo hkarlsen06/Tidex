@@ -38,6 +38,12 @@
         case "settings":
           SettingsView()
             .environmentObject(AppCoordinator.shared)
+        case "profile-subscribed":
+          NavigationStack {
+            ProfileSettingsView(
+              viewModel: ProfileSettingsViewModel(hasAppStoreSubscription: { true }))
+          }
+          .environmentObject(AppCoordinator.shared)
         case "login", "login-accessibility":
           NavigationStack {
             LoginView(viewModel: loginModel, currency: "kr")
