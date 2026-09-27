@@ -266,8 +266,6 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
           now: now
         )
 
-        let previousComparisonGross = previousTotals.gross
-
         // Calculate total hours (using filtered shifts that exclude conflicts)
         let currentHours = currentMonthIncluded.reduce(0) { $0 + $1.paidHours }  // swiftlint:disable:this explicit_type_interface line_length
         let previousHours = previousMonthIncluded.reduce(0) { $0 + $1.paidHours }  // swiftlint:disable:this explicit_type_interface line_length
@@ -279,16 +277,15 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
           ?? currentMonthShifts.first?.taxPercentage
           ?? 0
 
-        // Calculate percentage change
-        let percentageChange: Double?
-        if previousComparisonGross > 0 {
-          percentageChange =
-            ((currentTotals.gross - previousComparisonGross) / previousComparisonGross) * 100
-        } else if currentTotals.gross > 0 {
-          percentageChange = nil  // Can't compute meaningful change from zero
-        } else {
-          percentageChange = nil
-        }
+        // Same computation as Home, so both screens show the same percentage.
+        let percentageChange = MonthlyEarningsChange.percent(  // swiftlint:disable:this explicit_type_interface
+          currentShifts: primaryCurrentMonthShifts,
+          previousShifts: primaryPreviousMonthShifts,
+          halfTaxMonth: halfTaxMonth,
+          currentMonth: currentYM.month,
+          previousMonth: previousYM.month,
+          now: now
+        )
 
         // Build cumulative data for progress chart (using filtered shifts for earnings)
         let cumulativeData = Self.buildCumulativeData(  // swiftlint:disable:this explicit_type_interface
@@ -968,7 +965,9 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
         let days = calendar.range(of: .day, in: .month, for: monthStart)
       else { continue }
       let weekdayCount = days.filter { day in  // swiftlint:disable:this explicit_type_interface
-        guard let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) else { return false }
+        guard let date = calendar.date(byAdding: .day, value: day - 1, to: monthStart) else {
+          return false
+        }
         return !calendar.isDateInWeekend(date)
       }.count
       fullTimeHoursPerMonth[month] = Double(weekdayCount) * fullTimeHoursPerWeek / 5  // swiftlint:disable:this no_magic_numbers
@@ -981,7 +980,8 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
 
     for month in 1...12 {  // swiftlint:disable:this no_magic_numbers
       let fullTimeHours = fullTimeHoursPerMonth[month] ?? 0  // swiftlint:disable:this explicit_type_interface
-      let averagePercentage = fullTimeHours > 0 ? (hoursPerMonth[month] ?? 0) / fullTimeHours * 100 : 0  // swiftlint:disable:this explicit_type_interface line_length
+      let averagePercentage =
+        fullTimeHours > 0 ? (hoursPerMonth[month] ?? 0) / fullTimeHours * 100 : 0  // swiftlint:disable:this explicit_type_interface line_length
 
       let hasShifts = !(daysWithShiftsPerMonth[month]?.isEmpty ?? true)  // swiftlint:disable:this explicit_type_interface line_length
 

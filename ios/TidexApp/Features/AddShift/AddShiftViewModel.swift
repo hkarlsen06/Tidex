@@ -1108,7 +1108,8 @@ internal final class AddShiftViewModel: ObservableObject {
 
     return CalendarHeaderTotals(
       primary: primaryAmount,
-      secondary: secondaryAmount
+      secondary: secondaryAmount,
+      primaryIsAfterTax: totals.hasTaxEnabled
     )
   }
 
