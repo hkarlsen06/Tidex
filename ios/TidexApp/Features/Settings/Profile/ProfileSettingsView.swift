@@ -23,11 +23,16 @@ struct ProfileSettingsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.dismiss) private var dismiss
   @Environment(\.displayScale) private var displayScale
-  @StateObject private var viewModel = ProfileSettingsViewModel()
+  @Environment(\.openURL) private var openURL
+  @StateObject private var viewModel: ProfileSettingsViewModel
 
   private let onOpenSecurity: () -> Void
 
-  init(onOpenSecurity: @escaping () -> Void = {}) {
+  init(
+    viewModel: ProfileSettingsViewModel? = nil,
+    onOpenSecurity: @escaping () -> Void = {}
+  ) {
+    _viewModel = StateObject(wrappedValue: viewModel ?? ProfileSettingsViewModel())
     self.onOpenSecurity = onOpenSecurity
   }
 
@@ -169,8 +174,24 @@ struct ProfileSettingsView: View {
         }
       }
       .disabled(!viewModel.canConfirmDelete)
+
+      if viewModel.hasAppStoreSubscription,
+        let url = SubscriptionSettingsViewModel.manageSubscriptionsURL
+      {
+        Button(String(localized: .subscriptionActionsManage)) {
+          viewModel.deleteConfirmText = ""
+          openURL(url)
+        }
+      }
     } message: {
-      Text(.profileDangerZoneDeleteAccountDialogDescription)
+      if viewModel.hasAppStoreSubscription {
+        Text(
+          verbatim: String(localized: .profileDangerZoneDeleteAccountDialogDescription) + "\n\n"
+            + String(localized: .profileDangerZoneDeleteAccountDialogSubscriptionNote)
+        )
+      } else {
+        Text(.profileDangerZoneDeleteAccountDialogDescription)
+      }
     }
     .alert(
       String(localized: .userMenuLogoutEverywhereConfirmTitle),
@@ -751,24 +772,25 @@ struct ProfileSettingsView: View {
         await signOut()
       }
     } label: {
+      // Signing out of this device is routine and keeps the account, so only the
+      // everywhere action below uses destructive red.
       HStack(spacing: Spacing.sm) {
         TidexSettingsIcon(
           systemName: "rectangle.portrait.and.arrow.right",
-          foregroundColor: .tidexError,
+          foregroundColor: .tidexBlue,
           size: ProfileActionRowLayout.iconSize
         )
 
         if isSigningOut {
           ProgressView()
             .controlSize(.small)
-            .tint(.tidexError)
           Text(.userMenuLoggingOut)
             .font(.tidexBody)
-            .foregroundColor(.tidexError)
+            .foregroundColor(.tidexTextPrimary)
         } else {
           Text(.userMenuLogout)
             .font(.tidexBody)
-            .foregroundColor(.tidexError)
+            .foregroundColor(.tidexTextPrimary)
         }
 
         Spacer()

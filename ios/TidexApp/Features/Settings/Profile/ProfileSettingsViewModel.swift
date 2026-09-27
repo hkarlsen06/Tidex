@@ -17,6 +17,7 @@ final class ProfileSettingsViewModel: ObservableObject {
 
   private let settingsRepository: SettingsRepository
   private let syncCoordinator: SyncCoordinator
+  private let appStoreSubscriptionCheck: @MainActor () -> Bool
 
   // MARK: - Published State
 
@@ -71,9 +72,12 @@ final class ProfileSettingsViewModel: ObservableObject {
   init(
     settingsRepository: SettingsRepository? = nil,
     syncCoordinator: SyncCoordinator? = nil,
+    hasAppStoreSubscription: (@MainActor () -> Bool)? = nil,
   ) {
     self.settingsRepository = settingsRepository ?? SettingsRepository.shared
     self.syncCoordinator = syncCoordinator ?? SyncCoordinator.shared
+    self.appStoreSubscriptionCheck =
+      hasAppStoreSubscription ?? { StoreKitManager.shared.currentTier != .free }
     hydrateCachedProfileForImmediateDisplay()
   }
 
@@ -647,6 +651,11 @@ final class ProfileSettingsViewModel: ObservableObject {
   /// Expected confirmation text for account deletion
   var expectedDeleteConfirmText: String {
     String(localized: .profileDangerZoneDeleteAccountConfirmText)
+  }
+
+  /// Deleting the account doesn't cancel an App Store subscription, so the dialog warns about it.
+  var hasAppStoreSubscription: Bool {
+    appStoreSubscriptionCheck()
   }
 
   /// Whether the delete confirmation text matches
