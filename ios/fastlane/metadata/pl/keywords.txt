@@ -1,1 +1,1 @@
-praca,godziny,grafik,zmiany,wynagrodzenie,wypłata,kalendarz,planer,nadgodziny,rejestr,stawka
+praca,godziny,grafik,zarobki,kalkulator,nadgodziny,wypłata,kalendarz,zmiany,stawka,czas

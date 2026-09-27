@@ -1,11 +1,17 @@
-Seuraa työvuorojasi ja laske palkkasi Tidexillä.
+Mitä ylimääräinen vuoro oikeasti on arvoltaan?
 
-Ominaisuudet:
-• Helppo työvuorojen kirjaus alku- ja loppuajoilla
-• Automaattinen palkkalaskenta
-• Kalenterinäkymä kaikista vuoroista
-• Ansiokooste ja tilastot
-• Widget nopeaa käyttöä varten
-• Synkronointi laitteiden välillä
+Myöhäinen ilta, sunnuntai, muutama tunti ylitöitä. Tunnit voivat näyttää kalenterissa samanlaisilta, mutta palkka voi olla aivan eri. Tidex auttaa sinua näkemään, mitä työstäsi kertyy, jo ennen palkkapäivää.
 
-Täydellinen työntekijöille, jotka haluavat pitää kirjaa työtunneistaan ja ansioistaan.
+TIEDÄ, MISTÄ PALKKASI KOOSTUU
+Lisää vuorosi, niin Tidex laskee arvioidut ansiosi tuntipalkan, lisien, ylityökorvausten ja taukosääntöjen perusteella. Näet kokonaissumman erittelyn, jotta tiedät, mistä rahat tulevat.
+
+NÄE, MITEN LISÄVUORO VAIKUTTAA
+Lisää tuleva vuoro kalenteriisi ja katso, miten se vaikuttaa arvioituihin ansioihisi. Saat paremman kuvan tulevasta kuukaudesta, kun mietit, kannattaako ottaa lisää tunteja.
+
+USEAMPI TYÖ? PIDÄ KAIKKI YHDESSÄ
+Pidä kunkin työn vuorot ja palkka-asetukset samassa paikassa. Seuraa tuntejasi ja ansioitasi ajan mittaan ilman erillisiä muistiinpanoja ja laskelmia.
+
+JOTAKIN, JOHON VERRATA PALKKAKUITTIA
+Pidä oma kirjanpito tekemästäsi työstä. Vie vuorot PDF- tai CSV-muotoon, kun haluat vertailla tunteja, selvittää eroa tai jakaa raportin.
+
+Aikasi on seuraamisen arvoista. Aloita seuraavasta vuorostasi.

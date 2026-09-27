@@ -1,1 +1,1 @@
-werk,uren,diensten,loon,rooster,inkomsten,calculator,overuren,salaris,agenda,planner,urenregistratie
+loon,werk,uren,tijd,rooster,inkomsten,calculator,overwerk,loonstrook,agenda,planner,diensten

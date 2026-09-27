@@ -1,6 +1,9 @@
-- Rettet lønberegninger for nattevagter, tillæg, ubetalte pauser og overarbejde
-- Forbedrede lønindstillinger og lønhistorik med tydeligere ikrafttrædelsesdatoer og oversigt over udbetalinger
-- Rettet forhåndsvisning af indtjening og widgets, så de konsekvent afspejler indstillinger for halv skat
-- Forbedrede indtastning af vagttider og gjorde det mere sikkert at prøve igen, når kun nogle vagter blev gemt
-- Rettet vagtlister, der viste vagter uden for den valgte måned
-- Opdaterede appikonet og det visuelle design
+- Redesignet widgetten Venners vagter med profilbilleder og en tidslinje for hver vens næste vagt
+- Tidex beder nu om tilladelse til notifikationer, når du først har brug for det, ikke ved opstart
+- Rettet en fejl, hvor overarbejde talte timer fra overlappende vagter, som ikke bliver betalt
+- Rettet månedlige ansættelsesprocenter og ugestatistik for uger, der går på tværs af to måneder
+- Dataeksport bruger nu de samme lønsummer som appen
+- Forbedret sikkerhed ved login og delte vagter
+- Opdateret notifikationslyden
+- Apple Watch-appen er fjernet
+- Fejlrettelser og andre forbedringer

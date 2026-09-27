@@ -1,1 +1,1 @@
-salaire,travail,heures,temps,pointeuse,planning,gains,calcul,heuressup,paie,calendrier,agenda
+salaire,travail,heures,temps,planning,gains,calculateur,overtime,paie,calendrier,agenda,services

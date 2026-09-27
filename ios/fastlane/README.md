@@ -39,6 +39,14 @@ Generate metadata files without uploading
 
 Upload existing metadata files (no generation)
 
+### ios upload_screenshots
+
+```sh
+[bundle exec] fastlane ios upload_screenshots
+```
+
+Replace App Store screenshots with ASConnectScreenshots/<version> (no metadata)
+
 ### ios validate_metadata
 
 ```sh

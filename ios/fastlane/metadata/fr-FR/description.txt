@@ -1,11 +1,17 @@
-Suivez vos horaires de travail et calculez votre salaire avec Tidex.
+Que vaut vraiment ce service en plus ?
 
-Fonctionnalités :
-• Enregistrement facile des shifts avec heures de début et de fin
-• Calcul automatique du salaire
-• Vue calendrier de tous les shifts
-• Aperçu des gains et statistiques
-• Widget pour un accès rapide
-• Synchronisation entre appareils
+Une soirée tardive, un dimanche, quelques heures supplémentaires. Sur votre calendrier, les heures peuvent se ressembler, mais la paie peut être très différente. Tidex vous aide à voir ce que votre travail vous rapporte, avant le jour de paie.
 
-Parfait pour les employés qui veulent garder un œil sur leurs heures de travail et leurs revenus.
+COMPRENEZ CE QUI ENTRE DANS VOTRE PAIE
+Ajoutez vos services et laissez Tidex estimer vos gains à partir de votre taux horaire, des majorations, des heures supplémentaires et des règles de pause. Consultez le détail du total pour savoir d’où vient votre argent.
+
+VOYEZ CE QUE CHANGE UN SERVICE EN PLUS
+Ajoutez un service à venir dans votre calendrier et voyez comment il influe sur vos gains estimés. Vous aurez une vision plus claire du mois à venir au moment de décider si vous acceptez plus d’heures.
+
+PLUS D’UN EMPLOI ? GARDEZ TOUT AU MÊME ENDROIT
+Regroupez au même endroit les services et les paramètres de paie de chaque emploi. Suivez vos heures et vos gains dans le temps, sans devoir rassembler des notes et des calculs séparés.
+
+DE QUOI VÉRIFIER VOTRE FICHE DE PAIE
+Conservez votre propre relevé du travail effectué. Exportez vos services en PDF ou CSV pour comparer les heures, examiner un écart ou partager un rapport.
+
+Votre temps mérite d’être suivi. Commencez par votre prochain service.

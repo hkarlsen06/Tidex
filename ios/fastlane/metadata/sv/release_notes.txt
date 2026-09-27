@@ -1,6 +1,9 @@
-- Åtgärdade löneberäkningar för nattpass, tillägg, obetalda raster och övertid
-- Förbättrade löneinställningar och lönehistorik med tydligare ikraftträdandedatum och utbetalningsöversikter
-- Åtgärdade förhandsvisningar av intjänad lön och widgetar så att de konsekvent återspeglar inställningar för halv skatt
-- Förbättrade inmatning av arbetstid och gjorde det säkrare att försöka igen när bara vissa pass hade sparats
-- Åtgärdade att schemalistor visade pass utanför den valda månaden
-- Uppdaterade appikonen och den visuella designen
+- Widgeten Vänners pass har fått en ny design med profilbilder och en tidslinje för varje väns nästa pass
+- Tidex ber nu om tillåtelse för notiser först när du behöver det, inte vid start
+- Åtgärdade att övertid räknade med timmar från överlappande pass som inte betalas
+- Åtgärdade månatlig sysselsättningsgrad och veckostatistik för veckor som sträcker sig över två månader
+- Dataexporter använder nu samma lönesummor som appen
+- Förbättrad säkerhet för inloggning och delade pass
+- Uppdaterat aviseringsljud
+- Apple Watch-appen har tagits bort
+- Buggfixar och andra förbättringar

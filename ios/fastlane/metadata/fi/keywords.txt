@@ -1,1 +1,1 @@
-palkka,työ,tunnit,aika,kello,vuoro,ansiot,laskuri,ylityö,tili,kalenteri,lista
+palkka,työ,tunnit,aika,vuoro,kalenteri,ansiot,laskuri,ylityö,palkkakuitti,suunnittelu,seuranta

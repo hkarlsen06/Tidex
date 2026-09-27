@@ -1,6 +1,9 @@
-- Ispravljeni izračuni plaće za noćne smjene, dodatke, neplaćene pauze i prekovremeni rad
-- Poboljšane postavke plaće i povijest plaće s jasnijim datumima stupanja na snagu i pregledom isplata
-- Ispravljeni pregledi zarade i widgeti kako bi dosljedno odražavali postavke polovice poreza
-- Poboljšan unos vremena smjena i povećana sigurnost pri ponovnom pokušaju kada su spremljene samo neke smjene
-- Ispravljeni popisi rasporeda koji su prikazivali smjene izvan odabranog mjeseca
-- Ažurirana ikona aplikacije i vizualni dizajn
+- Redizajniran je widget Smjene prijatelja s profilnim fotografijama i vremenskom crtom sljedeće smjene svakog prijatelja
+- Tidex sada traži dopuštenje za obavijesti tek kada ti zatreba, a ne pri pokretanju
+- Ispravljeno je brojanje prekovremenih sati iz preklapajućih smjena koje nisu plaćene
+- Ispravljeni su mjesečni postoci zaposlenja i tjedna statistika za tjedne koji se protežu kroz dva mjeseca
+- Izvoz podataka sada koristi iste ukupne iznose plaće kao i aplikacija
+- Poboljšana je sigurnost prijave i dijeljenih smjena
+- Ažuriran je zvuk obavijesti
+- Uklonjena je aplikacija za Apple Watch
+- Ispravci grešaka i druga poboljšanja

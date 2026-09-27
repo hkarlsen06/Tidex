@@ -106,6 +106,45 @@ platform :ios do
     UI.success("Metadata uploaded successfully!")
   end
 
+  desc "Replace App Store screenshots with ASConnectScreenshots/<version> (no metadata)"
+  lane :upload_screenshots do
+    version = tidex_release_version
+    screenshots_path = File.expand_path("../ASConnectScreenshots/#{version}", __dir__)
+    UI.user_error!("No screenshots at #{screenshots_path}") unless Dir.exist?(screenshots_path)
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
+      issuer_id: ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"],
+      in_house: false
+    )
+
+    # Deliver rejects unknown folders such as raw-dark, so stage only the locale folders.
+    require "tmpdir"
+    Dir.mktmpdir("tidex-screenshots") do |staging|
+      %w[en-US no].each do |locale|
+        source = File.join(screenshots_path, locale)
+        UI.user_error!("Missing screenshots for #{locale} at #{source}") unless Dir.exist?(source)
+        FileUtils.cp_r(source, staging)
+      end
+
+      deliver(
+        api_key: api_key,
+        app_version: version,
+        submit_for_review: false,
+        skip_binary_upload: true,
+        skip_metadata: true,
+        skip_screenshots: false,
+        overwrite_screenshots: true,
+        screenshots_path: staging,
+        force: true,
+        precheck_include_in_app_purchases: false
+      )
+    end
+
+    UI.success("Screenshots uploaded successfully!")
+  end
+
   desc "Validate metadata files (check lengths and required files)"
   lane :validate_metadata do
     UI.message("Validating metadata files...")

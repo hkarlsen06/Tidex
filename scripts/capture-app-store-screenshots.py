@@ -110,7 +110,7 @@ def main():
     version = re.search(r"^MARKETING_VERSION = (\S+)",
                         (ROOT / "ios/Version.xcconfig").read_text(), re.MULTILINE).group(1)
     output = args.output or ROOT / "ios/ASConnectScreenshots" / version
-    iphone = args.iphone or default_device("iPhone 17 Pro Max")
+    iphone = args.iphone or default_device("iPhone 18 Pro Max")
     raw = output / "raw-dark"
     capture(iphone, "iPhone", raw)
     capture(args.ipad or default_device("iPad Pro 13-inch (M5)"), "iPad", raw)

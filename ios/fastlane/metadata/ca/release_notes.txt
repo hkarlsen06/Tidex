@@ -1,6 +1,9 @@
-- S'han corregit els càlculs salarials per als torns de nit, els complements, les pauses no remunerades i les hores extres
-- S'han millorat els ajustos salarials i l'historial salarial amb dates d'entrada en vigor més clares i un desglossament dels pagaments
-- S'han corregit les previsualitzacions dels guanys i els widgets perquè reflecteixin de manera coherent la configuració de mitja retenció
-- S'ha millorat l'entrada de l'horari dels torns i s'ha fet més segur tornar-ho a provar quan només s'havien desat alguns torns
-- S'ha corregit que les llistes d'horaris mostressin torns fora del mes seleccionat
-- S'han actualitzat la icona de l'app i el disseny visual
+- S'ha redissenyat el giny de Torns dels amics amb fotos de perfil i una línia temporal del proper torn de cada amic
+- Ara Tidex demana permís per a les notificacions quan el necessites per primer cop, no en iniciar l'app
+- Corregit un error que comptava com a hores extres hores de torns solapats que no es paguen
+- Corregits els percentatges mensuals d'ocupació i les estadístiques setmanals de les setmanes que abasten dos mesos
+- Les exportacions de dades ara fan servir els mateixos totals salarials que l'app
+- Millorada la seguretat de l'inici de sessió i dels torns compartits
+- S'ha actualitzat el so de les notificacions
+- S'ha eliminat l'app per a Apple Watch
+- Correccions d'errors i altres millores

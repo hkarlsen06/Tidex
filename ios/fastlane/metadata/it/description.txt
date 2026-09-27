@@ -1,11 +1,17 @@
-Tieni traccia dei tuoi turni di lavoro e calcola il tuo stipendio con Tidex.
+Quanto vale davvero quel turno extra?
 
-Funzionalità:
-• Registrazione semplice dei turni con orari di inizio/fine
-• Calcolo automatico della retribuzione
-• Vista calendario di tutti i turni
-• Panoramica dei guadagni e statistiche
-• Widget per accesso rapido
-• Sincronizzazione tra dispositivi
+Una sera tardi, una domenica, qualche ora di straordinario. Le ore possono sembrare simili sul calendario, ma la paga può essere molto diversa. Tidex ti aiuta a vedere quanto stai per guadagnare, prima del giorno di paga.
 
-Perfetta per i dipendenti che vogliono tenere sotto controllo le ore lavorate e i guadagni.
+SAPERE COSA COMPONE LA TUA PAGA
+Aggiungi i tuoi turni e lascia che Tidex calcoli i tuoi guadagni stimati in base alla paga oraria, alle maggiorazioni, agli straordinari e alle regole sulle pause. Vedi il dettaglio dietro al totale, così sai da dove arrivano i soldi.
+
+VEDI COSA CAMBIA CON UN TURNO EXTRA
+Inserisci un turno imminente nel calendario e scopri come influisce sui tuoi guadagni stimati. Avrai un'idea più chiara del mese che ti aspetta quando decidi se fare qualche ora in più.
+
+PIÙ DI UN LAVORO? TIENI TUTTO INSIEME
+Conserva turni e impostazioni di paga per ogni lavoro in un unico posto. Tieni d'occhio ore e guadagni nel tempo, senza dover mettere insieme note e calcoli separati.
+
+QUALCOSA CON CUI CONFRONTARE LA BUSTA PAGA
+Tieni un tuo registro del lavoro che hai svolto. Esporta i turni in PDF o CSV quando vuoi confrontare le ore, verificare una differenza o condividere un report.
+
+Vale la pena tenere traccia del tuo tempo. Inizia dal tuo prossimo turno.

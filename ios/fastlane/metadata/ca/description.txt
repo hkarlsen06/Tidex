@@ -1,11 +1,17 @@
-Fes un seguiment dels teus torns de feina i calcula el teu sou amb Tidex.
+Quant val realment aquell torn extra?
 
-Funcions:
-• Registre fàcil de torns amb hores d'inici i finalització
-• Càlcul automàtic del sou
-• Vista de calendari de tots els torns
-• Resum d'ingressos i estadístiques
-• Giny per a accés ràpid
-• Sincronització entre dispositius
+Un vespre tard, un diumenge, unes quantes hores extres. Les hores poden semblar iguals al calendari, però el sou pot ser ben diferent. Tidex t'ajuda a veure quant sumarà la teva feina abans del dia de cobrament.
 
-Perfecte per a empleats que volen portar el control de les hores de feina i dels ingressos.
+SAPS QUÈ COMPTA EN EL TEU SOU
+Afegeix els teus torns i deixa que Tidex calculi els guanys estimats segons la teva tarifa per hora, els complements, les hores extres i les regles de descans. Consulta el desglossament del total perquè sàpigues d'on surten els diners.
+
+VEU QUÈ CANVIA UN TORN EXTRA
+Afegeix un torn proper al calendari i mira com afecta els teus guanys estimats. Tingues una idea més clara del mes que ve quan decideixis si et convé fer més hores.
+
+MÉS D'UNA FEINA? AGRUPA-HO TOT
+Desa els torns i la configuració de sou de cada feina en un sol lloc. Fes seguiment de les hores i dels guanys al llarg del temps, sense haver d'ajuntar notes i càlculs per separat.
+
+TINGUES UNA REFERÈNCIA PER COMPROVAR LA NÒMINA
+Conserva el teu propi registre de la feina que has fet. Exporta els torns com a PDF o CSV quan vulguis comparar hores, revisar una diferència o compartir un informe.
+
+Val la pena portar el control del teu temps. Comença amb el teu proper torn.

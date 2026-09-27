@@ -1,11 +1,17 @@
-Lacak shift kerja Anda dan hitung gaji Anda dengan Tidex.
+Berapa sebenarnya nilai shift tambahan itu?
 
-Fitur:
-• Pencatatan shift yang mudah dengan waktu mulai/selesai
-• Perhitungan gaji otomatis
-• Tampilan kalender untuk semua shift
-• Ringkasan penghasilan dan statistik
-• Widget untuk akses cepat
-• Sinkronisasi antar perangkat
+Lembur malam, hari Minggu, beberapa jam kerja lembur. Jam kerjanya mungkin terlihat mirip di kalender Anda, tetapi bayarannya bisa sangat berbeda. Tidex membantu Anda melihat berapa penghasilan yang akan Anda dapatkan, sebelum hari gajian.
 
-Cocok untuk karyawan yang ingin melacak jam kerja dan penghasilan mereka.
+KETAHUI APA SAJA YANG MASUK KE GAJI ANDA
+Tambahkan shift Anda dan biarkan Tidex menghitung perkiraan penghasilan berdasarkan upah per jam, tunjangan, lembur, dan aturan istirahat. Lihat rincian di balik totalnya, jadi Anda tahu dari mana uang itu berasal.
+
+LIHAT PENGARUH SHIFT TAMBAHAN
+Masukkan shift yang akan datang ke kalender Anda dan lihat bagaimana pengaruhnya terhadap perkiraan penghasilan Anda. Dapatkan gambaran yang lebih jelas tentang bulan ke depan saat Anda memutuskan apakah akan mengambil jam kerja tambahan.
+
+LEBIH DARI SATU PEKERJAAN? SIMPAN DALAM SATU TEMPAT
+Simpan shift dan pengaturan gaji untuk setiap pekerjaan di satu tempat. Pantau jam kerja dan penghasilan Anda dari waktu ke waktu, tanpa perlu menggabungkan catatan dan perhitungan yang terpisah.
+
+PUNYA SESUATU UNTUK MEMERIKSA SLIP GAJI ANDA
+Simpan catatan Anda sendiri tentang pekerjaan yang telah Anda lakukan. Ekspor shift sebagai PDF atau CSV saat Anda ingin membandingkan jam kerja, menelusuri perbedaan, atau membagikan laporan.
+
+Waktu Anda layak untuk dicatat. Mulailah dengan shift Anda berikutnya.

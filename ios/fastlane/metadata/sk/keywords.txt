@@ -1,1 +1,1 @@
-mzda,práca,hodiny,čas,zmeny,rozvrh,zárobky,kalkulačka,nadčasy,výplata,kalendár,plánovač,záznam
+mzda,práca,hodiny,čas,smeny,rozvrh,zárobok,kalkulačka,nadčas,výplata,kalendár,plánovač,evidencia

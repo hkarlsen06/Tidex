@@ -1,11 +1,17 @@
-Tidex ile vardiyalarınızı takip edin ve ücretinizi hesaplayın.
+O ekstra vardiya gerçekten ne kadar ediyor?
 
-Özellikler:
-• Başlangıç/bitiş saatleriyle kolay vardiya kaydı
-• Otomatik ücret hesaplama
-• Tüm vardiyaları takvimde görüntüleme
-• Kazanç özeti ve istatistikler
-• Hızlı erişim için widget
-• Cihazlar arasında senkronizasyon
+Geç bir akşam, bir pazar günü, birkaç saat fazla mesai. Saatler takviminde benzer görünebilir ama kazancın çok farklı olabilir. Tidex, maaş günü gelmeden önce yaptığın çalışmanın ne kadar tuttuğunu görmene yardımcı olur.
 
-Çalışma saatlerini ve kazançlarını takip etmek isteyen çalışanlar için mükemmeldir.
+MAAŞINA NELERİN DAHİL OLDUĞUNU GÖR
+Vardiyalarını ekle, Tidex saatlik ücretin, ek ödemeler, fazla mesai ve mola kurallarına göre tahmini kazancını hesaplasın. Toplamın dökümünü gör, paranın nereden geldiğini bil.
+
+EK BİR VARDİYANIN NEYİ DEĞİŞTİRDİĞİNİ GÖR
+Yaklaşan bir vardiyayı takvimine ekle ve tahmini kazancını nasıl etkilediğini gör. Ek saat alıp almamaya karar verirken önündeki ayı daha net gör.
+
+BİRDEN FAZLA İŞİN Mİ VAR? HEPSİNİ BİR ARADA TUT
+Her işin vardiyalarını ve ücret ayarlarını tek bir yerde tut. Ayrı ayrı notlar ve hesaplarla uğraşmadan, saatlerini ve kazancını zaman içinde takip et.
+
+MAAŞ BORDRONU KARŞILAŞTIRABİLECEĞİN BİR KAYDIN OLSUN
+Yaptığın çalışmanın kendi kaydını tut. Saatleri karşılaştırmak, bir farkı incelemek veya bir rapor paylaşmak istediğinde vardiyalarını PDF ya da CSV olarak dışa aktar.
+
+Zamanını takip etmeye değer. Bir sonraki vardiyanla başla.

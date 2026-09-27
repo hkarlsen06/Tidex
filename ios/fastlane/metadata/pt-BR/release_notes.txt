@@ -1,6 +1,9 @@
-- Corrigidos os cálculos de pagamento para turnos noturnos, adicionais, pausas não remuneradas e horas extras
-- Melhoradas as configurações de pagamento e o histórico salarial com datas de vigência mais claras e detalhamento dos pagamentos
-- Corrigidas as prévias de ganhos e os widgets para refletirem a configuração de meia tributação de forma consistente
-- Melhorado o lançamento dos horários dos turnos e tornado mais seguro tentar novamente quando apenas alguns turnos foram salvos
-- Corrigidas as listas de escalas que mostravam turnos fora do mês selecionado
-- Atualizados o ícone do app e o design visual
+- O widget Turnos dos Amigos foi redesenhado com fotos de perfil e uma linha do tempo do próximo turno de cada amigo
+- O Tidex agora pede permissão para notificações quando você precisa delas pela primeira vez, não ao abrir o app
+- Corrigido um problema em que as horas extras contavam horas de turnos sobrepostos que não são pagos
+- Corrigidos os percentuais mensais de emprego e as estatísticas semanais para semanas que abrangem dois meses
+- As exportações de dados agora usam os mesmos totais de pagamento do app
+- Segurança aprimorada para login e turnos compartilhados
+- Som de notificação atualizado
+- O app para Apple Watch foi removido
+- Correções de bugs e outras melhorias

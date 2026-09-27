@@ -1,1 +1,1 @@
-arbeit,stunden,zeit,schicht,dienst,plan,lohn,gehalt,kalender,rechner,überstunden,zeiterfassung
+lohn,arbeit,stunden,zeit,schicht,plan,verdienst,rechner,überstunden,gehalt,kalender,job,timelog

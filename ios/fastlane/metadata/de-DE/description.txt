@@ -1,11 +1,17 @@
-Behalte deine Arbeitsschichten im Blick und berechne deinen Lohn mit Tidex.
+Was ist diese Extraschicht wirklich wert?
 
-Funktionen:
-• Einfache Schichterfassung mit Start-/Endzeiten
-• Automatische Lohnberechnung
-• Kalenderansicht aller Schichten
-• Verdienstübersicht und Statistiken
-• Widget für schnellen Zugriff
-• Synchronisierung über Geräte hinweg
+Ein später Abend, ein Sonntag, ein paar Überstunden. Im Kalender sehen die Stunden vielleicht ähnlich aus, aber der Lohn kann sehr unterschiedlich sein. Tidex hilft dir, schon vor dem Zahltag zu sehen, was deine Arbeit einbringt.
 
-Perfekt für Beschäftigte, die ihre Arbeitszeiten und Verdienste im Blick behalten möchten.
+WISSEN, WAS IN DEINEN LOHN EINFLIESST
+Füge deine Schichten hinzu und lass Tidex deinen voraussichtlichen Verdienst anhand von Stundenlohn, Zuschlägen, Überstunden und Pausenregeln berechnen. Sieh dir die Aufschlüsselung hinter dem Gesamtbetrag an, damit du weißt, woher das Geld kommt.
+
+SEHEN, WAS EINE EXTRASCHICHT VERÄNDERT
+Trage eine kommende Schicht in deinen Kalender ein und sieh, wie sie sich auf deinen voraussichtlichen Verdienst auswirkt. So bekommst du ein klareres Bild vom Monat, wenn du entscheidest, ob du noch mehr Stunden übernimmst.
+
+MEHR ALS EIN JOB? ALLES AN EINEM ORT
+Behalte Schichten und Lohneinstellungen für jeden Job an einem Ort. Verfolge deine Stunden und deinen Verdienst über längere Zeit, ohne einzelne Notizen und Berechnungen zusammenstückeln zu müssen.
+
+ETWAS, WOMIT DU DEINE LOHNABRECHNUNG PRÜFEN KANNST
+Behalte deine eigene Übersicht über die geleistete Arbeit. Exportiere Schichten als PDF oder CSV, wenn du Stunden vergleichen, eine Abweichung prüfen oder einen Bericht teilen möchtest.
+
+Es lohnt sich, deine Zeit im Blick zu behalten. Fang mit deiner nächsten Schicht an.

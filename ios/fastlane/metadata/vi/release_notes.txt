@@ -1,6 +1,9 @@
-- Đã sửa cách tính lương cho ca đêm, phụ cấp, nghỉ không lương và làm thêm giờ
-- Đã cải thiện cài đặt lương và lịch sử lương với ngày hiệu lực rõ ràng hơn và chi tiết phân tách khoản chi trả
-- Đã sửa phần xem trước thu nhập và tiện ích để phản ánh cài đặt thuế 50% một cách nhất quán
-- Đã cải thiện việc nhập giờ làm và giúp an toàn hơn khi thử lại nếu chỉ một số ca được lưu
-- Đã sửa lỗi danh sách lịch làm hiển thị các ca ngoài tháng đã chọn
-- Đã cập nhật biểu tượng ứng dụng và giao diện hình ảnh
+- Thiết kế lại tiện ích Ca làm của bạn bè với ảnh hồ sơ và dòng thời gian cho ca làm tiếp theo của từng người
+- Tidex giờ sẽ chỉ xin quyền gửi thông báo khi bạn thực sự cần, thay vì ngay lúc mở app
+- Đã sửa lỗi tính tăng ca bao gồm cả giờ từ các ca chồng lấn không được trả lương
+- Đã sửa tỷ lệ việc làm theo tháng và thống kê theo tuần cho những tuần kéo dài qua hai tháng
+- Xuất dữ liệu giờ đây dùng cùng tổng lương như trong ứng dụng
+- Cải thiện bảo mật cho đăng nhập và ca làm được chia sẻ
+- Cập nhật âm thanh thông báo
+- Đã gỡ ứng dụng Apple Watch
+- Sửa lỗi và cải thiện khác

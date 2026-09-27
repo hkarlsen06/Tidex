@@ -1,11 +1,17 @@
-Kövesd a műszakjaidat, és számold ki a béredet a Tidex segítségével.
+Mennyit ér valójában az a plusz műszak?
 
-Funkciók:
-• Egyszerű műszakrögzítés kezdési és befejezési idővel
-• Automatikus bérszámítás
-• Az összes műszak naptárnézete
-• Bevételi áttekintés és statisztikák
-• Widget a gyors eléréshez
-• Szinkronizálás az eszközök között
+Egy késő esti műszak, egy vasárnap, néhány óra túlóra. Az órák hasonlónak tűnhetnek a naptáradban, de a fizetés nagyon eltérő lehet. A Tidex segít átlátni, mennyit kereshetsz, még fizetésnap előtt.
 
-Tökéletes azoknak az alkalmazottaknak, akik nyomon szeretnék követni a ledolgozott óráikat és a bevételeiket.
+TUDD, MI SZÁMÍT BELE A FIZETÉSEDBE
+Add meg a műszakjaidat, és a Tidex kiszámolja a becsült keresetedet az órabéred, a pótlékok, a túlóra és a szünetszabályok alapján. Lásd a teljes összeg részletezését, hogy tudd, honnan jön a pénz.
+
+LÁSD, MIT JELENT EGY PLUSZ MŰSZAK
+Írj be egy közelgő műszakot a naptáradba, és nézd meg, hogyan befolyásolja a becsült keresetedet. Így tisztábban láthatod az előtted álló hónapot, amikor arról döntesz, vállalj-e több órát.
+
+TÖBB MUNKAHELYED VAN? TARTSD EGYBEN
+Tartsd egy helyen az egyes munkákhoz tartozó műszakokat és bérbeállításokat. Kövesd az óráidat és a keresetedet idővel, anélkül hogy külön jegyzetekből és számolásokból kellene összeraknod.
+
+LEGYEN MIHEZ HASONLÍTANOD A BÉRJEGYZÉKED
+Vezesd a saját nyilvántartásodat az elvégzett munkáról. Exportáld a műszakokat PDF- vagy CSV-formátumban, ha össze szeretnéd hasonlítani az órákat, utánanéznél egy eltérésnek, vagy megosztanál egy jelentést.
+
+Megéri nyomon követni az idődet. Kezdd a következő műszakoddal.

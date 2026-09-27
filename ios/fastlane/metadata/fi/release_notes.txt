@@ -1,6 +1,9 @@
-- Korjattu yövuorojen, palkkalisien, palkattomien taukojen ja ylityön palkkalaskelmat
-- Parannettu palkka-asetuksia ja palkkahistoriaa selkeämmillä voimaantulopäivillä ja maksuerittelyillä
-- Korjattu tuloennakot ja widgetit näyttämään puoliveroasetukset johdonmukaisesti
-- Parannettu vuoroaikojen syöttämistä ja tehty uudelleenyrityksestä turvallisempi, kun vain osa vuoroista tallentui
-- Korjattu aikataululuettelot, joissa näkyi vuoroja valitun kuukauden ulkopuolelta
-- Päivitetty sovelluskuvake ja visuaalinen ilme
+- Kavereiden vuorot -widget on uudistettu: mukana ovat profiilikuvat ja aikajana kunkin kaverin seuraavasta vuorosta
+- Tidex pyytää nyt ilmoitusluvan vasta silloin, kun sitä ensimmäisen kerran tarvitaan, ei käynnistyksen yhteydessä
+- Korjattu ongelma, jossa ylityölaskenta huomioi päällekkäisten, palkattomien vuorojen tunteja
+- Korjattu kuukausittaiset työaikaprosentit ja viikkotilastot viikoille, jotka ulottuvat kahden kuukauden alueelle
+- Tietoviennit käyttävät nyt samoja palkkasummia kuin sovellus
+- Parannettu kirjautumisen ja jaettujen vuorojen tietoturvaa
+- Päivitetty ilmoitusääni
+- Apple Watch -sovellus on poistettu
+- Virheenkorjauksia ja muita parannuksia
