@@ -34,6 +34,8 @@ elif [ "$HEARTBEAT_INTERVAL" -lt "$MIN_HEARTBEAT_INTERVAL" ]; then
 fi
 
 cleanup() {
+  xa_stop_xcodebuild "${XCODEBUILD_PID:-}"
+  xa_release_lock
   if [ -n "${HEARTBEAT_PID:-}" ]; then
     kill "$HEARTBEAT_PID" 2>/dev/null || true
     wait "$HEARTBEAT_PID" 2>/dev/null || true
@@ -42,6 +44,9 @@ cleanup() {
   rm -rf "$RESULT_BUNDLE"
 }
 trap cleanup EXIT
+# shellcheck source=lib/xcode-agent-throttle.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/xcode-agent-throttle.sh"
+xa_install_signal_traps
 
 start_heartbeat() {
   local start_time
@@ -86,12 +91,15 @@ fi
 if [ ${#EXTRA_ARGS[@]} -gt 0 ]; then
   XCODEBUILD_ARGS+=("${EXTRA_ARGS[@]}")
 fi
-xcodebuild "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
+xa_configure "${ACTION:-build}"
+xa_acquire_lock
+${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild ${XA_ARGS[@]+"${XA_ARGS[@]}"} "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
 XCODEBUILD_PID=$!
 start_heartbeat
 wait "$XCODEBUILD_PID"
 EXIT_CODE=$?
 stop_heartbeat
+xa_release_lock
 set -e
 
 STATUS="SUCCESS"
