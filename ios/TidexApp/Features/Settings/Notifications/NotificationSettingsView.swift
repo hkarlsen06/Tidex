@@ -9,16 +9,9 @@ struct NotificationSettingsView: View {
   var body: some View {
     Form {
       Group {
-        // System permission section
         systemPermissionSection
-
-        // Shift reminders section
         shiftRemindersSection
-
-        // Smart notifications section
         smartNotificationsSection
-
-        // Shared shifts section
         sharedShiftsSection
       }
       .listRowBackground(Color.tidexSurfacePrimary)
@@ -70,308 +63,203 @@ struct NotificationSettingsView: View {
 
   // MARK: - System Permission Section
 
+  /// Only shown while notifications are off, since there is nothing to do once they are on.
+  @ViewBuilder
   private var systemPermissionSection: some View {
-    Section {
-      LabeledContent {
-        permissionButton
-      } label: {
-        Label {
-          VStack(alignment: .leading, spacing: Spacing.micro) {
-            Text(.notificationsPermissionTitle)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(permissionStatusText)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+    switch viewModel.notificationStatus {
+    case .notDetermined:
+      Section {
+        permissionRow(icon: "bell.badge", iconColor: .tidexBlue) {
+          Button {
+            Task {
+              await viewModel.requestNotificationPermission()
+            }
+          } label: {
+            Text(.notificationsPermissionEnable)
           }
-        } icon: {
-          Image(systemName: permissionIcon)
-            .foregroundColor(permissionIconColor)
+          .buttonStyle(.borderedProminent)
         }
       }
-    } header: {
-      Text(String(localized: .notificationsPermissionSectionTitle))
-    } footer: {
-      notificationPermissionFooter
-    }
-  }
-
-  @ViewBuilder
-  private var notificationPermissionFooter: some View {
-    if viewModel.notificationStatus == .denied {
-      Text(.notificationsPermissionDeniedHint)
-    }
-  }
-
-  private var permissionIcon: String {
-    switch viewModel.notificationStatus {
-    case .authorized, .provisional, .ephemeral:
-      return "bell.badge.fill"
 
     case .denied:
-      return "bell.slash.fill"
+      Section {
+        permissionRow(icon: "bell.slash.fill", iconColor: .tidexError) {
+          Button {
+            viewModel.openSystemSettings()
+          } label: {
+            Text(.notificationsPermissionOpenSettings)
+          }
+          .buttonStyle(.bordered)
+        }
+      } footer: {
+        Text(.notificationsPermissionDeniedHint)
+      }
 
-    case .notDetermined:
-      return "bell"
-
-    @unknown default:
-      return "bell"
+    default:
+      EmptyView()
     }
   }
 
-  private var permissionIconColor: Color {
-    switch viewModel.notificationStatus {
-    case .authorized, .provisional, .ephemeral:
-      return .tidexSuccess
+  private func permissionRow<Action: View>(
+    icon: String,
+    iconColor: Color,
+    @ViewBuilder action: () -> Action
+  ) -> some View {
+    HStack(spacing: Spacing.sm) {
+      Label {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
+          Text(.notificationsPermissionTitle)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
 
-    case .denied:
-      return .tidexError
+          Text(permissionStatusText)
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextSecondary)
+        }
+      } icon: {
+        Image(systemName: icon)
+          .foregroundColor(iconColor)
+      }
 
-    case .notDetermined:
-      return .tidexBlue
+      Spacer(minLength: Spacing.xs)
 
-    @unknown default:
-      return .tidexBlue
+      action()
+        .controlSize(.small)
+        .tint(.tidexBlue)
     }
   }
 
   private var permissionStatusText: String {
-    switch viewModel.notificationStatus {
-    case .authorized, .provisional, .ephemeral:
-      return String(localized: .notificationsPermissionEnabled)
-
-    case .denied:
-      return String(localized: .notificationsPermissionDenied)
-
-    case .notDetermined:
-      return String(localized: .notificationsPermissionNotDetermined)
-
-    @unknown default:
-      return String(localized: .notificationsPermissionNotDetermined)
-    }
+    viewModel.notificationStatus == .denied
+      ? String(localized: .notificationsPermissionDenied)
+      : String(localized: .notificationsPermissionNotDetermined)
   }
 
-  @ViewBuilder
-  private var permissionButton: some View {
-    switch viewModel.notificationStatus {
-    case .authorized, .provisional, .ephemeral:
-      // Show checkmark
-      HStack(spacing: Spacing.xxs) {
-        Image(systemName: "checkmark.circle.fill")
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexSuccess)
-
-        Text(.notificationsPermissionActive)
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexSuccess)
-      }
-
-    case .denied:
-      // Open settings button
-      Button {
-        viewModel.openSystemSettings()
-      } label: {
-        Text(.notificationsPermissionOpenSettings)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexBlue)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.xxxs)
-          .background(Color.tidexBlue.opacity(0.1))
-          .cornerRadius(CornerRadius.xs)
-      }
-
-    case .notDetermined:
-      // Enable button
-      Button {
-        Task {
-          await viewModel.requestNotificationPermission()
-        }
-      } label: {
-        Text(.notificationsPermissionEnable)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextOnBrand)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.xxxs)
-          .background(Color.tidexBlue)
-          .cornerRadius(CornerRadius.xs)
-      }
-
-    @unknown default:
-      EmptyView()
-    }
+  private var isPermissionDenied: Bool {
+    viewModel.notificationStatus == .denied
   }
 
   // MARK: - Shift Reminders Section
 
   private var shiftRemindersSection: some View {
     Section {
-      // Enable toggle
       Toggle(isOn: $viewModel.shiftRemindersEnabled) {
-        Label {
-          VStack(alignment: .leading, spacing: Spacing.micro) {
-            Text(.notificationsRemindersTitle)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(.notificationsRemindersDescription)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-          }
-        } icon: {
-          Image(systemName: "bell.fill")
-            .foregroundColor(.tidexBlue)
-        }
+        Text(String(localized: .notificationsRemindersSectionTitle))
       }
       .tint(.tidexBlue)
 
-      // Reminder times (shown when enabled)
       if viewModel.shiftRemindersEnabled, !viewModel.reminderTimes.isEmpty {
         ForEach(Array(viewModel.reminderTimes.enumerated()), id: \.offset) { index, minutes in
           reminderTimeRow(minutes: minutes, index: index)
         }
 
-        // Add button (if under max)
         if viewModel.canAddReminder {
           addReminderButton
         }
       }
-    } header: {
-      Text(String(localized: .notificationsRemindersSectionTitle))
     } footer: {
-      Text(.notificationsRemindersSectionSubtitle)
+      Text(.notificationsRemindersDescription)
     }
-    .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
-    .disabled(viewModel.notificationStatus == .denied)
+    .disabled(isPermissionDenied)
   }
 
-  @ViewBuilder
   private func reminderTimeRow(minutes: Int, index: Int) -> some View {
     Button {
       viewModel.prepareForEditingTime(at: index)
     } label: {
-      LabeledContent {
-        Image(systemName: "pencil")
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextMuted)
-      } label: {
+      HStack(spacing: Spacing.sm) {
         Label {
           Text(viewModel.formatReminderTime(minutes, locale: Locale.current))
-            .font(.tidexSubheadline)
             .foregroundColor(.tidexTextPrimary)
         } icon: {
-          Image(systemName: "bell.fill")
-            .font(.tidexBody)
-            .foregroundColor(.tidexBlue)
+          Image(systemName: "clock")
+            .foregroundColor(.tidexTextSecondary)
         }
+
+        Spacer(minLength: Spacing.xs)
+
+        Image(systemName: "chevron.right")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
+      }
+      .contentShape(Rectangle())
+    }
+    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+      SwipeDeleteButton(title: String(localized: .commonDelete)) {
+        viewModel.deleteReminderTime(at: index)
       }
     }
-    .buttonStyle(.plain)
   }
 
-  @ViewBuilder
   private var addReminderButton: some View {
     Button {
       viewModel.prepareForAddingTime()
     } label: {
       Label {
         Text(.notificationsRemindersAddTime)
-          .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
       } icon: {
         Image(systemName: "plus.circle.fill")
-          .font(.tidexBody)
           .foregroundColor(.tidexBlue)
       }
     }
-    .buttonStyle(.plain)
   }
 
-  // MARK: - Shared Shifts Section
+  // MARK: - Smart Notifications Section
 
   private var smartNotificationsSection: some View {
     Section {
       Toggle(isOn: $viewModel.smartNotificationsEnabled) {
-        Label {
-          VStack(alignment: .leading, spacing: Spacing.micro) {
-            Text(.notificationsSmartTitle)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(.notificationsSmartDescription)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-          }
-        } icon: {
-          Image(systemName: "brain.head.profile")
-            .foregroundColor(.tidexBlue)
-        }
+        Text(String(localized: .notificationsSmartSectionTitle))
       }
       .tint(.tidexBlue)
-    } header: {
-      Text(String(localized: .notificationsSmartSectionTitle))
     } footer: {
-      smartStatusFooter
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        Text(.notificationsSmartDescription)
+        smartStatusText
+      }
     }
-    .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
-    .disabled(viewModel.notificationStatus == .denied)
+    .disabled(isPermissionDenied)
   }
 
   @ViewBuilder
-  private var smartStatusFooter: some View {
-    if let status = viewModel.smartStatus {
-      switch status {
-      case .active(let scheduledCount, let workDays):
-        Text(.notificationsSmartStatusActive(scheduledCount, workDays))
-          .foregroundColor(.tidexSuccess)
+  private var smartStatusText: some View {
+    switch viewModel.smartStatus {
+    case .active(let scheduledCount, let workDays):
+      Text(.notificationsSmartStatusActive(scheduledCount, workDays))
+        .foregroundColor(.tidexSuccess)
 
-      case .insufficientData(let weeksFound, let weeksRequired):
-        let weeksNeeded = weeksRequired - weeksFound
-        Text(.notificationsSmartStatusInsufficientData(weeksNeeded, weeksFound, weeksRequired))
-          .foregroundColor(.tidexWarning)
+    case .insufficientData(let weeksFound, let weeksRequired):
+      let weeksNeeded = weeksRequired - weeksFound
+      Text(.notificationsSmartStatusInsufficientData(weeksNeeded, weeksFound, weeksRequired))
+        .foregroundColor(.tidexWarning)
 
-      case .noShifts:
-        Text(.notificationsSmartStatusNoShifts)
-          .foregroundColor(.tidexWarning)
+    case .noShifts:
+      Text(.notificationsSmartStatusNoShifts)
+        .foregroundColor(.tidexWarning)
 
-      case .noPatternDetected:
-        Text(.notificationsSmartStatusNoPattern)
-          .foregroundColor(.tidexWarning)
+    case .noPatternDetected:
+      Text(.notificationsSmartStatusNoPattern)
+        .foregroundColor(.tidexWarning)
 
-      case .disabled, .permissionDenied:
-        Text(.notificationsSmartSectionSubtitle)
-      }
-    } else {
-      Text(.notificationsSmartSectionSubtitle)
+    case .disabled, .permissionDenied, nil:
+      EmptyView()
     }
   }
+
+  // MARK: - Shared Shifts Section
 
   private var sharedShiftsSection: some View {
     Section {
       Toggle(isOn: $viewModel.sharedShiftsEnabled) {
-        Label {
-          VStack(alignment: .leading, spacing: Spacing.micro) {
-            Text(.notificationsSharedTitle)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-
-            Text(.notificationsSharedDescription)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-          }
-        } icon: {
-          Image(systemName: "person.2.fill")
-            .foregroundColor(.tidexBlue)
-        }
+        Text(String(localized: .notificationsSharedSectionTitle))
       }
       .tint(.tidexBlue)
-    } header: {
-      Text(String(localized: .notificationsSharedSectionTitle))
     } footer: {
-      Text(.notificationsSharedSectionSubtitle)
+      Text(.notificationsSharedDescription)
     }
-    .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
-    .disabled(viewModel.notificationStatus == .denied)
+    .disabled(isPermissionDenied)
   }
 }
 

@@ -131,6 +131,30 @@ internal final class AdminAPITests: XCTestCase {
     XCTAssertNotNil(detail.created)
   }
 
+  internal func testUserStatsDecodeServerShape() throws {
+    let json: Data = Data(
+      #"""
+      {"devices":[{"id":"d1","platform":"ios","timeZone":"Europe/Oslo","appVersion":"2.7.2",
+        "lastSeenAt":"2026-09-28T06:24:30.077426+00:00"}],
+       "jobCount":1,"eventCount":15,"shiftCount":165,"messagesSent":622,"reportsFiled":5,
+       "feedbackCount":11,"firstShiftDate":"2025-04-09","seesShiftsFrom":10,"hasCalendarFeed":true,
+       "latestShiftDate":null,"reportsReceived":2,"lastShiftAddedAt":"2026-07-23T11:13:59.973667+00:00",
+       "shiftsLast30Days":0,"messagesLast30Days":16,"upcomingShiftCount":0,"sharesTheirShiftsWith":10,
+       "calendarFeedLastUsedAt":null,"recurringScheduleCount":2}
+      """#.utf8)
+
+    let stats: AdminUserStats = try JSONDecoder().decode(AdminUserStats.self, from: json)
+
+    XCTAssertEqual(stats.shiftCount, 165)
+    XCTAssertNil(stats.latestShift)
+    XCTAssertNotNil(stats.lastShiftAdded)
+    XCTAssertEqual(stats.devices.first?.appVersion, "2.7.2")
+    let firstShift: Date = try XCTUnwrap(stats.firstShift)
+    let day: Date.ISO8601FormatStyle = Date.ISO8601FormatStyle(timeZone: .current).year().month()
+      .day()
+    XCTAssertEqual(day.format(firstShift), "2025-04-09")
+  }
+
   // MARK: Errors
 
   internal func testEdgeFunctionErrorUsesServerMessage() throws {

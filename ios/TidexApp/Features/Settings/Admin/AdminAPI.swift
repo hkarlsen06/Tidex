@@ -47,6 +47,10 @@ enum AdminAPI {
       ])
   }
 
+  static func userStats(id: String) async throws -> AdminUserStats {
+    try await rpc("admin_get_user_stats_api", ["p_user_id": .string(id)])
+  }
+
   // MARK: Feedback
 
   static func feedback() async throws -> [AdminFeedback] {

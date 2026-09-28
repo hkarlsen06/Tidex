@@ -51,7 +51,7 @@ struct GlobalPaySettingsCard: View {
     }
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
-    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
+    .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
     .onAppear {
       initializeFromInputs(force: true)
     }

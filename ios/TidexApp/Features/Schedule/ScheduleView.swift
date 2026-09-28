@@ -311,8 +311,9 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   @ToolbarContentBuilder
   private var shiftsToolbarContent: some ToolbarContent {
+    TabTitleToolbarItem(title: .tabsShifts)
     if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
-      ToolbarItem(placement: .topBarLeading) {
+      ToolbarItem(placement: .topBarTrailing) {
         Button {
           startCalendarShare()
         } label: {

@@ -2,35 +2,43 @@ import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 /// Security settings view
-/// Displays password management, connected accounts, and MFA settings
+/// Password, connected accounts, passkeys and two-factor authentication
 struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.dismiss) private var dismiss
   @State private var viewModel = SecuritySettingsViewModel()
+  /// Connected account waiting for the user to confirm the disconnect
+  @State private var pendingDisconnect: ConnectedAccount?
+  /// Provider whose row started the running connect or disconnect request
+  @State private var busyProviderId: String?
+
+  private struct ConnectedAccount: Identifiable {
+    let id: String
+    let title: String
+  }
 
   var body: some View {
     Form {
       Group {
-        // Error message
         if let error = viewModel.errorMessage {
           ErrorBanner(message: error, onDismiss: { viewModel.clearMessages() })
         }
 
         if viewModel.isOfflineLimited {
-          Text(.securityOfflineManageUnavailable)
+          Section {
+            Label {
+              Text(.securityOfflineManageUnavailable)
+                .foregroundColor(.tidexTextSecondary)
+            } icon: {
+              Image(systemName: "wifi.slash")
+                .foregroundColor(.tidexTextMuted)
+            }
             .font(.tidexFootnote)
-            .foregroundColor(.tidexTextMuted)
+          }
         }
 
-        // Password section
         passwordSection
-
-        // Connected accounts section
         connectedAccountsSection
-
-        // Passkeys section
         passkeysSection
-
-        // MFA section
         mfaSection
       }
       .listRowBackground(Color.tidexSurfacePrimary)
@@ -47,8 +55,26 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     .sheet(isPresented: $viewModel.showMFAEnrollment) {
       mfaEnrollmentSheet
     }
-    .sheet(isPresented: $viewModel.showPhoneLinkingSheet) {
-      phoneLinkingSheet
+    .confirmationDialog(
+      pendingDisconnect?.title ?? "",
+      isPresented: Binding(
+        get: { pendingDisconnect != nil },
+        set: { isPresented in
+          if !isPresented {
+            pendingDisconnect = nil
+          }
+        }
+      ),
+      titleVisibility: .visible,
+      presenting: pendingDisconnect
+    ) { account in
+      Button(String(localized: .securityConnectionsDisconnect), role: .destructive) {
+        busyProviderId = account.id
+        Task {
+          await viewModel.disconnectProvider(account.id)
+        }
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {}
     }
     .alert(
       String(localized: .securityMfaUnenrollDialogTitle),
@@ -107,500 +133,427 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     }
   }
 
-  @ViewBuilder
-  private func settingsSection<Content: View>(
-    title: String,
-    footer: String? = nil,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    Section {
-      content()
-    } header: {
-      Text(title)
-    } footer: {
-      if let footer {
-        Text(footer)
+  // MARK: - Shared Rows
+
+  /// An icon with a title and a secondary line, used by every row on this screen.
+  private func detailLabel(icon: String, title: String, detail: String) -> some View {
+    Label {
+      VStack(alignment: .leading, spacing: Spacing.micro) {
+        Text(title)
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
+
+        Text(detail)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+      }
+    } icon: {
+      Image(systemName: icon)
+        .foregroundColor(.tidexBlue)
+    }
+  }
+
+  private var disclosureChevron: some View {
+    Image(systemName: "chevron.forward")
+      .font(.tidexCaptionRegular)
+      .foregroundColor(.tidexTextMuted)
+      .accessibilityHidden(true)
+  }
+
+  private func addRow(title: String, isLoading: Bool, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Label {
+        Text(title)
+          .foregroundColor(.tidexBlue)
+      } icon: {
+        if isLoading {
+          ProgressView()
+            .controlSize(.small)
+        } else {
+          Image(systemName: "plus.circle.fill")
+            .foregroundColor(.tidexBlue)
+        }
       }
     }
+  }
+
+  private func emptyRow(_ text: String) -> some View {
+    Text(text)
+      .font(.tidexSubheadline)
+      .foregroundColor(.tidexTextMuted)
   }
 
   // MARK: - Password Section
 
   private var passwordSection: some View {
-    settingsSection(title: String(localized: .securityPasswordSectionTitle)) {
-      HStack(spacing: Spacing.sm) {
-        // Icon
-        Image(systemName: "lock.fill")
-          .foregroundColor(.tidexBlue)
-          .accessibilityHidden(true)
-
-        // Content
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(.securityPasswordTitle)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(
-            viewModel.hasPassword
+    Section {
+      Button {
+        viewModel.showPasswordForm = true
+      } label: {
+        HStack(spacing: Spacing.sm) {
+          detailLabel(
+            icon: "lock.fill",
+            title: String(localized: .securityPasswordTitle),
+            detail: viewModel.hasPassword
               ? String(localized: .securityPasswordHasPassword)
               : String(localized: .securityPasswordNoPassword)
           )
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-        }
 
-        Spacer()
+          Spacer(minLength: Spacing.sm)
 
-        // Button
-        Button {
-          viewModel.showPasswordForm = true
-        } label: {
-          Text(
-            viewModel.hasPassword
-              ? String(localized: .securityPasswordChange)
-              : String(localized: .securityPasswordSet)
-          )
-          .font(.tidexLabel)
-          .foregroundColor(viewModel.hasPassword ? .tidexBlue : .tidexTextOnBrand)
-          .padding(.horizontal, Spacing.md)
-          .padding(.vertical, Spacing.xs)
-          .background(viewModel.hasPassword ? Color.tidexBlue.opacity(0.1) : Color.tidexBlue)
-          .cornerRadius(CornerRadius.sm)
+          if !viewModel.hasPassword {
+            Text(.securityPasswordSet)
+              .font(.tidexLabel)
+              .foregroundColor(.tidexBlue)
+          }
+
+          disclosureChevron
         }
-        .disabled(viewModel.isOfflineLimited)
-        .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
+        .contentShape(Rectangle())
       }
+      .disabled(viewModel.isOfflineLimited)
     }
   }
 
   // MARK: - Connected Accounts Section
 
   private var connectedAccountsSection: some View {
-    settingsSection(
-      title: String(localized: .securityConnectionsSectionTitle),
-      footer: String(localized: .securityConnectionsSectionSubtitle)
-    ) {
-      // Phone connection (linking needs an SMS; keep the row so existing numbers can be removed)
-      if AuthService.isSMSAvailable || viewModel.hasPhoneConnected {
+    Section {
+      // New numbers cannot be linked without SMS, but existing ones can still be removed.
+      if viewModel.hasPhoneConnected {
         connectionRow(
+          id: "phone",
           icon: "phone.fill",
-          iconColor: .tidexBlue,
           title: String(localized: .securityConnectionsPhoneTitle),
-          isConnected: viewModel.hasPhoneConnected,
+          isConnected: true,
           connectedText: formatPhoneForDisplay(viewModel.phoneNumber)
             ?? String(localized: .securityConnectionsPhoneConnected),
-          notConnectedText: String(localized: .securityConnectionsPhoneNotConnected),
-          canDisconnect: viewModel.canUnlinkPhone,
-          onConnect: {
-            viewModel.showPhoneLinkingSheet = true
-          },
-          onDisconnect: {
-            Task { await viewModel.disconnectProvider("phone") }
-          },
-          connectDisabled: viewModel.isOfflineLimited
+          notConnectedText: "",
+          canDisconnect: viewModel.canUnlinkPhone
         )
-
       }
 
-      // Google connection
       connectionRow(
+        id: "google",
         icon: "g.circle.fill",
-        iconColor: .tidexBlue,
         title: String(localized: .securityConnectionsGoogleTitle),
         isConnected: viewModel.hasGoogleConnected,
         connectedText: String(localized: .securityConnectionsGoogleConnected),
         notConnectedText: String(localized: .securityConnectionsGoogleNotConnected),
-        canDisconnect: viewModel.canDisconnectGoogle,
-        onConnect: {
-          Task { await viewModel.connectGoogle() }
-        },
-        onDisconnect: {
-          Task { await viewModel.disconnectProvider("google") }
-        },
-        connectDisabled: viewModel.isOfflineLimited
-      )
+        canDisconnect: viewModel.canDisconnectGoogle
+      ) {
+        Task { await viewModel.connectGoogle() }
+      }
 
-      // Apple connection
       connectionRow(
+        id: "apple",
         icon: "apple.logo",
-        iconColor: .tidexBlue,
         title: String(localized: .securityConnectionsAppleTitle),
         isConnected: viewModel.hasAppleConnected,
         connectedText: String(localized: .securityConnectionsAppleConnected),
         notConnectedText: String(localized: .securityConnectionsAppleNotConnected),
-        canDisconnect: viewModel.canDisconnectApple,
-        onConnect: {
-          Task { await viewModel.connectApple() }
-        },
-        onDisconnect: {
-          Task { await viewModel.disconnectProvider("apple") }
-        },
-        connectDisabled: viewModel.isOfflineLimited
-      )
+        canDisconnect: viewModel.canDisconnectApple
+      ) {
+        Task { await viewModel.connectApple() }
+      }
+    } header: {
+      Text(String(localized: .securityConnectionsSectionTitle))
+    } footer: {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        Text(.securityConnectionsSectionSubtitle)
+
+        if hasLockedConnection {
+          Text(.securityConnectionsAddOtherMethod)
+        }
+      }
     }
   }
 
+  /// True when a connected account is the last way in and so cannot be removed.
+  private var hasLockedConnection: Bool {
+    (viewModel.hasPhoneConnected && !viewModel.canUnlinkPhone)
+      || (viewModel.hasGoogleConnected && !viewModel.canDisconnectGoogle)
+      || (viewModel.hasAppleConnected && !viewModel.canDisconnectApple)
+  }
+
+  /// Tapping connects an account, or asks to disconnect a connected one.
+  /// The last remaining sign-in method is shown without an action.
   @ViewBuilder
-  private func connectionRow(  // swiftlint:disable:this function_body_length function_parameter_count line_length type_contents_order
+  private func connectionRow(  // swiftlint:disable:this function_parameter_count
+    id: String,
     icon: String,
-    iconColor: Color,
     title: String,
     isConnected: Bool,
     connectedText: String,
     notConnectedText: String,
     canDisconnect: Bool,
-    onConnect: @escaping () -> Void,
-    onDisconnect: @escaping () -> Void,
-    connectDisabled: Bool = false
+    onConnect: (() -> Void)? = nil
   ) -> some View {
-    HStack(spacing: Spacing.sm) {
-      // Icon
-      Image(systemName: icon)
-        .foregroundColor(iconColor)
-        .accessibilityHidden(true)
+    let isBusy = viewModel.isConnectingProvider && busyProviderId == id
+    let content = HStack(spacing: Spacing.sm) {
+      detailLabel(
+        icon: icon,
+        title: title,
+        detail: isConnected ? connectedText : notConnectedText
+      )
 
-      // Content
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(title)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
+      Spacer(minLength: Spacing.sm)
 
-        Text(isConnected ? connectedText : notConnectedText)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-
-        if isConnected, !canDisconnect {
-          Text(.securityConnectionsAddOtherMethod)
-            .font(.tidexMicro)
-            .foregroundColor(.tidexTextMuted)
-        }
+      if isBusy {
+        ProgressView()
+          .controlSize(.small)
+      } else if isConnected {
+        Image(systemName: "checkmark.circle.fill")
+          .foregroundColor(.tidexSuccess)
+          .accessibilityHidden(true)
+      } else {
+        Text(.securityConnectionsConnect)
+          .font(.tidexLabel)
+          .foregroundColor(.tidexBlue)
       }
+    }
+    .contentShape(Rectangle())
 
-      Spacer()
-
-      // Action button
-      if isConnected {
-        if canDisconnect {
-          // Disconnect button
-          Button(action: onDisconnect) {
-            if viewModel.isConnectingProvider {
-              ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexError))
-                .scaleEffect(0.8)
-            } else {
-              Text(.securityConnectionsDisconnect)
-                .font(.tidexLabel)
-                .foregroundColor(.tidexError)
-                .padding(.horizontal, Spacing.sm)
-                .padding(.vertical, Spacing.xxxs)
-                .background(Color.tidexError.opacity(0.1))
-                .cornerRadius(CornerRadius.xs)
-            }
-          }
-          .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
+    if isConnected, !canDisconnect {
+      content
+        .accessibilityElement(children: .combine)
+    } else {
+      Button {
+        if isConnected {
+          pendingDisconnect = ConnectedAccount(id: id, title: title)
         } else {
-          // Connected indicator
-          HStack(spacing: Spacing.xxs) {
-            Image(systemName: "checkmark.circle.fill")
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexSuccess)
-
-            Text(.securityConnectionsConnected)
-              .font(.tidexFootnoteMedium)
-              .foregroundColor(.tidexSuccess)
-          }
+          busyProviderId = id
+          onConnect?()
         }
-      } else if !connectDisabled {
-        Button(action: onConnect) {
-          if viewModel.isConnectingProvider {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-              .scaleEffect(0.8)
-          } else {
-            Text(.securityConnectionsConnect)
-              .font(.tidexLabel)
-              .foregroundColor(.tidexBlue)
-              .padding(.horizontal, Spacing.sm)
-              .padding(.vertical, Spacing.xxxs)
-              .background(Color.tidexBlue.opacity(0.1))
-              .cornerRadius(CornerRadius.xs)
-          }
-        }
-        .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
+      } label: {
+        content
       }
+      .disabled(viewModel.isConnectingProvider || viewModel.isOfflineLimited)
     }
   }
 
   // MARK: - Passkeys Section
 
   private var passkeysSection: some View {
-    settingsSection(
-      title: String(localized: .securityPasskeysSectionTitle),
-      footer: String(localized: .securityPasskeysSectionSubtitle)
-    ) {
+    Section {
       if viewModel.passkeys.isEmpty {
-        HStack(spacing: Spacing.sm) {
-          Image(systemName: "key.slash")
-            .foregroundColor(.tidexBlue)
-            .accessibilityHidden(true)
-
-          Text(.securityPasskeysNoPasskeys)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-
-          Spacer()
-        }
-
+        emptyRow(String(localized: .securityPasskeysNoPasskeys))
       } else {
         ForEach(viewModel.passkeys) { passkey in
           passkeyRow(passkey)
         }
       }
 
-      Button {
+      addRow(
+        title: viewModel.isRegisteringPasskey
+          ? String(localized: .securityPasskeysAdding)
+          : String(localized: .securityPasskeysAdd),
+        isLoading: viewModel.isRegisteringPasskey
+      ) {
         Task {
           await viewModel.registerPasskey()
         }
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          if viewModel.isRegisteringPasskey {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-              .scaleEffect(0.8)
-          } else {
-            Image(systemName: "plus.circle.fill")
-              .font(.tidexHeadline)
-          }
-
-          Text(
-            viewModel.isRegisteringPasskey
-              ? String(localized: .securityPasskeysAdding)
-              : String(localized: .securityPasskeysAdd)
-          )
-          .font(.tidexLabel)
-        }
-        .foregroundColor(.tidexBlue)
-        .frame(maxWidth: .infinity)
       }
       .disabled(viewModel.isRegisteringPasskey || viewModel.isOfflineLimited)
-      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
+    } header: {
+      Text(String(localized: .securityPasskeysSectionTitle))
+    } footer: {
+      Text(.securityPasskeysSectionSubtitle)
+    }
+  }
+
+  private func passkeyRow(_ passkey: PasskeyAuthService.Passkey) -> some View {
+    HStack(spacing: Spacing.sm) {
+      detailLabel(
+        icon: "person.badge.key.fill",
+        title: passkey.displayName,
+        detail: String(localized: .securityMfaAddedOn(passkey.formattedCreatedAt))
+      )
+
+      Spacer(minLength: Spacing.sm)
+
+      if viewModel.isRenamingPasskey, viewModel.passkeyToRename?.id == passkey.id {
+        ProgressView()
+          .controlSize(.small)
+      }
+    }
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+      passkeyActions(passkey)
+    }
+    .contextMenu {
+      passkeyActions(passkey)
     }
   }
 
   @ViewBuilder
-  private func passkeyRow(_ passkey: PasskeyAuthService.Passkey) -> some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: "person.badge.key.fill")
-        .foregroundColor(.tidexBlue)
-        .accessibilityHidden(true)
+  private func passkeyActions(_ passkey: PasskeyAuthService.Passkey) -> some View {
+    let isBusy =
+      viewModel.isRenamingPasskey || viewModel.isDeletingPasskey || viewModel.isOfflineLimited
 
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(passkey.displayName)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(String(localized: .securityMfaAddedOn(passkey.formattedCreatedAt)))
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      }
-
-      Spacer()
-
-      if viewModel.isRenamingPasskey, viewModel.passkeyToRename?.id == passkey.id {
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
-          .scaleEffect(0.75)
-          .padding(Spacing.xs)
-      } else {
-        Button {
-          viewModel.startRenamingPasskey(passkey)
-        } label: {
-          Image(systemName: "pencil")
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
-            .padding(Spacing.xs)
-        }
-        .disabled(
-          viewModel.isRenamingPasskey || viewModel.isDeletingPasskey || viewModel.isOfflineLimited
-        )
-        .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
-      }
-
-      Button {
-        viewModel.passkeyToDelete = passkey
-        viewModel.showDeletePasskeyConfirmation = true
-      } label: {
-        Image(systemName: "trash")
-          .font(.tidexBody)
-          .foregroundColor(.tidexError)
-          .padding(Spacing.xs)
-      }
-      .disabled(
-        viewModel.isDeletingPasskey || viewModel.isRenamingPasskey || viewModel.isOfflineLimited
-      )
-      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
+    SwipeDeleteButton(title: String(localized: .securityPasskeysDeleteDialogConfirm)) {
+      viewModel.passkeyToDelete = passkey
+      viewModel.showDeletePasskeyConfirmation = true
     }
+    .disabled(isBusy)
+
+    Button {
+      viewModel.startRenamingPasskey(passkey)
+    } label: {
+      Label(String(localized: .commonRename), systemImage: "pencil")
+    }
+    .tint(.tidexBlue)
+    .disabled(isBusy)
   }
 
   // MARK: - MFA Section
 
   private var mfaSection: some View {
-    settingsSection(
-      title: String(localized: .securityMfaSectionTitle),
-      footer: String(localized: .securityMfaSectionSubtitle)
-    ) {
-      // Enrolled factors
+    Section {
       if viewModel.mfaFactors.isEmpty {
-        HStack(spacing: Spacing.sm) {
-          Image(systemName: "shield.slash")
-            .foregroundColor(.tidexBlue)
-            .accessibilityHidden(true)
-
-          Text(.securityMfaNoFactors)
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexTextSecondary)
-
-          Spacer()
-        }
-
+        emptyRow(String(localized: .securityMfaNoFactors))
       } else {
         ForEach(viewModel.mfaFactors) { factor in
           mfaFactorRow(factor)
         }
       }
 
-      // Add factor button
-      Button {
+      addRow(
+        title: String(localized: .securityMfaAddFactor),
+        isLoading: viewModel.isEnrollingMFA
+      ) {
         Task {
           await viewModel.startMFAEnrollment()
         }
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          if viewModel.isEnrollingMFA {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-              .scaleEffect(0.8)
-          } else {
-            Image(systemName: "plus.circle.fill")
-              .font(.tidexHeadline)
-          }
-
-          Text(.securityMfaAddFactor)
-            .font(.tidexLabel)
-        }
-        .foregroundColor(.tidexBlue)
-        .frame(maxWidth: .infinity)
       }
       .disabled(viewModel.isEnrollingMFA || viewModel.isOfflineLimited)
-      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
+    } header: {
+      Text(String(localized: .securityMfaSectionTitle))
+    } footer: {
+      Text(.securityMfaSectionSubtitle)
     }
   }
 
-  @ViewBuilder
   private func mfaFactorRow(_ factor: SecuritySettingsViewModel.MFAFactor) -> some View {
-    HStack(spacing: Spacing.sm) {
-      // Icon
-      Image(systemName: "iphone")
-        .foregroundColor(.tidexBlue)
-        .accessibilityHidden(true)
-
-      // Content
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(factor.displayName)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(String(localized: .securityMfaAddedOn(factor.formattedDate)))
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      }
-
-      Spacer()
-
-      // Delete button
-      Button {
-        viewModel.factorToUnenroll = factor
-        viewModel.showUnenrollConfirmation = true
-      } label: {
-        Image(systemName: "trash")
-          .font(.tidexBody)
-          .foregroundColor(.tidexError)
-          .padding(Spacing.xs)
-      }
-      .disabled(viewModel.isUnenrollingMFA || viewModel.isOfflineLimited)
-      .opacity(viewModel.isOfflineLimited ? 0.55 : 1)
+    detailLabel(
+      icon: "iphone",
+      title: factor.displayName,
+      detail: String(localized: .securityMfaAddedOn(factor.formattedDate))
+    )
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+      mfaFactorActions(factor)
     }
+    .contextMenu {
+      mfaFactorActions(factor)
+    }
+  }
+
+  private func mfaFactorActions(_ factor: SecuritySettingsViewModel.MFAFactor) -> some View {
+    SwipeDeleteButton(title: String(localized: .securityMfaUnenrollDialogConfirm)) {
+      viewModel.factorToUnenroll = factor
+      viewModel.showUnenrollConfirmation = true
+    }
+    .disabled(viewModel.isUnenrollingMFA || viewModel.isOfflineLimited)
+  }
+
+  // MARK: - Sheet Helpers
+
+  /// Full-width action row at the bottom of a sheet form.
+  private func sheetActionSection(
+    title: String,
+    isLoading: Bool,
+    isEnabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Section {
+      Button(action: action) {
+        HStack(spacing: Spacing.xs) {
+          if isLoading {
+            ProgressView()
+              .controlSize(.small)
+          }
+
+          Text(title)
+            .font(.tidexBodyMedium)
+        }
+        .frame(maxWidth: .infinity)
+      }
+      .disabled(!isEnabled || isLoading)
+    }
+  }
+
+  /// Footer text that switches to the current error when there is one.
+  @ViewBuilder
+  private func sheetFooter(_ text: String) -> some View {
+    if let error = viewModel.errorMessage {
+      Text(error)
+        .foregroundColor(.tidexError)
+    } else {
+      Text(text)
+    }
+  }
+
+  /// A centered numeric code field that keeps at most `maxLength` digits.
+  private func codeField(_ placeholder: String, text: Binding<String>, maxLength: Int) -> some View {
+    TextField(placeholder, text: text)
+      .font(.tidexMonoTitle)
+      .multilineTextAlignment(.center)
+      .keyboardType(.numberPad)
+      .textContentType(.oneTimeCode)
+      .onChange(of: text.wrappedValue) { _, newValue in
+        let filtered = String(newValue.filter(\.isNumber).prefix(maxLength))
+        if filtered != newValue {
+          text.wrappedValue = filtered
+        }
+      }
   }
 
   // MARK: - Password Form Sheet
 
+  private var passwordInstructions: String {
+    viewModel.hasPassword
+      ? String(localized: .securityPasswordChangeInstructions)
+      : String(localized: .securityPasswordSetInstructions)
+  }
+
   private var passwordFormSheet: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.lg) {
-          // Instructions
-          Text(
-            viewModel.hasPassword
-              ? String(localized: .securityPasswordChangeInstructions)
-              : viewModel.hasPhoneConnected
-                ? String(localized: .securityPasswordSetWithPhoneInstructions)
-                : String(localized: .securityPasswordSetInstructions)
-          )
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .frame(maxWidth: .infinity, alignment: .leading)
+      Form {
+        Group {
+          Section {
+            SecureField(
+              viewModel.hasPassword
+                ? String(localized: .securityPasswordNewPasswordLabel)
+                : String(localized: .securityPasswordPasswordLabel),
+              text: $viewModel.newPassword
+            )
+            .textContentType(.newPassword)
 
-          // Phone OTP section (for phone-only users without password)
-          if !viewModel.hasPassword, viewModel.hasPhoneConnected {
-            phoneOtpSection
+            SecureField(
+              String(localized: .securityPasswordConfirmPasswordLabel),
+              text: $viewModel.confirmPassword
+            )
+            .textContentType(.newPassword)
+          } footer: {
+            sheetFooter("\(passwordInstructions) \(String(localized: .securityPasswordHint))")
           }
 
-          // Password fields (show after OTP sent for phone users, or immediately for others)
-          if viewModel.hasPassword || !viewModel.hasPhoneConnected || viewModel.otpSent {
-            passwordFieldsSection
-          }
-
-          // Error message
-          if let error = viewModel.errorMessage {
-            Text(error)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
-
-          // Submit button
-          if viewModel.hasPassword || !viewModel.hasPhoneConnected || viewModel.otpSent {
-            Button {
-              Task {
-                await viewModel.setPassword()
-              }
-            } label: {
-              HStack {
-                if viewModel.isSettingPassword {
-                  ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-                    .scaleEffect(0.8)
-                }
-                Text(
-                  viewModel.isSettingPassword
-                    ? String(localized: .securityPasswordSetting)
-                    : viewModel.hasPassword
-                      ? String(localized: .securityPasswordUpdate)
-                      : String(localized: .securityPasswordSet))
-              }
-              .font(.tidexButton)
-              .foregroundColor(.tidexTextOnBrand)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, Spacing.sm)
-              .background(canSubmitPassword ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-              .cornerRadius(CornerRadius.md)
+          sheetActionSection(
+            title: viewModel.isSettingPassword
+              ? String(localized: .securityPasswordSetting)
+              : viewModel.hasPassword
+                ? String(localized: .securityPasswordUpdate)
+                : String(localized: .securityPasswordSet),
+            isLoading: viewModel.isSettingPassword,
+            isEnabled: canSubmitPassword
+          ) {
+            Task {
+              await viewModel.setPassword()
             }
-            .disabled(!canSubmitPassword || viewModel.isSettingPassword)
           }
         }
-        .padding(Spacing.lg)
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .background(Color.tidexBackground)
+      .tidexListBackground()
       .navigationTitle(
         viewModel.hasPassword
           ? String(localized: .securityPasswordChangeTitle)
@@ -618,191 +571,66 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     .presentationDetents([.medium, .large])
   }
 
-  private var phoneOtpSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      if !viewModel.otpSent {
-        // Request OTP button
-        Button {
-          Task {
-            await viewModel.requestPasswordOTP()
-          }
-        } label: {
-          HStack {
-            if viewModel.isSettingPassword {
-              ProgressView()
-                .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-                .scaleEffect(0.8)
-            }
-            Text(
-              viewModel.isSettingPassword
-                ? String(localized: .securityPasswordSendingCode)
-                : String(localized: .securityPasswordRequestCode))
-          }
-          .font(.tidexButton)
-          .foregroundColor(.tidexTextOnBrand)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexBlue)
-          .cornerRadius(CornerRadius.md)
-        }
-        .disabled(viewModel.isSettingPassword)
-      } else {
-        // OTP input
-        VStack(alignment: .leading, spacing: Spacing.xxxs) {
-          Text(.securityPasswordOtpLabel)
-            .font(.tidexFootnoteMedium)
-            .foregroundColor(.tidexTextSecondary)
-
-          TextField("123456", text: $viewModel.phoneOtp)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
-            .keyboardType(.numberPad)
-            .padding(.horizontal, Spacing.sm)
-            .padding(.vertical, Spacing.sm)
-            .background(Color.tidexSurfaceSecondary)
-            .cornerRadius(CornerRadius.sm)
-            .onChange(of: viewModel.phoneOtp) { _, newValue in
-              // Limit to 6 digits
-              let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
-              if filtered.count > 6 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-                viewModel.phoneOtp = String(filtered.prefix(6))
-              } else if filtered != newValue {
-                viewModel.phoneOtp = filtered
-              }
-            }
-        }
-      }
-    }
-  }
-
-  private var passwordFieldsSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      // New password
-      VStack(alignment: .leading, spacing: Spacing.xxxs) {
-        Text(
-          viewModel.hasPassword
-            ? String(localized: .securityPasswordNewPasswordLabel)
-            : String(localized: .securityPasswordPasswordLabel)
-        )
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-
-        SecureField(
-          String(localized: .securityPasswordPasswordPlaceholder), text: $viewModel.newPassword
-        )
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(CornerRadius.sm)
-      }
-
-      // Confirm password
-      VStack(alignment: .leading, spacing: Spacing.xxxs) {
-        Text(.securityPasswordConfirmPasswordLabel)
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextSecondary)
-
-        SecureField(
-          String(localized: .securityPasswordPasswordPlaceholder), text: $viewModel.confirmPassword
-        )
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextPrimary)
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(CornerRadius.sm)
-      }
-
-      // Password hint
-      Text(.securityPasswordHint)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-    }
-  }
-
   private var canSubmitPassword: Bool {
-    let hasPassword = !viewModel.newPassword.isEmpty && !viewModel.confirmPassword.isEmpty
-    let hasOtp =
-      !viewModel.hasPassword && viewModel.hasPhoneConnected ? !viewModel.phoneOtp.isEmpty : true
-    return hasPassword && hasOtp
+    !viewModel.newPassword.isEmpty && !viewModel.confirmPassword.isEmpty
   }
 
   // MARK: - MFA Enrollment Sheet
 
   private var mfaEnrollmentSheet: some View {
     NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.lg) {
-          // QR Code - Generated natively from TOTP URI
+      Form {
+        Group {
           if let totpUri = viewModel.mfaTotpUri {
             qrCodeSection(totpUri)
           }
 
-          // Manual entry secret
           if let secret = viewModel.mfaSecret {
-            manualEntrySection(secret)
-          }
+            Section {
+              HStack(spacing: Spacing.sm) {
+                Text(secret)
+                  .font(.tidexMonoCaptionRegular)
+                  .foregroundColor(.tidexTextPrimary)
+                  .lineLimit(1)
+                  .truncationMode(.middle)
+                  .textSelection(.enabled)
 
-          // Verification code input
-          verificationCodeSection
+                Spacer(minLength: Spacing.sm)
 
-          // Error message
-          if let error = viewModel.errorMessage {
-            Text(error)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
-
-          // Buttons
-          VStack(spacing: Spacing.sm) {
-            Button {
-              Task {
-                await viewModel.verifyMFAEnrollment()
-              }
-            } label: {
-              HStack {
-                if viewModel.isVerifyingMFA {
-                  ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-                    .scaleEffect(0.8)
+                Button {
+                  UIPasteboard.general.string = secret
+                } label: {
+                  Label(String(localized: .commonCopy), systemImage: "doc.on.doc")
+                    .labelStyle(.iconOnly)
                 }
-                Text(
-                  viewModel.isVerifyingMFA
-                    ? String(localized: .securityMfaVerifying)
-                    : String(localized: .securityMfaVerify))
+                .buttonStyle(.borderless)
               }
-              .font(.tidexButton)
-              .foregroundColor(.tidexTextOnBrand)
-              .frame(maxWidth: .infinity)
-              .padding(.vertical, Spacing.sm)
-              .background(
-                viewModel.mfaVerifyCode.count == 6 ? Color.tidexBlue : Color.tidexBlue.opacity(0.5)
-              )
-              .cornerRadius(CornerRadius.md)
+            } header: {
+              Text(.securityMfaManualEntry)
             }
-            .disabled(viewModel.mfaVerifyCode.count != 6 || viewModel.isVerifyingMFA)
+          }
 
-            // Open in app button
-            if let uri = viewModel.mfaTotpUri, let url = URL(string: uri) {
-              Button {
-                UIApplication.shared.open(url)
-              } label: {
-                HStack(spacing: Spacing.xxxs) {
-                  Image(systemName: "arrow.up.right.square")
-                  Text(.securityMfaOpenInApp)
-                }
-                .font(.tidexLabel)
-                .foregroundColor(.tidexBlue)
-              }
+          Section {
+            codeField("000000", text: $viewModel.mfaVerifyCode, maxLength: 6)
+          } footer: {
+            sheetFooter(String(localized: .securityMfaVerifyLabel))
+          }
+
+          sheetActionSection(
+            title: viewModel.isVerifyingMFA
+              ? String(localized: .securityMfaVerifying)
+              : String(localized: .securityMfaVerify),
+            isLoading: viewModel.isVerifyingMFA,
+            isEnabled: viewModel.mfaVerifyCode.count == 6
+          ) {
+            Task {
+              await viewModel.verifyMFAEnrollment()
             }
           }
         }
-        .padding(Spacing.lg)
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .background(Color.tidexBackground)
+      .tidexListBackground()
       .navigationTitle(String(localized: .securityMfaEnrollTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -818,38 +646,21 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     .presentationDetents([.large])
   }
 
-  @ViewBuilder
   private func qrCodeSection(_ totpUri: String) -> some View {
-    VStack(spacing: Spacing.sm) {
-      Text(.securityMfaScanQR)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-        .multilineTextAlignment(.center)
-
-      // QR Code - Generated natively from otpauth:// URI
-      if let qrImage = generateQRCode(from: totpUri) {
-        Image(uiImage: qrImage)
-          .interpolation(.none)
-          .resizable()
-          .scaledToFit()
-          .frame(width: 200, height: 200)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.lg)
-              .fill(Color.white)
-              .padding(-Spacing.xs)
-          )
-          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg))
-      } else {
-        // Fallback if QR generation fails
-        ZStack {
-          RoundedRectangle(cornerRadius: CornerRadius.lg)
-            .fill(Color.white)
-            .frame(width: 200, height: 200)
-
+    Section {
+      Group {
+        if let qrImage = generateQRCode(from: totpUri) {
+          Image(uiImage: qrImage)
+            .interpolation(.none)
+            .resizable()
+            .scaledToFit()
+            .accessibilityHidden(true)
+        } else {
           VStack(spacing: Spacing.xs) {
             Image(systemName: "qrcode")
               .font(.system(size: 60))
               .foregroundColor(.tidexTextMuted)
+              .accessibilityHidden(true)
 
             Text(.securityMfaUseSecretBelow)
               .font(.tidexCaptionRegular)
@@ -858,6 +669,22 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           }
         }
       }
+      .frame(width: 184, height: 184)
+      .padding(Spacing.xs)
+      // QR scanners need dark modules on a light background in both appearances.
+      .background(Color.white, in: RoundedRectangle(cornerRadius: CornerRadius.lg))
+      .frame(maxWidth: .infinity)
+
+      if let url = URL(string: totpUri) {
+        Button {
+          UIApplication.shared.open(url)
+        } label: {
+          Label(String(localized: .securityMfaOpenInApp), systemImage: "arrow.up.right.square")
+            .frame(maxWidth: .infinity)
+        }
+      }
+    } footer: {
+      Text(.securityMfaScanQR)
     }
   }
 
@@ -881,247 +708,6 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     }
     return UIImage(cgImage: cgImage)
   }
-
-  @ViewBuilder
-  private func manualEntrySection(_ secret: String) -> some View {
-    VStack(spacing: Spacing.xs) {
-      Text(.securityMfaManualEntry)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-
-      // Secret code with copy button
-      HStack {
-        Text(secret)
-          .font(.tidexMonoCaptionRegular)
-          .foregroundColor(.tidexTextPrimary)
-          .lineLimit(1)
-
-        Spacer()
-
-        Button {
-          UIPasteboard.general.string = secret
-        } label: {
-          Image(systemName: "doc.on.doc")
-            .font(.tidexSubheadline)
-            .foregroundColor(.tidexBlue)
-        }
-      }
-      .padding(Spacing.sm)
-      .background(Color.tidexSurfaceSecondary)
-      .cornerRadius(CornerRadius.sm)
-    }
-  }
-
-  private var verificationCodeSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      Text(.securityMfaVerifyLabel)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-
-      // 6-digit code input using OTPInputField style
-      TextField("000000", text: $viewModel.mfaVerifyCode)
-        .font(.tidexMonoTitle)
-        .foregroundColor(.tidexTextPrimary)
-        .multilineTextAlignment(.center)
-        .keyboardType(.numberPad)
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(CornerRadius.sm)
-        .onChange(of: viewModel.mfaVerifyCode) { _, newValue in
-          // Limit to 6 digits
-          let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
-          if filtered.count > 6 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-            viewModel.mfaVerifyCode = String(filtered.prefix(6))
-          } else if filtered != newValue {
-            viewModel.mfaVerifyCode = filtered
-          }
-        }
-    }
-  }
-
-  // MARK: - Phone Linking Sheet
-
-  private var phoneLinkingSheet: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.lg) {
-          // Instructions
-          Text(
-            viewModel.phoneLinkStep == .input
-              ? String(localized: .securityPhoneLinkingInstructionEnter)
-              : String(localized: .securityPhoneLinkingInstructionVerify)
-          )
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .frame(maxWidth: .infinity, alignment: .leading)
-
-          if viewModel.phoneLinkStep == .input {
-            phoneLinkInputSection
-          } else {
-            phoneLinkOtpSection
-          }
-
-          // Error message
-          if let error = viewModel.errorMessage {
-            Text(error)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-              .frame(maxWidth: .infinity, alignment: .leading)
-          }
-
-          // Action button
-          Button {
-            Task {
-              if viewModel.phoneLinkStep == .input {
-                await viewModel.connectPhone()
-              } else {
-                await viewModel.verifyPhoneLinkOTP()
-              }
-            }
-          } label: {
-            HStack {
-              if viewModel.isLinkingPhone {
-                ProgressView()
-                  .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-                  .scaleEffect(0.8)
-              }
-              Text(
-                viewModel.isLinkingPhone
-                  ? (viewModel.phoneLinkStep == .input
-                    ? String(localized: .securityPhoneLinkingSending)
-                    : String(localized: .securityPhoneLinkingVerifying))
-                  : (viewModel.phoneLinkStep == .input
-                    ? String(localized: .securityPhoneLinkingSendCode)
-                    : String(localized: .securityPhoneLinkingVerify)))
-            }
-            .font(.tidexButton)
-            .foregroundColor(.tidexTextOnBrand)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.sm)
-            .background(canSubmitPhoneLinking ? Color.tidexBlue : Color.tidexBlue.opacity(0.5))
-            .cornerRadius(CornerRadius.md)
-          }
-          .disabled(!canSubmitPhoneLinking || viewModel.isLinkingPhone)
-        }
-        .padding(Spacing.lg)
-      }
-      .background(Color.tidexBackground)
-      .navigationTitle(String(localized: .securityPhoneLinkingTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            viewModel.resetPhoneLinkingForm()
-          }
-        }
-      }
-    }
-    .presentationDetents([.medium])
-  }
-
-  private var phoneLinkInputSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.xxxs) {
-      Text(.securityPhoneLinkingPhoneLabel)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-
-      HStack(spacing: Spacing.xs) {
-        // Country code indicator
-        Text("+47")
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(CornerRadius.sm)
-
-        TextField("12345678", text: $viewModel.phoneLinkInput)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-          .keyboardType(.numberPad)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(CornerRadius.sm)
-          .onChange(of: viewModel.phoneLinkInput) { _, newValue in
-            // Limit to 8 digits (Norwegian phone numbers)
-            let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
-            if filtered.count > 8 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-              viewModel.phoneLinkInput = String(filtered.prefix(8))
-            } else if filtered != newValue {
-              viewModel.phoneLinkInput = filtered
-            }
-          }
-      }
-
-      Text(.securityPhoneLinkingPhoneHint)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-    }
-  }
-
-  private var phoneLinkOtpSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      // Show the phone number that code was sent to
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: "phone.fill")
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexBlue)
-        Text(formatPhoneForDisplay(viewModel.phoneLinkInput) ?? "+47 \(viewModel.phoneLinkInput)")
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        Button {
-          viewModel.phoneLinkStep = .input
-          viewModel.phoneLinkOtp = ""
-          viewModel.errorMessage = nil
-        } label: {
-          Text(.securityPhoneLinkingChangeNumber)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
-        }
-      }
-      .padding(Spacing.sm)
-      .background(Color.tidexSurfaceSecondary)
-      .cornerRadius(CornerRadius.sm)
-
-      // OTP input
-      VStack(alignment: .leading, spacing: Spacing.xxxs) {
-        Text(.securityPhoneLinkingOtpLabel)
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextSecondary)
-
-        TextField("123456", text: $viewModel.phoneLinkOtp)
-          .font(.tidexMonoTitle)
-          .foregroundColor(.tidexTextPrimary)
-          .multilineTextAlignment(.center)
-          .keyboardType(.numberPad)
-          .padding(.horizontal, Spacing.md)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexSurfaceSecondary)
-          .cornerRadius(CornerRadius.sm)
-          .onChange(of: viewModel.phoneLinkOtp) { _, newValue in
-            // Limit to 6 digits
-            let filtered = newValue.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
-            if filtered.count > 6 {  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-              viewModel.phoneLinkOtp = String(filtered.prefix(6))
-            } else if filtered != newValue {
-              viewModel.phoneLinkOtp = filtered
-            }
-          }
-      }
-    }
-  }
-
-  private var canSubmitPhoneLinking: Bool {
-    if viewModel.phoneLinkStep == .input {
-      return viewModel.phoneLinkInput.count == 8
-    }
-    return viewModel.phoneLinkOtp.count == 6  // swiftlint:disable:this no_magic_numbers
-  }  // swiftlint:disable:this no_magic_numbers
 
   /// Format a phone number for display (Norwegian: nnn nn nnn)
   private func formatPhoneForDisplay(_ phone: String?) -> String? {

@@ -12,8 +12,8 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "NotificationS
 final class NotificationSettingsViewModel {
   // MARK: - Published State
 
-  /// System notification permission status
-  var notificationStatus: UNAuthorizationStatus = .notDetermined
+  /// System notification permission status, nil until the first check finishes
+  var notificationStatus: UNAuthorizationStatus?
 
   /// Whether shift reminders are enabled
   var shiftRemindersEnabled: Bool = false {

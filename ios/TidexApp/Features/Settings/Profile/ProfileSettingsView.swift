@@ -5,13 +5,13 @@ import os.log
 private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSettings")
 
 private enum ProfileAvatarLayout {
-  static let size: CGFloat = 80
-  static let cameraBadgeSize: CGFloat = 30
-  static let cameraIconSize: CGFloat = 10
+  static let size: CGFloat = 96
+  static let cameraBadgeSize: CGFloat = 32
+  static let cameraIconSize: CGFloat = 13
 }
 
 /// Profile settings view
-/// Displays profile picture, name, email, and danger zone (delete account)
+/// Profile picture, personal details, sign-in links, sessions and account deletion
 struct ProfileSettingsView: View {
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.dismiss) private var dismiss
@@ -81,12 +81,8 @@ struct ProfileSettingsView: View {
           )
         }
 
-        // Personal Info Section
-        Section(String(localized: .profilePersonalInfoTitle)) {
-          avatarSection
-          emailField
-        }
-
+        profileHeaderSection
+        personalInfoSection
         accountAccessSection
         sessionsSection
         dangerZoneSection
@@ -237,154 +233,116 @@ struct ProfileSettingsView: View {
 
   private var emailChangeSheet: some View {
     NavigationStack {
-      VStack(spacing: Spacing.lg) {
+      Group {
         if viewModel.emailChangeSent {
-          // Success state
           emailChangeSentView
         } else {
-          // Input state
-          emailChangeInputView
+          emailChangeForm
         }
-
-        Spacer()
       }
-      .padding(Spacing.lg)
-      .background(Color.tidexBackground)
       .navigationTitle(String(localized: .profileEmailChangeTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            viewModel.resetEmailChangeState()
+        if viewModel.emailChangeSent {
+          ToolbarItem(placement: .confirmationAction) {
+            Button(String(localized: .commonDone)) {
+              viewModel.resetEmailChangeState()
+            }
+          }
+        } else {
+          ToolbarItem(placement: .cancellationAction) {
+            Button(String(localized: .commonCancel)) {
+              viewModel.resetEmailChangeState()
+            }
           }
         }
       }
     }
-    .presentationDetents([.medium])
+    .presentationDetents([.medium, .large])
   }
 
-  private var emailChangeInputView: some View {
-    VStack(alignment: .leading, spacing: Spacing.mlg) {
-      // Instructions
-      Text(.profileEmailChangeInstructions)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-        .lineLimit(nil)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(maxWidth: .infinity, alignment: .leading)
-
-      // Current email (read-only)
-      VStack(alignment: .leading, spacing: Spacing.xxxs) {
-        Text(.profileEmailChangeCurrentEmailLabel)
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextSecondary)
-
-        Text(viewModel.email)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextMuted)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.sm)
-          .frame(maxWidth: .infinity, alignment: .leading)
-          .background(Color.tidexSurfaceSecondary.opacity(0.5))
-          .cornerRadius(CornerRadius.sm)
-      }
-
-      // New email input
-      VStack(alignment: .leading, spacing: Spacing.xxxs) {
-        Text(.profileEmailChangeNewEmailLabel)
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextSecondary)
-
-        TextField(
-          String(localized: .profileEmailChangeNewEmailPlaceholder), text: $viewModel.newEmail
-        )
-        .font(.tidexBody)
-        .foregroundColor(.tidexTextPrimary)
-        .keyboardType(.emailAddress)
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, Spacing.sm)
-        .background(Color.tidexSurfaceSecondary)
-        .cornerRadius(CornerRadius.sm)
-      }
-
-      // Error message
-      if let error = viewModel.errorMessage {
-        Text(error)
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexError)
-      }
-
-      // Submit button
-      Button {
-        Task {
-          await viewModel.initiateEmailChange()
+  private var emailChangeForm: some View {
+    Form {
+      Group {
+        Section {
+          currentEmailRow
         }
-      } label: {
-        HStack {
-          if viewModel.isChangingEmail {
-            ProgressView()
-              .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-              .scaleEffect(0.8)
+
+        Section {
+          TextField(
+            String(localized: .profileEmailChangeNewEmailPlaceholder),
+            text: $viewModel.newEmail
+          )
+          .keyboardType(.emailAddress)
+          .textContentType(.emailAddress)
+          .textInputAutocapitalization(.never)
+          .autocorrectionDisabled()
+        } header: {
+          Text(.profileEmailChangeNewEmailLabel)
+        } footer: {
+          if let error = viewModel.errorMessage {
+            Text(error)
+              .foregroundColor(.tidexError)
+          } else {
+            Text(.profileEmailChangeInstructions)
           }
-          Text(
-            viewModel.isChangingEmail
-              ? String(localized: .profileEmailChangeSending)
-              : String(localized: .profileEmailChangeSendConfirmation))
         }
-        .font(.tidexButton)
-        .foregroundColor(.tidexTextOnBrand)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(viewModel.newEmail.isEmpty ? Color.tidexBlue.opacity(0.5) : Color.tidexBlue)
-        .cornerRadius(CornerRadius.md)
+
+        Section {
+          emailChangeSendButton
+        }
       }
-      .disabled(viewModel.newEmail.isEmpty || viewModel.isChangingEmail)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
+    .tidexListBackground()
+  }
+
+  private var currentEmailRow: some View {
+    LabeledContent(String(localized: .profileEmailChangeCurrentEmailLabel)) {
+      Text(viewModel.email)
+        .lineLimit(1)
+        .truncationMode(.middle)
+    }
+  }
+
+  private var emailChangeSendButton: some View {
+    Button {
+      Task {
+        await viewModel.initiateEmailChange()
+      }
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        if viewModel.isChangingEmail {
+          ProgressView()
+            .controlSize(.small)
+        }
+
+        Text(
+          viewModel.isChangingEmail
+            ? String(localized: .profileEmailChangeSending)
+            : String(localized: .profileEmailChangeSendConfirmation)
+        )
+        .font(.tidexBodyMedium)
+      }
+      .frame(maxWidth: .infinity)
+    }
+    .disabled(viewModel.newEmail.isEmpty || viewModel.isChangingEmail)
   }
 
   private var emailChangeSentView: some View {
-    VStack(spacing: Spacing.mlg) {
-      // Success icon
-      ZStack {
-        Circle()
-          .fill(Color.tidexSuccess.opacity(0.15))
-          .frame(width: 80, height: 80)
-
-        Image(systemName: "checkmark.circle.fill")
-          .font(.system(size: 40))
-          .foregroundColor(.tidexSuccess)
-      }
-
-      // Success message
-      VStack(spacing: Spacing.xs) {
-        Text(.profileEmailChangeConfirmationSent)
-          .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(.profileEmailChangeConfirmationMessage)
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextSecondary)
-          .multilineTextAlignment(.center)
-      }
-
-      // Done button
-      Button {
-        viewModel.resetEmailChangeState()
-      } label: {
-        Text(.commonDone)
-          .font(.tidexButton)
-          .foregroundColor(.tidexTextOnBrand)
-          .frame(maxWidth: .infinity)
-          .padding(.vertical, Spacing.sm)
-          .background(Color.tidexBlue)
-          .cornerRadius(CornerRadius.md)
-      }
+    ContentUnavailableView {
+      Label(
+        String(localized: .profileEmailChangeConfirmationSent),
+        systemImage: "envelope.badge.fill"
+      )
+    } description: {
+      Text(.profileEmailChangeConfirmationMessage)
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color.tidexBackground)
   }
 
-  // MARK: - Avatar Section
+  // MARK: - Profile Header
 
   /// Button text for the photo picker - computed to avoid main actor issues in closure
   private var uploadButtonText: String {
@@ -397,219 +355,128 @@ struct ProfileSettingsView: View {
     return String(localized: .profilePersonalInfoUploadImage)
   }
 
-  private var avatarSection: some View {
-    HStack(spacing: Spacing.md) {
-      ZStack(alignment: .bottomTrailing) {
-        Button {
-          presentAvatarActionDialog()
-        } label: {
-          avatarView
-            .frame(width: ProfileAvatarLayout.size, height: ProfileAvatarLayout.size)
-        }
-        .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(.profilePersonalInfoProfilePicture))
-        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+  private var profileHeaderSection: some View {
+    Section {
+      VStack(spacing: Spacing.sm) {
+        avatarButton
 
-        if viewModel.isUploadingAvatar {
-          RoundedRectangle(cornerRadius: CornerRadius.xxl)
-            .fill(Color.tidexTextPrimary.opacity(0.28))
-            .frame(width: ProfileAvatarLayout.size, height: ProfileAvatarLayout.size)
+        VStack(spacing: Spacing.xxs) {
+          Text(
+            viewModel.displayName.isEmpty
+              ? String(localized: .profilePersonalInfoNamePlaceholder)
+              : viewModel.displayName
+          )
+          .font(.tidexTitle)
+          .foregroundColor(viewModel.displayName.isEmpty ? .tidexTextMuted : .tidexTextPrimary)
+          .multilineTextAlignment(.center)
+          .lineLimit(2)
 
-          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-        } else {
-          Button {
-            presentImageSourcePicker()
-          } label: {
-            Image(systemName: "camera.fill")
-              .font(.system(size: ProfileAvatarLayout.cameraIconSize, weight: .semibold))
-              .foregroundColor(.tidexTextOnBrand)
-              .frame(
-                width: ProfileAvatarLayout.cameraBadgeSize,
-                height: ProfileAvatarLayout.cameraBadgeSize
-              )
-              .background(Color.tidexBlue)
-              .clipShape(Circle())
-              .overlay(
-                Circle()
-                  .stroke(Color.tidexSurfacePrimary, lineWidth: 2)
-              )
+          if !viewModel.username.isEmpty {
+            Text(usernameDisplayText)
+              .font(.tidexSubheadline)
+              .foregroundColor(.tidexTextSecondary)
+              .lineLimit(1)
           }
-          .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
-          .buttonStyle(.plain)
-          .accessibilityLabel(Text(uploadButtonText))
         }
       }
-      .confirmationDialog(
-        String(localized: .profilePersonalInfoProfilePicture),
-        isPresented: $showAvatarActionDialog,
-        titleVisibility: .visible
-      ) {
-        Button(uploadButtonText) {
-          showAvatarActionDialog = false
-          Task { @MainActor in
-            await Task.yield()
-            presentImageSourcePicker()
-          }
-        }
+      .frame(maxWidth: .infinity)
+      .listRowBackground(Color.clear)
+      .listRowInsets(EdgeInsets())
+    }
+  }
 
-        if viewModel.profilePictureUrl != nil {
-          Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
-            showAvatarActionDialog = false
-            Task {
-              await viewModel.removeProfilePicture()
+  private var avatarButton: some View {
+    Button {
+      presentAvatarActionDialog()
+    } label: {
+      ZStack(alignment: .bottomTrailing) {
+        avatarView
+          .frame(width: ProfileAvatarLayout.size, height: ProfileAvatarLayout.size)
+          .overlay {
+            if viewModel.isUploadingAvatar {
+              RoundedRectangle(cornerRadius: CornerRadius.xxl)
+                .fill(Color.tidexTextPrimary.opacity(0.28))
+
+              ProgressView()
+                .tint(.white)
             }
           }
-        }
 
-        Button(String(localized: .commonCancel), role: .cancel) {
+        if !viewModel.isUploadingAvatar, !viewModel.isOfflineProfileFallback {
+          Image(systemName: "camera.fill")
+            .accessibilityHidden(true)
+            .font(.system(size: ProfileAvatarLayout.cameraIconSize, weight: .semibold))
+            .foregroundColor(.tidexTextOnBrand)
+            .frame(
+              width: ProfileAvatarLayout.cameraBadgeSize,
+              height: ProfileAvatarLayout.cameraBadgeSize
+            )
+            .background(Color.tidexBlue, in: Circle())
+            .overlay(Circle().stroke(Color.tidexBackground, lineWidth: 3))
+            .offset(x: 6, y: 6)
+        }
+      }
+      .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl))
+    }
+    .buttonStyle(.plain)
+    .disabled(isAvatarActionInProgress || viewModel.isOfflineProfileFallback)
+    .accessibilityLabel(Text(.profilePersonalInfoProfilePicture))
+    .accessibilityHint(Text(uploadButtonText))
+    .confirmationDialog(
+      String(localized: .profilePersonalInfoProfilePicture),
+      isPresented: $showAvatarActionDialog,
+      titleVisibility: .visible
+    ) {
+      Button(uploadButtonText) {
+        showAvatarActionDialog = false
+        Task { @MainActor in
+          await Task.yield()
+          presentImageSourcePicker()
+        }
+      }
+
+      if viewModel.profilePictureUrl != nil {
+        Button(String(localized: .profilePersonalInfoRemoveImage), role: .destructive) {
           showAvatarActionDialog = false
-        }
-      }
-      .confirmationDialog(
-        String(localized: .profilePersonalInfoChooseImageSource),
-        isPresented: $showImageSourcePicker,
-        titleVisibility: .visible
-      ) {
-        Button(String(localized: .profilePersonalInfoTakePhoto)) {
-          showImageSourcePicker = false
-          Task { @MainActor in
-            // Defer until dialog dismissal has settled.
-            await Task.yield()
-            showCamera = false
-            showCamera = true
+          Task {
+            await viewModel.removeProfilePicture()
           }
         }
-        Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
-          showImageSourcePicker = false
-          Task { @MainActor in
-            // Reset to ensure picker can always re-open after cancel.
-            selectedPhotoItem = nil
-            showGalleryPicker = false
-            // Defer until dialog dismissal has settled.
-            await Task.yield()
-            showGalleryPicker = true
-          }
-        }
-        Button(String(localized: .commonCancel), role: .cancel) {
-          showImageSourcePicker = false
-        }
       }
 
-      VStack(alignment: .leading, spacing: 0) {
-        profileNameRow
-        profileUsernameRow
-
-        if viewModel.isOfflineProfileFallback {
-          Text(.profileOfflineEditingUnavailable)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-            .fixedSize(horizontal: false, vertical: true)
+      Button(String(localized: .commonCancel), role: .cancel) {
+        showAvatarActionDialog = false
+      }
+    }
+    .confirmationDialog(
+      String(localized: .profilePersonalInfoChooseImageSource),
+      isPresented: $showImageSourcePicker,
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .profilePersonalInfoTakePhoto)) {
+        showImageSourcePicker = false
+        Task { @MainActor in
+          // Defer until dialog dismissal has settled.
+          await Task.yield()
+          showCamera = false
+          showCamera = true
         }
-
-        if let error = viewModel.usernameErrorMessage {
-          Text(error)
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexError)
-            .fixedSize(horizontal: false, vertical: true)
+      }
+      Button(String(localized: .profilePersonalInfoChooseFromLibrary)) {
+        showImageSourcePicker = false
+        Task { @MainActor in
+          // Reset to ensure picker can always re-open after cancel.
+          selectedPhotoItem = nil
+          showGalleryPicker = false
+          // Defer until dialog dismissal has settled.
+          await Task.yield()
+          showGalleryPicker = true
         }
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .opacity(viewModel.isOfflineProfileFallback ? 0.65 : 1)
-  }
-
-  private var profileNameRow: some View {
-    HStack(spacing: Spacing.xs) {
-      Text(
-        viewModel.displayName.isEmpty
-          ? String(localized: .profilePersonalInfoNamePlaceholder)
-          : viewModel.displayName
-      )
-      .font(.tidexTitle)
-      .foregroundColor(viewModel.displayName.isEmpty ? .tidexTextMuted : .tidexTextPrimary)
-      .lineLimit(2)
-      .fixedSize(horizontal: false, vertical: true)
-      .minimumScaleFactor(0.85)
-      .layoutPriority(1)
-
-      profileEditAccessory(isSaving: viewModel.isSavingName, font: .tidexSubheadline) {
-        startEditingName()
-      }
-
-      Spacer(minLength: Spacing.xs)
-    }
-    .disabled(viewModel.isOfflineProfileFallback)
-  }
-
-  private var profileUsernameRow: some View {
-    HStack(spacing: Spacing.xs) {
-      Text(usernameDisplayText)
-        .font(.tidexSubheadline)
-        .foregroundColor(viewModel.username.isEmpty ? .tidexTextMuted : .tidexTextSecondary)
-        .lineLimit(1)
-        .minimumScaleFactor(0.85)
-
-      profileEditAccessory(isSaving: viewModel.isSavingUsername, font: .tidexSubheadline) {
-        startEditingUsername()
-      }
-
-      Spacer(minLength: Spacing.xs)
-    }
-    .disabled(viewModel.isOfflineProfileFallback)
-  }
-
-  private var usernameDisplayText: String {
-    let username = viewModel.username.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !username.isEmpty else {
-      return String(localized: .profilePersonalInfoUsernamePlaceholder)
-    }
-    return username.hasPrefix("@") ? username : "@\(username)"
-  }
-
-  private func profileEditAccessory(
-    isSaving: Bool,
-    font: Font,
-    onEdit: @escaping () -> Void
-  ) -> some View {
-    Group {
-      if isSaving {
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextMuted))
-          .scaleEffect(0.6)
-      } else {
-        Button(action: onEdit) {
-          Image(systemName: "pencil")
-            .font(font)
-            .foregroundColor(.tidexTextPrimary)
-        }
-        .buttonStyle(.plain)
+      Button(String(localized: .commonCancel), role: .cancel) {
+        showImageSourcePicker = false
       }
     }
-  }
-
-  private func startEditingName() {
-    guard !viewModel.isOfflineProfileFallback else { return }
-    draftDisplayName = viewModel.displayName
-    showNameEditAlert = true
-  }
-
-  private func startEditingUsername() {
-    guard !viewModel.isOfflineProfileFallback else { return }
-    draftUsername = viewModel.username
-    showUsernameEditAlert = true
-  }
-
-  private func saveEditedName() async {
-    viewModel.displayName = draftDisplayName
-    await viewModel.saveNameNow()
-  }
-
-  private func saveEditedUsername() async {
-    viewModel.username = draftUsername
-    viewModel.onUsernameChanged()
-    await viewModel.saveUsernameNow()
   }
 
   @ViewBuilder
@@ -650,72 +517,156 @@ struct ProfileSettingsView: View {
     }
   }
 
-  // MARK: - Email Field
+  // MARK: - Personal Info Section
 
-  private var emailField: some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      HStack {
-        Text(.profilePersonalInfoEmailLabel)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
+  private var personalInfoSection: some View {
+    Section {
+      valueRow(
+        title: String(localized: .profilePersonalInfoNameLabel),
+        value: viewModel.displayName,
+        placeholder: String(localized: .profilePersonalInfoNamePlaceholder),
+        isSaving: viewModel.isSavingName,
+        action: viewModel.isOfflineProfileFallback ? nil : { startEditingName() }
+      )
 
-        Spacer()
+      valueRow(
+        title: String(localized: .profilePersonalInfoUsernameLabel),
+        value: viewModel.username.isEmpty ? "" : usernameDisplayText,
+        placeholder: String(localized: .profilePersonalInfoUsernamePlaceholder),
+        isSaving: viewModel.isSavingUsername,
+        action: viewModel.isOfflineProfileFallback ? nil : { startEditingUsername() }
+      )
 
-        if viewModel.canChangeEmail {
-          Button {
-            viewModel.showEmailChangeSheet = true
-          } label: {
-            Text(.profileEmailChangeChangeButton)
-              .font(.tidexFootnoteMedium)
-              .foregroundColor(.tidexBlue)
-          }
-        }
+      valueRow(
+        title: String(localized: .profilePersonalInfoEmailLabel),
+        value: viewModel.email,
+        placeholder: "",
+        isSaving: false,
+        action: viewModel.canChangeEmail ? { viewModel.showEmailChangeSheet = true } : nil
+      )
+    } header: {
+      Text(String(localized: .profilePersonalInfoTitle))
+    } footer: {
+      personalInfoFooter
+    }
+  }
+
+  @ViewBuilder
+  private var personalInfoFooter: some View {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
+      if let error = viewModel.usernameErrorMessage {
+        Text(error)
+          .foregroundColor(.tidexError)
       }
 
-      HStack {
-        Text(viewModel.email)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        if !viewModel.canChangeEmail {
-          Image(systemName: "lock.fill")
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-        }
-      }
-      .padding(.horizontal, Spacing.sm)
-      .padding(.vertical, Spacing.sm)
-      .background(Color.tidexSurfaceSecondary.opacity(0.5))
-      .cornerRadius(CornerRadius.sm)
-
-      // Show appropriate hint based on user's auth type
-      if viewModel.isOAuthOnly {
+      if viewModel.isOfflineProfileFallback {
+        Text(.profileOfflineEditingUnavailable)
+      } else if viewModel.isOAuthOnly {
         Text(.profileEmailChangeOauthOnlyHint)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      } else if viewModel.canChangeEmail {
-        Text(.profileEmailChangeCanChangeHint)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      } else {
+      } else if !viewModel.canChangeEmail {
         Text(.profilePersonalInfoEmailHint)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
       }
     }
+  }
+
+  /// A title with its current value on the trailing side.
+  /// Rows without an action show a lock instead of a chevron.
+  private func valueRow(
+    title: String,
+    value: String,
+    placeholder: String,
+    isSaving: Bool,
+    action: (() -> Void)?
+  ) -> some View {
+    let content = HStack(spacing: Spacing.sm) {
+      Text(title)
+        .foregroundColor(.tidexTextPrimary)
+
+      Spacer(minLength: Spacing.sm)
+
+      Text(value.isEmpty ? placeholder : value)
+        .foregroundColor(value.isEmpty ? .tidexTextMuted : .tidexTextSecondary)
+        .lineLimit(1)
+        .truncationMode(.middle)
+
+      if isSaving {
+        ProgressView()
+          .controlSize(.small)
+      } else if action != nil {
+        disclosureChevron
+      } else {
+        Image(systemName: "lock.fill")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
+      }
+    }
+    .contentShape(Rectangle())
+
+    return Group {
+      if let action {
+        Button(action: action) { content }
+          .disabled(isSaving)
+      } else {
+        content
+          .accessibilityElement(children: .combine)
+      }
+    }
+  }
+
+  private var disclosureChevron: some View {
+    Image(systemName: "chevron.forward")
+      .font(.tidexCaptionRegular)
+      .foregroundColor(.tidexTextMuted)
+      .accessibilityHidden(true)
+  }
+
+  private var usernameDisplayText: String {
+    let username = viewModel.username.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !username.isEmpty else {
+      return String(localized: .profilePersonalInfoUsernamePlaceholder)
+    }
+    return username.hasPrefix("@") ? username : "@\(username)"
+  }
+
+  private func startEditingName() {
+    guard !viewModel.isOfflineProfileFallback else { return }
+    draftDisplayName = viewModel.displayName
+    showNameEditAlert = true
+  }
+
+  private func startEditingUsername() {
+    guard !viewModel.isOfflineProfileFallback else { return }
+    draftUsername = viewModel.username
+    showUsernameEditAlert = true
+  }
+
+  private func saveEditedName() async {
+    viewModel.displayName = draftDisplayName
+    await viewModel.saveNameNow()
+  }
+
+  private func saveEditedUsername() async {
+    viewModel.username = draftUsername
+    viewModel.onUsernameChanged()
+    await viewModel.saveUsernameNow()
   }
 
   // MARK: - Account Access Section
 
   private var accountAccessSection: some View {
-    Section(String(localized: .profileAccountAccessTitle)) {
-      settingsNavigationRow(
-        icon: "lock.shield",
-        title: String(localized: .settingsMenuSecurityLabel),
-        action: onOpenSecurity
-      )
+    Section {
+      Button(action: onOpenSecurity) {
+        HStack(spacing: Spacing.sm) {
+          Label(String(localized: .settingsMenuSecurityLabel), systemImage: "lock.shield")
+            .foregroundColor(.tidexTextPrimary)
+
+          Spacer(minLength: Spacing.sm)
+
+          disclosureChevron
+        }
+        .contentShape(Rectangle())
+      }
     }
   }
 
@@ -769,22 +720,6 @@ struct ProfileSettingsView: View {
     .disabled(isSigningOut || isSigningOutGlobal)
   }
 
-  private func settingsNavigationRow(
-    icon: String,
-    title: String,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button(action: action) {
-      HStack {
-        Label(title, systemImage: icon)
-        Spacer()
-        Image(systemName: "chevron.right")
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
-  }
-
   // MARK: - Danger Zone Section
 
   private var dangerZoneSection: some View {
@@ -792,16 +727,19 @@ struct ProfileSettingsView: View {
       Button(role: .destructive) {
         viewModel.showDeleteConfirmation = true
       } label: {
-        Text(.profileDangerZoneDeleteAccountButton)
+        HStack(spacing: Spacing.xs) {
+          if viewModel.isDeletingAccount {
+            ProgressView()
+              .controlSize(.small)
+          }
+
+          Text(.profileDangerZoneDeleteAccountButton)
+        }
+        .frame(maxWidth: .infinity)
       }
       .disabled(viewModel.isDeletingAccount)
-    } header: {
-      Text(String(localized: .profileDangerZoneTitle))
     } footer: {
-      VStack(alignment: .leading, spacing: Spacing.xxs) {
-        Text(.profileDangerZoneSubtitle)
-        Text(.profileDangerZoneDeleteAccountDescription)
-      }
+      Text(.profileDangerZoneDeleteAccountDescription)
     }
   }
 

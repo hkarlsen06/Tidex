@@ -10,6 +10,12 @@ private func adminDate(_ value: String?) -> Date? {
   value.flatMap(ISO8601Timestamp.date(from:))
 }
 
+/// Parses a Postgres `date` such as "2026-09-28" as midnight in the device's time zone.
+private func adminDay(_ value: String?) -> Date? {
+  guard let value else { return nil }
+  return try? Date.ISO8601FormatStyle(timeZone: .current).year().month().day().parse(value)
+}
+
 struct AdminUser: Decodable, Identifiable, Hashable, Sendable {
   let id: String
   let email: String?
@@ -93,6 +99,44 @@ enum AdminLanguage: String, CaseIterable, Identifiable, Sendable {
 
   var title: String { self == .english ? "English" : "Norwegian" }
   var code: String { self == .english ? "EN" : "NO" }
+}
+
+/// Usage numbers from `admin_get_user_stats_api`. Deleted shifts, jobs and messages are excluded.
+struct AdminUserStats: Decodable, Sendable {
+  let shiftCount: Int
+  let shiftsLast30Days: Int
+  let upcomingShiftCount: Int
+  let firstShiftDate: String?
+  let latestShiftDate: String?
+  let lastShiftAddedAt: String?
+  let jobCount: Int
+  let recurringScheduleCount: Int
+  let eventCount: Int
+  let sharesTheirShiftsWith: Int
+  let seesShiftsFrom: Int
+  let messagesSent: Int
+  let messagesLast30Days: Int
+  let feedbackCount: Int
+  let reportsFiled: Int
+  let reportsReceived: Int
+  let hasCalendarFeed: Bool
+  let calendarFeedLastUsedAt: String?
+  let devices: [Device]
+
+  struct Device: Decodable, Identifiable, Sendable {
+    let id: String
+    let platform: String?
+    let appVersion: String?
+    let timeZone: String?
+    let lastSeenAt: String?
+
+    var lastSeen: Date? { adminDate(lastSeenAt) }
+  }
+
+  var firstShift: Date? { adminDay(firstShiftDate) }
+  var latestShift: Date? { adminDay(latestShiftDate) }
+  var lastShiftAdded: Date? { adminDate(lastShiftAddedAt) }
+  var calendarFeedLastUsed: Date? { adminDate(calendarFeedLastUsedAt) }
 }
 
 struct AdminUsersPage: Decodable, Sendable {

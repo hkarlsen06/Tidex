@@ -66,11 +66,18 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
   var body: some View {  // swiftlint:disable:this explicit_acl
     ShiftCardContentLayout(topRowAlignment: .center) {
       // Row 1: Label (leads with purpose, matches shift card title size)
-      payrollLabelContent
-        .frame(maxWidth: .infinity, alignment: .leading)
-    } leadingBottom: {
+      if isLoading {
+        loadingLabelPlaceholder
+          .frame(maxWidth: .infinity, alignment: .leading)
+      } else {
+        payrollLabelContent
+          .frame(maxWidth: .infinity, alignment: .leading)
+      }
+    } leadingBottom: {  // swiftlint:disable:this closure_body_length
       // Row 2: Banknote icon + payroll date (secondary)
-      if isPayrollToday {
+      if isLoading {
+        loadingDatePlaceholder
+      } else if isPayrollToday {
         HStack(spacing: Spacing.xxxs) {
           Image(systemName: "banknote")  // swiftlint:disable:this accessibility_label_for_image
             .font(.tidexLabel)
@@ -281,6 +288,31 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
 }
 
 extension PayrollCard {
+  // Placeholder bars match EmptyShiftCard's loading layout
+  fileprivate var loadingLabelPlaceholder: some View {
+    ZStack(alignment: .leading) {
+      Text(verbatim: "Monday · 31 Dec")
+        .font(.tidexBodyMedium)
+        .opacity(0)
+
+      RoundedRectangle(cornerRadius: 5)  // swiftlint:disable:this no_magic_numbers
+        .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
+        .frame(width: 140, height: 20)  // swiftlint:disable:this no_magic_numbers
+    }
+  }
+
+  fileprivate var loadingDatePlaceholder: some View {
+    ZStack(alignment: .leading) {
+      Text(verbatim: "Mon · 31 Dec")
+        .font(.tidexLabel)
+        .opacity(0)
+
+      RoundedRectangle(cornerRadius: CornerRadius.xxs)
+        .fill(Color.tidexTextMuted.opacity(0.2))  // swiftlint:disable:this no_magic_numbers
+        .frame(width: 100, height: 17)  // swiftlint:disable:this no_magic_numbers
+    }
+  }
+
   fileprivate func receivedButton(action: @escaping () -> Void) -> some View {
     let tint: Color = isMarkedReceived ? .tidexSuccess : .tidexBlue  // swiftlint:disable:this explicit_type_interface
     return Button(action: action) {

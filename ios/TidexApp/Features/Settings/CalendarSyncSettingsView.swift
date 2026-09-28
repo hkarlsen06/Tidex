@@ -12,56 +12,49 @@ struct CalendarSyncSettingsView: View {
   }
 
   var body: some View {
-    GeometryReader { proxy in
-      ScrollView {
-        VStack(spacing: Spacing.lg) {
-          if let error = viewModel.errorMessage {
+    Form {
+      Group {
+        if let error = viewModel.errorMessage {
+          Section {
             ErrorBanner(message: error, onDismiss: { viewModel.clearError() })
           }
-
-          calendarSubscriptionSection
-            .frame(minHeight: max(proxy.size.height - Spacing.xxl, 0), alignment: .top)
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.lg)
+
+        if viewModel.isLoadingCalendarSubscription {
+          Section {
+            HStack(spacing: Spacing.sm) {
+              ProgressView()
+              Text(.calendarSubscriptionLoading)
+                .foregroundColor(.tidexTextSecondary)
+            }
+          }
+        } else {
+          modeSection
+          actionsSection
+
+          if viewModel.calendarSubscriptionFallbackURL != nil {
+            fallbackSection
+          }
+
+          if viewModel.calendarSubscriptionState.metadata != nil {
+            disableSection
+          }
+        }
       }
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .background(Color.tidexBackground)
+    .tidexListBackground()
     .navigationTitle(String(localized: .calendarSubscriptionTitle))
     .navigationBarTitleDisplayMode(.inline)
+    .toolbar {
+      if viewModel.isUpdatingCalendarSubscription {
+        ToolbarItem(placement: .topBarTrailing) {
+          ProgressView()
+        }
+      }
+    }
     .task {
       await viewModel.loadSettings()
-    }
-  }
-
-  private var calendarSubscriptionSection: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      calendarSubscriptionHeader
-        .padding(.top, viewModel.calendarSubscriptionState.isActive ? 0 : Spacing.xxl)
-
-      Spacer(minLength: Spacing.xxl)
-
-      if viewModel.isLoadingCalendarSubscription {
-        loadingIndicator
-          .frame(maxWidth: .infinity, alignment: .leading)
-      } else if let metadata = viewModel.calendarSubscriptionState.metadata {
-        calendarModeOptions(metadata: metadata)
-      } else {
-        setupCalendarModeOptions
-      }
-
-      Spacer(minLength: Spacing.xxl)
-
-      if viewModel.calendarSubscriptionFallbackURL != nil {
-        fallbackLinkSection
-          .padding(.bottom, Spacing.md)
-      }
-
-      if viewModel.calendarSubscriptionState.metadata != nil {
-        activeCalendarSubscriptionActions
-      } else if !viewModel.isLoadingCalendarSubscription {
-        setupCalendarSubscriptionButton
-      }
     }
     .confirmationDialog(
       String(localized: .calendarSubscriptionDisableTitle),
@@ -79,247 +72,104 @@ struct CalendarSyncSettingsView: View {
     }
   }
 
-  private var calendarSubscriptionHeader: some View {
-    HStack(spacing: Spacing.sm) {
-      Image(systemName: "calendar.badge.clock")
-        .font(.system(size: 20, weight: .medium))
-        .foregroundColor(.tidexBlue)
-        .frame(width: 40, height: 40)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.md)
-            .fill(Color.tidexBlue.opacity(0.12))
-        )
-
-      VStack(alignment: .leading, spacing: Spacing.xxxs) {
-        Text(
-          viewModel.calendarSubscriptionState.isActive
-            ? .calendarSubscriptionActiveDescription
-            : .calendarSubscriptionInactiveDescription
-        )
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-        .fixedSize(horizontal: false, vertical: true)
-      }
-
-      Spacer(minLength: 0)
-    }
-  }
-
-  private var loadingIndicator: some View {
-    HStack(spacing: Spacing.sm) {
-      ProgressView()
-        .scaleEffect(0.8)
-      Text(.calendarSubscriptionLoading)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-  }
-
-  private func calendarModeOptions(
-    metadata: CalendarSubscriptionMetadata
-  ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(.calendarSubscriptionIncludeLabel)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-        .textCase(.uppercase)
-        .padding(.horizontal, Spacing.sm)
-
-      ForEach(CalendarSubscriptionContentMode.allCases) { mode in
-        calendarModeButton(
-          mode,
-          isSelected: metadata.contentMode == mode,
-          action: {
-            Task {
-              await viewModel.updateCalendarSubscriptionMode(mode)
-            }
-          })
-      }
-    }
-  }
-
-  private var setupCalendarModeOptions: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(.calendarSubscriptionIncludeLabel)
-        .font(.tidexFootnoteMedium)
-        .foregroundColor(.tidexTextSecondary)
-        .textCase(.uppercase)
-        .padding(.horizontal, Spacing.sm)
-
-      ForEach(CalendarSubscriptionContentMode.allCases) { mode in
-        calendarModeButton(
-          mode,
-          isSelected: setupMode == mode,
-          action: {
-            setupMode = mode
-          })
-      }
-    }
-  }
-
-  private var activeCalendarSubscriptionActions: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      if CalendarSubscriptionStore.shared.activeMetadata != nil {
-        openCalendarSubscriptionButton
-      }
-
-      Button {
+  /// Before setup the picker only chooses the mode to create; afterwards it updates the live feed.
+  private var modeSelection: Binding<CalendarSubscriptionContentMode> {
+    Binding(
+      get: { viewModel.calendarSubscriptionState.metadata?.contentMode ?? setupMode },
+      set: { mode in
+        guard viewModel.calendarSubscriptionState.metadata != nil else {
+          setupMode = mode
+          return
+        }
         Task {
-          await viewModel.rotateCalendarSubscription()
+          await viewModel.updateCalendarSubscriptionMode(mode)
         }
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "arrow.clockwise")
-          Text(.calendarSubscriptionRotateButton)
-        }
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.md)
-            .fill(Color.tidexBlue.opacity(0.1))
-        )
       }
-      .buttonStyle(.plain)
-      .disabled(viewModel.isUpdatingCalendarSubscription)
+    )
+  }
 
-      Button(role: .destructive) {
-        showDisableCalendarConfirmation = true
-      } label: {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "stop.circle")
-          Text(.calendarSubscriptionDisableButton)
+  private var modeSection: some View {
+    Section {
+      Picker(selection: modeSelection) {
+        ForEach(CalendarSubscriptionContentMode.allCases) { mode in
+          Label(mode.localizedTitle, systemImage: mode.systemImage)
+            .tag(mode)
         }
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexTextSecondary)
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Spacing.sm)
-        .background(
-          RoundedRectangle(cornerRadius: CornerRadius.md)
-            .fill(Color.tidexSurfaceSecondary)
-        )
+      } label: {
+        Text(.calendarSubscriptionIncludeLabel)
       }
-      .buttonStyle(.plain)
+      .pickerStyle(.inline)
+      .labelsHidden()
       .disabled(viewModel.isUpdatingCalendarSubscription)
+    } header: {
+      Text(.calendarSubscriptionIncludeLabel)
+    } footer: {
+      Text(
+        viewModel.calendarSubscriptionState.isActive
+          ? .calendarSubscriptionActiveDescription
+          : .calendarSubscriptionInactiveDescription
+      )
     }
   }
 
-  private var openCalendarSubscriptionButton: some View {
-    Button {
-      Task {
-        await viewModel.openCalendarSubscription()
+  @ViewBuilder
+  private var actionsSection: some View {
+    Section {
+      if viewModel.calendarSubscriptionState.metadata != nil {
+        if CalendarSubscriptionStore.shared.activeMetadata != nil {
+          Button {
+            Task {
+              await viewModel.openCalendarSubscription()
+            }
+          } label: {
+            Label(String(localized: .calendarSubscriptionOpenButton), systemImage: "arrow.up.forward.app")
+          }
+        }
+
+        Button {
+          Task {
+            await viewModel.rotateCalendarSubscription()
+          }
+        } label: {
+          Label(String(localized: .calendarSubscriptionRotateButton), systemImage: "arrow.clockwise")
+        }
+      } else {
+        Button {
+          Task {
+            await viewModel.setupCalendarSubscription(mode: setupMode)
+          }
+        } label: {
+          Label(String(localized: .calendarSubscriptionSetupButton), systemImage: "calendar.badge.plus")
+        }
       }
-    } label: {
-      calendarSubscriptionButtonLabel(
-        title: String(localized: .calendarSubscriptionOpenButton),
-        systemImage: "arrow.up.forward.app",
-        isLoading: viewModel.isUpdatingCalendarSubscription
-      )
     }
-    .buttonStyle(.plain)
+    .foregroundColor(.tidexBlue)
     .disabled(viewModel.isUpdatingCalendarSubscription)
   }
 
-  private var setupCalendarSubscriptionButton: some View {
-    Button {
-      Task {
-        await viewModel.setupCalendarSubscription(mode: setupMode)
-      }
-    } label: {
-      calendarSubscriptionButtonLabel(
-        title: String(localized: .calendarSubscriptionSetupButton),
-        systemImage: "calendar.badge.plus",
-        isLoading: viewModel.isUpdatingCalendarSubscription
-      )
-    }
-    .buttonStyle(.plain)
-    .disabled(viewModel.isUpdatingCalendarSubscription)
-  }
-
-  private var fallbackLinkSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      Text(.calendarSubscriptionFallbackDescription)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-
+  private var fallbackSection: some View {
+    Section {
       Button {
         viewModel.copyCalendarSubscriptionFallbackURL()
       } label: {
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "doc.on.doc")
-          Text(.calendarSubscriptionCopyLinkButton)
-        }
-        .font(.tidexLabelStrong)
-        .foregroundColor(.tidexBlue)
+        Label(String(localized: .calendarSubscriptionCopyLinkButton), systemImage: "doc.on.doc")
       }
-      .buttonStyle(.plain)
+      .foregroundColor(.tidexBlue)
+    } footer: {
+      Text(.calendarSubscriptionFallbackDescription)
     }
   }
 
-  private func calendarModeButton(
-    _ mode: CalendarSubscriptionContentMode,
-    isSelected: Bool,
-    action: @escaping () -> Void
-  ) -> some View {
-    Button {
-      guard !isSelected else { return }
-      action()
-    } label: {
-      HStack(spacing: Spacing.sm) {
-        Image(systemName: mode.systemImage)
-          .font(.tidexBodyMedium)
-          .foregroundColor(isSelected ? .tidexBlue : .tidexTextSecondary)
-          .frame(width: 28, height: 28)
-
-        Text(mode.localizedTitle)
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer(minLength: Spacing.sm)
-
-        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-          .font(.tidexBodyMedium)
-          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+  private var disableSection: some View {
+    Section {
+      Button(role: .destructive) {
+        showDisableCalendarConfirmation = true
+      } label: {
+        Label(String(localized: .calendarSubscriptionDisableButton), systemImage: "stop.circle")
       }
-      .padding(Spacing.md)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.md)
-          .fill(isSelected ? Color.tidexBlue.opacity(0.1) : Color.tidexSurfacePrimary)
-      )
-      .overlay(
-        RoundedRectangle(cornerRadius: CornerRadius.md)
-          .stroke(isSelected ? Color.tidexBlue : Color.tidexBorderSubtle, lineWidth: 1)
-      )
+      .foregroundColor(.tidexError)
+      .disabled(viewModel.isUpdatingCalendarSubscription)
     }
-    .buttonStyle(.plain)
-    .disabled(viewModel.isUpdatingCalendarSubscription)
-  }
-
-  private func calendarSubscriptionButtonLabel(
-    title: String,
-    systemImage: String,
-    isLoading: Bool
-  ) -> some View {
-    HStack(spacing: Spacing.xs) {
-      if isLoading {
-        ProgressView()
-          .progressViewStyle(CircularProgressViewStyle(tint: .tidexTextOnBrand))
-          .scaleEffect(0.8)
-      } else {
-        Image(systemName: systemImage)
-      }
-
-      Text(title)
-        .font(.tidexLabelStrong)
-    }
-    .foregroundColor(.tidexTextOnBrand)
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.md)
-        .fill(Color.tidexBlue)
-    )
   }
 }
 

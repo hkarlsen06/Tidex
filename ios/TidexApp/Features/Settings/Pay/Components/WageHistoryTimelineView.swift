@@ -64,9 +64,12 @@ struct WageHistoryTimelineView: View {
       onAddNew()
     }) {
       Label(.settingsPayTimelineAddChange, systemImage: "plus")
-        .font(.tidexLabel)
+        .font(.tidexLabelStrong)
         .foregroundColor(.tidexBlue)
         .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
+        .padding(.horizontal, Spacing.sm)
+        .padding(.vertical, Spacing.xs)
+        .background(Color.tidexBlue.opacity(0.12), in: Capsule())
         .frame(minHeight: 44, alignment: .leading)
         .contentShape(Rectangle())
     }
@@ -108,6 +111,7 @@ struct WageHistoryTimelineView: View {
 
 private struct TimelineEntryRow: View {
   @Environment(\.layoutDirection) private var layoutDirection
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   let entry: WageTimelineEntry
   let currency: String
   let isFirst: Bool
@@ -137,32 +141,9 @@ private struct TimelineEntryRow: View {
           .padding(.trailing, Spacing.xs)
           .accessibilityHidden(true)
 
-        // Content with vertical padding
-        HStack {
-          VStack(alignment: .leading, spacing: Spacing.xxs) {
-            Text(statusTitle)
-              .font(.tidexCaption)
-              .foregroundColor(entry.type == .current ? .tidexBlue : .tidexTextSecondary)
-
-            wageTitle
-
-            changesTitle
-
-            // Date range
-            Text(entry.dateRange)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-          }
-
-          Spacer()
-
-          Image(systemName: "chevron.right")
-            .font(.tidexCaption)
-            .foregroundColor(.tidexTextMuted)
-            .accessibilityHidden(true)
-        }
-        .padding(.vertical, verticalPadding)
-        .padding(.trailing, Spacing.md)
+        content
+          .padding(.vertical, verticalPadding)
+          .padding(.trailing, Spacing.md)
       }
       .background(
         entry.type == .current
@@ -178,6 +159,30 @@ private struct TimelineEntryRow: View {
         .joined(separator: ", ")
     )
     .accessibilityIdentifier("pay-history.period.\(entry.id)")
+  }
+
+  private var content: some View {
+    HStack(spacing: Spacing.sm) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        if dynamicTypeSize.isAccessibilitySize {
+          dateText
+          wageTitle
+        } else {
+          HStack(alignment: .firstTextBaseline, spacing: Spacing.sm) {
+            dateText
+            Spacer(minLength: Spacing.xs)
+            wageTitle
+          }
+        }
+
+        changesText
+      }
+
+      Image(systemName: "chevron.right")
+        .font(.tidexCaption)
+        .foregroundColor(.tidexTextMuted)
+        .accessibilityHidden(true)
+    }
   }
 
   // MARK: - Timeline Indicator
@@ -277,24 +282,30 @@ private struct TimelineEntryRow: View {
     }
   }
 
-  @ViewBuilder
+  private var dateText: some View {
+    Text(entry.dateRange)
+      .font(.tidexLabel)
+      .foregroundColor(entry.type == .past ? .tidexTextSecondary : .tidexTextPrimary)
+      .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+      .minimumScaleFactor(0.8)
+  }
+
   private var wageTitle: some View {
     Text(formattedWage)
       .font(entry.type == .current ? .tidexTitle : .tidexBodyMedium)
       .foregroundColor(.tidexTextPrimary)
       .monospacedDigit()
-      .fixedSize(horizontal: false, vertical: true)
+      .fixedSize(horizontal: !dynamicTypeSize.isAccessibilitySize, vertical: true)
   }
 
+  /// All non-wage changes in one line under the date and wage. The edit sheet shows the full list.
   @ViewBuilder
-  private var changesTitle: some View {
-    VStack(alignment: .leading, spacing: Spacing.micro) {
-      ForEach(nonWageChanges) { change in
-        Text(rtlAdjustedChangeDescription(change.description))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-          .fixedSize(horizontal: false, vertical: true)
-      }
+  private var changesText: some View {
+    if !nonWageChanges.isEmpty {
+      Text(nonWageChanges.map { rtlAdjustedChangeDescription($0.description) }.joined(separator: " · "))
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
     }
   }
 

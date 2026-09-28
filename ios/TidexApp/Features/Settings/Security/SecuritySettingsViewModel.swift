@@ -58,8 +58,6 @@ final class SecuritySettingsViewModel {
   var showPasswordForm = false
   var newPassword = ""
   var confirmPassword = ""
-  var phoneOtp = ""
-  var otpSent = false
 
   /// MFA enrollment state
   var showMFAEnrollment = false
@@ -79,18 +77,6 @@ final class SecuritySettingsViewModel {
   var showRenamePasskeyAlert = false
   var passkeyToRename: PasskeyAuthService.Passkey?
   var passkeyNameDraft = ""
-
-  /// Phone linking state
-  var showPhoneLinkingSheet = false
-  var phoneLinkStep: PhoneLinkStep = .input
-  var phoneLinkInput = ""
-  var phoneLinkOtp = ""
-  private(set) var isLinkingPhone = false
-
-  enum PhoneLinkStep {
-    case input
-    case otp
-  }
 
   // MARK: - Initialization
 
@@ -305,26 +291,6 @@ final class SecuritySettingsViewModel {
 
   // MARK: - Password Management
 
-  /// Request OTP for phone-only users to set password
-  func requestPasswordOTP() async {
-    guard hasPhoneConnected, let phone = phoneNumber else { return }
-
-    isSettingPassword = true
-    errorMessage = nil
-
-    do {
-      // Request reauthentication via phone OTP
-      try await supabase.auth.signInWithOTP(phone: phone)
-      otpSent = true
-      Haptics.play(.success)
-    } catch {
-      logger.error("Failed to request OTP: \(error)")
-      errorMessage = String(localized: .securityPasswordErrorsOtpFailed)
-    }
-
-    isSettingPassword = false
-  }
-
   /// Set or change password
   func setPassword() async {
     // Validate password
@@ -343,28 +309,10 @@ final class SecuritySettingsViewModel {
       return
     }
 
-    // For phone-only users, verify OTP first
-    if !hasPassword, hasPhoneConnected {
-      guard !phoneOtp.isEmpty else {
-        errorMessage = String(localized: .securityPasswordErrorsOtpRequired)
-        return
-      }
-
-      guard phoneOtp.count == 6, phoneOtp.allSatisfy(\.isNumber) else {  // swiftlint:disable:this no_magic_numbers
-        errorMessage = String(localized: .securityPasswordErrorsOtpInvalid)
-        return
-      }
-    }
-
     isSettingPassword = true
     errorMessage = nil
 
     do {
-      // If phone-only, verify OTP first
-      if !hasPassword, hasPhoneConnected, let phone = phoneNumber {
-        try await supabase.auth.verifyOTP(phone: phone, token: phoneOtp, type: .sms)
-      }
-
       // Update password
       // Supabase won't always add an "email" identity for OAuth users, so store a metadata flag.
       let passwordMetadata: [String: AnyJSON] = ["hasPassword": .bool(true)]
@@ -407,8 +355,6 @@ final class SecuritySettingsViewModel {
     showPasswordForm = false
     newPassword = ""
     confirmPassword = ""
-    phoneOtp = ""
-    otpSent = false
     errorMessage = nil
   }
 
@@ -484,102 +430,6 @@ final class SecuritySettingsViewModel {
     }
 
     isConnectingProvider = false
-  }
-
-  // MARK: - Phone Linking
-
-  /// Start phone linking by sending OTP to the phone number
-  func connectPhone() async {
-    // Validate phone number (Norwegian format: 8 digits)
-    let cleanedPhone = phoneLinkInput.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
-    guard cleanedPhone.count == 8 else {
-      errorMessage = String(localized: .securityPhoneLinkingErrorsPhoneInvalid)
-      return
-    }
-
-    // Format to E.164 (Norwegian: +47)
-    let phoneE164 = "+47\(cleanedPhone)"
-
-    isLinkingPhone = true
-    errorMessage = nil
-
-    do {
-      // Update user with new phone number - this sends an OTP
-      try await supabase.auth.update(user: UserAttributes(phone: phoneE164))
-
-      // Move to OTP step
-      phoneLinkStep = .otp
-      Haptics.play(.success)
-
-    } catch {
-      logger.error("Failed to initiate phone linking: \(error)")
-      errorMessage =
-        Self.isPhoneAlreadyInUseError(error)
-        ? String(localized: .securityPhoneLinkingErrorsPhoneInUse)
-        : String(localized: .securityPhoneLinkingErrorsSendFailed)
-    }
-
-    isLinkingPhone = false
-  }
-
-  /// Verify the OTP and complete phone linking
-  func verifyPhoneLinkOTP() async {
-    // Validate OTP
-    guard phoneLinkOtp.count == 6,  // swiftlint:disable:this no_magic_numbers
-      phoneLinkOtp.allSatisfy(\.isNumber)
-    else {
-      errorMessage = String(localized: .securityPhoneLinkingErrorsOtpInvalid)
-      return
-    }
-
-    // Format phone to E.164
-    let cleanedPhone = phoneLinkInput.filter(\.isNumber)  // swiftlint:disable:this explicit_type_interface
-    let phoneE164 = "+47\(cleanedPhone)"
-
-    isLinkingPhone = true
-    errorMessage = nil
-
-    do {
-      // Verify the OTP with phone_change type
-      try await supabase.auth.verifyOTP(
-        phone: phoneE164,
-        token: phoneLinkOtp,
-        type: .phoneChange
-      )
-
-      // Refresh session via serialized auth path to avoid refresh races
-      _ = try? await AuthSessionManager.shared.forceRefresh()
-
-      Haptics.play(.success)
-
-      // Reset phone linking state
-      resetPhoneLinkingForm()
-
-      // Reload security info to update UI
-      await loadSecurityInfo()
-
-    } catch {
-      logger.error("Failed to verify phone OTP: \(error)")
-      errorMessage = String(localized: .securityPhoneLinkingErrorsVerifyFailed)
-    }
-
-    isLinkingPhone = false
-  }
-
-  /// Reset phone linking form state
-  func resetPhoneLinkingForm() {
-    showPhoneLinkingSheet = false
-    phoneLinkStep = .input
-    phoneLinkInput = ""
-    phoneLinkOtp = ""
-    errorMessage = nil
-  }
-
-  private static func isPhoneAlreadyInUseError(_ error: Error) -> Bool {
-    let message = "\(error) \(error.localizedDescription)"
-    return message.contains("phone_exists")
-      || message.contains("A user with this phone number has already been registered")
-      || message.contains("Phone number already in use")
   }
 
   // MARK: - MFA Management

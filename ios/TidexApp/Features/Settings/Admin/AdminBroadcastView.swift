@@ -97,12 +97,22 @@ struct AdminBroadcastDraft {
 }
 
 struct AdminBroadcastView: View {
-  @State private var draft = AdminBroadcastDraft()
+  @State private var draft: AdminBroadcastDraft
   @State private var audienceSize: Int?
   @State private var history: [AdminBroadcast] = []
   @State private var isSending = false
   @State private var confirmSend = false
   @State private var errorMessage: String?
+
+  /// Starts a Specific broadcast to `recipient` when set, for example from a user's detail screen.
+  init(recipient: AdminUser? = nil) {
+    var draft: AdminBroadcastDraft = AdminBroadcastDraft()
+    if let recipient {
+      draft.target = .specific
+      draft.recipients = [recipient]
+    }
+    _draft = State(initialValue: draft)
+  }
 
   private var recipientCount: Int? {
     draft.target == .specific ? draft.recipients.count : audienceSize

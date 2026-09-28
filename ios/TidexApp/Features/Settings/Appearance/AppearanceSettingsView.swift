@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Appearance settings view
-/// Allows users to choose between system, light, and dark themes
+/// Theme, calendar colors, dashboard controls and the startup tab.
 struct AppearanceSettingsView: View {
   @Environment(\.colorScheme) private var systemColorScheme
   @State private var viewModel = AppearanceSettingsViewModel()
@@ -9,22 +9,14 @@ struct AppearanceSettingsView: View {
   var body: some View {
     Form {
       Group {
-        // Error message
         if let error = viewModel.errorMessage {
           ErrorBanner(message: error, onDismiss: { viewModel.clearError() })
         }
 
-        // Theme selection
-        themeSelectionSection
-
-        // Startup tab selection
-        startupTabSection
-
-        // Dashboard controls
-        dashboardControlsSection
-
-        // Calendar content color selection
+        themeSection
         calendarContentColorSection
+        dashboardControlsSection
+        startupTabSection
       }
       .listRowBackground(Color.tidexSurfacePrimary)
     }
@@ -36,218 +28,89 @@ struct AppearanceSettingsView: View {
     }
   }
 
-  // MARK: - Theme Selection Section
+  // MARK: - Theme
 
-  private var themeSelectionSection: some View {
+  private var themeSection: some View {
     Section {
-      Picker(selection: $viewModel.selectedTheme) {
+      HStack(alignment: .top, spacing: Spacing.sm) {
         ForEach(AppTheme.allCases, id: \.self) { theme in
-          themeOptionRow(theme).tag(theme)
+          choiceTile(
+            title: themeTitle(theme),
+            isSelected: viewModel.selectedTheme == theme
+          ) {
+            viewModel.selectedTheme = theme
+          } preview: {
+            themePreview(theme)
+          }
         }
-      } label: {
-        EmptyView()
       }
-      .pickerStyle(.inline)
+      .padding(.vertical, Spacing.xs)
     } header: {
       Text(String(localized: .appearanceThemeSectionTitle))
     } footer: {
-      currentThemeInfo
+      Text(currentThemeInfoText)
     }
   }
 
-  private func themeOptionRow(_ theme: AppTheme) -> some View {
-    HStack(spacing: Spacing.md) {
-      // Theme preview
-      themePreview(theme)
-
-      // Theme info
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(themeTitle(theme))
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(themeDescription(theme))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-      }
-    }
-    .padding(.vertical, Spacing.xs)
-  }
-
+  @ViewBuilder
   private func themePreview(_ theme: AppTheme) -> some View {
-    // Determine which color scheme to show in preview
-    let previewScheme: ColorScheme = {
-      switch theme {
-      case .system:
-        return systemColorScheme
-
-      case .light:
-        return .light
-
-      case .dark:
-        return .dark
-      }
-    }()
-
-    let isDark = previewScheme == .dark
-
-    return ZStack {
-      // Background
-      RoundedRectangle(cornerRadius: CornerRadius.sm)
-        .fill(isDark ? Color.tidexDarkSurfacePrimary : Color.tidexLightSurfaceSecondary)
-        .frame(width: 48, height: 48)
-
-      // Icon
-      Image(systemName: themeIcon(theme))
-        .font(.tidexBodyLarge)
-        .foregroundColor(isDark ? .tidexDarkTextPrimary : .tidexLightTextPrimary)
-    }
-  }
-
-  private func themeIcon(_ theme: AppTheme) -> String {
     switch theme {
     case .system:
-      return "circle.lefthalf.filled"
+      // Left half light, right half dark, like the system appearance picker.
+      miniScreen(isDark: false)
+        .overlay {
+          miniScreen(isDark: true)
+            .mask {
+              HStack(spacing: 0) {
+                Color.clear
+                Color.black
+              }
+            }
+        }
 
     case .light:
-      return "sun.max.fill"
+      miniScreen(isDark: false)
 
     case .dark:
-      return "moon.fill"
+      miniScreen(isDark: true)
     }
+  }
+
+  /// A small drawing of an app screen in fixed light or dark colors.
+  private func miniScreen(isDark: Bool) -> some View {
+    let surface = isDark ? Color.tidexDarkSurfacePrimary : Color.tidexLightSurfacePrimary
+    let text = isDark ? Color.tidexDarkTextPrimary : Color.tidexLightTextPrimary
+    let blue = isDark ? Color.tidexDarkBlue : Color.tidexLightBlue
+
+    return VStack(alignment: .leading, spacing: 5) {
+      Capsule()
+        .fill(text.opacity(0.85))
+        .frame(width: 30, height: 5)
+
+      RoundedRectangle(cornerRadius: 5, style: .continuous)
+        .fill(surface)
+        .frame(height: 26)
+        .overlay(alignment: .leading) {
+          Capsule()
+            .fill(blue)
+            .frame(width: 22, height: 5)
+            .padding(.leading, 6)
+        }
+
+      RoundedRectangle(cornerRadius: 5, style: .continuous)
+        .fill(surface)
+        .frame(height: 18)
+    }
+    .padding(8)
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    .background(isDark ? Color.tidexDarkBackgroundColor : Color.tidexLightBackground)
   }
 
   private func themeTitle(_ theme: AppTheme) -> String {
     switch theme {
-    case .system:
-      return String(localized: .appearanceThemeSystem)
-
-    case .light:
-      return String(localized: .appearanceThemeLight)
-
-    case .dark:
-      return String(localized: .appearanceThemeDark)
-    }
-  }
-
-  private func themeDescription(_ theme: AppTheme) -> String {
-    switch theme {
-    case .system:
-      return String(localized: .appearanceThemeSystemDescription)
-
-    case .light:
-      return String(localized: .appearanceThemeLightDescription)
-
-    case .dark:
-      return String(localized: .appearanceThemeDarkDescription)
-    }
-  }
-
-  // MARK: - Calendar Content Color Section
-
-  private var calendarContentColorSection: some View {
-    Section(String(localized: .appearanceCalendarContentColorSectionTitle)) {
-      Picker(selection: $viewModel.selectedCalendarContentColorStyle) {
-        ForEach(CalendarContentColorStyle.allCases, id: \.self) { style in
-          calendarContentColorOptionRow(style).tag(style)
-        }
-      } label: {
-        EmptyView()
-      }
-      .pickerStyle(.inline)
-    }
-  }
-
-  private func calendarContentColorOptionRow(_ style: CalendarContentColorStyle) -> some View {
-    HStack(spacing: Spacing.md) {
-      calendarContentColorPreview(style)
-
-      VStack(alignment: .leading, spacing: Spacing.micro) {
-        Text(calendarContentColorTitle(style))
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-
-        Text(calendarContentColorDescription(style))
-          .font(.tidexFootnote)
-          .foregroundColor(.tidexTextSecondary)
-      }
-    }
-    .padding(.vertical, Spacing.xs)
-  }
-
-  private func calendarContentColorPreview(_ style: CalendarContentColorStyle) -> some View {
-    ZStack {
-      RoundedRectangle(cornerRadius: CornerRadius.sm)
-        .fill(calendarContentColorPreviewBackground(style))
-        .frame(width: 48, height: 48)
-
-      Image(systemName: calendarContentColorIcon(style))
-        .font(.tidexBodyLarge)
-        .foregroundColor(calendarContentColorPreviewForeground(style))
-    }
-  }
-
-  private func calendarContentColorPreviewBackground(_ style: CalendarContentColorStyle) -> Color {
-    switch style {
-    case .workplace:
-      return Color.tidexPurple.opacity(0.12)
-
-    case .monochrome:
-      return Color.tidexSurfaceSecondary
-    }
-  }
-
-  private func calendarContentColorPreviewForeground(_ style: CalendarContentColorStyle) -> Color {
-    switch style {
-    case .workplace:
-      return .tidexPurple
-
-    case .monochrome:
-      return .tidexTextPrimary
-    }
-  }
-
-  private func calendarContentColorIcon(_ style: CalendarContentColorStyle) -> String {
-    switch style {
-    case .workplace:
-      return "paintpalette.fill"
-
-    case .monochrome:
-      return "circle.lefthalf.filled"
-    }
-  }
-
-  private func calendarContentColorTitle(_ style: CalendarContentColorStyle) -> String {
-    switch style {
-    case .workplace:
-      return String(localized: .appearanceCalendarContentColorWorkplace)
-
-    case .monochrome:
-      return String(localized: .appearanceCalendarContentColorMonochrome)
-    }
-  }
-
-  private func calendarContentColorDescription(_ style: CalendarContentColorStyle) -> String {
-    switch style {
-    case .workplace:
-      return String(localized: .appearanceCalendarContentColorWorkplaceDescription)
-
-    case .monochrome:
-      return String(localized: .appearanceCalendarContentColorMonochromeDescription)
-    }
-  }
-
-  // MARK: - Current Theme Info
-
-  private var currentThemeInfo: some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "info.circle")
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextMuted)
-
-      Text(currentThemeInfoText)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
+    case .system: String(localized: .appearanceThemeSystem)
+    case .light: String(localized: .appearanceThemeLight)
+    case .dark: String(localized: .appearanceThemeDark)
     }
   }
 
@@ -268,43 +131,143 @@ struct AppearanceSettingsView: View {
     }
   }
 
+  // MARK: - Calendar Colors
+
+  private var calendarContentColorSection: some View {
+    Section {
+      HStack(alignment: .top, spacing: Spacing.sm) {
+        ForEach(CalendarContentColorStyle.allCases, id: \.self) { style in
+          choiceTile(
+            title: calendarContentColorTitle(style),
+            isSelected: viewModel.selectedCalendarContentColorStyle == style
+          ) {
+            viewModel.selectedCalendarContentColorStyle = style
+          } preview: {
+            calendarPreview(style)
+          }
+        }
+      }
+      .padding(.vertical, Spacing.xs)
+    } header: {
+      Text(String(localized: .appearanceCalendarContentColorSectionTitle))
+    } footer: {
+      Text(calendarContentColorDescription(viewModel.selectedCalendarContentColorStyle))
+    }
+  }
+
+  /// A small calendar week with shift blocks in job colors or in the text color.
+  private func calendarPreview(_ style: CalendarContentColorStyle) -> some View {
+    let jobColors: [Color] = [.tidexBlue, .tidexPurple, .tidexSuccess, .tidexWarning]
+    let filledDays: [Int: Int] = [0: 0, 1: 1, 3: 0, 4: 2, 6: 3, 8: 1, 9: 0, 11: 2]
+
+    return LazyVGrid(
+      columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 4),
+      spacing: 4
+    ) {
+      ForEach(0..<12, id: \.self) { day in
+        RoundedRectangle(cornerRadius: 3, style: .continuous)
+          .fill(
+            filledDays[day].map { jobIndex in
+              style == .workplace ? jobColors[jobIndex] : Color.tidexTextPrimary
+            } ?? Color.tidexTextMuted.opacity(0.18)
+          )
+          .frame(height: 12)
+      }
+    }
+    .padding(8)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color.tidexSurfaceSecondary)
+  }
+
+  private func calendarContentColorTitle(_ style: CalendarContentColorStyle) -> String {
+    switch style {
+    case .workplace: String(localized: .appearanceCalendarContentColorWorkplace)
+    case .monochrome: String(localized: .appearanceCalendarContentColorMonochrome)
+    }
+  }
+
+  private func calendarContentColorDescription(_ style: CalendarContentColorStyle) -> String {
+    switch style {
+    case .workplace: String(localized: .appearanceCalendarContentColorWorkplaceDescription)
+    case .monochrome: String(localized: .appearanceCalendarContentColorMonochromeDescription)
+    }
+  }
+
+  // MARK: - Choice Tile
+
+  /// A tappable preview with a title and a selection mark, used for theme and calendar colors.
+  private func choiceTile<Preview: View>(
+    title: String,
+    isSelected: Bool,
+    action: @escaping () -> Void,
+    @ViewBuilder preview: () -> Preview
+  ) -> some View {
+    Button(action: action) {
+      VStack(spacing: Spacing.xs) {
+        preview()
+          .frame(height: 84)
+          .frame(maxWidth: .infinity)
+          .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
+          .overlay {
+            RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous)
+              .strokeBorder(
+                isSelected ? Color.tidexBlue : Color.tidexBorder,
+                lineWidth: isSelected ? 2 : 1
+              )
+          }
+
+        Text(title)
+          .font(.tidexFootnoteMedium)
+          .foregroundColor(.tidexTextPrimary)
+          .multilineTextAlignment(.center)
+          .fixedSize(horizontal: false, vertical: true)
+
+        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+          .font(.tidexBody)
+          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+      }
+      .frame(maxWidth: .infinity)
+      .contentShape(Rectangle())
+    }
+    // Plain style keeps each tile its own tap target inside the shared form row.
+    .buttonStyle(.plain)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(Text(title))
+    .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+  }
+
+  // MARK: - Dashboard
+
+  private var dashboardControlsSection: some View {
+    Section {
+      Toggle(isOn: $viewModel.showDashboardClockButtons) {
+        Text(.appearanceDashboardClockButtonsTitle)
+      }
+      .tint(.tidexBlue)
+    } header: {
+      Text(String(localized: .appearanceDashboardSectionTitle))
+    } footer: {
+      Text(.appearanceDashboardClockButtonsDescription)
+    }
+  }
+
   // MARK: - Startup Tab
 
   private var startupTabSection: some View {
     Section {
       Picker(selection: $viewModel.selectedStartupTab) {
         ForEach(StartupTabOption.allCases, id: \.self) { tab in
-          startupTabRow(tab).tag(tab)
+          Label(startupTabTitle(tab), systemImage: startupTabIcon(tab))
+            .tag(tab)
         }
       } label: {
-        EmptyView()
+        Text(.appearanceStartupTabSectionTitle)
       }
-      .pickerStyle(.inline)
-    } header: {
-      Text(String(localized: .appearanceStartupTabSectionTitle))
+      .pickerStyle(.menu)
+      .tint(.tidexTextSecondary)
     } footer: {
       Text(.appearanceStartupTabSectionDescription)
     }
-  }
-
-  private func startupTabRow(_ tab: StartupTabOption) -> some View {
-    HStack(spacing: Spacing.md) {
-      ZStack {
-        RoundedRectangle(cornerRadius: CornerRadius.sm)
-          .fill(Color.tidexBlue.opacity(0.1))
-          .frame(width: 40, height: 40)
-
-        Image(systemName: startupTabIcon(tab))
-          .font(.tidexBody)
-          .foregroundColor(.tidexBlue)
-          .accessibilityHidden(true)
-      }
-
-      Text(startupTabTitle(tab))
-        .font(.tidexBodyMedium)
-        .foregroundColor(.tidexTextPrimary)
-    }
-    .padding(.vertical, Spacing.xs)
   }
 
   private func startupTabTitle(_ tab: StartupTabOption) -> String {
@@ -330,25 +293,6 @@ struct AppearanceSettingsView: View {
 
     case .sharing:
       return "person.2.fill"
-    }
-  }
-
-  // MARK: - Dashboard Controls
-
-  private var dashboardControlsSection: some View {
-    Section(String(localized: .appearanceDashboardSectionTitle)) {
-      Toggle(isOn: $viewModel.showDashboardClockButtons) {
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(.appearanceDashboardClockButtonsTitle)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(.appearanceDashboardClockButtonsDescription)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-      }
-      .tint(.tidexBlue)
     }
   }
 }

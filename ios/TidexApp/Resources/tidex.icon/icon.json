@@ -22,6 +22,12 @@
               "value" : "system-light"
             },
             {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "srgb:0.37685,0.55395,0.94315,1.00000"
+              }
+            },
+            {
               "appearance" : "tinted",
               "value" : "system-light"
             }
@@ -65,6 +71,12 @@
           "fill-specializations" : [
             {
               "value" : "system-light"
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "srgb:0.37685,0.55395,0.94315,1.00000"
+              }
             },
             {
               "appearance" : "tinted",

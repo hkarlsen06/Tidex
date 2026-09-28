@@ -145,27 +145,7 @@ struct AdminSettingsView: View {
     Button {
       deepLinkedTab = tab
     } label: {
-      VStack(alignment: .leading, spacing: Spacing.xxs) {
-        Image(systemName: tab.icon)
-          .font(.tidexFootnoteStrong)
-          .foregroundStyle(tab.tint)
-        Group {
-          if let value {
-            Text(value, format: .number).contentTransition(.numericText())
-          } else {
-            Text(verbatim: "–")
-          }
-        }
-        .font(.tidexTitle)
-        .foregroundStyle(Color.tidexTextPrimary)
-        Text(title)
-          .font(.tidexCaptionRegular)
-          .foregroundStyle(Color.tidexTextSecondary)
-          .lineLimit(1)
-      }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(Spacing.sm)
-      .background(Color.tidexSurfacePrimary, in: .rect(cornerRadius: CornerRadius.md))
+      AdminStatTile(title: title, value: value, icon: tab.icon, tint: tab.tint)
     }
     .buttonStyle(.plain)
   }
@@ -203,6 +183,40 @@ private struct AdminDestination: View {
 }
 
 // MARK: - Shared components
+
+/// A number with an icon and caption, shown in a row of three on the admin home and user screens.
+struct AdminStatTile: View {
+  let title: String
+  let value: Int?
+  let icon: String
+  let tint: Color
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: Spacing.xxs) {
+      Image(systemName: icon)
+        .font(.tidexFootnoteStrong)
+        .foregroundStyle(tint)
+        .accessibilityHidden(true)
+      Group {
+        if let value {
+          Text(value, format: .number).contentTransition(.numericText())
+        } else {
+          Text(verbatim: "–")
+        }
+      }
+      .font(.tidexTitle)
+      .foregroundStyle(Color.tidexTextPrimary)
+      Text(title)
+        .font(.tidexCaptionRegular)
+        .foregroundStyle(Color.tidexTextSecondary)
+        .lineLimit(1)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(Spacing.sm)
+    .background(Color.tidexSurfacePrimary, in: .rect(cornerRadius: CornerRadius.md))
+    .accessibilityElement(children: .combine)
+  }
+}
 
 /// Small colored capsule for statuses and roles.
 struct AdminBadge: View {

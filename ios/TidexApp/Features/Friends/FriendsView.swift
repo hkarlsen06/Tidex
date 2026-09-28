@@ -485,6 +485,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
   @ToolbarContentBuilder
   private var friendsToolbarContent: some ToolbarContent {
+    TabTitleToolbarItem(title: .tabsSharing)
     ToolbarItem(placement: .topBarTrailing) {
       Button {
         showAddFriendSheet = true

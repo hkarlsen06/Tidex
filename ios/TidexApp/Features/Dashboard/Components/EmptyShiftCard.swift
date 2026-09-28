@@ -101,21 +101,9 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
         }
       }
 
-      // Footer area below the card - fixed height to match FeaturedShiftCard
-      Group {
-        if isLoading {
-          RoundedRectangle(cornerRadius: CornerRadius.xxs)
-            .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
-            .frame(width: 80, height: 14)  // swiftlint:disable:this no_magic_numbers
-        } else if showsAddShiftButton {
-          Color.clear
-        } else {
-          RoundedRectangle(cornerRadius: CornerRadius.xxs)
-            .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
-            .frame(width: 80, height: 14)  // swiftlint:disable:this no_magic_numbers
-        }
-      }
-      .frame(height: 20)  // Match FeaturedShiftCard footer height // swiftlint:disable:this no_magic_numbers
+      // Empty footer space below the card, matching the FeaturedShiftCard footer height
+      Color.clear
+        .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
     }
   }
 

@@ -666,6 +666,11 @@ struct SettingsView: View {
       jobsRepository.getAllJobs(for: userId, includeArchived: true, includeDeleted: false)
         .filter { $0.archived_at != nil }
     )
+    // The archived section hides once it is empty, so drop back to the compact sheet.
+    if payArchivedJobs.isEmpty, showArchivedPayJobs {
+      showArchivedPayJobs = false
+      applyPayChooserDetent(archivedVisible: false)
+    }
 
     if let selectedPayChooserJobId,
       payChooserJobs.contains(where: { $0.id == selectedPayChooserJobId }) == false
@@ -893,60 +898,52 @@ struct SettingsView: View {
     let defaultJob = payChooserJobs.first(where: \.is_default)  // swiftlint:disable:this explicit_type_interface
 
     return NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.sm) {
-          Button {
-            openAddPayJob()
-          } label: {
-            HStack(spacing: Spacing.sm) {
-              Image(systemName: "plus.circle.fill")
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexBlue)
-
-              Text(.settingsPayAddJobCta)
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextPrimary)
-
-              Spacer()
+      List {
+        Group {
+          Section {
+            if payChooserJobs.isEmpty {
+              Text(.settingsPayChooseJobEmpty)
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexTextSecondary)
+            } else {
+              ForEach(payChooserJobs, id: \.id) { job in
+                payChooserWorkplaceRow(job, isDefault: job.id == defaultJob?.id)
+              }
             }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .tidexRowSurface(cornerRadius: CornerRadius.lg)
-            .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-          }
-          .buttonStyle(.plain)
-          .frame(maxWidth: .infinity)
 
-          if payChooserJobs.isEmpty {
-            Text(.settingsPayChooseJobEmpty)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.horizontal, Spacing.sm)
-          } else {
-            ForEach(payChooserJobs, id: \.id) { job in
-              payChooserWorkplaceRow(job, isDefault: job.id == defaultJob?.id)
+            Button {
+              openAddPayJob()
+            } label: {
+              Label {
+                Text(.settingsPayAddJobCta)
+                  .foregroundColor(.tidexBlue)
+              } icon: {
+                Image(systemName: "plus.circle.fill")
+                  .foregroundColor(.tidexBlue)
+              }
+              .font(.tidexBodyMedium)
+            }
+          } footer: {
+            if !payChooserJobs.isEmpty {
+              Text(.settingsPayManageJobsFooter)
             }
           }
 
-          archivedPayJobsSection
-            .padding(.top, Spacing.lg)
+          if !payArchivedJobs.isEmpty {
+            archivedPayJobsSection
+          }
 
           if let payChooserError {
-            Text(payChooserError)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-              .frame(maxWidth: .infinity, alignment: .leading)
+            Section {
+              Text(payChooserError)
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexError)
+            }
           }
         }
-        .frame(maxWidth: .infinity)
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .scrollIndicators(.hidden)
-      .padding(.horizontal, Spacing.md)
-      .padding(.top, Spacing.sm)
-      .padding(.bottom, Spacing.md)
-      .background(Color.tidexBackground)
+      .tidexListBackground()
       .navigationTitle(String(localized: .settingsPayManageJobsTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -1058,149 +1055,88 @@ struct SettingsView: View {
       && exitDistance > verticalDistance * 1.4
   }
 
-  @ViewBuilder
   private var archivedPayJobsSection: some View {
-    VStack(spacing: Spacing.sm) {
-      Button {
-        let shouldShowArchivedPayJobs = !showArchivedPayJobs
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
-          showArchivedPayJobs = shouldShowArchivedPayJobs
-          applyPayChooserDetent(archivedVisible: shouldShowArchivedPayJobs)
-        }
-      } label: {
-        HStack(spacing: Spacing.sm) {
-          Image(systemName: "archivebox")
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
-            .frame(width: 22)
-
-          Text(.settingsPayManageJobsArchivedTitle)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextSecondary)
-            .lineLimit(1)
-
-          Spacer(minLength: Spacing.sm)
-
-          if !payArchivedJobs.isEmpty {
-            Text("\(payArchivedJobs.count)")
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-              .padding(.horizontal, Spacing.xs)
-              .padding(.vertical, Spacing.xxxs)
-              .background(Color.tidexBackground.opacity(0.9))
-              .clipShape(Capsule())
-          }
-
-          Image(systemName: showArchivedPayJobs ? "chevron.up" : "chevron.down")
-            .font(.tidexCaptionRegular)
-            .foregroundColor(.tidexTextMuted)
-        }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.md)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .tidexRowSurface(cornerRadius: CornerRadius.lg)
-        .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-      }
-      .buttonStyle(.plain)
-      .accessibilityLabel(archivedPayJobsToggleAccessibilityLabel)
-      .accessibilityValue(Text("\(payArchivedJobs.count)"))
-
-      if showArchivedPayJobs {
-        VStack(spacing: Spacing.sm) {
-          if payArchivedJobs.isEmpty {
-            Text(.settingsPayManageJobsArchivedEmpty)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextMuted)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .padding(.horizontal, Spacing.md)
-              .padding(.vertical, Spacing.sm)
-          } else {
-            ForEach(payArchivedJobs, id: \.id) { job in
-              payChooserArchivedJobRow(job)
+    Section {
+      DisclosureGroup(
+        isExpanded: Binding(
+          get: { showArchivedPayJobs },
+          set: { isVisible in
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+              showArchivedPayJobs = isVisible
+              applyPayChooserDetent(archivedVisible: isVisible)
             }
           }
+        )
+      ) {
+        ForEach(payArchivedJobs, id: \.id) { job in
+          payChooserArchivedJobRow(job)
         }
-        .transition(.opacity.combined(with: .move(edge: .top)))
+      } label: {
+        Label {
+          HStack(spacing: Spacing.sm) {
+            Text(.settingsPayManageJobsArchivedTitle)
+              .foregroundColor(.tidexTextSecondary)
+
+            Spacer(minLength: Spacing.sm)
+
+            Text(payArchivedJobs.count, format: .number)
+              .foregroundColor(.tidexTextMuted)
+              .monospacedDigit()
+          }
+        } icon: {
+          Image(systemName: "archivebox")
+            .foregroundColor(.tidexTextMuted)
+        }
+        .font(.tidexBodyMedium)
       }
+      .tint(.tidexTextMuted)
     }
   }
 
-  @ViewBuilder
   private func payChooserWorkplaceRow(_ job: Job, isDefault: Bool) -> some View {
-    HStack(spacing: Spacing.sm) {
-      Button {
-        openPayForSelectedJob(job)
-      } label: {
-        HStack(spacing: Spacing.sm) {
-          WorkplaceNameText(
-            name: job.name,
-            colorHex: job.color,
-            font: .tidexBodyMedium,
-            fallbackBadgeColor: .tidexBlue,
-            lineLimit: 2,
-            badgeCornerRadius: CornerRadius.md,
-            badgeHorizontalPadding: Spacing.sm,
-            badgeVerticalPadding: Spacing.xs
-          )
-          .layoutPriority(1)
+    Button {
+      openPayForSelectedJob(job)
+    } label: {
+      HStack(spacing: Spacing.sm) {
+        WorkplaceNameText(
+          name: job.name,
+          colorHex: job.color,
+          font: .tidexBodyMedium,
+          fallbackBadgeColor: .tidexBlue,
+          lineLimit: 2,
+          badgeCornerRadius: CornerRadius.md,
+          badgeHorizontalPadding: Spacing.sm,
+          badgeVerticalPadding: Spacing.xs
+        )
+        .layoutPriority(1)
 
-          Spacer(minLength: Spacing.sm)
+        Spacer(minLength: Spacing.sm)
 
+        if payJobManagementLoadingJobId == job.id {
+          ProgressView()
+            .controlSize(.small)
+        } else {
           payJobBadges(job, isDefault: isDefault)
             .layoutPriority(2)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
-      }
-      .buttonStyle(.plain)
-      .frame(maxWidth: .infinity)
 
-      if payJobManagementLoadingJobId == job.id {
-        ProgressView()
-          .controlSize(.small)
-          .frame(width: 44, height: 44)
-      } else if hasActivePayJobActions(for: job) {
-        Menu {
-          activePayJobActions(job)
-        } label: {
-          Label {
-            Text(payJobActionsAccessibilityLabel(for: job))
-          } icon: {
-            Image(systemName: "ellipsis.circle")
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextMuted)
-          }
-          .labelStyle(.iconOnly)
-          .frame(width: 44, height: 44)
-          .contentShape(Rectangle())
-        }
-        .accessibilityLabel(payJobActionsAccessibilityLabel(for: job))
+        Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+          .accessibilityHidden(true)
       }
-
-      Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
-        .fixedSize()
-        .accessibilityHidden(true)
+      .contentShape(Rectangle())
     }
-    .padding(.horizontal, Spacing.md)
-    .padding(.vertical, Spacing.md)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .tidexRowSurface(cornerRadius: CornerRadius.lg)
-    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+      activePayJobActions(job)
+    }
     .contextMenu {
       activePayJobActions(job)
     }
   }
 
-  @ViewBuilder
   private func payChooserArchivedJobRow(_ job: Job) -> some View {
     HStack(spacing: Spacing.sm) {
-      Image(systemName: "archivebox")
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextMuted)
-        .frame(width: 18)
-
       WorkplaceNameText(
         name: job.name,
         colorHex: job.color,
@@ -1209,34 +1145,17 @@ struct SettingsView: View {
         lineLimit: 2
       )
       .opacity(0.72)
-      .frame(maxWidth: .infinity, alignment: .leading)
 
       Spacer(minLength: Spacing.sm)
 
       if payJobManagementLoadingJobId == job.id {
         ProgressView()
           .controlSize(.small)
-          .frame(width: 44, height: 44)
-      } else {
-        Menu {
-          archivedPayJobActions(job)
-        } label: {
-          Image(systemName: "ellipsis.circle")
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextMuted)
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
-        }
-        .disabled(payJobManagementLoadingJobId != nil)
-        .accessibilityLabel(payJobActionsAccessibilityLabel(for: job))
-        .accessibilityValue(Text(job.name))
       }
     }
-    .padding(.horizontal, Spacing.md)
-    .padding(.vertical, Spacing.md)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .tidexRowSurface(cornerRadius: CornerRadius.lg)
-    .contentShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
+    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+      archivedPayJobActions(job)
+    }
     .contextMenu {
       archivedPayJobActions(job)
     }
@@ -1281,22 +1200,6 @@ struct SettingsView: View {
       .clipShape(Capsule())
   }
 
-  private func hasActivePayJobActions(for job: Job) -> Bool {
-    !job.is_default
-  }
-
-  private func payJobActionsAccessibilityLabel(for job: Job) -> String {
-    "\(String(localized: .settingsPayJobActionsTitle)): \(job.name)"
-  }
-
-  private var archivedPayJobsToggleAccessibilityLabel: String {
-    if showArchivedPayJobs {
-      return String(localized: .settingsPayManageJobsHideArchived)
-    }
-
-    return String(localized: .settingsPayManageJobsShowArchived)
-  }
-
   @ViewBuilder
   private func activePayJobActions(_ job: Job) -> some View {
     if !job.is_default {
@@ -1310,6 +1213,8 @@ struct SettingsView: View {
           systemImage: "checkmark.circle"
         )
       }
+      .tint(.tidexBlue)
+      .disabled(payJobManagementLoadingJobId != nil)
     }
 
     if payChooserJobs.count > 1, !job.is_default {
@@ -1323,6 +1228,8 @@ struct SettingsView: View {
           systemImage: "archivebox"
         )
       }
+      .tint(.tidexTextMuted)
+      .disabled(payJobManagementLoadingJobId != nil)
     }
   }
 
@@ -1338,6 +1245,8 @@ struct SettingsView: View {
         systemImage: "arrow.uturn.backward.circle"
       )
     }
+    .tint(.tidexBlue)
+    .disabled(payJobManagementLoadingJobId != nil)
 
     Button(role: .destructive) {
       Task {
@@ -1349,6 +1258,7 @@ struct SettingsView: View {
         systemImage: "trash"
       )
     }
+    .disabled(payJobManagementLoadingJobId != nil)
   }
 }
 
@@ -1361,36 +1271,54 @@ private struct RecurringShiftsSettingsView: View {
   @State private var errorMessage: String?
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: Spacing.mlg) {
-        headerSection
-
+    List {
+      Group {
         if let errorMessage {
-          errorBanner(errorMessage)
+          Section {
+            Label {
+              Text(errorMessage)
+                .foregroundColor(.tidexError)
+            } icon: {
+              Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.tidexError)
+            }
+            .font(.tidexSubheadline)
+          }
         }
 
-        if isLoading {
-          ProgressView()
-            .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(.top, Spacing.lg)
-        } else if recurringShifts.isEmpty {
-          emptyState
-        } else {
-          VStack(spacing: Spacing.xsm) {
+        if isLoading && recurringShifts.isEmpty {
+          Section {
+            ProgressView()
+              .frame(maxWidth: .infinity)
+          }
+        } else if !recurringShifts.isEmpty {
+          Section {
             ForEach(recurringShifts, id: \.id) { recurring in
               recurringShiftRow(recurring)
             }
+          } footer: {
+            Text(.settingsRecurringShiftsSubtitle)
           }
         }
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.lg)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .background(Color.tidexBackground)
+    .tidexListBackground()
+    .overlay {
+      if !isLoading, recurringShifts.isEmpty, errorMessage == nil {
+        ContentUnavailableView {
+          Label(String(localized: .settingsRecurringShiftsEmptyTitle), systemImage: "repeat")
+        } description: {
+          Text(.settingsRecurringShiftsEmptyDescription)
+        }
+      }
+    }
     .navigationTitle(String(localized: .settingsRecurringShiftsTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
+      await loadRecurringShifts()
+    }
+    .refreshable {
       await loadRecurringShifts()
     }
     .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
@@ -1423,84 +1351,28 @@ private struct RecurringShiftsSettingsView: View {
     }
   }
 
-  private var headerSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.xxs) {
-      Text(.settingsRecurringShiftsTitle)
-        .font(.title2)
-        .fontWeight(.bold)
-        .foregroundColor(.tidexTextPrimary)
-
-      Text(.settingsRecurringShiftsSubtitle)
-        .font(.subheadline)
-        .foregroundColor(.tidexTextSecondary)
-    }
-    .frame(maxWidth: .infinity, alignment: .leading)
-  }
-
-  private var emptyState: some View {
-    VStack(spacing: Spacing.xs) {
-      Text(.settingsRecurringShiftsEmptyTitle)
-        .font(.tidexButton)
-        .foregroundColor(.tidexTextPrimary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-
-      Text(.settingsRecurringShiftsEmptyDescription)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexTextSecondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-    .padding(Spacing.md)
-    .background(Color.tidexSurfacePrimary)
-    .cornerRadius(CornerRadius.lg)
-  }
-
   private func recurringShiftRow(_ recurring: RecurringShiftRow) -> some View {
     let exclusionCount = recurring.effectiveExclusions.count
+    var details = [weekdaySummary(for: recurring.selected_days), repeatLabel(for: recurring.repeat_interval_weeks)]
+    if exclusionCount > 0 {
+      details.append(String(localized: .settingsRecurringShiftsExcludedCount(exclusionCount)))
+    }
 
     return Button {
       recurringShiftToEdit = recurring
     } label: {
-      VStack(alignment: .leading, spacing: Spacing.xs) {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
         Text(verbatim: "\(recurring.cleanStartTime) - \(recurring.cleanEndTime)")
-          .font(.tidexButton)
+          .font(.tidexBodyMedium)
           .foregroundColor(.tidexTextPrimary)
+          .monospacedDigit()
 
-        HStack(spacing: Spacing.xxxs) {
-          Text(weekdaySummary(for: recurring.selected_days))
-          Text("•")
-          Text(repeatLabel(for: recurring.repeat_interval_weeks))
-          if exclusionCount > 0 {
-            Text("•")
-            Text(String(localized: .settingsRecurringShiftsExcludedCount(exclusionCount)))
-          }
-        }
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
+        Text(verbatim: details.joined(separator: " • "))
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
       }
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .padding(Spacing.md)
-      .background(Color.tidexSurfacePrimary)
-      .cornerRadius(CornerRadius.lg)
+      .padding(.vertical, Spacing.xxxs)
     }
-    .buttonStyle(.plain)
-  }
-
-  @ViewBuilder
-  private func errorBanner(_ message: String) -> some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "exclamationmark.triangle.fill")
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexError)
-      Text(message)
-        .font(.tidexSubheadline)
-        .foregroundColor(.tidexError)
-      Spacer()
-    }
-    .padding(Spacing.sm)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.lg)
-        .fill(Color.tidexError.opacity(0.1))
-    )
   }
 
   private func loadRecurringShifts() async {

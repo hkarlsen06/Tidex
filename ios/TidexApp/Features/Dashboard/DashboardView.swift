@@ -287,8 +287,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       ZStack {
         TidexAppBackground()
 
-        // Main content - month picker is now in shared overlay
-        Group {
+        // Main content - month picker is now in shared overlay.
+        // ZStack, not Group: Group would apply .animation to each branch, so the swap wouldn't animate.
+        ZStack {
           if shouldShowWorkSetupRequiredPlaceholder {
             WorkSetupRequiredPlaceholder()
           } else if let data = viewModel.dashboardData {
@@ -303,6 +304,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Crossfade skeleton to content instead of swapping abruptly on launch
+        .animation(.easeOut(duration: 0.3), value: viewModel.dashboardData == nil)  // swiftlint:disable:this no_magic_numbers line_length
 
         if !shouldShowWorkSetupRequiredPlaceholder {
           VStack {
@@ -319,7 +322,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .navigationBarTitleDisplayMode(.inline)
       .toolbarBackground(.hidden, for: .navigationBar)
       .toolbar {
-        ToolbarItem(placement: .topBarLeading) {
+        TabTitleToolbarItem(title: .tabsHome)
+        ToolbarItem(placement: .topBarTrailing) {
           statsToolbarButton
         }
       }
