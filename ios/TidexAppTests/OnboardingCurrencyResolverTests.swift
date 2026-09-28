@@ -98,4 +98,30 @@ final class OnboardingCurrencyResolverTests: XCTestCase {
     XCTAssertNil(OnboardingCurrencyCarryoverStore.readValidPreferredCurrency())
     XCTAssertNil(UserDefaults.standard.string(forKey: carryoverKey))
   }
+
+  func testOnlyNonKroneCurrenciesUseSimpleSetup() {
+    let data = OnboardingData()
+
+    data.currency = "kr"
+    XCTAssertFalse(data.usesSimpleSetup)
+
+    for currency in ["$", "€", "£", "zł", "₩"] {
+      data.currency = currency
+      XCTAssertTrue(data.usesSimpleSetup, currency)
+    }
+  }
+
+  func testSimpleSetupDefaultsTurnOffBreakAndTaxDeductions() {
+    let data = OnboardingData()
+    data.currency = "€"
+    data.breakEnabled = true
+    data.taxEnabled = true
+
+    data.applySimpleSetupDefaults()
+
+    XCTAssertFalse(data.breakEnabled)
+    XCTAssertFalse(data.taxEnabled)
+    XCTAssertEqual(data.wageType, .custom)
+    XCTAssertTrue(data.resolvedSupplements.rules.isEmpty)
+  }
 }

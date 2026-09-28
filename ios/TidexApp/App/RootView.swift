@@ -114,6 +114,9 @@ private struct RootContent: View {
             OnboardingView(
               onNavigateToSignup: {
                 completePreAuthOnboarding(destination: .signup)
+              },
+              onNavigateToLogin: {
+                completePreAuthOnboarding(destination: .login)
               }
             )
             .transition(.opacity)

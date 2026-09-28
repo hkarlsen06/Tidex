@@ -1070,7 +1070,8 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
           earningsMonth: Date.previousYearMonth(from: payoutYM).month,
           now: now
         )
-        let jobPaydaysInMonth = schedule  // swiftlint:disable:this explicit_type_interface
+        let jobPaydaysInMonth =
+          schedule  // swiftlint:disable:this explicit_type_interface
           .windows(paidInYear: payoutYM.year, month: payoutYM.month)
           .map(\.adjustedPayoutDate)
         let jobAdjustments = selectedPayoutAdjustments.filter { adjustment in  // swiftlint:disable:this explicit_type_interface line_length
@@ -1552,7 +1553,8 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   private var displayedMonthEvents: [EventRow] = []  // swiftlint:disable:this type_contents_order
   private var previousMonthShifts: [ShiftWithComputations] = []  // swiftlint:disable:this type_contents_order
   @ObservationIgnored private var previousPayrollAdjustments: [PayrollAdjustment] = []  // swiftlint:disable:this type_contents_order
-  @ObservationIgnored private var payrollAdjustmentsByPayoutMonth: [PayrollReadMonth: [PayrollAdjustment]] = [:]  // swiftlint:disable:this line_length type_contents_order
+  @ObservationIgnored private var payrollAdjustmentsByPayoutMonth:
+    [PayrollReadMonth: [PayrollAdjustment]] = [:]  // swiftlint:disable:this type_contents_order
   @ObservationIgnored private var settings: UserSettings?  // swiftlint:disable:this type_contents_order
   @ObservationIgnored private var snapshots: [WageSnapshot] = []  // swiftlint:disable:this type_contents_order
   @ObservationIgnored private var recurringShifts: [RecurringShiftRow] = []  // swiftlint:disable:this type_contents_order
@@ -3805,7 +3807,8 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
       shiftDate: shiftDate,
       startTime: Self.timeString(from: start),
       endTime: Self.timeString(from: end),
-      customSupplements: nil
+      customSupplements: nil,
+      creationMethod: "clock"
     )
 
     cancelTemporarySession(session)

@@ -1,10 +1,8 @@
 import SwiftUI
 
-/// Terms and conditions agreement checkbox with links
+/// Says that continuing accepts the Terms of Service and Privacy Policy, with links to both.
+/// Signup records `terms_accepted_at` when the user continues.
 struct TermsAgreementView: View {
-  @Binding var isAgreed: Bool
-  var error: String?
-
   @Environment(\.openURL) private var openURL
 
   private var termsURL: URL? {
@@ -16,67 +14,11 @@ struct TermsAgreementView: View {
   }
 
   var body: some View {
-    VStack(alignment: .center, spacing: Spacing.xs) {
-      HStack(alignment: .center, spacing: Spacing.xs) {
-        checkboxButton
-        termsLabel
-      }
-
-      if let error, !error.isEmpty {
-        Text(error)
-          .font(.tidexCaptionRegular)
-          .foregroundColor(.tidexError)
-          .multilineTextAlignment(.center)
-      }
-    }
-    .frame(maxWidth: .infinity, alignment: .center)
-  }
-
-  private var checkboxButton: some View {
-    Button(action: { isAgreed.toggle() }) {
-      ZStack {
-        RoundedRectangle(cornerRadius: CornerRadius.xxs)
-          .stroke(checkboxBorderColor, lineWidth: 1.5)
-          .frame(width: 20, height: 20)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xxs)
-              .fill(isAgreed ? Color.tidexBrandPrimary : Color.clear)
-          )
-
-        if isAgreed {
-          Image(systemName: "checkmark")
-            .font(.tidexCaptionStrong)
-            .foregroundColor(.tidexTextOnBrand)
-        }
-      }
-      .frame(width: 24, height: 24)
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .accessibilityLabel(agreementAccessibilityLabel)
-    .accessibilityAddTraits(isAgreed ? .isSelected : [])
-    .accessibilityHint(Text(.signupTermsPrefix))
-  }
-
-  private var agreementAccessibilityLabel: Text {
-    Text(
-      "\(String(localized: .signupTermsTermsLink)) \(String(localized: .signupTermsAnd)) \(String(localized: .signupTermsPrivacyLink))"
-    )
-  }
-
-  private var checkboxBorderColor: Color {
-    if error != nil {
-      return .tidexError
-    }
-    return isAgreed ? .tidexBrandPrimary : .tidexBorder
-  }
-
-  private var termsLabel: some View {
-    // Build the terms text with proper text flow using AttributedString
     Text(termsAttributedString)
-      .font(.tidexSubheadline)
+      .font(.tidexFootnote)
       .fixedSize(horizontal: false, vertical: true)
       .multilineTextAlignment(.center)
+      .frame(maxWidth: .infinity, alignment: .center)
       .environment(
         \.openURL,
         OpenURLAction { url in
@@ -124,26 +66,8 @@ struct TermsAgreementView: View {
   }
 }
 
-#Preview("Terms Agreement - Unchecked") {
-  VStack {
-    TermsAgreementView(isAgreed: .constant(false))
-  }
-  .padding()
-  .background(Color.tidexBackground)
-}
-
-#Preview("Terms Agreement - Checked") {
-  VStack {
-    TermsAgreementView(isAgreed: .constant(true))
-  }
-  .padding()
-  .background(Color.tidexBackground)
-}
-
-#Preview("Terms Agreement - Error") {
-  VStack {
-    TermsAgreementView(isAgreed: .constant(false), error: "You must agree to the terms")
-  }
-  .padding()
-  .background(Color.tidexBackground)
+#Preview("Terms Agreement") {
+  TermsAgreementView()
+    .padding()
+    .background(Color.tidexBackground)
 }

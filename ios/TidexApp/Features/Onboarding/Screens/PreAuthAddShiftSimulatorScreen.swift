@@ -321,6 +321,11 @@ struct PreAuthAddShiftSimulatorScreen: View {
     hideKeyboard()
 
     Haptics.play(.success)
+    OnboardingFirstShiftCarryoverStore.write(
+      dates: viewModel.selectedDates,
+      startTime: viewModel.startTime,
+      endTime: viewModel.endTime
+    )
     onContinue(
       viewModel.baselineToolbarTotals,
       viewModel.toolbarTotals ?? viewModel.baselineToolbarTotals,

@@ -20,7 +20,6 @@ final class SignupViewModel {
   var emailOrPhone: String = ""
   var password: String = ""
   var confirmPassword: String = ""
-  var hasAcceptedTerms = false
 
   var isLoading = false
   var showEmailForm = false
@@ -41,7 +40,6 @@ final class SignupViewModel {
     var emailOrPhone: String?
     var password: String?
     var confirmPassword: String?
-    var terms: String?
 
     mutating func clear() {
       firstName = nil
@@ -49,7 +47,6 @@ final class SignupViewModel {
       emailOrPhone = nil
       password = nil
       confirmPassword = nil
-      terms = nil
     }
   }
 
@@ -102,8 +99,6 @@ final class SignupViewModel {
     clearMessages()
     fieldErrors.clear()
 
-    guard validateTermsAgreement() else { return }
-
     isLoading = true
     defer { isLoading = false }
 
@@ -123,8 +118,6 @@ final class SignupViewModel {
   func signUpWithApple() async {
     clearMessages()
     fieldErrors.clear()
-
-    guard validateTermsAgreement() else { return }
 
     isLoading = true
     defer { isLoading = false }
@@ -197,17 +190,7 @@ final class SignupViewModel {
       isValid = false
     }
 
-    return validateTermsAgreement() && isValid
-  }
-
-  private func validateTermsAgreement() -> Bool {
-    guard hasAcceptedTerms else {
-      fieldErrors.terms = String(localized: .acceptTermsDescription)
-      return false
-    }
-
-    fieldErrors.terms = nil
-    return true
+    return isValid
   }
 
   private func handleSuccessfulSignup() async {

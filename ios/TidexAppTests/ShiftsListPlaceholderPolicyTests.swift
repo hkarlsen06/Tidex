@@ -57,4 +57,44 @@ final class ShiftsListPlaceholderPolicyTests: XCTestCase {
       )
     )
   }
+
+  // MARK: - Empty state
+
+  func testUserWithoutShiftsSeesFirstShiftStateInCurrentMonth() {
+    XCTAssertEqual(
+      ShiftsListPlaceholderPolicy.emptyState(
+        hasAnyShifts: false, hasRows: false, isCurrentMonth: true),
+      .firstShift
+    )
+  }
+
+  func testUserWithoutShiftsSeesFirstShiftStateInOtherMonths() {
+    XCTAssertEqual(
+      ShiftsListPlaceholderPolicy.emptyState(
+        hasAnyShifts: false, hasRows: false, isCurrentMonth: false),
+      .firstShift
+    )
+  }
+
+  func testEmptyCurrentMonthKeepsListWhenUserHasShiftsElsewhere() {
+    XCTAssertNil(
+      ShiftsListPlaceholderPolicy.emptyState(
+        hasAnyShifts: true, hasRows: false, isCurrentMonth: true)
+    )
+  }
+
+  func testEmptyOtherMonthShowsMonthStateWhenUserHasShiftsElsewhere() {
+    XCTAssertEqual(
+      ShiftsListPlaceholderPolicy.emptyState(
+        hasAnyShifts: true, hasRows: false, isCurrentMonth: false),
+      .emptyMonth
+    )
+  }
+
+  func testMonthWithEventsShowsListEvenWithoutShifts() {
+    XCTAssertNil(
+      ShiftsListPlaceholderPolicy.emptyState(
+        hasAnyShifts: false, hasRows: true, isCurrentMonth: true)
+    )
+  }
 }

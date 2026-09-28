@@ -184,6 +184,8 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   @State private var filteredListShiftsCache: [ShiftWithComputations] = []
   @State private var shiftListItemsCache: [ShiftListItem] = []
   @State private var weekGroupsWithPlaceholderCache: [ListWeekGroup] = []
+  /// False only for a user with no shifts at all, who sees the first-shift prompt.
+  @State private var hasAnyShifts: Bool = true
 
   private func shouldKeepShiftDetailsOpen(
     after editResult: ShiftEditResult,
@@ -267,6 +269,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     guard let summary, summary.userId == coordinator.userId else {
       return
     }
+    refreshHasAnyShifts()
     guard summary.reason != .appLaunch else {
       return
     }
@@ -382,9 +385,11 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         .task {
           viewModel.setActiveTabVisible(selectedTab == .shifts)
           refreshWorkSetupPresentationState()
+          refreshHasAnyShifts()
           await loadShiftsContent()
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
+          refreshHasAnyShifts()
           let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()
           guard !shouldShowWorkSetupRequiredPlaceholder else {
             return
@@ -467,7 +472,12 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           recomputeListDerivedDataIfNeeded()
         }
         .onChange(of: viewModel.shifts) { _, _ in
+          refreshHasAnyShifts()
           recomputeListDerivedDataIfNeeded()
+        }
+        // A shift added or deleted in another month doesn't change `viewModel.shifts`.
+        .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+          refreshHasAnyShifts()
         }
         .onChange(of: viewModel.events) { _, _ in
           recomputeListDerivedDataIfNeeded()
@@ -1366,10 +1376,42 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     }
   }
 
-  /// Empty state for a past or future month with no shifts. `isCurrentMonth` is never true
-  /// where this is shown, so there is no "current month" messaging to branch on.
+  /// Which empty state the list shows instead of its rows, if any.
+  private var listEmptyState: ShiftsListEmptyState? {
+    ShiftsListPlaceholderPolicy.emptyState(
+      hasAnyShifts: hasAnyShifts,
+      hasRows: shiftListItems.contains {
+        if case .todayPlaceholder = $0 { false } else { true }
+      },
+      isCurrentMonth: viewModel.isCurrentMonth
+    )
+  }
+
+  private func refreshHasAnyShifts() {
+    hasAnyShifts = ShiftsRepository.shared.hasAnyShifts(
+      for: coordinator.userId,
+      initialSyncComplete: coordinator.initialSyncComplete
+    )
+  }
+
+  /// Empty state for a user with no shifts at all, in any month, or for a past or future
+  /// month with no shifts. An empty current month shows the today placeholder instead.
   @ViewBuilder
   private func scheduleEmptyState(
+    _ state: ShiftsListEmptyState,
+    monthName: String,
+    isFutureMonth: Bool,
+    onAddShift: @escaping () -> Void
+  ) -> some View {
+    if state == .firstShift {
+      FirstShiftEmptyState(onAddShift: onAddShift)
+    } else {
+      monthEmptyState(monthName: monthName, isFutureMonth: isFutureMonth, onAddShift: onAddShift)
+    }
+  }
+
+  @ViewBuilder
+  private func monthEmptyState(
     monthName: String, isFutureMonth: Bool, onAddShift: @escaping () -> Void
   ) -> some View {
     let title =
@@ -1399,10 +1441,10 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   /// Shifts list panel for iPad landscape (right side)
   @ViewBuilder
   private var shiftsPanelForIPad: some View {
-    if shiftListItems.isEmpty, !viewModel.isCurrentMonth {
-      // Empty state for past/future months
+    if let listEmptyState {
       ScrollView {
         scheduleEmptyState(
+          listEmptyState,
           monthName: viewModel.displayMonthName,
           isFutureMonth: viewModel.isFutureMonth,
           onAddShift: { openAddShift() }
@@ -1598,6 +1640,12 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             )
             .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
+            if !hasAnyShifts {
+              FirstShiftPrompt { openAddShift() }
+                .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+                .padding(.horizontal, Spacing.lg)
+                .padding(.top, Spacing.md)
+            }
             Spacer()
           }
           // Offset for month picker overlay so content centers in available space
@@ -1612,12 +1660,12 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   @ViewBuilder
   private var listViewContent: some View {
-    // Show empty state only when there are no shifts AND it's not current month
-    // (current month with no shifts shows just the today placeholder card in the list)
-    if shiftListItems.isEmpty, !viewModel.isCurrentMonth {
-      // Empty state for past/future months with no shifts
+    // An empty current month shows the today placeholder card in the list, unless the
+    // user has no shifts at all
+    if let listEmptyState {
       ScrollView {
         scheduleEmptyState(
+          listEmptyState,
           monthName: viewModel.displayMonthName,
           isFutureMonth: viewModel.isFutureMonth,
           onAddShift: { openAddShift() }

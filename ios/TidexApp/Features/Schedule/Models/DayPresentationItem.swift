@@ -84,6 +84,30 @@ internal enum ShiftsListPlaceholderPolicy {
     }
     return eventCoverageByDate[todayISO]?.isEmpty != false
   }
+
+  /// Which empty state the Shifts list shows in place of its rows, if any.
+  /// - Parameter hasRows: Whether the month has shifts or events, not counting the today placeholder.
+  internal static func emptyState(
+    hasAnyShifts: Bool,
+    hasRows: Bool,
+    isCurrentMonth: Bool
+  ) -> ShiftsListEmptyState? {
+    guard !hasRows else {
+      return nil
+    }
+    if !hasAnyShifts {
+      return .firstShift
+    }
+    // An empty current month keeps the list with its today placeholder.
+    return isCurrentMonth ? nil : .emptyMonth
+  }
+}
+
+internal enum ShiftsListEmptyState: Equatable {
+  /// The user has never added a shift.
+  case firstShift
+  /// A past or future month without shifts.
+  case emptyMonth
 }
 
 internal struct EventPresentation: Identifiable, Equatable {

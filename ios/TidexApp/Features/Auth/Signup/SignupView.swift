@@ -125,9 +125,6 @@ struct SignupView: View {
         isLoading: viewModel.isLoading
       )
 
-      termsAgreementView
-        .padding(.top, Spacing.xxs)
-
       dividerView
         .padding(.vertical, Spacing.xs)
 
@@ -136,22 +133,11 @@ struct SignupView: View {
       } else {
         revealEmailButton(scrollProxy: scrollProxy)
       }
-    }
-  }
 
-  private var termsAgreementView: some View {
-    TermsAgreementView(
-      isAgreed: Binding(
-        get: { viewModel.hasAcceptedTerms },
-        set: { isAccepted in
-          viewModel.hasAcceptedTerms = isAccepted
-          if isAccepted {
-            viewModel.fieldErrors.terms = nil
-          }
-        }
-      ),
-      error: viewModel.fieldErrors.terms
-    )
+      // Below every signup option, so it covers Apple, Google and email alike.
+      TermsAgreementView()
+        .padding(.top, Spacing.xxs)
+    }
   }
 
   // MARK: - Reveal Email Button

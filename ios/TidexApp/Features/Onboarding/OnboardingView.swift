@@ -4,6 +4,7 @@ import SwiftUI
 /// Shows value proposition before requiring authentication
 struct OnboardingView: View {
   let onNavigateToSignup: () -> Void
+  var onNavigateToLogin: () -> Void = {}
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentPage = 0
@@ -105,6 +106,7 @@ struct OnboardingView: View {
         .onChange(of: currentPage) { oldPage, newPage in
           handlePageTransition(from: oldPage, to: newPage)
           preloadUpcomingScreen(after: newPage)
+          recordFunnelStep(for: newPage)
         }
 
         // Bottom controls area - constrained for iPad
@@ -134,7 +136,18 @@ struct OnboardingView: View {
     .onAppear {
       OnboardingCurrencyCarryoverStore.writePreferredCurrency(preAuthCurrency)
       preloadUpcomingScreen(after: currentPage)
+      recordFunnelStep(for: currentPage)
     }
+  }
+
+  private func recordFunnelStep(for page: Int) {
+    let name: String
+    switch page {
+    case simulatorPage: name = "add_shift_simulator"
+    case howItWorksPage: name = "how_it_works"
+    default: name = "welcome"
+    }
+    OnboardingFunnelRecorder.shared.recordPreAuth(name)
   }
 
   private var preloadedSimulatorScreen: some View {
@@ -225,6 +238,10 @@ struct OnboardingView: View {
           delay: 0.205
         )
         .padding(.top, Spacing.xxs)
+
+      if currentPage == 0 {
+        loginButton
+      }
     }
     .padding(.horizontal, Spacing.lg)
     .adaptiveContentWidth()
@@ -285,6 +302,24 @@ struct OnboardingView: View {
       }
     }
     .frame(height: 54)
+  }
+
+  /// Lets returning users go straight to login instead of through the intro.
+  private var loginButton: some View {
+    Button {
+      Haptics.play(.light)
+      onNavigateToLogin()
+    } label: {
+      Text(.onboardingGetstartedLogin)
+        .font(.tidexLabelStrong)
+        .foregroundColor(.tidexBlue)
+        .lineLimit(1)
+        .minimumScaleFactor(0.86)
+        .frame(maxWidth: .infinity)
+        .frame(height: 44)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
   }
 
   private func completeSimulatorAndAdvance(

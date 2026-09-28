@@ -1,7 +1,7 @@
 import Foundation
 import Observation
-import os.log
 import Supabase
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "OnboardingSaveManager")
 
@@ -145,6 +145,11 @@ final class OnboardingSaveManager {
   private func createBaselineSnapshot(userId: String, data: OnboardingData) async throws
     -> WageSnapshot
   {
+    if jobsRepository.getActiveJobs(for: userId).isEmpty {
+      // Pull first so a job that already exists on the server is reused instead of duplicated.
+      _ = await syncCoordinator.sync(reason: .manualRefresh, userId: userId)
+    }
+
     let activeSetupJob =
       jobsRepository.getDefaultJob(for: userId)
       ?? jobsRepository.getActiveJobs(for: userId).first
@@ -237,6 +242,7 @@ final class OnboardingSaveManager {
       wageLevel: data.resolvedWageLevel,
       tariffTypeId: data.resolvedTariffTypeId,
       supplements: data.resolvedSupplements,
+      overtime: data.resolvedOvertime,
       taxEnabled: data.taxEnabled,
       taxPercentage: data.taxEnabled ? data.taxPercentage : nil,
       breakEnabled: data.breakEnabled,

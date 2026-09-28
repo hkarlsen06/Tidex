@@ -1,6 +1,6 @@
 import Foundation
-import os.log
 import SwiftData
+import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "RecurringShiftsRepository")
 
@@ -223,6 +223,7 @@ final class RecurringShiftsRepository {
     )
 
     logger.info("Created new local recurring shift: \(createdShift.id)")
+    OnboardingFunnelRecorder.shared.recordShiftCreated(method: "recurring")
 
     // Trigger sync to upload immediately
     triggerSync(userId: userId)

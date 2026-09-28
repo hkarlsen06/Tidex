@@ -4,25 +4,21 @@ import XCTest
 
 @MainActor
 internal final class SignupViewModelTests: XCTestCase {
-  internal func testEmailSignupRequiresTermsAcceptanceBeforeNetworkWork() async {
+  // Continuing accepts the terms, so there is no checkbox to validate. Field checks still
+  // stop an invalid email signup before any network work.
+  internal func testEmailSignupStopsOnInvalidEmailBeforeNetworkWork() async {
     let viewModel: SignupViewModel = SignupViewModel()
     viewModel.firstName = "Test"
     viewModel.lastName = "User"
-    viewModel.emailOrPhone = "test@example.com"
+    viewModel.emailOrPhone = "not-an-email"
     viewModel.password = "password123"
 
     await viewModel.signUp()
 
-    XCTAssertEqual(viewModel.fieldErrors.terms, String(localized: .acceptTermsDescription))
-    XCTAssertFalse(viewModel.isLoading)
-  }
-
-  internal func testOAuthSignupRequiresTermsAcceptanceBeforeProviderWork() async {
-    let viewModel: SignupViewModel = SignupViewModel()
-
-    await viewModel.signUpWithGoogle()
-
-    XCTAssertEqual(viewModel.fieldErrors.terms, String(localized: .acceptTermsDescription))
+    XCTAssertEqual(viewModel.fieldErrors.emailOrPhone, String(localized: .signupErrorsInvalidEmail))
+    XCTAssertNil(viewModel.fieldErrors.firstName)
+    XCTAssertNil(viewModel.fieldErrors.password)
+    XCTAssertNil(viewModel.errorMessage)
     XCTAssertFalse(viewModel.isLoading)
   }
 

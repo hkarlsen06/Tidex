@@ -11,6 +11,8 @@ struct StatsView: View {
   @State private var isJobFilterDialogPresented = false  // swiftlint:disable:this explicit_type_interface
   @State private var showMixedCurrencyBreakdownPopover = false  // swiftlint:disable:this explicit_type_interface
   @State private var showExportSettings = false  // swiftlint:disable:this explicit_type_interface
+  /// False only for a user with no shifts at all, who sees one add-shift action instead of empty charts.
+  @State private var hasAnyShifts = true  // swiftlint:disable:this explicit_type_interface
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
   private func refreshStatsContent() async {  // swiftlint:disable:this type_contents_order
@@ -37,6 +39,13 @@ struct StatsView: View {
     workSetupPresentationViewModel.shouldShowPlaceholder
   }
 
+  private func refreshHasAnyShifts() {  // swiftlint:disable:this type_contents_order
+    hasAnyShifts = ShiftsRepository.shared.hasAnyShifts(
+      for: coordinator.userId,
+      initialSyncComplete: coordinator.initialSyncComplete
+    )
+  }
+
   private func loadStatsContent() async {  // swiftlint:disable:this type_contents_order
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     await viewModel.loadStats()
@@ -53,6 +62,11 @@ struct StatsView: View {
           WorkSetupRequiredPlaceholder()
         } else if let error = viewModel.error, viewModel.stats == nil {
           errorView(error: error)
+        } else if !hasAnyShifts {
+          FirstShiftEmptyState {
+            coordinator.pendingDeepLink = .addShift(mode: nil, date: nil)
+          }
+          .padding(.bottom, MonthPickerLayout.totalBottomInset)
         } else {
           statsContent(stats: displayedStats)
         }
@@ -82,12 +96,23 @@ struct StatsView: View {
     }
     .task {
       refreshWorkSetupPresentationState()
+      refreshHasAnyShifts()
       await loadStatsContent()
     }
     .onAppear {
       refreshWorkSetupPresentationState()
     }
+    .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { _ in
+      let hadShifts = hasAnyShifts  // swiftlint:disable:this explicit_type_interface
+      refreshHasAnyShifts()
+      // Stats doesn't reload on shift changes, so load it after the first shift is added.
+      guard !hadShifts, hasAnyShifts else { return }  // swiftlint:disable:this conditional_returns_on_newline
+      Task {
+        await loadStatsContent()
+      }
+    }
     .onChange(of: coordinator.initialSyncComplete) { _, _ in
+      refreshHasAnyShifts()
       let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()  // swiftlint:disable:this explicit_type_interface line_length
       guard shouldLoadAfterSetupCompleted else { return }  // swiftlint:disable:this conditional_returns_on_newline
       Task {

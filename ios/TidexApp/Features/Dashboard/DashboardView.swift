@@ -63,6 +63,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @State private var activeDashboardRefreshTask: Task<Void, Never>?  // swiftlint:disable:this type_contents_order
   @State private var showCalendarSubscriptionSettings: Bool = false  // swiftlint:disable:this type_contents_order
   @State private var selectedPayrollDetailsVariant: PayrollCardVariant?  // swiftlint:disable:this type_contents_order
+  /// False only for a user with no shifts at all, who sees the first-shift prompt.
+  @State private var hasAnyShifts = true  // swiftlint:disable:this explicit_type_interface type_contents_order
 
   // Action to run once the currently-presented sheet finishes dismissing, so two sheets
   // never race to present at once (see `performPendingSheetAction`).
@@ -146,7 +148,15 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }
   }
 
+  private func refreshHasAnyShifts() {  // swiftlint:disable:this type_contents_order
+    hasAnyShifts = ShiftsRepository.shared.hasAnyShifts(
+      for: coordinator.userId,
+      initialSyncComplete: coordinator.initialSyncComplete
+    )
+  }
+
   private func handleInitialSyncCompleteChange(completed: Bool) {  // swiftlint:disable:this type_contents_order
+    refreshHasAnyShifts()
     let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()  // swiftlint:disable:this explicit_type_interface line_length
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     if shouldLoadAfterSetupCompleted {
@@ -200,6 +210,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   private func handleSuccessfulSyncSummary(_ summary: SyncCompletionSummary?) {  // swiftlint:disable:this line_length type_contents_order
     guard let summary, summary.userId == coordinator.userId else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    refreshHasAnyShifts()
     guard summary.reason != .appLaunch else { return }  // swiftlint:disable:this conditional_returns_on_newline
     guard let context = summary.dashboardChangeContext else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
 
@@ -217,6 +228,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   private func handleDashboardDataChange(_ data: DashboardData?) {  // swiftlint:disable:this line_length type_contents_order unused_parameter
     showMixedCurrencyBreakdownPopover = false
+    refreshHasAnyShifts()
   }
 
   private func handleDashboardAppear() {  // swiftlint:disable:this type_contents_order
@@ -353,6 +365,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .task {
           viewModel.setActiveTabVisible(selectedTab == .home)
           refreshWorkSetupPresentationState()
+          refreshHasAnyShifts()
           await loadDashboardContent()
         }
         .onChange(of: coordinator.initialSyncComplete) { _, completed in
@@ -393,6 +406,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           handleSelectedTabChange(oldTab: oldTab, newTab: newTab)
         }
         .onReceive(NotificationCenter.default.publisher(for: .shiftsDidChange)) { notification in
+          // A shift added or deleted in another month doesn't reload Home, so check here.
+          refreshHasAnyShifts()
           guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
           guard (notification.object as AnyObject?) !== viewModel else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
           Task {
@@ -766,10 +781,14 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   // MARK: - Countdown Configuration
 
-  private typealias CountdownState = (text: String, isActive: Bool, progress: Double, finalSeconds: Int?)  // swiftlint:disable:this large_tuple line_length
+  private typealias CountdownState = (
+    text: String, isActive: Bool, progress: Double, finalSeconds: Int?
+  )
 
   /// Shift/event date and times to feed the countdown, if the featured item currently tracks one.
-  private func countdownTarget(for data: DashboardData) -> (shiftDate: String, startTime: String, endTime: String)? {  // swiftlint:disable:this large_tuple line_length type_contents_order
+  private func countdownTarget(for data: DashboardData) -> (
+    shiftDate: String, startTime: String, endTime: String
+  )? {  // swiftlint:disable:this type_contents_order
     switch data.featuredItem {
     case .shift(let shift)
     where data.isViewingCurrentMonth && !data.featuredShiftIsBestShift:
@@ -825,7 +844,9 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   @ViewBuilder
-  private func featuredEventFooter(_ event: EventRow, now: Date, state: CountdownState?) -> some View {  // swiftlint:disable:this line_length type_contents_order
+  private func featuredEventFooter(_ event: EventRow, now: Date, state: CountdownState?)
+    -> some View
+  {  // swiftlint:disable:this type_contents_order
     if event.is_all_day {
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: "calendar")
@@ -1444,6 +1465,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
             featuredEventFooter(event, now: now, state: countdownState(for: data, now: now))
           }
+        }
+      } else if !hasAnyShifts {
+        FirstShiftPrompt {
+          coordinator.pendingDeepLink = .addShift(mode: nil, date: nil)
         }
       } else {
         EmptyShiftCard(

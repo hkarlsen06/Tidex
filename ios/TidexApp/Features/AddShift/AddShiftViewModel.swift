@@ -246,12 +246,19 @@ internal final class AddShiftViewModel {
   /// Number of distinct start/end time pairs the user has used across all shifts.
   internal private(set) var distinctShiftTimePairCount: Int = 0
 
+  /// Times the form filled in by itself. A job change replaces them while the user
+  /// hasn't edited them.
+  @ObservationIgnored private var prefilledTimes: (start: Date, end: Date)?
+
   /// Selected job for new shift creation.
   /// Defaults to the user's standard workplace when no valid selection exists.
   internal var selectedJobId: String? {
     didSet {
       guard oldValue != selectedJobId else {
         return
+      }
+      if timesAreUntouchedPrefill {
+        prefillTimes()
       }
       publishStateToCoordinator()
       scheduleDraftSave()
@@ -1122,6 +1129,9 @@ internal final class AddShiftViewModel {
     activeJobs = jobsRepository.getActiveJobs(for: userId)
     configuredJobIds = jobPaySetupStatusService.configuredJobIds(for: userId)
     reconcileSelectedJob()
+    if startTime == nil, endTime == nil {
+      prefillTimes()
+    }
 
     // Load snapshots
     cachedSnapshots = snapshotsRepository.getSnapshots(for: userId)
@@ -2289,9 +2299,8 @@ internal final class AddShiftViewModel {
     previewUpdateTask?.cancel()
     previewUpdateTask = nil
 
-    // Clear times so user can start fresh
-    startTime = nil
-    endTime = nil
+    // Start the next shift from the times just used.
+    prefillTimes()
 
     // Reset recurring options to defaults (biweekly, indefinite)
     repeatInterval = 1
@@ -2316,22 +2325,38 @@ internal final class AddShiftViewModel {
     error = nil
   }
 
-  /// Default start time (09:00)
-  private static func defaultStartTime() -> Date {
-    let calendar = Calendar.current
-    var components = calendar.dateComponents([.year, .month, .day], from: Date())
-    components.hour = Self.defaultStartHour
-    components.minute = 0
-    return calendar.date(from: components) ?? Date()
+  /// Times for a new shift: the latest shift's times for the job, else 09:00-17:00.
+  static func prefillTimeStrings(latestShift: ShiftRow?) -> (start: String, end: String) {
+    if let latestShift, !latestShift.start_time.isEmpty, !latestShift.end_time.isEmpty {
+      // Synced rows can carry seconds ("HH:mm:ss"); the form parses "HH:mm".
+      return (String(latestShift.start_time.prefix(5)), String(latestShift.end_time.prefix(5)))
+    }
+    return (
+      String(format: "%02d:00", Self.defaultStartHour),
+      String(format: "%02d:00", Self.defaultEndHour)
+    )
   }
 
-  /// Default end time (17:00)
-  private static func defaultEndTime() -> Date {
-    let calendar = Calendar.current
-    var components = calendar.dateComponents([.year, .month, .day], from: Date())
-    components.hour = Self.defaultEndHour
-    components.minute = 0
-    return calendar.date(from: components) ?? Date()
+  /// Fills the start and end times from the selected job's latest shift.
+  private func prefillTimes() {
+    let latestShift = AppCoordinator.shared.getCurrentUserId().flatMap { userId in
+      shiftsRepository.getAllShifts(for: userId, jobId: effectiveSelectedJobId).first
+    }
+    let times = Self.prefillTimeStrings(latestShift: latestShift)
+    guard let start = parseTimeFromHHmm(times.start), let end = parseTimeFromHHmm(times.end)
+    else {
+      return
+    }
+    startTime = start
+    endTime = end
+    prefilledTimes = (start, end)
+  }
+
+  private var timesAreUntouchedPrefill: Bool {
+    guard let prefilledTimes, let startTime, let endTime else {
+      return false
+    }
+    return startTime == prefilledTimes.start && endTime == prefilledTimes.end
   }
 
   private static func defaultEventDate() -> Date {

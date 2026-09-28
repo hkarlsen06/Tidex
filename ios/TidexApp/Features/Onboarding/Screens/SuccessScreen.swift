@@ -8,11 +8,16 @@ struct SuccessScreen: View {
   var saveStatus: OnboardingSaveManager.SaveStatus = .success
   var errorMessage: String?
   let onComplete: () -> Void
+  /// Opens the Add screen after setup. When set, it is the primary action and
+  /// `onComplete` moves to a secondary button. Ignored for the friends-only path.
+  var onAddFirstShift: (() -> Void)?
   var onRetry: (() -> Void)?
 
   @State private var checkmarkScale: CGFloat = 0.0
   @State private var checkmarkOpacity: Double = 0.0
   @State private var contentVisible = false
+  @State private var showCalendarImport = false
+  @State private var didImportFromCalendar = false
 
   var body: some View {
     ZStack {
@@ -72,16 +77,35 @@ struct SuccessScreen: View {
 
         // Bottom button(s)
         VStack(spacing: Spacing.sm) {
-          // Go to Dashboard button
+          // Add first shift, or Go to Dashboard / Friends when there is no shift to add
           OnboardingButton(
-            title: buttonTitle,
+            title: addFirstShiftAction == nil
+              ? buttonTitle : String(localized: .onboardingSuccessAddFirstShift),
             action: {
               Haptics.play(.medium)
-              onComplete()
+              (addFirstShiftAction ?? onComplete)()
             }
           )
           .disabled(!saveStatus.allowsCompletion)
           .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
+
+          if addFirstShiftAction != nil {
+            OnboardingButton(title: buttonTitle, action: onComplete, style: .secondary)
+              .disabled(!saveStatus.allowsCompletion)
+              .opacity(saveStatus.allowsCompletion ? 1 : 0.5)
+          }
+
+          // Import from an employer calendar link (Planday, Quinyx, Tamigo, MinGat)
+          if completionMode == .fullSetup, saveStatus.allowsCompletion {
+            Button {
+              Haptics.play(.light)
+              showCalendarImport = true
+            } label: {
+              Text(.calendarImportEntryButton)
+                .font(.tidexBodyMedium)
+                .foregroundColor(.tidexBlue)
+            }
+          }
 
           // Retry button (only on error)
           if saveStatus == .error, let onRetry {
@@ -115,6 +139,19 @@ struct SuccessScreen: View {
     }
     .sensoryFeedback(.success, trigger: saveStatus) { _, newValue in newValue == .success }
     .sensoryFeedback(.error, trigger: saveStatus) { _, newValue in newValue == .error }
+    .sheet(
+      isPresented: $showCalendarImport,
+      onDismiss: {
+        // Shifts are in, so finish onboarding and show them in the app.
+        if didImportFromCalendar {
+          onComplete()
+        }
+      }
+    ) {
+      CalendarImportView { _ in
+        didImportFromCalendar = true
+      }
+    }
   }
 
   // MARK: - Status Animation
@@ -212,6 +249,10 @@ struct SuccessScreen: View {
     }
   }
 
+  private var addFirstShiftAction: (() -> Void)? {
+    completionMode == .fullSetup ? onAddFirstShift : nil
+  }
+
   private var buttonTitle: String {
     switch completionMode {
     case .fullSetup:
@@ -280,6 +321,7 @@ struct SuccessScreen: View {
     completionMode: .fullSetup,
     saveStatus: .success,
     onComplete: {},
+    onAddFirstShift: {},
     onRetry: nil
   )
 }

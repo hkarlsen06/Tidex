@@ -11,7 +11,6 @@ struct WageScreen: View {
   var onTopTrailingAction: (() -> Void)?  // swiftlint:disable:this explicit_acl type_contents_order
 
   @State private var isLoadingTariffData = false
-  @State private var showingTariffDisabledInfoAlert = false
   @State private var isKeyboardVisible = false
 
   private var showsTopBar: Bool {
@@ -69,10 +68,13 @@ struct WageScreen: View {
 
               // Header
               VStack(spacing: Spacing.sm) {
-                Text(.onboardingWageTitle)
-                  .font(.tidexScreenTitle)
-                  .foregroundColor(.tidexTextPrimary)
-                  .multilineTextAlignment(.center)
+                Text(
+                  isTariffAvailable
+                    ? LocalizedStringResource.onboardingWageTitle : .onboardingWageSimpleTitle
+                )
+                .font(.tidexScreenTitle)
+                .foregroundColor(.tidexTextPrimary)
+                .multilineTextAlignment(.center)
 
                 Text(.onboardingWageSubtitle)
                   .font(.tidexBody)
@@ -85,13 +87,15 @@ struct WageScreen: View {
               Spacer()
                 .frame(height: 32)
 
-              // Wage type toggle
-              wageTypeToggle
-                .padding(.horizontal, Spacing.lg)
-                .adaptiveContentWidth()
+              // Tariffs are Norwegian and priced in kr, so other currencies only get an hourly wage.
+              if isTariffAvailable {
+                wageTypeToggle
+                  .padding(.horizontal, Spacing.lg)
+                  .adaptiveContentWidth()
 
-              Spacer()
-                .frame(height: 24)
+                Spacer()
+                  .frame(height: 24)
+              }
 
               // Content based on wage type
               Group {
@@ -149,16 +153,6 @@ struct WageScreen: View {
         }
         .background(Color.tidexBackground)
       }
-    }
-    .alert(
-      String(localized: .onboardingWageTariffDisabledInfoTitle),
-      isPresented: $showingTariffDisabledInfoAlert
-    ) {
-      Button(String(localized: .alertsOk), role: .cancel) {}
-    } message: {
-      Text(
-        String(localized: .onboardingWageTariffDisabledInfoMessage)
-      )
     }
     .onAppear {
       if !data.hasInitializedWageForLocale {
@@ -229,10 +223,12 @@ struct WageScreen: View {
 
   // MARK: - Wage Type Toggle
 
+  private var isTariffAvailable: Bool {
+    data.currency == "kr"
+  }
+
   @ViewBuilder
   private var wageTypeToggle: some View {
-    let isTariffEnabled = data.currency == "kr"
-
     HStack(spacing: Spacing.sm) {
       WageTypeButton(
         title: String(localized: .onboardingWageCustom),
@@ -248,14 +244,11 @@ struct WageScreen: View {
       WageTypeButton(
         title: String(localized: .onboardingWageTariff),
         isSelected: data.wageType == .tariff,
-        isEnabled: isTariffEnabled,
+        isEnabled: true,
         action: {
           withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             data.wageType = .tariff
           }
-        },
-        onDisabledTap: {
-          showingTariffDisabledInfoAlert = true
         }
       )
     }
@@ -274,6 +267,11 @@ struct WageScreen: View {
   @ViewBuilder
   private var tariffSelector: some View {
     VStack(spacing: Spacing.md) {
+      Text(.onboardingWageTariffHint)
+        .font(.tidexFootnote)
+        .foregroundColor(.tidexTextSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+
       // Tariff type picker (when multiple types available)
       if !data.availableTariffTypes.isEmpty {
         VStack(alignment: .leading, spacing: Spacing.xs) {

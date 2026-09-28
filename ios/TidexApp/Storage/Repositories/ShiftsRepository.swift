@@ -155,6 +155,36 @@ final class ShiftsRepository {
     }
   }
 
+  /// Whether the user has a shift or recurring shift in any job or month.
+  /// Home, Shifts and Stats use this to show the first-shift prompt. It returns true until
+  /// the first sync has finished, so a returning user on a new device doesn't see the prompt.
+  func hasAnyShifts(for userId: String?, initialSyncComplete: Bool) -> Bool {
+    guard initialSyncComplete, let userId else { return true }
+
+    var shifts = FetchDescriptor<LocalUserShift>(
+      predicate: #Predicate { shift in
+        shift.userId == userId && shift.serverDeletedAt == nil
+          && shift.syncStatusRaw != "pendingDelete"
+      }
+    )
+    shifts.fetchLimit = 1
+    var recurringShifts = FetchDescriptor<LocalRecurringShift>(
+      predicate: #Predicate { shift in
+        shift.userId == userId && shift.serverDeletedAt == nil
+          && shift.syncStatusRaw != "pendingDelete"
+      }
+    )
+    recurringShifts.fetchLimit = 1
+
+    do {
+      let context = localStore.mainContext
+      return try context.fetchCount(shifts) > 0 || context.fetchCount(recurringShifts) > 0
+    } catch {
+      logger.error("Failed to check for any shifts: \(error.localizedDescription)")
+      return true
+    }
+  }
+
   /// Get a single shift by ID
   /// - Parameter id: Shift ID
   /// - Returns: ShiftRow if found, nil otherwise
@@ -229,6 +259,7 @@ final class ShiftsRepository {
   ///   - startTime: Start time (HH:mm)
   ///   - endTime: End time (HH:mm)
   ///   - customSupplements: Optional custom supplements
+  ///   - creationMethod: How the shift was entered, recorded if it is the user's first shift
   /// - Returns: The created ShiftRow
   func createShift(
     shiftId: String? = nil,
@@ -239,7 +270,8 @@ final class ShiftsRepository {
     endTime: String,
     note: String? = nil,
     customPauseWindows: CustomPauseWindows? = nil,
-    customSupplements: CustomSupplementsData? = nil
+    customSupplements: CustomSupplementsData? = nil,
+    creationMethod: String = "manual"
   ) async throws -> ShiftRow {
     let configuredJob = try jobPaySetupStatusService.requireConfiguredActiveJob(
       userId: userId,
@@ -259,6 +291,7 @@ final class ShiftsRepository {
     )
 
     logger.info("Created new local shift: \(createdShift.id)")
+    OnboardingFunnelRecorder.shared.recordShiftCreated(method: creationMethod)
 
     // Update widget storage with the new shift
     NativeWidgetStorage.updateWidgetStorage(for: userId)
