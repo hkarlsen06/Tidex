@@ -164,6 +164,41 @@ internal final class PayPeriodTests: XCTestCase {
 
   // MARK: - Dashboard
 
+  internal func testDashboardNextPayoutIncludesShiftsFromBothSidesOfMonthBoundary() throws {
+    let periods: [PayPeriod] = [
+      .monthly(startDay: 16, payoutMonthOffset: 0),
+      .biweekly(anchorEnd: "2026-10-04", payoutDelayDays: 5),
+    ]
+    let now = try XCTUnwrap(Date.fromISODateString("2026-09-28"))
+    let settings = try JSONDecoder().decode(
+      UserSettings.self, from: Data(#"{"user_id":"user-1","theme":"system"}"#.utf8))
+    for period in periods {
+      let job = TestFixtures.job(id: "job", isDefault: true, payrollDay: 25, payPeriod: period)
+      let september = TestFixtures.computedShift(
+        id: "september", shiftDate: "2026-09-28", startTime: "08:00", endTime: "09:00",
+        jobId: job.id, gross: 200)
+      let october = TestFixtures.computedShift(
+        id: "october", shiftDate: "2026-10-01", startTime: "08:00", endTime: "10:00",
+        jobId: job.id, gross: 400)
+      let outside = TestFixtures.computedShift(
+        id: "outside", shiftDate: "2026-10-31", startTime: "08:00", endTime: "09:00",
+        jobId: job.id, gross: 999)
+      let cards = DashboardViewModel.buildPayrollCardSnapshot(
+        .init(
+          displayedMonthShifts: [september], previousMonthShifts: [],
+          nextMonthShifts: [october, outside], payrollAdjustmentsByPayoutMonth: [:],
+          previousPayrollAdjustments: [], snapshots: [], settings: settings, jobs: [job],
+          displayYM: (year: 2_026, month: 9), fallbackCurrency: "kr",
+          fallbackPayrollDate: now, fallbackPreviousGross: 0, fallbackPreviousNet: nil,
+          fallbackPreviousTax: nil, fallbackPreviousTaxEnabled: false,
+          fallbackPreviousHasPayrollAdjustments: false, now: now))
+
+      let first = try XCTUnwrap(cards.variants.first)
+      XCTAssertEqual(first.gross, 600, accuracy: 0.001)
+      XCTAssertEqual(first.jobBreakdowns.first?.earningsPeriodEnd?.yearMonth().month, 10)
+    }
+  }
+
   internal func testDashboardShowsEachTwoWeeklyPayoutSeparately() throws {
     let job = TestFixtures.job(
       id: "job", isDefault: true,

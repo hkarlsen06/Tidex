@@ -20,56 +20,68 @@ export const marketingNo = {
   },
   faq: {
     eyebrow: 'FAQ',
-    heading: 'Vanlige spørsmål',
-    description: 'Alt du trenger å vite om vakter, rapporter og hvordan dataene dine behandles.',
+    heading: 'Spørsmål og svar',
+    description: 'Korte svar om lønn, pris og dataene dine.',
+    docsLink: 'Slik regner Tidex ut lønn',
+    contactLink: 'Spør oss om noe annet',
     items: [
       {
-        question: 'Hva er Tidex, og hvorfor bør jeg bruke det?',
+        question: 'Hva er Tidex?',
         answers: [
-          'Tidex er en iPhone-app for timelønnede som vil vite hva hver vakt faktisk er verdt før lønning.',
-          'Du får et tydelig estimat av lønn, tillegg, overtid og pauser på ett sted, så du kan planlegge bedre, oppdage feil og få mer kontroll på inntekten din.',
+          'Tidex er en iPhone-app for deg som får timelønn. Appen regner ut hva hver vakt gir, så du vet hva neste lønning blir før den kommer.',
+          'Du kan sammenligne tallet med lønnsslippen og oppdage feil tidlig.',
         ],
       },
       {
-        question: 'Hva koster Tidex?',
+        question: 'Hva koster det?',
         answers: [
-          'Du kan komme i gang gratis med kjernefunksjonene.',
-          'Hvis du vil ha mer, koster Pro 29 kr i måneden med ubegrenset historikk.',
+          'Ingenting. Alle funksjonene i Tidex er gratis, uten abonnement og uten reklame.',
         ],
       },
       {
-        question: 'Hvordan registrerer jeg vakter og får riktig utbetaling?',
+        question: 'Hvordan kommer jeg i gang?',
         answers: [
-          'Legg inn grunnlønn, relevante tillegg og pausevalg én gang i innstillingene.',
-          'Deretter legger du inn vakter, og Tidex regner ut utbetaling med samme regler hver gang, slik at tallene blir forutsigbare.',
+          'Last ned appen og legg inn timelønn, tillegg og skatteprosent. Det gjør du bare én gang.',
+          'Deretter legger du inn vaktene selv, eller importerer dem fra en kalenderfil (.ics) hvis arbeidsgiveren sender en.',
         ],
       },
       {
-        question: 'Hvordan blir pauser, overtid og tillegg beregnet?',
+        question: 'Hvordan håndterer Tidex tillegg, overtid og pauser?',
         answers: [
-          'Appen bruker reglene du har satt opp for overtid, pauser og tillegg før den viser totalen.',
-          'De fleste starter med standardregler, og justerer deretter hvis arbeidsgiveren har egne bestemmelser.',
+          'Tillegg gjelder for timene de dekker, for eksempel kveld eller helg. Overtid og ubetalte pauser følger reglene du setter opp.',
+          'Lønnsdokumentasjonen viser hver regel og hvordan Tidex bruker den.',
         ],
       },
       {
-        question: 'Kan jeg laste ned lønnsrapport fra appen?',
+        question: 'Tar appen hensyn til skatt?',
         answers: [
-          'Ja. Du kan eksportere alle vaktene som PDF eller CSV når du trenger et ryddig utgangspunkt.',
-          'Rapportene kan brukes ved lønnsoppfølging og eget økonomisk admin.',
+          'Ja. Legg inn trekkprosenten fra skattekortet, så viser Tidex både brutto og netto lønn.',
+          'Tidex håndterer også måneden med halv skatt.',
+        ],
+      },
+      {
+        question: 'Kan jeg dele vaktene mine med venner?',
+        answers: [
+          'Ja. Legg til venner i appen for å se når de jobber, og la dem se dine vakter. Du velger selv hvem du deler med.',
+        ],
+      },
+      {
+        question: 'Kan jeg eksportere vaktene mine?',
+        answers: [
+          'Ja. Eksporter en valgfri periode som PDF eller CSV fra innstillingene i appen.',
         ],
       },
       {
         question: 'Hvor lagres dataene mine?',
         answers: [
-          'Dataene dine lagres sikkert og er knyttet til kontoen din.',
-          'Appen synkroniserer dataene dine, så de er tilgjengelige på enheten din og følger deg når du logger inn.',
+          'På servere vi drifter selv, leid fra netcup i Tyskland. Sikkerhetskopier blir lagret i EU.',
+          'Vi lagrer vaktene, innstillingene og profilen din. Vi selger aldri dataene dine. Sletter du kontoen i appen, sletter vi dataene dine, og kopier i sikkerhetskopier forsvinner innen 28 dager.',
         ],
       },
       {
-        question: 'Er dataene mine trygge?',
+        question: 'Finnes Tidex for Android?',
         answers: [
-          'Ja. Vi tar personvern seriøst, og vaktdataene dine sendes bare når det trengs for innlogging og synkronisering.',
-          'Vi lagrer bare det som trengs for at appen skal fungere: vakter, innstillinger og profilinformasjon.',
+          'Nei. Tidex finnes bare for iPhone.',
         ],
       },
     ],

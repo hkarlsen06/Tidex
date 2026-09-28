@@ -107,13 +107,6 @@ struct PayWindow: Equatable, Sendable {
     start <= dateISO && dateISO <= end
   }
 
-  /// Payday moved back to the last valid banking day.
-  var adjustedPayoutDate: Date {
-    guard let parts = PayPeriodCalendar.components(payoutDate) else { return Date() }
-    return PayrollDateAdjuster.adjustPayrollDate(
-      payrollDay: parts.day, month: parts.month, year: parts.year)
-  }
-
   var payoutMonth: Int {
     PayPeriodCalendar.components(payoutDate)?.month ?? 1
   }
@@ -127,18 +120,6 @@ struct PayoutSchedule: Equatable, Sendable {
   /// Day of month for monthly payouts (1-31, clamped to the month's length).
   let payrollDay: Int
 
-  init(period: PayPeriod, payrollDay: Int) {
-    self.period = period
-    self.payrollDay = payrollDay
-  }
-
-  init(job: Job?, fallbackPayrollDay: Int) {
-    self.init(
-      period: job?.pay_period ?? .calendarMonth,
-      payrollDay: job?.payroll_day ?? fallbackPayrollDay
-    )
-  }
-
   /// The pay window that a worked day belongs to.
   func window(containing dateISO: String) -> PayWindow? {
     guard let date = PayPeriodCalendar.components(dateISO) else { return nil }
@@ -147,7 +128,7 @@ struct PayoutSchedule: Equatable, Sendable {
     case .monthly(let startDay, _):
       var start = (year: date.year, month: date.month)
       if date.day < startDay {
-        start = Date.previousYearMonth(from: start)
+        start = PayPeriodCalendar.previousYearMonth(from: start)
       }
       return monthlyWindow(startYM: start, startDay: startDay)
 
@@ -170,14 +151,15 @@ struct PayoutSchedule: Equatable, Sendable {
     case .monthly(let startDay, let offset):
       var endYM = (year: year, month: month)
       for _ in 0..<offset {
-        endYM = Date.previousYearMonth(from: endYM)
+        endYM = PayPeriodCalendar.previousYearMonth(from: endYM)
       }
-      let startYM = startDay == 1 ? endYM : Date.previousYearMonth(from: endYM)
+      let startYM = startDay == 1 ? endYM : PayPeriodCalendar.previousYearMonth(from: endYM)
       return [monthlyWindow(startYM: startYM, startDay: startDay)]
 
     case .biweekly(let anchorEnd, let delay):
-      let firstDay = Date.firstDayOfMonth(year: year, month: month)
-      let lastDay = Date.lastDayOfMonth(year: year, month: month)
+      let firstDay = String(format: "%04d-%02d-01", year, month)
+      let lastDay = String(
+        format: "%04d-%02d-%02d", year, month, PayPeriodCalendar.daysInMonth(year: year, month: month))
       guard let daysToMonthStart = PayPeriodCalendar.daysBetween(anchorEnd, firstDay) else {
         return []
       }
@@ -202,7 +184,7 @@ struct PayoutSchedule: Equatable, Sendable {
 
   private func monthlyWindow(startYM: (year: Int, month: Int), startDay: Int) -> PayWindow {
     let start = String(format: "%04d-%02d-%02d", startYM.year, startYM.month, startDay)
-    let nextStartYM = Date.nextYearMonth(from: startYM)
+    let nextStartYM = PayPeriodCalendar.nextYearMonth(from: startYM)
     let nextStart = String(format: "%04d-%02d-%02d", nextStartYM.year, nextStartYM.month, startDay)
     let end = PayPeriodCalendar.adding(days: -1, to: nextStart) ?? start
 
@@ -212,9 +194,9 @@ struct PayoutSchedule: Equatable, Sendable {
     }
     var payoutYM = (year: endParts.year, month: endParts.month)
     for _ in 0..<offset {
-      payoutYM = Date.nextYearMonth(from: payoutYM)
+      payoutYM = PayPeriodCalendar.nextYearMonth(from: payoutYM)
     }
-    let day = min(max(payrollDay, 1), Date.daysInMonth(year: payoutYM.year, month: payoutYM.month))
+    let day = min(max(payrollDay, 1), PayPeriodCalendar.daysInMonth(year: payoutYM.year, month: payoutYM.month))
     let payout = String(format: "%04d-%02d-%02d", payoutYM.year, payoutYM.month, day)
     return PayWindow(start: start, end: end, payoutDate: payout)
   }
@@ -240,6 +222,21 @@ enum PayPeriodCalendar {
     calendar.timeZone = TimeZone(identifier: "UTC") ?? .gmt
     return calendar
   }()
+
+  static func previousYearMonth(from value: (year: Int, month: Int)) -> (year: Int, month: Int) {
+    value.month == 1 ? (value.year - 1, 12) : (value.year, value.month - 1)
+  }
+
+  static func nextYearMonth(from value: (year: Int, month: Int)) -> (year: Int, month: Int) {
+    value.month == 12 ? (value.year + 1, 1) : (value.year, value.month + 1)
+  }
+
+  static func daysInMonth(year: Int, month: Int) -> Int {
+    guard let first = calendar.date(from: DateComponents(year: year, month: month, day: 1)) else {
+      return 31
+    }
+    return calendar.range(of: .day, in: .month, for: first)?.count ?? 31
+  }
 
   static func date(_ iso: String) -> Date? {
     guard let parts = components(iso) else { return nil }

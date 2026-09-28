@@ -370,7 +370,7 @@ final class AppCoordinator {
       let session = try await AuthSessionManager.shared.getSession(allowProactiveRefresh: false)
       resetLaunchSessionTimeoutCount()
       AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-      if routeToMFAIfRequired(session) { return }
+      if await routeToMFAIfRequired(session) { return }
       await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
     } catch {
       if isLaunchSessionTimeoutError(error) {
@@ -443,7 +443,7 @@ final class AppCoordinator {
         isUpdatingAuthState = false
 
         if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
-          if routeToMFAIfRequired(session) { return }
+          if await routeToMFAIfRequired(session) { return }
           launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
           AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
           loadOnboardingStateFromUser(session.user)
@@ -503,9 +503,8 @@ final class AppCoordinator {
           if let session {
             AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
             resetLaunchSessionTimeoutCount()
-            // A session left at aal1 (for example the app was killed on the MFA
-            // screen) must still verify MFA. The check is local, so it works offline.
-            if routeToMFAIfRequired(session) { break }
+            // Check restored impersonation before asking for the session owner's MFA.
+            if await routeToMFAIfRequired(session) { break }
             await checkTermsAndUpdateState(
               initialSession: session,
               allowProactiveRefresh: false
@@ -610,7 +609,7 @@ final class AppCoordinator {
       // will be re-checked on the next foreground or successful network call.
       launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
       if let session = await AuthSessionManager.shared.getSessionIfAvailable() {
-        if routeToMFAIfRequired(session) { return }
+        if await routeToMFAIfRequired(session) { return }
         loadOnboardingStateFromUser(session.user)
         userId = session.user.normalizedId
       }
@@ -622,6 +621,13 @@ final class AppCoordinator {
   /// Performs the actual MFA status check and terms verification.
   /// Extracted from checkMFAAndUpdateState so it can be wrapped in a timeout.
   private func performMFAAndTermsCheck() async {
+    if ImpersonationManager.shared.isImpersonating,
+      let session = await AuthSessionManager.shared.getSessionIfAvailable()
+    {
+      if await routeToMFAIfRequired(session) { return }
+      await checkTermsAndUpdateState(initialSession: session)
+      return
+    }
     do {
       let mfaStatus = try await authService.getMFAStatus()
 
@@ -644,34 +650,72 @@ final class AppCoordinator {
       // Fall back to the stored session so a failed check can't skip MFA.
       if let session = await AuthSessionManager.shared.getSessionIfAvailable(
         allowProactiveRefresh: false
-      ), routeToMFAIfRequired(session) {
+      ), await routeToMFAIfRequired(session) {
         return
       }
       await checkTermsAndUpdateState()
     }
   }
 
-  /// Routes to MFA when the session is aal1 and the user has a verified TOTP factor.
-  /// Reads the aal claim from the access token and factors from the stored user, so it
-  /// needs no network.
-  /// - Returns: true if the app moved to `.mfaRequired`.
-  private func routeToMFAIfRequired(_ session: Session) -> Bool {
-    guard
-      Self.assuranceLevel(fromAccessToken: session.accessToken) != "aal2",
-      let factor = session.user.factors?.first(where: {
+  enum MFARoute {
+    case notRequired
+    case resume(Session)
+    case verification(AuthService.MFAFactor)
+    case retry
+    case signedOut
+  }
+
+  /// Resolve impersonation before inspecting the target user's factors.
+  static func resolveMFARoute(
+    session: Session,
+    isImpersonating: () -> Bool,
+    validateImpersonation: () async -> Session?,
+    currentSession: () async -> Session?
+  ) async -> MFARoute {
+    let wasImpersonating = isImpersonating()
+    var resolvedSession = session
+    if wasImpersonating {
+      if let validated = await validateImpersonation() {
+        return .resume(validated)
+      }
+      // Validation leaves the stored impersonation intact on a transient failure.
+      guard !isImpersonating() else { return .retry }
+      guard let restored = await currentSession() else { return .signedOut }
+      resolvedSession = restored
+    }
+    if assuranceLevel(fromAccessToken: resolvedSession.accessToken) != "aal2",
+      let factor = resolvedSession.user.factors?.first(where: {
         $0.factorType == "totp" && $0.status == .verified
       })
-    else {
-      return false
+    {
+      return .verification(AuthService.MFAFactor(
+        id: factor.id, type: factor.factorType,
+        friendlyName: factor.friendlyName, status: factor.status.rawValue))
     }
+    return wasImpersonating ? .resume(resolvedSession) : .notRequired
+  }
 
-    pendingMFAFactor = AuthService.MFAFactor(
-      id: factor.id,
-      type: factor.factorType,
-      friendlyName: factor.friendlyName,
-      status: factor.status.rawValue
-    )
-    appState = .mfaRequired
+  /// Returns true when this method handled routing, including restoration of an admin session.
+  private func routeToMFAIfRequired(_ session: Session) async -> Bool {
+    let impersonation = ImpersonationManager.shared
+    let route = await Self.resolveMFARoute(
+      session: session,
+      isImpersonating: { impersonation.isImpersonating },
+      validateImpersonation: { await impersonation.validateSessionOnLaunch() },
+      currentSession: { await AuthSessionManager.shared.getSessionIfAvailable() })
+    switch route {
+    case .notRequired:
+      return false
+    case .resume(let resolvedSession):
+      await checkTermsAndUpdateState(initialSession: resolvedSession)
+    case .verification(let factor):
+      pendingMFAFactor = factor
+      appState = .mfaRequired
+    case .retry:
+      appState = .loading
+    case .signedOut:
+      appState = .unauthenticated
+    }
     return true
   }
 
@@ -743,10 +787,6 @@ final class AppCoordinator {
         self.appState = .authenticated
         await updateUserProfile()
 
-        // Validate impersonation session if one was restored from Keychain
-        // This ensures stale/expired sessions are cleaned up on app launch
-        await ImpersonationManager.shared.validateSessionOnLaunch()
-
         // Check in background if API has a newer terms version
         // This handles the case where terms were updated but we're using stale cache
         self.checkTermsVersionInBackground(termsAcceptedAt: termsAcceptedAt)
@@ -762,9 +802,6 @@ final class AppCoordinator {
       self.initialSyncComplete = false
       self.appState = .authenticated
       await updateUserProfile()
-
-      // Validate impersonation session if one was restored from Keychain
-      await ImpersonationManager.shared.validateSessionOnLaunch()
     }
   }
 
@@ -1298,7 +1335,7 @@ final class AppCoordinator {
     do {
       if let session = try await authService.getSession() {
         resetLaunchSessionTimeoutCount()
-        if routeToMFAIfRequired(session) { return }
+        if await routeToMFAIfRequired(session) { return }
         await checkTermsAndUpdateState()
       } else {
         appState = .unauthenticated

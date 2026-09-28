@@ -406,6 +406,7 @@ struct SharingRPCJobRow: Codable, Equatable, Sendable {
   let isDefault: Bool
   let sortOrder: Int?
   let payrollDay: Int?
+  let payPeriod: PayPeriod?
   let halfTaxMonth: Int?
   let monthlyGoal: Double?
   let archivedAt: String?
@@ -422,6 +423,7 @@ struct SharingRPCJobRow: Codable, Equatable, Sendable {
     case isDefault = "is_default"
     case sortOrder = "sort_order"
     case payrollDay = "payroll_day"
+    case payPeriod = "pay_period"
     case halfTaxMonth = "half_tax_month"
     case monthlyGoal = "monthly_goal"
     case archivedAt = "archived_at"
@@ -1093,10 +1095,10 @@ enum SharingComputeCore {
       summaryJobId.flatMap { context.jobsById[$0]?.payrollDay } ?? settings.effectivePayrollDay
     let scopedSnapshots = snapshotsForJob(jobId: summaryJobId, context: context)
 
-    let payoutDate = calculatePayoutDate(
-      shiftDate: monthStart(year: year, month: month),
-      payrollDay: payrollDay
-    )
+    let schedule = PayoutSchedule(
+      period: summaryJobId.flatMap { context.jobsById[$0]?.payPeriod } ?? .calendarMonth,
+      payrollDay: payrollDay)
+    let payoutDate = schedule.payoutDate(for: monthStart(year: year, month: month))
 
     guard let snapshot = snapshotForDate(payoutDate, from: scopedSnapshots) else {
       return nil
@@ -1242,10 +1244,10 @@ enum SharingComputeCore {
       effectiveJobId.flatMap { context.jobsById[$0]?.payrollDay } ?? context.fallbackPayrollDay
     let scopedSnapshots = snapshotsForJob(jobId: effectiveJobId, context: context)
 
-    let payoutDate = calculatePayoutDate(
-      shiftDate: shift.shiftDate,
-      payrollDay: payrollDay
-    )
+    let schedule = PayoutSchedule(
+      period: effectiveJobId.flatMap { context.jobsById[$0]?.payPeriod } ?? .calendarMonth,
+      payrollDay: payrollDay)
+    let payoutDate = schedule.payoutDate(for: shift.shiftDate)
 
     let wageSnapshot = snapshotForDate(shift.shiftDate, from: scopedSnapshots)
     let taxSnapshot = snapshotForDate(payoutDate, from: scopedSnapshots)
@@ -2163,27 +2165,6 @@ enum SharingComputeCore {
     }
 
     return result ?? baseline
-  }
-
-  private static func calculatePayoutDate(shiftDate: String, payrollDay: Int) -> String {
-    let parts = shiftDate.split(separator: "-")
-    guard parts.count >= 2,
-      let shiftYear = Int(parts[0]),
-      let shiftMonth = Int(parts[1])
-    else {
-      return shiftDate
-    }
-
-    var payoutYear = shiftYear
-    var payoutMonth = shiftMonth + 1
-
-    if payoutMonth > 12 {
-      payoutMonth = 1
-      payoutYear += 1
-    }
-
-    let effectiveDay = min(payrollDay, daysInMonth(year: payoutYear, month: payoutMonth))
-    return String(format: "%04d-%02d-%02d", payoutYear, payoutMonth, effectiveDay)
   }
 
   // MARK: - Recurring Helpers

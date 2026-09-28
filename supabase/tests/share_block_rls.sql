@@ -1,4 +1,4 @@
--- Run against a database containing 20260927130000..20260927130200.
+-- Run against a database containing the migrations through 20260928210000.
 -- All fixture changes roll back.
 \set ON_ERROR_STOP on
 BEGIN;
@@ -17,8 +17,10 @@ SELECT viewer_id, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated',
 INSERT INTO public.user_settings (user_id)
 SELECT owner_id FROM share_test_ids
 ON CONFLICT (user_id) DO NOTHING;
-INSERT INTO public.jobs (id, user_id, name)
-SELECT job_id, owner_id, 'Share RLS fixture' FROM share_test_ids;
+INSERT INTO public.jobs (id, user_id, name, pay_period)
+SELECT job_id, owner_id, 'Share RLS fixture',
+  '{"type":"monthly","startDay":16,"payoutMonthOffset":0}'::jsonb
+FROM share_test_ids;
 INSERT INTO public.wage_snapshots (user_id, job_id, hourly_wage)
 SELECT owner_id, job_id, 200 FROM share_test_ids;
 INSERT INTO public.shift_shares (owner_id, viewer_id, show_earnings)
@@ -37,6 +39,21 @@ BEGIN
   -- show_earnings = false hides wage snapshots but not settings.
   ASSERT NOT EXISTS (SELECT 1 FROM public.wage_snapshots WHERE user_id = v_owner), 'wage snapshot visible without show_earnings';
   ASSERT EXISTS (SELECT 1 FROM public.user_settings WHERE user_id = v_owner), 'shared settings not visible';
+
+  -- Both shared calculation paths need the same job pay period, even with hidden earnings.
+  ASSERT EXISTS (
+    SELECT 1 FROM public.get_shared_month_payload(v_owner, 2026, 9) payload,
+      jsonb_array_elements(payload.jobs) job
+    WHERE job ->> 'id' = (SELECT job_id::text FROM share_test_ids)
+      AND job -> 'pay_period' = '{"type":"monthly","startDay":16,"payoutMonthOffset":0}'::jsonb
+  ), 'month payload omitted the job pay period';
+  ASSERT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(
+      public.get_friends_tab_bootstrap('2026-09-01', '2026-09-30') -> 'previewPayloads') preview,
+      jsonb_array_elements(preview -> 'jobs') job
+    WHERE job ->> 'id' = (SELECT job_id::text FROM share_test_ids)
+      AND job -> 'pay_period' = '{"type":"monthly","startDay":16,"payoutMonthOffset":0}'::jsonb
+  ), 'preview payload omitted the job pay period';
 
   -- A viewer cannot write the owner's settings.
   UPDATE public.user_settings SET theme = 'dark' WHERE user_id = v_owner;

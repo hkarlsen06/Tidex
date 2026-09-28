@@ -103,19 +103,34 @@ struct FriendsWidgetProvider: TimelineProvider {
   }
 
   internal func getTimeline(in _: Context, completion: (Timeline<FriendsWidgetEntry>) -> Void) {
-    let entry = createEntry()
-
-    // Data only changes when the app calls WidgetCenter reloads; refreshing at midnight
-    // just covers relative day labels ("today"/"tomorrow") rolling over.
+    let now = Date()
+    let shifts = loadShifts()
     let nextMidnight =
       Calendar.current.nextDate(
-        after: Date(), matching: DateComponents(hour: 0, minute: 0, second: 0),
-        matchingPolicy: .nextTime) ?? Date()
-    let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
-    completion(timeline)
+        after: now, matching: DateComponents(hour: 0, minute: 0, second: 0),
+        matchingPolicy: .nextTime) ?? now.addingTimeInterval(24 * 60 * 60)
+    let helper = ShiftWidgetProviderHelper()
+    let boundaries = shifts.compactMap {
+      helper.shiftInterval(
+        shiftDateString: $0.shiftDate, startTime: $0.startTime, endTime: $0.endTime)
+    }.flatMap { [$0.start, $0.end] }
+    let dates = [now] + Set(boundaries.filter { $0 > now && $0 < nextMidnight }).sorted()
+    let entries = dates.map { createEntry(at: $0, shifts: shifts) }
+    completion(Timeline(entries: entries, policy: .after(nextMidnight)))
   }
 
-  private func createEntry() -> FriendsWidgetEntry {
+  private func loadShifts() -> [StoredFriendShift] {
+    guard let defaults = WidgetAppGroup.sharedUserDefaults(),
+      let json = defaults.string(forKey: WidgetAppGroup.friendShiftsKey),
+      let data = json.data(using: .utf8),
+      let shifts = try? JSONDecoder().decode([StoredFriendShift].self, from: data)
+    else {
+      return []
+    }
+    return shifts
+  }
+
+  private func createEntry(at now: Date, shifts: [StoredFriendShift]) -> FriendsWidgetEntry {
     // Load sharers
     guard let userDefaults = WidgetAppGroup.sharedUserDefaults(),
       let sharersJson = userDefaults.string(forKey: WidgetAppGroup.friendSharersKey),
@@ -124,15 +139,6 @@ struct FriendsWidgetProvider: TimelineProvider {
       !sharers.isEmpty
     else {
       return FriendsWidgetEntry.empty()
-    }
-
-    // Load shifts
-    var shifts: [StoredFriendShift] = []
-    if let shiftsJson = userDefaults.string(forKey: WidgetAppGroup.friendShiftsKey),
-      let shiftsData = shiftsJson.data(using: .utf8),
-      let decoded = try? JSONDecoder().decode([StoredFriendShift].self, from: shiftsData)
-    {
-      shifts = decoded
     }
 
     // Build friend previews
@@ -147,9 +153,10 @@ struct FriendsWidgetProvider: TimelineProvider {
         let (status, daysRemaining) = determineStatus(
           shiftDateString: shift.shiftDate,
           startTime: shift.startTime,
-          endTime: shift.endTime
+          endTime: shift.endTime,
+          now: now
         )
-        let formattedDate = formatShiftDate(shift.shiftDate, daysRemaining: daysRemaining)
+        let formattedDate = formatShiftDate(shift.shiftDate, daysRemaining: daysRemaining, now: now)
 
         previews.append(
           FriendPreview(
@@ -238,7 +245,7 @@ struct FriendsWidgetProvider: TimelineProvider {
     }
 
     return FriendsWidgetEntry(
-      date: Date(),
+      date: now,
       friends: topFriends,
       hasAnyFriends: true
     )
@@ -249,76 +256,28 @@ struct FriendsWidgetProvider: TimelineProvider {
   private func determineStatus(
     shiftDateString: String,
     startTime: String,
-    endTime: String
+    endTime: String,
+    now: Date
   ) -> (FriendPreview.FriendShiftStatus, Int) {
-    guard let shiftDate = parseShiftDate(shiftDateString) else {
+    guard let interval = ShiftWidgetProviderHelper().shiftInterval(
+      shiftDateString: shiftDateString, startTime: startTime, endTime: endTime)
+    else {
       return (.none, 0)
     }
-
-    let now = Date()
     let calendar = Calendar.current
-    let todayMidnight = calendar.startOfDay(for: now)
-    let shiftMidnight = calendar.startOfDay(for: shiftDate)
-
-    // Check if shift is active (currently happening)
-    if isShiftActive(shiftDateString: shiftDateString, startTime: startTime, endTime: endTime) {
-      return (.active, 0)
-    }
-
-    // Past shift
-    if shiftMidnight < todayMidnight {
-      let components = calendar.dateComponents([.day], from: shiftMidnight, to: todayMidnight)
-      let daysAgo = -(components.day ?? 0)
-      return (.past, daysAgo)
-    }
-
-    // Upcoming shift
-    let components = calendar.dateComponents([.day], from: todayMidnight, to: shiftMidnight)
-    let daysRemaining = components.day ?? 0
-    return (.upcoming, daysRemaining)
+    let days = calendar.dateComponents(
+      [.day], from: calendar.startOfDay(for: now),
+      to: calendar.startOfDay(for: interval.start)).day ?? 0
+    if now < interval.start { return (.upcoming, days) }
+    if now < interval.end { return (.active, 0) }
+    return (.past, days)
   }
 
-  private func isShiftActive(shiftDateString: String, startTime: String, endTime: String) -> Bool {
-    guard let shiftDate = parseShiftDate(shiftDateString) else { return false }
-
-    let now = Date()
-    let calendar = Calendar.current
-
-    // Parse start time
-    let startComponents = startTime.split(separator: ":").compactMap { Int($0) }
-    guard startComponents.count >= 2 else { return false }
-
-    var startDateComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    startDateComponents.hour = startComponents[0]
-    startDateComponents.minute = startComponents[1]
-    guard let shiftStartDateTime = calendar.date(from: startDateComponents) else { return false }
-
-    // Parse end time
-    let endComponents = endTime.split(separator: ":").compactMap { Int($0) }
-    guard endComponents.count >= 2 else { return false }
-
-    var endDateComponents = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    endDateComponents.hour = endComponents[0]
-    endDateComponents.minute = endComponents[1]
-    guard var shiftEndDateTime = calendar.date(from: endDateComponents) else { return false }
-
-    // Handle cross-midnight shifts
-    let startMinutes = startComponents[0] * 60 + startComponents[1]
-    let endMinutes = endComponents[0] * 60 + endComponents[1]
-    if endMinutes <= startMinutes {
-      shiftEndDateTime =
-        calendar.date(byAdding: .day, value: 1, to: shiftEndDateTime) ?? shiftEndDateTime
-    }
-
-    // Check if now is within the shift
-    return now >= shiftStartDateTime && now < shiftEndDateTime
-  }
-
-  private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
+  private func formatShiftDate(_ dateString: String, daysRemaining: Int, now: Date) -> String {
     guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
     let calendar = Calendar.current
-    let today = calendar.startOfDay(for: Date())
+    let today = calendar.startOfDay(for: now)
     let shiftDay = calendar.startOfDay(for: shiftDate)
 
     // Past shift

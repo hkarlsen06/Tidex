@@ -4969,10 +4969,6 @@ internal actor LocalStoreActor {
 internal protocol SyncFieldSnapshot {
   associatedtype Field: Hashable
 
-  var updatedAt: Date { get }
-
-  static func decode(from data: Data) -> Self?
-
   func changedFields(from other: Self) -> Set<Field>
 }
 
@@ -5007,19 +5003,15 @@ internal struct SyncPushBaseline: Equatable, Sendable {
 
 internal enum SyncMerge {
   /// Returns the dirty local fields to keep when a newer server row arrives for a dirty row.
-  /// Dirty fields whose local value already matches the server are dropped, so a push that the
-  /// server committed after the request timed out locally settles without a conflict. A field
-  /// conflicts only when the server changed it to a different value. The later write wins it.
+  /// Matching values acknowledge a pending write. Differing dirty fields still need pushing.
+  /// A server timestamp can belong to an earlier local edit whose response was lost, so it
+  /// cannot establish that the server value is newer than an unacknowledged local edit.
   internal static func fieldsToKeepLocally<Row: SyncPushTrackedModel>(
     _ row: Row,
     server: Row.Snapshot
   ) -> Set<Row.Snapshot.Field> {
-    let differing = row.dirtyFieldKeys.intersection(
+    row.dirtyFieldKeys.intersection(
       row.localValuesSnapshot.changedFields(from: server))
-    guard row.localUpdatedAt < server.updatedAt else { return differing }
-    // Without a readable base snapshot, every differing field counts as changed on the server.
-    guard let base = Row.Snapshot.decode(from: row.lastSyncedSnapshot) else { return [] }
-    return differing.subtracting(server.changedFields(from: base))
   }
 }
 

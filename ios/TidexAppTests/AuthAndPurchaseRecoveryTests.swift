@@ -59,6 +59,57 @@ internal final class AuthAndPurchaseRecoveryTests: XCTestCase {
     XCTAssertNil(AppCoordinator.assuranceLevel(fromAccessToken: "a.%%%.c"))
   }
 
+  @MainActor
+  internal func testVerifiedImpersonationResumesWithoutTargetMFA() async throws {
+    let target = try Self.session(aal: "aal1")
+    let route = await AppCoordinator.resolveMFARoute(
+      session: target, isImpersonating: { true },
+      validateImpersonation: { target }, currentSession: { nil })
+
+    guard case .resume(let session) = route else {
+      return XCTFail("A server-verified impersonation must not ask for the target's TOTP")
+    }
+    XCTAssertEqual(session.accessToken, target.accessToken)
+  }
+
+  @MainActor
+  internal func testExpiredImpersonationRoutesTheRestoredAdminSession() async throws {
+    let target = try Self.session(aal: "aal1")
+    let admin = try Self.session(aal: "aal2")
+    var isImpersonating = true
+    let route = await AppCoordinator.resolveMFARoute(
+      session: target, isImpersonating: { isImpersonating },
+      validateImpersonation: {
+        isImpersonating = false
+        return nil
+      },
+      currentSession: { admin })
+
+    guard case .resume(let session) = route else {
+      return XCTFail("An expired impersonation must route using the restored admin session")
+    }
+    XCTAssertEqual(session.accessToken, admin.accessToken)
+  }
+
+  @MainActor
+  internal func testUnverifiedImpersonationWaitsAndOrdinaryAAL1StillRequiresMFA() async throws {
+    let session = try Self.session(aal: "aal1")
+    let unverified = await AppCoordinator.resolveMFARoute(
+      session: session, isImpersonating: { true },
+      validateImpersonation: { nil }, currentSession: { session })
+    guard case .retry = unverified else {
+      return XCTFail("Stored impersonation metadata alone must not bypass MFA")
+    }
+
+    let ordinary = await AppCoordinator.resolveMFARoute(
+      session: session, isImpersonating: { false },
+      validateImpersonation: { nil }, currentSession: { session })
+    guard case .verification(let factor) = ordinary else {
+      return XCTFail("An ordinary AAL1 session must still verify its TOTP factor")
+    }
+    XCTAssertEqual(factor.id, "factor-1")
+  }
+
   // MARK: - Attachment upload errors
 
   internal func testDuplicateAttachmentUploadIsTreatedAsUploaded() {
@@ -91,6 +142,22 @@ internal final class AuthAndPurchaseRecoveryTests: XCTestCase {
   }
 
   // MARK: - Helpers
+
+  private static func session(aal: String) throws -> Session {
+    let json = #"""
+      {"id":"032d8c2a-9af6-4777-99f0-24e2c4058bf3","aud":"authenticated",
+       "app_metadata":{},"user_metadata":{},
+       "created_at":"2026-09-01T00:00:00Z","updated_at":"2026-09-01T00:00:00Z",
+       "factors":[{"id":"factor-1","factor_type":"totp","status":"verified",
+         "created_at":"2026-09-01T00:00:00Z","updated_at":"2026-09-01T00:00:00Z"}]}
+      """#
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return Session(
+      accessToken: jwt(aal: aal), tokenType: "bearer", expiresIn: 3_600,
+      expiresAt: Date().timeIntervalSince1970 + 3_600, refreshToken: "refresh-token",
+      user: try decoder.decode(User.self, from: Data(json.utf8)))
+  }
 
   private static func jwt(aal: String) -> String {
     let payload = Data(#"{"sub":"user","aal":"\#(aal)"}"#.utf8)

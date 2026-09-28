@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { CSSProperties } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Plus } from 'lucide-react';
 import dashboardEn from '@/public/hero/dashboard-en.png';
 import dashboardNo from '@/public/hero/dashboard-no.png';
 import tidexAppIcon from '@/public/brand/tidex-app-icon.png';
@@ -235,36 +235,65 @@ export function LandingPage({ locale, dictionary }: LandingPageProps) {
 
       <section
         id="faq"
-        className="relative overflow-hidden px-6 pt-14 pb-14 sm:pt-16 sm:pb-16 lg:pb-20"
+        className="relative scroll-mt-4 overflow-clip px-6 py-16 sm:py-20 lg:py-24"
       >
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_130%_80%_at_50%_-15%,hsl(199_89%_48%_/_0.24),transparent_60%)]" />
         </div>
-        <div className="mx-auto w-full max-w-5xl">
-          <div className="mb-10 max-w-2xl space-y-4 sm:mb-14 sm:space-y-5">
-            <h2 className="text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
+        <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-[minmax(0,19rem)_minmax(0,1fr)] lg:gap-16">
+          <div className="lg:sticky lg:top-12 lg:self-start">
+            <p className="text-xs font-medium uppercase tracking-[0.22em] text-brand-highlight">
+              {marketing.faq.eyebrow}
+            </p>
+            <h2 className="mt-4 text-balance text-3xl font-semibold tracking-[-0.03em] sm:text-4xl">
               {marketing.faq.heading}
             </h2>
-            <p className="text-base leading-7 text-text-secondary sm:text-lg">
+            <p className="mt-4 text-base leading-7 text-text-secondary">
               {marketing.faq.description}
             </p>
+            <div className="mt-8 flex flex-col items-start gap-3 text-sm font-medium">
+              <Link
+                href={payrollDocsHref}
+                className="flex items-center gap-1.5 text-text-primary transition-colors hover:text-brand-highlight"
+              >
+                {marketing.faq.docsLink}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <a
+                href={mailtoHref}
+                className="flex items-center gap-1.5 text-text-muted transition-colors hover:text-text-primary"
+              >
+                {marketing.faq.contactLink}
+                <ArrowRight className="h-3.5 w-3.5" />
+              </a>
+            </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="border-t border-white/10">
             {faqs.map((faq, index) => (
               <details
                 key={faq.question}
+                name="faq"
                 open={index === 0}
-                className="rounded-[1.15rem] border border-white/8 bg-background/60 px-4 last:border-b sm:rounded-[1.4rem] sm:px-6"
+                className="group border-b border-white/10"
               >
-                <summary className="cursor-pointer py-5 text-left text-base font-medium text-text-primary hover:text-brand-highlight sm:py-6 sm:text-lg">
-                  {faq.question}
+                <summary className="group/question flex cursor-pointer list-none items-start gap-4 py-5 sm:gap-6 sm:py-6 [&::-webkit-details-marker]:hidden">
+                  <span className="mt-1 w-6 shrink-0 text-xs font-medium tabular-nums text-text-muted transition-colors group-open:text-brand-highlight sm:mt-1.5">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="flex-1 text-base font-medium text-text-primary transition-colors group-hover/question:text-brand-highlight sm:text-lg">
+                    {faq.question}
+                  </span>
+                  <Plus
+                    aria-hidden="true"
+                    className="mt-1 h-4 w-4 shrink-0 text-text-muted transition-transform duration-200 group-open:rotate-45 group-open:text-text-primary sm:mt-1.5"
+                  />
                 </summary>
-                <div className="pb-5 sm:pb-6">
+                <div className="space-y-3 pb-6 pl-10 pr-8 sm:pl-12">
                   {faq.answers.map((paragraph, answerIndex) => (
                     <p
                       key={`${faq.question}-${answerIndex}`}
-                      className="pb-3 text-base leading-7 text-text-secondary last:pb-0"
+                      className="text-base leading-7 text-text-secondary"
                     >
                       {paragraph}
                     </p>

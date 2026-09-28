@@ -1150,8 +1150,7 @@ final class SyncCoordinator {
         return .noChange
       }
 
-      // Server changed. Keep local values that still differ. The later write wins a real
-      // conflict, so the row never gets stuck in conflict.
+      // Keep unacknowledged local values. A delayed push can have a newer server timestamp.
       await storeActor.autoMergeShift(
         id: serverRow.id,
         serverRow: serverRow,
@@ -3491,7 +3490,7 @@ final class SyncCoordinator {
     }
 
     // Rebase onto the server row and retry once. Local values that still differ stay, and the
-    // later write wins a real conflict.
+    // unacknowledged local values remain pending.
     await storeActor.rebaseShift(
       id: shiftId,
       serverRow: serverRow,

@@ -55,35 +55,45 @@ final class ImpersonationManager {
   }
 
   /// Validate the impersonation session on app launch
-  /// Call this from AppCoordinator after the app is ready
-  /// If session is invalid/expired, automatically stops impersonation
-  func validateSessionOnLaunch() async {
+  /// An MFA exemption requires the server to confirm the bound auth session.
+  /// Invalid or expired sessions restore the admin. Network failures leave them available to retry.
+  func validateSessionOnLaunch() async -> Session? {
     guard isImpersonating else {
-      return
+      return nil
     }
 
     // 1. Check local expiration first (fast path)
     if let expiresAt, expiresAt < Date() {
       logger.info("Impersonation session expired locally, stopping")
       await handleInvalidSession()
-      return
+      return nil
     }
 
     // 2. Validate the session is still active server-side.
     // Transient session resolution failures should not end impersonation.
     do {
-      _ = try await AuthSessionManager.shared.getSession()
+      let session = try await AuthSessionManager.shared.getSession()
+      let isValid: Bool = try await supabase.rpc("is_impersonation_session").execute().value
+      guard supabase.auth.currentSession?.accessToken == session.accessToken else {
+        return nil
+      }
+      guard isValid else {
+        await handleInvalidSession()
+        return nil
+      }
       logger.info("Impersonation session validated successfully")
+      return session
     } catch {
       if AuthSessionManager.shared.isTransientSessionResolutionError(error) {
         logger.warning(
           "Impersonation session validation hit transient error; keeping session: \(error.localizedDescription)"
         )
-        return
+        return nil
       }
 
       logger.warning("Impersonation session validation failed: \(error.localizedDescription)")
       await handleInvalidSession()
+      return nil
     }
   }
 

@@ -10,6 +10,15 @@ final class PayrollTotalsTests: XCTestCase {
       ([TestFixtures.job(id: "job", isDefault: true, halfTaxMonth: 11)], nil, nil, 15),
       ([], nil, 11, 15),
       ([], nil, 12, 30),
+      ([TestFixtures.job(
+        id: "job", isDefault: true, halfTaxMonth: 11,
+        payPeriod: .monthly(startDay: 1, payoutMonthOffset: 0))], "job", nil, 20),
+      ([TestFixtures.job(
+        id: "job", isDefault: true, halfTaxMonth: 11,
+        payPeriod: .monthly(startDay: 16, payoutMonthOffset: 1))], "job", nil, 30),
+      ([TestFixtures.job(
+        id: "job", isDefault: true, halfTaxMonth: 11,
+        payPeriod: .biweekly(anchorEnd: "2026-10-31", payoutDelayDays: 0))], "job", nil, 20),
     ]
     let encoder = JSONEncoder()
     let decoder = JSONDecoder()

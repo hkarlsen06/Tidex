@@ -212,6 +212,7 @@ AS $function$
             'sort_order', j.sort_order,
             'currency', j.currency,
             'payroll_day', j.payroll_day,
+            'pay_period', j.pay_period,
             'half_tax_month', j.half_tax_month,
             'monthly_goal', j.monthly_goal,
             'archived_at', j.archived_at,

@@ -20,56 +20,68 @@ export const marketingEn = {
   },
   faq: {
     eyebrow: 'FAQ',
-    heading: 'Frequently asked questions',
-    description: 'Everything you need to know about shifts, reports and how we handle your data.',
+    heading: 'Questions and answers',
+    description: 'Short answers about pay, price and your data.',
+    docsLink: 'How Tidex calculates pay',
+    contactLink: 'Ask us something else',
     items: [
       {
-        question: 'What is Tidex, and why should I use it?',
+        question: 'What is Tidex?',
         answers: [
-          'Tidex is an iPhone app for shift workers who want to know what each shift is actually worth before payday.',
-          'It gives you a clear estimate of salary, supplements, overtime and breaks in one place, so you can plan better, catch mistakes and feel more in control of your income.',
+          'Tidex is an iPhone app for people paid by the hour. It works out what each shift pays, so you know your next paycheck before it arrives.',
+          'You can compare that number with your payslip and spot mistakes early.',
         ],
       },
       {
-        question: 'How much does Tidex cost?',
+        question: 'What does it cost?',
         answers: [
-          'You can get started for free with the core features.',
-          'If you want more, Pro costs NOK 29 per month and includes unlimited history.',
+          'Nothing. Every feature in Tidex is free, with no subscription and no ads.',
         ],
       },
       {
-        question: 'How do I set up shifts and get accurate pay?',
+        question: 'How do I get started?',
         answers: [
-          'Add your base hourly rate, relevant supplements and break preference once in settings.',
-          'After that, enter a new shift and Tidex calculates the payout with the same rules every time, so numbers stay consistent.',
+          'Download the app and enter your hourly rate, supplements and tax percentage. You only do this once.',
+          'Then add your shifts by hand, or import them from a calendar file (.ics) if your employer sends one.',
         ],
       },
       {
-        question: 'How are breaks, overtime, and extra pay handled?',
+        question: 'How does Tidex handle supplements, overtime and breaks?',
         answers: [
-          'The app applies your configured rules for overtime, supplements, and breaks before showing totals.',
-          'Most users can rely on defaults for a first setup, then tune details if their employer has specific contracts.',
+          'Supplements apply to the hours they cover, such as evenings or weekends. Overtime and unpaid breaks follow the rules you set.',
+          'The payroll documentation lists each rule and how Tidex applies it.',
         ],
       },
       {
-        question: 'Can I export a pay report from my app?',
+        question: 'Does it take tax into account?',
         answers: [
-          'Yes. You can export all shifts as PDF or CSV from the app whenever you need a clean record.',
-          'Those reports are easy to share with your workplace or use for your own bookkeeping.',
+          'Yes. Enter the withholding percentage from your tax deduction card, and Tidex shows both gross and net pay.',
+          'Tidex also handles the half-tax month, when Norwegian employers withhold only half the usual tax.',
+        ],
+      },
+      {
+        question: 'Can I share my shifts with friends?',
+        answers: [
+          'Yes. Add friends in the app to see when they work, and let them see your schedule. You choose who you share with.',
+        ],
+      },
+      {
+        question: 'Can I export my shifts?',
+        answers: [
+          'Yes. Export any period as a PDF or CSV file from the app settings.',
         ],
       },
       {
         question: 'Where is my data stored?',
         answers: [
-          'Your data is stored securely and tied to your account.',
-          'The app syncs your data so it stays available on your device and follows you when you sign in.',
+          'On servers we run ourselves, rented from netcup in Germany. Backups stay in the EU.',
+          'We store your shifts, settings and profile. We never sell your data. If you delete your account in the app, we delete your data, and backup copies expire within 28 days.',
         ],
       },
       {
-        question: 'Is my data safe?',
+        question: 'Is Tidex available on Android?',
         answers: [
-          'Yes. We take privacy seriously, and your shift data is only sent when needed for sign-in and sync.',
-          'We only store what the app needs to work: your shifts, settings and profile details.',
+          'No. Tidex is only available for iPhone.',
         ],
       },
     ],
