@@ -27,8 +27,6 @@ struct AddShiftView: View {
   @State private var openJobsAndPaySettingsAfterPickerDismiss = false
   @State private var showPaySettings = false
   @State private var paySettingsDetent: PresentationDetent = Self.payManagerCompactDetent
-  @State private var showCalendarImport = false
-  @State private var calendarImportedDates: Set<String> = []
 
   /// Whether running on iPhone-sized idiom.
   private var isIPhone: Bool {
@@ -214,14 +212,6 @@ struct AddShiftView: View {
       .toolbar {
         if !shouldShowWorkSetupRequiredPlaceholder {
           ToolbarItem(placement: .topBarTrailing) {
-            Button {
-              showCalendarImport = true
-            } label: {
-              Image(systemName: "calendar.badge.plus")
-            }
-            .accessibilityLabel(Text(.calendarImportEntryButton))
-          }
-          ToolbarItem(placement: .topBarTrailing) {
             ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)
               .fixedSize()
           }
@@ -290,19 +280,6 @@ struct AddShiftView: View {
     }
     .sheet(isPresented: $viewModel.showPreviewSheet) {
       RecurringPreviewSheet(viewModel: viewModel)
-    }
-    .sheet(
-      isPresented: $showCalendarImport,
-      onDismiss: {
-        guard !calendarImportedDates.isEmpty else { return }
-        // Leave Add Shift the same way a manual save does, highlighting the new shifts.
-        onShiftsCreated(calendarImportedDates)
-        calendarImportedDates = []
-      }
-    ) {
-      CalendarImportView { dates in
-        calendarImportedDates = dates
-      }
     }
     .sheet(
       isPresented: $viewModel.showSubmitJobChooser,

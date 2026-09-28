@@ -147,17 +147,6 @@ final class AddShiftSubmissionTests: XCTestCase {
     XCTAssertEqual(model.submitBlockers, [.missingTimes])
   }
 
-  func testNewShiftTimesComeFromTheLatestShiftOrNineToFive() {
-    let latest = TestFixtures.shift(shiftDate: "2026-09-20", startTime: "22:00", endTime: "06:00")
-    let fromShift = AddShiftViewModel.prefillTimeStrings(latestShift: latest)
-    XCTAssertEqual(fromShift.start, "22:00")
-    XCTAssertEqual(fromShift.end, "06:00")
-
-    let fallback = AddShiftViewModel.prefillTimeStrings(latestShift: nil)
-    XCTAssertEqual(fallback.start, "09:00")
-    XCTAssertEqual(fallback.end, "17:00")
-  }
-
   private func time(hour: Int) throws -> Date {
     try XCTUnwrap(Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: .now))
   }

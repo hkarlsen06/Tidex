@@ -77,6 +77,27 @@ Available colors (all adapt to light/dark mode):
 
 Usage: `Color.tidexSurfacePrimary`, `Color.tidexTextSecondary`, etc.
 
+### No system grey surfaces
+
+iOS's default grouped grey (about `#1C1C1E` in dark mode) looks brown next to the navy Tidex palette. Never let it show:
+
+- Don't use `Color(.systemGroupedBackground)`, `Color(.secondarySystemGroupedBackground)`, `Color(.tertiarySystemGroupedBackground)`, `Color(.systemBackground)`, `Color(.secondarySystemBackground)` or `Color(.systemGray*)` for backgrounds or fills.
+- A `List` or `Form` draws its rows in that grey unless you replace it. Hiding the scroll background alone is not enough; the rows stay grey. Style every `List` and `Form` like this:
+
+```swift
+Form {
+  Group {
+    // sections and rows
+  }
+  .listRowBackground(Color.tidexSurfacePrimary)
+}
+.tidexListBackground()
+```
+
+`tidexListBackground()` (in `Shared/Components/TidexAppBackground.swift`) puts `tidexBackground` behind the list. A row that should show the page background, such as a header or footer, can use `.listRowBackground(Color.clear)` on its own section instead. See `Features/Settings/SettingsView.swift` for the full pattern.
+
+App extensions can't read the app's color assets. Code in `ios/Shared` that runs in the share extension uses `SharedPalette` (`ios/Shared/SharedPalette.swift`), and the widget uses `WidgetPalette`.
+
 ## Project Documentation
 
 See `ios/docs/` for more details:

@@ -141,24 +141,26 @@ internal struct CalendarImportView: View {
   internal var body: some View {
     NavigationStack {
       Form {
-        linkSection
+        Group {
+          linkSection
 
-        if let errorMessage = model.errorMessage {
-          Section {
-            Text(errorMessage)
-              .font(.tidexSubheadline)
-              .foregroundColor(.tidexError)
+          if let errorMessage = model.errorMessage {
+            Section {
+              Text(errorMessage)
+                .font(.tidexSubheadline)
+                .foregroundColor(.tidexError)
+            }
+          }
+
+          if model.hasFetched, !model.foundShifts.isEmpty {
+            previewSections
+          } else {
+            helpSection
           }
         }
-
-        if model.hasFetched, !model.foundShifts.isEmpty {
-          previewSections
-        } else {
-          helpSection
-        }
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .scrollContentBackground(.hidden)
-      .background(Color.tidexBackground)
+      .tidexListBackground()
       .navigationTitle(String(localized: .calendarImportTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

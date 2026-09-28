@@ -23,6 +23,8 @@ struct SettingsView: View {
   @State private var canAccessAdminSettings = false
   /// Whether to show the pay job chooser before opening pay settings.
   @State private var showPayJobChooser = false
+  /// Whether to show the calendar-link shift import sheet.
+  @State private var showCalendarImport = false
   /// Whether to show quick add-job sheet from the pay chooser.
   @State private var showPayAddJobSheet = false
   /// Current presentation size for the pay job chooser sheet.
@@ -168,6 +170,9 @@ struct SettingsView: View {
     }
     .sheet(isPresented: $showPayJobChooser, onDismiss: handleChooserDismiss) {
       payJobChooserSheet
+    }
+    .sheet(isPresented: $showCalendarImport) {
+      CalendarImportView()
     }
     .sheet(isPresented: $showPayAddJobSheet, onDismiss: handlePaySetupDismiss) {
       AddJobSheet(
@@ -371,6 +376,13 @@ struct SettingsView: View {
       NavigationLink(value: SettingsDestination.calendarSync()) {
         Label(String(localized: .calendarSubscriptionTitle), systemImage: "calendar.badge.clock")
       }
+
+      Button {
+        showCalendarImport = true
+      } label: {
+        Label(String(localized: .calendarImportTitle), systemImage: "calendar.badge.plus")
+      }
+      .tint(.tidexTextPrimary)
     }
   }
 
