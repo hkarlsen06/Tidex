@@ -323,34 +323,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         .accessibilityLabel(Text(.shiftsShareMonthTitle))
       }
     }
-
-    if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
-      ToolbarItem(placement: .topBarTrailing) {
-        Button {
-          toggleSelectionMode()
-        } label: {
-          Image(
-            systemName: viewModel.isSelectionModeEnabled
-              ? "checkmark.circle.fill" : "checkmark.circle"
-          )
-          .foregroundStyle(
-            viewModel.isSelectionModeEnabled ? Color.tidexBrandPrimary : Color.tidexTextPrimary
-          )
-          .contentTransition(.symbolEffect(.replace))
-          .accessibilityHidden(true)
-        }
-        .accessibilityLabel(
-          viewModel.isSelectionModeEnabled ? Text(.commonDone) : Text(.shiftsSelectionToggle))
-        .accessibilityIdentifier("schedule.select")
-      }
-    }
-  }
-
-  private func toggleSelectionMode() {
-    Haptics.play(.selection)
-    MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
-      viewModel.isSelectionModeEnabled.toggle()
-    }
   }
 
   private var navigationContent: some View {
@@ -718,7 +690,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         // Handle view mode switch (toggle is in shared overlay)
         .onChange(of: showListView) { _, isListView in
           if isListView {
-            viewModel.isSelectionModeEnabled = false
+            viewModel.clearSelection()
             recomputeListDerivedDataIfNeeded(force: true)
           }
         }
@@ -1377,7 +1349,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               onCancelCopyMove: {
                 viewModel.cancelCopyMoveMode()
               },
-              isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
               newlyAddedDates: celebrationManager.newlyAddedDates,
               deepLinkHighlightDates: deepLinkHighlightDates,
               conflictDates: viewModel.conflictDates,
@@ -1619,7 +1590,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               onCancelCopyMove: {
                 viewModel.cancelCopyMoveMode()
               },
-              isSelectionModeEnabled: $viewModel.isSelectionModeEnabled,
               newlyAddedDates: celebrationManager.newlyAddedDates,
               deepLinkHighlightDates: deepLinkHighlightDates,
               conflictDates: viewModel.conflictDates,
@@ -1900,12 +1870,10 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           .tint(.tidexBlue)
         }
         .swipeActions(edge: .trailing) {
-          Button(role: .destructive) {
+          SwipeDeleteButton {
             Haptics.play(.medium)
             shiftToDelete = shift
             showDeleteConfirmation = true
-          } label: {
-            Label(String(localized: .shiftsActionsDelete), systemImage: "trash")
           }
         }
 
@@ -1931,12 +1899,10 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
         .tint(.tidexBlue)
       }
       .swipeActions(edge: .trailing) {
-        Button(role: .destructive) {
+        SwipeDeleteButton {
           Haptics.play(.medium)
           eventToDelete = event.event
           showEventDeleteConfirmation = true
-        } label: {
-          Label(String(localized: .shiftsActionsDelete), systemImage: "trash")
         }
       }
 

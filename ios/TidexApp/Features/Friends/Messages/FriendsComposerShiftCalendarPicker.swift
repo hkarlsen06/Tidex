@@ -12,7 +12,6 @@ struct FriendsComposerShiftCalendarPicker: View {
   @Environment(\.dismiss) private var dismiss
   @State private var viewModel = ShiftsViewModel()
   @State private var selectedDates: Set<String> = []
-  @State private var isSelectionModeEnabled = false
   @State private var selectedDayForSheet: FriendsComposerShiftDaySelection?
   @State private var selectedDaySheetContentHeight: CGFloat =
     ContentSizedSheetMetrics.defaultContentHeight
@@ -83,7 +82,6 @@ struct FriendsComposerShiftCalendarPicker: View {
               onCopyToDate: nil,
               onMoveToDate: nil,
               onCancelCopyMove: nil,
-              isSelectionModeEnabled: $isSelectionModeEnabled,
               newlyAddedDates: [],
               deepLinkHighlightDates: [],
               conflictDates: viewModel.conflictDates,

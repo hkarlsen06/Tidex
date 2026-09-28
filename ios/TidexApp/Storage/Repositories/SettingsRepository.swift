@@ -204,16 +204,6 @@ final class SettingsRepository {
     }
   }
 
-  /// Update last active timestamp
-  /// This is typically not synced but can be used locally
-  /// - Parameter userId: User ID
-  func updateLastActive(for userId: String) async throws {
-    let didUpdate = try await localStore.storeActor.updateUserSettingsLastActive(userId: userId)
-    if didUpdate {
-      logger.debug("Updated last active for user: \(userId)")
-    }
-  }
-
   // MARK: - Conflict Resolution
 
   /// Resolve a conflict by keeping the local version

@@ -81,7 +81,7 @@ internal final class CalendarSemanticsTests: XCTestCase {
     XCTAssertFalse(viewModel.handleDayTapped(dateISO: dateISO, shiftsOnDay: shiftsOnDay))
     XCTAssertFalse(viewModel.handleDayTapped(dateISO: otherDateISO, shiftsOnDay: shiftsOnDay))
     XCTAssertTrue(viewModel.selectedDates.isEmpty)
-    XCTAssertTrue(viewModel.isSelectionModeEnabled, "Deselecting the last day keeps Select on")
+    XCTAssertFalse(viewModel.isSelectionModeEnabled, "Deselecting the last day ends selection mode")
   }
 
   internal func testTapOnEmptyDayInSelectionModeKeepsSelection() {
@@ -92,13 +92,14 @@ internal final class CalendarSemanticsTests: XCTestCase {
     XCTAssertEqual(viewModel.selectedDates, [dateISO])
   }
 
-  internal func testLeavingSelectionModeClearsSelection() {
+  internal func testClearingSelectionEndsSelectionMode() {
     let viewModel = ShiftsViewModel()
     viewModel.applyDragSelection([dateISO])
 
-    viewModel.isSelectionModeEnabled = false
+    viewModel.clearSelection()
 
     XCTAssertTrue(viewModel.selectedDates.isEmpty)
+    XCTAssertFalse(viewModel.isSelectionModeEnabled)
   }
 
   // MARK: - Cell text

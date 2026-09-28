@@ -189,7 +189,6 @@ struct MainTabView: View {
               }
             }
           }
-          .tint(.tidexTextPrimary)
         }
         .motionAnimation(.navigationPush, value: selectedTab, reduceMotion: shouldReduceEffects)
         .motionAnimation(.pageTransition, value: showListView, reduceMotion: shouldReduceEffects)

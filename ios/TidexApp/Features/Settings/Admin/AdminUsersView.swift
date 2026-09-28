@@ -1,6 +1,13 @@
 import Observation
 import SwiftUI
 
+/// What the users list shows. Changing any field reloads from page 1.
+struct AdminUsersRequest: Equatable {
+  var search: String = ""
+  var sort: AdminUserSort = .name
+  var filter: AdminUserFilter = .all
+}
+
 @MainActor
 @Observable
 final class AdminUsersModel {
@@ -9,26 +16,26 @@ final class AdminUsersModel {
   private(set) var isLoading: Bool = false
   /// True once the first load finished, whether or not it succeeded.
   private(set) var hasLoaded: Bool = false
+  /// The request behind `users`.
+  private(set) var request = AdminUsersRequest()
   var errorMessage: String?
 
   private var page: Int = 1
-  private var search: String?
   private let perPage: Int = 30
 
   var hasMore: Bool { users.count < totalCount }
 
-  /// Loads the first page for `query`. Cancelling the calling task drops the result.
-  func load(query: String) async {
-    search = query.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
+  /// Loads the first page for `request`. Cancelling the calling task drops the result.
+  func load(_ request: AdminUsersRequest) async {
     isLoading = true
     defer { isLoading = false }
     do {
-      let result: AdminUsersPage = try await AdminAPI.users(
-        page: 1, perPage: perPage, search: search)
+      let result: AdminUsersPage = try await fetch(request, page: 1)
       guard !Task.isCancelled else { return }
       users = result.users
       totalCount = result.totalCount
       page = 1
+      self.request = request
       hasLoaded = true
     } catch {
       guard !Task.isCancelled else { return }
@@ -42,8 +49,7 @@ final class AdminUsersModel {
     isLoading = true
     defer { isLoading = false }
     do {
-      let result: AdminUsersPage = try await AdminAPI.users(
-        page: page + 1, perPage: perPage, search: search)
+      let result: AdminUsersPage = try await fetch(request, page: page + 1)
       let known: Set<String> = Set(users.map(\.id))
       users += result.users.filter { !known.contains($0.id) }
       totalCount = result.totalCount
@@ -57,11 +63,21 @@ final class AdminUsersModel {
     guard let index = users.firstIndex(where: { $0.id == user.id }) else { return }
     users[index] = user
   }
+
+  private func fetch(_ request: AdminUsersRequest, page: Int) async throws -> AdminUsersPage {
+    try await AdminAPI.users(
+      page: page,
+      perPage: perPage,
+      search: request.search.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank,
+      sort: request.sort,
+      filter: request.filter
+    )
+  }
 }
 
 struct AdminUsersView: View {
   @State private var model = AdminUsersModel()
-  @State private var query = ""
+  @State private var request = AdminUsersRequest()
   @State private var isSuperadmin = false
 
   var body: some View {
@@ -75,7 +91,7 @@ struct AdminUsersView: View {
                   model.replace($0)
                 }
               } label: {
-                AdminUserRow(user: user)
+                AdminUserRow(user: user, sort: model.request.sort)
               }
               .onAppear {
                 if user.id == model.users.last?.id {
@@ -87,7 +103,11 @@ struct AdminUsersView: View {
               ProgressView().frame(maxWidth: .infinity)
             }
           } header: {
-            Text("\(model.totalCount) users")
+            if model.request.filter == .all {
+              Text("\(model.totalCount) users")
+            } else {
+              Text("\(model.totalCount) users · \(model.request.filter.title)")
+            }
           }
         }
       }
@@ -98,27 +118,66 @@ struct AdminUsersView: View {
       if !model.hasLoaded {
         ProgressView()
       } else if model.users.isEmpty {
-        ContentUnavailableView.search(text: query)
+        if request.search.isEmpty {
+          ContentUnavailableView("No users", systemImage: "person.2.slash")
+        } else {
+          ContentUnavailableView.search(text: request.search)
+        }
       }
     }
     .navigationTitle("Users")
     .navigationBarTitleDisplayMode(.inline)
-    .searchable(text: $query, prompt: "Name, email, phone or ID")
-    .task(id: query) {
-      if model.hasLoaded {
+    .searchable(
+      text: $request.search,
+      placement: .navigationBarDrawer(displayMode: .always),
+      prompt: "Name, email, phone or ID"
+    )
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        Menu {
+          Picker("Sort by", selection: $request.sort) {
+            ForEach(AdminUserSort.allCases) { Text($0.title).tag($0) }
+          }
+          .pickerStyle(.inline)
+          Picker("Show", selection: $request.filter) {
+            ForEach(AdminUserFilter.allCases) { Text($0.title).tag($0) }
+          }
+          .pickerStyle(.inline)
+        } label: {
+          Label(
+            "Sort and filter",
+            systemImage: request.filter == .all
+              ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill"
+          )
+        }
+      }
+    }
+    .task(id: request) {
+      // Debounce typing, but apply sort and filter changes right away.
+      if model.hasLoaded, request.search != model.request.search {
         try? await Task.sleep(for: .milliseconds(300))
         guard !Task.isCancelled else { return }
       }
-      await model.load(query: query)
+      await model.load(request)
     }
     .task { isSuperadmin = await AdminAPI.currentUserIsSuperadmin() }
-    .refreshable { await model.load(query: query) }
+    .refreshable { await model.load(request) }
     .adminErrorAlert($model.errorMessage)
   }
 }
 
 private struct AdminUserRow: View {
   let user: AdminUser
+  let sort: AdminUserSort
+
+  /// The date that matches the sort order, so the list reads top to bottom.
+  private var date: (label: String, value: Date?) {
+    switch sort {
+    case .newest: return ("Signed up", user.created)
+    case .lastActive: return ("Active", user.lastActive)
+    case .name, .lastSignIn: return ("Signed in", user.lastSignIn)
+    }
+  }
 
   var body: some View {
     HStack(spacing: Spacing.sm) {
@@ -126,9 +185,15 @@ private struct AdminUserRow: View {
       Spacer(minLength: Spacing.xs)
       VStack(alignment: .trailing, spacing: Spacing.xxs) {
         AdminUserBadges(user: user)
-        AdminRelativeDate(date: user.lastSignIn)
-          .font(.tidexMicro)
-          .foregroundStyle(Color.tidexTextMuted)
+        Group {
+          if let value = date.value {
+            Text("\(date.label) \(value.formatted(.relative(presentation: .named)))")
+          } else {
+            Text("\(date.label) never")
+          }
+        }
+        .font(.tidexMicro)
+        .foregroundStyle(Color.tidexTextMuted)
       }
     }
   }
@@ -183,6 +248,7 @@ struct AdminUserDetailView: View {
       header
       Group {
         accountSection
+        activitySection
         if canToggleBan || canToggleAdmin {
           actionsSection
         }
@@ -256,9 +322,29 @@ struct AdminUserDetailView: View {
       if let phone = user.phone?.nilIfBlank {
         LabeledContent("Phone") { Text(phone).textSelection(.enabled) }
       }
-      LabeledContent("Joined") {
+      LabeledContent("User ID") {
+        Text(user.id)
+          .font(.tidexMonoCaptionRegular)
+          .lineLimit(1)
+          .truncationMode(.middle)
+          .textSelection(.enabled)
+      }
+    }
+  }
+
+  private var activitySection: some View {
+    Section("Activity") {
+      LabeledContent("Signed up") {
         if let created = user.created {
           Text(created, format: .dateTime.day().month().year())
+        }
+      }
+      LabeledContent("Broadcast language", value: user.broadcastLanguage.title)
+      LabeledContent("Last active") {
+        if user.lastActive == nil {
+          Text("Never")
+        } else {
+          AdminRelativeDate(date: user.lastActive)
         }
       }
       LabeledContent("Last sign-in") {
@@ -267,13 +353,6 @@ struct AdminUserDetailView: View {
         } else {
           AdminRelativeDate(date: user.lastSignIn)
         }
-      }
-      LabeledContent("User ID") {
-        Text(user.id)
-          .font(.tidexMonoCaptionRegular)
-          .lineLimit(1)
-          .truncationMode(.middle)
-          .textSelection(.enabled)
       }
     }
   }

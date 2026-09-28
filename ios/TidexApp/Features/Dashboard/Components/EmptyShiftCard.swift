@@ -15,6 +15,10 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
     !dynamicTypeSize.isAccessibilitySize
   }
 
+  private var showsAddShiftButton: Bool {
+    !isLoading && onAddShift != nil
+  }
+
   // MARK: - Body
 
   var body: some View {  // swiftlint:disable:this explicit_acl
@@ -68,14 +72,34 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
             .frame(width: 72, height: 17)  // swiftlint:disable:this no_magic_numbers
         }
       }
+      .opacity(showsAddShiftButton ? 0.35 : 1)  // swiftlint:disable:this no_magic_numbers
+      .accessibilityHidden(showsAddShiftButton)
       .padding(.horizontal, isElevated ? Spacing.mlg : 0)
       .padding(.vertical, ShiftCardMetrics.verticalPadding)
       .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
+      .mask {
+        // Cut the placeholder bars around the button so their ends follow the capsule.
+        Rectangle()
+          .overlay {
+            if showsAddShiftButton {
+              addShiftLabel
+                .padding(Spacing.xs)
+                .background(Capsule())
+                .blendMode(.destinationOut)
+            }
+          }
+          .compositingGroup()
+      }
       .tidexRowSurface(
         cornerRadius: CornerRadius.card,
         fillColor: isElevated ? .tidexSurfacePrimary : .clear
       )
       .shimmer(isActive: isLoading)
+      .overlay {
+        if let onAddShift, showsAddShiftButton {
+          addShiftButton(action: onAddShift)
+        }
+      }
 
       // Footer area below the card - fixed height to match FeaturedShiftCard
       Group {
@@ -83,22 +107,8 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
           RoundedRectangle(cornerRadius: CornerRadius.xxs)
             .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
             .frame(width: 80, height: 14)  // swiftlint:disable:this no_magic_numbers
-        } else if let onAddShift {
-          Button {
-            Haptics.play(.light)
-            onAddShift()
-          } label: {
-            Text(.dashboardAddShiftButton)
-              .font(.tidexCaptionStrong)
-              .foregroundColor(.tidexBlue)
-              .lineLimit(1)
-              .minimumScaleFactor(0.85)  // swiftlint:disable:this no_magic_numbers
-              .padding(.horizontal, Spacing.xsm)
-              .padding(.vertical, 3)  // swiftlint:disable:this no_magic_numbers
-              .background(Color.tidexBlue.opacity(0.12))  // swiftlint:disable:this no_magic_numbers
-              .clipShape(Capsule())
-          }
-          .buttonStyle(.plain)
+        } else if showsAddShiftButton {
+          Color.clear
         } else {
           RoundedRectangle(cornerRadius: CornerRadius.xxs)
             .fill(Color.tidexTextMuted.opacity(0.3))  // swiftlint:disable:this no_magic_numbers
@@ -107,6 +117,35 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
       }
       .frame(height: 20)  // Match FeaturedShiftCard footer height // swiftlint:disable:this no_magic_numbers
     }
+  }
+
+  private var addShiftLabel: some View {
+    Label {
+      Text(.dashboardAddShiftButton)
+        .font(.tidexLabelStrong)
+        .lineLimit(1)
+        .minimumScaleFactor(0.85)  // swiftlint:disable:this no_magic_numbers
+    } icon: {
+      Image(systemName: "plus")
+        .font(.tidexLabelStrong)
+    }
+    .foregroundColor(.tidexTextOnBrand)
+    .padding(.horizontal, Spacing.lg)
+    .frame(minHeight: 44)  // swiftlint:disable:this no_magic_numbers
+    .background(Color.tidexBlue, in: Capsule())
+  }
+
+  /// Fills the whole card so any tap on the placeholder adds a shift.
+  private func addShiftButton(action: @escaping () -> Void) -> some View {
+    Button {
+      Haptics.play(.light)
+      action()
+    } label: {
+      addShiftLabel
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
   }
 }
 

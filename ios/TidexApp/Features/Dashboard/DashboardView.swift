@@ -1060,7 +1060,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
 
         VStack(spacing: Spacing.sm) {
-          VStack(spacing: Spacing.md) {
+          VStack(spacing: Spacing.xxs) {
             if let previousPayrollVariant, !isPayrollCardLoading {
               previousPayrollDetailsChip(for: previousPayrollVariant)
             } else if usesFixedCardHeights {
@@ -1532,7 +1532,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             }
 
             VStack(spacing: Spacing.sm) {
-              VStack(spacing: Spacing.md) {
+              VStack(spacing: Spacing.xxs) {
                 if usesFixedCardHeights {
                   Color.clear
                     .frame(height: 28)  // swiftlint:disable:this no_magic_numbers

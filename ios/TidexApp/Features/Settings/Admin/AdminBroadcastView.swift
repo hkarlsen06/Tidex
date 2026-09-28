@@ -4,6 +4,7 @@ import SwiftUI
 enum AdminBroadcastTarget: String, CaseIterable, Identifiable {
   case all
   case active
+  case new
   case specific
 
   var id: String { rawValue }
@@ -12,6 +13,7 @@ enum AdminBroadcastTarget: String, CaseIterable, Identifiable {
     switch self {
     case .all: return "Everyone"
     case .active: return "Active"
+    case .new: return "New"
     case .specific: return "Specific"
     }
   }
@@ -19,7 +21,8 @@ enum AdminBroadcastTarget: String, CaseIterable, Identifiable {
   var footer: String {
     switch self {
     case .all: return "Every user with a registered device, except you."
-    case .active: return "Users with a registered device who opened the app in the last 7 days."
+    case .active: return "Users with a registered device who used the app in the last 7 days."
+    case .new: return "Users with a registered device who signed up in the last 7 days."
     case .specific: return "Only the users you pick. You can pick yourself to test."
     }
   }
@@ -36,14 +39,40 @@ struct AdminBroadcastDraft {
   var target: AdminBroadcastTarget = .all
   var recipients: [AdminUser] = []
 
+  /// Server limits from the `admin_broadcasts` check constraints.
+  static let titleLimit: Int = 100
+  static let bodyLimit: Int = 500
+
+  /// Languages someone in the audience reads. Everyone and Active always include both.
+  var requiredLanguages: Set<AdminLanguage> {
+    target == .specific ? Set(recipients.map(\.broadcastLanguage)) : Set(AdminLanguage.allCases)
+  }
+
+  func isComplete(_ language: AdminLanguage) -> Bool {
+    let (title, body): (String, String) =
+      language == .english ? (self.title, self.body) : (titleNo, bodyNo)
+    return title.nilIfBlank != nil && body.nilIfBlank != nil
+  }
+
   /// Why the draft can't be sent yet, or `nil` when it can.
   var problem: String? {
-    let required: [String] = [title, body, titleNo, bodyNo]
-    if required.contains(where: { $0.nilIfBlank == nil }) {
-      return "Fill in the title and message in both languages."
-    }
     if target == .specific, recipients.isEmpty {
       return "Pick at least one recipient."
+    }
+    let missing: [AdminLanguage] = AdminLanguage.allCases.filter {
+      requiredLanguages.contains($0) && !isComplete($0)
+    }
+    if !missing.isEmpty {
+      return "Fill in the \(missing.map(\.title).joined(separator: " and ")) title and message."
+    }
+    func length(_ text: String) -> Int {
+      text.trimmingCharacters(in: .whitespacesAndNewlines).count
+    }
+    if max(length(title), length(titleNo)) > Self.titleLimit {
+      return "Titles can be at most \(Self.titleLimit) characters."
+    }
+    if max(length(body), length(bodyNo)) > Self.bodyLimit {
+      return "Messages can be at most \(Self.bodyLimit) characters."
     }
     return nil
   }
@@ -86,13 +115,19 @@ struct AdminBroadcastView: View {
         if draft.target == .specific {
           recipientsSection
         }
-        messageSection("English", title: $draft.title, body: $draft.body, deeplink: $draft.deeplink)
+        messageSection(.english, title: $draft.title, body: $draft.body, deeplink: $draft.deeplink)
         messageSection(
-          "Norwegian", title: $draft.titleNo, body: $draft.bodyNo, deeplink: $draft.deeplinkNo)
+          .norwegian, title: $draft.titleNo, body: $draft.bodyNo, deeplink: $draft.deeplinkNo)
         sendSection
         if !history.isEmpty {
           Section("Recent") {
-            ForEach(history) { AdminBroadcastRow(broadcast: $0) }
+            ForEach(history) { broadcast in
+              NavigationLink {
+                AdminBroadcastDetailView(broadcast: broadcast)
+              } label: {
+                AdminBroadcastRow(broadcast: broadcast)
+              }
+            }
           }
         }
       }
@@ -139,7 +174,11 @@ struct AdminBroadcastView: View {
   private var recipientsSection: some View {
     Section("Recipients") {
       ForEach(draft.recipients) { user in
-        AdminUserLabel(user: user)
+        HStack {
+          AdminUserLabel(user: user)
+          Spacer()
+          AdminBadge(user.broadcastLanguage.code, color: .tidexTextSecondary)
+        }
       }
       .onDelete { draft.recipients.remove(atOffsets: $0) }
       AdminUserSearchRows(excluding: Set(draft.recipients.map(\.id))) {
@@ -149,9 +188,11 @@ struct AdminBroadcastView: View {
   }
 
   private func messageSection(
-    _ language: String, title: Binding<String>, body: Binding<String>, deeplink: Binding<String>
+    _ language: AdminLanguage, title: Binding<String>, body: Binding<String>,
+    deeplink: Binding<String>
   ) -> some View {
-    Section(language) {
+    let isRequired: Bool = draft.requiredLanguages.contains(language)
+    return Section {
       TextField("Title", text: title)
       TextField("Message", text: body, axis: .vertical)
         .lineLimit(2...6)
@@ -160,6 +201,12 @@ struct AdminBroadcastView: View {
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)
         .keyboardType(.URL)
+    } header: {
+      Text(isRequired ? "\(language.title) *" : language.title)
+    } footer: {
+      if !isRequired, !draft.recipients.isEmpty {
+        Text("Optional. None of the recipients get \(language.title) text.")
+      }
     }
   }
 
@@ -212,16 +259,18 @@ struct AdminBroadcastView: View {
   }
 }
 
+/// Colors for `admin_broadcasts.status` and `notifications_outbox.status`.
+func adminBroadcastStatusColor(_ status: String) -> Color {
+  switch status {
+  case "complete", "sent": return .tidexSuccess
+  case "failed", "partial_failure": return .tidexError
+  case "skipped": return .tidexTextMuted
+  default: return .tidexWarning
+  }
+}
+
 private struct AdminBroadcastRow: View {
   let broadcast: AdminBroadcast
-
-  private var statusColor: Color {
-    switch broadcast.status {
-    case "completed": return .tidexSuccess
-    case "failed", "partial_failure": return .tidexError
-    default: return .tidexWarning
-    }
-  }
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -231,7 +280,8 @@ private struct AdminBroadcastRow: View {
           .foregroundStyle(Color.tidexTextPrimary)
           .lineLimit(1)
         Spacer()
-        AdminBadge(broadcast.status.adminHumanized, color: statusColor)
+        AdminBadge(
+          broadcast.status.adminHumanized, color: adminBroadcastStatusColor(broadcast.status))
       }
       Text(broadcast.body)
         .font(.tidexFootnote)

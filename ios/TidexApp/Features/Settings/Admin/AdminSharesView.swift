@@ -18,7 +18,7 @@ struct AdminSharesView: View {
         ForEach(shares ?? []) { share in
           AdminShareRow(share: share)
             .swipeActions {
-              Button("Delete", systemImage: "trash", role: .destructive) { pendingDelete = share }
+              SwipeDeleteButton(title: "Delete") { pendingDelete = share }
             }
         }
       } header: {
@@ -42,7 +42,10 @@ struct AdminSharesView: View {
     }
     .navigationTitle("Shares")
     .navigationBarTitleDisplayMode(.inline)
-    .searchable(text: $query, prompt: "Name, email, phone or ID")
+    .searchable(
+      text: $query, placement: .navigationBarDrawer(displayMode: .always),
+      prompt: "Name, email, phone or ID"
+    )
     .toolbar {
       ToolbarItem(placement: .primaryAction) {
         Button("New share", systemImage: "plus") { isCreating = true }

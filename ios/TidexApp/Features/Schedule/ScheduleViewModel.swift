@@ -317,14 +317,9 @@ final class ShiftsViewModel: MonthNavigable {
   /// Cached summary for the current selection to avoid recomputing on every access.
   private var selectionSummary: SelectionSummary?
 
-  /// Whether selection mode is enabled (taps toggle days instead of opening them).
-  /// Leaving selection mode clears the selection, like Select/Done in Photos or Mail.
-  var isSelectionModeEnabled: Bool = false {
-    didSet {
-      if oldValue, !isSelectionModeEnabled {
-        clearSelection()
-      }
-    }
+  /// Selection mode is on while any day is selected. Taps then toggle days instead of opening them.
+  var isSelectionModeEnabled: Bool {
+    !selectedDates.isEmpty
   }
 
   /// Two-click delete confirmation state
@@ -778,7 +773,6 @@ final class ShiftsViewModel: MonthNavigable {
     // Navigate to the month and select the date
     monthContext.navigateTo(year: year, month: month)
     selectedDates = [shiftDateString]
-    isSelectionModeEnabled = true
   }
 
   /// Evict least recently used cache entries if over limit
@@ -851,20 +845,16 @@ final class ShiftsViewModel: MonthNavigable {
     return false
   }
 
-  /// Long press + drag on the calendar: replace the selection and enter selection mode.
+  /// Long press + drag on the calendar replaces the selection.
   func applyDragSelection(_ dates: Set<String>) {
     confirmingDelete = false
     selectedDates = dates
-    if !dates.isEmpty {
-      isSelectionModeEnabled = true
-    }
   }
 
   /// Clear all selection state
   func clearSelection() {
     selectedDates.removeAll()
     confirmingDelete = false
-    isSelectionModeEnabled = false
     // Also clear copy/move state
     isCopyMode = false
     isMoveMode = false

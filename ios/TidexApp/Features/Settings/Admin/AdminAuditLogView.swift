@@ -52,7 +52,9 @@ struct AdminAuditLogView: View {
     }
     .navigationTitle(targetUserID == nil ? "Audit log" : "Audit history")
     .navigationBarTitleDisplayMode(.inline)
-    .searchable(text: $query, prompt: "Action or email")
+    .searchable(
+      text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Action or email"
+    )
     .task { await load() }
     .refreshable { await load() }
     .adminErrorAlert($errorMessage)

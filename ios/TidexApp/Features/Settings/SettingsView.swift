@@ -360,6 +360,8 @@ struct SettingsView: View {
           }
         }
       }
+      // A Button row draws its label in the tint color, so match the NavigationLink rows.
+      .tint(.tidexTextPrimary)
       .disabled(isOpeningPaySettings)
 
       NavigationLink(value: SettingsDestination.recurringShifts) {

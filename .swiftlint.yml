@@ -194,6 +194,13 @@ custom_rules:
     message: Use the generated LocalizedStringResource symbol instead of a raw localization key.
     severity: error
 
+  no_bare_destructive_swipe_action:
+    name: Bare destructive swipe action
+    regex: '\.swipeActions[^{]*\{[^}]*role:\s*\.destructive'
+    excluded_match_kinds: [comment, doccomment]
+    message: Use SwipeDeleteButton. Swipe buttons take any inherited tint, even with a destructive role.
+    severity: error
+
   no_direct_print:
     name: Direct print
     regex: '(?<![A-Za-z0-9_])print\s*\('

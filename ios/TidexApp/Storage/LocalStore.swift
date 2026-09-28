@@ -2790,23 +2790,6 @@ internal actor LocalStoreActor {
     return localSettings.toUserSettings()
   }
 
-  internal func updateUserSettingsLastActive(userId: String) throws -> Bool {
-    let descriptor = FetchDescriptor<LocalUserSettings>(
-      predicate: #Predicate { $0.userId == userId }
-    )
-
-    guard let localSettings = try modelContext.fetch(descriptor).first else {
-      return false
-    }
-
-    let now = Date()
-    localSettings.lastActive = now
-    localSettings.localUpdatedAt = now
-
-    try modelContext.save()
-    return true
-  }
-
   internal func resolveStoredUserSettingsConflictKeepLocal(userId: String) throws {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }

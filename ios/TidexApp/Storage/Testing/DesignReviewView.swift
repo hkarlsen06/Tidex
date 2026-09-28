@@ -6,7 +6,6 @@
   internal struct DesignReviewView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var selectedDates: Set<String> = []
-    @State private var selectionEnabled: Bool = false
     @State private var startTime: Date? = EventSheetFormatter.date(from: "09:00")
     @State private var endTime: Date? = EventSheetFormatter.date(from: "17:00")
     @State private var showingShiftEditor: Bool = false
@@ -257,8 +256,7 @@
         showEarnings: true, jobs: [], selectedDates: $selectedDates,
         confirmingDelete: false, isDeleting: false, selectedEarnings: nil,
         selectedCurrencyAggregate: nil, selectedHasTaxEnabled: true,
-        isCopyMode: false, isMoveMode: false, isCopying: false, isMoving: false,
-        isSelectionModeEnabled: $selectionEnabled
+        isCopyMode: false, isMoveMode: false, isCopying: false, isMoving: false
       )
     }
 

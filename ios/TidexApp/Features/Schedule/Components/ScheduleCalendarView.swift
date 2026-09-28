@@ -10,8 +10,8 @@ private enum SingleSelectionActionMode: Equatable {
 
 /// Full-featured calendar for the Shifts tab
 /// Shows shift times or earnings per day, ISO week numbers, and monthly totals
-/// Tap opens a day. Long press then drag selects every day with shifts it passes and
-/// enters selection mode, where taps toggle days. The Select toolbar button also enters it.
+/// Tap opens a day. Long press then drag selects every day with shifts it passes.
+/// While any day is selected, taps toggle days instead of opening them.
 struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   private let appearanceManager = AppearanceManager.shared
@@ -82,8 +82,10 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   var onMoveToDate: ((String) -> Void)?
   var onCancelCopyMove: (() -> Void)?
 
-  // Selection mode - when enabled, taps toggle days instead of opening them
-  @Binding var isSelectionModeEnabled: Bool
+  // Selection mode is on while any day is selected. Taps then toggle days instead of opening them.
+  private var isSelectionModeEnabled: Bool {
+    !selectedDates.isEmpty
+  }
 
   // Newly added dates for celebration highlighting
   var newlyAddedDates: Set<String> = []
@@ -161,7 +163,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     onFinishCopy: (() -> Void)? = nil,
     onMoveToDate: ((String) -> Void)? = nil,
     onCancelCopyMove: (() -> Void)? = nil,
-    isSelectionModeEnabled: Binding<Bool>,
     newlyAddedDates: Set<String> = [],
     deepLinkHighlightDates: Set<String> = [],
     conflictDates: Set<String> = [],
@@ -208,7 +209,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     self.onFinishCopy = onFinishCopy
     self.onMoveToDate = onMoveToDate
     self.onCancelCopyMove = onCancelCopyMove
-    _isSelectionModeEnabled = isSelectionModeEnabled
     self.newlyAddedDates = newlyAddedDates
     self.deepLinkHighlightDates = deepLinkHighlightDates
     self.conflictDates = conflictDates
@@ -1205,7 +1205,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 #Preview {
   struct PreviewWrapper: View {
     @State private var selectedDates: Set<String> = []
-    @State private var isSelectionModeEnabled: Bool = false
 
     var body: some View {
       ScrollView {
@@ -1227,7 +1226,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
           isMoveMode: false,
           isCopying: false,
           isMoving: false,
-          isSelectionModeEnabled: $isSelectionModeEnabled,
           newlyAddedDates: []
         )
         .padding()

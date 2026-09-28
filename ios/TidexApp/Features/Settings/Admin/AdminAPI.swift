@@ -14,13 +14,18 @@ enum AdminAPI {
 
   // MARK: Users
 
-  static func users(page: Int, perPage: Int, search: String?) async throws -> AdminUsersPage {
+  static func users(
+    page: Int, perPage: Int, search: String?, sort: AdminUserSort = .name,
+    filter: AdminUserFilter = .all
+  ) async throws -> AdminUsersPage {
     try await rpc(
       "admin_list_users_api",
       [
         "p_page": .integer(page),
         "p_per_page": .integer(perPage),
         "p_search": search.map(AnyJSON.string) ?? .null,
+        "p_sort": .string(sort.rawValue),
+        "p_filter": .string(filter.rawValue),
       ])
   }
 
@@ -130,6 +135,10 @@ enum AdminAPI {
     try await action("admin_send_broadcast_api", draft.rpcParams)
   }
 
+  static func broadcastDetail(id: String) async throws -> AdminBroadcastDetail {
+    try await rpc("admin_get_broadcast_detail_api", ["p_broadcast_id": .string(id)])
+  }
+
   // MARK: Transport
 
   private struct ActionResult: Decodable {
@@ -200,208 +209,5 @@ struct AdminError: LocalizedError {
     default:
       message = error.localizedDescription
     }
-  }
-}
-
-// MARK: - Models
-
-/// Parses the Postgres timestamps the admin RPCs return.
-private func adminDate(_ value: String?) -> Date? {
-  value.flatMap(ISO8601Timestamp.date(from:))
-}
-
-struct AdminUser: Decodable, Identifiable, Hashable, Sendable {
-  let id: String
-  let email: String?
-  let phone: String?
-  let name: String?
-  let lastSignInAt: String?
-  let createdAt: String
-  var isBanned: Bool
-  var isAdmin: Bool
-  let isSuperAdmin: Bool
-
-  var displayName: String {
-    [name, email, phone].lazy.compactMap { $0?.nilIfBlank }.first ?? String(id.prefix(8))
-  }
-
-  /// Email or phone, when it adds something the display name doesn't show.
-  var contact: String? {
-    [email, phone].lazy.compactMap { $0?.nilIfBlank }.first { $0 != displayName }
-  }
-
-  var lastSignIn: Date? { adminDate(lastSignInAt) }
-  var created: Date? { adminDate(createdAt) }
-}
-
-struct AdminUsersPage: Decodable, Sendable {
-  let users: [AdminUser]
-  let totalCount: Int
-}
-
-struct AdminFeedback: Decodable, Identifiable, Hashable, Sendable {
-  let id: String
-  let userId: String
-  let message: String
-  let userEmail: String
-  let userName: String?
-  let userProfilePicture: String?
-  let createdAt: String
-  let response: String?
-  let respondedAt: String?
-
-  var senderName: String { userName?.nilIfBlank ?? userEmail }
-  var isAnswered: Bool { response?.nilIfBlank != nil }
-  var created: Date? { adminDate(createdAt) }
-  var responded: Date? { adminDate(respondedAt) }
-}
-
-private struct AdminFeedbackPage: Decodable, Sendable {
-  let feedback: [AdminFeedback]
-}
-
-enum AdminReportStatus: String, Decodable, CaseIterable, Identifiable, Sendable {
-  case open
-  case inReview = "in_review"
-  case actioned
-  case dismissed
-
-  var id: String { rawValue }
-
-  var title: String {
-    switch self {
-    case .open: return "Open"
-    case .inReview: return "In review"
-    case .actioned: return "Actioned"
-    case .dismissed: return "Dismissed"
-    }
-  }
-}
-
-struct AdminReport: Decodable, Identifiable, Hashable, Sendable {
-  let id: String
-  let reporterUserId: String
-  let reporterName: String?
-  let reporterEmail: String?
-  let reportedUserId: String
-  let reportedName: String?
-  let reportedEmail: String?
-  let threadId: String
-  let messageId: String?
-  let reason: String
-  let note: String?
-  let status: AdminReportStatus
-  let reviewerNotes: String?
-  let reviewedAt: String?
-  let createdAt: String
-
-  var reporterDisplayName: String {
-    reporterName?.nilIfBlank ?? reporterEmail ?? String(reporterUserId.prefix(8))
-  }
-
-  var reportedDisplayName: String {
-    reportedName?.nilIfBlank ?? reportedEmail ?? String(reportedUserId.prefix(8))
-  }
-
-  var reasonTitle: String { reason.adminHumanized }
-  var created: Date? { adminDate(createdAt) }
-  var reviewed: Date? { adminDate(reviewedAt) }
-}
-
-struct AdminReportsPage: Decodable, Sendable {
-  let reports: [AdminReport]
-  let total: Int
-}
-
-struct AdminAuditEntry: Decodable, Identifiable, Hashable, Sendable {
-  let id: String
-  let adminEmail: String?
-  let action: String
-  let targetUserId: String?
-  let targetEmail: String?
-  let metadata: [String: AnyJSON]?
-  let createdAt: String
-
-  var created: Date? { adminDate(createdAt) }
-
-  struct Detail: Hashable {
-    let key: String
-    let value: String
-  }
-
-  /// Metadata as sorted key/value text, skipping nulls.
-  var metadataRows: [Detail] {
-    (metadata ?? [:])
-      .filter { $0.value != .null }
-      .map {
-        Detail(key: $0.key.adminHumanized, value: $0.value.stringValue ?? $0.value.description)
-      }
-      .sorted { $0.key < $1.key }
-  }
-}
-
-private struct AdminAuditPage: Decodable, Sendable {
-  let entries: [AdminAuditEntry]?
-}
-
-struct AdminShare: Decodable, Identifiable, Hashable, Sendable {
-  let id: String
-  let ownerId: String
-  let ownerEmail: String?
-  let ownerName: String?
-  let viewerId: String
-  let viewerEmail: String?
-  let viewerName: String?
-  let createdAt: String
-  let showEarnings: Bool
-  let blocked: Bool
-  let muted: Bool
-
-  var ownerDisplayName: String { ownerName?.nilIfBlank ?? ownerEmail ?? String(ownerId.prefix(8)) }
-  var viewerDisplayName: String {
-    viewerName?.nilIfBlank ?? viewerEmail ?? String(viewerId.prefix(8))
-  }
-  var created: Date? { adminDate(createdAt) }
-}
-
-struct AdminSharesPage: Decodable, Sendable {
-  let shares: [AdminShare]?
-  let totalCount: Int?
-}
-
-struct AdminBroadcast: Decodable, Identifiable, Hashable, Sendable {
-  let id: String
-  let title: String
-  let body: String
-  let target: String
-  let targetCount: Int
-  let status: String
-  let createdAt: String
-  let sentCount: Int
-  let failedCount: Int
-  let pendingCount: Int
-
-  var created: Date? { adminDate(createdAt) }
-}
-
-private struct AdminBroadcastPage: Decodable, Sendable {
-  let broadcasts: [AdminBroadcast]
-}
-
-private struct AdminCount: Decodable, Sendable {
-  let count: Int
-}
-
-// MARK: - Helpers
-
-extension String {
-  var nilIfBlank: String? {
-    trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : self
-  }
-
-  /// "shift_share_created" becomes "Shift share created".
-  var adminHumanized: String {
-    let words: String = replacingOccurrences(of: "_", with: " ")
-    return words.prefix(1).uppercased() + words.dropFirst()
   }
 }

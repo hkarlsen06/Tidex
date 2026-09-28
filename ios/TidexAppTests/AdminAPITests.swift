@@ -5,14 +5,15 @@ import XCTest
 
 internal final class AdminAPITests: XCTestCase {
   private func user(
-    id: String = "u1", name: String? = nil, email: String? = nil, phone: String? = nil
+    id: String = "u1", name: String? = nil, email: String? = nil, phone: String? = nil,
+    language: String? = nil
   )
     -> AdminUser
   {
     AdminUser(
       id: id, email: email, phone: phone, name: name, lastSignInAt: nil,
       createdAt: "2026-09-28T10:00:00.123456+00:00", isBanned: false, isAdmin: false,
-      isSuperAdmin: false)
+      isSuperAdmin: false, language: language)
   }
 
   private func filledDraft() -> AdminBroadcastDraft {
@@ -58,6 +59,76 @@ internal final class AdminAPITests: XCTestCase {
 
     draft.target = .specific
     XCTAssertEqual(draft.rpcParams["p_specific_user_ids"], .array([.string("a"), .string("b")]))
+  }
+
+  internal func testNorwegianRecipientsOnlyNeedNorwegianText() {
+    var draft: AdminBroadcastDraft = AdminBroadcastDraft(titleNo: "Hei", bodyNo: "Nytt")
+    draft.target = .specific
+    draft.recipients = [user(id: "a", language: "no"), user(id: "b", language: "no")]
+
+    XCTAssertEqual(draft.requiredLanguages, [.norwegian])
+    XCTAssertNil(draft.problem)
+    XCTAssertEqual(draft.rpcParams["p_title"], .null)
+    XCTAssertEqual(draft.rpcParams["p_title_no"], .string("Hei"))
+  }
+
+  internal func testEnglishRecipientsOnlyNeedEnglishText() {
+    var draft: AdminBroadcastDraft = AdminBroadcastDraft(title: "Hi", body: "News")
+    draft.target = .specific
+    draft.recipients = [user(language: "en")]
+
+    XCTAssertEqual(draft.requiredLanguages, [.english])
+    XCTAssertNil(draft.problem)
+  }
+
+  internal func testMixedRecipientsNeedBothLanguages() {
+    var draft: AdminBroadcastDraft = AdminBroadcastDraft(title: "Hi", body: "News")
+    draft.target = .specific
+    draft.recipients = [user(id: "a", language: "en"), user(id: "b", language: "no")]
+
+    XCTAssertEqual(draft.requiredLanguages, [.english, .norwegian])
+    XCTAssertEqual(draft.problem, "Fill in the Norwegian title and message.")
+  }
+
+  internal func testEveryoneAudienceNeedsBothLanguagesEvenWithStaleRecipients() {
+    var draft: AdminBroadcastDraft = AdminBroadcastDraft(title: "Hi", body: "News")
+    draft.recipients = [user(language: "en")]
+
+    XCTAssertEqual(draft.requiredLanguages, [.english, .norwegian])
+    XCTAssertNotNil(draft.problem)
+  }
+
+  internal func testTitleOverServerLimitIsRejected() {
+    var draft: AdminBroadcastDraft = filledDraft()
+    draft.titleNo = String(repeating: "a", count: AdminBroadcastDraft.titleLimit + 1)
+
+    XCTAssertEqual(draft.problem, "Titles can be at most 100 characters.")
+  }
+
+  internal func testUserWithoutLanguageGetsEnglish() {
+    XCTAssertEqual(user().broadcastLanguage, .english)
+    XCTAssertEqual(user(language: "no").broadcastLanguage, .norwegian)
+  }
+
+  internal func testBroadcastDetailDecodesServerShape() throws {
+    let json: Data = Data(
+      #"""
+      {"id":"b1","title":null,"body":null,"deeplink":null,"titleNo":"Hei","bodyNo":"Test",
+       "deeplinkNo":null,"target":"specific","targetCount":1,"status":"queued",
+       "createdAt":"2026-09-28T06:05:05.404665+00:00","adminEmail":"a@b.no",
+       "recipients":[{"id":"o1","userId":"u1","name":"Hjalmar","email":"a@b.no","phone":null,
+         "title":"Hei","status":"failed","attempts":3,"deeplink":null,
+         "errorMessage":"BadDeviceToken","processedAt":null}]}
+      """#.utf8)
+
+    let detail: AdminBroadcastDetail = try JSONDecoder().decode(
+      AdminBroadcastDetail.self, from: json)
+
+    XCTAssertNil(detail.title)
+    XCTAssertEqual(detail.titleNo, "Hei")
+    XCTAssertEqual(detail.recipients.first?.displayName, "Hjalmar")
+    XCTAssertEqual(detail.recipients.first?.errorMessage, "BadDeviceToken")
+    XCTAssertNotNil(detail.created)
   }
 
   // MARK: Errors

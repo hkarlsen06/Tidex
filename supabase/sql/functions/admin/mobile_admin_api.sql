@@ -41,10 +41,45 @@ BEGIN
 END;
 $function$;
 
+-- Norwegian locales get Norwegian broadcast text; everyone else gets English.
+CREATE OR REPLACE FUNCTION internal.admin_broadcast_language(p_locale text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+SET search_path TO ''
+AS $function$
+  SELECT CASE WHEN lower(COALESCE(p_locale, '')) ~ '^(no|nb|nn)([-_].*)?$' THEN 'no' ELSE 'en' END;
+$function$;
+
+REVOKE ALL ON FUNCTION internal.admin_broadcast_language(text) FROM PUBLIC, anon, authenticated;
+
+-- When a user last used the app, for the admin users list and the Active broadcast audience.
+CREATE OR REPLACE FUNCTION internal.admin_user_last_active(p_user_id uuid)
+RETURNS timestamptz
+LANGUAGE sql
+STABLE
+SET search_path TO ''
+AS $function$
+  -- The latest session refresh (the app refreshes its token while in use) or sign-in.
+  -- auth.sessions.refreshed_at is a UTC timestamp without a time zone.
+  SELECT GREATEST(
+    (
+      SELECT max(GREATEST(s.refreshed_at AT TIME ZONE 'UTC', s.updated_at))
+      FROM auth.sessions s
+      WHERE s.user_id = p_user_id
+    ),
+    (SELECT u.last_sign_in_at FROM auth.users u WHERE u.id = p_user_id)
+  );
+$function$;
+
+REVOKE ALL ON FUNCTION internal.admin_user_last_active(uuid) FROM PUBLIC, anon, authenticated;
+
 CREATE OR REPLACE FUNCTION public.admin_list_users_api(
   p_page integer DEFAULT 1,
   p_per_page integer DEFAULT 20,
-  p_search text DEFAULT NULL
+  p_search text DEFAULT NULL,
+  p_sort text DEFAULT 'name',
+  p_filter text DEFAULT 'all'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -55,11 +90,20 @@ DECLARE
   v_page integer := GREATEST(COALESCE(p_page, 1), 1);
   v_per_page integer := LEAST(GREATEST(COALESCE(p_per_page, 20), 1), 100);
   v_offset integer := (v_page - 1) * v_per_page;
+  v_sort text := COALESCE(p_sort, 'name');
+  v_filter text := COALESCE(p_filter, 'all');
 BEGIN
   PERFORM public.assert_is_admin();
 
+  IF v_sort NOT IN ('name', 'newest', 'last_sign_in', 'last_active') THEN
+    RAISE EXCEPTION 'Invalid sort. Must be name, newest, last_sign_in, or last_active';
+  END IF;
+  IF v_filter NOT IN ('all', 'active', 'new', 'admins', 'banned', 'norwegian', 'english') THEN
+    RAISE EXCEPTION 'Invalid filter. Must be all, active, new, admins, banned, norwegian, or english';
+  END IF;
+
   RETURN (
-    WITH filtered AS (
+    WITH base AS (
       SELECT
         u.id,
         u.email,
@@ -69,15 +113,32 @@ BEGIN
         u.created_at,
         u.banned_until,
         COALESCE(u.raw_app_meta_data->>'role', '') = 'admin' AS is_admin,
-        u.id = '032d8c2a-9af6-4777-99f0-24e2c4058bf3'::uuid AS is_super_admin
+        u.id = '032d8c2a-9af6-4777-99f0-24e2c4058bf3'::uuid AS is_super_admin,
+        internal.admin_broadcast_language(u.raw_user_meta_data->>'locale') AS language,
+        internal.admin_user_last_active(u.id) AS last_active
       FROM auth.users u
       WHERE
-        p_search IS NULL
-        OR p_search = ''
-        OR lower(COALESCE(u.email, '')) LIKE '%' || lower(p_search) || '%'
-        OR lower(COALESCE(u.phone, '')) LIKE '%' || lower(p_search) || '%'
-        OR lower(COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', '')) LIKE '%' || lower(p_search) || '%'
-        OR u.id::text LIKE '%' || lower(p_search) || '%'
+        (
+          p_search IS NULL
+          OR p_search = ''
+          OR lower(COALESCE(u.email, '')) LIKE '%' || lower(p_search) || '%'
+          OR lower(COALESCE(u.phone, '')) LIKE '%' || lower(p_search) || '%'
+          OR lower(COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', '')) LIKE '%' || lower(p_search) || '%'
+          OR u.id::text LIKE '%' || lower(p_search) || '%'
+        )
+    ),
+    filtered AS (
+      SELECT *
+      FROM base b
+      WHERE CASE v_filter
+        WHEN 'active' THEN b.last_active >= now() - interval '7 days'
+        WHEN 'new' THEN b.created_at >= now() - interval '7 days'
+        WHEN 'admins' THEN b.is_admin OR b.is_super_admin
+        WHEN 'banned' THEN b.banned_until IS NOT NULL
+        WHEN 'norwegian' THEN b.language = 'no'
+        WHEN 'english' THEN b.language = 'en'
+        ELSE true
+      END
     ),
     enriched AS (
       SELECT
@@ -103,7 +164,13 @@ BEGIN
     paged AS (
       SELECT *
       FROM enriched
-      ORDER BY lower(COALESCE(name, email, phone, '')), created_at DESC
+      ORDER BY
+        CASE WHEN v_sort = 'newest' THEN created_at END DESC,
+        CASE WHEN v_sort = 'last_sign_in' THEN last_sign_in_at END DESC NULLS LAST,
+        CASE WHEN v_sort = 'last_active' THEN last_active END DESC NULLS LAST,
+        lower(COALESCE(name, email, phone, '')),
+        created_at DESC,
+        id
       LIMIT v_per_page
       OFFSET v_offset
     )
@@ -116,7 +183,9 @@ BEGIN
             'phone', phone,
             'name', name,
             'lastSignInAt', last_sign_in_at,
+            'lastActiveAt', last_active,
             'createdAt', created_at,
+            'language', language,
             'isBanned', banned_until IS NOT NULL,
             'bannedUntil', banned_until,
             'isAdmin', is_admin,
@@ -136,6 +205,13 @@ BEGIN
                 ELSE 'free'
               END
           )
+          ORDER BY
+            CASE WHEN v_sort = 'newest' THEN created_at END DESC,
+            CASE WHEN v_sort = 'last_sign_in' THEN last_sign_in_at END DESC NULLS LAST,
+            CASE WHEN v_sort = 'last_active' THEN last_active END DESC NULLS LAST,
+            lower(COALESCE(name, email, phone, '')),
+            created_at DESC,
+            id
         ),
         '[]'::jsonb
       ),
@@ -867,16 +943,16 @@ BEGIN
     WITH rows AS (
       SELECT
         ab.id,
-        ab.title,
-        ab.body,
+        COALESCE(ab.title, ab.title_no) AS title,
+        COALESCE(ab.body, ab.body_no) AS body,
         ab.target,
         ab.target_count,
         ab.status,
         ab.created_at,
-        COUNT(*) FILTER (WHERE no.status = 'sent')::integer AS sent_count,
-        COUNT(*) FILTER (WHERE no.status = 'failed')::integer AS failed_count,
-        COUNT(*) FILTER (WHERE no.status = 'skipped')::integer AS skipped_count,
-        COUNT(*) FILTER (WHERE no.status IN ('pending', 'sending'))::integer AS pending_count
+        COUNT(no.id) FILTER (WHERE no.status = 'sent')::integer AS sent_count,
+        COUNT(no.id) FILTER (WHERE no.status = 'failed')::integer AS failed_count,
+        COUNT(no.id) FILTER (WHERE no.status = 'skipped')::integer AS skipped_count,
+        COUNT(no.id) FILTER (WHERE no.status IN ('pending', 'sending'))::integer AS pending_count
       FROM internal.admin_broadcasts ab
       LEFT JOIN internal.notifications_outbox no ON no.broadcast_id = ab.id
       GROUP BY ab.id
@@ -906,6 +982,82 @@ BEGIN
     )
     FROM rows
   );
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.admin_get_broadcast_detail_api(p_broadcast_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'internal', 'auth'
+AS $function$
+DECLARE
+  v_result jsonb;
+BEGIN
+  PERFORM public.assert_is_admin();
+
+  SELECT jsonb_build_object(
+    'id', ab.id,
+    'title', ab.title,
+    'body', ab.body,
+    'deeplink', ab.deeplink,
+    'titleNo', ab.title_no,
+    'bodyNo', ab.body_no,
+    'deeplinkNo', ab.deeplink_no,
+    'target', ab.target,
+    'targetCount', ab.target_count,
+    'status', ab.status,
+    'createdAt', ab.created_at,
+    'adminEmail', au.email,
+    'recipients', COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'id', d.id,
+          'userId', d.recipient_id,
+          'name', d.name,
+          'email', d.email,
+          'phone', d.phone,
+          'status', d.status,
+          'title', d.title,
+          'deeplink', d.data_payload->>'deeplink',
+          'attempts', d.attempts,
+          'errorMessage', d.error_message,
+          'processedAt', d.processed_at
+        )
+        ORDER BY
+          CASE d.status WHEN 'failed' THEN 0 WHEN 'pending' THEN 1 WHEN 'sending' THEN 1 WHEN 'skipped' THEN 2 ELSE 3 END,
+          lower(COALESCE(d.name, d.email, d.phone, ''))
+      )
+      FROM (
+        SELECT
+          no.id,
+          no.recipient_id,
+          COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name') AS name,
+          u.email,
+          u.phone,
+          no.status,
+          no.title,
+          no.data_payload,
+          no.attempts,
+          no.error_message,
+          no.processed_at
+        FROM internal.notifications_outbox no
+        LEFT JOIN auth.users u ON u.id = no.recipient_id
+        WHERE no.broadcast_id = ab.id
+        LIMIT 2000
+      ) d
+    ), '[]'::jsonb)
+  )
+  INTO v_result
+  FROM internal.admin_broadcasts ab
+  LEFT JOIN auth.users au ON au.id = ab.admin_id
+  WHERE ab.id = p_broadcast_id;
+
+  IF v_result IS NULL THEN
+    RAISE EXCEPTION 'Broadcast not found';
+  END IF;
+
+  RETURN v_result;
 END;
 $function$;
 
@@ -944,10 +1096,15 @@ BEGIN
     SELECT COUNT(DISTINCT pd.user_id)::integer
     INTO v_count
     FROM internal.push_devices pd
-    INNER JOIN public.user_settings us ON us.user_id = pd.user_id
-    WHERE us.last_active >= now() - interval '7 days';
+    WHERE internal.admin_user_last_active(pd.user_id) >= now() - interval '7 days';
+  ELSIF p_target = 'new' THEN
+    SELECT COUNT(DISTINCT pd.user_id)::integer
+    INTO v_count
+    FROM internal.push_devices pd
+    INNER JOIN auth.users u ON u.id = pd.user_id
+    WHERE u.created_at >= now() - interval '7 days';
   ELSE
-    RAISE EXCEPTION 'Invalid target. Must be all, pro, active, or specific';
+    RAISE EXCEPTION 'Invalid target. Must be all, pro, active, new, or specific';
   END IF;
 
   RETURN jsonb_build_object('count', v_count);
@@ -974,8 +1131,29 @@ DECLARE
   v_admin_id uuid := auth.uid();
   v_broadcast_id uuid;
   v_target_user_ids uuid[];
+  v_title text := NULLIF(btrim(COALESCE(p_title, '')), '');
+  v_body text := NULLIF(btrim(COALESCE(p_body, '')), '');
+  v_deeplink text := NULLIF(btrim(COALESCE(p_deeplink, '')), '');
+  v_title_no text := NULLIF(btrim(COALESCE(p_title_no, '')), '');
+  v_body_no text := NULLIF(btrim(COALESCE(p_body_no, '')), '');
+  v_deeplink_no text := NULLIF(btrim(COALESCE(p_deeplink_no, '')), '');
+  v_has_en boolean;
+  v_has_no boolean;
 BEGIN
   PERFORM public.assert_is_admin();
+
+  v_has_en := v_title IS NOT NULL AND v_body IS NOT NULL;
+  v_has_no := v_title_no IS NOT NULL AND v_body_no IS NOT NULL;
+
+  IF NOT v_has_en AND NOT v_has_no THEN
+    RETURN jsonb_build_object('success', false, 'message', 'Add a title and message in at least one language');
+  END IF;
+  IF char_length(COALESCE(v_title, '')) > 100 OR char_length(COALESCE(v_title_no, '')) > 100 THEN
+    RETURN jsonb_build_object('success', false, 'message', 'Titles can be at most 100 characters');
+  END IF;
+  IF char_length(COALESCE(v_body, '')) > 500 OR char_length(COALESCE(v_body_no, '')) > 500 THEN
+    RETURN jsonb_build_object('success', false, 'message', 'Messages can be at most 500 characters');
+  END IF;
 
   IF p_target = 'specific' THEN
     v_target_user_ids := COALESCE(p_specific_user_ids, ARRAY[]::uuid[]);
@@ -994,8 +1172,13 @@ BEGIN
     SELECT array_agg(DISTINCT pd.user_id)
     INTO v_target_user_ids
     FROM internal.push_devices pd
-    INNER JOIN public.user_settings us ON us.user_id = pd.user_id
-    WHERE us.last_active >= now() - interval '7 days';
+    WHERE internal.admin_user_last_active(pd.user_id) >= now() - interval '7 days';
+  ELSIF p_target = 'new' THEN
+    SELECT array_agg(DISTINCT pd.user_id)
+    INTO v_target_user_ids
+    FROM internal.push_devices pd
+    INNER JOIN auth.users u ON u.id = pd.user_id
+    WHERE u.created_at >= now() - interval '7 days';
   ELSE
     RAISE EXCEPTION 'Invalid target';
   END IF;
@@ -1009,13 +1192,19 @@ BEGIN
     title,
     body,
     deeplink,
+    title_no,
+    body_no,
+    deeplink_no,
     target,
     target_count
   ) VALUES (
     v_admin_id,
-    btrim(p_title),
-    btrim(p_body),
-    NULLIF(btrim(COALESCE(p_deeplink, '')), ''),
+    CASE WHEN v_has_en THEN v_title END,
+    CASE WHEN v_has_en THEN v_body END,
+    CASE WHEN v_has_en THEN v_deeplink END,
+    CASE WHEN v_has_no THEN v_title_no END,
+    CASE WHEN v_has_no THEN v_body_no END,
+    CASE WHEN v_has_no THEN v_deeplink_no END,
     p_target,
     array_length(v_target_user_ids, 1)
   )
@@ -1034,43 +1223,26 @@ BEGIN
   )
   SELECT
     v_admin_id,
-    u.id,
+    r.id,
     v_broadcast_id,
     'admin_broadcast',
     now(),
-    CASE
-      WHEN COALESCE(u.raw_user_meta_data->>'locale', 'en') IN ('no', 'nb', 'nn')
-        OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'no-%'
-        OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'nb-%'
-        OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'nn-%'
-      THEN btrim(p_title_no)
-      ELSE btrim(p_title)
-    END,
-    CASE
-      WHEN COALESCE(u.raw_user_meta_data->>'locale', 'en') IN ('no', 'nb', 'nn')
-        OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'no-%'
-        OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'nb-%'
-        OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'nn-%'
-      THEN btrim(p_body_no)
-      ELSE btrim(p_body)
-    END,
+    CASE WHEN r.use_no THEN v_title_no ELSE v_title END,
+    CASE WHEN r.use_no THEN v_body_no ELSE v_body END,
     jsonb_build_object(
       'type', 'admin_broadcast',
-      'deeplink',
-        CASE
-          WHEN (COALESCE(u.raw_user_meta_data->>'locale', 'en') IN ('no', 'nb', 'nn')
-            OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'no-%'
-            OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'nb-%'
-            OR COALESCE(u.raw_user_meta_data->>'locale', 'en') LIKE 'nn-%')
-            AND NULLIF(btrim(COALESCE(p_deeplink_no, '')), '') IS NOT NULL
-          THEN NULLIF(btrim(COALESCE(p_deeplink_no, '')), '')
-          ELSE NULLIF(btrim(COALESCE(p_deeplink, '')), '')
-        END,
+      'deeplink', CASE WHEN r.use_no THEN COALESCE(v_deeplink_no, v_deeplink) ELSE v_deeplink END,
       'broadcast_id', v_broadcast_id
     ),
-    'broadcast:' || v_broadcast_id::text || ':' || u.id::text
-  FROM auth.users u
-  WHERE u.id = ANY(v_target_user_ids);
+    'broadcast:' || v_broadcast_id::text || ':' || r.id::text
+  FROM (
+    SELECT
+      u.id,
+      (internal.admin_broadcast_language(u.raw_user_meta_data->>'locale') = 'no' AND v_has_no)
+        OR NOT v_has_en AS use_no
+    FROM auth.users u
+    WHERE u.id = ANY(v_target_user_ids)
+  ) r;
 
   UPDATE internal.admin_broadcasts
   SET status = 'queued'
@@ -1082,10 +1254,14 @@ BEGIN
     NULL,
     jsonb_build_object(
       'broadcast_id', v_broadcast_id,
-      'title', btrim(p_title),
+      'title', COALESCE(CASE WHEN v_has_en THEN v_title END, v_title_no),
+      'languages', to_jsonb(array_remove(ARRAY[
+        CASE WHEN v_has_en THEN 'en' END,
+        CASE WHEN v_has_no THEN 'no' END
+      ], NULL)),
       'target', p_target,
       'target_count', array_length(v_target_user_ids, 1),
-      'deeplink', NULLIF(btrim(COALESCE(p_deeplink, '')), '')
+      'deeplink', COALESCE(v_deeplink, v_deeplink_no)
     )
   );
 
@@ -1097,7 +1273,7 @@ END;
 $function$;
 
 GRANT EXECUTE ON FUNCTION public.admin_log_action_rpc(text, uuid, text, jsonb) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.admin_list_users_api(integer, integer, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_list_users_api(integer, integer, text, text, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_toggle_grandfathered_api(uuid, text, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_manage_trial_api(uuid, text, text, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_subscribers_api(text) TO authenticated;
@@ -1113,3 +1289,4 @@ GRANT EXECUTE ON FUNCTION public.admin_delete_share_api(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_broadcast_history_api() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_preview_notification_target_api(text, uuid[], boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_send_broadcast_api(text, text, text, text, text, text, text, uuid[], boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_broadcast_detail_api(uuid) TO authenticated;
