@@ -9,8 +9,8 @@ internal final class ClockSessionRulesTests: XCTestCase {
     XCTAssertEqual(ClockSessionRules.timeString(from: date), "09:07")
   }
 
-  internal func testHasExceededEndOfDayLimitOnlyAfterCutoff() {
-    let startedAt: Date = Date.fromDateAndTime("2026-03-02", time: "08:00") ?? Date()
+  internal func testNightSessionSurvivesMidnightUntilMaxDuration() {
+    let startedAt: Date = Date.fromDateAndTime("2026-03-02", time: "22:00") ?? Date()
     let session: TemporaryClockSession = TemporaryClockSession(
       id: "clock-1",
       userId: "user-1",
@@ -19,11 +19,13 @@ internal final class ClockSessionRulesTests: XCTestCase {
       createdAt: startedAt
     )
 
-    let atCutoff: Date = Date.fromDateAndTime("2026-03-02", time: "23:59") ?? Date()
-    let afterCutoff: Date = Date.fromDateAndTime("2026-03-03", time: "00:00") ?? Date()
+    let afterMidnight: Date = Date.fromDateAndTime("2026-03-03", time: "03:00") ?? Date()
+    let justBeforeLimit: Date = Date.fromDateAndTime("2026-03-03", time: "21:59") ?? Date()
+    let atLimit: Date = Date.fromDateAndTime("2026-03-03", time: "22:00") ?? Date()
 
-    XCTAssertEqual(ClockSessionRules.hasExceededEndOfDayLimit(session, at: atCutoff), false)
-    XCTAssertEqual(ClockSessionRules.hasExceededEndOfDayLimit(session, at: afterCutoff), true)
+    XCTAssertEqual(ClockSessionRules.hasExceededMaxDuration(session, at: afterMidnight), false)
+    XCTAssertEqual(ClockSessionRules.hasExceededMaxDuration(session, at: justBeforeLimit), false)
+    XCTAssertEqual(ClockSessionRules.hasExceededMaxDuration(session, at: atLimit), true)
   }
 
   internal func testIsShiftOngoingForSameDayShift() {

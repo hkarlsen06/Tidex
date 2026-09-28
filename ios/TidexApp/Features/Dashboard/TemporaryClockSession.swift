@@ -1,7 +1,7 @@
 import ActivityKit
 import Foundation
-import os.log
 import UIKit
+import os.log
 
 private let clockSessionLogger = Logger(subsystem: "com.tidex.app", category: "ClockSession")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
 
@@ -35,17 +35,18 @@ enum ClockSessionRules {  // swiftlint:disable:this explicit_acl explicit_top_le
     date.toHourMinuteString()
   }
 
-  static func hasExceededEndOfDayLimit(  // swiftlint:disable:this explicit_acl
+  /// Shifts store only HH:mm start and end times, so a clocked shift must end within 24 hours.
+  static let maxClockDuration: TimeInterval = 24 * 60 * 60  // swiftlint:disable:this explicit_acl no_magic_numbers
+
+  static func exceedsMaxDuration(from start: Date, to end: Date) -> Bool {  // swiftlint:disable:this explicit_acl
+    end.timeIntervalSince(start) >= maxClockDuration
+  }
+
+  static func hasExceededMaxDuration(  // swiftlint:disable:this explicit_acl
     _ session: TemporaryClockSession,
     at referenceDate: Date
   ) -> Bool {
-    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
-    let startOfDay = calendar.startOfDay(for: session.startedAt)  // swiftlint:disable:this explicit_type_interface
-    guard let cutoff = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: startOfDay)  // swiftlint:disable:this line_length no_magic_numbers
-    else {
-      return false
-    }
-    return referenceDate > cutoff
+    exceedsMaxDuration(from: session.startedAt, to: referenceDate)
   }
 
   static func isShiftOngoing(_ shift: ShiftRow, at date: Date) -> Bool {  // swiftlint:disable:this explicit_acl
@@ -134,7 +135,7 @@ final class ClockSessionReconciler {  // swiftlint:disable:this explicit_acl exp
 
     guard let temporarySession = clockSessionStore.activeSession(for: userId) else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
 
-    if Self.hasExceededEndOfDayLimit(temporarySession, at: referenceDate) {
+    if Self.hasExceededMaxDuration(temporarySession, at: referenceDate) {
       cancelTemporarySession(temporarySession)
       notifyShiftsDidChange(context: .affecting(date: temporarySession.startedAt))
       ((UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared)?
@@ -236,11 +237,11 @@ final class ClockSessionReconciler {  // swiftlint:disable:this explicit_acl exp
     ClockSessionRules.timeString(from: date)
   }
 
-  private static func hasExceededEndOfDayLimit(
+  private static func hasExceededMaxDuration(
     _ session: TemporaryClockSession, at referenceDate: Date
   )
     -> Bool
   {
-    ClockSessionRules.hasExceededEndOfDayLimit(session, at: referenceDate)
+    ClockSessionRules.hasExceededMaxDuration(session, at: referenceDate)
   }
 }

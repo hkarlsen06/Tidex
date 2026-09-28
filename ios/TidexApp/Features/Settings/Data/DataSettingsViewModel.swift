@@ -1,9 +1,9 @@
 import Combine
 import Foundation
-import os.log
 import PDFKit
 import Supabase
 import UIKit
+import os.log
 
 private let kLogger: Logger = Logger(
   subsystem: "com.tidex.app",
@@ -98,7 +98,8 @@ internal struct ExportedShift: Codable, Sendable {
   internal let date: String
   internal let startTime: String
   internal let endTime: String
-  internal let type: Int  // 0 = weekday, 1 = saturday, 2 = sunday
+  internal let type: Int  // 0 = weekday, 1 = saturday, 2 = sunday or public holiday
+  internal let jobName: String
   internal let recurringId: String?
   internal let calc: ShiftCalculation
 }
@@ -408,7 +409,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     didHandleCalendarSetupIntent = true
 
     switch calendarSetupIntent {
-    case let .setup(mode, autoOpen):
+    case .setup(let mode, let autoOpen):
       guard autoOpen else {
         return
       }
@@ -452,20 +453,26 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       referenceDate: Date()
     ).primary.currency
 
+    let jobNames = Dictionary(
+      context.jobs.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+
     return ExportResponse(
       generatedAt: ISO8601DateFormatter().string(from: Date()),
       currencySymbol: currency,
-      shifts: included.map { makeExportedShift(from: $0) }
+      shifts: included.map { makeExportedShift(from: $0, jobNames: jobNames) }
     )
   }
 
-  private func makeExportedShift(from shift: ShiftWithComputations) -> ExportedShift {
+  private func makeExportedShift(from shift: ShiftWithComputations, jobNames: [String: String])
+    -> ExportedShift
+  {
     ExportedShift(
       id: shift.id,
       date: shift.shiftDate,
       startTime: shift.startTime,
       endTime: shift.endTime,
-      type: getShiftType(dateISO: shift.shiftDate),
+      type: Self.shiftType(dateISO: shift.shiftDate),
+      jobName: shift.shift.job_id.flatMap { jobNames[$0] } ?? "",
       recurringId: shift.shift.recurring_id,
       calc: ExportedShift.ShiftCalculation(
         hours: shift.computed.paidHours,
@@ -476,9 +483,12 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     )
   }
 
-  private func getShiftType(dateISO: String) -> Int {
+  nonisolated static func shiftType(dateISO: String) -> Int {
     guard let date = parseISODate(dateISO) else {
       return 0
+    }
+    if NorwegianHolidays.isPublicHoliday(date) {
+      return 2
     }
     let calendar: Calendar = Calendar.current
     let weekday: Int = calendar.component(.weekday, from: date)
@@ -990,7 +1000,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
   }
 
   /// Generate CSV from export data
-  private nonisolated static func generateCSV(
+  nonisolated static func generateCSV(
     from data: ExportResponse,
     range: (from: String, to: String),
     localeIdentifier: String
@@ -1002,6 +1012,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     let headers = [
       String(localized: .dataExportTableDate),
       String(localized: .dataExportTableDay),
+      String(localized: .dataExportTableJob),
       String(localized: .dataExportTableStart),
       String(localized: .dataExportTableEnd),
       String(localized: .dataExportTableHours),
@@ -1030,6 +1041,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       let row = [
         dateStr,
         dayStr,
+        shift.jobName,
         shift.startTime,
         shift.endTime,
         String(format: "%.2f", shift.calc.hours),
@@ -1050,6 +1062,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     let sumLabel = String(localized: .dataExportPdfSumLabel).replacingOccurrences(of: ":", with: "")
     let totalsRow = [
       sumLabel,
+      "",
       "",
       "",
       "",

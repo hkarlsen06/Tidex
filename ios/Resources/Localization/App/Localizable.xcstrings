@@ -70779,287 +70779,6 @@
         }
       }
     },
-    "dashboard.clock.error.endOfDayLimitExceeded" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "لا يمكن حفظ جلسة تسجيل الوقت هذه إلا قبل منتصف الليل في يوم البدء."
-          }
-        },
-        "bg" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Тази сесия за отчитане на работното време може да се запази само преди полунощ в деня на започване."
-          }
-        },
-        "bn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "শুরুর দিনের মধ্যরাতের আগে এই ক্লক সেশনটি সংরক্ষণ করা যাবে।"
-          }
-        },
-        "ca" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aquesta sessió de fitxatge només es pot desar abans de mitjanit del dia d'inici."
-          }
-        },
-        "cs" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tuto relaci měření času lze uložit pouze před půlnocí v den zahájení."
-          }
-        },
-        "da" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denne tidsregistrering kan kun gemmes før midnat på startdagen."
-          }
-        },
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Diese Zeiterfassung kann nur vor Mitternacht des Starttags gespeichert werden."
-          }
-        },
-        "el" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Αυτή η καταγραφή ώρας μπορεί να αποθηκευτεί μόνο πριν από τα μεσάνυχτα της ημέρας έναρξης."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This clock session can only be saved before midnight on the start day."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esta sesión de fichaje solo se puede guardar antes de la medianoche del día de inicio."
-          }
-        },
-        "et" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Selle tööaja seansi saab salvestada ainult alguspäeval enne südaööd."
-          }
-        },
-        "fa" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "این جلسه ثبت ساعت فقط تا قبل از نیمه‌شب روز شروع قابل ذخیره است."
-          }
-        },
-        "fi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tämän kellotusjakson voi tallentaa vain aloituspäivänä ennen keskiyötä."
-          }
-        },
-        "fil" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ang session ng pag-clock na ito ay maaari lamang i-save bago maghatinggabi sa araw ng pagsisimula."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cette session de pointage ne peut être enregistrée qu'avant minuit le jour de début."
-          }
-        },
-        "he" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ניתן לשמור את סשן השעון הזה רק לפני חצות ביום ההתחלה."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "यह समय-ट्रैकिंग सत्र केवल प्रारंभ दिन की मध्यरात्रि से पहले सहेजा जा सकता है।"
-          }
-        },
-        "hr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ova se sesija radnog vremena može spremiti samo prije ponoći na dan početka."
-          }
-        },
-        "hu" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ez a munkaidő-rögzítés csak a kezdőnap éjféle előtt menthető."
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sesi pencatatan waktu ini hanya dapat disimpan sebelum tengah malam pada hari mulai."
-          }
-        },
-        "is" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Þessa stimplun er aðeins hægt að vista fyrir miðnætti á upphafsdeginum."
-          }
-        },
-        "it" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Questa sessione di timbratura può essere salvata solo prima di mezzanotte del giorno di inizio."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "この打刻セッションは、開始日の深夜0時までにしか保存できません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 근무 기록은 시작일 자정 전까지만 저장할 수 있습니다."
-          }
-        },
-        "lt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Šią darbo laiko registravimo sesiją galima išsaugoti tik iki vidurnakčio tą dieną, kai ji pradėta."
-          }
-        },
-        "lv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Šo darba laika uzskaites sesiju var saglabāt tikai pirms pusnakts tās sākuma dienā."
-          }
-        },
-        "nb" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denne stemplingen kan bare lagres før midnatt på startdagen."
-          }
-        },
-        "nl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deze klokregistratie kan alleen vóór middernacht op de startdag worden opgeslagen."
-          }
-        },
-        "nn" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Denne stemplinga kan berre lagrast før midnatt på startdagen."
-          }
-        },
-        "pl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tę sesję rejestracji czasu można zapisać tylko przed północą w dniu rozpoczęcia."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Este registro de ponto só pode ser salvo antes da meia-noite do dia de início."
-          }
-        },
-        "ro" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Această sesiune de pontare poate fi salvată doar înainte de miezul nopții din ziua de început."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Эту сессию учета времени можно сохранить только до полуночи в день начала."
-          }
-        },
-        "sk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Túto reláciu odpracovaného času možno uložiť iba pred polnocou v deň začiatku."
-          }
-        },
-        "sl" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "To sejo beleženja časa lahko shranite le pred polnočjo na dan začetka."
-          }
-        },
-        "sr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ova sesija evidentiranja vremena može se sačuvati samo pre ponoći na dan početka."
-          }
-        },
-        "sv" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Den här stämplingen kan bara sparas före midnatt på startdagen."
-          }
-        },
-        "sw" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kipindi hiki cha kurekodi muda kinaweza kuhifadhiwa tu kabla ya saa sita usiku siku ya kuanza."
-          }
-        },
-        "ta" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "இந்த நேரப் பதிவைத் தொடங்கிய நாளின் நள்ளிரவுக்கு முன் மட்டுமே சேமிக்க முடியும்."
-          }
-        },
-        "th" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "เซสชันการลงเวลานี้บันทึกได้ก่อนเที่ยงคืนของวันเริ่มต้นเท่านั้น"
-          }
-        },
-        "tr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bu çalışma kaydı, yalnızca başlangıç gününde gece yarısından önce kaydedilebilir."
-          }
-        },
-        "uk" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Цю сесію обліку часу можна зберегти лише до опівночі дня початку."
-          }
-        },
-        "ur" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "اس کلاک سیشن کو صرف شروع ہونے والے دن کی آدھی رات سے پہلے محفوظ کیا جا سکتا ہے۔"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Phiên chấm công này chỉ có thể được lưu trước nửa đêm của ngày bắt đầu."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此次打卡只能在开始日午夜前保存。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此次打卡只能在開始日午夜前儲存。"
-          }
-        }
-      }
-    },
     "dashboard.clock.error.invalidRange" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -399815,6 +399534,42 @@
         }
       },
       "comment" : "Pay settings: example of the current pay period. Arguments are short dates: period start, period end, payday. Example: Work from 16 Aug to 15 Sep is paid on 25 Sep."
+    },
+    "dashboard.clock.error.maxDurationExceeded" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A clocked shift must be shorter than 24 hours. Add longer shifts manually."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En stemplet vakt må være kortere enn 24 timer. Legg inn lengre vakter manuelt."
+          }
+        }
+      },
+      "comment" : "Error when saving a clocked shift that lasts 24 hours or more. Shifts store only start and end times, so they must be shorter than a day."
+    },
+    "data.export.table.job" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Job"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jobb"
+          }
+        }
+      },
+      "comment" : "Column header in exported shift tables (CSV). Name of the job the shift belongs to."
     }
   },
   "version" : "1.0"

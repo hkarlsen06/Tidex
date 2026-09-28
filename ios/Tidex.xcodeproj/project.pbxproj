@@ -112,6 +112,7 @@
 		F821E1003092000000000001 /* NotificationPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F821E1003092000000000002 /* NotificationPermissionTests.swift */; };
 		FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */; };
 		93F2CFD0DE7203A60CAAB352 /* PayPeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3A01F6AB17A746B12FFEB1 /* PayPeriodTests.swift */; };
+		083A7FAB077D9127A407090C /* DataExportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C35E2497757E1781F604C83 /* DataExportTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -252,6 +253,7 @@
 		B60A4D723072000000000002 /* LocalStoreShiftReadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalStoreShiftReadTests.swift; sourceTree = "<group>"; };
 		B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClockSessionRulesTests.swift; sourceTree = "<group>"; };
 		3A3A01F6AB17A746B12FFEB1 /* PayPeriodTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayPeriodTests.swift; sourceTree = "<group>"; };
+		8C35E2497757E1781F604C83 /* DataExportTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DataExportTests.swift; sourceTree = "<group>"; };
 		B75A10023060000100A1B2C3 /* SharedKeychainAccessTokenPayloadTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SharedKeychainAccessTokenPayloadTests.swift; sourceTree = "<group>"; };
 		BB30A0023060000100A1B2C3 /* JobsRepositoryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = JobsRepositoryTests.swift; sourceTree = "<group>"; };
 		BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = TestFixtures.swift; path = TestSupport/TestFixtures.swift; sourceTree = "<group>"; };
@@ -476,6 +478,7 @@
 				BBA96E3C55D5E2A591B70D8B /* TestFixtures.swift */,
 				B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */,
 				3A3A01F6AB17A746B12FFEB1 /* PayPeriodTests.swift */,
+				8C35E2497757E1781F604C83 /* DataExportTests.swift */,
 				E500F32D5A2178B806F072F4 /* SyncErrorTests.swift */,
 				BB30A0023060000100A1B2C3 /* JobsRepositoryTests.swift */,
 				F0AE1C90FD39F1346509A1F3 /* SyncServerSnapshotDiffTests.swift */,
@@ -1010,6 +1013,7 @@
 				188D65FF4E96734657711265 /* TestFixtures.swift in Sources */,
 				FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */,
 				93F2CFD0DE7203A60CAAB352 /* PayPeriodTests.swift in Sources */,
+				083A7FAB077D9127A407090C /* DataExportTests.swift in Sources */,
 				B0C03082D5FFE793DAD556DE /* SyncErrorTests.swift in Sources */,
 				BB30A0013060000100A1B2C3 /* JobsRepositoryTests.swift in Sources */,
 				A4460F5A061D70E12FA26564 /* SyncServerSnapshotDiffTests.swift in Sources */,

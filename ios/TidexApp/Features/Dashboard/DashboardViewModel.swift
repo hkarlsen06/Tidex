@@ -796,7 +796,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   enum ClockError: LocalizedError {  // swiftlint:disable:this explicit_acl
     case invalidRange
     case noActiveSession
-    case endOfDayLimitExceeded
+    case maxDurationExceeded
 
     var errorDescription: String? {  // swiftlint:disable:this explicit_acl
       switch self {
@@ -806,8 +806,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       case .noActiveSession:
         return String(localized: .dashboardClockErrorNoActiveSession)
 
-      case .endOfDayLimitExceeded:
-        return String(localized: .dashboardClockErrorEndOfDayLimitExceeded)
+      case .maxDurationExceeded:
+        return String(localized: .dashboardClockErrorMaxDurationExceeded)
       }
     }
   }
@@ -3783,10 +3783,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       session = storedSession
     }
 
-    if hasExceededEndOfDayLimit(session, at: Date())
-      || hasExceededEndOfDayLimit(session, at: end)
+    if hasExceededMaxDuration(session, at: Date())
+      || ClockSessionRules.exceedsMaxDuration(from: start, to: end)
     {
-      throw ClockError.endOfDayLimitExceeded
+      throw ClockError.maxDurationExceeded
     }
 
     isClockActionInProgress = true
@@ -4263,7 +4263,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     }
 
     if let session = clockSessionStore.activeSession(for: userId) {
-      if hasExceededEndOfDayLimit(session, at: referenceDate) {
+      if hasExceededMaxDuration(session, at: referenceDate) {
         cancelTemporarySession(session)
       } else {
         activeClockState = .temporary(session)
@@ -4290,10 +4290,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     clockSessionStore.clear(for: session.userId)
   }
 
-  private func hasExceededEndOfDayLimit(_ session: TemporaryClockSession, at referenceDate: Date)  // swiftlint:disable:this line_length type_contents_order
+  private func hasExceededMaxDuration(_ session: TemporaryClockSession, at referenceDate: Date)  // swiftlint:disable:this line_length type_contents_order
     -> Bool
   {
-    ClockSessionRules.hasExceededEndOfDayLimit(session, at: referenceDate)
+    ClockSessionRules.hasExceededMaxDuration(session, at: referenceDate)
   }
 
   private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async  // swiftlint:disable:this line_length type_contents_order
