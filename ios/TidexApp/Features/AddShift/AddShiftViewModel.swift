@@ -366,9 +366,6 @@ internal final class AddShiftViewModel: ObservableObject {
   /// Subscription to tab bar add action trigger
   private var addActionCancellable: AnyCancellable?
 
-  /// Subscription to add tab mode-cycle requests
-  private var modeCycleCancellable: AnyCancellable?
-
   /// Track the last observed month to detect changes
   private var lastObservedYear: Int = 0
   private var lastObservedMonth: Int = 0
@@ -401,17 +398,6 @@ internal final class AddShiftViewModel: ObservableObject {
       scheduleDraftSave()
     }
   }
-
-  // MARK: - Paywall State
-
-  /// Whether to show the month limit sheet
-  @Published var showMonthLimitSheet = false
-
-  /// Set of existing months when paywall is triggered (for display purposes)
-  @Published private(set) var existingShiftMonths: Set<DateComponents> = []
-
-  /// Target month the user is trying to add shifts to (for month limit sheet)
-  @Published private(set) var targetMonth = DateComponents()  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
 
   // MARK: - Recurring Mode State
 
@@ -517,13 +503,11 @@ internal final class AddShiftViewModel: ObservableObject {
 
     // Subscribe to tab bar add action trigger
     setupAddActionSubscription()
-    setupModeCycleSubscription()
   }
 
   deinit {
     monthContextCancellable?.cancel()
     addActionCancellable?.cancel()
-    modeCycleCancellable?.cancel()
     previewUpdateTask?.cancel()
     draftSaveTask?.cancel()
   }
@@ -561,15 +545,6 @@ internal final class AddShiftViewModel: ObservableObject {
       .receive(on: DispatchQueue.main)
       .sink { [weak self] in
         self?.handleTabBarAddTrigger()
-      }
-  }
-
-  private func setupModeCycleSubscription() {
-    modeCycleCancellable = addShiftCoordinator.cycleModeAction
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] in
-        guard self?.isLoading == false else { return }
-        self?.mode = self?.mode.nextMode ?? .single
       }
   }
 
@@ -616,7 +591,6 @@ internal final class AddShiftViewModel: ObservableObject {
       requiresJobSelection: mode == .events ? false : requiresExplicitJobSelection
     )
     addShiftCoordinator.updateSubmitBlockers(submitBlockers)
-    addShiftCoordinator.updateHasContent(hasContent)
   }
 
   // MARK: - Month Navigation
@@ -1426,24 +1400,18 @@ internal final class AddShiftViewModel: ObservableObject {
       isLoading = false
     }
 
-    // Get current tier for gating
-    let tier = EntitlementService.shared.effectiveTier
-
     do {
       let jobId = effectiveSelectedJobId
       let submittedStartTime = startTimeString
       let submittedEndTime = endTimeString
 
       try await saveSelectedSingleShifts { shiftDate in
-        // Use tier-checked creation for free users
-        _ = try await shiftsRepository.createShiftWithTierCheck(
+        _ = try await shiftsRepository.createShift(
           userId: userId,
           jobId: jobId,
           shiftDate: shiftDate,
           startTime: submittedStartTime,
-          endTime: submittedEndTime,
-          customSupplements: nil,
-          tier: tier
+          endTime: submittedEndTime
         )
         createdDates.insert(shiftDate.toISODateString())
       }
@@ -1467,24 +1435,6 @@ internal final class AddShiftViewModel: ObservableObject {
       onShiftsCreated?(.single(dates: createdDates))
       await requestShiftReminderPermission(for: userId)
 
-    } catch ShiftCreationError.monthLimitReached(let months) {
-      // Show month limit sheet instead of error
-      kLogger.info(
-        "Month limit reached, showing month limit sheet. Existing months: \(months.count)")
-      existingShiftMonths = months
-      if !createdDates.isEmpty {
-        self.error = String(localized: .addShiftSinglePartialSave)
-      }
-
-      // Saved dates have been removed, so this is the month that was actually blocked.
-      if let firstDate = selectedDates.min(),
-        let date = Date.fromISODateString(firstDate)
-      {
-        let calendar = Calendar.current
-        targetMonth = calendar.dateComponents([.year, .month], from: date)
-      }
-
-      showMonthLimitSheet = true
     } catch {
       kLogger.error("Failed to create shifts: \(error.localizedDescription)")
       self.error =
@@ -1732,57 +1682,6 @@ internal final class AddShiftViewModel: ObservableObject {
     }
 
     isLoading = false
-  }
-
-  // MARK: - Delete Shifts (Month Limit)
-
-  /// Delete shifts in other months (when free tier user chooses this option)
-  /// Returns true if successful
-  func deleteShiftsInOtherMonths() async -> Bool {
-    guard let userId = AppCoordinator.shared.getCurrentUserId() else {
-      kLogger.warning("Cannot delete shifts: no user ID")
-      return false
-    }
-
-    do {
-      let deletedCount = try await shiftsRepository.deleteShiftsInOtherMonths(
-        userId: userId,
-        targetMonth: targetMonth
-      )
-
-      kLogger.info("Deleted \(deletedCount) shifts in other months")
-
-      // Clear existing months since they're now deleted
-      existingShiftMonths.removeAll()
-
-      // Reload cached data to reflect deletions in UI
-      reloadShiftsForDisplayedMonth()
-      refreshDistinctShiftTimePairCount(for: userId)
-
-      // Notify that shifts changed (for other views like dashboard)
-      NotificationCenter.default.postShiftsDidChange(context: .fullReload)
-
-      return true
-    } catch {
-      kLogger.error("Failed to delete shifts in other months: \(error.localizedDescription)")
-      return false
-    }
-  }
-
-  /// Called when deletion is complete and user wants to proceed with creating shifts
-  func onDeleteComplete() {
-    // Re-attempt shift creation now that other months are cleared
-    Task {
-      await submitSingleShifts()
-    }
-  }
-
-  /// Called when user upgrades successfully - auto-retry shift creation
-  func onUpgradeComplete() {
-    // Re-attempt shift creation now that user has paid tier
-    Task {
-      await submitSingleShifts()
-    }
   }
 
   // MARK: - Private Helpers

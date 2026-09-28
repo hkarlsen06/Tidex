@@ -9,10 +9,6 @@
     @State private var isExpanded = true
     @State private var isCollapsed = false
     @State private var addError: String?
-    @StateObject private var capacityModel = ManageSharingViewModel(
-      initialSnapshot: FriendsManagementSnapshot(
-        friends: [], blockedFriends: [],
-        capacity: ShareCapacity(canAdd: true, currentCount: 4, limit: 5)))
 
     private let view: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_VIEW"] ?? "cards"
@@ -31,19 +27,15 @@
           Section {
             AddFriendForm(
               isExpanded: $isCollapsed, identifier: .constant(""), showEarnings: .constant(false),
-              error: $addError, isLoading: false, canAdd: capacityModel.canAddMore,
-              isOfflineUnavailable: false, capacityDisplay: capacityModel.capacityDisplay,
-              capacityAccessibilityLabel: capacityModel.capacityAccessibilityLabel,
-              shouldShowCapacity: capacityModel.shouldShowCapacity, onAdd: {}, onCancel: {})
+              error: $addError, isLoading: false, isOfflineUnavailable: false,
+              onAdd: {}, onCancel: {})
           }
           .listRowInsets(EdgeInsets())
           Section {
             AddFriendForm(
               isExpanded: $isExpanded, identifier: $identifier, showEarnings: $showEarnings,
-              error: $addError, isLoading: false, canAdd: true, isOfflineUnavailable: false,
-              capacityDisplay: capacityModel.capacityDisplay,
-              capacityAccessibilityLabel: capacityModel.capacityAccessibilityLabel,
-              shouldShowCapacity: false, onAdd: {}, onCancel: {})
+              error: $addError, isLoading: false, isOfflineUnavailable: false,
+              onAdd: {}, onCancel: {})
           }
           .listRowInsets(EdgeInsets())
         }
@@ -70,8 +62,7 @@
           showEarnings: true, hidden: false),
         onMessageTapped: {},
         initialSnapshot: FriendsManagementSnapshot(
-          friends: [friend], blockedFriends: [],
-          capacity: ShareCapacity(canAdd: true, currentCount: 1, limit: 5)))
+          friends: [friend], blockedFriends: []))
     }
 
     private var cards: some View {

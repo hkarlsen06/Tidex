@@ -18,13 +18,10 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       LocalUserSettings.self,
       LocalNotificationPreferences.self,
       LocalSyncState.self,
-      LocalEntitlementCache.self,
-      LocalPendingJWSUpload.self,
       LocalSharedShift.self,
       LocalSharer.self,
       LocalShiftPreview.self,
       LocalSharedShiftFetchRecord.self,
-      LocalConversation.self,
     ])
 
     let configuration = ModelConfiguration(

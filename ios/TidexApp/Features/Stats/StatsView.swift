@@ -78,14 +78,6 @@ struct StatsView: View {
     }
     .navigationBarTitleDisplayMode(.inline)
     .iPadToolbarBackground()
-    .toolbar {
-      ToolbarItem(placement: .topBarTrailing) {
-        UserMenuButton(
-          displayName: coordinator.userDisplayName,
-          avatarUrl: coordinator.userAvatarUrl
-        )
-      }
-    }
     .iPadToolbarTransaction()
     .sheet(isPresented: $showExportSettings) {
       SettingsView(initialDestination: .data)

@@ -23,7 +23,6 @@ struct ProfileSettingsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.dismiss) private var dismiss
   @Environment(\.displayScale) private var displayScale
-  @Environment(\.openURL) private var openURL
   @StateObject private var viewModel: ProfileSettingsViewModel
 
   private let onOpenSecurity: () -> Void
@@ -174,24 +173,8 @@ struct ProfileSettingsView: View {
         }
       }
       .disabled(!viewModel.canConfirmDelete)
-
-      if viewModel.hasAppStoreSubscription,
-        let url = SubscriptionSettingsViewModel.manageSubscriptionsURL
-      {
-        Button(String(localized: .subscriptionActionsManage)) {
-          viewModel.deleteConfirmText = ""
-          openURL(url)
-        }
-      }
     } message: {
-      if viewModel.hasAppStoreSubscription {
-        Text(
-          verbatim: String(localized: .profileDangerZoneDeleteAccountDialogDescription) + "\n\n"
-            + String(localized: .profileDangerZoneDeleteAccountDialogSubscriptionNote)
-        )
-      } else {
-        Text(.profileDangerZoneDeleteAccountDialogDescription)
-      }
+      Text(.profileDangerZoneDeleteAccountDialogDescription)
     }
     .alert(
       String(localized: .userMenuLogoutEverywhereConfirmTitle),

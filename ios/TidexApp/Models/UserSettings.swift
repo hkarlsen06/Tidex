@@ -114,7 +114,7 @@ struct UserSettings: Codable, Equatable {
   var effectiveDefaultStartupTab: String {
     guard let tab = default_startup_tab else { return "home" }
     switch tab {
-    case "home", "shifts", "add", "stats", "sharing":
+    case "home", "shifts", "stats", "sharing":
       return tab
 
     default:

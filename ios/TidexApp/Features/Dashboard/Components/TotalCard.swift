@@ -119,7 +119,8 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
         .frame(height: usesFixedTypographyFrames ? 88 : nil)  // swiftlint:disable:this no_magic_numbers
 
       comparisonRow
-        .frame(height: usesFixedTypographyFrames ? 24 : nil)  // swiftlint:disable:this no_magic_numbers
+        .frame(height: usesFixedTypographyFrames ? 32 : nil)  // swiftlint:disable:this no_magic_numbers
+        .padding(.bottom, Spacing.xs)
 
       subtitleContent
         .frame(height: usesFixedTypographyFrames ? 24 : nil)  // swiftlint:disable:this no_magic_numbers

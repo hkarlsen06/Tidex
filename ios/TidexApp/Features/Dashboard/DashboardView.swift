@@ -305,17 +305,12 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         ToolbarItem(placement: .topBarLeading) {
           statsToolbarButton
         }
-        ToolbarItem(placement: .topBarTrailing) {
-          UserMenuButton(
-            displayName: coordinator.userDisplayName,
-            avatarUrl: coordinator.userAvatarUrl
-          )
-        }
       }
       .navigationDestination(isPresented: $showStatsView) {
         StatsView()
           .id(coordinator.userId)
       }
+      .addShiftDestination(in: .home)
       .iPadToolbarTransaction()
     }
   }
@@ -1442,7 +1437,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       } else {
         EmptyShiftCard(
           onAddShift: {
-            selectedTab = .add
+            coordinator.pendingDeepLink = .addShift(mode: nil, date: nil)
           },
           isElevated: false
         )

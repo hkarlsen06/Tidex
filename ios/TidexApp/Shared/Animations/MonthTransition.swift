@@ -51,9 +51,6 @@ enum MonthPickerLayout {
   /// Bottom padding between MonthPicker and tab bar
   internal static let bottomPadding: CGFloat = 8
 
-  /// Height of the native iPhone tab bar.
-  internal static let iPhoneTabBarHeight: CGFloat = 49
-
   /// Height of the MonthPicker pill
   internal static let height: CGFloat = 50
 

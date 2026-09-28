@@ -25,36 +25,18 @@ extension Notification.Name {
   static let screenshotPromptUseShareButton = Notification.Name("screenshotPromptUseShareButton")
 }
 
-private struct SettingsSheetRoute: Identifiable {
-  static let payManagerCompactDetent: PresentationDetent = .height(395)
-
-  let id = UUID()
-  let initialDestination: SettingsView.SettingsDestination?
-
-  var opensPayManager: Bool {
-    guard case .pay(let jobId)? = initialDestination else { return false }
-    return jobId == nil
-  }
-
-  var compactDetent: PresentationDetent {
-    opensPayManager ? Self.payManagerCompactDetent : .large
-  }
-}
-
-/// Main tab view for authenticated users
-/// This is the home screen after successful login
-/// Currently a placeholder - will be expanded with full dashboard functionality
+/// Root tab view for signed-in users: Home, Schedule, Friends and the user's profile.
+/// The plus button beside the month picker pushes the Add screen onto the current tab.
 struct MainTabView: View {
   private static let startupTabCacheKey = "defaultStartupTab"
 
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.requestReview) private var requestReview
-  @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
-  @ObservedObject private var monthContext = SharedMonthContext.shared
   @ObservedObject private var shiftsToolbarCoordinator = ShiftsToolbarCoordinator.shared
   @ObservedObject private var impersonationManager = ImpersonationManager.shared
   @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
+  @ObservedObject private var addShiftNavigator = AddShiftNavigator.shared
   private let friendsMessagesRepository = FriendsMessagesRepository.shared
 
   @State private var selectedTab: Tab = .home
@@ -64,13 +46,12 @@ struct MainTabView: View {
   // On the next re-tap, we navigate to the current month instead.
   @State private var pendingCurrentMonthTab: Tab?
 
-  // State for shared month picker overlay
-  @State private var isKeyboardVisible = false
-  @State private var sharingHasSelectedSharer = false
+  @State private var friendsHasSelectedSharer = false
+  @State private var profileRequest: SettingsView.TabRequest?
+  /// The user's photo, sized and rounded for the profile tab item.
+  @State private var profileTabAvatar: UIImage?
 
   // State for feedback deep link sheets
-  @State private var settingsSheetRoute: SettingsSheetRoute?
-  @State private var settingsSheetDetent: PresentationDetent = .large
   @State private var showFeedbackSheet = false
   @State private var showAdminFeedbackSheet = false
   @State private var adminSheetInitialTab: AdminTab = .feedback
@@ -82,26 +63,17 @@ struct MainTabView: View {
   // Screenshot share prompt state (presented as overlay to keep content visible)
   @State private var showScreenshotPrompt = false
 
-  // Add tab disabled-submit guidance
-  @State private var showAddSubmitRequirementsAlert = false
   @State private var unreadFriendsCount = 0
   @State private var unreadRefreshTask: Task<Void, Never>?
-  @State private var lastHandledReselectionTab: Tab?
-  @State private var lastHandledReselectionDate = Date.distantPast
 
   // View mode toggle (calendar vs list) - persisted across app launches
   // Shared with ShiftsView via @AppStorage
   @AppStorage("shiftsViewMode") private var showListView = false
 
-  // Haptic feedback for toggle
+  // Haptic feedback for tab taps
   private let selectionHaptic = UISelectionFeedbackGenerator()
   // Temporary investigation switch; keep false for docs-aligned glass behavior.
   private let disableHeavyCompositingForHangInvestigation = false
-
-  // iPad detection - tab bar is at top on iPad, so month picker doesn't need extra bottom padding
-  private var isIPad: Bool {
-    UIDevice.current.userInterfaceIdiom == .pad
-  }
 
   private var shouldReduceEffects: Bool {
     reduceMotion || disableHeavyCompositingForHangInvestigation
@@ -110,49 +82,19 @@ struct MainTabView: View {
   enum Tab: String, CaseIterable, Hashable {
     case home
     case shifts
-    case add
-    case sharing
+    // The raw value is persisted as the startup tab and synced, so it keeps the old name.
+    case friends = "sharing"
+    case profile
 
-    var icon: String {
-      switch self {
-      case .home:
-        return "house.fill"
-
-      case .shifts:
-        return "calendar"
-
-      case .add:
-        return "plus.capsule.fill"
-
-      case .sharing:
-        return "person.2.fill"
-      }
-    }
-
-    var localizationKey: LocalizedStringResource {
-      switch self {
-      case .home: return .tabsHome
-      case .shifts: return .tabsShifts
-      case .add: return .tabsAdd
-      case .sharing: return .tabsSharing
-      }
-    }
-
-    static let orderedTabs: [Self] = [.home, .shifts, .add, .sharing]
-
-    var index: Int {
-      Self.orderedTabs.firstIndex(of: self) ?? 0
-    }
-
-    init?(index: Int) {
-      guard Self.orderedTabs.indices.contains(index) else { return nil }
-      self = Self.orderedTabs[index]
+    /// Resolves a stored startup tab. Values from removed tabs, such as "add", fall back to Home.
+    static func startupTab(rawValue: String?) -> Self {
+      rawValue.flatMap(Self.init(rawValue:)) ?? .home
     }
   }
 
   init() {
-    let cachedStartupTabRawValue = UserDefaults.standard.string(forKey: Self.startupTabCacheKey)
-    let startupTab = Tab(rawValue: cachedStartupTabRawValue ?? "home") ?? .home
+    let startupTab = Tab.startupTab(
+      rawValue: UserDefaults.standard.string(forKey: Self.startupTabCacheKey))
     _selectedTab = State(initialValue: startupTab)
     _loadedTabs = State(initialValue: [startupTab])
   }
@@ -163,7 +105,6 @@ struct MainTabView: View {
     Binding(
       get: { selectedTab },
       set: { newTab in
-        // Haptic feedback for all tab interactions
         selectionHaptic.selectionChanged()
 
         if newTab == selectedTab {
@@ -199,8 +140,8 @@ struct MainTabView: View {
 
           TabView(selection: tabSelection) {
             SwiftUI.Tab(
-              String(localized: Tab.home.localizationKey),
-              systemImage: Tab.home.icon,
+              String(localized: .tabsHome),
+              systemImage: "house.fill",
               value: Tab.home
             ) {
               tabHost(for: .home) {
@@ -209,8 +150,8 @@ struct MainTabView: View {
             }
 
             SwiftUI.Tab(
-              String(localized: Tab.shifts.localizationKey),
-              systemImage: Tab.shifts.icon,
+              String(localized: .tabsShifts),
+              systemImage: "calendar",
               value: Tab.shifts
             ) {
               tabHost(for: .shifts) {
@@ -219,53 +160,37 @@ struct MainTabView: View {
             }
 
             SwiftUI.Tab(
-              String(localized: Tab.add.localizationKey),
-              systemImage: Tab.add.icon,
-              value: Tab.add
+              String(localized: .tabsSharing),
+              systemImage: "person.2.fill",
+              value: Tab.friends
             ) {
-              tabHost(for: .add) {
-                AddShiftView(
-                  selectedTab: tabSelection,
-                  isKeyboardVisible: $isKeyboardVisible,
-                  onOpenJobsAndPaySettings: {
-                    presentSettingsSheet(initialDestination: .pay(jobId: nil))
-                  }
-                )
+              tabHost(for: .friends) {
+                FriendsView(
+                  selectedTab: tabSelection, hasSelectedSharer: $friendsHasSelectedSharer)
               }
             }
+            .badge(unreadFriendsCount)
 
-            SwiftUI.Tab(
-              String(localized: Tab.sharing.localizationKey),
-              systemImage: friendsTabIcon,
-              value: Tab.sharing
-            ) {
-              tabHost(for: .sharing) {
-                SharingView(
-                  selectedTab: tabSelection, hasSelectedSharer: $sharingHasSelectedSharer)
+            SwiftUI.Tab(value: Tab.profile) {
+              tabHost(for: .profile) {
+                SettingsView(tabRequest: $profileRequest)
+              }
+            } label: {
+              Label {
+                Text(profileTabTitle)
+              } icon: {
+                if let profileTabAvatar {
+                  Image(uiImage: profileTabAvatar)
+                    .renderingMode(.original)
+                } else {
+                  Image(systemName: "person.crop.circle.fill")
+                }
               }
             }
           }
-          .background(
-            TabBarTapObserver(selectedIndex: selectedTab.index) { tappedIndex in
-              guard let tappedTab = Tab(index: tappedIndex), tappedTab == selectedTab else {
-                return
-              }
-              selectionHaptic.selectionChanged()
-              handleTabReselection(tappedTab)
-            }
-          )
           .tint(.tidexTextPrimary)
-
-          // Shared month picker overlay - floats above tab bar
-          if shouldShowMonthPicker {
-            sharedMonthPickerOverlay
-              .transition(monthPickerTransition)
-          }
         }
         .motionAnimation(.navigationPush, value: selectedTab, reduceMotion: shouldReduceEffects)
-        .motionAnimation(
-          .pageTransition, value: shouldShowMonthPicker, reduceMotion: shouldReduceEffects
-        )
         .motionAnimation(.pageTransition, value: showListView, reduceMotion: shouldReduceEffects)
       }
       .motionAnimation(
@@ -305,6 +230,9 @@ struct MainTabView: View {
     .task {
       scheduleUnreadFriendsCountRefresh()
     }
+    .task(id: coordinator.userAvatarUrl) {
+      profileTabAvatar = await Self.loadTabAvatar(from: coordinator.userAvatarUrl)
+    }
     .onReceive(NotificationCenter.default.publisher(for: .friendsThreadDidUpdate)) { _ in
       scheduleUnreadFriendsCountRefresh()
     }
@@ -316,7 +244,7 @@ struct MainTabView: View {
       #if !DEBUG
         // Only show prompt when shifts tab is active and in calendar view (where share button is visible)
         if selectedTab == .shifts, !showListView, !showScreenshotPrompt, !showFeedbackSheet,
-          !showAdminFeedbackSheet
+          !showAdminFeedbackSheet, addShiftNavigator.hostTab != .shifts
         {
           showScreenshotPrompt = true
         }
@@ -347,42 +275,51 @@ struct MainTabView: View {
         FeedbackSettingsView()
       }
     }
-    .sheet(item: $settingsSheetRoute) { route in
-      SettingsView(
-        initialDestination: route.initialDestination,
-        sheetPresentationDetent: $settingsSheetDetent,
-        directPayManagerCompactDetent: route.compactDetent
-      )
-      .presentationDetents(
-        route.opensPayManager ? [route.compactDetent, .large] : [.large],
-        selection: $settingsSheetDetent
-      )
-      .presentationDragIndicator(.visible)
-    }
     .sheet(isPresented: $showAdminFeedbackSheet) {
       AdminSettingsView(
         initialTab: adminSheetInitialTab,
         initialReportId: adminSheetInitialReportId
       )
     }
-    .alert(
-      String(localized: .addShiftSubmitRequirementsTitle),
-      isPresented: $showAddSubmitRequirementsAlert
-    ) {
-      Button(String(localized: .commonOk), role: .cancel) {}
-    } message: {
-      Text(addSubmitRequirementsMessage)
+  }
+
+  /// Loads the user's photo from the image cache or network as a small round tab icon.
+  private static func loadTabAvatar(from urlString: String?) async -> UIImage? {
+    guard let urlString, let url = URL(string: urlString) else { return nil }
+    let maxPixelSize: CGFloat = 120
+    var image = ImageCache.shared.get(for: url, maxPixelSize: maxPixelSize)
+    if image == nil {
+      image = await ImageCache.shared.getFromDisk(for: url, maxPixelSize: maxPixelSize)
     }
+    if image == nil, let (data, _) = try? await URLSession.shared.data(from: url) {
+      image = ImageCache.decodedImage(from: data, maxPixelSize: maxPixelSize)
+      if let image {
+        ImageCache.shared.set(image, for: url, maxPixelSize: maxPixelSize)
+      }
+    }
+    return image.map(roundTabIcon(from:))
   }
 
-  private var friendsTabIcon: String {
-    unreadFriendsCount > 0 ? "person.2.badge.fill" : Tab.sharing.icon
+  /// Crops a photo to a circle the size of a tab bar symbol, keeping its original colors.
+  private static func roundTabIcon(from image: UIImage) -> UIImage {
+    let side: CGFloat = 26
+    let bounds = CGRect(x: 0, y: 0, width: side, height: side)
+    let scale = max(side / image.size.width, side / image.size.height)
+    let drawSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+    let drawRect = CGRect(
+      x: (side - drawSize.width) / 2, y: (side - drawSize.height) / 2,
+      width: drawSize.width, height: drawSize.height)
+    return UIGraphicsImageRenderer(bounds: bounds).image { _ in
+      UIBezierPath(ovalIn: bounds).addClip()
+      image.draw(in: drawRect)
+    }
+    .withRenderingMode(.alwaysOriginal)
   }
 
-  private func presentSettingsSheet(initialDestination: SettingsView.SettingsDestination?) {
-    let route = SettingsSheetRoute(initialDestination: initialDestination)
-    settingsSheetDetent = route.compactDetent
-    settingsSheetRoute = route
+  /// The profile tab is labelled with the user's first name.
+  private var profileTabTitle: String {
+    let firstName = coordinator.userDisplayName.split(separator: " ").first.map(String.init)
+    return firstName ?? String(localized: .tabsProfile)
   }
 
   private func refreshUnreadFriendsCount() async {
@@ -417,259 +354,48 @@ struct MainTabView: View {
 
   /// Whether to show the month picker based on current tab and state
   private var shouldShowMonthPicker: Bool {
+    // The Add screen has its own month picker.
+    guard addShiftNavigator.hostTab != selectedTab else { return false }
     switch selectedTab {
     case .home, .shifts:
       return true
 
-    case .add:
-      // Hide when keyboard is visible
-      return !isKeyboardVisible
+    case .friends:
+      // Only show when a friend's calendar is open
+      return friendsHasSelectedSharer
 
-    case .sharing:
-      // Only show when a sharer is selected
-      return sharingHasSelectedSharer
+    case .profile:
+      return false
     }
   }
 
-  // MARK: - Shared Month Picker Overlay
-
-  @ViewBuilder
-  private var sharedMonthPickerOverlay: some View {
-    HStack(spacing: Spacing.xs) {
-      if selectedTab == .shifts, shiftsToolbarCoordinator.canShowLeadingActions {
-        shiftsBottomToolbarPill
-      }
-
-      // View mode toggle button - Friends tab when viewing a friend
-      if selectedTab == .sharing, sharingHasSelectedSharer {
-        shiftsViewModeToggleButton
-      }
-
-      if selectedTab == .add, addShiftCoordinator.canShowStartFreshControl {
-        addShiftUndoButton
-      }
-
-      // Month picker
-      AnimatedMonthHeader(
-        monthName: monthContext.displayMonthName,
-        year: monthContext.displayYear,
-        phase: transitionPhase,
-        config: .default,
-        onPrevious: {
-          AppearanceTracker.shared.reset()
-          monthContext.goToPreviousMonth()
-        },
-        onNext: {
-          AppearanceTracker.shared.reset()
-          monthContext.goToNextMonth()
-        },
-        onNavigateToMonth: { year, month in
-          AppearanceTracker.shared.reset()
-          monthContext.navigateTo(year: year, month: month)
-        },
-        isLoading: false
-      )
-      .frame(maxWidth: .infinity)  // Fill available width for consistent sizing
-      .frame(height: MonthPickerLayout.height)
-      .tidexGlass(
-        shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-        interactive: true
-      )
-
-      // Submit button - only on Add tab
-      if selectedTab == .add {
-        Button {
-          handleAddButtonTap()
-        } label: {
-          Label(String(localized: .commonSave), systemImage: "checkmark")
-            .font(.tidexButton)
-            .lineLimit(1)
-            .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
-            // Keep the width while saving so the month picker doesn't jump.
-            .opacity(addShiftCoordinator.isLoading ? 0 : 1)
-            .overlay {
-              if addShiftCoordinator.isLoading {
-                ProgressView()
-                  .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
-                  .scaleEffect(MonthPickerLayout.progressIndicatorScale)
-              }
-            }
-            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-            .padding(.horizontal, Spacing.md)
-            .frame(height: MonthPickerLayout.height)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(addShiftCoordinator.isLoading)
-        .tidexGlass(
-          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-          interactive: true
-        )
-        .opacity(
-          addShiftCoordinator.canSubmit
-            ? MonthPickerLayout.enabledOpacity
-            : MonthPickerLayout.disabledOpacity
-        )
-        .transition(.opacity)
-        .accessibilityIdentifier("add-shift.save")
-      }
+  private var showsViewModeToggle: Bool {
+    switch selectedTab {
+    case .shifts: return shiftsToolbarCoordinator.canShowLeadingActions
+    case .friends: return friendsHasSelectedSharer
+    case .home, .profile: return false
     }
-    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
-    .frame(maxWidth: .infinity)  // Fill screen width, then constrain to tabContent max
-    .padding(
-      .horizontal,
-      isIPad
-        ? MonthPickerLayout.horizontalPadding
-        : MonthPickerLayout.tabBarAlignedHorizontalPadding
-    )
-    // Position above tab bar (49pt on iPhone) + original bottom padding (8pt)
-    // On iPad, tab bar is at top so no extra padding needed
-    .padding(
-      .bottom,
-      isIPad
-        ? MonthPickerLayout.bottomPadding
-        : MonthPickerLayout.iPhoneTabBarHeight + MonthPickerLayout.bottomPadding
-    )
   }
 
-  private var shiftsViewModeToggleButton: some View {
-    Button {
-      selectionHaptic.selectionChanged()
-      showListView.toggle()
-    } label: {
-      Image(systemName: showListView ? "calendar" : "list.bullet")
-        .font(.tidexButton)
-        .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexTextPrimary)
-        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-        .contentShape(Rectangle())
-        .accessibilityHidden(true)
+  private var showsAddButton: Bool {
+    switch selectedTab {
+    case .home: return true
+    case .shifts: return shiftsToolbarCoordinator.canShowLeadingActions
+    case .friends, .profile: return false
     }
-    .buttonStyle(.plain)
-    .contentTransition(.symbolEffect(.replace))
-    .tidexGlass(
-      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-      interactive: true
-    )
-    .transition(.opacity)
-    .motionAnimation(
-      .feedback,
-      value: monthContext.hasConflictsInMonth,
-      reduceMotion: shouldReduceEffects
-    )
-    .accessibilityLabel(
-      showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList))
   }
 
-  private var addShiftUndoButton: some View {
-    Button {
-      selectionHaptic.selectionChanged()
-      addShiftCoordinator.triggerStartFresh()
-    } label: {
-      Image(systemName: "arrow.uturn.backward.circle.fill")
-        .font(.tidexHeadline)
-        .foregroundColor(addShiftCoordinator.hasContent ? .tidexTextPrimary : .tidexTextMuted)
-        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-        .contentShape(Rectangle())
-        .accessibilityHidden(true)
-    }
-    .buttonStyle(.plain)
-    .disabled(!addShiftCoordinator.hasContent || addShiftCoordinator.isLoading)
-    .tidexGlass(
-      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-      interactive: true
-    )
-    .transition(.opacity)
-    .accessibilityLabel(Text(.addShiftStartFreshConfirmAction))
-  }
-
-  private var shiftsBottomToolbarPill: some View {
-    HStack(spacing: Spacing.sm) {
-      Button {
-        selectionHaptic.selectionChanged()
-        showListView.toggle()
-      } label: {
-        Image(systemName: showListView ? "calendar" : "list.bullet")
-          .font(.tidexButton)
-          .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexTextPrimary)
-          .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-          .contentShape(Rectangle())
-          .accessibilityHidden(true)
-      }
-      .buttonStyle(.plain)
-      .contentTransition(.symbolEffect(.replace))
-      .accessibilityLabel(Text(.tabsShifts))
-
-      if !showListView {
-        Button {
-          shiftsToolbarCoordinator.triggerToggleSelection()
-        } label: {
-          Image(
-            systemName: shiftsToolbarCoordinator.isSelectionModeEnabled
-              ? "checkmark.circle.fill" : "checkmark.circle"
-          )
-          .font(.tidexHeadline)
-          .foregroundColor(
-            shiftsToolbarCoordinator.isSelectionModeEnabled ? .tidexBrandPrimary : .tidexTextPrimary
-          )
-          .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
-          .contentShape(Rectangle())
-          .accessibilityHidden(true)
-        }
-        .buttonStyle(.plain)
-        .contentTransition(.symbolEffect(.replace))
-      }
-    }
-    .padding(.horizontal, Spacing.xs)
-    .frame(height: MonthPickerLayout.height)
-    .tidexGlass(
-      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-      interactive: true
-    )
-    .transition(.opacity)
-  }
-
-  private var monthPickerTransition: AnyTransition {
-    MotionTokens.transition(.pageTransition, reduceMotion: shouldReduceEffects)
-  }
-
-  /// Current transition phase for month picker animations
-  private var transitionPhase: MonthTransitionPhase {
-    MonthTransitionPhase(
-      year: monthContext.displayYear,
-      month: monthContext.displayMonth,
-      direction: monthContext.navigationDirection
-    )
-  }
-
-  private func handleAddButtonTap() {
-    guard !addShiftCoordinator.isLoading else { return }
-
-    if addShiftCoordinator.canSubmit {
-      selectionHaptic.selectionChanged()
-      addShiftCoordinator.triggerAdd()
-      return
-    }
-
-    Haptics.play(.warning)
-    showAddSubmitRequirementsAlert = true
-  }
+  // MARK: - Tab Reselection
 
   private func handleTabReselection(_ tab: Tab) {
-    let now = Date()
-    if lastHandledReselectionTab == tab, now.timeIntervalSince(lastHandledReselectionDate) < 0.2 {
-      return
-    }
-
-    lastHandledReselectionTab = tab
-    lastHandledReselectionDate = now
-
-    if tab == .home, showHomeStats {
+    if addShiftNavigator.hostTab == tab {
+      // Like any pushed screen, re-tapping the tab goes back to its root.
+      addShiftNavigator.hostTab = nil
+      pendingCurrentMonthTab = nil
+    } else if tab == .home, showHomeStats {
       showHomeStats = false
       pendingCurrentMonthTab = nil
-    } else if tab == .add {
-      addShiftCoordinator.triggerModeCycle()
-      pendingCurrentMonthTab = nil
-    } else if tab == .sharing {
+    } else if tab == .friends || tab == .profile {
       NotificationCenter.default.post(
         name: .tabReselected, object: nil, userInfo: ["tab": tab])
     } else if tab == .shifts, showListView, pendingCurrentMonthTab != tab {
@@ -679,56 +405,11 @@ struct MainTabView: View {
       pendingCurrentMonthTab = tab
     } else {
       // The next re-tap goes to today, switching month first if needed.
-      monthContext.goToCurrentMonth()
+      SharedMonthContext.shared.goToCurrentMonth()
       NotificationCenter.default.post(
         name: .tabReselected, object: nil,
         userInfo: ["tab": tab, "scrollToToday": true])
       pendingCurrentMonthTab = nil
-    }
-  }
-
-  private var addSubmitRequirementsMessage: String {
-    let blockers = addShiftCoordinator.submitBlockers
-    guard !blockers.isEmpty else {
-      return String(localized: .addShiftSubmitRequirementsGeneric)
-    }
-
-    return
-      blockers
-      .map { "- \(String(localized: submitRequirementMessageKey(for: $0)))" }
-      .joined(separator: "\n")
-  }
-
-  private func submitRequirementMessageKey(
-    for blocker: AddShiftSubmitBlocker
-  ) -> LocalizedStringResource {
-    switch blocker {
-    case .noAvailableJob:
-      return .addShiftSubmitRequirementsAddJobFirst
-
-    case .noSelectedJob:
-      return .addShiftSubmitRequirementsSelectJob
-
-    case .noSingleDates:
-      return .addShiftSubmitRequirementsSelectDate
-
-    case .noRecurringDays:
-      return .addShiftSubmitRequirementsSelectRecurringDay
-
-    case .missingTimes:
-      return .addShiftSubmitRequirementsSetTimes
-
-    case .noEventDate:
-      return .addShiftSubmitRequirementsSelectEventDate
-
-    case .invalidEventDateRange:
-      return .addShiftSubmitRequirementsValidEventRange
-
-    case .eventCrossesMidnight:
-      return .addShiftSubmitRequirementsEventSameDay
-
-    case .missingEventNote:
-      return .addShiftSubmitRequirementsEventNote
     }
   }
 
@@ -741,25 +422,21 @@ struct MainTabView: View {
 
     switch deepLink {
     case .sharing, .sharingManage, .friendChat:
-      // Switch to sharing tab - SharingView will handle the specific navigation
-      if selectedTab != .sharing {
-        activateTab(.sharing)
-      }
+      // FriendsView handles the specific navigation
+      activateTab(.friends)
 
     case .shifts:
-      // Switch to shifts tab - ShiftsView will handle the specific navigation
-      if selectedTab != .shifts {
-        activateTab(.shifts)
-      }
+      // ShiftsView handles the specific navigation
+      activateTab(.shifts)
 
     case .addShift:
-      // Switch to add tab - AddShiftView will handle preselected date
-      if selectedTab != .add {
-        activateTab(.add)
-      }
+      // Push Add onto the current tab. AddShiftView applies the mode and date,
+      // then clears the link.
+      addShiftNavigator.hostTab = selectedTab
 
     case .settings(let destination):
-      presentSettingsSheet(initialDestination: destination?.settingsDestination)
+      activateTab(.profile)
+      profileRequest = SettingsView.TabRequest(destination: destination?.settingsDestination)
       coordinator.clearPendingDeepLink()
 
     case .feedback:
@@ -795,9 +472,112 @@ struct MainTabView: View {
   ) -> some View {
     if loadedTabs.contains(tab) {
       content()
+        // The overlay sits in the tab's safe area, so it stays just above the tab bar
+        // without hardcoding the tab bar height, and leaves the content insets alone.
+        .overlay(alignment: .bottom) {
+          if selectedTab == tab, shouldShowMonthPicker {
+            MonthPickerControls(
+              showsViewModeToggle: showsViewModeToggle,
+              showsAddButton: showsAddButton,
+              onAddShift: { addShiftNavigator.hostTab = selectedTab }
+            )
+            .transition(MotionTokens.transition(.pageTransition, reduceMotion: shouldReduceEffects))
+          }
+        }
+        .motionAnimation(
+          .pageTransition, value: shouldShowMonthPicker, reduceMotion: shouldReduceEffects)
     } else {
       Color.clear
     }
+  }
+}
+
+// MARK: - Month Picker Controls
+
+/// Month picker above the tab bar, with the list toggle on its leading side
+/// and the add button on its trailing side, each as its own glass control.
+private struct MonthPickerControls: View {
+  let showsViewModeToggle: Bool
+  let showsAddButton: Bool
+  let onAddShift: () -> Void
+
+  @ObservedObject private var monthContext = SharedMonthContext.shared
+  @AppStorage("shiftsViewMode") private var showListView = false
+
+  private let selectionHaptic = UISelectionFeedbackGenerator()
+
+  private var isIPad: Bool {
+    UIDevice.current.userInterfaceIdiom == .pad
+  }
+
+  var body: some View {
+    HStack(spacing: Spacing.xs) {
+      if showsViewModeToggle {
+        viewModeToggleButton
+      }
+
+      SharedMonthPicker()
+        .frame(maxWidth: .infinity)
+        .frame(height: MonthPickerLayout.height)
+        .tidexGlass(
+          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+          interactive: true
+        )
+
+      if showsAddButton {
+        addButton
+      }
+    }
+    .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+    .frame(maxWidth: .infinity)
+    .padding(
+      .horizontal,
+      isIPad ? MonthPickerLayout.horizontalPadding : MonthPickerLayout.tabBarAlignedHorizontalPadding
+    )
+    .padding(.bottom, MonthPickerLayout.bottomPadding)
+  }
+
+  private var viewModeToggleButton: some View {
+    Button {
+      selectionHaptic.selectionChanged()
+      showListView.toggle()
+    } label: {
+      Image(systemName: showListView ? "calendar" : "list.bullet")
+        .font(.tidexButton)
+        .foregroundColor(monthContext.hasConflictsInMonth ? .tidexWarning : .tidexTextPrimary)
+        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+        .contentShape(Rectangle())
+        .accessibilityHidden(true)
+    }
+    .buttonStyle(.plain)
+    .contentTransition(.symbolEffect(.replace))
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .accessibilityLabel(
+      showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList))
+  }
+
+  private var addButton: some View {
+    Button {
+      selectionHaptic.selectionChanged()
+      onAddShift()
+    } label: {
+      Image(systemName: "plus")
+        .font(.tidexHeadline)
+        .foregroundColor(.tidexTextPrimary)
+        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+        .contentShape(Rectangle())
+        .accessibilityHidden(true)
+    }
+    .buttonStyle(.plain)
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .accessibilityLabel(Text(.shiftsEmptyAddShift))
+    .accessibilityIdentifier("month-accessory.add-shift")
   }
 }
 
@@ -809,9 +589,6 @@ extension AppCoordinator.SettingsDeepLinkDestination {
 
     case .security:
       return .security
-
-    case .subscription:
-      return .subscription
 
     case .notifications:
       return .notifications
@@ -836,91 +613,6 @@ extension AppCoordinator.SettingsDeepLinkDestination {
 
     case .admin:
       return .admin
-    }
-  }
-}
-
-private struct TabBarTapObserver: UIViewControllerRepresentable {
-  let selectedIndex: Int
-  let onTapSelectedIndex: (Int) -> Void
-
-  func makeUIViewController(context: Context) -> Controller {
-    let controller = Controller()
-    controller.coordinator = context.coordinator
-    return controller
-  }
-
-  func updateUIViewController(_ uiViewController: Controller, context: Context) {
-    context.coordinator.selectedIndex = selectedIndex
-    context.coordinator.onTapSelectedIndex = onTapSelectedIndex
-    uiViewController.attachIfNeeded()
-  }
-
-  func makeCoordinator() -> Coordinator {
-    Coordinator(selectedIndex: selectedIndex, onTapSelectedIndex: onTapSelectedIndex)
-  }
-
-  final class Coordinator: NSObject {
-    var selectedIndex: Int
-    var onTapSelectedIndex: (Int) -> Void
-    weak var tabBar: UITabBar?
-
-    init(selectedIndex: Int, onTapSelectedIndex: @escaping (Int) -> Void) {
-      self.selectedIndex = selectedIndex
-      self.onTapSelectedIndex = onTapSelectedIndex
-    }
-
-    @objc func handleTabBarTap(_ gesture: UITapGestureRecognizer) {
-      guard gesture.state == .ended, let tabBar else { return }
-
-      let tapLocation = gesture.location(in: tabBar)
-      let tabBarButtons = tabBar.subviews
-        .filter { $0 is UIControl && !$0.isHidden && $0.alpha > 0.01 }
-        .sorted { $0.frame.minX < $1.frame.minX }
-
-      guard let tappedIndex = tabBarButtons.firstIndex(where: { $0.frame.contains(tapLocation) })
-      else {
-        return
-      }
-
-      guard tappedIndex == selectedIndex else { return }
-      onTapSelectedIndex(tappedIndex)
-    }
-  }
-
-  final class Controller: UIViewController {
-    weak var coordinator: Coordinator?
-
-    override func viewDidAppear(_ animated: Bool) {
-      super.viewDidAppear(animated)
-      attachIfNeeded()
-    }
-
-    override func viewDidLayoutSubviews() {
-      super.viewDidLayoutSubviews()
-      attachIfNeeded()
-    }
-
-    func attachIfNeeded() {
-      guard let coordinator, let tabBar = tabBarController?.tabBar else { return }
-      guard coordinator.tabBar !== tabBar else { return }
-
-      coordinator.tabBar?.gestureRecognizers?
-        .filter { ($0 as? UITapGestureRecognizer)?.name == "MainTabView.TabBarTapObserver" }
-        .forEach { coordinator.tabBar?.removeGestureRecognizer($0) }
-
-      let recognizer = UITapGestureRecognizer(
-        target: coordinator, action: #selector(Coordinator.handleTabBarTap(_:)))
-      recognizer.cancelsTouchesInView = false
-      recognizer.name = "MainTabView.TabBarTapObserver"
-      tabBar.addGestureRecognizer(recognizer)
-      coordinator.tabBar = tabBar
-    }
-
-    deinit {
-      coordinator?.tabBar?.gestureRecognizers?
-        .filter { ($0 as? UITapGestureRecognizer)?.name == "MainTabView.TabBarTapObserver" }
-        .forEach { coordinator?.tabBar?.removeGestureRecognizer($0) }
     }
   }
 }

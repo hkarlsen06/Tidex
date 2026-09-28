@@ -94,6 +94,16 @@ internal final class AppDeepLinkResolverTests: XCTestCase {
     XCTAssertEqual(deepLink, .adminReport(reportId: "report_123"))
   }
 
+  internal func testStartupTabFromRemovedAddTabFallsBackToHome() {
+    // Add is a sheet now, so users who picked it as their startup tab land on Home.
+    XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: "add"), .home)
+    XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: nil), .home)
+    XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: "shifts"), .shifts)
+    // Friends keeps the stored "sharing" value that settings sync and onboarding write.
+    XCTAssertEqual(MainTabView.Tab.startupTab(rawValue: "sharing"), .friends)
+    XCTAssertNil(StartupTabOption(rawValue: "add"))
+  }
+
   deinit {
     // Required by SwiftLint for XCTestCase subclasses.
   }

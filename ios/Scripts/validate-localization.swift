@@ -38,15 +38,6 @@ private let placeholderMappings: [String: [PlaceholderSpec]] = [
   "addShift.monthPlural": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
   "addShift.yearPlural": [PlaceholderSpec(placeholder: "{n}", specifier: "%lld")],
   "appearance.info.systemActive": [PlaceholderSpec(placeholder: "{mode}", specifier: "%@")],
-  "monthLimit.confirmDeleteButton": [PlaceholderSpec(placeholder: "{count}", specifier: "%lld")],
-  "monthLimit.confirmDeleteButtonPlural": [
-    PlaceholderSpec(placeholder: "{count}", specifier: "%lld")
-  ],
-  "monthLimit.confirmDeleteMessage": [PlaceholderSpec(placeholder: "{months}", specifier: "%@")],
-  "monthLimit.deleteExplanation": [
-    PlaceholderSpec(placeholder: "{targetMonth}", specifier: "%@"),
-    PlaceholderSpec(placeholder: "{otherMonths}", specifier: "%@"),
-  ],
   "onboarding.settings.payday.customValue": [
     PlaceholderSpec(placeholder: "{day}", specifier: "%lld")
   ],

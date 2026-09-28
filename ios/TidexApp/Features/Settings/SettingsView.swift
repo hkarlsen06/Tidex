@@ -4,7 +4,7 @@ import os.log
 private let logger = Logger(subsystem: "no.tidex.app", category: "SettingsView")
 
 /// Settings main menu view
-/// Displays a list of settings options in iOS Settings style
+/// Shown as the profile tab, and as a sheet when another screen opens a settings page directly.
 struct SettingsView: View {
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.dismiss) private var dismiss
@@ -12,6 +12,11 @@ struct SettingsView: View {
   private let initialDestination: SettingsDestination?
   private let sheetPresentationDetent: Binding<PresentationDetent>?
   private let directPayManagerCompactDetent: PresentationDetent
+  /// Set when shown as the profile tab. Deep links write a request here to open a page.
+  private let tabRequest: Binding<TabRequest?>?
+
+  /// Email shown under the name in the profile card
+  @State private var profileEmail: String?
 
   /// Whether the current user can access admin settings
   /// Requires both admin role and AAL2 assurance level.
@@ -79,11 +84,16 @@ struct SettingsView: View {
     let message: String
   }
 
+  /// Asks the profile tab to return to its root and optionally open a page.
+  struct TabRequest: Equatable {
+    let id = UUID()
+    let destination: SettingsDestination?
+  }
+
   /// Settings navigation destinations
   enum SettingsDestination: Hashable {
     case profile
     case security
-    case subscription
     case notifications
     case appearance
     case pay(jobId: String?)
@@ -114,6 +124,19 @@ struct SettingsView: View {
     self.initialDestination = initialDestination
     self.sheetPresentationDetent = sheetPresentationDetent
     self.directPayManagerCompactDetent = directPayManagerCompactDetent
+    self.tabRequest = nil
+  }
+
+  /// Creates the profile tab root.
+  init(tabRequest: Binding<TabRequest?>) {
+    self.initialDestination = nil
+    self.sheetPresentationDetent = nil
+    self.directPayManagerCompactDetent = .medium
+    self.tabRequest = tabRequest
+  }
+
+  private var isTabRoot: Bool {
+    tabRequest != nil
   }
 
   var body: some View {
@@ -125,7 +148,7 @@ struct SettingsView: View {
       }
     }
     .task {
-      await checkAdminStatus()
+      await loadAccountDetails()
     }
     .sheet(isPresented: $showPayJobChooser) {
       payJobChooserSheet
@@ -153,6 +176,16 @@ struct SettingsView: View {
     }
     .onAppear {
       applyInitialDestinationIfNeeded()
+      applyTabRequestIfNeeded()
+    }
+    .onChange(of: tabRequest?.wrappedValue) { _, _ in
+      applyTabRequestIfNeeded()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { notification in
+      guard isTabRoot, notification.userInfo?["tab"] as? MainTabView.Tab == .profile else {
+        return
+      }
+      navigationPath = NavigationPath()
     }
   }
 
@@ -180,12 +213,15 @@ struct SettingsView: View {
       .navigationTitle(String(localized: .settingsTitle))
       .navigationBarTitleDisplayMode(.large)
       .toolbar {
-        ToolbarItem(placement: .confirmationAction) {
-          Button(String(localized: .commonDone)) {
-            dismiss()
+        if !isTabRoot {
+          ToolbarItem(placement: .confirmationAction) {
+            Button(String(localized: .commonDone)) {
+              dismiss()
+            }
           }
         }
       }
+      .addShiftDestination(in: isTabRoot ? .profile : nil)
       .navigationDestination(for: SettingsDestination.self) { destination in
         Group {
           switch destination {
@@ -196,9 +232,6 @@ struct SettingsView: View {
 
           case .security:
             SecuritySettingsView()
-
-          case .subscription:
-            SubscriptionSettingsView()
 
           case .notifications:
             NotificationSettingsView()
@@ -246,19 +279,29 @@ struct SettingsView: View {
     Button {
       navigationPath.append(SettingsDestination.profile)
     } label: {
-      HStack(spacing: Spacing.sm) {
+      HStack(spacing: Spacing.md) {
         AvatarView(
           url: coordinator.userAvatarUrl,
           initials: userInitials,
-          size: AvatarView.Size.large
+          size: SettingsMenuLayout.profileAvatarSize
         )
 
-        Text(coordinator.userDisplayName)
-          .font(.tidexTitle)
-          .foregroundColor(.tidexTextPrimary)
-          .lineLimit(2)
-          .fixedSize(horizontal: false, vertical: true)
-          .layoutPriority(1)
+        VStack(alignment: .leading, spacing: Spacing.xxs) {
+          Text(coordinator.userDisplayName)
+            .font(.tidexLargeTitle)
+            .foregroundColor(.tidexTextPrimary)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+
+          if let profileEmail, !profileEmail.isEmpty {
+            Text(profileEmail)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+              .lineLimit(1)
+              .truncationMode(.middle)
+          }
+        }
+        .layoutPriority(1)
 
         Spacer(minLength: Spacing.xs)
 
@@ -266,13 +309,12 @@ struct SettingsView: View {
           .font(.tidexFootnoteMedium)
           .foregroundStyle(.tertiary)
       }
-      .padding(.vertical, Spacing.sm)
-      .padding(.horizontal, Spacing.md)
-      .frame(minHeight: 84, alignment: .leading)
+      .padding(Spacing.md)
       .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
     .settingsCardSurface()
+    .accessibilityIdentifier("settings.profile-card")
   }
 
   private var accountSection: some View {
@@ -282,15 +324,6 @@ struct SettingsView: View {
         title: String(localized: .settingsMenuSecurityLabel)
       ) {
         navigationPath.append(SettingsDestination.security)
-      }
-
-      settingsMenuDivider
-
-      SettingsMenuItem(
-        icon: "creditcard",
-        title: String(localized: .settingsMenuSubscriptionLabel)
-      ) {
-        navigationPath.append(SettingsDestination.subscription)
       }
     }
   }
@@ -428,8 +461,21 @@ struct SettingsView: View {
   private func applyInitialDestinationIfNeeded() {
     guard !didApplyInitialDestination, let initialDestination else { return }
     didApplyInitialDestination = true
+    open(initialDestination)
+  }
 
-    switch initialDestination {
+  /// Consumes a deep link request from the tab bar: back to the root, then the requested page.
+  private func applyTabRequestIfNeeded() {
+    guard let tabRequest, let request = tabRequest.wrappedValue else { return }
+    tabRequest.wrappedValue = nil
+    navigationPath = NavigationPath()
+    if let destination = request.destination {
+      open(destination)
+    }
+  }
+
+  private func open(_ destination: SettingsDestination) {
+    switch destination {
     case .pay(let jobId):
       if let jobId {
         navigationPath.append(SettingsDestination.pay(jobId: jobId))
@@ -441,13 +487,15 @@ struct SettingsView: View {
       }
 
     default:
-      navigationPath.append(initialDestination)
+      navigationPath.append(destination)
     }
   }
 
-  private func checkAdminStatus() async {
+  /// Loads the email for the profile card and checks admin access from the same session.
+  private func loadAccountDetails() async {
     do {
       let session = try await AuthSessionManager.shared.getSession()
+      profileEmail = session.user.email
       guard let appMetadata = session.user.appMetadata["role"],
         case .string(let role) = appMetadata,
         role == "admin"
@@ -1574,6 +1622,7 @@ private enum SettingsMenuLayout {
   static let rowHeight: CGFloat = 56
   static let iconBadgeSize: CGFloat = 38
   static var iconEdgeInset: CGFloat { (rowHeight - iconBadgeSize) / 2 }
+  static let profileAvatarSize: CGFloat = 64
 }
 
 /// A single settings menu item with colored icon background, title, and chevron

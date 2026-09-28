@@ -88,14 +88,12 @@ struct FriendsTabBootstrapData {
   let sharers: [SharedUser]
   let friends: [Friend]
   let blockedFriends: [Friend]
-  let capacity: ShareCapacity
   let previews: [SharerShiftPreview]
 
   var managementSnapshot: FriendsManagementSnapshot {
     FriendsManagementSnapshot(
       friends: friends,
-      blockedFriends: blockedFriends,
-      capacity: capacity
+      blockedFriends: blockedFriends
     )
   }
 }
@@ -103,14 +101,12 @@ struct FriendsTabBootstrapData {
 struct FriendsManagementSnapshot {
   let friends: [Friend]
   let blockedFriends: [Friend]
-  let capacity: ShareCapacity
 }
 
-private struct FriendsTabBootstrapRPCResponse: Decodable {
+struct FriendsTabBootstrapRPCResponse: Decodable {
   let sharers: [SharedUser]
   let friends: [Friend]
   let blockedFriends: [Friend]?
-  let capacity: ShareCapacity
   let previewPayloads: [SharingRPCPreviewPayloadRow]
 }
 
@@ -199,7 +195,6 @@ final class SharingService: ObservableObject {
         sharers: response.sharers,
         friends: response.friends,
         blockedFriends: response.blockedFriends ?? [],
-        capacity: response.capacity,
         previews: previews
       )
     } catch let error as SharingServiceError {
@@ -670,13 +665,12 @@ final class SharingService: ObservableObject {
 
   // MARK: - Friends Management (via Supabase RPC)
 
-  // Fetch all friends (bidirectional relationships) and share capacity.
+  // Fetch all friends (bidirectional relationships) and blocked friends.
   // Used by the sharing management modal.
-  // swiftlint:disable:next cyclomatic_complexity function_body_length large_tuple type_contents_order
+  // swiftlint:disable:next cyclomatic_complexity function_body_length type_contents_order
   internal func fetchAllFriends() async throws -> (
     friends: [Friend],
-    blockedFriends: [Friend],
-    capacity: ShareCapacity
+    blockedFriends: [Friend]
   ) {
     do {
       logger.info("Starting fetchAllFriends...")
@@ -688,10 +682,9 @@ final class SharingService: ObservableObject {
           """
           Loaded \(bootstrap.friends.count) friends and
           \(bootstrap.blockedFriends.count) blocked friends
-          (capacity: \(bootstrap.capacity.currentCount)/\(bootstrap.capacity.limit))
           """
         )
-        return (bootstrap.friends, bootstrap.blockedFriends, bootstrap.capacity)
+        return (bootstrap.friends, bootstrap.blockedFriends)
       } catch let error as PostgrestError {
         throw mapRPCError(error)
       } catch let error as AuthError {
@@ -804,7 +797,7 @@ final class SharingService: ObservableObject {
   }
 
   /// Create a new share by email, phone, or username
-  /// Requires API for user lookup, limit checks, and notifications
+  /// Requires API for user lookup and notifications
   func createShare(identifier: String, showEarnings: Bool = false) async throws {
     try await performManageAction(
       action: .createShare,
@@ -902,7 +895,7 @@ final class SharingService: ObservableObject {
   }
 
   /// Share back with someone who has shared with me
-  /// Requires API for limit checks and notifications
+  /// Requires API for notifications
   func shareBack(recipientId: String) async throws {
     try await performManageAction(
       action: .shareBack,

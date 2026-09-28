@@ -4,8 +4,7 @@ import Foundation
 protocol FriendsThreadShareRelationshipProviding: AnyObject {
   func fetchAllFriends() async throws -> (
     friends: [Friend],
-    blockedFriends: [Friend],
-    capacity: ShareCapacity
+    blockedFriends: [Friend]
   )
 }
 

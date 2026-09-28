@@ -55,17 +55,4 @@ internal enum AddShiftMode: CaseIterable, Identifiable, Codable, RawRepresentabl
       return .addShiftModeSingle
     }
   }
-
-  internal var nextMode: Self {
-    guard let currentIndex = Self.displayOrder.firstIndex(of: self) else {
-      return .single
-    }
-
-    let nextIndex: [Self].Index = Self.displayOrder.index(after: currentIndex)
-    if nextIndex == Self.displayOrder.endIndex {
-      return Self.displayOrder[Self.displayOrder.startIndex]
-    }
-
-    return Self.displayOrder[nextIndex]
-  }
 }

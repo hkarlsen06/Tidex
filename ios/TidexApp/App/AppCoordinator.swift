@@ -108,7 +108,6 @@ final class AppCoordinator: ObservableObject {
   enum SettingsDeepLinkDestination: Equatable {
     case profile
     case security
-    case subscription
     case notifications
     case appearance
     case pay(jobId: String?)
@@ -202,9 +201,9 @@ final class AppCoordinator: ObservableObject {
     return currentUserId
   }
 
-  /// User's display name (for UserMenuButton)
+  /// User's display name (for the profile tab)
   @Published private(set) var userDisplayName: String = ""
-  /// User's profile picture URL (for UserMenuButton)
+  /// User's profile picture URL (for the profile tab)
   @Published private(set) var userAvatarUrl: String?
   /// Whether the user has already completed onboarding (from Supabase user metadata)
   @Published private(set) var hasFinishedOnboardingRemotely: Bool = false
@@ -912,9 +911,6 @@ final class AppCoordinator: ObservableObject {
         userDisplayName = "User"
       }
 
-      // Configure StoreKit and load entitlements
-      await configureStoreKitAndEntitlements(userId: currentUserId)
-
       // Register only if permission already exists. First-run onboarding should not be
       // interrupted by the system notification prompt.
       await NotificationService.shared.registerIfPermissionAlreadyGranted()
@@ -947,41 +943,6 @@ final class AppCoordinator: ObservableObject {
 
     } catch {
       userDisplayName = "User"
-    }
-  }
-
-  // MARK: - StoreKit & Entitlements
-
-  /// Configure StoreKit and entitlement services after authentication
-  /// Called once during updateUserProfile() after successful login
-  private func configureStoreKitAndEntitlements(userId: String) async {  // swiftlint:disable:this async_without_await
-    // 1. Configure StoreKit with user ID (required before purchases)
-    StoreKitManager.shared.configure(userId: userId)
-
-    // 2. Load cached entitlement first (fast, offline-safe)
-    EntitlementService.shared.loadFromCache(userId: userId)
-
-    // 3. Start StoreKit transaction listener (handles renewals, restores from other devices)
-    StoreKitManager.shared.startListening()
-
-    // 4. Start JWS upload worker (process any pending uploads from previous sessions)
-    JWSUploadWorker.shared.processQueue()
-
-    // 5. Refresh entitlement from server in background (non-blocking)
-    runTrackedTask { [weak self] in
-      guard let self else { return }
-      let isCurrent = await MainActor.run { self.userId == userId }
-      guard isCurrent else { return }
-      try? await EntitlementService.shared.refreshFromServer(userId: userId)
-      // Silent on success or failure - we have cache fallback
-    }
-
-    // 6. Load StoreKit products in background (for paywall)
-    runTrackedTask { [weak self] in
-      guard let self else { return }
-      let isCurrent = await MainActor.run { self.userId == userId }
-      guard isCurrent else { return }
-      await StoreKitManager.shared.loadProducts()
     }
   }
 
@@ -1067,9 +1028,6 @@ final class AppCoordinator: ObservableObject {
       if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
         await appDelegate.registerCachedAPNsTokenIfNeeded()
       }
-
-      // An offline launch may have skipped StoreKit verification.
-      await StoreKitManager.shared.updateCurrentEntitlements()
 
       await syncCoordinator.loadTrackingState(userId: userId)
       _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
@@ -1268,10 +1226,6 @@ final class AppCoordinator: ObservableObject {
 
     CalendarSubscriptionStore.shared.resetForUserChange()
     CalendarSubscriptionStore.clearStoredTokensForUserReset()
-
-    // Stop StoreKit listener and clear entitlement cache
-    StoreKitManager.shared.stopListening()
-    await EntitlementService.shared.clearCache()
 
     // Clear all local data (shifts, settings, sync state, etc.)
     await LocalStore.shared.resetAllData()
@@ -1527,9 +1481,6 @@ final class AppCoordinator: ObservableObject {
       } else {
         userDisplayName = "User"
       }
-
-      // Configure StoreKit and load entitlements
-      await configureStoreKitAndEntitlements(userId: currentUserId)
 
       // Register only if permission already exists. Do not prompt during account switching.
       await NotificationService.shared.registerIfPermissionAlreadyGranted()

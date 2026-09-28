@@ -14,7 +14,6 @@
     @State private var isPayReviewExpanded = false
     @State private var payEditorSelection: PayEditorSelection?
     @State private var savedPayDescription = ""
-    @StateObject private var paywallModel: PaywallViewModel = .init()
     @StateObject private var loginModel: LoginViewModel = .init()
     @StateObject private var signupModel: SignupViewModel = .init()
 
@@ -38,12 +37,6 @@
         case "settings":
           SettingsView()
             .environmentObject(AppCoordinator.shared)
-        case "profile-subscribed":
-          NavigationStack {
-            ProfileSettingsView(
-              viewModel: ProfileSettingsViewModel(hasAppStoreSubscription: { true }))
-          }
-          .environmentObject(AppCoordinator.shared)
         case "login", "login-accessibility":
           NavigationStack {
             LoginView(viewModel: loginModel, currency: "kr")
@@ -51,16 +44,6 @@
           .dynamicTypeSize(screen == "login-accessibility" ? .accessibility5 : dynamicTypeSize)
         case "signup":
           SignupView(viewModel: signupModel, currency: "kr")
-        case "paywall":
-          TrialPaywallScaffold(
-            viewModel: paywallModel,
-            showsAlternativeSection: false,
-            showsRestorePurchases: true,
-            onStartSubscription: { _ in },
-            onRestorePurchases: {}
-          ) {
-            EmptyView()
-          }
         case "time-input", "time-input-accessibility":
           NavigationStack {
             ScrollView {

@@ -13,7 +13,6 @@ SET search_path TO 'public', 'auth'
 AS $function$
 DECLARE
   v_user_id uuid := auth.uid();
-  v_limit integer := 5;
   v_target_id uuid;
   v_normalized text;
   v_identifier text;
@@ -22,21 +21,7 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
-  SELECT CASE COALESCE(tier, 'free')
-    WHEN 'max' THEN 200
-    WHEN 'pro' THEN 200
-    ELSE 5
-  END
-  INTO v_limit
-  FROM public.user_entitlements
-  WHERE user_id = v_user_id;
 
-  IF (SELECT COUNT(*) FROM public.shift_shares WHERE owner_id = v_user_id) >= v_limit THEN
-    RETURN jsonb_build_object(
-      'success', false,
-      'error', 'Du har nådd maksimalt antall delinger for ditt abonnement'
-    );
-  END IF;
 
   IF p_action = 'createShare' THEN
     IF p_identifier IS NULL OR btrim(p_identifier) = '' THEN

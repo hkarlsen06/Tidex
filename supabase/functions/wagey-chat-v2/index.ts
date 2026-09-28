@@ -1,96 +1,30 @@
-import { withSupabase } from "@supabase/server";
-import { createWageyContext } from "../_shared/wagey/context.ts";
-import { handleWageyRequest } from "../_shared/wagey/router.ts";
+// Wagey is shut down. This stub makes no OpenAI, database, or network calls.
+const MESSAGE =
+  "Wagey is being shut down and will be removed entirely in the next update.";
 
-const REQUEST_ID_HEADER = "x-wagey-request-id";
-
-function json(
-  body: Record<string, unknown>,
-  status: number,
-  extraHeaders: HeadersInit = {},
-): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      "Content-Type": "application/json",
-      ...extraHeaders,
-    },
-  });
-}
-
-function log(
-  level: "info" | "warn" | "error",
-  requestId: string,
-  message: string,
-  metadata: Record<string, unknown> = {},
-): void {
-  const payload = {
-    scope: "wagey-chat-v2",
-    requestId,
-    message,
-    ...metadata,
-  };
-
-  if (level === "error") {
-    console.error(JSON.stringify(payload));
-    return;
-  }
-  if (level === "warn") {
-    console.warn(JSON.stringify(payload));
-    return;
-  }
-  console.log(JSON.stringify(payload));
-}
+// Same headers @supabase/server's withSupabase sent by default.
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-retry-count",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
+};
 
 export default {
-  fetch: withSupabase<any>(
-    { auth: "user" },
-    async (req, supabaseContext) => {
-      const requestId = req.headers.get(REQUEST_ID_HEADER) ??
-        crypto.randomUUID();
-
-      if (req.method !== "POST") {
-        return json({ error: "Method not allowed" }, 405, {
-          [REQUEST_ID_HEADER]: requestId,
-        });
-      }
-
-      try {
-        const requestHeaders = new Headers(req.headers);
-        requestHeaders.set(REQUEST_ID_HEADER, requestId);
-        const requestWithId = new Request(req, { headers: requestHeaders });
-
-        const response = await handleWageyRequest(requestWithId, async () => {
-          return await createWageyContext(supabaseContext);
-        });
-
-        const responseHeaders = new Headers(response.headers);
-        responseHeaders.set(REQUEST_ID_HEADER, requestId);
-
-        return new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: responseHeaders,
-        });
-      } catch (error) {
-        const message = error instanceof Error
-          ? error.message
-          : "Failed to initialize Wagey";
-        log("error", requestId, "Initialization failed", {
-          error: message,
-        });
-        if (
-          message === "Missing authorization header" ||
-          message === "Unauthorized"
-        ) {
-          return json({ error: message }, 401, {
-            [REQUEST_ID_HEADER]: requestId,
-          });
-        }
-        return json({ error: message }, 500, {
-          [REQUEST_ID_HEADER]: requestId,
-        });
-      }
-    },
-  ),
+  fetch(req: Request): Response {
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+    // iOS 2.7.1 and older treat any non-200 status as a generic HTTP error and
+    // never read the body, so answer with the SSE stream they render as a reply.
+    const body = [
+      { type: "text_start" },
+      { type: "text", content: MESSAGE },
+      { type: "done" },
+    ].map((chunk) => `data: ${JSON.stringify({ type: "chunk", chunk })}\n\n`)
+      .join("");
+    return new Response(body, {
+      headers: { ...CORS_HEADERS, "Content-Type": "text/event-stream" },
+    });
+  },
 };

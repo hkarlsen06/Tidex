@@ -13,7 +13,7 @@ enum SharingDeepLinkNavigationPathResolver {
 
 /// Sharing tab view - displays shifts from users who share with the current user
 /// Fetches shared shifts from the Next.js API for proper payroll computation
-struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length line_length
+struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length line_length
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.userCurrency) private var currency
 
@@ -111,7 +111,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
       .navigationBarTitleDisplayMode(.inline)
-      .toolbar(isChatTabBarHidden ? .hidden : .visible, for: .tabBar)
+      .toolbar(isChatTabBarHidden ? .hidden : .automatic, for: .tabBar)
       .iPadToolbarBackground()
       .toolbar {
         friendsToolbarContent
@@ -122,14 +122,15 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       .navigationDestination(for: FriendChatRoute.self) { route in
         friendChatDestination(for: route)
       }
+      .addShiftDestination(in: .friends)
       .iPadToolbarTransaction()
     }
     .task(id: startupTaskID) {
-      guard selectedTab == .sharing else { return }
+      guard selectedTab == .friends else { return }
       refreshChatMetadata()
       await refreshFeedPlacements()
       await viewModel.loadSharers()
-      guard !Task.isCancelled, selectedTab == .sharing else { return }
+      guard !Task.isCancelled, selectedTab == .friends else { return }
       scheduleChatMetadataRefresh()
       await syncTypingSubscriptions()
     }
@@ -137,7 +138,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       // Handle tab reselection - if sharing tab is tapped again while viewing a sharer,
       // navigate back to the sharer list
       guard let tab = notification.userInfo?["tab"] as? MainTabView.Tab,
-        tab == .sharing,
+        tab == .friends,
         !navigationPath.isEmpty
       else {
         return
@@ -174,7 +175,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     }
     .onAppear {
       // Handle any pending deep link on initial appearance
-      friendsRealtimeCoordinator.setFriendsFeedVisible(selectedTab == .sharing)
+      friendsRealtimeCoordinator.setFriendsFeedVisible(selectedTab == .friends)
       handlePendingDeepLink(coordinator.pendingDeepLink)
       hasSelectedSharer = viewModel.selectedSharer != nil
     }
@@ -197,7 +198,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       }
     }
     .onChange(of: selectedTab) { _, newTab in
-      guard newTab == .sharing else {
+      guard newTab == .friends else {
         friendsRealtimeCoordinator.setFriendsFeedVisible(false)
         Task {
           await stopTypingSubscriptions()
@@ -259,7 +260,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) {
       _ in
-      guard selectedTab == .sharing else { return }
+      guard selectedTab == .friends else { return }
       scheduleChatMetadataRefresh()
     }
     .onDisappear {
@@ -300,7 +301,7 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   /// Navigates to a specific sharer or opens the manage modal
   private func handlePendingDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
     // swiftlint:disable:next conditional_returns_on_newline
-    guard selectedTab == .sharing, let deepLink else { return }
+    guard selectedTab == .friends, let deepLink else { return }
 
     switch deepLink {
     case .sharing(let sharerId, let dates, let changes):
@@ -491,13 +492,6 @@ struct SharingView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   private var friendsToolbarContent: some ToolbarContent {
     ToolbarItem(placement: .topBarLeading) {
       manageFriendsButton
-    }
-
-    ToolbarItem(placement: .topBarTrailing) {
-      UserMenuButton(
-        displayName: coordinator.userDisplayName,
-        avatarUrl: coordinator.userAvatarUrl
-      )
     }
   }
 
@@ -1223,11 +1217,11 @@ private struct SharedShiftsDetailView: View {
 
 #Preview {
   struct PreviewWrapper: View {
-    @State private var selectedTab: MainTabView.Tab = .sharing
+    @State private var selectedTab: MainTabView.Tab = .friends
     @State private var hasSelectedSharer = false
 
     var body: some View {
-      SharingView(selectedTab: $selectedTab, hasSelectedSharer: $hasSelectedSharer)
+      FriendsView(selectedTab: $selectedTab, hasSelectedSharer: $hasSelectedSharer)
         .environmentObject(AppCoordinator.shared)
         .environment(\.userCurrency, "kr")
     }

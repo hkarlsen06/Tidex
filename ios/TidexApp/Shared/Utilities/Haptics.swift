@@ -24,7 +24,6 @@ enum HapticType {
 enum SoundType: String {
   case shiftCreated = "tidex_success"
   case shiftDeleted = "tidex_shift_deleted"
-  case subscriptionSuccess = "tidex_subscription_success"
 }
 
 /// Centralized haptic feedback manager
@@ -46,7 +45,7 @@ enum Haptics {
     // Without this, iOS uses the default .soloAmbient which pauses external audio (Spotify, Apple Music, etc.)
     try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
 
-    for soundType in [SoundType.shiftCreated, .shiftDeleted, .subscriptionSuccess] {
+    for soundType in [SoundType.shiftCreated, .shiftDeleted] {
       prepareSound(soundType)
     }
   }
@@ -135,11 +134,5 @@ enum Haptics {
   static func playShiftDeleted() {
     UINotificationFeedbackGenerator().notificationOccurred(.warning)
     playSound(.shiftDeleted)
-  }
-
-  /// Play subscription success feedback (haptic + sound)
-  static func playSubscriptionSuccess() {
-    UINotificationFeedbackGenerator().notificationOccurred(.success)
-    playSound(.subscriptionSuccess)
   }
 }

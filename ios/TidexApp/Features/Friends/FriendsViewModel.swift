@@ -122,8 +122,7 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   /// Latest management-sheet payload from the Friends tab bootstrap RPC.
   @Published private(set) var managementSnapshot = FriendsManagementSnapshot(
     friends: [],
-    blockedFriends: [],
-    capacity: ShareCapacity(canAdd: true, currentCount: 0, limit: 5)
+    blockedFriends: []
   )
 
   /// Whether shift previews are being loaded

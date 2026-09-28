@@ -56,7 +56,7 @@
 		67E4A33E30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */; };
 		6F4297BFD94E7970B1B1D546 /* StatsServiceCalendarMathTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */; };
 		73DF04E4285F329FD78D7171 /* ShiftsListPlaceholderPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA87CB237E9D3D643F34BB55 /* ShiftsListPlaceholderPolicyTests.swift */; };
-		75D3AD7184F6294BEF65BF09 /* FriendsAPIResponseDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0101D84EA694A80B323B9F0 /* FriendsAPIResponseDecodingTests.swift */; };
+		75D3AD7184F6294BEF65BF09 /* FriendsBootstrapDecodingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0101D84EA694A80B323B9F0 /* FriendsBootstrapDecodingTests.swift */; };
 		770DBC63EADDCE0A94BCE3AD /* JobCurrencyAggregateResolverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A402FE07B31117F181E6ACB /* JobCurrencyAggregateResolverTests.swift */; };
 		798A63BCB40DB451D63BFE52 /* FriendsMessagingRealtimeCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4289F8A28BA4A1B40DF97B9 /* FriendsMessagingRealtimeCoordinatorTests.swift */; };
 		8042B8933D1A03D96E5ACBFC /* LocalRecurringShiftRecoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E66782B9FBBC17A73FF9D181 /* LocalRecurringShiftRecoveryTests.swift */; };
@@ -100,7 +100,6 @@
 		CA1E5E000000000000000003 /* CalendarSemanticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1E5E000000000000000004 /* CalendarSemanticsTests.swift */; };
 		CD50000030B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */; };
 		CE6A572385D358D6118E6A56 /* ProfileAvatarPersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C2C17EEC256EA2C671E15 /* ProfileAvatarPersistenceTests.swift */; };
-		CE6A572385D358D6118E6A57 /* PaywallTrialOfferTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C2C17EEC256EA2C671E16 /* PaywallTrialOfferTests.swift */; };
 		D4B0A0013050111100A1B2C3 /* ShiftReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */; };
 		DF37C9E7F95FB8B021B0AD99 /* PayrollCalculatorBehaviorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */; };
 		E06EDBE278ABEC07DEBF9FDA /* MonthlyEarningsChangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E691E0BB69F35FADF53F22 /* MonthlyEarningsChangeTests.swift */; };
@@ -205,7 +204,6 @@
 		568D0E37F2DA4AE43D386E42 /* FriendsComposerAttachmentControllerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsComposerAttachmentControllerTests.swift; sourceTree = "<group>"; };
 		56E691E0BB69F35FADF53F22 /* MonthlyEarningsChangeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyEarningsChangeTests.swift; sourceTree = "<group>"; };
 		578C2C17EEC256EA2C671E15 /* ProfileAvatarPersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileAvatarPersistenceTests.swift; sourceTree = "<group>"; };
-		578C2C17EEC256EA2C671E16 /* PaywallTrialOfferTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallTrialOfferTests.swift; sourceTree = "<group>"; };
 		5B8BD21DB21AE8305C882A4F /* ShiftCardAmountAnimationFallbackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftCardAmountAnimationFallbackTests.swift; sourceTree = "<group>"; };
 		5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsServiceCalendarMathTests.swift; sourceTree = "<group>"; };
 		67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineOvertimeTests.swift; sourceTree = "<group>"; };
@@ -262,7 +260,7 @@
 		CA1E5E000000000000000002 /* CalendarSemanticsUITests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSemanticsUITests.swift; sourceTree = "<group>"; };
 		CA1E5E000000000000000004 /* CalendarSemanticsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CalendarSemanticsTests.swift; sourceTree = "<group>"; };
 		CD50000130B8000000ABCDEF /* ShiftDetailsPresentationPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftDetailsPresentationPolicyTests.swift; sourceTree = "<group>"; };
-		D0101D84EA694A80B323B9F0 /* FriendsAPIResponseDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsAPIResponseDecodingTests.swift; sourceTree = "<group>"; };
+		D0101D84EA694A80B323B9F0 /* FriendsBootstrapDecodingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsBootstrapDecodingTests.swift; sourceTree = "<group>"; };
 		D4B0A0023050111100A1B2C4 /* ShiftReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftReminderPlannerTests.swift; sourceTree = "<group>"; };
 		DA87CB237E9D3D643F34BB55 /* ShiftsListPlaceholderPolicyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftsListPlaceholderPolicyTests.swift; sourceTree = "<group>"; };
 		DFFDB9FCC210711C89BECC5E /* PayrollAdjustmentCalculatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollAdjustmentCalculatorTests.swift; sourceTree = "<group>"; };
@@ -470,7 +468,6 @@
 				9A402FE07B31117F181E6ACB /* JobCurrencyAggregateResolverTests.swift */,
 				F6595302ED840034D4E34591 /* StatsServiceCurrencyTests.swift */,
 				578C2C17EEC256EA2C671E15 /* ProfileAvatarPersistenceTests.swift */,
-				578C2C17EEC256EA2C671E16 /* PaywallTrialOfferTests.swift */,
 				56E691E0BB69F35FADF53F22 /* MonthlyEarningsChangeTests.swift */,
 				ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */,
 				6CAD23D585847B9F1CFA03FB /* StatsServiceUserIsolationTests.swift */,
@@ -492,7 +489,7 @@
 				976E576E1642B64EE7E0E1FA /* AuthIdentityInputTests.swift */,
 				33275F166F2F09029A5C1A22 /* EventDetailsSummaryBuilderTests.swift */,
 				1CDF8C4565592D34AD761BEC /* FriendNotificationMessagePrefetcherTests.swift */,
-				D0101D84EA694A80B323B9F0 /* FriendsAPIResponseDecodingTests.swift */,
+				D0101D84EA694A80B323B9F0 /* FriendsBootstrapDecodingTests.swift */,
 				45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */,
 				568D0E37F2DA4AE43D386E42 /* FriendsComposerAttachmentControllerTests.swift */,
 				AE9C233351B5B4ECB36F8C88 /* FriendsComposerDraftStoreTests.swift */,
@@ -1004,7 +1001,6 @@
 				770DBC63EADDCE0A94BCE3AD /* JobCurrencyAggregateResolverTests.swift in Sources */,
 				56EFCBFF1B16E496DCBB7418 /* StatsServiceCurrencyTests.swift in Sources */,
 				CE6A572385D358D6118E6A56 /* ProfileAvatarPersistenceTests.swift in Sources */,
-				CE6A572385D358D6118E6A57 /* PaywallTrialOfferTests.swift in Sources */,
 				E06EDBE278ABEC07DEBF9FDA /* MonthlyEarningsChangeTests.swift in Sources */,
 				F7C518BFF353DDA1605E05BE /* ImageCacheInvalidationTests.swift in Sources */,
 				49C89D7374B5AC5DFB1FB072 /* StatsServiceUserIsolationTests.swift in Sources */,
@@ -1028,7 +1024,7 @@
 				020705327889E2CC9EEB25AE /* AuthIdentityInputTests.swift in Sources */,
 				E7E6B256C5C90B42640D5176 /* EventDetailsSummaryBuilderTests.swift in Sources */,
 				3DF443C2C293E16F9A4E9C99 /* FriendNotificationMessagePrefetcherTests.swift in Sources */,
-				75D3AD7184F6294BEF65BF09 /* FriendsAPIResponseDecodingTests.swift in Sources */,
+				75D3AD7184F6294BEF65BF09 /* FriendsBootstrapDecodingTests.swift in Sources */,
 				E29A3657DB37A9E7B0BA9A38 /* FriendsChatMessageGroupingTests.swift in Sources */,
 				850A44218362AE63CCB3736D /* FriendsComposerAttachmentControllerTests.swift in Sources */,
 				476274EAA87579B5D555F33E /* FriendsComposerDraftStoreTests.swift in Sources */,

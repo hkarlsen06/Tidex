@@ -1,4 +1,3 @@
-import Combine
 import SwiftUI
 // swiftlint:disable:next sorted_imports
 import os.log
@@ -9,26 +8,15 @@ private let kLogger: Logger = Logger(subsystem: "no.tidex.app", category: "Shift
 internal final class ShiftsToolbarCoordinator: ObservableObject {
   internal static let shared = ShiftsToolbarCoordinator()
 
+  /// Whether the month picker accessory shows the list toggle and add button for Schedule.
   @Published internal private(set) var canShowLeadingActions = false
-  @Published internal private(set) var isSelectionModeEnabled = false
-
-  private let toggleSelectionSubject = PassthroughSubject<Void, Never>()
-
-  internal var toggleSelectionAction: AnyPublisher<Void, Never> {
-    toggleSelectionSubject.eraseToAnyPublisher()
-  }
 
   private init() {
     // Singleton.
   }
 
-  internal func update(canShowLeadingActions: Bool, isSelectionModeEnabled: Bool) {
+  internal func update(canShowLeadingActions: Bool) {
     self.canShowLeadingActions = canShowLeadingActions
-    self.isSelectionModeEnabled = isSelectionModeEnabled
-  }
-
-  internal func triggerToggleSelection() {
-    toggleSelectionSubject.send()
   }
 }
 
@@ -180,8 +168,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   // View mode toggle (calendar vs list) - persisted across app launches
   @AppStorage("shiftsViewMode") private var showListView: Bool = false
-  @State private var tabTransitionOffset: CGFloat = 0
-  @State private var tabTransitionOpacity: Double = 1
   @State private var selectedListJobId: String?
   @State private var filteredListShiftsCache: [ShiftWithComputations] = []
   @State private var shiftListItemsCache: [ShiftListItem] = []
@@ -309,12 +295,32 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       }
     }
 
-    // User menu on trailing side
-    ToolbarItem(placement: .topBarTrailing) {
-      UserMenuButton(
-        displayName: coordinator.userDisplayName,
-        avatarUrl: coordinator.userAvatarUrl
-      )
+    if !showListView, !shouldShowWorkSetupRequiredPlaceholder {
+      ToolbarItem(placement: .topBarTrailing) {
+        Button {
+          toggleSelectionMode()
+        } label: {
+          Image(
+            systemName: viewModel.isSelectionModeEnabled
+              ? "checkmark.circle.fill" : "checkmark.circle"
+          )
+          .foregroundStyle(
+            viewModel.isSelectionModeEnabled ? Color.tidexBrandPrimary : Color.tidexTextPrimary
+          )
+          .contentTransition(.symbolEffect(.replace))
+          .accessibilityHidden(true)
+        }
+        .accessibilityLabel(
+          viewModel.isSelectionModeEnabled ? Text(.commonDone) : Text(.shiftsSelectionToggle))
+        .accessibilityIdentifier("schedule.select")
+      }
+    }
+  }
+
+  private func toggleSelectionMode() {
+    selectionHaptic.selectionChanged()
+    MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
+      viewModel.isSelectionModeEnabled.toggle()
     }
   }
 
@@ -347,6 +353,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       .toolbar {
         shiftsToolbarContent
       }
+      .addShiftDestination(in: .shifts)
       .onAppear {
         publishToolbarState()
       }
@@ -355,18 +362,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       }
       .onChange(of: shouldShowWorkSetupRequiredPlaceholder) { _, _ in
         publishToolbarState()
-      }
-      .onChange(of: viewModel.isSelectionModeEnabled) { _, _ in
-        publishToolbarState()
-      }
-      .onReceive(shiftsToolbarCoordinator.toggleSelectionAction) {
-        guard selectedTab == .shifts, !showListView, !shouldShowWorkSetupRequiredPlaceholder else {
-          return
-        }
-        selectionHaptic.selectionChanged()
-        MotionTokens.animate(.emphasis, reduceMotion: reduceMotion) {
-          viewModel.isSelectionModeEnabled.toggle()
-        }
       }
       .iPadToolbarTransaction()
     }
@@ -455,17 +450,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           }
           refreshWorkSetupPresentationState()
           handleDeepLink(coordinator.pendingDeepLink)
-          guard !shouldShowWorkSetupRequiredPlaceholder else {
-            return
-          }
-          if oldTab == .add {
-            tabTransitionOffset = -28
-            tabTransitionOpacity = 0.92
-            MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
-              tabTransitionOffset = 0
-              tabTransitionOpacity = 1
-            }
-          }
         }
         .onAppear {
           viewModel.setActiveTabVisible(selectedTab == .shifts)
@@ -649,21 +633,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           SettingsView(
             initialDestination: .calendarSync(
               calendarSetupIntent: .setup(mode: .shiftsAndEvents, autoOpen: false)))
-        }
-        .fullScreenCover(isPresented: $viewModel.showMonthLimitSheet) {
-          MonthLimitSheet(
-            existingMonths: viewModel.existingShiftMonths,
-            targetMonth: viewModel.targetMonth,
-            onDeleteShifts: {
-              await viewModel.deleteShiftsInOtherMonthsForCopy()
-            },
-            onDeleteComplete: {
-              viewModel.onCopyMonthLimitDeleteComplete()
-            },
-            onUpgradeComplete: {
-              viewModel.onCopyMonthLimitUpgradeComplete()
-            }
-          )
         }
         // Delete confirmation alert
         .alert(
@@ -1297,8 +1266,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
   private func publishToolbarState() {
     shiftsToolbarCoordinator.update(
-      canShowLeadingActions: !shouldShowWorkSetupRequiredPlaceholder,
-      isSelectionModeEnabled: viewModel.isSelectionModeEnabled
+      canShowLeadingActions: !shouldShowWorkSetupRequiredPlaceholder
     )
   }
 
@@ -1454,7 +1422,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
                   return
                 }
                 if let dateISO {
-                  navigateToAddTab(preselectedDate: dateISO)
+                  openAddShift(preselectedDate: dateISO)
                 }
               },
               isCopyMode: viewModel.isCopyMode,
@@ -1487,8 +1455,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
               excludedFromTotalIds: viewModel.excludedFromTotalIds
             )
             .padding(.horizontal, Spacing.md)
-            .offset(y: tabTransitionOffset)
-            .opacity(tabTransitionOpacity)
             Spacer()
           }
           // Offset for month picker overlay
@@ -1510,7 +1476,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           monthPeriod: viewModel.monthPeriod,
           monthName: viewModel.displayMonthName,
           onAddShift: {
-            navigateToAddTab()
+            openAddShift()
           }
         )
         .padding(.horizontal, Spacing.md)
@@ -1675,7 +1641,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
 
                 // No selection active - navigate to Add tab with date pre-selected
                 if let dateISO {
-                  navigateToAddTab(preselectedDate: dateISO)
+                  openAddShift(preselectedDate: dateISO)
                 }
               },
               isCopyMode: viewModel.isCopyMode,
@@ -1709,8 +1675,6 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
             )
             .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
             .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-            .offset(y: tabTransitionOffset)
-            .opacity(tabTransitionOpacity)
             Spacer()
           }
           // Offset for month picker overlay so content centers in available space
@@ -1735,7 +1699,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
           monthPeriod: viewModel.monthPeriod,
           monthName: viewModel.displayMonthName,
           onAddShift: {
-            navigateToAddTab()
+            openAddShift()
           }
         )
         .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -2021,7 +1985,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       TodayPlaceholderCard(onTap: {
         selectionHaptic.selectionChanged()
         // Navigate to add shift with today's date pre-selected
-        navigateToAddTab(preselectedDate: todayISO())
+        openAddShift(preselectedDate: todayISO())
       })
       .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
       .listRowBackground(Color.clear)
@@ -2029,10 +1993,10 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     }
   }
 
-  private func navigateToAddTab(preselectedDate dateISO: String? = nil) {
+  /// Opens the Add sheet in single mode, optionally with a date selected.
+  private func openAddShift(preselectedDate dateISO: String? = nil) {
     SharedMonthContext.shared.preselectedDate = dateISO
     coordinator.pendingDeepLink = .addShift(mode: .single, date: dateISO)
-    selectedTab = .add
   }
 
   private func listCoveredDateISO(for event: EventRow) -> String {

@@ -2,12 +2,14 @@ import XCTest
 
 @testable import Tidex
 
-final class FriendsAPIResponseDecodingTests: XCTestCase {
+final class FriendsBootstrapDecodingTests: XCTestCase {
   func testDecodesBlockedFriendsWhenPresent() throws {
     let data = Data(
       """
       {
+        "sharers": [],
         "friends": [],
+        "previewPayloads": [],
         "blockedFriends": [
           {
             "id": "friend-1",
@@ -28,17 +30,12 @@ final class FriendsAPIResponseDecodingTests: XCTestCase {
               "ownerMuted": false
             }
           }
-        ],
-        "capacity": {
-          "canAdd": true,
-          "currentCount": 1,
-          "limit": 5
-        }
+        ]
       }
       """.utf8
     )
 
-    let response = try JSONDecoder().decode(FriendsAPIResponse.self, from: data)
+    let response = try JSONDecoder().decode(FriendsTabBootstrapRPCResponse.self, from: data)
 
     XCTAssertEqual(response.friends.count, 0)
     XCTAssertEqual(response.blockedFriends?.count, 1)
@@ -46,23 +43,21 @@ final class FriendsAPIResponseDecodingTests: XCTestCase {
     XCTAssertTrue(response.blockedFriends?.first?.sharesWithMe?.hidden ?? false)
   }
 
-  func testDecodesLegacyResponseWithoutBlockedFriends() throws {
-    let data = Data(
-      """
-      {
-        "friends": [],
-        "capacity": {
-          "canAdd": true,
-          "currentCount": 0,
-          "limit": 5
-        }
-      }
-      """.utf8
-    )
+  /// The server keeps sending a `capacity` stub for older app builds, and may drop it later.
+  /// The bootstrap payload has to decode either way.
+  func testBootstrapDecodesWithAndWithoutLegacyCapacity() throws {
+    let withoutCapacity = Data(
+      #"{"sharers": [], "friends": [], "blockedFriends": [], "previewPayloads": []}"#.utf8)
+    let withCapacity = Data(
+      #"""
+      {"sharers": [], "friends": [], "blockedFriends": [], "previewPayloads": [],
+       "capacity": {"canAdd": true, "currentCount": 7, "limit": 0}}
+      """#.utf8)
 
-    let response = try JSONDecoder().decode(FriendsAPIResponse.self, from: data)
-
-    XCTAssertEqual(response.friends.count, 0)
-    XCTAssertNil(response.blockedFriends)
+    for data in [withoutCapacity, withCapacity] {
+      let response = try JSONDecoder().decode(FriendsTabBootstrapRPCResponse.self, from: data)
+      XCTAssertTrue(response.friends.isEmpty)
+      XCTAssertEqual(response.blockedFriends?.count, 0)
+    }
   }
 }

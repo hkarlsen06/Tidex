@@ -32,11 +32,11 @@ compose stack, a variable set under `environment:` in `docker-compose.yml`
 overrides the same variable in `env_file`. Change those in `.env`, then confirm
 the live value with `docker compose exec -T auth env`.
 
-Use migrations rather than ad hoc SQL for schema changes. When a Supabase CLI
-operation is required, pass the explicit, percent-encoded MDR connection as
-`--db-url "$TIDEX_MDR_DB_URL"`. Do not use bare remote CLI commands or
-`--linked`; they target the retired hosted project unless explicitly
-reconfigured and verified. Never commit the database URL or its credentials.
+Use migrations rather than ad hoc SQL for schema changes. Do not run remote
+Supabase CLI database commands (`db push`, `db pull`, `migration repair`,
+`--linked`, `--db-url`) against production. MDR has no
+`supabase_migrations.schema_migrations` table, so `db push` would try to
+replay every migration.
 
 ## Repository Structure
 
@@ -129,13 +129,12 @@ Use `verify_jwt: false` for pg_cron, webhooks, service role auth. Use `verify_jw
 
 - SQL function source files: `supabase/sql/functions/<category>/*.sql`
 - Cron job docs: `supabase/sql/cron/*.md`
-- CLI migration files: `supabase/migrations/*.sql`
+- Migration files: `supabase/migrations/*.sql`
 
 **CRITICAL:**
 
-- Write migrations that will be applied by the Supabase CLI to `supabase/migrations/`.
-- Use `supabase db pull --db-url "$TIDEX_MDR_DB_URL"` only when intentionally baselining or capturing remote-first schema changes back into `supabase/migrations/`.
-- Do not treat `supabase/sql/migrations/` as the CLI-applied migration directory.
+- Write migrations to `supabase/migrations/`.
+- Do not treat `supabase/sql/migrations/` as the migration directory.
 - Keep the SQL source files in `supabase/sql/functions/` in sync with the actual database definitions when making changes.
 
 ### Migration-only schema policy
@@ -148,8 +147,8 @@ Before revisiting adoption or planning a history cutover, read [the decision and
 
 1. Edit function/trigger source files in `supabase/sql/functions/` as needed.
 2. Add or update the corresponding migration in `supabase/migrations/`.
-3. Preview and apply it explicitly to MDR with `supabase db push --db-url "$TIDEX_MDR_DB_URL" --dry-run`, then rerun without `--dry-run`.
-4. If the remote database was changed outside the CLI workflow, reconcile with `supabase db pull --db-url "$TIDEX_MDR_DB_URL"` before continuing.
+3. Dry-run it on MDR by wrapping the file in `BEGIN;` and `ROLLBACK;` and piping it to `ssh mdr "cd /srv/tidex/tidex-sb && docker compose exec -T db psql -U postgres -d postgres -v ON_ERROR_STOP=1"`.
+4. Apply it with the same command plus `--single-transaction`, reading the migration file on stdin, then verify the result with a read-only query.
 
 **Current Cron Jobs:**
 

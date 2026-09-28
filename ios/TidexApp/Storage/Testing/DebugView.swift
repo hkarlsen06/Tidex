@@ -2,7 +2,6 @@
 // swiftlint:disable:previous blanket_disable_command
 #if DEBUG
   import os.log
-  import StoreKit
   import SwiftUI
   import UserNotifications
 
@@ -24,12 +23,6 @@
     @State private var showAdvancedSync = false
     @State private var showResetLocalDataConfirmation = false
 
-    @ObservedObject private var entitlementService = EntitlementService.shared
-    @ObservedObject private var storeKitManager = StoreKitManager.shared
-    @State private var isRefreshingEntitlement = false
-    @State private var isSyncingStoreKit = false
-    @State private var storeKitSyncResult: String?
-
     // Notification debug state
     @State private var pendingSmartCount = 0
     @State private var pendingReminderCount = 0
@@ -41,9 +34,6 @@
       List {
         // Quick Actions (most used)
         quickActionsSection
-
-        // Entitlement Section
-        entitlementSection
 
         // Notifications Section
         notificationsSection
@@ -345,194 +335,6 @@
       }
     }
 
-    // MARK: - Entitlement Section
-
-    private var entitlementSection: some View {
-      Section("Entitlement") {
-        HStack {
-          Text("Effective Tier")
-          Spacer()
-          Text(entitlementService.effectiveTier.rawValue.capitalized)
-            .foregroundColor(tierColor(for: entitlementService.effectiveTier))
-            .bold()
-        }
-
-        HStack {
-          Text("StoreKit Tier")
-          Spacer()
-          Text(storeKitManager.currentTier.rawValue.capitalized)
-            .foregroundColor(tierColor(for: storeKitManager.currentTier))
-        }
-
-        if let productId = storeKitManager.currentProductId {
-          HStack {
-            Text("StoreKit Product")
-            Spacer()
-            Text(productId)
-              .font(.caption)
-              .foregroundColor(.secondary)
-          }
-        }
-
-        HStack {
-          Text("Server Cache Status")
-          Spacer()
-          if entitlementService.serverTierExpired {
-            Text("Expired")
-              .foregroundColor(.red)
-          } else {
-            Text("Valid")
-              .foregroundColor(.green)
-          }
-        }
-
-        if let cached = entitlementService.serverEntitlement {
-          HStack {
-            Text("Valid Until")
-            Spacer()
-            Text(cached.validUntil, style: .relative)
-              .foregroundColor(cached.isExpired ? .red : .secondary)
-          }
-
-          if cached.isGrandfathered {
-            HStack {
-              Text("Grandfathered")
-              Spacer()
-              Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(.green)
-            }
-          }
-        }
-
-        // Refresh StoreKit state button
-        Button {
-          Task { await refreshStoreKitState() }
-        } label: {
-          Label("Refresh StoreKit State", systemImage: "arrow.clockwise")
-        }
-
-        // Sync StoreKit to Server button
-        if storeKitManager.currentTier != .free {
-          Button {
-            Task { await syncStoreKitToServer() }
-          } label: {
-            HStack {
-              if isSyncingStoreKit {
-                ProgressView()
-                  .progressViewStyle(.circular)
-              }
-              Label("Sync StoreKit to Server", systemImage: "icloud.and.arrow.up")
-            }
-          }
-          .disabled(isSyncingStoreKit || userId == nil)
-
-          if let result = storeKitSyncResult {
-            Text(result)
-              .font(.caption)
-              .foregroundColor(result.contains("Success") ? .green : .orange)
-          }
-        }
-      }
-    }
-
-    /// Refresh StoreKit state from App Store
-    private func refreshStoreKitState() async {
-      logger.info("Refreshing StoreKit state...")
-      do {
-        try await AppStore.sync()
-        await storeKitManager.updateCurrentEntitlements()
-        logger.info("StoreKit state refreshed: tier=\(storeKitManager.currentTier.rawValue)")
-      } catch {
-        logger.error("Failed to refresh StoreKit state: \(error.localizedDescription)")
-      }
-    }
-
-    /// Sync current StoreKit entitlements to server
-    /// Use this when StoreKit has a subscription but server doesn't know about it
-    private func syncStoreKitToServer() async {
-      guard let userId else { return }
-
-      isSyncingStoreKit = true
-      storeKitSyncResult = "Scanning entitlements..."
-
-      var uploadedCount = 0
-      var failedCount = 0
-      var lastError: String?
-
-      // Iterate through all current entitlements
-      for await result in Transaction.currentEntitlements {
-        guard case .verified(let transaction) = result else {
-          logger.warning("Skipping unverified transaction")
-          continue
-        }
-
-        // Get the JWS representation
-        let jwsRepresentation = result.jwsRepresentation
-
-        logger.info(
-          "Found StoreKit entitlement: \(transaction.productID), id=\(transaction.id), originalId=\(transaction.originalID)"
-        )
-        storeKitSyncResult = "Uploading \(transaction.productID)..."
-
-        // Create upload
-        let upload = LocalPendingJWSUpload(
-          userId: userId,
-          jwsRepresentation: jwsRepresentation,
-          transactionId: String(transaction.id),
-          originalTransactionId: String(transaction.originalID),
-          productId: transaction.productID,
-          environment: transaction.environment == .sandbox ? "Sandbox" : "Production",
-          priceDisplay: nil  // Not available from Transaction
-        )
-
-        // Upload immediately and capture any error
-        let success = await JWSUploadWorker.shared.uploadImmediately(upload)
-        if success {
-          uploadedCount += 1
-          logger.info("Upload succeeded for \(transaction.productID)")
-        } else {
-          failedCount += 1
-          lastError = "Check logs for details"
-          logger.error("Upload failed for \(transaction.productID)")
-        }
-      }
-
-      if uploadedCount > 0 {
-        var result = "Success: \(uploadedCount) synced"
-        if failedCount > 0 {
-          result += ", \(failedCount) failed"
-        }
-        storeKitSyncResult = result
-      } else if failedCount > 0 {
-        storeKitSyncResult = "Failed: \(lastError ?? "Unknown error")"
-      } else {
-        storeKitSyncResult = "No entitlements found in StoreKit"
-      }
-
-      isSyncingStoreKit = false
-    }
-
-    private func tierColor(for tier: SubscriptionTier) -> Color {
-      switch tier {
-      case .free: return .secondary
-      case .pro: return .blue
-      case .max: return .purple
-      }
-    }
-
-    private func forceRefreshEntitlement() async {
-      guard let userId else { return }
-
-      isRefreshingEntitlement = true
-      do {
-        try await entitlementService.refreshFromServer(userId: userId)
-        logger.info("Entitlement refreshed: tier=\(self.entitlementService.effectiveTier.rawValue)")
-      } catch {
-        logger.error("Failed to refresh entitlement: \(error.localizedDescription)")
-      }
-      isRefreshingEntitlement = false
-    }
-
     // MARK: - State Summary Section
 
     private var stateSummarySection: some View {
@@ -831,19 +633,6 @@
           Label("Trigger Manual Sync", systemImage: "arrow.triangle.2.circlepath")
         }
         .disabled(syncCoordinator.isSyncing || userId == nil)
-
-        Button {
-          Task { await forceRefreshEntitlement() }
-        } label: {
-          HStack {
-            if isRefreshingEntitlement {
-              ProgressView()
-                .progressViewStyle(.circular)
-            }
-            Label("Refresh Entitlement", systemImage: "arrow.clockwise")
-          }
-        }
-        .disabled(isRefreshingEntitlement || userId == nil)
       }
     }
 

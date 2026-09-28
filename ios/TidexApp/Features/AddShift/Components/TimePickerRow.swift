@@ -582,8 +582,8 @@ struct TimeRangePicker: View {
   var presetRanges: [TimeRangeCount]?  // swiftlint:disable:this discouraged_optional_collection explicit_acl
   /// Whether to show recent/preset time chips below the inputs.
   var showsRecentTimeChips = true
-  /// Optional accessory displayed to the left of recent time chips.
-  var leadingChipAccessory: AnyView?  // swiftlint:disable:this explicit_acl
+  /// Shows the recent time chips above the inputs instead of below them.
+  var chipsAboveInputs = false
   @StateObject private var focusController = TimeInputFocusController()
   @ScaledMetric(relativeTo: .body) private var compactInputWidth: CGFloat = 156
   @ScaledMetric(relativeTo: .body) private var compactInputHeight: CGFloat = 58
@@ -600,6 +600,10 @@ struct TimeRangePicker: View {
 
   var body: some View {
     VStack(spacing: Spacing.xs) {
+      if chipsAboveInputs {
+        recentTimeChipRow
+      }
+
       ViewThatFits(in: .horizontal) {
         HStack(alignment: .top, spacing: Spacing.sm) {
           startInput.frame(width: compactInputWidth)
@@ -612,22 +616,8 @@ struct TimeRangePicker: View {
       }
       .frame(maxWidth: .infinity, alignment: .center)
 
-      if showsRecentTimeChips {
-        HStack(spacing: Spacing.xs) {
-          if let leadingChipAccessory {
-            leadingChipAccessory
-              .fixedSize(horizontal: true, vertical: false)
-          }
-
-          RecentTimesChips(
-            onSelect: { range in
-              applyTimeRange(range)
-            },
-            activeRangeId: activeRangeId,
-            presetRanges: presetRanges
-          )
-          .frame(maxWidth: .infinity, alignment: .leading)
-        }
+      if !chipsAboveInputs {
+        recentTimeChipRow
       }
     }
     .id(scrollId)
@@ -643,6 +633,20 @@ struct TimeRangePicker: View {
       if focusController.currentFocus != newValue {
         focusController.focus(newValue)
       }
+    }
+  }
+
+  @ViewBuilder
+  private var recentTimeChipRow: some View {
+    if showsRecentTimeChips {
+      RecentTimesChips(
+        onSelect: { range in
+          applyTimeRange(range)
+        },
+        activeRangeId: activeRangeId,
+        presetRanges: presetRanges
+      )
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
   }
 

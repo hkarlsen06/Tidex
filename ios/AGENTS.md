@@ -16,7 +16,7 @@ Use [the verification guide](docs/AGENT_VERIFICATION.md) when building or testin
 
 Use the existing Swift Supabase client with the user's JWT for RLS-protected queries and authorized public RPCs. Keep privileged operations server-side in the existing Edge Functions or reviewed SQL functions. Do not introduce a web API layer or put service-role credentials in the iOS app. Inspect the affected service and handler before choosing a route.
 
-The current service layer uses `.rpc(...)` and `supabase.functions.invoke(...)`; examples include `Services/Data/FriendsMessagingService.swift`, `Services/Auth/ImpersonationManager.swift`, and `Services/Subscription/JWSUploadWorker.swift` under `ios/TidexApp/`. Backend source and self-hosted deployment guidance are in the root AGENTS.md. Static marketing and compatibility sites are not an authenticated application API server.
+The current service layer uses `.rpc(...)` and `supabase.functions.invoke(...)`; examples include `Services/Data/FriendsMessagingService.swift` and `Services/Auth/ImpersonationManager.swift` under `ios/TidexApp/`. Backend source and self-hosted deployment guidance are in the root AGENTS.md. Static marketing and compatibility sites are not an authenticated application API server.
 
 ## Testing Requirements (REQUIRED for feature work)
 

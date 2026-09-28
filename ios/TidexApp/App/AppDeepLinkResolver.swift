@@ -157,9 +157,6 @@ enum AppDeepLinkResolver {
     case "security", "mfa", "auth", "account_security":
       return .security
 
-    case "subscription", "plan", "billing", "paywall":
-      return .subscription
-
     case "notifications", "notification", "reminders":
       return .notifications
 

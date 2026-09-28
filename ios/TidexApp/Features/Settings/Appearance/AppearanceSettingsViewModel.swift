@@ -8,12 +8,11 @@ private enum AppearanceSettingsConstants {
 }
 
 internal enum StartupTabOption: String, CaseIterable {
-  case add
   case home
   case sharing
   case shifts
 
-  internal static let allCases: [Self] = [.home, .shifts, .add, .sharing]
+  internal static let allCases: [Self] = [.home, .shifts, .sharing]
 }
 
 /// ViewModel for appearance settings

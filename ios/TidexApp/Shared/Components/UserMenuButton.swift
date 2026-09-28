@@ -4,38 +4,24 @@
 // swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface no_magic_numbers
 import SwiftUI
 
-/// A user menu button that displays the user's profile picture and name,
-/// with a dropdown menu for accessing settings and other quick actions.
-/// Inspired by the web UserMenu component.
+/// Toolbar button that shows a person's first name and avatar.
+/// Used for friends in chat and calendar screens.
 struct UserMenuButton: View {
-  // Theme is handled at UIKit window level - sheets inherit from window
-
   /// User's display name (email or name from profile)
   let displayName: String
   /// Optional profile picture URL
   let avatarUrl: String?
-  /// Whether tapping opens settings (true) or is display-only (false)
+  /// Whether the button responds to taps (false renders a plain label)
   var interactive: Bool = true
-  /// Optional custom tap action. When provided, overrides the default settings behavior.
+  /// Tap action
   var onTap: (() -> Void)?
-  /// Whether to show the settings sheet
-  @State private var showSettings = false
 
   var body: some View {
     if interactive {
       Button {
-        if let onTap {
-          onTap()
-        } else {
-          showSettings = true
-        }
+        onTap?()
       } label: {
         menuButton
-      }
-      .sheet(isPresented: $showSettings) {
-        SettingsView()
-          .presentationDetents([.large])
-          .presentationDragIndicator(.visible)
       }
     } else {
       menuButton

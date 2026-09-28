@@ -347,9 +347,6 @@ struct AppearanceSettingsView: View {
     case .shifts:
       return String(localized: .tabsShifts)
 
-    case .add:
-      return String(localized: .tabsAdd)
-
     case .sharing:
       return String(localized: .tabsSharing)
     }
@@ -362,9 +359,6 @@ struct AppearanceSettingsView: View {
 
     case .shifts:
       return "calendar"
-
-    case .add:
-      return "plus.capsule.fill"
 
     case .sharing:
       return "person.2.fill"

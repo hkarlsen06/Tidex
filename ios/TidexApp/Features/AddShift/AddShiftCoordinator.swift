@@ -12,10 +12,10 @@ internal enum AddShiftSubmitBlocker: Hashable {
   case noSingleDates
 }
 
-/// Coordinates state between AddShiftView/ViewModel and the tab bar
+/// Coordinates state between AddShiftViewModel and the Add screen's save button
 /// Used to:
-/// - Communicate whether a shift can be submitted (for tab icon color)
-/// - Trigger add action from tab bar tap
+/// - Communicate whether a shift can be submitted (for save button state)
+/// - Trigger the add action from the save button
 /// - Track current mode for proper action routing
 @MainActor
 internal final class AddShiftCoordinator: ObservableObject {
@@ -39,29 +39,11 @@ internal final class AddShiftCoordinator: ObservableObject {
   /// Reasons the Add action is currently blocked.
   @Published internal private(set) var submitBlockers: [AddShiftSubmitBlocker] = []
 
-  /// Whether the current Add tab form has user-entered content that can be cleared.
-  @Published internal private(set) var hasContent: Bool = false
-
-  /// Whether the moved Add tab undo control should be shown in shared bottom chrome.
-  @Published internal private(set) var canShowStartFreshControl: Bool = false
-
   private let triggerAddSubject: PassthroughSubject<Void, Never> = .init()
-  private let cycleModeSubject: PassthroughSubject<Void, Never> = .init()
-  private let startFreshSubject: PassthroughSubject<Void, Never> = .init()
 
-  /// Publisher for triggering the add action from outside (tab bar tap)
+  /// Publisher for triggering the add action from the save button
   internal var triggerAddAction: AnyPublisher<Void, Never> {
     triggerAddSubject.eraseToAnyPublisher()
-  }
-
-  /// Publisher for cycling add modes when the Add tab is reselected.
-  internal var cycleModeAction: AnyPublisher<Void, Never> {
-    cycleModeSubject.eraseToAnyPublisher()
-  }
-
-  /// Publisher for triggering the Add tab start-fresh confirmation.
-  internal var startFreshAction: AnyPublisher<Void, Never> {
-    startFreshSubject.eraseToAnyPublisher()
   }
 
   private init() {
@@ -94,35 +76,14 @@ internal final class AddShiftCoordinator: ObservableObject {
     submitBlockers = blockers
   }
 
-  /// Update whether the Add tab form has content that can be cleared.
-  internal func updateHasContent(_ hasContent: Bool) {
-    self.hasContent = hasContent
-  }
-
-  internal func updateCanShowStartFreshControl(_ canShowStartFreshControl: Bool) {
-    self.canShowStartFreshControl = canShowStartFreshControl
-  }
-
-  /// Trigger the add action (called from MainTabView when Add tab is tapped)
+  /// Trigger the add action (called when the save button is tapped)
   internal func triggerAdd() {
     // swiftlint:disable:next conditional_returns_on_newline
     guard canSubmit, !isLoading else { return }
     triggerAddSubject.send()
   }
 
-  internal func triggerModeCycle() {
-    guard !isLoading else { return }
-    cycleModeSubject.send()
-  }
-
-  internal func triggerStartFresh() {
-    guard hasContent, !isLoading else { return }
-    startFreshSubject.send()
-  }
-
   deinit {
     triggerAddSubject.send(completion: .finished)
-    cycleModeSubject.send(completion: .finished)
-    startFreshSubject.send(completion: .finished)
   }
 }

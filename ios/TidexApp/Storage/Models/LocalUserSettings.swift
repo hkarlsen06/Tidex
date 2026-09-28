@@ -158,7 +158,7 @@ final class LocalUserSettings {
   var effectiveDefaultStartupTab: String {
     guard let tab = defaultStartupTab else { return "home" }
     switch tab {
-    case "home", "shifts", "add", "stats", "sharing":
+    case "home", "shifts", "stats", "sharing":
       return tab
 
     default:

@@ -119,11 +119,7 @@ struct ManageSharingSheet: View {
               showEarnings: $viewModel.addShowEarnings,
               error: $viewModel.addError,
               isLoading: viewModel.isAdding,
-              canAdd: viewModel.canAddMore,
               isOfflineUnavailable: viewModel.areServerActionsUnavailable,
-              capacityDisplay: viewModel.capacityDisplay,
-              capacityAccessibilityLabel: viewModel.capacityAccessibilityLabel,
-              shouldShowCapacity: viewModel.shouldShowCapacity,
               onAdd: {
                 Task {
                   await viewModel.addFriend()

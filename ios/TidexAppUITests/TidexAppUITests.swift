@@ -28,38 +28,6 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
-  func testPaywallWithoutConfirmedTrialEligibilityDoesNotPromiseATrial() {
-    let app = makeApp(scenario: "design-review")
-    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "paywall"
-    app.launch()
-    XCTAssertTrue(app.buttons["Close"].waitForExistence(timeout: defaultTimeout))
-    attachAppStoreScreenshot(app, name: "billing-paywall")
-    XCTAssertTrue(app.staticTexts["Unlock Tidex Pro"].exists, app.debugDescription)
-    XCTAssertFalse(app.staticTexts["Try Tidex Pro free"].exists)
-    XCTAssertFalse(app.buttons["Start my free trial"].exists)
-  }
-
-  @MainActor
-  func testDeleteAccountWarnsThatTheAppStoreSubscriptionKeepsBilling() {
-    let app = makeApp(scenario: "design-review")
-    app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "profile-subscribed"
-    app.launch()
-    let signOut = app.buttons["Log out"]
-    XCTAssertTrue(signOut.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    for _ in 0..<3 where !app.buttons["Delete Account"].isHittable { app.swipeUp() }
-    attachAppStoreScreenshot(app, name: "billing-profile-sessions")
-    app.buttons["Delete Account"].tap()
-    let alert = app.alerts.firstMatch
-    XCTAssertTrue(alert.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    attachAppStoreScreenshot(app, name: "billing-delete-account-dialog")
-    XCTAssertTrue(
-      alert.staticTexts.matching(
-        NSPredicate(format: "label CONTAINS %@", "doesn't cancel your App Store subscription")
-      ).firstMatch.exists, alert.debugDescription)
-    XCTAssertTrue(alert.buttons["Manage subscription"].exists, alert.debugDescription)
-  }
-
-  @MainActor
   func testTaxSettingExplainsTheFlatPercentage() {
     let app = makeApp(scenario: "design-review")
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "pay-history-tariff-editor"
@@ -342,7 +310,7 @@ final class TidexAppUITests: XCTestCase {
 
   @MainActor
   private func captureAddScreenshot(_ app: XCUIApplication, language: String) {
-    app.buttons[language == "en" ? "Add" : "Legg til"].firstMatch.tap()
+    openAddShift(in: app)
     let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
       .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
@@ -398,7 +366,7 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(text(containingLabel: "before tax", in: app).exists)
     attachAppStoreScreenshot(app, name: "money-03-schedule")
 
-    app.buttons["Add"].firstMatch.tap()
+    openAddShift(in: app)
     let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
       .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
@@ -449,10 +417,10 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
-  func testAddTabNamesItsModesAndSaveAction() {
-    for (language, locale, addTitle, singleTitle, saveTitle) in [
-      ("en", "en_US", "Add", "Single", "Save"),
-      ("nb", "nb_NO", "Legg til", "Enkel", "Lagre"),
+  func testAddScreenNamesItsModesAndSaveAction() {
+    for (language, locale, singleTitle, saveTitle) in [
+      ("en", "en_US", "Single", "Add"),
+      ("nb", "nb_NO", "Enkel", "Legg til"),
     ] {
       let app = XCUIApplication()
       app.launchArguments = [
@@ -461,9 +429,7 @@ final class TidexAppUITests: XCTestCase {
       ]
       app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
       app.launch()
-      let addTab = app.tabBars.buttons[addTitle]
-      XCTAssertTrue(addTab.waitForExistence(timeout: 30), app.debugDescription)
-      addTab.tap()
+      openAddShift(in: app)
 
       let singleMode = app.buttons["add-shift.mode.single"]
       XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
@@ -535,17 +501,39 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
+  func testProfileTabShowsSummaryAndRetapReturnsToRoot() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "home"]
+    app.launch()
+    // The profile tab is last and labelled with the user's first name.
+    let profileTab = app.tabBars.buttons.element(boundBy: 3)
+    XCTAssertTrue(profileTab.waitForExistence(timeout: 30), app.debugDescription)
+    profileTab.tap()
+
+    let card = app.buttons["settings.profile-card"]
+    XCTAssertTrue(card.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertFalse(app.buttons["Done"].exists, "The profile tab has no sheet Done button")
+    attachAppStoreScreenshot(app, name: "profile-tab")
+
+    card.tap()
+    XCTAssertTrue(card.waitForNonExistence(timeout: defaultTimeout))
+    profileTab.tap()
+    XCTAssertTrue(
+      card.waitForExistence(timeout: defaultTimeout), "Re-tapping the tab returns to the root")
+  }
+
+  @MainActor
   func testEmptyPastMonthCanAddAShiftAfterUsingEventMode() {
     let app = makeApp(scenario: "app-store-screenshots")
     app.launchArguments += ["-defaultStartupTab", "home", "-shiftsViewMode", "YES"]
     app.launch()
-    let addTab = app.tabBars.buttons["Add"]
-    XCTAssertTrue(addTab.waitForExistence(timeout: 30), app.debugDescription)
-    addTab.tap()
+    openAddShift(in: app)
     let eventsMode = app.buttons["add-shift.mode.events"]
     XCTAssertTrue(eventsMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     eventsMode.tap()
     XCTAssertTrue(eventsMode.isSelected)
+    app.buttons["BackButton"].tap()
+    XCTAssertTrue(eventsMode.waitForNonExistence(timeout: defaultTimeout))
 
     app.tabBars.buttons["Schedule"].tap()
     let monthTitle = app.buttons["month-header.title"].firstMatch
@@ -569,10 +557,11 @@ final class TidexAppUITests: XCTestCase {
     let singleMode = app.buttons["add-shift.mode.single"]
     XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     XCTAssertTrue(singleMode.isSelected, "Add shift must leave the previous event mode")
-    let addMonthTitle = app.buttons["month-header.title"].firstMatch
-    XCTAssertTrue(addMonthTitle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    XCTAssertTrue(addMonthTitle.label.contains("December"), addMonthTitle.label)
-    XCTAssertTrue(addMonthTitle.label.contains("2025"), addMonthTitle.label)
+    // The header shows the month and year as separate parts of the same title.
+    let monthTitles = app.buttons.matching(identifier: "month-header.title")
+    XCTAssertTrue(
+      monthTitles["December"].waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertTrue(monthTitles["2025"].exists, app.debugDescription)
   }
 
   @MainActor
@@ -580,9 +569,7 @@ final class TidexAppUITests: XCTestCase {
     let app = makeApp(scenario: "app-store-screenshots")
     app.launchArguments += ["-defaultStartupTab", "home"]
     app.launch()
-    let addTab = app.tabBars.buttons["Add"]
-    XCTAssertTrue(addTab.waitForExistence(timeout: 30))
-    addTab.tap()
+    openAddShift(in: app)
     let jobPicker = app.buttons["add-shift.job-picker"]
     XCTAssertTrue(jobPicker.waitForExistence(timeout: defaultTimeout))
     XCTAssertTrue(jobPicker.label.contains("Nord"))
@@ -594,7 +581,9 @@ final class TidexAppUITests: XCTestCase {
     }
     jobPicker.tap()
     app.buttons["Jobs & Pay"].tap()
-    let workplace = app.buttons.containing(.staticText, identifier: "Nord").firstMatch
+    // Skip the Add sheet's own job chip, which stays in the hierarchy under this sheet.
+    let workplace = app.buttons.matching(NSPredicate(format: "identifier != 'add-shift.job-picker'"))
+      .containing(.staticText, identifier: "Nord").firstMatch
     XCTAssertTrue(workplace.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     workplace.tap()
     let edit = app.buttons["Edit job"]
@@ -629,9 +618,7 @@ final class TidexAppUITests: XCTestCase {
     app.launchArguments += ["-defaultStartupTab", "home"]
     app.launchEnvironment["TIDEX_TEST_KEYBOARD"] = "1"
     app.launch()
-    let addTab = app.tabBars.buttons["Add"]
-    XCTAssertTrue(addTab.waitForExistence(timeout: 30))
-    addTab.tap()
+    openAddShift(in: app)
 
     let start = app.textFields["Start"]
     let end = app.textFields["End"]
@@ -810,7 +797,6 @@ final class TidexAppUITests: XCTestCase {
     let signup: String
     let payoutDetails: String
     let schedule: String
-    let add: String
     let jobsAndPay: String
     let manageJobs: String
     let defaultJob: String
@@ -821,11 +807,11 @@ final class TidexAppUITests: XCTestCase {
     for labels in [
       TerminologyLabels(
         language: "en", locale: "en_US", login: "Log in", signup: "Create account",
-        payoutDetails: "Payout details", schedule: "Schedule", add: "Add",
+        payoutDetails: "Payout details", schedule: "Schedule",
         jobsAndPay: "Jobs & Pay", manageJobs: "Manage jobs", defaultJob: "Default job"),
       TerminologyLabels(
         language: "nb", locale: "nb_NO", login: "Logg inn", signup: "Opprett konto",
-        payoutDetails: "Utbetalingsdetaljer", schedule: "Vaktplan", add: "Legg til",
+        payoutDetails: "Utbetalingsdetaljer", schedule: "Vaktplan",
         jobsAndPay: "Jobber og lønn", manageJobs: "Administrer jobber", defaultJob: "Standardjobb"),
     ] {
       captureTerminologyScreens(labels)
@@ -867,7 +853,7 @@ final class TidexAppUITests: XCTestCase {
     schedule.tap()
     attachAppStoreScreenshot(app, name: "\(language)-schedule-tab")
 
-    app.buttons[labels.add].firstMatch.tap()
+    openAddShift(in: app)
     let jobPicker = app.buttons["add-shift.job-picker"]
     XCTAssertTrue(jobPicker.waitForExistence(timeout: 30), app.debugDescription)
     jobPicker.tap()
@@ -1095,6 +1081,14 @@ final class TidexAppUITests: XCTestCase {
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "friends"
     app.launchEnvironment["TIDEX_DESIGN_FRIENDS_VIEW"] = view
     return app
+  }
+
+  /// Opens the Add screen from the plus button beside the month picker.
+  @MainActor
+  private func openAddShift(in app: XCUIApplication) {
+    let add = app.buttons["month-accessory.add-shift"]
+    XCTAssertTrue(add.waitForExistence(timeout: 30), app.debugDescription)
+    add.tap()
   }
 
   private func makeApp(scenario: String) -> XCUIApplication {

@@ -38,22 +38,6 @@ internal final class AuthAndPurchaseRecoveryTests: XCTestCase {
     XCTAssertNil(AppCoordinator.assuranceLevel(fromAccessToken: "a.%%%.c"))
   }
 
-  // MARK: - App account token storage
-
-  internal func testStoredAppAccountTokenIsReadBackPerUser() throws {
-    let suiteName = "AuthAndPurchaseRecoveryTests.\(UUID().uuidString)"
-    let defaults: UserDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-    defer { defaults.removePersistentDomain(forName: suiteName) }
-    let token = UUID()
-
-    XCTAssertNil(StoreKitManager.storedAppAccountToken(for: "user-a", defaults: defaults))
-
-    StoreKitManager.storeAppAccountToken(token, for: "USER-A", defaults: defaults)
-
-    XCTAssertEqual(StoreKitManager.storedAppAccountToken(for: "user-a", defaults: defaults), token)
-    XCTAssertNil(StoreKitManager.storedAppAccountToken(for: "user-b", defaults: defaults))
-  }
-
   // MARK: - Attachment upload errors
 
   internal func testDuplicateAttachmentUploadIsTreatedAsUploaded() {

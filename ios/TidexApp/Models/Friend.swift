@@ -290,23 +290,7 @@ struct Friend: Codable, Identifiable, Equatable {
   }
 }
 
-// MARK: - Share Capacity
-
-/// User's share capacity based on subscription tier
-struct ShareCapacity: Codable, Equatable {
-  let canAdd: Bool
-  let currentCount: Int
-  let limit: Int
-}
-
 // MARK: - API Response Types
-
-/// Response from GET /api/sharing/friends
-struct FriendsAPIResponse: Codable {
-  let friends: [Friend]
-  let blockedFriends: [Friend]?
-  let capacity: ShareCapacity
-}
 
 /// Response from POST /api/sharing/manage
 struct ManageActionResponse: Codable {

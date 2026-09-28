@@ -6,7 +6,7 @@ This document captures web-researched findings for Liquid Glass behavior in iOS 
 
 ## Scope
 
-- Main month picker bar (`ios/TidexApp/App/MainTabView.swift`)
+- Main month picker, shown in the tab bar's bottom accessory (`ios/TidexApp/App/MainTabView.swift`) and in the Add sheet (`ios/TidexApp/Features/AddShift/AddShiftView.swift`)
 - Calendar view-mode toggle (`ios/TidexApp/Shared/Components/Calendar/CalendarViewModeToggle.swift`)
 - Add Shift mode toggle (`ios/TidexApp/Features/AddShift/Components/ShiftModeToggle.swift`)
 

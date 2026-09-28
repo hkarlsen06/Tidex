@@ -12,11 +12,7 @@ struct AddFriendForm: View {
   @Binding var error: String?
 
   let isLoading: Bool
-  let canAdd: Bool
   let isOfflineUnavailable: Bool
-  let capacityDisplay: String
-  let capacityAccessibilityLabel: String
-  let shouldShowCapacity: Bool
   let onAdd: () -> Void
   let onCancel: () -> Void
 
@@ -33,51 +29,29 @@ struct AddFriendForm: View {
 
         Spacer()
 
-        if !isExpanded {
-          // Capacity count to the left of the plus button
-          HStack(spacing: Spacing.xs) {
-            if shouldShowCapacity {
-              HStack(spacing: Spacing.xxs) {
-                Text(capacityDisplay)
-                  .font(.tidexFootnoteMedium)
-                  .foregroundColor(canAdd ? .tidexTextMuted : .tidexWarning)
-
-                if !canAdd {
-                  Image(systemName: "exclamationmark.circle.fill")
-                    .font(.tidexCaptionRegular)
-                    .foregroundColor(.tidexWarning)
-                    .accessibilityHidden(true)
-                }
+        if !isExpanded, !isOfflineUnavailable {
+          Button(action: {
+            if reduceMotion {
+              isExpanded = true
+            } else {
+              withAnimation(.easeInOut(duration: 0.2)) {
+                isExpanded = true
               }
-              .accessibilityElement(children: .ignore)
-              .accessibilityLabel(capacityAccessibilityLabel)
             }
-
-            if canAdd, !isOfflineUnavailable {
-              Button(action: {
-                if reduceMotion {
-                  isExpanded = true
-                } else {
-                  withAnimation(.easeInOut(duration: 0.2)) {
-                    isExpanded = true
-                  }
-                }
-                // Focus the input after minimal delay (just enough for animation)
-                Task { @MainActor in
-                  try? await Task.sleep(for: .milliseconds(150))
-                  isFocused = true
-                }
-              }) {
-                Image(systemName: "plus.circle.fill")
-                  .font(.system(size: 24))
-                  .foregroundColor(.tidexBlue)
-                  .frame(minWidth: 44, minHeight: 44)
-                  .contentShape(Rectangle())
-              }
-              .buttonStyle(PlainButtonStyle())
-              .accessibilityLabel(Text(.sharingAddFriend))
+            // Focus the input after minimal delay (just enough for animation)
+            Task { @MainActor in
+              try? await Task.sleep(for: .milliseconds(150))
+              isFocused = true
             }
+          }) {
+            Image(systemName: "plus.circle.fill")
+              .font(.system(size: 24))
+              .foregroundColor(.tidexBlue)
+              .frame(minWidth: 44, minHeight: 44)
+              .contentShape(Rectangle())
           }
+          .buttonStyle(PlainButtonStyle())
+          .accessibilityLabel(Text(.sharingAddFriend))
         }
       }
 
@@ -218,11 +192,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       showEarnings: .constant(false),
       error: .constant(nil),
       isLoading: false,
-      canAdd: true,
       isOfflineUnavailable: false,
-      capacityDisplay: "Sharing with 2 of 5",
-      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 2 of 5.",
-      shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
     )
@@ -234,11 +204,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       showEarnings: .constant(true),
       error: .constant(nil),
       isLoading: false,
-      canAdd: true,
       isOfflineUnavailable: false,
-      capacityDisplay: "Sharing with 2 of 5",
-      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 2 of 5.",
-      shouldShowCapacity: false,
       onAdd: {},
       onCancel: {}
     )
@@ -250,27 +216,7 @@ struct TidexTextFieldStyle: TextFieldStyle {
       showEarnings: .constant(false),
       error: .constant("Fant ingen bruker med denne e-posten"),
       isLoading: false,
-      canAdd: true,
       isOfflineUnavailable: false,
-      capacityDisplay: "Sharing with 2 of 5",
-      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 2 of 5.",
-      shouldShowCapacity: false,
-      onAdd: {},
-      onCancel: {}
-    )
-
-    // Limit reached
-    AddFriendForm(
-      isExpanded: .constant(false),
-      identifier: .constant(""),
-      showEarnings: .constant(false),
-      error: .constant(nil),
-      isLoading: false,
-      canAdd: false,
-      isOfflineUnavailable: false,
-      capacityDisplay: "Sharing with 5 of 5",
-      capacityAccessibilityLabel: "Friend limit. Sharing your shifts with 5 of 5.",
-      shouldShowCapacity: true,
       onAdd: {},
       onCancel: {}
     )

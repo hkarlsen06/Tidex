@@ -1,20 +1,130 @@
--- Function: get_friends_tab_bootstrap
--- Description:
---   Consolidated native Friends tab bootstrap payload.
---   Replaces the old multi-RPC open path that previously called:
---     - get_my_sharers()
---     - get_sharing_friends_api()
---     - get_my_sharer_preview_payloads(...)
---     - direct shift_shares blocked-state selects
+-- Tidex is free, so sharing has no friend limit. get_friends_tab_bootstrap keeps
+-- returning capacity for older app builds; canAdd true with limit 0 hides their
+-- quota UI.
 
-CREATE OR REPLACE FUNCTION public.get_friends_tab_bootstrap(
-  p_preview_start_date date DEFAULT NULL,
-  p_preview_end_date date DEFAULT NULL
-)
-RETURNS jsonb
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO ''
+CREATE OR REPLACE FUNCTION public.manage_sharing_action(p_action text, p_identifier text DEFAULT NULL::text, p_recipient_id uuid DEFAULT NULL::uuid, p_show_earnings boolean DEFAULT false)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'auth'
+AS $function$
+DECLARE
+  v_user_id uuid := auth.uid();
+  v_target_id uuid;
+  v_normalized text;
+  v_identifier text;
+BEGIN
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Unauthorized';
+  END IF;
+
+
+
+  IF p_action = 'createShare' THEN
+    IF p_identifier IS NULL OR btrim(p_identifier) = '' THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Vennligst oppgi en gyldig e-post, telefonnummer eller brukernavn'
+      );
+    END IF;
+
+    v_identifier := btrim(p_identifier);
+
+    IF position('@' IN v_identifier) > 0 AND left(v_identifier, 1) <> '@' THEN
+      SELECT id INTO v_target_id
+      FROM auth.users
+      WHERE lower(email) = lower(v_identifier)
+      LIMIT 1;
+    ELSE
+      v_identifier := lower(v_identifier);
+      IF left(v_identifier, 1) = '@' THEN
+        v_identifier := substr(v_identifier, 2);
+      END IF;
+
+      SELECT id INTO v_target_id
+      FROM public.profiles
+      WHERE username = v_identifier
+      LIMIT 1;
+
+      IF v_target_id IS NULL THEN
+        v_normalized := regexp_replace(p_identifier, '\D', '', 'g');
+        IF length(v_normalized) = 8 THEN
+          v_normalized := '47' || v_normalized;
+        ELSIF left(v_normalized, 2) = '00' THEN
+          v_normalized := substr(v_normalized, 3);
+        END IF;
+
+        SELECT id INTO v_target_id
+        FROM auth.users
+        WHERE phone = v_normalized
+        LIMIT 1;
+      END IF;
+    END IF;
+  ELSIF p_action = 'shareBack' THEN
+    v_target_id := p_recipient_id;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Ugyldig handling');
+  END IF;
+
+  IF v_target_id IS NULL THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'Fant ingen bruker med denne e-posten, telefonnummeret eller brukernavnet'
+    );
+  END IF;
+
+  IF v_target_id = v_user_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Du kan ikke dele med deg selv');
+  END IF;
+
+  -- A block lives on the pair's shift_shares rows. Refuse a new share in
+  -- either direction while one exists.
+  IF EXISTS (
+    SELECT 1
+    FROM public.shift_shares
+    WHERE (
+      (owner_id = v_user_id AND viewer_id = v_target_id)
+      OR (owner_id = v_target_id AND viewer_id = v_user_id)
+    )
+      AND blocked_by_user_id IS NOT NULL
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Du kan ikke dele vaktene dine med denne brukeren');
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM public.shift_shares
+    WHERE owner_id = v_user_id
+      AND viewer_id = v_target_id
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Du deler allerede vaktene dine med denne brukeren');
+  END IF;
+
+  INSERT INTO public.shift_shares (
+    owner_id,
+    viewer_id,
+    show_earnings,
+    muted,
+    owner_muted
+  ) VALUES (
+    v_user_id,
+    v_target_id,
+    COALESCE(p_show_earnings, false),
+    false,
+    false
+  );
+
+  RETURN jsonb_build_object('success', true);
+END;
+$function$
+
+;
+
+CREATE OR REPLACE FUNCTION public.get_friends_tab_bootstrap(p_preview_start_date date DEFAULT NULL::date, p_preview_end_date date DEFAULT NULL::date)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO ''
 AS $function$
 DECLARE
   v_user_id uuid := auth.uid();
@@ -183,6 +293,7 @@ BEGIN
                 'profile_picture_url', us.profile_picture_url,
                 'payroll_day', us.payroll_day,
                 'theme', us.theme,
+                'calendar_animation_style', us.calendar_animation_style,
                 'half_tax_month', us.half_tax_month,
                 'currency', us.currency
               )
@@ -212,20 +323,8 @@ BEGIN
               FROM public.user_shifts s
               WHERE s.user_id = a.sharer_id
                 AND s.deleted_at IS NULL
-                AND (
-                  p_preview_start_date IS NULL OR
-                  s.shift_date >= (
-                    p_preview_start_date
-                    - ((EXTRACT(ISODOW FROM p_preview_start_date)::integer - 1) * interval '1 day')
-                  )::date
-                )
-                AND (
-                  p_preview_end_date IS NULL OR
-                  s.shift_date <= (
-                    p_preview_end_date
-                    + ((7 - EXTRACT(ISODOW FROM p_preview_end_date)::integer) * interval '1 day')
-                  )::date
-                )
+                AND (p_preview_start_date IS NULL OR s.shift_date >= (p_preview_start_date - ((EXTRACT(isodow FROM p_preview_start_date)::integer - 1) * interval '1 day'))::date)
+                AND (p_preview_end_date IS NULL OR s.shift_date <= (p_preview_end_date + ((7 - EXTRACT(isodow FROM p_preview_end_date)::integer) * interval '1 day'))::date)
             ),
             '[]'::jsonb
           ),
@@ -266,11 +365,7 @@ BEGIN
                     'hourly_wage', w.hourly_wage,
                     'wage_level', w.wage_level,
                     'tariff_type_id', w.tariff_type_id,
-                    'supplements', w.supplements,
-                    'overtime', COALESCE(
-                      w.overtime,
-                      jsonb_build_object('enabled', false, 'weeklyThresholdHours', 40, 'rules', jsonb_build_array())
-                    ),
+                    'supplements', w.supplements, 'overtime', COALESCE(w.overtime, jsonb_build_object('enabled', false, 'weeklyThresholdHours', 40, 'rules', jsonb_build_array())),
                     'tax_enabled', w.tax_enabled,
                     'tax_percentage', w.tax_percentage,
                     'break_enabled', w.break_enabled,
@@ -287,8 +382,7 @@ BEGIN
                     'hourly_wage', 0,
                     'wage_level', NULL,
                     'tariff_type_id', NULL,
-                    'supplements', jsonb_build_object('rules', jsonb_build_array()),
-                    'overtime', jsonb_build_object('enabled', false, 'weeklyThresholdHours', 40, 'rules', jsonb_build_array()),
+                    'supplements', jsonb_build_object('rules', jsonb_build_array()), 'overtime', jsonb_build_object('enabled', false, 'weeklyThresholdHours', 40, 'rules', jsonb_build_array()),
                     'tax_enabled', false,
                     'tax_percentage', 0,
                     'break_enabled', w.break_enabled,
@@ -361,8 +455,6 @@ BEGIN
     )
   );
 END;
-$function$;
+$function$
 
-REVOKE EXECUTE ON FUNCTION public.get_friends_tab_bootstrap(date, date) FROM public;
-REVOKE EXECUTE ON FUNCTION public.get_friends_tab_bootstrap(date, date) FROM anon;
-GRANT EXECUTE ON FUNCTION public.get_friends_tab_bootstrap(date, date) TO authenticated;
+;

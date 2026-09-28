@@ -381,15 +381,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Whether a shift update is in progress
   @Published var isUpdatingShift: Bool = false
 
-  /// Whether to show the month limit sheet for copy operations.
-  @Published var showMonthLimitSheet = false
-
-  /// Set of existing months when the paywall is triggered.
-  @Published private(set) var existingShiftMonths: Set<DateComponents> = []
-
-  /// Target month the user is trying to copy shifts to.
-  @Published private(set) var targetMonth = DateComponents()  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
-
   /// Whether an event update is in progress
   private var isUpdatingEvent = false
 
@@ -1071,15 +1062,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       }
 
       let sortedTargetDates = copyTargetDates.sorted()
-      let tier = EntitlementService.shared.effectiveTier
-      if let blockedTargetDate = firstBlockedCopyTargetDate(
-        sortedTargetDates,
-        userId: userId,
-        tier: tier
-      ) {
-        presentMonthLimitSheet(for: blockedTargetDate, userId: userId)
-        return
-      }
 
       for targetDateISO in sortedTargetDates {
         guard let targetDate = Date.fromISODateString(targetDateISO) else {
@@ -1088,14 +1070,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         }
 
         // Create a new shift with the same times at the target date
-        _ = try await shiftsRepository.createShiftWithTierCheck(
+        _ = try await shiftsRepository.createShift(
           userId: userId,
           jobId: sourceShift.shift.job_id,
           shiftDate: targetDate,
           startTime: sourceShift.startTime,
           endTime: sourceShift.endTime,
-          customSupplements: sourceShift.shift.custom_supplements,
-          tier: tier
+          customSupplements: sourceShift.shift.custom_supplements
         )
       }
 
@@ -1112,80 +1093,8 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       await reloadFromLocal()
       notifyShiftsDidChange(context: .affecting(isoDates: sortedTargetDates))
 
-    } catch ShiftCreationError.monthLimitReached(let months) {
-      existingShiftMonths = months
-      if let firstDateISO = copyTargetDates.min(),
-        let date = Date.fromISODateString(firstDateISO)
-      {
-        targetMonth = Calendar.current.dateComponents([.year, .month], from: date)
-      }
-      showMonthLimitSheet = true
-      Haptics.play(.error)
     } catch {
       kScheduleLogger.error("Failed to copy shift: \(error.localizedDescription)")
-    }
-  }
-
-  private func firstBlockedCopyTargetDate(
-    _ targetDateISOs: [String],
-    userId: String,
-    tier: SubscriptionTier
-  ) -> Date? {
-    guard tier == .free else {
-      return nil
-    }
-
-    for targetDateISO in targetDateISOs {
-      guard let targetDate = Date.fromISODateString(targetDateISO) else { continue }
-      if !shiftsRepository.canCreateShift(userId: userId, targetDate: targetDate, tier: tier) {
-        return targetDate
-      }
-    }
-
-    return nil
-  }
-
-  private func presentMonthLimitSheet(for targetDate: Date, userId: String) {
-    existingShiftMonths = shiftsRepository.getExistingShiftMonths(for: userId)
-    targetMonth = Calendar.current.dateComponents([.year, .month], from: targetDate)
-    showMonthLimitSheet = true
-    Haptics.play(.error)
-  }
-
-  /// Delete shifts in other months and retry the pending copy operation.
-  func deleteShiftsInOtherMonthsForCopy() async -> Bool {
-    guard let userId = AppCoordinator.shared.getCurrentUserId() else {
-      kScheduleLogger.warning("Cannot delete shifts: no user ID")
-      return false
-    }
-
-    do {
-      let deletedCount = try await shiftsRepository.deleteShiftsInOtherMonths(
-        userId: userId,
-        targetMonth: targetMonth
-      )
-
-      kScheduleLogger.info("Deleted \(deletedCount) shifts in other months before copying")
-      existingShiftMonths.removeAll()
-      await reloadFromLocal()
-      notifyShiftsDidChange(context: .fullReload)
-      return true
-    } catch {
-      kScheduleLogger.error(
-        "Failed to delete shifts in other months: \(error.localizedDescription)")
-      return false
-    }
-  }
-
-  func onCopyMonthLimitDeleteComplete() {
-    Task {
-      await finishCopyToSelectedDates()
-    }
-  }
-
-  func onCopyMonthLimitUpgradeComplete() {
-    Task {
-      await finishCopyToSelectedDates()
     }
   }
 

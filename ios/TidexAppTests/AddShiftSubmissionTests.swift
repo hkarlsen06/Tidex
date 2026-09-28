@@ -43,15 +43,12 @@ final class AddShiftSubmissionTests: XCTestCase {
       try await model.saveSelectedSingleShifts { date in
         let iso = date.toISODateString()
         if iso == dates[1] {
-          throw ShiftCreationError.monthLimitReached(
-            existingMonths: [DateComponents(year: 2_026, month: 9)])
+          throw SaveFailure.unavailable
         }
         saved.append(iso)
       }
-      XCTFail("Expected the October shift to be blocked")
-    } catch ShiftCreationError.monthLimitReached {
-      // This is the same failure used by the upgrade/delete-and-retry flow.
-    }
+      XCTFail("Expected the October shift to fail")
+    } catch SaveFailure.unavailable {}
 
     XCTAssertEqual(saved, [dates[0]])
     XCTAssertEqual(model.selectedDates, Set(dates.suffix(2)))

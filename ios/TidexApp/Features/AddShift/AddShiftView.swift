@@ -1,27 +1,32 @@
 import SwiftUI
 import UIKit
 
-/// Add Shift tab view - form for creating new shifts
+/// Add Shift screen, pushed onto the current tab's navigation stack - form for creating new shifts
 /// Supports both single shifts and recurring shift patterns
 struct AddShiftView: View {
+  private static let payManagerCompactDetent: PresentationDetent = .height(395)
+  private static let jobPickerMaxNameWidth: CGFloat = 140
+  /// Space kept free for the two rows of bottom controls.
+  private static let bottomControlsInset: CGFloat =
+    MonthPickerLayout.height * 2 + Spacing.xs + MonthPickerLayout.bottomPadding
+
   @EnvironmentObject private var coordinator: AppCoordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
   @StateObject private var viewModel = AddShiftViewModel()
   @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
-  @Binding var selectedTab: MainTabView.Tab
-  @Binding var isKeyboardVisible: Bool
-  var onOpenJobsAndPaySettings: () -> Void = {}
+  /// Called after saving so the presenter can pop the screen.
+  /// Receives the created dates in single mode, and nil for recurring shifts and events.
+  var onShiftsCreated: (_ singleDates: Set<String>?) -> Void = { _ in }
+  @State private var isKeyboardVisible = false
   @State private var focusedTimeField: TimeInputField?
   @State private var keyboardHeight: CGFloat = 0
-  @State private var tabTransitionOffset: CGFloat = 0
-  @State private var tabTransitionOpacity: Double = 1
   @State private var showStartFreshConfirmation = false
-  @State private var showSingleSuccessBanner = false
-  @State private var showAddConfetti = false
+  @State private var showSubmitRequirementsAlert = false
   @State private var showAddJobSheet = false
   @State private var openJobsAndPaySettingsAfterPickerDismiss = false
-  @State private var singleSuccessDismissTask: Task<Void, Never>?
+  @State private var showPaySettings = false
+  @State private var paySettingsDetent: PresentationDetent = Self.payManagerCompactDetent
 
   /// Whether running on iPhone-sized idiom.
   private var isIPhone: Bool {
@@ -47,7 +52,6 @@ struct AddShiftView: View {
       userId: coordinator.userId,
       initialSyncComplete: coordinator.initialSyncComplete
     )
-    addShiftCoordinator.updateCanShowStartFreshControl(!shouldShowWorkSetupRequiredPlaceholder)
   }
 
   private var shouldShowWorkSetupRequiredPlaceholder: Bool {
@@ -64,29 +68,21 @@ struct AddShiftView: View {
     viewModel.onShiftsCreated = { completion in
       switch completion {
       case .single(let dates):
-        coordinator.pendingDeepLink = .shifts(
-          dates: dates.sorted(),
-          shiftIds: nil,
-          action: .highlight
-        )
-        selectedTab = .shifts
+        onShiftsCreated(dates)
 
-      case .recurring:
-        selectedTab = .shifts
-
-      case .event:
-        selectedTab = .shifts
+      case .recurring, .event:
+        onShiftsCreated(nil)
       }
     }
 
-    // Check for pre-selected date when tab becomes visible
+    // Check for pre-selected date when the screen opens
     // (e.g., when user taps empty day in Shifts calendar)
     applyPendingPreselectedDateWithoutAnimation()
     handleDeepLink(coordinator.pendingDeepLink)
   }
 
   var body: some View {
-    NavigationStack {
+    Group {
       ZStack(alignment: .bottom) {
         // Background that fills entire screen including safe areas
         TidexAppBackground()
@@ -96,16 +92,15 @@ struct AddShiftView: View {
         } else {
           // Content area - different layouts for single vs recurring mode
           GeometryReader { geometry in
-            let availableHeight = geometry.size.height - (MonthPickerLayout.totalBottomInset)
+            let availableHeight = geometry.size.height - Self.bottomControlsInset
 
             ScrollViewReader { scrollProxy in
               switch viewModel.mode {
               case .single:
-                // Single mode: Fixed layout with centered calendar
+                // Single mode: centered calendar that only scrolls when it doesn't fit.
+                // No pull-to-refresh, so dragging down never fights the back gesture.
                 // Uses manual offset for keyboard avoidance to handle 6-week months
-                PullToRefreshContainer(onRefresh: {
-                  await refreshAddContent()
-                }) {
+                ScrollView {
                   VStack(spacing: 0) {
                     Spacer()
 
@@ -115,12 +110,13 @@ struct AddShiftView: View {
                     )
                     .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
                     .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-                    .offset(y: tabTransitionOffset)
-                    .opacity(tabTransitionOpacity)
 
                     Spacer()
                   }
-                  .padding(.bottom, MonthPickerLayout.totalBottomInset)
+                  // Fill exactly the space above the controls, so it only scrolls on screens
+                  // too small for the calendar.
+                  .frame(minHeight: availableHeight)
+                  .padding(.bottom, Self.bottomControlsInset)
                   .contentShape(Rectangle())
                   .monthSwipeGesture(
                     onSwipeLeft: { viewModel.goToNextMonth() },
@@ -131,6 +127,8 @@ struct AddShiftView: View {
                   .motionAnimation(
                     .subtle, value: focusedTimeField != nil, reduceMotion: reduceMotion)
                 }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
                 .ignoresSafeArea(.keyboard)
                 .onTapGesture {
                   hideKeyboard()
@@ -149,15 +147,10 @@ struct AddShiftView: View {
                   .padding(.top, Spacing.md)
                   .frame(maxWidth: .infinity)
                   .frame(minHeight: availableHeight, alignment: .center)
-                  .offset(y: tabTransitionOffset)
-                  .opacity(tabTransitionOpacity)
-                }
-                .refreshable {
-                  await refreshAddContent()
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .contentMargins(
-                  .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent
+                  .bottom, Self.bottomControlsInset + Spacing.md, for: .scrollContent
                 )
                 .onTapGesture {
                   hideKeyboard()
@@ -173,15 +166,10 @@ struct AddShiftView: View {
                   .padding(.top, Spacing.md)
                   .frame(maxWidth: .infinity)
                   .frame(minHeight: availableHeight, alignment: .top)
-                  .offset(y: tabTransitionOffset)
-                  .opacity(tabTransitionOpacity)
-                }
-                .refreshable {
-                  await refreshAddContent()
                 }
                 .scrollDismissesKeyboard(.interactively)
                 .contentMargins(
-                  .bottom, MonthPickerLayout.totalBottomInset + Spacing.md, for: .scrollContent
+                  .bottom, Self.bottomControlsInset + Spacing.md, for: .scrollContent
                 )
                 .onTapGesture {
                   hideKeyboard()
@@ -189,11 +177,6 @@ struct AddShiftView: View {
               }
             }
           }
-          ConfettiView(isActive: showAddConfetti, launchYRatio: 0.2) {
-            showAddConfetti = false
-          }
-          .allowsHitTesting(false)
-
           if !isKeyboardVisible {
             if let error = viewModel.error {
               ErrorBanner(
@@ -216,27 +199,12 @@ struct AddShiftView: View {
               )
               .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
               .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-              .padding(.bottom, MonthPickerLayout.totalBottomInset + Spacing.xs)
+              .padding(.bottom, Self.bottomControlsInset + Spacing.xs)
               .transition(.move(edge: .bottom).combined(with: .opacity))
-            } else if showSingleSuccessBanner {
-              SuccessBanner(
-                message: String(localized: .addShiftSingleSuccessSaved),
-                style: .toast,
-                actionTitle: .addShiftSingleViewShifts,
-                onAction: {
-                  dismissSingleSaveSuccessBanner()
-                  selectedTab = .shifts
-                },
-                onDismiss: {
-                  dismissSingleSaveSuccessBanner()
-                }
-              )
-              .frame(maxWidth: isIPhone ? .infinity : AdaptiveMaxWidth.tabContent)
-              .padding(.horizontal, isIPhone ? Spacing.xs : Spacing.md)
-              .padding(.top, Spacing.xs)
-              .frame(maxHeight: .infinity, alignment: .top)
-              .transition(.move(edge: .top).combined(with: .opacity))
             }
+
+            bottomControls
+              .transition(.opacity)
           }
         }
       }
@@ -244,17 +212,10 @@ struct AddShiftView: View {
       .iPadToolbarBackground()
       .toolbar {
         if !shouldShowWorkSetupRequiredPlaceholder {
-          ToolbarItem(placement: .topBarLeading) {
+          ToolbarItem(placement: .topBarTrailing) {
             ShiftModeToggle(mode: $viewModel.mode, style: .toolbar)
               .fixedSize()
           }
-        }
-        if !shouldShowWorkSetupRequiredPlaceholder {
-          ToolbarItem(placement: .topBarTrailing) {
-            AddShiftToolbarTotals(totals: viewModel.toolbarTotals)
-              .fixedSize(horizontal: true, vertical: false)
-          }
-          .sharedBackgroundVisibility(.hidden)
         }
       }
       .overlay(alignment: .bottomTrailing) {
@@ -302,81 +263,31 @@ struct AddShiftView: View {
         await loadAddShiftContent()
       }
     }
-    .onChange(of: viewModel.error) { _, newError in
-      if newError != nil {
-        dismissSingleSaveSuccessBanner()
-      }
-    }
-    .onChange(of: viewModel.mode) { _, newMode in
-      if newMode != .single {
-        dismissSingleSaveSuccessBanner()
-      }
-    }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
       guard !shouldShowWorkSetupRequiredPlaceholder else { return }
       handleDeepLink(deepLink)
-    }
-    .onChange(of: selectedTab) { oldTab, newTab in
-      if newTab == .add {
-        handleDeepLink(coordinator.pendingDeepLink)
-      }
-
-      if newTab == .add, oldTab == .shifts {
-        applyPendingPreselectedDateWithoutAnimation()
-        tabTransitionOffset = 28
-        tabTransitionOpacity = 0.92
-        MotionTokens.animate(.navigationPush, reduceMotion: reduceMotion) {
-          tabTransitionOffset = 0
-          tabTransitionOpacity = 1
-        }
-      }
-
-      if newTab == .add, oldTab != .add {
-        applyPendingPreselectedDateWithoutAnimation()
-      }
-
-      if oldTab == .add, newTab != .add {
-        focusedTimeField = nil
-        isKeyboardVisible = false
-        keyboardHeight = 0
-      }
-    }
-    .onReceive(addShiftCoordinator.startFreshAction) {
-      guard selectedTab == .add, !shouldShowWorkSetupRequiredPlaceholder else { return }
-      presentStartFreshConfirmation()
     }
     .onDisappear {
       focusedTimeField = nil
       isKeyboardVisible = false
       keyboardHeight = 0
-      showAddConfetti = false
-      dismissSingleSaveSuccessBanner()
       viewModel.onShiftsCreated = nil
+      // An unconsumed add link (for example while work setup is required) would
+      // otherwise block the next identical request from reopening the sheet.
+      if case .addShift = coordinator.pendingDeepLink {
+        coordinator.clearPendingDeepLink()
+      }
     }
     .sheet(isPresented: $viewModel.showPreviewSheet) {
       RecurringPreviewSheet(viewModel: viewModel)
-    }
-    .fullScreenCover(isPresented: $viewModel.showMonthLimitSheet) {
-      MonthLimitSheet(
-        existingMonths: viewModel.existingShiftMonths,
-        targetMonth: viewModel.targetMonth,
-        onDeleteShifts: {
-          await viewModel.deleteShiftsInOtherMonths()
-        },
-        onDeleteComplete: {
-          viewModel.onDeleteComplete()
-        },
-        onUpgradeComplete: {
-          viewModel.onUpgradeComplete()
-        }
-      )
     }
     .sheet(
       isPresented: $viewModel.showSubmitJobChooser,
       onDismiss: {
         guard openJobsAndPaySettingsAfterPickerDismiss else { return }
         openJobsAndPaySettingsAfterPickerDismiss = false
-        onOpenJobsAndPaySettings()
+        paySettingsDetent = Self.payManagerCompactDetent
+        showPaySettings = true
       }
     ) {
       AddShiftJobChooserSheet(
@@ -398,6 +309,17 @@ struct AddShiftView: View {
           viewModel.dismissJobSelection()
         }
       )
+    }
+    .sheet(isPresented: $showPaySettings) {
+      SettingsView(
+        initialDestination: .pay(jobId: nil),
+        sheetPresentationDetent: $paySettingsDetent,
+        directPayManagerCompactDetent: Self.payManagerCompactDetent
+      )
+      .presentationDetents(
+        [Self.payManagerCompactDetent, .large], selection: $paySettingsDetent
+      )
+      .presentationDragIndicator(.visible)
     }
     .sheet(isPresented: $showAddJobSheet) {
       AddJobSheet(
@@ -434,9 +356,16 @@ struct AddShiftView: View {
     } message: {
       Text(.addShiftStartFreshConfirmMessage)
     }
+    .alert(
+      String(localized: .addShiftSubmitRequirementsTitle),
+      isPresented: $showSubmitRequirementsAlert
+    ) {
+      Button(String(localized: .commonOk), role: .cancel) {}
+    } message: {
+      Text(submitRequirementsMessage)
+    }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification))
     { notification in
-      guard selectedTab == .add else { return }
       if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey]
         as? CGRect
       {
@@ -448,7 +377,6 @@ struct AddShiftView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification))
     { _ in
-      guard selectedTab == .add else { return }
       MotionTokens.animate(.subtle, reduceMotion: reduceMotion) {
         isKeyboardVisible = false
         keyboardHeight = 0
@@ -459,7 +387,7 @@ struct AddShiftView: View {
   // MARK: - Deep Link Handling
 
   private func handleDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
-    guard selectedTab == .add, case .addShift(let mode, let date) = deepLink else { return }
+    guard case .addShift(let mode, let date) = deepLink else { return }
     if let date, Date.fromISODateString(date) != nil {
       SharedMonthContext.shared.preselectedDate = date
     }
@@ -476,10 +404,6 @@ struct AddShiftView: View {
     withTransaction(transaction) {
       viewModel.checkPreselectedDate()
     }
-  }
-
-  private func refreshAddContent() async {
-    await viewModel.refreshData()
   }
 
   private func hideKeyboard() {
@@ -515,43 +439,197 @@ struct AddShiftView: View {
     }
   }
 
-  private func showSingleSaveSuccessBanner() {
-    dismissSingleSaveSuccessBanner()
-    withAnimation {
-      showSingleSuccessBanner = true
-    }
+  // MARK: - Bottom Controls
 
-    singleSuccessDismissTask = Task {
-      do {
-        try await Task.sleep(nanoseconds: 4_000_000_000)
-        guard !Task.isCancelled else { return }
-        await MainActor.run {
-          withAnimation {
-            showSingleSuccessBanner = false
+  /// Job picker and Add above, undo and month picker below, pinned to the bottom.
+  @ViewBuilder
+  private var bottomControls: some View {
+    if !shouldShowWorkSetupRequiredPlaceholder {
+      VStack(spacing: Spacing.xs) {
+        HStack(spacing: Spacing.xs) {
+          if viewModel.mode != .events {
+            jobPickerButton
           }
-          singleSuccessDismissTask = nil
+          saveButton
         }
-      } catch {
-        // Task cancelled.
+
+        HStack(spacing: Spacing.xs) {
+          startFreshButton
+
+          SharedMonthPicker()
+            .frame(maxWidth: .infinity)
+            .frame(height: MonthPickerLayout.height)
+            .tidexGlass(
+              shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+              interactive: true
+            )
+        }
       }
+      .frame(maxWidth: AdaptiveMaxWidth.tabContent)
+      .padding(.horizontal, Spacing.md)
+      .padding(.bottom, MonthPickerLayout.bottomPadding)
     }
   }
 
-  private func dismissSingleSaveSuccessBanner() {
-    singleSuccessDismissTask?.cancel()
-    singleSuccessDismissTask = nil
-    if showSingleSuccessBanner {
-      withAnimation {
-        showSingleSuccessBanner = false
+  /// Job color dot and name on plain glass, matching the other bottom controls.
+  private var jobPickerButton: some View {
+    Button {
+      viewModel.presentJobSelection()
+    } label: {
+      HStack(spacing: Spacing.xs) {
+        Circle()
+          .fill(selectedJobColor)
+          .frame(width: Spacing.xsm, height: Spacing.xsm)
+          .accessibilityHidden(true)
+
+        Text(viewModel.selectedJob?.name ?? String(localized: .settingsPayChooseJobTitle))
+          .font(.tidexButton)
+          .foregroundColor(.tidexTextPrimary)
+          .lineLimit(1)
+          .truncationMode(.tail)
+          .frame(maxWidth: Self.jobPickerMaxNameWidth, alignment: .leading)
+          .fixedSize(horizontal: true, vertical: false)
+
+        Image(systemName: "chevron.up.chevron.down")
+          .font(.tidexCaption)
+          .foregroundColor(.tidexTextSecondary)
+          .accessibilityHidden(true)
       }
+      .padding(.horizontal, Spacing.md)
+      .frame(height: MonthPickerLayout.height)
+      .contentShape(Rectangle())
     }
+    .buttonStyle(.plain)
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .accessibilityIdentifier("add-shift.job-picker")
   }
 
-  private func showAddConfettiCelebration() {
-    showAddConfetti = false
-    Task { @MainActor in
-      await Task.yield()
-      showAddConfetti = true
+  private var selectedJobColor: Color {
+    guard let job = viewModel.selectedJob,
+      let color = WorkplaceColor.hexToUIColor(job.color)
+    else {
+      return .tidexBlue
+    }
+    return Color(uiColor: color)
+  }
+
+  private var startFreshButton: some View {
+    Button {
+      Haptics.play(.selection)
+      presentStartFreshConfirmation()
+    } label: {
+      Image(systemName: "arrow.uturn.backward.circle.fill")
+        .font(.tidexHeadline)
+        .foregroundColor(viewModel.hasContent ? .tidexTextPrimary : .tidexTextMuted)
+        .frame(width: MonthPickerLayout.height, height: MonthPickerLayout.height)
+        .contentShape(Rectangle())
+        .accessibilityHidden(true)
+    }
+    .buttonStyle(.plain)
+    .disabled(!viewModel.hasContent || addShiftCoordinator.isLoading)
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .accessibilityLabel(Text(.addShiftStartFreshConfirmAction))
+  }
+
+  private var saveButton: some View {
+    Button {
+      handleSaveTap()
+    } label: {
+      Label(String(localized: .addShiftSubmitButton), systemImage: "plus")
+        .font(.tidexButton)
+        .lineLimit(1)
+        .foregroundColor(addShiftCoordinator.canSubmit ? .tidexBlue : .tidexTextMuted)
+        // Keep the width while saving so the month picker doesn't jump.
+        .opacity(addShiftCoordinator.isLoading ? 0 : 1)
+        .overlay {
+          if addShiftCoordinator.isLoading {
+            ProgressView()
+              .progressViewStyle(CircularProgressViewStyle(tint: .tidexBlue))
+              .scaleEffect(MonthPickerLayout.progressIndicatorScale)
+          }
+        }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .padding(.horizontal, Spacing.md)
+        .frame(maxWidth: .infinity)
+        .frame(height: MonthPickerLayout.height)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(addShiftCoordinator.isLoading)
+    .tidexGlass(
+      shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+      interactive: true
+    )
+    .opacity(
+      addShiftCoordinator.canSubmit
+        ? MonthPickerLayout.enabledOpacity
+        : MonthPickerLayout.disabledOpacity
+    )
+    .accessibilityIdentifier("add-shift.save")
+  }
+
+  private func handleSaveTap() {
+    guard !addShiftCoordinator.isLoading else { return }
+
+    if addShiftCoordinator.canSubmit {
+      Haptics.play(.selection)
+      addShiftCoordinator.triggerAdd()
+      return
+    }
+
+    Haptics.play(.warning)
+    showSubmitRequirementsAlert = true
+  }
+
+  private var submitRequirementsMessage: String {
+    let blockers = addShiftCoordinator.submitBlockers
+    guard !blockers.isEmpty else {
+      return String(localized: .addShiftSubmitRequirementsGeneric)
+    }
+
+    return
+      blockers
+      .map { "- \(String(localized: submitRequirementMessageKey(for: $0)))" }
+      .joined(separator: "\n")
+  }
+
+  // swiftlint:disable:next cyclomatic_complexity
+  private func submitRequirementMessageKey(
+    for blocker: AddShiftSubmitBlocker
+  ) -> LocalizedStringResource {
+    switch blocker {
+    case .noAvailableJob:
+      return .addShiftSubmitRequirementsAddJobFirst
+
+    case .noSelectedJob:
+      return .addShiftSubmitRequirementsSelectJob
+
+    case .noSingleDates:
+      return .addShiftSubmitRequirementsSelectDate
+
+    case .noRecurringDays:
+      return .addShiftSubmitRequirementsSelectRecurringDay
+
+    case .missingTimes:
+      return .addShiftSubmitRequirementsSetTimes
+
+    case .noEventDate:
+      return .addShiftSubmitRequirementsSelectEventDate
+
+    case .invalidEventDateRange:
+      return .addShiftSubmitRequirementsValidEventRange
+
+    case .eventCrossesMidnight:
+      return .addShiftSubmitRequirementsEventSameDay
+
+    case .missingEventNote:
+      return .addShiftSubmitRequirementsEventNote
     }
   }
 }
@@ -563,17 +641,10 @@ private struct SingleShiftContent: View {
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
 
-  private var leadingJobAccessory: AnyView? {
-    return AnyView(
-      AddShiftJobSelectionChip(
-        selectedJob: viewModel.selectedJob,
-        onTap: { viewModel.presentJobSelection() }
-      )
-    )
-  }
-
   var body: some View {
     VStack(spacing: Spacing.xs) {
+      AddShiftMonthTotals(totals: viewModel.toolbarTotals)
+
       AddShiftCalendarView(viewModel: viewModel)
 
       if viewModel.shouldShowSingleTimeScopeHint {
@@ -594,7 +665,7 @@ private struct SingleShiftContent: View {
         scrollProxy: scrollProxy,
         scrollId: "singleTimePicker",
         focusedFieldBinding: $focusedTimeField,
-        leadingChipAccessory: leadingJobAccessory
+        chipsAboveInputs: true
       )
     }
   }
@@ -607,18 +678,11 @@ private struct RecurringShiftContent: View {
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
 
-  private var leadingJobAccessory: AnyView? {
-    return AnyView(
-      AddShiftJobSelectionChip(
-        selectedJob: viewModel.selectedJob,
-        onTap: { viewModel.presentJobSelection() }
-      )
-    )
-  }
-
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.mlg) {
       titleSection
+
+      AddShiftMonthTotals(totals: viewModel.toolbarTotals)
 
       RecurringCalendarView(viewModel: viewModel)
         .monthSwipeGesture(
@@ -644,7 +708,7 @@ private struct RecurringShiftContent: View {
         scrollProxy: scrollProxy,
         scrollId: "recurringTimePicker",
         focusedFieldBinding: $focusedTimeField,
-        leadingChipAccessory: leadingJobAccessory
+        chipsAboveInputs: true
       )
 
       RepeatIntervalPicker(interval: $viewModel.repeatInterval)
@@ -758,7 +822,7 @@ private struct EventContent: View {
             scrollProxy: nil,
             scrollId: "eventTimePicker",
             focusedFieldBinding: $focusedTimeField,
-            leadingChipAccessory: nil
+            chipsAboveInputs: true
           )
 
           if viewModel.eventTimesCrossMidnight {
@@ -821,148 +885,6 @@ private struct EventContent: View {
       RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexSurfacePrimary)
     )
-  }
-}
-
-private struct AddShiftJobSelectionChip: View {
-  let selectedJob: Job?
-  let onTap: () -> Void
-
-  var body: some View {
-    Button(action: onTap) {
-      Group {
-        if let job = selectedJob {
-          AddShiftSelectedJobBadge(
-            name: job.name,
-            colorHex: job.color,
-            fallbackBadgeColor: .tidexBlue
-          )
-        } else {
-          HStack(spacing: Spacing.xxs) {
-            Image(systemName: "building.2")
-              .font(.tidexCaptionRegular)
-
-            Text(.settingsPayChooseJobTitle)
-              .font(.tidexMonoCaption)
-
-            Image(systemName: "chevron.down")
-              .font(.tidexMicro)
-              .fixedSize()
-          }
-          .foregroundColor(.tidexBlue)
-          .padding(.horizontal, Spacing.sm)
-          .padding(.vertical, Spacing.xs)
-          .background(Color.tidexBlue.opacity(0.12))
-          .clipShape(Capsule())
-        }
-      }
-      .frame(height: 36)
-      .fixedSize(horizontal: true, vertical: false)
-    }
-    .buttonStyle(.plain)
-    .accessibilityIdentifier("add-shift.job-picker")
-  }
-}
-
-private struct AddShiftSelectedJobBadge: View {
-  let name: String
-  let colorHex: String?
-  let fallbackBadgeColor: Color
-
-  @Environment(\.colorScheme) private var colorScheme
-
-  var body: some View {
-    let badgeColor = resolvedBadgeColor
-    HStack(spacing: Spacing.xxs) {
-      Text(name)
-        .font(.tidexMonoCaption)
-        .lineLimit(1)
-        .truncationMode(.tail)
-        .frame(maxWidth: 122, alignment: .leading)
-
-      Image(systemName: "chevron.down")
-        .font(.tidexMicro)
-        .fixedSize()
-    }
-    .foregroundColor(badgeForegroundColor(for: badgeColor))
-    .padding(.horizontal, Spacing.xs)
-    .padding(.vertical, 2)
-    .background(
-      RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
-        .fill(Color(uiColor: badgeColor))
-    )
-  }
-
-  private var resolvedBadgeColor: UIColor {
-    WorkplaceColor.hexToUIColor(colorHex) ?? UIColor(fallbackBadgeColor)
-  }
-
-  private func badgeForegroundColor(for badgeColor: UIColor) -> Color {
-    let resolvedColor = badgeColor.resolvedColor(
-      with: UITraitCollection(userInterfaceStyle: userInterfaceStyle))
-    let luminance = Self.relativeLuminance(for: resolvedColor)
-    let contrastWithWhite = Self.contrastRatio(luminance, 1)
-    let contrastWithBlack = Self.contrastRatio(luminance, 0)
-
-    if Self.shouldPreferWhiteBadgeText(for: resolvedColor, contrastWithWhite: contrastWithWhite) {
-      return .white
-    }
-
-    return contrastWithWhite >= contrastWithBlack ? .white : .black
-  }
-
-  private var userInterfaceStyle: UIUserInterfaceStyle {
-    colorScheme == .dark ? .dark : .light
-  }
-
-  private static func contrastRatio(_ firstLuminance: CGFloat, _ secondLuminance: CGFloat)
-    -> CGFloat
-  {
-    (max(firstLuminance, secondLuminance) + 0.05) / (min(firstLuminance, secondLuminance) + 0.05)
-  }
-
-  private static func relativeLuminance(for color: UIColor) -> CGFloat {
-    var red: CGFloat = 0
-    var green: CGFloat = 0
-    var blue: CGFloat = 0
-    var alpha: CGFloat = 0
-
-    guard color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
-      return 0
-    }
-
-    return 0.2126 * linearizedSRGB(red)
-      + 0.7152 * linearizedSRGB(green)
-      + 0.0722 * linearizedSRGB(blue)
-  }
-
-  private static func shouldPreferWhiteBadgeText(
-    for color: UIColor,
-    contrastWithWhite: CGFloat
-  ) -> Bool {
-    var hue: CGFloat = 0
-    var saturation: CGFloat = 0
-    var brightness: CGFloat = 0
-    var alpha: CGFloat = 0
-
-    guard color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-    else {
-      return false
-    }
-
-    let isRedOrRose = hue <= 0.08 || hue >= 0.88
-    let isBlueOrPurple = hue >= 0.55 && hue <= 0.88
-    return alpha > 0.1
-      && brightness >= 0.35
-      && saturation >= 0.45
-      && contrastWithWhite >= 2.2
-      && (isRedOrRose || isBlueOrPurple)
-  }
-
-  private static func linearizedSRGB(_ component: CGFloat) -> CGFloat {
-    component <= 0.03928
-      ? component / 12.92
-      : pow((component + 0.055) / 1.055, 2.4)
   }
 }
 
@@ -1122,11 +1044,11 @@ private struct AddShiftJobStatusBadge: View {
   }
 }
 
-// MARK: - Toolbar Totals
+// MARK: - Month Totals
 
-/// Compact earnings display for the Add tab toolbar trailing position.
-/// Shows the combined monthly total (existing shifts + preview earnings).
-private struct AddShiftToolbarTotals: View {
+/// Month total above the calendar: existing shifts plus the shifts being added,
+/// with the change the new shifts make.
+private struct AddShiftMonthTotals: View {
   let totals: CalendarHeaderTotals?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -1136,7 +1058,7 @@ private struct AddShiftToolbarTotals: View {
   var body: some View {
     Group {
       if let totals, let primary = totals.primary {
-        VStack(alignment: .trailing, spacing: Spacing.micro) {
+        VStack(alignment: .leading, spacing: Spacing.micro) {
           animatedAmount(
             primary,
             lastDisplayed: lastDisplayedPrimary,
@@ -1158,7 +1080,9 @@ private struct AddShiftToolbarTotals: View {
             .transition(.offset(y: -4).combined(with: .opacity))
           }
         }
-        .transition(.offset(x: 6).combined(with: .opacity))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Spacing.xs)
+        .transition(.opacity)
       }
     }
     .motionAnimation(.emphasis, value: totals?.primary, reduceMotion: reduceMotion)
@@ -1193,6 +1117,6 @@ private struct AddShiftToolbarTotals: View {
 // MARK: - Preview
 
 #Preview {
-  AddShiftView(selectedTab: .constant(.add), isKeyboardVisible: .constant(false))
+  AddShiftView()
     .environmentObject(AppCoordinator.shared)
 }

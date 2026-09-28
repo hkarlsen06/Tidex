@@ -24,10 +24,6 @@ final class ManageSharingViewModel: ObservableObject {
   /// Users currently blocked through the friends safety flow.
   @Published private(set) var blockedFriends: [Friend] = []
 
-  /// Share capacity based on subscription tier
-  @Published private(set) var capacity = ShareCapacity(  // swiftlint:disable:this explicit_acl explicit_type_interface
-    canAdd: true, currentCount: 0, limit: 5)
-
   /// Loading state for initial data fetch
   @Published private(set) var isLoading = false
 
@@ -79,26 +75,6 @@ final class ManageSharingViewModel: ObservableObject {
     friends.filter(\.isIncomingOnly)
   }
 
-  /// Whether user can add more friends
-  var canAddMore: Bool {
-    capacity.canAdd
-  }
-
-  /// Capacity display string (e.g., "Sharing with 4 of 5")
-  var capacityDisplay: String {
-    String(localized: .sharingCapacityDisplay(capacity.currentCount, capacity.limit))
-  }
-
-  var capacityAccessibilityLabel: String {
-    String(localized: .sharingCapacityAccessibilityLabel(capacity.currentCount, capacity.limit))
-  }
-
-  /// Avoid showing quota chrome until it is useful.
-  var shouldShowCapacity: Bool {
-    guard capacity.limit > 0 else { return !capacity.canAdd }
-    return !capacity.canAdd || Double(capacity.currentCount) / Double(capacity.limit) >= 0.8
-  }
-
   // MARK: - Initialization
 
   init(
@@ -128,7 +104,7 @@ final class ManageSharingViewModel: ObservableObject {
     await loadFriends()
   }
 
-  /// Load all friends and capacity
+  /// Load all friends and blocked friends
   func loadFriends() async {
     isLoading = true
     errorMessage = nil
@@ -183,7 +159,6 @@ final class ManageSharingViewModel: ObservableObject {
   func applyManagementSnapshot(_ snapshot: FriendsManagementSnapshot) {
     friends = snapshot.friends
     blockedFriends = snapshot.blockedFriends
-    capacity = snapshot.capacity
   }
 
   private func reconcileAfterSuccessfulAction() async {

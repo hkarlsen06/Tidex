@@ -484,8 +484,7 @@ struct EventDetailsSheet: View {
         endTime: $editedEndTime,
         scrollProxy: nil,
         scrollId: "event-details-time-range",
-        focusedFieldBinding: $focusedTimeField,
-        leadingChipAccessory: nil
+        focusedFieldBinding: $focusedTimeField
       )
 
       if showsTimeRangeHint {
