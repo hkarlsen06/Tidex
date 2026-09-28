@@ -160,7 +160,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     // Create entry (will use API data if available, otherwise cached)
     let now = Date()
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let entry = createEntry(for: friend, fromAPI: apiFriend, at: now)
 
     var entries = [entry]
@@ -384,7 +384,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
   private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
     guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let today = calendar.startOfDay(for: Date())
     let shiftDay = calendar.startOfDay(for: shiftDate)
 

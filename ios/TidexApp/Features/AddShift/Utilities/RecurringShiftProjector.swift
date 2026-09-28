@@ -22,7 +22,7 @@ struct RecurringShiftProjector {
     guard !selectedDays.isEmpty else { return [] }
     guard repeatInterval >= 0 else { return [] }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var dates: [String] = []
 
     // Find the earliest anchor
@@ -98,7 +98,7 @@ struct RecurringShiftProjector {
     guard !selectedDays.isEmpty else { return [] }
     guard repeatInterval >= 0 else { return [] }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var dates: [String] = []
 
     // Get the display month range (with some buffer for edge cases)
@@ -191,7 +191,7 @@ struct RecurringShiftProjector {
   ) -> (minMonth: Date, maxMonth: Date?)? {
     guard !selectedDays.isEmpty else { return nil }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     // Find earliest anchor
     let anchors = selectedDays.values.sorted()
@@ -247,7 +247,7 @@ struct RecurringShiftProjector {
       return true
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     guard let prevMonth = calendar.date(byAdding: .month, value: -1, to: currentMonth) else {
       return false
     }
@@ -267,7 +267,7 @@ struct RecurringShiftProjector {
       return true  // No max = always can go forward
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: currentMonth) else {
       return false
     }

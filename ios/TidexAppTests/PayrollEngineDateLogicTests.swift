@@ -43,6 +43,28 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(date.toISODateString(), "2028-02-29")
   }
 
+  /// A device set to an Islamic (Hijri) calendar, reachable via a locale like
+  /// `en_US@calendar=islamic`, resolves Gregorian year/month/day components to a date
+  /// hundreds of years away, because AH year 2026 lands in the 26th century CE, not
+  /// 2026 CE. `PayrollDateAdjuster` must always resolve payroll dates on the Gregorian
+  /// calendar, never on `Calendar.current`, or the dashboard payout countdown shows
+  /// something like "in 204,970 days" instead of a date days away.
+  func testAdjustPayrollDateIsIndependentOfDeviceCalendar() {
+    var islamicCalendar = Calendar(identifier: .islamic)
+    islamicCalendar.timeZone = .current
+    let buggyDate = islamicCalendar.date(from: DateComponents(year: 2_026, month: 9, day: 15))
+    let buggyYear = buggyDate.flatMap { Int($0.toISODateString().prefix(4)) }
+    XCTAssertNotEqual(buggyYear, 2_026)
+
+    let date = PayrollDateAdjuster.adjustPayrollDate(
+      payrollDay: 15,
+      month: 9,
+      year: 2_026
+    )
+
+    XCTAssertTrue(date.toISODateString().hasPrefix("2026-09"))
+  }
+
   func testCalculatePayoutDateRollsOverYearBoundary() {
     let payoutDate = PayrollEngine.calculatePayoutDate(
       shiftDate: "2026-12-10",

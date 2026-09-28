@@ -36,7 +36,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
   // MARK: - Computed Properties
 
   private var isPayrollToday: Bool {
-    Calendar.current.isDateInToday(payrollDate)
+    Calendar.gregorianCurrent.isDateInToday(payrollDate)
   }
 
   private var hasPayoutData: Bool {
@@ -248,7 +248,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
   }
 
   private func payrollCountdownText(at now: Date) -> String {  // swiftlint:disable:this type_contents_order
-    Calendar.current.isDate(payrollDate, inSameDayAs: now)
+    Calendar.gregorianCurrent.isDate(payrollDate, inSameDayAs: now)
       ? String(localized: .commonToday)
       : CountdownFormatter.formatRelativeCountdown(referenceDate: payrollDate, now: now)
   }

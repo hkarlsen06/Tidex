@@ -2297,7 +2297,7 @@ internal actor LocalStoreActor {
     let now = Date()
 
     if let fromDate, fromDate.toISODateString() != localSnapshot.fromDateString {
-      localSnapshot.fromDate = Calendar.current.startOfDay(for: fromDate)
+      localSnapshot.fromDate = Calendar.gregorianCurrent.startOfDay(for: fromDate)
       newDirtyFields.insert(.fromDate)
     }
 

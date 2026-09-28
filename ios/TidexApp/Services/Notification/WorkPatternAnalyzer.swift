@@ -62,7 +62,7 @@ struct WorkPatternAnalyzer {
   /// is considered a typical work day.
   @MainActor
   static func analyzeDetailed(for userId: String) -> AnalysisResult {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let now = Date()
     let endDate = calendar.startOfDay(for: now)
     guard let startDate = calendar.date(byAdding: .weekOfYear, value: -analysisWeeks, to: endDate)
@@ -82,7 +82,7 @@ struct WorkPatternAnalyzer {
   /// Async variant that keeps repository reads on main actor but runs loop-heavy analysis off-main.
   @MainActor
   static func analyzeDetailedAsync(for userId: String) async -> AnalysisResult {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let now = Date()
     let endDate = calendar.startOfDay(for: now)
     guard let startDate = calendar.date(byAdding: .weekOfYear, value: -analysisWeeks, to: endDate)
@@ -216,7 +216,7 @@ struct WorkPatternAnalyzer {
     _ shifts: [ShiftTime],
     now: Date
   ) -> AnalysisResult {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     var weeksWithData = Set<String>()
     for shift in shifts {
@@ -290,7 +290,7 @@ struct WorkPatternAnalyzer {
 
   private static func getMonthsInRange(startDate: Date, endDate: Date) -> [(Int, Int)] {
     var months: [(Int, Int)] = []
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     var current =
       calendar.date(from: calendar.dateComponents([.year, .month], from: startDate)) ?? startDate

@@ -137,7 +137,7 @@ internal struct ShiftsCalendarPresentation {
     var monthlyIncludedShifts: [ShiftWithComputations] = []
     var monthlyNet: Double = 0
     var monthlyGross: Double = 0
-    var calendar = Calendar.current
+    var calendar = Calendar.gregorianCurrent
     calendar.timeZone = Date.localTimeZone
 
     for (date, shiftsOnDate) in shiftsByDate {
@@ -279,7 +279,7 @@ final class ShiftsViewModel: MonthNavigable {
     components.year = committedYear
     components.month = committedMonth
     components.day = 1
-    if let date = Calendar.current.date(from: components) {
+    if let date = Calendar.gregorianCurrent.date(from: components) {
       return kScheduleMonthNameFormatter.string(from: date)
     }
     return ""
@@ -464,7 +464,7 @@ final class ShiftsViewModel: MonthNavigable {
         for offset in 0...daySpan {
           guard
             let startDate = Date.fromISODateString(event.start_date),
-            let coveredDate = Calendar.current.date(byAdding: .day, value: offset, to: startDate)
+            let coveredDate = Calendar.gregorianCurrent.date(byAdding: .day, value: offset, to: startDate)
           else {
             continue
           }
@@ -766,7 +766,7 @@ final class ShiftsViewModel: MonthNavigable {
       return
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let year = calendar.component(.year, from: shiftDate)
     let month = calendar.component(.month, from: shiftDate)
 
@@ -2242,7 +2242,7 @@ final class ShiftsViewModel: MonthNavigable {
   /// Find the next upcoming shift from the current shifts.
   private func findNextUpcomingShift(in shifts: [ShiftWithComputations]) -> ShiftWithComputations? {
     let now = Date()
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     // Filter to shifts that haven't ended yet
     let upcomingShifts = shifts.filter { shift in

@@ -108,7 +108,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
     month: Int? = nil,
     jobId: String? = nil
   ) async throws -> StatsData {
-    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
     let now = Date()  // swiftlint:disable:this explicit_type_interface
     let targetYear = year ?? calendar.component(.year, from: now)  // swiftlint:disable:this explicit_type_interface
     let targetMonth = month ?? calendar.component(.month, from: now)  // swiftlint:disable:this explicit_type_interface
@@ -614,7 +614,7 @@ final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_
     previousMonth: Int,
     now: Date
   ) -> [DailyCumulativeData] {
-    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
 
     // Get days in target month
     guard

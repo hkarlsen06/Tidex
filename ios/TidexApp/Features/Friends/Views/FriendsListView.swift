@@ -186,7 +186,7 @@ struct FriendsListOrdering {
     let components = shift.start_time.split(separator: ":").compactMap { Int($0) }
     guard components.count >= 2 else { return nil }
 
-    return Calendar.current.date(
+    return Calendar.gregorianCurrent.date(
       bySettingHour: components[0],
       minute: components[1],
       second: 0,

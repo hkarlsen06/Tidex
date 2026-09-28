@@ -31,7 +31,7 @@ enum EventReminderPlanner {
     return normalizedReminderMinutes(event.notification_minutes_array)
       .compactMap { minutesBefore in
         guard
-          let fireDate = Calendar.current.date(
+          let fireDate = Calendar.gregorianCurrent.date(
             byAdding: .minute, value: -minutesBefore, to: baseDate),
           fireDate > referenceDate
         else {
@@ -95,7 +95,7 @@ enum EventReminderPlanner {
   static func effectiveEndDate(for event: EventRow) -> Date? {
     if event.is_all_day {
       guard let endDate = Date.fromISODateString(event.end_date) else { return nil }
-      var calendar = Calendar.current
+      var calendar = Calendar.gregorianCurrent
       calendar.timeZone = Date.localTimeZone
       let startOfEndDate = calendar.startOfDay(for: endDate)
       return calendar.date(byAdding: .day, value: 1, to: startOfEndDate)
@@ -210,7 +210,7 @@ final class EventReminderScheduler {
     let center = UNUserNotificationCenter.current()
     let content = buildNotificationContent(for: event, schedule: schedule)
 
-    let components = Calendar.current.dateComponents(
+    let components = Calendar.gregorianCurrent.dateComponents(
       [.year, .month, .day, .hour, .minute],
       from: schedule.fireDate
     )
@@ -265,7 +265,7 @@ final class EventReminderScheduler {
   private func formatDayText(for isoDate: String, relativeTo referenceDate: Date) -> String {
     guard let eventDate = Date.fromISODateString(isoDate) else { return isoDate }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let today = calendar.startOfDay(for: referenceDate)
     let reminderDay = calendar.startOfDay(for: eventDate)
 

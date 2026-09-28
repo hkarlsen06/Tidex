@@ -30,7 +30,7 @@ struct FriendsComposerShiftCalendarPicker: View {
     components.year = viewModel.committedYear
     components.month = viewModel.committedMonth
     components.day = 1
-    return Calendar.current.date(from: components) ?? .now
+    return Calendar.gregorianCurrent.date(from: components) ?? .now
   }
 
   private var isIPhone: Bool {

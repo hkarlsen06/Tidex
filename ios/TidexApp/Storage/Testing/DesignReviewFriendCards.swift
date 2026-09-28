@@ -100,9 +100,9 @@
 
     private static func minutesUntilTomorrow(atHour hour: Int) -> Double {
       let tomorrow =
-        Calendar.current.date(
-          byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: .now)) ?? .now
-      let start = Calendar.current.date(byAdding: .hour, value: hour, to: tomorrow) ?? tomorrow
+        Calendar.gregorianCurrent.date(
+          byAdding: .day, value: 1, to: Calendar.gregorianCurrent.startOfDay(for: .now)) ?? .now
+      let start = Calendar.gregorianCurrent.date(byAdding: .hour, value: hour, to: tomorrow) ?? tomorrow
       return start.timeIntervalSinceNow / 60
     }
 

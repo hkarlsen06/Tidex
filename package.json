@@ -29,6 +29,7 @@
     "ios:chat-package:check": "./scripts/check-chat-package-source.sh",
     "tariff:hk-virke:backpay": "bunx deno-bin@2.2.7 run --no-lock --allow-env --allow-net --config supabase/functions/deno.json scripts/hk-virke-backpay.ts",
     "screenshots": "python3 scripts/capture-app-store-screenshots.py",
+    "screenshots:3d": "node scripts/render-3d-screenshots.mjs",
     "swiftlint": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; for arg in \"$@\"; do if [ \"$arg\" = \"--fix\" ] || [ \"$arg\" = \"autocorrect\" ]; then echo \"swiftlint autocorrect is disabled in this repo. Use bun run swift-format.\"; exit 1; fi; done; swiftlint lint \"$@\" && swift ios/Scripts/check-swift-imports.swift' --",
     "swiftlint:analyze": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; if [ -n \"$SWIFTLINT_COMPILE_COMMANDS_PATH\" ]; then swiftlint analyze --strict --config .swiftlint.yml --compile-commands \"$SWIFTLINT_COMPILE_COMMANDS_PATH\" \"$@\"; elif [ -n \"$SWIFTLINT_COMPILER_LOG_PATH\" ]; then swiftlint analyze --strict --config .swiftlint.yml --compiler-log-path \"$SWIFTLINT_COMPILER_LOG_PATH\" \"$@\"; else echo \"Set SWIFTLINT_COMPILE_COMMANDS_PATH or SWIFTLINT_COMPILER_LOG_PATH\"; exit 1; fi' --",
     "swift-format": "xcrun swift-format format --configuration .swift-format --recursive ios/ --in-place --parallel",
@@ -61,6 +62,8 @@
   ],
   "devDependencies": {
     "husky": "^9.1.7",
+    "playwright": "1.58.1",
+    "three": "0.186.1",
     "wrangler": "4.118.0"
   }
 }

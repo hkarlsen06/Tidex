@@ -133,7 +133,7 @@ struct TotalCardWidgetProvider: TimelineProvider {
 
     // The card is month-scoped and only changes when the app calls WidgetCenter reloads,
     // so refreshing before the next month starts just re-renders the same data.
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let startOfMonth = calendar.dateInterval(of: .month, for: Date())?.start ?? Date()
     let startOfNextMonth =
       calendar.date(byAdding: .month, value: 1, to: startOfMonth) ?? Date()
@@ -157,7 +157,7 @@ struct TotalCardWidgetProvider: TimelineProvider {
       let totals = try decoder.decode(StoredMonthlyTotals.self, from: data)
 
       // Totals saved last month would show the wrong month's earnings once the month changes.
-      guard Calendar.current.isDate(totals.updatedAt, equalTo: .now, toGranularity: .month) else {
+      guard Calendar.gregorianCurrent.isDate(totals.updatedAt, equalTo: .now, toGranularity: .month) else {
         return TotalCardWidgetEntry.empty(currency: totals.currencySymbol)
       }
 

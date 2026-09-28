@@ -221,47 +221,177 @@ final class TidexAppUITests: XCTestCase {
     attachAppStoreScreenshot(app, name: "payroll-night-overtime-and-break")
   }
 
+  /// One App Store locale: app language, number locale, and fixture account with local pay.
+  private struct ScreenshotLocale {
+    let id: String
+    let language: String
+    let locale: String
+    let currency: String
+    let hourlyWage: Double
+    let supplement: Double
+    let name: String
+
+    /// Formats an amount the way the app does, from the app's localization identifier.
+    func amount(_ value: Double) -> String {
+      let formatter = NumberFormatter()
+      formatter.numberStyle = .decimal
+      formatter.maximumFractionDigits = 0
+      formatter.locale = Locale(identifier: language)
+      return formatter.string(from: NSNumber(value: value)) ?? String(Int(value))
+    }
+  }
+
+  // Keys match ios/fastlane/metadata. ar_SA and th_TH keep their Islamic and Buddhist default calendars.
+  // Wage plus supplement is a multiple of 5, so the net amounts (112 hours at 20% tax) are whole.
+  private static let screenshotLocales: [ScreenshotLocale] = [
+    .init(
+      id: "en-US", language: "en", locale: "en_US",
+      currency: "$", hourlyWage: 22, supplement: 3, name: "Emily"),
+    .init(
+      id: "no", language: "nb", locale: "nb_NO",
+      currency: "kr", hourlyWage: 225, supplement: 25, name: "Ingrid"),
+    .init(
+      id: "sv", language: "sv", locale: "sv_SE",
+      currency: "kr", hourlyWage: 185, supplement: 20, name: "Elin"),
+    .init(
+      id: "da", language: "da", locale: "da_DK",
+      currency: "kr", hourlyWage: 180, supplement: 20, name: "Freja"),
+    .init(
+      id: "fi", language: "fi", locale: "fi_FI",
+      currency: "€", hourlyWage: 17, supplement: 3, name: "Aino"),
+    .init(
+      id: "de-DE", language: "de", locale: "de_DE",
+      currency: "€", hourlyWage: 17, supplement: 3, name: "Lena"),
+    .init(
+      id: "fr-FR", language: "fr", locale: "fr_FR",
+      currency: "€", hourlyWage: 16, supplement: 4, name: "Camille"),
+    .init(
+      id: "es-ES", language: "es", locale: "es_ES",
+      currency: "€", hourlyWage: 13, supplement: 2, name: "Lucía"),
+    .init(
+      id: "ca", language: "ca", locale: "ca_ES",
+      currency: "€", hourlyWage: 13, supplement: 2, name: "Laia"),
+    .init(
+      id: "it", language: "it", locale: "it_IT",
+      currency: "€", hourlyWage: 12, supplement: 3, name: "Giulia"),
+    .init(
+      id: "nl-NL", language: "nl", locale: "nl_NL",
+      currency: "€", hourlyWage: 17, supplement: 3, name: "Sanne"),
+    .init(
+      id: "el", language: "el", locale: "el_GR",
+      currency: "€", hourlyWage: 8, supplement: 2, name: "Ελένη"),
+    .init(
+      id: "sk", language: "sk", locale: "sk_SK",
+      currency: "€", hourlyWage: 8, supplement: 2, name: "Zuzana"),
+    .init(
+      id: "hr", language: "hr", locale: "hr_HR",
+      currency: "€", hourlyWage: 9, supplement: 1, name: "Ana"),
+    .init(
+      id: "cs", language: "cs", locale: "cs_CZ",
+      currency: "Kč", hourlyWage: 220, supplement: 30, name: "Tereza"),
+    .init(
+      id: "pl", language: "pl", locale: "pl_PL",
+      currency: "zł", hourlyWage: 35, supplement: 5, name: "Zuzanna"),
+    .init(
+      id: "pt-BR", language: "pt-BR", locale: "pt_BR",
+      currency: "R$", hourlyWage: 25, supplement: 5, name: "Beatriz"),
+    .init(
+      id: "ru", language: "ru", locale: "ru_RU",
+      currency: "₽", hourlyWage: 400, supplement: 50, name: "Анна"),
+    .init(
+      id: "uk", language: "uk", locale: "uk_UA",
+      currency: "₴", hourlyWage: 120, supplement: 15, name: "Олена"),
+    .init(
+      id: "ro", language: "ro", locale: "ro_RO",
+      currency: "lei", hourlyWage: 30, supplement: 5, name: "Ioana"),
+    .init(
+      id: "hu", language: "hu", locale: "hu_HU",
+      currency: "Ft", hourlyWage: 2_600, supplement: 300, name: "Réka"),
+    .init(
+      id: "tr", language: "tr", locale: "tr_TR",
+      currency: "₺", hourlyWage: 160, supplement: 20, name: "Elif"),
+    .init(
+      id: "ar-SA", language: "ar", locale: "ar_SA",
+      currency: "ر.س", hourlyWage: 35, supplement: 5, name: "نورة"),
+    .init(
+      id: "he", language: "he", locale: "he_IL",
+      currency: "₪", hourlyWage: 45, supplement: 5, name: "נועה"),
+    .init(
+      id: "hi", language: "hi", locale: "hi_IN",
+      currency: "₹", hourlyWage: 150, supplement: 25, name: "प्रिया"),
+    .init(
+      id: "th", language: "th", locale: "th_TH",
+      currency: "฿", hourlyWage: 80, supplement: 10, name: "ปราง"),
+    .init(
+      id: "vi", language: "vi", locale: "vi_VN",
+      currency: "₫", hourlyWage: 30_000, supplement: 5_000, name: "Linh"),
+    .init(
+      id: "id", language: "id", locale: "id_ID",
+      currency: "Rp", hourlyWage: 25_000, supplement: 3_000, name: "Putri"),
+    .init(
+      id: "ja", language: "ja", locale: "ja_JP",
+      currency: "¥", hourlyWage: 1_300, supplement: 200, name: "さくら"),
+    .init(
+      id: "ko", language: "ko", locale: "ko_KR",
+      currency: "₩", hourlyWage: 12_000, supplement: 1_500, name: "지민"),
+    .init(
+      id: "zh-Hans", language: "zh-Hans", locale: "zh_CN",
+      currency: "¥", hourlyWage: 30, supplement: 5, name: "思雨"),
+    .init(
+      id: "zh-Hant", language: "zh-Hant", locale: "zh_TW",
+      currency: "NT$", hourlyWage: 200, supplement: 25, name: "怡君"),
+  ]
+
+  /// Captures the App Store screens for every locale, or the comma-separated
+  /// TIDEX_SCREENSHOT_LOCALES (set TEST_RUNNER_TIDEX_SCREENSHOT_LOCALES on xcodebuild).
+  /// With several simulators listed in TIDEX_SCREENSHOT_SHARDS, each takes every nth locale.
   @MainActor
   func testAppStoreScreenshots() {
-    for (language, locale, shiftsTitle, statsTitle) in [
-      ("en", "en_US", "Schedule", "Stats"),
-      ("nb", "nb_NO", "Vaktplan", "Statistikk"),
-    ] {
-      let app = XCUIApplication()
-      app.launchArguments = [
-        "-ui-testing", "-AppleLanguages", "(\(language))", "-AppleLocale", locale,
-        "-defaultStartupTab", "home", "-AppleInterfaceStyle", "Dark", "-cachedTheme", "dark",
-      ]
-      app.launchEnvironment["TIDEX_UI_TEST_SCENARIO"] = "app-store-screenshots"
-      app.launch()
-      let earnings = app.staticTexts.matching(
-        NSPredicate(format: "label MATCHES %@", ".*22[^0-9]?400.*")
-      ).firstMatch
-      XCTAssertTrue(earnings.waitForExistence(timeout: 30), app.debugDescription)
+    let environment = ProcessInfo.processInfo.environment
+    let selected = environment["TIDEX_SCREENSHOT_LOCALES"]?.split(separator: ",").map(String.init)
+    let shards = environment["TIDEX_SCREENSHOT_SHARDS"]?.split(separator: ",").map(String.init) ?? []
+    let shard = shards.firstIndex(of: environment["SIMULATOR_UDID"] ?? "")
+    XCTAssertTrue(shards.isEmpty || shard != nil, "This simulator is not in TIDEX_SCREENSHOT_SHARDS")
+    let specs = Self.screenshotLocales.filter { selected?.contains($0.id) ?? true }
+      .enumerated().filter { shard == nil || $0.offset % shards.count == shard }.map(\.element)
+    let avatar = URL(fileURLWithPath: #filePath)
+      .appendingPathComponent("../../../scripts/assets/app-store/screenshot-avatar.png")
+      .standardizedFileURL.path
+    XCTAssertTrue(FileManager.default.fileExists(atPath: avatar), avatar)
+    for spec in specs {
+      let app = launchScreenshotApp(spec, avatar: avatar)
+      // 112 September hours after 20% tax, then one more 8-hour shift in the add screen.
+      let rate = spec.hourlyWage + spec.supplement
+      let earnings = text(containingLabel: spec.amount(112 * rate * 0.8), in: app)
+      XCTAssertTrue(earnings.waitForExistence(timeout: 30), "\(spec.id)\n\(app.debugDescription)")
       XCTAssertFalse(app.staticTexts["screenshot.error"].exists)
-      if language == "en" {
+      if spec.id == "en-US" {
         assertHomeContentInsets(app)
       }
-      attachAppStoreScreenshot(app, name: "\(language)-01-home")
+      attachAppStoreScreenshot(app, name: "\(spec.id)-01-home")
 
-      capturePayrollScreenshot(app, language: language)
+      capturePayrollScreenshot(app, id: spec.id)
 
-      let statsButton = app.buttons[statsTitle]
+      let statsButton = app.buttons["home.stats"]
       XCTAssertTrue(statsButton.waitForExistence(timeout: defaultTimeout), app.debugDescription)
       statsButton.tap()
       XCTAssertTrue(app.buttons["BackButton"].waitForExistence(timeout: defaultTimeout))
       XCTAssertTrue(earnings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-      attachAppStoreScreenshot(app, name: "\(language)-02-statistics")
+      attachAppStoreScreenshot(app, name: "\(spec.id)-02-statistics")
 
       app.buttons["BackButton"].tap()
-      app.buttons[shiftsTitle].firstMatch.tap()
-      let calendarAmount = app.staticTexts.matching(
-        NSPredicate(format: "label == %@", "09:00")
-      ).firstMatch
-      XCTAssertTrue(calendarAmount.waitForExistence(timeout: 30), app.debugDescription)
-      XCTAssertTrue(app.buttons[shiftsTitle].firstMatch.exists, app.debugDescription)
-      attachAppStoreScreenshot(app, name: "\(language)-03-schedule")
-      captureAddScreenshot(app, language: language)
+      // iPad's floating tab bar is not a TabBar element, but there its buttons carry the tab's
+      // SF Symbol as their identifier. On iPhone that identifier is not reliable.
+      let tabBar = app.tabBars.firstMatch
+      let scheduleTab = tabBar.waitForExistence(timeout: 2)
+        ? tabBar.buttons.element(boundBy: 1) : app.buttons["calendar"].firstMatch
+      XCTAssertTrue(scheduleTab.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+      scheduleTab.tap()
+      let calendarTime = app.staticTexts.matching(NSPredicate(format: "label == %@", "09:00"))
+        .firstMatch
+      XCTAssertTrue(calendarTime.waitForExistence(timeout: 30), app.debugDescription)
+      attachAppStoreScreenshot(app, name: "\(spec.id)-03-schedule")
+      captureAddScreenshot(app, id: spec.id, total: spec.amount(96 * rate))
     }
   }
 
@@ -281,48 +411,84 @@ final class TidexAppUITests: XCTestCase {
   }
 
   @MainActor
-  private func capturePayrollScreenshot(_ app: XCUIApplication, language: String) {
-    let payroll = app.staticTexts[language == "en" ? "Next payout" : "Neste utbetaling"]
-    XCTAssertTrue(payroll.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    payroll.tap()
-    let done = app.buttons[language == "en" ? "Done" : "Ferdig"]
-    XCTAssertTrue(done.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    let supplements = app.buttons.matching(
-      NSPredicate(
-        format: "label CONTAINS %@", language == "en" ? "Total Supplement" : "Totalt tillegg"
-      )
-    ).firstMatch
-    XCTAssertTrue(supplements.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    supplements.tap()
-    // The expanded breakdown includes the pay-settings link and needs the large detent.
-    let header = done.coordinate(withNormalizedOffset: CGVector(dx: -1, dy: 0.5))
-    let expandedPosition = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
-    header.press(forDuration: 0.1, thenDragTo: expandedPosition)
-    let paySettings = app.buttons[
-      language == "en" ? "Check the pay settings" : "Sjekk lønnsinnstillingene"
+  private func launchScreenshotApp(_ spec: ScreenshotLocale, avatar: String) -> XCUIApplication {
+    let app = XCUIApplication()
+    app.launchArguments = [
+      "-ui-testing", "-AppleLanguages", "(\(spec.language))", "-AppleLocale", spec.locale,
+      "-defaultStartupTab", "home", "-AppleInterfaceStyle", "Dark", "-cachedTheme", "dark",
     ]
-    XCTAssertTrue(paySettings.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    XCTAssertTrue(
-      app.frame.contains(paySettings.frame), "Pay-settings link must fit in the screenshot")
-    attachAppStoreScreenshot(app, name: "\(language)-04-payroll")
-    done.tap()
+    app.launchEnvironment = [
+      "TIDEX_UI_TEST_SCENARIO": "app-store-screenshots",
+      "TIDEX_SCREENSHOT_NAME": spec.name,
+      "TIDEX_SCREENSHOT_AVATAR": avatar,
+      "TIDEX_SCREENSHOT_CURRENCY": spec.currency,
+      "TIDEX_SCREENSHOT_HOURLY_WAGE": String(spec.hourlyWage),
+      "TIDEX_SCREENSHOT_SUPPLEMENT": String(spec.supplement),
+      "TZ": Self.screenshotTimeZone(),
+    ]
+    app.launch()
+    return app
+  }
+
+  /// A whole-hour UTC offset where it is now 11 o'clock, so the fixture's 09:00 to 17:00 shift
+  /// today is in progress whenever the capture runs. Etc/GMT names flip the sign.
+  private static func screenshotTimeZone() -> String {
+    var utc = Calendar(identifier: .gregorian)
+    utc.timeZone = .gmt
+    var offset = 11 - utc.component(.hour, from: .now)
+    if offset < -12 { offset += 24 }
+    if offset > 14 { offset -= 24 }
+    return offset == 0 ? "Etc/GMT" : "Etc/GMT\(offset > 0 ? "-" : "+")\(abs(offset))"
   }
 
   @MainActor
-  private func captureAddScreenshot(_ app: XCUIApplication, language: String) {
+  private func capturePayrollScreenshot(_ app: XCUIApplication, id: String) {
+    // The card's title; other parts of the card, such as the date, open popovers instead.
+    let payroll = app.staticTexts.matching(identifier: "home.payroll-card").firstMatch
+    XCTAssertTrue(payroll.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    payroll.tap()
+    let done = app.buttons["payroll-details.done"]
+    XCTAssertTrue(done.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    let supplements = app.buttons["payroll-details.supplements"]
+    XCTAssertTrue(supplements.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    supplements.tap()
+    // The expanded breakdown includes the pay-settings link and needs the large detent. Drag the
+    // sheet header at the screen's centre, since Done sits on either side depending on direction.
+    // With several simulators running, the sheet can still be moving or miss a drag, so wait for
+    // the link to fit and drag again from the header's current position if it does not.
+    let paySettings = app.buttons["payroll-details.pay-settings"]
+    let fits = { paySettings.exists && app.frame.contains(paySettings.frame) }
+    for _ in 0..<3 where !fits() {
+      let header = app.coordinate(withNormalizedOffset: .zero)
+        .withOffset(CGVector(dx: app.frame.midX, dy: done.frame.midY))
+      header.press(
+        forDuration: 0.1,
+        thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)))
+      let deadline = Date.now.addingTimeInterval(3)
+      while !fits(), Date.now < deadline {
+        Thread.sleep(forTimeInterval: 0.25)
+      }
+    }
+    XCTAssertTrue(fits(), "Pay-settings link must fit in the screenshot\n\(app.debugDescription)")
+    attachAppStoreScreenshot(app, name: "\(id)-04-payroll")
+    done.tap()
+    // A tap while the sheet is still closing is lost.
+    XCTAssertTrue(done.waitForNonExistence(timeout: defaultTimeout), app.debugDescription)
+  }
+
+  @MainActor
+  private func captureAddScreenshot(_ app: XCUIApplication, id: String, total: String) {
     openAddShift(in: app)
     let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
       .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
-    let previewTotal = app.staticTexts.matching(
-      NSPredicate(format: "label MATCHES %@", ".*24[^0-9]?000.*")
-    ).firstMatch
+    let previewTotal = text(containingLabel: total, in: app)
     // A restored draft may already have this range selected; tapping it again clears it.
     if !previewTotal.waitForExistence(timeout: 2) {
       recentTime.tap()
     }
     XCTAssertTrue(previewTotal.waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    attachAppStoreScreenshot(app, name: "\(language)-05-add")
+    attachAppStoreScreenshot(app, name: "\(id)-05-add")
     app.terminate()
   }
 
@@ -618,8 +784,10 @@ final class TidexAppUITests: XCTestCase {
     jobPicker.tap()
     app.buttons["Jobs & Pay"].tap()
     // Skip the Add sheet's own job chip, which stays in the hierarchy under this sheet.
-    let workplace = app.buttons.matching(NSPredicate(format: "identifier != 'add-shift.job-picker'"))
-      .containing(.staticText, identifier: "Nord").firstMatch
+    let workplace = app.buttons.matching(
+      NSPredicate(format: "identifier != 'add-shift.job-picker'")
+    )
+    .containing(.staticText, identifier: "Nord").firstMatch
     XCTAssertTrue(workplace.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     workplace.tap()
     let edit = app.buttons["Edit job"]

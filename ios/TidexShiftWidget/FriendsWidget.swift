@@ -106,7 +106,7 @@ struct FriendsWidgetProvider: TimelineProvider {
     let now = Date()
     let shifts = loadShifts()
     let nextMidnight =
-      Calendar.current.nextDate(
+      Calendar.gregorianCurrent.nextDate(
         after: now, matching: DateComponents(hour: 0, minute: 0, second: 0),
         matchingPolicy: .nextTime) ?? now.addingTimeInterval(24 * 60 * 60)
     let helper = ShiftWidgetProviderHelper()
@@ -264,7 +264,7 @@ struct FriendsWidgetProvider: TimelineProvider {
     else {
       return (.none, 0)
     }
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let days = calendar.dateComponents(
       [.day], from: calendar.startOfDay(for: now),
       to: calendar.startOfDay(for: interval.start)).day ?? 0
@@ -276,7 +276,7 @@ struct FriendsWidgetProvider: TimelineProvider {
   private func formatShiftDate(_ dateString: String, daysRemaining: Int, now: Date) -> String {
     guard let shiftDate = parseShiftDate(dateString) else { return dateString }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let today = calendar.startOfDay(for: now)
     let shiftDay = calendar.startOfDay(for: shiftDate)
 
@@ -511,7 +511,7 @@ struct FriendsWidgetView: View {
   /// A 24-hour track with the shift drawn as a filled segment.
   private func dayBar(span: ClosedRange<Double>, showNow: Bool) -> some View {
     let accent = showNow ? activeColor : initialsTextColor
-    let now = Calendar.current.dateComponents([.hour, .minute], from: entry.date)
+    let now = Calendar.gregorianCurrent.dateComponents([.hour, .minute], from: entry.date)
     let nowFraction = (Double(now.hour ?? 0) * 60 + Double(now.minute ?? 0)) / 1_440
     return VStack(spacing: 4) {
       GeometryReader { geo in

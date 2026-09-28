@@ -178,7 +178,7 @@ enum DashboardFeaturedItemSelector {  // swiftlint:disable:this explicit_acl exp
     }
 
     if shift.endTime <= shift.startTime {
-      endDate = Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+      endDate = Calendar.gregorianCurrent.date(byAdding: .day, value: 1, to: endDate) ?? endDate
     }
 
     return endDate
@@ -196,7 +196,7 @@ enum DashboardFeaturedItemSelector {  // swiftlint:disable:this explicit_acl exp
   private static func eventEndDate(for event: EventRow) -> Date? {
     if event.is_all_day {
       guard let endDate = Date.fromISODateString(event.end_date) else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
-      return Calendar.current.date(byAdding: .day, value: 1, to: endDate)
+      return Calendar.gregorianCurrent.date(byAdding: .day, value: 1, to: endDate)
     }
 
     guard let endTime = event.end_time else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
@@ -371,7 +371,7 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
     fallbackPayrollDay: Int,
     isViewingCurrentMonth: Bool,
     now: Date = Date(),
-    calendar: Calendar = .current
+    calendar: Calendar = .gregorianCurrent
   ) -> DashboardPayrollSelection? {
     selections(
       displayYM: displayYM,
@@ -389,7 +389,7 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
     fallbackPayrollDay: Int,
     isViewingCurrentMonth: Bool,
     now: Date = Date(),
-    calendar: Calendar = .current
+    calendar: Calendar = .gregorianCurrent
   ) -> [DashboardPayrollSelection] {
     guard !jobs.isEmpty else { return [] }  // swiftlint:disable:this conditional_returns_on_newline
 
@@ -437,7 +437,7 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
     jobs: [Job],
     fallbackPayrollDay: Int,
     now: Date = Date(),
-    calendar: Calendar = .current
+    calendar: Calendar = .gregorianCurrent
   ) -> [DashboardPayrollSelection] {
     let startOfToday = calendar.startOfDay(for: now)  // swiftlint:disable:this explicit_type_interface
     return Array(
@@ -554,7 +554,7 @@ enum DashboardPayrollAdjustmentFilter {  // swiftlint:disable:this explicit_acl 
     _ adjustment: PayrollAdjustment,
     payoutDate: Date,
     jobPayoutDatesInMonth: [Date] = [],
-    calendar: Calendar = .current
+    calendar: Calendar = .gregorianCurrent
   ) -> Bool {
     guard let adjustmentDate = Date.fromISODateString(adjustment.payout_date) else {
       return adjustment.payout_date.prefix(7) == payoutDate.toISODateString().prefix(7)  // swiftlint:disable:this line_length no_magic_numbers
@@ -871,7 +871,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
       return false
     }
 
-    return Calendar.current.isDate(currentSelection.payoutDate, inSameDayAs: payoutDate)
+    return Calendar.gregorianCurrent.isDate(currentSelection.payoutDate, inSameDayAs: payoutDate)
   }
 
   func currentPayrollProgressStartDate(  // swiftlint:disable:this explicit_acl type_contents_order
@@ -894,7 +894,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
 
     guard
       let selection = selections.first(where: {
-        Calendar.current.isDate($0.payoutDate, inSameDayAs: payoutDate)  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
+        Calendar.gregorianCurrent.isDate($0.payoutDate, inSameDayAs: payoutDate)  // swiftlint:disable:this anonymous_argument_in_multiline_closure line_length
       })
     else {
       return nil
@@ -3303,7 +3303,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     let currency = settings.currency ?? dashboardData.currency  // swiftlint:disable:this explicit_type_interface
     let currentMonthShifts = displayedMonthShifts.filter { shift in  // swiftlint:disable:this explicit_type_interface
       guard let date = Date.fromISODateString(shift.shiftDate) else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
-      let components = Calendar.current.dateComponents([.year, .month], from: date)  // swiftlint:disable:this explicit_type_interface line_length
+      let components = Self.gregorianCalendar.dateComponents([.year, .month], from: date)  // swiftlint:disable:this explicit_type_interface line_length
       return components.year == current.year && components.month == current.month
     }
 
@@ -3837,7 +3837,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     defer { isClockActionInProgress = false }
 
     let resolvedJobId = jobId ?? session.jobId ?? defaultJobId(for: session.userId)  // swiftlint:disable:this explicit_type_interface line_length
-    let shiftDate = Calendar.current.startOfDay(for: start)  // swiftlint:disable:this explicit_type_interface
+    let shiftDate = Calendar.gregorianCurrent.startOfDay(for: start)  // swiftlint:disable:this explicit_type_interface
     _ = try await shiftsRepository.createShift(
       shiftId: session.id,
       userId: session.userId,
@@ -4344,7 +4344,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
   private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async  // swiftlint:disable:this line_length type_contents_order
     -> ShiftRow?
   {
-    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
     let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate  // swiftlint:disable:this explicit_type_interface line_length
     let endDate = calendar.date(byAdding: .day, value: 1, to: referenceDate) ?? referenceDate  // swiftlint:disable:this explicit_type_interface line_length
     let shifts = await shiftsRepository.getShiftsOffMain(  // swiftlint:disable:this explicit_type_interface

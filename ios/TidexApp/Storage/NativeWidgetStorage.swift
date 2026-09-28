@@ -171,7 +171,7 @@ enum NativeWidgetStorage {
 
     // Calculate date range: previous month through 90 days ahead
     let now = Date()
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     // First day of previous month - use Calendar.date(byAdding:) for safe month arithmetic
     // This correctly handles January -> December rollover without manual year/month math
@@ -314,7 +314,7 @@ enum NativeWidgetStorage {
     previousMonthShifts: [ShiftRow],
     now: Date
   ) {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     // Get current month
     let currentYear = calendar.component(.year, from: now)

@@ -152,7 +152,7 @@ struct CustomSupplementsEditorSheet: View {  // swiftlint:disable:this explicit_
   /// Get the weekday (1-7, Mon-Sun) from shift date
   private var shiftWeekday: Int {
     guard let date = Date.fromISODateString(shift.shiftDate) else { return 1 }
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     // Calendar weekday is 1=Sunday, 2=Monday, etc.
     // We need 1=Monday, 7=Sunday
     let calendarWeekday = calendar.component(.weekday, from: date)

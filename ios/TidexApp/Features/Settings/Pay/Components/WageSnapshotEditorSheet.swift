@@ -562,7 +562,9 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
         .fixedSize(horizontal: false, vertical: true)
 
       if let nextDate = nextChangeDate {
-        Text(.settingsPayEditorNextChange(nextDate.formatted(.dateTime.day().month().year())))
+        Text(
+          .settingsPayEditorNextChange(
+            nextDate.formatted(.dateTime.day().month().year().calendar(.gregorian))))
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
           .fixedSize(horizontal: false, vertical: true)

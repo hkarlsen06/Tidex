@@ -92,7 +92,7 @@ struct EmploymentData: Codable, Equatable {  // swiftlint:disable:this explicit_
 
   func completedMonthsAverage(  // swiftlint:disable:this explicit_acl
     now: Date = Date(),
-    calendar: Calendar = .current
+    calendar: Calendar = .gregorianCurrent
   ) -> Double? {
     let includedMonths = completedAverageMonthNumbers(now: now, calendar: calendar)  // swiftlint:disable:this explicit_type_interface line_length
     guard !includedMonths.isEmpty else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
@@ -109,7 +109,7 @@ struct EmploymentData: Codable, Equatable {  // swiftlint:disable:this explicit_
 
   func completedAverageRangeLabel(  // swiftlint:disable:this explicit_acl
     now: Date = Date(),
-    calendar: Calendar = .current
+    calendar: Calendar = .gregorianCurrent
   ) -> String? {
     let includedMonths = completedAverageMonthNumbers(now: now, calendar: calendar).sorted()  // swiftlint:disable:this explicit_type_interface line_length
     guard includedMonths.isContiguous else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
@@ -128,7 +128,7 @@ struct EmploymentData: Codable, Equatable {  // swiftlint:disable:this explicit_
   func isIncludedInCompletedAverage(  // swiftlint:disable:this explicit_acl
     _ month: EmploymentMonthlyData,
     now: Date = Date(),
-    calendar: Calendar = .current
+    calendar: Calendar = .gregorianCurrent
   ) -> Bool {
     completedAverageMonthNumbers(now: now, calendar: calendar).contains(month.monthNumber)
   }

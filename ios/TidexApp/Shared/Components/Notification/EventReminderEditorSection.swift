@@ -147,7 +147,7 @@ struct EventReminderEditorSection: View {
   }
 
   private func defaultAnchorTime() -> Date {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let baseDate = Date()
     return calendar.date(bySettingHour: 9, minute: 0, second: 0, of: baseDate) ?? baseDate
   }

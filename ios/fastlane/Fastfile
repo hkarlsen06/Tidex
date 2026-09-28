@@ -119,13 +119,23 @@ platform :ios do
       in_house: false
     )
 
-    # Deliver rejects unknown folders such as raw-dark, so stage only the locale folders.
+    # Deliver rejects unknown folders such as raw-dark, so stage one folder per locale: the 3D
+    # iPhone renders for every locale, plus the flat iPad renders, which exist for en-US and no.
+    # Deliver replaces all screenshots, iPad included, in each locale it uploads.
     require "tmpdir"
     Dir.mktmpdir("tidex-screenshots") do |staging|
+      locales = Dir.children(File.join(screenshots_path, "3d"))
+                   .select { |name| File.directory?(File.join(screenshots_path, "3d", name)) }
+      UI.user_error!("No 3D screenshots at #{screenshots_path}/3d") if locales.empty?
+      locales.each do |locale|
+        FileUtils.mkdir_p(File.join(staging, locale))
+        FileUtils.cp(Dir.glob(File.join(screenshots_path, "3d", locale, "iPhone-*.png")), File.join(staging, locale))
+        FileUtils.cp(Dir.glob(File.join(screenshots_path, locale, "iPad-*.png")), File.join(staging, locale))
+      end
       %w[en-US no].each do |locale|
-        source = File.join(screenshots_path, locale)
-        UI.user_error!("Missing screenshots for #{locale} at #{source}") unless Dir.exist?(source)
-        FileUtils.cp_r(source, staging)
+        next if Dir.glob(File.join(staging, locale, "iPad-*.png")).any?
+
+        UI.user_error!("Missing iPad screenshots for #{locale} in #{screenshots_path}/#{locale}")
       end
 
       deliver(

@@ -288,6 +288,6 @@ extension FeedbackItem {
   }
 
   private func formatDate(_ date: Date, locale: Locale) -> String {
-    date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale))
+    date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale).calendar(.gregorian))
   }
 }

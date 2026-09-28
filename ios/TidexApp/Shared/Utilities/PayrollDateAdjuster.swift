@@ -17,6 +17,12 @@ import Foundation
 /// Matches the Next.js implementation in `lib/payroll/adjust-payroll-date.ts`.
 enum PayrollDateAdjuster {
 
+  /// Gregorian calendar for all payroll date math. `year`/`month`/`day` here are always
+  /// Gregorian, so resolving them with `Calendar.current` would misread them as, say,
+  /// Hijri or Buddhist components on a device set to one of those calendars and land on
+  /// a wildly wrong date (payouts hundreds of years away).
+  private static var calendar: Calendar { .gregorianCurrent }
+
   /// Adjusts a payroll date backwards to the last valid weekday (Tuesday-Friday)
   /// if the original date falls on a weekend, Monday, or public holiday.
   ///
@@ -42,9 +48,8 @@ enum PayrollDateAdjuster {
     components.year = year
     components.month = month
     components.day = effectivePayrollDay
-    components.timeZone = TimeZone.current
 
-    guard var date = Calendar.current.date(from: components) else {
+    guard var date = calendar.date(from: components) else {
       return Date()
     }
 
@@ -54,7 +59,7 @@ enum PayrollDateAdjuster {
 
     // Move backward until we find a valid payroll day (Tuesday-Friday, non-holiday)
     while isInvalidPayrollDay(date), iterations < maxIterations {
-      date = Calendar.current.date(byAdding: .day, value: -1, to: date) ?? date
+      date = calendar.date(byAdding: .day, value: -1, to: date) ?? date
       iterations += 1
     }
 
@@ -69,14 +74,14 @@ enum PayrollDateAdjuster {
 
   /// Check if a date is a weekend (Saturday or Sunday)
   static func isWeekend(_ date: Date) -> Bool {
-    let weekday = Calendar.current.component(.weekday, from: date)
+    let weekday = calendar.component(.weekday, from: date)
     // 1 = Sunday, 7 = Saturday
     return weekday == 1 || weekday == 7
   }
 
   /// Check if a date is a Monday
   static func isMonday(_ date: Date) -> Bool {
-    let weekday = Calendar.current.component(.weekday, from: date)
+    let weekday = calendar.component(.weekday, from: date)
     // 2 = Monday
     return weekday == 2
   }

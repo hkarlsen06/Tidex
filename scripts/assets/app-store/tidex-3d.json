@@ -1,0 +1,241 @@
+{
+  "font": "Poppins-SemiBold.ttf",
+  "background": "linear-gradient(100deg, #0a0f2e 0%, #1f1d58 38%, #283f99 72%, #4b72db 100%)",
+  "glow": "#4c86ea70",
+  "accent": "#22d3ee",
+  "finish": "#3b4a66",
+  "capture": "{locale}/iPhone-{screen}.png",
+  "phones": [
+    { "screen": "01-home", "x": 0.5, "y": 0.62, "height": 0.64, "rotate": [0, 14, 0] },
+    { "screen": "05-add", "x": 1.5, "y": 0.67, "height": 0.56, "rotate": [0, 24, 6] },
+    { "screen": "02-statistics", "x": 2.5, "y": 0.67, "height": 0.56, "rotate": [0, -24, -6] },
+    { "screen": "03-schedule", "x": 2, "y": 0.63, "height": 0.64, "rotate": [0, 0, 0] },
+    { "screen": "04-payroll", "x": 4.04, "y": 0.7, "height": 0.8, "rotate": [6, -26, -12] }
+  ],
+  "panels": {
+    "en-US": [
+      ["What's that extra shift <em>really</em> worth?", "Tidex shows what your work adds up to, before payday."],
+      ["Say yes to extra hours <em>knowing</em> what they pay", "Put a shift in the calendar and see how it changes your month."],
+      ["Every job in <em>one</em> overview", "Follow your hours and earnings over time, without piecing together notes."],
+      ["Know where the money <em>comes from</em>", "See the breakdown behind the total, and have something to check your payslip against."],
+      ["Your time is worth <em>keeping track of</em>", "Start with your next shift."]
+    ],
+    "no": [
+      ["Hva er den ekstravakten <em>egentlig</em> verdt?", "Tidex viser hva du ligger an til å tjene, før lønningsdagen."],
+      ["Si ja til ekstravakter og <em>vit</em> hva de gir", "Legg en vakt i kalenderen og se hva den betyr for måneden."],
+      ["Alle jobbene i <em>én</em> oversikt", "Følg med på timer og inntekt over tid, uten løse notater og regnestykker."],
+      ["Vit hvor pengene <em>kommer fra</em>", "Se hvordan beløpet er satt sammen, og ha noe å sjekke lønnsslippen mot."],
+      ["Tiden din er verdt å <em>holde styr på</em>", "Begynn med din neste vakt."]
+    ],
+    "ar-SA": [
+      ["كم تساوي تلك المناوبة الإضافية <em>حقًا</em>؟", "Tidex يوضح لك ما يضيفه عملك إلى دخلك، قبل موعد الراتب."],
+      ["قل نعم للساعات الإضافية و<em>اعرف</em> قيمتها", "أضف المناوبة إلى التقويم وشاهد كيف تغيّر شهرك."],
+      ["كل وظائفك في <em>مكان واحد</em>", "تابع ساعاتك وأرباحك بمرور الوقت، دون تجميع ملاحظات متفرقة."],
+      ["اعرف <em>من أين</em> يأتي المال", "اطّلع على تفاصيل المبلغ الإجمالي، وقارنه بقسيمة راتبك."],
+      ["وقتك يستحق أن <em>تتابعه</em>", "ابدأ بمناوبتك التالية."]
+    ],
+    "ca": [
+      ["Quant val <em>realment</em> aquell torn extra?", "Tidex et mostra què sumarà la teva feina, abans de cobrar."],
+      ["Accepta hores extres <em>sabent</em> què paguen", "Posa un torn al calendari i mira com canvia el teu mes."],
+      ["Totes les feines en <em>un</em> sol lloc", "Fes seguiment d'hores i guanys al llarg del temps, sense ajuntar notes soltes."],
+      ["Saps <em>d'on surten</em> els diners", "Consulta el desglossament del total i compara'l amb la teva nòmina."],
+      ["El teu temps val la pena <em>controlar-lo</em>", "Comença pel teu proper torn."]
+    ],
+    "cs": [
+      ["Kolik <em>vlastně</em> vynese směna navíc?", "Tidex vám ukáže, kolik vám práce vynese, ještě před výplatou."],
+      ["Řekněte ano přesčasům a <em>vězte</em>, kolik vydělají", "Přidejte směnu do kalendáře a uvidíte, jak změní váš měsíc."],
+      ["Všechny práce v <em>jednom</em> přehledu", "Sledujte hodiny a výdělky v čase, bez skládání poznámek dohromady."],
+      ["Vězte, <em>odkud</em> se berou peníze", "Podívejte se na rozpis částky a mějte si co porovnat s výplatní páskou."],
+      ["Váš čas stojí za to <em>sledovat</em>", "Začněte svou příští směnou."]
+    ],
+    "da": [
+      ["Hvad er den ekstra vagt <em>egentlig</em> værd?", "Tidex viser, hvad dit arbejde bliver til, før lønningsdag."],
+      ["Sig ja til ekstra timer og <em>kend</em> lønnen", "Læg en vagt i kalenderen, og se hvordan den ændrer din måned."],
+      ["Alle dine job i <em>én</em> oversigt", "Følg dine timer og løn over tid, uden løse noter og beregninger."],
+      ["Vid, hvor <em>pengene kommer fra</em>", "Se opdelingen bag beløbet, og hav noget at holde din lønseddel op imod."],
+      ["Din tid er værd at <em>holde styr på</em>", "Start med din næste vagt."]
+    ],
+    "de-DE": [
+      ["Was ist die Extraschicht <em>wirklich</em> wert?", "Tidex zeigt dir, was deine Arbeit einbringt, noch vor dem Zahltag."],
+      ["Sag ja zu Überstunden und <em>kenn</em> den Lohn", "Trag eine Schicht in den Kalender ein und sieh, wie sich dein Monat ändert."],
+      ["Alle Jobs in <em>einer</em> Übersicht", "Verfolge Stunden und Verdienst über die Zeit, ohne Notizen zusammenzusuchen."],
+      ["Wisse, <em>woher</em> das Geld kommt", "Sieh die Aufschlüsselung des Betrags und prüfe sie gegen deine Lohnabrechnung."],
+      ["Es lohnt sich, deine Zeit <em>festzuhalten</em>", "Fang mit deiner nächsten Schicht an."]
+    ],
+    "el": [
+      ["Πόσο αξίζει <em>πραγματικά</em> η έξτρα βάρδια;", "Το Tidex σας δείχνει πόσα θα βγάλετε, πριν την ημέρα πληρωμής."],
+      ["Υπερωρίες με <em>γνώση</em> της αμοιβής", "Βάλτε μια βάρδια στο ημερολόγιο και δείτε πώς αλλάζει ο μήνας σας."],
+      ["Όλες οι δουλειές σε <em>μία</em> εικόνα", "Παρακολουθείτε ώρες και κέρδη στον χρόνο, χωρίς σκόρπιες σημειώσεις."],
+      ["Μάθετε <em>από πού</em> έρχονται τα χρήματα", "Δείτε την ανάλυση του συνόλου, κάτι να συγκρίνετε με το εκκαθαριστικό."],
+      ["Ο χρόνος σας αξίζει <em>παρακολούθηση</em>", "Ξεκινήστε με την επόμενη βάρδιά σας."]
+    ],
+    "es-ES": [
+      ["¿Cuánto vale <em>realmente</em> ese turno extra?", "Tidex te muestra cuánto vas a ganar, antes de cobrar."],
+      ["Di que sí a horas extra <em>sabiendo</em> lo que pagan", "Añade un turno al calendario y mira cómo cambia tu mes."],
+      ["Todos tus trabajos en <em>un</em> solo lugar", "Sigue tus horas y ganancias en el tiempo, sin juntar notas sueltas."],
+      ["Sabe <em>de dónde</em> sale el dinero", "Consulta el desglose del total y compáralo con tu nómina."],
+      ["Tu tiempo merece la pena <em>llevarlo al día</em>", "Empieza con tu próximo turno."]
+    ],
+    "fi": [
+      ["Mitä lisävuoro <em>oikeasti</em> tuo?", "Tidex näyttää, mitä työstäsi kertyy, jo ennen palkkapäivää."],
+      ["Ota lisätunnit <em>tietäen</em>, mitä ne maksavat", "Lisää vuoro kalenteriin ja katso, miten kuukautesi muuttuu."],
+      ["Kaikki työt <em>yhdessä</em> näkymässä", "Seuraa tunteja ja ansioita ajan mittaan, ilman irrallisia muistiinpanoja."],
+      ["Tiedä, <em>mistä</em> raha tulee", "Näe erittely summan takana, jotain verrattavaksi palkkakuittiin."],
+      ["Aikasi on <em>seuraamisen</em> arvoista", "Aloita seuraavasta vuorostasi."]
+    ],
+    "fr-FR": [
+      ["Que vaut <em>vraiment</em> ce service en plus ?", "Tidex vous montre ce que rapporte votre travail, avant le jour de paie."],
+      ["Dites oui aux heures sup, <em>en sachant</em> combien", "Ajoutez un service au calendrier et voyez comment il change votre mois."],
+      ["Tous vos emplois en <em>une</em> vue", "Suivez vos heures et vos gains dans le temps, sans éparpiller vos notes."],
+      ["Sachez <em>d'où vient</em> l'argent", "Consultez le détail du total, de quoi vérifier votre fiche de paie."],
+      ["Votre temps mérite <em>d'être suivi</em>", "Commencez par votre prochain service."]
+    ],
+    "he": [
+      ["כמה <em>באמת</em> שווה המשמרת הנוספת?", "Tidex מראה לכם כמה מכניסה העבודה שלכם, עוד לפני יום המשכורת."],
+      ["אמרו כן לשעות נוספות <em>ודעו</em> כמה משלמות", "הוסיפו משמרת ליומן וראו איך היא משנה את החודש שלכם."],
+      ["כל העבודות <em>במקום אחד</em>", "עקבו אחרי שעות והכנסות לאורך זמן, בלי פתקים מפוזרים."],
+      ["דעו <em>מאיפה</em> מגיע הכסף", "ראו את הפירוט מאחורי הסכום, ויהיה לכם מול מה לבדוק את התלוש."],
+      ["הזמן שלכם שווה <em>מעקב</em>", "התחילו עם המשמרת הבאה שלכם."]
+    ],
+    "hi": [
+      ["वह अतिरिक्त शिफ्ट <em>सच में</em> कितनी कीमत रखती है?", "Tidex वेतन-दिवस से पहले ही दिखाता है कि आपकी कमाई कितनी बनती है।"],
+      ["ओवरटाइम को हां कहें, <em>जानकर</em> कि कितना मिलेगा", "कैलेंडर में शिफ्ट जोड़ें और देखें यह आपका महीना कैसे बदलता है।"],
+      ["सभी नौकरियां <em>एक</em> जगह", "समय के साथ घंटे और कमाई ट्रैक करें, बिखरे नोट्स जोड़े बिना।"],
+      ["जानें पैसा <em>कहां से</em> आता है", "कुल राशि का विवरण देखें, और वेतन पर्ची से मिलाने के लिए कुछ रखें।"],
+      ["आपका समय <em>ट्रैक करने</em> लायक है", "अपनी अगली शिफ्ट से शुरुआत करें।"]
+    ],
+    "hr": [
+      ["Koliko <em>zapravo</em> vrijedi dodatna smjena?", "Tidex ti pokazuje koliko ćeš zaraditi, prije isplate plaće."],
+      ["Reci da prekovremenima <em>znajući</em> koliko plaćaju", "Dodaj smjenu u kalendar i vidi kako mijenja tvoj mjesec."],
+      ["Svi poslovi na <em>jednom</em> mjestu", "Prati sate i zaradu kroz vrijeme, bez sastavljanja bilješki."],
+      ["Znaj <em>odakle</em> dolazi novac", "Pogledaj raščlambu iznosa i imaj s čime usporediti platnu listu."],
+      ["Tvoje vrijeme vrijedi <em>pratiti</em>", "Kreni sa svojom sljedećom smjenom."]
+    ],
+    "hu": [
+      ["Mennyit ér <em>valójában</em> a plusz műszak?", "A Tidex megmutatja, mennyit kereshetsz, még fizetésnap előtt."],
+      ["Mondj igent túlórára, <em>tudva</em> mennyit fizet", "Írj be egy műszakot a naptárba, és nézd meg, hogyan változik a hónapod."],
+      ["Minden munkahely <em>egy</em> helyen", "Kövesd az óráidat és a keresetedet, külön jegyzetek nélkül."],
+      ["Tudd, <em>honnan</em> jön a pénz", "Nézd meg az összeg részletezését, amivel összevetheted a bérjegyzéked."],
+      ["Megéri <em>nyomon követni</em> az idődet", "Kezdd a következő műszakoddal."]
+    ],
+    "id": [
+      ["Berapa <em>sebenarnya</em> nilai shift tambahan itu?", "Tidex menunjukkan penghasilan Anda, sebelum hari gajian."],
+      ["Terima jam lembur, <em>tahu</em> berapa bayarannya", "Masukkan shift ke kalender dan lihat perubahan bulan Anda."],
+      ["Semua pekerjaan dalam <em>satu</em> tampilan", "Pantau jam kerja dan penghasilan dari waktu ke waktu, tanpa catatan terpisah."],
+      ["Tahu <em>dari mana</em> uang itu berasal", "Lihat rincian totalnya, ada yang bisa dicocokkan dengan slip gaji."],
+      ["Waktu Anda layak <em>dicatat</em>", "Mulailah dengan shift Anda berikutnya."]
+    ],
+    "it": [
+      ["Quanto vale <em>davvero</em> quel turno extra?", "Tidex ti mostra quanto stai per guadagnare, prima del giorno di paga."],
+      ["Accetta straordinari <em>sapendo</em> quanto pagano", "Metti un turno nel calendario e vedi come cambia il tuo mese."],
+      ["Tutti i lavori in <em>un</em> colpo d'occhio", "Tieni d'occhio ore e guadagni nel tempo, senza note sparse."],
+      ["Sappi <em>da dove</em> arrivano i soldi", "Vedi il dettaglio del totale, così hai con cosa confrontare la busta paga."],
+      ["Vale la pena <em>tenere traccia</em> del tuo tempo", "Inizia dal tuo prossimo turno."]
+    ],
+    "ja": [
+      ["その追加シフト、<em>本当は</em>いくら？", "給料日前に、Tidexが仕事の価値を教えてくれます。"],
+      ["残業は<em>いくら</em>か知ってから", "シフトをカレンダーに入れて、今月の変化を確認しましょう。"],
+      ["仕事を<em>ひとつ</em>にまとめて管理", "勤務時間と収入をまとめて記録、メモを探し回る必要なし。"],
+      ["お金の<em>出どころ</em>がわかる", "内訳を確認して、給与明細と照らし合わせましょう。"],
+      ["時間は<em>記録する</em>価値がある", "次のシフトから始めましょう。"]
+    ],
+    "ko": [
+      ["그 추가 근무, <em>진짜</em> 얼마?", "Tidex가 급여일 전에 내 수입을 미리 보여줍니다."],
+      ["초과근무, <em>얼마</em>인지 알고 하기", "달력에 근무를 넣고 이번 달이 어떻게 바뀌는지 확인하세요."],
+      ["모든 일자리를 <em>한곳</em>에서", "시간과 수입을 한곳에서 계속 추적하세요, 흩어진 메모 없이."],
+      ["돈이 <em>어디서</em> 오는지 알기", "총액의 세부 내역을 보고 급여명세서와 대조하세요."],
+      ["시간은 <em>기록</em>할 가치가 있어요", "다음 근무부터 시작해 보세요."]
+    ],
+    "nl-NL": [
+      ["Wat is die extra dienst <em>nu echt</em> waard?", "Tidex laat zien wat je werk oplevert, vóór je loon wordt uitbetaald."],
+      ["Overwerk accepteren? <em>Weet</em> wat het oplevert", "Zet een dienst in je agenda en zie hoe je maand verandert."],
+      ["Al je banen in <em>één</em> overzicht", "Volg je uren en inkomsten in de tijd, zonder losse notities."],
+      ["Weet <em>waar</em> het geld vandaan komt", "Bekijk de opbouw van het totaal, iets om je loonstrook mee te checken."],
+      ["Je tijd is het <em>waard om bij te houden</em>", "Begin met je volgende dienst."]
+    ],
+    "pl": [
+      ["Ile naprawdę <em>warta</em> jest dodatkowa zmiana?", "Tidex pokazuje, ile zarobisz, zanim dostaniesz wypłatę."],
+      ["Zgódź się na nadgodziny, <em>znając</em> stawkę", "Dodaj zmianę do kalendarza i zobacz, jak zmienia Twój miesiąc."],
+      ["Wszystkie prace w <em>jednym</em> miejscu", "Śledź godziny i zarobki w czasie, bez osobnych notatek."],
+      ["Wiedz, <em>skąd</em> biorą się pieniądze", "Zobacz rozbicie kwoty, masz z czym porównać wypłatę."],
+      ["Twój czas warto <em>śledzić</em>", "Zacznij od następnej zmiany."]
+    ],
+    "pt-BR": [
+      ["Quanto vale <em>de verdade</em> aquele turno extra?", "O Tidex mostra quanto seu trabalho rende, antes do pagamento."],
+      ["Aceite horas extras <em>sabendo</em> quanto pagam", "Coloque um turno no calendário e veja como seu mês muda."],
+      ["Todos os trabalhos em <em>um só</em> lugar", "Acompanhe horas e ganhos ao longo do tempo, sem anotações soltas."],
+      ["Saiba <em>de onde</em> vem o dinheiro", "Veja como o total é composto, e tenha o que conferir com o holerite."],
+      ["Seu tempo vale a pena <em>ser acompanhado</em>", "Comece pelo seu próximo turno."]
+    ],
+    "ro": [
+      ["Cât valorează, <em>de fapt</em>, tura în plus?", "Tidex îți arată cât adună munca ta, înainte de salariu."],
+      ["Spune da orelor suplimentare <em>știind</em> plata", "Adaugă o tură în calendar și vezi cum îți schimbă luna."],
+      ["Toate joburile într-o <em>singură</em> privire", "Urmărește orele și câștigurile în timp, fără notițe împrăștiate."],
+      ["Știi <em>de unde</em> vin banii", "Vezi cum se formează suma, ceva cu care să-ți verifici fluturașul."],
+      ["Timpul tău merită <em>urmărit</em>", "Începe cu următoarea ta tură."]
+    ],
+    "ru": [
+      ["Что <em>реально</em> даёт лишняя смена?", "Tidex показывает, сколько вы заработаете, ещё до зарплаты."],
+      ["Беритесь за сверхурочные, <em>зная</em> оплату", "Добавьте смену в календарь и увидите, как меняется месяц."],
+      ["Все работы в <em>одном</em> месте", "Следите за часами и заработком со временем, без разрозненных заметок."],
+      ["Узнайте, <em>откуда</em> берутся деньги", "Смотрите разбивку суммы и сверяйте её с расчётным листком."],
+      ["Ваше время стоит <em>учитывать</em>", "Начните со своей следующей смены."]
+    ],
+    "sk": [
+      ["Akú <em>naozaj</em> hodnotu má extra smena?", "Tidex vám ukáže, koľko zarobíte, ešte pred výplatou."],
+      ["Povedzte áno nadčasom a <em>vedzte</em>, koľko platia", "Pridajte smenu do kalendára a zistite, ako zmení váš mesiac."],
+      ["Všetky práce na <em>jednom</em> mieste", "Sledujte hodiny a zárobky v čase, bez skladania poznámok."],
+      ["Vedzte, <em>odkiaľ</em> peniaze pochádzajú", "Pozrite si rozpis sumy a majte si s čím porovnať výplatnú pásku."],
+      ["Váš čas stojí za to <em>sledovať</em>", "Začnite svojou najbližšou smenou."]
+    ],
+    "sv": [
+      ["Vad är extrapasset <em>egentligen</em> värt?", "Tidex visar vad ditt jobb ger, innan löning."],
+      ["Säg ja till övertid och <em>vet</em> vad den ger", "Lägg in ett pass i kalendern och se hur din månad ändras."],
+      ["Alla jobb i <em>en</em> översikt", "Följ timmar och lön över tid, utan lösa anteckningar."],
+      ["Vet <em>var</em> pengarna kommer ifrån", "Se hur summan är uppbyggd, och ha något att jämföra lönespecen med."],
+      ["Din tid är värd att <em>hålla koll på</em>", "Börja med ditt nästa pass."]
+    ],
+    "th": [
+      ["กะพิเศษนั้น<em>คุ้มค่า</em>แค่ไหนกันแน่?", "Tidex ช่วยให้คุณเห็นรายได้ล่วงหน้า ก่อนวันเงินเดือนออก"],
+      ["รับโอทีโดย<em>รู้</em>ว่าได้เท่าไร", "ใส่กะลงปฏิทินแล้วดูว่าเดือนนี้เปลี่ยนไปแค่ไหน"],
+      ["งานทั้งหมดใน<em>ที่เดียว</em>", "ติดตามชั่วโมงและรายได้ต่อเนื่อง โดยไม่ต้องรวมบันทึกกระจัดกระจาย"],
+      ["รู้ว่าเงิน<em>มาจากไหน</em>", "ดูรายละเอียดยอดรวม มีอะไรไว้ตรวจกับสลิปเงินเดือน"],
+      ["เวลาของคุณ<em>ควรค่าแก่การติดตาม</em>", "เริ่มจากกะถัดไปของคุณ"]
+    ],
+    "tr": [
+      ["O ekstra vardiya <em>gerçekten</em> ne kadar ediyor?", "Tidex, maaş günü gelmeden kazancını gösterir."],
+      ["Fazla mesaiye <em>bilerek</em> evet de", "Vardiyayı takvime ekle, ayının nasıl değiştiğini gör."],
+      ["Tüm işler <em>tek</em> yerde", "Saatlerini ve kazancını zaman içinde takip et, dağınık not olmadan."],
+      ["Paranın <em>nereden</em> geldiğini bil", "Toplamın dökümünü gör, bordronla karşılaştıracak bir kaydın olsun."],
+      ["Zamanını <em>takip etmeye</em> değer", "Bir sonraki vardiyanla başla."]
+    ],
+    "uk": [
+      ["Скільки насправді <em>варта</em> додаткова зміна?", "Tidex показує, скільки ви заробите, ще до зарплати."],
+      ["Понаднормові? <em>Знайте</em> оплату наперед", "Додайте зміну в календар і побачте, як зміниться місяць."],
+      ["Усі роботи в <em>одному</em> місці", "Відстежуйте години та заробіток з часом, без розкиданих нотаток."],
+      ["Знайте, <em>звідки</em> беруться гроші", "Дивіться розбивку суми і звіряйте з розрахунковим листком."],
+      ["Ваш час вартий <em>обліку</em>", "Почніть із наступної зміни."]
+    ],
+    "vi": [
+      ["Ca làm thêm đó <em>thực sự</em> đáng giá bao nhiêu?", "Tidex cho bạn thấy mình kiếm được bao nhiêu, trước ngày lĩnh lương."],
+      ["Nhận ca thêm giờ, <em>biết rõ</em> lương bao nhiêu", "Thêm ca vào lịch và xem tháng của bạn thay đổi thế nào."],
+      ["Mọi công việc trong <em>một</em> nơi", "Theo dõi giờ làm và thu nhập theo thời gian, không cần ghi chú rời rạc."],
+      ["Biết tiền <em>đến từ đâu</em>", "Xem chi tiết tổng thu nhập, có cơ sở đối chiếu phiếu lương."],
+      ["Thời gian của bạn đáng để <em>theo dõi</em>", "Hãy bắt đầu với ca làm tiếp theo."]
+    ],
+    "zh-Hans": [
+      ["多上一班，<em>到底</em>值多少钱？", "Tidex 让你在发薪日前看清这份工作值多少钱。"],
+      ["接受加班，<em>先搞清</em>能赚多少", "把班次加入日历，看看这个月会有什么变化。"],
+      ["所有工作<em>一目了然</em>", "持续追踪工时和收入，不用东拼西凑笔记。"],
+      ["知道<em>钱从哪来</em>", "查看总额明细，核对工资单时更有依据。"],
+      ["你的时间值得<em>被记录</em>", "就从下一班开始。"]
+    ],
+    "zh-Hant": [
+      ["多上一個班，<em>到底</em>值多少？", "Tidex 讓你在發薪日前，先看清這份工作值多少。"],
+      ["接受加班，<em>先搞清楚</em>能賺多少", "把班次放進行事曆，看看這個月會差多少。"],
+      ["所有工作<em>一目了然</em>", "持續追蹤工時與收入，不必東拼西湊筆記。"],
+      ["知道<em>錢從哪來</em>", "查看總額明細，核對薪資單時更有依據。"],
+      ["你的時間值得<em>被記錄</em>", "就從下一個班次開始。"]
+    ]
+  }
+}

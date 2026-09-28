@@ -332,7 +332,7 @@ extension FriendCard {
     if isRefreshing {
       skeletonBars(count: 2)
     } else if let timing = shiftTiming, let shift = preview?.shift {
-      let crossesMidnight = !Calendar.current.isDate(timing.end, inSameDayAs: timing.start)
+      let crossesMidnight = !Calendar.gregorianCurrent.isDate(timing.end, inSameDayAs: timing.start)
       let endTime = ShiftCardFormatter.localizedTime(shift.end_time, locale: Locale.appLocale)
 
       Group {

@@ -31,7 +31,7 @@ final class ReviewRequestManager {
     else { return }
 
     let accountAgeDays =
-      Calendar.current.dateComponents([.day], from: createdDate, to: Date()).day ?? 0
+      Calendar.gregorianCurrent.dateComponents([.day], from: createdDate, to: Date()).day ?? 0
     guard accountAgeDays >= Self.minAccountAgeDays else { return }
 
     requestReview()
@@ -51,7 +51,7 @@ final class ReviewRequestManager {
     }
 
     let daysSinceLastRequest =
-      Calendar.current.dateComponents([.day], from: lastRequested, to: Date()).day ?? 0
+      Calendar.gregorianCurrent.dateComponents([.day], from: lastRequested, to: Date()).day ?? 0
     return daysSinceLastRequest >= Self.cooldownDays
   }
 

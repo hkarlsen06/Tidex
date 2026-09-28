@@ -1666,7 +1666,7 @@ private struct FriendsThreadDateSeparator: View {
   }
 
   private var separatorText: String {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     if calendar.isDateInToday(date) {
       return String(localized: .commonToday)
     }

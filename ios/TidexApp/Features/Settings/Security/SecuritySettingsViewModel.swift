@@ -577,7 +577,8 @@ extension SecuritySettingsViewModel {
     }
 
     var formattedDate: String {
-      createdAt.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(.appLocale))
+      createdAt.formatted(
+        Date.FormatStyle(date: .abbreviated, time: .omitted).locale(.appLocale).calendar(.gregorian))
     }
   }
 }

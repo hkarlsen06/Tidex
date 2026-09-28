@@ -22,6 +22,15 @@ internal enum OnboardingCurrencyResolver {
     "BRL": "R$",
     "ZAR": "R",
     "THB": "฿",
+    "TWD": "NT$",
+    "TRY": "₺",
+    "UAH": "₴",
+    "ILS": "₪",
+    "SAR": "ر.س",
+    "RON": "lei",
+    "HUF": "Ft",
+    "IDR": "Rp",
+    "VND": "₫",
   ]
 
   /// Region fallback for supported symbols when Foundation currency metadata is unavailable.
@@ -70,6 +79,15 @@ internal enum OnboardingCurrencyResolver {
     "BR": "R$",
     "ZA": "R",
     "TH": "฿",
+    "TW": "NT$",
+    "TR": "₺",
+    "UA": "₴",
+    "IL": "₪",
+    "SA": "ر.س",
+    "RO": "lei",
+    "HU": "Ft",
+    "ID": "Rp",
+    "VN": "₫",
   ]
 
   internal static func detectDefaultCurrency(locale: Locale = .current) -> String {

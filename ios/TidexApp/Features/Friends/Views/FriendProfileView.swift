@@ -367,7 +367,7 @@ struct FriendProfileView: View {
 
   private func friendsSinceText(for friend: Friend) -> String? {
     guard let date = friendshipStartDate(for: friend) else { return nil }
-    let formattedDate = date.formatted(.dateTime.day().month(.wide).year())
+    let formattedDate = date.formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))
     return String(localized: .sharingProfileFriendsSince(formattedDate))
   }
 

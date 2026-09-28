@@ -190,7 +190,7 @@ struct CountdownFormatter {
 
     // If shift crosses midnight, add one day to the end time
     if crossesMidnight {
-      result = Calendar.current.date(byAdding: .day, value: 1, to: result) ?? result
+      result = Calendar.gregorianCurrent.date(byAdding: .day, value: 1, to: result) ?? result
     }
 
     return result
@@ -199,7 +199,7 @@ struct CountdownFormatter {
   /// Count midnight boundaries crossed between two dates (matching Next.js behavior)
   /// Users perceive "1 day" as "tomorrow", not "24 hours from now"
   private static func countMidnightCrossings(from: Date, to: Date) -> Int {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let fromMidnight = calendar.startOfDay(for: from)
     let toMidnight = calendar.startOfDay(for: to)
     let days = calendar.dateComponents([.day], from: fromMidnight, to: toMidnight).day ?? 0

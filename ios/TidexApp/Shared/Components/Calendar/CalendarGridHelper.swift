@@ -16,7 +16,7 @@ import SwiftUI
 /// Static helper functions for calendar grid computations
 /// Centralizes the date calculation logic shared across all calendar views
 enum CalendarGridHelper {
-  private static let calendar = Calendar.current
+  private static let calendar = Calendar.gregorianCurrent
   static let columnCount = 7
   static let cellSpacing: CGFloat = Spacing.xxs
   /// Width:height ratio for calendar cells. The cell text is sized by the cell width,

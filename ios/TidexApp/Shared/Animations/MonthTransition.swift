@@ -190,7 +190,7 @@ struct MonthYearPickerSheet: View {
 
   // Year range: 5 years back to 5 years forward
   private var yearRange: [Int] {
-    let currentCalendarYear = Calendar.current.component(.year, from: Date())
+    let currentCalendarYear = Calendar.gregorianCurrent.component(.year, from: Date())
     return Array((currentCalendarYear - 5)...(currentCalendarYear + 5))
   }
 

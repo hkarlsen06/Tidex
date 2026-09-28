@@ -281,6 +281,10 @@ final class ShiftCompletionCelebrationManager {
   private func apply(result: CelebrationResult, stateKey: String) {
     switch result {
     case .show(let data, let state):
+      #if DEBUG
+        // App Store captures happen whenever the fixture month overlaps today.
+        if AppStoreScreenshotFixture.isActive { return }
+      #endif
       pendingState = state
       celebrationData = data
       shouldShowCelebration = true

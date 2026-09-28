@@ -120,7 +120,7 @@ final class SmartNotificationScheduler {
       return
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let now = Date()
     let startOfToday = calendar.startOfDay(for: now)
     let existingShiftDates = await getUpcomingShiftDates(for: userId, from: startOfToday)
@@ -180,7 +180,7 @@ final class SmartNotificationScheduler {
     dateISO: String,
     now: Date
   ) async -> Bool {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month, .day], from: date)
     components.hour = Self.morningHour
     components.minute = 0
@@ -198,7 +198,7 @@ final class SmartNotificationScheduler {
     pattern: WorkPatternAnalyzer.DayPattern,
     now: Date
   ) async -> Bool {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let baseMinutes = pattern.medianEndMinutes + Self.eveningOffsetMinutes
     let dayOffset = baseMinutes / (24 * 60)
     let minuteOfDay = baseMinutes % (24 * 60)
@@ -225,7 +225,7 @@ final class SmartNotificationScheduler {
     fireDate: Date
   ) async -> Bool {
     let center = UNUserNotificationCenter.current()
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: fireDate)
     let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
 
@@ -292,7 +292,7 @@ final class SmartNotificationScheduler {
   }
 
   private func eveningPromptTitle(for workDate: Date, fireDate: Date) -> String {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     if calendar.isDate(workDate, inSameDayAs: fireDate) {
       return String(localized: .notificationsSmartEveningTitle)
@@ -313,7 +313,7 @@ final class SmartNotificationScheduler {
 
   private func getUpcomingShiftDates(for userId: String, from startDate: Date) async -> Set<String>
   {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     guard
       let endDate = calendar.date(byAdding: .day, value: Self.scheduleDaysAhead - 1, to: startDate)
     else {
@@ -387,7 +387,7 @@ final class SmartNotificationScheduler {
 
   private nonisolated static func getMonthsInRange(startDate: Date, endDate: Date) -> [(Int, Int)] {
     var months: [(Int, Int)] = []
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
 
     var current =
       calendar.date(from: calendar.dateComponents([.year, .month], from: startDate)) ?? startDate

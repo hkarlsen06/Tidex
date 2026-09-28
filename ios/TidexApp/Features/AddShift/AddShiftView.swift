@@ -864,12 +864,13 @@ private struct EventContent: View {
   }
 
   private var rangeSummaryText: String {
-    if Calendar.current.isDate(viewModel.eventStartDate, inSameDayAs: viewModel.eventEndDate) {
-      return viewModel.eventStartDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    if Calendar.gregorianCurrent.isDate(viewModel.eventStartDate, inSameDayAs: viewModel.eventEndDate) {
+      return viewModel.eventStartDate.formatted(
+        .dateTime.weekday(.wide).day().month(.wide).calendar(.gregorian))
     }
 
-    return
-      "\(viewModel.eventStartDate.formatted(.dateTime.day().month(.abbreviated))) - \(viewModel.eventEndDate.formatted(.dateTime.day().month(.abbreviated)))"
+    let format = Date.FormatStyle.dateTime.day().month(.abbreviated).calendar(.gregorian)
+    return "\(viewModel.eventStartDate.formatted(format)) - \(viewModel.eventEndDate.formatted(format))"
   }
 
   private var remindersSection: some View {

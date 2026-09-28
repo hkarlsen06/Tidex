@@ -34,7 +34,7 @@ enum FriendCardMessagePreviewTimestampFormatter {
   private static func largestNonZeroUnit(from messageDate: Date, to referenceDate: Date)
     -> NSCalendar.Unit
   {
-    let calendarComponents = Calendar.current.dateComponents(
+    let calendarComponents = Calendar.gregorianCurrent.dateComponents(
       [.year, .month, .weekOfMonth, .day, .hour, .minute],
       from: messageDate,
       to: referenceDate
@@ -74,7 +74,7 @@ struct FriendShiftTiming: Equatable {
     self.end = end
   }
 
-  init?(shift: SharedShiftData, calendar: Calendar = .current) {
+  init?(shift: SharedShiftData, calendar: Calendar = .gregorianCurrent) {
     guard let shiftDate = Date.fromISODateString(shift.shift_date) else { return nil }
 
     let startComponents = shift.start_time.split(separator: ":").compactMap { Int($0) }
@@ -126,7 +126,8 @@ private struct CompactFriendShiftPreviewTextRow: View {
 
   private var formattedDate: String {
     guard let date = Date.fromISODateString(shift.shift_date) else { return "" }
-    return date.formatted(.dateTime.weekday(.wide).day().month(.abbreviated)).sentenceCased()
+    return date.formatted(.dateTime.weekday(.wide).day().month(.abbreviated).calendar(.gregorian))
+      .sentenceCased()
   }
 
   private var formattedTimeRange: String {

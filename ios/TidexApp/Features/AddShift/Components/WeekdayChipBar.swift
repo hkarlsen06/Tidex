@@ -58,7 +58,7 @@ private struct WeekdayChip: View {
   let onRemove: () -> Void
 
   private var weekdayName: String {
-    var calendar = Calendar.current
+    var calendar = Calendar.gregorianCurrent
     calendar.locale = Locale(identifier: Locale.current.identifier)
     let names = calendar.shortWeekdaySymbols
     guard let index = Int(weekday), index >= 0, index < 7 else { return "" }

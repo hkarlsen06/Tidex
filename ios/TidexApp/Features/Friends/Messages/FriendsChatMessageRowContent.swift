@@ -1380,7 +1380,7 @@ private struct FriendsChatDateSeparator: View {
   }
 
   private var separatorText: String {
-    let calendar: Calendar = Calendar.current
+    let calendar: Calendar = Calendar.gregorianCurrent
     if calendar.isDateInToday(date) {
       return String(localized: .commonToday)
     }

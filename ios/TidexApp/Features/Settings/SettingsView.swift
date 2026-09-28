@@ -1431,7 +1431,7 @@ private struct RecurringShiftsSettingsView: View {
 
   private func weekdaySummary(for selectedDays: SelectedDays) -> String {
     let order = ["1", "2", "3", "4", "5", "6", "0"]
-    var calendar = Calendar.current
+    var calendar = Calendar.gregorianCurrent
     calendar.locale = Locale(identifier: Locale.current.identifier)
     let symbols = calendar.shortWeekdaySymbols
     let labels =

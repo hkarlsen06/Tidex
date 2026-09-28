@@ -317,7 +317,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
             if let dates, let firstDate = dates.first,
               let date = Date.fromISODateString(firstDate)
             {
-              let calendar = Calendar.current
+              let calendar = Calendar.gregorianCurrent
               let components = calendar.dateComponents([.year, .month], from: date)
               if let year = components.year, let month = components.month {
                 // Navigate to the month containing the highlighted shifts

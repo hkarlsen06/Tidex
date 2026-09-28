@@ -38,7 +38,7 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
 
   @State private var dragSelection: CalendarDragSelection?
 
-  private let calendar = Calendar.current
+  private let calendar = Calendar.gregorianCurrent
 
   var body: some View {
     VStack(spacing: 0) {

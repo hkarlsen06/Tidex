@@ -453,7 +453,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var endDate = formatter.date(from: "\(shift.shiftDate) \(shift.endTime)") ?? startDate
     if isCrossMidnight(startTime: shift.startTime, endTime: shift.endTime) {
-      endDate = Calendar.current.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+      endDate = Calendar.gregorianCurrent.date(byAdding: .day, value: 1, to: endDate) ?? endDate
     }
 
     return (startDate: startDate, endDate: endDate)

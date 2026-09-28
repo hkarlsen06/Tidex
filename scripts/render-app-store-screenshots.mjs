@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// Compose the existing Tidex marketing layout around unmodified simulator captures.
+// Compose the flat Tidex iPad layout around unmodified simulator captures.
+// iPhone screenshots come from render-3d-screenshots.mjs.
 import { readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +33,7 @@ try {
   for (const [locale, screens] of Object.entries(captions)) {
     const folder = path.join(output, locale);
     await mkdir(folder, { recursive: true });
-    for (const [family, width, height] of [['iPhone', 1320, 2868], ['iPad', 2064, 2752]]) {
+    for (const [family, width, height] of [['iPad', 2064, 2752]]) {
       const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
       const previews = [];
       for (const [index, [screen, caption]] of screens.entries()) {

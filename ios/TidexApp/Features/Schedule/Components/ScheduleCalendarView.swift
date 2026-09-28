@@ -119,7 +119,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
   private let warningHaptic = UINotificationFeedbackGenerator()
 
-  private let calendar = Calendar.current
+  private let calendar = Calendar.gregorianCurrent
 
   init(
     shifts: [ShiftWithComputations],
@@ -568,7 +568,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       return Text(verbatim: "")
     }
     var parts: [String] = [
-      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale))
+      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
     ]
     if isToday {
       parts.append(String(localized: .commonToday))

@@ -34,7 +34,9 @@ struct PaySettingsReviewCard: View {
         Text(.settingsPayReviewTitle)
           .font(.tidexTitle2)
           .accessibilityAddTraits(.isHeader)
-        Text(.settingsPayReviewActiveOn(workDate.formatted(.dateTime.day().month(.wide).year())))
+        Text(
+          .settingsPayReviewActiveOn(
+            workDate.formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))))
           .font(.tidexSubheadline)
           .foregroundStyle(Color.tidexTextSecondary)
       }
@@ -221,6 +223,7 @@ struct PaySettingsReviewCard: View {
   }
 
   private func formattedDate(_ isoDate: String) -> String {
-    Date.fromISODateString(isoDate)?.formatted(.dateTime.day().month(.wide).year()) ?? isoDate
+    Date.fromISODateString(isoDate)?.formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))
+      ?? isoDate
   }
 }

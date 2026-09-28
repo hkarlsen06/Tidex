@@ -15,7 +15,7 @@ enum FriendInitialMonthResolver {
     if let previewShift = preview?.shift,
       let previewDate = Date.fromISODateString(previewShift.shift_date)
     {
-      let components = Calendar.current.dateComponents([.year, .month], from: previewDate)
+      let components = Calendar.gregorianCurrent.dateComponents([.year, .month], from: previewDate)
       if let year = components.year, let month = components.month,
         year != current.year || month != current.month
       {
@@ -31,7 +31,7 @@ enum FriendInitialMonthResolver {
       return nil
     }
 
-    let components = Calendar.current.dateComponents([.year, .month], from: latestShiftDate)
+    let components = Calendar.gregorianCurrent.dateComponents([.year, .month], from: latestShiftDate)
     guard let year = components.year, let month = components.month else { return nil }
     guard year != current.year || month != current.month else { return nil }
     return (year, month)
@@ -173,7 +173,7 @@ final class SharingViewModel: MonthNavigable {
     components.year = committedYear
     components.month = committedMonth
     components.day = 1
-    if let date = Calendar.current.date(from: components) {
+    if let date = Calendar.gregorianCurrent.date(from: components) {
       return formatter.string(from: date)
     }
     return ""

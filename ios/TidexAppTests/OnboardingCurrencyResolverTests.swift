@@ -77,6 +77,20 @@ final class OnboardingCurrencyResolverTests: XCTestCase {
     )
   }
 
+  func testDetectDefaultCurrencyCoversAppStoreLocales() {
+    for (identifier, currency) in [
+      ("tr_TR", "₺"), ("hu_HU", "Ft"), ("ro_RO", "lei"), ("uk_UA", "₴"), ("he_IL", "₪"),
+      ("ar_SA", "ر.س"), ("id_ID", "Rp"), ("vi_VN", "₫"), ("zh_TW", "NT$"),
+    ] {
+      XCTAssertEqual(
+        OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: identifier)),
+        currency, identifier)
+    }
+    XCTAssertEqual(CurrencyConfig.get("₫").wageRangeTier, .ultraLow)
+    XCTAssertTrue(CurrencyConfig.format(3_136_000, currency: "Rp").hasPrefix("Rp"))
+    XCTAssertTrue(CurrencyConfig.format(324_800, currency: "Ft").hasSuffix(" Ft"))
+  }
+
   func testDetectDefaultCurrencyFallsBackToNorwegianLanguageThenDollar() {
     XCTAssertEqual(
       OnboardingCurrencyResolver.detectDefaultCurrency(locale: Locale(identifier: "nb_CH")),

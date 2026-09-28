@@ -209,7 +209,7 @@ final class ClockSessionReconciler {  // swiftlint:disable:this explicit_acl exp
   private func findPersistedOngoingShift(for userId: String, at referenceDate: Date) async  // swiftlint:disable:this line_length type_contents_order
     -> ShiftRow?
   {
-    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
     let startDate = calendar.date(byAdding: .day, value: -1, to: referenceDate) ?? referenceDate  // swiftlint:disable:this explicit_type_interface line_length
     let endDate = calendar.date(byAdding: .day, value: 1, to: referenceDate) ?? referenceDate  // swiftlint:disable:this explicit_type_interface line_length
     let shifts = await shiftsRepository.getShiftsOffMain(  // swiftlint:disable:this explicit_type_interface

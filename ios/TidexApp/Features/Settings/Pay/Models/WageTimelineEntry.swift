@@ -128,7 +128,7 @@ enum WageTimelineProcessor {
 
     // Parse the date and subtract one day
     guard let date = Date.fromISODateString(previousFromDate),
-      let oneDayBefore = Calendar.current.date(byAdding: .day, value: -1, to: date)
+      let oneDayBefore = Calendar.gregorianCurrent.date(byAdding: .day, value: -1, to: date)
     else {
       return nil
     }
@@ -162,7 +162,7 @@ enum WageTimelineProcessor {
   private static func formatDate(_ isoDate: String, locale: Locale) -> String {
     guard let date = Date.fromISODateString(isoDate) else { return isoDate }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let isCurrentYear =
       calendar.component(.year, from: date) == calendar.component(.year, from: Date())
 

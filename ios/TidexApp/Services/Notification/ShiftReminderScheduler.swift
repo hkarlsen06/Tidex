@@ -42,7 +42,7 @@ enum ShiftReminderPlanner {
       return []
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let daysUntil = calendar.dateComponents([.day], from: referenceDate, to: shiftStart).day ?? 0
     let normalizedMinutes = normalizedReminderMinutes(reminderMinutes)
 
@@ -254,7 +254,7 @@ final class ShiftReminderScheduler {
     )
 
     // Create trigger using calendar components for precise timing
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let components = calendar.dateComponents(
       [.year, .month, .day, .hour, .minute],
       from: fireDate
@@ -327,7 +327,7 @@ final class ShiftReminderScheduler {
       return shiftDateString
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let today = calendar.startOfDay(for: referenceDate)
     let shiftDay = calendar.startOfDay(for: shiftDate)
 

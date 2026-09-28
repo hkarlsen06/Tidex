@@ -86,6 +86,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           Button(String(localized: .commonDone)) {
             dismiss()
           }
+          .accessibilityIdentifier("payroll-details.done")
         }
       }
     }
@@ -136,20 +137,24 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     guard let start = breakdown.earningsPeriodStart else {
       return nil
     }
-    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
-    let isCalendarMonth: Bool = breakdown.earningsPeriodEnd.map { end in
-      calendar.component(.day, from: start) == 1
-        && calendar.isDate(end, equalTo: start, toGranularity: .month)
-        && calendar.component(.day, from: calendar.date(byAdding: .day, value: 1, to: end) ?? end) == 1
-    } ?? true
+    let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
+    let isCalendarMonth: Bool =
+      breakdown.earningsPeriodEnd.map { end in
+        calendar.component(.day, from: start) == 1
+          && calendar.isDate(end, equalTo: start, toGranularity: .month)
+          && calendar.component(.day, from: calendar.date(byAdding: .day, value: 1, to: end) ?? end)
+            == 1
+      } ?? true
 
     guard !isCalendarMonth, let end = breakdown.earningsPeriodEnd else {
       return String(
-        localized: .dashboardPayrollDetailsEarningsPeriod(start.formatted(.dateTime.month(.wide).year())))
+        localized: .dashboardPayrollDetailsEarningsPeriod(
+          start.formatted(.dateTime.month(.wide).year().calendar(.gregorian))))
     }
-    let format = Date.FormatStyle.dateTime.day().month(.abbreviated)  // swiftlint:disable:this explicit_type_interface
+    let format = Date.FormatStyle.dateTime.day().month(.abbreviated).calendar(.gregorian)  // swiftlint:disable:this explicit_type_interface line_length
     return String(
-      localized: .dashboardPayrollDetailsEarningsPeriodRange(start.formatted(format), end.formatted(format)))
+      localized: .dashboardPayrollDetailsEarningsPeriodRange(
+        start.formatted(format), end.formatted(format)))
   }
 
   private var earningsSection: some View {
@@ -259,9 +264,9 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
 
       if let periodText = earningsPeriodText(for: breakdown) {
         Text(periodText)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-        .frame(maxWidth: .infinity, alignment: .leading)
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
+          .frame(maxWidth: .infinity, alignment: .leading)
       }
 
       EarningsBreakdownCard<EmptyView>.Row(
@@ -349,6 +354,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
         }
         .buttonStyle(.plain)
         .foregroundColor(.tidexBlue)
+        .accessibilityIdentifier("payroll-details.pay-settings")
       }
     }
   }
@@ -486,6 +492,7 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           supplementTotalRow(breakdown, showsChevron: true, isExpanded: isExpanded)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("payroll-details.supplements")
       } else {
         supplementTotalRow(breakdown, showsChevron: false, isExpanded: false)
       }
@@ -1010,8 +1017,9 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
           Section {
             Toggle(
               String(localized: .dashboardPayrollDetailsAdjustmentUseEarnedRange),
-              isOn: $useEarnedRange)  // swiftlint:disable:this multiline_arguments_brackets
-              .tint(.tidexBlue)
+              isOn: $useEarnedRange
+            )  // swiftlint:disable:this multiline_arguments_brackets
+            .tint(.tidexBlue)
             Text(.dashboardPayrollDetailsAdjustmentEarnedRangeHelp)
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)

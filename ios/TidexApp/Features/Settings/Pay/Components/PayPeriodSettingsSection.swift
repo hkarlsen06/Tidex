@@ -114,7 +114,7 @@ struct PayPeriodSettingsSection: View {
     else {
       return nil
     }
-    let format = Date.FormatStyle.dateTime.day().month(.abbreviated)
+    let format = Date.FormatStyle.dateTime.day().month(.abbreviated).calendar(.gregorian)
     return String(
       localized: .settingsPayPeriodExample(
         start.formatted(format), end.formatted(format), window.adjustedPayoutDate.formatted(format)))
@@ -144,7 +144,7 @@ struct PayPeriodSettingsSection: View {
   }
 
   private static func mostRecentSunday(from date: Date = Date()) -> Date {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let weekday = calendar.component(.weekday, from: date)  // 1 = Sunday
     return calendar.startOfDay(for: date).addingDays(-(weekday - 1))
   }
@@ -185,6 +185,6 @@ struct PayPeriodSettingsSection: View {
 
 extension Date {
   fileprivate func addingDays(_ days: Int) -> Date {
-    Calendar.current.date(byAdding: .day, value: days, to: self) ?? self
+    Calendar.gregorianCurrent.date(byAdding: .day, value: days, to: self) ?? self
   }
 }

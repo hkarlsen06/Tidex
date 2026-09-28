@@ -2569,9 +2569,9 @@ enum FriendsAPIClient {
 
     let now = Date()
     let startDate = SharingComputeCore.isoDateString(
-      Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
+      Calendar.gregorianCurrent.date(byAdding: .day, value: -30, to: now) ?? now)
     let endDate = SharingComputeCore.isoDateString(
-      Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
+      Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
 
     let bootstrap = try await fetchFriendsTabBootstrap(
       startDate: startDate,
@@ -3062,9 +3062,9 @@ enum FriendsAPIClient {
 
       let now = Date()
       let startDate = SharingComputeCore.isoDateString(
-        Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
+        Calendar.gregorianCurrent.date(byAdding: .day, value: -30, to: now) ?? now)
       let endDate = SharingComputeCore.isoDateString(
-        Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
+        Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
 
       async let friendsTask = fetchFriends(
         accessToken: accessToken,

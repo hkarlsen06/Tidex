@@ -62,7 +62,7 @@ struct ShareableCalendarView: View {
 
   /// Monthly totals (net and gross, excludes conflicting shifts)
   private var monthlyTotals: (net: Double, gross: Double) {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let filteredShifts = shifts.filter { shift in
       // Skip shifts excluded from totals
       guard !excludedFromTotalIds.contains(shift.id) else { return false }

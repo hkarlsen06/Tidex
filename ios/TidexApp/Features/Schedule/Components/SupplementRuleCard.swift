@@ -255,6 +255,7 @@ struct SupplementRuleEditorSheet: View {
       case .medium: return 5
       case .low: return 50
       case .veryLow: return 500
+      case .ultraLow: return 5_000  // swiftlint:disable:this no_magic_numbers
       }
 
     case .percent:
@@ -572,6 +573,9 @@ struct SupplementRuleEditorSheet: View {
 
       case .veryLow:
         return [100, 250, 500, 750, 1_000]  // swiftlint:disable:this no_magic_numbers
+
+      case .ultraLow:
+        return [1_000, 2_500, 5_000, 7_500, 10_000]  // swiftlint:disable:this no_magic_numbers
       }
 
     case .percent:
@@ -587,6 +591,7 @@ struct SupplementRuleEditorSheet: View {
       case .medium: return 1...50
       case .low: return 1...500
       case .veryLow: return 1...2_000  // swiftlint:disable:this no_magic_numbers switch_case_on_newline
+      case .ultraLow: return 1...20_000  // swiftlint:disable:this no_magic_numbers switch_case_on_newline
       }
 
     case .percent:

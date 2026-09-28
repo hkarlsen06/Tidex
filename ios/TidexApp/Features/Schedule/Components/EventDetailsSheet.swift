@@ -621,12 +621,12 @@ struct EventDetailsSheet: View {
   }
 
   private var editorRangeSummaryText: String {
-    if Calendar.current.isDate(eventStartDate, inSameDayAs: eventEndDate) {
-      return eventStartDate.formatted(.dateTime.weekday(.wide).day().month(.wide))
+    if Calendar.gregorianCurrent.isDate(eventStartDate, inSameDayAs: eventEndDate) {
+      return eventStartDate.formatted(.dateTime.weekday(.wide).day().month(.wide).calendar(.gregorian))
     }
 
-    return
-      "\(eventStartDate.formatted(.dateTime.day().month(.abbreviated))) - \(eventEndDate.formatted(.dateTime.day().month(.abbreviated)))"
+    let format = Date.FormatStyle.dateTime.day().month(.abbreviated).calendar(.gregorian)
+    return "\(eventStartDate.formatted(format)) - \(eventEndDate.formatted(format))"
   }
 
   private func errorBanner(message: String) -> some View {
@@ -768,7 +768,7 @@ enum EventSheetFormatter {
     }
 
     let is24 = hour == 24 && minute == 0
-    var calendar = Calendar.current
+    var calendar = Calendar.gregorianCurrent
     calendar.timeZone = Date.localTimeZone
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
     components.hour = is24 ? 0 : hour

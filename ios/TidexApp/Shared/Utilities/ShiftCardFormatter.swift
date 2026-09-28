@@ -26,8 +26,8 @@ enum ShiftCardFormatter {
 
   static func dateParts(for date: Date) -> ShiftCardDateParts {
     ShiftCardDateParts(
-      weekday: date.formatted(.dateTime.weekday(.wide)).sentenceCased(),
-      dayMonth: date.formatted(.dateTime.day().month(.abbreviated))
+      weekday: date.formatted(.dateTime.weekday(.wide).calendar(.gregorian)).sentenceCased(),
+      dayMonth: date.formatted(.dateTime.day().month(.abbreviated).calendar(.gregorian))
     )
   }
 
@@ -104,7 +104,7 @@ private final class ShiftCardFormatterCache {
 
     let formatter = DateFormatter()
     formatter.locale = Locale(identifier: locale.identifier)
-    formatter.calendar = Calendar.autoupdatingCurrent
+    formatter.calendar = Calendar.gregorianCurrent
     formatter.dateFormat = format
     formatters[key] = formatter
     return formatter

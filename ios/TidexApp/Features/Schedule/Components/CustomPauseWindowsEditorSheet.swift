@@ -45,7 +45,7 @@ private struct PauseWindowDraft: Identifiable, Equatable {
       return Date()
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var dateComponents = calendar.dateComponents([.year, .month, .day], from: Date())
     dateComponents.hour = hour == 24 ? 0 : hour
     dateComponents.minute = minute
@@ -251,7 +251,7 @@ struct CustomPauseWindowsEditorSheet: View {
   }
 
   private func defaultDraft() -> PauseWindowDraft {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let start =
       PauseWindowDraft.date(
         for: shift.startTime.count >= 5 ? String(shift.startTime.prefix(5)) : "12:00")

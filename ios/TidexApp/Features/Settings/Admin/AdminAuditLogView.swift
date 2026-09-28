@@ -22,7 +22,7 @@ struct AdminAuditLogView: View {
           .contains { $0?.localizedStandardContains(query) == true }
     }
     let grouped: [Date: [AdminAuditEntry]] = Dictionary(grouping: matches) { entry in
-      Calendar.current.startOfDay(for: entry.created ?? .distantPast)
+      Calendar.gregorianCurrent.startOfDay(for: entry.created ?? .distantPast)
     }
     return grouped.keys.sorted(by: >).map { Day(day: $0, entries: grouped[$0] ?? []) }
   }

@@ -459,7 +459,7 @@ private struct OnboardingHowItWorksTotalCard: View {
   }
 
   private var nextMonthPayrollDate: Date {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let currentMonth = Date.currentYearMonth()
     let currentMonthDate =
       calendar.date(

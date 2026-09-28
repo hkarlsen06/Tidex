@@ -316,8 +316,10 @@
 		11828EBC2F2AE096008A1A80 /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Calendar+Gregorian.swift",
 				FriendsAPIClient.swift,
 				ISO8601Timestamp.swift,
+				PayPeriod.swift,
 				SharedKeychainStorage.swift,
 				StoredFriendShift.swift,
 				StoredMonthlyTotals.swift,

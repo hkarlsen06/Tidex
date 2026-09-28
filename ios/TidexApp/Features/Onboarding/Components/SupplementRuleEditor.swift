@@ -349,10 +349,10 @@ struct SupplementRuleEditor: View {
 
     if hours == 24, minutes != 0 { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length no_magic_numbers
 
-    var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+    var components = Calendar.gregorianCurrent.dateComponents([.year, .month, .day], from: Date())
     components.hour = hours == 24 ? 0 : hours
     components.minute = minutes
-    return Calendar.current.date(from: components)
+    return Calendar.gregorianCurrent.date(from: components)
   }
 
   private func formatSupplementTime(_ date: Date?) -> String {
@@ -554,6 +554,10 @@ struct SupplementRuleEditor: View {
       case .veryLow:
         // JPY, KRW - very high nominal values
         return [100, 250, 500, 750, 1_000]  // swiftlint:disable:this no_magic_numbers
+
+      case .ultraLow:
+        // IDR, VND - five-digit nominal values
+        return [1_000, 2_500, 5_000, 7_500, 10_000]  // swiftlint:disable:this no_magic_numbers
       }
 
     case .percent:
@@ -577,6 +581,9 @@ struct SupplementRuleEditor: View {
 
       case .veryLow:
         return 1...2_000  // swiftlint:disable:this no_magic_numbers
+
+      case .ultraLow:
+        return 1...20_000  // swiftlint:disable:this no_magic_numbers
       }
 
     case .percent:

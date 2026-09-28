@@ -543,7 +543,7 @@ struct NumericTimeInput: View {
     // swiftlint:disable:next conditional_returns_on_newline no_magic_numbers
     if hours == 24, minutes != 0 { return nil }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
     // Treat 24:00 as midnight (00:00) — the payroll engine's
     // cross-midnight logic handles this correctly
@@ -723,7 +723,7 @@ struct TimeRangePicker: View {
     // swiftlint:disable:next conditional_returns_on_newline no_magic_numbers
     if hours == 24, minutes != 0 { return nil }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
     components.hour = hours == 24 ? 0 : hours
     components.minute = minutes

@@ -254,7 +254,8 @@ final class AppCoordinator {
     #if DEBUG
       if AppStoreScreenshotFixture.isActive {
         userId = AppStoreScreenshotFixture.userId
-        userDisplayName = "Alex"
+        userDisplayName = AppStoreScreenshotFixture.displayName
+        userAvatarUrl = AppStoreScreenshotFixture.avatarURL
         appState = .authenticated
         initialSyncComplete = true
         hasFinishedOnboardingRemotely = true

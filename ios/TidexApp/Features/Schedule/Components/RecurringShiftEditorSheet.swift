@@ -64,12 +64,12 @@ struct RecurringShiftEditorSheet: View {
 
   /// Display year from display month
   private var displayYear: Int {
-    Calendar.current.component(.year, from: displayMonth)
+    Calendar.gregorianCurrent.component(.year, from: displayMonth)
   }
 
   /// Display month number (1-12) from display month
   private var displayMonthNumber: Int {
-    Calendar.current.component(.month, from: displayMonth)
+    Calendar.gregorianCurrent.component(.month, from: displayMonth)
   }
 
   /// Localized month name
@@ -91,7 +91,7 @@ struct RecurringShiftEditorSheet: View {
 
   /// Navigate to previous month
   private func goToPreviousMonth() {
-    guard let newMonth = Calendar.current.date(byAdding: .month, value: -1, to: displayMonth) else {
+    guard let newMonth = Calendar.gregorianCurrent.date(byAdding: .month, value: -1, to: displayMonth) else {
       return
     }
     navigationDirection = .previous
@@ -100,7 +100,7 @@ struct RecurringShiftEditorSheet: View {
 
   /// Navigate to next month
   private func goToNextMonth() {
-    guard let newMonth = Calendar.current.date(byAdding: .month, value: 1, to: displayMonth) else {
+    guard let newMonth = Calendar.gregorianCurrent.date(byAdding: .month, value: 1, to: displayMonth) else {
       return
     }
     navigationDirection = .next
@@ -113,7 +113,7 @@ struct RecurringShiftEditorSheet: View {
     components.year = year
     components.month = month
     components.day = 1
-    guard let date = Calendar.current.date(from: components) else { return }
+    guard let date = Calendar.gregorianCurrent.date(from: components) else { return }
 
     // Determine direction for animation
     if date > displayMonth {
@@ -427,7 +427,7 @@ struct RecurringShiftEditorSheet: View {
     }
 
     // Set display month to the month containing the earliest anchor
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month], from: anchorDate)
     components.day = 1
     displayMonth = calendar.date(from: components) ?? Date()

@@ -1523,7 +1523,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
           Text(
             .settingsPayReviewTaxDate(
               Date.fromISODateString(context.scheduledPayoutDate)?
-                .formatted(.dateTime.day().month(.wide).year()) ?? context.scheduledPayoutDate)
+                .formatted(.dateTime.day().month(.wide).year().calendar(.gregorian))
+                ?? context.scheduledPayoutDate)
           )
           .font(.tidexFootnote)
           .foregroundColor(.tidexTextSecondary)
@@ -1923,7 +1924,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Format shift metadata dates with relative or absolute formatting.
   private func formattedShiftTimestamp(_ date: Date) -> String {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let now = Date()
 
     // If within the last 7 days, use relative formatting

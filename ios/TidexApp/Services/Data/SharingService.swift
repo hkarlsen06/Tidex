@@ -154,9 +154,9 @@ final class SharingService {
   func fetchFriendsTabBootstrap() async throws -> FriendsTabBootstrapData {
     let now = Date()
     let startDate = SharingComputeCore.isoDateString(
-      Calendar.current.date(byAdding: .day, value: -30, to: now) ?? now)
+      Calendar.gregorianCurrent.date(byAdding: .day, value: -30, to: now) ?? now)
     let endDate = SharingComputeCore.isoDateString(
-      Calendar.current.date(byAdding: .day, value: 30, to: now) ?? now)
+      Calendar.gregorianCurrent.date(byAdding: .day, value: 30, to: now) ?? now)
 
     let params: [String: AnyJSON] = [
       "p_preview_start_date": .string(startDate),

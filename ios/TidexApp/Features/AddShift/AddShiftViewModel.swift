@@ -165,7 +165,7 @@ internal final class AddShiftViewModel {
     }
   }
 
-  internal var eventDate: Date = Calendar.current.startOfDay(for: Date()) {
+  internal var eventDate: Date = Calendar.gregorianCurrent.startOfDay(for: Date()) {
     didSet {
       guard oldValue != eventDate else {
         return
@@ -184,7 +184,7 @@ internal final class AddShiftViewModel {
     }
   }
 
-  internal var eventStartDate: Date = Calendar.current.startOfDay(for: Date()) {
+  internal var eventStartDate: Date = Calendar.gregorianCurrent.startOfDay(for: Date()) {
     didSet {
       guard oldValue != eventStartDate else {
         return
@@ -200,7 +200,7 @@ internal final class AddShiftViewModel {
     }
   }
 
-  internal var eventEndDate: Date = Calendar.current.startOfDay(for: Date()) {
+  internal var eventEndDate: Date = Calendar.gregorianCurrent.startOfDay(for: Date()) {
     didSet {
       guard oldValue != eventEndDate else {
         return
@@ -343,10 +343,10 @@ internal final class AddShiftViewModel {
       components.year = monthContext.displayYear
       components.month = monthContext.displayMonth
       components.day = 1
-      return Calendar.current.date(from: components) ?? Date()
+      return Calendar.gregorianCurrent.date(from: components) ?? Date()
     }
     set {
-      let calendar = Calendar.current
+      let calendar = Calendar.gregorianCurrent
       let components = calendar.dateComponents([.year, .month], from: newValue)
       if let year = components.year, let month = components.month {
         // Update tracking immediately to prevent the subscription from double-triggering
@@ -930,9 +930,9 @@ internal final class AddShiftViewModel {
     case .events:
       return !eventNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         || startTime != nil || endTime != nil
-        || eventDate != Calendar.current.startOfDay(for: Date())
-        || eventStartDate != Calendar.current.startOfDay(for: Date())
-        || eventEndDate != Calendar.current.startOfDay(for: Date())
+        || eventDate != Calendar.gregorianCurrent.startOfDay(for: Date())
+        || eventStartDate != Calendar.gregorianCurrent.startOfDay(for: Date())
+        || eventEndDate != Calendar.gregorianCurrent.startOfDay(for: Date())
         || isEventAllDay
         || !eventReminderTimes.isEmpty
         || eventReminderAnchorTime != nil
@@ -1223,7 +1223,7 @@ internal final class AddShiftViewModel {
 
     // Navigate to the month containing the pre-selected date
     if let date = Date.fromISODateString(dateISO) {
-      let calendar = Calendar.current
+      let calendar = Calendar.gregorianCurrent
       let components = calendar.dateComponents([.year, .month], from: date)
       if let year = components.year, let month = components.month {
         monthContext.navigateTo(year: year, month: month)
@@ -1240,7 +1240,7 @@ internal final class AddShiftViewModel {
       return
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let components = calendar.dateComponents([.year, .month], from: displayMonth)
     guard let year = components.year, let month = components.month else {
       return
@@ -1321,7 +1321,7 @@ internal final class AddShiftViewModel {
     guard let tappedDate = Date.fromISODateString(dateISO) else {
       return
     }
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let normalizedDate = calendar.startOfDay(for: tappedDate)
     markEventCalendarSelectionEdited()
 
@@ -2318,7 +2318,7 @@ internal final class AddShiftViewModel {
 
   /// Default start time (09:00)
   private static func defaultStartTime() -> Date {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
     components.hour = Self.defaultStartHour
     components.minute = 0
@@ -2327,7 +2327,7 @@ internal final class AddShiftViewModel {
 
   /// Default end time (17:00)
   private static func defaultEndTime() -> Date {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
     components.hour = Self.defaultEndHour
     components.minute = 0
@@ -2335,11 +2335,11 @@ internal final class AddShiftViewModel {
   }
 
   private static func defaultEventDate() -> Date {
-    Calendar.current.startOfDay(for: Date())
+    Calendar.gregorianCurrent.startOfDay(for: Date())
   }
 
   private static func defaultEventReminderAnchorTime() -> Date {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let baseDate = Date()
     return calendar.date(
       bySettingHour: Self.defaultStartHour,
@@ -2512,7 +2512,7 @@ internal final class AddShiftViewModel {
     }
 
     // Transfer hour and minute to today's date
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month, .day], from: Date())
     let timeComponents = calendar.dateComponents([.hour, .minute], from: time)
     components.hour = timeComponents.hour
@@ -2548,7 +2548,7 @@ internal final class AddShiftViewModel {
       let earliestDate =
         selectedDates
         .compactMap({ Date.fromISODateString($0) })
-        .map({ Calendar.current.startOfDay(for: $0) })
+        .map({ Calendar.gregorianCurrent.startOfDay(for: $0) })
         .min()
     else {
       return
@@ -2592,7 +2592,7 @@ internal final class AddShiftViewModel {
   }
 
   private func contiguousDateSelection(from start: Date, to end: Date) -> Set<String> {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let normalizedStart = calendar.startOfDay(for: min(start, end))
     let normalizedEnd = calendar.startOfDay(for: max(start, end))
 

@@ -70,7 +70,10 @@ enum FormatterCache {
     cached("tidex.monthNameFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
-      formatter.calendar = Calendar.autoupdatingCurrent
+      // Gregorian, not Calendar.autoupdatingCurrent: a device set to a Buddhist or
+      // Islamic calendar must still show the same month names as Gregorian, since
+      // pay periods and shift dates are computed on the Gregorian calendar.
+      formatter.calendar = .gregorianCurrent
       formatter.dateFormat = "MMMM"
       return formatter
     }
@@ -91,7 +94,8 @@ enum FormatterCache {
     cached("tidex.weekdayFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
-      formatter.calendar = Calendar.autoupdatingCurrent
+      // Gregorian for the same reason as monthNameFormatter above.
+      formatter.calendar = .gregorianCurrent
       formatter.dateFormat = "EEEE"
       return formatter
     }
@@ -101,7 +105,7 @@ enum FormatterCache {
     cached("tidex.shortWeekdayFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
-      formatter.calendar = Calendar.autoupdatingCurrent
+      formatter.calendar = .gregorianCurrent
       formatter.dateFormat = "EEE"
       return formatter
     }
@@ -122,7 +126,7 @@ enum FormatterCache {
     cached("tidex.abbreviatedMonthDayFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
-      formatter.calendar = Calendar.autoupdatingCurrent
+      formatter.calendar = .gregorianCurrent
       formatter.dateFormat = "MMM d"
       return formatter
     }

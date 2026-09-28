@@ -955,7 +955,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       return
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let targetYear = calendar.component(.year, from: date)
     let targetMonth = calendar.component(.month, from: date)
 
@@ -993,7 +993,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
       return
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let targetYear = calendar.component(.year, from: targetDate)
     let targetMonth = calendar.component(.month, from: targetDate)
 
@@ -1976,7 +1976,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
   private func listCoveredDateISO(for event: EventRow) -> String {
     guard
       event.is_all_day,
-      let monthStart = Calendar.current.date(
+      let monthStart = Calendar.gregorianCurrent.date(
         from: DateComponents(year: viewModel.committedYear, month: viewModel.committedMonth, day: 1)
       )
     else {
@@ -2117,7 +2117,7 @@ internal struct ShiftsView: View {  // swiftlint:disable:this type_body_length
     components.year = viewModel.committedYear
     components.month = viewModel.committedMonth
     components.day = 1
-    return Calendar.current.date(from: components) ?? Date()
+    return Calendar.gregorianCurrent.date(from: components) ?? Date()
   }
 
   // MARK: - Error View

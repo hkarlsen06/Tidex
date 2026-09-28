@@ -16,12 +16,12 @@ struct YearlyIncomeChart: View {  // swiftlint:disable:this explicit_acl explici
 
   /// Current month number (1-12)
   private var currentMonthNumber: Int {
-    Calendar.current.component(.month, from: Date())
+    Calendar.gregorianCurrent.component(.month, from: Date())
   }
 
   /// Current year
   private var currentYear: Int {
-    Calendar.current.component(.year, from: Date())
+    Calendar.gregorianCurrent.component(.year, from: Date())
   }
 
   /// Whether the focus year is the current year

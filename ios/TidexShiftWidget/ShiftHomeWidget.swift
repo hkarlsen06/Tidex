@@ -387,7 +387,7 @@ internal enum WidgetCurrencyFormatter {
   internal static func display(for currency: String) -> Display {
     switch currency {
     // Suffix currencies
-    case "kr", "zł", "Kč", "₽":
+    case "kr", "zł", "Kč", "₽", "₴", "₪", "ر.س", "lei", "Ft", "₫":
       return .suffix
 
     // Prefix currencies (default)
@@ -470,7 +470,7 @@ internal struct ShiftWidgetProvider: TimelineProvider {
 
   internal func getTimeline(in _: Context, completion: (Timeline<ShiftWidgetEntry>) -> Void) {
     let now = Date()
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let entry: ShiftWidgetEntry = helper.createEntry(at: now)
 
     // Refresh at next midnight to pick up day transitions and new shift data
@@ -511,7 +511,7 @@ internal struct ShiftWidgetProviderHelper {
     let minute = timeComponents[1]
     let hour = rawHour == 24 ? 0 : rawHour
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var components = calendar.dateComponents([.year, .month, .day], from: shiftDate)
     components.hour = hour
     components.minute = minute
@@ -537,7 +537,7 @@ internal struct ShiftWidgetProviderHelper {
     }
 
     if end <= start {
-      end = Calendar.current.date(byAdding: .day, value: 1, to: end) ?? end
+      end = Calendar.gregorianCurrent.date(byAdding: .day, value: 1, to: end) ?? end
     }
 
     return (start, end)
@@ -546,7 +546,7 @@ internal struct ShiftWidgetProviderHelper {
   /// Count midnight boundaries crossed between two dates (matching the web app's pattern)
   /// Users perceive "1 day" as "tomorrow", not "24 hours from now"
   internal func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let fromMidnight = calendar.startOfDay(for: startDate)
     let toMidnight = calendar.startOfDay(for: endDate)
 
@@ -582,7 +582,7 @@ internal struct ShiftWidgetProviderHelper {
       return false
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     guard now >= shiftEndDateTime else {
       return false
     }
@@ -620,7 +620,7 @@ internal struct ShiftWidgetProviderHelper {
       return (.empty, 0)
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let todayMidnight = calendar.startOfDay(for: now)
     let shiftMidnight = calendar.startOfDay(for: shiftDate)
 
@@ -830,7 +830,7 @@ private func formatShiftDate(
     return dateString
   }
 
-  let calendar: Calendar = .current
+  let calendar: Calendar = .gregorianCurrent
   let today: Date = calendar.startOfDay(for: Date())
   let shiftDay: Date = calendar.startOfDay(for: shiftDate)
 

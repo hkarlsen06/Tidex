@@ -25,7 +25,7 @@ internal enum ExportPeriodPreset: String, CaseIterable, Identifiable {
   /// Resolve the date range for this preset
   internal func resolveDateRange() -> (from: String, to: String)? {
     let now: Date = Date()
-    let calendar: Calendar = Calendar.current
+    let calendar: Calendar = Calendar.gregorianCurrent
 
     switch self {
     case .currentMonth:
@@ -415,7 +415,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     let readService = MonthlyPayrollReadService.shared
     let context = await readService.loadContextOffMain(for: userId)
     let rows = await readService.loadShiftRows(for: userId, startDate: startDate, endDate: endDate)
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let computed = PayrollEngine.computeShiftsForMonth(
       PayrollEngine.MonthComputationRequest(
         year: calendar.component(.year, from: startDate),
@@ -473,7 +473,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     if NorwegianHolidays.isPublicHoliday(date) {
       return 2
     }
-    let calendar: Calendar = Calendar.current
+    let calendar: Calendar = Calendar.gregorianCurrent
     let weekday: Int = calendar.component(.weekday, from: date)
 
     switch weekday {
@@ -563,10 +563,14 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     let hoursUnit = String(localized: .commonHours)
 
     let detailDateFormat = Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale)
+      .calendar(.gregorian)
     let tableDateFormat = Date.FormatStyle(date: .numeric, time: .omitted).locale(locale)
+      .calendar(.gregorian)
     let generatedAtFormat = Date.FormatStyle(date: .abbreviated, time: .shortened).locale(locale)
-    let monthFormat = Date.FormatStyle.dateTime.year().month(.wide).locale(locale)
+      .calendar(.gregorian)
+    let monthFormat = Date.FormatStyle.dateTime.year().month(.wide).locale(locale).calendar(.gregorian)
     let weekdayFormat = Date.FormatStyle.dateTime.weekday(.abbreviated).locale(locale)
+      .calendar(.gregorian)
 
     let generatedAtText = "\(exportedLabel) \(data.generatedAt.formatted(generatedAtFormat))"
     let fromDate =
@@ -848,7 +852,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
         let monthTitle: String
 
         if let shiftDate {
-          let components = Calendar.current.dateComponents([.year, .month], from: shiftDate)
+          let components = Calendar.gregorianCurrent.dateComponents([.year, .month], from: shiftDate)
           monthKey = "\(components.year ?? 0)-\(components.month ?? 0)"
           monthTitle = shiftDate.formatted(monthFormat)
         } else {
@@ -990,8 +994,9 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
     csvContent += headers.joined(separator: ";") + "\n"
 
     // Date formats
-    let dateFormat = Date.FormatStyle(date: .numeric, time: .omitted).locale(locale)
+    let dateFormat = Date.FormatStyle(date: .numeric, time: .omitted).locale(locale).calendar(.gregorian)
     let weekdayFormat = Date.FormatStyle.dateTime.weekday(.abbreviated).locale(locale)
+      .calendar(.gregorian)
 
     // Data rows
     for shift in data.shifts {
@@ -1057,7 +1062,7 @@ final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl expl
       return "tidex_export.\(ext)"
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     let monthFormatter = DateFormatter()
     monthFormatter.dateFormat = "MMM"
     monthFormatter.locale = locale

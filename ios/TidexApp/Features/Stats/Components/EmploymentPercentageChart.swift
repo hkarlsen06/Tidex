@@ -13,11 +13,11 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
 
   /// Current month and year
   private var currentMonth: Int {
-    Calendar.current.component(.month, from: Date())
+    Calendar.gregorianCurrent.component(.month, from: Date())
   }
 
   private var currentYear: Int {
-    Calendar.current.component(.year, from: Date())
+    Calendar.gregorianCurrent.component(.year, from: Date())
   }
 
   private var completedAverageSubtitle: String {

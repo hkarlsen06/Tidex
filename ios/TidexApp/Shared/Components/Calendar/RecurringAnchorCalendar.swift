@@ -11,7 +11,7 @@ import SwiftUI
 enum RecurringAnchorSelection {
   static func weekdayKey(for dateISO: String) -> String {
     guard let date = Date.fromISODateString(dateISO) else { return "0" }
-    let weekday = Calendar.current.component(.weekday, from: date)
+    let weekday = Calendar.gregorianCurrent.component(.weekday, from: date)
     return String((weekday - 1) % 7)
   }
 

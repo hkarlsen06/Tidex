@@ -18,6 +18,8 @@ enum WageRangeTier: Equatable {
   case low
   /// Very low-value currencies (JPY, KRW, etc.) - typical hourly wages 1000-5000
   case veryLow
+  /// Currencies with five-digit hourly wages (IDR, VND) - typical hourly wages 10000-100000
+  case ultraLow
 
   /// Slider minimum value for this tier
   var minValue: Double {
@@ -33,6 +35,9 @@ enum WageRangeTier: Equatable {
 
     case .veryLow:
       return 1_000  // swiftlint:disable:this no_magic_numbers
+
+    case .ultraLow:
+      return 10_000  // swiftlint:disable:this no_magic_numbers
     }
   }
 
@@ -50,6 +55,9 @@ enum WageRangeTier: Equatable {
 
     case .veryLow:
       return 5_000  // swiftlint:disable:this no_magic_numbers
+
+    case .ultraLow:
+      return 100_000  // swiftlint:disable:this no_magic_numbers
     }
   }
 
@@ -67,6 +75,9 @@ enum WageRangeTier: Equatable {
 
     case .veryLow:
       return 2_000  // swiftlint:disable:this no_magic_numbers
+
+    case .ultraLow:
+      return 30_000  // swiftlint:disable:this no_magic_numbers
     }
   }
 }
@@ -123,7 +134,8 @@ enum CurrencyConfig {
   /// - high: NOK, SEK, DKK, CZK, Ruble - hourly wages typically 150-550
   /// - medium: USD, EUR, GBP, CAD, AUD, SGD, CHF - hourly wages typically 15-75
   /// - low: INR, BRL, ZAR, THB, PLN - hourly wages typically 100-1000
-  /// - veryLow: JPY, KRW - hourly wages typically 1000-5000
+  /// - veryLow: JPY, KRW, HUF - hourly wages typically 1000-5000
+  /// - ultraLow: IDR, VND - hourly wages typically 10000-100000
   static let groups: [CurrencyGroup] = [
     CurrencyGroup(
       label: "Krone",
@@ -154,6 +166,18 @@ enum CurrencyConfig {
         CurrencyOption(value: "₩", label: "Won (₩)", display: .prefix, wageRangeTier: .veryLow),
         CurrencyOption(value: "R", label: "Rand (R)", display: .prefix, wageRangeTier: .low),
         CurrencyOption(value: "฿", label: "Baht (฿)", display: .prefix, wageRangeTier: .low),
+        CurrencyOption(value: "NT$", label: "NT$", display: .prefix, wageRangeTier: .low),
+        CurrencyOption(value: "₺", label: "Lira (₺)", display: .prefix, wageRangeTier: .low),
+        CurrencyOption(value: "₴", label: "Hryvnia (₴)", display: .suffix, wageRangeTier: .low),
+        CurrencyOption(value: "₪", label: "Shekel (₪)", display: .suffix, wageRangeTier: .medium),
+        CurrencyOption(
+          value: "ر.س", label: "Riyal (ر.س)", display: .suffix, wageRangeTier: .medium),
+        CurrencyOption(value: "lei", label: "Leu (lei)", display: .suffix, wageRangeTier: .medium),
+        CurrencyOption(
+          value: "Ft", label: "Forint (Ft)", display: .suffix, wageRangeTier: .veryLow),
+        CurrencyOption(
+          value: "Rp", label: "Rupiah (Rp)", display: .prefix, wageRangeTier: .ultraLow),
+        CurrencyOption(value: "₫", label: "Dong (₫)", display: .suffix, wageRangeTier: .ultraLow),
       ]
     ),
   ]

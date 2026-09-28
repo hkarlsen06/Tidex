@@ -596,7 +596,7 @@ enum FriendsThreadChatViewportResolver {
     init(messages: [ExyteChat.Message]) {
       messageIDsSignature = messages.map(\.id)
 
-      let calendar = Calendar.current
+      let calendar = Calendar.gregorianCurrent
       var messagesByDay: [Date: [ExyteChat.Message]] = [:]
       var orderByPresentedMessageID: [String: Int] = [:]
 

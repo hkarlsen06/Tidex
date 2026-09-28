@@ -42,7 +42,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
   @State private var selectedDates: Set<String> = []
   @State private var selectedEarningsByDate: [String: CalendarEarningsData] = [:]
   private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
-  private let calendar = Calendar.current
+  private let calendar = Calendar.gregorianCurrent
 
   /// Purple/violet color for deep link highlight (matches ShiftsCalendarView)
   private static let deepLinkHighlightColor = Color.tidexPurple
@@ -551,7 +551,7 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     }
     let showsMoney = showEarnings && viewMode == .money
     var parts: [String] = [
-      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale))
+      date.formatted(.dateTime.weekday(.wide).day().month(.wide).locale(.appLocale).calendar(.gregorian))
     ]
     if dateISO == metrics.todayISO {
       parts.append(String(localized: .commonToday))

@@ -177,7 +177,7 @@ struct ShiftConflictDetector {
   /// Add days to an ISO date string
   private static func addDays(to dateISO: String, days: Int) -> String? {
     guard let date = Date.fromISODateString(dateISO) else { return nil }
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     guard let newDate = calendar.date(byAdding: .day, value: days, to: date) else { return nil }
     return newDate.toISODateString()
   }
@@ -200,7 +200,7 @@ struct ShiftConflictDetector {
       return []
     }
 
-    let calendar = Calendar.current
+    let calendar = Calendar.gregorianCurrent
     var dates: [String] = []
 
     // Generate virtual shifts for months containing the dates

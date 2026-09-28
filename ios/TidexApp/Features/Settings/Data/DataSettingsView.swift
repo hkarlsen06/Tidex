@@ -155,8 +155,8 @@ struct DataSettingsView: View {
 
   private func presetLabel(_ preset: ExportPeriodPreset) -> String {
     let now = Date()
-    let calendar = Calendar.current
-    let monthFormat = Date.FormatStyle.dateTime.month(.wide)
+    let calendar = Calendar.gregorianCurrent
+    let monthFormat = Date.FormatStyle.dateTime.month(.wide).calendar(.gregorian)
 
     switch preset {
     case .lastMonth:

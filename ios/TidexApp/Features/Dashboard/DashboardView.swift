@@ -357,6 +357,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .accessibilityHidden(true)
     }
     .accessibilityLabel(Text(.tabsStats))
+    .accessibilityIdentifier("home.stats")
   }
 
   private var bodyWithLifecycle: AnyView {
@@ -911,7 +912,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @ViewBuilder
   private func animatedCardContent(data: DashboardData) -> some View {  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length type_contents_order
     let now = Date()  // swiftlint:disable:this explicit_type_interface
-    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let calendar = Calendar.gregorianCurrent  // swiftlint:disable:this explicit_type_interface
     let isViewingCurrentMonth = data.isViewingCurrentMonth  // swiftlint:disable:this explicit_type_interface
     let preliminaryPayrollVariants = viewModel.payrollCardVariants(  // swiftlint:disable:this explicit_type_interface
       fallback: data,
@@ -1268,7 +1269,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     // The received override only changes anything on payday, so the visible toggle is payday-only.
     let showsReceivedToggle =  // swiftlint:disable:this explicit_type_interface
       canManuallySetPayrollStatus && !isLoading
-      && Calendar.current.isDateInToday(selectedVariant.payoutDate)
+      && Calendar.gregorianCurrent.isDateInToday(selectedVariant.payoutDate)
     let toggleReceived = {  // swiftlint:disable:this explicit_type_interface
       Haptics.play(.medium)
       if payrollMarkedReceived {
@@ -1299,6 +1300,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
     card
       .userCurrency(selectedVariant.currency)
+      .accessibilityIdentifier("home.payroll-card")
       .contentShape(Rectangle())
       .onTapGesture {
         guard !isLoading else { return }  // swiftlint:disable:this conditional_returns_on_newline
@@ -1711,7 +1713,7 @@ private struct ClockOutReviewSheet: View {
   private var resolvedEndTime: Date? {
     guard let startTime, let endTime else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
     guard endTime <= startTime else { return endTime }  // swiftlint:disable:this conditional_returns_on_newline
-    return Calendar.current.date(byAdding: .day, value: 1, to: endTime) ?? endTime
+    return Calendar.gregorianCurrent.date(byAdding: .day, value: 1, to: endTime) ?? endTime
   }
 
   private var isValidRange: Bool {
@@ -1721,7 +1723,7 @@ private struct ClockOutReviewSheet: View {
 
   private var showsCrossMidnightHint: Bool {
     guard let startTime, let resolvedEndTime else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
-    return !Calendar.current.isDate(startTime, inSameDayAs: resolvedEndTime)
+    return !Calendar.gregorianCurrent.isDate(startTime, inSameDayAs: resolvedEndTime)
   }
 
   private var isWorking: Bool {

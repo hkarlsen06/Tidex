@@ -57,7 +57,7 @@ final class PreAuthAddShiftSimulatorViewModel: AddShiftCalendarViewModeling {
     components.year = current.year
     components.month = current.month
     components.day = 1
-    displayMonth = Calendar.current.date(from: components) ?? Date()
+    displayMonth = Calendar.gregorianCurrent.date(from: components) ?? Date()
 
     let resolvedCurrency =
       OnboardingCurrencyResolver.isSupportedCurrency(initialCurrency)
