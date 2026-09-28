@@ -69,7 +69,8 @@ enum TestFixtures {
     isDefault: Bool,
     currency: String = "kr",
     payrollDay: Int? = 25,
-    halfTaxMonth: Int? = nil
+    halfTaxMonth: Int? = nil,
+    payPeriod: PayPeriod? = nil
   ) -> Job {
     Job(
       id: id,
@@ -85,7 +86,8 @@ enum TestFixtures {
       archived_at: nil,
       deleted_at: nil,
       created_at: nil,
-      updated_at: nil
+      updated_at: nil,
+      pay_period: payPeriod
     )
   }
 

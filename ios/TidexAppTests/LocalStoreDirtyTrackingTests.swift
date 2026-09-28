@@ -810,6 +810,65 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(snapshots.isEmpty, true)
   }
 
+  internal func testCreateJobWithPayPeriodSurvivesToJob() async throws {
+    let store = try makeStoreActor()
+    let payPeriod = PayPeriod.monthly(startDay: 16, payoutMonthOffset: 0)
+
+    let created = try await store.createJob(
+      userId: userId,
+      name: "Store",
+      color: "#00AA00",
+      currency: "kr",
+      isDefault: true,
+      sortOrder: 0,
+      payrollDay: 25,
+      halfTaxMonth: 12,
+      payPeriod: payPeriod,
+      monthlyGoal: 30_000
+    )
+
+    XCTAssertEqual(created.pay_period, payPeriod)
+
+    let localRecord = try await store.getJob(id: created.id)
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.toJob().pay_period, payPeriod)
+  }
+
+  internal func testUpdateJobPaySettingsMarksOnlyPayPeriodDirtyAfterClean() async throws {
+    let store = try makeStoreActor()
+
+    let created = try await store.createJob(
+      userId: userId,
+      name: "Store",
+      color: nil,
+      currency: "kr",
+      isDefault: false,
+      sortOrder: 0,
+      payrollDay: 25,
+      halfTaxMonth: nil,
+      monthlyGoal: nil
+    )
+
+    await store.markJobClean(id: created.id)
+    try await store.save()
+
+    let newPayPeriod = PayPeriod.biweekly(anchorEnd: "2026-09-13", payoutDelayDays: 5)
+    _ = try await store.updateJobPaySettings(
+      id: created.id,
+      payrollDay: 25,
+      halfTaxMonth: nil,
+      monthlyGoal: nil,
+      payPeriod: newPayPeriod
+    )
+
+    let localRecord = try await store.getJob(id: created.id)
+
+    let local = try XCTUnwrap(localRecord)
+    XCTAssertEqual(local.syncStatus, .dirty)
+    XCTAssertEqual(local.dirtyFieldKeys, Set([.payPeriod]))
+    XCTAssertEqual(local.toJob().pay_period, newPayPeriod)
+  }
+
   internal func testUpdateJobMetadataTracksChangedFieldsAfterClean() async throws {
     let store = try makeStoreActor()
 
@@ -1050,6 +1109,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       sortOrder: 2,
       payrollDay: 20,
       halfTaxMonth: 11,
+      payPeriod: .calendarMonth,
       monthlyGoal: 35_000,
       archivedAt: nil,
       deletedAt: nil,
@@ -1117,6 +1177,7 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       sortOrder: 4,
       payrollDay: 20,
       halfTaxMonth: 11,
+      payPeriod: .calendarMonth,
       monthlyGoal: 40_000,
       archivedAt: nil,
       deletedAt: nil,

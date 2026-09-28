@@ -462,7 +462,12 @@ enum HomeScheduleAffectedMonthResolver {
       return true
     }
 
+    // Pay periods can reach two months back, so the payroll card depends on that month too.
+    let earlierYM = Date.previousYearMonth(from: previousYM)
+    let earlierMonth = ShiftChangeAffectedMonth(year: earlierYM.year, month: earlierYM.month)
+
     return affectedMonths.contains(displayedMonth) || affectedMonths.contains(previousMonth)
+      || earlierMonth.map(affectedMonths.contains) == true
   }
 
   static func scheduleDisplayMonthsAffected(

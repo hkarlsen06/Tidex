@@ -256,8 +256,8 @@ struct PayrollEngine {
     context: ComputationContext
   ) -> ShiftWithComputations {
     let effectiveJobId = shift.job_id ?? context.defaultJobId
-    let payrollDay =
-      effectiveJobId.flatMap { context.jobsById[$0]?.payroll_day } ?? context.fallbackPayrollDay
+    let job = effectiveJobId.flatMap { context.jobsById[$0] }
+    let schedule = PayoutSchedule(job: job, fallbackPayrollDay: context.fallbackPayrollDay)
 
     let scopedSnapshots = snapshotsForJob(
       jobId: effectiveJobId,
@@ -267,11 +267,8 @@ struct PayrollEngine {
       defaultJobId: context.defaultJobId
     )
 
-    // 1. Calculate payout date for this specific shift
-    let payoutDate = calculatePayoutDate(
-      shiftDate: shift.shift_date,
-      payrollDay: payrollDay
-    )
+    // 1. Calculate payout date for this specific shift from the job's pay period
+    let payoutDate = schedule.payoutDate(for: shift.shift_date)
 
     // 2. Look up wage/supplement snapshot for SHIFT date (determines wage rate & supplements)
     let wageSnapshot = SnapshotsService.snapshotForDate(shift.shift_date, from: scopedSnapshots)
@@ -282,9 +279,8 @@ struct PayrollEngine {
     // 4. Compute payroll with wage snapshot
     let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 
-    let job = effectiveJobId.flatMap { context.jobsById[$0] }
     let halfTaxMonth = job.map(\.half_tax_month) ?? context.fallbackHalfTaxMonth
-    let month = payoutMonth(from: shift.shift_date)
+    let month = PayPeriodCalendar.components(payoutDate)?.month ?? payoutMonth(from: shift.shift_date)
     let taxSettings = PayoutTaxSettings(
       enabled: taxSnapshot?.effectiveTaxEnabled ?? false,
       percentage: taxSnapshot?.effectiveTaxPercentage ?? 0

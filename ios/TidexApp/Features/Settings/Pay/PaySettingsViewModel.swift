@@ -310,6 +310,10 @@ final class PaySettingsViewModel: ObservableObject {
     selectedJob?.half_tax_month
   }
 
+  var selectedJobPayPeriod: PayPeriod {
+    selectedJob?.pay_period ?? .calendarMonth
+  }
+
   func selectJob(_ jobId: String) {
     guard selectedJobId != jobId else { return }
     requiresJobReselection = false
@@ -696,7 +700,7 @@ final class PaySettingsViewModel: ObservableObject {
       guard let date = Date.fromISODateString(shift.shift_date) else { return false }
       let context = PaySettingsContext(
         workDate: date, snapshots: snapshots, payrollDay: selectedJobPayrollDay,
-        halfTaxMonth: selectedJobHalfTaxMonth)
+        halfTaxMonth: selectedJobHalfTaxMonth, payPeriod: selectedJobPayPeriod)
       return context.wageSnapshot?.id == snapshot.id || context.taxSnapshot?.id == snapshot.id
     }.count
   }
@@ -742,7 +746,8 @@ final class PaySettingsViewModel: ObservableObject {
         jobId: selectedJobId,
         payrollDay: value,
         halfTaxMonth: selectedJob.half_tax_month,
-        monthlyGoal: selectedJob.monthly_goal
+        monthlyGoal: selectedJob.monthly_goal,
+        payPeriod: selectedJob.pay_period
       )
 
       refreshData()
@@ -768,7 +773,8 @@ final class PaySettingsViewModel: ObservableObject {
         jobId: selectedJobId,
         payrollDay: selectedJob.payroll_day ?? 1,
         halfTaxMonth: value,
-        monthlyGoal: selectedJob.monthly_goal
+        monthlyGoal: selectedJob.monthly_goal,
+        payPeriod: selectedJob.pay_period
       )
 
       refreshData()
@@ -776,6 +782,32 @@ final class PaySettingsViewModel: ObservableObject {
       logger.info("Updated half tax month to: \(value ?? 0)")
     } catch {
       logger.error("Failed to update half tax month: \(error.localizedDescription)")
+      errorMessage = String(localized: .settingsPayErrorSaveFailed)
+    }
+  }
+
+  func updatePayPeriod(_ value: PayPeriod) async {
+    guard
+      let userId = currentLocalUserId(),
+      let selectedJobId,
+      let selectedJob
+    else { return }
+
+    do {
+      _ = try await jobsRepository.updateJobPaySettings(
+        userId: userId,
+        jobId: selectedJobId,
+        payrollDay: selectedJob.payroll_day ?? 1,
+        halfTaxMonth: selectedJob.half_tax_month,
+        monthlyGoal: selectedJob.monthly_goal,
+        payPeriod: value.isCalendarMonth ? nil : value
+      )
+
+      refreshData()
+      notifyDashboardDataChanged()
+      logger.info("Updated pay period")
+    } catch {
+      logger.error("Failed to update pay period: \(error.localizedDescription)")
       errorMessage = String(localized: .settingsPayErrorSaveFailed)
     }
   }

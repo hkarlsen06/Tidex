@@ -87,8 +87,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 5)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-05-20")
-    XCTAssertEqual(selection.earningsYear, 2_026)
-    XCTAssertEqual(selection.earningsMonth, 4)
+    XCTAssertEqual(selection.windowsByJobId.values.first?.start, "2026-04-01")
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
 
@@ -105,8 +104,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 6)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-10")
-    XCTAssertEqual(selection.earningsYear, 2_026)
-    XCTAssertEqual(selection.earningsMonth, 5)
+    XCTAssertEqual(selection.windowsByJobId.values.first?.start, "2026-05-01")
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
 
@@ -123,8 +121,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 6)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-06-30")
-    XCTAssertEqual(selection.earningsYear, 2_026)
-    XCTAssertEqual(selection.earningsMonth, 5)
+    XCTAssertEqual(selection.windowsByJobId.values.first?.start, "2026-05-01")
     XCTAssertEqual(selection.jobIds, ["job-1"])
   }
 
@@ -233,7 +230,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
 
     XCTAssertEqual(selection.payoutMonth, 5)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-05-20")
-    XCTAssertEqual(selection.earningsMonth, 4)
+    XCTAssertEqual(selection.windowsByJobId.values.first?.start, "2026-04-01")
     XCTAssertEqual(selection.jobIds, ["upcoming"])
   }
 
@@ -267,7 +264,7 @@ final class PayrollEngineDateLogicTests: XCTestCase {
     XCTAssertEqual(selection.payoutYear, 2_026)
     XCTAssertEqual(selection.payoutMonth, 4)
     XCTAssertEqual(selection.payoutDate.toISODateString(), "2026-04-10")
-    XCTAssertEqual(selection.earningsMonth, 3)
+    XCTAssertEqual(selection.windowsByJobId.values.first?.start, "2026-03-01")
   }
 
   func testDashboardPayrollVariantPickerSkipsZeroGrossEarlierCandidateGroup() throws {

@@ -70,6 +70,14 @@ extension Date {
     return (year: current.year, month: current.month - 1)
   }
 
+  /// Get next month (handles year rollover)
+  static func nextYearMonth(from current: (year: Int, month: Int)) -> (year: Int, month: Int) {
+    if current.month == 12 {
+      return (year: current.year + 1, month: 1)
+    }
+    return (year: current.year, month: current.month + 1)
+  }
+
   // MARK: - Month Boundaries
 
   /// Get first day of month as ISO date string

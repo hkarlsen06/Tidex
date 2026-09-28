@@ -342,6 +342,7 @@ struct PayrollCardJobBreakdown: Identifiable, Equatable {  // swiftlint:disable:
   let taxEnabled: Bool  // swiftlint:disable:this explicit_acl
   let adjustments: [PayrollAdjustment]  // swiftlint:disable:this explicit_acl
   var earningsPeriodStart: Date? = nil
+  var earningsPeriodEnd: Date?
   var payoutTaxSettings: PayoutTaxSettings? = nil
 }
 
@@ -353,12 +354,13 @@ struct DashboardPayrollCardSnapshot: Equatable {  // swiftlint:disable:this expl
 }
 
 struct DashboardPayrollSelection: Equatable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  /// Month of the nominal payday. Used for adjustment lookups and half tax.
   let payoutYear: Int  // swiftlint:disable:this explicit_acl
   let payoutMonth: Int  // swiftlint:disable:this explicit_acl
-  let earningsYear: Int  // swiftlint:disable:this explicit_acl
-  let earningsMonth: Int  // swiftlint:disable:this explicit_acl
   let payoutDate: Date  // swiftlint:disable:this explicit_acl
   let jobIds: [String]  // swiftlint:disable:this explicit_acl
+  /// The pay period each selected job is paid for on `payoutDate`.
+  let windowsByJobId: [String: PayWindow]  // swiftlint:disable:this explicit_acl
 }
 
 enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
@@ -406,7 +408,7 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
         )
       }
 
-      let nextYM = nextYearMonth(from: displayYM)  // swiftlint:disable:this explicit_type_interface
+      let nextYM = Date.nextYearMonth(from: displayYM)  // swiftlint:disable:this explicit_type_interface
       return makeSelections(
         payoutYM: nextYM,
         candidates: payoutCandidates(
@@ -450,25 +452,19 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
     )
   }
 
+  /// The earliest previous payday among the selected jobs. Progress toward the
+  /// selected payout starts here.
   static func previousPayoutStartDate(  // swiftlint:disable:this explicit_acl type_contents_order
     for selection: DashboardPayrollSelection,
     jobs: [Job],
     fallbackPayrollDay: Int
   ) -> Date? {
-    let previousPayoutYM = Date.previousYearMonth(  // swiftlint:disable:this explicit_type_interface
-      from: (year: selection.payoutYear, month: selection.payoutMonth)
-    )
-    let selectedJobIds = Set(selection.jobIds)  // swiftlint:disable:this explicit_type_interface
-    let selectedJobs = jobs.filter { selectedJobIds.contains($0.id) }  // swiftlint:disable:this explicit_type_interface
-
-    return
-      selectedJobs
-      .map { job in
-        PayrollDateAdjuster.adjustPayrollDate(
-          payrollDay: job.payroll_day ?? fallbackPayrollDay,
-          month: previousPayoutYM.month,
-          year: previousPayoutYM.year
-        )
+    jobs
+      .compactMap { job -> Date? in
+        guard let window = selection.windowsByJobId[job.id] else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
+        return PayoutSchedule(job: job, fallbackPayrollDay: fallbackPayrollDay)
+          .previousWindow(before: window)?
+          .adjustedPayoutDate
       }
       .min()
   }
@@ -483,20 +479,16 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
 
     while let candidate = earliestCandidate(in: remaining) {
       let selectedDate = candidate.payoutDate  // swiftlint:disable:this explicit_type_interface
-      let selectedJobIds =  // swiftlint:disable:this explicit_type_interface
-        remaining
-        .filter { calendar.isDate($0.payoutDate, inSameDayAs: selectedDate) }
-        .map(\.job.id)
+      let sameDay = remaining.filter { calendar.isDate($0.payoutDate, inSameDayAs: selectedDate) }  // swiftlint:disable:this explicit_type_interface line_length
 
-      let earningsYM = Date.previousYearMonth(from: payoutYM)  // swiftlint:disable:this explicit_type_interface
       selections.append(
         DashboardPayrollSelection(
           payoutYear: payoutYM.year,
           payoutMonth: payoutYM.month,
-          earningsYear: earningsYM.year,
-          earningsMonth: earningsYM.month,
           payoutDate: selectedDate,
-          jobIds: selectedJobIds
+          jobIds: sameDay.map(\.job.id),
+          windowsByJobId: Dictionary(
+            sameDay.map { ($0.job.id, $0.window) }, uniquingKeysWith: { first, _ in first })
         ))  // swiftlint:disable:this multiline_arguments_brackets
 
       remaining.removeAll { calendar.isDate($0.payoutDate, inSameDayAs: selectedDate) }
@@ -507,23 +499,20 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
 
   private struct PayoutCandidate {
     let job: Job
+    let window: PayWindow
     let payoutDate: Date
   }
 
+  /// One candidate per payday in the month. Two-weekly jobs can have two or three.
   private static func payoutCandidates(
     for payoutYM: (year: Int, month: Int),
     jobs: [Job],
     fallbackPayrollDay: Int
   ) -> [PayoutCandidate] {
-    jobs.map { job in
-      PayoutCandidate(
-        job: job,
-        payoutDate: PayrollDateAdjuster.adjustPayrollDate(
-          payrollDay: job.payroll_day ?? fallbackPayrollDay,
-          month: payoutYM.month,
-          year: payoutYM.year
-        )
-      )
+    jobs.flatMap { job in
+      PayoutSchedule(job: job, fallbackPayrollDay: fallbackPayrollDay)
+        .windows(paidInYear: payoutYM.year, month: payoutYM.month)
+        .map { PayoutCandidate(job: job, window: $0, payoutDate: $0.adjustedPayoutDate) }
     }
   }
 
@@ -537,15 +526,6 @@ enum DashboardPayrollSelector {  // swiftlint:disable:this explicit_acl explicit
       }
       return lhs.payoutDate < rhs.payoutDate
     }
-  }
-
-  private static func nextYearMonth(from current: (year: Int, month: Int)) -> (
-    year: Int, month: Int
-  ) {
-    if current.month == 12 {  // swiftlint:disable:this no_magic_numbers
-      return (year: current.year + 1, month: 1)
-    }
-    return (year: current.year, month: current.month + 1)
   }
 }
 
@@ -566,9 +546,13 @@ extension PayrollCardVariant {  // swiftlint:disable:this file_types_order no_gr
 }
 
 enum DashboardPayrollAdjustmentFilter {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  /// An adjustment belongs to the payout in its month. When a job has several paydays that
+  /// month (`jobPayoutDatesInMonth`), it goes to the first payday on or after its date, or the
+  /// last payday if it comes after all of them.
   static func matches(  // swiftlint:disable:this explicit_acl
     _ adjustment: PayrollAdjustment,
     payoutDate: Date,
+    jobPayoutDatesInMonth: [Date] = [],
     calendar: Calendar = .current
   ) -> Bool {
     guard let adjustmentDate = Date.fromISODateString(adjustment.payout_date) else {
@@ -577,8 +561,18 @@ enum DashboardPayrollAdjustmentFilter {  // swiftlint:disable:this explicit_acl 
 
     let adjustmentComponents = calendar.dateComponents([.year, .month], from: adjustmentDate)  // swiftlint:disable:this explicit_type_interface line_length
     let payoutComponents = calendar.dateComponents([.year, .month], from: payoutDate)  // swiftlint:disable:this explicit_type_interface line_length
-    return adjustmentComponents.year == payoutComponents.year
-      && adjustmentComponents.month == payoutComponents.month
+    guard
+      adjustmentComponents.year == payoutComponents.year
+        && adjustmentComponents.month == payoutComponents.month
+    else {
+      return false
+    }
+
+    let paydays = jobPayoutDatesInMonth.sorted()  // swiftlint:disable:this explicit_type_interface
+    guard paydays.count > 1 else { return true }  // swiftlint:disable:this conditional_returns_on_newline
+    let adjustmentDay = calendar.startOfDay(for: adjustmentDate)  // swiftlint:disable:this explicit_type_interface
+    let target = paydays.first { calendar.startOfDay(for: $0) >= adjustmentDay } ?? paydays.last  // swiftlint:disable:this explicit_type_interface line_length
+    return target.map { calendar.isDate($0, inSameDayAs: payoutDate) } ?? true
   }
 }
 
@@ -703,6 +697,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   private struct PayrollCardVariantBuildInput {
     let displayedMonthShifts: [ShiftWithComputations]
     let previousMonthShifts: [ShiftWithComputations]
+    /// Two months before the displayed month. Needed for periods such as the 16th to the 15th
+    /// paid the month after.
+    var earlierMonthShifts: [ShiftWithComputations] = []
     let payrollAdjustmentsByPayoutMonth: [PayrollReadMonth: [PayrollAdjustment]]
     let previousPayrollAdjustments: [PayrollAdjustment]
     let snapshots: [WageSnapshot]
@@ -970,6 +967,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   ) -> [PayrollCardVariant] {
     let displayedMonthShifts = input.displayedMonthShifts  // swiftlint:disable:this explicit_type_interface
     let previousMonthShifts = input.previousMonthShifts  // swiftlint:disable:this explicit_type_interface
+    // Pay periods can reach two months back, so search all three loaded months.
+    let payoutShiftPool = displayedMonthShifts + previousMonthShifts + input.earlierMonthShifts  // swiftlint:disable:this explicit_type_interface line_length
     let payrollAdjustmentsByPayoutMonth = input.payrollAdjustmentsByPayoutMonth  // swiftlint:disable:this explicit_type_interface line_length
     let previousPayrollAdjustments = input.previousPayrollAdjustments  // swiftlint:disable:this explicit_type_interface
     let snapshots = input.snapshots  // swiftlint:disable:this explicit_type_interface
@@ -1046,13 +1045,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let candidateJobVariantGroups = candidateSelections.map { selection in  // swiftlint:disable:this closure_body_length explicit_type_interface line_length
       let selectedJobIds = Set(selection.jobIds)  // swiftlint:disable:this explicit_type_interface
       let selectedJobs = sortedJobs.filter { selectedJobIds.contains($0.id) }  // swiftlint:disable:this explicit_type_interface line_length
-      let earningsYM = (year: selection.earningsYear, month: selection.earningsMonth)  // swiftlint:disable:this explicit_type_interface line_length
-      let earningsMonthShifts = payrollEarningsShifts(  // swiftlint:disable:this explicit_type_interface
-        for: earningsYM,
-        displayYM: displayYM,
-        displayedMonthShifts: displayedMonthShifts,
-        previousMonthShifts: previousMonthShifts
-      )
+      let payoutYM = (year: selection.payoutYear, month: selection.payoutMonth)  // swiftlint:disable:this explicit_type_interface line_length
       let selectedPayoutAdjustments = payrollAdjustments(  // swiftlint:disable:this explicit_type_interface
         forPayoutYM: (year: selection.payoutYear, month: selection.payoutMonth),
         renderedDisplayYM: displayYM,
@@ -1061,8 +1054,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       )
       let payoutDate = selection.payoutDate  // swiftlint:disable:this explicit_type_interface
 
-      return selectedJobs.map { job in  // swiftlint:disable:this closure_body_length
-        let jobShifts = earningsMonthShifts.filter { shift in  // swiftlint:disable:this explicit_type_interface
+      return selectedJobs.compactMap { job -> PayrollCardVariant? in  // swiftlint:disable:this closure_body_length
+        guard let window = selection.windowsByJobId[job.id] else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
+        let schedule = PayoutSchedule(job: job, fallbackPayrollDay: fallbackPayrollDay)  // swiftlint:disable:this explicit_type_interface line_length
+        let jobShifts = payoutShiftPool.filter { shift in  // swiftlint:disable:this explicit_type_interface
+          guard window.contains(shift.shiftDate) else { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
           guard let shiftJobId = shift.shift.job_id else {
             return job.id == defaultJobId
           }
@@ -1072,11 +1068,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         let totals = PayrollEngine.summarizeShiftTotals(  // swiftlint:disable:this explicit_type_interface
           shifts: jobShifts,
           halfTaxMonth: job.half_tax_month,
-          earningsMonth: earningsYM.month,
+          earningsMonth: Date.previousYearMonth(from: payoutYM).month,
           now: now
         )
+        let jobPaydaysInMonth = schedule  // swiftlint:disable:this explicit_type_interface
+          .windows(paidInYear: payoutYM.year, month: payoutYM.month)
+          .map(\.adjustedPayoutDate)
         let jobAdjustments = selectedPayoutAdjustments.filter { adjustment in  // swiftlint:disable:this explicit_type_interface line_length
-          guard DashboardPayrollAdjustmentFilter.matches(adjustment, payoutDate: payoutDate) else {
+          guard
+            DashboardPayrollAdjustmentFilter.matches(
+              adjustment, payoutDate: payoutDate, jobPayoutDatesInMonth: jobPaydaysInMonth)
+          else {
             return false
           }
           guard let adjustmentJobId = adjustment.job_id else {
@@ -1086,9 +1088,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         }
         let fallbackTaxSettings = payrollTaxSettings(  // swiftlint:disable:this explicit_type_interface
           from: jobShifts,
-          fallbackDate: PayrollEngine.calculatePayoutDate(
-            shiftDate: Date.firstDayOfMonth(year: earningsYM.year, month: earningsYM.month),
-            payrollDay: job.payroll_day ?? fallbackPayrollDay),
+          fallbackDate: window.payoutDate,
           snapshots: snapshots,
           jobs: jobs,
           jobId: job.id
@@ -1163,8 +1163,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
               tax: tax,
               taxEnabled: taxEnabled,
               adjustments: jobAdjustments,
-              earningsPeriodStart: Date.firstDayOfMonthDate(
-                year: earningsYM.year, month: earningsYM.month),
+              earningsPeriodStart: Date.fromISODateString(window.start),
+              earningsPeriodEnd: Date.fromISODateString(window.end),
               payoutTaxSettings: fallbackTaxSettings.adjusted(
                 payoutMonth: selection.payoutMonth, halfTaxMonth: job.half_tax_month)
             )
@@ -1369,24 +1369,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
       return lhsPayout < rhsPayout
     }
-  }
-
-  nonisolated private static func payrollEarningsShifts(  // swiftlint:disable:this type_contents_order
-    for earningsYM: (year: Int, month: Int),
-    displayYM: (year: Int, month: Int),
-    displayedMonthShifts: [ShiftWithComputations],
-    previousMonthShifts: [ShiftWithComputations]
-  ) -> [ShiftWithComputations] {
-    if earningsYM.year == displayYM.year, earningsYM.month == displayYM.month {
-      return displayedMonthShifts
-    }
-
-    let previousYM = Date.previousYearMonth(from: displayYM)  // swiftlint:disable:this explicit_type_interface
-    if earningsYM.year == previousYM.year, earningsYM.month == previousYM.month {
-      return previousMonthShifts
-    }
-
-    return []
   }
 
   nonisolated private static func payrollAdjustments(  // swiftlint:disable:this type_contents_order
@@ -1926,10 +1908,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let displayKey = "\(targetYear)-\(targetMonth)"  // swiftlint:disable:this explicit_type_interface
     let previousYM = Date.previousYearMonth(from: (year: targetYear, month: targetMonth))  // swiftlint:disable:this explicit_type_interface line_length
     let previousKey = "\(previousYM.year)-\(previousYM.month)"  // swiftlint:disable:this explicit_type_interface
+    let earlierKey = monthCacheKey(Date.previousYearMonth(from: previousYM))  // swiftlint:disable:this explicit_type_interface line_length
 
-    // Check if we have valid cache for both displayed and previous months
+    // Check if we have valid cache for the displayed month and the two before it
     if var displayCache = monthCache[displayKey], displayCache.isValid,
-      var previousCache = monthCache[previousKey], previousCache.isValid
+      var previousCache = monthCache[previousKey], previousCache.isValid,
+      let earlierCache = monthCache[earlierKey], earlierCache.isValid
     {
       // Use cached data - instant navigation!
       logger.info("📦 Using cached data for \(displayKey)")
@@ -1960,6 +1944,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         let capturedDisplay = displayCache.shifts  // swiftlint:disable:this explicit_type_interface
         let capturedDisplayEvents = displayCache.events  // swiftlint:disable:this explicit_type_interface
         let capturedPrevious = previousCache.shifts  // swiftlint:disable:this explicit_type_interface
+        let capturedEarlier = earlierCache.shifts  // swiftlint:disable:this explicit_type_interface
         let capturedCurrency = currentSettings.currency ?? "kr"  // swiftlint:disable:this explicit_type_interface
         let capturedJobs = displayJobs  // swiftlint:disable:this explicit_type_interface
         let capturedAdjustments = previousPayrollAdjustments  // swiftlint:disable:this explicit_type_interface
@@ -1970,8 +1955,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           [
             displayYM = (year: targetYear, month: targetMonth), previousYM, currentSettings,
             capturedCurrency, capturedJobs, capturedDisplay, capturedDisplayEvents,
-            capturedPrevious, capturedAdjustments, capturedAdjustmentsByPayoutMonth,
-            capturedSnapshots
+            capturedPrevious, capturedEarlier, capturedAdjustments,
+            capturedAdjustmentsByPayoutMonth, capturedSnapshots
           ] in
           let data = Self.buildDashboardDataOffMain(  // swiftlint:disable:this explicit_type_interface
             .init(
@@ -1990,6 +1975,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
             .init(
               displayedMonthShifts: capturedDisplay,
               previousMonthShifts: capturedPrevious,
+              earlierMonthShifts: capturedEarlier,
               payrollAdjustmentsByPayoutMonth: capturedAdjustmentsByPayoutMonth,
               previousPayrollAdjustments: capturedAdjustments,
               snapshots: capturedSnapshots,
@@ -2369,9 +2355,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     for userId: String,
     displayYM: (year: Int, month: Int),
     previousYM: (year: Int, month: Int)
-  ) async -> (display: PayrollRawWindowData, previous: PayrollRawWindowData) {
+  ) async -> (  // swiftlint:disable:this large_tuple
+    display: PayrollRawWindowData, previous: PayrollRawWindowData, earlier: PayrollRawWindowData
+  ) {
     let displayWindow = PayrollReadWindow.month(year: displayYM.year, month: displayYM.month)  // swiftlint:disable:this explicit_type_interface line_length
     let previousWindow = PayrollReadWindow.month(year: previousYM.year, month: previousYM.month)  // swiftlint:disable:this explicit_type_interface line_length
+    let earlierYM = Date.previousYearMonth(from: previousYM)  // swiftlint:disable:this explicit_type_interface
+    let earlierWindow = PayrollReadWindow.month(year: earlierYM.year, month: earlierYM.month)  // swiftlint:disable:this explicit_type_interface line_length
 
     async let displayData = monthlyPayrollReadService.loadRawWindow(  // swiftlint:disable:this explicit_type_interface
       for: userId,
@@ -2381,8 +2371,12 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       for: userId,
       window: previousWindow
     )
+    async let earlierData = monthlyPayrollReadService.loadRawWindow(  // swiftlint:disable:this explicit_type_interface
+      for: userId,
+      window: earlierWindow
+    )
 
-    return await (displayData, previousData)
+    return await (displayData, previousData, earlierData)
   }
 
   private func fetchPayrollAdjustmentsForPayoutMonth(  // swiftlint:disable:this type_contents_order
@@ -2704,6 +2698,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       logger.info(
         "📋 Loaded shifts for \(displayYM.year)-\(displayYM.month): \(displayShifts.count)")  // swiftlint:disable:this line_length multiline_arguments_brackets
       let fetchedPreviousShifts = fetchedRawWindows.previous.shifts  // swiftlint:disable:this explicit_type_interface
+      let fetchedEarlierShifts = fetchedRawWindows.earlier.shifts  // swiftlint:disable:this explicit_type_interface
+      let earlierYM = Date.previousYearMonth(from: previousYM)  // swiftlint:disable:this explicit_type_interface
       let displayEvents = fetchedRawWindows.display.events  // swiftlint:disable:this explicit_type_interface
       let previousEvents = fetchedRawWindows.previous.events  // swiftlint:disable:this explicit_type_interface
       let fetchedPayrollAdjustmentsByMonth = fetchPayrollAdjustmentsForPayoutMonths(  // swiftlint:disable:this explicit_type_interface line_length
@@ -2747,6 +2743,18 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           )
         )
 
+        let earlierComputed = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
+          .init(
+            year: earlierYM.year,
+            month: earlierYM.month,
+            shifts: fetchedEarlierShifts,
+            recurring: capturedRecurring,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs
+          )
+        )
+
         let dashboardData = Self.buildDashboardDataOffMain(  // swiftlint:disable:this explicit_type_interface
           .init(
             displayedMonthShifts: displayComputed,
@@ -2765,6 +2773,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           .init(
             displayedMonthShifts: displayComputed,
             previousMonthShifts: previousComputed,
+            earlierMonthShifts: earlierComputed,
             payrollAdjustmentsByPayoutMonth: capturedPayrollAdjustmentsByPayoutMonth,
             previousPayrollAdjustments: capturedPayrollAdjustments,
             snapshots: capturedSnapshots,
@@ -2786,6 +2795,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           displayEvents: displayEvents,
           previous: previousComputed,
           previousEvents: previousEvents,
+          earlier: earlierComputed,
           dashboardData: dashboardData,
           payrollCardSnapshot: payrollCardSnapshot
         )
@@ -2812,6 +2822,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         month: previousYM.month,
         shifts: result.previous,
         events: result.previousEvents,
+        timestamp: Date()
+      )
+      monthCache[monthCacheKey(year: earlierYM.year, month: earlierYM.month)] = MonthCacheEntry(
+        year: earlierYM.year,
+        month: earlierYM.month,
+        shifts: result.earlier,
+        events: fetchedRawWindows.earlier.events,
         timestamp: Date()
       )
 
@@ -2887,6 +2904,8 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
       )
       let displayShifts = fetchedRawWindows.display.shifts  // swiftlint:disable:this explicit_type_interface
       let fetchedPreviousShifts = fetchedRawWindows.previous.shifts  // swiftlint:disable:this explicit_type_interface
+      let fetchedEarlierShifts = fetchedRawWindows.earlier.shifts  // swiftlint:disable:this explicit_type_interface
+      let earlierYM = Date.previousYearMonth(from: previousYM)  // swiftlint:disable:this explicit_type_interface
       let displayEvents = fetchedRawWindows.display.events  // swiftlint:disable:this explicit_type_interface
       let previousEvents = fetchedRawWindows.previous.events  // swiftlint:disable:this explicit_type_interface
       let fetchedPayrollAdjustmentsByMonth = fetchPayrollAdjustmentsForPayoutMonths(  // swiftlint:disable:this explicit_type_interface line_length
@@ -2938,6 +2957,18 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           )
         )
 
+        let earlierComputed = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
+          .init(
+            year: earlierYM.year,
+            month: earlierYM.month,
+            shifts: fetchedEarlierShifts,
+            recurring: capturedRecurring,
+            snapshots: capturedSnapshots,
+            settings: currentSettings,
+            jobs: capturedJobs
+          )
+        )
+
         let dashboardData = Self.buildDashboardDataOffMain(  // swiftlint:disable:this explicit_type_interface
           .init(
             displayedMonthShifts: displayComputed,
@@ -2956,6 +2987,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           .init(
             displayedMonthShifts: displayComputed,
             previousMonthShifts: previousComputed,
+            earlierMonthShifts: earlierComputed,
             payrollAdjustmentsByPayoutMonth: capturedPayrollAdjustmentsByPayoutMonth,
             previousPayrollAdjustments: capturedPayrollAdjustments,
             snapshots: capturedSnapshots,
@@ -2977,6 +3009,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
           displayEvents: displayEvents,
           previous: previousComputed,
           previousEvents: previousEvents,
+          earlier: earlierComputed,
           dashboardData: dashboardData,
           payrollCardSnapshot: payrollCardSnapshot
         )
@@ -2997,6 +3030,13 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         month: previousYM.month,
         shifts: result.previous,
         events: result.previousEvents,
+        timestamp: Date()
+      )
+      monthCache[monthCacheKey(year: earlierYM.year, month: earlierYM.month)] = MonthCacheEntry(
+        year: earlierYM.year,
+        month: earlierYM.month,
+        shifts: result.earlier,
+        events: fetchedRawWindows.earlier.events,
         timestamp: Date()
       )
 
@@ -3044,14 +3084,17 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     let previousYM = Date.previousYearMonth(from: displayYM)  // swiftlint:disable:this explicit_type_interface
     let nextYM = nextYearMonth(from: displayYM)  // swiftlint:disable:this explicit_type_interface
 
-    // Also get the months needed for the payroll card of each neighbor
+    // Also get the months needed for the payroll card of each neighbor.
+    // Pay periods can reach two months back, so the previous month needs three months before it.
     let prevPrevYM = Date.previousYearMonth(from: previousYM)  // swiftlint:disable:this explicit_type_interface
+    let prevPrevPrevYM = Date.previousYearMonth(from: prevPrevYM)  // swiftlint:disable:this explicit_type_interface
     let nextPrevYM = Date.previousYearMonth(from: nextYM)  // swiftlint:disable:this explicit_type_interface
 
     // Prefetch all needed months
     prefetchMonthInBackground(year: previousYM.year, month: previousYM.month)
     prefetchMonthInBackground(year: nextYM.year, month: nextYM.month)
     prefetchMonthInBackground(year: prevPrevYM.year, month: prevPrevYM.month)
+    prefetchMonthInBackground(year: prevPrevPrevYM.year, month: prevPrevPrevYM.month)
     prefetchMonthInBackground(year: nextPrevYM.year, month: nextPrevYM.month)
   }
 

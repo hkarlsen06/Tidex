@@ -231,6 +231,7 @@ struct PaySettingsView: View {
             currency: viewModel.userCurrency,
             payrollDay: viewModel.selectedJobPayrollDay,
             halfTaxMonth: viewModel.selectedJobHalfTaxMonth,
+            payPeriod: viewModel.selectedJobPayPeriod,
             onEdit: { viewModel.openEditEditor(snapshot: $0, section: $1) }
           )
           .padding(.horizontal, Spacing.md)
@@ -261,6 +262,10 @@ struct PaySettingsView: View {
             },
             onUpdateCurrency: { value in
               await viewModel.updateCurrency(value)
+            },
+            payPeriod: viewModel.selectedJobPayPeriod,
+            onUpdatePayPeriod: { value in
+              await viewModel.updatePayPeriod(value)
             }
           )
           .padding(.horizontal, Spacing.md)

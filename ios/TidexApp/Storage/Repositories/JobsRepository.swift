@@ -307,7 +307,8 @@ final class JobsRepository: ObservableObject {
     currency: String,
     payrollDay: Int?,
     halfTaxMonth: Int?,
-    monthlyGoal: Int?
+    monthlyGoal: Int?,
+    payPeriod: PayPeriod? = nil
   ) async throws -> Job {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else {
@@ -327,6 +328,7 @@ final class JobsRepository: ObservableObject {
       sortOrder: nextSortOrder,
       payrollDay: payrollDay ?? 15,
       halfTaxMonth: halfTaxMonth,
+      payPeriod: payPeriod,
       monthlyGoal: monthlyGoal
     )
 
@@ -344,7 +346,8 @@ final class JobsRepository: ObservableObject {
     payrollDay: Int?,
     halfTaxMonth: Int?,
     monthlyGoal: Int?,
-    baselineSnapshot: JobBaselineSnapshotInput
+    baselineSnapshot: JobBaselineSnapshotInput,
+    payPeriod: PayPeriod? = nil
   ) async throws -> Job {
     let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmedName.isEmpty else {
@@ -365,6 +368,7 @@ final class JobsRepository: ObservableObject {
       sortOrder: nextSortOrder,
       payrollDay: payrollDay ?? 15,
       halfTaxMonth: halfTaxMonth,
+      payPeriod: payPeriod,
       monthlyGoal: monthlyGoal
     )
 
@@ -479,19 +483,22 @@ final class JobsRepository: ObservableObject {
     }
   }
 
+  // swiftlint:disable:next function_parameter_count
   func updateJobPaySettings(
     userId: String,
     jobId: String,
     payrollDay: Int,
     halfTaxMonth: Int?,
-    monthlyGoal: Int?
+    monthlyGoal: Int?,
+    payPeriod: PayPeriod?
   ) async throws -> Job? {
     do {
       let updated = try await localStore.storeActor.updateJobPaySettings(
         id: jobId,
         payrollDay: payrollDay,
         halfTaxMonth: halfTaxMonth,
-        monthlyGoal: monthlyGoal
+        monthlyGoal: monthlyGoal,
+        payPeriod: payPeriod
       )
       logger.info("Updated pay settings for job: \(jobId)")
       triggerSync(userId: userId)
@@ -549,7 +556,8 @@ final class JobsRepository: ObservableObject {
       jobId: jobId,
       payrollDay: payrollDay,
       halfTaxMonth: halfTaxMonth,
-      monthlyGoal: monthlyGoal
+      monthlyGoal: monthlyGoal,
+      payPeriod: existingJob.pay_period
     )
 
     if existingBaseline != nil {

@@ -131,6 +131,27 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
     }
   }
 
+  /// "Work in September 2026" for a calendar month, otherwise "Work from 16 Aug to 15 Sep".
+  private func earningsPeriodText(for breakdown: PayrollCardJobBreakdown) -> String? {
+    guard let start = breakdown.earningsPeriodStart else {
+      return nil
+    }
+    let calendar = Calendar.current  // swiftlint:disable:this explicit_type_interface
+    let isCalendarMonth: Bool = breakdown.earningsPeriodEnd.map { end in
+      calendar.component(.day, from: start) == 1
+        && calendar.isDate(end, equalTo: start, toGranularity: .month)
+        && calendar.component(.day, from: calendar.date(byAdding: .day, value: 1, to: end) ?? end) == 1
+    } ?? true
+
+    guard !isCalendarMonth, let end = breakdown.earningsPeriodEnd else {
+      return String(
+        localized: .dashboardPayrollDetailsEarningsPeriod(start.formatted(.dateTime.month(.wide).year())))
+    }
+    let format = Date.FormatStyle.dateTime.day().month(.abbreviated)  // swiftlint:disable:this explicit_type_interface
+    return String(
+      localized: .dashboardPayrollDetailsEarningsPeriodRange(start.formatted(format), end.formatted(format)))
+  }
+
   private var earningsSection: some View {
     VStack(spacing: Spacing.sm) {
       ForEach(Array(displayedBreakdowns.enumerated()), id: \.element.id) { index, breakdown in
@@ -236,10 +257,8 @@ struct PayrollDetailsSheet: View {  // swiftlint:disable:this explicit_acl expli
           .lineLimit(1)
       }
 
-      if let period = breakdown.earningsPeriodStart {
-        Text(
-          .dashboardPayrollDetailsEarningsPeriod(period.formatted(.dateTime.month(.wide).year()))
-        )
+      if let periodText = earningsPeriodText(for: breakdown) {
+        Text(periodText)
         .font(.tidexFootnote)
         .foregroundColor(.tidexTextSecondary)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1282,6 +1301,7 @@ extension PayrollCardJobBreakdown {
       taxEnabled: nextTaxEnabled,
       adjustments: nextAdjustments,
       earningsPeriodStart: earningsPeriodStart,
+      earningsPeriodEnd: earningsPeriodEnd,
       payoutTaxSettings: payoutTaxSettings
     )
   }

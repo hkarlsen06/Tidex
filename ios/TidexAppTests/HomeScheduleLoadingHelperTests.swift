@@ -171,6 +171,21 @@ final class HomeScheduleLoadingHelperTests: XCTestCase {
         displayMonth: 5
       )
     )
+    // A 16th-to-15th period paid the month after reaches two months back.
+    XCTAssertTrue(
+      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
+        on: [try XCTUnwrap(ShiftChangeAffectedMonth(year: 2_026, month: 3))],
+        displayYear: 2_026,
+        displayMonth: 5
+      )
+    )
+    XCTAssertFalse(
+      HomeScheduleAffectedMonthResolver.dashboardDisplayedMonthDepends(
+        on: [try XCTUnwrap(ShiftChangeAffectedMonth(year: 2_026, month: 2))],
+        displayYear: 2_026,
+        displayMonth: 5
+      )
+    )
   }
 
   func testScheduleInvalidatesAffectedMonthAndAdjacentDisplayMonths() throws {

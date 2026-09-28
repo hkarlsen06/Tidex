@@ -533,6 +533,7 @@ internal actor LocalStoreActor {
       existing.sortOrder = job.sortOrder
       existing.payrollDay = job.payrollDay
       existing.halfTaxMonth = job.halfTaxMonth
+      existing.payPeriodJSON = job.payPeriodJSON
       existing.monthlyGoal = job.monthlyGoal
       existing.archivedAt = job.archivedAt
       existing.deletedAt = job.deletedAt
@@ -599,6 +600,7 @@ internal actor LocalStoreActor {
     sortOrder: Int,
     payrollDay: Int?,
     halfTaxMonth: Int?,
+    payPeriod: PayPeriod? = nil,
     monthlyGoal: Int?
   ) throws -> Job {
     let id = UUID().lowercasedString
@@ -630,6 +632,7 @@ internal actor LocalStoreActor {
       sortOrder: sortOrder,
       payrollDay: payrollDay,
       halfTaxMonth: halfTaxMonth,
+      payPeriod: payPeriod ?? .calendarMonth,
       monthlyGoal: monthlyGoal,
       archivedAt: nil,
       deletedAt: nil,
@@ -651,6 +654,7 @@ internal actor LocalStoreActor {
       sortOrder: sortOrder,
       payrollDay: payrollDay,
       halfTaxMonth: halfTaxMonth,
+      payPeriodJSON: payPeriod?.storageJSON,
       monthlyGoal: monthlyGoal,
       archivedAt: nil,
       deletedAt: nil,
@@ -743,7 +747,8 @@ internal actor LocalStoreActor {
     id: String,
     payrollDay: Int,
     halfTaxMonth: Int?,
-    monthlyGoal: Int?
+    monthlyGoal: Int?,
+    payPeriod: PayPeriod?
   ) throws -> Job {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
@@ -769,6 +774,12 @@ internal actor LocalStoreActor {
     if localJob.monthlyGoal != monthlyGoal {
       localJob.monthlyGoal = monthlyGoal
       newDirtyFields.insert(.monthlyGoal)
+    }
+
+    let payPeriodJSON = payPeriod?.storageJSON
+    if localJob.payPeriodJSON != payPeriodJSON {
+      localJob.payPeriodJSON = payPeriodJSON
+      newDirtyFields.insert(.payPeriod)
     }
 
     localJob.dirtyFieldKeys = newDirtyFields
@@ -949,6 +960,7 @@ internal actor LocalStoreActor {
     localJob.sortOrder = serverSnapshot.sortOrder
     localJob.payrollDay = serverSnapshot.payrollDay
     localJob.halfTaxMonth = serverSnapshot.halfTaxMonth
+    localJob.payPeriodJSON = serverSnapshot.payPeriod.storageJSON
     localJob.monthlyGoal = serverSnapshot.monthlyGoal
     localJob.archivedAt = serverSnapshot.archivedAt
     localJob.deletedAt = serverSnapshot.deletedAt
@@ -2987,6 +2999,7 @@ internal actor LocalStoreActor {
     existing.sortOrder = serverRow.sort_order
     existing.payrollDay = serverRow.payroll_day
     existing.halfTaxMonth = serverRow.half_tax_month
+    existing.payPeriodJSON = serverRow.pay_period?.storageJSON
     existing.monthlyGoal = serverRow.monthly_goal
     existing.archivedAt = archivedAt
     existing.deletedAt = deletedAt
@@ -3066,6 +3079,9 @@ internal actor LocalStoreActor {
     }
     if !localDirtyFields.contains(.halfTaxMonth) {
       existing.halfTaxMonth = serverRow.half_tax_month
+    }
+    if !localDirtyFields.contains(.payPeriod) {
+      existing.payPeriodJSON = serverRow.pay_period?.storageJSON
     }
     if !localDirtyFields.contains(.monthlyGoal) {
       existing.monthlyGoal = serverRow.monthly_goal
@@ -3818,6 +3834,7 @@ internal actor LocalStoreActor {
     existing.sortOrder = serverRow.sort_order
     existing.payrollDay = serverRow.payroll_day
     existing.halfTaxMonth = serverRow.half_tax_month
+    existing.payPeriodJSON = serverRow.pay_period?.storageJSON
     existing.monthlyGoal = serverRow.monthly_goal
     existing.archivedAt = archivedAt
     existing.deletedAt = deletedAt
@@ -3912,6 +3929,7 @@ internal actor LocalStoreActor {
     existing.sortOrder = serverSnapshot.sortOrder
     existing.payrollDay = serverSnapshot.payrollDay
     existing.halfTaxMonth = serverSnapshot.halfTaxMonth
+    existing.payPeriodJSON = serverSnapshot.payPeriod.storageJSON
     existing.monthlyGoal = serverSnapshot.monthlyGoal
     existing.archivedAt = serverSnapshot.archivedAt
     existing.deletedAt = serverSnapshot.deletedAt
@@ -5104,6 +5122,7 @@ extension LocalJob: SyncPushTrackedModel {
       sortOrder: sortOrder,
       payrollDay: payrollDay,
       halfTaxMonth: halfTaxMonth,
+      payPeriod: PayPeriod.fromStorageJSON(payPeriodJSON),
       monthlyGoal: monthlyGoal,
       archivedAt: archivedAt,
       deletedAt: deletedAt,

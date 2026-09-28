@@ -11,6 +11,8 @@ struct Job: Codable, Identifiable, Equatable {
   let sort_order: Int
   let payroll_day: Int?
   let half_tax_month: Int?
+  /// nil means calendar month, paid on `payroll_day` the month after.
+  let pay_period: PayPeriod?  // swiftlint:disable:this identifier_name
   let monthly_goal: Int?
   let archived_at: String?
   let deleted_at: String?
@@ -31,7 +33,8 @@ struct Job: Codable, Identifiable, Equatable {
     archived_at: String?,
     deleted_at: String?,
     created_at: String?,
-    updated_at: String?
+    updated_at: String?,  // swiftlint:disable:this identifier_name
+    pay_period: PayPeriod? = nil  // swiftlint:disable:this identifier_name
   ) {
     self.id = id
     self.user_id = user_id
@@ -42,6 +45,7 @@ struct Job: Codable, Identifiable, Equatable {
     self.sort_order = sort_order
     self.payroll_day = payroll_day
     self.half_tax_month = half_tax_month
+    self.pay_period = pay_period
     self.monthly_goal = monthly_goal
     self.archived_at = archived_at
     self.deleted_at = deleted_at
@@ -59,6 +63,7 @@ struct Job: Codable, Identifiable, Equatable {
     case sort_order
     case payroll_day
     case half_tax_month
+    case pay_period  // swiftlint:disable:this identifier_name
     case monthly_goal
     case archived_at
     case deleted_at
@@ -78,6 +83,8 @@ struct Job: Codable, Identifiable, Equatable {
     sort_order = try container.decode(Int.self, forKey: .sort_order)
     payroll_day = try container.decodeIfPresent(Int.self, forKey: .payroll_day)
     half_tax_month = try container.decodeIfPresent(Int.self, forKey: .half_tax_month)
+    // An unreadable value falls back to the calendar month instead of failing the whole job.
+    pay_period = try? container.decodeIfPresent(PayPeriod.self, forKey: .pay_period)
     monthly_goal = try container.decodeIfPresent(Int.self, forKey: .monthly_goal)
     archived_at = try container.decodeIfPresent(String.self, forKey: .archived_at)
     deleted_at = try container.decodeIfPresent(String.self, forKey: .deleted_at)

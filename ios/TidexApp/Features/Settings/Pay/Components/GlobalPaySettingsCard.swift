@@ -3,7 +3,7 @@ import UIKit
 
 // MARK: - Global Pay Settings Card
 
-/// Card for editing global pay settings: currency, payroll day, and half-tax month
+/// Card for editing a job's pay settings: currency, pay period, payroll day, and half-tax month
 struct GlobalPaySettingsCard: View {
   let jobId: String?
   let currency: String
@@ -13,6 +13,9 @@ struct GlobalPaySettingsCard: View {
   let onUpdatePayrollDay: (Int) -> Void
   let onUpdateHalfTaxMonth: (Int?) async -> Void
   let onUpdateCurrency: (String) async -> Void
+  var payPeriod: PayPeriod = .calendarMonth
+  /// Shows the pay period picker when set.
+  var onUpdatePayPeriod: ((PayPeriod) async -> Void)?
 
   @State private var selectedCurrency: String = "kr"
   @State private var selectedPayrollDay: Int = 1
@@ -30,8 +33,19 @@ struct GlobalPaySettingsCard: View {
       // Currency selector
       currencyInput
 
-      // Payroll day
-      payrollDayInput
+      if let onUpdatePayPeriod {
+        PayPeriodSettingsSection(
+          jobId: jobId,
+          payPeriod: payPeriod,
+          payrollDay: selectedPayrollDay,
+          onUpdate: onUpdatePayPeriod
+        )
+      }
+
+      // Two-weekly pay has its own paydays, so the monthly payday only applies to monthly periods.
+      if !payPeriod.isBiweekly {
+        payrollDayInput
+      }
 
       // Half-tax month
       halfTaxMonthPicker
@@ -145,9 +159,11 @@ struct GlobalPaySettingsCard: View {
         onUpdatePayrollDay(newValue)
       }
 
-      Text(.settingsPayGlobalPayrollDayHelper)
-        .font(.tidexCaptionRegular)
-        .foregroundColor(.tidexTextMuted)
+      if payPeriod.isCalendarMonth {
+        Text(.settingsPayGlobalPayrollDayHelper)
+          .font(.tidexCaptionRegular)
+          .foregroundColor(.tidexTextMuted)
+      }
     }
   }
 

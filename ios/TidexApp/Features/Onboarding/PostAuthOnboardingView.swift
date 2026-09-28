@@ -645,7 +645,8 @@ struct PostAuthOnboardingView: View {
         jobId: job.id,
         payrollDay: input.payrollDay,
         halfTaxMonth: input.halfTaxMonth,
-        monthlyGoal: job.monthly_goal
+        monthlyGoal: job.monthly_goal,
+        payPeriod: nil
       ) != nil
     else {
       throw JobsRepositoryError.jobNotFound

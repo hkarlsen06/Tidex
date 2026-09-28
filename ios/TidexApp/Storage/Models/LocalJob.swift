@@ -28,6 +28,8 @@ final class LocalJob {
   var sortOrder: Int
   var payrollDay: Int?
   var halfTaxMonth: Int?
+  /// JSON-encoded `PayPeriod`, or nil for the calendar-month default. See `PayPeriod.storageJSON`.
+  var payPeriodJSON: String?
   var monthlyGoal: Int?
   var archivedAt: Date?
   var deletedAt: Date?
@@ -101,6 +103,7 @@ final class LocalJob {
     sortOrder: Int,
     payrollDay: Int? = nil,
     halfTaxMonth: Int? = nil,
+    payPeriodJSON: String? = nil,
     monthlyGoal: Int? = nil,
     archivedAt: Date? = nil,
     deletedAt: Date? = nil,
@@ -122,6 +125,7 @@ final class LocalJob {
     self.sortOrder = sortOrder
     self.payrollDay = payrollDay
     self.halfTaxMonth = halfTaxMonth
+    self.payPeriodJSON = payPeriodJSON
     self.monthlyGoal = monthlyGoal
     self.archivedAt = archivedAt
     self.deletedAt = deletedAt
@@ -152,6 +156,9 @@ struct JobServerSnapshot: Codable, Equatable {
   let sortOrder: Int
   let payrollDay: Int?
   let halfTaxMonth: Int?
+  /// Normalized to `.calendarMonth` when unset, so the two representations of "no override"
+  /// (a NULL column and an explicit calendar-month JSON value) never register as a diff.
+  let payPeriod: PayPeriod
   let monthlyGoal: Int?
   let archivedAt: Date?
   let deletedAt: Date?
@@ -170,6 +177,7 @@ struct JobServerSnapshot: Codable, Equatable {
       sortOrder: row.sort_order,
       payrollDay: row.payroll_day,
       halfTaxMonth: row.half_tax_month,
+      payPeriod: row.pay_period ?? .calendarMonth,
       monthlyGoal: row.monthly_goal,
       archivedAt: row.archived_at.flatMap { parseJobISO8601($0) },
       deletedAt: row.deleted_at.flatMap { parseJobISO8601($0) },
@@ -214,6 +222,9 @@ struct JobServerSnapshot: Codable, Equatable {
     if halfTaxMonth != other.halfTaxMonth {
       changed.insert(.halfTaxMonth)
     }
+    if payPeriod != other.payPeriod {
+      changed.insert(.payPeriod)
+    }
     if monthlyGoal != other.monthlyGoal {
       changed.insert(.monthlyGoal)
     }
@@ -237,6 +248,7 @@ extension JobServerSnapshot {
     case sortOrder
     case payrollDay
     case halfTaxMonth
+    case payPeriod
     case monthlyGoal
     case archivedAt
     case deletedAt
@@ -254,6 +266,7 @@ extension JobServerSnapshot {
     sortOrder = try container.decode(Int.self, forKey: .sortOrder)
     payrollDay = try container.decodeIfPresent(Int.self, forKey: .payrollDay)
     halfTaxMonth = try container.decodeIfPresent(Int.self, forKey: .halfTaxMonth)
+    payPeriod = try container.decodeIfPresent(PayPeriod.self, forKey: .payPeriod) ?? .calendarMonth
     monthlyGoal = try container.decodeIfPresent(Int.self, forKey: .monthlyGoal)
     archivedAt = try container.decodeIfPresent(Date.self, forKey: .archivedAt)
     deletedAt = try container.decodeIfPresent(Date.self, forKey: .deletedAt)
@@ -280,7 +293,8 @@ extension LocalJob {
       archived_at: archivedAt.map { formatJobISO8601($0) },
       deleted_at: deletedAt.map { formatJobISO8601($0) },
       created_at: createdAt.map { formatJobISO8601($0) },
-      updated_at: formatJobISO8601(serverUpdatedAt)
+      updated_at: formatJobISO8601(serverUpdatedAt),
+      pay_period: payPeriodJSON.map { PayPeriod.fromStorageJSON($0) }
     )
   }
 
@@ -298,6 +312,7 @@ extension LocalJob {
       sortOrder: serverRow.sort_order,
       payrollDay: serverRow.payroll_day,
       halfTaxMonth: serverRow.half_tax_month,
+      payPeriodJSON: serverRow.pay_period?.storageJSON,
       monthlyGoal: serverRow.monthly_goal,
       archivedAt: serverRow.archived_at.flatMap { parseJobISO8601($0) },
       deletedAt: serverRow.deleted_at.flatMap { parseJobISO8601($0) },

@@ -10,11 +10,13 @@ struct PaySettingsReviewCard: View {
   let currency: String
   let payrollDay: Int
   let halfTaxMonth: Int?
+  var payPeriod: PayPeriod = .calendarMonth
   let onEdit: (WageSnapshot, WageSnapshotEditorSection) -> Void
 
   private var context: PaySettingsContext {
     PaySettingsContext(
-      workDate: workDate, snapshots: snapshots, payrollDay: payrollDay, halfTaxMonth: halfTaxMonth
+      workDate: workDate, snapshots: snapshots, payrollDay: payrollDay, halfTaxMonth: halfTaxMonth,
+      payPeriod: payPeriod
     )
   }
 

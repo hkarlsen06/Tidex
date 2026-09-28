@@ -399581,6 +399581,132 @@
           }
         }
       }
+    },
+    "dashboard.payrollDetails.earningsPeriodRange" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work from %1$@ to %2$@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arbeid fra %1$@ til %2$@"
+          }
+        }
+      },
+      "comment" : "Payroll details: the pay period a payout covers when it is not a calendar month. Arguments are short dates, for example 16 Aug and 15 Sep."
+    },
+    "settings.pay.period.title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pay period"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lønnsperiode"
+          }
+        }
+      },
+      "comment" : "Pay settings: label for how a job groups worked hours into payouts."
+    },
+    "settings.pay.period.calendarMonth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar month"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kalendermåned"
+          }
+        }
+      },
+      "comment" : "Pay period option: hours from the 1st to the last day of each month."
+    },
+    "settings.pay.period.customMonthly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Monthly, starting on another day"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Månedlig, fra en annen dag"
+          }
+        }
+      },
+      "comment" : "Pay period option: a month-long period that starts on a day other than the 1st, for example the 16th to the 15th."
+    },
+    "settings.pay.period.biweekly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every two weeks"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Annenhver uke"
+          }
+        }
+      },
+      "comment" : "Pay period option: 14-day periods, paid every other week."
+    },
+    "settings.pay.period.startDay" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "First day of the period"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Første dag i perioden"
+          }
+        }
+      },
+      "comment" : "Pay settings: label for the day of the month a monthly pay period starts on."
+    },
+    "settings.pay.period.startDayOption" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The %@"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Den %@."
+          }
+        }
+      },
+      "comment" : "Option in the first-day picker. The argument is a day number, in English with an ordinal suffix (16th), in Norwegian without (16)."
     }
   },
   "version" : "1.0"

@@ -272,6 +272,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       sortOrder: 0,
       payrollDay: 25,
       halfTaxMonth: 12,
+      payPeriod: .calendarMonth,
       monthlyGoal: 30_000,
       archivedAt: nil,
       deletedAt: nil,
@@ -287,6 +288,7 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       sortOrder: 0,
       payrollDay: 20,
       halfTaxMonth: 12,
+      payPeriod: .calendarMonth,
       monthlyGoal: 30_000,
       archivedAt: timestamp,
       deletedAt: nil,
@@ -406,6 +408,88 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     let decoded = try JSONDecoder().decode(SyncJobRow.self, from: Data(json.utf8))
 
     XCTAssertEqual(decoded.currency, "kr")
+  }
+
+  func testSyncJobRowDecodesValidPayPeriod() throws {
+    let json = """
+      {
+        "id": "job-1",
+        "user_id": "user-1",
+        "name": "Store",
+        "color": "#FF0000",
+        "currency": "kr",
+        "is_default": true,
+        "sort_order": 0,
+        "payroll_day": 15,
+        "half_tax_month": null,
+        "pay_period": {"type": "monthly", "startDay": 16, "payoutMonthOffset": 0},
+        "monthly_goal": 30000,
+        "archived_at": null,
+        "deleted_at": null,
+        "created_at": "2026-03-02T12:00:00Z",
+        "updated_at": "2026-03-02T12:00:00Z",
+        "revision": 10
+      }
+      """
+
+    let decoded = try JSONDecoder().decode(SyncJobRow.self, from: Data(json.utf8))
+
+    XCTAssertEqual(decoded.pay_period, .monthly(startDay: 16, payoutMonthOffset: 0))
+  }
+
+  func testSyncJobRowDecodesNullPayPeriodAsNil() throws {
+    let json = """
+      {
+        "id": "job-1",
+        "user_id": "user-1",
+        "name": "Store",
+        "color": "#FF0000",
+        "currency": "kr",
+        "is_default": true,
+        "sort_order": 0,
+        "payroll_day": 15,
+        "half_tax_month": null,
+        "pay_period": null,
+        "monthly_goal": 30000,
+        "archived_at": null,
+        "deleted_at": null,
+        "created_at": "2026-03-02T12:00:00Z",
+        "updated_at": "2026-03-02T12:00:00Z",
+        "revision": 10
+      }
+      """
+
+    let decoded = try JSONDecoder().decode(SyncJobRow.self, from: Data(json.utf8))
+
+    XCTAssertNil(decoded.pay_period)
+  }
+
+  func testSyncJobRowDecodesInvalidPayPeriodAsNilWithoutFailingRow() throws {
+    let json = """
+      {
+        "id": "job-1",
+        "user_id": "user-1",
+        "name": "Store",
+        "color": "#FF0000",
+        "currency": "kr",
+        "is_default": true,
+        "sort_order": 0,
+        "payroll_day": 15,
+        "half_tax_month": null,
+        "pay_period": {"type": "monthly", "startDay": 99, "payoutMonthOffset": 0},
+        "monthly_goal": 30000,
+        "archived_at": null,
+        "deleted_at": null,
+        "created_at": "2026-03-02T12:00:00Z",
+        "updated_at": "2026-03-02T12:00:00Z",
+        "revision": 10
+      }
+      """
+
+    let decoded = try JSONDecoder().decode(SyncJobRow.self, from: Data(json.utf8))
+
+    XCTAssertNil(decoded.pay_period)
+    XCTAssertEqual(decoded.id, "job-1")
   }
 
   func testJobDecodeBackfillsMissingCurrency() throws {

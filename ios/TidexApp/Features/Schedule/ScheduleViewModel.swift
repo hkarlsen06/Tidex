@@ -1106,10 +1106,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     let scopedSnapshots = snapshotsForJob(jobId)
 
     let wageSnapshot = SnapshotsService.snapshotForDate(dateISO, from: scopedSnapshots)
-    let payoutDate = PayrollEngine.calculatePayoutDate(
-      shiftDate: dateISO,
-      payrollDay: payrollDay(for: jobId)
-    )
+    let payoutDate = payoutSchedule(for: jobId).payoutDate(for: dateISO)
     let taxSnapshot = SnapshotsService.snapshotForDate(payoutDate, from: scopedSnapshots)
 
     let shift = ShiftRow(
@@ -1146,11 +1143,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     return []
   }
 
-  private func payrollDay(for jobId: String?) -> Int {
-    if let jobId, let jobPayrollDay = activeJobs.first(where: { $0.id == jobId })?.payroll_day {
-      return jobPayrollDay
-    }
-    return settings?.effectivePayrollDay ?? 1
+  private func payoutSchedule(for jobId: String?) -> PayoutSchedule {
+    PayoutSchedule(
+      job: jobId.flatMap { id in activeJobs.first { $0.id == id } },
+      fallbackPayrollDay: settings?.effectivePayrollDay ?? 1
+    )
   }
 
   /// Handle date tap when in move mode - move shift to the tapped date

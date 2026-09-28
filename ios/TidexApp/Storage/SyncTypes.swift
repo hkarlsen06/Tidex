@@ -99,6 +99,7 @@ internal enum JobField: String, Codable, CaseIterable {
   case isDefault = "is_default"
   case monthlyGoal = "monthly_goal"
   case name = "name"
+  case payPeriod = "pay_period"
   case payrollDay = "payroll_day"
   case sortOrder = "sort_order"
 }

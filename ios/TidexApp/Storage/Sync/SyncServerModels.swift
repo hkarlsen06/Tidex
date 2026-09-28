@@ -246,6 +246,8 @@ internal struct SyncJobRow: Codable {
   internal let sort_order: Int
   internal let payroll_day: Int?
   internal let half_tax_month: Int?
+  /// An unreadable value falls back to nil (calendar month) instead of failing the row.
+  internal let pay_period: PayPeriod?  // swiftlint:disable:this identifier_name
   internal let monthly_goal: Int?
   internal let archived_at: String?
   internal let deleted_at: String?
@@ -263,6 +265,7 @@ internal struct SyncJobRow: Codable {
     case sort_order
     case payroll_day
     case half_tax_month
+    case pay_period  // swiftlint:disable:this identifier_name
     case monthly_goal
     case archived_at
     case deleted_at
@@ -284,6 +287,7 @@ internal struct SyncJobRow: Codable {
     sort_order = try container.decode(Int.self, forKey: .sort_order)
     payroll_day = try container.decodeIfPresent(Int.self, forKey: .payroll_day)
     half_tax_month = try container.decodeIfPresent(Int.self, forKey: .half_tax_month)
+    pay_period = try? container.decodeIfPresent(PayPeriod.self, forKey: .pay_period)
     monthly_goal = try container.decodeIfPresent(Int.self, forKey: .monthly_goal)
     archived_at = try container.decodeIfPresent(String.self, forKey: .archived_at)
     deleted_at = try container.decodeIfPresent(String.self, forKey: .deleted_at)

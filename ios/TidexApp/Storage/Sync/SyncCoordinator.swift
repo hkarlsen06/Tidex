@@ -2728,6 +2728,14 @@ final class SyncCoordinator: ObservableObject {
         updateData["half_tax_month"] = .null
       }
     }
+    if dirtyFields.contains(.payPeriod) {
+      if let json = job.payPeriodJSON, let data = json.data(using: .utf8) {
+        let decoded = try requireAnyJSON(data, table: .jobs, id: jobId, field: "pay_period")
+        updateData["pay_period"] = decoded
+      } else {
+        updateData["pay_period"] = .null
+      }
+    }
     if dirtyFields.contains(.monthlyGoal) {
       if let goal = job.monthlyGoal {
         updateData["monthly_goal"] = .integer(goal)
@@ -2907,6 +2915,9 @@ final class SyncCoordinator: ObservableObject {
     }
     if let halfTaxMonth = job.halfTaxMonth {
       insertData["half_tax_month"] = .integer(halfTaxMonth)
+    }
+    if let payPeriodJSON = job.payPeriodJSON, let data = payPeriodJSON.data(using: .utf8) {
+      insertData["pay_period"] = try requireAnyJSON(data, table: .jobs, id: jobId, field: "pay_period")
     }
     if let monthlyGoal = job.monthlyGoal {
       insertData["monthly_goal"] = .integer(monthlyGoal)

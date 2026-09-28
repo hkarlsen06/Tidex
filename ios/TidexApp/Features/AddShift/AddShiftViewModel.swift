@@ -1736,11 +1736,11 @@ internal final class AddShiftViewModel: ObservableObject {
     SnapshotsService.snapshotForDate(dateISO, from: snapshotsForJob(jobId))
   }
 
-  private func payrollDay(for jobId: String?) -> Int {
-    if let jobId, let jobPayrollDay = activeJobs.first(where: { $0.id == jobId })?.payroll_day {
-      return jobPayrollDay
-    }
-    return cachedSettings?.effectivePayrollDay ?? 1
+  private func payoutSchedule(for jobId: String?) -> PayoutSchedule {
+    PayoutSchedule(
+      job: jobId.flatMap { id in activeJobs.first { $0.id == id } },
+      fallbackPayrollDay: cachedSettings?.effectivePayrollDay ?? 1
+    )
   }
 
   /// Format Date to HH:mm string
@@ -1765,9 +1765,8 @@ internal final class AddShiftViewModel: ObservableObject {
     // Wage/supplements from shift date
     let wageSnapshot = snapshotForDate(dateISO, jobId: jobId)
 
-    // Tax settings from payout date (shift month + 1)
-    let payrollDay = payrollDay(for: jobId)
-    let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: dateISO, payrollDay: payrollDay)
+    // Tax settings from the payout date of the job's pay period
+    let payoutDate = payoutSchedule(for: jobId).payoutDate(for: dateISO)
     let taxSnapshot = snapshotForDate(payoutDate, jobId: jobId)
 
     let shift = ShiftRow(
@@ -1857,12 +1856,9 @@ internal final class AddShiftViewModel: ObservableObject {
       )
       let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 
-      let payrollDay = Self.payrollDay(
-        for: shift.job_id, jobs: input.jobs, settings: input.settings)
-      let payoutDate = PayrollEngine.calculatePayoutDate(
-        shiftDate: shift.shift_date,
-        payrollDay: payrollDay
-      )
+      let payoutDate = Self.payoutSchedule(
+        for: shift.job_id, jobs: input.jobs, settings: input.settings
+      ).payoutDate(for: shift.shift_date)
       let taxSnapshot = Self.snapshotForDate(
         payoutDate,
         jobId: shift.job_id,
@@ -1910,15 +1906,11 @@ internal final class AddShiftViewModel: ObservableObject {
         )
         let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 
-        let payrollDay = Self.payrollDay(
+        let payoutDate = Self.payoutSchedule(
           for: recurring.job_id,
           jobs: input.jobs,
           settings: input.settings
-        )
-        let payoutDate = PayrollEngine.calculatePayoutDate(
-          shiftDate: virtualShift.date,
-          payrollDay: payrollDay
-        )
+        ).payoutDate(for: virtualShift.date)
         let taxSnapshot = Self.snapshotForDate(
           payoutDate,
           jobId: recurring.job_id,
@@ -2144,12 +2136,11 @@ internal final class AddShiftViewModel: ObservableObject {
       jobs: context.jobs
     )
 
-    let payrollDay = Self.payrollDay(
+    let payoutDate = Self.payoutSchedule(
       for: effectiveJobId,
       jobs: context.jobs,
       settings: context.settings
-    )
-    let payoutDate = PayrollEngine.calculatePayoutDate(shiftDate: dateISO, payrollDay: payrollDay)
+    ).payoutDate(for: dateISO)
     let taxSnapshot = Self.snapshotForDate(
       payoutDate,
       jobId: effectiveJobId,
@@ -2173,7 +2164,7 @@ internal final class AddShiftViewModel: ObservableObject {
       enabled: taxSnapshot?.effectiveTaxEnabled ?? false,
       percentage: taxSnapshot?.effectiveTaxPercentage ?? 0
     ).adjusted(
-      payoutMonth: PayrollEngine.payoutMonth(from: dateISO),
+      payoutMonth: PayPeriodCalendar.components(payoutDate)?.month ?? 1,
       halfTaxMonth: job.map(\.half_tax_month) ?? context.settings?.half_tax_month)
 
     return CalendarEarningsData(
@@ -2216,15 +2207,15 @@ internal final class AddShiftViewModel: ObservableObject {
     )
   }
 
-  private nonisolated static func payrollDay(
+  private nonisolated static func payoutSchedule(
     for jobId: String?,
     jobs: [Job],
     settings: UserSettings?
-  ) -> Int {
-    if let jobId, let jobPayrollDay = jobs.first(where: { $0.id == jobId })?.payroll_day {
-      return jobPayrollDay
-    }
-    return settings?.effectivePayrollDay ?? 1
+  ) -> PayoutSchedule {
+    PayoutSchedule(
+      job: jobId.flatMap { id in jobs.first { $0.id == id } },
+      fallbackPayrollDay: settings?.effectivePayrollDay ?? 1
+    )
   }
 
   /// Virtual shift with computed earnings
@@ -2267,12 +2258,8 @@ internal final class AddShiftViewModel: ObservableObject {
         let wageSnapshot = snapshotForDate(virtualShift.date, jobId: recurring.job_id)
         let computed = PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 
-        // Tax settings from payout date (shift month + 1)
-        let payrollDay = payrollDay(for: recurring.job_id)
-        let payoutDate = PayrollEngine.calculatePayoutDate(
-          shiftDate: virtualShift.date,
-          payrollDay: payrollDay
-        )
+        // Tax settings from the payout date of the job's pay period
+        let payoutDate = payoutSchedule(for: recurring.job_id).payoutDate(for: virtualShift.date)
         let taxSnapshot = snapshotForDate(payoutDate, jobId: recurring.job_id)
 
         let taxEnabled = taxSnapshot?.effectiveTaxEnabled ?? false
