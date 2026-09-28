@@ -1,45 +1,5 @@
 import SwiftUI
 
-enum FriendCardMessageState: Equatable {
-  case outgoingSending
-  case outgoingSent
-  case outgoingOpened
-  case outgoingFailed
-  case incomingUnread
-  case incomingOpened
-}
-
-struct FriendCardMessagePreview: Equatable {
-  let text: String
-  let timestamp: Date
-  let state: FriendCardMessageState
-
-  var metaColor: Color {
-    switch state {
-    case .incomingUnread: .tidexBlue
-    case .outgoingFailed: .tidexError
-    default: .tidexTextMuted
-    }
-  }
-
-  /// Relative time, prefixed with the delivery state for the user's own messages.
-  func metaText(at now: Date) -> String {
-    let timestamp = FriendCardMessagePreviewTimestampFormatter.relativeTimestamp(
-      messageDate: timestamp,
-      referenceDate: now
-    )
-    let label: LocalizedStringResource? =
-      switch state {
-      case .outgoingSending: .friendsChatStatusSending
-      case .outgoingSent: .friendsChatPreviewLabelSent
-      case .outgoingOpened: .friendsChatPreviewLabelOpened
-      case .outgoingFailed: .friendsChatStatusFailed
-      case .incomingUnread, .incomingOpened: nil
-      }
-    return label.map { "\(String(localized: $0)) \(timestamp)" } ?? timestamp
-  }
-}
-
 /// A friend who shares their shifts with the current user. The left side is the conversation:
 /// name on top and the last message as a chat bubble, gray from them and blue from the user.
 /// The right side is a shift tile that opens their calendar. A progress ring around the avatar
@@ -64,7 +24,6 @@ struct FriendCard: View {
   var unreadMessageCount = 0
   var surfaceStyle: SurfaceStyle = .standard
 
-  private let avatarSize = AvatarView.Size.large
   private let ringWidth: CGFloat = 3
   private let ringGap: CGFloat = 3
   private let cardCornerRadius = CornerRadius.xxxl
@@ -74,6 +33,39 @@ struct FriendCard: View {
   }
 
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+  @Environment(\.displayScale) private var displayScale
+
+  /// As tall as a two-line message bubble, so the avatar lines up with the bubble beside it.
+  /// Capped at the largest non-accessibility text size.
+  private var avatarSize: CGFloat {
+    (uiFont(.subheadline).lineHeight * 2 + Spacing.xxxs * 2).rounded()
+  }
+
+  /// Lifts the shift status onto the name's baseline. Both rows end at the same height, and
+  /// the name's font reaches further below its baseline.
+  private var statusBaselineOffset: CGFloat {
+    uiFont(.caption1).descender - uiFont(.headline).descender
+  }
+
+  /// Empty space as tall as a two-line message bubble. The avatar row and the shift times both
+  /// take this height, so the two columns line up exactly.
+  private var twoLineBubbleSpace: some View {
+    Text(verbatim: "A\nA")
+      .font(.tidexSubheadline)
+      .lineLimit(2)
+      .padding(.vertical, Spacing.xxxs)
+      .hidden()
+      .accessibilityHidden(true)
+  }
+
+  private func uiFont(_ style: UIFont.TextStyle) -> UIFont {
+    UIFont.preferredFont(
+      forTextStyle: style,
+      compatibleWith: UITraitCollection(
+        preferredContentSizeCategory: UIContentSizeCategory(min(dynamicTypeSize, .xxxLarge))
+      )
+    )
+  }
 
   private var showsMessage: Bool {
     isTyping || messagePreview != nil
@@ -85,18 +77,32 @@ struct FriendCard: View {
 
   var body: some View {
     // Stack the shift tile under the conversation when large text leaves no room beside it.
+    // Side by side, bottom alignment puts the shift status on the name's line and the times
+    // beside the avatar, since both halves end in a row of avatar height.
+    let isStacked = dynamicTypeSize.isAccessibilitySize
     let layout =
-      dynamicTypeSize.isAccessibilitySize
+      isStacked
       ? AnyLayout(VStackLayout(alignment: .leading, spacing: Spacing.sm))
-      : AnyLayout(HStackLayout(spacing: Spacing.sm))
+      : AnyLayout(HStackLayout(alignment: .bottom, spacing: Spacing.md))
 
     // Tick every second only while a shift needs a live countdown.
     TimelineView(.periodic(from: .now, by: shiftTiming == nil ? 60 : 1)) { context in
       layout {
         conversation(at: context.date)
 
-        if showsShiftTile {
+        // Without a tile the empty column still holds its width, so the message times line up
+        // with the other cards.
+        if showsShiftTile || !isStacked {
           shiftTile(at: context.date)
+            // The line sits on the tile's edge rather than mid-gap. The tile centers its text, so
+            // this leaves about as much room on the text's side as on the bubble's.
+            .overlay(alignment: .leading) {
+              if showsShiftTile && !isStacked {
+                Rectangle()
+                  .fill(Color.tidexSeparator)
+                  .frame(width: 1 / displayScale)
+              }
+            }
         }
       }
       .fixedSize(horizontal: false, vertical: true)
@@ -119,51 +125,54 @@ struct FriendCard: View {
         .strokeBorder(borderColor, style: borderStyle)
     )
     .clipShape(RoundedRectangle(cornerRadius: cardCornerRadius, style: .continuous))
-    .modifier(
-      FriendCardShadowModifier(
-        isEnabled: surfaceStyle == .standard,
-        cornerRadius: cardCornerRadius
-      )
-    )
   }
 
+  /// The name row on top, with the avatar and the message bubble under it.
   private func conversation(at now: Date) -> some View {
-    HStack(spacing: Spacing.xs) {
-      avatar(
-        progress: shiftTiming.flatMap { timing in
-          timing.status(at: now) == .active ? timing.progress(at: now) : nil
-        }
-      )
-      .contentShape(Circle())
-      .onTapGesture {
-        onProfileRequested?()
-      }
-      // The avatar is a shortcut for sighted users; VoiceOver reads the card as one chat button.
-      .accessibilityAddTraits(.isButton)
-      .accessibilityHidden(true)
+    VStack(alignment: .leading, spacing: Spacing.xs) {
+      nameRow(at: now)
 
-      FriendCardMessageColumn(spacing: Spacing.xxxs) {
-        nameRow(at: now)
+      ZStack(alignment: .leading) {
+        twoLineBubbleSpace
 
-        if showsMessage {
-          FriendCardMessageBubble(preview: messagePreview, isTyping: isTyping)
+        HStack(spacing: Spacing.sm) {
+          avatar(
+            progress: shiftTiming.flatMap { timing in
+              timing.status(at: now) == .active ? timing.progress(at: now) : nil
+            }
+          )
+          .contentShape(Circle())
+          .onTapGesture {
+            onProfileRequested?()
+          }
+          // The avatar is a shortcut for sighted users; VoiceOver reads the card as one chat button.
+          .accessibilityAddTraits(.isButton)
+          .accessibilityHidden(true)
+
+          if showsMessage {
+            FriendCardMessageBubble(preview: messagePreview, isTyping: isTyping)
+          }
         }
       }
-      .accessibilityElement(children: .combine)
-      .accessibilityAddTraits(.isButton)
-      .accessibilityHint(Text(.friendsChatMessageAction))
     }
     .frame(maxWidth: .infinity, alignment: .leading)
+    .accessibilityElement(children: .combine)
+    .accessibilityAddTraits(.isButton)
+    .accessibilityHint(Text(.friendsChatMessageAction))
   }
 
+  /// During a shift the photo shrinks inside the progress ring, so the avatar keeps its size.
   private func avatar(progress: Double?) -> some View {
-    AvatarView(
+    let inset = progress == nil ? 0 : ringWidth + ringGap
+    let photoSize = avatarSize - inset * 2
+
+    return AvatarView(
       url: sharer.avatarUrl,
       initials: sharer.initials,
-      size: avatarSize,
-      cornerRadius: avatarSize / 2
+      size: photoSize,
+      cornerRadius: photoSize / 2
     )
-    .padding(ringWidth + ringGap)
+    .padding(inset)
     .overlay {
       if let progress {
         Circle()
@@ -200,78 +209,20 @@ struct FriendCard: View {
       Spacer(minLength: Spacing.xxs)
 
       if !isTyping, let messagePreview {
-        Text(messagePreview.metaText(at: now))
-          .font(.tidexCaptionRegular)
-          .foregroundColor(messagePreview.metaColor)
-          .monospacedDigit()
-          .lineLimit(1)
-          .fixedSize()
-      }
-    }
-  }
+        HStack(spacing: Spacing.micro) {
+          Image(systemName: messagePreview.metaSymbol)
+            .imageScale(.small)
+            .accessibilityLabel(Text(messagePreview.metaLabel))
 
-  /// Shift status and time range. Tapping it opens the friend's calendar; without a shift it
-  /// is only the calendar entry.
-  @ViewBuilder
-  private func shiftTile(at now: Date) -> some View {
-    if isCalendarAvailable && !isRefreshing {
-      Button(action: onCalendarTap) {
-        shiftTileLabel(at: now)
-      }
-      .buttonStyle(.plain)
-    } else {
-      shiftTileLabel(at: now)
-    }
-  }
-
-  /// Status over stacked start and end times, like the calendar day cell. "+1" marks an end time
-  /// on the next day.
-  private func shiftTileLabel(at now: Date) -> some View {
-    let isStacked = dynamicTypeSize.isAccessibilitySize
-
-    return VStack(alignment: isStacked ? .leading : .center, spacing: Spacing.micro) {
-      if isRefreshing {
-        ForEach(0..<3, id: \.self) { _ in
-          RoundedRectangle(cornerRadius: CornerRadius.xxs)
-            .fill(Color.tidexTextMuted.opacity(0.25))
-            .frame(width: 44, height: 12)
+          Text(messagePreview.metaText(at: now))
+            .monospacedDigit()
         }
-        .shimmer(duration: 1.2)
-      } else if let timing = shiftTiming, let shift = preview?.shift {
-        let status = timing.status(at: now)
-        let crossesMidnight = !Calendar.current.isDate(timing.end, inSameDayAs: timing.start)
-
-        Text(timing.statusText(at: now))
-          .font(.tidexCaptionStrong)
-          .foregroundColor(statusColor(status))
-          .minimumScaleFactor(0.7)
-
-        let endTime = ShiftCardFormatter.localizedTime(shift.end_time, locale: Locale.appLocale)
-
-        Group {
-          Text(ShiftCardFormatter.localizedTime(shift.start_time, locale: Locale.appLocale))
-          Text(verbatim: endTime + (crossesMidnight ? "+1" : ""))
-            .accessibilityLabel(
-              crossesMidnight ? Text(.friendsCardEndsNextDay(endTime)) : Text(verbatim: endTime))
-        }
-        .font(.tidexSubheadline.weight(.semibold))
-        .foregroundColor(status == .past ? .tidexTextSecondary : .tidexTextPrimary)
-      } else {
-        Image(systemName: "calendar")
-          .font(.tidexHeadline)
-          .accessibilityHidden(true)
-
-        Text(.tabsShifts)
-          .font(.tidexCaptionStrong)
+        .font(.tidexCaptionRegular)
+        .foregroundColor(messagePreview.metaColor)
+        .lineLimit(1)
+        .fixedSize()
       }
     }
-    .foregroundColor(.tidexBlue)
-    .monospacedDigit()
-    .lineLimit(1)
-    // A fixed width keeps the shift column aligned across cards.
-    .frame(width: isStacked ? nil : 80)
-    .frame(maxHeight: .infinity)
-    .contentShape(Rectangle())
   }
 
   private func statusColor(_ status: ShiftPreviewStatus) -> Color {
@@ -313,16 +264,102 @@ struct FriendCard: View {
   }
 }
 
-private struct FriendCardShadowModifier: ViewModifier {
-  let isEnabled: Bool
-  let cornerRadius: CGFloat
+// MARK: - Shift tile
 
-  func body(content: Content) -> some View {
-    if isEnabled {
-      content.tidexCardShadow(cornerRadius: cornerRadius)
+extension FriendCard {
+  /// Shift status and time range. Tapping it opens the friend's calendar; without a shift it
+  /// is only the calendar entry.
+  @ViewBuilder
+  private func shiftTile(at now: Date) -> some View {
+    if isCalendarAvailable && !isRefreshing {
+      Button(action: onCalendarTap) {
+        shiftTileLabel(at: now)
+      }
+      .buttonStyle(.plain)
     } else {
-      content
+      shiftTileLabel(at: now)
     }
+  }
+
+  /// Status over stacked start and end times, like the calendar day cell. The times fill a row
+  /// as tall as the avatar, which lines them up with it. "+1" marks an end time on the next day.
+  private func shiftTileLabel(at now: Date) -> some View {
+    let isStacked = dynamicTypeSize.isAccessibilitySize
+    let alignment: HorizontalAlignment = isStacked ? .leading : .center
+
+    return VStack(alignment: alignment, spacing: Spacing.xs) {
+      shiftStatus(at: now)
+
+      ZStack {
+        if !isStacked {
+          twoLineBubbleSpace
+        }
+
+        VStack(alignment: alignment, spacing: Spacing.micro) {
+          shiftTimes(at: now)
+        }
+      }
+    }
+    .foregroundColor(.tidexBlue)
+    .monospacedDigit()
+    .lineLimit(1)
+    // A fixed width keeps the shift column aligned across cards. The full card height keeps the
+    // hairline the same length on every card. A shift keeps to the bottom so its rows line up
+    // with the conversation, and the calendar entry sits in the middle.
+    .frame(width: isStacked ? nil : 80)
+    .frame(
+      maxHeight: isStacked ? nil : .infinity,
+      alignment: shiftTiming == nil && !isRefreshing ? .center : .bottom
+    )
+    .contentShape(Rectangle())
+  }
+
+  @ViewBuilder
+  private func shiftStatus(at now: Date) -> some View {
+    if isRefreshing {
+      skeletonBars(count: 1)
+    } else if let timing = shiftTiming {
+      Text(timing.statusText(at: now, compact: true))
+        .font(.tidexCaptionStrong)
+        .foregroundColor(statusColor(timing.status(at: now)))
+        .minimumScaleFactor(0.7)
+        .padding(.bottom, dynamicTypeSize.isAccessibilitySize ? 0 : statusBaselineOffset)
+    }
+  }
+
+  @ViewBuilder
+  private func shiftTimes(at now: Date) -> some View {
+    if isRefreshing {
+      skeletonBars(count: 2)
+    } else if let timing = shiftTiming, let shift = preview?.shift {
+      let crossesMidnight = !Calendar.current.isDate(timing.end, inSameDayAs: timing.start)
+      let endTime = ShiftCardFormatter.localizedTime(shift.end_time, locale: Locale.appLocale)
+
+      Group {
+        Text(ShiftCardFormatter.localizedTime(shift.start_time, locale: Locale.appLocale))
+        Text(verbatim: endTime + (crossesMidnight ? "+1" : ""))
+          .accessibilityLabel(
+            crossesMidnight ? Text(.friendsCardEndsNextDay(endTime)) : Text(verbatim: endTime))
+      }
+      .font(.tidexSubheadline.weight(.semibold))
+      .foregroundColor(timing.status(at: now) == .past ? .tidexTextSecondary : .tidexTextPrimary)
+    } else if isCalendarAvailable {
+      Image(systemName: "calendar")
+        .font(.tidexHeadline)
+        .accessibilityHidden(true)
+
+      Text(.tabsShifts)
+        .font(.tidexCaptionStrong)
+    }
+  }
+
+  private func skeletonBars(count: Int) -> some View {
+    ForEach(0..<count, id: \.self) { _ in
+      RoundedRectangle(cornerRadius: CornerRadius.xxs)
+        .fill(Color.tidexTextMuted.opacity(0.25))
+        .frame(width: 44, height: 12)
+    }
+    .shimmer(duration: 1.2)
   }
 }
 

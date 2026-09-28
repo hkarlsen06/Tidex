@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import os.log
 import Supabase
 
@@ -13,7 +13,8 @@ enum OnboardingCompletionMode: Equatable {
 /// Handles async save with status tracking for onboarding data
 /// Creates baseline wage snapshot and updates settings
 @MainActor
-final class OnboardingSaveManager: ObservableObject {
+@Observable
+final class OnboardingSaveManager {
   private static let startupTabCacheKey = "defaultStartupTab"
 
   nonisolated static func defaultJobName(locale: Locale? = nil) -> String {
@@ -33,8 +34,8 @@ final class OnboardingSaveManager: ObservableObject {
 
   // MARK: - Published State
 
-  @Published private(set) var status: SaveStatus = .idle
-  @Published private(set) var errorMessage: String?
+  private(set) var status: SaveStatus = .idle
+  private(set) var errorMessage: String?
 
   // MARK: - Save Status
 

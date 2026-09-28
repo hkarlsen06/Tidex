@@ -1,10 +1,11 @@
-import Combine
 import Foundation
+import Observation
 
 /// View model for the login screen
 /// Handles all authentication methods: email/password, phone/OTP, Google, Apple
 @MainActor
-final class LoginViewModel: ObservableObject {
+@Observable
+final class LoginViewModel {
 
   // MARK: - Dependencies
 
@@ -15,19 +16,19 @@ final class LoginViewModel: ObservableObject {
 
   // MARK: - Published State
 
-  @Published var emailOrPhone: String = ""
-  @Published var password: String = ""
-  @Published var otpCode: String = ""
+  var emailOrPhone: String = ""
+  var password: String = ""
+  var otpCode: String = ""
 
-  @Published var currentStep: LoginStep = .input
-  @Published var isLoading = false
-  @Published var showEmailForm = false
+  var currentStep: LoginStep = .input
+  var isLoading = false
+  var showEmailForm = false
 
-  @Published var errorMessage: String?
-  @Published var successMessage: String?
-  @Published var accountCreationPromptMessage: String?
+  var errorMessage: String?
+  var successMessage: String?
+  var accountCreationPromptMessage: String?
 
-  @Published var fieldErrors = FieldErrors()
+  var fieldErrors = FieldErrors()
 
   // MARK: - Types
 
@@ -52,7 +53,7 @@ final class LoginViewModel: ObservableObject {
 
   // MARK: - Private State
 
-  private var authTask: Task<Void, Never>?
+  @ObservationIgnored private var authTask: Task<Void, Never>?
 
   // MARK: - Computed Properties
 

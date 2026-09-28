@@ -25,10 +25,17 @@ extension LocalizedStringResource {
   // MARK: - Shift Labels
   internal static var widgetNoShift: LocalizedStringResource { "No shift" }
   internal static var widgetNoShifts: LocalizedStringResource { "No shifts" }
-  internal static var widgetShift: LocalizedStringResource { "shift" }
   internal static var widgetShifts: LocalizedStringResource { "shifts" }
-  internal static var widgetShiftPlanned: LocalizedStringResource { "shift planned" }
-  internal static var widgetShiftsPlanned: LocalizedStringResource { "shifts planned" }
+
+  /// "1 shift" / "%lld shifts", pluralized per locale.
+  internal static func widgetShiftsCount(_ count: Int) -> LocalizedStringResource {
+    "\(count) shifts"
+  }
+
+  /// "1 shift planned" / "%lld shifts planned", pluralized per locale.
+  internal static func widgetShiftsPlannedCount(_ count: Int) -> LocalizedStringResource {
+    "\(count) shifts planned"
+  }
 
   // MARK: - Friend Labels
   internal static var widgetFriend: LocalizedStringResource { "Friend" }

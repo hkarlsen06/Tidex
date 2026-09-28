@@ -18,7 +18,7 @@ struct PostAuthOnboardingView: View {
 
   @State private var currentScreen: PostAuthScreen = .loading
   @State private var onboardingData = OnboardingData()
-  @StateObject private var saveManager = OnboardingSaveManager()
+  @State private var saveManager = OnboardingSaveManager()
   @State private var showingMFAEnrollment = false
   @State private var showAddJobSheet = false
   @State private var addJobSheetPresentationID = UUID()
@@ -578,7 +578,7 @@ struct PostAuthOnboardingView: View {
       onboardingJobNeedingSetup = incompleteSetupJob(from: onboardingActiveJobs)
       multiJobErrorMessage = nil
       didAddOnboardingJob = true
-      UINotificationFeedbackGenerator().notificationOccurred(.success)
+      Haptics.play(.success)
       return true
     } catch {
       multiJobErrorMessage = error.localizedDescription
@@ -852,7 +852,7 @@ private struct MFAEnrollmentSheet: View {
 
               Button(action: {
                 UIPasteboard.general.string = secret
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                Haptics.play(.success)
               }) {
                 Image(systemName: "doc.on.doc")
                   .font(.tidexSubheadline)
@@ -937,7 +937,7 @@ private struct MFAEnrollmentSheet: View {
     if let url = URL(string: uri) {
       UIApplication.shared.open(url, options: [:]) { success in
         if success {
-          UINotificationFeedbackGenerator().notificationOccurred(.success)
+          Haptics.play(.success)
         }
       }
     }

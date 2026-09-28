@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Screen for naming and coloring the first job created during onboarding.
 struct JobBasicsOnboardingScreen: View {
@@ -115,7 +114,7 @@ struct JobBasicsOnboardingScreen: View {
   private func backButton(_ onBack: @escaping () -> Void) -> some View {
     HStack {
       Button(action: {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Haptics.play(.light)
         onBack()
       }) {
         HStack(spacing: Spacing.xxs) {
@@ -172,7 +171,7 @@ struct JobBasicsOnboardingScreen: View {
   private func continueIfReady() {
     guard canContinue else { return }
     data.jobName = trimmedJobName
-    UINotificationFeedbackGenerator().notificationOccurred(.success)
+    Haptics.play(.success)
     onContinue()
   }
 }

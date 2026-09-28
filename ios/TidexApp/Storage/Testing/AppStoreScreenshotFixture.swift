@@ -103,7 +103,7 @@
           Text(errorMessage).accessibilityIdentifier("screenshot.error")
         } else if isReady {
           MainTabView()
-            .environmentObject(AppCoordinator.shared)
+            .environment(AppCoordinator.shared)
         } else {
           ProgressView()
         }

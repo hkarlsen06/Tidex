@@ -9,12 +9,12 @@ private let kSettingsServiceLogger: Logger = Logger(
 
 /// Service for fetching user settings from Supabase
 @MainActor
-internal final class SettingsService: ObservableObject {
+internal final class SettingsService {
   internal static let shared: SettingsService = SettingsService()
 
-  @Published internal private(set) var settings: UserSettings?
-  @Published internal private(set) var isLoading: Bool = false
-  @Published internal private(set) var error: Error?
+  internal private(set) var settings: UserSettings?
+  internal private(set) var isLoading: Bool = false
+  internal private(set) var error: Error?
 
   private init() {
     // Singleton.

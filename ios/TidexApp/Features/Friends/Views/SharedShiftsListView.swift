@@ -40,6 +40,7 @@ struct SharedShiftsListView: View {
 
   @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.userCurrency) private var currency
+  @Environment(\.isSceneCaptured) private var isSceneCaptured
 
   // View mode toggle (synced with Shifts tab)
   @AppStorage("shiftsViewMode") private var showListView = false
@@ -49,7 +50,7 @@ struct SharedShiftsListView: View {
   @State private var pendingSendToChatResult: SendShiftToChatResult?
 
   // Screenshot bubble state
-  @StateObject private var screenshotFeedback = ScreenshotNotificationFeedback()
+  @State private var screenshotFeedback = ScreenshotNotificationFeedback()
 
   private var jobsById: [String: SharedJob] {
     Dictionary(uniqueKeysWithValues: jobs.map { ($0.id, $0) })
@@ -66,7 +67,6 @@ struct SharedShiftsListView: View {
   private let swipeThreshold: CGFloat = 50
   private let verticalLimit: CGFloat = 50
   private let edgeExclusion: CGFloat = 24
-  private let monthSwipeHaptic = UIImpactFeedbackGenerator(style: .medium)
 
   var body: some View {
     GeometryReader { geometry in
@@ -132,9 +132,6 @@ struct SharedShiftsListView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .animation(.none, value: showListView)
-    .onAppear {
-      monthSwipeHaptic.prepare()
-    }
     // Using .sheet(item:) guarantees data availability when sheet presents
     .sheet(
       item: $selectedShift,
@@ -168,11 +165,10 @@ struct SharedShiftsListView: View {
         await reportScreenshot()
       }
     }
-    .background {
-      ScreenCaptureDetectionView {
-        Task {
-          await reportScreenshot()
-        }
+    .onChange(of: isSceneCaptured) { wasCaptured, isCaptured in
+      guard isCaptured, !wasCaptured else { return }
+      Task {
+        await reportScreenshot()
       }
     }
   }
@@ -201,8 +197,7 @@ struct SharedShiftsListView: View {
         guard let action else { return }
 
         AppearanceTracker.shared.reset()
-        monthSwipeHaptic.impactOccurred()
-        monthSwipeHaptic.prepare()
+        Haptics.play(.medium)
         action()
       }
   }

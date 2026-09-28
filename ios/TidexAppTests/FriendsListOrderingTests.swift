@@ -839,19 +839,4 @@ final class FriendSharingRemovalActionTests: XCTestCase {
       [.stopSeeingTheirShifts]
     )
   }
-
-  func testRelationshipStatusCopyMatchesDirection() {
-    XCTAssertEqual(
-      FriendSectionType.mutual.relationshipStatus,
-      String(localized: .sharingRelationshipMutual)
-    )
-    XCTAssertEqual(
-      FriendSectionType.outgoing.relationshipStatus,
-      String(localized: .sharingRelationshipOutgoingOnly)
-    )
-    XCTAssertEqual(
-      FriendSectionType.incoming.relationshipStatus,
-      String(localized: .sharingRelationshipIncomingOnly)
-    )
-  }
 }  // swiftlint:disable:this file_length

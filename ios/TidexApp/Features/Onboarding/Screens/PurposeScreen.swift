@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Entry screen for the initial post-auth onboarding flow.
 /// Uses product-style previews instead of abstract option cards to explain the two paths.
@@ -144,13 +143,13 @@ struct PurposeScreen: View {
           table: "Localizable"
         ),
         action: {
-          UINotificationFeedbackGenerator().notificationOccurred(.success)
+          Haptics.play(.success)
           onSelectPaySetup()
         }
       )
 
       Button(action: {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Haptics.play(.light)
         onSelectFriendsOnly()
       }) {
         Text(

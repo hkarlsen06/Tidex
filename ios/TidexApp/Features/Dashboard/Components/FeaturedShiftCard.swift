@@ -226,7 +226,6 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
           .strokeBorder(cardBorderColor, style: cardBorderStyle)
       }
       .clipShape(cardShape)
-      .modifier(CardShadowModifier(isEnabled: surfaceStyle == .standard))
       .onChange(of: displayedProgress) { _, newValue in
         // Animate to new progress value
         withAnimation(.linear(duration: 1.0)) {
@@ -342,18 +341,6 @@ struct FeaturedShiftCard: View {  // swiftlint:disable:this explicit_acl explici
 
     case .flat:
       StrokeStyle(lineWidth: 0)
-    }
-  }
-}
-
-private struct CardShadowModifier: ViewModifier {
-  let isEnabled: Bool
-
-  func body(content: Content) -> some View {
-    if isEnabled {
-      content.tidexCardShadow()
-    } else {
-      content
     }
   }
 }

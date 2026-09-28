@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Reusable accordion component for onboarding settings
 /// Expands to show content, collapses to show summary
@@ -53,7 +52,7 @@ struct AccordionSectionView<Content: View>: View {
 
           if let onContinue {
             Button(action: {
-              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+              Haptics.play(.medium)
               onContinue()
             }) {
               Text(.commonContinue)

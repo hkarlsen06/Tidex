@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Screen for optional MFA enrollment during onboarding
 /// Shows benefits and offers setup or skip
@@ -19,7 +18,7 @@ struct MFASetupScreen: View {
         if let onBack {
           HStack {
             Button(action: {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
+              Haptics.play(.light)
               onBack()
             }) {
               HStack(spacing: Spacing.xxs) {
@@ -82,13 +81,13 @@ struct MFASetupScreen: View {
           OnboardingButton(
             title: String(localized: .onboardingMfaSetup),
             action: {
-              UINotificationFeedbackGenerator().notificationOccurred(.success)
+              Haptics.play(.success)
               onSetupMFA()
             }
           )
 
           Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            Haptics.play(.light)
             onSkip()
           }) {
             Text(.onboardingMfaSkip)

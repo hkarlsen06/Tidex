@@ -1,5 +1,4 @@
 import Auth
-import Combine
 import Foundation
 import os.log
 import Supabase
@@ -80,7 +79,7 @@ enum FriendsMessagingServiceError: Error, LocalizedError {
 
 @MainActor
 // swiftlint:disable:next type_body_length
-final class FriendsMessagingService: ObservableObject {
+final class FriendsMessagingService {
   static let shared = FriendsMessagingService()
 
   private let storageBucket = "message-attachments"

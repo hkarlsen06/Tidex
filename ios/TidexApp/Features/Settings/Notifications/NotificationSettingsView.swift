@@ -4,11 +4,11 @@ import UserNotifications
 /// Notification settings view
 /// Allows users to configure shift reminders and shared shift notifications
 struct NotificationSettingsView: View {
-  @StateObject private var viewModel = NotificationSettingsViewModel()
+  @State private var viewModel = NotificationSettingsViewModel()
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: Spacing.lg) {
+    Form {
+      Group {
         // System permission section
         systemPermissionSection
 
@@ -21,10 +21,12 @@ struct NotificationSettingsView: View {
         // Shared shifts section
         sharedShiftsSection
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.lg)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .background(Color.tidexBackground)
+    .sensoryFeedback(.impact(weight: .light), trigger: viewModel.showTimePickerSheet) { _, new in
+      new
+    }
+    .tidexListBackground()
     .navigationTitle(String(localized: .notificationsTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
@@ -69,30 +71,29 @@ struct NotificationSettingsView: View {
   // MARK: - System Permission Section
 
   private var systemPermissionSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .notificationsPermissionSectionTitle),
-      footer: { notificationPermissionFooter }
-    ) {
-      HStack(spacing: Spacing.sm) {
-        // Icon
-        TidexSettingsIcon(systemName: permissionIcon, foregroundColor: permissionIconColor)
-
-        // Content
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(.notificationsPermissionTitle)
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(permissionStatusText)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        // Action button
+    Section {
+      LabeledContent {
         permissionButton
+      } label: {
+        Label {
+          VStack(alignment: .leading, spacing: Spacing.micro) {
+            Text(.notificationsPermissionTitle)
+              .font(.tidexBodyMedium)
+              .foregroundColor(.tidexTextPrimary)
+
+            Text(permissionStatusText)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+          }
+        } icon: {
+          Image(systemName: permissionIcon)
+            .foregroundColor(permissionIconColor)
+        }
       }
+    } header: {
+      Text(String(localized: .notificationsPermissionSectionTitle))
+    } footer: {
+      notificationPermissionFooter
     }
   }
 
@@ -204,15 +205,10 @@ struct NotificationSettingsView: View {
   // MARK: - Shift Reminders Section
 
   private var shiftRemindersSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .notificationsRemindersSectionTitle),
-      footer: { Text(.notificationsRemindersSectionSubtitle) }
-    ) {
+    Section {
       // Enable toggle
       Toggle(isOn: $viewModel.shiftRemindersEnabled) {
-        HStack(spacing: Spacing.sm) {
-          TidexSettingsIcon(systemName: "bell.fill", foregroundColor: .tidexBlue)
-
+        Label {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsRemindersTitle)
               .font(.tidexBodyMedium)
@@ -222,17 +218,17 @@ struct NotificationSettingsView: View {
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
           }
+        } icon: {
+          Image(systemName: "bell.fill")
+            .foregroundColor(.tidexBlue)
         }
       }
       .tint(.tidexBlue)
 
       // Reminder times (shown when enabled)
       if viewModel.shiftRemindersEnabled, !viewModel.reminderTimes.isEmpty {
-        settingsDivider
-
         ForEach(Array(viewModel.reminderTimes.enumerated()), id: \.offset) { index, minutes in
           reminderTimeRow(minutes: minutes, index: index)
-          settingsDivider
         }
 
         // Add button (if under max)
@@ -240,6 +236,10 @@ struct NotificationSettingsView: View {
           addReminderButton
         }
       }
+    } header: {
+      Text(String(localized: .notificationsRemindersSectionTitle))
+    } footer: {
+      Text(.notificationsRemindersSectionSubtitle)
     }
     .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
     .disabled(viewModel.notificationStatus == .denied)
@@ -248,28 +248,23 @@ struct NotificationSettingsView: View {
   @ViewBuilder
   private func reminderTimeRow(minutes: Int, index: Int) -> some View {
     Button {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
       viewModel.prepareForEditingTime(at: index)
     } label: {
-      HStack(spacing: Spacing.sm) {
-        // Bell icon
-        Image(systemName: "bell.fill")
-          .font(.tidexBody)
-          .foregroundColor(.tidexBlue)
-          .frame(width: TidexSettingsIcon.defaultSize)
-
-        // Time label
-        Text(viewModel.formatReminderTime(minutes, locale: Locale.current))
-          .font(.tidexSubheadline)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
+      LabeledContent {
         Image(systemName: "pencil")
           .font(.tidexSubheadline)
           .foregroundColor(.tidexTextMuted)
+      } label: {
+        Label {
+          Text(viewModel.formatReminderTime(minutes, locale: Locale.current))
+            .font(.tidexSubheadline)
+            .foregroundColor(.tidexTextPrimary)
+        } icon: {
+          Image(systemName: "bell.fill")
+            .font(.tidexBody)
+            .foregroundColor(.tidexBlue)
+        }
       }
-      .padding(.vertical, Spacing.xs)
     }
     .buttonStyle(.plain)
   }
@@ -277,19 +272,17 @@ struct NotificationSettingsView: View {
   @ViewBuilder
   private var addReminderButton: some View {
     Button {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
       viewModel.prepareForAddingTime()
     } label: {
-      HStack(spacing: Spacing.xs) {
-        Image(systemName: "plus.circle.fill")
-          .font(.tidexBody)
-          .foregroundColor(.tidexBlue)
-
+      Label {
         Text(.notificationsRemindersAddTime)
           .font(.tidexLabel)
           .foregroundColor(.tidexBlue)
+      } icon: {
+        Image(systemName: "plus.circle.fill")
+          .font(.tidexBody)
+          .foregroundColor(.tidexBlue)
       }
-      .padding(.vertical, Spacing.xs)
     }
     .buttonStyle(.plain)
   }
@@ -297,14 +290,9 @@ struct NotificationSettingsView: View {
   // MARK: - Shared Shifts Section
 
   private var smartNotificationsSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .notificationsSmartSectionTitle),
-      footer: { smartStatusFooter }
-    ) {
+    Section {
       Toggle(isOn: $viewModel.smartNotificationsEnabled) {
-        HStack(spacing: Spacing.sm) {
-          TidexSettingsIcon(systemName: "brain.head.profile", foregroundColor: .tidexBlue)
-
+        Label {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsSmartTitle)
               .font(.tidexBodyMedium)
@@ -314,9 +302,16 @@ struct NotificationSettingsView: View {
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
           }
+        } icon: {
+          Image(systemName: "brain.head.profile")
+            .foregroundColor(.tidexBlue)
         }
       }
       .tint(.tidexBlue)
+    } header: {
+      Text(String(localized: .notificationsSmartSectionTitle))
+    } footer: {
+      smartStatusFooter
     }
     .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
     .disabled(viewModel.notificationStatus == .denied)
@@ -352,14 +347,9 @@ struct NotificationSettingsView: View {
   }
 
   private var sharedShiftsSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .notificationsSharedSectionTitle),
-      footer: { Text(.notificationsSharedSectionSubtitle) }
-    ) {
+    Section {
       Toggle(isOn: $viewModel.sharedShiftsEnabled) {
-        HStack(spacing: Spacing.sm) {
-          TidexSettingsIcon(systemName: "person.2.fill", foregroundColor: .tidexBlue)
-
+        Label {
           VStack(alignment: .leading, spacing: Spacing.micro) {
             Text(.notificationsSharedTitle)
               .font(.tidexBodyMedium)
@@ -369,16 +359,19 @@ struct NotificationSettingsView: View {
               .font(.tidexFootnote)
               .foregroundColor(.tidexTextSecondary)
           }
+        } icon: {
+          Image(systemName: "person.2.fill")
+            .foregroundColor(.tidexBlue)
         }
       }
       .tint(.tidexBlue)
+    } header: {
+      Text(String(localized: .notificationsSharedSectionTitle))
+    } footer: {
+      Text(.notificationsSharedSectionSubtitle)
     }
     .opacity(viewModel.notificationStatus == .denied ? 0.5 : 1.0)
     .disabled(viewModel.notificationStatus == .denied)
-  }
-
-  private var settingsDivider: some View {
-    TidexSettingsDivider()
   }
 }
 

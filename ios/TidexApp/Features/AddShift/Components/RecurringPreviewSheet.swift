@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Sheet showing preview of all projected recurring shifts before confirmation
 struct RecurringPreviewSheet: View {
-  @ObservedObject var viewModel: AddShiftViewModel
+  var viewModel: AddShiftViewModel
   @Environment(\.dismiss) private var dismiss
 
   /// Whether the pattern is indefinite (endless)
@@ -94,9 +94,6 @@ private struct SummaryHeader: View {
     if isIndefinite {
       return String(localized: .previewOngoingShifts)
     }
-    if totalCount == 1 {
-      return String(localized: .previewShiftSingular)
-    }
     return String(localized: .previewShiftsCount(totalCount))
   }
 
@@ -179,10 +176,7 @@ private struct ConflictWarning: View {
   let count: Int
 
   private var warningText: String {
-    if count == 1 {
-      return String(localized: .previewConflictWarningSingular)
-    }
-    return String(localized: .previewConflictWarningPlural(count))
+    String(localized: .previewConflictWarningPlural(count))
   }
 
   var body: some View {
@@ -213,12 +207,9 @@ private struct ProjectedShiftRow: View {
 
   private var formattedDate: String {
     guard let date = Date.fromISODateString(dateISO) else { return dateISO }
-    let formatter = DateFormatter()
-    formatter.dateFormat = "EEEE, d. MMMM yyyy"  // Full weekday name, e.g. "Mandag, 3. februar 2025"
-    formatter.locale = Locale.appLocale
-    let formatted = formatter.string(from: date)
-    // Capitalize first letter
-    return formatted.prefix(1).uppercased() + formatted.dropFirst()
+    return date.formatted(
+      .dateTime.weekday(.wide).day().month(.wide).year().locale(.appLocale)
+    ).sentenceCased()
   }
 
   private var timeRangeText: String {

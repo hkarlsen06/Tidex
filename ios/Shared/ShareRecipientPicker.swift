@@ -85,7 +85,7 @@ import SwiftUI
       .padding(.vertical, 12)
       .background(
         RoundedRectangle(cornerRadius: 18, style: .continuous)
-          .fill(Color(.secondarySystemGroupedBackground))
+          .fill(SharedPalette.surfacePrimary)
       )
       .overlay(
         RoundedRectangle(cornerRadius: 18, style: .continuous)

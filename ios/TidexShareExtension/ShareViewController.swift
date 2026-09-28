@@ -6,7 +6,7 @@
 // swiftlint:disable explicit_type_interface file_types_order no_magic_numbers required_deinit
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable strict_fileprivate type_contents_order
-import Combine
+import Observation
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -17,7 +17,7 @@ final class ShareViewController: UIViewController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    view.backgroundColor = .systemBackground
+    view.backgroundColor = UIColor(SharedPalette.background)
 
     viewModel.configure(extensionContext: extensionContext)
 
@@ -43,14 +43,15 @@ final class ShareViewController: UIViewController {
 }
 
 @MainActor
-private final class ShareExtensionViewModel: ObservableObject {
-  @Published var recipients: [ShareRecipient] = []
-  @Published var recipientSelection = ShareRecipientSelectionState()
-  @Published var messageText = ""
-  @Published var previewImage: UIImage?
-  @Published var isLoading = true
-  @Published var isSending = false
-  @Published var errorMessage: String?
+@Observable
+private final class ShareExtensionViewModel {
+  var recipients: [ShareRecipient] = []
+  var recipientSelection = ShareRecipientSelectionState()
+  var messageText = ""
+  var previewImage: UIImage?
+  var isLoading = true
+  var isSending = false
+  var errorMessage: String?
 
   private weak var extensionContext: NSExtensionContext?
   private var sharedImageData: Data?
@@ -155,12 +156,12 @@ private final class ShareExtensionViewModel: ObservableObject {
 }
 
 private struct ShareRootView: View {
-  @ObservedObject var viewModel: ShareExtensionViewModel
+  @Bindable var viewModel: ShareExtensionViewModel
   @FocusState private var isMessageFieldFocused: Bool
 
   var body: some View {
     ZStack {
-      Color(.systemGroupedBackground)
+      SharedPalette.background
         .ignoresSafeArea()
 
       VStack(spacing: 18) {
@@ -244,11 +245,11 @@ private struct ShareRootView: View {
           .resizable()
           .scaledToFit()
           .frame(width: 96, height: 128, alignment: .center)
-          .background(Color(.secondarySystemBackground))
+          .background(SharedPalette.surfaceSecondary)
           .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
       } else {
         RoundedRectangle(cornerRadius: 16, style: .continuous)
-          .fill(Color(.secondarySystemBackground))
+          .fill(SharedPalette.surfaceSecondary)
           .frame(width: 96, height: 128)
       }
     }
@@ -269,7 +270,7 @@ private struct ShareRootView: View {
     .padding(.vertical, 12)
     .background(
       RoundedRectangle(cornerRadius: 16, style: .continuous)
-        .fill(Color(.secondarySystemGroupedBackground))
+        .fill(SharedPalette.surfacePrimary)
     )
     .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     .onTapGesture {

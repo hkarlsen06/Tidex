@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Break Deduction Section
 
@@ -22,9 +21,6 @@ struct BreakDeductionSection: View {
           .foregroundColor(.tidexTextPrimary)
       }
       .tint(.tidexBrandPrimary)
-      .onChange(of: enabled) { _, _ in
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-      }
 
       Text(.settingsPayEditorBreakDescription)
         .font(.tidexFootnote)
@@ -64,7 +60,6 @@ struct BreakDeductionSection: View {
   private var advancedMethodDisclosure: some View {
     VStack(alignment: .leading, spacing: 0) {
       Button {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.18)) {
           isAdvancedExpanded.toggle()
         }
@@ -95,6 +90,7 @@ struct BreakDeductionSection: View {
       }
       .buttonStyle(.plain)
       .accessibilityIdentifier("pay-settings.break-method")
+      .sensoryFeedback(.impact(weight: .light), trigger: isAdvancedExpanded)
 
       if isAdvancedExpanded {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -128,7 +124,6 @@ struct BreakDeductionSection: View {
             method: breakMethod,
             isSelected: method == breakMethod,
             action: {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
               withAnimation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.8)) {
                 method = breakMethod
               }
@@ -137,6 +132,7 @@ struct BreakDeductionSection: View {
         }
       }
     }
+    .sensoryFeedback(.selection, trigger: method)
   }
 
   // MARK: - Threshold Input

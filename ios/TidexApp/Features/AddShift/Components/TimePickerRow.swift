@@ -1,3 +1,4 @@
+import Observation
 import SwiftUI
 import UIKit
 
@@ -6,11 +7,12 @@ enum TimeInputField: Hashable {
   case end
 }
 
-final class TimeInputFocusController: ObservableObject {
-  weak var startField: UITextField?
-  weak var endField: UITextField?
-  var onFocusChange: ((TimeInputField?) -> Void)?
-  @Published private(set) var currentFocus: TimeInputField? {
+@Observable
+final class TimeInputFocusController {
+  @ObservationIgnored weak var startField: UITextField?
+  @ObservationIgnored weak var endField: UITextField?
+  @ObservationIgnored var onFocusChange: ((TimeInputField?) -> Void)?
+  private(set) var currentFocus: TimeInputField? {
     didSet {
       if oldValue != currentFocus {
         onFocusChange?(currentFocus)
@@ -328,7 +330,7 @@ private struct TimeTextField: UIViewRepresentable {
 struct NumericTimeInput: View {
   @Binding var time: Date?
   let label: String
-  @ObservedObject var focusController: TimeInputFocusController
+  var focusController: TimeInputFocusController
   let field: TimeInputField
   let nextField: TimeInputField?
   let previousField: TimeInputField?
@@ -560,9 +562,7 @@ struct NumericTimeInput: View {
   }
 
   private func formatDateToHHMM(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    date.toHourMinuteString()
   }
 }
 
@@ -584,7 +584,7 @@ struct TimeRangePicker: View {
   var showsRecentTimeChips = true
   /// Shows the recent time chips above the inputs instead of below them.
   var chipsAboveInputs = false
-  @StateObject private var focusController = TimeInputFocusController()
+  @State private var focusController = TimeInputFocusController()
   @ScaledMetric(relativeTo: .body) private var compactInputWidth: CGFloat = 156
   @ScaledMetric(relativeTo: .body) private var compactInputHeight: CGFloat = 58
 
@@ -705,9 +705,7 @@ struct TimeRangePicker: View {
 
   /// Format a Date to HH:mm string for comparison
   private func formatDateToHHmm(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    date.toHourMinuteString()
   }
 
   /// Parse HH:mm string to Date

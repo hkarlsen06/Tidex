@@ -100,7 +100,6 @@ enum WageTimelineProcessor {
       let changes = detectChanges(
         current: snapshot,
         previous: nextSnapshot,
-        locale: locale,
         currency: currency
       )
 
@@ -184,7 +183,6 @@ enum WageTimelineProcessor {
   private static func detectChanges(  // swiftlint:disable:this cyclomatic_complexity function_body_length
     current: WageSnapshot,
     previous: WageSnapshot?,
-    locale: Locale,
     currency: String
   ) -> [WageChange] {
     guard let previous else { return [] }  // swiftlint:disable:this conditional_returns_on_newline
@@ -193,16 +191,8 @@ enum WageTimelineProcessor {
 
     // Wage change
     if current.hourly_wage != previous.hourly_wage {
-      let formatter = NumberFormatter()
-      formatter.numberStyle = .decimal
-      formatter.minimumFractionDigits = 2
-      formatter.maximumFractionDigits = 2
-      formatter.locale = Locale(identifier: locale.identifier)
-
-      let oldWage =
-        formatter.string(from: NSNumber(value: previous.hourly_wage)) ?? "\(previous.hourly_wage)"
-      let newWage =
-        formatter.string(from: NSNumber(value: current.hourly_wage)) ?? "\(current.hourly_wage)"
+      let oldWage = CurrencyConfig.formatPlain(previous.hourly_wage, includeDecimals: true)
+      let newWage = CurrencyConfig.formatPlain(current.hourly_wage, includeDecimals: true)
 
       changes.append(
         WageChange(
@@ -332,19 +322,5 @@ enum WageTimelineProcessor {
     case .suffix:
       return "\(amount) \(currency)\(perHour)"
     }
-  }
-}
-
-// MARK: - ISO8601 Date Helper
-
-extension ISO8601DateFormatter {
-  /// Format date as YYYY-MM-DD (date only, no time)
-  static func dateOnlyString(from date: Date) -> String {
-    date.toISODateString()
-  }
-
-  /// Parse YYYY-MM-DD string to Date
-  static func dateFromDateOnlyString(_ string: String) -> Date? {
-    Date.fromISODateString(string)
   }
 }

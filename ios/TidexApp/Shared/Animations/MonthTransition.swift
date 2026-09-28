@@ -15,19 +15,10 @@ import SwiftUI
 
 // MARK: - Animation State Environment
 
-/// Environment key for tracking whether a month transition animation is in progress
-/// Child views can read this to buffer data changes during animation
-private struct MonthAnimatingKey: EnvironmentKey {
-  static let defaultValue: Bool = false
-}
-
 extension EnvironmentValues {
   /// Whether a month transition animation is currently in progress
   /// Use this to defer data updates until animation completes
-  var isMonthAnimating: Bool {
-    get { self[MonthAnimatingKey.self] }
-    set { self[MonthAnimatingKey.self] = newValue }
-  }
+  @Entry var isMonthAnimating: Bool = false
 }
 
 // MARK: - Layout Constants
@@ -182,76 +173,6 @@ struct CardTransitionModifier: ViewModifier {
   private var visibleOffsetX: CGFloat {
     guard !reduceMotion else { return 0 }
     return isAppearing ? 0 : slideOffset
-  }
-}
-
-// MARK: - Text Transition Modifier
-
-/// A view modifier that applies slide transition to text (month/year labels)
-/// Text slides horizontally in the direction of navigation.
-struct TextTransitionModifier: ViewModifier {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.layoutDirection) private var layoutDirection
-  let phase: MonthTransitionPhase
-  let config: MonthTransitionConfig
-
-  func body(content: Content) -> some View {
-    content
-      .id(phase.id)
-      .transition(textTransition)
-      .animation(
-        reduceMotion
-          ? nil : .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
-        value: phase.id
-      )
-  }
-
-  private var textTransition: AnyTransition {
-    if reduceMotion { return .identity }
-    let direction = phase.direction
-    let base = direction == .next ? config.textOffset : -config.textOffset
-    let offset = layoutDirection == .rightToLeft ? -base : base
-
-    return .asymmetric(
-      insertion: .offset(x: offset),
-      removal: .offset(x: -offset)
-    )
-  }
-}
-
-// MARK: - Staggered Cards Container
-
-/// A container wrapper for calendar content that applies slide animations
-/// when navigating between months.
-struct StaggeredCardsContainer<Content: View>: View {
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @Environment(\.layoutDirection) private var layoutDirection
-  let phase: MonthTransitionPhase
-  let config: MonthTransitionConfig
-  @ViewBuilder let content: () -> Content
-
-  var body: some View {
-    content()
-      .id(phase.id)
-      .transition(slideTransition)
-      .animation(
-        reduceMotion
-          ? nil : .spring(response: config.springResponse, dampingFraction: config.dampingFraction),
-        value: phase.id
-      )
-  }
-
-  /// Asymmetric transition: new content slides in from direction of navigation,
-  /// old content slides out in the opposite direction
-  private var slideTransition: AnyTransition {
-    guard !reduceMotion else { return .identity }
-    let base = phase.direction == .next ? config.slideOffset : -config.slideOffset
-    let offset = layoutDirection == .rightToLeft ? -base : base
-
-    return .asymmetric(
-      insertion: .offset(x: offset),
-      removal: .offset(x: -offset)
-    )
   }
 }
 
@@ -467,11 +388,6 @@ struct AnimatedMonthHeader: View {
   @ScaledMetric(relativeTo: .body) private var navTextSafeInset: CGFloat = 24
   @ScaledMetric(relativeTo: .body) private var navIconSize: CGFloat = 16
 
-  // Haptic feedback for swipe, tap, and long press
-  private let swipeHaptic = UIImpactFeedbackGenerator(style: .medium)
-  private let tapHaptic = UIImpactFeedbackGenerator(style: .light)
-  private let longPressHaptic = UIImpactFeedbackGenerator(style: .heavy)
-
   /// Current real month/year for long press "jump to current month"
   private var currentMonth: (year: Int, month: Int) {
     Date.currentYearMonth()
@@ -512,6 +428,7 @@ struct AnimatedMonthHeader: View {
         onNavigateToMonth?(selectedYear, selectedMonth)
       }
     }
+    .sensoryFeedback(.impact(weight: .medium), trigger: phase.id)
   }
 
   // MARK: - Compact Layout (for Add tab)
@@ -541,12 +458,12 @@ struct AnimatedMonthHeader: View {
       .highPriorityGesture(
         LongPressGesture(minimumDuration: 0.35)
           .onEnded { _ in
-            longPressHaptic.impactOccurred()
+            Haptics.play(.heavy)
             jumpToCurrentMonth()
           }
       )
       .onTapGesture {
-        tapHaptic.impactOccurred()
+        Haptics.play(.light)
         showMonthPicker()
       }
       .accessibilityAddTraits(.isButton)
@@ -557,11 +474,6 @@ struct AnimatedMonthHeader: View {
     }
     .contentShape(Rectangle())
     .gesture(swipeGesture)
-    .onAppear {
-      swipeHaptic.prepare()
-      tapHaptic.prepare()
-      longPressHaptic.prepare()
-    }
   }
 
   // MARK: - Default Layout (for Dashboard/Shifts)
@@ -588,12 +500,12 @@ struct AnimatedMonthHeader: View {
       .highPriorityGesture(
         LongPressGesture(minimumDuration: 0.35)
           .onEnded { _ in
-            longPressHaptic.impactOccurred()
+            Haptics.play(.heavy)
             jumpToCurrentMonth()
           }
       )
       .onTapGesture {
-        tapHaptic.impactOccurred()
+        Haptics.play(.light)
         showMonthPicker()
       }
       .accessibilityAddTraits(.isButton)
@@ -610,11 +522,6 @@ struct AnimatedMonthHeader: View {
     .padding(.vertical, Spacing.sm)
     .contentShape(Rectangle())
     .gesture(swipeGesture)
-    .onAppear {
-      swipeHaptic.prepare()
-      tapHaptic.prepare()
-      longPressHaptic.prepare()
-    }
   }
 
   // MARK: - Shared Helpers
@@ -699,8 +606,6 @@ struct AnimatedMonthHeader: View {
 
         guard abs(horizontal) > vertical else { return }
 
-        swipeHaptic.impactOccurred()
-
         if horizontal > 0 {
           onPrevious()
         } else {
@@ -716,7 +621,6 @@ struct AnimatedMonthHeader: View {
     icon: String, label: LocalizedStringResource, action: @escaping () -> Void
   ) -> some View {
     Button {
-      swipeHaptic.impactOccurred()
       action()
     } label: {
       Image(systemName: icon)
@@ -740,7 +644,6 @@ struct AnimatedMonthHeader: View {
     icon: String, label: LocalizedStringResource, action: @escaping () -> Void
   ) -> some View {
     Button {
-      swipeHaptic.impactOccurred()
       action()
     } label: {
       Image(systemName: icon)
@@ -765,9 +668,11 @@ struct AnimatedMonthHeader: View {
     let base: CGFloat = direction == .next ? config.textOffset : -config.textOffset
     let offset: CGFloat = layoutDirection == .rightToLeft ? -base : base
 
+    // SwiftUI removes the old label with the transition it had when it was inserted, so a
+    // directional removal would slide the wrong way right after a change of direction.
     return .asymmetric(
       insertion: .offset(x: offset).combined(with: .opacity),
-      removal: .offset(x: -offset).combined(with: .opacity)
+      removal: .opacity
     )
   }
 }
@@ -786,14 +691,6 @@ extension View {
     config: MonthTransitionConfig = .default
   ) -> some View {
     modifier(CardTransitionModifier(phase: phase, index: index, config: config))
-  }
-
-  /// Applies a text transition animation for month changes
-  func textTransition(
-    phase: MonthTransitionPhase,
-    config: MonthTransitionConfig = .default
-  ) -> some View {
-    modifier(TextTransitionModifier(phase: phase, config: config))
   }
 }
 

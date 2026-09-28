@@ -59,8 +59,6 @@
 	<string>Tidex does not use your location. The chat library includes location sharing, which is disabled in Tidex.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Tidex needs access to save shared calendar and shift images to your photo library.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Tidex needs photo library access to show recent images you can attach in chat.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSUserActivityTypes</key>

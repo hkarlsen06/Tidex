@@ -1,6 +1,6 @@
-import Combine
 import Foundation
 import ImageIO
+import Observation
 import Supabase
 import UniformTypeIdentifiers
 
@@ -11,7 +11,8 @@ private struct ProfileUsernameRow: Decodable {
 /// View model for profile settings
 /// Handles profile data loading, name editing, avatar management, and account deletion
 @MainActor
-final class ProfileSettingsViewModel: ObservableObject {
+@Observable
+final class ProfileSettingsViewModel {
 
   // MARK: - Dependencies
 
@@ -21,44 +22,44 @@ final class ProfileSettingsViewModel: ObservableObject {
   // MARK: - Published State
 
   /// User's display name (editable)
-  @Published var displayName: String = ""
+  var displayName: String = ""
   /// User's email address (read-only display)
-  @Published var email: String = ""
+  var email: String = ""
   /// User's username (editable, used for friend lookup)
-  @Published var username: String = ""
+  var username: String = ""
   /// User's profile picture URL
-  @Published var profilePictureUrl: String?
+  var profilePictureUrl: String?
   /// User ID
-  @Published private(set) var userId: String?
+  private(set) var userId: String?
 
   /// Whether user has password authentication (can change email)
-  @Published private(set) var hasPassword = false
+  private(set) var hasPassword = false
   /// Whether user is OAuth-only (cannot change email)
-  @Published private(set) var isOAuthOnly = false
+  private(set) var isOAuthOnly = false
 
   /// Loading states
-  @Published private(set) var isLoading = false
-  @Published private(set) var isSavingName = false
-  @Published private(set) var isSavingUsername = false
-  @Published private(set) var isUploadingAvatar = false
-  @Published private(set) var isDeletingAccount = false
-  @Published private(set) var isChangingEmail = false
+  private(set) var isLoading = false
+  private(set) var isSavingName = false
+  private(set) var isSavingUsername = false
+  private(set) var isUploadingAvatar = false
+  private(set) var isDeletingAccount = false
+  private(set) var isChangingEmail = false
 
   /// Error message to display
-  @Published var errorMessage: String?
+  var errorMessage: String?
   /// Username-specific validation or save error shown near the username field
-  @Published var usernameErrorMessage: String?
+  var usernameErrorMessage: String?
   /// Whether profile data was loaded from partial offline fallback state
-  @Published private(set) var isOfflineProfileFallback = false
+  private(set) var isOfflineProfileFallback = false
 
   /// Email change state
-  @Published var showEmailChangeSheet = false
-  @Published var newEmail: String = ""
-  @Published var emailChangeSent = false
+  var showEmailChangeSheet = false
+  var newEmail: String = ""
+  var emailChangeSent = false
 
   /// Delete account confirmation state
-  @Published var showDeleteConfirmation = false
-  @Published var deleteConfirmText = ""
+  var showDeleteConfirmation = false
+  var deleteConfirmText = ""
 
   // MARK: - Private State
 

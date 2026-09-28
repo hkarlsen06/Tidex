@@ -5,7 +5,7 @@
 #   - one wrapper-driven xcodebuild at a time across every repo on this
 #     machine (shared lock in /tmp), so parallel agents queue instead of
 #     competing for cores
-#   - lower CPU priority (nice) and a capped build job count, so the
+#   - lower CPU priority (nice) and half the CPUs for compile jobs, so the
 #     desktop and Xcode stay responsive
 #   - tests run without parallel simulator clones, and UI test targets are
 #     skipped unless a run asks for them
@@ -16,7 +16,7 @@
 #   XCODE_AGENT_LOCK_DIR               lock path (default /tmp/xcode-agent.lock)
 #   XCODE_AGENT_NO_LOCK=1              skip the machine-wide lock
 #   XCODE_AGENT_NICE=N                 nice level, 0 disables (default 10)
-#   XCODE_AGENT_JOBS=N                 xcodebuild -jobs (default: logical CPUs - 2)
+#   XCODE_AGENT_JOBS=N                 xcodebuild -jobs (default: half the logical CPUs)
 #   XCODE_TEST_AGENT_PARALLEL=1        allow Xcode parallel testing (clones simulators)
 #   XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1  run *UITests targets in an unfiltered run
 
@@ -29,10 +29,12 @@ XA_PREFIX=()
 xa_default_jobs() {
   local n
   n="$(sysctl -n hw.logicalcpu 2>/dev/null || echo 8)"
-  if [ "$n" -gt 4 ]; then
-    echo $((n - 2))
+  # Half the logical CPUs (at least 2): builds take longer, but the rest
+  # of the Mac stays usable while agents keep the build queue busy.
+  if [ "$n" -ge 4 ]; then
+    echo $((n / 2))
   else
-    echo "$n"
+    echo 2
   fi
 }
 XA_JOBS="${XCODE_AGENT_JOBS:-$(xa_default_jobs)}"

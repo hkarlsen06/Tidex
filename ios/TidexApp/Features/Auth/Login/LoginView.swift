@@ -3,7 +3,7 @@ import SwiftUI
 /// Main login screen view with native iOS styling
 /// Supports email/password, phone/OTP, Google, and Apple sign-in
 struct LoginView: View {
-  @ObservedObject var viewModel: LoginViewModel
+  @Bindable var viewModel: LoginViewModel
   let currency: String
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize

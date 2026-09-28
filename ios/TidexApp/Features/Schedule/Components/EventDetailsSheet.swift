@@ -778,9 +778,8 @@ enum EventSheetFormatter {
 
   static func longDate(_ isoDate: String) -> String {
     guard let date = Date.fromISODateString(isoDate) else { return isoDate }
-    let formatter = DateFormatter()
-    formatter.locale = Locale.appLocale
-    formatter.dateFormat = "EEEE, d. MMMM yyyy"
-    return formatter.string(from: date).sentenceCased()
+    return date.formatted(
+      .dateTime.weekday(.wide).day().month(.wide).year().locale(.appLocale)
+    ).sentenceCased()
   }
 }

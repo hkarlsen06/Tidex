@@ -3,20 +3,31 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface file_types_order
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable function_body_length multiline_arguments_brackets no_magic_numbers sorted_enum_cases
-// swiftlint:disable:next blanket_disable_command
-// swiftlint:disable vertical_whitespace_between_cases
+// swiftlint:disable no_magic_numbers
 import SwiftUI
 
-/// Consistent glass styling that respects Reduce Transparency.
+/// Consistent glass styling built on Liquid Glass.
 enum TidexGlassShape {
   case rect(cornerRadius: CGFloat)
   case capsule
   case circle
+
+  fileprivate var resolved: AnyShape {
+    switch self {
+    case .rect(let cornerRadius):
+      return AnyShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+
+    case .capsule:
+      return AnyShape(Capsule())
+
+    case .circle:
+      return AnyShape(Circle())
+    }
+  }
 }
 
 extension View {
-  /// Applies glass effect when available, or a solid fallback when Reduce Transparency is enabled.
+  /// Applies a Liquid Glass effect, or a solid fallback when `disabled` is set.
   func tidexGlass(
     shape: TidexGlassShape,
     tint: Color? = nil,
@@ -38,7 +49,6 @@ extension View {
 }
 
 private struct TidexGlassModifier: ViewModifier {
-  @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
   @Environment(\.colorScheme) private var colorScheme
 
   let shape: TidexGlassShape
@@ -60,70 +70,18 @@ private struct TidexGlassModifier: ViewModifier {
   }
 
   func body(content: Content) -> some View {
-    let fallbackBase = Color.tidexGlassSurface.opacity(fallbackOpacity)
-    let fallbackTint = tint?.opacity(colorScheme == .dark ? 0.24 : 0.16) ?? .clear
-
-    if reduceTransparency || disabled {
-      switch shape {
-      case .rect(let cornerRadius):
-        content
-          .background(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-              .fill(fallbackBase)
-              .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                  .fill(fallbackTint)
-              )
-          )
-          .overlay(
-            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-          )
-
-      case .capsule:
-        content
-          .background(
-            Capsule()
-              .fill(fallbackBase)
-              .overlay(
-                Capsule()
-                  .fill(fallbackTint)
-              )
-          )
-          .overlay(
-            Capsule()
-              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-          )
-
-      case .circle:
-        content
-          .background(
-            Circle()
-              .fill(fallbackBase)
-              .overlay(
-                Circle()
-                  .fill(fallbackTint)
-              )
-          )
-          .overlay(
-            Circle()
-              .stroke(Color.tidexBorderSubtle, lineWidth: 1)
-          )
-      }
+    if disabled {
+      let fallbackBase = Color.tidexGlassSurface.opacity(fallbackOpacity)
+      let fallbackTint = tint?.opacity(colorScheme == .dark ? 0.24 : 0.16) ?? .clear
+      content
+        .background(
+          shape.resolved
+            .fill(fallbackBase)
+            .overlay(shape.resolved.fill(fallbackTint))
+        )
+        .overlay(shape.resolved.stroke(Color.tidexBorderSubtle, lineWidth: 1))
     } else {
-      switch shape {
-      case .rect(let cornerRadius):
-        content
-          .glassEffect(glassEffect, in: .rect(cornerRadius: cornerRadius))
-
-      case .capsule:
-        content
-          .glassEffect(glassEffect, in: .capsule)
-
-      case .circle:
-        content
-          .glassEffect(glassEffect, in: .circle)
-      }
+      content.glassEffect(glassEffect, in: shape.resolved)
     }
   }
 }

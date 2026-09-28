@@ -66,34 +66,6 @@ enum MotionTokens {
     reduceMotion ? nil : animation(token, reduceMotion: false)
   }
 
-  static func navigationPush(reduceMotion: Bool) -> Animation {
-    animation(.navigationPush, reduceMotion: reduceMotion)
-  }
-
-  static func navigationPop(reduceMotion: Bool) -> Animation {
-    animation(.navigationPop, reduceMotion: reduceMotion)
-  }
-
-  static func pageTransition(reduceMotion: Bool) -> Animation {
-    animation(.pageTransition, reduceMotion: reduceMotion)
-  }
-
-  static func emphasis(reduceMotion: Bool) -> Animation {
-    animation(.emphasis, reduceMotion: reduceMotion)
-  }
-
-  static func affordance(reduceMotion: Bool) -> Animation {
-    animation(.affordance, reduceMotion: reduceMotion)
-  }
-
-  static func feedback(reduceMotion: Bool) -> Animation {
-    animation(.feedback, reduceMotion: reduceMotion)
-  }
-
-  static func subtle(reduceMotion: Bool) -> Animation {
-    animation(.subtle, reduceMotion: reduceMotion)
-  }
-
   static func instant(reduceMotion: Bool) -> Animation {
     animation(.instant, reduceMotion: reduceMotion)
   }

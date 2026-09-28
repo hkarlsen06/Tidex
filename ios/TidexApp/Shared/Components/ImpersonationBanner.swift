@@ -73,31 +73,12 @@ struct ImpersonationBanner: View {
 
 // MARK: - Expiration Text
 
-private struct ExpirationText: View {
-  let expiresAt: Date
-
-  @State private var timeRemaining: String = ""
-
-  var body: some View {
-    Text(timeRemaining)
-      .font(.tidexCaptionRegular)
-      .foregroundStyle(isExpiringSoon ? Color.tidexError : Color.tidexTextSecondary)
-      .onAppear { updateTimeRemaining() }
-      .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
-        updateTimeRemaining()
-      }
-  }
-
-  private var isExpiringSoon: Bool {
-    expiresAt.timeIntervalSinceNow < 300  // Less than 5 minutes
-  }
-
-  private func updateTimeRemaining() {
-    let remaining = expiresAt.timeIntervalSinceNow
-
+/// Pure formatter for the impersonation session countdown text, kept separate from the
+/// view so its text logic can be unit tested without going through `TimelineView`.
+enum ImpersonationExpirationFormatter {
+  static func text(remaining: TimeInterval) -> String {
     if remaining <= 0 {
-      timeRemaining = String(localized: .impersonationBannerSessionExpiredState)
-      return
+      return String(localized: .impersonationBannerSessionExpiredState)
     }
 
     let hours = Int(remaining) / 3_600
@@ -105,13 +86,26 @@ private struct ExpirationText: View {
     let seconds = Int(remaining) % 60
 
     if hours > 0 {
-      timeRemaining =
+      return
         "\(String(localized: .impersonationBannerExpiresInPrefix)) \(hours)\(String(localized: .commonHoursShort)) \(minutes)\(String(localized: .commonMinutesShort))"
     } else if minutes > 0 {
-      timeRemaining = String(
+      return String(
         localized: .impersonationBannerExpiresInMinutesSeconds(Int32(minutes), Int32(seconds)))
     } else {
-      timeRemaining = String(localized: .impersonationBannerExpiresInSeconds(Int32(seconds)))
+      return String(localized: .impersonationBannerExpiresInSeconds(Int32(seconds)))
+    }
+  }
+}
+
+private struct ExpirationText: View {
+  let expiresAt: Date
+
+  var body: some View {
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      let remaining = expiresAt.timeIntervalSince(context.date)
+      Text(ImpersonationExpirationFormatter.text(remaining: remaining))
+        .font(.tidexCaptionRegular)
+        .foregroundStyle(remaining < 300 ? Color.tidexError : Color.tidexTextSecondary)
     }
   }
 }

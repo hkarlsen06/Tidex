@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "PaySettingsViewModel")
@@ -9,43 +9,44 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "PaySettingsVi
 /// ViewModel for the Pay Settings screen
 /// Manages wage snapshots (timeline) and global pay settings
 @MainActor
-final class PaySettingsViewModel: ObservableObject {
+@Observable
+final class PaySettingsViewModel {
 
   // MARK: - Published State
 
   /// Raw snapshots from repository (ordered by from_date DESC)
-  @Published private(set) var snapshots: [WageSnapshot] = []
+  private(set) var snapshots: [WageSnapshot] = []
 
   /// Processed timeline entries for display
-  @Published private(set) var timelineEntries: [WageTimelineEntry] = []
+  private(set) var timelineEntries: [WageTimelineEntry] = []
 
-  @Published var reviewDate: Date
+  var reviewDate: Date
 
   /// Global user settings
-  @Published private(set) var globalSettings: UserSettings?
+  private(set) var globalSettings: UserSettings?
 
   /// Loading state
-  @Published var isLoading = true
+  var isLoading = true
 
   /// Error message to display
-  @Published var errorMessage: String?
+  var errorMessage: String?
   /// Optional specific title for the current error alert.
-  @Published var errorTitle: String?
+  var errorTitle: String?
 
   /// Whether a job-level action is currently being applied.
-  @Published private(set) var isProcessingJobAction = false
+  private(set) var isProcessingJobAction = false
 
   /// Active jobs for job-scoped timeline filtering.
-  @Published private(set) var activeJobs: [Job] = []
+  private(set) var activeJobs: [Job] = []
   /// Whether the user has archived workplaces.
-  @Published private(set) var hasArchivedJobs = false
+  private(set) var hasArchivedJobs = false
 
   /// Selected job for this screen's wage timeline.
-  @Published private(set) var selectedJobId: String?
+  private(set) var selectedJobId: String?
   /// Whether the selected active job has the required baseline wage snapshot.
-  @Published private(set) var isSelectedJobConfigured = false
+  private(set) var isSelectedJobConfigured = false
   /// True when a previously selected entry job is no longer active and user must choose again.
-  @Published private(set) var requiresJobReselection = false
+  private(set) var requiresJobReselection = false
 
   // MARK: - Currency
 
@@ -67,25 +68,25 @@ final class PaySettingsViewModel: ObservableObject {
   // MARK: - Editor State
 
   /// Whether the editor sheet is showing
-  @Published var showingEditor = false
+  var showingEditor = false
 
   /// Current editor mode
-  @Published var editorMode: EditorMode = .create
+  var editorMode: EditorMode = .create
 
   /// Selected snapshot for editing (nil for create mode)
-  @Published var selectedSnapshot: WageSnapshot?
-  @Published var editorSection: WageSnapshotEditorSection?
+  var selectedSnapshot: WageSnapshot?
+  var editorSection: WageSnapshotEditorSection?
 
   // MARK: - Delete Confirmation State
 
   /// Whether delete confirmation dialog is showing
-  @Published var showingDeleteConfirmation = false
+  var showingDeleteConfirmation = false
 
   /// Snapshot pending deletion
-  @Published private(set) var snapshotToDelete: WageSnapshot?
+  private(set) var snapshotToDelete: WageSnapshot?
 
   /// Number of shifts affected by deletion
-  @Published private(set) var affectedShiftCount = 0
+  private(set) var affectedShiftCount = 0
 
   // MARK: - Editor Mode
 
@@ -106,7 +107,7 @@ final class PaySettingsViewModel: ObservableObject {
 
   // MARK: - Debounce
 
-  private var payrollDaySaveTask: Task<Void, Never>?
+  @ObservationIgnored private var payrollDaySaveTask: Task<Void, Never>?
 
   // MARK: - Init
 
@@ -537,7 +538,7 @@ final class PaySettingsViewModel: ObservableObject {
 
     // Validate date uniqueness
     if let fromDate = input.fromDate {
-      let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
+      let isoDate = fromDate.toISODateString()
       if hasSnapshotOnDate(isoDate, excludingId: nil) {
         errorMessage = String(localized: .settingsPayErrorDateConflict)
         return false
@@ -588,7 +589,7 @@ final class PaySettingsViewModel: ObservableObject {
 
     // Validate date uniqueness (excluding current snapshot)
     if let fromDate = input.fromDate {
-      let isoDate = ISO8601DateFormatter.dateOnlyString(from: fromDate)
+      let isoDate = fromDate.toISODateString()
       if hasSnapshotOnDate(isoDate, excludingId: id) {
         errorMessage = String(localized: .settingsPayErrorDateConflict)
         return false
@@ -885,7 +886,7 @@ struct WageSnapshotEditorInput {
   /// Create input from an existing snapshot
   init(from snapshot: WageSnapshot) {
     if let fromDateString = snapshot.from_date {
-      self.fromDate = ISO8601DateFormatter.dateFromDateOnlyString(fromDateString)
+      self.fromDate = Date.fromISODateString(fromDateString)
     } else {
       self.fromDate = nil
     }

@@ -120,8 +120,7 @@ struct EventRowCard: View {
     .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
     .tidexRowSurface(
       cornerRadius: CornerRadius.card,
-      fillColor: isElevated ? .tidexSurfacePrimary : .clear,
-      shadowLevel: isElevated ? .card : nil
+      fillColor: isElevated ? .tidexSurfacePrimary : .clear
     )
     .overlay(
       RoundedRectangle(cornerRadius: CornerRadius.card)

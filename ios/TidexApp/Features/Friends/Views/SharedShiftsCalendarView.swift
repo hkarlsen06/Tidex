@@ -4,7 +4,7 @@ import UIKit
 /// Read-only calendar view for shared shifts
 /// Matches the visual style of ShiftsCalendarView but without selection/editing features
 internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type_body_length
-  @ObservedObject private var appearanceManager = AppearanceManager.shared
+  private let appearanceManager = AppearanceManager.shared
 
   let shifts: [ShiftWithComputations]
   let jobs: [SharedJob]
@@ -166,15 +166,6 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
     )
   }
 
-  /// Month name
-  private var monthName: String {
-    CalendarGridHelper.monthName(
-      year: year,
-      month: month,
-      locale: Locale.appLocale
-    )
-  }
-
   // MARK: - Body
 
   var body: some View {
@@ -228,12 +219,8 @@ internal struct SharedShiftsCalendarView: View {  // swiftlint:disable:this type
 
   private func headerRow(metrics: CalendarMetrics) -> some View {
     CalendarHeaderRow(
-      monthName: monthName,
-      year: year,
-      selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
-      phase: phase,
       totals: headerTotals(metrics: metrics),
-      trailingAccessory: nil
+      selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil
     )
     .userCurrency(currency)
   }

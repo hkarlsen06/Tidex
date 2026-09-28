@@ -104,5 +104,5 @@ struct UserMenuButton: View {
       )
     }
   }
-  .environmentObject(AppCoordinator.shared)
+  .environment(AppCoordinator.shared)
 }

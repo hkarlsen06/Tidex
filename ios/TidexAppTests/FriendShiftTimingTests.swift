@@ -39,6 +39,21 @@ final class FriendShiftTimingTests: XCTestCase {
     )
   }
 
+  func testCompactStatusTextKeepsOnlyTheLargestUnit() throws {
+    let timing = try XCTUnwrap(FriendShiftTiming(shift: makeShift(start: "16:00", end: "21:00")))
+    let hours = String(localized: .commonHoursShort)
+    let minutes = String(localized: .commonMinShort)
+
+    XCTAssertEqual(
+      timing.statusText(at: timing.start.addingTimeInterval(-(12 * 3_600 + 42 * 60 + 5)), compact: true),
+      String(localized: .commonInTime("12\(hours)"))
+    )
+    XCTAssertEqual(
+      timing.statusText(at: timing.start.addingTimeInterval(-(42 * 60 + 5)), compact: true),
+      String(localized: .commonInTime("42\(minutes)"))
+    )
+  }
+
   func testMalformedTimesProduceNoTiming() {
     XCTAssertNil(FriendShiftTiming(shift: makeShift(start: "8", end: "16:00")))
     XCTAssertNil(FriendShiftTiming(shift: makeShift(date: "not-a-date")))

@@ -1,4 +1,5 @@
 import Combine
+import Observation
 
 internal enum AddShiftSubmitBlocker: Hashable {
   case eventCrossesMidnight
@@ -18,28 +19,29 @@ internal enum AddShiftSubmitBlocker: Hashable {
 /// - Trigger the add action from the save button
 /// - Track current mode for proper action routing
 @MainActor
-internal final class AddShiftCoordinator: ObservableObject {
+@Observable
+internal final class AddShiftCoordinator {
   internal static let shared: AddShiftCoordinator = .init()
 
   /// Whether a shift can currently be submitted (dates/days selected + valid times)
-  @Published internal private(set) var canSubmit: Bool = false
+  internal private(set) var canSubmit: Bool = false
 
   /// Current add mode - determines which action to trigger
-  @Published internal private(set) var currentMode: AddShiftMode = .single
+  internal private(set) var currentMode: AddShiftMode = .single
 
   /// Whether the view is currently loading (submitting)
-  @Published internal private(set) var isLoading: Bool = false
+  internal private(set) var isLoading: Bool = false
 
   /// Whether the current add-shift context requires explicit job selection before submit.
-  @Published internal private(set) var requiresJobSelection: Bool = false
+  internal private(set) var requiresJobSelection: Bool = false
 
   /// Currently selected job for add-shift context.
-  @Published internal private(set) var selectedJobId: String?
+  internal private(set) var selectedJobId: String?
 
   /// Reasons the Add action is currently blocked.
-  @Published internal private(set) var submitBlockers: [AddShiftSubmitBlocker] = []
+  internal private(set) var submitBlockers: [AddShiftSubmitBlocker] = []
 
-  private let triggerAddSubject: PassthroughSubject<Void, Never> = .init()
+  @ObservationIgnored private let triggerAddSubject: PassthroughSubject<Void, Never> = .init()
 
   /// Publisher for triggering the add action from the save button
   internal var triggerAddAction: AnyPublisher<Void, Never> {

@@ -4,12 +4,12 @@ import Supabase
 /// Service for fetching and resolving wage snapshots from Supabase
 /// Resolves snapshots in one pass without sorting or allocating a dated copy.
 @MainActor
-final class SnapshotsService: ObservableObject {
+final class SnapshotsService {
   static let shared = SnapshotsService()
 
-  @Published private(set) var snapshots: [WageSnapshot] = []
-  @Published private(set) var isLoading = false
-  @Published private(set) var error: Error?
+  private(set) var snapshots: [WageSnapshot] = []
+  private(set) var isLoading = false
+  private(set) var error: Error?
 
   private init() {}
 

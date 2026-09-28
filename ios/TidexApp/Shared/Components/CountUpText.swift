@@ -1,166 +1,12 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable line_length superfluous_disable_command
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
+// swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable file_types_order identifier_name no_magic_numbers number_separator
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable type_contents_order unused_closure_parameter unused_parameter
+// swiftlint:disable type_contents_order
 import SwiftUI
-
-/// Animated text where each digit rolls/scrolls into place.
-/// Matches the AnimateNumber React component behavior exactly.
-///
-/// Usage:
-/// ```swift
-/// CurrencyCountUpText(amount: 24650)
-///     .font(.system(size: 48, weight: .bold))
-/// ```
-struct CountUpText: View {
-  let targetValue: Double
-  let duration: Double
-  let format: (Double) -> String
-  let animateOnAppear: Bool
-  let animateChanges: Bool
-
-  init(
-    targetValue: Double,
-    duration: Double = 1.0,
-    animateOnAppear: Bool = true,
-    animateChanges: Bool = true,
-    format: @escaping (Double) -> String = { String(format: "%.0f", $0) }
-  ) {
-    self.targetValue = targetValue
-    self.duration = duration
-    self.animateOnAppear = animateOnAppear
-    self.animateChanges = animateChanges
-    self.format = format
-  }
-
-  private var formattedText: String {
-    format(targetValue)
-  }
-
-  var body: some View {
-    HStack(spacing: 0) {
-      ForEach(Array(formattedText.enumerated()), id: \.offset) { _, character in
-        if character.isNumber, let digit = Int(String(character)) {
-          RollingDigit(
-            digit: digit,
-            duration: duration,
-            animateOnAppear: animateOnAppear,
-            animateChanges: animateChanges
-          )
-        } else {
-          // Non-digit characters (currency symbols, separators, spaces)
-          Text(String(character))
-            .monospacedDigit()  // Ensures consistent spacing
-        }
-      }
-    }
-    // Keep character order stable in RTL so number + currency stays in string order.
-    .environment(\.layoutDirection, .leftToRight)
-    .monospacedDigit()  // Apply tabular figures for consistent digit widths
-    .accessibilityLabel(formattedText)
-  }
-}
-
-/// Single digit that rolls to the target digit using TimelineView for smooth animation
-private struct RollingDigit: View {
-  let digit: Int
-  let duration: Double
-  let animateOnAppear: Bool
-  let animateChanges: Bool
-
-  /// Animation start time
-  @State private var animationStart: Date?
-  /// Starting digit for current animation
-  @State private var fromDigit: CGFloat = 0
-  /// Target digit for current animation
-  @State private var toDigit: CGFloat = 0
-  /// Whether we've completed initial setup
-  @State private var didSetup = false
-
-  /// All digits 0-9 for the rolling column
-  private let digits = Array(0...9)
-
-  var body: some View {
-    // Hidden "0" to establish the frame size (with monospaced digits for consistent width)
-    Text("0")
-      .monospacedDigit()
-      .hidden()
-      .overlay {
-        TimelineView(.animation(paused: animationStart == nil)) { timeline in
-          GeometryReader { geometry in
-            let progress = calculateProgress(at: timeline.date)
-            let currentDigit = fromDigit + (toDigit - fromDigit) * progress
-
-            VStack(spacing: 0) {
-              ForEach(digits, id: \.self) { d in
-                Text("\(d)")
-                  .monospacedDigit()
-                  .frame(height: geometry.size.height)
-              }
-            }
-            .offset(y: -currentDigit * geometry.size.height)
-          }
-        }
-        .clipped()
-      }
-      .onAppear {
-        guard !didSetup else { return }
-        didSetup = true
-
-        if animateOnAppear {
-          fromDigit = 0
-          toDigit = CGFloat(digit)
-          // Small delay to let app settle
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            animationStart = Date()
-          }
-        } else {
-          fromDigit = CGFloat(digit)
-          toDigit = CGFloat(digit)
-        }
-      }
-      .onChange(of: digit) { _, newValue in
-        if animateChanges {
-          fromDigit = toDigit
-          toDigit = CGFloat(newValue)
-          animationStart = Date()
-        } else {
-          fromDigit = CGFloat(newValue)
-          toDigit = CGFloat(newValue)
-          animationStart = nil
-        }
-      }
-  }
-
-  /// Calculate eased progress with critically damped spring (normalized to reach 1.0)
-  private func calculateProgress(at date: Date) -> CGFloat {
-    guard let start = animationStart else { return 1 }
-
-    let elapsed = date.timeIntervalSince(start)
-    let rawProgress = min(elapsed / duration, 1.0)
-
-    // Critically damped spring, normalized to reach exactly 1.0 at end
-    let omega: CGFloat = 6.0
-    let t = rawProgress * omega
-    let springRaw = 1 - (1 + t) * exp(-t)
-    // Normalize: at t=omega, spring reaches ~0.9826 for omega=6
-    let finalValue: CGFloat = 1 - (1 + omega) * exp(-omega)
-    let eased = springRaw / finalValue
-
-    // Stop the timeline when complete
-    if rawProgress >= 1.0 {
-      DispatchQueue.main.async {
-        animationStart = nil
-      }
-    }
-
-    return eased
-  }
-}
 
 /// Currency-formatted rolling text using the user's selected currency
 /// Uses SwiftUI's built-in content transition for smooth digit animations
@@ -255,20 +101,6 @@ struct CurrencyCountUpText: View {
     CurrencyCountUpText(amount: 31_200)
       .font(.system(size: 48, weight: .bold))
       .foregroundColor(.tidexSuccess)
-  }
-  .padding()
-  .background(Color.tidexBackground)
-}
-
-#Preview("Custom Format") {
-  VStack(spacing: Spacing.lg) {
-    CountUpText(targetValue: 142.5, format: { String(format: "%.1f timer", $0) })
-      .font(.system(size: 32, weight: .semibold))
-      .foregroundColor(.tidexTextPrimary)
-
-    CountUpText(targetValue: 28, format: { String(format: "%.0f vakter", $0) })
-      .font(.system(size: 32, weight: .semibold))
-      .foregroundColor(.tidexTextPrimary)
   }
   .padding()
   .background(Color.tidexBackground)

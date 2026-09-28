@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Month picker bound to `SharedMonthContext`, so every screen that shows it stays on the same month.
 internal struct SharedMonthPicker: View {
-  @ObservedObject private var monthContext: SharedMonthContext = .shared
+  private let monthContext: SharedMonthContext = .shared
 
   internal var body: some View {
     AnimatedMonthHeader(

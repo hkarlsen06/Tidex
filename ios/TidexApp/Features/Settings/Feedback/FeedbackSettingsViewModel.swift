@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import os.log
 import Supabase
 
@@ -53,32 +54,33 @@ internal struct FeedbackInsert: Encodable {
 
 /// ViewModel for feedback settings
 @MainActor
-internal final class FeedbackSettingsViewModel: ObservableObject {
+@Observable
+internal final class FeedbackSettingsViewModel {
 
   // MARK: - Published State
 
   /// The feedback message being composed
-  @Published internal var message: String = ""
+  internal var message: String = ""
 
   /// Loading state for initial data fetch
-  @Published internal var isLoading: Bool = false
+  internal var isLoading: Bool = false
 
   /// Loading state for submitting feedback
-  @Published internal var isSubmitting: Bool = false
+  internal var isSubmitting: Bool = false
 
   /// Error message to display
-  @Published internal var errorMessage: String?
+  internal var errorMessage: String?
 
   /// Whether feedback was successfully submitted
-  @Published internal var showSuccess: Bool = false
+  internal var showSuccess: Bool = false
   /// Whether feedback actions are unavailable because the session was resolved offline
-  @Published internal private(set) var isOfflineUnavailable: Bool = false
+  internal private(set) var isOfflineUnavailable: Bool = false
 
   /// History of user's feedback
-  @Published internal var feedbackHistory: [FeedbackItem] = []
+  internal var feedbackHistory: [FeedbackItem] = []
 
   /// Currently expanded feedback item ID
-  @Published internal var expandedItemId: String?
+  internal var expandedItemId: String?
 
   // MARK: - Computed Properties
 
@@ -274,48 +276,18 @@ internal final class FeedbackSettingsViewModel: ObservableObject {
 extension FeedbackItem {
   /// Format the created_at date for display
   internal func formattedDate(locale: Locale) -> String {
-    let formatter: ISO8601DateFormatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-    guard let date = formatter.date(from: createdAt) else {
-      // Try without fractional seconds
-      formatter.formatOptions = [.withInternetDateTime]
-      guard let date = formatter.date(from: createdAt) else {
-        return createdAt
-      }
-
-      return formatDate(date, locale: locale)
-    }
-
+    guard let date = ISO8601Timestamp.date(from: createdAt) else { return createdAt }
     return formatDate(date, locale: locale)
   }
 
   /// Format the responded_at date for display
   internal func formattedResponseDate(locale: Locale) -> String? {
-    guard let respondedAt else {
-      return nil
-    }
-
-    let formatter: ISO8601DateFormatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-    guard let date = formatter.date(from: respondedAt) else {
-      formatter.formatOptions = [.withInternetDateTime]
-      guard let date = formatter.date(from: respondedAt) else {
-        return respondedAt
-      }
-
-      return formatDate(date, locale: locale)
-    }
-
+    guard let respondedAt else { return nil }
+    guard let date = ISO8601Timestamp.date(from: respondedAt) else { return respondedAt }
     return formatDate(date, locale: locale)
   }
 
   private func formatDate(_ date: Date, locale: Locale) -> String {
-    let displayFormatter: DateFormatter = DateFormatter()
-    displayFormatter.dateStyle = .medium
-    displayFormatter.timeStyle = .none
-    displayFormatter.locale = locale
-    return displayFormatter.string(from: date)
+    date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale))
   }
 }

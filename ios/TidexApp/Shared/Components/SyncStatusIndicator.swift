@@ -9,7 +9,7 @@ import SwiftUI
 /// Compact indicator for sync status
 /// Shows only when sync is in progress, failed, or offline
 struct SyncStatusIndicator: View {
-  @ObservedObject var syncStatusManager = SyncStatusManager.shared
+  let syncStatusManager = SyncStatusManager.shared
 
   var onRetry: () -> Void
 

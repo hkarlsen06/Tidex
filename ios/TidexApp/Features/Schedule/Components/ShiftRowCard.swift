@@ -85,7 +85,7 @@ struct ShiftRowCard: View {
 
   var body: some View {
     // Use a simple view with tap gesture instead of Button
-    // Button adds its own gesture recognizer that conflicts with SwipeableShiftCard
+    // Button adds its own gesture recognizer that conflicts with the List row's .swipeActions
     cardContent
       .contentShape(RoundedRectangle(cornerRadius: CornerRadius.card))
       .onTapGesture {
@@ -177,7 +177,6 @@ struct ShiftRowCard: View {
           lineWidth: rowBorderWidth
         )
     )
-    .tidexCardShadow()
   }
 
   // MARK: - Formatting

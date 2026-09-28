@@ -26,18 +26,54 @@ internal final class CalendarSemanticsTests: XCTestCase {
     XCTAssertFalse(viewModel.isSelectionModeEnabled)
   }
 
-  internal func testLongPressEntersSelectionModeWithThatDaySelected() {
+  internal func testDragSelectionEntersSelectionModeWithThoseDaysSelected() {
     let viewModel = ShiftsViewModel()
 
-    viewModel.beginSelection(dateISO: dateISO)
+    viewModel.applyDragSelection([dateISO])
 
     XCTAssertTrue(viewModel.isSelectionModeEnabled)
     XCTAssertEqual(viewModel.selectedDates, [dateISO])
   }
 
+  internal func testEmptyDragSelectionDoesNotEnterSelectionMode() {
+    let viewModel = ShiftsViewModel()
+
+    viewModel.applyDragSelection([])
+
+    XCTAssertFalse(viewModel.isSelectionModeEnabled)
+  }
+
+  // MARK: - Long press + drag selection
+
+  internal func testDragSelectsEligibleRangeAndRestoresDaysOnDragBack() {
+    let days = CalendarGridHelper.daysInMonth(year: 2_026, month: 9)
+    let baseline: Set<String> = ["2026-09-01"]
+    var drag = CalendarDragSelection(anchor: "2026-09-03", baseline: baseline)
+
+    drag.hover = "2026-09-06"
+    XCTAssertEqual(
+      drag.selection(in: days) { $0 != "2026-09-05" },
+      ["2026-09-01", "2026-09-03", "2026-09-04", "2026-09-06"])
+
+    drag.hover = "2026-09-02"
+    XCTAssertEqual(
+      drag.selection(in: days) { _ in true }, ["2026-09-01", "2026-09-02", "2026-09-03"])
+  }
+
+  internal func testDragFromSelectedDayDeselects() {
+    let days = CalendarGridHelper.daysInMonth(year: 2_026, month: 9)
+    var drag = CalendarDragSelection(
+      anchor: "2026-09-03", baseline: ["2026-09-03", "2026-09-04", "2026-09-10"])
+
+    drag.hover = "2026-09-04"
+
+    XCTAssertFalse(drag.isSelecting)
+    XCTAssertEqual(drag.selection(in: days) { _ in true }, ["2026-09-10"])
+  }
+
   internal func testTapInSelectionModeTogglesDays() {
     let viewModel = ShiftsViewModel()
-    viewModel.beginSelection(dateISO: dateISO)
+    viewModel.applyDragSelection([dateISO])
 
     XCTAssertFalse(viewModel.handleDayTapped(dateISO: otherDateISO, shiftsOnDay: shiftsOnDay))
     XCTAssertEqual(viewModel.selectedDates, [dateISO, otherDateISO])
@@ -50,7 +86,7 @@ internal final class CalendarSemanticsTests: XCTestCase {
 
   internal func testTapOnEmptyDayInSelectionModeKeepsSelection() {
     let viewModel = ShiftsViewModel()
-    viewModel.beginSelection(dateISO: dateISO)
+    viewModel.applyDragSelection([dateISO])
 
     XCTAssertFalse(viewModel.handleDayTapped(dateISO: otherDateISO, shiftsOnDay: []))
     XCTAssertEqual(viewModel.selectedDates, [dateISO])
@@ -58,7 +94,7 @@ internal final class CalendarSemanticsTests: XCTestCase {
 
   internal func testLeavingSelectionModeClearsSelection() {
     let viewModel = ShiftsViewModel()
-    viewModel.beginSelection(dateISO: dateISO)
+    viewModel.applyDragSelection([dateISO])
 
     viewModel.isSelectionModeEnabled = false
 

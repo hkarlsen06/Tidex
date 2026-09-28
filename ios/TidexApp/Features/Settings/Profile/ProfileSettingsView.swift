@@ -4,13 +4,6 @@ import os.log
 
 private let logger = Logger(subsystem: "no.tidex.app", category: "ProfileSettings")
 
-private enum ProfileActionRowLayout {
-  static let rowHeight: CGFloat = 48
-  static let iconSize: CGFloat = 32
-  static let horizontalPadding: CGFloat = Spacing.md
-  static var dividerLeadingPadding: CGFloat { horizontalPadding + iconSize + Spacing.sm }
-}
-
 private enum ProfileAvatarLayout {
   static let size: CGFloat = 80
   static let cameraBadgeSize: CGFloat = 30
@@ -20,10 +13,10 @@ private enum ProfileAvatarLayout {
 /// Profile settings view
 /// Displays profile picture, name, email, and danger zone (delete account)
 struct ProfileSettingsView: View {
-  @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.dismiss) private var dismiss
   @Environment(\.displayScale) private var displayScale
-  @StateObject private var viewModel: ProfileSettingsViewModel
+  @State private var viewModel: ProfileSettingsViewModel
 
   private let onOpenSecurity: () -> Void
 
@@ -31,7 +24,7 @@ struct ProfileSettingsView: View {
     viewModel: ProfileSettingsViewModel? = nil,
     onOpenSecurity: @escaping () -> Void = {}
   ) {
-    _viewModel = StateObject(wrappedValue: viewModel ?? ProfileSettingsViewModel())
+    _viewModel = State(wrappedValue: viewModel ?? ProfileSettingsViewModel())
     self.onOpenSecurity = onOpenSecurity
   }
 
@@ -76,8 +69,8 @@ struct ProfileSettingsView: View {
   }
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: Spacing.lg) {
+    Form {
+      Group {
         // Error banner (for avatar upload, name save, etc.)
         if let error = viewModel.errorMessage, viewModel.usernameErrorMessage == nil,
           !viewModel.showEmailChangeSheet
@@ -89,9 +82,8 @@ struct ProfileSettingsView: View {
         }
 
         // Personal Info Section
-        settingsSection(title: String(localized: .profilePersonalInfoTitle)) {
+        Section(String(localized: .profilePersonalInfoTitle)) {
           avatarSection
-          settingsDivider
           emailField
         }
 
@@ -99,10 +91,9 @@ struct ProfileSettingsView: View {
         sessionsSection
         dangerZoneSection
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.lg)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .background(Color.tidexBackground)
+    .tidexListBackground()
     .navigationTitle(String(localized: .profileTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
@@ -719,33 +710,21 @@ struct ProfileSettingsView: View {
   // MARK: - Account Access Section
 
   private var accountAccessSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .profileAccountAccessTitle),
-      contentPadding: 0
-    ) {
-      VStack(alignment: .leading, spacing: 0) {
-        settingsNavigationRow(
-          icon: "lock.shield",
-          title: String(localized: .settingsMenuSecurityLabel),
-          tint: .tidexBlue,
-          action: onOpenSecurity
-        )
-      }
+    Section(String(localized: .profileAccountAccessTitle)) {
+      settingsNavigationRow(
+        icon: "lock.shield",
+        title: String(localized: .settingsMenuSecurityLabel),
+        action: onOpenSecurity
+      )
     }
   }
 
   // MARK: - Sessions Section
 
   private var sessionsSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .profileSessionsTitle),
-      contentPadding: 0
-    ) {
-      VStack(alignment: .leading, spacing: 0) {
-        signOutRow
-        compactSettingsDivider
-        signOutEverywhereRow
-      }
+    Section(String(localized: .profileSessionsTitle)) {
+      signOutRow
+      signOutEverywhereRow
     }
   }
 
@@ -756,173 +735,74 @@ struct ProfileSettingsView: View {
       }
     } label: {
       // Signing out of this device is routine and keeps the account, so only the
-      // everywhere action below uses destructive red.
-      HStack(spacing: Spacing.sm) {
-        TidexSettingsIcon(
-          systemName: "rectangle.portrait.and.arrow.right",
-          foregroundColor: .tidexBlue,
-          size: ProfileActionRowLayout.iconSize
-        )
-
-        if isSigningOut {
-          ProgressView()
-            .controlSize(.small)
+      // everywhere action below uses a destructive role.
+      if isSigningOut {
+        Label {
           Text(.userMenuLoggingOut)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
-        } else {
-          Text(.userMenuLogout)
-            .font(.tidexBody)
-            .foregroundColor(.tidexTextPrimary)
+        } icon: {
+          ProgressView().controlSize(.small)
         }
-
-        Spacer()
+      } else {
+        Label(String(localized: .userMenuLogout), systemImage: "rectangle.portrait.and.arrow.right")
       }
-      .padding(.horizontal, ProfileActionRowLayout.horizontalPadding)
-      .frame(minHeight: ProfileActionRowLayout.rowHeight)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .contentShape(Rectangle())
     }
-    .buttonStyle(.plain)
     .disabled(isSigningOut || isSigningOutGlobal)
   }
 
   private var signOutEverywhereRow: some View {
-    Button {
+    Button(role: .destructive) {
       showSignOutEverywhereAlert = true
     } label: {
-      HStack(spacing: Spacing.sm) {
-        TidexSettingsIcon(
-          systemName: "rectangle.portrait.and.arrow.right.fill",
-          foregroundColor: .tidexError,
-          size: ProfileActionRowLayout.iconSize
-        )
-
-        if isSigningOutGlobal {
-          ProgressView()
-            .controlSize(.small)
-            .tint(.tidexError)
+      if isSigningOutGlobal {
+        Label {
           Text(.userMenuLogoutEverywhereLoading)
-            .font(.tidexBody)
-            .foregroundColor(.tidexError)
-        } else {
-          Text(.userMenuLogoutEverywhere)
-            .font(.tidexBody)
-            .foregroundColor(.tidexError)
+        } icon: {
+          ProgressView().controlSize(.small)
         }
-
-        Spacer()
+      } else {
+        Label(
+          String(localized: .userMenuLogoutEverywhere),
+          systemImage: "rectangle.portrait.and.arrow.right.fill"
+        )
       }
-      .padding(.horizontal, ProfileActionRowLayout.horizontalPadding)
-      .frame(minHeight: ProfileActionRowLayout.rowHeight)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .contentShape(Rectangle())
     }
-    .buttonStyle(.plain)
     .disabled(isSigningOut || isSigningOutGlobal)
   }
 
   private func settingsNavigationRow(
     icon: String,
     title: String,
-    tint: Color,
     action: @escaping () -> Void
   ) -> some View {
     Button(action: action) {
-      HStack(spacing: Spacing.sm) {
-        TidexSettingsIcon(
-          systemName: icon,
-          foregroundColor: tint,
-          size: ProfileActionRowLayout.iconSize
-        )
-
-        Text(title)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-
+      HStack {
+        Label(title, systemImage: icon)
         Spacer()
-
         Image(systemName: "chevron.right")
           .font(.tidexCaptionRegular)
           .foregroundColor(.tidexTextMuted)
       }
-      .padding(.horizontal, ProfileActionRowLayout.horizontalPadding)
-      .frame(minHeight: ProfileActionRowLayout.rowHeight)
-      .frame(maxWidth: .infinity, alignment: .leading)
-      .contentShape(Rectangle())
     }
-    .buttonStyle(.plain)
   }
 
   // MARK: - Danger Zone Section
 
   private var dangerZoneSection: some View {
-    settingsSection(
-      title: String(localized: .profileDangerZoneTitle),
-      titleColor: .tidexTextSecondary
-    ) {
-      Text(.profileDangerZoneSubtitle)
-        .font(.tidexFootnote)
-        .foregroundColor(.tidexTextSecondary)
-
-      settingsDivider
-
-      // Delete account row
-      HStack(spacing: Spacing.md) {
-        VStack(alignment: .leading, spacing: Spacing.xxs) {
-          Text(.profileDangerZoneDeleteAccountTitle)
-            .font(.tidexLabel)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(.profileDangerZoneDeleteAccountDescription)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        Button {
-          viewModel.showDeleteConfirmation = true
-        } label: {
-          Text(.profileDangerZoneDeleteAccountButton)
-            .font(.tidexLabel)
-            .foregroundColor(.tidexError)
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.sm)
-            .background(Color.tidexError.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous))
-            .overlay {
-              RoundedRectangle(cornerRadius: CornerRadius.sm, style: .continuous)
-                .stroke(Color.tidexError.opacity(0.18), lineWidth: 1)
-            }
-        }
-        .disabled(viewModel.isDeletingAccount)
-        .opacity(viewModel.isDeletingAccount ? 0.55 : 1)
+    Section {
+      Button(role: .destructive) {
+        viewModel.showDeleteConfirmation = true
+      } label: {
+        Text(.profileDangerZoneDeleteAccountButton)
+      }
+      .disabled(viewModel.isDeletingAccount)
+    } header: {
+      Text(String(localized: .profileDangerZoneTitle))
+    } footer: {
+      VStack(alignment: .leading, spacing: Spacing.xxs) {
+        Text(.profileDangerZoneSubtitle)
+        Text(.profileDangerZoneDeleteAccountDescription)
       }
     }
-  }
-
-  @ViewBuilder
-  private func settingsSection<Content: View>(
-    title: String,
-    titleColor: Color = .tidexTextSecondary,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    TidexSettingsSection(title: title, titleColor: titleColor) {
-      VStack(alignment: .leading, spacing: 0) {
-        content()
-      }
-    }
-  }
-
-  private var settingsDivider: some View {
-    TidexSettingsDivider()
-  }
-
-  private var compactSettingsDivider: some View {
-    Divider()
-      .background(Color.tidexSeparator)
-      .padding(.leading, ProfileActionRowLayout.dividerLeadingPadding)
   }
 
   // MARK: - Actions
@@ -1001,16 +881,26 @@ struct ProfileSettingsView: View {
     }
   }
 
+  /// Resize `image` to a `size`x`size` square in pixels, independent of screen scale.
+  /// `UIGraphicsImageRenderer(size:)` defaults to the screen's scale, so on a 3x device
+  /// a "192x192" render would produce a 576x576 pixel image.
+  static func resizedAvatarImage(_ image: UIImage, to size: CGFloat) -> UIImage {
+    let format = UIGraphicsImageRendererFormat()
+    format.scale = 1
+    let renderer = UIGraphicsImageRenderer(
+      size: CGSize(width: size, height: size), format: format)
+    return renderer.image { _ in
+      image.draw(in: CGRect(origin: .zero, size: CGSize(width: size, height: size)))
+    }
+  }
+
   /// Handle cropped image from crop sheet
   /// The image is already square from the crop view, just needs resize and compression
   private func handleCroppedImage(_ image: UIImage) async {
     // Resize to 192x192 square (matches server's AVATAR_SIZE for 2x retina)
     let avatarSize: CGFloat = 192
 
-    let renderer = UIGraphicsImageRenderer(size: CGSize(width: avatarSize, height: avatarSize))
-    let resizedImage = renderer.image { _ in
-      image.draw(in: CGRect(origin: .zero, size: CGSize(width: avatarSize, height: avatarSize)))
-    }
+    let resizedImage = Self.resizedAvatarImage(image, to: avatarSize)
 
     guard let compressedData = resizedImage.jpegData(compressionQuality: 0.8) else {
       logger.error("Failed to compress cropped image")

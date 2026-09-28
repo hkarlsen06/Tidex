@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import os.log
 
@@ -45,7 +44,7 @@ private struct StatsComputationResult {
 /// Service for computing stats locally from on-device data
 /// Uses the same PayrollEngine as the Dashboard for consistent calculations
 @MainActor
-final class StatsService: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length required_deinit type_body_length
+final class StatsService {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length required_deinit type_body_length
   static let shared = StatsService()  // swiftlint:disable:this explicit_acl explicit_type_interface
 
   // MARK: - Dependencies
@@ -53,13 +52,13 @@ final class StatsService: ObservableObject {  // swiftlint:disable:this explicit
   private let monthlyPayrollReadService: MonthlyPayrollReadService
   private let userIdProvider: @MainActor () async throws -> String
 
-  // MARK: - Published State
+  // MARK: - State
 
-  @Published private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
+  private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
   private(set) var statsUserId: String?
   private(set) var statsJobId: String?
-  @Published private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
-  @Published private(set) var error: Error?  // swiftlint:disable:this explicit_acl
+  private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
+  private(set) var error: Error?  // swiftlint:disable:this explicit_acl
 
   // MARK: - Private State
 

@@ -1,10 +1,11 @@
-import Combine
 import Foundation
+import Observation
 
 /// View model for the signup screen
 /// Handles email/password and OAuth registration
 @MainActor
-final class SignupViewModel: ObservableObject {
+@Observable
+final class SignupViewModel {
 
   // MARK: - Dependencies
 
@@ -14,19 +15,19 @@ final class SignupViewModel: ObservableObject {
 
   // MARK: - Published State
 
-  @Published var firstName: String = ""
-  @Published var lastName: String = ""
-  @Published var emailOrPhone: String = ""
-  @Published var password: String = ""
-  @Published var confirmPassword: String = ""
-  @Published var hasAcceptedTerms = false
+  var firstName: String = ""
+  var lastName: String = ""
+  var emailOrPhone: String = ""
+  var password: String = ""
+  var confirmPassword: String = ""
+  var hasAcceptedTerms = false
 
-  @Published var isLoading = false
-  @Published var showEmailForm = false
+  var isLoading = false
+  var showEmailForm = false
 
-  @Published var errorMessage: String?
+  var errorMessage: String?
 
-  @Published var fieldErrors = FieldErrors()
+  var fieldErrors = FieldErrors()
 
   // MARK: - Navigation Callback
 

@@ -17,6 +17,3 @@
 
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex needs access to save shared calendar and shift images to your photo library.";
-
-/* Photo library usage description */
-"NSPhotoLibraryUsageDescription" = "Tidex needs photo library access to show recent images you can attach in chat.";

@@ -9,7 +9,7 @@
 import SwiftUI
 
 struct WorkSetupRequiredPlaceholder: View {
-  @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @State private var isRefreshingBeforeSetup = false
   @State private var showAddJobSheet = false
@@ -122,8 +122,7 @@ struct WorkSetupRequiredPlaceholder: View {
     .padding(Spacing.mlg)
     .tidexRowSurface(
       cornerRadius: CornerRadius.card,
-      fillColor: .tidexSurfacePrimary,
-      shadowLevel: .card
+      fillColor: .tidexSurfacePrimary
     )
   }
 
@@ -187,7 +186,6 @@ struct WorkSetupRequiredPlaceholder: View {
       updateWidgetStorage: false
     )
 
-    coordinator.objectWillChange.send()
     NotificationCenter.default.post(name: .workSetupDataDidChange, object: nil)
 
     let status = workSetupStatusService.status(for: userId)

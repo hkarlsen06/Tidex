@@ -71,8 +71,7 @@ struct RootView: View {
 /// Actual root content that manages the app's navigation based on authentication state.
 /// Handles transitions between: Loading -> Onboarding -> Login -> MFA -> Post-Auth Onboarding -> Dashboard
 private struct RootContent: View {
-  // Note: Using @ObservedObject for singletons as @StateObject is meant for owned instances
-  @ObservedObject private var coordinator = AppCoordinator.shared
+  private let coordinator = AppCoordinator.shared
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   // Theme is handled at UIKit window level - no need to observe AppearanceManager here
 
@@ -204,7 +203,7 @@ private struct RootContent: View {
     .motionAnimation(
       .pageTransition, value: hasCompletedPostAuthOnboarding, reduceMotion: reduceMotion
     )
-    .environmentObject(coordinator)
+    .environment(coordinator)
     // Theme is handled at UIKit window level via AppearanceManager.applyToWindows()
     // Don't use .preferredColorScheme() here as it conflicts with window.overrideUserInterfaceStyle
     .onAppear {
@@ -314,7 +313,7 @@ private struct RootContent: View {
 /// Initial loading view shown while checking authentication state
 /// Matches the splash screen exactly, with a spinner below the logo
 struct LoadingView: View {
-  @ObservedObject private var appearanceManager = AppearanceManager.shared
+  private let appearanceManager = AppearanceManager.shared
   @Environment(\.colorScheme) private var systemColorScheme
 
   private var launchBackgroundColor: Color {

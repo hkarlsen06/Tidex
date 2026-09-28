@@ -4,6 +4,7 @@
 // swiftlint:disable no_magic_numbers required_deinit
 import Combine
 import Foundation
+import Observation
 
 /// Shared month context that synchronizes the displayed month across multiple tabs
 /// Used by Dashboard, Shifts, and AddShift views to maintain consistent month navigation
@@ -11,7 +12,8 @@ import Foundation
 /// When the user navigates to a different month in any of these tabs, all other tabs
 /// will display the same month when switched to.
 @MainActor
-final class SharedMonthContext: ObservableObject {
+@Observable
+final class SharedMonthContext {
 
   // MARK: - Shared Instance
 
@@ -19,28 +21,30 @@ final class SharedMonthContext: ObservableObject {
 
   private static let gregorianCalendar = Calendar(identifier: .gregorian)
 
-  // MARK: - Published State
+  // MARK: - Observed State
 
   /// Currently displayed year
-  @Published private(set) var displayYear: Int
+  private(set) var displayYear: Int
 
   /// Currently displayed month (1-12)
-  @Published private(set) var displayMonth: Int
+  private(set) var displayMonth: Int
 
   /// Direction of last navigation (for animations)
-  @Published private(set) var navigationDirection: MonthNavigationDirection?
+  private(set) var navigationDirection: MonthNavigationDirection?
 
   /// Pre-selected date for AddShift (ISO format, e.g., "2025-01-15")
   /// Set when navigating from an empty calendar day to the Add tab
   /// AddShiftViewModel consumes and clears this on load
-  @Published var preselectedDate: String?
+  var preselectedDate: String?
 
   /// Whether the currently displayed month has any shift conflicts
   /// Updated by ShiftsViewModel when conflicts are detected
-  @Published var hasConflictsInMonth: Bool = false
+  var hasConflictsInMonth: Bool = false
 
   /// Emits exactly one event per month navigation to avoid transient year/month pairs.
-  private let monthChangedSubject = PassthroughSubject<(year: Int, month: Int), Never>()
+  @ObservationIgnored private let monthChangedSubject = PassthroughSubject<
+    (year: Int, month: Int), Never
+  >()
 
   // MARK: - Computed Properties
 
@@ -81,7 +85,7 @@ final class SharedMonthContext: ObservableObject {
   /// Navigate to the previous month
   func goToPreviousMonth() {
     navigationDirection = .previous
-    SoundManager.shared.play("tap")
+    Haptics.playTapSound()
 
     if displayMonth == 1 {
       displayMonth = 12
@@ -96,7 +100,7 @@ final class SharedMonthContext: ObservableObject {
   /// Navigate to the next month
   func goToNextMonth() {
     navigationDirection = .next
-    SoundManager.shared.play("tap")
+    Haptics.playTapSound()
 
     if displayMonth == 12 {
       displayMonth = 1

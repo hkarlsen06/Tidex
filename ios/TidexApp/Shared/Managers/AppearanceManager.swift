@@ -7,6 +7,7 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable sorted_enum_cases sorted_imports switch_case_on_newline type_contents_order
 import Foundation
+import Observation
 import SwiftUI
 import UIKit
 import os.log
@@ -60,19 +61,20 @@ enum CalendarContentColorStyle: String, CaseIterable {
 /// Manager for app-wide appearance settings
 /// Handles theme persistence and provides the current color scheme to the app
 @MainActor
-final class AppearanceManager: ObservableObject {
+@Observable
+final class AppearanceManager {
 
   // MARK: - Singleton
 
   static let shared = AppearanceManager()
 
-  // MARK: - Published State
+  // MARK: - Observed State
 
   /// The current theme preference
-  @Published private(set) var theme: AppTheme = .system
+  private(set) var theme: AppTheme = .system
 
   /// The current calendar content color style
-  @Published private(set) var calendarContentColorStyle: CalendarContentColorStyle = .workplace
+  private(set) var calendarContentColorStyle: CalendarContentColorStyle = .workplace
 
   /// The color scheme to apply (nil means follow system)
   var colorScheme: ColorScheme? {

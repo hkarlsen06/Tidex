@@ -96,10 +96,12 @@ struct CountdownFormatter {
 
   /// Shared relative countdown formatting used by payroll and friend next-shift previews.
   /// Format examples: "Om 2t 30min 45sek", "I morgen", "2t siden".
+  /// `compact` keeps only the largest unit ("Om 2t", "Om 7d") for narrow columns.
   static func formatRelativeCountdown(
     referenceDate: Date,
     dayBoundaryReferenceDate: Date? = nil,
-    now: Date = Date()
+    now: Date = Date(),
+    compact: Bool = false
   ) -> String {
     let diffSeconds = referenceDate.timeIntervalSince(now)
     let isFuture = diffSeconds > 0
@@ -128,7 +130,9 @@ struct CountdownFormatter {
       let includeSeconds = totalHours < 12
 
       let timeStr: String
-      if totalMinutes == 0 {
+      if compact {
+        timeStr = h > 0 ? "\(h)\(hAbbrev)" : m > 0 ? "\(m)\(minAbbrev)" : "\(s)\(secAbbrev)"
+      } else if totalMinutes == 0 {
         timeStr = "\(s)\(secAbbrev)"
       } else if h == 0 {
         if includeSeconds {
@@ -158,6 +162,15 @@ struct CountdownFormatter {
       return isFuture
         ? String(localized: .commonTomorrow)
         : String(localized: .commonYesterday)
+    }
+
+    if compact,
+      let days = DateComponentsFormatter.localizedString(
+        from: DateComponents(day: midnightDays), unitsStyle: .abbreviated)
+    {
+      // "3d" rather than "3 d", matching the message times in the friends list.
+      let compactDays = days.filter { !$0.isWhitespace }
+      return String(localized: isFuture ? .commonInTime(compactDays) : .commonTimeAgo(compactDays))
     }
 
     if isFuture {
@@ -191,107 +204,5 @@ struct CountdownFormatter {
     let toMidnight = calendar.startOfDay(for: to)
     let days = calendar.dateComponents([.day], from: fromMidnight, to: toMidnight).day ?? 0
     return abs(days)
-  }
-
-  private static func formatFutureTime(to targetDate: Date) -> (String, Bool) {
-    let now = Date()
-    let calendar = Calendar.current
-    let midnightDays = countMidnightCrossings(from: now, to: targetDate)
-
-    // 1 midnight crossing = tomorrow
-    if midnightDays == 1 {
-      return (String(localized: .commonTomorrow), false)
-    }
-
-    // 2+ midnight crossings = "In X days"
-    if midnightDays > 1 {
-      return (String(localized: .commonInDays(Int32(midnightDays))), false)
-    }
-
-    // Same calendar day (0 midnight crossings) - show hours/minutes/seconds
-    let components = calendar.dateComponents([.hour, .minute, .second], from: now, to: targetDate)
-    let hours = components.hour ?? 0
-    let minutes = components.minute ?? 0
-    let seconds = components.second ?? 0
-    let totalSeconds = Int(targetDate.timeIntervalSince(now))
-    let totalHours = totalSeconds / 3_600
-
-    let secWord = String(localized: .commonSecondsShort)
-    let minWord = String(localized: .commonMinutesShort)
-    let hourWord = String(localized: .commonHoursShort)
-    let inWord = String(localized: .commonIn)
-
-    // Within 6 hours - show high precision with seconds
-    if totalHours < 6 {
-      // Less than 1 minute - show only seconds
-      if hours == 0, minutes == 0 {
-        return ("\(inWord) \(seconds)\(secWord)", false)
-      }
-
-      // Less than 1 hour - show minutes and seconds
-      if hours == 0 {
-        return ("\(inWord) \(minutes)\(minWord) \(seconds)\(secWord)", false)
-      }
-
-      // Less than 6 hours - show hours, minutes and seconds
-      return ("\(inWord) \(hours)\(hourWord) \(minutes)\(minWord) \(seconds)\(secWord)", false)
-    }
-
-    // 6+ hours on same day - show hours and minutes only
-    if minutes == 0 {
-      return ("\(inWord) \(hours)\(hourWord)", false)
-    }
-    return ("\(inWord) \(hours)\(hourWord) \(minutes)\(minWord)", false)
-  }
-
-  private static func formatPastTime(from pastDate: Date) -> (String, Bool) {
-    let now = Date()
-    let calendar = Calendar.current
-    let midnightDays = countMidnightCrossings(from: pastDate, to: now)
-
-    // 1 midnight crossing = yesterday
-    if midnightDays == 1 {
-      return (String(localized: .commonYesterday), false)
-    }
-
-    // 2+ midnight crossings = "X days ago"
-    if midnightDays > 1 {
-      return (String(localized: .commonDaysAgo(Int32(midnightDays))), false)
-    }
-
-    // Same calendar day (0 midnight crossings) - show hours/minutes/seconds
-    let components = calendar.dateComponents([.hour, .minute, .second], from: pastDate, to: now)
-    let hours = components.hour ?? 0
-    let minutes = components.minute ?? 0
-    let seconds = components.second ?? 0
-    let totalSeconds = Int(now.timeIntervalSince(pastDate))
-    let totalHours = totalSeconds / 3_600
-
-    let secWord = String(localized: .commonSecondsShort)
-    let minWord = String(localized: .commonMinutesShort)
-    let hourWord = String(localized: .commonHoursShort)
-    let agoWord = String(localized: .commonAgo)
-
-    // Within 6 hours - show high precision with seconds
-    if totalHours < 6 {
-      // Less than 1 minute - show only seconds
-      if hours == 0, minutes == 0 {
-        return ("\(seconds)\(secWord) \(agoWord)", false)
-      }
-
-      // Less than 1 hour - show minutes and seconds
-      if hours == 0 {
-        return ("\(minutes)\(minWord) \(seconds)\(secWord) \(agoWord)", false)
-      }
-
-      // Less than 6 hours - show hours, minutes and seconds
-      return ("\(hours)\(hourWord) \(minutes)\(minWord) \(seconds)\(secWord) \(agoWord)", false)
-    }
-
-    // 6+ hours on same day - show hours and minutes only
-    if minutes == 0 {
-      return ("\(hours)\(hourWord) \(agoWord)", false)
-    }
-    return ("\(hours)\(hourWord) \(minutes)\(minWord) \(agoWord)", false)
   }
 }

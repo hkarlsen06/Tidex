@@ -4,16 +4,13 @@ import SwiftUI
 /// Shows monthly earnings, hours, shifts, and trends
 struct StatsView: View {
   // swiftlint:disable:previous explicit_acl explicit_top_level_acl file_types_order type_body_length
-  @EnvironmentObject private var coordinator: AppCoordinator  // swiftlint:disable:this type_contents_order
+  @Environment(AppCoordinator.self) private var coordinator  // swiftlint:disable:this type_contents_order
 
-  @StateObject private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
-  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()  // swiftlint:disable:this explicit_type_interface line_length
+  @State private var viewModel = StatsViewModel()  // swiftlint:disable:this explicit_type_interface
+  @State private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()  // swiftlint:disable:this explicit_type_interface line_length
   @State private var isJobFilterDialogPresented = false  // swiftlint:disable:this explicit_type_interface
   @State private var showMixedCurrencyBreakdownPopover = false  // swiftlint:disable:this explicit_type_interface
   @State private var showExportSettings = false  // swiftlint:disable:this explicit_type_interface
-
-  // Haptic feedback
-  private let selectionHaptic = UISelectionFeedbackGenerator()  // swiftlint:disable:this explicit_type_interface
 
   /// Shared refresh action used by pull-to-refresh and sync retry UI.
   private func refreshStatsContent() async {  // swiftlint:disable:this type_contents_order
@@ -77,7 +74,6 @@ struct StatsView: View {
       }
     }
     .navigationBarTitleDisplayMode(.inline)
-    .iPadToolbarBackground()
     .iPadToolbarTransaction()
     .sheet(isPresented: $showExportSettings) {
       SettingsView(initialDestination: .data)
@@ -90,7 +86,6 @@ struct StatsView: View {
     }
     .onAppear {
       refreshWorkSetupPresentationState()
-      selectionHaptic.prepare()
     }
     .onChange(of: coordinator.initialSyncComplete) { _, _ in
       let shouldLoadAfterSetupCompleted = refreshWorkSetupPresentationState()  // swiftlint:disable:this explicit_type_interface line_length
@@ -137,7 +132,7 @@ struct StatsView: View {
             showsCurrencyBreakdown: usesMixedCurrency && !breakdownEntries.isEmpty,
             onEarningsTap: {
               if usesMixedCurrency, !breakdownEntries.isEmpty {
-                selectionHaptic.selectionChanged()
+                Haptics.play(.selection)
                 showMixedCurrencyBreakdownPopover.toggle()
               }
             }
@@ -236,7 +231,7 @@ struct StatsView: View {
       Spacer()
 
       Button {
-        selectionHaptic.selectionChanged()
+        Haptics.play(.selection)
         isJobFilterDialogPresented = true
       } label: {
         statsJobFilterMenuLabel(selectedJob: selectedJob)
@@ -248,7 +243,7 @@ struct StatsView: View {
         titleVisibility: .visible
       ) {
         Button {
-          selectionHaptic.selectionChanged()
+          Haptics.play(.selection)
           viewModel.selectJobFilter(nil)
         } label: {
           if viewModel.selectedJobId == nil {
@@ -260,7 +255,7 @@ struct StatsView: View {
 
         ForEach(viewModel.activeJobs) { job in
           Button {
-            selectionHaptic.selectionChanged()
+            Haptics.play(.selection)
             viewModel.selectJobFilter(job.id)
           } label: {
             if viewModel.selectedJobId == job.id {
@@ -276,8 +271,7 @@ struct StatsView: View {
     }
     .statsPanelSurface(
       padding: Spacing.sm,
-      cornerRadius: CornerRadius.xxl,
-      shadowLevel: .subtle
+      cornerRadius: CornerRadius.xxl
     )
     // Keep filter control styling stable while stats cards animate numeric transitions.
     .transaction { transaction in
@@ -437,8 +431,7 @@ private struct StatsOverviewLedger: View {
     }
     .statsPanelSurface(
       padding: Spacing.lg,
-      cornerRadius: CornerRadius.card,
-      shadowLevel: .card
+      cornerRadius: CornerRadius.card
     )
   }
 
@@ -580,5 +573,5 @@ private struct StatsLedgerValueRow: View {
 
 #Preview {
   StatsView()
-    .environmentObject(AppCoordinator.shared)
+    .environment(AppCoordinator.shared)
 }  // swiftlint:disable:this file_length

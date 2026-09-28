@@ -1,16 +1,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Gesture State Machine
-
-/// The current mode of the gesture state machine
-private enum GestureMode: Equatable {
-  /// No touch active
-  case idle
-  /// Long-press activated, actively selecting date range
-  case selecting
-}
-
 private enum SingleSelectionActionMode: Equatable {
   case primary
   case copyMoveChoices
@@ -20,11 +10,11 @@ private enum SingleSelectionActionMode: Equatable {
 
 /// Full-featured calendar for the Shifts tab
 /// Shows shift times or earnings per day, ISO week numbers, and monthly totals
-/// Tap opens a day. Long-press or the Select toolbar button enters selection mode,
-/// where taps toggle days and drags select a range.
+/// Tap opens a day. Long press then drag selects every day with shifts it passes and
+/// enters selection mode, where taps toggle days. The Select toolbar button also enters it.
 struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @ObservedObject private var appearanceManager = AppearanceManager.shared
+  private let appearanceManager = AppearanceManager.shared
 
   let shifts: [ShiftWithComputations]
   let eventCoverageByDate: [String: [EventPresentation]]
@@ -42,8 +32,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
   // Day tap callback: opens the day, or toggles it in selection mode
   var onDayTapped: ((String, [ShiftWithComputations]) -> Void)?
-  // Day long-press callback on a day with shifts (outside selection mode)
-  var onDayLongPressed: ((String, [ShiftWithComputations]) -> Void)?
   var onSwipeLeft: (() -> Void)?
   var onSwipeRight: (() -> Void)?
 
@@ -73,8 +61,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   var onMove: (() -> Void)?
   var onClearSelection: (() -> Void)?
 
-  // Range selection callback (for long-press + drag)
-  var onSelectDateRange: (([String]) -> Void)?
+  // Long press + drag callback with the full new selection. Nil disables drag selection.
+  var onDragSelect: ((Set<String>) -> Void)?
 
   // Empty day tap callback (for navigating to add shift with date)
   var onEmptyDayTapped: ((_ dateISO: String?) -> Void)?
@@ -94,7 +82,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   var onMoveToDate: ((String) -> Void)?
   var onCancelCopyMove: (() -> Void)?
 
-  // Selection mode toggle - when enabled, taps/long-press work; when disabled, swipes work
+  // Selection mode - when enabled, taps toggle days instead of opening them
   @Binding var isSelectionModeEnabled: Bool
 
   // Newly added dates for celebration highlighting
@@ -122,17 +110,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
 
   // MARK: - Gesture State
 
-  /// Current gesture state
-  @State private var gestureMode: GestureMode = .idle
-
-  /// ISO date where long-press started (anchor for range)
-  @State private var anchorDateISO: String?
-
-  /// Current hover date during drag
-  @State private var hoverDateISO: String?
-
-  /// Preview dates during drag (before committing)
-  @State private var dragPreviewDates: Set<String> = []
+  /// Active long press + drag selection
+  @State private var dragSelection: CalendarDragSelection?
 
   // Haptic feedback for UI interactions (non-gesture haptics)
   private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
@@ -153,7 +132,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     showsActionBar: Bool = true,
     phase: MonthTransitionPhase? = nil,
     onDayTapped: ((String, [ShiftWithComputations]) -> Void)? = nil,
-    onDayLongPressed: ((String, [ShiftWithComputations]) -> Void)? = nil,
     onSwipeLeft: (() -> Void)? = nil,
     onSwipeRight: (() -> Void)? = nil,
     selectedDates: Binding<Set<String>>,
@@ -170,7 +148,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     onEdit: (() -> Void)? = nil,
     onMove: (() -> Void)? = nil,
     onClearSelection: (() -> Void)? = nil,
-    onSelectDateRange: (([String]) -> Void)? = nil,
+    onDragSelect: ((Set<String>) -> Void)? = nil,
     onEmptyDayTapped: ((_ dateISO: String?) -> Void)? = nil,
     isCopyMode: Bool,
     isMoveMode: Bool,
@@ -201,7 +179,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     self.showsActionBar = showsActionBar
     self.phase = phase
     self.onDayTapped = onDayTapped
-    self.onDayLongPressed = onDayLongPressed
     self.onSwipeLeft = onSwipeLeft
     self.onSwipeRight = onSwipeRight
     _selectedDates = selectedDates
@@ -218,7 +195,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     self.onEdit = onEdit
     self.onMove = onMove
     self.onClearSelection = onClearSelection
-    self.onSelectDateRange = onSelectDateRange
+    self.onDragSelect = onDragSelect
     self.onEmptyDayTapped = onEmptyDayTapped
     self.isCopyMode = isCopyMode
     self.isMoveMode = isMoveMode
@@ -346,12 +323,8 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   var body: some View {
     VStack(spacing: 0) {
       CalendarHeaderRow(
-        monthName: monthName,
-        year: year,
-        selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
-        phase: phase,
         totals: headerTotals,
-        trailingAccessory: nil,
+        selectionCount: selectedDates.count >= 2 ? selectedDates.count : nil,
         secondaryStyle: headerSecondaryStyle
       )
       .userCurrency(headerDisplayCurrency)
@@ -497,15 +470,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     return selectedCurrencyAggregate
   }
 
-  // MARK: - Month Name
-
-  private var monthName: String {
-    CalendarGridHelper.monthName(
-      from: month,
-      locale: Locale.appLocale
-    )
-  }
-
   // MARK: - Calendar Grid
 
   @ViewBuilder
@@ -522,7 +486,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       let eventsOnDay = dayInfo.dateISO.flatMap { eventCoverageByDate[$0] } ?? []
       let isSelected =
         dayInfo.dateISO.map { selectedDates.contains($0) || copyTargetDates.contains($0) } ?? false
-      let isInDragPreview = dayInfo.dateISO.map { dragPreviewDates.contains($0) } ?? false
       let isNewlyAdded = dayInfo.dateISO.map { newlyAddedDates.contains($0) } ?? false
       let isDeepLinkHighlighted =
         dayInfo.dateISO.map { deepLinkHighlightDates.contains($0) } ?? false
@@ -536,7 +499,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         && hasMultipleActiveJobs
         && !dayInfo.isOutsideMonth
         && !isSelected
-        && !isInDragPreview
         && !isNewlyAdded
         && !isDeepLinkHighlighted
         && !shiftsOnDay.isEmpty
@@ -548,7 +510,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         style: cellStyle(
           isToday: isToday,
           isSelected: isSelected,
-          isInDragPreview: isInDragPreview,
           isNewlyAdded: isNewlyAdded,
           isDeepLinkHighlighted: isDeepLinkHighlighted,
           hasConflict: hasConflict
@@ -577,41 +538,23 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
       .accessibilityHidden(dayInfo.dateISO == nil)
     }
     .coordinateSpace(name: "calendar")
-    .overlay(
+    .overlay {
       GeometryReader { geometry in
-        Color.clear
-          .contentShape(Rectangle())
-          .calendarPressGestures(
-            onTap: { location in
-              handleTap(at: location, geometry: geometry, days: days)
+        CalendarDragSelectOverlay(
+          onTap: { location in
+            Haptics.play(.selection)
+            handleTap(at: location, geometry: geometry, days: days)
+          },
+          onDragSelect: onDragSelect == nil
+            ? nil
+            : { state, location in
+              handleDragSelect(state, at: location, geometry: geometry, days: days)
             },
-            onLongPress: { location in
-              handleLongPress(at: location, geometry: geometry, days: days)
-            },
-            onSwipeLeft: onSwipeLeft,
-            onSwipeRight: onSwipeRight,
-            isEnabled: !isSelectionModeEnabled
-          )
-          .calendarSelectionGestures(
-            actions: CalendarGestureActions(
-              onTap: { location in
-                handleTap(at: location, geometry: geometry, days: days)
-              },
-              onDragStart: { location in
-                handleDragStart(at: location, geometry: geometry, days: days)
-              },
-              onDragChanged: { location in
-                handleDragChanged(at: location, geometry: geometry, days: days)
-              },
-              onDragEnded: {
-                handleDragEnded()
-              }
-            ),
-            config: .default,
-            isEnabled: isSelectionModeEnabled
-          )
+          onSwipeLeft: onSwipeLeft,
+          onSwipeRight: onSwipeRight
+        )
       }
-    )
+    }
   }
 
   private func dayAccessibilityLabel(
@@ -660,7 +603,6 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   private func cellStyle(
     isToday: Bool,
     isSelected: Bool,
-    isInDragPreview: Bool,
     isNewlyAdded: Bool,
     isDeepLinkHighlighted: Bool,
     hasConflict: Bool
@@ -684,7 +626,7 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
         showsTodayBadge: false
       )
     }
-    if isSelected || isInDragPreview {
+    if isSelected {
       let color: Color = hasConflict ? .tidexWarning : .tidexBlue
       return CalendarCellStyle(
         backgroundColor: isToday ? color.opacity(0.2) : .tidexSurfacePrimary,
@@ -772,7 +714,10 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
   // MARK: - Gesture Handling
 
   private func handleTap(at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]) {
-    guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
+    guard
+      let dayISO = CalendarDragSelection.dateISO(
+        at: location, gridSize: geometry.size, days: days)
+    else {
       if isCopyMode || isMoveMode {
         onCancelCopyMove?()
       } else {
@@ -809,155 +754,18 @@ struct ShiftsCalendarView: View {  // swiftlint:disable:this explicit_acl explic
     }
   }
 
-  private func handleLongPress(
-    at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]
+  private func handleDragSelect(
+    _ state: UIGestureRecognizer.State, at location: CGPoint, geometry: GeometryProxy,
+    days: [CalendarDayInfo]
   ) {
-    guard !isCopyMode, !isMoveMode else {
-      return
-    }
-    guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
-      return
-    }
-
-    let shiftsOnDay = shiftsByDate[dayISO] ?? []
-    guard !shiftsOnDay.isEmpty else {
-      return
-    }
-
-    onDayLongPressed?(dayISO, shiftsOnDay)
-  }
-
-  private func handleDragStart(
-    at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]
-  ) {
-    guard let dayISO = findDayAt(location: location, geometry: geometry, days: days) else {
-      return
-    }
-
-    gestureMode = .selecting
-    anchorDateISO = dayISO
-    hoverDateISO = dayISO
-    dragPreviewDates = [dayISO]
-  }
-
-  private func handleDragChanged(
-    at location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo]
-  ) {
-    guard gestureMode == .selecting else {
-      return
-    }
-
-    if let dayISO = findDayAt(location: location, geometry: geometry, days: days) {
-      if dayISO != hoverDateISO {
-        hoverDateISO = dayISO
-        updateDragPreview()
-      }
-    }
-  }
-
-  private func handleDragEnded() {
-    guard gestureMode == .selecting else {
-      resetGestureState()
-      return
-    }
-
-    if !dragPreviewDates.isEmpty {
-      let datesToSelect = Array(dragPreviewDates)
-      onSelectDateRange?(datesToSelect)
-    }
-
-    resetGestureState()
-  }
-
-  private func resetGestureState() {
-    gestureMode = .idle
-    anchorDateISO = nil
-    hoverDateISO = nil
-    dragPreviewDates.removeAll()
-  }
-
-  private func updateDragPreview() {
-    guard let anchorISO = anchorDateISO, let hoverISO = hoverDateISO else {
-      dragPreviewDates.removeAll()
-      return
-    }
-
-    let range = buildDateRange(from: anchorISO, to: hoverISO)
-    let datesWithShifts = range.filter { dateISO in
-      if let shiftsOnDay = shiftsByDate[dateISO] {
-        return !shiftsOnDay.isEmpty
-      }
-      return false
-    }
-
-    dragPreviewDates = Set(datesWithShifts)
-  }
-
-  private func buildDateRange(from startISO: String, to endISO: String) -> [String] {
-    guard let startDate = Date.fromISODateString(startISO),
-      let endDate = Date.fromISODateString(endISO)
-    else {
-      return [startISO]
-    }
-
-    let (earlierDate, laterDate) =
-      startDate <= endDate ? (startDate, endDate) : (endDate, startDate)
-
-    var result: [String] = []
-    var current = earlierDate
-
-    while current <= laterDate {
-      result.append(current.toISODateString())
-      guard let nextDay = calendar.date(byAdding: .day, value: 1, to: current) else {
-        break
-      }
-      current = nextDay
-    }
-
-    return result
-  }
-
-  private func findDayAt(location: CGPoint, geometry: GeometryProxy, days: [CalendarDayInfo])
-    -> String?
-  {
-    let gridWidth = geometry.size.width
-    let numRows = (days.count + 6) / 7
-    let spacing = CalendarGridHelper.cellSpacing
-    let totalHorizontalSpacing = spacing * CGFloat(CalendarGridHelper.columnCount - 1)
-    let cellWidth = (gridWidth - totalHorizontalSpacing) / CGFloat(CalendarGridHelper.columnCount)
-    let cellHeight = cellWidth / CalendarGridHelper.cellAspectRatio
-    let colStep = cellWidth + spacing
-    let rowStep = cellHeight + spacing
-
-    guard colStep > 0, rowStep > 0 else {
-      return nil
-    }
-
-    let col = Int(location.x / colStep)
-    let row = Int(location.y / rowStep)
-
-    guard col >= 0, col < CalendarGridHelper.columnCount, row >= 0, row < numRows else {
-      return nil
-    }
-
-    // Ignore hits in the inter-cell spacing gutters.
-    let xInCell = location.x - CGFloat(col) * colStep
-    let yInCell = location.y - CGFloat(row) * rowStep
-    guard xInCell <= cellWidth, yInCell <= cellHeight else {
-      return nil
-    }
-
-    let index = row * CalendarGridHelper.columnCount + col
-    guard index >= 0, index < days.count else {
-      return nil
-    }
-
-    let dayInfo = days[index]
-    guard !dayInfo.isOutsideMonth else {
-      return nil
-    }
-
-    return dayInfo.dateISO
+    guard !isCopyMode, !isMoveMode,
+      let selection = CalendarDragSelection.update(
+        &dragSelection, state: state,
+        dateISO: CalendarDragSelection.dateISO(at: location, gridSize: geometry.size, days: days),
+        days: days, current: selectedDates, isEligible: { shiftsByDate[$0]?.isEmpty == false })
+    else { return }
+    Haptics.play(.selection)
+    onDragSelect?(selection)
   }
 
   // MARK: - Action Bar

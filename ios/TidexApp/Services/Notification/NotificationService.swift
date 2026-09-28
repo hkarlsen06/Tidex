@@ -296,29 +296,24 @@ final class NotificationService {
     for threadId: String,
     center: UNUserNotificationCenter
   ) async -> [String] {
-    await withCheckedContinuation { continuation in
-      center.getDeliveredNotifications { notifications in
-        let identifiers = notifications.compactMap { notification -> String? in
-          let userInfo = notification.request.content.userInfo
-          let type = userInfo["type"] as? String ?? ""
-          guard
-            type == "thread_message" || type == "thread_screenshot"
-              || type == "thread_typing" || type == "thread_reaction"
-          else {
-            return nil
-          }
-
-          guard let notificationThreadId = userInfo["thread_id"] as? String,
-            notificationThreadId == threadId
-          else {
-            return nil
-          }
-
-          return notification.request.identifier
-        }
-
-        continuation.resume(returning: identifiers)
+    let notifications = await center.deliveredNotifications()
+    return notifications.compactMap { notification -> String? in
+      let userInfo = notification.request.content.userInfo
+      let type = userInfo["type"] as? String ?? ""
+      guard
+        type == "thread_message" || type == "thread_screenshot"
+          || type == "thread_typing" || type == "thread_reaction"
+      else {
+        return nil
       }
+
+      guard let notificationThreadId = userInfo["thread_id"] as? String,
+        notificationThreadId == threadId
+      else {
+        return nil
+      }
+
+      return notification.request.identifier
     }
   }
 
@@ -326,26 +321,21 @@ final class NotificationService {
     for ownerId: String,
     center: UNUserNotificationCenter
   ) async -> [String] {
-    await withCheckedContinuation { continuation in
-      center.getDeliveredNotifications { notifications in
-        let identifiers = notifications.compactMap { notification -> String? in
-          let userInfo = notification.request.content.userInfo
-          let type = userInfo["type"] as? String ?? ""
-          guard type.hasPrefix("shared_shift_") else {
-            return nil
-          }
-
-          guard let notificationOwnerId = userInfo["owner_id"] as? String,
-            notificationOwnerId == ownerId
-          else {
-            return nil
-          }
-
-          return notification.request.identifier
-        }
-
-        continuation.resume(returning: identifiers)
+    let notifications = await center.deliveredNotifications()
+    return notifications.compactMap { notification -> String? in
+      let userInfo = notification.request.content.userInfo
+      let type = userInfo["type"] as? String ?? ""
+      guard type.hasPrefix("shared_shift_") else {
+        return nil
       }
+
+      guard let notificationOwnerId = userInfo["owner_id"] as? String,
+        notificationOwnerId == ownerId
+      else {
+        return nil
+      }
+
+      return notification.request.identifier
     }
   }
 }

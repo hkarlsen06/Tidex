@@ -213,19 +213,10 @@ enum CurrencyConfig {
 
 // MARK: - Environment Key for User Currency
 
-/// Environment key for the user's selected currency
-/// This allows components to access the currency setting from their environment
-private struct UserCurrencyKey: EnvironmentKey {
-  static let defaultValue: String = "kr"
-}
-
 extension EnvironmentValues {
   /// The user's selected currency symbol (e.g., "kr", "$", "€")
   /// Set this at the top of your view hierarchy from user settings
-  var userCurrency: String {
-    get { self[UserCurrencyKey.self] }
-    set { self[UserCurrencyKey.self] = newValue }
-  }
+  @Entry var userCurrency: String = "kr"
 }
 
 // MARK: - Currency Formatting Extension

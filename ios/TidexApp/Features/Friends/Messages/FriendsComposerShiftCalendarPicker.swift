@@ -10,7 +10,7 @@ struct FriendsComposerShiftCalendarPicker: View {
   let onSelectShift: (ShiftWithComputations) async -> Bool
 
   @Environment(\.dismiss) private var dismiss
-  @StateObject private var viewModel = ShiftsViewModel()
+  @State private var viewModel = ShiftsViewModel()
   @State private var selectedDates: Set<String> = []
   @State private var isSelectionModeEnabled = false
   @State private var selectedDayForSheet: FriendsComposerShiftDaySelection?
@@ -75,7 +75,6 @@ struct FriendsComposerShiftCalendarPicker: View {
               onEdit: nil,
               onMove: nil,
               onClearSelection: nil,
-              onSelectDateRange: nil,
               onEmptyDayTapped: nil,
               isCopyMode: false,
               isMoveMode: false,

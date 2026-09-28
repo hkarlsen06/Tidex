@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 enum HourlyRateInputFormatter {
   static func display(_ amount: Double) -> String {
@@ -7,7 +6,7 @@ enum HourlyRateInputFormatter {
     formatter.numberStyle = .decimal
     formatter.minimumFractionDigits = 0
     formatter.maximumFractionDigits = 2
-    formatter.locale = .current
+    formatter.locale = .appLocale
     return formatter.string(from: NSNumber(value: amount)) ?? "\(amount)"
   }
 
@@ -252,7 +251,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
       step: 1,
       onEditingChanged: { isEditing in
         if isEditing {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
+          Haptics.play(.light)
         }
       }
     )
@@ -276,10 +275,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
 
   /// Format just the number (for inline display where currency symbol is separate)
   private func formatValue(_ amount: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.maximumFractionDigits = 0
-    return formatter.string(from: NSNumber(value: amount)) ?? "0"
+    amount.formatted(.number.precision(.fractionLength(0)).locale(.appLocale))
   }
 
   /// Format with currency for min/max labels
@@ -302,7 +298,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
   @ViewBuilder
   private func tappableValue(_ text: String) -> some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       inputText = formatValueWithDecimals(value)
       showingCustomInput = true
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -324,7 +320,7 @@ struct OnboardingRateSlider: View {  // swiftlint:disable:this explicit_acl expl
   @ViewBuilder
   private func tappableValueFull(_ text: String) -> some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       inputText = formatValueWithDecimals(value)
       showingCustomInput = true
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {

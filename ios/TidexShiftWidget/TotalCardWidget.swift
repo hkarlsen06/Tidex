@@ -120,18 +120,6 @@ struct TotalCardWidgetEntry: TimelineEntry {
 // MARK: - Timeline Provider
 
 struct TotalCardWidgetProvider: TimelineProvider {
-  private let appGroupId = "group.no.tidex.app"
-  private let monthlyTotalsKey = "monthly_totals"
-  private let currencyKey = "user_currency"
-
-  private func sharedUserDefaults() -> UserDefaults? {
-    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
-    else {
-      return nil
-    }
-    return UserDefaults(suiteName: appGroupId)
-  }
-
   internal func placeholder(in _: Context) -> TotalCardWidgetEntry {
     TotalCardWidgetEntry.placeholder()
   }
@@ -143,18 +131,23 @@ struct TotalCardWidgetProvider: TimelineProvider {
   internal func getTimeline(in _: Context, completion: (Timeline<TotalCardWidgetEntry>) -> Void) {
     let entry = createEntry()
 
-    // Refresh every 15 minutes
-    let refreshDate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
-    let timeline = Timeline(entries: [entry], policy: .after(refreshDate))
+    // The card is month-scoped and only changes when the app calls WidgetCenter reloads,
+    // so refreshing before the next month starts just re-renders the same data.
+    let calendar = Calendar.current
+    let startOfMonth = calendar.dateInterval(of: .month, for: Date())?.start ?? Date()
+    let startOfNextMonth =
+      calendar.date(byAdding: .month, value: 1, to: startOfMonth) ?? Date()
+    let timeline = Timeline(entries: [entry], policy: .after(startOfNextMonth))
     completion(timeline)
   }
 
   private func createEntry() -> TotalCardWidgetEntry {
-    guard let userDefaults = sharedUserDefaults(),
-      let totalsJson = userDefaults.string(forKey: monthlyTotalsKey),
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults(),
+      let totalsJson = userDefaults.string(forKey: WidgetAppGroup.monthlyTotalsKey),
       let data = totalsJson.data(using: .utf8)
     else {
-      let currency = sharedUserDefaults()?.string(forKey: currencyKey) ?? "kr"
+      let currency = WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
+        ?? "kr"
       return TotalCardWidgetEntry.empty(currency: currency)
     }
 
@@ -164,9 +157,7 @@ struct TotalCardWidgetProvider: TimelineProvider {
       let totals = try decoder.decode(StoredMonthlyTotals.self, from: data)
 
       // Totals saved last month would show the wrong month's earnings once the month changes.
-      let now = Calendar(identifier: .gregorian).dateComponents([.year, .month], from: Date())
-      let currentYearMonth = String(format: "%04d-%02d", now.year ?? 0, now.month ?? 0)
-      guard totals.yearMonth == currentYearMonth else {
+      guard Calendar.current.isDate(totals.updatedAt, equalTo: .now, toGranularity: .month) else {
         return TotalCardWidgetEntry.empty(currency: totals.currencySymbol)
       }
 
@@ -187,7 +178,8 @@ struct TotalCardWidgetProvider: TimelineProvider {
         hasData: true
       )
     } catch {
-      let currency = sharedUserDefaults()?.string(forKey: currencyKey) ?? "kr"
+      let currency = WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
+        ?? "kr"
       return TotalCardWidgetEntry.empty(currency: currency)
     }
   }
@@ -260,20 +252,6 @@ struct TotalCardWidgetView: View {
     String(localized: .widgetBeforeTax)
   }
 
-  private var shiftsPlannedLabel: String {
-    if entry.plannedCount == 1 {
-      return String(localized: .widgetShiftPlanned)
-    }
-    return String(localized: .widgetShiftsPlanned)
-  }
-
-  private var shiftsLabel: String {
-    if entry.shiftCount == 1 {
-      return String(localized: .widgetShift)
-    }
-    return String(localized: .widgetShifts)
-  }
-
   // MARK: - Subtitle Logic (matching TotalCard.swift exactly)
 
   private var subtitleText: String? {
@@ -296,12 +274,12 @@ struct TotalCardWidgetView: View {
     // Future shifts but no real earnings yet
     let showPlanned = entry.hasFutureShifts && !hasRealEarned && entry.plannedCount > 0
     if showPlanned {
-      return "\(entry.plannedCount) \(shiftsPlannedLabel)"
+      return String(localized: .widgetShiftsPlannedCount(entry.plannedCount))
     }
 
     // Fallback: shift count
     if entry.shiftCount > 0 {
-      return "\(entry.shiftCount) \(shiftsLabel)"
+      return String(localized: .widgetShiftsCount(entry.shiftCount))
     }
 
     return nil
@@ -461,7 +439,7 @@ struct TotalCardWidgetView: View {
         Text("—")
           .font(.system(size: 18, weight: .semibold))
       } else {
-        Text(String(format: "%.0f%%", entry.displayPercentage))
+        Text((entry.displayPercentage / 100).formatted(.percent.precision(.fractionLength(0))))
           .font(.system(size: 18, weight: .semibold))
       }
     }
@@ -511,23 +489,6 @@ struct TotalCardWidget: Widget {
     .supportedFamilies([.systemMedium])
     .contentMarginsDisabled()
   }
-}
-
-// MARK: - StoredMonthlyTotals (must match main app)
-
-private struct StoredMonthlyTotals: Codable {
-  let gross: Double
-  let net: Double?
-  let completedGross: Double
-  let completedNet: Double?
-  let shiftCount: Int
-  let plannedCount: Int
-  let totalHours: Double
-  let percentageChange: Double?
-  let yearMonth: String
-  let taxEnabled: Bool
-  let currencySymbol: String
-  let updatedAt: Date
 }
 
 // MARK: - Preview

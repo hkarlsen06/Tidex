@@ -176,8 +176,7 @@ struct PayrollCard: View {  // swiftlint:disable:this explicit_acl explicit_top_
     }
     .tidexRowSurface(
       cornerRadius: CornerRadius.card,
-      fillColor: isElevated ? .tidexSurfacePrimary : .clear,
-      shadowLevel: isElevated ? .card : nil
+      fillColor: isElevated ? .tidexSurfacePrimary : .clear
     )
     .overlay(alignment: .bottomLeading) {
       if !isElevated, !isLoading, hasProgress {

@@ -3,7 +3,7 @@ import SwiftUI
 /// Main signup screen view with native iOS styling
 /// Supports email/password, Google, and Apple sign-up
 struct SignupView: View {
-  @ObservedObject var viewModel: SignupViewModel
+  @Bindable var viewModel: SignupViewModel
   let currency: String
   var onNavigateToLogin: (() -> Void)?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -264,7 +264,7 @@ extension View {
 
 /// Email, password, and name form for signup with native iOS styling
 struct SignupForm: View {
-  @ObservedObject var viewModel: SignupViewModel
+  @Bindable var viewModel: SignupViewModel
 
   var body: some View {
     VStack(spacing: Spacing.md) {

@@ -3,10 +3,10 @@ import SwiftUI
 /// MFA verification screen with native iOS styling
 /// Displays a 6-digit code input for TOTP verification
 struct MFAVerifyView: View {
-  @StateObject private var viewModel: MFAVerifyViewModel
+  @State private var viewModel: MFAVerifyViewModel
 
   init(factor: AuthService.MFAFactor, coordinator: AppCoordinator) {
-    _viewModel = StateObject(
+    _viewModel = State(
       wrappedValue: MFAVerifyViewModel(
         factor: factor,
         coordinator: coordinator

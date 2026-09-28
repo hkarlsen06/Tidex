@@ -19,8 +19,9 @@ enum CalendarGridHelper {
   private static let calendar = Calendar.current
   static let columnCount = 7
   static let cellSpacing: CGFloat = Spacing.xxs
-  /// Width:height ratio for calendar cells.
-  static let cellAspectRatio: CGFloat = 1 / 1.3
+  /// Width:height ratio for calendar cells. The cell text is sized by the cell width,
+  /// so this height still fits two lines of times or earnings at full size.
+  static let cellAspectRatio: CGFloat = 1 / 1.08
 
   // MARK: - Days in Month
 
@@ -244,7 +245,6 @@ struct CalendarMonthGrid<DayContent: View>: View {
   var monthTransitionPhase: MonthTransitionPhase?
   var monthTransitionConfig: MonthTransitionConfig
   var spacing: CGFloat = CalendarGridHelper.cellSpacing
-  var cellAspectRatio: CGFloat = CalendarGridHelper.cellAspectRatio
   let dayContent: (CalendarDayInfo) -> DayContent
 
   init(
@@ -252,14 +252,12 @@ struct CalendarMonthGrid<DayContent: View>: View {
     monthTransitionPhase: MonthTransitionPhase? = nil,
     monthTransitionConfig: MonthTransitionConfig = .default,
     spacing: CGFloat = CalendarGridHelper.cellSpacing,
-    cellAspectRatio: CGFloat = CalendarGridHelper.cellAspectRatio,
     @ViewBuilder dayContent: @escaping (CalendarDayInfo) -> DayContent
   ) {
     self.days = days
     self.monthTransitionPhase = monthTransitionPhase
     self.monthTransitionConfig = monthTransitionConfig
     self.spacing = spacing
-    self.cellAspectRatio = cellAspectRatio
     self.dayContent = dayContent
   }
 
@@ -277,7 +275,7 @@ struct CalendarMonthGrid<DayContent: View>: View {
       ForEach(days, id: \.id) { dayInfo in
         dayContent(dayInfo)
           .frame(maxWidth: .infinity)
-          .aspectRatio(cellAspectRatio, contentMode: .fit)
+          .aspectRatio(CalendarGridHelper.cellAspectRatio, contentMode: .fit)
       }
     }
     .id(monthGridIdentity)

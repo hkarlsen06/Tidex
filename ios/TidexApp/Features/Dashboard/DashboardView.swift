@@ -1,4 +1,3 @@
-import Combine
 import SwiftUI
 
 private struct EventSheetSelection: Identifiable {
@@ -8,10 +7,20 @@ private struct EventSheetSelection: Identifiable {
   var id: String { event.id }
 }
 
+/// An action queued to run once the sheet that triggered it has finished dismissing.
+/// Presenting a new sheet while another is still animating out is a no-op in SwiftUI,
+/// so this replaces `DispatchQueue.main.asyncAfter` guesswork with a real `onDismiss` hook.
+private enum PendingDashboardSheetAction {
+  case shiftDelete(ShiftWithComputations)
+  case eventDelete(EventRow)
+  case recurringEdit(RecurringShiftRow)
+  case calendarSubscriptionSettings
+}
+
 /// Dashboard view showing the main financial overview
 /// Displays payroll, total earnings, and featured shift cards
 struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
-  @EnvironmentObject private var coordinator: AppCoordinator  // swiftlint:disable:this type_contents_order
+  @Environment(AppCoordinator.self) private var coordinator  // swiftlint:disable:this type_contents_order
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
   @Environment(\.layoutDirection) private var layoutDirection  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
 
@@ -19,12 +28,11 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @Binding var selectedTab: MainTabView.Tab  // swiftlint:disable:this explicit_acl type_contents_order
   @Binding var showStatsView: Bool  // swiftlint:disable:this explicit_acl type_contents_order
 
-  @StateObject private var viewModel = DashboardViewModel()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @StateObject private var countdownManager = CountdownManager()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @StateObject private var calendarSubscriptionStore = CalendarSubscriptionStore.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @ObservedObject private var pushManager = PushNotificationManager.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
-  @ObservedObject private var syncStatusManager = SyncStatusManager.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @State private var viewModel = DashboardViewModel()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  private let calendarSubscriptionStore = CalendarSubscriptionStore.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  @State private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  private let pushManager = PushNotificationManager.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  private let syncStatusManager = SyncStatusManager.shared  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
 
   /// State for showing push notification failure alert
   @State private var showPushFailureAlert = false  // swiftlint:disable:this explicit_type_interface type_contents_order
@@ -51,14 +59,14 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   @State private var showClockInJobChooser: Bool = false  // swiftlint:disable:this type_contents_order
   @State private var clockPaySetupJob: Job?  // swiftlint:disable:this type_contents_order
   @State private var pendingClockAction: PendingClockAction?  // swiftlint:disable:this type_contents_order
-  @State private var temporarySessionReferenceDate: Date = .init()  // swiftlint:disable:this type_contents_order
   @State private var showMixedCurrencyBreakdownPopover: Bool = false  // swiftlint:disable:this type_contents_order
   @State private var activeDashboardRefreshTask: Task<Void, Never>?  // swiftlint:disable:this type_contents_order
   @State private var showCalendarSubscriptionSettings: Bool = false  // swiftlint:disable:this type_contents_order
   @State private var selectedPayrollDetailsVariant: PayrollCardVariant?  // swiftlint:disable:this type_contents_order
 
-  /// Haptic feedback generator
-  private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)  // swiftlint:disable:this explicit_type_interface line_length type_contents_order
+  // Action to run once the currently-presented sheet finishes dismissing, so two sheets
+  // never race to present at once (see `performPendingSheetAction`).
+  @State private var pendingSheetAction: PendingDashboardSheetAction?  // swiftlint:disable:this type_contents_order
 
   private enum PendingClockAction {
     case clockIn(jobId: String?)
@@ -84,10 +92,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   private let payrollSectionMinHeight: CGFloat = 89
   private let featuredSectionMinHeight: CGFloat = 118
-  private let clockStateRefreshTicker = Timer.publish(every: 30, on: .main, in: .common)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    .autoconnect()
-  private let temporarySessionTicker = Timer.publish(every: 1, on: .main, in: .common)  // swiftlint:disable:this explicit_type_interface line_length
-    .autoconnect()
 
   @discardableResult
   private func refreshWorkSetupPresentationState() -> Bool {  // swiftlint:disable:this type_contents_order
@@ -211,8 +215,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     }
   }
 
-  private func handleDashboardDataChange(_ data: DashboardData?) {  // swiftlint:disable:this type_contents_order
-    configureCountdown(with: data)
+  private func handleDashboardDataChange(_ data: DashboardData?) {  // swiftlint:disable:this line_length type_contents_order unused_parameter
     showMixedCurrencyBreakdownPopover = false
   }
 
@@ -221,8 +224,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     refreshWorkSetupPresentationState()
     guard selectedTab == .home else { return }  // swiftlint:disable:this conditional_returns_on_newline
     guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-    // Reconfigure timers when returning to the dashboard after a disappear cycle.
-    configureCountdown(with: viewModel.dashboardData)
     refreshActiveDashboardStateIfNeeded()
   }
 
@@ -231,7 +232,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
     viewModel.setActiveTabVisible(newTab == .home)
     if newTab == .home {
       refreshWorkSetupPresentationState()
-      configureCountdown(with: viewModel.dashboardData)
       refreshActiveDashboardStateIfNeeded()
     } else {
       activeDashboardRefreshTask?.cancel()
@@ -240,9 +240,26 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   private func openCalendarSubscriptionSetupFromDashboard() {  // swiftlint:disable:this type_contents_order
+    pendingSheetAction = .calendarSubscriptionSettings
     selectedShift = nil
     selectedEvent = nil
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {  // swiftlint:disable:this no_magic_numbers
+  }
+
+  /// Runs the sheet queued by `pendingSheetAction`, called from the dismissed sheet's
+  /// `onDismiss`. Attach this to every `.sheet` that can set `pendingSheetAction`.
+  private func performPendingSheetAction() {  // swiftlint:disable:this type_contents_order
+    guard let action = pendingSheetAction else { return }
+    pendingSheetAction = nil
+    switch action {
+    case .shiftDelete(let shift):
+      shiftToDelete = shift
+      showDeleteConfirmation = true
+    case .eventDelete(let event):
+      eventToDelete = event
+      showEventDeleteConfirmation = true
+    case .recurringEdit(let recurring):
+      recurringShiftToEdit = recurring
+    case .calendarSubscriptionSettings:
       showCalendarSubscriptionSettings = true
     }
   }
@@ -367,7 +384,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .onDisappear {
           activeDashboardRefreshTask?.cancel()
           activeDashboardRefreshTask = nil
-          countdownManager.stop()
         }
         .onChange(of: selectedTab) { oldTab, newTab in
           handleSelectedTabChange(oldTab: oldTab, newTab: newTab)
@@ -387,22 +403,12 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             viewModel.applyDashboardClockButtonsVisibility(isVisible)
           }
         }
-        .onReceive(clockStateRefreshTicker) { _ in
-          guard selectedTab == .home else { return }  // swiftlint:disable:this conditional_returns_on_newline
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-          Task {
+        .task {
+          while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(30))  // swiftlint:disable:this no_magic_numbers
+            guard selectedTab == .home else { continue }
+            guard !shouldShowWorkSetupRequiredPlaceholder else { continue }
             await viewModel.refreshClockState()
-          }
-        }
-        .onReceive(temporarySessionTicker) { now in
-          guard selectedTab == .home else { return }  // swiftlint:disable:this conditional_returns_on_newline
-          guard case .temporary = viewModel.activeClockState else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-          guard !shouldShowWorkSetupRequiredPlaceholder else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-          temporarySessionReferenceDate = now
-        }
-        .onChange(of: viewModel.activeClockState) { _, state in
-          if case .temporary = state {
-            temporarySessionReferenceDate = Date()
           }
         }
         .onChange(of: pushManager.shouldShowAlert) { _, shouldShow in
@@ -529,19 +535,17 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         }
       }
       // Shift details sheet with full edit/delete capabilities
-      .sheet(item: $selectedShift) { shift in  // swiftlint:disable:this closure_body_length
+      .sheet(
+        item: $selectedShift, onDismiss: performPendingSheetAction
+      ) { shift in
         let shiftJob = viewModel.shouldShowJobIndicators ? viewModel.jobForShift(shift) : nil  // swiftlint:disable:this explicit_type_interface line_length
         ShiftDetailsSheet(
           shift: shift,
           jobName: shiftJob?.name,
           jobColorHex: shiftJob?.color,
           onDelete: {
+            pendingSheetAction = .shiftDelete(shift)
             selectedShift = nil
-            // Small delay before showing delete confirmation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {  // swiftlint:disable:this no_magic_numbers
-              shiftToDelete = shift
-              showDeleteConfirmation = true
-            }
           },
           onUpdate: { editResult in
             let shouldKeepSheetOpen = shouldKeepShiftDetailsOpen(  // swiftlint:disable:this explicit_type_interface
@@ -562,13 +566,10 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
             }
           },
           onEditRecurring: { recurringId in
-            selectedShift = nil
-            // Small delay to allow sheet to dismiss
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {  // swiftlint:disable:this no_magic_numbers
-              if let recurring = viewModel.getRecurringShift(id: recurringId) {
-                recurringShiftToEdit = recurring
-              }
+            if let recurring = viewModel.getRecurringShift(id: recurringId) {
+              pendingSheetAction = .recurringEdit(recurring)
             }
+            selectedShift = nil
           },
           onStopRecurringAfterDate: { recurringId, occurrenceDate in
             try await viewModel.stopRecurringShiftAfterDate(
@@ -586,15 +587,12 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
       }
-      .sheet(item: $selectedEvent) { selection in
+      .sheet(item: $selectedEvent, onDismiss: performPendingSheetAction) { selection in
         EventDetailsSheet(
           event: selection.event,
           onDelete: {
+            pendingSheetAction = .eventDelete(selection.event)
             selectedEvent = nil
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {  // swiftlint:disable:this no_magic_numbers
-              eventToDelete = selection.event
-              showEventDeleteConfirmation = true
-            }
           },
           onUpdate: { editResult in
             try await viewModel.updateEvent(editResult)
@@ -687,7 +685,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   /// Delete a shift (or exclude a virtual shift)
   private func deleteShift(_ shift: ShiftWithComputations) async {  // swiftlint:disable:this type_contents_order
-    impactHaptic.impactOccurred()
+    Haptics.play(.medium)
 
     do {
       if shift.isVirtual {
@@ -717,7 +715,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   private func deleteEvent(_ event: EventRow) async {  // swiftlint:disable:this type_contents_order
-    impactHaptic.impactOccurred()
+    Haptics.play(.medium)
 
     do {
       try await viewModel.deleteEvent(event)
@@ -764,43 +762,45 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   // MARK: - Countdown Configuration
 
-  private func configureCountdown(with data: DashboardData?) {  // swiftlint:disable:this type_contents_order
-    guard let data else {
-      countdownManager.stop()
-      return
-    }
+  private typealias CountdownState = (text: String, isActive: Bool, progress: Double, finalSeconds: Int?)  // swiftlint:disable:this large_tuple line_length
 
-    let shiftDate: String?
-    let startTime: String?
-    let endTime: String?
-
+  /// Shift/event date and times to feed the countdown, if the featured item currently tracks one.
+  private func countdownTarget(for data: DashboardData) -> (shiftDate: String, startTime: String, endTime: String)? {  // swiftlint:disable:this large_tuple line_length type_contents_order
     switch data.featuredItem {
     case .shift(let shift)
     where data.isViewingCurrentMonth && !data.featuredShiftIsBestShift:
-      shiftDate = shift.shiftDate
-      startTime = shift.startTime
-      endTime = shift.endTime
+      return (shift.shiftDate, shift.startTime, shift.endTime)
 
     case .event(let event, _)
     where data.isViewingCurrentMonth && !data.featuredShiftIsBestShift && !event.is_all_day:
-      shiftDate = event.start_date
-      startTime = event.start_time
-      endTime = event.end_time
+      guard let startTime = event.start_time, let endTime = event.end_time else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
+      return (event.start_date, startTime, endTime)
 
     default:
-      shiftDate = nil
-      startTime = nil
-      endTime = nil
+      return nil
     }
-
-    countdownManager.configure(
-      shiftDate: shiftDate,
-      startTime: startTime,
-      endTime: endTime
-    )
   }
 
-  private func featuredEventCountdownStatus(_ event: EventRow, now: Date = Date())  // swiftlint:disable:this line_length type_contents_order
+  /// Countdown text/progress for the featured item at `now`, recomputed on every timeline tick.
+  private func countdownState(for data: DashboardData, now: Date) -> CountdownState? {  // swiftlint:disable:this line_length type_contents_order
+    guard let target = countdownTarget(for: data) else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
+
+    let (text, isActive, progress) = CountdownFormatter.formatShiftCountdown(
+      shiftDate: target.shiftDate,
+      startTime: target.startTime,
+      endTime: target.endTime,
+      now: now
+    )
+    let finalSeconds = CountdownFormatter.finalCountdownSecondsForShift(
+      shiftDate: target.shiftDate,
+      startTime: target.startTime,
+      endTime: target.endTime,
+      now: now
+    )
+    return (text, isActive, progress, finalSeconds)
+  }
+
+  private func featuredEventCountdownStatus(_ event: EventRow, now: Date)  // swiftlint:disable:this type_contents_order
     -> ShiftPreviewStatus
   {
     guard
@@ -821,7 +821,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
   }
 
   @ViewBuilder
-  private func featuredEventFooter(_ event: EventRow) -> some View {  // swiftlint:disable:this type_contents_order
+  private func featuredEventFooter(_ event: EventRow, now: Date, state: CountdownState?) -> some View {  // swiftlint:disable:this line_length type_contents_order
     if event.is_all_day {
       HStack(spacing: Spacing.xxxs) {
         Image(systemName: "calendar")
@@ -833,11 +833,11 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           .foregroundColor(.tidexTextSecondary)
       }
       .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
-    } else if let countdownText = countdownManager.shiftCountdownText {
+    } else if let countdownText = state?.text {
       ShiftCountdownBadge(
         text: countdownText,
-        status: featuredEventCountdownStatus(event),
-        finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds
+        status: featuredEventCountdownStatus(event, now: now),
+        finalCountdownSeconds: state?.finalSeconds
       )
       .frame(height: 20)  // swiftlint:disable:this no_magic_numbers
     } else {
@@ -1039,7 +1039,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .contentShape(Rectangle())
         .onTapGesture {
           if data.currentMonthCurrencyAggregate.hasMixedCurrency {
-            impactHaptic.impactOccurred()
+            Haptics.play(.medium)
             showMixedCurrencyBreakdownPopover.toggle()
           }
         }
@@ -1110,7 +1110,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
         guard abs(horizontal) > vertical else { return }  // swiftlint:disable:this conditional_returns_on_newline
 
-        impactHaptic.impactOccurred()
+        Haptics.play(.medium)
 
         let isRTL = layoutDirection == .rightToLeft  // swiftlint:disable:this explicit_type_interface
         if horizontal < 0 {
@@ -1138,7 +1138,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         isEnabled: viewModel.isClockInEnabled
       ) {
         guard viewModel.isClockInEnabled else { return }  // swiftlint:disable:this conditional_returns_on_newline
-        impactHaptic.impactOccurred()
+        Haptics.play(.medium)
         Task {
           let cachedJobs = viewModel.clockSelectableJobsSnapshot()  // swiftlint:disable:this explicit_type_interface
           if cachedJobs.count > 1 {
@@ -1161,7 +1161,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         isEnabled: viewModel.isClockOutEnabled
       ) {
         guard viewModel.isClockOutEnabled else { return }  // swiftlint:disable:this conditional_returns_on_newline
-        impactHaptic.impactOccurred()
+        Haptics.play(.medium)
         Task {
           let route = await viewModel.routeClockOut()  // swiftlint:disable:this explicit_type_interface
           if case .temporaryReview(let session) = route {
@@ -1200,7 +1200,6 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       )
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
       .contentShape(RoundedRectangle(cornerRadius: CornerRadius.card, style: .continuous))
-      .tidexCardShadow()
     }
     .buttonStyle(DashboardClockButtonStyle())
     .disabled(!isEnabled)
@@ -1246,7 +1245,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       canManuallySetPayrollStatus && !isLoading
       && Calendar.current.isDateInToday(selectedVariant.payoutDate)
     let toggleReceived = {  // swiftlint:disable:this explicit_type_interface
-      impactHaptic.impactOccurred()
+      Haptics.play(.medium)
       if payrollMarkedReceived {
         viewModel.clearPayrollReceivedOverrideForDisplayedMonth(userId: payrollOverrideUserId)
       } else {
@@ -1278,7 +1277,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .contentShape(Rectangle())
       .onTapGesture {
         guard !isLoading else { return }  // swiftlint:disable:this conditional_returns_on_newline
-        impactHaptic.impactOccurred()
+        Haptics.play(.medium)
         selectedPayrollDetailsVariant = selectedVariant
       }
       .accessibilityElement(children: .combine)
@@ -1297,7 +1296,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
       .contextMenu {
         if canManuallySetPayrollStatus, !isLoading {
           Button {
-            impactHaptic.impactOccurred()
+            Haptics.play(.medium)
             viewModel.markPayrollReceivedForDisplayedMonth(userId: payrollOverrideUserId)
           } label: {
             Label(
@@ -1307,7 +1306,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
           }
 
           Button {
-            impactHaptic.impactOccurred()
+            Haptics.play(.medium)
             viewModel.clearPayrollReceivedOverrideForDisplayedMonth(
               userId: payrollOverrideUserId)  // swiftlint:disable:this multiline_arguments_brackets
           } label: {
@@ -1322,7 +1321,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   private func previousPayrollDetailsChip(for variant: PayrollCardVariant) -> some View {  // swiftlint:disable:this line_length type_contents_order
     Button {
-      impactHaptic.impactOccurred()
+      Haptics.play(.medium)
       selectedPayrollDetailsVariant = variant
     } label: {
       HStack(spacing: Spacing.xxs) {
@@ -1350,14 +1349,21 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
 
   /// Featured shift card with fixed height to prevent layout jumps
   @ViewBuilder
-  private func featuredShiftSection(data: DashboardData) -> some View {  // swiftlint:disable:this function_body_length line_length type_contents_order
+  private func featuredShiftSection(data: DashboardData) -> some View {  // swiftlint:disable:this type_contents_order
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      featuredShiftContent(data: data, now: context.date)
+    }
+  }
+
+  @ViewBuilder
+  private func featuredShiftContent(data: DashboardData, now: Date) -> some View {  // swiftlint:disable:this function_body_length line_length type_contents_order
     // Use a fixed height container so the layout doesn't shift
     // when switching between FeaturedShiftCard and EmptyShiftCard
     Group {  // swiftlint:disable:this closure_body_length
       if case .temporary(let session) = viewModel.activeClockState {
         let temporaryShift = viewModel.temporaryFeaturedShift(  // swiftlint:disable:this explicit_type_interface
           from: session,
-          at: temporarySessionReferenceDate
+          at: now
         )
         let shiftJob = viewModel.jobForTemporarySession(session)  // swiftlint:disable:this explicit_type_interface
         FeaturedShiftCard(
@@ -1373,7 +1379,7 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .userCurrency(shiftJob?.currency ?? data.currency)
         .contentShape(Rectangle())
         .onTapGesture {
-          impactHaptic.impactOccurred()
+          Haptics.play(.medium)
           Task {
             await presentTemporaryClockReview(session)
           }
@@ -1384,27 +1390,28 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         switch featuredItem {
         case .shift(let featuredShift):
           // Only show progress bar for active shifts (matching Next.js behavior)
-          let shiftProgress: Double? =
-            countdownManager.isShiftActive ? countdownManager.shiftProgress : nil
+          let state = countdownState(for: data, now: now)  // swiftlint:disable:this explicit_type_interface
+          let isActive = state?.isActive ?? false
+          let shiftProgress: Double? = isActive ? state?.progress : nil
           let displayedFeaturedShift: ShiftWithComputations =
-            countdownManager.isShiftActive
-            ? viewModel.liveFeaturedShiftWhileOngoing(from: featuredShift, at: Date())
+            isActive
+            ? viewModel.liveFeaturedShiftWhileOngoing(from: featuredShift, at: now)
             : featuredShift
           let shiftJob = viewModel.jobForShift(featuredShift)  // swiftlint:disable:this explicit_type_interface
           FeaturedShiftCard(
             shift: displayedFeaturedShift,
             isToday: data.isFeaturedItemToday,
             isBestShift: data.featuredShiftIsBestShift,
-            countdownText: countdownManager.shiftCountdownText,
+            countdownText: state?.text,
             progress: shiftProgress,
-            finalCountdownSeconds: countdownManager.finalShiftCountdownSeconds,
+            finalCountdownSeconds: state?.finalSeconds,
             surfaceStyle: .flat
           )
           .userCurrency(shiftJob?.currency ?? data.currency)
           .contentShape(Rectangle())
           .onTapGesture {
-            impactHaptic.impactOccurred()
-            if countdownManager.isShiftActive {
+            Haptics.play(.medium)
+            if isActive {
               if viewModel.shouldShowDashboardClockButtons {
                 selectedShift = featuredShift
               } else {
@@ -1424,14 +1431,14 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
               event: event,
               coveredDateISO: coveredDateISO,
               onTap: {
-                impactHaptic.impactOccurred()
+                Haptics.play(.medium)
                 selectedEvent = EventSheetSelection(event: event, startInEditMode: false)
               },
               showTodayHighlight: false,
               isElevated: false
             )
 
-            featuredEventFooter(event)
+            featuredEventFooter(event, now: now, state: countdownState(for: data, now: now))
           }
         }
       } else {
@@ -1819,7 +1826,6 @@ private struct ClockOutReviewSheet: View {
               RoundedRectangle(cornerRadius: CornerRadius.card)
                 .fill(Color.tidexSurfacePrimary)
             )
-            .tidexCardShadow(cornerRadius: CornerRadius.card)
         }
         .buttonStyle(.plain)
         .padding(.horizontal, Spacing.md)
@@ -2005,7 +2011,7 @@ private struct DashboardClockJobChooserSheet: View {
 
     var body: some View {
       DashboardView(selectedTab: $selectedTab, showStatsView: $showStatsView)
-        .environmentObject(AppCoordinator.shared)
+        .environment(AppCoordinator.shared)
     }
   }
 

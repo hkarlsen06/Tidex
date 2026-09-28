@@ -91,6 +91,17 @@ extension Date {
     return String(format: "%04d-%02d-%02d", year, month, lastDay)
   }
 
+  /// Build an ISO date string (YYYY-MM-DD) from year/month/day components.
+  static func isoDateString(year: Int, month: Int, day: Int) -> String? {
+    var calendar = gregorianCalendar
+    calendar.timeZone = localTimeZone
+    var components = DateComponents()
+    components.year = year
+    components.month = month
+    components.day = day
+    return calendar.date(from: components)?.toISODateString()
+  }
+
   /// Get number of days in a month
   static func daysInMonth(year: Int, month: Int) -> Int {
     var components = DateComponents()
@@ -178,26 +189,6 @@ extension Date {
     var calendar = Self.gregorianCalendar
     calendar.timeZone = Date.localTimeZone
     return calendar.component(.weekday, from: self) - 1
-  }
-
-  // MARK: - Comparison
-
-  /// Check if this date is today (in local timezone)
-  var isToday: Bool {
-    let todayString = Date().toISODateString()
-    return toISODateString() == todayString
-  }
-
-  /// Check if this date is in the past (before today)
-  var isPast: Bool {
-    let todayString = Date().toISODateString()
-    return toISODateString() < todayString
-  }
-
-  /// Check if this date is in the future (after today)
-  var isFuture: Bool {
-    let todayString = Date().toISODateString()
-    return toISODateString() > todayString
   }
 
   // MARK: - Days Between

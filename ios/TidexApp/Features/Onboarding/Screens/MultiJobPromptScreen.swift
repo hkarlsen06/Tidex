@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Optional post-auth onboarding step for setting up an additional workplace/job.
 struct MultiJobPromptScreen: View {
@@ -19,7 +18,7 @@ struct MultiJobPromptScreen: View {
       VStack(spacing: 0) {
         HStack {
           Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            Haptics.play(.light)
             onBack()
           }) {
             HStack(spacing: Spacing.xxs) {
@@ -97,14 +96,14 @@ struct MultiJobPromptScreen: View {
           OnboardingButton(
             title: String(localized: .settingsPayAddJobCta),
             action: {
-              UINotificationFeedbackGenerator().notificationOccurred(.success)
+              Haptics.play(.success)
               onAddNow()
             }
           )
           .disabled(isLoading)
 
           Button(action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            Haptics.play(.light)
             onContinueLater()
           }) {
             Text(!jobs.isEmpty ? .commonContinue : .onboardingMfaSkip)

@@ -31,7 +31,6 @@ struct ShiftModeToggle: View {
   @Namespace private var namespace
   @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 16
   private let buttonSpacing: CGFloat = 8
-  private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
 
   init(mode: Binding<AddShiftMode>, style: Style = .toolbar) {
     self._mode = mode
@@ -48,9 +47,7 @@ struct ShiftModeToggle: View {
       }
     }
     .padding(outerPadding)
-    .onAppear {
-      toggleHaptic.prepare()
-    }
+    .sensoryFeedback(.impact(weight: .light), trigger: mode)
   }
 
   private var modeButtonMetrics: ModeButtonMetrics {
@@ -159,7 +156,6 @@ struct ShiftModeToggle: View {
 
   private func select(_ modeOption: AddShiftMode) {
     guard mode != modeOption else { return }
-    toggleHaptic.impactOccurred()
     if reduceMotion {
       mode = modeOption
     } else {

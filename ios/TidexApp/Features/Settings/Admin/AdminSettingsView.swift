@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AdminSettingsView: View {
-  @StateObject private var viewModel = AdminSettingsViewModel()
+  @State private var viewModel = AdminSettingsViewModel()
   @Environment(\.dismiss) private var dismiss
 
   /// Optional initial tab to select when the view appears (for deep linking)
@@ -119,7 +119,7 @@ private struct MessageBanner: View {
 // MARK: - Tab Content
 
 private struct TabContent: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   var body: some View {
     switch viewModel.selectedTab {
@@ -137,21 +137,17 @@ private struct TabContent: View {
 // MARK: - Users Tab
 
 private struct UsersTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   var body: some View {
     VStack(spacing: 0) {  // swiftlint:disable:this closure_body_length
-      SearchBar(
-        text: $viewModel.usersSearchQuery, placeholder: "Search users...",
-        isSearching: viewModel.usersIsLoading
-      ) {
-        viewModel.searchUsers()
-      }
-
       if viewModel.usersIsLoading, viewModel.users.isEmpty {
-        AdminLoadingView()
+        ProgressView()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if viewModel.users.isEmpty {
-        EmptyStateView(icon: "person.3", message: "No users found")
+        ContentUnavailableView(
+          "No users found", systemImage: "person.3"
+        )
       } else {
         ScrollView {
           LazyVStack(spacing: Spacing.xs) {
@@ -180,13 +176,19 @@ private struct UsersTabView: View {
         }
       }
     }
+    .searchable(text: $viewModel.usersSearchQuery, prompt: "Search users...")
+    .task(id: viewModel.usersSearchQuery) {
+      try? await Task.sleep(for: .milliseconds(300))
+      guard !Task.isCancelled else { return }
+      await viewModel.searchUsers()
+    }
   }
 }
 
 // MARK: - Subscribers Tab
 
 private struct SubscribersTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   var body: some View {
     VStack(spacing: 0) {
@@ -216,9 +218,12 @@ private struct SubscribersTabView: View {
       .padding(.vertical, Spacing.sm)
 
       if viewModel.subscribersIsLoading {
-        AdminLoadingView()
+        ProgressView()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if viewModel.subscribers.isEmpty {
-        EmptyStateView(icon: "person.crop.circle.badge.checkmark", message: "No subscribers found")
+        ContentUnavailableView(
+          "No subscribers found", systemImage: "person.crop.circle.badge.checkmark"
+        )
       } else {
         ScrollView {
           LazyVStack(spacing: Spacing.xs) {
@@ -241,13 +246,16 @@ private struct SubscribersTabView: View {
 // MARK: - Feedback Tab
 
 private struct FeedbackTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   var body: some View {
     if viewModel.feedbackIsLoading {
-      AdminLoadingView()
+      ProgressView()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else if viewModel.feedbackItems.isEmpty {
-      EmptyStateView(icon: "bubble.left.and.bubble.right", message: "No feedback yet")
+      ContentUnavailableView(
+        "No feedback yet", systemImage: "bubble.left.and.bubble.right"
+      )
     } else {
       ScrollView {
         LazyVStack(spacing: Spacing.sm) {
@@ -302,7 +310,7 @@ private enum ReportsFilterOption: String, CaseIterable, Identifiable {
 }
 
 private struct ReportsTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   private var selectedFilter: Binding<ReportsFilterOption> {
     Binding(
@@ -338,9 +346,10 @@ private struct ReportsTabView: View {
       .padding(.vertical, Spacing.sm)
 
       if viewModel.reportsIsLoading {
-        AdminLoadingView()
+        ProgressView()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if viewModel.reportsItems.isEmpty {
-        EmptyStateView(icon: "flag", message: "No reports found")
+        ContentUnavailableView("No reports found", systemImage: "flag")
       } else {
         ScrollView {
           LazyVStack(spacing: Spacing.sm) {
@@ -363,13 +372,16 @@ private struct ReportsTabView: View {
 // MARK: - Audit Log Tab
 
 private struct AuditLogTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   var body: some View {
     if viewModel.auditLogIsLoading {
-      AdminLoadingView()
+      ProgressView()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     } else if viewModel.auditLogEntries.isEmpty {
-      EmptyStateView(icon: "list.bullet.clipboard", message: "No audit log entries")
+      ContentUnavailableView(
+        "No audit log entries", systemImage: "list.bullet.clipboard"
+      )
     } else {
       ScrollView {
         LazyVStack(spacing: Spacing.xs) {
@@ -386,19 +398,13 @@ private struct AuditLogTabView: View {
 // MARK: - Shares Tab
 
 private struct SharesTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   var body: some View {
     VStack(spacing: 0) {
-      // Search and create button row
-      HStack(spacing: Spacing.xs) {
-        SearchBar(
-          text: $viewModel.sharesSearchQuery, placeholder: "Search shares...",
-          isSearching: viewModel.sharesIsLoading
-        ) {
-          viewModel.searchShares()
-        }
-
+      // Create button row
+      HStack {
+        Spacer()
         Button {
           viewModel.resetCreateShareForm()
           viewModel.isShowingCreateShare = true
@@ -411,9 +417,12 @@ private struct SharesTabView: View {
       }
 
       if viewModel.sharesIsLoading {
-        AdminLoadingView()
+        ProgressView()
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
       } else if viewModel.shares.isEmpty {
-        EmptyStateView(icon: "square.and.arrow.up", message: "No shares found")
+        ContentUnavailableView(
+          "No shares found", systemImage: "square.and.arrow.up"
+        )
       } else {
         ScrollView {
           LazyVStack(spacing: Spacing.xs) {
@@ -434,13 +443,19 @@ private struct SharesTabView: View {
     .sheet(isPresented: $viewModel.isShowingCreateShare) {
       CreateShareSheet(viewModel: viewModel)
     }
+    .searchable(text: $viewModel.sharesSearchQuery, prompt: "Search shares...")
+    .task(id: viewModel.sharesSearchQuery) {
+      try? await Task.sleep(for: .milliseconds(300))
+      guard !Task.isCancelled else { return }
+      await viewModel.fetchShares()
+    }
   }
 }
 
 // MARK: - Notifications Tab
 
 private struct NotificationsTabView: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
   let targets = ["all", "pro", "active", "specific"]
 
   var body: some View {
@@ -603,7 +618,6 @@ private struct NotificationsTabView: View {
         .padding(Spacing.md)
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(CornerRadius.lg)
-        .tidexCardShadow(cornerRadius: CornerRadius.lg)
 
         // History section
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -674,58 +688,6 @@ private struct FlowLayout: Layout {
 
 // MARK: - Reusable Components
 
-private struct SearchBar: View {
-  @Binding var text: String
-  let placeholder: String
-  let isSearching: Bool
-  let onSearch: () -> Void
-
-  var body: some View {
-    HStack(spacing: Spacing.xs) {
-      Image(systemName: "magnifyingglass").foregroundColor(.tidexTextMuted)
-      TextField(placeholder, text: $text)
-        .autocorrectionDisabled()
-        .textInputAutocapitalization(.never)
-        .onChange(of: text) { _, _ in onSearch() }
-      if !text.isEmpty {
-        Button {
-          text = ""
-          onSearch()
-        } label: {
-          Image(systemName: "xmark.circle.fill").foregroundColor(.tidexTextMuted)
-        }
-      }
-      if isSearching { ProgressView().scaleEffect(0.8) }
-    }
-    .padding(Spacing.sm)
-    .background(Color.tidexSurfacePrimary)
-  }
-}
-
-private struct AdminLoadingView: View {
-  var body: some View {
-    VStack {
-      Spacer()
-      ProgressView()
-      Spacer()
-    }
-  }
-}
-
-private struct EmptyStateView: View {
-  let icon: String
-  let message: String
-
-  var body: some View {
-    VStack(spacing: Spacing.sm) {
-      Spacer()
-      Image(systemName: icon).font(.system(size: 40)).foregroundColor(.tidexTextMuted)
-      Text(message).font(.tidexBody).foregroundColor(.tidexTextSecondary)
-      Spacer()
-    }
-  }
-}
-
 private struct AdminTextFieldStyle: TextFieldStyle {
   func _body(configuration: TextField<Self._Label>) -> some View {
     configuration
@@ -767,7 +729,6 @@ private struct UserCard: View {
       .padding(Spacing.sm)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(CornerRadius.md)
-      .tidexCardShadow(cornerRadius: CornerRadius.md)
     }
     .buttonStyle(.plain)
   }
@@ -784,7 +745,7 @@ private struct UserCard: View {
 
 private struct SubscriberCard: View {
   let subscriber: AdminSubscriberItem
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -848,7 +809,6 @@ private struct SubscriberCard: View {
     .padding(Spacing.sm)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.md)
-    .tidexCardShadow(cornerRadius: CornerRadius.md)
   }
 
   private func planColor(_ plan: String) -> Color {
@@ -862,19 +822,9 @@ private struct SubscriberCard: View {
 
   private func formattedDate(_ dateString: String?) -> String {
     guard let dateString else { return "-" }
+    guard let date = ISO8601Timestamp.date(from: dateString) else { return dateString }
 
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = formatter.date(from: dateString) {
-      return date.formatted(date: .abbreviated, time: .omitted)
-    }
-
-    formatter.formatOptions = [.withInternetDateTime]
-    if let date = formatter.date(from: dateString) {
-      return date.formatted(date: .abbreviated, time: .omitted)
-    }
-
-    return dateString
+    return date.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(.appLocale))
   }
 }
 
@@ -898,7 +848,6 @@ private struct FeedbackCard: View {
       .padding(Spacing.sm)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(CornerRadius.md)
-      .tidexCardShadow(cornerRadius: CornerRadius.md)
     }
     .buttonStyle(.plain)
   }
@@ -950,7 +899,6 @@ private struct ReportCard: View {
       .padding(Spacing.sm)
       .background(Color.tidexSurfacePrimary)
       .cornerRadius(CornerRadius.md)
-      .tidexCardShadow(cornerRadius: CornerRadius.md)
     }
     .buttonStyle(.plain)
   }
@@ -965,18 +913,9 @@ private struct ReportCard: View {
   }
 
   private func formattedDate(_ dateString: String) -> String {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = formatter.date(from: dateString) {
-      return date.formatted(date: .abbreviated, time: .shortened)
-    }
+    guard let date = ISO8601Timestamp.date(from: dateString) else { return dateString }
 
-    formatter.formatOptions = [.withInternetDateTime]
-    if let date = formatter.date(from: dateString) {
-      return date.formatted(date: .abbreviated, time: .shortened)
-    }
-
-    return dateString
+    return date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(.appLocale))
   }
 }
 
@@ -1000,7 +939,6 @@ private struct AuditLogCard: View {
     .padding(Spacing.xs)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.sm)
-    .tidexCardShadow(cornerRadius: CornerRadius.sm)
   }
 }
 
@@ -1036,7 +974,6 @@ private struct ShareCard: View {
     .padding(Spacing.xs)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.sm)
-    .tidexCardShadow(cornerRadius: CornerRadius.sm)
   }
 }
 
@@ -1061,7 +998,6 @@ private struct BroadcastCard: View {
     .padding(Spacing.xs)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.sm)
-    .tidexCardShadow(cornerRadius: CornerRadius.sm)
   }
 
   private func statusColor(_ status: String) -> Color {
@@ -1093,7 +1029,7 @@ private struct Badge: View {
 
 private struct UserActionSheet: View {
   let user: AdminUserItem
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
   @Environment(\.dismiss) private var dismiss
   @State private var impersonationReason = ""
   @State private var impersonationError: String?
@@ -1101,116 +1037,110 @@ private struct UserActionSheet: View {
 
   private var formattedLastSignIn: String? {
     guard let lastSignIn = user.lastSignInAt else { return nil }
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    guard let date = formatter.date(from: lastSignIn) else {
-      // Try without fractional seconds
-      formatter.formatOptions = [.withInternetDateTime]
-      guard let date = formatter.date(from: lastSignIn) else { return lastSignIn }
-      return formatDate(date)
-    }
+    guard let date = ISO8601Timestamp.date(from: lastSignIn) else { return lastSignIn }
     return formatDate(date)
   }
 
   private func formatDate(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateStyle = .medium
-    formatter.timeStyle = .short
-    return formatter.string(from: date)
+    date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(.appLocale))
   }
 
   var body: some View {
     NavigationStack {
       List {
-        Section {
-          Text(user.displayName).font(.headline)
-          if let email = user.email { Text(email).font(.subheadline).foregroundColor(.secondary) }
-          if let lastSignIn = formattedLastSignIn {
-            HStack {
-              Text("Last login")
-                .foregroundColor(.secondary)
-              Spacer()
-              Text(lastSignIn)
-                .foregroundColor(.tidexTextMuted)
+        Group {
+          Section {
+            Text(user.displayName).font(.headline)
+            if let email = user.email { Text(email).font(.subheadline).foregroundColor(.secondary) }
+            if let lastSignIn = formattedLastSignIn {
+              HStack {
+                Text("Last login")
+                  .foregroundColor(.secondary)
+                Spacer()
+                Text(lastSignIn)
+                  .foregroundColor(.tidexTextMuted)
+              }
+              .font(.subheadline)
+            } else {
+              HStack {
+                Text("Last login")
+                  .foregroundColor(.secondary)
+                Spacer()
+                Text("Never")
+                  .foregroundColor(.tidexTextMuted)
+              }
+              .font(.subheadline)
             }
-            .font(.subheadline)
-          } else {
-            HStack {
-              Text("Last login")
-                .foregroundColor(.secondary)
-              Spacer()
-              Text("Never")
-                .foregroundColor(.tidexTextMuted)
+          }
+
+          Section("Actions") {
+            if !user.isSuperAdmin {
+              Button(user.isBanned ? "Unban User" : "Ban User") {
+                Task {
+                  await viewModel.toggleBan(user: user)
+                  dismiss()
+                }
+              }
+              .foregroundColor(user.isBanned ? .tidexSuccess : .tidexError)
             }
-            .font(.subheadline)
+
+            if viewModel.isSuperAdmin, !user.isSuperAdmin {
+              Button(user.isAdmin ? "Revoke Admin" : "Grant Admin") {
+                Task {
+                  await viewModel.toggleAdmin(user: user)
+                  dismiss()
+                }
+              }
+            }
+
+            Button(user.isGrandfathered ? "Revoke Grandfathered" : "Grant Grandfathered") {
+              Task {
+                await viewModel.toggleGrandfathered(user: user)
+                dismiss()
+              }
+            }
+
+            if user.plan == "trial" {
+              Button("Revoke Trial") {
+                Task {
+                  await viewModel.toggleTrial(user: user, create: false)
+                  dismiss()
+                }
+              }
+              .foregroundColor(.tidexError)
+            } else if user.plan == "free" {
+              Button("Grant 7-day Trial") {
+                Task {
+                  await viewModel.toggleTrial(user: user, create: true)
+                  dismiss()
+                }
+              }
+            }
+          }
+
+          if !user.isAdmin || (viewModel.isSuperAdmin && !user.isSuperAdmin) {
+            Section("Impersonation") {
+              TextField("Reason (minimum 5 characters)", text: $impersonationReason)
+                .textInputAutocapitalization(.sentences)
+
+              if let impersonationError {
+                Text(impersonationError)
+                  .font(.tidexCaptionRegular)
+                  .foregroundColor(.tidexError)
+              }
+
+              Button(isStartingImpersonation ? "Starting..." : "Impersonate User") {
+                Task { await startImpersonation() }
+              }
+              .disabled(
+                isStartingImpersonation
+                  || impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines).count < 5)
+            }
           }
         }
-
-        Section("Actions") {
-          if !user.isSuperAdmin {
-            Button(user.isBanned ? "Unban User" : "Ban User") {
-              Task {
-                await viewModel.toggleBan(user: user)
-                dismiss()
-              }
-            }
-            .foregroundColor(user.isBanned ? .tidexSuccess : .tidexError)
-          }
-
-          if viewModel.isSuperAdmin, !user.isSuperAdmin {
-            Button(user.isAdmin ? "Revoke Admin" : "Grant Admin") {
-              Task {
-                await viewModel.toggleAdmin(user: user)
-                dismiss()
-              }
-            }
-          }
-
-          Button(user.isGrandfathered ? "Revoke Grandfathered" : "Grant Grandfathered") {
-            Task {
-              await viewModel.toggleGrandfathered(user: user)
-              dismiss()
-            }
-          }
-
-          if user.plan == "trial" {
-            Button("Revoke Trial") {
-              Task {
-                await viewModel.toggleTrial(user: user, create: false)
-                dismiss()
-              }
-            }
-            .foregroundColor(.tidexError)
-          } else if user.plan == "free" {
-            Button("Grant 7-day Trial") {
-              Task {
-                await viewModel.toggleTrial(user: user, create: true)
-                dismiss()
-              }
-            }
-          }
-        }
-
-        if !user.isAdmin || (viewModel.isSuperAdmin && !user.isSuperAdmin) {
-          Section("Impersonation") {
-            TextField("Reason (minimum 5 characters)", text: $impersonationReason)
-              .textInputAutocapitalization(.sentences)
-
-            if let impersonationError {
-              Text(impersonationError)
-                .font(.tidexCaptionRegular)
-                .foregroundColor(.tidexError)
-            }
-
-            Button(isStartingImpersonation ? "Starting..." : "Impersonate User") {
-              Task { await startImpersonation() }
-            }
-            .disabled(
-              isStartingImpersonation
-                || impersonationReason.trimmingCharacters(in: .whitespacesAndNewlines).count < 5)
-          }
-        }
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
+      .tidexListBackground()
       .navigationTitle("User Actions")
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -1250,7 +1180,7 @@ private struct UserActionSheet: View {
 
 private struct FeedbackResponseSheet: View {
   let feedback: AdminFeedbackItem
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {
@@ -1264,7 +1194,6 @@ private struct FeedbackResponseSheet: View {
         .padding()
         .background(Color.tidexSurfacePrimary)
         .cornerRadius(CornerRadius.lg)
-        .tidexCardShadow(cornerRadius: CornerRadius.lg)
 
         if let existingResponse = feedback.response {
           VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -1314,7 +1243,7 @@ private struct FeedbackResponseSheet: View {
 
 private struct ReportReviewSheet: View {
   let report: AdminReportItem
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
   @Environment(\.dismiss) private var dismiss
   @State private var selectedStatus: AdminReportStatus
 
@@ -1342,7 +1271,6 @@ private struct ReportReviewSheet: View {
             .padding()
             .background(Color.tidexSurfacePrimary)
             .cornerRadius(CornerRadius.lg)
-            .tidexCardShadow(cornerRadius: CornerRadius.lg)
           }
 
           VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -1364,7 +1292,6 @@ private struct ReportReviewSheet: View {
           .padding()
           .background(Color.tidexSurfacePrimary)
           .cornerRadius(CornerRadius.lg)
-          .tidexCardShadow(cornerRadius: CornerRadius.lg)
 
           Button(action: save) {
             Text(viewModel.isPerformingAction ? "Saving..." : "Save Review")
@@ -1411,7 +1338,6 @@ private struct ReportReviewSheet: View {
     .padding()
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.lg)
-    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 
   private func save() {
@@ -1427,24 +1353,14 @@ private struct ReportReviewSheet: View {
 
   private func formattedDate(_ dateString: String?) -> String? {
     guard let dateString, !dateString.isEmpty else { return nil }
+    guard let date = ISO8601Timestamp.date(from: dateString) else { return dateString }
 
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let date = formatter.date(from: dateString) {
-      return date.formatted(date: .abbreviated, time: .shortened)
-    }
-
-    formatter.formatOptions = [.withInternetDateTime]
-    if let date = formatter.date(from: dateString) {
-      return date.formatted(date: .abbreviated, time: .shortened)
-    }
-
-    return dateString
+    return date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened).locale(.appLocale))
   }
 }
 
 private struct CreateShareSheet: View {
-  @ObservedObject var viewModel: AdminSettingsViewModel
+  @Bindable var viewModel: AdminSettingsViewModel
   @Environment(\.dismiss) private var dismiss
 
   var body: some View {

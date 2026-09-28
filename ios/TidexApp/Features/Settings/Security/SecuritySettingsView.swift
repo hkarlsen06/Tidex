@@ -5,11 +5,11 @@ import SwiftUI
 /// Displays password management, connected accounts, and MFA settings
 struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl type_body_length
   @Environment(\.dismiss) private var dismiss
-  @StateObject private var viewModel = SecuritySettingsViewModel()
+  @State private var viewModel = SecuritySettingsViewModel()
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: Spacing.lg) {
+    Form {
+      Group {
         // Error message
         if let error = viewModel.errorMessage {
           ErrorBanner(message: error, onDismiss: { viewModel.clearMessages() })
@@ -19,7 +19,6 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           Text(.securityOfflineManageUnavailable)
             .font(.tidexFootnote)
             .foregroundColor(.tidexTextMuted)
-            .padding(.horizontal, Spacing.sm)
         }
 
         // Password section
@@ -34,10 +33,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
         // MFA section
         mfaSection
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.lg)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .background(Color.tidexBackground)
+    .tidexListBackground()
     .navigationTitle(String(localized: .securityTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
@@ -115,20 +113,15 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     footer: String? = nil,
     @ViewBuilder content: () -> Content
   ) -> some View {
-    TidexSettingsSection(
-      title: title,
-      footer: {
-        if let footer {
-          Text(footer)
-        }
-      }
-    ) {
+    Section {
       content()
+    } header: {
+      Text(title)
+    } footer: {
+      if let footer {
+        Text(footer)
+      }
     }
-  }
-
-  private var settingsDivider: some View {
-    TidexSettingsDivider()
   }
 
   // MARK: - Password Section
@@ -137,7 +130,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     settingsSection(title: String(localized: .securityPasswordSectionTitle)) {
       HStack(spacing: Spacing.sm) {
         // Icon
-        TidexSettingsIcon(systemName: "lock.fill", foregroundColor: .tidexBlue, size: 29)
+        Image(systemName: "lock.fill")
+          .foregroundColor(.tidexBlue)
+          .accessibilityHidden(true)
 
         // Content
         VStack(alignment: .leading, spacing: Spacing.micro) {
@@ -205,7 +200,6 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           connectDisabled: viewModel.isOfflineLimited
         )
 
-        settingsDivider
       }
 
       // Google connection
@@ -225,8 +219,6 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
         },
         connectDisabled: viewModel.isOfflineLimited
       )
-
-      settingsDivider
 
       // Apple connection
       connectionRow(
@@ -263,7 +255,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   ) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      TidexSettingsIcon(systemName: icon, foregroundColor: iconColor, size: 29)
+      Image(systemName: icon)
+        .foregroundColor(iconColor)
+        .accessibilityHidden(true)
 
       // Content
       VStack(alignment: .leading, spacing: Spacing.micro) {
@@ -346,7 +340,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
     ) {
       if viewModel.passkeys.isEmpty {
         HStack(spacing: Spacing.sm) {
-          TidexSettingsIcon(systemName: "key.slash", foregroundColor: .tidexBlue, size: 29)
+          Image(systemName: "key.slash")
+            .foregroundColor(.tidexBlue)
+            .accessibilityHidden(true)
 
           Text(.securityPasskeysNoPasskeys)
             .font(.tidexSubheadline)
@@ -355,11 +351,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           Spacer()
         }
 
-        settingsDivider
       } else {
         ForEach(viewModel.passkeys) { passkey in
           passkeyRow(passkey)
-          settingsDivider
         }
       }
 
@@ -396,7 +390,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   @ViewBuilder
   private func passkeyRow(_ passkey: PasskeyAuthService.Passkey) -> some View {
     HStack(spacing: Spacing.sm) {
-      TidexSettingsIcon(systemName: "person.badge.key.fill", foregroundColor: .tidexBlue, size: 29)
+      Image(systemName: "person.badge.key.fill")
+        .foregroundColor(.tidexBlue)
+        .accessibilityHidden(true)
 
       VStack(alignment: .leading, spacing: Spacing.micro) {
         Text(passkey.displayName)
@@ -456,7 +452,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
       // Enrolled factors
       if viewModel.mfaFactors.isEmpty {
         HStack(spacing: Spacing.sm) {
-          TidexSettingsIcon(systemName: "shield.slash", foregroundColor: .tidexBlue, size: 29)
+          Image(systemName: "shield.slash")
+            .foregroundColor(.tidexBlue)
+            .accessibilityHidden(true)
 
           Text(.securityMfaNoFactors)
             .font(.tidexSubheadline)
@@ -465,11 +463,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
           Spacer()
         }
 
-        settingsDivider
       } else {
         ForEach(viewModel.mfaFactors) { factor in
           mfaFactorRow(factor)
-          settingsDivider
         }
       }
 
@@ -504,7 +500,9 @@ struct SecuritySettingsView: View {  // swiftlint:disable:this explicit_acl expl
   private func mfaFactorRow(_ factor: SecuritySettingsViewModel.MFAFactor) -> some View {
     HStack(spacing: Spacing.sm) {
       // Icon
-      TidexSettingsIcon(systemName: "iphone", foregroundColor: .tidexBlue, size: 29)
+      Image(systemName: "iphone")
+        .foregroundColor(.tidexBlue)
+        .accessibilityHidden(true)
 
       // Content
       VStack(alignment: .leading, spacing: Spacing.micro) {

@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import Supabase
 import SwiftData
@@ -50,7 +49,7 @@ struct SharedKeychainAccessTokenPayload: Equatable {
 /// ```
 @MainActor
 // swiftlint:disable:next type_body_length
-final class AuthSessionManager: ObservableObject {
+final class AuthSessionManager {
   static let shared = AuthSessionManager()
 
   // MARK: - Configuration
@@ -76,7 +75,7 @@ final class AuthSessionManager: ObservableObject {
   private var sessionTaskAllowsProactiveRefresh = false
 
   /// Whether a refresh is currently in progress
-  @Published private(set) var isRefreshing = false
+  private(set) var isRefreshing = false
 
   // MARK: - Initialization
 

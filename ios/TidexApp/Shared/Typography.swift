@@ -190,28 +190,6 @@ extension Font {
   static let tidexPricePeriod = Font.system(.caption, design: .default)
 }
 
-// MARK: - Text Style Modifiers
-
-extension View {
-  /// Applies the standard body text style
-  func tidexBodyStyle() -> some View {
-    self.font(.tidexBody)
-      .foregroundColor(.tidexTextPrimary)
-  }
-
-  /// Applies the secondary text style
-  func tidexSecondaryStyle() -> some View {
-    self.font(.tidexSubheadline)
-      .foregroundColor(.tidexTextSecondary)
-  }
-
-  /// Applies the muted caption style
-  func tidexMutedStyle() -> some View {
-    self.font(.tidexCaptionRegular)
-      .foregroundColor(.tidexTextMuted)
-  }
-}
-
 // MARK: - TextStyle UIKit Bridge
 
 extension Font.TextStyle {

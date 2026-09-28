@@ -1,5 +1,4 @@
 import Auth
-import Combine
 import Foundation
 import Supabase
 import os.log
@@ -116,13 +115,13 @@ struct FriendsTabBootstrapRPCResponse: Decodable {
 /// Sharing management now uses authenticated Supabase RPCs end-to-end.
 @MainActor
 // swiftlint:disable:next type_body_length
-final class SharingService: ObservableObject {
+final class SharingService {
   static let shared = SharingService()
 
-  @Published private(set) var sharers: [SharedUser] = []
-  @Published private(set) var isLoadingSharers = false
-  @Published private(set) var isLoadingShifts = false
-  @Published private(set) var error: Error?
+  private(set) var sharers: [SharedUser] = []
+  private(set) var isLoadingSharers = false
+  private(set) var isLoadingShifts = false
+  private(set) var error: Error?
 
   /// Cache for shift previews (by sharer ID)
   private var previewCache: [String: CachedPreview] = [:]

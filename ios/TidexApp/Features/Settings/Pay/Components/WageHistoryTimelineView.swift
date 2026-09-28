@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Wage History Timeline View
 
@@ -61,7 +60,7 @@ struct WageHistoryTimelineView: View {
 
   private var addChangeButton: some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       onAddNew()
     }) {
       Label(.settingsPayTimelineAddChange, systemImage: "plus")
@@ -127,7 +126,7 @@ private struct TimelineEntryRow: View {
 
   var body: some View {
     Button {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       onEdit()
     } label: {
       HStack(alignment: .center, spacing: 0) {
@@ -254,12 +253,7 @@ private struct TimelineEntryRow: View {
 
   private var formattedWage: String {
     let wage = entry.snapshot.hourly_wage
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 2
-    formatter.maximumFractionDigits = 2
-    formatter.locale = Locale.appLocale
-    let formatted = formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
+    let formatted = CurrencyConfig.formatPlain(wage, includeDecimals: true)
     let currencyConfig = CurrencyConfig.get(currency)
     let perHour = String(localized: .commonPerHourShort)
 

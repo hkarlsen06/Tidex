@@ -3,7 +3,7 @@ import SwiftUI
 /// Feedback settings view
 /// Allows users to submit feedback and view their feedback history with responses
 struct FeedbackSettingsView: View {
-  @StateObject private var viewModel = FeedbackSettingsViewModel()
+  @State private var viewModel = FeedbackSettingsViewModel()
   @State private var historyAnimated = false
 
   var body: some View {

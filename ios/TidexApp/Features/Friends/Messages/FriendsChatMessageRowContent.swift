@@ -306,21 +306,6 @@ struct FriendsChatMessageRowContent: View {
   private static let avatarSize: CGFloat = AvatarView.Size.small
   private static let replySwipeResetAnimationDuration: TimeInterval = 0.18
 
-  private enum ReplySwipeHaptics {
-    static let impact: UIImpactFeedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
-    static let selection: UISelectionFeedbackGenerator = UISelectionFeedbackGenerator()
-    private static var isPrepared: Bool = false
-
-    static func prepareIfNeeded() {
-      guard !isPrepared else {
-        return
-      }
-      isPrepared = true
-      impact.prepare()
-      selection.prepare()
-    }
-  }
-
   let message: FriendMessage
   let quotedPreview: FriendsChatReplyPreviewModel?
   let isCurrentUser: Bool
@@ -788,8 +773,9 @@ struct FriendsChatMessageRowContent: View {
         replySwipeActionLabel
           .opacity(replySwipeActionOpacity(for: id))
       }
-      .onAppear {
-        ReplySwipeHaptics.prepareIfNeeded()
+      .sensoryFeedback(.impact(weight: .medium), trigger: hasTriggeredReplySwipeHaptic) {
+        _, newValue in
+        newValue
       }
     } else {
       content()
@@ -886,8 +872,6 @@ struct FriendsChatMessageRowContent: View {
     )
     if crossedThreshold, !hasTriggeredReplySwipeHaptic {
       hasTriggeredReplySwipeHaptic = true
-      ReplySwipeHaptics.impact.impactOccurred()
-      ReplySwipeHaptics.impact.prepare()
     }
   }
 
@@ -921,7 +905,7 @@ struct FriendsChatMessageRowContent: View {
       return
     }
 
-    ReplySwipeHaptics.impact.impactOccurred()
+    Haptics.play(.medium)
     DispatchQueue.main.asyncAfter(
       deadline: .now() + Self.replySwipeResetAnimationDuration + 0.04
     ) {
@@ -2206,15 +2190,16 @@ private struct FriendsChatReplySwipeContainer<Content: View, ActionLabel: View>:
 }
 
 @MainActor
-final class FriendsChatImageLoader: ObservableObject {
+@Observable
+final class FriendsChatImageLoader {
   enum Variant {
     case original
     case display(pixelSize: CGSize)
   }
 
-  @Published private(set) var image: UIImage?
-  @Published private(set) var isLoading: Bool = false
-  @Published private(set) var didFail: Bool = false
+  private(set) var image: UIImage?
+  private(set) var isLoading: Bool = false
+  private(set) var didFail: Bool = false
 
   private let variant: Variant
 
@@ -2506,7 +2491,7 @@ struct FriendsChatImageAttachmentCard: View {
   // swiftlint:disable:next explicit_acl
   var onTap: (() -> Void)?
 
-  @StateObject private var loader: FriendsChatImageLoader
+  @State private var loader: FriendsChatImageLoader
 
   init(
     attachment: FriendMessageAttachment,
@@ -2535,7 +2520,7 @@ struct FriendsChatImageAttachmentCard: View {
     let variant = FriendsChatImageLoader.Variant.display(pixelSize: pixelSize)
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath, variant: variant)
     let initialImage = ImageCache.shared.get(for: cacheURL, policy: .messageAttachment)
-    _loader = StateObject(
+    _loader = State(
       wrappedValue: FriendsChatImageLoader(initialImage: initialImage, variant: variant)
     )
   }
@@ -2882,7 +2867,7 @@ private struct FriendsChatImageGalleryPage: View {
   let onImageLoaded: (UIImage) -> Void
   let onZoomStateChanged: (Bool) -> Void
 
-  @StateObject private var loader: FriendsChatImageLoader
+  @State private var loader: FriendsChatImageLoader
 
   init(
     attachment: FriendMessageAttachment,
@@ -2896,7 +2881,7 @@ private struct FriendsChatImageGalleryPage: View {
     self.onZoomStateChanged = onZoomStateChanged
     let cacheURL = FriendsChatImageLoader.cacheURL(for: attachment.storagePath)
     let initialImage = ImageCache.shared.get(for: cacheURL, policy: .messageAttachment)
-    _loader = StateObject(
+    _loader = State(
       wrappedValue: FriendsChatImageLoader(initialImage: initialImage, variant: .original)
     )
   }

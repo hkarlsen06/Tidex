@@ -1,4 +1,3 @@
-import SafariServices
 import SwiftUI
 
 /// Terms and conditions agreement checkbox with links
@@ -6,7 +5,7 @@ struct TermsAgreementView: View {
   @Binding var isAgreed: Bool
   var error: String?
 
-  @State private var safariURL: URL?
+  @Environment(\.openURL) private var openURL
 
   private var termsURL: URL? {
     URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
@@ -31,10 +30,6 @@ struct TermsAgreementView: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .center)
-    .fullScreenCover(item: $safariURL) { url in
-      SafariView(url: url)
-        .ignoresSafeArea()
-    }
   }
 
   private var checkboxButton: some View {
@@ -85,7 +80,7 @@ struct TermsAgreementView: View {
       .environment(
         \.openURL,
         OpenURLAction { url in
-          safariURL = url
+          openURL(url, prefersInApp: true)
           return .handled
         })
   }
@@ -127,27 +122,6 @@ struct TermsAgreementView: View {
 
     return result
   }
-}
-
-// MARK: - Safari View
-
-/// Wrapper for presenting SFSafariViewController in SwiftUI
-struct SafariView: UIViewControllerRepresentable {
-  let url: URL
-
-  // swiftlint:disable:next explicit_acl
-  func makeUIViewController(context _: Context) -> SFSafariViewController {
-    SFSafariViewController(url: url)
-  }
-
-  // swiftlint:disable:next explicit_acl no_empty_block
-  func updateUIViewController(_: SFSafariViewController, context _: Context) {}
-}
-
-// MARK: - URL Identifiable Extension
-
-extension URL: @retroactive Identifiable {
-  public var id: String { absoluteString }
 }
 
 #Preview("Terms Agreement - Unchecked") {

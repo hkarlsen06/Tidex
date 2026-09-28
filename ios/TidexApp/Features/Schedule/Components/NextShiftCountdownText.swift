@@ -1,4 +1,3 @@
-import Combine
 import SwiftUI
 
 private enum NextShiftCountdownPreviewData {
@@ -45,44 +44,21 @@ private enum NextShiftCountdownPreviewData {
 internal struct NextShiftCountdownText: View {
   internal let shift: ShiftWithComputations
 
-  @State private var countdownText: String = ""
-  @State private var timer: AnyCancellable?
-
   internal var body: some View {
-    Text(countdownText)
-      .font(.tidexCaptionRegular)
-      .foregroundColor(.tidexTextMuted)
-      .onAppear {
-        updateCountdown()
-        startTimer()
-      }
-      .onDisappear {
-        stopTimer()
-      }
+    TimelineView(.periodic(from: .now, by: 1)) { context in
+      Text(countdownText(at: context.date))
+        .font(.tidexCaptionRegular)
+        .foregroundColor(.tidexTextMuted)
+    }
   }
 
-  // MARK: - Timer
-
-  private func startTimer() {
-    timer = Timer.publish(every: 1, on: .main, in: .common)
-      .autoconnect()
-      .sink { _ in
-        updateCountdown()
-      }
-  }
-
-  private func stopTimer() {
-    timer?.cancel()
-    timer = nil
-  }
-
-  private func updateCountdown() {
-    countdownText =
-      CountdownFormatter.formatShiftCountdown(
-        shiftDate: shift.shiftDate,
-        startTime: shift.startTime,
-        endTime: shift.endTime
-      ).text
+  private func countdownText(at date: Date) -> String {
+    CountdownFormatter.formatShiftCountdown(
+      shiftDate: shift.shiftDate,
+      startTime: shift.startTime,
+      endTime: shift.endTime,
+      now: date
+    ).text
   }
 }
 

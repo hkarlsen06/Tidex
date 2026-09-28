@@ -122,7 +122,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   private let initialTariffRules: [SupplementRule]
   private var tariffRules: [SupplementRule] { recalculatedTariffRules ?? initialTariffRules }
 
-  @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.userCurrency) private var currency
   @Environment(\.layoutDirection) private var layoutDirection
   @Environment(\.dismiss) private var dismiss
@@ -201,12 +201,6 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
   @State private var showingStopRecurringConfirmation = false
   @State private var isStoppingRecurringAfterDate = false
 
-  /// Image to share (rendered from ShareableShiftCard)
-  @State private var shareImage: UIImage?
-
-  /// URL of the temporary image file for sharing
-  @State private var shareImageURL: URL?
-
   /// Haptic feedback generator
   private let impactHaptic = UIImpactFeedbackGenerator(style: .medium)
 
@@ -260,10 +254,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       return shift.shiftDate
     }
 
-    let formatter = DateFormatter()
-    formatter.locale = Locale.appLocale
-    formatter.dateFormat = "EEEE, d. MMMM yyyy"
-    return formatter.string(from: date).sentenceCased()
+    return date.formatted(
+      .dateTime.weekday(.wide).day().month(.wide).year().locale(.appLocale)
+    ).sentenceCased()
   }
 
   private var formattedStopRecurringDate: String {
@@ -665,28 +658,10 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
       .presentationDetents([.height(250)])
       .presentationDragIndicator(.visible)
     }
-    .sheet(
-      isPresented: $showingImageShareOptions,
-      onDismiss: {
-        // Check if we have a pending share action
-        if let url = shareImageURL {
-          presentShareSheet(with: [url])
-        } else if let image = shareImage {
-          presentShareSheet(with: [image])
-        }
-      }
-    ) {
+    .sheet(isPresented: $showingImageShareOptions) {
       ShareOptionsSheet(
-        onShowEarnings: {
-          // Prepare the image first, then dismiss - share sheet shows on dismiss
-          prepareShiftImage(includeEarnings: true)
-          showingImageShareOptions = false
-        },
-        onHideEarnings: {
-          // Prepare the image first, then dismiss - share sheet shows on dismiss
-          prepareShiftImage(includeEarnings: false)
-          showingImageShareOptions = false
-        }
+        earningsImage: renderShiftImage(includeEarnings: true),
+        hiddenEarningsImage: renderShiftImage(includeEarnings: false)
       )
       .presentationDetents([.height(260)])
       .presentationDragIndicator(.visible)
@@ -924,70 +899,15 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
   }
 
-  /// Prepare the shift image for sharing (called before dismissing options sheet)
+  /// Render the shift card as a PNG for `ShareOptionsSheet`'s `ShareLink` buttons
   @MainActor
-  private func prepareShiftImage(includeEarnings: Bool) {
-    // Create the shareable card view
-    let shareableCard = ShareableShiftCard(
+  private func renderShiftImage(includeEarnings: Bool) -> UIImage? {
+    ShareableShiftCard(
       shift: shift,
       currency: currency,
       includeEarnings: includeEarnings
     )
-
-    // Render to image and save to temp file for better share sheet compatibility
-    guard let image = shareableCard.renderAsImage(),
-      let pngData = image.pngData()
-    else {
-      shareImage = nil
-      shareImageURL = nil
-      return
-    }
-
-    let tempURL = FileManager.default.temporaryDirectory
-      .appendingPathComponent("shift-\(shift.id).png")
-
-    do {
-      try pngData.write(to: tempURL)
-      shareImage = image
-      shareImageURL = tempURL
-    } catch {
-      // Fallback to sharing image directly
-      shareImage = image
-      shareImageURL = nil
-    }
-  }
-
-  /// Present the share sheet with the given items (called after options sheet dismisses)
-  @MainActor
-  private func presentShareSheet(with activityItems: [Any]) {
-    // Clear the pending share state
-    defer {
-      shareImage = nil
-      shareImageURL = nil
-    }
-
-    let activityVC = UIActivityViewController(
-      activityItems: activityItems,
-      applicationActivities: nil
-    )
-
-    // Get the root view controller and present
-    if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-      let rootVC = windowScene.windows.first?.rootViewController
-    {
-      // Find the topmost presented view controller
-      var topVC = rootVC
-      while let presented = topVC.presentedViewController {
-        topVC = presented
-      }
-      // iPad requires popover configuration
-      if let popover = activityVC.popoverPresentationController {
-        popover.sourceView = topVC.view
-        popover.sourceRect = CGRect(x: topVC.view.bounds.midX, y: 100, width: 0, height: 0)
-        popover.permittedArrowDirections = .up
-      }
-      topVC.present(activityVC, animated: true)
-    }
+    .renderAsImage()
   }
 
   /// Save changes
@@ -1498,10 +1418,9 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
               systemImage: "repeat",
               style: .secondary
             ) {
-              dismiss()
-              DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                onEditRecurring?(recurringId)
-              }
+              // The caller nils out the item binding that presents this sheet and queues
+              // the recurring editor to open once the dismiss animation finishes.
+              onEditRecurring?(recurringId)
             }
           }
 
@@ -2015,6 +1934,7 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
     }
     // Otherwise use a short date format
     let formatter = DateFormatter()  // swiftlint:disable:this explicit_type_interface
+    formatter.locale = Locale.appLocale
     formatter.dateStyle = .medium
     formatter.timeStyle = .none
     return formatter.string(from: date)
@@ -2070,10 +1990,8 @@ struct ShiftDetailsSheet: View {  // swiftlint:disable:this explicit_acl explici
 
 /// Bottom sheet for selecting share options
 private struct ShareOptionsSheet: View {
-  let onShowEarnings: () -> Void
-  let onHideEarnings: () -> Void
-
-  @Environment(\.dismiss) private var dismiss
+  let earningsImage: UIImage?
+  let hiddenEarningsImage: UIImage?
 
   var body: some View {
     VStack(spacing: Spacing.mlg) {
@@ -2084,51 +2002,9 @@ private struct ShareOptionsSheet: View {
         .padding(.top, Spacing.md)
 
       VStack(spacing: Spacing.sm) {
-        // Show earnings option
-        Button {
-          onShowEarnings()
-        } label: {
-          HStack(spacing: Spacing.msm) {
-            Image(systemName: "eye")
-              .font(.tidexTitle2)
-              .foregroundColor(.tidexTextSecondary)
-              .frame(width: 28)
-            Text(.shiftsShareShowEarnings)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-            Spacer()
-          }
-          .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, 18)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xl)
-              .fill(Color.tidexSurfacePrimary)
-          )
-        }
-        .buttonStyle(.plain)
-
-        // Hide earnings option
-        Button {
-          onHideEarnings()
-        } label: {
-          HStack(spacing: Spacing.msm) {
-            Image(systemName: "eye.slash")
-              .font(.tidexTitle2)
-              .foregroundColor(.tidexTextSecondary)
-              .frame(width: 28)
-            Text(.shiftsShareHideEarnings)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-            Spacer()
-          }
-          .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, 18)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xl)
-              .fill(Color.tidexSurfacePrimary)
-          )
-        }
-        .buttonStyle(.plain)
+        shareLinkRow(image: earningsImage, systemImage: "eye", label: .shiftsShareShowEarnings)
+        shareLinkRow(
+          image: hiddenEarningsImage, systemImage: "eye.slash", label: .shiftsShareHideEarnings)
       }
       .padding(.horizontal, Spacing.mlg)
 
@@ -2136,6 +2012,36 @@ private struct ShareOptionsSheet: View {
     }
     .frame(maxWidth: .infinity)
     .background(Color.tidexBackground)
+  }
+
+  @ViewBuilder
+  private func shareLinkRow(
+    image: UIImage?, systemImage: String, label: LocalizedStringResource
+  ) -> some View {
+    if let image, let pngData = image.pngData() {
+      ShareLink(
+        item: TransferablePNGImage(data: pngData),
+        preview: SharePreview(Text(label), image: Image(uiImage: image))
+      ) {
+        HStack(spacing: Spacing.msm) {
+          Image(systemName: systemImage)
+            .font(.tidexTitle2)
+            .foregroundColor(.tidexTextSecondary)
+            .frame(width: 28)
+          Text(label)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+          Spacer()
+        }
+        .padding(.horizontal, Spacing.mlg)
+        .padding(.vertical, 18)
+        .background(
+          RoundedRectangle(cornerRadius: CornerRadius.xl)
+            .fill(Color.tidexSurfacePrimary)
+        )
+      }
+      .buttonStyle(.plain)
+    }
   }
 }
 

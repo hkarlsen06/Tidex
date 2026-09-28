@@ -60,10 +60,6 @@ struct CalendarSelectionGestureModifier: ViewModifier {
   @State private var dragStartLocation: CGPoint?
   @State private var lastReportedLocation: CGPoint?
 
-  // Haptics
-  private let tapHaptic = UISelectionFeedbackGenerator()
-  private let dragHaptic = UISelectionFeedbackGenerator()
-
   func body(content: Content) -> some View {
     // CRITICAL: Only attach the gesture when enabled
     // Otherwise the DragGesture(minimumDistance: 0) intercepts all touches
@@ -80,10 +76,7 @@ struct CalendarSelectionGestureModifier: ViewModifier {
               handleDragEnded(value)
             }
         )
-        .onAppear {
-          tapHaptic.prepare()
-          dragHaptic.prepare()
-        }
+        .sensoryFeedback(.selection, trigger: isDragging) { _, isNowDragging in isNowDragging }
     } else {
       content
     }
@@ -105,10 +98,8 @@ struct CalendarSelectionGestureModifier: ViewModifier {
       location.y - (dragStartLocation?.y ?? 0))
 
     if !isDragging, drift >= config.minimumDragDistance {
-      // Start drag mode
+      // Start drag mode (haptic feedback via .sensoryFeedback(trigger: isDragging) in body)
       isDragging = true
-      dragHaptic.selectionChanged()
-      dragHaptic.prepare()
       actions.onDragStart?(dragStartLocation ?? value.startLocation)
     }
 
@@ -120,8 +111,7 @@ struct CalendarSelectionGestureModifier: ViewModifier {
 
       if distFromLast >= config.dragUpdateThreshold {
         lastReportedLocation = location
-        dragHaptic.selectionChanged()
-        dragHaptic.prepare()
+        Haptics.play(.selection)
         actions.onDragChanged?(location)
       }
     }
@@ -137,8 +127,7 @@ struct CalendarSelectionGestureModifier: ViewModifier {
       actions.onDragEnded?()
     } else if drift < config.minimumDragDistance {
       // Minimal movement - treat as tap
-      tapHaptic.selectionChanged()
-      tapHaptic.prepare()
+      Haptics.play(.selection)
       actions.onTap?(value.startLocation)
     }
 
@@ -146,31 +135,6 @@ struct CalendarSelectionGestureModifier: ViewModifier {
     isDragging = false
     dragStartLocation = nil
     lastReportedLocation = nil
-  }
-}
-
-// MARK: - Simple Tap Gesture Modifier (Normal Mode)
-
-/// A simple tap gesture for normal mode (when selection mode is off).
-/// Just detects taps - no drag handling, so swipes can pass through.
-struct CalendarTapGestureModifier: ViewModifier {
-  let onTap: ((CGPoint) -> Void)?
-  let isEnabled: Bool
-
-  private let tapHaptic = UISelectionFeedbackGenerator()
-
-  func body(content: Content) -> some View {
-    content
-      .contentShape(Rectangle())
-      .onTapGesture { location in
-        guard isEnabled else { return }
-        tapHaptic.selectionChanged()
-        tapHaptic.prepare()
-        onTap?(location)
-      }
-      .onAppear {
-        tapHaptic.prepare()
-      }
   }
 }
 
@@ -185,16 +149,13 @@ struct CalendarLongPressGestureModifier: ViewModifier {
   let onSwipeRight: (() -> Void)?
   let isEnabled: Bool
 
-  private let tapHaptic = UISelectionFeedbackGenerator()
-
   func body(content: Content) -> some View {
     content
       .overlay {
         if isEnabled {
           CalendarPressOverlay(
             onTap: { location in
-              tapHaptic.selectionChanged()
-              tapHaptic.prepare()
+              Haptics.play(.selection)
               onTap?(location)
             },
             onLongPress: onLongPress,
@@ -203,9 +164,6 @@ struct CalendarLongPressGestureModifier: ViewModifier {
           )
           .allowsHitTesting(true)
         }
-      }
-      .onAppear {
-        tapHaptic.prepare()
       }
   }
 }
@@ -273,7 +231,6 @@ private struct CalendarPressOverlay: UIViewRepresentable {
 
     private let swipeThreshold: CGFloat = 40
     private let flickVelocity: CGFloat = 280
-    private let haptic = UIImpactFeedbackGenerator(style: .medium)
 
     init(
       onTap: ((CGPoint) -> Void)?,
@@ -285,7 +242,6 @@ private struct CalendarPressOverlay: UIViewRepresentable {
       self.onLongPress = onLongPress
       self.onSwipeLeft = onSwipeLeft
       self.onSwipeRight = onSwipeRight
-      haptic.prepare()
     }
 
     @objc
@@ -308,8 +264,7 @@ private struct CalendarPressOverlay: UIViewRepresentable {
 
       guard abs(horizontal) > vertical, isFlick || crossedThreshold else { return }
 
-      haptic.impactOccurred()
-      haptic.prepare()
+      Haptics.play(.medium)
 
       if horizontal < 0 {
         onSwipeLeft?()
@@ -358,18 +313,6 @@ extension View {
       ))
   }
 
-  /// Add simple tap gesture for normal mode
-  func calendarTapGesture(
-    onTap: ((CGPoint) -> Void)?,
-    isEnabled: Bool = true
-  ) -> some View {
-    modifier(
-      CalendarTapGestureModifier(
-        onTap: onTap,
-        isEnabled: isEnabled
-      ))
-  }
-
   /// Add location-aware long press handling without blocking parent gestures.
   func calendarPressGestures(
     onTap: ((CGPoint) -> Void)?,
@@ -384,41 +327,6 @@ extension View {
         onLongPress: onLongPress,
         onSwipeLeft: onSwipeLeft,
         onSwipeRight: onSwipeRight,
-        isEnabled: isEnabled
-      ))
-  }
-}
-
-// MARK: - Legacy Support (for compatibility)
-
-/// Legacy modifier that uses the old API
-struct CalendarGestureModifier: ViewModifier {
-  let actions: CalendarGestureActions
-  let config: CalendarGestureConfig
-  let isEnabled: Bool
-
-  func body(content: Content) -> some View {
-    content
-      .modifier(
-        CalendarSelectionGestureModifier(
-          actions: actions,
-          config: config,
-          isEnabled: isEnabled
-        ))
-  }
-}
-
-extension View {
-  /// Add calendar gesture handling
-  func calendarGestures(
-    actions: CalendarGestureActions,
-    config: CalendarGestureConfig = .default,
-    isEnabled: Bool = true
-  ) -> some View {
-    modifier(
-      CalendarGestureModifier(
-        actions: actions,
-        config: config,
         isEnabled: isEnabled
       ))
   }

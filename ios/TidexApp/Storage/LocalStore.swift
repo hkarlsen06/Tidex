@@ -177,7 +177,10 @@ internal actor LocalStoreActor {
     timeZone: Date.localTimeZone
   )
 
-  /// Delete all data from all tables
+  /// Delete all data from all tables.
+  /// Kept manual: `testResetAllDataClearsExistingRowsAndLeavesTheContainerUsable` crashed the
+  /// test process when this called `modelContext.container.erase()`, so the container doesn't
+  /// reliably stay usable afterward. Per-model batch deletes don't have that problem.
   internal func resetAllData() {
     do {
       try modelContext.delete(model: LocalUserShift.self)
@@ -516,7 +519,11 @@ internal actor LocalStoreActor {
     }
   }
 
-  /// Upsert a job from server data
+  /// Upsert a job from server data.
+  /// Kept manual: a plain `insert` looked safe (unique id, no relationships) but
+  /// `testUpsertJobTwiceBeforeSaveKeepsOneRowWithLatestValues` showed SwiftData keeps the
+  /// first insert's values when two unsaved inserts share a unique id in one context, so it
+  /// silently drops the update instead of upserting. Fetch-then-copy avoids that.
   internal func upsertJob(_ job: LocalJob) throws {
     let jobId = job.id
     let descriptor = FetchDescriptor<LocalJob>(

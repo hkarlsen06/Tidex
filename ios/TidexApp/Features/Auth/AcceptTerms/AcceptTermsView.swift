@@ -1,28 +1,8 @@
-import SafariServices
 import Supabase
 import SwiftUI
 import os.log
 
 private let kAcceptTermsLogger: Logger = Logger(subsystem: "no.tidex.app", category: "AcceptTerms")
-
-// MARK: - Safari View (local copy to avoid import issues)
-
-/// Wrapper for presenting SFSafariViewController in SwiftUI
-internal struct SafariViewAcceptTerms: UIViewControllerRepresentable {
-  private let url: URL
-
-  internal init(url: URL) {
-    self.url = url
-  }
-
-  internal func makeUIViewController(context _: Context) -> SFSafariViewController {
-    SFSafariViewController(url: url)
-  }
-
-  internal func updateUIViewController(_: SFSafariViewController, context _: Context) {
-    _ = url
-  }
-}
 
 /// Screen shown when user needs to accept (or re-accept) terms of service
 /// Mirrors the web app's `/accept-terms` page behavior
@@ -30,9 +10,9 @@ internal struct AcceptTermsView: View {
   internal let isUpdate: Bool
   internal let coordinator: AppCoordinator
 
+  @Environment(\.openURL) private var openURL
   @State private var isProcessing: Bool = false
   @State private var error: String?
-  @State private var safariURL: URL?
 
   private let verticalSpacerLength: CGFloat = 60
   private let iconBackgroundSize: CGFloat = 80
@@ -88,10 +68,6 @@ internal struct AcceptTermsView: View {
       .scrollBounceBehavior(.basedOnSize)
     }
     .background(Color.tidexBackground)
-    .fullScreenCover(item: $safariURL) { url in
-      SafariViewAcceptTerms(url: url)
-        .ignoresSafeArea()
-    }
   }
 
   // MARK: - Header Section
@@ -205,7 +181,7 @@ internal struct AcceptTermsView: View {
   ) -> some View {
     Button {
       if let url {
-        safariURL = url
+        openURL(url, prefersInApp: true)
       }
     } label: {
       HStack(alignment: .top, spacing: Spacing.sm) {

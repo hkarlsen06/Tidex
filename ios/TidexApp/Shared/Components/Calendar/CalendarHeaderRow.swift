@@ -6,8 +6,9 @@
 // swiftlint:disable no_magic_numbers sorted_enum_cases vertical_whitespace_between_cases
 import SwiftUI
 
-/// Totals shown on the trailing side of a calendar header.
-/// `primary` is rendered on the month/year line. `secondary` is optional and shown below.
+/// Totals shown in a calendar header.
+/// `primary` is the net amount on the leading side. `secondary` is optional and shown on the
+/// trailing side, as the before-tax amount or as the change new shifts make.
 struct CalendarHeaderTotals: Equatable {
   let primary: Double?
   let secondary: Double?
@@ -41,88 +42,46 @@ enum CalendarHeaderSecondaryStyle {
   case delta
 }
 
-/// Shared month/year header used by calendar-based screens.
-/// Supports optional trailing totals.
+/// One-line totals header above a calendar. The month and year live in the month picker, so the
+/// row shows the amount on the leading side and the before-tax amount or change on the trailing
+/// side. It keeps the same height whether or not the amounts are there, so selecting dates
+/// never moves the calendar. It shows nothing when there are no totals, such as when earnings
+/// are turned off.
 struct CalendarHeaderRow: View {
-  let monthName: String
-  let year: Int
-  let selectionCount: Int?
-  let phase: MonthTransitionPhase?
   let totals: CalendarHeaderTotals?
-  let trailingAccessory: AnyView?
+  /// Number of selected dates, shown after the amount when the amount covers a selection.
+  var selectionCount: Int?
   var secondaryStyle: CalendarHeaderSecondaryStyle = .detail
 
   @State private var lastDisplayedPrimary: Double = 0
   @State private var lastDisplayedSecondary: Double = 0
 
   var body: some View {
-    if let totals, totals.secondary != nil {
-      HStack(alignment: .center) {
-        monthYearLabel
+    if let totals {
+      HStack(alignment: .firstTextBaseline, spacing: Spacing.xs) {
+        // Holds the line height while no amount is shown.
+        Text(verbatim: " ")
+          .font(.tidexHeadline)
+          .frame(width: 0)
+          .hidden()
 
-        Spacer()
+        primaryAmountText(totals.primary)
 
-        trailingContent(totals: totals, alignment: .center)
-      }
-      .padding(.horizontal, Spacing.xxs)
-      .padding(.bottom, Spacing.sm)
-    } else {
-      HStack(alignment: .firstTextBaseline) {
-        monthYearLabel
+        if let selectionCount {
+          Text(verbatim: "(\(selectionCount))")
+            .font(.tidexFootnote)
+            .foregroundColor(.tidexTextMuted)
+        }
 
-        Spacer()
+        Spacer(minLength: Spacing.xs)
 
-        if let totals {
-          trailingContent(totals: totals, alignment: .firstTextBaseline)
-        } else if let trailingAccessory {
-          trailingAccessory
+        if let secondary = totals.secondary {
+          secondaryAmountText(secondary, isAfterTax: totals.primaryIsAfterTax)
+            .lineLimit(1)
         }
       }
       .padding(.horizontal, Spacing.xxs)
       .padding(.bottom, Spacing.sm)
-    }
-  }
-
-  @ViewBuilder
-  private var monthYearLabel: some View {
-    HStack(spacing: Spacing.xxxs) {
-      Text(monthName)
-        .font(.tidexTitle2)
-        .foregroundColor(.tidexTextPrimary)
-
-      if let selectionCount {
-        Text("(\(selectionCount))")
-          .font(.tidexBodyLarge)
-          .foregroundColor(.tidexTextMuted)
-      } else {
-        Text(String(year))
-          .font(.tidexBodyLarge)
-          .foregroundColor(.tidexTextMuted)
-      }
-    }
-  }
-
-  @ViewBuilder
-  private func trailingContent(totals: CalendarHeaderTotals, alignment: VerticalAlignment)
-    -> some View
-  {
-    HStack(alignment: alignment, spacing: Spacing.xs) {
-      if let trailingAccessory {
-        trailingAccessory
-      }
-      totalsView(totals: totals)
-    }
-  }
-
-  @ViewBuilder
-  private func totalsView(totals: CalendarHeaderTotals) -> some View {
-    if let secondary = totals.secondary {
-      VStack(alignment: .trailing, spacing: Spacing.micro) {
-        primaryAmountText(totals.primary)
-        secondaryAmountText(secondary, isAfterTax: totals.primaryIsAfterTax)
-      }
-    } else {
-      primaryAmountText(totals.primary)
     }
   }
 
@@ -182,7 +141,7 @@ struct CalendarHeaderRow: View {
         amountText
       }
       .font(.tidexFootnote)
-      .transition(.offset(y: -4).combined(with: .opacity))
+      .transition(.opacity)
     }
   }
 

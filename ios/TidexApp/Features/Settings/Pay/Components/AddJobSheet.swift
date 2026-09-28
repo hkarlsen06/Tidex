@@ -348,7 +348,6 @@ struct AddJobSheet: View {
                   }
               } else {
                 Button(action: {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
                   paydayInputText = !payrollDayOptions.contains(payrollDay) ? "\(payrollDay)" : ""
                   showingPaydayInput = true
                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -404,6 +403,8 @@ struct AddJobSheet: View {
       RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
         .stroke(Color.tidexBorder, lineWidth: 1)
     )
+    .sensoryFeedback(.impact(weight: .light), trigger: showingPaydayInput) { _, new in new }
+    .sensoryFeedback(.selection, trigger: payrollDay)
   }
 
   private var wageStep: some View {
@@ -766,10 +767,7 @@ private struct AddJobPaydayButton: View {
   let action: () -> Void
 
   var body: some View {
-    Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
-      action()
-    }) {
+    Button(action: action) {
       Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")
         .font(isSelected ? .tidexButton : .tidexBodyMedium)
         .foregroundColor(isSelected ? .white : .tidexTextSecondary)

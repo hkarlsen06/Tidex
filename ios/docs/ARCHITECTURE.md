@@ -48,22 +48,29 @@ TidexApp/
 
 **Usage**:
 ```swift
-@ObservedObject private var coordinator = AppCoordinator.shared
+@Environment(AppCoordinator.self) private var coordinator
 // Access: coordinator.appState, coordinator.userId, coordinator.userDisplayName
 ```
 
-### 2. View Models (@MainActor, ObservableObject)
+### 2. View Models (@MainActor, @Observable)
 
 **Pattern**: Each feature has a dedicated view model that:
 - Depends on repositories (local-first data access)
-- Publishes UI state via @Published properties
+- Exposes UI state as plain stored properties, tracked automatically by the Observation framework
 - Handles user interactions and async operations
 - Caches computed data to avoid redundant calculations
 
+Views hold their own view model in `@State` (SwiftUI evaluates the initializer on every parent
+re-render, so give an expensive or side-effecting `init` a stable owner instead). A view that
+receives someone else's view model uses a plain `let`/`var`, or `@Bindable` when it needs
+`$viewModel.property` bindings. `AppCoordinator` and other `.shared` singletons are read via
+`@Environment(Type.self)` (injected with `.environment(...)`) or a plain `let`.
+
 **Example - DashboardViewModel**:
 - Dependencies: ShiftsRepository, SettingsRepository, SnapshotsRepository, SyncCoordinator
-- Published state: dashboardData, isLoading, error, displayYear, displayMonth
-- Caching: monthCache (5-minute TTL) for computed shifts
+- Observed state: dashboardData, isLoading, error, displayYear, displayMonth
+- Caching: monthCache (5-minute TTL) for computed shifts, marked `@ObservationIgnored` since it's
+  internal bookkeeping, not UI state
 - Prefetching: Loads neighboring months in background
 
 ### 3. Repositories (Local-First)

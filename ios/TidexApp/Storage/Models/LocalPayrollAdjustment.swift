@@ -3,22 +3,6 @@
 import Foundation
 import SwiftData
 
-private func parsePayrollAdjustmentISO8601(_ string: String) -> Date? {
-  let fractional = ISO8601DateFormatter()
-  fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-  let internet = ISO8601DateFormatter()
-  internet.formatOptions = [.withInternetDateTime]
-  return fractional.date(from: string)
-    ?? internet.date(from: string)
-    ?? ISO8601DateFormatter().date(from: string)
-}
-
-private func formatPayrollAdjustmentTimestamp(_ date: Date) -> String {
-  let formatter = ISO8601DateFormatter()
-  formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-  return formatter.string(from: date)
-}
-
 @Model
 final class LocalPayrollAdjustment {
   @Attribute(.unique)
@@ -249,9 +233,9 @@ extension LocalPayrollAdjustment {
       earned_to_date: earnedToDateString,
       payout_date: payoutDateString,
       created_at: nil,
-      updated_at: formatPayrollAdjustmentTimestamp(serverUpdatedAt),
+      updated_at: ISO8601Timestamp.string(from: serverUpdatedAt),
       revision: serverRevision,
-      deleted_at: serverDeletedAt.map(formatPayrollAdjustmentTimestamp)
+      deleted_at: serverDeletedAt.map(ISO8601Timestamp.string(from:))
     )
   }
 
@@ -259,7 +243,7 @@ extension LocalPayrollAdjustment {
     -> LocalPayrollAdjustment
   {
     let dateFormatter = FormatterCache.isoDateFormatter(timeZone: Date.localTimeZone)
-    let deletedAt = serverRow.deleted_at.flatMap { parsePayrollAdjustmentISO8601($0) }
+    let deletedAt = serverRow.deleted_at.flatMap { ISO8601Timestamp.date(from: $0) }
     let snapshot = PayrollAdjustmentServerSnapshot.from(
       row: serverRow,
       updatedAt: serverUpdatedAt,

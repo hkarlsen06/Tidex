@@ -28,27 +28,6 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
     return data.first { $0.date == selected }
   }
 
-  /// Y-axis scale calculation
-  /// Note: Bar charts must always start at 0 - bars draw from 0 by default in Swift Charts
-  private var yAxisScale: (domain: ClosedRange<Double>, ticks: [Double]) {
-    let earnings = data.map(\.earnings)  // swiftlint:disable:this explicit_type_interface
-    let positiveEarnings = earnings.filter { $0 > 0 }  // swiftlint:disable:this explicit_type_interface
-
-    guard !positiveEarnings.isEmpty else {
-      // No data - show default range
-      return (0...100, [0, 25, 50, 75, 100])  // swiftlint:disable:this no_magic_numbers
-    }
-
-    let maxEarnings = earnings.max() ?? 0  // swiftlint:disable:this explicit_type_interface
-
-    // Add 15% padding above max
-    let upperBound = maxEarnings * 1.15  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-
-    // Build nice scale starting from 0
-    let (niceDomain, ticks) = buildNiceScale(min: 0, max: upperBound, desiredTicks: 5)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    return (niceDomain, ticks)
-  }
-
   // MARK: - Body
 
   var body: some View {  // swiftlint:disable:this explicit_acl
@@ -67,14 +46,21 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
           )
           .foregroundStyle(barColor(for: day, isSelected: selectedDay == day.date))
           .cornerRadius(CornerRadius.xs)
+          .annotation(
+            position: .top,
+            overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+          ) {
+            if selectedDay == day.date {
+              TooltipView(dayData: day, currency: currency)
+            }
+          }
         }
       }
-      .chartOverlay { proxy in
-        ChartOverlayContent(
-          proxy: proxy,
-          data: data,
-          selectedDay: $selectedDay,
-          currency: currency
+      .chartXSelection(value: $selectedDay)
+      .onChange(of: selectedDay) { _, newValue in
+        selectedDay = ChartSelectionSnapping.nearestNonZero(
+          to: newValue,
+          in: data.map { (key: $0.date, value: $0.earnings) }
         )
       }
       .chartXAxis {
@@ -93,19 +79,20 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
         }
       }
       .chartYAxis {
-        AxisMarks(position: .leading, values: yAxisScale.ticks) { value in
+        AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { _ in
           AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))  // swiftlint:disable:this no_magic_numbers
             .foregroundStyle(Color.tidexSeparator)
-          AxisValueLabel {
-            if let amount = value.as(Double.self) {
-              Text(formatAxisValue(amount))
-                .font(.tidexCaptionRegular)
-                .foregroundColor(.tidexTextPrimary)
-            }
-          }
+          AxisValueLabel(
+            format: FloatingPointFormatStyle<Double>.number
+              .notation(.compactName)
+              .precision(.fractionLength(0...1))
+              .locale(.appLocale)
+          )
+          .font(.tidexCaptionRegular)
+          .foregroundStyle(Color.tidexTextPrimary)
         }
       }
-      .chartYScale(domain: yAxisScale.domain)
+      .chartYScale(domain: .automatic(includesZero: true))
       .chartLegend(.hidden)
       .frame(height: 200)  // swiftlint:disable:this no_magic_numbers
     }
@@ -129,172 +116,27 @@ struct WeeklyBarChart: View {  // swiftlint:disable:this explicit_acl explicit_t
     // "Best Week" mode: all bars full color
     return .tidexBlue
   }
-
-  /// Build a nice scale for the Y-axis
-  private func buildNiceScale(min: Double, max: Double, desiredTicks: Int) -> (
-    ClosedRange<Double>, [Double]
-  ) {
-    let span = max - min  // swiftlint:disable:this explicit_type_interface
-
-    guard span > 0 else {
-      return (0...100, [0, 25, 50, 75, 100])  // swiftlint:disable:this no_magic_numbers
-    }
-
-    let tickInterval = niceNumber(span / Double(desiredTicks - 1))  // swiftlint:disable:this explicit_type_interface
-    let niceMin = floor(min / tickInterval) * tickInterval  // swiftlint:disable:this explicit_type_interface
-    let niceMax = ceil(max / tickInterval) * tickInterval  // swiftlint:disable:this explicit_type_interface
-
-    var ticks: [Double] = []
-    var tick = niceMin  // swiftlint:disable:this explicit_type_interface
-    while tick <= niceMax + tickInterval / 2 {  // swiftlint:disable:this no_magic_numbers
-      ticks.append(tick)
-      tick += tickInterval
-    }
-
-    return (niceMin...niceMax, ticks)
-  }
-
-  /// Calculate a "nice" number for axis intervals
-  private func niceNumber(_ value: Double) -> Double {
-    guard value > 0 else { return 1 }  // swiftlint:disable:this conditional_returns_on_newline
-
-    let exponent = floor(log10(value))  // swiftlint:disable:this explicit_type_interface
-    let fraction = value / pow(10, exponent)  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-
-    let niceFraction: Double
-    if fraction <= 1 {
-      niceFraction = 1
-    } else if fraction <= 2 {  // swiftlint:disable:this no_magic_numbers
-      niceFraction = 2  // swiftlint:disable:this no_magic_numbers
-    } else if fraction <= 2.5 {  // swiftlint:disable:this no_magic_numbers
-      niceFraction = 2.5  // swiftlint:disable:this no_magic_numbers
-    } else if fraction <= 5 {  // swiftlint:disable:this no_magic_numbers
-      niceFraction = 5  // swiftlint:disable:this no_magic_numbers
-    } else {
-      niceFraction = 10  // swiftlint:disable:this no_magic_numbers
-    }
-
-    return niceFraction * pow(10, exponent)  // swiftlint:disable:this no_magic_numbers
-  }
-
-  /// Format axis values as "Xk" (e.g., "1,2k", "1,4k")
-  private func formatAxisValue(_ value: Double) -> String {
-    if value == 0 {
-      return "0"
-    }
-
-    if value >= 1_000 {  // swiftlint:disable:this no_magic_numbers
-      let kValue = value / 1_000  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-      if kValue == floor(kValue) {
-        return "\(Int(kValue))k"
-      }
-      let sep = Locale.appLocale.decimalSeparator ?? ","  // swiftlint:disable:this explicit_type_interface
-      return String(format: "%.1fk", kValue).replacingOccurrences(of: ".", with: sep)
-    }
-
-    return "\(Int(value))"
-  }
 }
 
-// MARK: - Chart Overlay Content
+// MARK: - Chart Selection
 
-/// Separate struct to avoid compiler complexity issues with chartOverlay
-private struct ChartOverlayContent: View {
-  let proxy: ChartProxy
-  let data: [DailyData]
-  @Binding var selectedDay: String?
-  let currency: String
-  @State private var tooltipWidth: CGFloat = 0
+/// Shared selection-normalization logic for the Stats bar charts: taps/drags on a
+/// zero-value bar snap to the nearest bar with a positive value instead of showing an
+/// empty tooltip.
+enum ChartSelectionSnapping {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
+  /// Returns the key nearest to `key` whose value is greater than zero, or `nil` if
+  /// `key` is `nil` or no point in `points` has a positive value.
+  static func nearestNonZero<Key: Equatable>(  // swiftlint:disable:this explicit_acl
+    to key: Key?,
+    in points: [(key: Key, value: Double)]
+  ) -> Key? {
+    guard let key, let index = points.firstIndex(where: { $0.key == key }) else { return nil }  // swiftlint:disable:this conditional_returns_on_newline line_length
+    if points[index].value > 0 { return key }  // swiftlint:disable:this conditional_returns_on_newline
 
-  var body: some View {
-    GeometryReader { geometry in
-      let plotFrame: CGRect = proxy.plotFrame.map { geometry[$0] } ?? .zero
-
-      ZStack {
-        // Tap detection layer
-        Rectangle()  // swiftlint:disable:this accessibility_trait_for_button
-          .fill(Color.clear)
-          .contentShape(Rectangle())
-          .onTapGesture { location in
-            handleTap(at: location, plotFrame: plotFrame)
-          }
-
-        // Tooltip overlay
-        if let tooltipData = tooltipData(
-          plotFrame: plotFrame,
-          containerWidth: geometry.size.width
-        ) {
-          TooltipView(dayData: tooltipData.dayData, currency: currency)
-            .fixedSize()
-            .position(x: tooltipData.xPosition, y: 30)  // swiftlint:disable:this no_magic_numbers
-            .background(
-              GeometryReader { tooltipGeometry in
-                Color.clear.preference(
-                  key: TooltipWidthPreferenceKey.self,
-                  value: tooltipGeometry.size.width
-                )
-              }
-            )
-            .onPreferenceChange(TooltipWidthPreferenceKey.self) { width in
-              tooltipWidth = width
-            }
-        }
-      }
-    }
-  }
-
-  private func handleTap(at location: CGPoint, plotFrame: CGRect) {
-    // Adjust tap location relative to plot area
-    let adjustedX = location.x - plotFrame.origin.x  // swiftlint:disable:this explicit_type_interface
-    let barWidth = plotFrame.width / CGFloat(data.count)  // swiftlint:disable:this explicit_type_interface
-    let tappedIndex = Int(adjustedX / barWidth)  // swiftlint:disable:this explicit_type_interface
-
-    guard tappedIndex >= 0, tappedIndex < data.count else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-
-    let tappedDay = data[tappedIndex]  // swiftlint:disable:this explicit_type_interface
-    guard tappedDay.earnings > 0 else { return }  // swiftlint:disable:this conditional_returns_on_newline
-
-    withAnimation(.easeInOut(duration: 0.15)) {  // swiftlint:disable:this no_magic_numbers
-      if selectedDay == tappedDay.date {
-        selectedDay = nil
-      } else {
-        selectedDay = tappedDay.date
-      }
-    }
-  }
-
-  private func tooltipData(
-    plotFrame: CGRect,
-    containerWidth: CGFloat
-  ) -> (dayData: DailyData, xPosition: CGFloat)? {
-    guard let selected = selectedDay,
-      let dayData = data.first(where: { $0.date == selected }),
-      let index = data.firstIndex(where: { $0.date == selected })
-    else {
-      return nil
-    }
-
-    let barWidth = plotFrame.width / CGFloat(data.count)  // swiftlint:disable:this explicit_type_interface
-    let desiredX = plotFrame.origin.x + barWidth * (CGFloat(index) + 0.5)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    let horizontalInset = Spacing.xs  // swiftlint:disable:this explicit_type_interface
-    let fallbackTooltipWidth: CGFloat = 120
-    let effectiveTooltipWidth =  // swiftlint:disable:this explicit_type_interface
-      tooltipWidth > 0 && tooltipWidth < (containerWidth - (horizontalInset * 2))  // swiftlint:disable:this line_length no_magic_numbers
-      ? tooltipWidth : fallbackTooltipWidth
-    let halfTooltipWidth = effectiveTooltipWidth / 2  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let minX = halfTooltipWidth + horizontalInset  // swiftlint:disable:this explicit_type_interface
-    let maxX = containerWidth - halfTooltipWidth - horizontalInset  // swiftlint:disable:this explicit_type_interface
-    let xPosition = maxX > minX ? min(max(desiredX, minX), maxX) : containerWidth / 2  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-
-    return (dayData: dayData, xPosition: xPosition)
-  }
-}
-
-private struct TooltipWidthPreferenceKey: PreferenceKey {
-  static var defaultValue: CGFloat = 0
-
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = nextValue()
+    return points.enumerated()
+      .filter { $0.element.value > 0 }
+      .min { abs($0.offset - index) < abs($1.offset - index) }?
+      .element.key
   }
 }
 

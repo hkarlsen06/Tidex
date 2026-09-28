@@ -7,14 +7,6 @@
 import SwiftUI
 import UIKit
 
-private struct SheetContentHeightPreferenceKey: PreferenceKey {
-  static var defaultValue: CGFloat = 0
-
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = max(value, nextValue())
-  }
-}
-
 enum ContentSizedSheetMetrics {
   static let navigationChromeHeight: CGFloat = 76
   static let minDetentHeight: CGFloat = 180
@@ -53,16 +45,9 @@ enum ContentSizedSheetMetrics {
 
 extension View {
   func measureSheetContentHeight(_ onChange: @escaping (CGFloat) -> Void) -> some View {
-    background(
-      GeometryReader { proxy in
-        Color.clear
-          .preference(
-            key: SheetContentHeightPreferenceKey.self,
-            value: proxy.size.height
-          )
-      }
-    )
-    .onPreferenceChange(SheetContentHeightPreferenceKey.self) { height in
+    onGeometryChange(for: CGFloat.self) { proxy in
+      proxy.size.height
+    } action: { height in
       guard height > 0 else { return }
       onChange(ceil(height))
     }

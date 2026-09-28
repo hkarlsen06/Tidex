@@ -1,6 +1,5 @@
 // swiftlint:disable explicit_type_interface
 // swiftlint:disable:previous blanket_disable_command
-import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -13,7 +12,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "ShiftsReposit
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
 /// Automatically triggers sync after mutations for immediate upload
 @MainActor
-final class ShiftsRepository: ObservableObject {
+final class ShiftsRepository {
   static let shared = ShiftsRepository()
 
   private let localStore: LocalStore

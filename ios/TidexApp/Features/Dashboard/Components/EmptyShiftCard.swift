@@ -73,8 +73,7 @@ struct EmptyShiftCard: View {  // swiftlint:disable:this explicit_acl explicit_t
       .frame(minHeight: usesFixedCardHeight ? ShiftCardMetrics.regularCardMinHeight : nil)
       .tidexRowSurface(
         cornerRadius: CornerRadius.card,
-        fillColor: isElevated ? .tidexSurfacePrimary : .clear,
-        shadowLevel: isElevated ? .card : nil
+        fillColor: isElevated ? .tidexSurfacePrimary : .clear
       )
       .shimmer(isActive: isLoading)
 

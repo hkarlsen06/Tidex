@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Lets the user choose how a job groups worked hours into payouts.
 /// Every change is saved through `onUpdate`.
@@ -41,9 +40,9 @@ struct PayPeriodSettingsSection: View {
     .onChange(of: jobId) { _, _ in load(payPeriod) }
     .onChange(of: draft) { _, newValue in
       guard newValue != payPeriod else { return }
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
       Task { await onUpdate(newValue) }
     }
+    .sensoryFeedback(.selection, trigger: draft) { _, new in new != payPeriod }
   }
 
   @ViewBuilder private var kindOptions: some View {

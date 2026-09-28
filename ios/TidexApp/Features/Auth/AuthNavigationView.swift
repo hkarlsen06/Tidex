@@ -8,8 +8,8 @@ struct AuthNavigationView: View {
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @State private var currentScreen: AuthScreen
   @State private var authCurrency: String
-  @StateObject private var loginViewModel = LoginViewModel()
-  @StateObject private var signupViewModel = SignupViewModel()
+  @State private var loginViewModel = LoginViewModel()
+  @State private var signupViewModel = SignupViewModel()
 
   enum AuthScreen {
     case login

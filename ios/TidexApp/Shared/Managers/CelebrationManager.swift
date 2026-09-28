@@ -4,35 +4,36 @@
 // swiftlint:disable conditional_returns_on_newline explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_empty_block no_magic_numbers required_deinit type_contents_order
-import Combine
 import Foundation
+import Observation
 import SwiftUI
 
 /// Manager for tracking and displaying celebration effects when shifts are added
 /// Handles passing newly added shift dates from AddShift tab to Shifts tab
 @MainActor
-final class CelebrationManager: ObservableObject {
+@Observable
+final class CelebrationManager {
 
   // MARK: - Singleton
 
   static let shared = CelebrationManager()
 
-  // MARK: - Published State
+  // MARK: - Observed State
 
   /// Set of newly added shift dates (ISO strings) that should be highlighted
-  @Published private(set) var newlyAddedDates: Set<String> = []
+  private(set) var newlyAddedDates: Set<String> = []
 
   /// Whether confetti should be shown
-  @Published private(set) var shouldShowConfetti: Bool = false
+  private(set) var shouldShowConfetti: Bool = false
 
   /// The month (year, month) where confetti should originate
   /// This is the month the user was viewing when they hit the add button
-  @Published private(set) var confettiOriginMonth: (year: Int, month: Int)?
+  private(set) var confettiOriginMonth: (year: Int, month: Int)?
 
   // MARK: - Private State
 
   /// Timer for auto-clearing the celebration state
-  private var clearTimer: Timer?
+  @ObservationIgnored private var clearTimer: Timer?
 
   /// Duration to show highlights before clearing (matches web: 3 seconds)
   private static let highlightDuration: TimeInterval = 3.0

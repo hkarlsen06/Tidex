@@ -4,6 +4,7 @@
 // swiftlint:disable convenience_type explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable file_types_order no_magic_numbers type_contents_order unused_parameter
+import Observation
 import SwiftUI
 import UIKit
 
@@ -29,22 +30,6 @@ enum AdaptiveMaxWidth {
 }
 
 // MARK: - View Modifier for Adaptive Max Width
-
-/// Constrains content to a max width and centers it horizontally
-/// Ideal for iPad landscape where full-width forms look stretched
-struct AdaptiveMaxWidthModifier: ViewModifier {
-  let maxWidth: CGFloat
-  let alignment: Alignment
-
-  func body(content: Content) -> some View {
-    GeometryReader { geometry in
-      let effectiveMaxWidth = min(maxWidth, geometry.size.width)
-      content
-        .frame(maxWidth: effectiveMaxWidth)
-        .frame(maxWidth: .infinity, alignment: alignment)
-    }
-  }
-}
 
 /// Constrains content width with proper centering (non-GeometryReader version)
 /// Simpler approach that works well for most cases
@@ -93,65 +78,6 @@ extension View {
   }
 }
 
-// MARK: - Truncation Fade Effect
-
-/// View modifier that creates a fade-out effect for truncated text
-/// Mimics the CSS `truncate-fade` utility from the Next.js web app
-struct TruncationFadeModifier: ViewModifier {
-  let fadeWidth: CGFloat
-
-  func body(content: Content) -> some View {
-    content
-      .mask(
-        LinearGradient(
-          gradient: Gradient(stops: [
-            .init(color: .black, location: 0),
-            .init(color: .black, location: 1 - (fadeWidth / 200)),  // Approximate position
-            .init(color: .clear, location: 1),
-          ]),
-          startPoint: .leading,
-          endPoint: .trailing
-        )
-      )
-  }
-}
-
-extension View {
-  /// Applies a fade-out effect to truncated text
-  /// Creates a smooth gradient fade at the trailing edge instead of hard truncation
-  ///
-  /// - Parameter fadeWidth: Width of the fade gradient (default: 24pt to match web CSS)
-  func truncationFade(fadeWidth: CGFloat = 24) -> some View {
-    modifier(TruncationFadeModifier(fadeWidth: fadeWidth))
-  }
-}
-
-// MARK: - Horizontal Size Class Helper
-
-/// View modifier that provides size class information
-struct SizeClassReader: ViewModifier {
-  @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-  let action: (Bool) -> Void
-
-  func body(content: Content) -> some View {
-    content
-      .onAppear {
-        action(horizontalSizeClass == .regular)
-      }
-      .onChange(of: horizontalSizeClass) { _, newValue in
-        action(newValue == .regular)
-      }
-  }
-}
-
-extension View {
-  /// Executes a closure with the current regular width state
-  /// Use this instead of the deprecated UIScreen.main approach
-  func onSizeClass(_ action: @escaping (Bool) -> Void) -> some View {
-    modifier(SizeClassReader(action: action))
-  }
-}
-
 // MARK: - iPad Detection Helper
 
 /// Check if running on iPad
@@ -162,11 +88,6 @@ private var isIPad: Bool {
 // MARK: - iPad-Only View Modifiers
 
 extension View {
-  /// Keeps the system default toolbar appearance (no custom color/material override).
-  func iPadToolbarBackground() -> some View {
-    self
-  }
-
   /// Disables toolbar animations only on iPad
   /// Prevents layout shifts when toolbar items change on iPad
   @ViewBuilder
@@ -193,10 +114,11 @@ extension View {
 
 /// Observable class that tracks device orientation changes
 @MainActor
-class OrientationTracker: ObservableObject {
+@Observable
+class OrientationTracker {
   static let shared = OrientationTracker()
 
-  @Published private(set) var isLandscape: Bool = false
+  private(set) var isLandscape: Bool = false
 
   private init() {
     // Set initial value

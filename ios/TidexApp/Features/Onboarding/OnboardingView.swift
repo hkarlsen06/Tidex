@@ -263,7 +263,7 @@ struct OnboardingView: View {
 
       HStack(spacing: Spacing.sm) {
         Button {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
+          Haptics.play(.light)
           completeAndNavigateToSignup()
         } label: {
           Image(systemName: "forward.end.fill")

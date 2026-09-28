@@ -7,12 +7,12 @@
 │                        SwiftUI Views                         │
 │                   (DashboardView, ShiftListView)             │
 └────────────────────────┬────────────────────────────────────┘
-                         │ @Published properties
+                         │ Observed properties
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    View Models (@MainActor)                  │
 │         (DashboardViewModel, ShiftsListViewModel)            │
-│  - Manage UI state (@Published)                              │
+│  - Manage UI state (@Observable)                             │
 │  - Handle user interactions                                  │
 │  - Cache computed data                                       │
 └────────────────────────┬────────────────────────────────────┘

@@ -12,6 +12,7 @@
 // swiftlint:disable sorted_imports type_contents_order
 import Combine
 import Foundation
+import Observation
 import Supabase
 import UIKit
 import os
@@ -28,7 +29,8 @@ private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 ///
 /// Also triggers SyncCoordinator after authentication and on foreground.
 @MainActor
-final class AppCoordinator: ObservableObject {
+@Observable
+final class AppCoordinator {
   static let shared = AppCoordinator()
   private static let startupTabCacheKey = "defaultStartupTab"
 
@@ -61,17 +63,17 @@ final class AppCoordinator: ObservableObject {
     case authenticated  // Fully authenticated, show main app
   }
 
-  @Published private(set) var appState: AppState = .loading
+  private(set) var appState: AppState = .loading
 
   // MARK: - MFA State
 
   /// MFA factor to verify (when state is .mfaRequired)
-  @Published private(set) var pendingMFAFactor: AuthService.MFAFactor?
+  private(set) var pendingMFAFactor: AuthService.MFAFactor?
 
   // MARK: - Deep Link Navigation State
 
   /// Pending deep link navigation to execute after authentication/tab setup
-  @Published var pendingDeepLink: DeepLink?
+  var pendingDeepLink: DeepLink?
 
   /// Action to take when opening a shift deeplink
   enum ShiftDeepLinkAction: String, Equatable {
@@ -90,7 +92,7 @@ final class AppCoordinator: ObservableObject {
   enum DeepLink: Equatable {
     case shifts(dates: [String]?, shiftIds: [String]?, action: ShiftDeepLinkAction)  // Navigate to shifts view, optionally filtering dates/shifts
     case sharing(sharerId: String?, highlightDates: [String]?, changes: [ShiftChange]?)  // Navigate to sharing tab, select sharer, highlight specific shifts
-    case sharingManage(highlightUserId: String?)  // Open sharing management modal, optionally highlighting a user
+    case sharingManage(highlightUserId: String?)  // Open a friend's profile, or the add friend sheet
     case friendChat(
       threadId: String,
       messageId: String?,
@@ -121,12 +123,12 @@ final class AppCoordinator: ObservableObject {
   // MARK: - Terms Acceptance State
 
   /// Whether this is an update to terms (user previously accepted older version)
-  @Published private(set) var isTermsUpdate: Bool = false
+  private(set) var isTermsUpdate: Bool = false
 
   // MARK: - User Profile State
 
   /// Current user's ID (lowercase UUID string)
-  @Published private(set) var userId: String? {
+  private(set) var userId: String? {
     didSet {
       if oldValue != userId {
         resetPayrollCaches()
@@ -202,23 +204,23 @@ final class AppCoordinator: ObservableObject {
   }
 
   /// User's display name (for the profile tab)
-  @Published private(set) var userDisplayName: String = ""
+  private(set) var userDisplayName: String = ""
   /// User's profile picture URL (for the profile tab)
-  @Published private(set) var userAvatarUrl: String?
+  private(set) var userAvatarUrl: String?
   /// Whether the user has already completed onboarding (from Supabase user metadata)
-  @Published private(set) var hasFinishedOnboardingRemotely: Bool = false
-  @Published private(set) var postAuthOnboardingPresentation: PostAuthOnboardingPresentationState =
+  private(set) var hasFinishedOnboardingRemotely: Bool = false
+  private(set) var postAuthOnboardingPresentation: PostAuthOnboardingPresentationState =
     .none
 
   // MARK: - Sync State
 
   /// Whether initial sync has completed after authentication
-  @Published private(set) var initialSyncComplete = false
+  private(set) var initialSyncComplete = false
 
   // MARK: - MFA Completion State
 
   /// Flag indicating MFA was just completed - consumed by DashboardView for haptic feedback
-  @Published var didJustCompleteMFA = false
+  var didJustCompleteMFA = false
 
   // MARK: - Dependencies
 
@@ -228,15 +230,15 @@ final class AppCoordinator: ObservableObject {
 
   // MARK: - Private
 
-  private var authStateTask: Task<Void, Never>?
-  private var initialSessionTimeoutTask: Task<Void, Never>?
-  private var friendsRealtimeTask: Task<Void, Never>?
-  private var appActiveObserver: AnyCancellable?
-  private var backgroundTasks: [Task<Void, Never>] = []
-  private var foregroundTask: Task<Void, Never>?
-  private var didReceiveInitialSession = false
-  private var isUpdatingAuthState = false
-  private var isUserInitiatedSignOutInProgress = false
+  @ObservationIgnored private var authStateTask: Task<Void, Never>?
+  @ObservationIgnored private var initialSessionTimeoutTask: Task<Void, Never>?
+  @ObservationIgnored private var friendsRealtimeTask: Task<Void, Never>?
+  @ObservationIgnored private var appActiveObserver: AnyCancellable?
+  @ObservationIgnored private var backgroundTasks: [Task<Void, Never>] = []
+  @ObservationIgnored private var foregroundTask: Task<Void, Never>?
+  @ObservationIgnored private var didReceiveInitialSession = false
+  @ObservationIgnored private var isUpdatingAuthState = false
+  @ObservationIgnored private var isUserInitiatedSignOutInProgress = false
 
   // MARK: - Initialization
 
@@ -1429,7 +1431,7 @@ final class AppCoordinator: ObservableObject {
   ///
   /// Supported URL formats:
   /// - tidex://sharing?user=<userId> → Navigate to sharing tab and select the sharer
-  /// - tidex://sharing/manage?highlight=<userId> → Open manage modal and highlight user
+  /// - tidex://sharing/manage?highlight=<userId> → Open that friend's profile, or the add friend sheet
   /// - tidex://shifts?dates=2025-01-15,2025-01-16 → Navigate to shifts with dates selected
   /// - tidex://shifts?shiftIds=<uuid>&dates=2025-01-15&action=highlight → Highlight/open specific shifts
   /// - tidex://settings/pay?jobId=<uuid> → Open pay settings

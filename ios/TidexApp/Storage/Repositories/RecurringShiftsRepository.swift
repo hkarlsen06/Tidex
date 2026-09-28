@@ -10,7 +10,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "RecurringShif
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
 /// Automatically triggers sync after mutations for immediate upload
 @MainActor
-final class RecurringShiftsRepository: ObservableObject {
+final class RecurringShiftsRepository {
   static let shared = RecurringShiftsRepository()
 
   private let localStore: LocalStore

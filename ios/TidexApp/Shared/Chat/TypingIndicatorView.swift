@@ -36,31 +36,3 @@ struct TypingIndicatorView: View {
     }
   }
 }
-
-/// Inline jumping dot sequence used in the explicit thinking bubble.
-struct InlineJumpingDotsView: View {
-  @State private var dotOffsets: [Bool] = [false, false, false]
-
-  var body: some View {
-    HStack(spacing: 1) {
-      ForEach(0..<3, id: \.self) { index in
-        Text(".")
-          .font(.tidexFootnoteMedium)
-          .foregroundColor(.tidexTextMuted)
-          .offset(y: dotOffsets[index] ? -2 : 1)
-          .opacity(dotOffsets[index] ? 1.0 : 0.45)
-      }
-    }
-    .onAppear {
-      for index in 0..<3 {
-        withAnimation(
-          .easeInOut(duration: 0.38)
-            .repeatForever(autoreverses: true)
-            .delay(Double(index) * 0.15)
-        ) {
-          dotOffsets[index] = true
-        }
-      }
-    }
-  }
-}

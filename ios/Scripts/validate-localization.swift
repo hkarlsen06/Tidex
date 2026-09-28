@@ -18,6 +18,15 @@ private struct CatalogEntry: Codable {
 
 private struct CatalogLocalization: Codable {
   var stringUnit: CatalogStringUnit?
+  var variations: CatalogVariations?
+}
+
+private struct CatalogVariations: Codable {
+  var plural: [String: CatalogPluralCase]?
+}
+
+private struct CatalogPluralCase: Codable {
+  var stringUnit: CatalogStringUnit?
 }
 
 private struct CatalogStringUnit: Codable {
@@ -184,11 +193,20 @@ private func validatePlaceholders(
     }
 
     for (locale, localization) in localizations {
-      guard let value = localization.stringUnit?.value else {
+      // A flat string carries the count itself, so it must always include the specifier.
+      if let value = localization.stringUnit?.value {
+        for replacement in replacements where !value.contains(replacement.specifier) {
+          missingSpecifiers.append("\(base) [\(locale)] missing \(replacement.specifier)")
+        }
+        continue
+      }
+      // A pluralized entry's "other" category always carries the count; "one" may legitimately
+      // spell it out without the specifier (e.g. "1 month" instead of "%lld month").
+      guard let otherValue = localization.variations?.plural?["other"]?.stringUnit?.value else {
         missingSpecifiers.append("\(base) [\(locale)] missing value")
         continue
       }
-      for replacement in replacements where !value.contains(replacement.specifier) {
+      for replacement in replacements where !otherValue.contains(replacement.specifier) {
         missingSpecifiers.append("\(base) [\(locale)] missing \(replacement.specifier)")
       }
     }

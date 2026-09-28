@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 
 extension Notification.Name {
   static let workSetupDataDidChange = Notification.Name("com.tidex.workSetupDataDidChange")
@@ -102,8 +102,9 @@ final class WorkSetupStatusService {
 }
 
 @MainActor
-final class WorkSetupPresentationViewModel: ObservableObject {
-  @Published private(set) var presentationState: WorkSetupPresentationState?
+@Observable
+final class WorkSetupPresentationViewModel {
+  private(set) var presentationState: WorkSetupPresentationState?
 
   private let workSetupStatusService: WorkSetupStatusService
 

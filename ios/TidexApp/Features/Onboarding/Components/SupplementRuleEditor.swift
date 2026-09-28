@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Sheet for adding/editing a single supplement rule
 /// Uses progressive disclosure: Days → Time → Type → Value
@@ -189,14 +188,14 @@ struct SupplementRuleEditor: View {
 
   private func handlePrimaryActionTap() {
     if canSave {
-      UINotificationFeedbackGenerator().notificationOccurred(.success)
+      Haptics.play(.success)
       onSave(editedRule)
       return
     }
 
     guard canAdvanceToNextStep else { return }
 
-    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    Haptics.play(.light)
     withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
       switch currentStep {
       case .days:
@@ -235,7 +234,7 @@ struct SupplementRuleEditor: View {
             day: day,
             isSelected: editedRule.days.contains(day),
             action: {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
+              Haptics.play(.light)
               withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
                 if editedRule.days.contains(day) {
                   editedRule.days.remove(day)
@@ -376,7 +375,7 @@ struct SupplementRuleEditor: View {
           subtitle: hourRateSuffix,
           isSelected: hasSelectedType && editedRule.type == .fixed,
           action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            Haptics.play(.light)
             withAnimation {
               editedRule.type = .fixed
               hasSelectedType = true
@@ -392,7 +391,7 @@ struct SupplementRuleEditor: View {
           subtitle: "%",
           isSelected: hasSelectedType && editedRule.type == .percent,
           action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            Haptics.play(.light)
             withAnimation {
               editedRule.type = .percent
               hasSelectedType = true
@@ -423,7 +422,7 @@ struct SupplementRuleEditor: View {
             type: editedRule.type,
             isSelected: editedRule.value == value,
             action: {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
+              Haptics.play(.light)
               withAnimation {
                 editedRule.value = value
               }
@@ -475,7 +474,7 @@ struct SupplementRuleEditor: View {
           } else {
             // Tappable display
             Button(action: {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
+              Haptics.play(.light)
               valueInputText = formatValueWithDecimals(editedRule.value)
               showingValueInput = true
               DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -506,7 +505,7 @@ struct SupplementRuleEditor: View {
           step: 1,
           onEditingChanged: { isEditing in
             if isEditing {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
+              Haptics.play(.light)
             }
           }
         )
@@ -519,12 +518,7 @@ struct SupplementRuleEditor: View {
   }
 
   private func formatValueWithDecimals(_ value: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 0
-    formatter.maximumFractionDigits = 2
-    formatter.locale = Locale(identifier: "nb_NO")
-    return formatter.string(from: NSNumber(value: value)) ?? "0"
+    value.formatted(.number.precision(.fractionLength(0...2)).locale(.appLocale))
   }
 
   private func applyValueInput() {
@@ -627,7 +621,7 @@ private struct QuickSelectButton: View {
 
   var body: some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       action()
     }) {
       Text(title)

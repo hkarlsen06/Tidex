@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import SwiftData
 import os.log
@@ -11,7 +10,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SnapshotsRepo
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
 /// Automatically triggers sync after mutations for immediate upload
 @MainActor
-final class SnapshotsRepository: ObservableObject {
+final class SnapshotsRepository {
   static let shared = SnapshotsRepository()
 
   private let localStore: LocalStore

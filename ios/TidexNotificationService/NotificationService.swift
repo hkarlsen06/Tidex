@@ -254,18 +254,6 @@ final class NotificationService: UNNotificationServiceExtension {
     }
   }
 
-  private func fetchSenderImage(from url: URL?) -> INImage? {
-    guard let url else { return nil }
-
-    let request = URLRequest(
-      url: url,
-      cachePolicy: .returnCacheDataDontLoad,
-      timeoutInterval: 1
-    )
-
-    return SenderAvatarLoader.cachedImage(for: request, url: url)
-  }
-
   private func loadSenderImage(from url: URL?) async -> INImage? {
     guard let url else { return nil }
     let startedAt = Date()
@@ -345,8 +333,6 @@ private struct CommunicationNotificationPayload {
   let targetContentIdentifier: String
   let messageCreatedAt: Date?
 
-  private static let iso8601Formatter = ISO8601DateFormatter()
-
   init?(userInfo: [AnyHashable: Any], fallbackSenderDisplayName: String) {
     guard let type = userInfo["type"] as? String else { return nil }
     guard Self.supportedTypes.contains(type) else { return nil }
@@ -393,7 +379,7 @@ private struct CommunicationNotificationPayload {
 
   private static func date(from iso8601: String?) -> Date? {
     guard let iso8601, !iso8601.isEmpty else { return nil }
-    return iso8601Formatter.date(from: iso8601)
+    return ISO8601Timestamp.date(from: iso8601)
   }
 }
 

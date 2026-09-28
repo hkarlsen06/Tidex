@@ -20,10 +20,9 @@ struct DayShiftsSheet: View {
       return dateISO
     }
 
-    let formatter = DateFormatter()
-    formatter.locale = Locale.appLocale
-    formatter.dateFormat = "EEEE, d. MMMM"
-    return formatter.string(from: date).sentenceCased()
+    return date.formatted(
+      .dateTime.weekday(.wide).day().month(.wide).locale(.appLocale)
+    ).sentenceCased()
   }
 
   private var totalEarnings: Double {

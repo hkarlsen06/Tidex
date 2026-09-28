@@ -179,7 +179,6 @@ struct ShiftSupplementRuleCard: View {
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 }
 
@@ -241,15 +240,11 @@ struct SupplementRuleEditorSheet: View {
   }
 
   private func parseTime(_ timeString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.date(from: String(timeString.prefix(5)))
+    FormatterCache.hourMinuteFormatter().date(from: String(timeString.prefix(5)))
   }
 
   private func formatTime(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    date.toHourMinuteString()
   }
 
   private func defaultValue(for type: CustomSupplementRuleWithId.SupplementType) -> Double {
@@ -600,12 +595,7 @@ struct SupplementRuleEditorSheet: View {
   }
 
   private func formatValueWithDecimals(_ value: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 0
-    formatter.maximumFractionDigits = 2
-    formatter.locale = Locale(identifier: "nb_NO")
-    return formatter.string(from: NSNumber(value: value)) ?? "0"
+    value.formatted(.number.precision(.fractionLength(0...2)).locale(.appLocale))
   }
 
   private func applyValueInput() {

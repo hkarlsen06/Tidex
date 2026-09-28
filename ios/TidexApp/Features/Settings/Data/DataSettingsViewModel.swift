@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import PDFKit
 import Supabase
 import UIKit
@@ -34,7 +34,7 @@ internal enum ExportPeriodPreset: String, CaseIterable, Identifiable {
       else {
         return nil
       }
-      return (toISODate(start), toISODate(end))
+      return (start.toISODateString(), end.toISODateString())
 
     case .lastMonth:
       guard
@@ -44,7 +44,7 @@ internal enum ExportPeriodPreset: String, CaseIterable, Identifiable {
       else {
         return nil
       }
-      return (toISODate(start), toISODate(end))
+      return (start.toISODateString(), end.toISODateString())
 
     case .currentYear:
       let year: Int = calendar.component(.year, from: now)
@@ -53,7 +53,7 @@ internal enum ExportPeriodPreset: String, CaseIterable, Identifiable {
       else {
         return nil
       }
-      return (toISODate(start), toISODate(end))
+      return (start.toISODateString(), end.toISODateString())
 
     case .lastYear:
       let year: Int = calendar.component(.year, from: now) - 1
@@ -62,7 +62,7 @@ internal enum ExportPeriodPreset: String, CaseIterable, Identifiable {
       else {
         return nil
       }
-      return (toISODate(start), toISODate(end))
+      return (start.toISODateString(), end.toISODateString())
 
     case .custom:
       return nil
@@ -80,7 +80,7 @@ internal enum ExportFormat {
 
 /// Response from the export API
 internal struct ExportResponse: Codable, Sendable {
-  internal let generatedAt: String
+  internal let generatedAt: Date
   internal let currencySymbol: String
   internal let shifts: [ExportedShift]
 }
@@ -108,44 +108,45 @@ internal struct ExportedShift: Codable, Sendable {
 
 /// ViewModel for data export settings
 @MainActor
-final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length required_deinit type_body_length
-  // MARK: - Published State
+@Observable
+final class DataSettingsViewModel {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length required_deinit type_body_length
+  // MARK: - Observed State
 
   /// Selected period preset
-  @Published var selectedPreset: ExportPeriodPreset?  // swiftlint:disable:this explicit_acl
+  var selectedPreset: ExportPeriodPreset?  // swiftlint:disable:this explicit_acl
 
   /// Custom date range (when preset is .custom)
-  @Published var customFromDate: Date = Date()  // swiftlint:disable:this explicit_acl
-  @Published var customToDate: Date = Date()  // swiftlint:disable:this explicit_acl
+  var customFromDate: Date = Date()  // swiftlint:disable:this explicit_acl
+  var customToDate: Date = Date()  // swiftlint:disable:this explicit_acl
 
   /// Loading state for PDF export
-  @Published var isExportingPdf = false
+  var isExportingPdf = false
 
   /// Loading state for CSV export
-  @Published var isExportingCsv = false
+  var isExportingCsv = false
 
-  /// Loading state for calendar export
-  @Published var calendarSubscriptionState: CalendarSubscriptionState = .inactive
-  @Published var isLoadingCalendarSubscription = false
-  @Published var isUpdatingCalendarSubscription = false
-  @Published var calendarSubscriptionFallbackURL: URL?
+  /// Loading state for calendar export - reads straight through to the store, which is
+  /// itself observed, so this stays current without a manual mirror/subscription.
+  var calendarSubscriptionState: CalendarSubscriptionState { calendarSubscriptionStore.state }
+  var isLoadingCalendarSubscription: Bool { calendarSubscriptionStore.isLoading }
+  var isUpdatingCalendarSubscription = false
+  var calendarSubscriptionFallbackURL: URL? { calendarSubscriptionStore.fallbackHTTPSURL }
 
   /// Error message
-  @Published var errorMessage: String?
+  var errorMessage: String?
 
   /// URL for share sheet presentation
-  @Published var shareURL: URL?
+  var shareURL: URL?
 
   /// Whether a sync is in progress
-  @Published var isSyncing = false
+  var isSyncing = false
 
   // MARK: - Private Properties
 
-  private var userId: String?
+  @ObservationIgnored private var userId: String?
   private let calendarSubscriptionStore: CalendarSubscriptionStore
   private let calendarSetupIntent: CalendarSubscriptionSetupIntent?
-  private var cancellables: Set<AnyCancellable> = []
-  private var didHandleCalendarSetupIntent = false
+  @ObservationIgnored private var didHandleCalendarSetupIntent = false
 
   init(
     calendarSetupIntent: CalendarSubscriptionSetupIntent? = nil,
@@ -153,7 +154,6 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
   ) {
     self.calendarSetupIntent = calendarSetupIntent
     self.calendarSubscriptionStore = calendarSubscriptionStore ?? .shared
-    bindCalendarSubscriptionStore()
   }
 
   // MARK: - Computed Properties
@@ -169,7 +169,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       if customFromDate > customToDate {
         return nil
       }
-      return (toISODate(customFromDate), toISODate(customToDate))
+      return (customFromDate.toISODateString(), customToDate.toISODateString())
     }
 
     return preset.resolveDateRange()
@@ -199,6 +199,11 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     guard let range = resolvedDateRange, let userId else {
       return
     }
+
+    // Clean up the previous export's temp file before starting a new one. Deletion is
+    // deferred to this point (rather than on share dismissal) so the system share sheet
+    // has time to read the file after ShareLink hands it off.
+    removePreviousShareFile()
 
     // Set loading state
     switch format {
@@ -275,12 +280,16 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     errorMessage = nil
   }
 
-  /// Dismiss share sheet
+  /// Hide the "ready to share" card. The temp file itself is removed the next time an
+  /// export starts (see `removePreviousShareFile`), not here, since the system share
+  /// sheet may still be reading it after the user taps ShareLink.
   func dismissShareSheet() {
-    // Clean up temp file
-    if let url = shareURL {
-      try? FileManager.default.removeItem(at: url)
-    }
+    shareURL = nil
+  }
+
+  private func removePreviousShareFile() {
+    guard let url = shareURL else { return }
+    try? FileManager.default.removeItem(at: url)
     shareURL = nil
   }
 
@@ -299,7 +308,6 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       }
 
       await calendarSubscriptionStore.openCalendarApp()
-      calendarSubscriptionFallbackURL = calendarSubscriptionStore.fallbackHTTPSURL
       errorMessage = calendarSubscriptionStore.errorMessage
     } catch {
       errorMessage = ErrorTranslations.translate(error)
@@ -328,7 +336,6 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
         mode: calendarSubscriptionState.metadata?.contentMode
       )
       await calendarSubscriptionStore.openCalendarApp()
-      calendarSubscriptionFallbackURL = calendarSubscriptionStore.fallbackHTTPSURL
       errorMessage = calendarSubscriptionStore.errorMessage
     } catch {
       errorMessage = ErrorTranslations.translate(error)
@@ -353,7 +360,6 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     defer { isUpdatingCalendarSubscription = false }
 
     await calendarSubscriptionStore.openCalendarApp()
-    calendarSubscriptionFallbackURL = calendarSubscriptionStore.fallbackHTTPSURL
     errorMessage = calendarSubscriptionStore.errorMessage
   }
 
@@ -379,29 +385,6 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     }
   }
 
-  private func bindCalendarSubscriptionStore() {
-    calendarSubscriptionStore.$state
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] state in
-        self?.calendarSubscriptionState = state
-      }
-      .store(in: &cancellables)
-
-    calendarSubscriptionStore.$isLoading
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] isLoading in
-        self?.isLoadingCalendarSubscription = isLoading
-      }
-      .store(in: &cancellables)
-
-    calendarSubscriptionStore.$fallbackHTTPSURL
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] url in
-        self?.calendarSubscriptionFallbackURL = url
-      }
-      .store(in: &cancellables)
-  }
-
   private func handleCalendarSetupIntentIfNeeded() async {
     guard !didHandleCalendarSetupIntent, let calendarSetupIntent else {
       return
@@ -422,7 +405,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     guard let userId else {
       throw ExportError.unauthorized
     }
-    guard let startDate = parseISODate(from), let endDate = parseISODate(to) else {
+    guard let startDate = Date.fromISODateString(from), let endDate = Date.fromISODateString(to) else {
       throw ExportError.invalidDateRange
     }
 
@@ -457,7 +440,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       context.jobs.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
 
     return ExportResponse(
-      generatedAt: ISO8601DateFormatter().string(from: Date()),
+      generatedAt: Date(),
       currencySymbol: currency,
       shifts: included.map { makeExportedShift(from: $0, jobNames: jobNames) }
     )
@@ -484,7 +467,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
   }
 
   nonisolated static func shiftType(dateISO: String) -> Int {
-    guard let date = parseISODate(dateISO) else {
+    guard let date = Date.fromISODateString(dateISO) else {
       return 0
     }
     if NorwegianHolidays.isPublicHoliday(date) {
@@ -579,34 +562,17 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     let currencySymbol = data.currencySymbol
     let hoursUnit = String(localized: .commonHours)
 
-    let detailDateFormatter = DateFormatter()
-    detailDateFormatter.dateStyle = .medium
-    detailDateFormatter.timeStyle = .none
-    detailDateFormatter.locale = locale
+    let detailDateFormat = Date.FormatStyle(date: .abbreviated, time: .omitted).locale(locale)
+    let tableDateFormat = Date.FormatStyle(date: .numeric, time: .omitted).locale(locale)
+    let generatedAtFormat = Date.FormatStyle(date: .abbreviated, time: .shortened).locale(locale)
+    let monthFormat = Date.FormatStyle.dateTime.year().month(.wide).locale(locale)
+    let weekdayFormat = Date.FormatStyle.dateTime.weekday(.abbreviated).locale(locale)
 
-    let tableDateFormatter = DateFormatter()
-    tableDateFormatter.dateStyle = .short
-    tableDateFormatter.timeStyle = .none
-    tableDateFormatter.locale = locale
-
-    let generatedAtFormatter = DateFormatter()
-    generatedAtFormatter.dateStyle = .medium
-    generatedAtFormatter.timeStyle = .short
-    generatedAtFormatter.locale = locale
-
-    let monthFormatter = DateFormatter()
-    monthFormatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
-    monthFormatter.locale = locale
-
-    let weekdayFormatter = DateFormatter()
-    weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE")
-    weekdayFormatter.locale = locale
-
-    let generatedAtText =
-      "\(exportedLabel) \(Self.formatExportTimestamp(data.generatedAt, formatter: generatedAtFormatter))"
+    let generatedAtText = "\(exportedLabel) \(data.generatedAt.formatted(generatedAtFormat))"
     let fromDate =
-      parseISODate(range.from).map { detailDateFormatter.string(from: $0) } ?? range.from
-    let toDate = parseISODate(range.to).map { detailDateFormatter.string(from: $0) } ?? range.to
+      Date.fromISODateString(range.from).map { $0.formatted(detailDateFormat) } ?? range.from
+    let toDate =
+      Date.fromISODateString(range.to).map { $0.formatted(detailDateFormat) } ?? range.to
     let periodText = "\(fromDate) - \(toDate)"
 
     let summaryRows: [(String, String)] = [
@@ -877,14 +843,14 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
       beginPage(includeSummary: true)
 
       for shift in data.shifts {
-        let shiftDate = parseISODate(shift.date)
+        let shiftDate = Date.fromISODateString(shift.date)
         let monthKey: String
         let monthTitle: String
 
         if let shiftDate {
           let components = Calendar.current.dateComponents([.year, .month], from: shiftDate)
           monthKey = "\(components.year ?? 0)-\(components.month ?? 0)"
-          monthTitle = monthFormatter.string(from: shiftDate)
+          monthTitle = shiftDate.formatted(monthFormat)
         } else {
           monthKey = String(shift.date.prefix(7))
           monthTitle = shift.date
@@ -907,8 +873,8 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
         }
 
         let rowValues = [
-          shiftDate.map { tableDateFormatter.string(from: $0) } ?? shift.date,
-          shiftDate.map { weekdayFormatter.string(from: $0) } ?? "",
+          shiftDate.map { $0.formatted(tableDateFormat) } ?? shift.date,
+          shiftDate.map { $0.formatted(weekdayFormat) } ?? "",
           shift.startTime,
           shift.endTime,
           Self.formatNumber(shift.calc.hours, decimals: 2, locale: locale),
@@ -1023,20 +989,15 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
 
     csvContent += headers.joined(separator: ";") + "\n"
 
-    // Date formatter
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateStyle = .short
-    dateFormatter.locale = locale
-
-    let weekdayFormatter = DateFormatter()
-    weekdayFormatter.dateFormat = "EEE"
-    weekdayFormatter.locale = locale
+    // Date formats
+    let dateFormat = Date.FormatStyle(date: .numeric, time: .omitted).locale(locale)
+    let weekdayFormat = Date.FormatStyle.dateTime.weekday(.abbreviated).locale(locale)
 
     // Data rows
     for shift in data.shifts {
-      let shiftDate = parseISODate(shift.date)
-      let dateStr = shiftDate.map { dateFormatter.string(from: $0) } ?? shift.date
-      let dayStr = shiftDate.map { weekdayFormatter.string(from: $0) } ?? ""
+      let shiftDate = Date.fromISODateString(shift.date)
+      let dateStr = shiftDate.map { $0.formatted(dateFormat) } ?? shift.date
+      let dayStr = shiftDate.map { $0.formatted(weekdayFormat) } ?? ""
 
       let row = [
         dateStr,
@@ -1090,8 +1051,8 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
     let ext = format == .pdf ? "pdf" : "csv"
 
     // Parse dates
-    guard let fromDate = parseISODate(range.from),
-      let toDate = parseISODate(range.to)
+    guard let fromDate = Date.fromISODateString(range.from),
+      let toDate = Date.fromISODateString(range.to)
     else {
       return "tidex_export.\(ext)"
     }
@@ -1143,34 +1104,7 @@ final class DataSettingsViewModel: ObservableObject {  // swiftlint:disable:this
   private nonisolated static func formatNumber(_ value: Double, decimals: Int, locale: Locale)
     -> String
   {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = decimals
-    formatter.maximumFractionDigits = decimals
-    formatter.locale = locale
-    return formatter.string(from: NSNumber(value: value)) ?? String(format: "%.\(decimals)f", value)
-  }
-
-  private nonisolated static func formatExportTimestamp(_ value: String, formatter: DateFormatter)
-    -> String
-  {
-    if let date = Self.parseISO8601Date(value) {
-      return formatter.string(from: date)
-    }
-    return formatter.string(from: Date())
-  }
-
-  private nonisolated static func parseISO8601Date(_ value: String) -> Date? {
-    let preciseFormatter = ISO8601DateFormatter()
-    preciseFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-    if let date = preciseFormatter.date(from: value) {
-      return date
-    }
-
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime]
-    return formatter.date(from: value)
+    value.formatted(.number.precision(.fractionLength(decimals)).locale(locale))
   }
 
   private nonisolated static func drawPDFText(
@@ -1342,22 +1276,4 @@ internal enum ExportError: LocalizedError {
       return String(localized: .commonErrorNotAuthenticated)
     }
   }
-}
-
-// MARK: - Helper Functions
-
-/// Convert a Date to ISO date string (YYYY-MM-DD)
-private func toISODate(_ date: Date) -> String {
-  let formatter = DateFormatter()
-  formatter.dateFormat = "yyyy-MM-dd"
-  formatter.timeZone = TimeZone.current
-  return formatter.string(from: date)
-}
-
-/// Parse an ISO date string to Date
-private func parseISODate(_ string: String) -> Date? {
-  let formatter = DateFormatter()
-  formatter.dateFormat = "yyyy-MM-dd"
-  formatter.timeZone = TimeZone.current
-  return formatter.date(from: string)
 }  // swiftlint:disable:this file_length

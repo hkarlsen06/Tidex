@@ -207,7 +207,9 @@ struct HowItWorksScreen: View {
   private static func makeOnboardingFeaturedShift(currency: String) -> ShiftWithComputations {
     let current = Date.currentYearMonth()
     let day = min(12, Date.daysInMonth(year: current.year, month: current.month))
-    let dateISO = String(format: "%04d-%02d-%02d", current.year, current.month, day)
+    let dateISO =
+      Date.isoDateString(year: current.year, month: current.month, day: day)
+      ?? "\(current.year)-\(current.month)-\(day)"
 
     let row = ShiftRow(
       id: "onboarding-how-featured",

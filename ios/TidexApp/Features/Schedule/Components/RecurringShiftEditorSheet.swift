@@ -76,7 +76,7 @@ struct RecurringShiftEditorSheet: View {
   private var displayMonthName: String {
     CalendarGridHelper.monthName(
       from: displayMonth,
-      locale: Locale(identifier: Locale.current.identifier)
+      locale: Locale.appLocale
     )
   }
 
@@ -474,7 +474,7 @@ struct RecurringShiftEditorSheet: View {
     let formatter = DateFormatter()
     formatter.dateStyle = .medium
     formatter.timeStyle = .none
-    formatter.locale = Locale(identifier: Locale.current.identifier)
+    formatter.locale = Locale.appLocale
     return formatter.string(from: date)
   }
 }

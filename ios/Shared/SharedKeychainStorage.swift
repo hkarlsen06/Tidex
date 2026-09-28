@@ -14,10 +14,6 @@ import Security
 enum SharedKeychainStorage {
   // MARK: - Configuration
 
-  /// Shared keychain access group suffix (team ID prefix is added at runtime)
-  /// Format: $(AppIdentifierPrefix)no.tidex.shared in entitlements
-  private static let accessGroupSuffix = "no.tidex.shared"
-
   /// Keychain service identifier
   private static let service = "no.tidex.shared.auth"
 
@@ -26,68 +22,6 @@ enum SharedKeychainStorage {
 
   /// Key for storing the token expiry timestamp
   private static let tokenExpiryKey = "token_expiry"
-
-  /// Cache the access group once discovered (team ID prefix + suffix)
-  private static var cachedAccessGroup: String?
-
-  /// Get the full access group with team ID prefix
-  /// Prefers the current target's entitlements and falls back to probing for the team ID.
-  private static func getAccessGroup() -> String? {
-    if let cached = cachedAccessGroup {
-      return cached
-    }
-
-    // Try to discover team ID from an existing keychain item
-    if let teamId = discoverTeamId() {
-      let fullGroup = "\(teamId).\(accessGroupSuffix)"
-      cachedAccessGroup = fullGroup
-      return fullGroup
-    }
-
-    // Avoid writing an invalid bare suffix like "no.tidex.shared".
-    // If we cannot resolve the shared group, fall back to the default group.
-    return nil
-  }
-
-  /// Discover the team ID by creating and querying a temporary keychain item
-  private static func discoverTeamId() -> String? {
-    // Create a temporary item to discover the access group
-    let tempKey = "__tidex_team_id_probe__"
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrService as String: service,
-      kSecAttrAccount as String: tempKey,
-      kSecValueData as String: Data("probe".utf8),
-      kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
-      kSecReturnAttributes as String: true,
-    ]
-
-    // Delete any existing probe item
-    SecItemDelete(query as CFDictionary)
-
-    // Add the item and get its attributes back
-    var result: AnyObject?
-    let addStatus = SecItemAdd(query as CFDictionary, &result)
-
-    // Clean up the probe item
-    SecItemDelete(query as CFDictionary)
-
-    guard addStatus == errSecSuccess,
-      let attributes = result as? [String: Any],
-      let accessGroup = attributes[kSecAttrAccessGroup as String] as? String
-    else {
-      return nil
-    }
-
-    // Access group format is "TEAMID.bundleid" - extract the team ID
-    // We want to use this team ID with our shared group suffix
-    let components = accessGroup.split(separator: ".", maxSplits: 1)
-    if let teamId = components.first {
-      return String(teamId)
-    }
-
-    return nil
-  }
 
   // MARK: - Errors
 
@@ -226,17 +160,15 @@ enum SharedKeychainStorage {
     }
   }
 
+  /// No `kSecAttrAccessGroup` here: every target that touches this keychain service has
+  /// only `$(AppIdentifierPrefix)no.tidex.shared` in its keychain-access-groups entitlement,
+  /// so that's the default group `SecItemAdd` uses. Omitting the attribute on queries makes
+  /// them search across all of the app's access groups, so existing items stay readable.
   private static func baseQuery(forKey key: String) -> [String: Any] {
-    var query: [String: Any] = [
+    [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
       kSecAttrAccount as String: key,
     ]
-
-    if let accessGroup = getAccessGroup() {
-      query[kSecAttrAccessGroup as String] = accessGroup
-    }
-
-    return query
   }
 }

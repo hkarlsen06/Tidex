@@ -56,7 +56,7 @@ private struct OAuthProviderButton<Icon: View>: View {
 
   var body: some View {
     Button {
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+      Haptics.play(.medium)
       action()
     } label: {
       HStack(spacing: Spacing.sm) {

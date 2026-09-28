@@ -26,6 +26,27 @@ internal final class AuthAndPurchaseRecoveryTests: XCTestCase {
     XCTAssertFalse(AppLifecycleHandler.isPasswordRecoveryCallback(url))
   }
 
+  internal func testPercentEncodedTypeInQueryIsRecovery() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://login-callback?type=recover%79"))
+
+    XCTAssertTrue(AppLifecycleHandler.isPasswordRecoveryCallback(url))
+  }
+
+  internal func testPercentEncodedTypeInFragmentIsRecovery() throws {
+    let url: URL = try XCTUnwrap(URL(string: "tidex://login-callback#type=recover%79"))
+
+    XCTAssertTrue(AppLifecycleHandler.isPasswordRecoveryCallback(url))
+  }
+
+  internal func testQueryTypeOverridesFragmentType() throws {
+    // The query is merged after the fragment, so it wins when both carry `type`.
+    let url: URL = try XCTUnwrap(
+      URL(string: "tidex://login-callback?type=recovery#type=signup")
+    )
+
+    XCTAssertTrue(AppLifecycleHandler.isPasswordRecoveryCallback(url))
+  }
+
   // MARK: - MFA assurance level
 
   internal func testAssuranceLevelReadsAAL1AndAAL2Claims() {

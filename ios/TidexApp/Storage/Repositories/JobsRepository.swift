@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import Supabase
 import SwiftData
@@ -119,7 +118,7 @@ enum JobDeletionPolicy {
 }
 
 @MainActor
-final class JobsRepository: ObservableObject {
+final class JobsRepository {
   static let shared = JobsRepository()
 
   private let localStore: LocalStore

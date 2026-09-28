@@ -2,7 +2,7 @@ import SwiftUI
 
 /// OTP verification form for phone login with native iOS styling
 internal struct PhoneOTPForm: View {
-  @ObservedObject internal var viewModel: LoginViewModel
+  @Bindable internal var viewModel: LoginViewModel
 
   private let otpCodeLength: Int = 6
 

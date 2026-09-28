@@ -16,7 +16,7 @@ struct CurrencySelector: View {
 
       // Selector button
       Button(action: {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Haptics.play(.light)
         showingPicker = true
       }) {
         HStack {
@@ -60,7 +60,7 @@ struct OnboardingCurrencyCapsuleSelector: View {
 
   var body: some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       showingPicker = true
     }) {
       HStack(spacing: Spacing.xxxs) {
@@ -111,7 +111,6 @@ struct OnboardingCurrencyPickerSheet: View {
                     option: option,
                     isSelected: selectedCurrency == option.value,
                     action: {
-                      UIImpactFeedbackGenerator(style: .light).impactOccurred()
                       selectedCurrency = option.value
                       isPresented = false
                     }
@@ -136,6 +135,7 @@ struct OnboardingCurrencyPickerSheet: View {
       }
       .navigationTitle(String(localized: .onboardingCurrencyTitle))
       .navigationBarTitleDisplayMode(.inline)
+      .sensoryFeedback(.impact(weight: .light), trigger: selectedCurrency)
       .toolbar {
         ToolbarItem(placement: .cancellationAction) {
           Button(String(localized: .commonCancel)) {

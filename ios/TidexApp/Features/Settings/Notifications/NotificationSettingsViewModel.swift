@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import UIKit
 import UserNotifications
 import os.log
@@ -7,14 +8,15 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "NotificationS
 
 /// ViewModel for notification settings
 @MainActor
-final class NotificationSettingsViewModel: ObservableObject {
+@Observable
+final class NotificationSettingsViewModel {
   // MARK: - Published State
 
   /// System notification permission status
-  @Published var notificationStatus: UNAuthorizationStatus = .notDetermined
+  var notificationStatus: UNAuthorizationStatus = .notDetermined
 
   /// Whether shift reminders are enabled
-  @Published var shiftRemindersEnabled: Bool = false {
+  var shiftRemindersEnabled: Bool = false {
     didSet {
       if oldValue != shiftRemindersEnabled {
         handleRemindersToggleChange()
@@ -23,7 +25,7 @@ final class NotificationSettingsViewModel: ObservableObject {
   }
 
   /// Reminder times in minutes (sorted descending)
-  @Published var reminderTimes: [Int] = [] {
+  var reminderTimes: [Int] = [] {
     didSet {
       if oldValue != reminderTimes {
         updateReminderTimes()
@@ -34,22 +36,22 @@ final class NotificationSettingsViewModel: ObservableObject {
   // MARK: - Time Picker State
 
   /// Whether the time picker sheet is shown
-  @Published var showTimePickerSheet: Bool = false
+  var showTimePickerSheet: Bool = false
 
   /// Index of time being edited (nil = adding new)
-  @Published var editingTimeIndex: Int?
+  var editingTimeIndex: Int?
 
   /// Picker hours value (0-48)
-  @Published var pickerHours: Int = 1
+  var pickerHours: Int = 1
 
   /// Picker minutes value (0-59)
-  @Published var pickerMinutes: Int = 0
+  var pickerMinutes: Int = 0
 
   /// Tracks if add was triggered by toggling ON with empty list
   private var addingFromEmptyToggle: Bool = false
 
   /// Whether shared shift notifications are enabled
-  @Published var sharedShiftsEnabled: Bool = true {
+  var sharedShiftsEnabled: Bool = true {
     didSet {
       if oldValue != sharedShiftsEnabled {
         updateSharedShifts()
@@ -58,7 +60,7 @@ final class NotificationSettingsViewModel: ObservableObject {
   }
 
   /// Whether smart notifications are enabled
-  @Published var smartNotificationsEnabled: Bool = true {
+  var smartNotificationsEnabled: Bool = true {
     didSet {
       if oldValue != smartNotificationsEnabled {
         updateSmartNotifications()
@@ -67,13 +69,13 @@ final class NotificationSettingsViewModel: ObservableObject {
   }
 
   /// Current status of smart notifications
-  @Published var smartStatus: SmartNotificationScheduler.Status?
+  var smartStatus: SmartNotificationScheduler.Status?
 
   /// Loading state
-  @Published var isLoading: Bool = false
+  var isLoading: Bool = false
 
   /// Error message
-  @Published var errorMessage: String?
+  var errorMessage: String?
 
   // MARK: - Private Properties
 
@@ -143,7 +145,7 @@ final class NotificationSettingsViewModel: ObservableObject {
 
   /// Open system settings
   func openSystemSettings() {
-    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+    guard let url = URL(string: UIApplication.openNotificationSettingsURLString) else { return }
     UIApplication.shared.open(url)
   }
 

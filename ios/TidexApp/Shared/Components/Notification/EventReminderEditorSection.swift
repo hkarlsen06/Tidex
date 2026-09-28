@@ -73,6 +73,9 @@ struct EventReminderEditorSection: View {
       }
       .presentationDetents([.medium])
     }
+    .sensoryFeedback(.impact(weight: .light), trigger: showTimePickerSheet) { _, isShowing in
+      isShowing
+    }
   }
 
   private var header: some View {
@@ -98,7 +101,6 @@ struct EventReminderEditorSection: View {
       ForEach(Array(sortedReminderTimes.enumerated()), id: \.offset) { index, minutes in
         Button {
           guard isEditable else { return }
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
           prepareForEditingTime(minutes)
         } label: {
           HStack(spacing: Spacing.sm) {
@@ -129,7 +131,6 @@ struct EventReminderEditorSection: View {
 
   private var addReminderButton: some View {
     Button {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
       prepareForAddingTime()
     } label: {
       HStack(spacing: Spacing.xs) {

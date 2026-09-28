@@ -2,8 +2,8 @@
 // swiftlint:disable explicit_acl explicit_top_level_acl explicit_type_interface no_empty_block required_deinit
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable sorted_enum_cases switch_case_on_newline
-import Combine
 import Foundation
+import Observation
 
 /// Sync indicator status states for UI display
 /// Named to avoid collision with SyncStatus in SyncTypes.swift (used for record sync state)
@@ -31,12 +31,13 @@ enum SyncIndicatorStatus: Equatable {
 /// Observable manager for app-wide sync status
 /// Used by views to display sync state indicators
 @MainActor
-final class SyncStatusManager: ObservableObject {
+@Observable
+final class SyncStatusManager {
   static let shared = SyncStatusManager()
 
-  @Published private(set) var status: SyncIndicatorStatus = .synced
-  @Published private(set) var lastSuccessfulSync: Date?
-  @Published private(set) var lastSuccessfulSyncSummary: SyncCompletionSummary?
+  private(set) var status: SyncIndicatorStatus = .synced
+  private(set) var lastSuccessfulSync: Date?
+  private(set) var lastSuccessfulSyncSummary: SyncCompletionSummary?
 
   private init() {}
 

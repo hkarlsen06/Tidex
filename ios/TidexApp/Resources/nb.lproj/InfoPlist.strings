@@ -24,8 +24,5 @@
 /* Photo library save description */
 "NSPhotoLibraryAddUsageDescription" = "Tidex trenger tilgang til å lagre delte kalendre og skiftbilder i fotobiblioteket ditt.";
 
-/* Photo library usage description */
-"NSPhotoLibraryUsageDescription" = "Tidex trenger tilgang til bildebiblioteket for å vise nylige bilder du kan legge ved i chat.";
-
 /* Calendar access description */
 "NSCalendarsFullAccessUsageDescription" = "Tidex trenger tilgang til kalenderen din for å legge til og oppdatere vakter.";

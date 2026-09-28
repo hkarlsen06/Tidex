@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import os.log
 import SwiftData
@@ -7,7 +6,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "EventsReposit
 
 /// Local-first repository for private events.
 @MainActor
-final class EventsRepository: ObservableObject {
+final class EventsRepository {
   static let shared = EventsRepository()
 
   private let localStore: LocalStore

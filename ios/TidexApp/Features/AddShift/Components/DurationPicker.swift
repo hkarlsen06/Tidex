@@ -169,13 +169,9 @@ private struct MonthsSlider: View {
   var body: some View {
     VStack(spacing: Spacing.sm) {
       HStack {
-        Text(
-          value == 1
-            ? String(localized: .addShiftMonthSingular)
-            : String(localized: .addShiftMonthPlural(value))
-        )
-        .font(.tidexButton)
-        .foregroundColor(.tidexTextPrimary)
+        Text(String(localized: .addShiftMonthPlural(value)))
+          .font(.tidexButton)
+          .foregroundColor(.tidexTextPrimary)
 
         Spacer()
       }
@@ -206,13 +202,9 @@ private struct YearsSlider: View {
   var body: some View {
     VStack(spacing: Spacing.sm) {
       HStack {
-        Text(
-          value == 1
-            ? String(localized: .addShiftYearSingular)
-            : String(localized: .addShiftYearPlural(value))
-        )
-        .font(.tidexButton)
-        .foregroundColor(.tidexTextPrimary)
+        Text(String(localized: .addShiftYearPlural(value)))
+          .font(.tidexButton)
+          .foregroundColor(.tidexTextPrimary)
 
         Spacer()
       }

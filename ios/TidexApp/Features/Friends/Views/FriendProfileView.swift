@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Profile view for a friend, presented as a sheet from the friend detail view.
-/// Shows the friend's avatar/name and all management options (same as ManageSharingSheet).
+/// Shows the friend's avatar/name and every setting and action for that friend.
 /// The UserMenuButton in the toolbar visually leads into this profile when tapped.
 struct FriendProfileView: View {
   let sharedUser: SharedUser
@@ -13,10 +13,10 @@ struct FriendProfileView: View {
   var initialSnapshot: FriendsManagementSnapshot?
 
   @Environment(\.dismiss) private var dismiss
-  @StateObject private var viewModel = ManageSharingViewModel()
+  @State private var viewModel = ManageSharingViewModel()
 
-  @State private var showManageSheet = false
   @State private var friendToRemove: Friend?
+  @State private var friendToBlock: Friend?
   @State private var removeAction: FriendSharingRemovalAction?
   @State private var isMovedToBottom = false
   @State private var didPlayOpenHaptic = false
@@ -47,12 +47,13 @@ struct FriendProfileView: View {
         }
         .listRowBackground(Color.clear)
       } else if let friend, let sectionType {
-        notificationSection(friend: friend, sectionType: sectionType)
-        sharingSection(friend: friend, sectionType: sectionType)
-        actionsSection(friend: friend, sectionType: sectionType)
+        Group {
+          notificationSection(friend: friend, sectionType: sectionType)
+          sharingSection(friend: friend, sectionType: sectionType)
+          actionsSection(friend: friend, sectionType: sectionType)
+        }
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-
-      manageFriendsLink
 
       if let friend {
         friendshipFooterSection(friend: friend)
@@ -73,9 +74,6 @@ struct FriendProfileView: View {
         await viewModel.loadFriends()
       }
       await refreshFeedPlacement()
-    }
-    .sheet(isPresented: $showManageSheet) {
-      ManageSharingSheet(onVisibilityChange: onVisibilityChange)
     }
     .confirmationDialog(
       confirmationTitle,
@@ -113,6 +111,30 @@ struct FriendProfileView: View {
       }
     } message: {
       Text(confirmationMessage)
+    }
+    .confirmationDialog(
+      blockConfirmationTitle,
+      isPresented: .init(
+        get: { friendToBlock != nil },
+        set: { if !$0 { friendToBlock = nil } }
+      ),
+      titleVisibility: .visible
+    ) {
+      Button(String(localized: .friendsChatBlockUser), role: .destructive) {
+        if let friend = friendToBlock {
+          Task {
+            await viewModel.blockFriend(friend)
+            onFriendRemoved?()
+            dismiss()
+          }
+        }
+        friendToBlock = nil
+      }
+      Button(String(localized: .commonCancel), role: .cancel) {
+        friendToBlock = nil
+      }
+    } message: {
+      Text(.friendsChatBlockConfirmMessage)
     }
   }
 
@@ -176,6 +198,7 @@ struct FriendProfileView: View {
             }
           )
         )
+        .tint(.tidexBlue)
       }
 
       if sectionType == .mutual || sectionType == .outgoing {
@@ -188,6 +211,7 @@ struct FriendProfileView: View {
             }
           )
         )
+        .tint(.tidexBlue)
       }
     }
   }
@@ -208,6 +232,7 @@ struct FriendProfileView: View {
             }
           )
         )
+        .tint(.tidexBlue)
       }
 
     case .incoming:
@@ -283,26 +308,13 @@ struct FriendProfileView: View {
           Label(removalAction.title, systemImage: removalAction.systemImage)
         }
       }
-    }
-  }
 
-  // MARK: - Manage Friends Link
-
-  private var manageFriendsLink: some View {
-    Section {
-      Button {
-        showManageSheet = true
+      Button(role: .destructive) {
+        friendToBlock = friend
       } label: {
-        HStack {
-          Spacer()
-          Text(.sharingProfileManageFriends)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexBlue)
-          Spacer()
-        }
+        Label(String(localized: .friendsChatBlockUser), systemImage: "hand.raised.fill")
       }
     }
-    .listRowBackground(Color.clear)
   }
 
   // MARK: - Friendship Footer
@@ -339,6 +351,12 @@ struct FriendProfileView: View {
 
   private var removeButtonTitle: String {
     removeAction?.title ?? ""
+  }
+
+  private var blockConfirmationTitle: String {
+    guard let friend = friendToBlock else { return "" }
+    return String(localized: .friendsChatBlockConfirmTitle)
+      .replacingOccurrences(of: "{name}", with: friend.displayName)
   }
 
   private func sectionType(for friend: Friend) -> FriendSectionType {

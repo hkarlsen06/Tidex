@@ -338,7 +338,7 @@ private struct JobPayScheduleSetupScreen: View {
             title: String(localized: .commonContinue),
             isEnabled: !isSaving,
             action: {
-              UINotificationFeedbackGenerator().notificationOccurred(.success)
+              Haptics.play(.success)
               onContinue()
             }
           )

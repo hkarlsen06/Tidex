@@ -5,7 +5,6 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_empty_block no_magic_numbers
 import SwiftUI
-import UIKit
 
 /// Primary action button with Tidex brand styling
 /// Used for main CTAs like "Log in", "Sign up", etc.
@@ -19,7 +18,7 @@ struct PrimaryButton: View {
 
   var body: some View {
     Button {
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+      Haptics.play(.medium)
       action()
     } label: {
       Text(title)

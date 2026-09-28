@@ -23,7 +23,7 @@ internal final class DataExportTests: XCTestCase {
       calc: ExportedShift.ShiftCalculation(hours: 6, baseWage: 1_200, supplement: 150, total: 1_350)
     )
     let data: ExportResponse = ExportResponse(
-      generatedAt: "2026-05-31T12:00:00Z",
+      generatedAt: Date(),
       currencySymbol: "kr",
       shifts: [shift]
     )

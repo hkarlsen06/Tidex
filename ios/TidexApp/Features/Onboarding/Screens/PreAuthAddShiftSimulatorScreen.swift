@@ -14,7 +14,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-  @StateObject private var viewModel: PreAuthAddShiftSimulatorViewModel
+  @State private var viewModel: PreAuthAddShiftSimulatorViewModel
   @State private var focusedTimeField: TimeInputField?
   @State private var relaxFocusInAddStage = false
   @State private var focusRelaxToken = 0
@@ -39,7 +39,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
     self.onSkip = onSkip
     self.onBaselineReady = onBaselineReady
     self.isPreloaded = isPreloaded
-    _viewModel = StateObject(
+    _viewModel = State(
       wrappedValue: PreAuthAddShiftSimulatorViewModel(initialCurrency: initialCurrency))
   }
 
@@ -195,7 +195,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
     ZStack(alignment: .center) {
       HStack(spacing: Spacing.sm) {
         Button {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
+          Haptics.play(.light)
           onSkip()
         } label: {
           Image(systemName: "forward.end.fill")
@@ -320,7 +320,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
     focusedTimeField = nil
     hideKeyboard()
 
-    UINotificationFeedbackGenerator().notificationOccurred(.success)
+    Haptics.play(.success)
     onContinue(
       viewModel.baselineToolbarTotals,
       viewModel.toolbarTotals ?? viewModel.baselineToolbarTotals,
@@ -331,7 +331,7 @@ struct PreAuthAddShiftSimulatorScreen: View {
   private func handleTotalsAcknowledged() {
     guard focusStage == .totals else { return }
 
-    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    Haptics.play(.light)
     withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
       hasAcknowledgedTotals = true
     }

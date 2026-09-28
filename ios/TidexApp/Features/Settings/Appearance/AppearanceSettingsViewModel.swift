@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import os.log
 
 private enum AppearanceSettingsConstants {
@@ -17,13 +18,14 @@ internal enum StartupTabOption: String, CaseIterable {
 
 /// ViewModel for appearance settings
 @MainActor
-internal final class AppearanceSettingsViewModel: ObservableObject {
+@Observable
+internal final class AppearanceSettingsViewModel {
   private static let startupTabCacheKey: String = "defaultStartupTab"
 
   // MARK: - Published State
 
   /// The currently selected theme
-  @Published internal var selectedTheme: AppTheme = .system {
+  internal var selectedTheme: AppTheme = .system {
     didSet {
       if oldValue != selectedTheme, !isInitialLoad {
         updateTheme()
@@ -32,7 +34,7 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// The currently selected calendar content color style
-  @Published internal var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace
+  internal var selectedCalendarContentColorStyle: CalendarContentColorStyle = .workplace
   {
     didSet {
       if oldValue != selectedCalendarContentColorStyle, !isInitialLoad {
@@ -42,7 +44,7 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// Whether dashboard clock buttons are visible
-  @Published internal var showDashboardClockButtons: Bool = true {
+  internal var showDashboardClockButtons: Bool = true {
     didSet {
       if oldValue != showDashboardClockButtons, !isInitialLoad {
         updateShowDashboardClockButtons()
@@ -51,7 +53,7 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// The default tab to open when launching the app
-  @Published internal var selectedStartupTab: StartupTabOption = .home {
+  internal var selectedStartupTab: StartupTabOption = .home {
     didSet {
       if oldValue != selectedStartupTab, !isInitialLoad {
         updateDefaultStartupTab()
@@ -60,10 +62,10 @@ internal final class AppearanceSettingsViewModel: ObservableObject {
   }
 
   /// Loading state
-  @Published internal var isLoading: Bool = false
+  internal var isLoading: Bool = false
 
   /// Error message
-  @Published internal var errorMessage: String?
+  internal var errorMessage: String?
 
   // MARK: - Private Properties
 

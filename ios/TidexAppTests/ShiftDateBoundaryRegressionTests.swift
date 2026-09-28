@@ -41,6 +41,45 @@ final class ShiftDateBoundaryRegressionTests: XCTestCase {
     XCTAssertNil(ShiftTimeFieldFormat.pickerDate(from: "25:00", on: day))
   }
 
+  // MARK: - Locale/calendar independence
+
+  /// A machine "yyyy-MM-dd" formatter built from the device's current locale/calendar (the bug
+  /// this guards against) misinterprets the year under a Thai locale with the Buddhist calendar,
+  /// because BE year 2026 is CE year 1483. `Date.fromISODateString` must keep parsing "2026-09-28"
+  /// as Gregorian 2026 regardless.
+  func testISODateParsingIsIndependentOfDeviceCalendar() throws {
+    var buggyFormatter = DateFormatter()
+    buggyFormatter.locale = Locale(identifier: "th_TH")
+    buggyFormatter.calendar = Calendar(identifier: .buddhist)
+    buggyFormatter.dateFormat = "yyyy-MM-dd"
+    let buggyParsed = try XCTUnwrap(buggyFormatter.date(from: "2026-09-28"))
+    var gregorian = Calendar(identifier: .gregorian)
+    gregorian.timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+    XCTAssertNotEqual(gregorian.component(.year, from: buggyParsed), 2_026)
+
+    let fixedParsed = try XCTUnwrap(
+      Date.fromISODateString("2026-09-28", in: try XCTUnwrap(TimeZone(identifier: "UTC"))))
+    XCTAssertEqual(gregorian.component(.year, from: fixedParsed), 2_026)
+    XCTAssertEqual(fixedParsed.toISODateString(in: try XCTUnwrap(TimeZone(identifier: "UTC"))), "2026-09-28")
+  }
+
+  /// A machine "HH:mm" formatter built from an Arabic locale renders native-script digits, so the
+  /// resulting string no longer round-trips as "14:30". `FormatterCache.hourMinuteFormatter`
+  /// (POSIX locale) must always produce Western digits for storage/comparison.
+  func testHourMinuteFormattingIsIndependentOfDeviceLocale() throws {
+    let timeZone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+    let time = try XCTUnwrap(FormatterCache.hourMinuteFormatter(timeZone: timeZone).date(from: "14:30"))
+
+    var buggyFormatter = DateFormatter()
+    buggyFormatter.locale = Locale(identifier: "ar_SA")
+    buggyFormatter.calendar = Calendar(identifier: .gregorian)
+    buggyFormatter.timeZone = timeZone
+    buggyFormatter.dateFormat = "HH:mm"
+    XCTAssertNotEqual(buggyFormatter.string(from: time), "14:30")
+
+    XCTAssertEqual(time.toHourMinuteString(in: timeZone), "14:30")
+  }
+
   // MARK: - Wage timeline dates
 
   func testWageTimelineEndsPreviousPeriodTheDayBeforeTheNextStarts() {

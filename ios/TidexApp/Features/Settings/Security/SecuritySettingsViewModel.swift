@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import os.log
 import Supabase
 
@@ -7,7 +8,8 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "SecuritySettin
 /// View model for security settings
 /// Handles password management, connected accounts, and MFA
 @MainActor
-final class SecuritySettingsViewModel: ObservableObject {
+@Observable
+final class SecuritySettingsViewModel {
 
   // MARK: - Dependencies
   private let passkeyAuthService: PasskeyAuthService
@@ -15,75 +17,75 @@ final class SecuritySettingsViewModel: ObservableObject {
   // MARK: - Published State
 
   /// User's email address
-  @Published var email: String = ""
+  var email: String = ""
   /// User's phone number
-  @Published var phoneNumber: String?
+  var phoneNumber: String?
 
   /// Authentication provider info
-  @Published private(set) var hasPassword = false
-  @Published private(set) var hasGoogleConnected = false
-  @Published private(set) var hasAppleConnected = false
-  @Published private(set) var hasPhoneConnected = false
-  @Published private(set) var isOAuthOnly = false
+  private(set) var hasPassword = false
+  private(set) var hasGoogleConnected = false
+  private(set) var hasAppleConnected = false
+  private(set) var hasPhoneConnected = false
+  private(set) var isOAuthOnly = false
 
   /// Whether user can disconnect providers (must have at least one auth method)
-  @Published private(set) var canDisconnectGoogle = false
-  @Published private(set) var canDisconnectApple = false
-  @Published private(set) var canUnlinkPhone = false
+  private(set) var canDisconnectGoogle = false
+  private(set) var canDisconnectApple = false
+  private(set) var canUnlinkPhone = false
 
   /// MFA factors
-  @Published var mfaFactors: [MFAFactor] = []
+  var mfaFactors: [MFAFactor] = []
   /// Passkeys registered for this account
-  @Published var passkeys: [PasskeyAuthService.Passkey] = []
+  var passkeys: [PasskeyAuthService.Passkey] = []
 
   /// Loading states
-  @Published private(set) var isLoading = false
-  @Published private(set) var isSettingPassword = false
-  @Published private(set) var isConnectingProvider = false
-  @Published private(set) var isEnrollingMFA = false
-  @Published private(set) var isVerifyingMFA = false
-  @Published private(set) var isUnenrollingMFA = false
-  @Published private(set) var isRegisteringPasskey = false
-  @Published private(set) var isDeletingPasskey = false
-  @Published private(set) var isRenamingPasskey = false
+  private(set) var isLoading = false
+  private(set) var isSettingPassword = false
+  private(set) var isConnectingProvider = false
+  private(set) var isEnrollingMFA = false
+  private(set) var isVerifyingMFA = false
+  private(set) var isUnenrollingMFA = false
+  private(set) var isRegisteringPasskey = false
+  private(set) var isDeletingPasskey = false
+  private(set) var isRenamingPasskey = false
 
   /// Error message to display
-  @Published var errorMessage: String?
+  var errorMessage: String?
   /// Whether security settings were opened while account security data is unavailable offline
-  @Published private(set) var isOfflineLimited = false
+  private(set) var isOfflineLimited = false
 
   /// Password form state
-  @Published var showPasswordForm = false
-  @Published var newPassword = ""
-  @Published var confirmPassword = ""
-  @Published var phoneOtp = ""
-  @Published var otpSent = false
+  var showPasswordForm = false
+  var newPassword = ""
+  var confirmPassword = ""
+  var phoneOtp = ""
+  var otpSent = false
 
   /// MFA enrollment state
-  @Published var showMFAEnrollment = false
-  @Published var mfaQRCode: String?
-  @Published var mfaSecret: String?
-  @Published var mfaTotpUri: String?
-  @Published var mfaVerifyCode = ""
-  @Published var pendingFactorId: String?
+  var showMFAEnrollment = false
+  var mfaQRCode: String?
+  var mfaSecret: String?
+  var mfaTotpUri: String?
+  var mfaVerifyCode = ""
+  var pendingFactorId: String?
 
   /// MFA unenroll confirmation
-  @Published var showUnenrollConfirmation = false
-  @Published var factorToUnenroll: MFAFactor?
+  var showUnenrollConfirmation = false
+  var factorToUnenroll: MFAFactor?
 
   /// Passkey deletion confirmation
-  @Published var showDeletePasskeyConfirmation = false
-  @Published var passkeyToDelete: PasskeyAuthService.Passkey?
-  @Published var showRenamePasskeyAlert = false
-  @Published var passkeyToRename: PasskeyAuthService.Passkey?
-  @Published var passkeyNameDraft = ""
+  var showDeletePasskeyConfirmation = false
+  var passkeyToDelete: PasskeyAuthService.Passkey?
+  var showRenamePasskeyAlert = false
+  var passkeyToRename: PasskeyAuthService.Passkey?
+  var passkeyNameDraft = ""
 
   /// Phone linking state
-  @Published var showPhoneLinkingSheet = false
-  @Published var phoneLinkStep: PhoneLinkStep = .input
-  @Published var phoneLinkInput = ""
-  @Published var phoneLinkOtp = ""
-  @Published private(set) var isLinkingPhone = false
+  var showPhoneLinkingSheet = false
+  var phoneLinkStep: PhoneLinkStep = .input
+  var phoneLinkInput = ""
+  var phoneLinkOtp = ""
+  private(set) var isLinkingPhone = false
 
   enum PhoneLinkStep {
     case input
@@ -725,9 +727,7 @@ extension SecuritySettingsViewModel {
     }
 
     var formattedDate: String {
-      let formatter = DateFormatter()
-      formatter.dateStyle = .medium
-      return formatter.string(from: createdAt)
+      createdAt.formatted(Date.FormatStyle(date: .abbreviated, time: .omitted).locale(.appLocale))
     }
   }
 }

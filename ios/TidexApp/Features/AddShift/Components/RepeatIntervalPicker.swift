@@ -48,11 +48,7 @@ internal struct RepeatIntervalPicker: View {
 
   // Get localized ordinal label for interval
   private func ordinalLabel(_ index: Int) -> String {
-    let weeks: Int = index + 1
-    if weeks == 1 {
-      return String(localized: .addShiftEveryWeek)
-    }
-    return String(localized: .addShiftEveryNWeeks(weeks))
+    String(localized: .addShiftEveryNWeeks(index + 1))
   }
 }
 

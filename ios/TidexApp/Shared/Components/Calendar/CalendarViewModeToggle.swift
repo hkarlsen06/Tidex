@@ -5,7 +5,6 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable explicit_top_level_acl explicit_type_interface no_magic_numbers type_contents_order
 import SwiftUI
-import UIKit
 
 // MARK: - Calendar View Mode Toggle
 
@@ -18,9 +17,6 @@ struct CalendarViewModeToggle: View {
   let currency: String
   let showMoneyOption: Bool
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  // Haptic feedback
-  private let toggleHaptic = UIImpactFeedbackGenerator(style: .light)
 
   init(
     viewMode: Binding<CalendarViewMode>,
@@ -62,7 +58,6 @@ struct CalendarViewModeToggle: View {
         // Hours button
         Button {
           guard viewMode != .hours else { return }
-          toggleHaptic.impactOccurred()
           if reduceMotion {
             viewMode = .hours
             viewMode.save()
@@ -91,7 +86,6 @@ struct CalendarViewModeToggle: View {
         if showMoneyOption {
           Button {
             guard viewMode != .money else { return }
-            toggleHaptic.impactOccurred()
             if reduceMotion {
               viewMode = .money
               viewMode.save()
@@ -120,9 +114,7 @@ struct CalendarViewModeToggle: View {
       .padding(controlInset)
     }
     .frame(height: controlHeight + (controlInset * 2))
-    .onAppear {
-      toggleHaptic.prepare()
-    }
+    .sensoryFeedback(.impact(weight: .light), trigger: viewMode)
   }
 }
 

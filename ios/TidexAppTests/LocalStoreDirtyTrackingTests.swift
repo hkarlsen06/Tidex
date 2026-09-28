@@ -1716,6 +1716,49 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.serverUpdatedAt, serverUpdatedAt)
     XCTAssertNil(local.conflictServerSnapshot)
   }
+  internal func testResetAllDataClearsExistingRowsAndLeavesTheContainerUsable() async throws {
+    let store = try makeStoreActor()
+
+    try await store.upsertJob(
+      LocalJob(
+        id: "job-1",
+        userId: userId,
+        name: "Before reset",
+        isDefault: false,
+        sortOrder: 0,
+        serverUpdatedAt: Date(timeIntervalSince1970: 1),
+        serverRevision: 1,
+        lastSyncedSnapshot: Data(),
+        localUpdatedAt: Date(timeIntervalSince1970: 1)
+      ))
+    try await store.save()
+    let jobsBeforeReset = try await store.getAllJobs(userId: userId)
+    XCTAssertEqual(jobsBeforeReset.count, 1)
+
+    await store.resetAllData()
+    let jobsAfterFirstReset = try await store.getAllJobs(userId: userId)
+    XCTAssertEqual(jobsAfterFirstReset.count, 0)
+
+    // The container must still accept writes after erase().
+    try await store.upsertJob(
+      LocalJob(
+        id: "job-2",
+        userId: userId,
+        name: "After reset",
+        isDefault: false,
+        sortOrder: 0,
+        serverUpdatedAt: Date(timeIntervalSince1970: 2),
+        serverRevision: 1,
+        lastSyncedSnapshot: Data(),
+        localUpdatedAt: Date(timeIntervalSince1970: 2)
+      ))
+    try await store.save()
+
+    let jobsAfterReset = try await store.getAllJobs(userId: userId)
+    XCTAssertEqual(jobsAfterReset.count, 1)
+    XCTAssertEqual(jobsAfterReset.first?.name, "After reset")
+  }
+
   deinit {
     // Required explicitly by the repository.s lifecycle lint policy.
   }

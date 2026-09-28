@@ -329,41 +329,18 @@ extension LocalJob {
   }
 }
 
-private func parseJobISO8601(_ value: String) -> Date? {
+/// Visible to tests so ISO8601TimestampTests can exercise Postgres-form parsing directly.
+func parseJobISO8601(_ value: String) -> Date? {
   let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
   guard !trimmed.isEmpty else { return nil }
 
   let normalized = normalizeJobTimestamp(trimmed)
-
-  if let date = jobISO8601WithFractionalFormatter.date(from: normalized) {
-    return date
-  }
-  if let date = jobISO8601Formatter.date(from: normalized) {
-    return date
-  }
-  if let date = jobISO8601WithFractionalFormatter.date(from: trimmed) {
-    return date
-  }
-  return jobISO8601Formatter.date(from: trimmed)
+  return ISO8601Timestamp.date(from: normalized) ?? ISO8601Timestamp.date(from: trimmed)
 }
 
 private func formatJobISO8601(_ date: Date) -> String {
-  jobISO8601Formatter.string(from: date)
+  ISO8601Timestamp.string(from: date)
 }
-
-private let jobISO8601WithFractionalFormatter: ISO8601DateFormatter = {
-  let formatter = ISO8601DateFormatter()
-  formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-  formatter.timeZone = TimeZone(secondsFromGMT: 0)
-  return formatter
-}()
-
-private let jobISO8601Formatter: ISO8601DateFormatter = {
-  let formatter = ISO8601DateFormatter()
-  formatter.formatOptions = [.withInternetDateTime]
-  formatter.timeZone = TimeZone(secondsFromGMT: 0)
-  return formatter
-}()
 
 private func normalizeJobTimestamp(_ value: String) -> String {
   var normalized = value

@@ -131,8 +131,7 @@ struct TotalCard: View {  // swiftlint:disable:this explicit_acl explicit_top_le
     .padding(.bottom, Spacing.md)
     .tidexRowSurface(
       cornerRadius: CornerRadius.card,
-      fillColor: isElevated ? .tidexSurfacePrimary : .clear,
-      shadowLevel: isElevated ? .card : nil
+      fillColor: isElevated ? .tidexSurfacePrimary : .clear
     )
     .shimmer(isActive: isLoading)
   }

@@ -1,6 +1,6 @@
 // Admin-only file with internal API calls where URLs are guaranteed valid
-import Combine
 import Foundation
+import Observation
 import os.log
 import Supabase
 
@@ -432,26 +432,27 @@ struct ImpersonationTabState {
 /// AdminSettingsViewModel uses grouped state structs to reduce re-renders.
 /// When a property in one state group changes, only observers of that group re-evaluate.
 @MainActor
-final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
+@Observable
+final class AdminSettingsViewModel {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order line_length type_body_length
 
   // MARK: - Common State
 
-  @Published var selectedTab: AdminTab = .notifications
-  @Published var isSuperAdmin: Bool = false
-  @Published var errorMessage: String?
-  @Published var isPerformingAction: Bool = false
-  @Published var shouldDismissAfterImpersonation: Bool = false
+  var selectedTab: AdminTab = .notifications
+  var isSuperAdmin: Bool = false
+  var errorMessage: String?
+  var isPerformingAction: Bool = false
+  var shouldDismissAfterImpersonation: Bool = false
 
   // MARK: - Grouped Tab States
 
-  @Published var usersState: UsersTabState = UsersTabState()
-  @Published var subscribersState: SubscribersTabState = SubscribersTabState()
-  @Published var feedbackState: FeedbackTabState = FeedbackTabState()
-  @Published var reportsState: ReportsTabState = ReportsTabState()
-  @Published var auditLogState: AuditLogTabState = AuditLogTabState()
-  @Published var sharesState: SharesTabState = SharesTabState()
-  @Published var notificationsState: NotificationsTabState = NotificationsTabState()
-  @Published var impersonationState: ImpersonationTabState = ImpersonationTabState()
+  var usersState: UsersTabState = UsersTabState()
+  var subscribersState: SubscribersTabState = SubscribersTabState()
+  var feedbackState: FeedbackTabState = FeedbackTabState()
+  var reportsState: ReportsTabState = ReportsTabState()
+  var auditLogState: AuditLogTabState = AuditLogTabState()
+  var sharesState: SharesTabState = SharesTabState()
+  var notificationsState: NotificationsTabState = NotificationsTabState()
+  var impersonationState: ImpersonationTabState = ImpersonationTabState()
 
   // MARK: - Legacy Computed Properties (for backwards compatibility with View)
 
@@ -709,16 +710,11 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
 
   // MARK: - Private Properties
 
-  private var searchTask: Task<Void, Never>?
   private let perPage: Int = 20
   private let adminRouteBaseURL: URL =
     URL(string: "https://tidex.invalid")
     ?? URL(fileURLWithPath: "/")
   private var initialReportId: String?
-
-  deinit {
-    searchTask?.cancel()
-  }
 
   // MARK: - Common Methods
 
@@ -768,17 +764,9 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
 
   // MARK: - Users Tab Methods
 
-  func searchUsers() {
-    searchTask?.cancel()
+  func searchUsers() async {
     let query: String = usersSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-
-    searchTask = Task {
-      try? await Task.sleep(nanoseconds: 300_000_000)
-      guard !Task.isCancelled else {
-        return
-      }
-      await fetchUsers(page: 1, search: query.isEmpty ? nil : query)
-    }
+    await fetchUsers(page: 1, search: query.isEmpty ? nil : query)
   }
 
   func loadMoreUsers() async {
@@ -1112,17 +1100,6 @@ final class AdminSettingsViewModel: ObservableObject {  // swiftlint:disable:thi
     }
 
     sharesIsLoading = false
-  }
-
-  func searchShares() {
-    searchTask?.cancel()
-    searchTask = Task {
-      try? await Task.sleep(nanoseconds: 300_000_000)
-      guard !Task.isCancelled else {
-        return
-      }
-      await fetchShares()
-    }
   }
 
   func deleteShare(_ shareId: String) async {

@@ -1,29 +1,29 @@
-import Combine
 import Foundation
-import UIKit
+import Observation
 
 /// Local-only Add tab simulator for pre-auth onboarding.
 /// Mirrors single-shift interactions without persisting or requiring auth.
 @MainActor
-final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalendarViewModeling {
-  @Published var startTime: Date? {  // swiftlint:disable:this explicit_acl
+@Observable
+final class PreAuthAddShiftSimulatorViewModel: AddShiftCalendarViewModeling {
+  var startTime: Date? {  // swiftlint:disable:this explicit_acl
     didSet { updateConflictsAndPreviews() }
   }
 
-  @Published var endTime: Date? {  // swiftlint:disable:this explicit_acl
+  var endTime: Date? {  // swiftlint:disable:this explicit_acl
     didSet { updateConflictsAndPreviews() }
   }
 
-  @Published var selectedDates: Set<String> = [] {
+  var selectedDates: Set<String> = [] {
     didSet { updateConflictsAndPreviews() }
   }
 
-  @Published private(set) var currency: String
-  @Published private(set) var conflictDates: Set<String> = []
-  @Published private(set) var previewEarnings: [String: CalendarEarningsData] = [:]
-  @Published private(set) var existingShiftHours: [String: HoursData] = [:]
-  @Published private(set) var baselineToolbarTotals: CalendarHeaderTotals?
-  @Published private(set) var toolbarTotals: CalendarHeaderTotals?
+  private(set) var currency: String
+  private(set) var conflictDates: Set<String> = []
+  private(set) var previewEarnings: [String: CalendarEarningsData] = [:]
+  private(set) var existingShiftHours: [String: HoursData] = [:]
+  private(set) var baselineToolbarTotals: CalendarHeaderTotals?
+  private(set) var toolbarTotals: CalendarHeaderTotals?
 
   let displayMonth: Date
   let displayYear: Int
@@ -89,8 +89,7 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
       selectedDates.insert(dateISO)
     }
 
-    let generator = UIImpactFeedbackGenerator(style: .light)
-    generator.impactOccurred()
+    Haptics.play(.light)
   }
 
   func applyCurrency(_ symbol: String) {
@@ -261,8 +260,9 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
     ]
 
     return seed.compactMap { item in
-      guard item.day <= daysInMonth else { return nil }
-      let dateISO = String(format: "%04d-%02d-%02d", year, month, item.day)
+      guard item.day <= daysInMonth,
+        let dateISO = Date.isoDateString(year: year, month: month, day: item.day)
+      else { return nil }
 
       return ShiftRow(
         id: "onboarding-seed-\(item.day)",
@@ -362,8 +362,6 @@ final class PreAuthAddShiftSimulatorViewModel: ObservableObject, AddShiftCalenda
   }
 
   private static func formatTimeAsHHmm(_ date: Date) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    return formatter.string(from: date)
+    date.toHourMinuteString()
   }
 }

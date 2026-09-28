@@ -479,7 +479,8 @@ enum HomeScheduleAffectedMonthResolver {
       let previousYM = Date.previousYearMonth(
         from: (year: affectedMonth.year, month: affectedMonth.month)
       )
-      let nextYM = nextYearMonth(from: (year: affectedMonth.year, month: affectedMonth.month))
+      let nextYM = Date.nextYearMonth(
+        from: (year: affectedMonth.year, month: affectedMonth.month))
 
       displayMonths.insert(affectedMonth)
       if let previousMonth = ShiftChangeAffectedMonth(
@@ -494,15 +495,5 @@ enum HomeScheduleAffectedMonthResolver {
     }
 
     return displayMonths
-  }
-
-  private static func nextYearMonth(from current: (year: Int, month: Int)) -> (
-    year: Int,
-    month: Int
-  ) {
-    if current.month == 12 {
-      return (year: current.year + 1, month: 1)
-    }
-    return (year: current.year, month: current.month + 1)
   }
 }

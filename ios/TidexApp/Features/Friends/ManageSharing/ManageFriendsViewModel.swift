@@ -1,15 +1,16 @@
-import Combine
 import Foundation
+import Observation
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "ManageSharingViewModel")
 
 // MARK: - Manage Sharing View Model
 
-/// ViewModel for the sharing management modal
+/// ViewModel for the add friend sheet and the friend profile
 /// Handles fetching friends, optimistic updates, and management actions
 @MainActor
-final class ManageSharingViewModel: ObservableObject {
+@Observable
+final class ManageSharingViewModel {
 
   // MARK: - Dependencies
 
@@ -19,25 +20,25 @@ final class ManageSharingViewModel: ObservableObject {
   // MARK: - Published State
 
   /// All friends (optimistic state for immediate UI updates)
-  @Published private(set) var friends: [Friend] = []
+  private(set) var friends: [Friend] = []
 
   /// Users currently blocked through the friends safety flow.
-  @Published private(set) var blockedFriends: [Friend] = []
+  private(set) var blockedFriends: [Friend] = []
 
   /// Loading state for initial data fetch
-  @Published private(set) var isLoading = false
+  private(set) var isLoading = false
 
   /// ID of friend currently being acted upon (for per-row loading states)
-  @Published private(set) var actionInProgress: String?
+  private(set) var actionInProgress: String?
 
   /// Locally hidden outgoing-only friends for the current viewer.
-  @Published private(set) var hiddenOutgoingFriendIds: Set<String> = []
+  private(set) var hiddenOutgoingFriendIds: Set<String> = []
 
   /// Error message to display
-  @Published var errorMessage: String?
+  var errorMessage: String?
 
   /// Whether server-backed sharing management actions are unavailable offline.
-  @Published private(set) var areServerActionsUnavailable = false
+  private(set) var areServerActionsUnavailable = false
 
   /// Inline offline message for server-backed sharing management controls.
   var offlineActionsUnavailableMessage: String? {
@@ -48,32 +49,14 @@ final class ManageSharingViewModel: ObservableObject {
 
   // MARK: - Add Friend Form State
 
-  @Published var isAddFormExpanded = false
-  @Published var addIdentifier = ""
-  @Published var addShowEarnings = false
-  @Published var isAdding = false
-  @Published var addError: String?
+  var addIdentifier = ""
+  var addShowEarnings = false
+  var isAdding = false
+  var addError: String?
 
   private var cachedUserId: String?
   private var hasHydratedFromInitialSnapshot = false
   var onBootstrapRefresh: ((FriendsTabBootstrapData) async -> Void)?
-
-  // MARK: - Computed Properties
-
-  /// Friends where both users share with each other
-  var mutualFriends: [Friend] {
-    friends.filter(\.isMutual)
-  }
-
-  /// Friends where only I share with them
-  var outgoingOnlyFriends: [Friend] {
-    friends.filter(\.isOutgoingOnly)
-  }
-
-  /// Friends where only they share with me
-  var incomingOnlyFriends: [Friend] {
-    friends.filter(\.isIncomingOnly)
-  }
 
   // MARK: - Initialization
 
@@ -181,15 +164,16 @@ final class ManageSharingViewModel: ObservableObject {
 
   // MARK: - Add Friend
 
-  /// Add a new friend by email or phone
-  func addFriend() async {
+  /// Add a new friend by email, phone, or username. Returns whether the friend was added.
+  @discardableResult
+  func addFriend() async -> Bool {
     // Prevent duplicate taps
-    guard !isAdding else { return }
+    guard !isAdding else { return false }
 
     let identifier = addIdentifier.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !identifier.isEmpty else {
       addError = String(localized: .sharingErrorAddFriendEmpty)
-      return
+      return false
     }
 
     isAdding = true
@@ -203,9 +187,10 @@ final class ManageSharingViewModel: ObservableObject {
       // Reset form
       addIdentifier = ""
       addShowEarnings = false
-      isAddFormExpanded = false
 
       logger.info("Added friend: \(identifier)")
+      isAdding = false
+      return true
     } catch let error as SharingServiceError {
       logger.error("Failed to add friend: \(error.localizedDescription)")
       addError = userFacingActionError(for: error, fallback: error.localizedDescription)
@@ -218,14 +203,7 @@ final class ManageSharingViewModel: ObservableObject {
     }
 
     isAdding = false
-  }
-
-  /// Cancel adding a friend
-  func cancelAddFriend() {
-    addIdentifier = ""
-    addShowEarnings = false
-    addError = nil
-    isAddFormExpanded = false
+    return false
   }
 
   // MARK: - Toggle Earnings Visibility
@@ -659,6 +637,17 @@ final class ManageSharingViewModel: ObservableObject {
 
   /// Callback for when visibility changes (hide/show) to trigger sharer list refresh
   var onVisibilityChange: (() -> Void)?
+
+  /// Friends left out of the friends list, sorted by name.
+  var hiddenFriends: [Friend] {
+    friends
+      .filter { isHiddenInFriendsTab(for: $0) }
+      .sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
+  }
+
+  var hasHiddenOrBlockedPeople: Bool {
+    !blockedFriends.isEmpty || friends.contains { isHiddenInFriendsTab(for: $0) }
+  }
 
   func isHiddenInFriendsTab(for friend: Friend) -> Bool {
     if let sharesWithMe = friend.sharesWithMe {

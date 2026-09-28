@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "WageSnapshotEditorSheet")
@@ -363,7 +362,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       if !Task.isCancelled { isLoadingTariff = false }
     }
 
-    let isoDate = ISO8601DateFormatter.dateOnlyString(from: date)
+    let isoDate = date.toISODateString()
 
     do {
       let version = try await TariffVersionService.shared.getTariffVersionForDate(
@@ -508,9 +507,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
   /// Format effective date for display
   private func formatEffectiveDate(_ isoDate: String) -> String {
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd"
-    guard let date = dateFormatter.date(from: isoDate) else { return isoDate }
+    guard let date = Date.fromISODateString(isoDate) else { return isoDate }
 
     let displayFormatter = DateFormatter()
     displayFormatter.dateFormat = "MMMM yyyy"
@@ -634,6 +631,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
       }
     }
     .padding(.horizontal)
+    .sensoryFeedback(.impact(weight: .light), trigger: supplements.count)
   }
 
   @ViewBuilder
@@ -693,7 +691,6 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
 
       // Delete button
       Button(action: {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         withAnimation {
           supplements.removeAll { $0.id == rule.id }
         }
@@ -905,7 +902,7 @@ struct WageSnapshotEditorSheet: View {  // swiftlint:disable:this explicit_acl e
   @ViewBuilder
   private var deleteButton: some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+      Haptics.play(.medium)
       if let snapshot {
         onDelete(snapshot)
       }

@@ -97,7 +97,7 @@ internal struct OTPInputField: View {
       }
       .onTapGesture {
         isFocused = true
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Haptics.play(.light)
       }
       .accessibilityAddTraits(.isButton)
 
@@ -120,6 +120,12 @@ internal struct OTPInputField: View {
     .onDisappear {
       cursorTimer?.invalidate()
       cursorTimer = nil
+    }
+    .sensoryFeedback(.impact(weight: .light), trigger: code) { _, newValue in
+      !newValue.isEmpty
+    }
+    .sensoryFeedback(.impact(weight: .medium), trigger: code) { _, newValue in
+      newValue.count == digitCount
     }
   }
 
@@ -162,14 +168,8 @@ internal struct OTPInputField: View {
       code = filtered
     }
 
-    // Haptic feedback on digit entry
-    if !code.isEmpty {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
-    }
-
     // Call completion when all digits entered
     if code.count == digitCount {
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
       onComplete?()
     }
   }

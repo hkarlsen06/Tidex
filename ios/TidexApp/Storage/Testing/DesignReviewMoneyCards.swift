@@ -29,17 +29,14 @@
               onToggleReceived: { isMarkedReceived.toggle() }
             )
             CalendarHeaderRow(
-              monthName: "September", year: 2_026, selectionCount: nil, phase: nil,
-              totals: CalendarHeaderTotals(primary: 22_400, secondary: 28_000),
-              trailingAccessory: nil
+              totals: CalendarHeaderTotals(primary: 22_400, secondary: 28_000)
             )
             CalendarHeaderRow(
-              monthName: "September", year: 2_026, selectionCount: nil, phase: nil,
               totals: CalendarHeaderTotals(
                 primary: 24_000, secondary: 1_600,
                 primaryIsAfterTax: true
               ),
-              trailingAccessory: nil, secondaryStyle: .delta
+              secondaryStyle: .delta
             )
           }
           .padding(Spacing.xxl)

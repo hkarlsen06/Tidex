@@ -6,8 +6,8 @@ import SwiftUI
 struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order
   let data: EmploymentData  // swiftlint:disable:this explicit_acl
 
-  /// Currently selected month (for tooltip)
-  @State private var selectedMonth: Int?
+  /// Currently selected month label (for tooltip)
+  @State private var selectedMonth: String?
 
   // MARK: - Computed Properties
 
@@ -50,27 +50,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
   /// Get selected month data
   private var selectedMonthData: EmploymentMonthlyData? {
     guard let selected = selectedMonth else { return nil }  // swiftlint:disable:this conditional_returns_on_newline
-    return data.monthlyData.first { $0.monthNumber == selected }
-  }
-
-  /// Y-axis scale calculation - rounds up to nearest 10
-  private var yAxisScale: (domain: ClosedRange<Double>, ticks: [Double]) {
-    let percentages = filteredData.map(\.averagePercentage)  // swiftlint:disable:this explicit_type_interface
-    let maxPercentage = percentages.max() ?? 0  // swiftlint:disable:this explicit_type_interface
-
-    // Round up to nearest 10, minimum 20%
-    let upperBound = max(ceil(maxPercentage / 10) * 10, 20)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-
-    // Create ticks at 20% intervals, or 10% if upper bound is small
-    let tickInterval: Double = upperBound <= 40 ? 10.0 : 20.0  // swiftlint:disable:this no_magic_numbers
-    var ticks: [Double] = []
-    var tick = 0.0  // swiftlint:disable:this explicit_type_interface
-    while tick <= upperBound {
-      ticks.append(tick)
-      tick += tickInterval
-    }
-
-    return (0...upperBound, ticks)
+    return data.monthlyData.first { $0.month == selected }
   }
 
   // MARK: - Body
@@ -137,20 +117,34 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
           x: .value("Month", month.month),
           y: .value("Percentage", month.averagePercentage)
         )
-        .foregroundStyle(barColor(for: month, isSelected: selectedMonth == month.monthNumber))
+        .foregroundStyle(barColor(for: month, isSelected: selectedMonth == month.month))
         .cornerRadius(CornerRadius.xs)
+        .annotation(
+          position: .top,
+          overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+        ) {
+          if selectedMonth == month.month {
+            TooltipView(monthData: month)
+          }
+        }
       }
     }
     .chartOverlay { proxy in
-      ChartOverlayContent(
+      CompletedAverageOutlineOverlay(
         proxy: proxy,
         data: filteredData,
-        outlinedMonthNumbers: Set(
+        outlinedMonths: Set(
           filteredData
             .filter { data.isIncludedInCompletedAverage($0) }
-            .map(\.monthNumber)
-        ),
-        selectedMonth: $selectedMonth
+            .map(\.month)
+        )
+      )
+    }
+    .chartXSelection(value: $selectedMonth)
+    .onChange(of: selectedMonth) { _, newValue in
+      selectedMonth = ChartSelectionSnapping.nearestNonZero(
+        to: newValue,
+        in: filteredData.map { (key: $0.month, value: $0.averagePercentage) }
       )
     }
     .chartXAxis {
@@ -162,7 +156,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
               monthData.map { data.isIncludedInCompletedAverage($0) } ?? false
             let isCurrentMonth =  // swiftlint:disable:this explicit_type_interface
               monthData?.monthNumber == currentMonth && monthData?.year == currentYear
-            let isSelected = selectedMonth == monthData?.monthNumber  // swiftlint:disable:this explicit_type_interface
+            let isSelected = selectedMonth == label  // swiftlint:disable:this explicit_type_interface
             let isEmphasized = isIncluded || isCurrentMonth || isSelected  // swiftlint:disable:this explicit_type_interface line_length
 
             Text(label)
@@ -178,7 +172,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
       }
     }
     .chartYAxis {
-      AxisMarks(position: .leading, values: yAxisScale.ticks) { value in
+      AxisMarks(position: .leading, values: .automatic(desiredCount: 5)) { value in
         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5))  // swiftlint:disable:this no_magic_numbers
           .foregroundStyle(Color.tidexSeparator)
         AxisValueLabel {
@@ -190,7 +184,7 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
         }
       }
     }
-    .chartYScale(domain: yAxisScale.domain)
+    .chartYScale(domain: 0...100)
     .chartLegend(.hidden)
     .frame(height: 200)  // swiftlint:disable:this no_magic_numbers
     .padding(Spacing.mlg)
@@ -241,64 +235,32 @@ struct EmploymentPercentageChart: View {  // swiftlint:disable:this explicit_acl
   }
 }
 
-// MARK: - Chart Overlay Content
+// MARK: - Completed Average Outline Overlay
 
-/// Separate struct to avoid compiler complexity issues with chartOverlay
-private struct ChartOverlayContent: View {
+/// Draws an accent outline around bars for months included in the completed-months average.
+/// Kept as a `chartOverlay` because Swift Charts marks have no native stroke/border modifier.
+private struct CompletedAverageOutlineOverlay: View {
   let proxy: ChartProxy
   let data: [EmploymentMonthlyData]
-  let outlinedMonthNumbers: Set<Int>
-  @Binding var selectedMonth: Int?
-  @State private var tooltipWidth: CGFloat = 0
+  let outlinedMonths: Set<String>
 
   var body: some View {
-    GeometryReader { geometry in  // swiftlint:disable:this closure_body_length
+    GeometryReader { geometry in
       let plotFrame: CGRect = proxy.plotFrame.map { geometry[$0] } ?? .zero
 
-      ZStack {  // swiftlint:disable:this closure_body_length
-        ForEach(data.filter { outlinedMonthNumbers.contains($0.monthNumber) }) { month in
-          if let outlineFrame = barOutlineFrame(for: month, plotFrame: plotFrame) {
-            UnevenRoundedRectangle(
-              cornerRadii: RectangleCornerRadii(
-                topLeading: CornerRadius.xs,
-                bottomLeading: 0,
-                bottomTrailing: 0,
-                topTrailing: CornerRadius.xs
-              )
+      ForEach(data.filter { outlinedMonths.contains($0.month) }) { month in
+        if let outlineFrame = barOutlineFrame(for: month, plotFrame: plotFrame) {
+          UnevenRoundedRectangle(
+            cornerRadii: RectangleCornerRadii(
+              topLeading: CornerRadius.xs,
+              bottomLeading: 0,
+              bottomTrailing: 0,
+              topTrailing: CornerRadius.xs
             )
-            .stroke(Color.tidexEmploymentAccent, lineWidth: 1.5)  // swiftlint:disable:this no_magic_numbers
-            .frame(width: outlineFrame.width, height: outlineFrame.height)
-            .position(x: outlineFrame.midX, y: outlineFrame.midY)
-          }
-        }
-
-        // Tap detection layer
-        Rectangle()  // swiftlint:disable:this accessibility_trait_for_button
-          .fill(Color.clear)
-          .contentShape(Rectangle())
-          .onTapGesture { location in
-            handleTap(at: location, plotFrame: plotFrame)
-          }
-
-        // Tooltip overlay
-        if let tooltipData = tooltipData(
-          plotFrame: plotFrame,
-          containerWidth: geometry.size.width
-        ) {
-          TooltipView(monthData: tooltipData.monthData)
-            .fixedSize()
-            .position(x: tooltipData.xPosition, y: 30)  // swiftlint:disable:this no_magic_numbers
-            .background(
-              GeometryReader { tooltipGeometry in
-                Color.clear.preference(
-                  key: EmploymentTooltipWidthPreferenceKey.self,
-                  value: tooltipGeometry.size.width
-                )
-              }
-            )
-            .onPreferenceChange(EmploymentTooltipWidthPreferenceKey.self) { width in
-              tooltipWidth = width
-            }
+          )
+          .stroke(Color.tidexEmploymentAccent, lineWidth: 1.5)  // swiftlint:disable:this no_magic_numbers
+          .frame(width: outlineFrame.width, height: outlineFrame.height)
+          .position(x: outlineFrame.midX, y: outlineFrame.midY)
         }
       }
     }
@@ -325,62 +287,6 @@ private struct ChartOverlayContent: View {
       width: barWidth,
       height: height
     )
-  }
-
-  private func handleTap(at location: CGPoint, plotFrame: CGRect) {
-    // Adjust tap location relative to plot area
-    let adjustedX = location.x - plotFrame.origin.x  // swiftlint:disable:this explicit_type_interface
-    let barWidth = plotFrame.width / CGFloat(data.count)  // swiftlint:disable:this explicit_type_interface
-    let tappedIndex = Int(adjustedX / barWidth)  // swiftlint:disable:this explicit_type_interface
-
-    guard tappedIndex >= 0, tappedIndex < data.count else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
-
-    let tappedMonth = data[tappedIndex]  // swiftlint:disable:this explicit_type_interface
-    guard tappedMonth.averagePercentage > 0 else { return }  // swiftlint:disable:this conditional_returns_on_newline
-
-    withAnimation(.easeInOut(duration: 0.15)) {  // swiftlint:disable:this no_magic_numbers
-      if selectedMonth == tappedMonth.monthNumber {
-        selectedMonth = nil
-      } else {
-        selectedMonth = tappedMonth.monthNumber
-      }
-    }
-  }
-
-  private func tooltipData(
-    plotFrame: CGRect,
-    containerWidth: CGFloat
-  ) -> (
-    monthData: EmploymentMonthlyData, xPosition: CGFloat
-  )? {
-    guard let selected = selectedMonth,
-      let monthData = data.first(where: { $0.monthNumber == selected }),
-      let index = data.firstIndex(where: { $0.monthNumber == selected })
-    else {
-      return nil
-    }
-
-    let barWidth = plotFrame.width / CGFloat(data.count)  // swiftlint:disable:this explicit_type_interface
-    let desiredX = plotFrame.origin.x + barWidth * (CGFloat(index) + 0.5)  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-    let horizontalInset = Spacing.xs  // swiftlint:disable:this explicit_type_interface
-    let fallbackTooltipWidth: CGFloat = 120
-    let effectiveTooltipWidth =  // swiftlint:disable:this explicit_type_interface
-      tooltipWidth > 0 && tooltipWidth < (containerWidth - (horizontalInset * 2))  // swiftlint:disable:this line_length no_magic_numbers
-      ? tooltipWidth : fallbackTooltipWidth
-    let halfTooltipWidth = effectiveTooltipWidth / 2  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    let minX = halfTooltipWidth + horizontalInset  // swiftlint:disable:this explicit_type_interface
-    let maxX = containerWidth - halfTooltipWidth - horizontalInset  // swiftlint:disable:this explicit_type_interface
-    let xPosition = maxX > minX ? min(max(desiredX, minX), maxX) : containerWidth / 2  // swiftlint:disable:this explicit_type_interface line_length no_magic_numbers
-
-    return (monthData: monthData, xPosition: xPosition)
-  }
-}
-
-private struct EmploymentTooltipWidthPreferenceKey: PreferenceKey {
-  static var defaultValue: CGFloat = 0
-
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = nextValue()
   }
 }
 

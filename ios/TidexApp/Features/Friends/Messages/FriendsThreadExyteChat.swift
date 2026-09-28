@@ -1031,7 +1031,7 @@ struct FriendsThreadChatProjection {
 }
 
 @MainActor
-final class FriendsThreadChatProjectionStore: ObservableObject {
+final class FriendsThreadChatProjectionStore {
   private var cachedInput: FriendsThreadChatProjection.Input?
   private var cachedProjection: FriendsThreadChatProjection = .empty
 

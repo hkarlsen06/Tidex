@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Observation
 import UIKit
 import os.log
 
@@ -12,22 +13,6 @@ private let kScheduleISODateFormatter: DateFormatter = FormatterCache.isoDateFor
 private let kScheduleHourMinuteFormatter: DateFormatter = FormatterCache.hourMinuteFormatter(
   timeZone: Date.localTimeZone
 )
-
-// MARK: - Week Group
-
-/// A group of shifts for a single ISO week
-internal struct WeekGroup: Identifiable, Equatable {
-  /// Unique identifier: "YYYY-WW" format
-  internal let id: String
-  /// ISO week number (1-53)
-  internal let weekNumber: Int
-  /// Year for the week (ISO week-numbering year)
-  internal let year: Int
-  /// Total gross earnings for all shifts in this week
-  internal let totalGross: Double
-  /// Shifts in this week, sorted by date (newest first)
-  internal let shifts: [ShiftWithComputations]
-}
 
 // MARK: - Shifts Error
 
@@ -225,8 +210,9 @@ private struct MonthComputationInput {
 // MARK: - Shifts View Model
 
 @MainActor
+@Observable
 // swiftlint:disable:next explicit_acl explicit_top_level_acl type_body_length
-final class ShiftsViewModel: ObservableObject, MonthNavigable {
+final class ShiftsViewModel: MonthNavigable {
 
   // MARK: - Dependencies (Local-First Repositories)
 
@@ -251,11 +237,10 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   /// Precomputed calendar maps and totals for the displayed month.
   private(set) var calendarPresentation = ShiftsCalendarPresentation.empty()
   /// Shifts grouped by ISO week
-  private(set) var weekGroups: [WeekGroup] = []
   /// Whether data is currently loading
-  @Published private(set) var isLoading = false
+  private(set) var isLoading = false
   /// Error if data loading failed
-  @Published private(set) var error: Error?
+  private(set) var error: Error?
   /// Set of shift IDs that have conflicts (overlapping with other shifts)
   private(set) var conflictingShiftIds: Set<String> = []
   /// Set of shift IDs excluded from totals (higher-earning overlapping shifts are excluded)
@@ -264,7 +249,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   private(set) var conflictDates: Set<String> = []
 
   /// Direction of last navigation (for animations) - synced from SharedMonthContext
-  @Published private(set) var navigationDirection: MonthNavigationDirection?
+  var navigationDirection: MonthNavigationDirection? { monthContext.navigationDirection }
 
   // MARK: - Committed Display State
   // These values only update AFTER shift data is ready, ensuring atomic rendering
@@ -300,35 +285,28 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     return ""
   }
 
-  /// The period type of the displayed month (past, current, or future)
-  /// Uses committed state for stable rendering
-  var monthPeriod: MonthPeriod {
+  /// Whether the displayed month is after the current month (used for empty-state copy).
+  /// Uses committed state for stable rendering.
+  var isFutureMonth: Bool {
     let current = Date.currentYearMonth()
     let displayedIndex = committedYear * 12 + committedMonth
     let currentIndex = current.year * 12 + current.month
-
-    if displayedIndex < currentIndex {
-      return .past
-    }
-    if displayedIndex == currentIndex {
-      return .current
-    }
-    return .future
+    return displayedIndex > currentIndex
   }
 
   /// User's currency for formatting
-  @Published private(set) var currency: String = "kr"
+  private(set) var currency: String = "kr"
 
   /// Next upcoming shift (for countdown display)
   private(set) var nextUpcomingShift: ShiftWithComputations?
 
   /// All non-deleted jobs for metadata rendering (badges/colors in shift cards).
-  @Published private(set) var activeJobs: [Job] = []
+  private(set) var activeJobs: [Job] = []
 
   // MARK: - Selection State
 
   /// Selected dates (ISO strings). Persists across month navigation.
-  @Published var selectedDates: Set<String> = [] {
+  var selectedDates: Set<String> = [] {
     didSet {
       if oldValue != selectedDates {
         updateSelectionSummary()
@@ -337,11 +315,11 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   }
 
   /// Cached summary for the current selection to avoid recomputing on every access.
-  @Published private var selectionSummary: SelectionSummary?
+  private var selectionSummary: SelectionSummary?
 
-  /// Whether selection mode is enabled (tap/drag to select vs swipe to navigate).
+  /// Whether selection mode is enabled (taps toggle days instead of opening them).
   /// Leaving selection mode clears the selection, like Select/Done in Photos or Mail.
-  @Published var isSelectionModeEnabled: Bool = false {
+  var isSelectionModeEnabled: Bool = false {
     didSet {
       if oldValue, !isSelectionModeEnabled {
         clearSelection()
@@ -350,36 +328,36 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
   }
 
   /// Two-click delete confirmation state
-  @Published var confirmingDelete: Bool = false
+  var confirmingDelete: Bool = false
 
   /// Whether we're currently deleting shifts
-  @Published var isDeleting: Bool = false
+  var isDeleting: Bool = false
 
   // MARK: - Copy/Move State
 
   /// Whether copy mode is active (waiting for target date selection)
-  @Published var isCopyMode: Bool = false
+  var isCopyMode: Bool = false
 
   /// Whether move mode is active (waiting for target date selection)
-  @Published var isMoveMode: Bool = false
+  var isMoveMode: Bool = false
 
   /// Whether a copy operation is in progress
-  @Published var isCopying: Bool = false
+  var isCopying: Bool = false
 
   /// Whether a move operation is in progress
-  @Published var isMoving: Bool = false
+  var isMoving: Bool = false
 
   /// Target dates selected while choosing where to copy a shift.
-  @Published var copyTargetDates: Set<String> = []
+  var copyTargetDates: Set<String> = []
 
   /// Whether a recurring shift update is in progress
-  @Published var isUpdatingRecurring: Bool = false
+  var isUpdatingRecurring: Bool = false
 
   /// Whether a recurring shift deletion is in progress
-  @Published var isDeletingRecurring: Bool = false
+  var isDeletingRecurring: Bool = false
 
   /// Whether a shift update is in progress
-  @Published var isUpdatingShift: Bool = false
+  var isUpdatingShift: Bool = false
 
   /// Whether an event update is in progress
   private var isUpdatingEvent = false
@@ -582,50 +560,50 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Private State
 
-  private var settings: UserSettings?
-  private var snapshots: [WageSnapshot] = []
-  private var recurringShifts: [RecurringShiftRow] = []
-  private var scheduleDependenciesLoaded = false
-  private var cachedUserId: String?
-  private var isActiveTabVisible = true
-  private var displayedMonthLoadPending = false
+  @ObservationIgnored private var settings: UserSettings?
+  @ObservationIgnored private var snapshots: [WageSnapshot] = []
+  @ObservationIgnored private var recurringShifts: [RecurringShiftRow] = []
+  @ObservationIgnored private var scheduleDependenciesLoaded = false
+  @ObservationIgnored private var cachedUserId: String?
+  @ObservationIgnored private var isActiveTabVisible = true
+  @ObservationIgnored private var displayedMonthLoadPending = false
 
   /// Subscription to SharedMonthContext changes
-  private var monthContextCancellable: AnyCancellable?
+  @ObservationIgnored private var monthContextCancellable: AnyCancellable?
 
   /// Track the last observed month to detect changes
-  private var lastObservedYear: Int = 0
-  private var lastObservedMonth: Int = 0
+  @ObservationIgnored private var lastObservedYear: Int = 0
+  @ObservationIgnored private var lastObservedMonth: Int = 0
 
   // MARK: - Month Cache
 
   /// Cache of computed shifts by month key (e.g., "2025-1")
-  private var monthCache: [String: MonthCacheEntry] = [:]
+  @ObservationIgnored private var monthCache: [String: MonthCacheEntry] = [:]
 
   /// Maximum number of months to keep in cache (prevents unbounded memory growth)
   private static let maxCacheSize = 12
 
   /// Background prefetch tasks keyed by month (to avoid duplicates and cancel stale work).
-  private var prefetchTasks: [String: Task<Void, Never>] = [:]
+  @ObservationIgnored private var prefetchTasks: [String: Task<Void, Never>] = [:]
 
   /// Memory warning observer
-  private var memoryWarningObserver: NSObjectProtocol?
+  @ObservationIgnored private var memoryWarningObserver: NSObjectProtocol?
 
   /// Shift reminder tap observer for deep linking
-  private var shiftReminderObserver: NSObjectProtocol?
+  @ObservationIgnored private var shiftReminderObserver: NSObjectProtocol?
 
   /// Whether cached month data must be rebuilt from local storage before reuse.
-  private var localDataNeedsReload = false
+  @ObservationIgnored private var localDataNeedsReload = false
 
   /// Cross-tab shift/event change observer.
-  private var shiftsDidChangeObserver: NSObjectProtocol?
+  @ObservationIgnored private var shiftsDidChangeObserver: NSObjectProtocol?
 
   /// In-flight local reload shared by notification and tab-entry callers.
-  private var localReloadTask: Task<Void, Never>?
-  private var localReloadID: UUID?
+  @ObservationIgnored private var localReloadTask: Task<Void, Never>?
+  @ObservationIgnored private var localReloadID: UUID?
 
   /// Track active navigation task to cancel stale fetches
-  private var activeNavigationTask: Task<Void, Never>?
+  @ObservationIgnored private var activeNavigationTask: Task<Void, Never>?
 
   // MARK: - Initialization
 
@@ -731,9 +709,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
         // Update tracking
         lastObservedYear = newMonth.year
         lastObservedMonth = newMonth.month
-
-        // Sync navigation direction from context
-        navigationDirection = monthContext.navigationDirection
 
         guard isActiveTabVisible else {
           displayedMonthLoadPending = true
@@ -876,11 +851,13 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     return false
   }
 
-  /// Long-press on a day with shifts: enter selection mode with that day selected.
-  func beginSelection(dateISO: String) {
+  /// Long press + drag on the calendar: replace the selection and enter selection mode.
+  func applyDragSelection(_ dates: Set<String>) {
     confirmingDelete = false
-    selectedDates = [dateISO]
-    isSelectionModeEnabled = true
+    selectedDates = dates
+    if !dates.isEmpty {
+      isSelectionModeEnabled = true
+    }
   }
 
   /// Clear all selection state
@@ -893,25 +870,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     isMoveMode = false
     copyTargetDates.removeAll()
     shiftForOperation = nil
-  }
-
-  /// Handle date range selection from long-press + drag gesture
-  /// - Parameter dates: Array of ISO date strings to select
-  func handleDateRangeSelected(_ dates: [String]) {
-    // Reset delete confirmation
-    confirmingDelete = false
-
-    // Filter to only dates with shifts
-    let datesWithShifts = dates.filter { dateISO in
-      shifts.contains { $0.shiftDate == dateISO }
-    }
-
-    guard !datesWithShifts.isEmpty else {
-      return
-    }
-
-    // Add to existing selection (union, not replace)
-    selectedDates.formUnion(datesWithShifts)
   }
 
   /// Delete all shifts for selected dates
@@ -1601,7 +1559,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       ? findNextUpcomingShift(in: computedShifts)
       : nil
 
-    objectWillChange.send()
     updateConflictDetection(for: computedShifts)
     self.shifts = computedShifts
     self.events = displayEvents
@@ -1609,7 +1566,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       events: displayEvents,
       visibleRange: visibleRange
     )
-    self.weekGroups = self.groupShiftsByWeek(computedShifts)
     self.calendarPresentation = ShiftsCalendarPresentation.build(
       shifts: computedShifts,
       year: year,
@@ -1772,7 +1728,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
     // Sync tracking with current month context values
     lastObservedYear = monthContext.displayYear
     lastObservedMonth = monthContext.displayMonth
-    navigationDirection = nil
 
     // Clear all caches on full reload (including cachedUserId for impersonation support)
     monthCache.removeAll()
@@ -1810,7 +1765,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
 
     // Store current data as fallback
     let previousShifts = shifts
-    let previousWeekGroups = weekGroups
 
     do {
       // Get user ID
@@ -1854,9 +1808,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       kScheduleLogger.error("❌ Pull-to-refresh failed: \(error.localizedDescription)")
 
       // Restore previous data so UI doesn't break
-      objectWillChange.send()
       self.shifts = previousShifts
-      self.weekGroups = previousWeekGroups
 
       kScheduleLogger.info("📦 Restored previous data after refresh failure")
     }
@@ -2178,7 +2130,7 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       self.isLoading = false
 
       kScheduleLogger.info(
-        "📊 Loaded shifts from local: \(computedShifts.count) shifts, \(self.weekGroups.count) weeks"
+        "📊 Loaded shifts from local: \(computedShifts.count) shifts"
       )
 
       return true
@@ -2526,64 +2478,6 @@ final class ShiftsViewModel: ObservableObject, MonthNavigable {
       return (year: current.year + 1, month: 1)
     }
     return (year: current.year, month: current.month + 1)
-  }
-
-  // MARK: - Week Grouping
-
-  /// Group shifts by ISO week
-  /// - Parameter shifts: Shifts to group
-  /// - Returns: Array of WeekGroup, sorted by week (oldest first, ascending)
-  private func groupShiftsByWeek(_ shifts: [ShiftWithComputations]) -> [WeekGroup] {
-    guard !shifts.isEmpty else {
-      return []
-    }
-
-    // Group shifts by ISO week key
-    var weekMap: [String: (weekNumber: Int, year: Int, shifts: [ShiftWithComputations])] = [:]
-
-    for shift in shifts {
-      guard let date = Date.fromISODateString(shift.shiftDate) else { continue }
-
-      let (weekNumber, weekYear) = getIsoWeek(from: date)
-      let key = "\(weekYear)-W\(String(format: "%02d", weekNumber))"
-
-      if var existing = weekMap[key] {
-        existing.shifts.append(shift)
-        weekMap[key] = existing
-      } else {
-        weekMap[key] = (weekNumber: weekNumber, year: weekYear, shifts: [shift])
-      }
-    }
-
-    // Convert to WeekGroup array (excluding conflicting shifts from totals)
-    let groups = weekMap.map { key, value in
-      WeekGroup(
-        id: key,
-        weekNumber: value.weekNumber,
-        year: value.year,
-        totalGross: value.shifts.reduce(0) { total, shift in
-          // Don't include excluded shifts in week totals
-          self.excludedFromTotalIds.contains(shift.id) ? total : total + shift.grossPay
-        },
-        shifts: value.shifts.sorted { $0.shiftDate < $1.shiftDate }
-      )
-    }
-
-    // Sort by week (oldest first, ascending)
-    return groups.sorted { $0.id < $1.id }
-  }
-
-  /// Get ISO week number and year for a date
-  /// Uses ISO 8601 week numbering (Monday is first day, week 1 has at least 4 days in year)
-  private func getIsoWeek(from date: Date) -> (weekNumber: Int, year: Int) {
-    var calendar = Calendar(identifier: .iso8601)
-    calendar.firstWeekday = 2  // Monday
-    calendar.minimumDaysInFirstWeek = 4
-
-    let weekOfYear = calendar.component(.weekOfYear, from: date)
-    let yearForWeekOfYear = calendar.component(.yearForWeekOfYear, from: date)
-
-    return (weekOfYear, yearForWeekOfYear)
   }
 
   // MARK: - Private Helpers

@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Global Pay Settings Card
 
@@ -53,7 +52,6 @@ struct GlobalPaySettingsCard: View {
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
     .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-    .tidexCardShadow(cornerRadius: CornerRadius.lg)
     .onAppear {
       initializeFromInputs(force: true)
     }
@@ -98,7 +96,6 @@ struct GlobalPaySettingsCard: View {
 
       Button(action: {
         if canChangeCurrency {
-          UIImpactFeedbackGenerator(style: .light).impactOccurred()
           showingCurrencyPicker = true
         }
       }) {
@@ -125,6 +122,7 @@ struct GlobalPaySettingsCard: View {
       }
       .buttonStyle(.plain)
       .disabled(!canChangeCurrency)
+      .sensoryFeedback(.impact(weight: .light), trigger: showingCurrencyPicker) { _, new in new }
 
       if !canChangeCurrency {
         Text(.settingsPayCurrencyTariffWarning)
@@ -155,9 +153,9 @@ struct GlobalPaySettingsCard: View {
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       .onChange(of: selectedPayrollDay) { _, newValue in
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         onUpdatePayrollDay(newValue)
       }
+      .sensoryFeedback(.selection, trigger: selectedPayrollDay)
 
       if payPeriod.isCalendarMonth {
         Text(.settingsPayGlobalPayrollDayHelper)
@@ -218,11 +216,11 @@ struct GlobalPaySettingsCard: View {
       .background(Color.tidexSurfaceSecondary)
       .clipShape(RoundedRectangle(cornerRadius: CornerRadius.md, style: .continuous))
       .onChange(of: selectedHalfTaxMonth) { _, newValue in
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         Task {
           await onUpdateHalfTaxMonth(newValue)
         }
       }
+      .sensoryFeedback(.selection, trigger: selectedHalfTaxMonth)
 
       Text(.settingsPayGlobalHalfTaxMonthHelper)
         .font(.tidexCaptionRegular)
@@ -253,7 +251,6 @@ private struct CurrencyPickerSheet: View {
                     option: option,
                     isSelected: selectedCurrency == option.value,
                     action: {
-                      UIImpactFeedbackGenerator(style: .light).impactOccurred()
                       selectedCurrency = option.value
                       onSelect(option.value)
                       isPresented = false
@@ -287,6 +284,7 @@ private struct CurrencyPickerSheet: View {
         }
       }
     }
+    .sensoryFeedback(.selection, trigger: selectedCurrency)
   }
 }
 

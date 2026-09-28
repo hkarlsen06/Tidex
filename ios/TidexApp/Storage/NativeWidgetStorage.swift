@@ -103,13 +103,6 @@ private actor NativeWidgetStorageRefreshCoordinator {
 /// - Successful sync (SyncCoordinator)
 /// - Local shift changes (ShiftsRepository)
 enum NativeWidgetStorage {
-  private static let appGroupId = "group.no.tidex.app"
-  private static let shiftsKey = "upcoming_shifts"
-  private static let currencyKey = "user_currency"
-  private static let friendSharersKey = "friend_sharers"
-  private static let friendShiftsKey = "friend_shifts"
-  private static let monthlyTotalsKey = "monthly_totals"
-
   /// Default currency symbol if settings don't specify one
   private static let defaultCurrencySymbol = "kr"
 
@@ -292,8 +285,8 @@ enum NativeWidgetStorage {
       return
     }
 
-    userDefaults.removeObject(forKey: shiftsKey)
-    userDefaults.removeObject(forKey: monthlyTotalsKey)
+    userDefaults.removeObject(forKey: WidgetAppGroup.shiftsKey)
+    userDefaults.removeObject(forKey: WidgetAppGroup.monthlyTotalsKey)
     reloadWidgetTimelines()
 
     // Cancel all scheduled shift reminders
@@ -431,7 +424,7 @@ enum NativeWidgetStorage {
       encoder.dateEncodingStrategy = .iso8601
       let data = try encoder.encode(totals)
       let jsonString = String(data: data, encoding: .utf8)
-      userDefaults.set(jsonString, forKey: monthlyTotalsKey)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.monthlyTotalsKey)
       logger.debug("Wrote monthly totals to App Group")
     } catch {
       logger.error("Failed to encode monthly totals for widget: \(error.localizedDescription)")
@@ -458,7 +451,7 @@ enum NativeWidgetStorage {
     }
 
     // Get currency
-    let currencySymbol = userDefaults.string(forKey: currencyKey) ?? defaultCurrencySymbol
+    let currencySymbol = userDefaults.string(forKey: WidgetAppGroup.currencyKey) ?? defaultCurrencySymbol
 
     // Convert sharers to WidgetSharer format
     let widgetSharers = sharers.map { $0.toWidgetSharer() }
@@ -498,8 +491,8 @@ enum NativeWidgetStorage {
       return
     }
 
-    userDefaults.removeObject(forKey: friendSharersKey)
-    userDefaults.removeObject(forKey: friendShiftsKey)
+    userDefaults.removeObject(forKey: WidgetAppGroup.friendSharersKey)
+    userDefaults.removeObject(forKey: WidgetAppGroup.friendShiftsKey)
     if let directory = friendAvatarsDirectory() {
       try? FileManager.default.removeItem(at: directory)
     }
@@ -538,7 +531,7 @@ enum NativeWidgetStorage {
   }
 
   private static func friendAvatarsDirectory() -> URL? {
-    FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
+    FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: WidgetAppGroup.id)?
       .appendingPathComponent("friend-avatars", isDirectory: true)
   }
 
@@ -549,7 +542,7 @@ enum NativeWidgetStorage {
       let encoder = JSONEncoder()
       let data = try encoder.encode(sharers)
       let jsonString = String(data: data, encoding: .utf8)
-      userDefaults.set(jsonString, forKey: friendSharersKey)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.friendSharersKey)
       logger.debug("Wrote \(sharers.count) friend sharers to App Group")
     } catch {
       logger.error("Failed to encode friend sharers for widget: \(error.localizedDescription)")
@@ -563,7 +556,7 @@ enum NativeWidgetStorage {
       let encoder = JSONEncoder()
       let data = try encoder.encode(shifts)
       let jsonString = String(data: data, encoding: .utf8)
-      userDefaults.set(jsonString, forKey: friendShiftsKey)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.friendShiftsKey)
       logger.debug("Wrote \(shifts.count) friend shifts to App Group")
     } catch {
       logger.error("Failed to encode friend shifts for widget: \(error.localizedDescription)")
@@ -573,12 +566,11 @@ enum NativeWidgetStorage {
   // MARK: - Private Helpers
 
   private static func sharedUserDefaults() -> UserDefaults? {
-    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
-    else {
-      logger.error("App Group container not available: \(appGroupId)")
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults() else {
+      logger.error("App Group container not available: \(WidgetAppGroup.id)")
       return nil
     }
-    return UserDefaults(suiteName: appGroupId)
+    return userDefaults
   }
 
   private static func writeShiftsToAppGroup(_ shifts: [StoredShift]) {
@@ -591,7 +583,7 @@ enum NativeWidgetStorage {
       let encoder = JSONEncoder()
       let data = try encoder.encode(shifts)
       let jsonString = String(data: data, encoding: .utf8)
-      userDefaults.set(jsonString, forKey: shiftsKey)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.shiftsKey)
       logger.debug("Wrote \(shifts.count) shifts to App Group")
     } catch {
       logger.error("Failed to encode shifts for widget: \(error.localizedDescription)")
@@ -603,7 +595,7 @@ enum NativeWidgetStorage {
       logger.warning("Unable to access App Group UserDefaults for currency")
       return
     }
-    userDefaults.set(currency, forKey: currencyKey)
+    userDefaults.set(currency, forKey: WidgetAppGroup.currencyKey)
     logger.debug("Stored user currency: \(currency)")
   }
 

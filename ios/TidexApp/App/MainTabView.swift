@@ -1,7 +1,7 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable closure_body_length conditional_returns_on_newline
 // swiftlint:disable:next blanket_disable_command
-// swiftlint:disable cyclomatic_complexity explicit_acl explicit_enum_raw_value explicit_top_level_acl
+// swiftlint:disable explicit_acl explicit_enum_raw_value explicit_top_level_acl
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable explicit_type_interface extension_access_modifier file_length file_types_order identifier_name
 // swiftlint:disable:next blanket_disable_command
@@ -30,13 +30,13 @@ extension Notification.Name {
 struct MainTabView: View {
   private static let startupTabCacheKey = "defaultStartupTab"
 
-  @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.requestReview) private var requestReview
-  @ObservedObject private var shiftsToolbarCoordinator = ShiftsToolbarCoordinator.shared
-  @ObservedObject private var impersonationManager = ImpersonationManager.shared
-  @ObservedObject private var celebrationManager = ShiftCompletionCelebrationManager.shared
-  @ObservedObject private var addShiftNavigator = AddShiftNavigator.shared
+  private let shiftsToolbarCoordinator = ShiftsToolbarCoordinator.shared
+  private let impersonationManager = ImpersonationManager.shared
+  @Bindable private var celebrationManager = ShiftCompletionCelebrationManager.shared
+  private let addShiftNavigator = AddShiftNavigator.shared
   private let friendsMessagesRepository = FriendsMessagesRepository.shared
 
   @State private var selectedTab: Tab = .home
@@ -70,8 +70,9 @@ struct MainTabView: View {
   // Shared with ShiftsView via @AppStorage
   @AppStorage("shiftsViewMode") private var showListView = false
 
-  // Haptic feedback for tab taps
-  private let selectionHaptic = UISelectionFeedbackGenerator()
+  // Haptic feedback for tab taps. Tapping the already-selected tab doesn't change
+  // `selectedTab`, so a counter drives the feedback instead of the tab value itself.
+  @State private var tabInteractionTick = 0
   // Temporary investigation switch; keep false for docs-aligned glass behavior.
   private let disableHeavyCompositingForHangInvestigation = false
 
@@ -105,7 +106,7 @@ struct MainTabView: View {
     Binding(
       get: { selectedTab },
       set: { newTab in
-        selectionHaptic.selectionChanged()
+        tabInteractionTick += 1
 
         if newTab == selectedTab {
           handleTabReselection(newTab)
@@ -197,23 +198,6 @@ struct MainTabView: View {
         .pageTransition, value: impersonationManager.isImpersonating,
         reduceMotion: shouldReduceEffects)
 
-      // Celebration overlay - above everything including tab bar and month picker
-      if celebrationManager.shouldShowCelebration,
-        let data = celebrationManager.celebrationData
-      {
-        CelebrationOverlay(
-          data: data,
-          onDismiss: {
-            guard let userId = coordinator.userId else { return }
-            celebrationManager.dismissCelebration(userId: userId, month: Date.currentYearMonth())
-            ReviewRequestManager.shared.requestReviewIfEligible(
-              userId: userId,
-              requestReview: { requestReview() }
-            )
-          }
-        )
-      }
-
       // Screenshot share prompt overlay - above tab bar, keeps content visible
       if showScreenshotPrompt {
         ScreenshotSharePromptOverlay(
@@ -227,6 +211,22 @@ struct MainTabView: View {
         )
       }
     }
+    .sheet(
+      isPresented: $celebrationManager.shouldShowCelebration,
+      onDismiss: {
+        guard let userId = coordinator.userId else { return }
+        celebrationManager.dismissCelebration(userId: userId, month: Date.currentYearMonth())
+        ReviewRequestManager.shared.requestReviewIfEligible(
+          userId: userId,
+          requestReview: { requestReview() }
+        )
+      }
+    ) {
+      if let data = celebrationManager.celebrationData {
+        CelebrationOverlay(data: data)
+      }
+    }
+    .sensoryFeedback(.selection, trigger: tabInteractionTick)
     .task {
       scheduleUnreadFriendsCountRefresh()
     }
@@ -261,7 +261,6 @@ struct MainTabView: View {
       // Handle any pending deep link on initial appearance
       loadedTabs.insert(selectedTab)
       handlePendingDeepLink(coordinator.pendingDeepLink)
-      selectionHaptic.prepare()
     }
     .onReceive(NotificationCenter.default.publisher(for: .tidexDidBecomeActive)) { _ in
       scheduleUnreadFriendsCountRefresh()
@@ -501,31 +500,31 @@ private struct MonthPickerControls: View {
   let showsAddButton: Bool
   let onAddShift: () -> Void
 
-  @ObservedObject private var monthContext = SharedMonthContext.shared
+  private let monthContext = SharedMonthContext.shared
   @AppStorage("shiftsViewMode") private var showListView = false
-
-  private let selectionHaptic = UISelectionFeedbackGenerator()
 
   private var isIPad: Bool {
     UIDevice.current.userInterfaceIdiom == .pad
   }
 
   var body: some View {
-    HStack(spacing: Spacing.xs) {
-      if showsViewModeToggle {
-        viewModeToggleButton
-      }
+    GlassEffectContainer(spacing: Spacing.xs) {
+      HStack(spacing: Spacing.xs) {
+        if showsViewModeToggle {
+          viewModeToggleButton
+        }
 
-      SharedMonthPicker()
-        .frame(maxWidth: .infinity)
-        .frame(height: MonthPickerLayout.height)
-        .tidexGlass(
-          shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
-          interactive: true
-        )
+        SharedMonthPicker()
+          .frame(maxWidth: .infinity)
+          .frame(height: MonthPickerLayout.height)
+          .tidexGlass(
+            shape: .rect(cornerRadius: MonthPickerLayout.cornerRadius),
+            interactive: true
+          )
 
-      if showsAddButton {
-        addButton
+        if showsAddButton {
+          addButton
+        }
       }
     }
     .frame(maxWidth: AdaptiveMaxWidth.tabContent)
@@ -539,7 +538,6 @@ private struct MonthPickerControls: View {
 
   private var viewModeToggleButton: some View {
     Button {
-      selectionHaptic.selectionChanged()
       showListView.toggle()
     } label: {
       Image(systemName: showListView ? "calendar" : "list.bullet")
@@ -557,11 +555,12 @@ private struct MonthPickerControls: View {
     )
     .accessibilityLabel(
       showListView ? Text(.shiftsViewModeShowCalendar) : Text(.shiftsViewModeShowList))
+    .sensoryFeedback(.selection, trigger: showListView)
   }
 
   private var addButton: some View {
     Button {
-      selectionHaptic.selectionChanged()
+      Haptics.play(.selection)
       onAddShift()
     } label: {
       Image(systemName: "plus")
@@ -619,5 +618,5 @@ extension AppCoordinator.SettingsDeepLinkDestination {
 
 #Preview {
   MainTabView()
-    .environmentObject(AppCoordinator.shared)
+    .environment(AppCoordinator.shared)
 }

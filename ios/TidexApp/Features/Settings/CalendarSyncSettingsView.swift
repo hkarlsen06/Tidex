@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct CalendarSyncSettingsView: View {
-  @StateObject private var viewModel: DataSettingsViewModel
+  @State private var viewModel: DataSettingsViewModel
   @State private var showDisableCalendarConfirmation = false
   @State private var setupMode: CalendarSubscriptionContentMode
 
   init(calendarSetupIntent: CalendarSubscriptionSetupIntent? = nil) {
-    _viewModel = StateObject(
+    _viewModel = State(
       wrappedValue: DataSettingsViewModel(calendarSetupIntent: calendarSetupIntent))
     _setupMode = State(initialValue: calendarSetupIntent?.mode ?? .shiftsAndEvents)
   }

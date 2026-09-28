@@ -10,11 +10,11 @@ struct AddShiftView: View {
   private static let bottomControlsInset: CGFloat =
     MonthPickerLayout.height * 2 + Spacing.xs + MonthPickerLayout.bottomPadding
 
-  @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
-  @ObservedObject private var addShiftCoordinator = AddShiftCoordinator.shared
-  @StateObject private var viewModel = AddShiftViewModel()
-  @StateObject private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
+  private let addShiftCoordinator = AddShiftCoordinator.shared
+  @State private var viewModel = AddShiftViewModel()
+  @State private var workSetupPresentationViewModel = WorkSetupPresentationViewModel()
   /// Called after saving so the presenter can pop the screen.
   /// Receives the created dates in single mode, and nil for recurring shifts and events.
   var onShiftsCreated: (_ singleDates: Set<String>?) -> Void = { _ in }
@@ -209,7 +209,6 @@ struct AddShiftView: View {
         }
       }
       .navigationBarTitleDisplayMode(.inline)
-      .iPadToolbarBackground()
       .toolbar {
         if !shouldShowWorkSetupRequiredPlaceholder {
           ToolbarItem(placement: .topBarTrailing) {
@@ -235,6 +234,7 @@ struct AddShiftView: View {
       .iPadToolbarTransaction()
       .userCurrency(viewModel.currency)
     }
+    .background(FullWidthBackSwipeBlocker())
     .disabled(viewModel.isLoading)
     .task {
       refreshWorkSetupPresentationState()
@@ -637,13 +637,13 @@ struct AddShiftView: View {
 // MARK: - Single Shift Content
 
 private struct SingleShiftContent: View {
-  @ObservedObject var viewModel: AddShiftViewModel
+  @Bindable var viewModel: AddShiftViewModel
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
 
   var body: some View {
     VStack(spacing: Spacing.xs) {
-      AddShiftMonthTotals(totals: viewModel.toolbarTotals)
+      CalendarHeaderRow(totals: viewModel.toolbarTotals, secondaryStyle: .delta)
 
       AddShiftCalendarView(viewModel: viewModel)
 
@@ -674,7 +674,7 @@ private struct SingleShiftContent: View {
 // MARK: - Recurring Shift Content
 
 private struct RecurringShiftContent: View {
-  @ObservedObject var viewModel: AddShiftViewModel
+  @Bindable var viewModel: AddShiftViewModel
   var scrollProxy: ScrollViewProxy
   @Binding var focusedTimeField: TimeInputField?
 
@@ -682,7 +682,7 @@ private struct RecurringShiftContent: View {
     VStack(alignment: .leading, spacing: Spacing.mlg) {
       titleSection
 
-      AddShiftMonthTotals(totals: viewModel.toolbarTotals)
+      CalendarHeaderRow(totals: viewModel.toolbarTotals, secondaryStyle: .delta)
 
       RecurringCalendarView(viewModel: viewModel)
         .monthSwipeGesture(
@@ -733,7 +733,7 @@ private struct RecurringShiftContent: View {
 // MARK: - Event Content
 
 private struct EventContent: View {
-  @ObservedObject var viewModel: AddShiftViewModel
+  @Bindable var viewModel: AddShiftViewModel
   @Binding var focusedTimeField: TimeInputField?
   @FocusState private var isTitleFieldFocused: Bool
 
@@ -1044,72 +1044,32 @@ private struct AddShiftJobStatusBadge: View {
   }
 }
 
-// MARK: - Month Totals
+// MARK: - Back Swipe
 
-/// Month total above the calendar: existing shifts plus the shifts being added,
-/// with the change the new shifts make.
-private struct AddShiftMonthTotals: View {
-  let totals: CalendarHeaderTotals?
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  @State private var lastDisplayedPrimary: Double = 0
-  @State private var lastDisplayedSecondary: Double = 0
-
-  var body: some View {
-    Group {
-      if let totals, let primary = totals.primary {
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          animatedAmount(
-            primary,
-            lastDisplayed: lastDisplayedPrimary,
-            onUpdate: { lastDisplayedPrimary = $0 }
-          )
-          .font(.tidexHeadline)
-          .foregroundColor(.tidexTextPrimary)
-
-          if let secondary = totals.secondary {
-            CalendarHeaderDeltaLabel(isAfterTax: totals.primaryIsAfterTax) {
-              animatedAmount(
-                secondary,
-                lastDisplayed: lastDisplayedSecondary,
-                onUpdate: { lastDisplayedSecondary = $0 },
-                allowsZero: true
-              )
-            }
-            .font(.tidexFootnote)
-            .transition(.offset(y: -4).combined(with: .opacity))
-          }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Spacing.xs)
-        .transition(.opacity)
-      }
-    }
-    .motionAnimation(.emphasis, value: totals?.primary, reduceMotion: reduceMotion)
-    .motionAnimation(.emphasis, value: totals?.secondary, reduceMotion: reduceMotion)
+/// Turns off the full-width back swipe while the screen is in the window, so a right swipe
+/// on the calendar or month picker changes month instead of popping the screen.
+/// The edge swipe and back button still go back.
+private struct FullWidthBackSwipeBlocker: UIViewRepresentable {
+  func makeUIView(context _: Context) -> BlockerView {
+    BlockerView()
   }
 
-  @ViewBuilder
-  private func animatedAmount(
-    _ amount: Double?,
-    lastDisplayed: Double,
-    onUpdate: @escaping (Double) -> Void,
-    allowsZero: Bool = false
-  ) -> some View {
-    if let amount, allowsZero ? amount >= 0 : amount > 0 {
-      CurrencyCountUpText(
-        amount: amount,
-        animateOnAppear: false,
-        animateFrom: lastDisplayed > 0 ? lastDisplayed : nil
-      )
-      .onChange(of: amount) { _, newValue in
-        onUpdate(newValue)
-      }
-      .onAppear {
-        if lastDisplayed == 0 {
-          onUpdate(amount)
-        }
-      }
+  func updateUIView(_: BlockerView, context _: Context) {}
+
+  final class BlockerView: UIView {
+    private weak var blockedRecognizer: UIGestureRecognizer?
+
+    override func didMoveToWindow() {
+      super.didMoveToWindow()
+      blockedRecognizer?.isEnabled = true
+      blockedRecognizer = nil
+      guard window != nil else { return }
+
+      let navigationController =
+        sequence(first: self as UIResponder, next: \.next)
+        .first { $0 is UINavigationController } as? UINavigationController
+      blockedRecognizer = navigationController?.interactiveContentPopGestureRecognizer
+      blockedRecognizer?.isEnabled = false
     }
   }
 }
@@ -1118,5 +1078,5 @@ private struct AddShiftMonthTotals: View {
 
 #Preview {
   AddShiftView()
-    .environmentObject(AppCoordinator.shared)
+    .environment(AppCoordinator.shared)
 }

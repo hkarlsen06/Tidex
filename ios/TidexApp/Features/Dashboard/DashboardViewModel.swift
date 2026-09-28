@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Observation
 import Supabase
 import UIKit
 import os.log  // swiftlint:disable:this sorted_imports
@@ -663,7 +664,8 @@ private struct MonthCacheEntry {
 // MARK: - Dashboard View Model
 
 @MainActor
-final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl line_length type_body_length
+@Observable
+final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this explicit_acl explicit_top_level_acl line_length type_body_length
 
   // MARK: - Dependencies (Local-First Repositories)
 
@@ -775,10 +777,10 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
 
   // MARK: - Published State
 
-  @Published private(set) var dashboardData: DashboardData?  // swiftlint:disable:this explicit_acl type_contents_order
-  @Published private(set) var payrollCardSnapshot: DashboardPayrollCardSnapshot?  // swiftlint:disable:this explicit_acl line_length type_contents_order
-  @Published private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
-  @Published private(set) var error: Error?  // swiftlint:disable:this explicit_acl type_contents_order
+  private(set) var dashboardData: DashboardData?  // swiftlint:disable:this explicit_acl type_contents_order
+  private(set) var payrollCardSnapshot: DashboardPayrollCardSnapshot?  // swiftlint:disable:this explicit_acl line_length type_contents_order
+  private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
+  private(set) var error: Error?  // swiftlint:disable:this explicit_acl type_contents_order
 
   enum ActiveClockState: Equatable {  // swiftlint:disable:this explicit_acl
     case none  // swiftlint:disable:this discouraged_none_name
@@ -812,9 +814,9 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     }
   }
 
-  @Published private(set) var activeClockState: ActiveClockState = .none  // swiftlint:disable:this explicit_acl line_length type_contents_order
-  @Published private(set) var isClockActionInProgress = false  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
-  @Published private(set) var shouldShowDashboardClockButtons = true  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
+  private(set) var activeClockState: ActiveClockState = .none  // swiftlint:disable:this explicit_acl line_length type_contents_order
+  private(set) var isClockActionInProgress = false  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
+  private(set) var shouldShowDashboardClockButtons = true  // swiftlint:disable:this explicit_acl explicit_type_interface line_length type_contents_order
 
   var isClockInEnabled: Bool {  // swiftlint:disable:this explicit_acl type_contents_order
     if isClockActionInProgress || isUpdatingShift { return false }  // swiftlint:disable:this conditional_returns_on_newline line_length
@@ -827,9 +829,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     if case .none = activeClockState { return false }  // swiftlint:disable:this conditional_returns_on_newline
     return true
   }
-
-  /// Direction of last navigation (for animations) - synced from SharedMonthContext
-  @Published private(set) var navigationDirection: MonthNavigationDirection?  // swiftlint:disable:this explicit_acl line_length type_contents_order
 
   /// Currently displayed year - synced from SharedMonthContext
   var displayYear: Int { monthContext.displayYear }  // swiftlint:disable:this explicit_acl type_contents_order
@@ -1523,11 +1522,11 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   // MARK: - User Profile Data (for UserMenuButton)
 
   /// User's display name (derived from email or metadata)
-  @Published private(set) var userDisplayName: String = ""  // swiftlint:disable:this explicit_acl type_contents_order
+  private(set) var userDisplayName: String = ""  // swiftlint:disable:this explicit_acl type_contents_order
   /// User's profile picture URL
-  @Published private(set) var userAvatarUrl: String?  // swiftlint:disable:this explicit_acl type_contents_order
+  private(set) var userAvatarUrl: String?  // swiftlint:disable:this explicit_acl type_contents_order
   /// All non-deleted jobs used for dashboard workplace metadata.
-  @Published private(set) var displayJobs: [Job] = []  // swiftlint:disable:this explicit_acl type_contents_order
+  private(set) var displayJobs: [Job] = []  // swiftlint:disable:this explicit_acl type_contents_order
 
   var shouldShowJobIndicators: Bool {  // swiftlint:disable:this explicit_acl type_contents_order
     displayJobs.count > 1
@@ -1552,48 +1551,48 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   private var displayedMonthShifts: [ShiftWithComputations] = []  // swiftlint:disable:this type_contents_order
   private var displayedMonthEvents: [EventRow] = []  // swiftlint:disable:this type_contents_order
   private var previousMonthShifts: [ShiftWithComputations] = []  // swiftlint:disable:this type_contents_order
-  private var previousPayrollAdjustments: [PayrollAdjustment] = []  // swiftlint:disable:this type_contents_order
-  private var payrollAdjustmentsByPayoutMonth: [PayrollReadMonth: [PayrollAdjustment]] = [:]  // swiftlint:disable:this line_length type_contents_order
-  private var settings: UserSettings?  // swiftlint:disable:this type_contents_order
-  private var snapshots: [WageSnapshot] = []  // swiftlint:disable:this type_contents_order
-  private var recurringShifts: [RecurringShiftRow] = []  // swiftlint:disable:this type_contents_order
-  private var dashboardDependenciesLoaded = false  // swiftlint:disable:this explicit_type_interface type_contents_order
-  private var cachedUserId: String?  // swiftlint:disable:this type_contents_order
-  private var isActiveTabVisible = true  // swiftlint:disable:this explicit_type_interface type_contents_order
-  private var localDataNeedsReload = false  // swiftlint:disable:this explicit_type_interface type_contents_order
-  private var displayedMonthLoadPending = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @ObservationIgnored private var previousPayrollAdjustments: [PayrollAdjustment] = []  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var payrollAdjustmentsByPayoutMonth: [PayrollReadMonth: [PayrollAdjustment]] = [:]  // swiftlint:disable:this line_length type_contents_order
+  @ObservationIgnored private var settings: UserSettings?  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var snapshots: [WageSnapshot] = []  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var recurringShifts: [RecurringShiftRow] = []  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var dashboardDependenciesLoaded = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @ObservationIgnored private var cachedUserId: String?  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var isActiveTabVisible = true  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @ObservationIgnored private var localDataNeedsReload = false  // swiftlint:disable:this explicit_type_interface type_contents_order
+  @ObservationIgnored private var displayedMonthLoadPending = false  // swiftlint:disable:this explicit_type_interface type_contents_order
 
   /// Subscription to SharedMonthContext changes
-  private var monthContextCancellable: AnyCancellable?  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var monthContextCancellable: AnyCancellable?  // swiftlint:disable:this type_contents_order
 
   /// Track the last observed month to detect changes
-  private var lastObservedYear: Int = 0  // swiftlint:disable:this type_contents_order
-  private var lastObservedMonth: Int = 0  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var lastObservedYear: Int = 0  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var lastObservedMonth: Int = 0  // swiftlint:disable:this type_contents_order
 
   // MARK: - Month Cache
 
   /// Cache of computed shifts by month key (e.g., "2025-1")
-  private var monthCache: [String: MonthCacheEntry] = [:]  // swiftlint:disable:this type_contents_order
+  @ObservationIgnored private var monthCache: [String: MonthCacheEntry] = [:]  // swiftlint:disable:this type_contents_order
 
   /// Maximum number of months to keep in cache (prevents unbounded memory growth)
   private static let maxCacheSize = 12  // swiftlint:disable:this explicit_type_interface
 
   /// Background prefetch tasks keyed by month cache key and invalidation token
   /// (to avoid duplicate fetches and stale writes after invalidation).
-  private var prefetchTasks: [String: Int] = [:]
+  @ObservationIgnored private var prefetchTasks: [String: Int] = [:]
 
   /// Per-month invalidation tokens used to discard stale background prefetch results.
-  private var monthCacheInvalidationTokens: [String: Int] = [:]
+  @ObservationIgnored private var monthCacheInvalidationTokens: [String: Int] = [:]
 
   /// Tracks initial-sync transitions so the first post-sync local reload remains a full reset.
-  private var hasObservedInitialSyncCompletion = false  // swiftlint:disable:this explicit_type_interface
+  @ObservationIgnored private var hasObservedInitialSyncCompletion = false  // swiftlint:disable:this explicit_type_interface
 
   /// Memory warning observer
-  private var memoryWarningObserver: NSObjectProtocol?
+  @ObservationIgnored private var memoryWarningObserver: NSObjectProtocol?
   /// App lifecycle observer for foreground transitions
-  private var foregroundObserver: NSObjectProtocol?
+  @ObservationIgnored private var foregroundObserver: NSObjectProtocol?
   /// Observer for significant time changes (midnight, timezone, DST, etc.)
-  private var significantTimeObserver: NSObjectProtocol?
+  @ObservationIgnored private var significantTimeObserver: NSObjectProtocol?
 
   // MARK: - Initialization
 
@@ -1711,9 +1710,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
         // Update tracking
         lastObservedYear = newMonth.year
         lastObservedMonth = newMonth.month
-
-        // Sync navigation direction from context
-        navigationDirection = monthContext.navigationDirection
 
         guard isActiveTabVisible else {
           displayedMonthLoadPending = true
@@ -1880,7 +1876,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   // MARK: - Month Navigation
 
   /// Track active navigation task to cancel stale fetches
-  private var activeNavigationTask: Task<Void, Never>?
+  @ObservationIgnored private var activeNavigationTask: Task<Void, Never>?
 
   /// Navigate to the previous month (non-blocking)
   /// Delegates to SharedMonthContext - data reload happens via subscription
@@ -2163,7 +2159,6 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     // Sync tracking with current month context values
     lastObservedYear = monthContext.displayYear
     lastObservedMonth = monthContext.displayMonth
-    navigationDirection = nil
 
     // Clear cache on full reload (including cachedUserId for impersonation support)
     clearAllMonthCache(reason: "full-load")
@@ -2534,12 +2529,21 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
     isLoading = true
   }
 
+  /// In-memory mirror of the UserDefaults-backed payroll-received override, lazily seeded
+  /// per key on first read. Backing this with a tracked property (instead of reading
+  /// UserDefaults directly) lets views that check it stay observed without a manual
+  /// notification.
+  private(set) var payrollReceivedOverrideKeys: Set<String> = []
+
   /// Returns whether payroll has been manually marked as received for the displayed month.
   func isPayrollReceivedOverrideForDisplayedMonth(userId: String? = nil) -> Bool {  // swiftlint:disable:this explicit_acl line_length type_contents_order
     guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else {
       return false
     }
-    return UserDefaults.standard.bool(forKey: key)
+    if !payrollReceivedOverrideKeys.contains(key), UserDefaults.standard.bool(forKey: key) {
+      payrollReceivedOverrideKeys.insert(key)
+    }
+    return payrollReceivedOverrideKeys.contains(key)
   }
 
   /// Marks payroll as received for the displayed month.
@@ -2547,14 +2551,14 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   func markPayrollReceivedForDisplayedMonth(userId: String? = nil) {  // swiftlint:disable:this explicit_acl line_length type_contents_order
     guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     UserDefaults.standard.set(true, forKey: key)
-    objectWillChange.send()
+    payrollReceivedOverrideKeys.insert(key)
   }
 
   /// Clears the manual payroll-received override for the displayed month.
   func clearPayrollReceivedOverrideForDisplayedMonth(userId: String? = nil) {  // swiftlint:disable:this explicit_acl line_length type_contents_order
     guard let key = payrollReceivedOverrideKeyForDisplayedMonth(userId: userId) else { return }  // swiftlint:disable:this conditional_returns_on_newline line_length
     UserDefaults.standard.removeObject(forKey: key)
-    objectWillChange.send()
+    payrollReceivedOverrideKeys.remove(key)
   }
 
   /// Reload dashboard from local data without triggering sync
@@ -3577,7 +3581,7 @@ final class DashboardViewModel: ObservableObject, MonthNavigable {  // swiftlint
   // MARK: - Shift Operations
 
   /// Whether a shift update is in progress
-  @Published private(set) var isUpdatingShift = false  // swiftlint:disable:this explicit_acl explicit_type_interface
+  private(set) var isUpdatingShift = false  // swiftlint:disable:this explicit_acl explicit_type_interface
   private var isUpdatingRecurringShift = false  // swiftlint:disable:this explicit_type_interface
   private var isUpdatingEvent = false  // swiftlint:disable:this explicit_type_interface
   private var isDeletingEvent = false  // swiftlint:disable:this explicit_type_interface

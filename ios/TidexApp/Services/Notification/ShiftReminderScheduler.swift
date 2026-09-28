@@ -323,10 +323,7 @@ final class ShiftReminderScheduler {
   /// Format day text (Today/Tomorrow/Date)
   private func formatDayText(for shiftDateString: String, relativeTo referenceDate: Date) -> String
   {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-
-    guard let shiftDate = formatter.date(from: shiftDateString) else {
+    guard let shiftDate = Date.fromISODateString(shiftDateString) else {
       return shiftDateString
     }
 

@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Observation
 import SwiftUI
 import os.log
 
@@ -61,7 +62,8 @@ enum SharingError: Error, LocalizedError {
 // MARK: - Sharing View Model
 
 @MainActor
-final class SharingViewModel: ObservableObject, MonthNavigable {
+@Observable
+final class SharingViewModel: MonthNavigable {
 
   // MARK: - Dependencies
 
@@ -73,84 +75,84 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
   // MARK: - Published State
 
   /// List of users who share their shifts with the current user
-  @Published private(set) var sharers: [SharedUser] = []
+  private(set) var sharers: [SharedUser] = []
 
   /// Users who share their shifts with the current user but are hidden from the main list
-  @Published private(set) var hiddenSharers: [SharedUser] = []
+  private(set) var hiddenSharers: [SharedUser] = []
 
   /// Users the viewer shares with, but who do not share back.
-  @Published private(set) var chatOnlyUserIds: Set<String> = []
+  private(set) var chatOnlyUserIds: Set<String> = []
 
   /// Currently selected sharer (nil shows sharer list)
-  @Published var selectedSharer: SharedUser?
+  var selectedSharer: SharedUser?
 
   /// Shifts from the selected sharer for the currently visible calendar range
   /// (includes out-of-month padding days for the committed month grid)
-  @Published private(set) var sharedShifts: [ShiftWithComputations] = []
+  private(set) var sharedShifts: [ShiftWithComputations] = []
 
   /// Job metadata for currently selected sharer
-  @Published private(set) var sharedJobs: [SharedJob] = []
+  private(set) var sharedJobs: [SharedJob] = []
 
   /// Currency for currently selected sharer (from shared settings payload)
-  @Published private(set) var sharedCurrency: String?
+  private(set) var sharedCurrency: String?
 
   /// Whether sharers are being loaded
-  @Published private(set) var isLoadingSharers = false
+  private(set) var isLoadingSharers = false
 
   /// Whether the initial sharers state has been resolved (cache or first fetch attempt).
   /// Prevents an empty-state flash on first frame before cache/network hydration starts.
-  @Published private(set) var hasFinishedInitialSharersLoad = false
+  private(set) var hasFinishedInitialSharersLoad = false
 
   /// Whether shifts are being loaded
-  @Published private(set) var isLoadingShifts = false
+  private(set) var isLoadingShifts = false
 
   /// Whether the selected sharer's shift content has resolved from cache or network.
-  @Published private(set) var hasResolvedSelectedSharerShifts = true
+  private(set) var hasResolvedSelectedSharerShifts = true
 
   /// Current error state
-  @Published private(set) var error: Error?
+  private(set) var error: Error?
 
   /// Last cache time for currently displayed shifts
-  @Published private(set) var lastCacheTime: Date?
+  private(set) var lastCacheTime: Date?
 
   /// Direction of last navigation (for animations)
-  @Published private(set) var navigationDirection: MonthNavigationDirection?
+  var navigationDirection: MonthNavigationDirection? { monthContext.navigationDirection }
 
   /// Shift previews for each sharer (most relevant shift per sharer)
-  @Published private(set) var shiftPreviews: [String: SharerShiftPreview] = [:]
+  private(set) var shiftPreviews: [String: SharerShiftPreview] = [:]
 
   /// Latest management-sheet payload from the Friends tab bootstrap RPC.
-  @Published private(set) var managementSnapshot = FriendsManagementSnapshot(
+  private(set) var managementSnapshot = FriendsManagementSnapshot(
     friends: [],
     blockedFriends: []
   )
 
   /// Whether shift previews are being loaded
-  @Published private(set) var isLoadingPreviews = false
+  private(set) var isLoadingPreviews = false
 
   /// Whether a pull-to-refresh is in progress (for shimmer on cards)
-  @Published private(set) var isRefreshing = false
+  private(set) var isRefreshing = false
 
   // MARK: - Superimpose State
 
   /// Whether to show user's own shifts overlaid on friend's calendar
-  @Published var isSuperimposing = false
+  var isSuperimposing = false
 
   /// User's own shifts for the currently visible calendar range (raw data, no payroll needed)
-  @Published private(set) var userShiftsForMonth: [ShiftRow] = []
+  private(set) var userShiftsForMonth: [ShiftRow] = []
 
   /// User's own earnings by date for the currently visible calendar range
-  @Published private(set) var userEarningsByDate: [String: CalendarEarningsData] = [:]
+  private(set) var userEarningsByDate: [String: CalendarEarningsData] = [:]
 
   // MARK: - Committed Display State
   // These values only update AFTER shift data is ready, ensuring atomic rendering
   // The calendar uses these to avoid showing the new month structure before data arrives
 
   /// The year that is actually ready to display (data loaded)
-  @Published private(set) var committedYear: Int
+  private(set) var committedYear: Int
 
   /// The month that is actually ready to display (data loaded)
-  @Published private(set) var committedMonth: Int
+  private(set) var committedMonth: Int
 
   // MARK: - Month Navigation (MonthNavigable)
 
@@ -191,14 +193,14 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
   // MARK: - Private State
 
-  private var cachedUserId: String?
-  private var locallyBlockedUserIds: Set<String> = []
-  private var monthContextCancellable: AnyCancellable?
-  private var lastObservedYear: Int = 0
-  private var lastObservedMonth: Int = 0
-  private var selectedSharerLoadTask: Task<Void, Never>?
-  private var inFlightRequestKey: String?
-  private var userShiftsComputationGeneration: UInt64 = 0
+  @ObservationIgnored private var cachedUserId: String?
+  @ObservationIgnored private var locallyBlockedUserIds: Set<String> = []
+  @ObservationIgnored private var monthContextCancellable: AnyCancellable?
+  @ObservationIgnored private var lastObservedYear: Int = 0
+  @ObservationIgnored private var lastObservedMonth: Int = 0
+  @ObservationIgnored private var selectedSharerLoadTask: Task<Void, Never>?
+  @ObservationIgnored private var inFlightRequestKey: String?
+  @ObservationIgnored private var userShiftsComputationGeneration: UInt64 = 0
 
   private struct UserShiftComputationInput {
     let userId: String
@@ -268,7 +270,6 @@ final class SharingViewModel: ObservableObject, MonthNavigable {
 
         lastObservedYear = newMonth.year
         lastObservedMonth = newMonth.month
-        navigationDirection = monthContext.navigationDirection
 
         // Reload shifts for new month if a sharer is selected
         if selectedSharer != nil {

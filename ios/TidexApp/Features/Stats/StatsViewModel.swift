@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Observation
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "StatsViewModel")  // swiftlint:disable:this explicit_type_interface line_length prefixed_toplevel_constant
@@ -19,25 +20,26 @@ private struct StartupStatsCache: Codable {
 /// View model for the stats tab
 /// Computes statistics locally from on-device shift data
 @MainActor
-final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explicit_acl explicit_top_level_acl line_length
+@Observable
+final class StatsViewModel {  // swiftlint:disable:this explicit_acl explicit_top_level_acl
 
-  // MARK: - Published State
+  // MARK: - Observed State
 
-  @Published private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
-  @Published private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
-  @Published private(set) var error: Error?  // swiftlint:disable:this explicit_acl
+  private(set) var stats: StatsData?  // swiftlint:disable:this explicit_acl
+  private(set) var isLoading = false  // swiftlint:disable:this explicit_acl explicit_type_interface
+  private(set) var error: Error?  // swiftlint:disable:this explicit_acl
 
   /// User's selected currency (from settings)
-  @Published private(set) var currency: String = "kr"  // swiftlint:disable:this explicit_acl
-  @Published private(set) var activeJobs: [Job] = []  // swiftlint:disable:this explicit_acl
-  @Published private(set) var selectedJobId: String?  // swiftlint:disable:this explicit_acl
+  private(set) var currency: String = "kr"  // swiftlint:disable:this explicit_acl
+  private(set) var activeJobs: [Job] = []  // swiftlint:disable:this explicit_acl
+  private(set) var selectedJobId: String?  // swiftlint:disable:this explicit_acl
 
   // MARK: - Month Navigation State (from SharedMonthContext)
 
-  @Published private(set) var displayYear: Int  // swiftlint:disable:this explicit_acl
-  @Published private(set) var displayMonth: Int  // swiftlint:disable:this explicit_acl
-  @Published private(set) var displayMonthName: String = ""  // swiftlint:disable:this explicit_acl
-  @Published private(set) var navigationDirection: MonthNavigationDirection?  // swiftlint:disable:this explicit_acl
+  private(set) var displayYear: Int  // swiftlint:disable:this explicit_acl
+  private(set) var displayMonth: Int  // swiftlint:disable:this explicit_acl
+  private(set) var displayMonthName: String = ""  // swiftlint:disable:this explicit_acl
+  private(set) var navigationDirection: MonthNavigationDirection?  // swiftlint:disable:this explicit_acl
 
   /// Whether viewing the current (real) month
   var isCurrentMonth: Bool {  // swiftlint:disable:this explicit_acl
@@ -51,10 +53,10 @@ final class StatsViewModel: ObservableObject {  // swiftlint:disable:this explic
   private let jobsRepository: JobsRepository
   private let monthContext: SharedMonthContext
   private let syncCoordinator: SyncCoordinator
-  private var cancellables = Set<AnyCancellable>()  // swiftlint:disable:this explicit_type_interface
-  private var settings: UserSettings?
-  private var activeLoadTask: Task<Void, Never>?
-  private var loadGeneration: Int = 0
+  @ObservationIgnored private var cancellables = Set<AnyCancellable>()  // swiftlint:disable:this explicit_type_interface
+  @ObservationIgnored private var settings: UserSettings?
+  @ObservationIgnored private var activeLoadTask: Task<Void, Never>?
+  @ObservationIgnored private var loadGeneration: Int = 0
 
   // MARK: - Initialization
 

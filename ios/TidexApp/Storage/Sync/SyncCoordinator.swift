@@ -1,46 +1,12 @@
 // swiftlint:disable:next line_length
 // swiftlint:disable explicit_type_interface file_length function_body_length multiline_arguments_brackets no_magic_numbers sorted_imports type_body_length
 // swiftlint:disable:previous blanket_disable_command
-import Combine
 import Foundation
+import Observation
 import Supabase
 import os.log
 
 private let logger = Logger(subsystem: "com.tidex.app", category: "SyncCoordinator")
-
-private enum SyncDateFormatters {
-  private static func cached<T: AnyObject>(_ key: String, builder: () -> T) -> T {
-    let dictionary = Thread.current.threadDictionary
-    if let cached = dictionary[key] as? T {
-      return cached
-    }
-    let formatter = builder()
-    dictionary[key] = formatter
-    return formatter
-  }
-
-  static func iso8601DefaultFormatter() -> ISO8601DateFormatter {
-    cached("tidex.sync.iso8601.default") {
-      ISO8601DateFormatter()
-    }
-  }
-
-  static func iso8601FractionalFormatter() -> ISO8601DateFormatter {
-    cached("tidex.sync.iso8601.fractional") {
-      let formatter = ISO8601DateFormatter()
-      formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-      return formatter
-    }
-  }
-
-  static func iso8601InternetFormatter() -> ISO8601DateFormatter {
-    cached("tidex.sync.iso8601.internet") {
-      let formatter = ISO8601DateFormatter()
-      formatter.formatOptions = [.withInternetDateTime]
-      return formatter
-    }
-  }
-}
 
 /// Batch size for intermediate saves during pull operations.
 /// Rows are saved every N rows to ensure durability if a later row fails.
@@ -124,27 +90,28 @@ extension SyncReason {
 
 /// Coordinates bidirectional sync between local SwiftData storage and Supabase
 /// Implements incremental sync via revision cursors with field-level conflict detection
-final class SyncCoordinator: ObservableObject {
+@Observable
+final class SyncCoordinator {
   /// Shared instance
   static let shared = SyncCoordinator()
 
   // MARK: - Published State
 
   /// Whether a sync is currently in progress
-  @Published private(set) var isSyncing = false
+  private(set) var isSyncing = false
 
   /// Last sync error (nil if last sync succeeded)
-  @Published private(set) var lastError: String?
+  private(set) var lastError: String?
 
   /// Number of unresolved conflicts
-  @Published private(set) var conflictCount = 0
+  private(set) var conflictCount = 0
 
   /// When the last successful sync completed
-  @Published private(set) var lastSyncedAt: Date?
+  private(set) var lastSyncedAt: Date?
 
   // When the last sync attempt started
   // swiftlint:disable:next type_contents_order
-  @Published internal private(set) var lastSyncAttemptedAt: Date?
+  internal private(set) var lastSyncAttemptedAt: Date?
 
   // MARK: - Configuration
 
@@ -2524,10 +2491,8 @@ final class SyncCoordinator: ObservableObject {
     serverUpdatedAt: Date,
     storeActor: LocalStoreActor
   ) async throws {
-    let dateFormatter = SyncDateFormatters.iso8601DefaultFormatter()
-
-    let lastActive = serverRow.last_active.flatMap { dateFormatter.date(from: $0) }
-    let createdAt = serverRow.created_at.flatMap { dateFormatter.date(from: $0) }
+    let lastActive = serverRow.last_active.flatMap { ISO8601Timestamp.date(from: $0) }
+    let createdAt = serverRow.created_at.flatMap { ISO8601Timestamp.date(from: $0) }
 
     let snapshot = UserSettingsServerSnapshot.from(
       row: serverRow.toUserSettings(),
@@ -5743,12 +5708,7 @@ final class SyncCoordinator: ObservableObject {
 
   /// Parse ISO8601 date string to Date
   private func parseISO8601(_ string: String) -> Date? {
-    if let date = SyncDateFormatters.iso8601FractionalFormatter().date(from: string) {
-      return date
-    }
-
-    // Try without fractional seconds
-    return SyncDateFormatters.iso8601InternetFormatter().date(from: string)
+    ISO8601Timestamp.date(from: string)
   }
 
   /// Parse ISO8601 updated_at with warning log on failure
@@ -5816,11 +5776,11 @@ final class SyncCoordinator: ObservableObject {
   /// Format Date to ISO8601 string for Supabase queries
   /// Uses fractional seconds for maximum precision
   private func formatISO8601(_ date: Date) -> String {
-    SyncDateFormatters.iso8601FractionalFormatter().string(from: date)
+    ISO8601Timestamp.string(from: date)
   }
 
   private func formatSupabaseTimestamp(_ date: Date) -> String {
-    SyncDateFormatters.iso8601DefaultFormatter().string(from: date)
+    ISO8601Timestamp.string(from: date)
   }
 
   // MARK: - Shift Notification Helper

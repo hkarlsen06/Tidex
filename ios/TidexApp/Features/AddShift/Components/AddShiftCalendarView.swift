@@ -1,4 +1,6 @@
+import Observation
 import SwiftUI
+import UIKit
 
 /// Minimal contract needed by AddShiftCalendarView.
 /// Lets us reuse the exact calendar UI in onboarding without coupling to AddShiftViewModel.
@@ -21,9 +23,10 @@ enum AddShiftCalendarSelectionEmphasis {
 
 /// Multi-select calendar for choosing shift dates in AddShift
 /// Uses the same visual style as ShiftsCalendarView but adapted for date selection
-/// Supports tap to toggle date selection with existing shift and conflict indicators
-struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & ObservableObject>: View {
-  @ObservedObject var viewModel: ViewModel
+/// Supports tap to toggle date selection with existing shift and conflict indicators,
+/// and long press then drag to select a run of dates
+struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable>: View {
+  var viewModel: ViewModel
   // swiftlint:disable:next discouraged_optional_collection explicit_acl
   var selectedDatesOverride: Set<String>?
   // swiftlint:disable:next discouraged_optional_collection explicit_acl
@@ -32,6 +35,8 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
   var onToggleDateOverride: ((String) -> Void)?
   var showSelectionCheckmark: Bool = true
   var selectionEmphasis: AddShiftCalendarSelectionEmphasis = .standard
+
+  @State private var dragSelection: CalendarDragSelection?
 
   private let calendar = Calendar.current
 
@@ -63,15 +68,45 @@ struct AddShiftCalendarView<ViewModel: AddShiftCalendarViewModeling & Observable
         showSelectionCheckmark: showSelectionCheckmark,
         selectionEmphasis: selectionEmphasis
       )
-      .onTapGesture {
-        if let dateISO = dayInfo.dateISO, !dayInfo.isOutsideMonth {
-          if let onToggleDateOverride {
-            onToggleDateOverride(dateISO)
-          } else {
-            viewModel.toggleDate(dateISO)
-          }
-        }
+    }
+    .overlay {
+      GeometryReader { geometry in
+        CalendarDragSelectOverlay(
+          onTap: { location in
+            guard
+              let dateISO = CalendarDragSelection.dateISO(
+                at: location, gridSize: geometry.size, days: days)
+            else { return }
+            if let onToggleDateOverride {
+              onToggleDateOverride(dateISO)
+            } else {
+              viewModel.toggleDate(dateISO)
+            }
+          },
+          // Event ranges use their own tap semantics, so only shift dates support drag selection.
+          onDragSelect: onToggleDateOverride != nil
+            ? nil
+            : { state, location in
+              handleDragSelect(state, at: location, size: geometry.size, days: days)
+            }
+        )
       }
+    }
+  }
+
+  // MARK: - Drag Selection
+
+  private func handleDragSelect(
+    _ state: UIGestureRecognizer.State, at location: CGPoint, size: CGSize, days: [CalendarDayInfo]
+  ) {
+    guard
+      let selection = CalendarDragSelection.update(
+        &dragSelection, state: state,
+        dateISO: CalendarDragSelection.dateISO(at: location, gridSize: size, days: days),
+        days: days, current: resolvedSelectedDates)
+    else { return }
+    for dateISO in resolvedSelectedDates.symmetricDifference(selection).sorted() {
+      viewModel.toggleDate(dateISO)
     }
   }
 

@@ -37,7 +37,7 @@ struct WageScreen: View {
                 HStack {
                   if let onBack {
                     Button(action: {
-                      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                      Haptics.play(.light)
                       onBack()
                     }) {
                       HStack(spacing: Spacing.xxs) {
@@ -136,7 +136,7 @@ struct WageScreen: View {
               if isKeyboardVisible {
                 dismissKeyboard()
               } else {
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                Haptics.play(.success)
                 onContinue()
               }
             }
@@ -285,7 +285,6 @@ struct WageScreen: View {
             ForEach(data.availableTariffTypes) { tariffType in
               Button(action: {
                 guard tariffType.id != data.selectedTariffTypeId else { return }
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 data.selectedTariffTypeId = tariffType.id
                 Task {
                   await loadTariffVersion(for: tariffType.id)
@@ -329,6 +328,7 @@ struct WageScreen: View {
                 .stroke(Color.tidexBorder, lineWidth: 1)
             )
           }
+          .sensoryFeedback(.impact(weight: .light), trigger: data.selectedTariffTypeId)
         }
       }
 
@@ -355,10 +355,9 @@ struct WageScreen: View {
   }
 
   private func formatEffectiveDate(_ dateString: String) -> String {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy-MM-dd"
-    guard let date = formatter.date(from: dateString) else { return dateString }
+    guard let date = Date.fromISODateString(dateString) else { return dateString }
 
+    let formatter = DateFormatter()
     formatter.dateStyle = .medium
     formatter.timeStyle = .none
     return formatter.string(from: date)
@@ -460,11 +459,11 @@ private struct WageTypeButton: View {
   var body: some View {
     Button(action: {
       guard isEnabled else {
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        Haptics.play(.warning)
         onDisabledTap?()
         return
       }
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       action()
     }) {
       Text(title)
@@ -514,7 +513,7 @@ private struct TariffLevelRow: View {
 
   var body: some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       action()
     }) {
       HStack {

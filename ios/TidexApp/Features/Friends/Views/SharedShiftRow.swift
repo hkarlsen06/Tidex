@@ -71,7 +71,6 @@ struct SharedShiftRow: View {
           lineWidth: isToday ? 2 : 0
         )
     )
-    .tidexCardShadow()
   }
 
   @ViewBuilder

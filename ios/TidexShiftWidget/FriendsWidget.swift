@@ -94,18 +94,6 @@ struct FriendsWidgetEntry: TimelineEntry {
 // MARK: - Timeline Provider
 
 struct FriendsWidgetProvider: TimelineProvider {
-  private let appGroupId = "group.no.tidex.app"
-  private let friendSharersKey = "friend_sharers"
-  private let friendShiftsKey = "friend_shifts"
-
-  private func sharedUserDefaults() -> UserDefaults? {
-    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
-    else {
-      return nil
-    }
-    return UserDefaults(suiteName: appGroupId)
-  }
-
   internal func placeholder(in _: Context) -> FriendsWidgetEntry {
     FriendsWidgetEntry.placeholder()
   }
@@ -117,16 +105,20 @@ struct FriendsWidgetProvider: TimelineProvider {
   internal func getTimeline(in _: Context, completion: (Timeline<FriendsWidgetEntry>) -> Void) {
     let entry = createEntry()
 
-    // Refresh every 15 minutes
-    let refreshDate = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date()
-    let timeline = Timeline(entries: [entry], policy: .after(refreshDate))
+    // Data only changes when the app calls WidgetCenter reloads; refreshing at midnight
+    // just covers relative day labels ("today"/"tomorrow") rolling over.
+    let nextMidnight =
+      Calendar.current.nextDate(
+        after: Date(), matching: DateComponents(hour: 0, minute: 0, second: 0),
+        matchingPolicy: .nextTime) ?? Date()
+    let timeline = Timeline(entries: [entry], policy: .after(nextMidnight))
     completion(timeline)
   }
 
   private func createEntry() -> FriendsWidgetEntry {
     // Load sharers
-    guard let userDefaults = sharedUserDefaults(),
-      let sharersJson = userDefaults.string(forKey: friendSharersKey),
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults(),
+      let sharersJson = userDefaults.string(forKey: WidgetAppGroup.friendSharersKey),
       let sharersData = sharersJson.data(using: .utf8),
       let sharers = try? JSONDecoder().decode([WidgetSharer].self, from: sharersData),
       !sharers.isEmpty
@@ -136,7 +128,7 @@ struct FriendsWidgetProvider: TimelineProvider {
 
     // Load shifts
     var shifts: [StoredFriendShift] = []
-    if let shiftsJson = userDefaults.string(forKey: friendShiftsKey),
+    if let shiftsJson = userDefaults.string(forKey: WidgetAppGroup.friendShiftsKey),
       let shiftsData = shiftsJson.data(using: .utf8),
       let decoded = try? JSONDecoder().decode([StoredFriendShift].self, from: shiftsData)
     {
@@ -232,7 +224,7 @@ struct FriendsWidgetProvider: TimelineProvider {
 
     // Take top 5
     let avatarDirectory = FileManager.default
-      .containerURL(forSecurityApplicationGroupIdentifier: appGroupId)?
+      .containerURL(forSecurityApplicationGroupIdentifier: WidgetAppGroup.id)?
       .appendingPathComponent("friend-avatars", isDirectory: true)
     // Sorting already puts friends with shifts first. The view shows the first
     // few as rows and the rest as avatars, so only those need image files.
@@ -253,15 +245,6 @@ struct FriendsWidgetProvider: TimelineProvider {
   }
 
   // MARK: - Date Helpers
-
-  private func parseShiftDate(_ dateString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone.current
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.date(from: dateString)
-  }
 
   private func determineStatus(
     shiftDateString: String,
@@ -344,10 +327,7 @@ struct FriendsWidgetProvider: TimelineProvider {
       if daysAgo == 1 {
         return String(localized: .widgetYesterday)
       }
-      let weekdayFormatter: DateFormatter = .init()
-      weekdayFormatter.locale = appLocale()
-      weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
-      return sentenceCased(weekdayFormatter.string(from: shiftDate))
+      return formattedWeekday(shiftDate, style: .abbreviatedDayMonth)
     }
 
     // Today
@@ -364,53 +344,12 @@ struct FriendsWidgetProvider: TimelineProvider {
 
     // Within a week: weekday only
     if daysRemaining <= 7 {
-      let weekdayFormatter: DateFormatter = .init()
-      weekdayFormatter.locale = appLocale()
-      weekdayFormatter.setLocalizedDateFormatFromTemplate("EEEE")
-      return sentenceCased(weekdayFormatter.string(from: shiftDate))
+      return formattedWeekday(shiftDate, style: .fullWeekday)
     }
 
     // Weekday + date
-    let weekdayFormatter = DateFormatter()
-    weekdayFormatter.locale = appLocale()
-    weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d. MMM")
-    return sentenceCased(weekdayFormatter.string(from: shiftDate))
+    return formattedWeekday(shiftDate, style: .abbreviatedDayMonth)
   }
-}
-
-// MARK: - Widget Sharer (Local copy)
-
-private struct WidgetSharer: Codable, Identifiable, Equatable {
-  let id: String
-  let displayName: String
-  let initials: String
-  let showEarnings: Bool
-}
-
-// MARK: - Stored Friend Shift (Local copy)
-
-private struct StoredFriendShift: Codable {
-  let sharerId: String
-  let shiftId: String
-  let shiftDate: String
-  let startTime: String
-  let endTime: String
-  let gross: Double
-  let currencySymbol: String?
-  let showEarnings: Bool
-  let status: String
-}
-
-// MARK: - App Locale Helper
-
-private func sentenceCased(_ text: String) -> String {
-  guard !text.isEmpty else { return text }
-  return text.prefix(1).uppercased(with: appLocale()) + text.dropFirst()
-}
-
-private func appLocale() -> Locale {
-  let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
-  return Locale(identifier: identifier)
 }
 
 // MARK: - Widget View

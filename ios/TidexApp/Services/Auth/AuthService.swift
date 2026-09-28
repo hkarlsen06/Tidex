@@ -20,7 +20,7 @@ enum AuthError: Error, LocalizedError {
 /// all navigation state transitions (loading -> auth -> MFA -> authenticated).
 /// This service focuses purely on auth operations without duplicating state listening.
 @MainActor
-final class AuthService: ObservableObject {
+final class AuthService {
   static let shared = AuthService()
   // ponytail: production has no SMS provider since the 2026-09 self-hosting move.
   // Flip back to true once GOTRUE_SMS_* is configured on the auth server.
@@ -35,7 +35,7 @@ final class AuthService: ObservableObject {
   // MARK: - Published State
 
   /// Loading indicator for auth operations
-  @Published private(set) var isLoading = false
+  private(set) var isLoading = false
 
   // MARK: - Initialization
 

@@ -14,7 +14,7 @@ enum SharingDeepLinkNavigationPathResolver {
 /// Sharing tab view - displays shifts from users who share with the current user
 /// Fetches shared shifts from the Next.js API for proper payroll computation
 struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_level_acl file_types_order type_body_length line_length
-  @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.userCurrency) private var currency
 
   /// Binding to the selected tab for navigation
@@ -23,19 +23,12 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   /// Binding to communicate sharer selection state to parent
   @Binding var hasSelectedSharer: Bool
 
-  @StateObject private var viewModel = SharingViewModel()
+  @State private var viewModel = SharingViewModel()
 
   /// Navigation path for push navigation (friend detail slides in from right)
   @State private var navigationPath = NavigationPath()
 
-  /// State for showing the manage sharing sheet
-  @State private var showManageSheet = false
-
-  /// User ID to highlight in the manage sheet (from deep link)
-  @State private var highlightUserId: String?
-
-  /// Whether to auto-expand the add friend form when the manage sheet opens
-  @State private var autoExpandAddForm = false
+  @State private var showAddFriendSheet = false
 
   /// Dates to highlight in the calendar (from shared shift notification)
   @State private var highlightDates: Set<String> = []
@@ -112,7 +105,6 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       }
       .navigationBarTitleDisplayMode(.inline)
       .toolbar(isChatTabBarHidden ? .hidden : .automatic, for: .tabBar)
-      .iPadToolbarBackground()
       .toolbar {
         friendsToolbarContent
       }
@@ -147,27 +139,13 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       navigationPath = NavigationPath()
       viewModel.deselectSharer()
     }
-    .sheet(
-      isPresented: $showManageSheet,
-      onDismiss: {
-        // Clear state when sheet is dismissed
-        highlightUserId = nil
-        autoExpandAddForm = false
-      }
-    ) {
-      ManageSharingSheet(
-        highlightUserId: highlightUserId,
-        autoExpandAddForm: autoExpandAddForm,
+    .sheet(isPresented: $showAddFriendSheet) {
+      AddFriendSheet(
         initialSnapshot: viewModel.hasFinishedInitialSharersLoad
           ? viewModel.managementSnapshot : nil,
         onBootstrapRefresh: { bootstrap in
           await viewModel.applyFriendsTabBootstrap(bootstrap)
-        },
-        typingUserIds: typingUserIds,
-        unreadChatUserIds: unreadChatUserIds,
-        chatPreviewsByUserId: chatPreviewsByUserId,
-        shiftPreviews: viewModel.shiftPreviews,
-        isLoadingPreviews: viewModel.isLoadingPreviews
+        }
       )
     }
     .onChange(of: coordinator.pendingDeepLink) { _, deepLink in
@@ -298,7 +276,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
   // MARK: - Deep Link Handling
 
   /// Handle pending deep link from AppCoordinator
-  /// Navigates to a specific sharer or opens the manage modal
+  /// Navigates to a specific sharer, opens a friend's profile, or opens the add friend sheet
   private func handlePendingDeepLink(_ deepLink: AppCoordinator.DeepLink?) {
     // swiftlint:disable:next conditional_returns_on_newline
     guard selectedTab == .friends, let deepLink else { return }
@@ -361,10 +339,28 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
       coordinator.clearPendingDeepLink()
 
     case .sharingManage(let highlightId):
-      // Open manage modal with optional highlight
-      highlightUserId = highlightId
-      showManageSheet = true
       coordinator.clearPendingDeepLink()
+      guard let highlightId else {
+        showAddFriendSheet = true
+        return
+      }
+
+      // A named friend has their settings on their profile. Anyone else
+      // (blocked, or not loaded) is reachable from the add friend sheet.
+      deepLinkNavigationTask?.cancel()
+      deepLinkNavigationTask = Task { @MainActor in
+        await viewModel.waitForSharersLoaded()
+        guard !Task.isCancelled else { return }
+
+        if let sharer = (viewModel.sharers + viewModel.hiddenSharers).first(where: {
+          $0.id == highlightId
+        }) {
+          navigationPath = NavigationPath()
+          profileSharer = sharer
+        } else {
+          showAddFriendSheet = true
+        }
+      }
 
     case .friendChat(
       let threadId,
@@ -452,8 +448,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
           highlightedChatUserId: activeChatHighlightUserId,
           openingThreadUserId: openingThreadUserId,
           onAddFriend: {
-            autoExpandAddForm = true
-            showManageSheet = true
+            showAddFriendSheet = true
           }
         )
       }
@@ -490,20 +485,11 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
 
   @ToolbarContentBuilder
   private var friendsToolbarContent: some ToolbarContent {
-    ToolbarItem(placement: .topBarLeading) {
-      manageFriendsButton
-    }
-  }
-
-  private var manageFriendsButton: some View {
-    Button(action: {
-      showManageSheet = true
-    }) {
-      Label {
-        Text(.sharingSeeFriends)
-      } icon: {
-        Image(systemName: "person.2")
-          .accessibilityHidden(true)
+    ToolbarItem(placement: .topBarTrailing) {
+      Button {
+        showAddFriendSheet = true
+      } label: {
+        Label(String(localized: .sharingAddFriend), systemImage: "person.badge.plus")
       }
     }
   }
@@ -1071,7 +1057,7 @@ struct FriendsView: View {  // swiftlint:disable:this explicit_acl explicit_top_
 /// Displays the friend's shifts in a calendar/list with month navigation
 private struct SharedShiftsDetailView: View {
   let sharer: SharedUser
-  @ObservedObject var viewModel: SharingViewModel
+  var viewModel: SharingViewModel
   @Binding var highlightDates: Set<String>
   @Binding var highlightShiftIds: Set<String>
   let onMessageTapped: (SharedUser) -> Void
@@ -1222,7 +1208,7 @@ private struct SharedShiftsDetailView: View {
 
     var body: some View {
       FriendsView(selectedTab: $selectedTab, hasSelectedSharer: $hasSelectedSharer)
-        .environmentObject(AppCoordinator.shared)
+        .environment(AppCoordinator.shared)
         .environment(\.userCurrency, "kr")
     }
   }

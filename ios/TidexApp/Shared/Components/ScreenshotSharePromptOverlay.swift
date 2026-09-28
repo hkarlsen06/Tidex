@@ -81,7 +81,7 @@ struct ScreenshotSharePromptOverlay: View {
 
             // Use share button - primary action
             Button {
-              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+              Haptics.play(.medium)
               dismiss()
               // Small delay to let the overlay dismiss first
               DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {

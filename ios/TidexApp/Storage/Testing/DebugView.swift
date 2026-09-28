@@ -12,8 +12,8 @@
   /// Debug view for testing app functionality
   /// Accessible from user menu > Debug (only in debug builds)
   struct SyncDebugView: View {
-    @StateObject private var testHelper = SyncTestHelper.shared
-    @ObservedObject private var syncCoordinator = SyncCoordinator.shared
+    @State private var testHelper = SyncTestHelper.shared
+    private let syncCoordinator = SyncCoordinator.shared
 
     @State private var userId: String?
     @State private var syncStateSummary: SyncStateSummary?
@@ -32,28 +32,32 @@
 
     var body: some View {
       List {
-        // Quick Actions (most used)
-        quickActionsSection
+        Group {
+          // Quick Actions (most used)
+          quickActionsSection
 
-        // Notifications Section
-        notificationsSection
+          // Notifications Section
+          notificationsSection
 
-        // Sync Status Section
-        syncStatusSection
+          // Sync Status Section
+          syncStatusSection
 
-        // Advanced controls
-        advancedSection
+          // Advanced controls
+          advancedSection
 
-        // Advanced Sync (collapsible)
-        if showAdvancedSync {
-          stateSummarySection
-          validationSection
-          logsSection
+          // Advanced Sync (collapsible)
+          if showAdvancedSync {
+            stateSummarySection
+            validationSection
+            logsSection
+          }
+
+          // Destructive actions
+          dangerZoneSection
         }
-
-        // Destructive actions
-        dangerZoneSection
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
+      .tidexListBackground()
       .navigationTitle("Debug")
       .task {
         await loadUserId()

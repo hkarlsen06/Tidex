@@ -372,22 +372,6 @@ internal struct ShiftHomeWidgetView: View {
   }
 }
 
-// MARK: - Stored Shift Model (matches App target)
-
-/// Represents a shift stored in shared UserDefaults
-/// Must match the structure from the main app
-private struct StoredShift: Codable {
-  let shiftId: String
-  let shiftDate: String  // YYYY-MM-DD
-  let startTime: String  // HH:mm
-  let endTime: String  // HH:mm
-  let hourlyWage: Double
-  let supplementRatePerHour: Double
-  let totalGrossEstimate: Double
-  let currencySymbol: String?
-  let taxRate: Double?
-}
-
 // MARK: - Widget Currency Formatter
 
 /// Currency formatting for widgets - mirrors CurrencyConfig from the main app
@@ -507,35 +491,13 @@ internal struct ShiftWidgetProvider: TimelineProvider {
 // MARK: - Provider Helpers
 
 internal struct ShiftWidgetProviderHelper {
-  private let appGroupId = "group.no.tidex.app"
-  private let shiftsKey = "upcoming_shifts"
-  private let currencyKey = "user_currency"
-
-  private func sharedUserDefaults() -> UserDefaults? {
-    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
-    else {
-      return nil
-    }
-    return UserDefaults(suiteName: appGroupId)
-  }
-
   /// Get the user's stored currency symbol, or nil if not set
   private func getStoredCurrency() -> String? {
-    sharedUserDefaults()?.string(forKey: currencyKey)
-  }
-
-  /// Parse ISO date (YYYY-MM-DD) in a stable, locale-agnostic way.
-  private func parseShiftDate(_ dateString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone.current
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.date(from: dateString)
+    WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
   }
 
   /// Build a local Date from shift day + HH:mm, supporting 24:00 as next-day midnight.
-  private func shiftDateTime(shiftDateString: String, time: String) -> Date? {
+  internal func shiftDateTime(shiftDateString: String, time: String) -> Date? {
     guard let shiftDate = parseShiftDate(shiftDateString) else {
       return nil
     }
@@ -565,7 +527,7 @@ internal struct ShiftWidgetProviderHelper {
     return date
   }
 
-  private func shiftInterval(shiftDateString: String, startTime: String, endTime: String) -> (
+  internal func shiftInterval(shiftDateString: String, startTime: String, endTime: String) -> (
     start: Date, end: Date
   )? {
     guard let start = shiftDateTime(shiftDateString: shiftDateString, time: startTime),
@@ -583,7 +545,7 @@ internal struct ShiftWidgetProviderHelper {
 
   /// Count midnight boundaries crossed between two dates (matching the web app's pattern)
   /// Users perceive "1 day" as "tomorrow", not "24 hours from now"
-  private func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
+  internal func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
     let calendar = Calendar.current
     let fromMidnight = calendar.startOfDay(for: startDate)
     let toMidnight = calendar.startOfDay(for: endDate)
@@ -594,7 +556,7 @@ internal struct ShiftWidgetProviderHelper {
 
   /// Determine if the shift has already started by comparing the given time to shift start
   /// Returns true if `now` is at or past the shift's start time on the shift date
-  private func hasShiftStarted(shiftDateString: String, startTime: String, at now: Date) -> Bool {
+  internal func hasShiftStarted(shiftDateString: String, startTime: String, at now: Date) -> Bool {
     guard let shiftStartDateTime = shiftDateTime(shiftDateString: shiftDateString, time: startTime)
     else {
       return false
@@ -607,7 +569,7 @@ internal struct ShiftWidgetProviderHelper {
   /// Returns true ONLY if the shift end time is today (relative to `now`) and we're past it
   /// For past day shifts, returns false (those use pastShift layout with countdown instead)
   /// Note: For cross-midnight shifts (end <= start), adds 1 day to end time
-  private func hasShiftEnded(
+  internal func hasShiftEnded(
     shiftDateString: String, startTime: String, endTime: String, at now: Date
   ) -> Bool {
     guard
@@ -630,7 +592,7 @@ internal struct ShiftWidgetProviderHelper {
   }
 
   /// True while "now" is between start and end (supports cross-midnight).
-  private func isShiftActive(
+  internal func isShiftActive(
     shiftDateString: String, startTime: String, endTime: String, at now: Date
   ) -> Bool {
     guard
@@ -651,7 +613,7 @@ internal struct ShiftWidgetProviderHelper {
   /// - 1 crossing: tomorrow (State A)
   /// - 2+ crossings: countdown (State B)
   /// - Negative crossings: past shift (State C)
-  private func determineLayoutState(shiftDateString: String, at now: Date = Date()) -> (
+  internal func determineLayoutState(shiftDateString: String, at now: Date = Date()) -> (
     state: WidgetLayoutState, daysRemaining: Int
   ) {
     guard let shiftDate = parseShiftDate(shiftDateString) else {
@@ -680,7 +642,7 @@ internal struct ShiftWidgetProviderHelper {
   }
 
   private func loadShifts() -> [StoredShift] {
-    guard let json = sharedUserDefaults()?.string(forKey: shiftsKey),
+    guard let json = WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.shiftsKey),
       let data = json.data(using: .utf8),
       let shifts = try? JSONDecoder().decode([StoredShift].self, from: data)
     else {
@@ -877,11 +839,7 @@ private func formatShiftDate(
     if daysAgo == 1 {
       return String(localized: .widgetYesterday)
     }
-
-    let weekdayFormatter: DateFormatter = .init()
-    weekdayFormatter.locale = appLocale()
-    weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-    return sentenceCased(weekdayFormatter.string(from: shiftDate))
+    return formattedWeekday(shiftDate, style: .abbreviatedDay)
   }
 
   if calendar.isDate(shiftDay, inSameDayAs: today) {
@@ -894,22 +852,51 @@ private func formatShiftDate(
     return String(localized: .widgetTomorrow)
   }
 
-  let weekdayFormatter: DateFormatter = .init()
-  weekdayFormatter.locale = appLocale()
-  weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-  return sentenceCased(weekdayFormatter.string(from: shiftDate))
+  return formattedWeekday(shiftDate, style: .abbreviatedDay)
 }
 
-private func sentenceCased(_ text: String) -> String {
-  guard !text.isEmpty else {
-    return text
-  }
-  return text.prefix(1).uppercased(with: appLocale()) + text.dropFirst()
-}
+// MARK: - Widget Date Formatting Helpers
+//
+// Shared by ShiftHomeWidget, FriendShiftWidget and FriendsWidget so shift dates parse and
+// display the same way across all three.
 
-private func appLocale() -> Locale {
+/// Locale Tidex actually ships strings in, so widget dates match the app's language even
+/// when the system locale isn't one Tidex supports.
+internal func appLocale() -> Locale {
   let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
   return Locale(identifier: identifier)
+}
+
+/// Parses a "yyyy-MM-dd" shift date in the device's local time zone.
+internal func parseShiftDate(_ dateString: String) -> Date? {
+  let strategy = Date.ISO8601FormatStyle(timeZone: .current).year().month().day()
+  return try? Date(dateString, strategy: strategy)
+}
+
+/// Weekday label shapes used across the widget extension's shift date displays.
+internal enum WidgetWeekdayStyle {
+  /// e.g. "Mon 5"
+  case abbreviatedDay
+  /// e.g. "Monday"
+  case fullWeekday
+  /// e.g. "Mon 5 Oct"
+  case abbreviatedDayMonth
+}
+
+/// Formats a weekday label for the app's locale, sentence-cased.
+internal func formattedWeekday(_ date: Date, style: WidgetWeekdayStyle) -> String {
+  var format: Date.FormatStyle
+  switch style {
+  case .abbreviatedDay:
+    format = .dateTime.weekday(.abbreviated).day()
+  case .fullWeekday:
+    format = .dateTime.weekday(.wide)
+  case .abbreviatedDayMonth:
+    format = .dateTime.weekday(.abbreviated).day().month(.abbreviated)
+  }
+  format.locale = appLocale()
+  format.capitalizationContext = .beginningOfSentence
+  return date.formatted(format)
 }
 
 // MARK: - Widget Configuration

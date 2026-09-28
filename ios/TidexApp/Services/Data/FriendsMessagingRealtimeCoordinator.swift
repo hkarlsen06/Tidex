@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import os.log
 import Supabase
@@ -31,7 +30,7 @@ protocol FriendsMessagingRealtimeCoordinating: AnyObject {
 
 @MainActor
 // swiftlint:disable:next type_body_length
-final class FriendsMessagingRealtimeCoordinator: ObservableObject {
+final class FriendsMessagingRealtimeCoordinator {
   private enum Pagination {
     static let pageSize = 50
   }

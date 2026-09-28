@@ -14,8 +14,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.join(__dirname, "../../.env.local"), quiet: true });
 
 const OPENAI_RESPONSES_API_URL = "https://api.openai.com/v1/responses";
-const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
-const OPENAI_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT?.trim() || "high";
+const OPENAI_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-6-sol";
+const OPENAI_REASONING_EFFORT = process.env.OPENAI_REASONING_EFFORT?.trim() || "low";
 const REQUEST_TIMEOUT_MS = 120_000;
 const MAX_OUTPUT_TOKENS = 16_384;
 const BATCH_SIZE = 30;

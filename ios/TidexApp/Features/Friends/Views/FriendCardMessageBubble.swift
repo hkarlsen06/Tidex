@@ -1,5 +1,59 @@
 import SwiftUI
 
+enum FriendCardMessageState: Equatable {
+  case outgoingSending
+  case outgoingSent
+  case outgoingOpened
+  case outgoingFailed
+  case incomingUnread
+  case incomingOpened
+}
+
+struct FriendCardMessagePreview: Equatable {
+  let text: String
+  let timestamp: Date
+  let state: FriendCardMessageState
+
+  var metaColor: Color {
+    switch state {
+    case .incomingUnread: .tidexBlue
+    case .outgoingFailed: .tidexError
+    case .outgoingSending: .tidexTextMuted.opacity(0.5)
+    default: .tidexTextMuted
+    }
+  }
+
+  /// Paper planes for the user's messages, bubbles for the friend's. Filled means not yet opened.
+  var metaSymbol: String {
+    switch state {
+    case .outgoingSending, .outgoingSent: "paperplane.fill"
+    case .outgoingOpened: "paperplane"
+    case .outgoingFailed: "xmark"
+    case .incomingUnread: "message.fill"
+    case .incomingOpened: "message"
+    }
+  }
+
+  /// What VoiceOver reads in place of the icon.
+  var metaLabel: LocalizedStringResource {
+    switch state {
+    case .outgoingSending: .friendsChatStatusSending
+    case .outgoingSent: .friendsChatPreviewLabelSent
+    case .outgoingOpened: .friendsChatPreviewLabelOpened
+    case .outgoingFailed: .friendsChatStatusFailed
+    case .incomingUnread: .friendsChatPreviewLabelNew
+    case .incomingOpened: .friendsChatPreviewLabelReceived
+    }
+  }
+
+  func metaText(at now: Date) -> String {
+    FriendCardMessagePreviewTimestampFormatter.relativeTimestamp(
+      messageDate: timestamp,
+      referenceDate: now
+    )
+  }
+}
+
 /// The last message in a friend card as a chat bubble: gray from the friend, blue from the user.
 struct FriendCardMessageBubble: View {
   let preview: FriendCardMessagePreview?
@@ -40,6 +94,8 @@ struct FriendCardMessageBubble: View {
           )
       }
     }
+    // The user's messages sit on the right, like in the chat.
+    .frame(maxWidth: .infinity, alignment: isOutgoing ? .trailing : .leading)
   }
 
   private var fillColor: Color {
@@ -57,52 +113,5 @@ struct FriendCardMessageBubble: View {
     case .outgoingSent, .outgoingOpened, .outgoingSending: .tidexTextOnBrand
     case .outgoingFailed: .tidexError
     }
-  }
-}
-
-/// The name row with the message bubble under it. The name row takes the bubble's width, so the
-/// time sits above the bubble's trailing edge rather than at the far edge of the card. A wider
-/// name row widens the column instead.
-struct FriendCardMessageColumn: Layout {
-  var spacing: CGFloat
-
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    let sizes = measure(width: proposal.width, subviews: subviews)
-    return CGSize(width: sizes.width, height: sizes.height)
-  }
-
-  func placeSubviews(
-    in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
-  ) {
-    let sizes = measure(width: bounds.width, subviews: subviews)
-    subviews[0].place(
-      at: bounds.origin,
-      proposal: ProposedViewSize(width: sizes.width, height: sizes.header.height)
-    )
-    guard let bubble = sizes.bubble, subviews.count > 1 else { return }
-    subviews[1].place(
-      at: CGPoint(
-        x: bounds.minX,
-        y: bounds.minY + sizes.header.height + spacing
-      ),
-      proposal: ProposedViewSize(bubble)
-    )
-  }
-
-  private struct Sizes {
-    let width: CGFloat
-    let height: CGFloat
-    let header: CGSize
-    let bubble: CGSize?
-  }
-
-  private func measure(width available: CGFloat?, subviews: Subviews) -> Sizes {
-    let bubble = subviews.count > 1
-      ? subviews[1].sizeThatFits(ProposedViewSize(width: available, height: nil)) : nil
-    let headerIdealWidth = subviews[0].sizeThatFits(.unspecified).width
-    let width = min(max(bubble?.width ?? 0, headerIdealWidth), available ?? .infinity)
-    let header = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
-    let height = header.height + (bubble.map { spacing + $0.height } ?? 0)
-    return Sizes(width: width, height: height, header: header, bubble: bubble)
   }
 }

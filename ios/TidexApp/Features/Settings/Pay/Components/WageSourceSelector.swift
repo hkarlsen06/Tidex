@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 // MARK: - Wage Source Selector
 
@@ -55,7 +54,6 @@ struct WageSourceSelector: View {
             icon: "building.2",
             isSelected: usePreset,
             action: {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
               withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 usePreset = true
               }
@@ -67,7 +65,6 @@ struct WageSourceSelector: View {
             icon: "slider.horizontal.3",
             isSelected: !usePreset,
             action: {
-              UIImpactFeedbackGenerator(style: .light).impactOccurred()
               withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                 usePreset = false
               }
@@ -93,6 +90,8 @@ struct WageSourceSelector: View {
       currentWageDisplay
     }
     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: usePreset)
+    .sensoryFeedback(.selection, trigger: usePreset)
+    .sensoryFeedback(.selection, trigger: wageLevel)
   }
 
   // MARK: - Tariff Level Picker
@@ -107,7 +106,6 @@ struct WageSourceSelector: View {
           ),
           isSelected: wageLevel == level.level,
           action: {
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
             withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
               wageLevel = level.level
             }
@@ -155,13 +153,7 @@ struct WageSourceSelector: View {
   }
 
   private func formatWage(_ wage: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 2
-    formatter.maximumFractionDigits = 2
-    formatter.locale = .appLocale
-    let formatted = formatter.string(from: NSNumber(value: wage)) ?? "\(wage)"
-
+    let formatted = CurrencyConfig.formatPlain(wage, includeDecimals: true)
     let currencyConfig = CurrencyConfig.get(currency)
     let perHour = String(localized: .commonPerHourShort)
 

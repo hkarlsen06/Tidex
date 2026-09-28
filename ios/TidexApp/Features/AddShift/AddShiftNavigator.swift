@@ -1,13 +1,15 @@
+import Observation
 import SwiftUI
 
 /// Tracks which tab's navigation stack shows the Add screen.
 /// Only one tab shows it at a time, so there is a single draft on screen.
 @MainActor
-internal final class AddShiftNavigator: ObservableObject {
+@Observable
+internal final class AddShiftNavigator {
   internal static let shared: AddShiftNavigator = .init()
 
   /// The tab whose stack has the Add screen pushed, if any.
-  @Published internal var hostTab: MainTabView.Tab?
+  internal var hostTab: MainTabView.Tab?
 
   private init() {
     // Singleton.
@@ -24,8 +26,8 @@ extension View {
 
 private struct AddShiftDestinationModifier: ViewModifier {
   let tab: MainTabView.Tab?
-  @EnvironmentObject private var coordinator: AppCoordinator
-  @ObservedObject private var navigator: AddShiftNavigator = .shared
+  @Environment(AppCoordinator.self) private var coordinator
+  private let navigator: AddShiftNavigator = .shared
 
   func body(content: Content) -> some View {
     content

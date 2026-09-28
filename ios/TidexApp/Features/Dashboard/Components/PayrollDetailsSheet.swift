@@ -948,114 +948,119 @@ private struct PayrollAdjustmentFormSheet: View {  // swiftlint:disable:this typ
   var body: some View {
     NavigationStack {  // swiftlint:disable:this closure_body_length
       Form {  // swiftlint:disable:this closure_body_length
-        Section {
-          TextField(
-            String(localized: .dashboardPayrollDetailsAdjustmentDescriptionPlaceholder),
-            text: $descriptionText,
-            axis: .vertical
-          )
-          .textInputAutocapitalization(.sentences)
-          .lineLimit(2...4)  // swiftlint:disable:this no_magic_numbers
-          .focused($focusedField, equals: .description)
-
-          HStack(spacing: Spacing.sm) {
+        Group {  // swiftlint:disable:this closure_body_length
+          Section {
             TextField(
-              String(localized: .dashboardPayrollDetailsAdjustmentAmount), text: $amountText
+              String(localized: .dashboardPayrollDetailsAdjustmentDescriptionPlaceholder),
+              text: $descriptionText,
+              axis: .vertical
             )
-            .keyboardType(.numbersAndPunctuation)
-            .focused($focusedField, equals: .amount)
-            .onChange(of: amountText) { _, newValue in
-              let sanitized = sanitizedAmountText(newValue)  // swiftlint:disable:this explicit_type_interface
-              if sanitized != newValue {
-                amountText = sanitized
+            .textInputAutocapitalization(.sentences)
+            .lineLimit(2...4)  // swiftlint:disable:this no_magic_numbers
+            .focused($focusedField, equals: .description)
+
+            HStack(spacing: Spacing.sm) {
+              TextField(
+                String(localized: .dashboardPayrollDetailsAdjustmentAmount), text: $amountText
+              )
+              .keyboardType(.numbersAndPunctuation)
+              .focused($focusedField, equals: .amount)
+              .onChange(of: amountText) { _, newValue in
+                let sanitized = sanitizedAmountText(newValue)  // swiftlint:disable:this explicit_type_interface
+                if sanitized != newValue {
+                  amountText = sanitized
+                }
               }
-            }
 
-            if focusedField != .amount, !amountText.isEmpty {
-              Text(context.breakdown.currency)
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextSecondary)
-            }
-          }
-        }
-
-        Section(String(localized: .dashboardPayrollDetailsAdjustmentCategory)) {
-          categoryOption(.retroPay)
-          categoryOption(.bonus)
-          categoryOption(.correction)
-        }
-
-        if context.breakdown.taxEnabled {
-          Section(String(localized: .dashboardPayrollDetailsAdjustmentTaxTreatment)) {
-            taxTreatmentOption(.grossTaxable)
-            taxTreatmentOption(.netManual)
-          }
-        }
-
-        if context.jobOptions.count > 1 {
-          Section {
-            Picker(
-              String(localized: .dashboardPayrollDetailsAdjustmentJob), selection: $selectedJobId
-            ) {
-              Text(.dashboardPayrollDetailsAdjustmentNoSpecificJob)
-                .tag(String?.none)
-              ForEach(context.jobOptions) { job in
-                Text(job.title).tag(Optional(job.id))
+              if focusedField != .amount, !amountText.isEmpty {
+                Text(context.breakdown.currency)
+                  .font(.tidexBodyMedium)
+                  .foregroundColor(.tidexTextSecondary)
               }
             }
           }
-        }
 
-        Section {
-          Toggle(
-            String(localized: .dashboardPayrollDetailsAdjustmentUseEarnedRange),
-            isOn: $useEarnedRange)  // swiftlint:disable:this multiline_arguments_brackets
-          Text(.dashboardPayrollDetailsAdjustmentEarnedRangeHelp)
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-
-          if useEarnedRange {
-            DatePicker(
-              String(localized: .dashboardPayrollDetailsAdjustmentEarnedFrom),
-              selection: $earnedFromDate,
-              displayedComponents: .date
-            )
-            DatePicker(
-              String(localized: .dashboardPayrollDetailsAdjustmentEarnedTo),
-              selection: $earnedToDate,
-              displayedComponents: .date
-            )
+          Section(String(localized: .dashboardPayrollDetailsAdjustmentCategory)) {
+            categoryOption(.retroPay)
+            categoryOption(.bonus)
+            categoryOption(.correction)
           }
-        }
 
-        Section {
-          TextField(
-            String(localized: .dashboardPayrollDetailsAdjustmentNote),
-            text: $note,
-            axis: .vertical
-          )
-          .lineLimit(3...8)  // swiftlint:disable:this no_magic_numbers
-          .focused($focusedField, equals: .note)
-        }
-
-        if let errorMessage {
-          Section {
-            Text(errorMessage)
-              .foregroundColor(.tidexError)
-          }
-        }
-
-        if onDelete != nil {
-          Section {
-            Button(role: .destructive) {
-              delete()
-            } label: {
-              Text(.commonDelete)
+          if context.breakdown.taxEnabled {
+            Section(String(localized: .dashboardPayrollDetailsAdjustmentTaxTreatment)) {
+              taxTreatmentOption(.grossTaxable)
+              taxTreatmentOption(.netManual)
             }
-            .disabled(isSaving)
+          }
+
+          if context.jobOptions.count > 1 {
+            Section {
+              Picker(
+                String(localized: .dashboardPayrollDetailsAdjustmentJob), selection: $selectedJobId
+              ) {
+                Text(.dashboardPayrollDetailsAdjustmentNoSpecificJob)
+                  .tag(String?.none)
+                ForEach(context.jobOptions) { job in
+                  Text(job.title).tag(Optional(job.id))
+                }
+              }
+            }
+          }
+
+          Section {
+            Toggle(
+              String(localized: .dashboardPayrollDetailsAdjustmentUseEarnedRange),
+              isOn: $useEarnedRange)  // swiftlint:disable:this multiline_arguments_brackets
+              .tint(.tidexBlue)
+            Text(.dashboardPayrollDetailsAdjustmentEarnedRangeHelp)
+              .font(.tidexFootnote)
+              .foregroundColor(.tidexTextSecondary)
+
+            if useEarnedRange {
+              DatePicker(
+                String(localized: .dashboardPayrollDetailsAdjustmentEarnedFrom),
+                selection: $earnedFromDate,
+                displayedComponents: .date
+              )
+              DatePicker(
+                String(localized: .dashboardPayrollDetailsAdjustmentEarnedTo),
+                selection: $earnedToDate,
+                displayedComponents: .date
+              )
+            }
+          }
+
+          Section {
+            TextField(
+              String(localized: .dashboardPayrollDetailsAdjustmentNote),
+              text: $note,
+              axis: .vertical
+            )
+            .lineLimit(3...8)  // swiftlint:disable:this no_magic_numbers
+            .focused($focusedField, equals: .note)
+          }
+
+          if let errorMessage {
+            Section {
+              Text(errorMessage)
+                .foregroundColor(.tidexError)
+            }
+          }
+
+          if onDelete != nil {
+            Section {
+              Button(role: .destructive) {
+                delete()
+              } label: {
+                Text(.commonDelete)
+              }
+              .disabled(isSaving)
+            }
           }
         }
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
+      .tidexListBackground()
       .scrollDismissesKeyboard(.interactively)
       .navigationTitle(
         String(

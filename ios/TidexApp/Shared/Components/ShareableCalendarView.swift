@@ -7,6 +7,7 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_grouping_extension no_magic_numbers prefer_condition_list prefer_key_path
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// A shareable view that renders the calendar for sharing as a PNG
 /// Displays the calendar in hours mode (from-to times) with optional earnings display
@@ -228,25 +229,36 @@ struct ShareableCalendarView: View {
   }
 }
 
+// MARK: - Transferable PNG Image
+
+/// A rendered PNG, shared via `ShareLink` without a temp file.
+struct TransferablePNGImage: Transferable {
+  let data: Data
+
+  static var transferRepresentation: some TransferRepresentation {
+    DataRepresentation(exportedContentType: .png) { item in
+      item.data
+    }
+  }
+}
+
 // MARK: - Calendar Share Options Sheet
 
 /// Bottom sheet for selecting calendar share options
 struct CalendarShareOptionsSheet: View {
   let title: LocalizedStringResource
-  let onShowEarnings: () -> Void
-  let onHideEarnings: () -> Void
+  let earningsImage: UIImage?
+  let hiddenEarningsImage: UIImage?
 
   init(
     title: LocalizedStringResource = .shiftsShareTitle,
-    onShowEarnings: @escaping () -> Void,
-    onHideEarnings: @escaping () -> Void
+    earningsImage: UIImage?,
+    hiddenEarningsImage: UIImage?
   ) {
     self.title = title
-    self.onShowEarnings = onShowEarnings
-    self.onHideEarnings = onHideEarnings
+    self.earningsImage = earningsImage
+    self.hiddenEarningsImage = hiddenEarningsImage
   }
-
-  @Environment(\.dismiss) private var dismiss
 
   var body: some View {
     VStack(spacing: Spacing.mlg) {
@@ -257,51 +269,9 @@ struct CalendarShareOptionsSheet: View {
         .padding(.top, Spacing.md)
 
       VStack(spacing: Spacing.sm) {
-        // Show earnings option
-        Button {
-          onShowEarnings()
-        } label: {
-          HStack(spacing: Spacing.msm) {
-            Image(systemName: "eye")
-              .font(.tidexBodyLarge)
-              .foregroundColor(.tidexBlue)
-              .frame(width: 28)
-            Text(.shiftsShareShowEarnings)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-            Spacer()
-          }
-          .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, 18)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xl)
-              .fill(Color.tidexSurfacePrimary)
-          )
-        }
-        .buttonStyle(.plain)
-
-        // Hide earnings option
-        Button {
-          onHideEarnings()
-        } label: {
-          HStack(spacing: Spacing.msm) {
-            Image(systemName: "eye.slash")
-              .font(.tidexBodyLarge)
-              .foregroundColor(.tidexBlue)
-              .frame(width: 28)
-            Text(.shiftsShareHideEarnings)
-              .font(.tidexBodyMedium)
-              .foregroundColor(.tidexTextPrimary)
-            Spacer()
-          }
-          .padding(.horizontal, Spacing.mlg)
-          .padding(.vertical, 18)
-          .background(
-            RoundedRectangle(cornerRadius: CornerRadius.xl)
-              .fill(Color.tidexSurfacePrimary)
-          )
-        }
-        .buttonStyle(.plain)
+        shareLinkRow(image: earningsImage, systemImage: "eye", label: .shiftsShareShowEarnings)
+        shareLinkRow(
+          image: hiddenEarningsImage, systemImage: "eye.slash", label: .shiftsShareHideEarnings)
       }
       .padding(.horizontal, Spacing.mlg)
 
@@ -309,6 +279,36 @@ struct CalendarShareOptionsSheet: View {
     }
     .frame(maxWidth: .infinity)
     .background(Color.tidexBackground)
+  }
+
+  @ViewBuilder
+  private func shareLinkRow(
+    image: UIImage?, systemImage: String, label: LocalizedStringResource
+  ) -> some View {
+    if let image, let pngData = image.pngData() {
+      ShareLink(
+        item: TransferablePNGImage(data: pngData),
+        preview: SharePreview(Text(label), image: Image(uiImage: image))
+      ) {
+        HStack(spacing: Spacing.msm) {
+          Image(systemName: systemImage)
+            .font(.tidexBodyLarge)
+            .foregroundColor(.tidexBlue)
+            .frame(width: 28)
+          Text(label)
+            .font(.tidexBodyMedium)
+            .foregroundColor(.tidexTextPrimary)
+          Spacer()
+        }
+        .padding(.horizontal, Spacing.mlg)
+        .padding(.vertical, 18)
+        .background(
+          RoundedRectangle(cornerRadius: CornerRadius.xl)
+            .fill(Color.tidexSurfacePrimary)
+        )
+      }
+      .buttonStyle(.plain)
+    }
   }
 }
 

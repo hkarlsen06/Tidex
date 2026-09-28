@@ -112,12 +112,13 @@ enum SendAttachmentRecipientResolver {
 }
 
 @MainActor
-private final class SendAttachmentToChatViewModel: ObservableObject {
-  @Published var recipients: [ShareRecipient] = []
-  @Published var recipientSelection = ShareRecipientSelectionState()
-  @Published var isLoading = true
-  @Published var isSubmitting = false
-  @Published var errorMessage: String?
+@Observable
+private final class SendAttachmentToChatViewModel {
+  var recipients: [ShareRecipient] = []
+  var recipientSelection = ShareRecipientSelectionState()
+  var isLoading = true
+  var isSubmitting = false
+  var errorMessage: String?
 
   private let viewerUserId: String
   private let buildAttachment: (ShareRecipient) throws -> FriendsComposerAttachmentDraft
@@ -126,7 +127,7 @@ private final class SendAttachmentToChatViewModel: ObservableObject {
   private let capabilities: any FriendsMessagingCapabilityProviding
   private let repository: FriendsMessagesRepository
   private let sharedShiftsRepository: SharedShiftsRepository
-  private var hasLoaded = false
+  @ObservationIgnored private var hasLoaded = false
 
   init(
     viewerUserId: String,
@@ -241,7 +242,7 @@ struct SendAttachmentToChatSheet: View {
   let onCompleted: (SendShiftToChatResult) -> Void
 
   @Environment(\.dismiss) private var dismiss
-  @StateObject private var viewModel: SendAttachmentToChatViewModel
+  @State private var viewModel: SendAttachmentToChatViewModel
 
   @MainActor
   init(
@@ -252,7 +253,7 @@ struct SendAttachmentToChatSheet: View {
     self.viewerUserId = viewerUserId
     self.buildAttachment = buildAttachment
     self.onCompleted = onCompleted
-    _viewModel = StateObject(
+    _viewModel = State(
       wrappedValue: SendAttachmentToChatViewModel(
         viewerUserId: viewerUserId,
         buildAttachment: buildAttachment,

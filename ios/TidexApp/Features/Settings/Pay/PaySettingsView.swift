@@ -6,7 +6,7 @@ import UIKit
 /// Main pay settings screen displaying wage history timeline and global settings
 struct PaySettingsView: View {
   @Environment(\.dismiss) private var dismiss
-  @StateObject private var viewModel: PaySettingsViewModel
+  @State private var viewModel: PaySettingsViewModel
   @State private var showingEditJobSheet = false
   @State private var paySetupJob: Job?
   @State private var showingArchiveConfirmation = false
@@ -17,7 +17,7 @@ struct PaySettingsView: View {
     initiallyExpandPayReview: Bool = false
   ) {
     _isPayReviewExpanded = State(initialValue: initiallyExpandPayReview)
-    _viewModel = StateObject(
+    _viewModel = State(
       wrappedValue: PaySettingsViewModel(
         initialSelectedJobId: initialJobId, initialDate: initialDate
       ))
@@ -162,31 +162,35 @@ struct PaySettingsView: View {
   private var requiredJobReselectionSheet: some View {
     NavigationStack {
       List {
-        Section {
-          Text(.settingsPayChooseJobUnavailable)
-            .foregroundStyle(Color.tidexTextSecondary)
-          ForEach(viewModel.activeJobs) { job in
-            Button {
-              viewModel.resolveRequiredJobSelection(job.id)
-            } label: {
-              WorkplaceNameText(
-                name: job.name,
-                colorHex: job.color,
-                fallbackBadgeColor: .tidexBlue
-              )
+        Group {
+          Section {
+            Text(.settingsPayChooseJobUnavailable)
+              .foregroundStyle(Color.tidexTextSecondary)
+            ForEach(viewModel.activeJobs) { job in
+              Button {
+                viewModel.resolveRequiredJobSelection(job.id)
+              } label: {
+                WorkplaceNameText(
+                  name: job.name,
+                  colorHex: job.color,
+                  fallbackBadgeColor: .tidexBlue
+                )
+              }
+              .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+          } header: {
+            HStack(spacing: Spacing.xxxs) {
+              Image(systemName: "building.2")
+                .font(.tidexCaptionRegular)
+                .foregroundColor(.tidexBlue)
+              Text(.settingsPayChooseJobTitle)
+            }
+            .textCase(nil)
           }
-        } header: {
-          HStack(spacing: Spacing.xxxs) {
-            Image(systemName: "building.2")
-              .font(.tidexCaptionRegular)
-              .foregroundColor(.tidexBlue)
-            Text(.settingsPayChooseJobTitle)
-          }
-          .textCase(nil)
         }
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
+      .tidexListBackground()
       .navigationTitle(String(localized: .settingsMenuPayLabel))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {
@@ -541,29 +545,33 @@ private struct EditWorkplaceSheet: View {
   var body: some View {
     NavigationStack {
       Form {
-        Section {
-          TextField(String(localized: .settingsPayAddJobName), text: $name)
-            .textInputAutocapitalization(.words)
+        Group {
+          Section {
+            TextField(String(localized: .settingsPayAddJobName), text: $name)
+              .textInputAutocapitalization(.words)
 
-          VStack(alignment: .leading, spacing: Spacing.xs) {
-            Text(.settingsPayAddJobColorLabel)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexTextSecondary)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+              Text(.settingsPayAddJobColorLabel)
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexTextSecondary)
 
-            WorkplaceColorCarousel(selectedHex: Self.normalizedHex(from: selectedColor)) { hex in
-              selectedColor = Self.colorFromHex(hex) ?? .tidexBlue
+              WorkplaceColorCarousel(selectedHex: Self.normalizedHex(from: selectedColor)) { hex in
+                selectedColor = Self.colorFromHex(hex) ?? .tidexBlue
+              }
+            }
+          }
+
+          if let saveError {
+            Section {
+              Text(saveError)
+                .font(.tidexFootnote)
+                .foregroundColor(.tidexError)
             }
           }
         }
-
-        if let saveError {
-          Section {
-            Text(saveError)
-              .font(.tidexFootnote)
-              .foregroundColor(.tidexError)
-          }
-        }
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
+      .tidexListBackground()
       .navigationTitle(String(localized: .settingsPayEditJobTitle))
       .navigationBarTitleDisplayMode(.inline)
       .toolbar {

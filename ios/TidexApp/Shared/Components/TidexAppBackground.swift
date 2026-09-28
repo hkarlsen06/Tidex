@@ -8,3 +8,11 @@ internal struct TidexAppBackground: View {
       .allowsHitTesting(false)
   }
 }
+
+extension View {
+  /// Swaps the system grouped background of a `List` or `Form` for the app canvas.
+  internal func tidexListBackground() -> some View {
+    scrollContentBackground(.hidden)
+      .background(TidexAppBackground())
+  }
+}

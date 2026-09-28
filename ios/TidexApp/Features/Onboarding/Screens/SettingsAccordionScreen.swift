@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Screen for configuring break, tax, and payday with progressive accordion
 /// Each section expands one at a time for focused input
@@ -42,7 +41,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
             if let onBack {
               HStack {
                 Button(action: {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  Haptics.play(.light)
                   onBack()
                 }) {
                   HStack(spacing: Spacing.xxs) {
@@ -109,7 +108,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
           OnboardingButton(
             title: continueTitle,
             action: {
-              UINotificationFeedbackGenerator().notificationOccurred(.success)
+              Haptics.play(.success)
               onContinue()
             }
           )
@@ -273,7 +272,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
               } else {
                 // Tappable display
                 Button(action: {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  Haptics.play(.light)
                   taxInputText = formatTaxValue(data.taxPercentage)
                   showingTaxInput = true
                   DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -305,7 +304,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
               step: 1,
               onEditingChanged: { isEditing in
                 if isEditing {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  Haptics.play(.light)
                 }
               }
             )
@@ -406,7 +405,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
               } else {
                 // "Other" button to enter custom day
                 Button(action: {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  Haptics.play(.light)
                   paydayInputText =
                     !payrollDayOptions.contains(data.payrollDay) ? "\(data.payrollDay)" : ""
                   showingPaydayInput = true
@@ -505,12 +504,7 @@ struct SettingsAccordionScreen: View {  // swiftlint:disable:this explicit_acl e
   }
 
   private func formatTaxValue(_ value: Double) -> String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 0
-    formatter.maximumFractionDigits = 1
-    formatter.locale = Locale(identifier: "nb_NO")
-    return formatter.string(from: NSNumber(value: value)) ?? "0"
+    value.formatted(.number.precision(.fractionLength(0...1)).locale(.appLocale))
   }
 
   private func applyTaxInput() {
@@ -546,7 +540,7 @@ private struct TaxPresetButton: View {
 
   var body: some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       action()
     }) {
       Text("\(Int(value))%")
@@ -577,7 +571,7 @@ private struct PaydayButton: View {
 
   var body: some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .light).impactOccurred()
+      Haptics.play(.light)
       action()
     }) {
       Text(isLast ? String(localized: .onboardingPersonalizePaydayLastDay) : "\(day)")

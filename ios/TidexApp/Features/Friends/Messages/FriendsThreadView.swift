@@ -8,7 +8,7 @@ struct FriendsThreadView: View {
   private static let timestampRevealResetAnimationDuration: TimeInterval = 0.18
 
   @MainActor
-  private final class ChatListRuntime: ObservableObject {
+  private final class ChatListRuntime {
     var lastWillDisplayPresentedMessageID: String?
   }
 
@@ -45,19 +45,19 @@ struct FriendsThreadView: View {
 
   @Environment(\.openURL) private var openURL
   @Environment(\.dismiss) private var dismiss
+  @Environment(\.isSceneCaptured) private var isSceneCaptured
 
   private let route: FriendChatRoute
-  @StateObject private var viewModel: FriendsThreadViewModel
-  @StateObject private var composerBridge = FriendsThreadComposerBridge()
-  @StateObject private var reactionPaletteStore = FriendsChatReactionPaletteStore()
-  @StateObject private var chatListRuntime = ChatListRuntime()
-  @StateObject private var chatProjectionStore = FriendsThreadChatProjectionStore()
+  @State private var viewModel: FriendsThreadViewModel
+  @State private var composerBridge = FriendsThreadComposerBridge()
+  @State private var reactionPaletteStore = FriendsChatReactionPaletteStore()
+  @State private var chatListRuntime = ChatListRuntime()
+  @State private var chatProjectionStore = FriendsThreadChatProjectionStore()
 
   @State private var pendingReportTarget: ReportTarget?
   @State private var pendingDeleteMessageId: String?
   @State private var showBlockConfirmation = false
   @State private var showSafetySupport = false
-  @State private var safariURL: URL?
   @State private var alertState: AlertState?
   @State private var highlightedMessageId: String?
   @State private var unreadIncomingCount = 0
@@ -81,14 +81,14 @@ struct FriendsThreadView: View {
 
   init(route: FriendChatRoute, viewerUserId: String) {
     self.route = route
-    _viewModel = StateObject(
+    _viewModel = State(
       wrappedValue: FriendsThreadViewModel(route: route, viewerUserId: viewerUserId)
     )
   }
 
   init(viewModel: FriendsThreadViewModel) {
     self.route = viewModel.route
-    _viewModel = StateObject(wrappedValue: viewModel)
+    _viewModel = State(wrappedValue: viewModel)
   }
 
   private var currentUserDisplayName: String {
@@ -299,11 +299,10 @@ struct FriendsThreadView: View {
           await reportScreenshot()
         }
       }
-      .background {
-        ScreenCaptureDetectionView {
-          Task {
-            await reportScreenshot()
-          }
+      .onChange(of: isSceneCaptured) { wasCaptured, isCaptured in
+        guard isCaptured, !wasCaptured else { return }
+        Task {
+          await reportScreenshot()
         }
       }
       .onReceive(
@@ -357,7 +356,6 @@ struct FriendsThreadView: View {
     .navigationBarTitleDisplayMode(.inline)
     .toolbarBackground(.hidden, for: .navigationBar)
     .toolbarBackground(.hidden, for: .tabBar)
-    .iPadToolbarBackground()
     .toolbar {
       ToolbarItem(placement: .topBarTrailing) {
         actionsMenu
@@ -435,7 +433,7 @@ struct FriendsThreadView: View {
       titleVisibility: .visible
     ) {
       Button(String(localized: .friendsChatSupportOpenPage)) {
-        safariURL = APIConfiguration.supportURL
+        openURL(APIConfiguration.supportURL, prefersInApp: true)
       }
 
       Button(String(localized: .friendsChatSupportEmail)) {
@@ -445,18 +443,18 @@ struct FriendsThreadView: View {
       }
 
       Button(String(localized: .paywallPrivacyPolicy)) {
-        safariURL = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy")
+        if let url = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/privacy") {
+          openURL(url, prefersInApp: true)
+        }
       }
 
       Button(String(localized: .paywallTermsOfUse)) {
-        safariURL = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms")
+        if let url = URL(string: "\(TermsVersion.baseURL)/\(Locale.current.urlLanguageCode)/terms") {
+          openURL(url, prefersInApp: true)
+        }
       }
 
       Button(String(localized: .commonCancel), role: .cancel) {}
-    }
-    .fullScreenCover(item: $safariURL) { url in
-      SafariView(url: url)
-        .ignoresSafeArea()
     }
     .sheet(isPresented: $showProfile) {
       FriendProfileView(sharedUser: counterpartProfileUser)
@@ -874,7 +872,7 @@ struct FriendsThreadView: View {
       showsNewMessagesPill = false
       isPinnedToBottom = true
       Haptics.play(.light)
-      SoundManager.shared.play("tap")
+      Haptics.playTapSound()
       requestScrollToBottom()
     } label: {
       HStack(spacing: Spacing.xs) {
@@ -1159,7 +1157,7 @@ struct FriendsThreadView: View {
 
     if appendOutcome.shouldPlayFeedback {
       Haptics.play(.light)
-      SoundManager.shared.play("tap")
+      Haptics.playTapSound()
       return
     }
 
@@ -1587,7 +1585,8 @@ private struct FriendsChatTypingRow: View {
 }
 
 @MainActor
-final class FriendsChatReactionPaletteStore: ObservableObject {
+@Observable
+final class FriendsChatReactionPaletteStore {
   private enum Constants {
     static let defaults = ["❤️", "👍", "😂", "🔥", "😮", "😢"]
     static let maxVisible = 5
@@ -1595,10 +1594,10 @@ final class FriendsChatReactionPaletteStore: ObservableObject {
     static let recentsKey = "friends.chat.reaction.recents"
   }
 
-  @Published private(set) var displayEmojis: [String] = Constants.defaults
+  private(set) var displayEmojis: [String] = Constants.defaults
 
   private let userDefaults: UserDefaults
-  private var recentEmojis: [String] = []
+  @ObservationIgnored private var recentEmojis: [String] = []
 
   init(userDefaults: UserDefaults = .standard) {
     self.userDefaults = userDefaults

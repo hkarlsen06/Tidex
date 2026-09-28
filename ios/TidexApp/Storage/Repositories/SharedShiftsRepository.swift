@@ -9,7 +9,7 @@ private let logger = Logger(subsystem: "com.tidex.app", category: "SharedShiftsR
 /// Repository for locally cached shared shifts
 /// Server is source of truth - local data is replaced on each fetch
 @MainActor
-final class SharedShiftsRepository: ObservableObject {
+final class SharedShiftsRepository {
   static let shared = SharedShiftsRepository()
 
   struct CachedFriendsSnapshot {

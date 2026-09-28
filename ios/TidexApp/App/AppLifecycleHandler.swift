@@ -47,12 +47,6 @@ final class AppLifecycleHandler {
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
       self?.clockSessionReconciliationTask = nil
     }
-
-    guard !isInitialActivation else { return }
-    // Force SwiftUI to re-evaluate its view tree. UIKit layout calls
-    // (setNeedsLayout) don't restart SwiftUI's render loop, but sending
-    // objectWillChange on the root ObservableObject does.
-    AppCoordinator.shared.objectWillChange.send()
   }
 
   func handleWillResignActive() {
@@ -218,17 +212,11 @@ final class AppLifecycleHandler {
   }
 
   private nonisolated static func parseQueryString(_ queryString: String) -> [String: String] {
-    var parameters: [String: String] = [:]
+    var components = URLComponents()
+    components.percentEncodedQuery = queryString
 
-    for pair in queryString.split(separator: "&") {
-      let parts = pair.split(separator: "=", maxSplits: 1)
-      guard parts.count == 2 else { continue }
-
-      let key = String(parts[0])
-      let value = String(parts[1]).removingPercentEncoding ?? String(parts[1])
-      parameters[key] = value
+    return (components.queryItems ?? []).reduce(into: [:]) { parameters, item in
+      parameters[item.name] = item.value
     }
-
-    return parameters
   }
 }

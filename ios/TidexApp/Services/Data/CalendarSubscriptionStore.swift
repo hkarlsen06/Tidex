@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import os.log
 import UIKit
 
@@ -9,19 +9,20 @@ private let calendarSubscriptionStoreLogger = Logger(
 )
 
 @MainActor
-final class CalendarSubscriptionStore: ObservableObject {
+@Observable
+final class CalendarSubscriptionStore {
   static let shared = CalendarSubscriptionStore()
 
-  @Published private(set) var state: CalendarSubscriptionState = .inactive
-  @Published private(set) var isLoading = false
-  @Published private(set) var isMutating = false
-  @Published var errorMessage: String?
-  @Published var fallbackHTTPSURL: URL?
+  private(set) var state: CalendarSubscriptionState = .inactive
+  private(set) var isLoading = false
+  private(set) var isMutating = false
+  var errorMessage: String?
+  var fallbackHTTPSURL: URL?
 
   private let service: CalendarSubscriptionServicing
   private let tokenStore: CalendarSubscriptionTokenStoring
-  private let userIdProvider: () async throws -> String
-  private var hasLoadedForCurrentSession = false
+  @ObservationIgnored private let userIdProvider: () async throws -> String
+  @ObservationIgnored private var hasLoadedForCurrentSession = false
 
   init(
     service: CalendarSubscriptionServicing = CalendarSubscriptionService.shared,

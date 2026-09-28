@@ -936,17 +936,25 @@ enum SharingComputeCore {
     SharingRPCSupplementRule(days: [7], from: "00:00", to: "24:00", rate: 115, percent: nil),
   ]
 
-  private static func makeISODateFormatter() -> DateFormatter {
+  /// DateFormatter isn't safe to share across threads, so this caches one instance per
+  /// thread (matching `FormatterCache`) instead of allocating one on every call in a loop.
+  private static var isoDateFormatter: DateFormatter {
+    let key = "tidex.sharing.isoDateFormatter"
+    let dictionary = Thread.current.threadDictionary
+    if let cached = dictionary[key] as? DateFormatter {
+      return cached
+    }
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd"
     formatter.calendar = Calendar(identifier: .gregorian)
     formatter.locale = Locale(identifier: "en_US_POSIX")
     formatter.timeZone = .current
+    dictionary[key] = formatter
     return formatter
   }
 
   static func isoDateString(_ date: Date) -> String {
-    makeISODateFormatter().string(from: date)
+    isoDateFormatter.string(from: date)
   }
 
   static func monthStart(year: Int, month: Int) -> String {
@@ -2366,7 +2374,7 @@ enum SharingComputeCore {
   }
 
   private static func dateFromISO(_ dateString: String) -> Date? {
-    makeISODateFormatter().date(from: dateString)
+    isoDateFormatter.date(from: dateString)
   }
 
   private static func daysBetween(_ from: String, _ to: String) -> Int {
@@ -3485,14 +3493,7 @@ enum FriendsAPIClient {
 
       private static func parseTimestamp(_ value: String?) -> Date? {
         guard let value else { return nil }
-
-        let fractionalFormatter = ISO8601DateFormatter()
-        fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = fractionalFormatter.date(from: value) {
-          return date
-        }
-
-        return ISO8601DateFormatter().date(from: value)
+        return ISO8601Timestamp.date(from: value)
       }
     }
 

@@ -1,14 +1,16 @@
 import Foundation
+import Observation
 
 @MainActor
-final class ShiftCompletionCelebrationManager: ObservableObject {
+@Observable
+final class ShiftCompletionCelebrationManager {
   static let shared = ShiftCompletionCelebrationManager()
 
-  @Published var shouldShowCelebration: Bool = false
-  @Published var celebrationData: CelebrationData?
+  var shouldShowCelebration: Bool = false
+  var celebrationData: CelebrationData?
 
-  private var pendingState: CelebrationState?
-  private var checkTask: Task<Void, Never>?
+  @ObservationIgnored private var pendingState: CelebrationState?
+  @ObservationIgnored private var checkTask: Task<Void, Never>?
 
   private init() {}
 

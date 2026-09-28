@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Full-width CTA button for onboarding screens
 /// Matches PrimaryButton styling with gradient option
@@ -18,7 +17,7 @@ struct OnboardingButton: View {
 
   var body: some View {
     Button {
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+      Haptics.play(.medium)
       action()
     } label: {
       Text(title)

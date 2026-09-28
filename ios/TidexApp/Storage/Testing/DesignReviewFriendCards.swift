@@ -4,12 +4,6 @@
   /// Friend cards in their main states, for TIDEX_DESIGN_SCREEN=friends. Set
   /// TIDEX_DESIGN_FRIENDS_VIEW to add-friend or profile for the other Friends screens.
   internal struct DesignReviewFriendCards: View {
-    @State private var identifier = "ella@example.com"
-    @State private var showEarnings = true
-    @State private var isExpanded = true
-    @State private var isCollapsed = false
-    @State private var addError: String?
-
     private let view: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_FRIENDS_VIEW"] ?? "cards"
 
@@ -22,29 +16,18 @@
     }
 
     private var addFriend: some View {
-      NavigationStack {
-        List {
-          Section {
-            AddFriendForm(
-              isExpanded: $isCollapsed, identifier: .constant(""), showEarnings: .constant(false),
-              error: $addError, isLoading: false, isOfflineUnavailable: false,
-              onAdd: {}, onCancel: {})
-          }
-          .listRowInsets(EdgeInsets())
-          Section {
-            AddFriendForm(
-              isExpanded: $isExpanded, identifier: $identifier, showEarnings: $showEarnings,
-              error: $addError, isLoading: false, isOfflineUnavailable: false,
-              onAdd: {}, onCancel: {})
-          }
-          .listRowInsets(EdgeInsets())
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .background(Color.tidexBackground)
-        .navigationTitle(String(localized: .sharingSeeFriends))
-        .navigationBarTitleDisplayMode(.inline)
-      }
+      let hidden = Friend(
+        id: "jonas", email: "jonas@example.com", phone: nil, username: nil, firstName: "Jonas Berg",
+        profilePictureUrl: nil, oauthAvatarUrl: nil,
+        sharesWithMe: Friend.SharesWithMe(
+          hidden: true, showEarningsToMe: false, sharedAt: "2026-01-01",
+          notificationFrequency: .instant),
+        iShareWith: nil)
+      let blocked = Friend(
+        id: "oskar", email: "oskar@example.com", phone: nil, username: nil, firstName: "Oskar Lie",
+        profilePictureUrl: nil, oauthAvatarUrl: nil, sharesWithMe: nil, iShareWith: nil)
+      return AddFriendSheet(
+        initialSnapshot: FriendsManagementSnapshot(friends: [hidden], blockedFriends: [blocked]))
     }
 
     private var profile: some View {

@@ -214,7 +214,7 @@ struct PaySettingsReviewCard: View {
   }
 
   private func hourlyAmount(_ amount: Double) -> String {
-    let number = amount.formatted(.number.precision(.fractionLength(2)).locale(.appLocale))
+    let number = CurrencyConfig.formatPlain(amount, includeDecimals: true)
     let config = CurrencyConfig.get(currency)
     let money = config.display == .prefix ? "\(currency)\(number)" : "\(number) \(currency)"
     return "\(money)\(String(localized: .commonPerHourShort))"

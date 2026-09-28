@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import Observation
 import SwiftUI
 import os.log
 
@@ -60,7 +61,8 @@ internal struct CalendarDisplayData {
 /// ViewModel for the Add Shift screen
 /// Manages state for single, event, and recurring add modes
 @MainActor
-internal final class AddShiftViewModel: ObservableObject {
+@Observable
+internal final class AddShiftViewModel {
 
   // MARK: - Dependencies
 
@@ -74,14 +76,14 @@ internal final class AddShiftViewModel: ObservableObject {
   private let monthContext: SharedMonthContext
   private let addShiftCoordinator: AddShiftCoordinator
   private let draftDefaults: UserDefaults
-  private var eventRangeAnchorDate: Date?
-  private var didEditEventCalendarSelectionSinceEnteringEventMode: Bool = false
-  private var isSyncingCalendarSelectionAcrossModes: Bool = false
-  private var pendingDeepLinkMode: AddShiftMode?
+  @ObservationIgnored private var eventRangeAnchorDate: Date?
+  @ObservationIgnored private var didEditEventCalendarSelectionSinceEnteringEventMode: Bool = false
+  @ObservationIgnored private var isSyncingCalendarSelectionAcrossModes: Bool = false
+  @ObservationIgnored private var pendingDeepLinkMode: AddShiftMode?
 
   // MARK: - Mode State
 
-  @Published internal var mode: AddShiftMode = .single {
+  internal var mode: AddShiftMode = .single {
     didSet {
       guard oldValue != mode else {
         return
@@ -98,7 +100,7 @@ internal final class AddShiftViewModel: ObservableObject {
   // MARK: - Shared State
 
   // swiftlint:disable:next explicit_acl type_contents_order
-  @Published var startTime: Date? {
+  var startTime: Date? {
     didSet {
       // Debounce time changes - schedule recomputation
       schedulePreviewUpdate()
@@ -107,7 +109,7 @@ internal final class AddShiftViewModel: ObservableObject {
     }
   }
   // swiftlint:disable:next explicit_acl type_contents_order
-  @Published var endTime: Date? {
+  var endTime: Date? {
     didSet {
       // Debounce time changes - schedule recomputation
       schedulePreviewUpdate()
@@ -115,21 +117,21 @@ internal final class AddShiftViewModel: ObservableObject {
       scheduleDraftSave()
     }
   }
-  @Published internal var isLoading: Bool = false {
+  internal var isLoading: Bool = false {
     didSet { publishStateToCoordinator() }
   }
-  @Published internal var error: String?
+  internal var error: String?
 
   // MARK: - Event Mode State
 
-  @Published internal var eventNote: String = "" {
+  internal var eventNote: String = "" {
     didSet {
       publishStateToCoordinator()
       scheduleDraftSave()
     }
   }
 
-  @Published internal var isEventAllDay: Bool = false {
+  internal var isEventAllDay: Bool = false {
     didSet {
       guard oldValue != isEventAllDay else {
         return
@@ -163,7 +165,7 @@ internal final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published internal var eventDate: Date = Calendar.current.startOfDay(for: Date()) {
+  internal var eventDate: Date = Calendar.current.startOfDay(for: Date()) {
     didSet {
       guard oldValue != eventDate else {
         return
@@ -182,7 +184,7 @@ internal final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published internal var eventStartDate: Date = Calendar.current.startOfDay(for: Date()) {
+  internal var eventStartDate: Date = Calendar.current.startOfDay(for: Date()) {
     didSet {
       guard oldValue != eventStartDate else {
         return
@@ -198,7 +200,7 @@ internal final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published internal var eventEndDate: Date = Calendar.current.startOfDay(for: Date()) {
+  internal var eventEndDate: Date = Calendar.current.startOfDay(for: Date()) {
     didSet {
       guard oldValue != eventEndDate else {
         return
@@ -208,7 +210,7 @@ internal final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published internal var eventReminderTimes: [Int] = [] {
+  internal var eventReminderTimes: [Int] = [] {
     didSet {
       let normalized: [Int] = LocalEvent.normalizedReminderMinutes(eventReminderTimes)
       guard oldValue != normalized else {
@@ -226,7 +228,7 @@ internal final class AddShiftViewModel: ObservableObject {
     }
   }
 
-  @Published internal var eventReminderAnchorTime: Date? {
+  internal var eventReminderAnchorTime: Date? {
     didSet {
       guard oldValue != eventReminderAnchorTime else {
         return
@@ -237,16 +239,16 @@ internal final class AddShiftViewModel: ObservableObject {
   }
 
   /// Active (non-archived, non-deleted) jobs for the current user.
-  @Published internal private(set) var activeJobs: [Job] = []
+  internal private(set) var activeJobs: [Job] = []
   /// Active job IDs that have the required baseline wage snapshot.
-  @Published internal private(set) var configuredJobIds: Set<String> = []
+  internal private(set) var configuredJobIds: Set<String> = []
 
   /// Number of distinct start/end time pairs the user has used across all shifts.
-  @Published internal private(set) var distinctShiftTimePairCount: Int = 0
+  internal private(set) var distinctShiftTimePairCount: Int = 0
 
   /// Selected job for new shift creation.
   /// Defaults to the user's standard workplace when no valid selection exists.
-  @Published internal var selectedJobId: String? {
+  internal var selectedJobId: String? {
     didSet {
       guard oldValue != selectedJobId else {
         return
@@ -260,7 +262,7 @@ internal final class AddShiftViewModel: ObservableObject {
   // MARK: - Time Input Debouncing
 
   /// Debounce timer for time input changes
-  private var previewUpdateTask: Task<Void, Never>?
+  @ObservationIgnored private var previewUpdateTask: Task<Void, Never>?
 
   /// Guards against applying stale async preview/conflict computations.
   private var previewComputationVersion: UInt64 = 0
@@ -328,7 +330,7 @@ internal final class AddShiftViewModel: ObservableObject {
   // MARK: - Draft Persistence
 
   /// Debounce timer for draft saving
-  private var draftSaveTask: Task<Void, Never>?
+  @ObservationIgnored private var draftSaveTask: Task<Void, Never>?
 
   /// Debounce delay for draft saving (500ms)
   private static let draftSaveDebounceDelay: UInt64 = 500_000_000
@@ -351,27 +353,27 @@ internal final class AddShiftViewModel: ObservableObject {
         lastObservedYear = year
         lastObservedMonth = month
 
-        // Update shared context (this will trigger other tabs)
+        // Update shared context (this will trigger other tabs); displayMonth's getter reads
+        // monthContext's observed properties directly, so views tracking it refresh
+        // automatically without a manual notification.
         monthContext.navigateTo(year: year, month: month)
-
-        // Notify SwiftUI that the view should update
-        objectWillChange.send()
       }
     }
   }
 
   /// Subscription to SharedMonthContext changes
-  private var monthContextCancellable: AnyCancellable?
+  @ObservationIgnored private var monthContextCancellable: AnyCancellable?
 
   /// Subscription to tab bar add action trigger
-  private var addActionCancellable: AnyCancellable?
+  @ObservationIgnored private var addActionCancellable: AnyCancellable?
 
   /// Track the last observed month to detect changes
-  private var lastObservedYear: Int = 0
-  private var lastObservedMonth: Int = 0
+  @ObservationIgnored private var lastObservedYear: Int = 0
+  @ObservationIgnored private var lastObservedMonth: Int = 0
 
-  /// Direction of last navigation (for animations) - synced from SharedMonthContext
-  private(set) var navigationDirection: MonthNavigationDirection?
+  /// Direction of last navigation (for animations). Read live so it changes in the same
+  /// update as the month; a copy made in the month subscription lands a run loop late.
+  var navigationDirection: MonthNavigationDirection? { monthContext.navigationDirection }
 
   // MARK: - Display Properties (from SharedMonthContext)
 
@@ -388,11 +390,11 @@ internal final class AddShiftViewModel: ObservableObject {
   var displayMonthName: String { monthContext.displayMonthName }
 
   /// User-selected currency for display formatting in Add tab UI.
-  @Published private(set) var currency: String = "kr"
+  private(set) var currency: String = "kr"
 
   // MARK: - Single Mode State
 
-  @Published var selectedDates: Set<String> = [] {  // ISO dates (YYYY-MM-DD)
+  var selectedDates: Set<String> = [] {  // ISO dates (YYYY-MM-DD)
     didSet {
       publishStateToCoordinator()
       scheduleDraftSave()
@@ -401,68 +403,64 @@ internal final class AddShiftViewModel: ObservableObject {
 
   // MARK: - Recurring Mode State
 
-  @Published var repeatInterval: Int = 1 {  // 0 = weekly, 1 = biweekly, etc. Default: biweekly
+  var repeatInterval: Int = 1 {  // 0 = weekly, 1 = biweekly, etc. Default: biweekly
     didSet {
       scheduleDraftSave()
       // Update projected dates immediately when interval changes
       updateProjectedRecurringDates()
     }
   }
-  @Published var selectedDays: [String: String] = [:] {  // weekday "0"-"6" -> anchor ISO date
+  var selectedDays: [String: String] = [:] {  // weekday "0"-"6" -> anchor ISO date
     didSet {
       publishStateToCoordinator()
       scheduleDraftSave()
     }
   }
   // swiftlint:disable:next explicit_acl type_contents_order
-  @Published var endCondition: EndCondition? {  // Default: indefinite
+  var endCondition: EndCondition? {  // Default: indefinite
     didSet {
       scheduleDraftSave()
       // Update projected dates immediately when end condition changes
       updateProjectedRecurringDates()
     }
   }
-  @Published var showPreviewSheet = false
-  @Published var showSubmitJobChooser = false
-  @Published var paySetupRequest: AddShiftPaySetupRequest?
+  var showPreviewSheet = false
+  var showSubmitJobChooser = false
+  var paySetupRequest: AddShiftPaySetupRequest?
 
   // MARK: - Cached Data
 
-  /// Triggers view updates when cached data changes
-  /// We use this instead of making cachedShifts @Published to avoid exposing internal data
-  @Published private var cacheVersion: Int = 0
-
-  private var cachedShifts: [ShiftRow] = []
-  private var cachedRecurringShifts: [RecurringShiftRow] = []
-  private var cachedSnapshots: [WageSnapshot] = []
-  private var cachedSettings: UserSettings?
+  @ObservationIgnored private var cachedShifts: [ShiftRow] = []
+  @ObservationIgnored private var cachedRecurringShifts: [RecurringShiftRow] = []
+  @ObservationIgnored private var cachedSnapshots: [WageSnapshot] = []
+  @ObservationIgnored private var cachedSettings: UserSettings?
 
   // MARK: - Performance Optimized Caches
 
   /// Cached calendar display data - computed once per month, not per view update
-  @Published private(set) var cachedDisplayData: CalendarDisplayData?
+  private(set) var cachedDisplayData: CalendarDisplayData?
 
   /// Cached conflict dates - only recomputed when dates or times change
-  @Published private(set) var cachedConflictDatesForCalendar: Set<String> = []
+  private(set) var cachedConflictDatesForCalendar: Set<String> = []
 
   /// Cached preview earnings - only recomputed when selection or times change
-  @Published private(set) var cachedPreviewEarnings: [String: CalendarEarningsData] = [:]
+  private(set) var cachedPreviewEarnings: [String: CalendarEarningsData] = [:]
 
   /// Cached projected recurring dates for calendar display (current month only)
-  @Published private(set) var cachedProjectedRecurringDates: [String] = []
+  private(set) var cachedProjectedRecurringDates: [String] = []
 
   /// Cached earnings per anchor weekday - computed once per anchor, shared by all projected dates
-  @Published private(set) var cachedAnchorEarnings: [String: CalendarEarningsData] = [:]
+  private(set) var cachedAnchorEarnings: [String: CalendarEarningsData] = [:]
 
   // MARK: - Preview Cache (computed only when preview sheet is shown)
 
   /// Cached projected dates for preview sheet - computed once when preview is shown
-  @Published private(set) var cachedProjectedDates: [String] = []
+  private(set) var cachedProjectedDates: [String] = []
   /// Cached conflict dates for preview sheet
-  @Published private(set) var cachedConflictDates: Set<String> = []
+  private(set) var cachedConflictDates: Set<String> = []
 
   /// Prevents reloading the saved draft over live add-state on later tab appearances.
-  private var hasLoadedInitialData = false
+  @ObservationIgnored private var hasLoadedInitialData = false
 
   // MARK: - Navigation Callback
 
@@ -514,8 +512,10 @@ internal final class AddShiftViewModel: ObservableObject {
 
   /// Subscribe to SharedMonthContext changes to reload data when month changes
   private func setupMonthContextSubscription() {
+    // No main-queue hop: SharedMonthContext sends on the main actor, and handling the change
+    // right away gives the calendar its new month and that month's shift times in one update.
+    // A hop draws one frame of the new month without times, which then pop in mid-slide.
     monthContextCancellable = monthContext.monthChanged
-      .receive(on: DispatchQueue.main)
       .sink { [weak self] newMonth in
         guard let self else {
           return
@@ -530,9 +530,6 @@ internal final class AddShiftViewModel: ObservableObject {
         // Update tracking
         lastObservedYear = newMonth.year
         lastObservedMonth = newMonth.month
-
-        // Sync navigation direction from context (for animations)
-        navigationDirection = monthContext.navigationDirection
 
         // Reload shifts and publish the new month's cell data together.
         reloadShiftsForDisplayedMonth()
@@ -1068,10 +1065,6 @@ internal final class AddShiftViewModel: ObservableObject {
       conflictDates: cachedConflictDatesForCalendar
     )
 
-    guard totals.gross > 0 else {
-      return nil
-    }
-
     let baselineTotals = ConflictExclusion.combinedEarnings(
       existingByDate: existingEarnings,
       previewByDate: [:],
@@ -1148,9 +1141,6 @@ internal final class AddShiftViewModel: ObservableObject {
     applyPreselectedDate()
     hasLoadedInitialData = true
     applyPendingDeepLinkMode()
-
-    // Trigger view update now that cached data is loaded
-    cacheVersion += 1
 
     publishStateToCoordinator()
 
@@ -1275,9 +1265,6 @@ internal final class AddShiftViewModel: ObservableObject {
     // Rebuild full display data and previews asynchronously to avoid blocking UI
     scheduleCalendarDisplayRebuild()
     scheduleConflictsAndPreviewsRecompute()
-
-    // Trigger view update for new month's shift indicators
-    cacheVersion += 1
   }
 
   /// Refresh number of distinct start/end pairs used in historical shifts.
@@ -2520,9 +2507,7 @@ internal final class AddShiftViewModel: ObservableObject {
     let is24 = timeString == "24:00"
     let parseable = is24 ? "00:00" : timeString
 
-    let formatter = DateFormatter()
-    formatter.dateFormat = "HH:mm"
-    guard let time = formatter.date(from: parseable) else {
+    guard let time = FormatterCache.hourMinuteFormatter().date(from: parseable) else {
       return nil
     }
 

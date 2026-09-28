@@ -2,6 +2,7 @@
 // swiftlint:disable:previous blanket_disable_command
 #if DEBUG
   import Foundation
+  import Observation
   import os.log
   import SwiftData
 
@@ -12,16 +13,17 @@
   /// Helper utility for testing and validating offline sync functionality
   /// Provides methods to simulate scenarios, inspect state, and log sync operations
   @MainActor
-  final class SyncTestHelper: ObservableObject {
+  @Observable
+  final class SyncTestHelper {
     static let shared = SyncTestHelper()
 
     private let localStore: LocalStore
     private let syncCoordinator: SyncCoordinator
 
-    // MARK: - Published State
+    // MARK: - Observed State
 
     /// Test log entries for inspection
-    @Published private(set) var testLogs: [TestLogEntry] = []
+    private(set) var testLogs: [TestLogEntry] = []
 
     /// Maximum number of log entries to keep
     private let maxLogEntries = 100

@@ -14,8 +14,8 @@
     @State private var isPayReviewExpanded = false
     @State private var payEditorSelection: PayEditorSelection?
     @State private var savedPayDescription = ""
-    @StateObject private var loginModel: LoginViewModel = .init()
-    @StateObject private var signupModel: SignupViewModel = .init()
+    @State private var loginModel: LoginViewModel = .init()
+    @State private var signupModel: SignupViewModel = .init()
 
     private let screen: String =
       ProcessInfo.processInfo.environment["TIDEX_DESIGN_SCREEN"] ?? "home"
@@ -36,7 +36,7 @@
           DesignReviewMoneyCards(screen: screen)
         case "settings":
           SettingsView()
-            .environmentObject(AppCoordinator.shared)
+            .environment(AppCoordinator.shared)
         case "login", "login-accessibility":
           NavigationStack {
             LoginView(viewModel: loginModel, currency: "kr")
@@ -69,11 +69,11 @@
           }
           .sheet(isPresented: $showingShiftEditor) {
             ShiftDetailsSheet(shift: Self.shifts[0], onUpdate: { _ in }, startInEditMode: true)
-              .environmentObject(AppCoordinator.shared)
+              .environment(AppCoordinator.shared)
           }
         case "payroll-breakdown":
           ShiftDetailsSheet(shift: Self.payrollBreakdownShift, jobName: "Harbour")
-            .environmentObject(AppCoordinator.shared)
+            .environment(AppCoordinator.shared)
         case "pay-settings-review", "pay-settings-accessibility":
           paySettingsReview
             .dynamicTypeSize(

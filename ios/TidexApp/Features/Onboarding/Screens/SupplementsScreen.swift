@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Screen for configuring custom supplement rules
 /// Only shown for custom wage users
@@ -28,7 +27,7 @@ struct SupplementsScreen: View {
             if let onBack {
               HStack {
                 Button(action: {
-                  UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                  Haptics.play(.light)
                   onBack()
                 }) {
                   HStack(spacing: Spacing.xxs) {
@@ -97,7 +96,7 @@ struct SupplementsScreen: View {
 
             // Add rule button
             Button(action: {
-              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+              Haptics.play(.medium)
               editingRule = nil
               showingRuleEditor = true
             }) {
@@ -143,7 +142,7 @@ struct SupplementsScreen: View {
         OnboardingButton(
           title: String(localized: primaryButtonTitle),
           action: {
-            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            Haptics.play(.success)
             onContinue()
           }
         )
@@ -207,7 +206,7 @@ private struct SupplementRuleCard: View {
 
       // Edit button
       Button(action: {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        Haptics.play(.light)
         onEdit()
       }) {
         Image(systemName: "pencil")
@@ -227,7 +226,7 @@ private struct SupplementRuleCard: View {
 
       // Delete button
       Button(action: {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        Haptics.play(.medium)
         onDelete()
       }) {
         Image(systemName: "trash")

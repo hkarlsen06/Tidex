@@ -5,13 +5,15 @@
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable required_deinit
 import Foundation
+import Observation
 import SwiftUI
 
 @MainActor
-final class ScreenshotNotificationFeedback: ObservableObject {
-  @Published var showsBubble = false
-  @Published var showsNotifiedIcon = false
-  @Published var bellShakeTrigger = false
+@Observable
+final class ScreenshotNotificationFeedback {
+  var showsBubble = false
+  var showsNotifiedIcon = false
+  var bellShakeTrigger = false
 
   func showBubble() {
     showsNotifiedIcon = false

@@ -3,14 +3,14 @@ import SwiftUI
 /// Reset password screen with native iOS styling
 /// Step 1: Enter email/phone -> Step 2: OTP verification (phone only) -> Step 3: New password
 internal struct ResetPasswordView: View {  // swiftlint:disable:this type_body_length
-  @StateObject private var viewModel: ResetPasswordViewModel
+  @State private var viewModel: ResetPasswordViewModel
   var onNavigateToLogin: (() -> Void)?
 
   init(
     presentationMode: ResetPasswordViewModel.PresentationMode = .standard,
     onNavigateToLogin: (() -> Void)? = nil
   ) {
-    _viewModel = StateObject(
+    _viewModel = State(
       wrappedValue: ResetPasswordViewModel(presentationMode: presentationMode)
     )
     self.onNavigateToLogin = onNavigateToLogin

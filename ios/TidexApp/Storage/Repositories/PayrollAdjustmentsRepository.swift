@@ -1,10 +1,9 @@
-import Combine
 import Foundation
 import os.log
 import SwiftData
 
 @MainActor
-final class PayrollAdjustmentsRepository: ObservableObject {
+final class PayrollAdjustmentsRepository {
   static let shared = PayrollAdjustmentsRepository()
 
   private let localStore: LocalStore

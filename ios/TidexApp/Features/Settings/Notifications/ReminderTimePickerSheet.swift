@@ -80,7 +80,6 @@ struct ReminderTimePickerSheet: View {
           .padding(.vertical, Spacing.xs)
           .background(Color.tidexSurfacePrimary)
           .cornerRadius(CornerRadius.lg)
-          .tidexCardShadow(cornerRadius: CornerRadius.lg)
         }
         .padding(.horizontal)
 
@@ -159,7 +158,7 @@ struct ReminderTimePickerSheet: View {
   @ViewBuilder
   private func deleteButton(action: @escaping () -> Void) -> some View {
     Button(action: {
-      UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+      Haptics.play(.medium)
       action()
     }) {
       HStack(spacing: Spacing.xs) {

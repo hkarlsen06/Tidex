@@ -76,26 +76,6 @@ enum FormatterCache {
     }
   }
 
-  static func dayFormatter(locale: Locale = .current) -> DateFormatter {
-    cached("tidex.dayFormatter.\(locale.identifier)") {
-      let formatter = DateFormatter()
-      formatter.locale = locale
-      formatter.calendar = Calendar.autoupdatingCurrent
-      formatter.dateFormat = "d"
-      return formatter
-    }
-  }
-
-  static func dayMonthFormatter(locale: Locale = .current) -> DateFormatter {
-    cached("tidex.dayMonthFormatter.\(locale.identifier)") {
-      let formatter = DateFormatter()
-      formatter.locale = locale
-      formatter.calendar = Calendar.autoupdatingCurrent
-      formatter.dateFormat = "d MMMM"
-      return formatter
-    }
-  }
-
   static func shiftDateTimeFormatter(timeZone: TimeZone = .current) -> DateFormatter {
     cached("tidex.shiftDateTimeFormatter.\(timeZone.identifier)") {
       let formatter = DateFormatter()
@@ -138,34 +118,12 @@ enum FormatterCache {
     }
   }
 
-  static func shortMonthFormatter(locale: Locale = .current) -> DateFormatter {
-    cached("tidex.shortMonthFormatter.\(locale.identifier)") {
-      let formatter = DateFormatter()
-      formatter.locale = locale
-      formatter.calendar = Calendar.autoupdatingCurrent
-      formatter.dateFormat = "MMM"
-      return formatter
-    }
-  }
-
   static func abbreviatedMonthDayFormatter(locale: Locale = .current) -> DateFormatter {
     cached("tidex.abbreviatedMonthDayFormatter.\(locale.identifier)") {
       let formatter = DateFormatter()
       formatter.locale = locale
       formatter.calendar = Calendar.autoupdatingCurrent
       formatter.dateFormat = "MMM d"
-      return formatter
-    }
-  }
-
-  static func compactCurrencyFormatter(locale: Locale = .current) -> NumberFormatter {
-    cached("tidex.compactCurrencyFormatter.\(locale.identifier)") {
-      let formatter = NumberFormatter()
-      formatter.numberStyle = .decimal
-      formatter.minimumFractionDigits = 0
-      formatter.maximumFractionDigits = 0
-      formatter.locale = locale
-      formatter.groupingSeparator = " "
       return formatter
     }
   }

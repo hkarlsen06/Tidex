@@ -1,5 +1,5 @@
-import Combine
 import Foundation
+import Observation
 import UIKit
 import os.log
 
@@ -29,7 +29,8 @@ internal protocol SharedShiftsCaching: AnyObject {
 extension SharedShiftsRepository: SharedShiftsCaching {}
 
 @MainActor
-internal final class FriendsThreadViewModel: ObservableObject {
+@Observable
+internal final class FriendsThreadViewModel {
   private enum NotificationSource {
     static let localRead: String = "localRead"
   }
@@ -153,30 +154,30 @@ internal final class FriendsThreadViewModel: ObservableObject {
     }
   }
 
-  @Published private(set) var thread: FriendThread
-  @Published private(set) var messages: [FriendMessage] = []
-  @Published private(set) var isLoading = false
-  @Published private(set) var isLoadingOlderMessages = false
-  @Published private(set) var hasMoreHistoricalMessages = true
-  @Published private(set) var isThreadReadOnly = false
-  @Published private(set) var counterpartReadState: FriendThreadState?
-  @Published private(set) var counterpartIsTyping = false
-  @Published private(set) var restoreScrollTargetMessageId: String?
-  @Published private(set) var replyScrollTargetMessageId: String?
-  @Published private(set) var quotedMessagesById: [String: FriendMessage] = [:]
-  @Published private(set) var counterpartShiftPreview: SharerShiftPreview?
-  @Published private var composerState: ComposerState = .normal
-  @Published private(set) var composerFocusRequestToken = 0
-  @Published private(set) var composerValidationMessage: String?
-  @Published private(set) var draftCharacterCount = 0
-  @Published var draft = "" {
+  private(set) var thread: FriendThread
+  private(set) var messages: [FriendMessage] = []
+  private(set) var isLoading = false
+  private(set) var isLoadingOlderMessages = false
+  private(set) var hasMoreHistoricalMessages = true
+  private(set) var isThreadReadOnly = false
+  private(set) var counterpartReadState: FriendThreadState?
+  private(set) var counterpartIsTyping = false
+  private(set) var restoreScrollTargetMessageId: String?
+  private(set) var replyScrollTargetMessageId: String?
+  private(set) var quotedMessagesById: [String: FriendMessage] = [:]
+  private(set) var counterpartShiftPreview: SharerShiftPreview?
+  private var composerState: ComposerState = .normal
+  private(set) var composerFocusRequestToken = 0
+  private(set) var composerValidationMessage: String?
+  private(set) var draftCharacterCount = 0
+  var draft = "" {
     didSet {
       updateDraftValidation(for: draft)
       clearSafetyFilterSendErrorIfResolved(for: draft)
     }
   }
-  @Published var stagedComposerAttachments: [FriendsComposerAttachmentDraft] = []
-  @Published var sendErrorMessage: String?
+  var stagedComposerAttachments: [FriendsComposerAttachmentDraft] = []
+  var sendErrorMessage: String?
 
   var stagedComposerAttachment: FriendsComposerAttachmentDraft? {
     get { stagedComposerAttachments.first }
@@ -185,7 +186,7 @@ internal final class FriendsThreadViewModel: ObservableObject {
 
   let route: FriendChatRoute
 
-  @Published private(set) var viewerUserId: String
+  private(set) var viewerUserId: String
   private let service: any FriendsMessagingServiceProviding
   private let capabilities: any FriendsMessagingCapabilityProviding
   private let shareVisibilityResolver: any FriendsThreadShareVisibilityResolving
@@ -197,26 +198,26 @@ internal final class FriendsThreadViewModel: ObservableObject {
   private let composerDraftStore: FriendsComposerDraftStore
   private let realtimeCoordinator: any FriendsMessagingRealtimeCoordinating
   private let viewerUserIdResolver: () async -> String?
-  private var hasLoaded = false
-  private var loadingQuotedMessageIds: Set<String> = []
-  private var didSendTypingStart = false
-  private var lastTypingStartSentAt: Date?
-  private var localTypingStopTask: Task<Void, Never>?
-  private var localTypingPushTask: Task<Void, Never>?
-  private var lastTypingPushQueuedAt: Date?
-  private var activeThreadCatchUpTask: Task<Void, Never>?
-  private var counterpartTypingTimeoutTask: Task<Void, Never>?
-  private var counterpartTypingStopGraceTask: Task<Void, Never>?
-  private var pendingNotificationTypingUserId: String?
-  private var threadStatesRefreshTask: Task<Void, Never>?
-  private var latestVisibleMessageReadTask: Task<Void, Never>?
-  private var togglingReactionKeys: Set<String> = []
-  private var backgroundSendingMessageIds: Set<String> = []
-  private var suspendedComposerSnapshot: ComposerSnapshot?
-  private var latestVisibleMessageId: String?
-  private var latestCounterpartMessageId: String?
-  private var receivedReactionCountsByMessageId: [String: Int] = [:]
-  private var hasReceivedReactionBaseline = false
+  @ObservationIgnored private var hasLoaded = false
+  @ObservationIgnored private var loadingQuotedMessageIds: Set<String> = []
+  @ObservationIgnored private var didSendTypingStart = false
+  @ObservationIgnored private var lastTypingStartSentAt: Date?
+  @ObservationIgnored private var localTypingStopTask: Task<Void, Never>?
+  @ObservationIgnored private var localTypingPushTask: Task<Void, Never>?
+  @ObservationIgnored private var lastTypingPushQueuedAt: Date?
+  @ObservationIgnored private var activeThreadCatchUpTask: Task<Void, Never>?
+  @ObservationIgnored private var counterpartTypingTimeoutTask: Task<Void, Never>?
+  @ObservationIgnored private var counterpartTypingStopGraceTask: Task<Void, Never>?
+  @ObservationIgnored private var pendingNotificationTypingUserId: String?
+  @ObservationIgnored private var threadStatesRefreshTask: Task<Void, Never>?
+  @ObservationIgnored private var latestVisibleMessageReadTask: Task<Void, Never>?
+  @ObservationIgnored private var togglingReactionKeys: Set<String> = []
+  @ObservationIgnored private var backgroundSendingMessageIds: Set<String> = []
+  @ObservationIgnored private var suspendedComposerSnapshot: ComposerSnapshot?
+  @ObservationIgnored private var latestVisibleMessageId: String?
+  @ObservationIgnored private var latestCounterpartMessageId: String?
+  @ObservationIgnored private var receivedReactionCountsByMessageId: [String: Int] = [:]
+  @ObservationIgnored private var hasReceivedReactionBaseline = false
 
   var composerMode: FriendsThreadComposerMode {
     composerState.mode

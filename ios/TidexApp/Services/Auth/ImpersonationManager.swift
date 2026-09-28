@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import os.log
 import Supabase
 
@@ -10,22 +11,23 @@ private let kMinimumImpersonationReasonLength: Int = 5
 /// Allows admins to temporarily assume the identity of another user for debugging/support.
 /// The admin's original session is stored in Keychain and restored when impersonation ends.
 @MainActor
-final class ImpersonationManager: ObservableObject {
+@Observable
+final class ImpersonationManager {
   static let shared = ImpersonationManager()
 
-  // MARK: - Published State
+  // MARK: - Observed State
 
   /// Whether we are currently impersonating another user
-  @Published private(set) var isImpersonating: Bool = false
+  private(set) var isImpersonating: Bool = false
 
   /// The target user's display name (when impersonating)
-  @Published private(set) var impersonatedUserName: String?
+  private(set) var impersonatedUserName: String?
 
   /// When the impersonation session expires
-  @Published private(set) var expiresAt: Date?
+  private(set) var expiresAt: Date?
 
   /// The impersonation session ID
-  @Published private(set) var sessionId: String?
+  private(set) var sessionId: String?
 
   // MARK: - Private Constants
 

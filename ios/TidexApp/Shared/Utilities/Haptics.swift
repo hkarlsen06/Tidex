@@ -4,6 +4,7 @@
 // swiftlint:disable cyclomatic_complexity explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_magic_numbers sorted_enum_cases vertical_whitespace_between_cases
+import AudioToolbox
 import AVFoundation
 import UIKit
 
@@ -32,9 +33,6 @@ enum Haptics {
   /// Audio players for each sound type
   private static var soundPlayers: [SoundType: AVAudioPlayer] = [:]
 
-  /// Pre-prepared generator for rapid streaming haptics (e.g., token streaming)
-  private static let streamingGenerator = UIImpactFeedbackGenerator(style: .light)
-
   /// Volume level for sound effects (0.0 to 1.0)
   /// Adjust this to control how loud the sounds play
   private static let soundVolume: Float = 0.3
@@ -50,14 +48,9 @@ enum Haptics {
     }
   }
 
-  /// Prepare the streaming haptic generator for rapid haptics (call before streaming starts)
-  static func prepareStreamingHaptics() {
-    streamingGenerator.prepare()
-  }
-
-  /// Play a light haptic for streaming tokens (uses pre-prepared generator for performance)
-  static func playStreamingToken() {
-    streamingGenerator.impactOccurred()
+  /// Play the short system click sound used for lightweight tap feedback.
+  static func playTapSound() {
+    AudioServicesPlaySystemSound(1_104)
   }
 
   /// Preload a specific sound

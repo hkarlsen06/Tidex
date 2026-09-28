@@ -1,9 +1,11 @@
 import Foundation
+import Observation
 import SwiftUI
 
 /// View model for MFA verification screen
 @MainActor
-final class MFAVerifyViewModel: ObservableObject {
+@Observable
+final class MFAVerifyViewModel {
 
   // MARK: - Dependencies
 
@@ -13,16 +15,16 @@ final class MFAVerifyViewModel: ObservableObject {
 
   // MARK: - Published State
 
-  @Published var code: String = ""
-  @Published var isLoading = false
-  @Published var isVerificationComplete = false  // Keeps overlay visible during transition
-  @Published var errorMessage: String?
-  @Published var focusedIndex: Int = 0
+  var code: String = ""
+  var isLoading = false
+  var isVerificationComplete = false  // Keeps overlay visible during transition
+  var errorMessage: String?
+  var focusedIndex: Int = 0
 
   // MARK: - Private State
 
   private var challengeId: String?
-  private var verifyTask: Task<Void, Never>?
+  @ObservationIgnored private var verifyTask: Task<Void, Never>?
 
   // MARK: - Initialization
 

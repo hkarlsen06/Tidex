@@ -8,7 +8,7 @@ struct DataSettingsView: View {
     GridItem(.flexible(), spacing: Spacing.xs),
   ]
 
-  @StateObject private var viewModel = DataSettingsViewModel()
+  @State private var viewModel = DataSettingsViewModel()
 
   var body: some View {
     ScrollView {
@@ -29,6 +29,11 @@ struct DataSettingsView: View {
         // Export buttons
         exportButtonsSection
 
+        // Share the file once it's ready
+        if let shareURL = viewModel.shareURL {
+          readyToShareCard(url: shareURL)
+        }
+
         // About section
         aboutSection
       }
@@ -41,12 +46,31 @@ struct DataSettingsView: View {
     .task {
       await viewModel.loadSettings()
     }
-    .sheet(item: $viewModel.shareURL) { url in
-      ShareSheet(activityItems: [url])
-        .onDisappear {
-          viewModel.dismissShareSheet()
-        }
+  }
+
+  private func readyToShareCard(url: URL) -> some View {
+    HStack(spacing: Spacing.sm) {
+      Image(systemName: "checkmark.circle.fill")
+        .foregroundColor(.tidexSuccess)
+        .accessibilityHidden(true)
+      Text(.dataExportReadyToShare)
+        .font(.tidexSubheadline)
+        .foregroundColor(.tidexTextPrimary)
+      Spacer()
+      ShareLink(item: url) {
+        Label(String(localized: .dataExportShare), systemImage: "square.and.arrow.up")
+      }
+      Button {
+        viewModel.dismissShareSheet()
+      } label: {
+        Image(systemName: "xmark.circle.fill")
+          .foregroundColor(.tidexTextMuted)
+      }
+      .accessibilityLabel(Text(.commonDismiss))
     }
+    .padding(Spacing.sm)
+    .background(Color.tidexSurfaceSecondary)
+    .cornerRadius(CornerRadius.sm)
   }
 
   // MARK: - Syncing Indicator
@@ -132,19 +156,17 @@ struct DataSettingsView: View {
   private func presetLabel(_ preset: ExportPeriodPreset) -> String {
     let now = Date()
     let calendar = Calendar.current
-    let dateFormatter = DateFormatter()
+    let monthFormat = Date.FormatStyle.dateTime.month(.wide)
 
     switch preset {
     case .lastMonth:
       guard let lastMonth = calendar.date(byAdding: .month, value: -1, to: now) else {
         return ""
       }
-      dateFormatter.dateFormat = "MMMM"
-      return dateFormatter.string(from: lastMonth).sentenceCased()
+      return lastMonth.formatted(monthFormat).sentenceCased()
 
     case .currentMonth:
-      dateFormatter.dateFormat = "MMMM"
-      return dateFormatter.string(from: now).sentenceCased()
+      return now.formatted(monthFormat).sentenceCased()
 
     case .lastYear:
       return String(calendar.component(.year, from: now) - 1)
@@ -339,7 +361,6 @@ struct DataSettingsView: View {
       RoundedRectangle(cornerRadius: CornerRadius.lg)
         .fill(Color.tidexSurfacePrimary)
     )
-    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 
   // MARK: - About Section
@@ -358,23 +379,6 @@ struct DataSettingsView: View {
     .padding(.top, Spacing.xs)
   }
 }
-
-// MARK: - Share Sheet
-
-/// Wrapper for UIActivityViewController
-struct ShareSheet: UIViewControllerRepresentable {
-  let activityItems: [Any]
-  var applicationActivities: [UIActivity]?  // swiftlint:disable:this discouraged_optional_collection explicit_acl
-  // swiftlint:disable:this discouraged_optional_collection explicit_acl
-  func makeUIViewController(context _: Context) -> UIActivityViewController {  // swiftlint:disable:this explicit_acl
-    UIActivityViewController(  // swiftlint:disable:this explicit_acl
-      activityItems: activityItems,
-      applicationActivities: applicationActivities
-    )
-  }
-
-  func updateUIViewController(_: UIActivityViewController, context _: Context) {}  // swiftlint:disable:this explicit_acl line_length no_empty_block
-}  // swiftlint:disable:this explicit_acl no_empty_block
 
 // MARK: - Preview
 

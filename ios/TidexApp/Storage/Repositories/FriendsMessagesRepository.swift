@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import os.log
 import SwiftData
@@ -22,7 +21,7 @@ protocol FriendsMessagesRepositoryProviding: AnyObject {
 }
 
 @MainActor
-final class FriendsMessagesRepository: ObservableObject {
+final class FriendsMessagesRepository {
   static let shared = FriendsMessagesRepository()
 
   private let container: ModelContainer

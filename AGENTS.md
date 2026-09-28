@@ -2,6 +2,24 @@
 
 This file provides guidance to coding agents when working with code in this repository.
 
+## Builds and tests: the user runs them (read this first)
+
+Hjalmar builds, runs and tests the app himself in Xcode. What he wants from you is fast iterations: make the change, check it by reading the code, hand it back, and let him run it.
+
+- **Do not build, test or launch anything with Xcode tools unless the user asks for it in this conversation.** No `./scripts/xcode-build-agent.sh`, no `./scripts/xcode-test-agent.sh`, no `xcodebuild`, no simulators. That includes a quick build to check that it compiles, running tests you just wrote, and a final check before handoff.
+- **A task is not a request to build or test.** "Fix X", "add Y" or "refactor Z" means edit the code and hand back. Only "build it", "run the tests" or similar counts.
+- **Allowed without asking:** fast static checks that finish in seconds, such as `swiftlint --quiet` and `rg`.
+- **Still write tests** when the task needs them. Just don't run them.
+- **Handoff:** one or two lines on what you did not verify and what the user should run or check, for example "run `FooTests`" or "check the settings screen in dark mode".
+
+When the user does ask for a build or test:
+
+- Use the wrappers only, never raw `xcodebuild`. They share one machine-wide lock across Tidex, Paeonia, Kvil and Notex. If a run prints `waiting for another agent's xcodebuild`, wait. Do not kill the other run or set `XCODE_AGENT_NO_LOCK=1`.
+- Run only what was asked for, filtered with `-only-testing:<Target>/<Class>` where possible. The test wrapper builds the app itself, so do not run the build wrapper first.
+- Do not run UI tests (`TidexAppUITests`) unless the user asks for UI tests. Unfiltered runs skip them; do not set `XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1` on your own.
+- Do not boot, create, erase or clone simulators, or open Simulator.app. Use the destination the test wrapper picks.
+- `XCODE_AGENT_NICE` and `XCODE_AGENT_JOBS` are for the user to set, not you.
+
 ## Project Overview
 
 A monorepo for the Tidex iOS app and its supporting infrastructure.

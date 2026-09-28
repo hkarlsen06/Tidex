@@ -4,33 +4,6 @@ import AppIntents
 import SwiftUI
 import WidgetKit
 
-// MARK: - Widget Sharer Model (Local copy for widget extension)
-
-/// Lightweight sharer model for widget consumption
-/// Must match the structure written by NativeWidgetStorage in the main app
-private struct WidgetSharer: Codable, Identifiable, Equatable {
-  let id: String
-  let displayName: String
-  let initials: String
-  let showEarnings: Bool
-}
-
-// MARK: - Stored Friend Shift Model (Local copy for widget extension)
-
-/// Friend's shift data stored in App Group
-/// Must match the structure written by NativeWidgetStorage in the main app
-private struct StoredFriendShift: Codable {
-  let sharerId: String
-  let shiftId: String
-  let shiftDate: String
-  let startTime: String
-  let endTime: String
-  let gross: Double
-  let currencySymbol: String?
-  let showEarnings: Bool
-  let status: String
-}
-
 // MARK: - Friend Entity (for Widget Configuration)
 
 struct FriendEntity: AppEntity {
@@ -50,9 +23,6 @@ struct FriendEntity: AppEntity {
 // MARK: - Friend Entity Query
 
 struct FriendEntityQuery: EntityQuery {
-  private let appGroupId = "group.no.tidex.app"
-  private let friendSharersKey = "friend_sharers"
-
   internal func entities(for identifiers: [FriendEntity.ID]) async -> [FriendEntity] {
     let allFriends = await loadFriendsWithAPIFallback()
     return allFriends.filter { identifiers.contains($0.id) }
@@ -97,8 +67,8 @@ struct FriendEntityQuery: EntityQuery {
   }
 
   private func loadFriendsFromAppGroup() -> [FriendEntity] {
-    guard let userDefaults = UserDefaults(suiteName: appGroupId),
-      let jsonString = userDefaults.string(forKey: friendSharersKey),
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults(),
+      let jsonString = userDefaults.string(forKey: WidgetAppGroup.friendSharersKey),
       let data = jsonString.data(using: .utf8),
       let sharers = try? JSONDecoder().decode([WidgetSharer].self, from: data)
     else {
@@ -117,7 +87,7 @@ struct FriendEntityQuery: EntityQuery {
 
   /// Update App Group with fresh friends data for future widget loads
   private func updateAppGroupCache(friends: [FriendWithShift]) {
-    guard let userDefaults = UserDefaults(suiteName: appGroupId) else { return }
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults() else { return }
 
     // Convert to WidgetSharer format
     let sharers = friends.map { friend in
@@ -133,7 +103,7 @@ struct FriendEntityQuery: EntityQuery {
     if let data = try? JSONEncoder().encode(sharers),
       let jsonString = String(data: data, encoding: .utf8)
     {
-      userDefaults.set(jsonString, forKey: friendSharersKey)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.friendSharersKey)
     }
   }
 }
@@ -151,10 +121,7 @@ struct FriendShiftIntent: WidgetConfigurationIntent {
 // MARK: - Timeline Provider
 
 struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
-  private let appGroupId = "group.no.tidex.app"
-  private let friendSharersKey = "friend_sharers"
-  private let friendShiftsKey = "friend_shifts"
-  private let currencyKey = "user_currency"
+  private let helper = ShiftWidgetProviderHelper()
 
   func placeholder(in _: Context) -> FriendShiftWidgetEntry {
     FriendShiftWidgetEntry.placeholder()
@@ -217,7 +184,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
   /// Update App Group cache with fresh data from API
   private func updateAppGroupCache(friends: [FriendWithShift]) {
-    guard let userDefaults = UserDefaults(suiteName: appGroupId) else { return }
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults() else { return }
 
     // Convert to WidgetSharer format and save
     let sharers = friends.map { friend in
@@ -232,11 +199,11 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     if let data = try? JSONEncoder().encode(sharers),
       let jsonString = String(data: data, encoding: .utf8)
     {
-      userDefaults.set(jsonString, forKey: friendSharersKey)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.friendSharersKey)
     }
 
     // Convert to StoredFriendShift format and save
-    let currency = userDefaults.string(forKey: currencyKey) ?? "kr"
+    let currency = userDefaults.string(forKey: WidgetAppGroup.currencyKey) ?? "kr"
 
     let shifts: [StoredFriendShift] = friends.compactMap { friend in
       guard let shiftId = friend.shiftId,
@@ -263,27 +230,19 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     if let data = try? JSONEncoder().encode(shifts),
       let jsonString = String(data: data, encoding: .utf8)
     {
-      userDefaults.set(jsonString, forKey: friendShiftsKey)
+      userDefaults.set(jsonString, forKey: WidgetAppGroup.friendShiftsKey)
     }
   }
 
   // MARK: - Private Helpers
 
-  private func sharedUserDefaults() -> UserDefaults? {
-    guard FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId) != nil
-    else {
-      return nil
-    }
-    return UserDefaults(suiteName: appGroupId)
-  }
-
   private func getStoredCurrency() -> String? {
-    sharedUserDefaults()?.string(forKey: currencyKey)
+    WidgetAppGroup.sharedUserDefaults()?.string(forKey: WidgetAppGroup.currencyKey)
   }
 
   private func loadFriendShift(for friendId: String) -> StoredFriendShift? {
-    guard let userDefaults = sharedUserDefaults(),
-      let jsonString = userDefaults.string(forKey: friendShiftsKey),
+    guard let userDefaults = WidgetAppGroup.sharedUserDefaults(),
+      let jsonString = userDefaults.string(forKey: WidgetAppGroup.friendShiftsKey),
       let data = jsonString.data(using: .utf8),
       let shifts = try? JSONDecoder().decode([StoredFriendShift].self, from: data)
     else {
@@ -348,17 +307,19 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     }
 
     // Determine layout state
-    var (layoutState, daysRemaining) = determineLayoutState(shiftDateString: shiftDate, at: now)
+    var (layoutState, daysRemaining) = helper.determineLayoutState(
+      shiftDateString: shiftDate, at: now)
 
     // Check if shift has started/ended
-    let shiftStarted = hasShiftStarted(shiftDateString: shiftDate, startTime: startTime, at: now)
-    let shiftEnded = hasShiftEnded(
+    let shiftStarted = helper.hasShiftStarted(
+      shiftDateString: shiftDate, startTime: startTime, at: now)
+    let shiftEnded = helper.hasShiftEnded(
       shiftDateString: shiftDate,
       startTime: startTime,
       endTime: endTime,
       at: now
     )
-    let shiftActive = isShiftActive(
+    let shiftActive = helper.isShiftActive(
       shiftDateString: shiftDate,
       startTime: startTime,
       endTime: endTime,
@@ -394,7 +355,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
 
     // Build deep link (use "user" param to match AppCoordinator.handleDeepLink)
     let deepLinkURL = URL(string: "tidex://sharing?user=\(friend.id)&dates=\(shiftDate)")
-    let interval = shiftInterval(
+    let interval = helper.shiftInterval(
       shiftDateString: shiftDate, startTime: startTime, endTime: endTime)
 
     return FriendShiftWidgetEntry(
@@ -418,128 +379,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     )
   }
 
-  // MARK: - Date Parsing & Layout Logic (same as ShiftWidgetProvider)
-
-  private func parseShiftDate(_ dateString: String) -> Date? {
-    let formatter = DateFormatter()
-    formatter.calendar = Calendar(identifier: .gregorian)
-    formatter.locale = Locale(identifier: "en_US_POSIX")
-    formatter.timeZone = TimeZone.current
-    formatter.dateFormat = "yyyy-MM-dd"
-    return formatter.date(from: dateString)
-  }
-
-  /// Build a local Date from shift day + HH:mm, supporting 24:00 as next-day midnight.
-  private func shiftDateTime(shiftDateString: String, time: String) -> Date? {
-    guard let shiftDate = parseShiftDate(shiftDateString) else { return nil }
-
-    let timeComponents = time.split(separator: ":").compactMap { Int($0) }
-    guard timeComponents.count >= 2 else { return nil }
-
-    let rawHour = timeComponents[0]
-    let minute = timeComponents[1]
-    let hour = rawHour == 24 ? 0 : rawHour
-
-    let calendar = Calendar.current
-    var components = calendar.dateComponents([.year, .month, .day], from: shiftDate)
-    components.hour = hour
-    components.minute = minute
-    components.second = 0
-
-    guard var date = calendar.date(from: components) else { return nil }
-    if rawHour == 24 {
-      date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
-    }
-
-    return date
-  }
-
-  private func shiftInterval(shiftDateString: String, startTime: String, endTime: String) -> (
-    start: Date, end: Date
-  )? {
-    guard let start = shiftDateTime(shiftDateString: shiftDateString, time: startTime),
-      var end = shiftDateTime(shiftDateString: shiftDateString, time: endTime)
-    else {
-      return nil
-    }
-
-    if end <= start {
-      end = Calendar.current.date(byAdding: .day, value: 1, to: end) ?? end
-    }
-
-    return (start, end)
-  }
-
-  private func countMidnightCrossings(from startDate: Date, to endDate: Date) -> Int {
-    let calendar = Calendar.current
-    let fromMidnight = calendar.startOfDay(for: startDate)
-    let toMidnight = calendar.startOfDay(for: endDate)
-    let components = calendar.dateComponents([.day], from: fromMidnight, to: toMidnight)
-    return abs(components.day ?? 0)
-  }
-
-  private func hasShiftStarted(shiftDateString: String, startTime: String, at now: Date = Date())
-    -> Bool
-  {
-    guard let shiftStartDateTime = shiftDateTime(shiftDateString: shiftDateString, time: startTime)
-    else { return false }
-    return now >= shiftStartDateTime
-  }
-
-  private func hasShiftEnded(
-    shiftDateString: String, startTime: String, endTime: String, at now: Date = Date()
-  ) -> Bool {
-    guard
-      let (_, shiftEndDateTime) = shiftInterval(
-        shiftDateString: shiftDateString,
-        startTime: startTime,
-        endTime: endTime
-      )
-    else { return false }
-
-    let calendar = Calendar.current
-    guard now >= shiftEndDateTime else { return false }
-    return calendar.isDate(shiftEndDateTime, inSameDayAs: now)
-  }
-
-  /// True while "now" is between start and end (supports cross-midnight).
-  private func isShiftActive(
-    shiftDateString: String, startTime: String, endTime: String, at now: Date = Date()
-  ) -> Bool {
-    guard
-      let interval = shiftInterval(
-        shiftDateString: shiftDateString,
-        startTime: startTime,
-        endTime: endTime
-      )
-    else { return false }
-
-    return now >= interval.start && now < interval.end
-  }
-
-  private func determineLayoutState(shiftDateString: String, at now: Date = Date()) -> (
-    state: WidgetLayoutState, daysRemaining: Int
-  ) {
-    guard let shiftDate = parseShiftDate(shiftDateString) else {
-      return (.empty, 0)
-    }
-
-    let calendar = Calendar.current
-    let todayMidnight = calendar.startOfDay(for: now)
-    let shiftMidnight = calendar.startOfDay(for: shiftDate)
-
-    if shiftMidnight < todayMidnight {
-      let daysAgo = countMidnightCrossings(from: shiftDate, to: now)
-      return (.pastShift, -daysAgo)
-    }
-
-    let daysRemaining = countMidnightCrossings(from: now, to: shiftDate)
-
-    if daysRemaining <= 1 {
-      return (.todayOrTomorrow, daysRemaining)
-    }
-    return (.countdown, daysRemaining)
-  }
+  // MARK: - Date Formatting (parsing & layout logic live in ShiftWidgetProviderHelper)
 
   private func formatShiftDate(_ dateString: String, daysRemaining: Int) -> String {
     guard let shiftDate = parseShiftDate(dateString) else { return dateString }
@@ -554,10 +394,7 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
       if daysAgo == 1 {
         return String(localized: .widgetYesterday)
       }
-      let weekdayFormatter: DateFormatter = .init()
-      weekdayFormatter.locale = appLocale()
-      weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-      return sentenceCased(weekdayFormatter.string(from: shiftDate))
+      return formattedWeekday(shiftDate, style: .abbreviatedDay)
     }
 
     // Today
@@ -573,23 +410,8 @@ struct FriendShiftTimelineProvider: AppIntentTimelineProvider {
     }
 
     // Weekday + day
-    let weekdayFormatter = DateFormatter()
-    weekdayFormatter.locale = appLocale()
-    weekdayFormatter.setLocalizedDateFormatFromTemplate("EEE d")
-    return sentenceCased(weekdayFormatter.string(from: shiftDate))
+    return formattedWeekday(shiftDate, style: .abbreviatedDay)
   }
-}
-
-// MARK: - App Locale Helper
-
-private func sentenceCased(_ text: String) -> String {
-  guard !text.isEmpty else { return text }
-  return text.prefix(1).uppercased(with: appLocale()) + text.dropFirst()
-}
-
-private func appLocale() -> Locale {
-  let identifier = Bundle.main.preferredLocalizations.first ?? Locale.autoupdatingCurrent.identifier
-  return Locale(identifier: identifier)
 }
 
 // MARK: - Initials Circle View

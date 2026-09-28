@@ -1,10 +1,11 @@
-import Combine
 import Foundation
+import Observation
 
 /// View model for the reset password screen
 /// Handles three-step flow: Input -> OTP verification -> New password
 @MainActor
-final class ResetPasswordViewModel: ObservableObject {
+@Observable
+final class ResetPasswordViewModel {
 
   // MARK: - Dependencies
 
@@ -12,18 +13,18 @@ final class ResetPasswordViewModel: ObservableObject {
 
   // MARK: - Published State
 
-  @Published var emailOrPhone: String = ""
-  @Published var otpCode: String = ""
-  @Published var newPassword: String = ""
-  @Published var confirmPassword: String = ""
+  var emailOrPhone: String = ""
+  var otpCode: String = ""
+  var newPassword: String = ""
+  var confirmPassword: String = ""
 
-  @Published var currentStep: ResetStep = .input
-  @Published var isLoading = false
+  var currentStep: ResetStep = .input
+  var isLoading = false
 
-  @Published var errorMessage: String?
-  @Published var successMessage: String?
+  var errorMessage: String?
+  var successMessage: String?
 
-  @Published var fieldErrors = FieldErrors()
+  var fieldErrors = FieldErrors()
 
   // MARK: - Navigation Callback
 
@@ -62,7 +63,7 @@ final class ResetPasswordViewModel: ObservableObject {
   // MARK: - Private State
 
   private let presentationMode: PresentationMode
-  private var authTask: Task<Void, Never>?
+  @ObservationIgnored private var authTask: Task<Void, Never>?
 
   // MARK: - Computed Properties
 

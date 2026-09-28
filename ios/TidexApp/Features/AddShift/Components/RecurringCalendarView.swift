@@ -5,7 +5,7 @@ import SwiftUI
 /// Allows one anchor per weekday (max 7 anchors)
 /// Note: Month navigation is handled by AnimatedMonthHeader in AddShiftView
 internal struct RecurringCalendarView: View {
-  @ObservedObject internal var viewModel: AddShiftViewModel
+  internal var viewModel: AddShiftViewModel
 
   internal var body: some View {
     RecurringAnchorCalendar(

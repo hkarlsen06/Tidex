@@ -105,14 +105,15 @@ struct FriendShiftTiming: Equatable {
   }
 
   /// "Pågår nå" while active, otherwise a countdown to the start or time since the end.
-  func statusText(at now: Date) -> String {
+  func statusText(at now: Date, compact: Bool = false) -> String {
     if status(at: now) == .active {
       return String(localized: .sharingStatusActive)
     }
     return CountdownFormatter.formatRelativeCountdown(
       referenceDate: now > end ? end : start,
       dayBoundaryReferenceDate: start,
-      now: now
+      now: now,
+      compact: compact
     )
   }
 }

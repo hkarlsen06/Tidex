@@ -52,8 +52,8 @@ Detailed payroll computation system:
 
 ```
 Views (SwiftUI)
-    ↓ @Published properties
-View Models (@MainActor, ObservableObject)
+    ↓ Observed properties
+View Models (@MainActor, @Observable)
     ↓ Read/Write operations
 Repositories (Local-First)
     ↓ Fetch/Update
@@ -127,10 +127,9 @@ Supabase (Server)
 ### Adding a New Repository
 
 1. Create file: `Storage/Repositories/MyRepository.swift`
-2. Inherit from ObservableObject
-3. Implement read operations (sync, from SwiftData)
-4. Implement write operations (async, mark dirty)
-5. Accept optional LocalStore for testing
+2. Implement read operations (sync, from SwiftData)
+3. Implement write operations (async, mark dirty)
+4. Accept optional LocalStore for testing
 
 ## Testing
 

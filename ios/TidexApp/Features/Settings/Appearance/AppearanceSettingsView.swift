@@ -4,11 +4,11 @@ import SwiftUI
 /// Allows users to choose between system, light, and dark themes
 struct AppearanceSettingsView: View {
   @Environment(\.colorScheme) private var systemColorScheme
-  @StateObject private var viewModel = AppearanceSettingsViewModel()
+  @State private var viewModel = AppearanceSettingsViewModel()
 
   var body: some View {
-    ScrollView {
-      VStack(alignment: .leading, spacing: Spacing.lg) {
+    Form {
+      Group {
         // Error message
         if let error = viewModel.errorMessage {
           ErrorBanner(message: error, onDismiss: { viewModel.clearError() })
@@ -26,10 +26,9 @@ struct AppearanceSettingsView: View {
         // Calendar content color selection
         calendarContentColorSection
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.lg)
+      .listRowBackground(Color.tidexSurfacePrimary)
     }
-    .background(Color.tidexBackground)
+    .tidexListBackground()
     .navigationTitle(String(localized: .appearanceTitle))
     .navigationBarTitleDisplayMode(.inline)
     .task {
@@ -40,50 +39,39 @@ struct AppearanceSettingsView: View {
   // MARK: - Theme Selection Section
 
   private var themeSelectionSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .appearanceThemeSectionTitle),
-      footer: { currentThemeInfo }
-    ) {
-      ForEach(AppTheme.allCases, id: \.self) { theme in
-        themeOptionRow(theme)
-        if theme != AppTheme.allCases.last {
-          settingsDivider
+    Section {
+      Picker(selection: $viewModel.selectedTheme) {
+        ForEach(AppTheme.allCases, id: \.self) { theme in
+          themeOptionRow(theme).tag(theme)
         }
+      } label: {
+        EmptyView()
       }
+      .pickerStyle(.inline)
+    } header: {
+      Text(String(localized: .appearanceThemeSectionTitle))
+    } footer: {
+      currentThemeInfo
     }
   }
 
   private func themeOptionRow(_ theme: AppTheme) -> some View {
-    let isSelected = viewModel.selectedTheme == theme
+    HStack(spacing: Spacing.md) {
+      // Theme preview
+      themePreview(theme)
 
-    return Button {
-      viewModel.selectedTheme = theme
-    } label: {
-      HStack(spacing: Spacing.md) {
-        // Theme preview
-        themePreview(theme)
+      // Theme info
+      VStack(alignment: .leading, spacing: Spacing.micro) {
+        Text(themeTitle(theme))
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
 
-        // Theme info
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(themeTitle(theme))
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(themeDescription(theme))
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        // Selection indicator
-        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-          .font(.system(size: 24))
-          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+        Text(themeDescription(theme))
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
       }
-      .padding(.vertical, Spacing.xs)
     }
-    .buttonStyle(.plain)
+    .padding(.vertical, Spacing.xs)
   }
 
   private func themePreview(_ theme: AppTheme) -> some View {
@@ -158,44 +146,33 @@ struct AppearanceSettingsView: View {
   // MARK: - Calendar Content Color Section
 
   private var calendarContentColorSection: some View {
-    TidexSettingsSection(title: String(localized: .appearanceCalendarContentColorSectionTitle)) {
-      ForEach(CalendarContentColorStyle.allCases, id: \.self) { style in
-        calendarContentColorOptionRow(style)
-        if style != CalendarContentColorStyle.allCases.last {
-          settingsDivider
+    Section(String(localized: .appearanceCalendarContentColorSectionTitle)) {
+      Picker(selection: $viewModel.selectedCalendarContentColorStyle) {
+        ForEach(CalendarContentColorStyle.allCases, id: \.self) { style in
+          calendarContentColorOptionRow(style).tag(style)
         }
+      } label: {
+        EmptyView()
       }
+      .pickerStyle(.inline)
     }
   }
 
   private func calendarContentColorOptionRow(_ style: CalendarContentColorStyle) -> some View {
-    let isSelected = viewModel.selectedCalendarContentColorStyle == style
+    HStack(spacing: Spacing.md) {
+      calendarContentColorPreview(style)
 
-    return Button {
-      viewModel.selectedCalendarContentColorStyle = style
-    } label: {
-      HStack(spacing: Spacing.md) {
-        calendarContentColorPreview(style)
+      VStack(alignment: .leading, spacing: Spacing.micro) {
+        Text(calendarContentColorTitle(style))
+          .font(.tidexBodyMedium)
+          .foregroundColor(.tidexTextPrimary)
 
-        VStack(alignment: .leading, spacing: Spacing.micro) {
-          Text(calendarContentColorTitle(style))
-            .font(.tidexBodyMedium)
-            .foregroundColor(.tidexTextPrimary)
-
-          Text(calendarContentColorDescription(style))
-            .font(.tidexFootnote)
-            .foregroundColor(.tidexTextSecondary)
-        }
-
-        Spacer()
-
-        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-          .font(.system(size: 24))
-          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+        Text(calendarContentColorDescription(style))
+          .font(.tidexFootnote)
+          .foregroundColor(.tidexTextSecondary)
       }
-      .padding(.vertical, Spacing.xs)
     }
-    .buttonStyle(.plain)
+    .padding(.vertical, Spacing.xs)
   }
 
   private func calendarContentColorPreview(_ style: CalendarContentColorStyle) -> some View {
@@ -294,49 +271,40 @@ struct AppearanceSettingsView: View {
   // MARK: - Startup Tab
 
   private var startupTabSection: some View {
-    TidexSettingsSection(
-      title: String(localized: .appearanceStartupTabSectionTitle),
-      footer: { Text(.appearanceStartupTabSectionDescription) }
-    ) {
-      ForEach(StartupTabOption.allCases, id: \.self) { tab in
-        startupTabRow(tab)
-        if tab != StartupTabOption.allCases.last {
-          settingsDivider
+    Section {
+      Picker(selection: $viewModel.selectedStartupTab) {
+        ForEach(StartupTabOption.allCases, id: \.self) { tab in
+          startupTabRow(tab).tag(tab)
         }
+      } label: {
+        EmptyView()
       }
+      .pickerStyle(.inline)
+    } header: {
+      Text(String(localized: .appearanceStartupTabSectionTitle))
+    } footer: {
+      Text(.appearanceStartupTabSectionDescription)
     }
   }
 
   private func startupTabRow(_ tab: StartupTabOption) -> some View {
-    let isSelected = viewModel.selectedStartupTab == tab
+    HStack(spacing: Spacing.md) {
+      ZStack {
+        RoundedRectangle(cornerRadius: CornerRadius.sm)
+          .fill(Color.tidexBlue.opacity(0.1))
+          .frame(width: 40, height: 40)
 
-    return Button {
-      viewModel.selectedStartupTab = tab
-    } label: {
-      HStack(spacing: Spacing.md) {
-        ZStack {
-          RoundedRectangle(cornerRadius: CornerRadius.sm)
-            .fill(Color.tidexBlue.opacity(0.1))
-            .frame(width: 40, height: 40)
-
-          Image(systemName: startupTabIcon(tab))
-            .font(.tidexBody)
-            .foregroundColor(.tidexBlue)
-        }
-
-        Text(startupTabTitle(tab))
-          .font(.tidexBodyMedium)
-          .foregroundColor(.tidexTextPrimary)
-
-        Spacer()
-
-        Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-          .font(.system(size: 24))
-          .foregroundColor(isSelected ? .tidexBlue : .tidexTextMuted)
+        Image(systemName: startupTabIcon(tab))
+          .font(.tidexBody)
+          .foregroundColor(.tidexBlue)
+          .accessibilityHidden(true)
       }
-      .padding(.vertical, Spacing.xs)
+
+      Text(startupTabTitle(tab))
+        .font(.tidexBodyMedium)
+        .foregroundColor(.tidexTextPrimary)
     }
-    .buttonStyle(.plain)
+    .padding(.vertical, Spacing.xs)
   }
 
   private func startupTabTitle(_ tab: StartupTabOption) -> String {
@@ -368,7 +336,7 @@ struct AppearanceSettingsView: View {
   // MARK: - Dashboard Controls
 
   private var dashboardControlsSection: some View {
-    TidexSettingsSection(title: String(localized: .appearanceDashboardSectionTitle)) {
+    Section(String(localized: .appearanceDashboardSectionTitle)) {
       Toggle(isOn: $viewModel.showDashboardClockButtons) {
         VStack(alignment: .leading, spacing: Spacing.micro) {
           Text(.appearanceDashboardClockButtonsTitle)
@@ -382,10 +350,6 @@ struct AppearanceSettingsView: View {
       }
       .tint(.tidexBlue)
     }
-  }
-
-  private var settingsDivider: some View {
-    TidexSettingsDivider()
   }
 }
 

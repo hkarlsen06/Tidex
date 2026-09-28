@@ -12,7 +12,7 @@ private let logger = Logger(
 /// All reads come from SwiftData; network calls are handled by SyncCoordinator
 /// Automatically triggers sync after mutations for immediate upload
 @MainActor
-final class NotificationPreferencesRepository: ObservableObject {
+final class NotificationPreferencesRepository {
   static let shared = NotificationPreferencesRepository()
 
   private let localStore: LocalStore

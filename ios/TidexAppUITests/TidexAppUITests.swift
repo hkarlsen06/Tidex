@@ -455,6 +455,12 @@ final class TidexAppUITests: XCTestCase {
     // The time fields sit below the event calendar.
     app.scrollViews.firstMatch.swipeUp()
     Thread.sleep(forTimeInterval: 1)
+    // The saved draft can have empty times. Fill both fields first so the deletes below
+    // clear one full time each instead of jumping back to the start field.
+    if start.value as? String != "09:00" || end.value as? String != "17:00" {
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00")).firstMatch
+        .tap()
+    }
     // Four deletes empty "HH:mm"; a fifth would move focus back to the start field.
     let clear = String(repeating: XCUIKeyboardKey.delete.rawValue, count: 4)
     let focused = NSPredicate(format: "hasKeyboardFocus == true")
@@ -498,6 +504,36 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(
       currentMonth.waitForExistence(timeout: defaultTimeout),
       "The second re-tap goes to today")
+  }
+
+  @MainActor
+  func testSelectingADateKeepsTheAddLayoutStill() {
+    let app = makeApp(scenario: "app-store-screenshots")
+    app.launchArguments += ["-defaultStartupTab", "home"]
+    app.launch()
+    openAddShift(in: app)
+    let singleMode = app.buttons["add-shift.mode.single"]
+    XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    singleMode.tap()
+    let start = app.textFields["Start"]
+    XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    // Set times so a selected date gets earnings and the change amount appears.
+    if start.value as? String != "09:00" {
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00")).firstMatch
+        .tap()
+    }
+    Thread.sleep(forTimeInterval: 1)
+    let startTopBefore = start.frame.minY
+
+    // The 23rd has no shift in the fixture, so selecting it adds to the total and shows the change.
+    app.staticTexts["23"].firstMatch.tap()
+    let change = text(containingLabel: "after tax", in: app)
+    XCTAssertTrue(change.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    Thread.sleep(forTimeInterval: 1)
+    XCTAssertEqual(
+      start.frame.minY, startTopBefore, accuracy: 0.5,
+      "Selecting a date must not move the rest of the Add screen")
+    attachAppStoreScreenshot(app, name: "add-selected-date")
   }
 
   @MainActor

@@ -48,9 +48,8 @@ enum TermsVersion {
         return fallbackVersionReference
       }
 
-      let (data, response) = try await withTimeout(seconds: requestTimeout) {
-        try await URLSession.shared.data(from: url)
-      }
+      let request = URLRequest(url: url, timeoutInterval: requestTimeout)
+      let (data, response) = try await URLSession.shared.data(for: request)
 
       guard let httpResponse = response as? HTTPURLResponse,
         httpResponse.statusCode == 200
@@ -73,39 +72,9 @@ enum TermsVersion {
       lastFetchTime = Date()
 
       return latestVersionReference
-    } catch is TimeoutError {
-      logger.warning("Request timed out after \(requestTimeout)s. Using fallback.")
-      return fallbackVersionReference
     } catch {
       logger.warning("Failed to fetch version: \(error.localizedDescription). Using fallback.")
       return fallbackVersionReference
-    }
-  }
-
-  // MARK: - Timeout Helper
-
-  private struct TimeoutError: Error {}
-
-  /// Execute an async operation with a timeout
-  private static func withTimeout<T>(
-    seconds: TimeInterval,
-    operation: @escaping () async throws -> T
-  ) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
-      group.addTask {
-        try await operation()
-      }
-
-      group.addTask {
-        try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-        throw TimeoutError()
-      }
-
-      // Return the first result (either the operation or timeout)
-      // swiftlint:disable:next force_unwrapping
-      let result = try await group.next()!
-      group.cancelAll()
-      return result
     }
   }
 
@@ -177,22 +146,11 @@ enum TermsVersion {
   }
 
   private static func parseVersionReference(_ value: String) -> Date? {
-    let isoFormatter = ISO8601DateFormatter()
-    isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-    if let date = isoFormatter.date(from: value) {
+    if let date = ISO8601Timestamp.date(from: value) {
       return date
     }
 
-    isoFormatter.formatOptions = [.withInternetDateTime]
-    if let date = isoFormatter.date(from: value) {
-      return date
-    }
-
-    let dateFormatter = DateFormatter()
-    dateFormatter.dateFormat = "yyyy-MM-dd"
-    dateFormatter.timeZone = TimeZone(identifier: "UTC")
-    return dateFormatter.date(from: value)
+    return Date.fromISODateString(value, in: TimeZone(identifier: "UTC") ?? .current)
   }
 }
 

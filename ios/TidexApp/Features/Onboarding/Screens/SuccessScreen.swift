@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// Screen 6: Success/Ready
 /// Confirms setup complete, shows save status, transitions to app
@@ -77,7 +76,7 @@ struct SuccessScreen: View {
           OnboardingButton(
             title: buttonTitle,
             action: {
-              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+              Haptics.play(.medium)
               onComplete()
             }
           )
@@ -87,7 +86,7 @@ struct SuccessScreen: View {
           // Retry button (only on error)
           if saveStatus == .error, let onRetry {
             Button(action: {
-              UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+              Haptics.play(.medium)
               onRetry()
             }) {
               Text(.commonRetry)
@@ -107,16 +106,15 @@ struct SuccessScreen: View {
     }
     .onChange(of: saveStatus) { _, newStatus in
       if newStatus == .success {
-        // Play success haptic when save completes
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
         startAnimations()
       } else if newStatus == .error {
-        UINotificationFeedbackGenerator().notificationOccurred(.error)
         withAnimation(.easeOut(duration: 0.2)) {
           contentVisible = true
         }
       }
     }
+    .sensoryFeedback(.success, trigger: saveStatus) { _, newValue in newValue == .success }
+    .sensoryFeedback(.error, trigger: saveStatus) { _, newValue in newValue == .error }
   }
 
   // MARK: - Status Animation
@@ -266,7 +264,7 @@ struct SuccessScreen: View {
 
       // Success haptic
       DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        Haptics.play(.success)
       }
     }
 

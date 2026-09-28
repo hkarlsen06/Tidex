@@ -370,14 +370,14 @@ struct TariffLevel: Identifiable {
 
   var id: Int { level }
 
-  /// Format rate for display (e.g., "184,54 kr/t")
+  /// Format rate for display (e.g., "184,54 kr/t").
+  /// These tariff levels are Norwegian collective-agreement rates denominated in NOK regardless
+  /// of the user's chosen display currency, so the "kr/t" suffix stays fixed; only the number's
+  /// digit grouping and decimal separator follow the app's locale.
   var formattedRate: String {
-    let formatter = NumberFormatter()
-    formatter.numberStyle = .decimal
-    formatter.minimumFractionDigits = 2
-    formatter.maximumFractionDigits = 2
-    formatter.locale = Locale(identifier: "nb_NO")
-    let formatted = formatter.string(from: NSNumber(value: rate)) ?? "\(rate)"
+    let formatted = rate.formatted(
+      .number.precision(.fractionLength(2)).locale(.appLocale)
+    )
     return "\(formatted) kr/t"
   }
 

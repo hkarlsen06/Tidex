@@ -6,7 +6,7 @@ private let logger = Logger(subsystem: "no.tidex.app", category: "SettingsView")
 /// Settings main menu view
 /// Shown as the profile tab, and as a sheet when another screen opens a settings page directly.
 struct SettingsView: View {
-  @EnvironmentObject private var coordinator: AppCoordinator
+  @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.dismiss) private var dismiss
   @Environment(\.layoutDirection) private var layoutDirection
   private let initialDestination: SettingsDestination?
@@ -57,6 +57,10 @@ struct SettingsView: View {
   @State private var paySetupJob: Job?
   /// Follow-up action after a pay setup sheet succeeds.
   @State private var pendingPaySetupAction: PaySetupAction?
+  /// What to present once the pay chooser sheet finishes dismissing.
+  @State private var pendingChooserDismissAction: PendingChooserDismissAction?
+  /// What to present once the pay setup sheet finishes dismissing.
+  @State private var pendingPaySetupDismissAction: PendingPaySetupDismissAction?
   /// Guards against duplicate pay-entry taps while loading job state.
   @State private var isOpeningPaySettings = false
   /// Navigation path for settings subviews
@@ -70,6 +74,18 @@ struct SettingsView: View {
   private enum PaySetupAction: Equatable {
     case openPay
     case setDefault
+  }
+
+  /// What to present once the pay chooser sheet has finished dismissing.
+  private enum PendingChooserDismissAction {
+    case presentJobSetup(Job)
+    case presentAddJobSheet
+  }
+
+  /// What to present once the pay setup sheet has finished dismissing.
+  private enum PendingPaySetupDismissAction {
+    case presentChooser
+    case presentPayScreen(jobId: String)
   }
 
   private struct PayChooserDetailRoute: Identifiable, Hashable {
@@ -150,10 +166,10 @@ struct SettingsView: View {
     .task {
       await loadAccountDetails()
     }
-    .sheet(isPresented: $showPayJobChooser) {
+    .sheet(isPresented: $showPayJobChooser, onDismiss: handleChooserDismiss) {
       payJobChooserSheet
     }
-    .sheet(isPresented: $showPayAddJobSheet) {
+    .sheet(isPresented: $showPayAddJobSheet, onDismiss: handlePaySetupDismiss) {
       AddJobSheet(
         initialCurrency: payChooserCurrency,
         initialPayrollDay: payChooserPayrollDay,
@@ -165,7 +181,7 @@ struct SettingsView: View {
         await completeConfiguredPayJob(input: input)
       }
     }
-    .sheet(item: $paySetupJob) { job in
+    .sheet(item: $paySetupJob, onDismiss: handlePaySetupDismiss) { job in
       JobPaySetupSheet(
         job: job,
         initialCurrency: job.currency,
@@ -196,9 +212,12 @@ struct SettingsView: View {
 
   private var settingsRootView: some View {
     NavigationStack(path: $navigationPath) {
-      ScrollView {
-        VStack(alignment: .leading, spacing: Spacing.lg) {
-          profileCard
+      List {
+        Group {
+          Section {
+            profileCard
+          }
+
           accountSection
           preferencesSection
           workSection
@@ -206,10 +225,10 @@ struct SettingsView: View {
           adminSection
           debugSection
         }
-        .padding(.horizontal, Spacing.md)
-        .padding(.vertical, Spacing.lg)
+        .listRowBackground(Color.tidexSurfacePrimary)
       }
-      .background(Color.tidexBackgroundSecondary)
+      .listStyle(.insetGrouped)
+      .tidexListBackground()
       .navigationTitle(String(localized: .settingsTitle))
       .navigationBarTitleDisplayMode(.large)
       .toolbar {
@@ -275,15 +294,15 @@ struct SettingsView: View {
       }
   }
 
+  private let profileAvatarSize: CGFloat = 64
+
   private var profileCard: some View {
-    Button {
-      navigationPath.append(SettingsDestination.profile)
-    } label: {
+    NavigationLink(value: SettingsDestination.profile) {
       HStack(spacing: Spacing.md) {
         AvatarView(
           url: coordinator.userAvatarUrl,
           initials: userInitials,
-          size: SettingsMenuLayout.profileAvatarSize
+          size: profileAvatarSize
         )
 
         VStack(alignment: .leading, spacing: Spacing.xxs) {
@@ -302,100 +321,65 @@ struct SettingsView: View {
           }
         }
         .layoutPriority(1)
-
-        Spacer(minLength: Spacing.xs)
-
-        Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-          .font(.tidexFootnoteMedium)
-          .foregroundStyle(.tertiary)
       }
-      .padding(Spacing.md)
-      .contentShape(Rectangle())
+      .padding(.vertical, Spacing.xs)
     }
-    .buttonStyle(.plain)
-    .settingsCardSurface()
     .accessibilityIdentifier("settings.profile-card")
   }
 
   private var accountSection: some View {
-    settingsMenuSection(title: String(localized: .settingsMenuAccountLabel)) {
-      SettingsMenuItem(
-        icon: "lock.shield",
-        title: String(localized: .settingsMenuSecurityLabel)
-      ) {
-        navigationPath.append(SettingsDestination.security)
+    Section(String(localized: .settingsMenuAccountLabel)) {
+      NavigationLink(value: SettingsDestination.security) {
+        Label(String(localized: .settingsMenuSecurityLabel), systemImage: "lock.shield")
       }
     }
   }
 
   private var preferencesSection: some View {
-    settingsMenuSection(title: String(localized: .settingsGroupPreferences)) {
-      SettingsMenuItem(
-        icon: "bell",
-        title: String(localized: .settingsMenuNotificationsLabel)
-      ) {
-        navigationPath.append(SettingsDestination.notifications)
+    Section(String(localized: .settingsGroupPreferences)) {
+      NavigationLink(value: SettingsDestination.notifications) {
+        Label(String(localized: .settingsMenuNotificationsLabel), systemImage: "bell")
       }
 
-      settingsMenuDivider
-
-      SettingsMenuItem(
-        icon: "paintpalette",
-        title: String(localized: .settingsMenuAppearanceLabel)
-      ) {
-        navigationPath.append(SettingsDestination.appearance)
+      NavigationLink(value: SettingsDestination.appearance) {
+        Label(String(localized: .settingsMenuAppearanceLabel), systemImage: "paintpalette")
       }
     }
   }
 
   private var workSection: some View {
-    settingsMenuSection(title: String(localized: .settingsGroupWork)) {
-      SettingsMenuItem(
-        icon: "banknote",
-        title: String(localized: .settingsMenuPayLabel),
-        isLoading: isOpeningPaySettings
-      ) {
-        Task {
-          await openPaySettings()
+    Section(String(localized: .settingsGroupWork)) {
+      Button {
+        Task { await openPaySettings() }
+      } label: {
+        HStack {
+          Label(String(localized: .settingsMenuPayLabel), systemImage: "banknote")
+          Spacer()
+          if isOpeningPaySettings {
+            ProgressView()
+          }
         }
       }
+      .disabled(isOpeningPaySettings)
 
-      settingsMenuDivider
-
-      SettingsMenuItem(
-        icon: "repeat.circle",
-        title: String(localized: .settingsMenuRecurringShiftsLabel)
-      ) {
-        navigationPath.append(SettingsDestination.recurringShifts)
+      NavigationLink(value: SettingsDestination.recurringShifts) {
+        Label(String(localized: .settingsMenuRecurringShiftsLabel), systemImage: "repeat.circle")
       }
 
-      settingsMenuDivider
-
-      SettingsMenuItem(
-        icon: "calendar.badge.clock",
-        title: String(localized: .calendarSubscriptionTitle)
-      ) {
-        navigationPath.append(SettingsDestination.calendarSync())
+      NavigationLink(value: SettingsDestination.calendarSync()) {
+        Label(String(localized: .calendarSubscriptionTitle), systemImage: "calendar.badge.clock")
       }
     }
   }
 
   private var supportSection: some View {
-    settingsMenuSection(title: String(localized: .settingsGroupSupportData)) {
-      SettingsMenuItem(
-        icon: "message",
-        title: String(localized: .settingsMenuFeedbackLabel)
-      ) {
-        navigationPath.append(SettingsDestination.feedback)
+    Section(String(localized: .settingsGroupSupportData)) {
+      NavigationLink(value: SettingsDestination.feedback) {
+        Label(String(localized: .settingsMenuFeedbackLabel), systemImage: "message")
       }
 
-      settingsMenuDivider
-
-      SettingsMenuItem(
-        icon: "externaldrive",
-        title: String(localized: .settingsMenuDataLabel)
-      ) {
-        navigationPath.append(SettingsDestination.data)
+      NavigationLink(value: SettingsDestination.data) {
+        Label(String(localized: .settingsMenuDataLabel), systemImage: "externaldrive")
       }
     }
   }
@@ -403,12 +387,12 @@ struct SettingsView: View {
   @ViewBuilder
   private var adminSection: some View {
     if canAccessAdminSettings {
-      settingsMenuSection(title: String(localized: .settingsGroupAdmin)) {
-        SettingsMenuItem(
-          icon: "shield.lefthalf.filled.badge.checkmark",
-          title: String(localized: .settingsMenuAdminLabel)
-        ) {
-          navigationPath.append(SettingsDestination.admin)
+      Section(String(localized: .settingsGroupAdmin)) {
+        NavigationLink(value: SettingsDestination.admin) {
+          Label(
+            String(localized: .settingsMenuAdminLabel),
+            systemImage: "shield.lefthalf.filled.badge.checkmark"
+          )
         }
       }
     }
@@ -417,43 +401,12 @@ struct SettingsView: View {
   @ViewBuilder
   private var debugSection: some View {
     #if DEBUG
-      settingsMenuSection(title: "Debug") {
-        SettingsMenuItem(
-          icon: "ladybug",
-          title: "Debug"
-        ) {
-          navigationPath.append(SettingsDestination.debug)
+      Section("Debug") {
+        NavigationLink(value: SettingsDestination.debug) {
+          Label("Debug", systemImage: "ladybug")
         }
       }
     #endif
-  }
-
-  @ViewBuilder
-  private func settingsMenuSection<Content: View>(
-    title: String? = nil,
-    @ViewBuilder content: () -> Content
-  ) -> some View {
-    VStack(alignment: .leading, spacing: Spacing.xs) {
-      if let title {
-        Text(title)
-          .font(.tidexLabel)
-          .foregroundColor(.tidexTextSecondary)
-          .textCase(nil)
-          .padding(.horizontal, Spacing.sm)
-      }
-
-      VStack(spacing: 0) {
-        content()
-      }
-      .settingsCardSurface()
-    }
-  }
-
-  private var settingsMenuDivider: some View {
-    Divider()
-      .background(Color.tidexSeparator)
-      .padding(
-        .leading, SettingsMenuLayout.iconEdgeInset + SettingsMenuLayout.iconBadgeSize + Spacing.sm)
   }
 
   // MARK: - Actions
@@ -480,6 +433,10 @@ struct SettingsView: View {
       if let jobId {
         navigationPath.append(SettingsDestination.pay(jobId: jobId))
       } else if !presentsPayChooserDirectly {
+        // This deep link can arrive while MainTabView is still switching to the Profile
+        // tab (and possibly dismissing an unrelated sheet), which owns that transition.
+        // There's no local dismiss/completion to hook into, so wait it out before
+        // presenting the chooser sheet on top.
         Task {
           try? await Task.sleep(nanoseconds: 350_000_000)
           await openPaySettings()
@@ -631,10 +588,7 @@ struct SettingsView: View {
       pendingPaySetupAction = nil
       refreshPayJobLists(for: userId)
       refreshPayChooserDefaults(for: userId)
-
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-        presentPayChooserPayScreen(jobId: configuredJob.id)
-      }
+      pendingPaySetupDismissAction = .presentPayScreen(jobId: configuredJob.id)
 
       Haptics.play(.success)
       return true
@@ -656,9 +610,49 @@ struct SettingsView: View {
   }
 
   private func openAddPayJob() {
+    presentAfterChooserDismiss(.presentAddJobSheet)
+  }
+
+  /// Presents `action` once the pay chooser sheet dismisses. When the chooser is the
+  /// screen's root (deep-linked directly, so there's no sheet to dismiss), this presents
+  /// immediately instead of waiting on `onDismiss`, which never fires in that mode.
+  private func presentAfterChooserDismiss(_ action: PendingChooserDismissAction) {
+    guard !presentsPayChooserDirectly else {
+      applyChooserDismissAction(action)
+      return
+    }
+    pendingChooserDismissAction = action
     showPayJobChooser = false
-    DispatchQueue.main.async {
+  }
+
+  /// Presents whatever the pay chooser sheet was dismissed to make way for.
+  private func handleChooserDismiss() {
+    guard let action = pendingChooserDismissAction else { return }
+    pendingChooserDismissAction = nil
+    applyChooserDismissAction(action)
+  }
+
+  private func applyChooserDismissAction(_ action: PendingChooserDismissAction) {
+    switch action {
+    case .presentJobSetup(let job):
+      paySetupJob = job
+
+    case .presentAddJobSheet:
       showPayAddJobSheet = true
+    }
+  }
+
+  /// Presents whatever the pay setup sheet was dismissed to make way for.
+  private func handlePaySetupDismiss() {
+    guard let action = pendingPaySetupDismissAction else { return }
+    pendingPaySetupDismissAction = nil
+
+    switch action {
+    case .presentChooser:
+      showPayJobChooser = true
+
+    case .presentPayScreen(let jobId):
+      presentPayChooserPayScreen(jobId: jobId)
     }
   }
 
@@ -826,10 +820,7 @@ struct SettingsView: View {
 
   private func beginPaySetup(for job: Job, action: PaySetupAction) {
     pendingPaySetupAction = action
-    showPayJobChooser = false
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-      paySetupJob = job
-    }
+    presentAfterChooserDismiss(.presentJobSetup(job))
   }
 
   private func completePaySetup(for job: Job, input: JobPaySetupInput) async -> Bool {
@@ -864,16 +855,12 @@ struct SettingsView: View {
         selectedPayChooserJobId = configuredJob.id
         refreshPayJobLists(for: userId)
         pendingPaySetupAction = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-          showPayJobChooser = true
-        }
+        pendingPaySetupDismissAction = .presentChooser
 
       case .openPay, .none:
         selectedPayChooserJobId = configuredJob.id
         pendingPaySetupAction = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-          presentPayChooserPayScreen(jobId: configuredJob.id)
-        }
+        pendingPaySetupDismissAction = .presentPayScreen(jobId: configuredJob.id)
       }
 
       Haptics.play(.success)
@@ -1371,8 +1358,6 @@ private struct RecurringShiftsSettingsView: View {
   @State private var isLoading = true
   @State private var errorMessage: String?
 
-  private let impactHaptic = UIImpactFeedbackGenerator(style: .light)
-
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: Spacing.mlg) {
@@ -1431,6 +1416,9 @@ private struct RecurringShiftsSettingsView: View {
       .presentationDetents([.large])
       .presentationDragIndicator(.visible)
     }
+    .sensoryFeedback(.impact(weight: .light), trigger: recurringShiftToEdit) { _, new in
+      new != nil
+    }
   }
 
   private var headerSection: some View {
@@ -1462,14 +1450,12 @@ private struct RecurringShiftsSettingsView: View {
     .padding(Spacing.md)
     .background(Color.tidexSurfacePrimary)
     .cornerRadius(CornerRadius.lg)
-    .tidexCardShadow(cornerRadius: CornerRadius.lg)
   }
 
   private func recurringShiftRow(_ recurring: RecurringShiftRow) -> some View {
     let exclusionCount = recurring.effectiveExclusions.count
 
     return Button {
-      impactHaptic.impactOccurred()
       recurringShiftToEdit = recurring
     } label: {
       VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -1609,100 +1595,7 @@ private struct RecurringShiftsSettingsView: View {
   }
 
   private func repeatLabel(for repeatInterval: Int) -> String {
-    if repeatInterval == 0 {
-      return String(localized: .addShiftEveryWeek)
-    }
-    return String(localized: .addShiftEveryNWeeks(repeatInterval + 1))
-  }
-}
-
-// MARK: - Settings Menu Item
-
-private enum SettingsMenuLayout {
-  static let rowHeight: CGFloat = 56
-  static let iconBadgeSize: CGFloat = 38
-  static var iconEdgeInset: CGFloat { (rowHeight - iconBadgeSize) / 2 }
-  static let profileAvatarSize: CGFloat = 64
-}
-
-/// A single settings menu item with colored icon background, title, and chevron
-/// Designed for use inside a List section (iOS Settings style)
-struct SettingsMenuItem: View {
-  let icon: String
-  let title: String
-  var isLoading: Bool = false
-  let action: () -> Void
-
-  @Environment(\.layoutDirection) private var layoutDirection
-
-  var body: some View {
-    Button(action: action) {
-      HStack(spacing: Spacing.sm) {
-        SettingsRowIcon(
-          systemName: icon,
-          foregroundColor: .tidexTextSecondary,
-          backgroundColor: .clear
-        )
-
-        Text(title)
-          .font(.tidexBody)
-          .foregroundColor(.tidexTextPrimary)
-          .fixedSize(horizontal: false, vertical: true)
-
-        Spacer()
-
-        if isLoading {
-          ProgressView()
-            .controlSize(.small)
-            .tint(.tidexBlue)
-        } else {
-          Image(systemName: layoutDirection == .rightToLeft ? "chevron.left" : "chevron.right")
-            .font(.tidexFootnoteMedium)
-            .foregroundStyle(.tertiary)
-        }
-      }
-      .frame(minHeight: SettingsMenuLayout.rowHeight)
-      .padding(.leading, SettingsMenuLayout.iconEdgeInset)
-      .padding(.trailing, Spacing.md)
-      .contentShape(Rectangle())
-    }
-    .buttonStyle(.plain)
-    .disabled(isLoading)
-  }
-}
-
-private struct SettingsCardSurfaceModifier: ViewModifier {
-  func body(content: Content) -> some View {
-    content
-      .background(Color.tidexSurfacePrimary)
-      .clipShape(RoundedRectangle(cornerRadius: CornerRadius.xxl, style: .continuous))
-  }
-}
-
-extension View {
-  fileprivate func settingsCardSurface() -> some View {
-    modifier(SettingsCardSurfaceModifier())
-  }
-}
-
-private struct SettingsRowIcon: View {
-  let systemName: String
-  var foregroundColor: Color = .tidexTextPrimary
-  var backgroundColor: Color = .tidexSurfaceSecondary
-  private let glyphBoxSize: CGFloat = 18
-
-  var body: some View {
-    Image(systemName: systemName)
-      .resizable()
-      .scaledToFit()
-      .foregroundColor(foregroundColor)
-      .frame(width: glyphBoxSize, height: glyphBoxSize)
-      .frame(width: SettingsMenuLayout.iconBadgeSize, height: SettingsMenuLayout.iconBadgeSize)
-      .background(
-        RoundedRectangle(cornerRadius: CornerRadius.xs, style: .continuous)
-          .fill(backgroundColor)
-      )
-      .accessibilityHidden(true)
+    String(localized: .addShiftEveryNWeeks(repeatInterval + 1))
   }
 }
 
@@ -1710,5 +1603,5 @@ private struct SettingsRowIcon: View {
 
 #Preview {
   SettingsView()
-    .environmentObject(AppCoordinator.shared)
+    .environment(AppCoordinator.shared)
 }
