@@ -1128,7 +1128,10 @@ struct SettingsView: View {
           ProgressView()
             .controlSize(.small)
         } else {
-          payJobBadges(job, isDefault: isDefault)
+          JobStatusBadges(
+            isDefault: isDefault,
+            requiresPaySetup: !payConfiguredJobIds.contains(job.id)
+          )
             .layoutPriority(2)
         }
 
@@ -1171,45 +1174,6 @@ struct SettingsView: View {
     .contextMenu {
       archivedPayJobActions(job)
     }
-  }
-
-  @ViewBuilder
-  private func payJobBadges(_ job: Job, isDefault: Bool) -> some View {
-    HStack(spacing: Spacing.xs) {
-      if isDefault {
-        payJobBadge(
-          title: String(localized: .settingsPayChooseJobDefaultBadge),
-          foregroundColor: .tidexBlue,
-          backgroundColor: .tidexBlue.opacity(0.14)
-        )
-      }
-
-      if !payConfiguredJobIds.contains(job.id) {
-        payJobBadge(
-          title: String(localized: .settingsPaySetupRequiredBadge),
-          foregroundColor: .tidexWarning,
-          backgroundColor: .tidexWarning.opacity(0.14)
-        )
-      }
-    }
-    .fixedSize(horizontal: true, vertical: false)
-  }
-
-  private func payJobBadge(
-    title: String,
-    foregroundColor: Color,
-    backgroundColor: Color
-  ) -> some View {
-    Text(title)
-      .font(.tidexCaptionStrong)
-      .foregroundColor(foregroundColor)
-      .lineLimit(1)
-      .truncationMode(.tail)
-      .fixedSize(horizontal: true, vertical: false)
-      .padding(.horizontal, Spacing.xsm)
-      .padding(.vertical, Spacing.xxs)
-      .background(backgroundColor)
-      .clipShape(Capsule())
   }
 
   @ViewBuilder

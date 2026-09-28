@@ -529,8 +529,8 @@ struct DashboardView: View {  // swiftlint:disable:this explicit_acl explicit_to
         .presentationDragIndicator(.visible)
       }
       .sheet(isPresented: $showClockInJobChooser) {
-        DashboardClockJobChooserSheet(
-          initialJobs: clockInJobOptions,
+        JobChooserSheet(
+          jobs: clockInJobOptions,
           loadJobs: {
             await viewModel.clockSelectableJobs()
           },
@@ -1866,8 +1866,9 @@ private struct ClockOutReviewSheet: View {
         await ensureJobsLoaded()
       }
       .sheet(isPresented: $showJobChooser) {
-        DashboardClockJobChooserSheet(
-          initialJobs: availableJobs,
+        JobChooserSheet(
+          jobs: availableJobs,
+          selectedJobId: selectedJobId,
           onSelect: { jobId in
             selectedJobId = jobId
             showJobChooser = false
@@ -1921,114 +1922,6 @@ private struct ClockOutReviewSheet: View {
     availableJobs = loadedJobs
     if selectedJobId == nil {
       selectedJobId = loadedJobs.first(where: \.is_default)?.id ?? loadedJobs.first?.id
-    }
-  }
-}
-
-private struct DashboardClockJobChooserSheet: View {
-  let loadJobs: (() async -> [Job])?
-  let onSelect: (String) -> Void
-  let onCancel: () -> Void
-
-  @State private var jobs: [Job]
-  @State private var isLoading: Bool
-
-  init(  // swiftlint:disable:this type_contents_order
-    initialJobs: [Job],
-    loadJobs: (() async -> [Job])? = nil,
-    onSelect: @escaping (String) -> Void,
-    onCancel: @escaping () -> Void
-  ) {
-    self.loadJobs = loadJobs
-    self.onSelect = onSelect
-    self.onCancel = onCancel
-    _jobs = State(initialValue: initialJobs)
-    _isLoading = State(initialValue: initialJobs.isEmpty && loadJobs != nil)
-  }
-
-  private var detentHeight: CGFloat {
-    let visibleRows = max(1, min(jobs.count, 4))  // swiftlint:disable:this explicit_type_interface no_magic_numbers
-    return CGFloat(visibleRows) * 70 + 120  // swiftlint:disable:this no_magic_numbers
-  }
-
-  var body: some View {
-    NavigationStack {  // swiftlint:disable:this closure_body_length
-      ScrollView {  // swiftlint:disable:this closure_body_length
-        Group {  // swiftlint:disable:this closure_body_length
-          if isLoading {
-            VStack(spacing: Spacing.sm) {
-              ProgressView()
-              Text(.commonLoading)
-                .font(.tidexFootnote)
-                .foregroundColor(.tidexTextSecondary)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.lg)
-          } else {
-            VStack(spacing: Spacing.sm) {
-              ForEach(jobs, id: \.id) { job in
-                Button {
-                  onSelect(job.id)
-                } label: {
-                  HStack(spacing: Spacing.sm) {
-                    WorkplaceNameText(
-                      name: job.name,
-                      colorHex: job.color,
-                      font: .tidexBodyMedium,
-                      fallbackBadgeColor: .tidexBlue
-                    )
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")  // swiftlint:disable:this accessibility_label_for_image
-                      .font(.tidexCaptionRegular)
-                      .foregroundColor(.tidexTextMuted)
-                  }
-                  .padding(.horizontal, Spacing.md)
-                  .padding(.vertical, Spacing.md)
-                  .frame(maxWidth: .infinity, alignment: .leading)
-                  .background(Color.tidexSurfaceSecondary)
-                  .clipShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-                  .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
-              }
-            }
-          }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.md)
-      }
-      .scrollIndicators(.hidden)
-      .background(Color.tidexBackground)
-      .navigationTitle(String(localized: .settingsPayChooseJobTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            onCancel()
-          }
-        }
-      }
-    }
-    .task {
-      await ensureJobsLoaded()
-    }
-    .presentationDetents([.height(detentHeight)])
-    .presentationDragIndicator(.visible)
-  }
-
-  private func ensureJobsLoaded() async {
-    guard jobs.isEmpty, let loadJobs else { return }  // swiftlint:disable:this conditional_returns_on_newline
-    let loadedJobs = await loadJobs()  // swiftlint:disable:this explicit_type_interface
-    jobs = loadedJobs
-    isLoading = false
-
-    if loadedJobs.count == 1, let onlyJobId = loadedJobs.first?.id {
-      onSelect(onlyJobId)
     }
   }
 }

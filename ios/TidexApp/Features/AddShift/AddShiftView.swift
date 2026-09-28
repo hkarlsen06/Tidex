@@ -290,19 +290,19 @@ struct AddShiftView: View {
         showPaySettings = true
       }
     ) {
-      AddShiftJobChooserSheet(
+      JobChooserSheet(
         jobs: viewModel.submissionJobs,
         configuredJobIds: viewModel.configuredJobIds,
-        onSelect: { jobId in
-          viewModel.selectJobForShiftCreation(jobId)
-          viewModel.dismissJobSelection()
-        },
         onAddJob: {
           viewModel.dismissJobSelection()
           showAddJobSheet = true
         },
         onOpenSettings: {
           openJobsAndPaySettingsAfterPickerDismiss = true
+          viewModel.dismissJobSelection()
+        },
+        onSelect: { jobId in
+          viewModel.selectJobForShiftCreation(jobId)
           viewModel.dismissJobSelection()
         },
         onCancel: {
@@ -885,162 +885,6 @@ private struct EventContent: View {
       RoundedRectangle(cornerRadius: CornerRadius.xxl)
         .fill(Color.tidexSurfacePrimary)
     )
-  }
-}
-
-private struct AddShiftJobChooserSheet: View {
-  let jobs: [Job]
-  let configuredJobIds: Set<String>
-  let onSelect: (String) -> Void
-  let onAddJob: () -> Void
-  let onOpenSettings: () -> Void
-  let onCancel: () -> Void
-
-  private var detentHeight: CGFloat {
-    let visibleRows = max(2, min(jobs.count + 1, 5))
-    return CGFloat(visibleRows) * 78 + 128
-  }
-
-  var body: some View {
-    NavigationStack {
-      ScrollView {
-        VStack(spacing: Spacing.sm) {
-          Button {
-            onAddJob()
-          } label: {
-            HStack(spacing: Spacing.sm) {
-              Image(systemName: "plus.circle.fill")
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexBlue)
-
-              Text(.settingsPayAddJobCta)
-                .font(.tidexBodyMedium)
-                .foregroundColor(.tidexTextPrimary)
-
-              Spacer()
-            }
-            .padding(.horizontal, Spacing.md)
-            .padding(.vertical, Spacing.md)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .tidexRowSurface(cornerRadius: CornerRadius.lg)
-            .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-          }
-          .buttonStyle(.plain)
-          .frame(maxWidth: .infinity)
-
-          ForEach(jobs, id: \.id) { job in
-            Button {
-              onSelect(job.id)
-            } label: {
-              HStack(spacing: Spacing.sm) {
-                WorkplaceNameText(
-                  name: job.name,
-                  colorHex: job.color,
-                  font: .tidexBodyMedium,
-                  fallbackBadgeColor: .tidexBlue,
-                  maxTextWidth: 178,
-                  badgeCornerRadius: CornerRadius.md,
-                  badgeHorizontalPadding: Spacing.sm,
-                  badgeVerticalPadding: Spacing.xs
-                )
-                .layoutPriority(1)
-
-                Spacer(minLength: Spacing.xs)
-
-                AddShiftJobStatusBadges(
-                  isDefault: job.is_default,
-                  requiresPaySetup: !configuredJobIds.contains(job.id)
-                )
-                .layoutPriority(2)
-
-                Image(systemName: "chevron.right")
-                  .font(.tidexCaptionRegular)
-                  .foregroundColor(.tidexTextMuted)
-                  .fixedSize()
-              }
-              .padding(.horizontal, Spacing.md)
-              .padding(.vertical, Spacing.md)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .tidexRowSurface(cornerRadius: CornerRadius.lg)
-              .contentShape(RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity)
-          }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, Spacing.md)
-        .padding(.top, Spacing.sm)
-        .padding(.bottom, Spacing.md)
-      }
-      .scrollIndicators(.hidden)
-      .background(Color.tidexBackground)
-      .navigationTitle(String(localized: .settingsPayChooseJobTitle))
-      .navigationBarTitleDisplayMode(.inline)
-      .toolbar {
-        ToolbarItem(placement: .cancellationAction) {
-          Button(String(localized: .commonCancel)) {
-            onCancel()
-          }
-        }
-
-        ToolbarItem(placement: .topBarTrailing) {
-          Button {
-            onOpenSettings()
-          } label: {
-            Image(systemName: "gearshape")
-          }
-          .accessibilityLabel(Text(.settingsMenuPayLabel))
-        }
-      }
-    }
-    .presentationDetents([.height(detentHeight)])
-    .presentationDragIndicator(.visible)
-  }
-}
-
-private struct AddShiftJobStatusBadges: View {
-  let isDefault: Bool
-  let requiresPaySetup: Bool
-
-  var body: some View {
-    HStack(spacing: Spacing.xs) {
-      if isDefault {
-        AddShiftJobStatusBadge(
-          title: String(localized: .settingsPayChooseJobDefaultBadge),
-          foregroundColor: .tidexBlue,
-          backgroundColor: .tidexBlue.opacity(0.14)
-        )
-      }
-
-      if requiresPaySetup {
-        AddShiftJobStatusBadge(
-          title: String(localized: .settingsPaySetupRequiredBadge),
-          foregroundColor: .tidexWarning,
-          backgroundColor: .tidexWarning.opacity(0.14)
-        )
-      }
-    }
-    .fixedSize(horizontal: true, vertical: false)
-  }
-}
-
-private struct AddShiftJobStatusBadge: View {
-  let title: String
-  let foregroundColor: Color
-  let backgroundColor: Color
-
-  var body: some View {
-    Text(title)
-      .font(.tidexCaptionStrong)
-      .foregroundColor(foregroundColor)
-      .lineLimit(1)
-      .truncationMode(.tail)
-      .fixedSize(horizontal: true, vertical: false)
-      .padding(.horizontal, Spacing.xsm)
-      .padding(.vertical, Spacing.xxs)
-      .background(backgroundColor)
-      .clipShape(Capsule())
   }
 }
 

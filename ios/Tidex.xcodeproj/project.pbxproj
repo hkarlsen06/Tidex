@@ -53,6 +53,7 @@
 		52E5C48354F6DFB96205FB31 /* PayrollAdjustmentCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFFDB9FCC210711C89BECC5E /* PayrollAdjustmentCalculatorTests.swift */; };
 		54F4461E60171452C47629DE /* SMSUnavailableAuthTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98EADBE6776C3205FCE196FA /* SMSUnavailableAuthTests.swift */; };
 		56EFCBFF1B16E496DCBB7418 /* StatsServiceCurrencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6595302ED840034D4E34591 /* StatsServiceCurrencyTests.swift */; };
+		599820B3B57832A51B3582C1 /* ICSShiftParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 694575EF01410FC7E8B1ED9E /* ICSShiftParserTests.swift */; };
 		614F000A48D360E310B23368 /* PayrollEngineDateLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0565ABB83841254593809DC9 /* PayrollEngineDateLogicTests.swift */; };
 		6203D73C76B6C0769010928A /* RecurringAnchorSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C3AEC90755C61373FD2D6F4 /* RecurringAnchorSelectionTests.swift */; };
 		67E4A33E30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */; };
@@ -72,7 +73,6 @@
 		91106E689CB197BE16533EF4 /* PayrollTotalsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C644A5A93C12DDD06C7136 /* PayrollTotalsTests.swift */; };
 		93F2CFD0DE7203A60CAAB352 /* PayPeriodTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A3A01F6AB17A746B12FFEB1 /* PayPeriodTests.swift */; };
 		969F64792CB12C677FAEBA0A /* AdminAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECC72DB88ADB99743AF1F1DA /* AdminAPITests.swift */; };
-		599820B3B57832A51B3582C1 /* ICSShiftParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 694575EF01410FC7E8B1ED9E /* ICSShiftParserTests.swift */; };
 		9B92592ECD790DEF2F49BFA8 /* TemporaryClockSessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D8D7241D325341331A471CA /* TemporaryClockSessionStoreTests.swift */; };
 		9FB74791B62FBB9668D255E5 /* FriendsThreadViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CBA8DBD0E3907C5C8593B4 /* FriendsThreadViewModelTests.swift */; };
 		A0B106063072000000000001 /* StatsServiceCachingFingerprintTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0B106063072000000000002 /* StatsServiceCachingFingerprintTests.swift */; };
@@ -83,7 +83,6 @@
 		A7F3C2D14E5B40A1B2C3D4E5 /* AddFriendSheetHiddenPeopleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7F3C2D14E5B40A1B2C3D4E6 /* AddFriendSheetHiddenPeopleTests.swift */; };
 		A86AE5652DBD6465CB0DDC19 /* ShiftCardAmountAnimationFallbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B8BD21DB21AE8305C882A4F /* ShiftCardAmountAnimationFallbackTests.swift */; };
 		A9B8C7D63041ABCD00A1B2C3 /* OnboardingSaveManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */; };
-		FA11E1000000000000000001 /* OnboardingFunnelRecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA11E1000000000000000002 /* OnboardingFunnelRecorderTests.swift */; };
 		AA31C0013051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0023051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift */; };
 		AA31C0033051222200B4C5D6 /* EventReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */; };
 		AA31C0053051222200B4C5D6 /* RecurringShiftProjectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */; };
@@ -118,6 +117,7 @@
 		F673BFD095B29F66F51AADEB /* PauseWindowSupportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01E35CE4061C4F93FBD8F872 /* PauseWindowSupportTests.swift */; };
 		F7C518BFF353DDA1605E05BE /* ImageCacheInvalidationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADFD10634AF1477AAE69CC27 /* ImageCacheInvalidationTests.swift */; };
 		F821E1003092000000000001 /* NotificationPermissionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F821E1003092000000000002 /* NotificationPermissionTests.swift */; };
+		FA11E1000000000000000001 /* OnboardingFunnelRecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA11E1000000000000000002 /* OnboardingFunnelRecorderTests.swift */; };
 		FD26DD868C7656CD8CD4C4DD /* ClockSessionRulesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7074096369E0F26F206BF5C /* ClockSessionRulesTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -205,7 +205,6 @@
 		33275F166F2F09029A5C1A22 /* EventDetailsSummaryBuilderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventDetailsSummaryBuilderTests.swift; sourceTree = "<group>"; };
 		359D5AFDFCA85F02777DC7FA /* ChartSelectionSnappingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ChartSelectionSnappingTests.swift; sourceTree = "<group>"; };
 		3A3A01F6AB17A746B12FFEB1 /* PayPeriodTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayPeriodTests.swift; sourceTree = "<group>"; };
-		694575EF01410FC7E8B1ED9E /* ICSShiftParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ICSShiftParserTests.swift; sourceTree = "<group>"; };
 		3F21A0B13061411100A1B2C4 /* FriendCardMessagePreviewTimestampFormatterTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendCardMessagePreviewTimestampFormatterTests.swift; sourceTree = "<group>"; };
 		3FDD235FEE994CE22FFBC5F8 /* AuthErrorTranslationsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AuthErrorTranslationsTests.swift; sourceTree = "<group>"; };
 		45FACC6CA659ACE3AE2483B9 /* FriendsChatMessageGroupingTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FriendsChatMessageGroupingTests.swift; sourceTree = "<group>"; };
@@ -218,6 +217,7 @@
 		5B8BD21DB21AE8305C882A4F /* ShiftCardAmountAnimationFallbackTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ShiftCardAmountAnimationFallbackTests.swift; sourceTree = "<group>"; };
 		5D69F4C5819F949A7FF100C1 /* StatsServiceCalendarMathTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatsServiceCalendarMathTests.swift; sourceTree = "<group>"; };
 		67E4A33F30D2F00100A7E411 /* PayrollEngineOvertimeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollEngineOvertimeTests.swift; sourceTree = "<group>"; };
+		694575EF01410FC7E8B1ED9E /* ICSShiftParserTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ICSShiftParserTests.swift; sourceTree = "<group>"; };
 		6BCA863EB86543B1471C227F /* TidexAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TidexAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6CAD23D585847B9F1CFA03FB /* StatsServiceUserIsolationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsServiceUserIsolationTests.swift; sourceTree = "<group>"; };
 		6CDB8BEA1226D21E2FA73AB5 /* AppDeepLinkResolverTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppDeepLinkResolverTests.swift; sourceTree = "<group>"; };
@@ -246,7 +246,6 @@
 		A7F10A0230C6000000DAD001 /* HomeScheduleLoadingHelperTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HomeScheduleLoadingHelperTests.swift; sourceTree = "<group>"; };
 		A7F3C2D14E5B40A1B2C3D4E6 /* AddFriendSheetHiddenPeopleTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AddFriendSheetHiddenPeopleTests.swift; sourceTree = "<group>"; };
 		A9B8C7D73041ABCD00A1B2C4 /* OnboardingSaveManagerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingSaveManagerTests.swift; sourceTree = "<group>"; };
-		FA11E1000000000000000002 /* OnboardingFunnelRecorderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingFunnelRecorderTests.swift; sourceTree = "<group>"; };
 		AA31C0023051222200B4C5D6 /* DashboardFeaturedItemSelectorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = DashboardFeaturedItemSelectorTests.swift; sourceTree = "<group>"; };
 		AA31C0043051222200B4C5D6 /* EventReminderPlannerTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = EventReminderPlannerTests.swift; sourceTree = "<group>"; };
 		AA31C0063051222200B4C5D6 /* RecurringShiftProjectorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecurringShiftProjectorTests.swift; sourceTree = "<group>"; };
@@ -289,6 +288,7 @@
 		F59CB55051D16F41537F400E /* PayrollCalculatorBehaviorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PayrollCalculatorBehaviorTests.swift; sourceTree = "<group>"; };
 		F6595302ED840034D4E34591 /* StatsServiceCurrencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsServiceCurrencyTests.swift; sourceTree = "<group>"; };
 		F821E1003092000000000002 /* NotificationPermissionTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NotificationPermissionTests.swift; sourceTree = "<group>"; };
+		FA11E1000000000000000002 /* OnboardingFunnelRecorderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingFunnelRecorderTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
