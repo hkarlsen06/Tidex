@@ -399707,6 +399707,114 @@
         }
       },
       "comment" : "Option in the first-day picker. The argument is a day number, in English with an ordinal suffix (16th), in Norwegian without (16)."
+    },
+    "settings.pay.period.payoutMonth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Paid in"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utbetales i"
+          }
+        }
+      },
+      "comment" : "Pay settings: label for which month the pay for a period arrives in."
+    },
+    "settings.pay.period.payoutSameMonth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The month the period ends"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Måneden perioden slutter"
+          }
+        }
+      },
+      "comment" : "Option: pay arrives in the same month the pay period ends."
+    },
+    "settings.pay.period.payoutNextMonth" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The month after"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Måneden etter"
+          }
+        }
+      },
+      "comment" : "Option: pay arrives in the month after the pay period ends."
+    },
+    "settings.pay.period.lastPeriodEnd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Last day of a recent pay period"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siste dag i en nylig lønnsperiode"
+          }
+        }
+      },
+      "comment" : "Pay settings for two-weekly pay: date picker label for the last day of any recent pay period. The app counts 14-day periods from this date."
+    },
+    "settings.pay.period.payday" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Payday for that period"
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lønningsdag for den perioden"
+          }
+        }
+      },
+      "comment" : "Pay settings for two-weekly pay: date picker label for the payday of the period chosen above."
+    },
+    "settings.pay.period.example" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Work from %1$@ to %2$@ is paid on %3$@."
+          }
+        },
+        "nb" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arbeid fra %1$@ til %2$@ blir utbetalt %3$@."
+          }
+        }
+      },
+      "comment" : "Pay settings: example of the current pay period. Arguments are short dates: period start, period end, payday. Example: Work from 16 Aug to 15 Sep is paid on 25 Sep."
     }
   },
   "version" : "1.0"
