@@ -7,7 +7,7 @@ import Foundation
 /// - Allows URLSession to optimize connection reuse
 enum URLSessionFactory {
   /// Standard session for most API calls (30s request, 60s resource timeout)
-  /// Use for: SharingService, AdminSettingsViewModel, general API calls
+  /// Use for: SharingService, general API calls
   static let standard: URLSession = {
     let config = URLSessionConfiguration.default
     config.timeoutIntervalForRequest = 30

@@ -275,10 +275,12 @@ struct MainTabView: View {
       }
     }
     .sheet(isPresented: $showAdminFeedbackSheet) {
-      AdminSettingsView(
-        initialTab: adminSheetInitialTab,
-        initialReportId: adminSheetInitialReportId
-      )
+      NavigationStack {
+        AdminSettingsView(
+          initialTab: adminSheetInitialTab,
+          initialReportId: adminSheetInitialReportId
+        )
+      }
     }
   }
 
