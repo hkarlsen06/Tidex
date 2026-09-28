@@ -1,9 +1,19 @@
-- Új dizájnt kapott a Barátok műszakai widget profilképekkel és az egyes barátok következő műszakját mutató idővonallal
-- A Tidex most akkor kér engedélyt az értesítésekhez, amikor először szükség van rá, nem indításkor
+- A Tidex mostantól mindenkinek ingyenes, előfizetés nélkül, és nincs korlátja annak sem, hány baráttal osztod meg
+- Frissítettük a logót és az alkalmazás ikonját
+- Mostantól négy fül van: Kezdőlap, Műszakbeosztás, Barátok és Profil. Új műszakot a hónapválasztó melletti + gombbal adhatsz hozzá
+- Minden munkához hozzáadtunk egy fizetési időszak beállítást: naptári hónap, más napon kezdődő hónap vagy kétheti elszámolás
+- Hozzáadtuk a műszakok importálását a munkahelyi naptár linkedről, például Planday, Quinyx, MinGat vagy Tamigo esetén. Ezt a Profilban találod
+- Koppints egy napra a naptárban a műszakok megnyitásához, vagy egy üres napra új műszak hozzáadásához. Hosszan nyomva több napot is kijelölhetsz
+- A barátkártyák mostantól a legutóbbi üzenetet chatbuborékként jelenítik meg
+- Újraterveztük a Barátok műszakai widgetet profilképekkel és az egyes barátok következő műszakját mutató idővonallal
+- A Kezdőlapon, a Statisztikákban és a Kifizetésnél az összegek mostantól jelzik, hogy adózás előtti vagy utáni értékek
+- A bejelentkeztetett műszakok mostantól átnyúlhatnak éjfélen
+- Az adatexportok mostantól minden műszaknál megjelenítik a munkát, jelölik a munkaszüneti napokat, és ugyanazokat a bérösszesítéseket használják, mint az alkalmazás
+- Lerövidítettük a regisztrációt. A regisztráció közben kipróbált műszak készen áll arra, hogy elmentsd első műszakodként
+- A Tidex mostantól akkor kér értesítési engedélyt, amikor először szükség van rá, nem indításkor
 - Javítottuk azt a hibát, amelynél a túlóra beleszámolta az átfedő, de nem fizetett műszakok óráit
 - Javítottuk a havi foglalkoztatási százalékokat és a heti statisztikákat azoknál a heteknél, amelyek két hónapra nyúlnak át
-- Az adatexportok mostantól ugyanazokat a bérösszegeket használják, mint az alkalmazás
 - Javítottuk a bejelentkezés és a megosztott műszakok biztonságát
 - Frissítettük az értesítési hangot
-- Eltávolítottuk az Apple Watch appot
+- Eltávolítottuk az Apple Watch alkalmazást és a Wagey asszisztenst
 - Hibajavítások és egyéb fejlesztések

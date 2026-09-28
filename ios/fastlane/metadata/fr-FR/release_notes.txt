@@ -1,9 +1,19 @@
-- Nouveau design du widget des services des amis, avec photos de profil et frise du prochain service de chaque ami
-- Tidex demande désormais l’autorisation pour les notifications au moment où vous en avez besoin, et non au lancement
-- Correction d’un problème où les heures supplémentaires comptaient des heures de services qui se chevauchent sans être payées
-- Correction des pourcentages mensuels d’emploi et des statistiques hebdomadaires pour les semaines sur deux mois
-- Les exportations de données utilisent désormais les mêmes totaux de paie que l’app
+- Tidex est désormais gratuit pour tout le monde, sans abonnement et sans limite du nombre d'amis avec qui vous partagez
+- Logo et icône de l'app mis à jour
+- Passage à quatre onglets : Accueil, Planning, Amis et Profil. Ajoutez un service avec le bouton + à côté du sélecteur de mois
+- Ajout d'un paramètre de période de paie pour chaque emploi : mois calendaire, mois commençant un autre jour, ou toutes les deux semaines
+- Ajout de l'importation des services depuis le lien de votre calendrier de travail, par exemple Planday, Quinyx, MinGat ou Tamigo. Vous le trouverez dans Profil
+- Touchez un jour dans le calendrier pour ouvrir ses services, ou touchez un jour vide pour en ajouter un. Appuyez longuement pour sélectionner plusieurs jours
+- Les cartes d'amis affichent désormais le dernier message dans une bulle de discussion
+- Le widget Services des amis a été repensé avec des photos de profil et une chronologie du prochain service de chaque ami
+- Les montants sur Accueil, Statistiques et Paiement indiquent désormais s'ils sont avant ou après impôts
+- Les services pointés peuvent désormais se prolonger après minuit
+- Les exports de données affichent désormais l'emploi pour chaque service, marquent les jours fériés et utilisent les mêmes totaux de paie que l'app
+- Inscription raccourcie. Le service que vous essayez pendant l'inscription est prêt à être enregistré comme votre premier service
+- Tidex demande désormais l'autorisation pour les notifications au moment où vous en avez besoin, et non au lancement
+- Correction du calcul des heures supplémentaires qui comptait les heures de services qui se chevauchent et ne sont pas payées
+- Correction des pourcentages d'emploi mensuels et des statistiques hebdomadaires pour les semaines qui chevauchent deux mois
 - Sécurité renforcée pour la connexion et les services partagés
 - Son de notification mis à jour
-- Suppression de l’app Apple Watch
+- Suppression de l'app Apple Watch et de l'assistant Wagey
 - Corrections de bugs et autres améliorations

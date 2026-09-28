@@ -1,9 +1,19 @@
+- Tidex je sada besplatan za sve, bez pretplate i bez ograničenja broja prijatelja s kojima dijelite
+- Ažurirani su logotip i ikona aplikacije
+- Priješli smo na četiri kartice: Početna, Raspored, Prijatelji i Profil. Dodajte smjenu gumbom + pokraj birača mjeseca
+- Dodana je postavka obračunskog razdoblja za svaki posao: kalendarski mjesec, mjesec koji počinje nekim drugim danom ili svaka dva tjedna
+- Dodan je uvoz smjena iz poveznice na vaš radni kalendar, kao što su Planday, Quinyx, MinGat ili Tamigo. To ćete pronaći u Profilu
+- Dodirnite dan u kalendaru da biste otvorili njegove smjene ili dodirnite prazan dan da biste dodali novu. Dugo pritisnite za odabir više dana
+- Kartice prijatelja sada prikazuju najnoviju poruku kao oblačić za chat
 - Redizajniran je widget Smjene prijatelja s profilnim fotografijama i vremenskom crtom sljedeće smjene svakog prijatelja
-- Tidex sada traži dopuštenje za obavijesti tek kada ti zatreba, a ne pri pokretanju
-- Ispravljeno je brojanje prekovremenih sati iz preklapajućih smjena koje nisu plaćene
+- Iznosi na Početnoj, u Statistici i Isplati sada prikazuju jesu li prije ili nakon poreza
+- Smjene na kojima ste se prijavili sada mogu trajati preko ponoći
+- Izvoz podataka sada prikazuje posao za svaku smjenu, označava državne praznike i koristi iste ukupne iznose plaće kao aplikacija
+- Skraćen je postupak registracije. Smjena koju isprobate tijekom registracije spremna je za spremanje kao vaša prva smjena
+- Tidex sada traži dopuštenje za obavijesti tek kada vam ono prvi put zatreba, a ne pri pokretanju
+- Ispravljeno je računanje prekovremenih sati iz preklapajućih smjena koje se ne plaćaju
 - Ispravljeni su mjesečni postoci zaposlenja i tjedna statistika za tjedne koji se protežu kroz dva mjeseca
-- Izvoz podataka sada koristi iste ukupne iznose plaće kao i aplikacija
 - Poboljšana je sigurnost prijave i dijeljenih smjena
 - Ažuriran je zvuk obavijesti
-- Uklonjena je aplikacija za Apple Watch
-- Ispravci grešaka i druga poboljšanja
+- Uklonjene su aplikacija za Apple Watch i pomoćnik Wagey
+- Ispravci pogrešaka i druga poboljšanja

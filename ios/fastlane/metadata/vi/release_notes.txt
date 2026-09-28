@@ -1,9 +1,19 @@
-- Thiết kế lại tiện ích Ca làm của bạn bè với ảnh hồ sơ và dòng thời gian cho ca làm tiếp theo của từng người
-- Tidex giờ sẽ chỉ xin quyền gửi thông báo khi bạn thực sự cần, thay vì ngay lúc mở app
-- Đã sửa lỗi tính tăng ca bao gồm cả giờ từ các ca chồng lấn không được trả lương
-- Đã sửa tỷ lệ việc làm theo tháng và thống kê theo tuần cho những tuần kéo dài qua hai tháng
-- Xuất dữ liệu giờ đây dùng cùng tổng lương như trong ứng dụng
-- Cải thiện bảo mật cho đăng nhập và ca làm được chia sẻ
-- Cập nhật âm thanh thông báo
-- Đã gỡ ứng dụng Apple Watch
-- Sửa lỗi và cải thiện khác
+- Tidex hiện đã miễn phí cho mọi người, không cần đăng ký gói thuê bao và không giới hạn số lượng bạn bè bạn chia sẻ cùng
+- Đã cập nhật logo và biểu tượng ứng dụng
+- Chuyển sang bốn tab: Trang chủ, Lịch ca, Bạn bè và Hồ sơ. Thêm ca làm bằng nút + bên cạnh bộ chọn tháng
+- Đã thêm cài đặt kỳ lương cho từng công việc: theo tháng dương lịch, theo tháng bắt đầu vào một ngày khác hoặc mỗi hai tuần
+- Đã thêm tính năng nhập ca làm từ liên kết lịch làm việc, chẳng hạn như Planday, Quinyx, MinGat hoặc Tamigo. Bạn có thể tìm thấy trong Hồ sơ
+- Chạm vào một ngày trên lịch để mở các ca làm trong ngày đó, hoặc chạm vào một ngày trống để thêm ca. Nhấn giữ để chọn nhiều ngày
+- Thẻ bạn bè giờ đây hiển thị tin nhắn mới nhất dưới dạng bong bóng chat
+- Đã thiết kế lại tiện ích Ca làm của bạn bè với ảnh hồ sơ và dòng thời gian cho ca làm tiếp theo của từng người bạn
+- Các khoản tiền trên Trang chủ, Thống kê và Thanh toán giờ đây cho biết là trước hay sau thuế
+- Các ca đã chấm công giờ đây có thể kéo dài qua nửa đêm
+- Dữ liệu xuất ra giờ đây hiển thị công việc cho từng ca, đánh dấu ngày lễ và sử dụng cùng tổng tiền lương như trong ứng dụng
+- Đã rút ngắn quy trình đăng ký. Ca làm bạn thử trong lúc đăng ký đã sẵn sàng để lưu làm ca đầu tiên của bạn
+- Tidex giờ đây chỉ yêu cầu quyền thông báo khi bạn thực sự cần, thay vì ngay khi mở ứng dụng
+- Đã sửa lỗi tính giờ làm thêm từ các ca bị chồng chéo nhưng không được trả lương
+- Đã sửa lỗi phần trăm việc làm theo tháng và thống kê theo tuần cho những tuần kéo dài qua hai tháng
+- Đã cải thiện bảo mật cho đăng nhập và chia sẻ ca làm
+- Đã cập nhật âm thanh thông báo
+- Đã gỡ bỏ ứng dụng Apple Watch và trợ lý Wagey
+- Sửa lỗi và các cải tiến khác

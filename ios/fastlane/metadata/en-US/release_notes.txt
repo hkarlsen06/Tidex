@@ -1,9 +1,19 @@
+- Tidex is now free for everyone, with no subscription and no limit on how many friends you share with
+- Updated the logo and app icon
+- Moved to four tabs: Home, Schedule, Friends and Profile. Add a shift with the + button next to the month picker
+- Added a pay period setting for each job: calendar month, a month that starts on another day, or every two weeks
+- Added shift import from your work calendar link, such as Planday, Quinyx, MinGat or Tamigo. You find it in Profile
+- Tap a day in the calendar to open its shifts, or tap an empty day to add one. Long-press to select several days
+- Friend cards now show the latest message as a chat bubble
 - Redesigned the Friends' Shifts widget with profile photos and a timeline of each friend's next shift
+- Amounts on Home, Stats and Payout now say whether they are before or after tax
+- Clocked-in shifts can now run past midnight
+- Data exports now show the job for each shift, mark public holidays and use the same pay totals as the app
+- Shortened sign-up. The shift you try during sign-up is ready to save as your first shift
 - Tidex now asks for notification permission when you first need it, not at launch
 - Fixed overtime counting hours from overlapping shifts that aren't paid
 - Fixed monthly employment percentages and weekly stats for weeks that span two months
-- Data exports now use the same pay totals as the app
 - Improved security for sign-in and shared shifts
 - Updated the notification sound
-- Removed the Apple Watch app
+- Removed the Apple Watch app and the Wagey assistant
 - Bug fixes and other improvements

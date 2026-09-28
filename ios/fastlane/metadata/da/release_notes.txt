@@ -1,9 +1,19 @@
-- Redesignet widgetten Venners vagter med profilbilleder og en tidslinje for hver vens næste vagt
+- Tidex er nu gratis for alle, uden abonnement og uden grænse for, hvor mange venner du deler med
+- Opdateret logoet og appikonet
+- Gået over til fire faner: Hjem, Vagtplan, Venner og Profil. Tilføj en vagt med +-knappen ved siden af månedsvælgeren
+- Tilføjet en lønperiodeindstilling for hvert job: kalendermåned, en måned der starter på en anden dag, eller hver anden uge
+- Tilføjet import af vagter fra dit arbejdskalenderlink, såsom Planday, Quinyx, MinGat eller Tamigo. Du finder det under Profil
+- Tryk på en dag i kalenderen for at åbne dens vagter, eller tryk på en tom dag for at tilføje en. Tryk og hold for at vælge flere dage
+- Vennekort viser nu den seneste besked som en chatboble
+- Redesignet widgeten Venners vagter med profilbilleder og en tidslinje for hver vens næste vagt
+- Beløb på Hjem, Statistik og Udbetaling viser nu, om de er før eller efter skat
+- Indstemplede vagter kan nu gå forbi midnat
+- Dataeksporter viser nu jobbet for hver vagt, markerer helligdage og bruger de samme lønsummer som appen
+- Forkortet tilmeldingen. Den vagt, du prøver under tilmeldingen, er klar til at blive gemt som din første vagt
 - Tidex beder nu om tilladelse til notifikationer, når du først har brug for det, ikke ved opstart
-- Rettet en fejl, hvor overarbejde talte timer fra overlappende vagter, som ikke bliver betalt
-- Rettet månedlige ansættelsesprocenter og ugestatistik for uger, der går på tværs af to måneder
-- Dataeksport bruger nu de samme lønsummer som appen
-- Forbedret sikkerhed ved login og delte vagter
+- Rettet overtid, der talte timer fra overlappende vagter med, som ikke bliver betalt
+- Rettet månedlige ansættelsesprocenter og ugentlig statistik for uger, der går på tværs af to måneder
+- Forbedret sikkerheden ved login og delte vagter
 - Opdateret notifikationslyden
-- Apple Watch-appen er fjernet
+- Fjernet Apple Watch-appen og Wagey-assistenten
 - Fejlrettelser og andre forbedringer

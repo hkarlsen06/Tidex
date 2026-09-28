@@ -1,9 +1,19 @@
-- O widget Turnos dos Amigos foi redesenhado com fotos de perfil e uma linha do tempo do próximo turno de cada amigo
-- O Tidex agora pede permissão para notificações quando você precisa delas pela primeira vez, não ao abrir o app
-- Corrigido um problema em que as horas extras contavam horas de turnos sobrepostos que não são pagos
+- Tidex agora é grátis para todos, sem assinatura e sem limite de quantos amigos você pode compartilhar
+- Logo e ícone do app atualizados
+- Agora são quatro abas: Início, Escala, Amigos e Perfil. Adicione um turno com o botão + ao lado do seletor de mês
+- Adicionada uma configuração de período de pagamento para cada trabalho: mês do calendário, um mês que começa em outro dia ou a cada duas semanas
+- Adicionada a importação de turnos pelo link do calendário de trabalho, como Planday, Quinyx, MinGat ou Tamigo. Você encontra isso em Perfil
+- Toque em um dia no calendário para abrir os turnos dele ou toque em um dia vazio para adicionar um. Pressione e segure para selecionar vários dias
+- Os cartões de amigos agora mostram a mensagem mais recente em um balão de conversa
+- O widget Turnos dos amigos foi redesenhado com fotos de perfil e uma linha do tempo do próximo turno de cada amigo
+- Os valores em Início, Estatísticas e Pagamento agora indicam se são antes ou depois dos impostos
+- Turnos com registro de entrada agora podem passar da meia-noite
+- As exportações de dados agora mostram o trabalho de cada turno, marcam os feriados e usam os mesmos totais de pagamento do app
+- Cadastro simplificado. O turno que você experimenta durante o cadastro já fica pronto para ser salvo como seu primeiro turno
+- O Tidex agora pede permissão para notificações quando você realmente precisa delas, e não na abertura do app
+- Corrigida a contagem de horas extras que incluía horas de turnos sobrepostos que não são pagos
 - Corrigidos os percentuais mensais de emprego e as estatísticas semanais para semanas que abrangem dois meses
-- As exportações de dados agora usam os mesmos totais de pagamento do app
 - Segurança aprimorada para login e turnos compartilhados
 - Som de notificação atualizado
-- O app para Apple Watch foi removido
+- O app para Apple Watch e o assistente Wagey foram removidos
 - Correções de bugs e outras melhorias

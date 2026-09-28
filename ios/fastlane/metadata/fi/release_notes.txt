@@ -1,9 +1,19 @@
-- Kavereiden vuorot -widget on uudistettu: mukana ovat profiilikuvat ja aikajana kunkin kaverin seuraavasta vuorosta
-- Tidex pyytää nyt ilmoitusluvan vasta silloin, kun sitä ensimmäisen kerran tarvitaan, ei käynnistyksen yhteydessä
-- Korjattu ongelma, jossa ylityölaskenta huomioi päällekkäisten, palkattomien vuorojen tunteja
-- Korjattu kuukausittaiset työaikaprosentit ja viikkotilastot viikoille, jotka ulottuvat kahden kuukauden alueelle
-- Tietoviennit käyttävät nyt samoja palkkasummia kuin sovellus
-- Parannettu kirjautumisen ja jaettujen vuorojen tietoturvaa
+- Tidex on nyt ilmainen kaikille, ilman tilausta ja ilman rajaa sille, kuinka monen ystävän kanssa voit jakaa
+- Päivitetty logo ja sovelluskuvake
+- Siirrytty neljään välilehteen: Koti, Työvuorot, Ystävät ja Profiili. Lisää vuoro +-painikkeella kuukausivalitsimen vierestä
+- Lisätty palkkajaksoasetus jokaiselle työlle: kalenterikuukausi, muuna päivänä alkava kuukausi tai kahden viikon välein
+- Lisätty vuorojen tuonti työkalenterin linkistä, kuten Planday, Quinyx, MinGat tai Tamigo. Löydät sen Profiilista
+- Avaa päivän vuorot napauttamalla päivää kalenterissa tai lisää vuoro napauttamalla tyhjää päivää. Valitse useita päiviä painamalla pitkään
+- Ystäväkorteissa näkyy nyt viimeisin viesti puhekuplana
+- Ystävien vuorot -widget uudistettiin: mukana profiilikuvat ja aikajana kunkin ystävän seuraavaan vuoroon
+- Koti-, Tilastot- ja Maksut-välilehtien summat kertovat nyt, ovatko ne ennen veroja vai verojen jälkeen
+- Sisään leimatut vuorot voivat nyt jatkua yli keskiyön
+- Datan viennit näyttävät nyt jokaisen vuoron työn, merkitsevät arkipyhät ja käyttävät samoja palkkasummia kuin sovellus
+- Rekisteröitymistä lyhennetty. Rekisteröitymisen aikana kokeilemasi vuoro on valmis tallennettavaksi ensimmäiseksi vuoroksesi
+- Tidex pyytää nyt lupaa ilmoituksiin vasta silloin, kun tarvitset niitä, ei käynnistyksen yhteydessä
+- Korjattu ylityön tuntien laskenta päällekkäisistä vuoroista, joista ei makseta
+- Korjattu kuukausittaiset työsuhdeprosentit ja viikkotilastot viikoille, jotka ulottuvat kahdelle kuukaudelle
+- Parannettu kirjautumisen ja jaettujen vuorojen turvallisuutta
 - Päivitetty ilmoitusääni
-- Apple Watch -sovellus on poistettu
+- Apple Watch -sovellus ja Wagey-avustaja poistettu
 - Virheenkorjauksia ja muita parannuksia

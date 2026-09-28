@@ -1,9 +1,19 @@
-- Das Widget „Schichten von Freunden“ wurde mit Profilfotos und einer Zeitleiste für die nächste Schicht jedes Freundes neu gestaltet
-- Tidex fragt jetzt erst dann nach Mitteilungserlaubnis, wenn sie benötigt wird, nicht direkt beim Start
-- Behoben: Bei Überstunden wurden Stunden aus sich überschneidenden, unbezahlten Schichten mitgezählt
-- Behoben: monatliche Beschäftigungsgrade und Wochenstatistiken für Wochen, die sich über zwei Monate erstrecken
-- Datenexporte verwenden jetzt dieselben Lohnsummen wie die App
+- Tidex ist jetzt für alle kostenlos, ohne Abonnement und ohne Begrenzung, mit wie vielen Freunden du teilst
+- Logo und App-Symbol aktualisiert
+- Umgestellt auf vier Tabs: Startseite, Schichtplan, Freunde und Profil. Füge eine Schicht mit der +‑Schaltfläche neben der Monatsauswahl hinzu
+- Für jeden Job eine Lohnperiode hinzugefügt: Kalendermonat, ein Monat, der an einem anderen Tag beginnt, oder alle zwei Wochen
+- Import von Schichten über den Link zu deinem Arbeitskalender hinzugefügt, zum Beispiel Planday, Quinyx, MinGat oder Tamigo. Du findest ihn unter Profil
+- Tippe auf einen Tag im Kalender, um die Schichten dieses Tages zu öffnen, oder auf einen leeren Tag, um eine hinzuzufügen. Halte gedrückt, um mehrere Tage auszuwählen
+- Freundeskarten zeigen jetzt die neueste Nachricht als Chatblase an
+- Das Widget „Schichten von Freunden“ wurde mit Profilfotos und einer Zeitleiste der nächsten Schicht jedes Freundes neu gestaltet
+- Beträge auf Start, Statistik und Auszahlung zeigen jetzt an, ob sie vor oder nach Steuern sind
+- Eingestempelte Schichten können jetzt über Mitternacht hinausgehen
+- Datenexporte zeigen jetzt den Job für jede Schicht an, markieren Feiertage und verwenden dieselben Lohnsummen wie die App
+- Die Registrierung wurde verkürzt. Die Schicht, die du während der Registrierung ausprobierst, kann direkt als deine erste Schicht gespeichert werden
+- Tidex fragt jetzt erst dann nach der Berechtigung für Benachrichtigungen, wenn sie zum ersten Mal benötigt wird, nicht beim Start
+- Behoben: Bei Überstunden wurden Stunden aus überlappenden Schichten mitgezählt, die nicht bezahlt werden
+- Behoben: Monatliche Beschäftigungsprozentsätze und Wochenstatistiken für Wochen, die sich über zwei Monate erstrecken
 - Sicherheit für Anmeldung und geteilte Schichten verbessert
 - Benachrichtigungston aktualisiert
-- Apple Watch-App entfernt
+- Die Apple Watch-App und der Assistent Wagey wurden entfernt
 - Fehlerbehebungen und weitere Verbesserungen

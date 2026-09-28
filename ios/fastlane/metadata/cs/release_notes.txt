@@ -1,9 +1,19 @@
-- Přepracovali jsme widget Směny přátel a přidali profilové fotky i časovou osu příští směny každého přítele
-- Tidex nyní žádá o povolení k oznámením až ve chvíli, kdy je skutečně potřeba, ne při spuštění
-- Opravili jsme počítání přesčasů, do kterého se započítávaly neplacené hodiny z překrývajících se směn
-- Opravili jsme měsíční pracovní úvazky a týdenní statistiky pro týdny, které zasahují do dvou měsíců
-- Exporty dat nyní používají stejné mzdové součty jako aplikace
+- Tidex je teď zdarma pro všechny, bez předplatného a bez omezení počtu přátel, se kterými sdílíte
+- Aktualizovali jsme logo a ikonu aplikace
+- Přesunuli jsme se na čtyři záložky: Domů, Rozvrh směn, Přátelé a Profil. Směnu přidáte tlačítkem + vedle výběru měsíce
+- Přidali jsme nastavení výplatního období pro každou práci: kalendářní měsíc, měsíc začínající jiným dnem nebo každé dva týdny
+- Přidali jsme import směn z odkazu na váš pracovní kalendář, například z Planday, Quinyx, MinGat nebo Tamigo. Najdete ho v Profilu
+- Klepnutím na den v kalendáři otevřete jeho směny, klepnutím na prázdný den přidáte novou. Dlouhým podržením vyberete více dní
+- Karty přátel teď zobrazují poslední zprávu jako chatovou bublinu
+- Přepracovali jsme widget Směny přátel: nově obsahuje profilové fotky a časovou osu příští směny každého přítele
+- Částky na obrazovkách Domů, Statistiky a Výplata nyní uvádějí, zda jsou před nebo po zdanění
+- Směny se zapnutou docházkou teď mohou pokračovat i po půlnoci
+- Exporty dat teď zobrazují práci u každé směny, označují státní svátky a používají stejné součty mezd jako aplikace
+- Zkrátili jsme registraci. Směna, kterou si během registrace vyzkoušíte, je připravená k uložení jako vaše první směna
+- Tidex teď žádá o povolení k oznámením až ve chvíli, kdy je poprvé potřebujete, ne při spuštění aplikace
+- Opravili jsme přesčasy, do kterých se započítávaly hodiny z překrývajících se neplacených směn
+- Opravili jsme měsíční procenta úvazku a týdenní statistiky pro týdny, které zasahují do dvou měsíců
 - Zlepšili jsme zabezpečení přihlášení a sdílených směn
 - Aktualizovali jsme zvuk oznámení
-- Odebrali jsme aplikaci pro Apple Watch
+- Odebrali jsme aplikaci pro Apple Watch a asistenta Wagey
 - Opravy chyb a další vylepšení

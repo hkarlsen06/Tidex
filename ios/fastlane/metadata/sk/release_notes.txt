@@ -1,9 +1,19 @@
-- Prepracovali sme widget Smeny priateľov: teraz obsahuje profilové fotky a časovú os najbližšej smeny každého priateľa
-- Tidex teraz požiada o povolenie upozornení až vtedy, keď ich prvýkrát potrebujete, nie pri spustení
-- Opravili sme započítavanie nadčasov z prekrývajúcich sa smien, ktoré nie sú platené
+- Tidex je teraz zadarmo pre všetkých, bez predplatného a bez obmedzenia počtu priateľov, s ktorými zdieľate
+- Aktualizovali sme logo a ikonu aplikácie
+- Prešli sme na štyri karty: Domov, Rozvrh zmien, Priatelia a Profil. Zmenu pridáte tlačidlom + vedľa výberu mesiaca
+- Pridali sme nastavenie výplatného obdobia pre každú prácu: kalendárny mesiac, mesiac začínajúci iným dňom alebo každé dva týždne
+- Pridali sme import zmien z odkazu na váš pracovný kalendár, napríklad z Planday, Quinyx, MinGat alebo Tamigo. Nájdete ho v časti Profil
+- Klepnutím na deň v kalendári otvoríte jeho zmeny, alebo klepnutím na prázdny deň pridáte novú. Dlhým stlačením vyberiete viac dní
+- Karty priateľov teraz zobrazujú poslednú správu ako bublinu chatu
+- Prepracovali sme widget Zmeny priateľov s profilovými fotkami a časovou osou ďalšej zmeny každého priateľa
+- Sumy na obrazovkách Domov, Štatistiky a Výplata teraz uvádzajú, či sú pred zdanením alebo po zdanení
+- Zmeny s prihláseným začiatkom teraz môžu pokračovať aj po polnoci
+- Exporty dát teraz zobrazujú prácu pri každej zmene, označujú sviatky a používajú rovnaké súčty mzdy ako aplikácia
+- Skrátili sme registráciu. Zmena, ktorú si počas registrácie vyskúšate, je pripravená na uloženie ako vaša prvá zmena
+- Tidex teraz žiada o povolenie na upozornenia až vtedy, keď ho prvýkrát potrebujete, nie pri spustení
+- Opravili sme započítavanie nadčasov, ktoré zahŕňalo hodiny z prekrývajúcich sa neplatených zmien
 - Opravili sme mesačné percentá pracovného úväzku a týždenné štatistiky pre týždne, ktoré zasahujú do dvoch mesiacov
-- Exporty dát teraz používajú rovnaké súčty mzdy ako aplikácia
-- Zlepšili sme zabezpečenie prihlásenia a zdieľaných smien
+- Zlepšili sme zabezpečenie prihlasovania a zdieľaných zmien
 - Aktualizovali sme zvuk upozornení
-- Odstránili sme aplikáciu pre Apple Watch
+- Odstránili sme aplikáciu pre Apple Watch a asistenta Wagey
 - Opravy chýb a ďalšie vylepšenia

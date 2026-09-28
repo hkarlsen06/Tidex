@@ -1,9 +1,19 @@
-- Przeprojektowano widżet Zmiany znajomych — dodano zdjęcia profilowe i oś czasu z następną zmianą każdego znajomego
-- Tidex prosi teraz o zgodę na powiadomienia dopiero wtedy, gdy są potrzebne, a nie przy uruchomieniu
-- Naprawiono błąd, przez który nadgodziny uwzględniały godziny z nakładających się zmian, które nie są opłacane
-- Naprawiono miesięczny procent etatu i tygodniowe statystyki dla tygodni obejmujących dwa miesiące
-- Eksport danych korzysta teraz z tych samych sum wynagrodzenia co aplikacja
-- Zwiększono bezpieczeństwo logowania i współdzielonych zmian
+- Tidex jest teraz darmowy dla wszystkich — bez subskrypcji i bez limitu liczby znajomych, z którymi udostępniasz grafik
+- Zaktualizowano logo i ikonę aplikacji
+- Aplikacja ma teraz cztery karty: Główna, Grafik, Znajomi i Profil. Dodaj zmianę przyciskiem + obok wyboru miesiąca
+- Dodano ustawienie okresu rozliczeniowego dla każdej pracy: miesiąc kalendarzowy, miesiąc zaczynający się innego dnia lub co dwa tygodnie
+- Dodano import zmian z linku do kalendarza pracy, na przykład z Planday, Quinyx, MinGat lub Tamigo. Znajdziesz to w Profilu
+- Stuknij dzień w kalendarzu, aby otworzyć jego zmiany, albo stuknij pusty dzień, aby dodać zmianę. Przytrzymaj, aby wybrać kilka dni
+- Karty znajomych pokazują teraz najnowszą wiadomość w dymku czatu
+- Przeprojektowano widżet Zmiany znajomych — teraz zawiera zdjęcia profilowe i oś czasu z następną zmianą każdego znajomego
+- Kwoty na ekranach Start, Statystyki i Wypłata pokazują teraz, czy są przed opodatkowaniem, czy po opodatkowaniu
+- Zmiany z rozpoczętym czasem pracy mogą teraz trwać po północy
+- Eksporty danych pokazują teraz pracę dla każdej zmiany, oznaczają święta i używają tych samych sum wynagrodzenia co aplikacja
+- Skrócono rejestrację. Zmiana wypróbowana podczas rejestracji jest gotowa do zapisania jako Twoja pierwsza zmiana
+- Tidex prosi teraz o zgodę na powiadomienia dopiero wtedy, gdy jest to potrzebne, a nie przy uruchomieniu
+- Naprawiono naliczanie nadgodzin uwzględniające godziny z nakładających się zmian, za które nie ma wynagrodzenia
+- Naprawiono miesięczne procenty zatrudnienia i tygodniowe statystyki dla tygodni obejmujących dwa miesiące
+- Poprawiono bezpieczeństwo logowania i udostępnionych zmian
 - Zaktualizowano dźwięk powiadomień
-- Usunięto aplikację Apple Watch
+- Usunięto aplikację na Apple Watch i asystenta Wagey
 - Poprawki błędów i inne ulepszenia

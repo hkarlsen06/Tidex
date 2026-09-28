@@ -1,9 +1,19 @@
-- Widgetul Turele prietenilor a fost redesenat, cu poze de profil și o cronologie a următoarei ture a fiecărui prieten
-- Tidex cere acum permisiunea pentru notificări atunci când ai nevoie de ea, nu la lansare
-- Am corectat calculul orelor suplimentare care includea ore din ture suprapuse neplătite
-- Am corectat procentele lunare de angajare și statisticile săptămânale pentru săptămânile care se întind pe două luni
-- Exporturile de date folosesc acum aceleași totaluri salariale ca aplicația
-- Am îmbunătățit securitatea pentru autentificare și turele partajate
+- Tidex este acum gratuit pentru toată lumea, fără abonament și fără limită pentru numărul de prieteni cu care partajezi
+- Am actualizat sigla și pictograma aplicației
+- Am trecut la patru file: Acasă, Program, Prieteni și Profil. Adaugă un schimb cu butonul + de lângă selectorul de lună
+- Am adăugat o setare pentru perioada de plată la fiecare job: lună calendaristică, o lună care începe în altă zi sau la fiecare două săptămâni
+- Am adăugat importul schimburilor din linkul calendarului de la serviciu, cum ar fi Planday, Quinyx, MinGat sau Tamigo. Îl găsești în Profil
+- Atinge o zi din calendar pentru a deschide schimburile ei sau atinge o zi goală pentru a adăuga unul. Ține apăsat pentru a selecta mai multe zile
+- Cardurile prietenilor afișează acum cel mai recent mesaj sub formă de bulă de chat
+- Am reproiectat widgetul Schimburile prietenilor, cu fotografii de profil și o cronologie a următorului schimb al fiecărui prieten
+- Sumele din Acasă, Statistici și Plată arată acum dacă sunt înainte sau după impozitare
+- Schimburile în care ai pontat intrarea pot acum să continue după miezul nopții
+- Exporturile de date afișează acum jobul pentru fiecare schimb, marchează sărbătorile legale și folosesc aceleași totaluri de plată ca aplicația
+- Am scurtat înregistrarea. Schimbul pe care îl încerci în timpul înregistrării este gata să fie salvat ca primul tău schimb
+- Tidex cere acum permisiunea pentru notificări atunci când ai nevoie de ele pentru prima dată, nu la deschiderea aplicației
+- Am remediat calcularea orelor suplimentare care includea ore din schimburi suprapuse care nu sunt plătite
+- Am remediat procentele lunare de angajare și statisticile săptămânale pentru săptămânile care se întind pe două luni
+- Am îmbunătățit securitatea pentru autentificare și schimburile partajate
 - Am actualizat sunetul notificărilor
-- Am eliminat aplicația pentru Apple Watch
-- Corecții de erori și alte îmbunătățiri
+- Am eliminat aplicația Apple Watch și asistentul Wagey
+- Remedieri de erori și alte îmbunătățiri

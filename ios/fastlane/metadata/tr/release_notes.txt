@@ -1,9 +1,19 @@
-- Arkadaşların Vardiyaları araç takımı, profil fotoğrafları ve her arkadaşın bir sonraki vardiyasını gösteren zaman akışıyla yeniden tasarlandı
-- Tidex artık bildirim iznini uygulama açılışında değil, ilk gerektiğinde istiyor
-- Ücreti ödenmeyen çakışan vardiyalardaki saatlerin fazla mesaiye sayılması sorunu düzeltildi
+- Tidex artık herkes için ücretsiz; abonelik yok ve kaç arkadaşla paylaştığınız konusunda sınır yok
+- Logo ve uygulama simgesi güncellendi
+- Dört sekmeye geçildi: Ana Sayfa, Vardiya planı, Arkadaşlar ve Profil. Ay seçicinin yanındaki + düğmesiyle vardiya ekleyin
+- Her iş için bir maaş dönemi ayarı eklendi: takvim ayı, başka bir günde başlayan bir ay veya iki haftada bir
+- Planday, Quinyx, MinGat veya Tamigo gibi iş takvimi bağlantınızdan vardiya içe aktarma eklendi. Bunu Profil'de bulabilirsiniz
+- Vardiyalarını açmak için takvimde bir güne dokunun veya eklemek için boş bir güne dokunun. Birden fazla gün seçmek için uzun basın
+- Arkadaş kartları artık en son mesajı bir sohbet balonu olarak gösteriyor
+- Arkadaşların Vardiyaları araç takımı, profil fotoğrafları ve her arkadaşın bir sonraki vardiyasının zaman çizelgesiyle yeniden tasarlandı
+- Ana Sayfa, İstatistikler ve Ödeme'deki tutarlar artık vergi öncesi mi yoksa vergi sonrası mı olduğunu gösteriyor
+- Giriş yapılmış vardiyalar artık gece yarısını geçebiliyor
+- Veri dışa aktarımları artık her vardiya için işi gösteriyor, resmi tatilleri işaretliyor ve uygulamayla aynı ücret toplamlarını kullanıyor
+- Kayıt süreci kısaltıldı. Kayıt sırasında denediğiniz vardiya, ilk vardiyanız olarak kaydetmeye hazır
+- Tidex artık bildirim iznini uygulama açılışında değil, ilk ihtiyaç duyduğunuzda istiyor
+- Ücretlendirilmeyen çakışan vardiyalardaki saatlerin fazla mesaiye dahil edilmesi sorunu düzeltildi
 - İki aya yayılan haftalar için aylık çalışma yüzdeleri ve haftalık istatistikler düzeltildi
-- Veri dışa aktarımları artık uygulamayla aynı ücret toplamlarını kullanıyor
-- Giriş yapma ve paylaşılan vardiyalar için güvenlik iyileştirildi
+- Oturum açma ve paylaşılan vardiyalar için güvenlik iyileştirildi
 - Bildirim sesi güncellendi
-- Apple Watch uygulaması kaldırıldı
+- Apple Watch uygulaması ve Wagey asistanı kaldırıldı
 - Hata düzeltmeleri ve diğer iyileştirmeler

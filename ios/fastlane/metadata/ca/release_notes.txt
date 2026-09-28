@@ -1,9 +1,19 @@
-- S'ha redissenyat el giny de Torns dels amics amb fotos de perfil i una línia temporal del proper torn de cada amic
-- Ara Tidex demana permís per a les notificacions quan el necessites per primer cop, no en iniciar l'app
-- Corregit un error que comptava com a hores extres hores de torns solapats que no es paguen
-- Corregits els percentatges mensuals d'ocupació i les estadístiques setmanals de les setmanes que abasten dos mesos
-- Les exportacions de dades ara fan servir els mateixos totals salarials que l'app
-- Millorada la seguretat de l'inici de sessió i dels torns compartits
-- S'ha actualitzat el so de les notificacions
-- S'ha eliminat l'app per a Apple Watch
+- Tidex ara és gratuït per a tothom, sense subscripció i sense límit de quants amics hi comparteixes
+- Hem actualitzat el logotip i la icona de l'app
+- Ara hi ha quatre pestanyes: Inici, Horari, Amics i Perfil. Afegeix un torn amb el botó + al costat del selector de mes
+- Hem afegit un ajust de període de pagament per a cada feina: mes natural, un mes que comença en un altre dia o cada dues setmanes
+- Hem afegit la importació de torns des de l'enllaç del calendari de la feina, com ara Planday, Quinyx, MinGat o Tamigo. Ho trobaràs a Perfil
+- Toca un dia del calendari per obrir-ne els torns, o toca un dia buit per afegir-ne un. Mantén premut per seleccionar diversos dies
+- Les targetes d'amic ara mostren l'últim missatge com a bombolla de xat
+- Hem redissenyat el giny Torns dels amics amb fotos de perfil i una línia de temps del proper torn de cada amic
+- Les quantitats d'Inici, Estadístiques i Pagament ara indiquen si són abans o després d'impostos
+- Els torns amb fitxatge d'entrada ara poden allargar-se més enllà de la mitjanit
+- Les exportacions de dades ara mostren la feina de cada torn, marquen els dies festius i fan servir els mateixos totals de paga que l'app
+- Hem escurçat el registre. El torn que proves durant el registre ja està llest per desar-se com el teu primer torn
+- Tidex ara demana permís per a les notificacions quan el necessites per primera vegada, no en iniciar l'app
+- Hem corregit el càlcul de les hores extres perquè no compti hores de torns solapats que no es paguen
+- Hem corregit els percentatges d'ocupació mensuals i les estadístiques setmanals de les setmanes que abasten dos mesos
+- Hem millorat la seguretat de l'inici de sessió i dels torns compartits
+- Hem actualitzat el so de les notificacions
+- Hem eliminat l'app de l'Apple Watch i l'assistent Wagey
 - Correccions d'errors i altres millores

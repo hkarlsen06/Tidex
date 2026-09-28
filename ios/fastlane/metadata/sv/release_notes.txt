@@ -1,9 +1,19 @@
-- Widgeten Vänners pass har fått en ny design med profilbilder och en tidslinje för varje väns nästa pass
-- Tidex ber nu om tillåtelse för notiser först när du behöver det, inte vid start
-- Åtgärdade att övertid räknade med timmar från överlappande pass som inte betalas
-- Åtgärdade månatlig sysselsättningsgrad och veckostatistik för veckor som sträcker sig över två månader
-- Dataexporter använder nu samma lönesummor som appen
-- Förbättrad säkerhet för inloggning och delade pass
+- Tidex är nu gratis för alla, utan abonnemang och utan gräns för hur många vänner du delar med
+- Uppdaterad logotyp och appikon
+- Appen har nu fyra flikar: Hem, Schema, Vänner och Profil. Lägg till ett arbetspass med +-knappen bredvid månadsväljaren
+- Lagt till en löneperiodsinställning för varje jobb: kalendermånad, en månad som börjar en annan dag eller varannan vecka
+- Lagt till import av arbetspass från länken till din jobbkalender, till exempel Planday, Quinyx, MinGat eller Tamigo. Du hittar det under Profil
+- Tryck på en dag i kalendern för att öppna dagens arbetspass, eller tryck på en tom dag för att lägga till ett. Håll in för att välja flera dagar
+- Vänkort visar nu det senaste meddelandet som en chattbubbla
+- Widgeten Vänners arbetspass har fått ny design med profilbilder och en tidslinje för varje väns nästa arbetspass
+- Beloppen på Hem, Statistik och Utbetalning visar nu om de är före eller efter skatt
+- Incheckade arbetspass kan nu pågå efter midnatt
+- Dataexporter visar nu jobbet för varje arbetspass, markerar helgdagar och använder samma lönesummor som appen
+- Registreringen har kortats ner. Arbetspasset du provar under registreringen är klart att spara som ditt första arbetspass
+- Tidex ber nu om tillåtelse för notiser när du först behöver det, inte vid uppstart
+- Åtgärdat att övertid räknade timmar från överlappande arbetspass som inte är betalda
+- Åtgärdat månatliga sysselsättningsgrader och veckostatistik för veckor som sträcker sig över två månader
+- Förbättrad säkerhet för inloggning och delade arbetspass
 - Uppdaterat aviseringsljud
-- Apple Watch-appen har tagits bort
+- Apple Watch-appen och assistenten Wagey har tagits bort
 - Buggfixar och andra förbättringar

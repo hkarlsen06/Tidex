@@ -1,9 +1,19 @@
-- Hemos rediseñado el widget Turnos de amigos con fotos de perfil y una línea de tiempo del próximo turno de cada amigo
-- Tidex ahora solicita permiso para las notificaciones cuando lo necesitas por primera vez, no al iniciar la app
-- Corregido un problema por el que las horas extra contaban horas de turnos superpuestos que no se pagan
-- Corregidos los porcentajes mensuales de empleo y las estadísticas semanales en semanas que abarcan dos meses
-- Las exportaciones de datos ahora usan los mismos totales salariales que la app
-- Mejorada la seguridad del inicio de sesión y de los turnos compartidos
-- Actualizado el sonido de las notificaciones
-- Eliminada la app para Apple Watch
+- Tidex ahora es gratis para todo el mundo, sin suscripción y sin límite en el número de amigos con los que compartes
+- Se han actualizado el logotipo y el icono de la app
+- Ahora hay cuatro pestañas: Inicio, Turnos, Amigos y Perfil. Añade un turno con el botón + junto al selector de mes
+- Se ha añadido un ajuste de periodo de pago para cada trabajo: mes natural, un mes que empieza en otro día o cada dos semanas
+- Se ha añadido la importación de turnos desde el enlace de tu calendario de trabajo, como Planday, Quinyx, MinGat o Tamigo. Lo encontrarás en Perfil
+- Toca un día del calendario para abrir sus turnos, o toca un día vacío para añadir uno. Mantén pulsado para seleccionar varios días
+- Las tarjetas de amigos ahora muestran el último mensaje como un globo de chat
+- Se ha rediseñado el widget Turnos de amigos con fotos de perfil y una cronología del próximo turno de cada amigo
+- Los importes de Inicio, Estadísticas y Pagos ahora indican si son antes o después de impuestos
+- Los turnos con fichaje de entrada ahora pueden prolongarse más allá de la medianoche
+- Las exportaciones de datos ahora muestran el trabajo de cada turno, marcan los festivos y usan los mismos totales salariales que la app
+- Se ha acortado el registro. El turno que pruebas durante el registro queda listo para guardarlo como tu primer turno
+- Tidex ahora pide permiso para las notificaciones cuando las necesitas por primera vez, no al iniciar la app
+- Se ha corregido que las horas extra contaran horas de turnos superpuestos que no se pagan
+- Se han corregido los porcentajes de empleo mensuales y las estadísticas semanales en semanas que abarcan dos meses
+- Se ha mejorado la seguridad del inicio de sesión y de los turnos compartidos
+- Se ha actualizado el sonido de las notificaciones
+- Se han eliminado la app para Apple Watch y el asistente Wagey
 - Corrección de errores y otras mejoras

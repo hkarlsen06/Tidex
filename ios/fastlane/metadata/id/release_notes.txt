@@ -1,9 +1,19 @@
+- Tidex sekarang gratis untuk semua orang, tanpa langganan dan tanpa batas jumlah teman yang bisa Anda ajak berbagi
+- Logo dan ikon aplikasi telah diperbarui
+- Kini ada empat tab: Beranda, Jadwal, Teman, dan Profil. Tambahkan shift dengan tombol + di samping pemilih bulan
+- Menambahkan pengaturan periode gajian untuk setiap pekerjaan: bulan kalender, bulan yang dimulai pada hari lain, atau setiap dua minggu
+- Menambahkan impor shift dari tautan kalender kerja Anda, seperti Planday, Quinyx, MinGat, atau Tamigo. Anda bisa menemukannya di Profil
+- Ketuk hari di kalender untuk membuka shift pada hari itu, atau ketuk hari kosong untuk menambahkan shift. Tekan lama untuk memilih beberapa hari
+- Kartu teman sekarang menampilkan pesan terbaru sebagai gelembung chat
 - Widget Shift Teman didesain ulang dengan foto profil dan linimasa shift berikutnya dari setiap teman
-- Tidex kini meminta izin notifikasi saat Anda pertama kali membutuhkannya, bukan saat aplikasi dibuka
-- Memperbaiki perhitungan lembur yang menghitung jam dari shift yang tumpang tindih tetapi tidak dibayar
-- Memperbaiki persentase kerja bulanan dan statistik mingguan untuk minggu yang mencakup dua bulan
-- Ekspor data kini menggunakan total gaji yang sama seperti di aplikasi
-- Meningkatkan keamanan untuk masuk dan shift bersama
-- Memperbarui suara notifikasi
-- Menghapus aplikasi Apple Watch
+- Jumlah pada Beranda, Statistik, dan Pembayaran kini menunjukkan apakah nilainya sebelum atau sesudah pajak
+- Shift yang sedang berlangsung kini dapat melewati tengah malam
+- Ekspor data kini menampilkan pekerjaan untuk setiap shift, menandai hari libur nasional, dan menggunakan total gaji yang sama seperti di aplikasi
+- Proses pendaftaran dipersingkat. Shift yang Anda coba saat mendaftar siap disimpan sebagai shift pertama Anda
+- Tidex kini meminta izin notifikasi saat pertama kali diperlukan, bukan saat aplikasi dibuka
+- Memperbaiki perhitungan lembur yang sebelumnya menghitung jam dari shift yang tumpang tindih tetapi tidak dibayar
+- Memperbaiki persentase jam kerja bulanan dan statistik mingguan untuk minggu yang mencakup dua bulan
+- Meningkatkan keamanan untuk masuk dan shift yang dibagikan
+- Suara notifikasi diperbarui
+- Menghapus aplikasi Apple Watch dan asisten Wagey
 - Perbaikan bug dan peningkatan lainnya

@@ -1,9 +1,19 @@
+- Tidex er nå gratis for alle, uten abonnement og uten grense for hvor mange venner du deler med
+- Ny logo og nytt appikon
+- Appen har nå fire faner: Hjem, Vaktplan, Venner og Profil. Legg til vakter med +-knappen ved siden av månedsvelgeren
+- Lagt til lønnsperiode for hver jobb: kalendermåned, en måned som starter på en annen dag, eller annenhver uke
+- Lagt til import av vakter fra jobbkalenderen, for eksempel Planday, Quinyx, MinGat eller Tamigo. Du finner det under Profil
+- Trykk på en dag i kalenderen for å åpne vaktene, eller på en tom dag for å legge til en. Hold inne for å velge flere dager
+- Vennekortene viser nå siste melding som en chatboble
 - Widgeten Venners vakter har fått nytt design med profilbilder og en tidslinje for vennenes neste vakt
+- Beløpene på Hjem, Statistikk og Utbetaling viser nå om de er før eller etter skatt
+- Vakter du stempler inn på kan nå vare over midnatt
+- Dataeksport viser nå jobben for hver vakt, markerer helligdager og bruker de samme lønnstallene som appen
+- Kortere registrering. Vakten du prøver under registreringen er klar til å lagres som din første vakt
 - Tidex spør nå om tillatelse til varsler når du trenger dem, ikke ved oppstart
 - Rettet at overtid regnet med timer fra overlappende vakter som ikke blir betalt
 - Rettet stillingsprosent per måned og ukestatistikk for uker som går over to måneder
-- Dataeksport bruker nå de samme lønnstallene som appen
 - Forbedret sikkerheten for innlogging og delte vakter
 - Ny varslingslyd
-- Apple Watch-appen er fjernet
+- Apple Watch-appen og assistenten Wagey er fjernet
 - Feilrettinger og andre forbedringer
