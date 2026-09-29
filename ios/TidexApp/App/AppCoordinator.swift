@@ -32,26 +32,8 @@ private let launchLog = Logger(subsystem: "no.tidex.app", category: "Launch")
 @Observable
 final class AppCoordinator {
   static let shared = AppCoordinator()
-  private static let startupTabCacheKey = "defaultStartupTab"
-
-  enum PostAuthOnboardingPresentationState: Equatable {
-    case none
-    case initial
-    case reentry
-
-    var entryMode: PostAuthOnboardingEntryMode? {
-      switch self {
-      case .none:
-        return nil
-
-      case .initial:
-        return .initial
-
-      case .reentry:
-        return .reentry
-      }
-    }
-  }
+  /// UserDefaults key for the cached startup tab, read by `MainTabView` before settings load.
+  static let startupTabCacheKey = "defaultStartupTab"
 
   // MARK: - Navigation State
 
@@ -159,39 +141,6 @@ final class AppCoordinator {
     return userId
   }
 
-  func currentPostAuthOnboardingPresentation(
-    hasCompletedLocally: Bool
-  ) -> PostAuthOnboardingPresentationState {
-    if postAuthOnboardingPresentation == .reentry {
-      return .reentry
-    }
-
-    guard appState == .authenticated else {
-      return .none
-    }
-
-    return !hasCompletedLocally && !hasFinishedOnboardingRemotely ? .initial : .none
-  }
-
-  func refreshPostAuthOnboardingPresentation(hasCompletedLocally: Bool) {
-    postAuthOnboardingPresentation = currentPostAuthOnboardingPresentation(
-      hasCompletedLocally: hasCompletedLocally
-    )
-  }
-
-  func requestPostAuthOnboardingReentry() {
-    guard appState == .authenticated else { return }
-    postAuthOnboardingPresentation = .reentry
-  }
-
-  func dismissPostAuthOnboarding(markCompletedRemotely: Bool = false) {
-    if markCompletedRemotely {
-      hasFinishedOnboardingRemotely = true
-    }
-
-    postAuthOnboardingPresentation = .none
-  }
-
   /// Get the current user ID, throwing an error if not authenticated
   /// Use this when the operation requires a valid user ID to proceed
   /// - Throws: `UserIdError.notAuthenticated` if no user is logged in
@@ -209,8 +158,6 @@ final class AppCoordinator {
   private(set) var userAvatarUrl: String?
   /// Whether the user has already completed onboarding (from Supabase user metadata)
   private(set) var hasFinishedOnboardingRemotely: Bool = false
-  private(set) var postAuthOnboardingPresentation: PostAuthOnboardingPresentationState =
-    .none
 
   // MARK: - Sync State
 
@@ -231,10 +178,9 @@ final class AppCoordinator {
   // MARK: - Private
 
   @ObservationIgnored private var authStateTask: Task<Void, Never>?
-  @ObservationIgnored private var initialSessionTimeoutTask: Task<Void, Never>?
   @ObservationIgnored private var friendsRealtimeTask: Task<Void, Never>?
   @ObservationIgnored private var appActiveObserver: AnyCancellable?
-  @ObservationIgnored private var backgroundTasks: [Task<Void, Never>] = []
+  @ObservationIgnored private var backgroundTasks: [UUID: Task<Void, Never>] = [:]
   @ObservationIgnored private var foregroundTask: Task<Void, Never>?
   @ObservationIgnored private var didReceiveInitialSession = false
   @ObservationIgnored private var isUpdatingAuthState = false
@@ -275,17 +221,15 @@ final class AppCoordinator {
     )
     setupAuthStateListener()
     setupFriendsRealtimeLifecycle()
-    setupInitialSessionCheck()
     setupMaxLoadingTimeout()
     launchLog.info("[Launch] AppCoordinator.init END")
   }
 
   deinit {
     authStateTask?.cancel()
-    initialSessionTimeoutTask?.cancel()
     friendsRealtimeTask?.cancel()
     appActiveObserver?.cancel()
-    backgroundTasks.forEach { $0.cancel() }
+    backgroundTasks.values.forEach { $0.cancel() }
     foregroundTask?.cancel()
   }
 
@@ -314,169 +258,58 @@ final class AppCoordinator {
     }
   }
 
-  // MARK: - Initial Session Check
-
-  /// Timeout for initial session check (in nanoseconds)
-  /// If authStateChanges doesn't emit .initialSession within this time, we check manually
-  private static let initialSessionTimeout: UInt64 = 500_000_000  // 0.5 seconds
+  // MARK: - Launch Timeouts
 
   /// Timeout for MFA/terms network checks (in nanoseconds)
-  /// If these checks hang (slow network, unresponsive server), fall back to .unauthenticated
+  /// If these checks hang (slow network, unresponsive server), fall back to .authenticated
   private static let authCheckTimeout: UInt64 = 10_000_000_000  // 10 seconds
 
   /// Hard maximum time the app can stay in .loading state (in nanoseconds)
-  /// After this, force transition to .unauthenticated regardless of what's pending
+  /// After this, force a transition out regardless of what's pending
   private static let maxLoadingTimeout: UInt64 = 15_000_000_000  // 15 seconds
 
   /// Number of repeated launch/session timeouts before we force a stable fallback state.
   private static let launchSessionTimeoutRecoveryThreshold = 3
   private static let launchSessionTimeoutCountKey = "auth.launch_session_timeout_count"
 
-  /// Fallback check in case authStateChanges doesn't emit .initialSession promptly
-  /// This handles edge cases where the Supabase SDK doesn't emit the initial event
-  private func setupInitialSessionCheck() {
-    initialSessionTimeoutTask = Task { [weak self] in
-      // Wait for authStateChanges to emit - this is a fallback, not the primary flow
-      try? await Task.sleep(nanoseconds: Self.initialSessionTimeout)
-
-      guard let self,
-        !Task.isCancelled
-      else { return }
-
-      // If still loading after timeout AND we haven't received initialSession event,
-      // the authStateChanges stream hasn't emitted.
-      // This can happen if there's no stored session or the SDK initialization is slow.
-      if appState == .loading, !didReceiveInitialSession {
-        launchLog.warning(
-          "[Launch] AppCoordinator timeout fallback – .initialSession not received in 0.5s")
-        AuthDiagnosticsReporter.shared.record(
-          .initialSessionTimeout,
-          severity: .warning,
-          appState: String(describing: appState),
-          metadata: [
-            "timeout_ms": .integer(Int(Self.initialSessionTimeout / 1_000_000)),
-            "did_receive_initial_session": .bool(didReceiveInitialSession),
-            "is_updating_auth_state": .bool(isUpdatingAuthState),
-            "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
-          ]
-        )
-        await performInitialSessionCheck()
-      }
-    }
-  }
-
-  /// Perform initial session check directly (fallback when authStateChanges doesn't emit)
-  private func performInitialSessionCheck() async {
-    do {
-      // session is non-optional - throws if no session exists
-      // Use AuthSessionManager to prevent concurrent refresh race conditions
-      let session = try await AuthSessionManager.shared.getSession(allowProactiveRefresh: false)
-      resetLaunchSessionTimeoutCount()
-      AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-      if await routeToMFAIfRequired(session) { return }
-      await checkTermsAndUpdateState(initialSession: session, allowProactiveRefresh: false)
-    } catch {
-      if isLaunchSessionTimeoutError(error) {
-        AuthDiagnosticsReporter.shared.record(
-          .initialSessionCheckFailed,
-          severity: .warning,
-          appState: String(describing: appState),
-          error: error,
-          metadata: [
-            "failure_class": .string("launch_session_timeout"),
-            "did_receive_initial_session": .bool(didReceiveInitialSession),
-            "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
-            "recovery_threshold": .integer(Self.launchSessionTimeoutRecoveryThreshold),
-          ]
-        )
-        if handleRepeatedLaunchSessionTimeoutIfNeeded() {
-          return
-        }
-        launchLog.warning(
-          "[Launch] Initial session check timed out; keeping loading state for retry")
-        return
-      }
-
-      // Transient timeout/network failures should not immediately force logout.
-      if AuthSessionManager.shared.isTransientNetworkError(error)
-        || (error as? AuthSessionManagerError) != nil
-      {
-        launchLog.warning(
-          "[Launch] Initial session check transient failure; keeping loading state")
-        AuthDiagnosticsReporter.shared.record(
-          .initialSessionCheckFailed,
-          severity: .warning,
-          appState: String(describing: appState),
-          error: error,
-          metadata: authFailureMetadata(
-            error,
-            reason: "initial_session_transient_failure",
-            previousState: appState
-          )
-        )
-        return
-      }
-      launchLog.info("[Launch] AppCoordinator → .unauthenticated (no session)")
-      AuthDiagnosticsReporter.shared.record(
-        .forcedUnauthenticated,
-        severity: .warning,
-        appState: String(describing: appState),
-        error: error,
-        metadata: authFailureMetadata(
-          error,
-          reason: "initial_session_unrecoverable_failure",
-          previousState: appState
-        )
-      )
-      appState = .unauthenticated
-    }
-  }
-
   /// Hard deadline: if the app is still in .loading after maxLoadingTimeout,
   /// force a transition out. Prefers .authenticated when a local session exists
   /// (preserving offline usage) and only falls back to .unauthenticated when
   /// there is genuinely no session.
   private func setupMaxLoadingTimeout() {
-    backgroundTasks.append(
-      Task { [weak self] in
-        try? await Task.sleep(nanoseconds: Self.maxLoadingTimeout)
-        guard let self, !Task.isCancelled else { return }
-        guard appState == .loading else { return }
+    runTrackedTask { [weak self] in
+      try? await Task.sleep(nanoseconds: Self.maxLoadingTimeout)
+      guard let self, !Task.isCancelled, appState == .loading else { return }
 
-        isUpdatingAuthState = false
+      isUpdatingAuthState = false
 
-        if let session = await AuthSessionManager.shared.getSessionOrLocal() {
-          if await routeToMFAIfRequired(session) { return }
-          launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
-          AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
-          loadOnboardingStateFromUser(session.user)
-          userId = session.user.normalizedId
-          initialSyncComplete = false
-          appState = .authenticated
-        } else {
-          launchLog.error(
-            "[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
-          AuthDiagnosticsReporter.shared.record(
-            .forcedUnauthenticated,
-            severity: .error,
-            appState: String(describing: appState),
-            metadata: [
-              "reason": .string("hard_loading_timeout"),
-              "timeout_ms": .integer(Int(Self.maxLoadingTimeout / 1_000_000)),
-              "did_receive_initial_session": .bool(didReceiveInitialSession),
-              "is_updating_auth_state": .bool(isUpdatingAuthState),
-              "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
-            ]
-          )
-          appState = .unauthenticated
-        }
-      })
-  }
+      let session = await AuthSessionManager.shared.getSessionOrLocal()
+      // The normal launch flow may have finished while the stored session loaded.
+      guard appState == .loading else { return }
 
-  /// Reset auth state update flag. Called by AppLifecycleHandler's recovery mechanism
-  /// to unblock a potentially stuck checkMFAAndUpdateState call.
-  func resetAuthUpdateFlag() {
-    isUpdatingAuthState = false
+      if let session {
+        if await routeToMFAIfRequired(session) { return }
+        launchLog.error("[Launch] Hard loading timeout (15s) – proceeding to authenticated")
+        AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
+        await enterAuthenticatedState(user: session.user)
+      } else {
+        launchLog.error(
+          "[Launch] Hard loading timeout (15s) – no session, forcing unauthenticated")
+        AuthDiagnosticsReporter.shared.record(
+          .forcedUnauthenticated,
+          severity: .error,
+          appState: String(describing: appState),
+          metadata: [
+            "reason": .string("hard_loading_timeout"),
+            "timeout_ms": .integer(Int(Self.maxLoadingTimeout / 1_000_000)),
+            "did_receive_initial_session": .bool(didReceiveInitialSession),
+            "is_updating_auth_state": .bool(isUpdatingAuthState),
+            "launch_session_timeout_count": .integer(currentLaunchSessionTimeoutCount()),
+          ]
+        )
+        appState = .unauthenticated
+      }
+    }
   }
 
   // MARK: - Auth State Listener
@@ -495,11 +328,8 @@ final class AppCoordinator {
         case .initialSession:
           launchLog.info(
             "[Launch] AppCoordinator received .initialSession, hasSession=\(session != nil)")
-          // Cancel the timeout task since we received the session event
-          initialSessionTimeoutTask?.cancel()
-          initialSessionTimeoutTask = nil
-
-          // Mark that we received the initial session event (prevents duplicate check from timeout)
+          // The client sets emitLocalSessionAsInitialSession, so this event comes from local
+          // storage on every launch without waiting for the network.
           didReceiveInitialSession = true
 
           // On app launch, check if we have a valid session
@@ -599,6 +429,7 @@ final class AppCoordinator {
 
     await discardRetainedLocalDataIfUserChanged()
 
+    let stateBeforeCheck = appState
     let didComplete = await withTaskGroup(of: Bool.self) { group in
       group.addTask { @MainActor in
         await self.performMFAAndTermsCheck()
@@ -613,20 +444,20 @@ final class AppCoordinator {
       return result
     }
 
-    if !didComplete {
-      // This method is only called when a session is known to exist, so default to
-      // authenticated rather than kicking the user to the login screen. MFA/terms
-      // will be re-checked on the next foreground or successful network call.
-      launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
-      isTermsRecheckPending = true
-      if let session = await AuthSessionManager.shared.getSessionOrLocal() {
-        if await routeToMFAIfRequired(session) { return }
-        loadOnboardingStateFromUser(session.user)
-        userId = session.user.normalizedId
-      }
-      initialSyncComplete = false
-      appState = .authenticated
-    }
+    guard !didComplete else { return }
+    // The terms check may have been cut short. Check again on the next foreground.
+    isTermsRecheckPending = true
+
+    // The task group waits for the cancelled check, and its error fallbacks usually route
+    // on their own. Routing again would repeat the profile load and the initial sync.
+    guard appState == stateBeforeCheck || appState == .loading else { return }
+
+    // This method is only called when a session is known to exist, so default to
+    // authenticated rather than kicking the user to the login screen.
+    launchLog.error("[Launch] Auth check timed out after 10s, proceeding to authenticated")
+    let session = await AuthSessionManager.shared.getSessionOrLocal()
+    if let session, await routeToMFAIfRequired(session) { return }
+    await enterAuthenticatedState(user: session?.user)
   }
 
   /// Performs the actual MFA status check and terms verification.
@@ -792,8 +623,6 @@ final class AppCoordinator {
         self.appState = .termsRequired
       } else {
         // Terms appear up to date - proceed to authenticated immediately
-        loadOnboardingStateFromUser(user)
-        self.initialSyncComplete = false
         launchLog.info("[Launch] AppCoordinator → .authenticated")
         AuthDiagnosticsReporter.shared.record(
           .authenticated,
@@ -807,8 +636,7 @@ final class AppCoordinator {
             "needs_terms_reacceptance_immediate": .bool(needsReAcceptanceImmediate),
           ]) { current, _ in current }
         )
-        self.appState = .authenticated
-        await updateUserProfile()
+        await enterAuthenticatedState(user: user)
 
         // Check in background if API has a newer terms version
         // This handles the case where terms were updated but we're using stale cache
@@ -816,16 +644,27 @@ final class AppCoordinator {
       }
     } catch {
       // If we can't check terms, proceed to authenticated and let backend handle it
-      if let session = await AuthSessionManager.shared.getSessionOrLocal(
+      let session = await AuthSessionManager.shared.getSessionOrLocal(
         allowProactiveRefresh: allowProactiveRefresh
-      ) {
-        loadOnboardingStateFromUser(session.user)
+      )
+      if let session {
         AuthDiagnosticsReporter.shared.rememberAuthenticatedUserId(session.normalizedUserId)
       }
-      self.initialSyncComplete = false
-      self.appState = .authenticated
-      await updateUserProfile()
+      await enterAuthenticatedState(user: session?.user)
     }
+  }
+
+  /// Shows the main app and loads the profile, which sets `userId` and starts the initial
+  /// sync. Don't set `userId` by hand instead: the later recovery paths only load the
+  /// profile while `userId` is nil, so the dashboard would wait for a sync that never starts.
+  private func enterAuthenticatedState(user: User?) async {
+    // Load onboarding state before the state change so post-auth onboarding doesn't flash.
+    if let user {
+      loadOnboardingStateFromUser(user)
+    }
+    initialSyncComplete = false
+    appState = .authenticated
+    await updateUserProfile()
   }
 
   /// Background check for terms version update
@@ -836,22 +675,18 @@ final class AppCoordinator {
       let needsReAcceptance = await TermsVersion.needsTermsReAcceptanceIfReachable(termsAcceptedAt)
 
       // Check cancellation after async operation to avoid stale state updates
-      guard !Task.isCancelled else { return }
+      guard let self, !Task.isCancelled else { return }
 
-      await MainActor.run { [weak self] in
-        guard let self, !Task.isCancelled else { return }
+      // Offline: the fallback version must not gate the app. Check again when online.
+      guard let needsReAcceptance else {
+        isTermsRecheckPending = true
+        return
+      }
 
-        // Offline: the fallback version must not gate the app. Check again when online.
-        guard let needsReAcceptance else {
-          isTermsRecheckPending = true
-          return
-        }
-
-        // Only transition if we're still authenticated and terms are actually needed
-        if needsReAcceptance, appState == .authenticated {
-          isTermsUpdate = termsAcceptedAt != nil
-          appState = .termsRequired
-        }
+      // Only transition if we're still authenticated and terms are actually needed
+      if needsReAcceptance, appState == .authenticated {
+        isTermsUpdate = termsAcceptedAt != nil
+        appState = .termsRequired
       }
     }
   }
@@ -869,23 +704,19 @@ final class AppCoordinator {
   /// Cancel all tracked background tasks
   /// Called during sign out to prevent stale state updates
   private func cancelAllBackgroundTasks() {
-    backgroundTasks.forEach { $0.cancel() }
+    backgroundTasks.values.forEach { $0.cancel() }
     backgroundTasks.removeAll()
     cancelForegroundWork()
   }
 
-  /// Run a background task and track it for cancellation/cleanup.
-  private func runTrackedTask(_ operation: @escaping @Sendable () async -> Void) {
-    let task = Task {
+  /// Runs work on the main actor that sign-out can cancel. Keep the work inside this
+  /// task: a `Task {}` started from the closure would keep running after cancellation.
+  private func runTrackedTask(_ operation: @escaping @MainActor @Sendable () async -> Void) {
+    let id = UUID()
+    // Runs after this method returns, because both are on the main actor.
+    backgroundTasks[id] = Task { @MainActor [weak self] in
       await operation()
-    }
-    backgroundTasks.append(task)
-    // Cleanup task waits for completion then removes from tracking array
-    Task { [weak self, task] in
-      _ = await task.value
-      await MainActor.run {
-        self?.backgroundTasks.removeAll { $0 == task }
-      }
+      self?.backgroundTasks[id] = nil
     }
   }
 
@@ -974,19 +805,7 @@ final class AppCoordinator {
       loadOnboardingStateFromUser(user)
       Task { await OnboardingCompletionStore.retryPendingMetadataIfNeeded(userId: currentUserId) }
 
-      // Extract display name from user metadata or fall back to email
-      if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
-        userDisplayName = fullName
-      } else if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
-        userDisplayName = name
-      } else if let email = user.email {
-        // Use the part before @ for email
-        userDisplayName = email.components(separatedBy: "@").first ?? email
-      } else if let phone = user.phone {
-        userDisplayName = phone
-      } else {
-        userDisplayName = "User"
-      }
+      userDisplayName = Self.displayName(for: user)
 
       // Register only if permission already exists. First-run onboarding should not be
       // interrupted by the system notification prompt.
@@ -995,32 +814,42 @@ final class AppCoordinator {
       // Trigger initial sync in background after authentication
       triggerInitialSync(userId: currentUserId)
 
-      if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
-        let expectedUserId = currentUserId
+      if let appDelegate = AppDelegate.shared {
         runTrackedTask { [weak self] in
-          guard let self else { return }
-          let isCurrent = await MainActor.run { self.userId == expectedUserId }
-          guard isCurrent else { return }
+          guard self?.userId == currentUserId else { return }
           await appDelegate.registerCachedAPNsTokenIfNeeded()
         }
       }
 
-      // Profile picture and appearance will be loaded from local store after sync completes
-      // For now, check local settings repository for cached values
-      if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
-        userAvatarUrl = settings.profile_picture_url
-        AppearanceManager.shared.loadFromSettings(settings.theme)
-        AppearanceManager.shared.loadCalendarContentColorStyleFromSettings(
-          settings.effectiveCalendarContentColorStyle)
-        UserDefaults.standard.set(
-          settings.effectiveDefaultStartupTab,
-          forKey: Self.startupTabCacheKey
-        )
-      }
-
+      // The sync refreshes these. Until then, use the cached settings.
+      applyCachedSettings(userId: currentUserId)
     } catch {
       userDisplayName = "User"
     }
+  }
+
+  /// Display name from user metadata, falling back to the email name or phone number.
+  private static func displayName(for user: User) -> String {
+    if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
+      return fullName
+    }
+    if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
+      return name
+    }
+    if let email = user.email {
+      return email.components(separatedBy: "@").first ?? email
+    }
+    return user.phone ?? "User"
+  }
+
+  /// Applies the avatar, theme and startup tab from the locally stored settings.
+  private func applyCachedSettings(userId: String) {
+    guard let settings = SettingsRepository.shared.getSettings(for: userId) else { return }
+    userAvatarUrl = settings.profile_picture_url
+    AppearanceManager.shared.loadFromSettings(settings.theme)
+    AppearanceManager.shared.loadCalendarContentColorStyleFromSettings(
+      settings.effectiveCalendarContentColorStyle)
+    UserDefaults.standard.set(settings.effectiveDefaultStartupTab, forKey: Self.startupTabCacheKey)
   }
 
   /// Resolves the session for loading the profile. Offline with an expired access token,
@@ -1049,30 +878,13 @@ final class AppCoordinator {
     let coordinator = syncCoordinator
 
     runTrackedTask { [weak self] in
-      guard let self else { return }
       await coordinator.loadTrackingState(userId: userId)
       _ = await coordinator.sync(reason: .appLaunch, userId: userId)
       await FriendsMessageOutbox.shared.drain(userId: userId)
 
-      let settings = await MainActor.run { () -> UserSettings? in
-        guard self.userId == userId else { return nil }
-        self.initialSyncComplete = true
-        let settings = SettingsRepository.shared.getSettings(for: userId)
-        return settings
-      }
-
-      if let settings {
-        await MainActor.run {
-          self.userAvatarUrl = settings.profile_picture_url
-          AppearanceManager.shared.loadFromSettings(settings.theme)
-          AppearanceManager.shared.loadCalendarContentColorStyleFromSettings(
-            settings.effectiveCalendarContentColorStyle)
-          UserDefaults.standard.set(
-            settings.effectiveDefaultStartupTab,
-            forKey: Self.startupTabCacheKey
-          )
-        }
-      }
+      guard let self, self.userId == userId else { return }
+      initialSyncComplete = true
+      applyCachedSettings(userId: userId)
     }
   }
 
@@ -1146,9 +958,7 @@ final class AppCoordinator {
         return
       }
 
-      if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
-        await appDelegate.registerCachedAPNsTokenIfNeeded()
-      }
+      await AppDelegate.shared?.registerCachedAPNsTokenIfNeeded()
 
       await syncCoordinator.loadTrackingState(userId: userId)
       _ = await syncCoordinator.sync(reason: .foreground, userId: userId)
@@ -1250,11 +1060,8 @@ final class AppCoordinator {
     // Set flag for DashboardView to play release haptic when fully rendered
     didJustCompleteMFA = true
     runTrackedTask { [weak self] in
-      guard let self else { return }
       // After MFA, check if terms acceptance is needed
-      await Task { @MainActor in
-        await self.checkTermsAndUpdateState()
-      }.value
+      await self?.checkTermsAndUpdateState()
     }
   }
 
@@ -1266,10 +1073,7 @@ final class AppCoordinator {
     initialSyncComplete = false
     appState = .authenticated
     runTrackedTask { [weak self] in
-      guard let self else { return }
-      await Task { @MainActor in
-        await self.updateUserProfile()
-      }.value
+      await self?.updateUserProfile()
     }
   }
 
@@ -1363,9 +1167,7 @@ final class AppCoordinator {
     // a signed-out device cannot receive push-to-start Live Activity notifications.
     await LiveActivityPushTokenService.shared.unregisterCurrentDevice()
     // Same for APNs, so the next user of this device doesn't get this user's pushes.
-    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
-      await appDelegate.unregisterCachedAPNsToken()
-    }
+    await AppDelegate.shared?.unregisterCachedAPNsToken()
 
     // Clear all cached data
     await clearAllCachedData(retainingLocalDataFor: retainedUserId)
@@ -1470,9 +1272,7 @@ final class AppCoordinator {
     // background tasks cannot repopulate App Group data after sign-out.
     await NativeWidgetStorage.invalidatePendingRefreshes()
 
-    if let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared {
-      await appDelegate.endAllLiveActivities(reason: "auth/session context reset")
-    }
+    await AppDelegate.shared?.endAllLiveActivities(reason: "auth/session context reset")
 
     NativeWidgetStorage.clearWidgetStorage()
     NativeWidgetStorage.clearFriendWidgetStorage()
@@ -1496,7 +1296,6 @@ final class AppCoordinator {
     userDisplayName = ""
     userAvatarUrl = nil
     hasFinishedOnboardingRemotely = false
-    postAuthOnboardingPresentation = .none
     initialSyncComplete = false
     NotificationService.shared.setApplicationBadgeCount(0)
   }
@@ -1678,44 +1477,17 @@ final class AppCoordinator {
       // Store user ID
       self.userId = currentUserId
 
-      // Load onboarding state
       loadOnboardingStateFromUser(user)
-
-      // Extract display name
-      if let fullName = user.userMetadata["full_name"]?.value as? String, !fullName.isEmpty {
-        userDisplayName = fullName
-      } else if let name = user.userMetadata["name"]?.value as? String, !name.isEmpty {
-        userDisplayName = name
-      } else if let email = user.email {
-        userDisplayName = email.components(separatedBy: "@").first ?? email
-      } else if let phone = user.phone {
-        userDisplayName = phone
-      } else {
-        userDisplayName = "User"
-      }
+      userDisplayName = Self.displayName(for: user)
 
       // Register only if permission already exists. Do not prompt during account switching.
       await NotificationService.shared.registerIfPermissionAlreadyGranted()
+      applyCachedSettings(userId: currentUserId)
 
-      // Load cached avatar
-      if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
-        userAvatarUrl = settings.profile_picture_url
-        AppearanceManager.shared.loadFromSettings(settings.theme)
-        AppearanceManager.shared.loadCalendarContentColorStyleFromSettings(
-          settings.effectiveCalendarContentColorStyle)
-        UserDefaults.standard.set(
-          settings.effectiveDefaultStartupTab,
-          forKey: Self.startupTabCacheKey
-        )
-      }
-
-      // Register APNs token if available
       // Skip during impersonation to prevent registering the admin's device
       // token under the impersonated user's account
-      if !ImpersonationManager.shared.isImpersonating,
-        let appDelegate = (UIApplication.shared.delegate as? AppDelegate) ?? AppDelegate.shared
-      {
-        await appDelegate.registerCachedAPNsTokenIfNeeded()
+      if !ImpersonationManager.shared.isImpersonating {
+        await AppDelegate.shared?.registerCachedAPNsTokenIfNeeded()
       }
 
       // Run sync and WAIT for it to complete (unlike normal flow which runs in background)
@@ -1723,18 +1495,7 @@ final class AppCoordinator {
       await syncCoordinator.loadTrackingState(userId: currentUserId)
       _ = await syncCoordinator.sync(reason: .appLaunch, userId: currentUserId)
       initialSyncComplete = true
-
-      // Update avatar from synced settings
-      if let settings = SettingsRepository.shared.getSettings(for: currentUserId) {
-        userAvatarUrl = settings.profile_picture_url
-        AppearanceManager.shared.loadFromSettings(settings.theme)
-        AppearanceManager.shared.loadCalendarContentColorStyleFromSettings(
-          settings.effectiveCalendarContentColorStyle)
-        UserDefaults.standard.set(
-          settings.effectiveDefaultStartupTab,
-          forKey: Self.startupTabCacheKey
-        )
-      }
+      applyCachedSettings(userId: currentUserId)
     } catch {
       userDisplayName = "User"
     }
@@ -1756,7 +1517,6 @@ final class AppCoordinator {
       self.appState = .authenticated
       self.pendingDeepLink = nil
       self.pendingMFAFactor = nil
-      self.postAuthOnboardingPresentation = .none
     }
   }
 #endif

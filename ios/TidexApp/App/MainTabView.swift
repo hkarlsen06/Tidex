@@ -28,8 +28,6 @@ extension Notification.Name {
 /// Root tab view for signed-in users: Home, Schedule, Friends and the user's profile.
 /// The plus button beside the month picker pushes the Add screen onto the current tab.
 struct MainTabView: View {
-  private static let startupTabCacheKey = "defaultStartupTab"
-
   @Environment(AppCoordinator.self) private var coordinator
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.requestReview) private var requestReview
@@ -95,7 +93,7 @@ struct MainTabView: View {
 
   init() {
     let startupTab = Tab.startupTab(
-      rawValue: UserDefaults.standard.string(forKey: Self.startupTabCacheKey))
+      rawValue: UserDefaults.standard.string(forKey: AppCoordinator.startupTabCacheKey))
     _selectedTab = State(initialValue: startupTab)
     _loadedTabs = State(initialValue: [startupTab])
   }

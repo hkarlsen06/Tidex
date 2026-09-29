@@ -60,6 +60,84 @@ enum AppDeepLinkResolver {
     return nil
   }
 
+  /// Resolves the destination for a tapped push notification. Returns nil for payloads
+  /// without an in-app destination, including `deeplink` values that aren't tidex:// URLs.
+  static func resolve(notificationUserInfo userInfo: [AnyHashable: Any]) -> AppCoordinator.DeepLink? {
+    let type = userInfo["type"] as? String ?? ""
+
+    if type == "smart_prompt", let date = userInfo["date"] as? String {
+      return .addShift(mode: nil, date: date)
+    }
+    if type == "shift_reminder", let shiftDate = userInfo["shift_date"] as? String {
+      let shiftId = userInfo["shift_id"] as? String
+      return .shifts(dates: [shiftDate], shiftIds: shiftId.map { [$0] }, action: .highlight)
+    }
+    if type.hasPrefix("shared_shift_") {
+      return sharedShiftNotificationDeepLink(userInfo: userInfo)
+    }
+    if type == "share_started" {
+      return .sharing(sharerId: userInfo["owner_id"] as? String, highlightDates: nil, changes: nil)
+    }
+    if type == "feedback_responded" {
+      return .feedback
+    }
+    if type == "feedback_submitted" {
+      return .adminFeedback
+    }
+    if ["thread_message", "thread_screenshot", "thread_typing", "thread_reaction"].contains(type),
+      let threadId = userInfo["thread_id"] as? String
+    {
+      let senderUserId = userInfo["sender_user_id"] as? String
+      return .friendChat(
+        threadId: threadId,
+        messageId: userInfo["message_id"] as? String,
+        senderUserId: senderUserId,
+        typingUserId: type == "thread_typing" ? senderUserId : nil,
+        navigationRequestId: UUID()
+      )
+    }
+    // Admin broadcasts and other notification types can carry a deep link.
+    if let deeplink = userInfo["deeplink"] as? String, let url = URL(string: deeplink),
+      url.scheme == "tidex"
+    {
+      return resolve(url)
+    }
+    return nil
+  }
+
+  /// Opens the friend's calendar with the changed shifts highlighted.
+  private static func sharedShiftNotificationDeepLink(
+    userInfo: [AnyHashable: Any]
+  ) -> AppCoordinator.DeepLink {
+    let changes = (userInfo["changes"] as? [[String: Any]])?.compactMap {
+      dict -> AppCoordinator.ShiftChange? in
+      guard let shiftId = dict["shift_id"] as? String,
+        let date = dict["date"] as? String,
+        let op = dict["op"] as? String
+      else {
+        return nil
+      }
+      return AppCoordinator.ShiftChange(shiftId: shiftId, date: date, op: op)
+    }
+
+    var dates: [String]?
+    if let changes, !changes.isEmpty {
+      // Dates of all changes, deleted ones included.
+      dates = Array(Set(changes.map(\.date)))
+    } else if let datesArray = userInfo["shift_dates"] as? [String] {
+      // Legacy format: APNs sends arrays as-is
+      dates = datesArray
+    } else if let datesString = userInfo["shift_dates"] as? String {
+      // Legacy format: FCM sends comma-separated strings
+      dates = datesString.components(separatedBy: ",").map {
+        $0.trimmingCharacters(in: .whitespaces)
+      }
+    }
+
+    return .sharing(
+      sharerId: userInfo["owner_id"] as? String, highlightDates: dates, changes: changes)
+  }
+
   private static func sharingDeepLink(
     path: String,
     queryItems: [URLQueryItem]

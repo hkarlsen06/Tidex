@@ -867,121 +867,28 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
       }
     }
 
-    // Handle smart notification taps (prompt to add shift)
-    if type == "smart_prompt",
-      let dateISO = userInfo["date"] as? String
-    {
-      Task { @MainActor in
-        AppCoordinator.shared.pendingDeepLink = .addShift(mode: nil, date: dateISO)
-      }
-    }
-    // Handle shift reminder notification taps
-    else if type == "shift_reminder",
-      let shiftDate = userInfo["shift_date"] as? String
-    {
-      // Navigate to shifts view with the shift highlighted
-      Task { @MainActor in
-        let shiftId = userInfo["shift_id"] as? String
-        AppCoordinator.shared.pendingDeepLink = .shifts(
-          dates: [shiftDate],
-          shiftIds: shiftId.map { [$0] },
-          action: .highlight
-        )
-      }
-    }
-    // Handle shared shift notifications (created, updated, deleted)
-    else if type.hasPrefix("shared_shift_") {
-      // Extract owner_id (the friend who shared)
-      let ownerId = userInfo["owner_id"] as? String
-
-      // Parse changes array (new format with shift IDs for highlighting)
-      var changes: [AppCoordinator.ShiftChange]?
-      if let changesArray = userInfo["changes"] as? [[String: Any]] {
-        changes = changesArray.compactMap { dict -> AppCoordinator.ShiftChange? in
-          guard let shiftId = dict["shift_id"] as? String,
-            let date = dict["date"] as? String,
-            let op = dict["op"] as? String
-          else {
-            return nil
-          }
-          return AppCoordinator.ShiftChange(shiftId: shiftId, date: date, op: op)
-        }
-      }
-
-      // Extract dates from changes array, falling back to legacy shift_dates field
-      var dates: [String]?
-      if let changes, !changes.isEmpty {
-        // Extract unique dates from ALL changes (including deleted - useful to see when they're not working)
-        dates = Array(Set(changes.map(\.date)))
-      } else if let datesArray = userInfo["shift_dates"] as? [String] {
-        // Legacy format: APNs sends arrays as-is
-        dates = datesArray
-      } else if let datesString = userInfo["shift_dates"] as? String {
-        // Legacy format: FCM sends comma-separated strings
-        dates = datesString.components(separatedBy: ",").map {
-          $0.trimmingCharacters(in: .whitespaces)
-        }
-      }
-
-      // Navigate to sharing tab with the specific friend and shifts highlighted
-      Task { @MainActor in
-        AppCoordinator.shared.pendingDeepLink = .sharing(
-          sharerId: ownerId, highlightDates: dates, changes: changes)
-      }
-    }
-    // Handle share_started notification (someone started sharing with you)
-    else if type == "share_started" {
-      let ownerId = userInfo["owner_id"] as? String
-      Task { @MainActor in
-        AppCoordinator.shared.pendingDeepLink = .sharing(
-          sharerId: ownerId, highlightDates: nil, changes: nil)
-      }
-    }
-    // Handle feedback_responded notification (admin responded to user's feedback)
-    else if type == "feedback_responded" {
-      Task { @MainActor in
-        AppCoordinator.shared.pendingDeepLink = .feedback
-      }
-    }
-    // Handle feedback_submitted notification (user submitted feedback, admin notification)
-    else if type == "feedback_submitted" {
-      Task { @MainActor in
-        AppCoordinator.shared.pendingDeepLink = .adminFeedback
-      }
-    }
-    // Handle friend chat message notifications
-    else if type == "thread_message" || type == "thread_screenshot" || type == "thread_typing"
-      || type == "thread_reaction",
-      let threadId = userInfo["thread_id"] as? String
-    {
-      let messageId = userInfo["message_id"] as? String
-      let senderUserId = userInfo["sender_user_id"] as? String
-
+    let deepLink = AppDeepLinkResolver.resolve(notificationUserInfo: userInfo)
+    var chatThreadId: String?
+    if case .friendChat(let threadId, let messageId, _, _, _) = deepLink {
+      chatThreadId = threadId
       prefetchThreadMessageFromNotification(threadId: threadId, messageId: messageId)
-
-      Task { @MainActor in
-        AppCoordinator.shared.pendingDeepLink = .friendChat(
-          threadId: threadId,
-          messageId: messageId,
-          senderUserId: senderUserId,
-          typingUserId: type == "thread_typing" ? senderUserId : nil,
-          navigationRequestId: UUID()
-        )
-        await NotificationService.shared.clearDeliveredFriendChatNotifications(for: threadId)
-      }
     }
-    // Handle deeplink from admin broadcast or other notification types
-    else if let deeplink = userInfo["deeplink"] as? String,
-      let url = URL(string: deeplink)
+    // Links outside the app, such as itms-apps:// or https://, open in the system.
+    var externalURL: URL?
+    if let deeplink = userInfo["deeplink"] as? String, let url = URL(string: deeplink),
+      url.scheme != "tidex"
     {
-      Task { @MainActor in
-        if url.scheme == "tidex" {
-          // Internal deep link - pass to AppCoordinator
-          AppCoordinator.shared.handleDeepLink(url)
-        } else {
-          // External URL (e.g., itms-apps://, https://) - open with system
-          await UIApplication.shared.open(url)
+      externalURL = url
+    }
+
+    Task { @MainActor in
+      if let deepLink {
+        AppCoordinator.shared.pendingDeepLink = deepLink
+        if let chatThreadId {
+          await NotificationService.shared.clearDeliveredFriendChatNotifications(for: chatThreadId)
         }
+      } else if let externalURL {
+        await UIApplication.shared.open(externalURL)
       }
     }
 

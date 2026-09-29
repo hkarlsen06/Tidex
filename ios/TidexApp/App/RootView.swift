@@ -41,30 +41,26 @@ struct RootView: View {
     #if DEBUG
       if let uiTestingConfiguration {
         UITestingRootView(configuration: uiTestingConfiguration)
-      } else if isReady {
-        RootContent()
       } else {
-        LoadingView()
-          .task {
-            // The .task fires after the view has appeared on screen.
-            // Flipping isReady triggers RootContent creation (with singletons)
-            // while LoadingView is already visible — no black gap.
-            isReady = true
-          }
+        launchContent
       }
     #else
-      if isReady {
-        RootContent()
-      } else {
-        LoadingView()
-          .task {
-            // The .task fires after the view has appeared on screen.
-            // Flipping isReady triggers RootContent creation (with singletons)
-            // while LoadingView is already visible — no black gap.
-            isReady = true
-          }
-      }
+      launchContent
     #endif
+  }
+
+  @ViewBuilder private var launchContent: some View {
+    if isReady {
+      RootContent()
+    } else {
+      LoadingView()
+        .task {
+          // The .task fires after the view has appeared on screen.
+          // Flipping isReady triggers RootContent creation (with singletons)
+          // while LoadingView is already visible, so there is no black gap.
+          isReady = true
+        }
+    }
   }
 }
 
@@ -95,10 +91,6 @@ private struct RootContent: View {
   }
 
   var body: some View {
-    let postAuthOnboardingPresentation = coordinator.currentPostAuthOnboardingPresentation(
-      hasCompletedLocally: hasCompletedPostAuthOnboarding
-    )
-
     ZStack {
       TidexAppBackground()
 
@@ -140,16 +132,13 @@ private struct RootContent: View {
             .transition(.opacity)
 
         case .authenticated:
-          if let entryMode = postAuthOnboardingPresentation.entryMode {
+          if !hasCompletedPostAuthOnboarding, !coordinator.hasFinishedOnboardingRemotely {
             PostAuthOnboardingView(
-              entryMode: entryMode,
+              entryMode: .initial,
               onComplete: {
                 hasCompletedPostAuthOnboarding = true
-                coordinator.dismissPostAuthOnboarding(markCompletedRemotely: true)
               },
-              onClose: {
-                coordinator.dismissPostAuthOnboarding()
-              },
+              onClose: nil,
               userId: coordinator.userId ?? ""
             )
             .transition(.opacity)
@@ -212,17 +201,12 @@ private struct RootContent: View {
     .onAppear {
       launchLog.info(
         "[Launch] RootContent.onAppear – appState=\(String(describing: coordinator.appState))")
-      coordinator.refreshPostAuthOnboardingPresentation(
-        hasCompletedLocally: hasCompletedPostAuthOnboarding
-      )
     }
-    .onAppear {
-      Task { @MainActor in
-        // Defer storage initialization until after first render to avoid launch stalls.
-        await Task.yield()
-        if LocalStore.shared.isUsingInMemoryFallback {
-          showStorageWarning = true
-        }
+    .task {
+      // Defer storage initialization until after first render to avoid launch stalls.
+      await Task.yield()
+      if LocalStore.shared.isUsingInMemoryFallback {
+        showStorageWarning = true
       }
     }
     .alert(String(localized: .alertsStorageIssueTitle), isPresented: $showStorageWarning) {
@@ -247,19 +231,6 @@ private struct RootContent: View {
       authDestination = .login
       showAuthAfterOnboarding = true
       showPasswordRecovery = true
-    }
-    .onChange(of: coordinator.appState) { _, _ in
-      coordinator.refreshPostAuthOnboardingPresentation(
-        hasCompletedLocally: hasCompletedPostAuthOnboarding
-      )
-    }
-    .onChange(of: coordinator.hasFinishedOnboardingRemotely) { _, _ in
-      coordinator.refreshPostAuthOnboardingPresentation(
-        hasCompletedLocally: hasCompletedPostAuthOnboarding
-      )
-    }
-    .onChange(of: hasCompletedPostAuthOnboarding) { _, newValue in
-      coordinator.refreshPostAuthOnboardingPresentation(hasCompletedLocally: newValue)
     }
     .onDisappear {
       chatToastDismissTask?.cancel()
