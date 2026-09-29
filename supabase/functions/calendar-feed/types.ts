@@ -1,7 +1,7 @@
 import type {
   EndCondition,
   SelectedDays,
-} from "../_shared/wagey/recurring/types.ts";
+} from "../_shared/recurring/types.ts";
 
 export type CalendarSubscriptionContentMode =
   | "events_only"

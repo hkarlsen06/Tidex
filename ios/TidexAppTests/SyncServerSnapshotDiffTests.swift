@@ -314,11 +314,9 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       theme: "system",
       calendarContentColorStyle: "workplace",
       showDashboardClockButtons: true,
-      aiDataSharingEnabled: false,
       halfTaxMonth: nil,
       currency: "NOK",
       defaultStartupTab: "home",
-      wageyShowcaseSeen: false,
       lastActive: nil,
       updatedAt: timestamp,
       revision: 1
@@ -333,11 +331,9 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
       theme: "dark",
       calendarContentColorStyle: "monochrome",
       showDashboardClockButtons: false,
-      aiDataSharingEnabled: true,
       halfTaxMonth: nil,
       currency: "NOK",
       defaultStartupTab: "home",
-      wageyShowcaseSeen: true,
       lastActive: nil,
       updatedAt: timestamp,
       revision: 2
@@ -352,8 +348,6 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
         .theme,
         .calendarContentColorStyle,
         .showDashboardClockButtons,
-        .aiDataSharingEnabled,
-        .wageyShowcaseSeen,
       ])
     )
   }
@@ -381,8 +375,6 @@ final class SyncServerSnapshotDiffTests: XCTestCase {
     XCTAssertEqual(decoded.monthlyGoalsByMonth, [:])
     XCTAssertEqual(decoded.calendarContentColorStyle, "workplace")
     XCTAssertTrue(decoded.showDashboardClockButtons)
-    XCTAssertFalse(decoded.aiDataSharingEnabled)
-    XCTAssertFalse(decoded.wageyShowcaseSeen)
   }
 
   func testSyncJobRowDecodeBackfillsMissingCurrency() throws {

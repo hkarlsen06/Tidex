@@ -311,11 +311,9 @@ internal struct SyncUserSettingsRow: Codable {
   internal let theme: String
   internal let calendar_content_color_style: String?
   internal let show_dashboard_clock_buttons: Bool?
-  internal let ai_data_sharing_enabled: Bool?
   internal let half_tax_month: Int?
   internal let currency: String?
   internal let default_startup_tab: String?
-  internal let wagey_showcase_seen: Bool?  // swiftlint:disable:this identifier_name
   internal let revision: Int64
 
   /// Convert to regular UserSettings
@@ -333,11 +331,9 @@ internal struct SyncUserSettingsRow: Codable {
       theme: theme,
       calendar_content_color_style: calendar_content_color_style ?? "workplace",
       show_dashboard_clock_buttons: show_dashboard_clock_buttons,
-      ai_data_sharing_enabled: ai_data_sharing_enabled,
       half_tax_month: half_tax_month,
       currency: currency,
-      default_startup_tab: default_startup_tab,
-      wagey_showcase_seen: wagey_showcase_seen
+      default_startup_tab: default_startup_tab
     )
   }
 }

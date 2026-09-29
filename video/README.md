@@ -4,8 +4,8 @@ Remotion project that renders the Tidex showcase in four cuts.
 
 | Composition | Size | Length | Use |
 | --- | --- | --- | --- |
-| `Social-en`, `Social-no` | 1080 x 1920 | 28 s | Reels, TikTok, Shorts |
-| `AppStore-en`, `AppStore-no` | 886 x 1920 | 24 s | App Store app preview for 6.1" to 6.9" iPhones |
+| `Social-en`, `Social-no` | 1080 x 1920 | 24 s | Reels, TikTok, Shorts |
+| `AppStore-en`, `AppStore-no` | 886 x 1920 | 20 s | App Store app preview for 6.1" to 6.9" iPhones |
 
 ## Commands
 

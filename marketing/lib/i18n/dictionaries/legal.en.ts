@@ -214,7 +214,6 @@ export const legalEn = {
           { boldLabel: 'Friends messaging data:', text: 'Messages, reply references, image attachments, abuse reports, block actions, thread metadata, and read/mute state when you use Friends messaging.' },
           { boldLabel: 'Authentication data:', text: 'Session tokens and authentication state needed to keep you signed in, including login provider information when you use Sign in with Apple or Google Sign-In.' },
           { boldLabel: 'Payment data:', text: 'Handled by Apple for iOS in-app purchases. We do not store card information.' },
-          { boldLabel: 'AI assistant data:', text: 'When you use the Wagey AI assistant, the messages you send (including text and images), your display name, and shift data retrieved during the conversation are processed by a third-party AI service (see section 5).' },
           { boldLabel: 'Notification metadata:', text: 'If you enable push notifications, notification payloads may include sender identity, limited message preview text, screenshot alerts, and thread identifiers so the app can show and open the correct conversation.' },
           { boldLabel: 'Device and usage data:', text: 'When you open the app, it sends the app version, iOS version, device model, language, region and time zone, some of your settings (notification and background refresh permissions, which Tidex widgets you use, light or dark mode, text size and Reduce Motion), and the time you opened it. The app also sends technical reports about launches and sign-in, such as whether you are signed in and any error messages, so we can fix sign-in problems.' },
         ],
@@ -231,7 +230,6 @@ export const legalEn = {
           { text: 'Deliver push notifications and related in-app alerts if you enable them.' },
           { text: 'Communicate with you about the service.' },
           { text: 'Give support, fix problems, and count how many people use the app and its features.' },
-          { text: 'Provide AI-powered assistance through the Wagey feature, including answering questions about your shifts, helping manage shifts, and calculating wages. This requires sending relevant data to a third-party AI service (see section 5).' },
           { text: 'Review abuse reports, enforce our rules, and protect users and the service from abuse.' },
         ],
         importantNote: {
@@ -287,16 +285,8 @@ export const legalEn = {
               text: 'privacy policy',
             },
           },
-          {
-            boldLabel: 'OpenAI:',
-            text: "The Wagey AI assistant is powered by GPT-5.6 Luna from OpenAI. When you use Wagey, the messages you type, any images you attach, your display name, and shift data retrieved during the conversation (such as working hours, breaks, and wage settings) may be sent to OpenAI for processing. In this context, Tidex is the controller of that personal data and OpenAI acts as a processor on Tidex's behalf. When needed, Wagey may also use OpenAI's web search tools to retrieve relevant public web information. This data is sent only when you actively use the Wagey feature and have given your explicit consent. OpenAI's current commercial documentation says API inputs and outputs are not used to train OpenAI models unless the customer opts in to model improvement. OpenAI's {link} can provide additional information about OpenAI's own processing and products, but Tidex's privacy policy governs how Tidex handles your personal data in Wagey.",
-            link: {
-              href: 'https://openai.com/policies/privacy-policy/',
-              text: 'privacy policy',
-            },
-          },
         ],
-        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in, purchases, or push notifications, and with OpenAI when you actively use the Wagey AI assistant and have given your explicit consent. No data is shared with third parties beyond those listed above.',
+        closingParagraph: 'Data is only shared with Google if you choose Google Sign-In, with Apple when you use Apple sign-in, purchases, or push notifications. No data is shared with third parties beyond those listed above.',
       },
       {
         heading: '6. Your rights',

@@ -134,6 +134,27 @@ internal final class SyncPushMergeTests: XCTestCase {
     XCTAssertEqual(shift.serverRevision, 1, "The next push must update, not insert again")
   }
 
+  internal func testPushCompletionSettlesAcknowledgedFieldsWhenAnotherFieldChangedInFlight()
+    async throws
+  {
+    let store = try makeStoreActor()
+    let shift = try await makeEditedSyncedShift(in: store)
+    let baseline = SyncPushBaseline(shift)
+
+    // The push of start 10:00 is in flight when the user changes the end time.
+    _ = try await store.updateUserShift(
+      id: shiftId, shiftDate: nil, startTime: nil, endTime: "18:00", customSupplements: nil)
+    await markPushed(store, startTime: "10:00", revision: 2, baseline: baseline)
+
+    // The server acknowledged 10:00. If start stayed dirty, a later edit of the start time on
+    // another device would be overwritten by this device's already sent value.
+    XCTAssertEqual(shift.dirtyFieldKeys, [.endTime])
+    XCTAssertEqual(shift.syncStatus, .dirty)
+    XCTAssertEqual(shift.startTime, "10:00")
+    XCTAssertEqual(shift.endTime, "18:00")
+    XCTAssertEqual(shift.serverRevision, 2)
+  }
+
   internal func testPushCompletionKeepsDeleteMadeWhileInFlight() async throws {
     let store = try makeStoreActor()
     let shift = try await makeShift(in: store)
@@ -193,8 +214,7 @@ internal final class SyncPushMergeTests: XCTestCase {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: 2,
       serverDeletedAt: nil,
-      newSnapshot: server.snapshot,
-      localDirtyFields: SyncMerge.fieldsToKeepLocally(shift, server: server.snapshot)
+      newSnapshot: server.snapshot
     )
   }
 

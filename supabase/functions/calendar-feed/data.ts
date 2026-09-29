@@ -1,4 +1,4 @@
-import { generateVirtualShiftsForMonth } from "../_shared/wagey/recurring/utils.ts";
+import { generateVirtualShiftsForMonth } from "../_shared/recurring/utils.ts";
 import { compareISODate, monthsBetweenInclusive } from "./date.ts";
 import type {
   CalendarData,

@@ -26,7 +26,7 @@ import {
   SHEET,
   Variant,
 } from "./config";
-import { Background, Caption, LiftOut, Receipt, Sfx, SLIDE_EASING, Sparkles, TapRing } from "./parts";
+import { Background, Caption, LiftOut, Receipt, Sfx, SLIDE_EASING, TapRing } from "./parts";
 import { Hook } from "./scenes/Hook";
 import { Outro } from "./scenes/Outro";
 
@@ -222,17 +222,6 @@ const SceneOverlay: React.FC<{ scene: Scene; lang: Lang; variant: Variant; cardW
           <Sfx name="pop" at={lift.at + scene.fadeIn} volume={0.18} />
         </React.Fragment>
       ))}
-      {scene.id === "wagey" ? (
-        <Sparkles
-          points={[
-            [0.02 * cardW, 0.29 * cardH, 64, 44],
-            [0.97 * cardW, 0.3 * cardH, 46, 50],
-            [0.92 * cardW, 0.475 * cardH, 70, 56],
-            [0.08 * cardW, 0.49 * cardH, 42, 62],
-            [0.6 * cardW, 0.262 * cardH, 38, 68],
-          ]}
-        />
-      ) : null}
     </>
   );
 };

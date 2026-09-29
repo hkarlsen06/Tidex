@@ -6,10 +6,10 @@ import {
   type BreakMethod,
   type ShiftRow,
   type WageSnapshot,
-} from "../supabase/functions/_shared/wagey/payroll/index.ts";
-import { generateVirtualShiftsForMonth } from "../supabase/functions/_shared/wagey/recurring/utils.ts";
-import type { EndCondition, SelectedDays } from "../supabase/functions/_shared/wagey/recurring/types.ts";
-import { cleanTime } from "../supabase/functions/_shared/wagey/time-utils.ts";
+} from "../supabase/functions/_shared/payroll/index.ts";
+import { generateVirtualShiftsForMonth } from "../supabase/functions/_shared/recurring/utils.ts";
+import type { EndCondition, SelectedDays } from "../supabase/functions/_shared/recurring/types.ts";
+import { cleanTime } from "../supabase/functions/_shared/time-utils.ts";
 
 type UserSettingsRow = {
   user_id: string;

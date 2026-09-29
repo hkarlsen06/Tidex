@@ -1548,39 +1548,6 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
     XCTAssertEqual(local.dirtyFieldKeys, Set([.calendarContentColorStyle]))
   }
 
-  internal func testUpdateUserSettingsCanResetWageyShowcaseState() async throws {
-    let store = try makeStoreActor()
-
-    _ = try await store.createUserSettings(
-      userId: userId,
-      wageyShowcaseSeen: true
-    )
-
-    await store.markUserSettingsClean(userId: userId)
-    try await store.save()
-
-    _ = try await store.updateUserSettings(
-      userId: userId,
-      monthlyGoal: nil,
-      monthlyGoalsByMonth: nil,
-      defaultShiftsView: nil,
-      profilePictureUrl: nil,
-      payrollDay: nil,
-      theme: nil,
-      calendarContentColorStyle: nil,
-      showDashboardClockButtons: nil,
-      wageyShowcaseSeen: false,
-      halfTaxMonth: nil,
-      currency: nil,
-      defaultStartupTab: nil
-    )
-
-    let localRecord = try await store.getUserSettings(userId: userId)
-    let local = try XCTUnwrap(localRecord)
-    XCTAssertEqual(local.wageyShowcaseSeen, false)
-    XCTAssertEqual(local.dirtyFieldKeys, Set([.wageyShowcaseSeen]))
-  }
-
   internal func testResolveStoredUserSettingsConflictKeepServerOverwritesLocal() async throws {
     let store = try makeStoreActor()
 
@@ -1608,11 +1575,9 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       theme: "light",
       calendarContentColorStyle: "workplace",
       showDashboardClockButtons: true,
-      aiDataSharingEnabled: false,
       halfTaxMonth: nil,
       currency: "SEK",
       defaultStartupTab: "home",
-      wageyShowcaseSeen: false,
       lastActive: serverUpdatedAt,
       updatedAt: serverUpdatedAt,
       revision: 12
@@ -1690,11 +1655,9 @@ internal final class LocalStoreDirtyTrackingTests: XCTestCase {
       theme: "light",
       calendarContentColorStyle: "workplace",
       showDashboardClockButtons: true,
-      aiDataSharingEnabled: false,
       halfTaxMonth: nil,
       currency: "SEK",
       defaultStartupTab: "home",
-      wageyShowcaseSeen: false,
       lastActive: serverUpdatedAt,
       updatedAt: serverUpdatedAt,
       revision: 14

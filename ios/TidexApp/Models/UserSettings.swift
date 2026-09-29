@@ -29,16 +29,12 @@ struct UserSettings: Codable, Equatable {
   let calendar_content_color_style: String?
   /// Whether dashboard clock in/out buttons are visible
   let show_dashboard_clock_buttons: Bool?
-  /// Whether the user has consented to Wagey AI data sharing
-  let ai_data_sharing_enabled: Bool?
   /// Month number (11=November, 12=December) for half tax deduction
   let half_tax_month: Int?
   /// Currency code
   let currency: String?
   /// Default tab to open when launching the app
   let default_startup_tab: String?
-  /// Whether the user has dismissed the Wagey showcase
-  let wagey_showcase_seen: Bool?  // swiftlint:disable:this identifier_name
 
   init(
     user_id: String,
@@ -53,11 +49,9 @@ struct UserSettings: Codable, Equatable {
     theme: String,
     calendar_content_color_style: String? = "workplace",
     show_dashboard_clock_buttons: Bool?,
-    ai_data_sharing_enabled: Bool? = nil,
     half_tax_month: Int?,
     currency: String?,
-    default_startup_tab: String?,  // swiftlint:disable:this identifier_name
-    wagey_showcase_seen: Bool? = nil  // swiftlint:disable:this identifier_name
+    default_startup_tab: String?  // swiftlint:disable:this identifier_name
   ) {
     self.user_id = user_id
     self.created_at = created_at
@@ -71,11 +65,9 @@ struct UserSettings: Codable, Equatable {
     self.theme = theme
     self.calendar_content_color_style = calendar_content_color_style
     self.show_dashboard_clock_buttons = show_dashboard_clock_buttons
-    self.ai_data_sharing_enabled = ai_data_sharing_enabled
     self.half_tax_month = half_tax_month
     self.currency = currency
     self.default_startup_tab = default_startup_tab
-    self.wagey_showcase_seen = wagey_showcase_seen
   }
 
   /// Effective payroll day (defaults to 1 if not set)
@@ -103,11 +95,6 @@ struct UserSettings: Codable, Equatable {
   /// Effective dashboard clock button visibility
   var effectiveShowDashboardClockButtons: Bool {
     show_dashboard_clock_buttons ?? true
-  }
-
-  /// Effective Wagey AI data sharing consent state.
-  var effectiveAIDataSharingEnabled: Bool {
-    ai_data_sharing_enabled ?? false
   }
 
   /// Effective startup tab (defaults to home)
@@ -151,11 +138,9 @@ struct UserSettings: Codable, Equatable {
       theme: "system",
       calendar_content_color_style: "workplace",
       show_dashboard_clock_buttons: true,
-      ai_data_sharing_enabled: false,
       half_tax_month: nil,
       currency: nil,
-      default_startup_tab: "home",
-      wagey_showcase_seen: false
+      default_startup_tab: "home"
     )
   }
 }

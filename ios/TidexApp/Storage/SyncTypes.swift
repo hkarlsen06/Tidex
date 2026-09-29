@@ -106,7 +106,6 @@ internal enum JobField: String, Codable, CaseIterable {
 
 /// Field keys for tracking dirty fields on LocalUserSettings
 internal enum UserSettingsField: String, Codable, CaseIterable {
-  case aiDataSharingEnabled = "ai_data_sharing_enabled"
   case calendarContentColorStyle = "calendar_content_color_style"
   case currency = "currency"
   case defaultShiftsView = "default_shifts_view"
@@ -119,7 +118,6 @@ internal enum UserSettingsField: String, Codable, CaseIterable {
   case profilePictureUrl = "profile_picture_url"
   case showDashboardClockButtons = "show_dashboard_clock_buttons"
   case theme = "theme"
-  case wageyShowcaseSeen = "wagey_showcase_seen"
 }
 
 /// Field keys for tracking dirty fields on LocalNotificationPreferences

@@ -13,8 +13,8 @@ import {
   projectedRecurringShifts,
   zonedShiftRange,
 } from "./live-activity-scheduling.ts";
-import { computeShift } from "./wagey/payroll/calc.ts";
-import type { UserSettings, WageSnapshot } from "./wagey/payroll/types.ts";
+import { computeShift } from "./payroll/calc.ts";
+import type { UserSettings, WageSnapshot } from "./payroll/types.ts";
 
 type ApnsEnvironment = "production" | "sandbox";
 

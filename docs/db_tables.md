@@ -127,7 +127,6 @@ Each user can have many of these records.
 |--------|------|-------------|
 | **id** | `uuid` | PK, FK → auth.users |
 | before_paywall | `boolean` | default: false |
-| wagey_invocations | `jsonb` | default: `{"count": 0, "month": null, "bonus": 0}` |
 | created_at | `timestamptz` | |
 | updated_at | `timestamptz` | |
 
@@ -162,21 +161,6 @@ Each user can have many of these records.
 | raw_provider_payload | `jsonb` | |
 | created_at | `timestamptz` | |
 | updated_at | `timestamptz` | |
-
----
-
-### consumable_transactions
-
-| Column | Type | Constraints |
-|--------|------|-------------|
-| **id** | `uuid` | PK, default: `gen_random_uuid()` |
-| user_id | `uuid` | FK → `profiles.id`, NOT NULL |
-| apple_transaction_id | `text` | UNIQUE, NOT NULL |
-| apple_original_transaction_id | `text` | NOT NULL |
-| apple_product_id | `text` | NOT NULL |
-| credits_granted | `integer` | NOT NULL, default: 0 |
-| environment | `text` | NOT NULL, default: `Sandbox` |
-| created_at | `timestamptz` | NOT NULL, default: `now()` |
 
 ---
 

@@ -370,6 +370,66 @@ internal final class SyncOfflineBehaviorTests: XCTestCase {
     XCTAssertEqual(adjustment.syncStatus, .dirty)
   }
 
+  // swiftlint:disable:next function_body_length
+  internal func testPayrollAdjustmentEditKeepsAnotherDevicesChangeToOtherFields() async throws {
+    let store = LocalStoreActor(modelContainer: try makeContainer())
+    let adjustment = try await makeAdjustment(in: store)
+    await store.markPayrollAdjustmentClean(id: adjustment.id)
+
+    // The editor saves every field, but only the note changed.
+    _ = try await store.updatePayrollAdjustment(
+      id: adjustment.id,
+      jobId: nil,
+      amount: 500,
+      currency: "kr",
+      category: .other,
+      taxTreatment: .grossTaxable,
+      description: "Bonus",
+      note: "Local note",
+      earnedFromDate: nil,
+      earnedToDate: nil,
+      payoutDate: adjustment.payoutDate
+    )
+    XCTAssertEqual(adjustment.dirtyFieldKeys, [.note])
+
+    // Another device changed the amount. The merge takes it and keeps the unpushed note.
+    let row = SyncPayrollAdjustmentRow(
+      id: adjustment.id,
+      user_id: userId,
+      job_id: nil,
+      amount: 900,
+      currency: "kr",
+      category: .other,
+      tax_treatment: .grossTaxable,
+      description: "Bonus",
+      note: nil,
+      curated_note: nil,
+      curated_description: nil,
+      curated_link: nil,
+      curated_link_title: nil,
+      earned_from_date: nil,
+      earned_to_date: nil,
+      payout_date: adjustment.payoutDateString,
+      created_at: nil,
+      updated_at: ISO8601Timestamp.string(from: Date()),
+      revision: 2,
+      deleted_at: nil
+    )
+    await store.mergePayrollAdjustmentFromServer(
+      id: adjustment.id,
+      serverRow: row,
+      serverUpdatedAt: Date(),
+      serverDeletedAt: nil,
+      snapshot: PayrollAdjustmentServerSnapshot.from(row: row, updatedAt: Date(), deletedAt: nil)
+    )
+
+    XCTAssertEqual(adjustment.amount, 900)
+    XCTAssertEqual(adjustment.note, "Local note")
+    XCTAssertEqual(adjustment.dirtyFieldKeys, [.note])
+    XCTAssertEqual(adjustment.syncStatus, .dirty)
+    XCTAssertEqual(adjustment.serverRevision, 2)
+  }
+
   // MARK: - Payroll adjustment conflict resolution
 
   internal func testKeepLocalRequeuesPayrollAdjustmentAsWholeRow() async throws {

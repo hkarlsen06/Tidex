@@ -2499,7 +2499,6 @@ internal actor LocalStoreActor {
       existing.theme = settings.theme
       existing.calendarContentColorStyle = settings.calendarContentColorStyle
       existing.showDashboardClockButtons = settings.showDashboardClockButtons
-      existing.aiDataSharingEnabled = settings.aiDataSharingEnabled
       existing.halfTaxMonth = settings.halfTaxMonth
       existing.currency = settings.currency
       existing.defaultStartupTab = settings.defaultStartupTab
@@ -2563,8 +2562,6 @@ internal actor LocalStoreActor {
     theme: String = "system",
     calendarContentColorStyle: String = "workplace",
     showDashboardClockButtons: Bool = true,
-    aiDataSharingEnabled: Bool = false,
-    wageyShowcaseSeen: Bool = false,
     monthlyGoal: Int? = nil,
     monthlyGoalsByMonth: [String: Int] = [:],
     defaultShiftsView: String? = nil,
@@ -2583,11 +2580,9 @@ internal actor LocalStoreActor {
       theme: theme,
       calendarContentColorStyle: calendarContentColorStyle,
       showDashboardClockButtons: showDashboardClockButtons,
-      aiDataSharingEnabled: aiDataSharingEnabled,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       defaultStartupTab: defaultStartupTab,
-      wageyShowcaseSeen: wageyShowcaseSeen,
       lastActive: now,
       updatedAt: now,
       revision: 0
@@ -2597,9 +2592,6 @@ internal actor LocalStoreActor {
     var dirtyFields: [UserSettingsField] = [
       .theme, .calendarContentColorStyle, .showDashboardClockButtons, .lastActive,
     ]
-    if aiDataSharingEnabled {
-      dirtyFields.append(.aiDataSharingEnabled)
-    }
     if payrollDay != nil { dirtyFields.append(.payrollDay) }
     if currency != nil { dirtyFields.append(.currency) }
     if monthlyGoal != nil { dirtyFields.append(.monthlyGoal) }
@@ -2622,11 +2614,9 @@ internal actor LocalStoreActor {
       theme: theme,
       calendarContentColorStyle: calendarContentColorStyle,
       showDashboardClockButtons: showDashboardClockButtons,
-      aiDataSharingEnabled: aiDataSharingEnabled,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       defaultStartupTab: defaultStartupTab,
-      wageyShowcaseSeen: wageyShowcaseSeen,
       lastActive: now,
       createdAt: now,
       serverUpdatedAt: now,
@@ -2677,8 +2667,6 @@ internal actor LocalStoreActor {
     theme: String?,
     calendarContentColorStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
-    aiDataSharingEnabled: Bool? = nil,
-    wageyShowcaseSeen: Bool? = nil,
     halfTaxMonth: Int?,
     currency: String?,
     defaultStartupTab: String?
@@ -2737,16 +2725,6 @@ internal actor LocalStoreActor {
     if let newShowDashboardClockButtons = showDashboardClockButtons {
       localSettings.showDashboardClockButtons = newShowDashboardClockButtons
       newDirtyFields.insert(.showDashboardClockButtons)
-    }
-
-    if let newAIDataSharingEnabled = aiDataSharingEnabled {
-      localSettings.aiDataSharingEnabled = newAIDataSharingEnabled
-      newDirtyFields.insert(.aiDataSharingEnabled)
-    }
-
-    if let newWageyShowcaseSeen = wageyShowcaseSeen {
-      localSettings.wageyShowcaseSeen = newWageyShowcaseSeen
-      newDirtyFields.insert(.wageyShowcaseSeen)
     }
 
     if let newHalfTax = halfTaxMonth, newHalfTax != localSettings.halfTaxMonth {
@@ -2858,7 +2836,6 @@ internal actor LocalStoreActor {
     localSettings.theme = serverSnapshot.theme
     localSettings.calendarContentColorStyle = serverSnapshot.calendarContentColorStyle
     localSettings.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
-    localSettings.aiDataSharingEnabled = serverSnapshot.aiDataSharingEnabled
     localSettings.halfTaxMonth = serverSnapshot.halfTaxMonth
     localSettings.currency = serverSnapshot.currency
     localSettings.defaultStartupTab = serverSnapshot.defaultStartupTab
@@ -3097,8 +3074,7 @@ internal actor LocalStoreActor {
     serverRevision: Int64,
     archivedAt: Date?,
     deletedAt: Date?,
-    newSnapshot: JobServerSnapshot,
-    localDirtyFields: Set<JobField>
+    newSnapshot: JobServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalJob>(
       predicate: #Predicate { $0.id == id }
@@ -3109,6 +3085,10 @@ internal actor LocalStoreActor {
       return
 
     }
+
+    // Read the dirty fields here, in the same actor turn as the merge, so a local edit saved
+    // after the coordinator read the row is kept.
+    let localDirtyFields = SyncMerge.fieldsToKeepLocally(existing, server: newSnapshot)
 
     func mergeUnlessDirty(_ field: JobField, _ apply: () -> Void) {
       if !localDirtyFields.contains(field) { apply() }
@@ -3219,8 +3199,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: UserShiftServerSnapshot,
-    localDirtyFields: Set<UserShiftField>
+    newSnapshot: UserShiftServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalUserShift>(
       predicate: #Predicate { $0.id == id }
@@ -3231,6 +3210,10 @@ internal actor LocalStoreActor {
       return
 
     }
+
+    // Read the dirty fields here, in the same actor turn as the merge, so a local edit saved
+    // after the coordinator read the row is kept.
+    let localDirtyFields = SyncMerge.fieldsToKeepLocally(existing, server: newSnapshot)
 
     let dateFormatter = isoDateFormatter
 
@@ -3350,8 +3333,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: EventServerSnapshot,
-    localDirtyFields: Set<EventField>
+    newSnapshot: EventServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalEvent>(
       predicate: #Predicate { $0.id == id }
@@ -3362,6 +3344,10 @@ internal actor LocalStoreActor {
       return
 
     }
+
+    // Read the dirty fields here, in the same actor turn as the merge, so a local edit saved
+    // after the coordinator read the row is kept.
+    let localDirtyFields = SyncMerge.fieldsToKeepLocally(existing, server: newSnapshot)
 
     let dateFormatter = isoDateFormatter
 
@@ -3500,8 +3486,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: RecurringShiftServerSnapshot,
-    localDirtyFields: Set<RecurringShiftField>
+    newSnapshot: RecurringShiftServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalRecurringShift>(
       predicate: #Predicate { $0.id == id }
@@ -3512,6 +3497,10 @@ internal actor LocalStoreActor {
       return
 
     }
+
+    // Read the dirty fields here, in the same actor turn as the merge, so a local edit saved
+    // after the coordinator read the row is kept.
+    let localDirtyFields = SyncMerge.fieldsToKeepLocally(existing, server: newSnapshot)
 
     if !localDirtyFields.contains(.jobId) {
       existing.jobId = serverRow.job_id
@@ -3647,8 +3636,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: WageSnapshotServerSnapshot,
-    localDirtyFields: Set<WageSnapshotField>
+    newSnapshot: WageSnapshotServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalWageSnapshot>(
       predicate: #Predicate { $0.id == id }
@@ -3659,6 +3647,10 @@ internal actor LocalStoreActor {
       return
 
     }
+
+    // Read the dirty fields here, in the same actor turn as the merge, so a local edit saved
+    // after the coordinator read the row is kept.
+    let localDirtyFields = SyncMerge.fieldsToKeepLocally(existing, server: newSnapshot)
 
     let dateFormatter = isoDateFormatter
 
@@ -3732,8 +3724,6 @@ internal actor LocalStoreActor {
     existing.theme = serverRow.theme
     existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
-    existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
-    existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.defaultStartupTab = serverRow.default_startup_tab
@@ -3809,12 +3799,6 @@ internal actor LocalStoreActor {
     mergeUnlessDirty(.showDashboardClockButtons) {
       existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
     }
-    mergeUnlessDirty(.aiDataSharingEnabled) {
-      existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
-    }
-    mergeUnlessDirty(.wageyShowcaseSeen) {
-      existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
-    }
     mergeUnlessDirty(.halfTaxMonth) { existing.halfTaxMonth = serverRow.half_tax_month }
     mergeUnlessDirty(.currency) { existing.currency = serverRow.currency }
     mergeUnlessDirty(.defaultStartupTab) {
@@ -3830,8 +3814,7 @@ internal actor LocalStoreActor {
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    newSnapshot: UserSettingsServerSnapshot,
-    localDirtyFields: Set<UserSettingsField>
+    newSnapshot: UserSettingsServerSnapshot
   ) {
     let descriptor = FetchDescriptor<LocalUserSettings>(
       predicate: #Predicate { $0.userId == userId }
@@ -3842,6 +3825,10 @@ internal actor LocalStoreActor {
       return
 
     }
+
+    // Read the dirty fields here, in the same actor turn as the merge, so a local edit saved
+    // after the coordinator read the row is kept.
+    let localDirtyFields = SyncMerge.fieldsToKeepLocally(existing, server: newSnapshot)
 
     mergeServerFields(into: existing, from: serverRow, keepingLocal: localDirtyFields)
 
@@ -3881,7 +3868,7 @@ internal actor LocalStoreActor {
       baseline: baseline,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      snapshot: snapshot.encoded()
+      snapshot: snapshot
     ) {
       return
     }
@@ -3955,8 +3942,7 @@ internal actor LocalStoreActor {
     serverRevision: Int64,
     archivedAt: Date?,
     deletedAt: Date?,
-    newSnapshot: JobServerSnapshot,
-    localDirtyFields: Set<JobField>
+    newSnapshot: JobServerSnapshot
   ) {
     autoMergeJob(
       id: id,
@@ -3965,8 +3951,7 @@ internal actor LocalStoreActor {
       serverRevision: serverRevision,
       archivedAt: archivedAt,
       deletedAt: deletedAt,
-      newSnapshot: newSnapshot,
-      localDirtyFields: localDirtyFields
+      newSnapshot: newSnapshot
     )
   }
 
@@ -4041,7 +4026,7 @@ internal actor LocalStoreActor {
       baseline: baseline,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      snapshot: snapshot.encoded()
+      snapshot: snapshot
     ) {
       return
     }
@@ -4119,8 +4104,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: UserShiftServerSnapshot,
-    localDirtyFields: Set<UserShiftField>
+    newSnapshot: UserShiftServerSnapshot
   ) {
     // Same as autoMergeShift - apply server changes for non-dirty fields
     autoMergeShift(
@@ -4129,8 +4113,7 @@ internal actor LocalStoreActor {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newSnapshot,
-      localDirtyFields: localDirtyFields
+      newSnapshot: newSnapshot
     )
   }
 
@@ -4212,7 +4195,7 @@ internal actor LocalStoreActor {
       baseline: baseline,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      snapshot: snapshot.encoded()
+      snapshot: snapshot
     ) {
       return
     }
@@ -4285,8 +4268,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: EventServerSnapshot,
-    localDirtyFields: Set<EventField>
+    newSnapshot: EventServerSnapshot
   ) {
     autoMergeEvent(
       id: id,
@@ -4294,8 +4276,7 @@ internal actor LocalStoreActor {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newSnapshot,
-      localDirtyFields: localDirtyFields
+      newSnapshot: newSnapshot
     )
   }
 
@@ -4374,7 +4355,7 @@ internal actor LocalStoreActor {
       baseline: baseline,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      snapshot: snapshot.encoded()
+      snapshot: snapshot
     ) {
       return
     }
@@ -4461,8 +4442,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: RecurringShiftServerSnapshot,
-    localDirtyFields: Set<RecurringShiftField>
+    newSnapshot: RecurringShiftServerSnapshot
   ) {
     autoMergeRecurringShift(
       id: id,
@@ -4470,8 +4450,7 @@ internal actor LocalStoreActor {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newSnapshot,
-      localDirtyFields: localDirtyFields
+      newSnapshot: newSnapshot
     )
   }
 
@@ -4550,7 +4529,7 @@ internal actor LocalStoreActor {
       baseline: baseline,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      snapshot: snapshot.encoded()
+      snapshot: snapshot
     ) {
       return
     }
@@ -4627,8 +4606,7 @@ internal actor LocalStoreActor {
     serverUpdatedAt: Date,
     serverRevision: Int64,
     serverDeletedAt: Date?,
-    newSnapshot: WageSnapshotServerSnapshot,
-    localDirtyFields: Set<WageSnapshotField>
+    newSnapshot: WageSnapshotServerSnapshot
   ) {
     autoMergeWageSnapshot(
       id: id,
@@ -4636,8 +4614,7 @@ internal actor LocalStoreActor {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newSnapshot,
-      localDirtyFields: localDirtyFields
+      newSnapshot: newSnapshot
     )
   }
 
@@ -4721,7 +4698,7 @@ internal actor LocalStoreActor {
       baseline: baseline,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      snapshot: snapshot.encoded()
+      snapshot: snapshot
     ) {
       return
     }
@@ -4736,8 +4713,6 @@ internal actor LocalStoreActor {
     existing.theme = serverRow.theme
     existing.calendarContentColorStyle = serverRow.calendar_content_color_style ?? "workplace"
     existing.showDashboardClockButtons = serverRow.show_dashboard_clock_buttons ?? true
-    existing.aiDataSharingEnabled = serverRow.ai_data_sharing_enabled ?? false
-    existing.wageyShowcaseSeen = serverRow.wagey_showcase_seen ?? false
     existing.halfTaxMonth = serverRow.half_tax_month
     existing.currency = serverRow.currency
     existing.defaultStartupTab = serverRow.default_startup_tab
@@ -4773,16 +4748,14 @@ internal actor LocalStoreActor {
     serverRow: SyncUserSettingsRow,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    newSnapshot: UserSettingsServerSnapshot,
-    localDirtyFields: Set<UserSettingsField>
+    newSnapshot: UserSettingsServerSnapshot
   ) {
     autoMergeUserSettings(
       userId: userId,
       serverRow: serverRow,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      newSnapshot: newSnapshot,
-      localDirtyFields: localDirtyFields
+      newSnapshot: newSnapshot
     )
   }
 
@@ -4807,8 +4780,6 @@ internal actor LocalStoreActor {
     existing.theme = serverSnapshot.theme
     existing.calendarContentColorStyle = serverSnapshot.calendarContentColorStyle
     existing.showDashboardClockButtons = serverSnapshot.showDashboardClockButtons
-    existing.aiDataSharingEnabled = serverSnapshot.aiDataSharingEnabled
-    existing.wageyShowcaseSeen = serverSnapshot.wageyShowcaseSeen
     existing.halfTaxMonth = serverSnapshot.halfTaxMonth
     existing.currency = serverSnapshot.currency
     existing.defaultStartupTab = serverSnapshot.defaultStartupTab
@@ -5039,6 +5010,7 @@ internal protocol SyncFieldSnapshot {
   associatedtype Field: Hashable
 
   func changedFields(from other: Self) -> Set<Field>
+  func encoded() -> Data
 }
 
 /// Sync metadata shared by the local models that the sync coordinator pushes.
@@ -5105,20 +5077,24 @@ extension LocalStoreActor {
   /// Keeps an edit or delete made while a push was in flight.
   /// Returns `true` when the row changed after `baseline` was captured. In that case only the
   /// returned server revision is recorded, and the caller must not overwrite the row.
-  internal func keepChangesMadeDuringPush(
-    _ row: some SyncPushTrackedModel,
+  internal func keepChangesMadeDuringPush<Row: SyncPushTrackedModel>(
+    _ row: Row,
     baseline: SyncPushBaseline,
     serverUpdatedAt: Date,
     serverRevision: Int64,
-    snapshot: Data
+    snapshot: Row.Snapshot
   ) -> Bool {
     guard SyncPushBaseline(row) != baseline else { return false }
+    // A dirty field that now matches the server row was acknowledged by this push and not
+    // edited again. Left dirty, it would later overwrite a newer edit from another device.
+    let stillPending = SyncMerge.fieldsToKeepLocally(row, server: snapshot)
     adoptServerRevision(
       row,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRevision,
-      snapshot: snapshot
+      snapshot: snapshot.encoded()
     )
+    settleMergedDirtyFields(row, keepingLocal: stillPending)
     return true
   }
 
@@ -5273,11 +5249,9 @@ extension LocalUserSettings: SyncPushTrackedModel {
       theme: theme,
       calendarContentColorStyle: effectiveCalendarContentColorStyle,
       showDashboardClockButtons: effectiveShowDashboardClockButtons,
-      aiDataSharingEnabled: aiDataSharingEnabled ?? false,
       halfTaxMonth: halfTaxMonth,
       currency: currency,
       defaultStartupTab: defaultStartupTab,
-      wageyShowcaseSeen: wageyShowcaseSeen ?? false,
       lastActive: lastActive,
       updatedAt: serverUpdatedAt,
       revision: serverRevision

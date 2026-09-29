@@ -129,7 +129,7 @@ const payrollDocs = {
           heading: 'Entry points',
           paragraphs: [
             'The active payroll stack is split between the iOS app and the shared Supabase TypeScript module.',
-            'The Swift iOS layer orchestrates month-level loading and tax/snapshot selection, while the shared TypeScript calculator is still used by Wagey and server-side tooling. In the TypeScript compatibility signature, settings and job are retained for compatibility but are not required for the current core calculation path.',
+            'The Swift iOS layer orchestrates month-level loading and tax/snapshot selection, while the shared TypeScript calculator is still used by server-side tooling such as the calendar feed and Live Activities. In the TypeScript compatibility signature, settings and job are retained for compatibility but are not required for the current core calculation path.',
           ],
           code: {
             language: 'text',
@@ -141,9 +141,9 @@ PayrollEngine.computeShiftsForMonth(request)
 PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 // ios/TidexApp/Services/Payroll/PayrollCalculator.swift
 
-// Shared TypeScript calculator (Wagey / server-side tools)
+// Shared TypeScript calculator (server-side tools)
 computeShift(shift, settings, presetRules, snapshot, job?)
-// supabase/functions/_shared/wagey/payroll/calc.ts`,
+// supabase/functions/_shared/payroll/calc.ts`,
           },
         },
       ],
@@ -255,7 +255,7 @@ computeShift(shift, settings, presetRules, snapshot, job?)
               ['tax_treatment', 'text', 'One of: gross_taxable, net_manual, excluded_from_tax_estimate'],
               ['description', 'text', 'Short user-visible explanation'],
               ['note', 'text', 'Private user note'],
-              ['curated_note', 'text', 'Optional Wagey-authored explanation'],
+              ['curated_note', 'text', 'Optional curated explanation'],
               ['curated_description', 'text', 'Optional longer curated explanation shown after tapping the CTA'],
               ['curated_link', 'text', 'Optional source link for the curated explanation'],
               ['curated_link_title', 'text', 'Optional user-visible title for the curated source link'],
@@ -382,10 +382,10 @@ computeShift(shift, settings, presetRules, snapshot, job?)
         },
         {
           heading: 'Job-scoped snapshot buckets',
-          paragraphs: ['All wage snapshots are loaded once and grouped into buckets by job_id. The active iOS engine first chooses the snapshot scope for a shift, then resolves the latest dated snapshot or baseline inside that scope. The shared Wagey TypeScript helper keeps a bucket resolver for server-side tools:'],
+          paragraphs: ['All wage snapshots are loaded once and grouped into buckets by job_id. The active iOS engine first chooses the snapshot scope for a shift, then resolves the latest dated snapshot or baseline inside that scope. A reference TypeScript bucket resolver looks like this:'],
           code: {
             language: 'typescript',
-            content: `// Shared TypeScript fallback chain for snapshot lookup
+            content: `// Reference TypeScript fallback chain for snapshot lookup
 const preferredKeys = [shift.job_id ?? '__legacy__', '__legacy__'];
 
 for (const key of preferredKeys) {
@@ -680,10 +680,10 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
         },
         {
           heading: 'Job-scoped snapshot selection algorithm',
-          paragraphs: ['The live iOS app scopes snapshots before date selection. The shared Wagey TypeScript path groups snapshots into buckets by job_id and uses an explicit job/legacy resolver for server-side tools. Both paths keep wage and tax lookup dates separate.'],
+          paragraphs: ['The live iOS app scopes snapshots before date selection. A reference TypeScript resolver groups snapshots into buckets by job_id and uses an explicit job/legacy resolver. Both paths keep wage and tax lookup dates separate.'],
           code: {
             language: 'typescript',
-            content: `// Shared Wagey TypeScript resolver
+            content: `// Reference TypeScript resolver
 const resolveSnapshotForDate = (
   buckets: Map<string, SnapshotBucket>,
   snapshots: WageSnapshot[],
@@ -953,7 +953,7 @@ const gross = Math.round((basePay + supplementPay) * 100) / 100;
           heading: 'Tax calculation',
           paragraphs: [
             'Tax is applied downstream from computeShift, not inside the pure shift calculator.',
-            'In the iOS app this happens when ShiftWithComputations values and monthly totals are assembled; Wagey and other server-side tools expose the same tax-derived values in their response payloads.',
+            'In the iOS app this happens when ShiftWithComputations values and monthly totals are assembled; server-side tools expose the same tax-derived values in their response payloads.',
           ],
           code: {
             language: 'typescript',
@@ -1209,7 +1209,7 @@ const toDeduct = method !== "none" && totalHours > thresholdHours
         {
           heading: 'Shared and previewed shifts',
           paragraphs: [
-            'Shared month payloads, sharer previews, and Wagey what-if calculations now carry custom pause windows and the richer break-audit metadata as part of the current rollout.',
+            'Shared month payloads, and sharer previews now carry custom pause windows and the richer break-audit metadata as part of the current rollout.',
             'That means paid-hours recomputation stays accurate even when earnings are hidden, because pause overrides are still available to the consumer.',
           ],
         },

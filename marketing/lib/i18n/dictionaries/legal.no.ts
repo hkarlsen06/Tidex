@@ -214,7 +214,6 @@ export const legalNo = {
           { boldLabel: 'Vennemeldinger:', text: 'Meldinger, svarreferanser, bildevedlegg, misbruksrapporter, blokkeringer, trådmetadata og lese-/mute-status når du bruker vennemeldinger.' },
           { boldLabel: 'Autentiseringsinformasjon:', text: 'Økttokens og autentiseringstilstand som trengs for å holde deg innlogget, inkludert informasjon om innloggingsleverandør når du bruker Logg inn med Apple eller Google-innlogging.' },
           { boldLabel: 'Betalingsinformasjon:', text: 'Behandles av Apple for kjøp i appen på iOS. Vi lagrer ikke kortinformasjon.' },
-          { boldLabel: 'AI-assistentdata:', text: 'Når du bruker Wagey AI-assistenten, blir meldingene du sender (inkludert tekst og bilder), visningsnavnet ditt og skiftdata som hentes under samtalen behandlet av en tredjeparts AI-tjeneste (se punkt 5).' },
           { boldLabel: 'Varslingsmetadata:', text: 'Hvis du aktiverer pushvarsler, kan varslingspayloaden inneholde avsenderidentitet, begrenset meldingsforhåndsvisning, skjermbildevarsler og trådidentifikatorer slik at appen kan vise og åpne riktig samtale.' },
           { boldLabel: 'Enhets- og bruksdata:', text: 'Når du åpner appen, sender den appversjon, iOS-versjon, enhetsmodell, språk, region og tidssone, noen av innstillingene dine (tillatelse til varsler og bakgrunnsoppdatering, hvilke Tidex-widgeter du bruker, lys eller mørk modus, tekststørrelse og Reduser bevegelse), og tidspunktet du åpnet den. Appen sender også tekniske rapporter om oppstart og innlogging, for eksempel om du er logget inn og eventuelle feilmeldinger, slik at vi kan rette innloggingsproblemer.' },
         ],
@@ -231,7 +230,6 @@ export const legalNo = {
           { text: 'Levere pushvarsler og relaterte varsler i appen dersom du aktiverer dem.' },
           { text: 'Kommunisere med deg om tjenesten.' },
           { text: 'Gi brukerstøtte, rette feil og telle hvor mange som bruker appen og funksjonene i den.' },
-          { text: 'Tilby AI-drevet assistanse gjennom Wagey-funksjonen, inkludert å svare på spørsmål om skiftene dine, hjelpe med å administrere skift og beregne lønn. Dette krever sending av relevante data til en tredjeparts AI-tjeneste (se punkt 5).' },
           { text: 'Behandle misbruksrapporter, håndheve reglene våre og beskytte brukere og tjenesten mot misbruk.' },
         ],
         importantNote: {
@@ -287,16 +285,8 @@ export const legalNo = {
               text: 'personvernerklæring',
             },
           },
-          {
-            boldLabel: 'OpenAI:',
-            text: 'Wagey AI-assistenten drives av GPT-5.6 Luna fra OpenAI. Når du bruker Wagey, kan meldingene du skriver, eventuelle bilder du legger ved, visningsnavnet ditt og skiftdata som hentes under samtalen (som arbeidstider, pauser og lønnsinnstillinger) sendes til OpenAI for behandling. I denne sammenhengen er Tidex behandlingsansvarlig for personopplysningene, og OpenAI opptrer som databehandler på vegne av Tidex. Ved behov kan Wagey også bruke OpenAIs web search-verktøy for å hente relevant offentlig informasjon fra nettet. Disse dataene sendes kun når du aktivt bruker Wagey-funksjonen og har gitt ditt uttrykkelige samtykke. OpenAIs nåværende kommersielle dokumentasjon sier at API-inndata og -utdata ikke brukes til å trene OpenAIs modeller med mindre kunden uttrykkelig melder seg på modellforbedring. OpenAIs {link} kan gi mer informasjon om OpenAIs egne produkter og behandling, men det er Tidex sin personvernerklæring som regulerer hvordan Tidex behandler personopplysningene dine i Wagey.',
-            link: {
-              href: 'https://openai.com/policies/privacy-policy/',
-              text: 'personvernerklæring',
-            },
-          },
         ],
-        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler, og med OpenAI når du aktivt bruker Wagey AI-assistenten og har gitt ditt uttrykkelige samtykke. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
+        closingParagraph: 'Data deles kun med Google hvis du velger Google-innlogging, med Apple når du bruker Apple-innlogging, kjøp eller pushvarsler. Ingen data deles med tredjeparter utover de som er oppført ovenfor.',
       },
       {
         heading: '6. Dine rettigheter',

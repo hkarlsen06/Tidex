@@ -174,6 +174,7 @@ extension LocalStoreActor {
       throw LocalStoreWriteError.notFound
     }
 
+    let before = existing.localValuesSnapshot
     existing.jobId = jobId
     existing.amount = amount
     existing.currency = currency
@@ -186,12 +187,13 @@ extension LocalStoreActor {
     existing.payoutDate = payoutDate
     existing.localUpdatedAt = Date()
     existing.syncStatus = .dirty
-    existing.dirtyFieldKeys = Set(PayrollAdjustmentField.allCases)
+    // Only the changed fields, so a push does not overwrite fields another device changed.
+    existing.dirtyFieldKeys.formUnion(existing.localValuesSnapshot.changedFields(from: before))
     try modelContext.save()
     return existing.toPayrollAdjustment()
   }
 
-  /// Overwrites the local row with the server row.
+  /// Overwrites the local row with the server row, except the fields in `keepingLocal`.
   /// With `onlyIfClean`, a row that is no longer clean stays untouched and the call returns false.
   /// The coordinator reads the sync status outside this actor, so it needs this check.
   @discardableResult
@@ -201,7 +203,8 @@ extension LocalStoreActor {
     serverUpdatedAt: Date,
     serverDeletedAt: Date?,
     snapshot: PayrollAdjustmentServerSnapshot,
-    onlyIfClean: Bool = false
+    onlyIfClean: Bool = false,
+    keepingLocal keep: Set<PayrollAdjustmentField> = []
   ) -> Bool {
     guard let existing = try? getPayrollAdjustment(id: id) else {
       return false
@@ -209,21 +212,30 @@ extension LocalStoreActor {
     if onlyIfClean, existing.syncStatus != .clean {
       return false
     }
+    func merge(_ field: PayrollAdjustmentField, _ apply: () -> Void) {
+      if !keep.contains(field) { apply() }
+    }
     let formatter = payrollAdjustmentDateFormatter
-    existing.jobId = serverRow.job_id
-    existing.amount = serverRow.amount
-    existing.currency = serverRow.currency
-    existing.category = serverRow.category
-    existing.taxTreatment = serverRow.tax_treatment
-    existing.descriptionText = serverRow.description
-    existing.note = serverRow.note
-    existing.curatedNote = serverRow.curated_note
-    existing.curatedDescription = serverRow.curated_description
-    existing.curatedLink = serverRow.curated_link
-    existing.curatedLinkTitle = serverRow.curated_link_title
-    existing.earnedFromDate = serverRow.earned_from_date.flatMap { formatter.date(from: $0) }
-    existing.earnedToDate = serverRow.earned_to_date.flatMap { formatter.date(from: $0) }
-    existing.payoutDate = formatter.date(from: serverRow.payout_date) ?? existing.payoutDate
+    merge(.jobId) { existing.jobId = serverRow.job_id }
+    merge(.amount) { existing.amount = serverRow.amount }
+    merge(.currency) { existing.currency = serverRow.currency }
+    merge(.category) { existing.category = serverRow.category }
+    merge(.taxTreatment) { existing.taxTreatment = serverRow.tax_treatment }
+    merge(.description) { existing.descriptionText = serverRow.description }
+    merge(.note) { existing.note = serverRow.note }
+    merge(.curatedNote) { existing.curatedNote = serverRow.curated_note }
+    merge(.curatedDescription) { existing.curatedDescription = serverRow.curated_description }
+    merge(.curatedLink) { existing.curatedLink = serverRow.curated_link }
+    merge(.curatedLinkTitle) { existing.curatedLinkTitle = serverRow.curated_link_title }
+    merge(.earnedFromDate) {
+      existing.earnedFromDate = serverRow.earned_from_date.flatMap { formatter.date(from: $0) }
+    }
+    merge(.earnedToDate) {
+      existing.earnedToDate = serverRow.earned_to_date.flatMap { formatter.date(from: $0) }
+    }
+    merge(.payoutDate) {
+      existing.payoutDate = formatter.date(from: serverRow.payout_date) ?? existing.payoutDate
+    }
     existing.serverUpdatedAt = serverUpdatedAt
     existing.serverRevision = serverRow.revision
     existing.serverDeletedAt = serverDeletedAt
@@ -249,7 +261,7 @@ extension LocalStoreActor {
       baseline: baseline,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
-      snapshot: snapshot.encoded()
+      snapshot: snapshot
     ) {
       return
     }
@@ -265,10 +277,9 @@ extension LocalStoreActor {
     existing.conflictServerSnapshot = nil
   }
 
-  /// Merges a newer server row into a dirty local adjustment.
-  /// Pushes send the whole row, so this merges whole rows. The server row replaces the local
-  /// values when no local value still needs pushing. Otherwise the local values stay and only
-  /// the server revision is adopted, so the next push updates the server row.
+  /// Merges a newer server row into a dirty local adjustment, field by field. Dirty local values
+  /// that differ from the server stay and are pushed next. Every other field takes the server
+  /// value.
   func mergePayrollAdjustmentFromServer(
     id: String,
     serverRow: SyncPayrollAdjustmentRow,
@@ -280,22 +291,14 @@ extension LocalStoreActor {
       return
     }
     let keepLocal = SyncMerge.fieldsToKeepLocally(existing, server: snapshot)
-    if keepLocal.isEmpty {
-      updatePayrollAdjustmentFromServer(
-        id: id,
-        serverRow: serverRow,
-        serverUpdatedAt: serverUpdatedAt,
-        serverDeletedAt: serverDeletedAt,
-        snapshot: snapshot
-      )
-    } else {
-      adoptServerRevision(
-        existing,
-        serverUpdatedAt: serverUpdatedAt,
-        serverRevision: serverRow.revision,
-        snapshot: snapshot.encoded()
-      )
-    }
+    updatePayrollAdjustmentFromServer(
+      id: id,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      snapshot: snapshot,
+      keepingLocal: keepLocal
+    )
     settleMergedDirtyFields(existing, keepingLocal: keepLocal)
   }
 
@@ -398,7 +401,7 @@ extension LocalStoreActor {
   }
 
   /// Resolves a payroll adjustment conflict by keeping the local values and queuing a push.
-  /// A push sends the whole row, so every field is marked dirty.
+  /// Every field is marked dirty, so the push sends the whole local row.
   func resolvePayrollAdjustmentConflictKeepLocal(id: String, serverRevision: Int64) {
     guard let existing = try? getPayrollAdjustment(id: id) else {
       return

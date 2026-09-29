@@ -36,6 +36,23 @@ internal final class ISO8601TimestampTests: XCTestCase {
     XCTAssertEqual(parsed.timeIntervalSince1970, date.timeIntervalSince1970, accuracy: 0.001)
   }
 
+  /// A sync cursor must come back as the exact Postgres value. A millisecond cursor sorts before
+  /// its own row, and the pull then fetches that row and every row tied with it again.
+  internal func testMicrosecondStringKeepsPostgresPrecision() throws {
+    let inputs = [
+      "2026-02-26T14:10:15.909073+00:00": "2026-02-26T14:10:15.909073Z",
+      "2026-09-28T10:15:30.123999+00:00": "2026-09-28T10:15:30.123999Z",
+      "2026-09-28T10:15:30.000001+00:00": "2026-09-28T10:15:30.000001Z",
+      "2026-09-28T10:15:30.999999+00:00": "2026-09-28T10:15:30.999999Z",
+      "2026-09-28T10:15:30Z": "2026-09-28T10:15:30.000000Z",
+      "2026-09-28T12:15:30.5+02:00": "2026-09-28T10:15:30.500000Z",
+    ]
+    for (input, expected) in inputs {
+      let date = try XCTUnwrap(ISO8601Timestamp.date(from: input), input)
+      XCTAssertEqual(ISO8601Timestamp.microsecondString(from: date), expected, input)
+    }
+  }
+
   // MARK: - LocalJob's Postgres-form normalization (normalizeJobTimestamp + parseJobISO8601)
 
   internal func testParsesPostgresSpaceSeparatorWithTwoDigitOffset() throws {

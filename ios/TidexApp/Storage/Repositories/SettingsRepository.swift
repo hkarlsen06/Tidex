@@ -128,7 +128,6 @@ final class SettingsRepository {
   ///   - theme: New theme (optional)
   ///   - calendarContentColorStyle: New calendar content color style (optional)
   ///   - showDashboardClockButtons: Whether dashboard clock buttons are visible (optional)
-  ///   - aiDataSharingEnabled: Whether Wagey AI data sharing is enabled (optional)
   ///   - halfTaxMonth: New half tax month (optional)
   ///   - currency: New currency (optional)
   ///   - defaultStartupTab: New default startup tab (optional)
@@ -144,8 +143,6 @@ final class SettingsRepository {
     theme: String? = nil,
     calendarContentColorStyle: String? = nil,
     showDashboardClockButtons: Bool? = nil,
-    aiDataSharingEnabled: Bool? = nil,
-    wageyShowcaseSeen: Bool? = nil,
     halfTaxMonth: Int? = nil,
     currency: String? = nil,
     defaultStartupTab: String? = nil,
@@ -162,8 +159,6 @@ final class SettingsRepository {
         theme: theme,
         calendarContentColorStyle: calendarContentColorStyle,
         showDashboardClockButtons: showDashboardClockButtons,
-        aiDataSharingEnabled: aiDataSharingEnabled,
-        wageyShowcaseSeen: wageyShowcaseSeen,
         halfTaxMonth: halfTaxMonth,
         currency: currency,
         defaultStartupTab: defaultStartupTab

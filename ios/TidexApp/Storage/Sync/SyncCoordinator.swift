@@ -475,7 +475,9 @@ final class SyncCoordinator {
   }
 
   /// Mutable outcome of the pull phase. It is a class so that a timed out pull keeps the tables
-  /// it finished.
+  /// it finished. `@unchecked` is safe because only the pull task writes it, and `withTimeout`
+  /// returns only after that task ends, since a task group waits for its children even after
+  /// `cancelAll()`.
   private final class PullPhase: @unchecked Sendable {
     var tableResults: [TablePullResult] = []
     var error: Error?
@@ -689,6 +691,9 @@ final class SyncCoordinator {
         error: nil
       )
     } catch let error where Self.isCancellation(error) {
+      // Rows pushed before the cancellation are marked clean only in memory. Save them, or a
+      // restart replays those pushes against revisions the server has moved past.
+      try? await storeActor.save()
       let duration = Date().timeIntervalSince(startTime)
       logger.warning("Sync cancelled after \(String(format: "%.1f", duration))s")
       return SyncResult(
@@ -1125,8 +1130,7 @@ final class SyncCoordinator {
         serverRevision: serverRow.revision,
         archivedAt: serverArchivedAt,
         deletedAt: serverDeletedAt,
-        newSnapshot: serverSnapshot,
-        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+        newSnapshot: serverSnapshot
       )
       return .autoMerged
 
@@ -1331,8 +1335,7 @@ final class SyncCoordinator {
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
-        newSnapshot: serverSnapshot,
-        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+        newSnapshot: serverSnapshot
       )
       return .autoMerged
 
@@ -1574,8 +1577,7 @@ final class SyncCoordinator {
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
-        newSnapshot: serverSnapshot,
-        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+        newSnapshot: serverSnapshot
       )
       return .autoMerged
 
@@ -1808,8 +1810,7 @@ final class SyncCoordinator {
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
-        newSnapshot: serverSnapshot,
-        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+        newSnapshot: serverSnapshot
       )
       return .autoMerged
 
@@ -2035,8 +2036,7 @@ final class SyncCoordinator {
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
         serverDeletedAt: serverDeletedAt,
-        newSnapshot: serverSnapshot,
-        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+        newSnapshot: serverSnapshot
       )
       return .autoMerged
 
@@ -2160,7 +2160,8 @@ final class SyncCoordinator {
   private func pushPayrollAdjustment(
     _ adjustment: LocalPayrollAdjustment,
     userId: String,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    isRetry: Bool = false
   ) async throws -> PushResult {
     if adjustment.syncStatus == .pendingDelete {
       return try await pushPayrollAdjustmentDelete(
@@ -2180,7 +2181,9 @@ final class SyncCoordinator {
     }
 
     let baseline = SyncPushBaseline(adjustment)
+    let dirtyColumns = Set(adjustment.dirtyFieldKeys.map(\.rawValue))
     let updateData = payrollAdjustmentPayload(adjustment, includeIdentity: false, userId: userId)
+      .filter { dirtyColumns.contains($0.key) }
     try requireNonEmptyUpdate(updateData, table: .payrollAdjustments, id: adjustment.id)
 
     let returnedRows: [SyncPayrollAdjustmentRow] =
@@ -2196,12 +2199,57 @@ final class SyncCoordinator {
       .value
 
     guard let returnedRow = returnedRows.first else {
-      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
-      return .conflict
+      return try await handlePayrollAdjustmentPushConflict(
+        adjustment, userId: userId, storeActor: storeActor, isRetry: isRetry)
     }
 
     try await markPayrollAdjustmentPushed(returnedRow, storeActor: storeActor, baseline: baseline)
     return .success
+  }
+
+  /// Handles an update that matched no row. A moved revision is merged the way a pull merges it,
+  /// and the push is retried once. A deleted or missing row, or a second miss, is a conflict
+  /// that carries the server row when there is one.
+  private func handlePayrollAdjustmentPushConflict(
+    _ adjustment: LocalPayrollAdjustment,
+    userId: String,
+    storeActor: LocalStoreActor,
+    isRetry: Bool
+  ) async throws -> PushResult {
+    let serverRows: [SyncPayrollAdjustmentRow] =
+      try await supabase
+      .from("payroll_adjustments")
+      .select()
+      .eq("id", value: adjustment.id)
+      .execute()
+      .value
+    guard let serverRow = serverRows.first else {
+      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
+      return .conflict
+    }
+    let serverUpdatedAt = try requireISO8601(
+      serverRow.updated_at, table: .payrollAdjustments, id: serverRow.id)
+    let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+    let snapshot = PayrollAdjustmentServerSnapshot.from(
+      row: serverRow, updatedAt: serverUpdatedAt, deletedAt: serverDeletedAt)
+    guard serverDeletedAt == nil, !isRetry else {
+      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: snapshot)
+      return .conflict
+    }
+
+    await storeActor.mergePayrollAdjustmentFromServer(
+      id: serverRow.id,
+      serverRow: serverRow,
+      serverUpdatedAt: serverUpdatedAt,
+      serverDeletedAt: serverDeletedAt,
+      snapshot: snapshot
+    )
+    guard let rebased = try await storeActor.getPayrollAdjustment(id: adjustment.id) else {
+      return .conflict
+    }
+    let retryResult = try await pushPayrollAdjustment(
+      rebased, userId: userId, storeActor: storeActor, isRetry: true)
+    return retryResult == .success ? .rebased : retryResult
   }
 
   private func insertPayrollAdjustment(
@@ -2260,34 +2308,66 @@ final class SyncCoordinator {
   private func pushPayrollAdjustmentDelete(
     _ adjustment: LocalPayrollAdjustment,
     userId: String,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    retryRevision: Int64? = nil
   ) async throws -> PushResult {
-    // Never pushed, so there is no server row to soft-delete. Retire the local row.
-    if adjustment.serverRevision == 0 {
-      let deletedAt = Date()
-      await storeActor.markPayrollAdjustmentDeleted(
-        id: adjustment.id,
-        serverUpdatedAt: deletedAt,
-        serverRevision: 0,
-        serverDeletedAt: deletedAt
-      )
-      return .deleted
-    }
-
+    // A row that was never acknowledged can still exist on the server, when an insert committed
+    // but its response was lost. No server row has revision 0, so the update below misses and
+    // the lookup after it decides whether the row is gone, already deleted or still live.
     let returnedRows: [SyncPayrollAdjustmentRow] =
       try await supabase
       .from("payroll_adjustments")
       .update(["deleted_at": AnyJSON.string(formatSupabaseTimestamp(Date()))])
       .eq("id", value: adjustment.id)
       .eq("user_id", value: userId)
-      .eq("revision", value: Int(adjustment.serverRevision))
+      .eq("revision", value: Int(retryRevision ?? adjustment.serverRevision))
       .is("deleted_at", value: nil)
       .select()
       .execute()
       .value
 
     guard let returnedRow = returnedRows.first else {
-      await storeActor.markPayrollAdjustmentConflict(id: adjustment.id, serverSnapshot: nil)
+      let serverRows: [SyncPayrollAdjustmentRow] =
+        try await supabase
+        .from("payroll_adjustments")
+        .select()
+        .eq("id", value: adjustment.id)
+        .execute()
+        .value
+      // The server hard deleted the row, which is what the delete wanted. Retire the local row.
+      guard let serverRow = serverRows.first else {
+        let deletedAt = Date()
+        await storeActor.markPayrollAdjustmentDeleted(
+          id: adjustment.id,
+          serverUpdatedAt: deletedAt,
+          serverRevision: adjustment.serverRevision,
+          serverDeletedAt: deletedAt
+        )
+        return .deleted
+      }
+      let serverUpdatedAt = try requireISO8601(
+        serverRow.updated_at, table: .payrollAdjustments, id: serverRow.id)
+      let serverDeletedAt = serverRow.deleted_at.flatMap { parseISO8601($0) }
+      if serverDeletedAt != nil {
+        await storeActor.markPayrollAdjustmentDeleted(
+          id: adjustment.id,
+          serverUpdatedAt: serverUpdatedAt,
+          serverRevision: serverRow.revision,
+          serverDeletedAt: serverDeletedAt
+        )
+        return .deleted
+      }
+      // Another write moved the revision after this device last saw the row. The user deleted
+      // the row, so the delete wins. Retry once against the current revision.
+      if retryRevision == nil {
+        return try await pushPayrollAdjustmentDelete(
+          adjustment, userId: userId, storeActor: storeActor, retryRevision: serverRow.revision)
+      }
+      await storeActor.markPayrollAdjustmentConflict(
+        id: adjustment.id,
+        serverSnapshot: PayrollAdjustmentServerSnapshot.from(
+          row: serverRow, updatedAt: serverUpdatedAt, deletedAt: nil)
+      )
       return .conflict
     }
 
@@ -2691,8 +2771,7 @@ final class SyncCoordinator {
         serverRow: serverRow,
         serverUpdatedAt: serverUpdatedAt,
         serverRevision: serverRow.revision,
-        newSnapshot: serverSnapshot,
-        localDirtyFields: SyncMerge.fieldsToKeepLocally(existing, server: serverSnapshot)
+        newSnapshot: serverSnapshot
       )
       return .autoMerged
 
@@ -2730,11 +2809,9 @@ final class SyncCoordinator {
       theme: serverRow.theme,
       calendarContentColorStyle: serverRow.calendar_content_color_style ?? "workplace",
       showDashboardClockButtons: serverRow.show_dashboard_clock_buttons ?? true,
-      aiDataSharingEnabled: serverRow.ai_data_sharing_enabled ?? false,
       halfTaxMonth: serverRow.half_tax_month,
       currency: serverRow.currency,
       defaultStartupTab: serverRow.default_startup_tab,
-      wageyShowcaseSeen: serverRow.wagey_showcase_seen ?? false,
       lastActive: lastActive,
       createdAt: createdAt,
       serverUpdatedAt: serverUpdatedAt,
@@ -2986,24 +3063,15 @@ final class SyncCoordinator {
   private func pushJobDelete(
     _ job: LocalJob,
     userId: String,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    retryRevision: Int64? = nil
   ) async throws -> PushResult {
     let jobId = job.id
 
-    // A row that was never pushed has no server row to soft-delete. Retire the local row
-    // instead of returning a conflict that no sync can clear.
-    if job.serverRevision == 0 {
-      let deletedAt = Date()
-      await storeActor.markJobDeleted(
-        id: jobId,
-        serverUpdatedAt: deletedAt,
-        serverRevision: 0,
-        deletedAt: deletedAt
-      )
-      logger.debug("Discarded unsynced job \(jobId.prefix(8))")
-      return .deleted
-    }
-    let serverRevision = Int(job.serverRevision)
+    // A row that was never acknowledged can still exist on the server, when an insert committed
+    // but its response was lost. No server row has revision 0, so the update below misses and
+    // the lookup after it decides whether the row is gone, already deleted or still live.
+    let serverRevision = Int(retryRevision ?? job.serverRevision)
 
     let returnedRows: [SyncJobRow] =
       try await supabase
@@ -3053,6 +3121,14 @@ final class SyncCoordinator {
           deletedAt: serverDeletedAt
         )
         return .deleted
+      }
+
+      // Another write moved the revision after this device last saw the row. The user deleted
+      // the row, so the delete wins, as the local fields do when an update is rebased. Retry
+      // once against the current revision.
+      if retryRevision == nil {
+        return try await pushJobDelete(
+          job, userId: userId, storeActor: storeActor, retryRevision: serverRow.revision)
       }
 
       let serverSnapshot = JobServerSnapshot.from(row: serverRow, updatedAt: serverUpdatedAt)
@@ -3230,8 +3306,7 @@ final class SyncCoordinator {
       serverRevision: serverRow.revision,
       archivedAt: serverArchivedAt,
       deletedAt: serverDeletedAt,
-      newSnapshot: newServerSnapshot,
-      localDirtyFields: SyncMerge.fieldsToKeepLocally(job, server: newServerSnapshot)
+      newSnapshot: newServerSnapshot
     )
 
     if let rebasedJob = try await storeActor.getJob(id: jobId) {
@@ -3454,25 +3529,16 @@ final class SyncCoordinator {
   private func pushUserShiftDelete(
     _ shift: LocalUserShift,
     userId: String,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    retryRevision: Int64? = nil
   ) async throws -> PushResult {
     let shiftId = shift.id
 
-    // A row that was never pushed has no server row to soft-delete. Retire the local row
-    // instead of returning a conflict that no sync can clear.
-    if shift.serverRevision == 0 {
-      let deletedAt = Date()
-      await storeActor.markShiftDeleted(
-        id: shiftId,
-        serverUpdatedAt: deletedAt,
-        serverRevision: 0,
-        serverDeletedAt: deletedAt
-      )
-      logger.debug("Discarded unsynced shift \(shiftId.prefix(8))")
-      return .deleted
-    }
+    // A row that was never acknowledged can still exist on the server, when an insert committed
+    // but its response was lost. No server row has revision 0, so the update below misses and
+    // the lookup after it decides whether the row is gone, already deleted or still live.
     // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(shift.serverRevision)
+    let serverRevision = Int(retryRevision ?? shift.serverRevision)
 
     // UPDATE deleted_at = now() with revision filter
     let returnedRows: [SyncShiftRow] =
@@ -3525,6 +3591,14 @@ final class SyncCoordinator {
           serverDeletedAt: serverDeletedAt
         )
         return .deleted
+      }
+
+      // Another write moved the revision after this device last saw the row. The user deleted
+      // the row, so the delete wins, as the local fields do when an update is rebased. Retry
+      // once against the current revision.
+      if retryRevision == nil {
+        return try await pushUserShiftDelete(
+          shift, userId: userId, storeActor: storeActor, retryRevision: serverRow.revision)
       }
 
       // Mark conflict
@@ -3755,8 +3829,7 @@ final class SyncCoordinator {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newServerSnapshot,
-      localDirtyFields: SyncMerge.fieldsToKeepLocally(shift, server: newServerSnapshot)
+      newSnapshot: newServerSnapshot
     )
 
     // Reload and retry
@@ -3951,26 +4024,15 @@ final class SyncCoordinator {
   private func pushEventDelete(
     _ event: LocalEvent,
     userId: String,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    retryRevision: Int64? = nil
   ) async throws -> PushResult {
     let eventId = event.id
 
-    // A locally created event can be deleted before its first successful push.
-    // In that case there is no server row to soft-delete, so we should just
-    // retire the local record instead of surfacing a false conflict.
-    if event.serverRevision == 0 {
-      let deletedAt = Date()
-      await storeActor.markEventDeleted(
-        id: eventId,
-        serverUpdatedAt: deletedAt,
-        serverRevision: 0,
-        serverDeletedAt: deletedAt
-      )
-      logger.debug("Discarded unsynced event \(eventId.prefix(8))")
-      return .deleted
-    }
-
-    let serverRevision = Int(event.serverRevision)
+    // A row that was never acknowledged can still exist on the server, when an insert committed
+    // but its response was lost. No server row has revision 0, so the update below misses and
+    // the lookup after it decides whether the row is gone, already deleted or still live.
+    let serverRevision = Int(retryRevision ?? event.serverRevision)
 
     let returnedRows: [SyncEventRow] =
       try await supabase
@@ -4020,12 +4082,33 @@ final class SyncCoordinator {
         return .deleted
       }
 
+      // Another write moved the revision after this device last saw the row. The user deleted
+      // the row, so the delete wins, as the local fields do when an update is rebased. Retry
+      // once against the current revision.
+      if retryRevision == nil {
+        return try await pushEventDelete(
+          event, userId: userId, storeActor: storeActor, retryRevision: serverRow.revision)
+      }
+
       let serverSnapshot = EventServerSnapshot.from(
         serverRow: serverRow,
         updatedAt: serverUpdatedAt,
         deletedAt: serverDeletedAt
       )
       await storeActor.markEventConflict(id: eventId, serverSnapshot: serverSnapshot)
+    }
+    // The server has no row at all, for example after it purged old soft deleted rows. The row
+    // is gone there, which is what the delete wanted. Retire the local row instead of retrying
+    // on every sync.
+    if serverRows.isEmpty {
+      let deletedAt = Date()
+      await storeActor.markEventDeleted(
+        id: eventId,
+        serverUpdatedAt: deletedAt,
+        serverRevision: event.serverRevision,
+        serverDeletedAt: deletedAt
+      )
+      return .deleted
     }
     return .conflict
   }
@@ -4182,8 +4265,7 @@ final class SyncCoordinator {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newServerSnapshot,
-      localDirtyFields: SyncMerge.fieldsToKeepLocally(event, server: newServerSnapshot)
+      newSnapshot: newServerSnapshot
     )
 
     if let rebasedEvent = try await storeActor.getEvent(id: eventId) {
@@ -4435,25 +4517,16 @@ final class SyncCoordinator {
   private func pushRecurringShiftDelete(
     _ shift: LocalRecurringShift,
     userId: String,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    retryRevision: Int64? = nil
   ) async throws -> PushResult {
     let shiftId = shift.id
 
-    // A row that was never pushed has no server row to soft-delete. Retire the local row
-    // instead of returning a conflict that no sync can clear.
-    if shift.serverRevision == 0 {
-      let deletedAt = Date()
-      await storeActor.markRecurringShiftDeleted(
-        id: shiftId,
-        serverUpdatedAt: deletedAt,
-        serverRevision: 0,
-        serverDeletedAt: deletedAt
-      )
-      logger.debug("Discarded unsynced recurring shift \(shiftId.prefix(8))")
-      return .deleted
-    }
+    // A row that was never acknowledged can still exist on the server, when an insert committed
+    // but its response was lost. No server row has revision 0, so the update below misses and
+    // the lookup after it decides whether the row is gone, already deleted or still live.
     // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(shift.serverRevision)
+    let serverRevision = Int(retryRevision ?? shift.serverRevision)
 
     let returnedRows: [SyncRecurringShiftRow] =
       try await supabase
@@ -4504,6 +4577,14 @@ final class SyncCoordinator {
           serverDeletedAt: serverDeletedAt
         )
         return .deleted
+      }
+
+      // Another write moved the revision after this device last saw the row. The user deleted
+      // the row, so the delete wins, as the local fields do when an update is rebased. Retry
+      // once against the current revision.
+      if retryRevision == nil {
+        return try await pushRecurringShiftDelete(
+          shift, userId: userId, storeActor: storeActor, retryRevision: serverRow.revision)
       }
 
       let serverSnapshot = RecurringShiftServerSnapshot.from(
@@ -4719,8 +4800,7 @@ final class SyncCoordinator {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newServerSnapshot,
-      localDirtyFields: SyncMerge.fieldsToKeepLocally(shift, server: newServerSnapshot)
+      newSnapshot: newServerSnapshot
     )
 
     if let rebasedShift = try await storeActor.getRecurringShift(id: shiftId) {
@@ -4749,7 +4829,12 @@ final class SyncCoordinator {
     var newConflicts = 0
     var rebased = 0
 
-    for snapshot in dirtySnapshots {
+    // Deletes go first. The unique indexes on (job, from date) skip deleted rows, so a snapshot
+    // that replaces a deleted one on the same date can only insert after the delete.
+    let deletesFirst = dirtySnapshots.sorted {
+      $0.syncStatus == .pendingDelete && $1.syncStatus != .pendingDelete
+    }
+    for snapshot in deletesFirst {
       let snapshotId = snapshot.id
       let result: PushResult
       do {
@@ -4912,25 +4997,16 @@ final class SyncCoordinator {
   private func pushWageSnapshotDelete(
     _ snapshot: LocalWageSnapshot,
     userId: String,
-    storeActor: LocalStoreActor
+    storeActor: LocalStoreActor,
+    retryRevision: Int64? = nil
   ) async throws -> PushResult {
     let snapshotId = snapshot.id
 
-    // A row that was never pushed has no server row to soft-delete. Retire the local row
-    // instead of returning a conflict that no sync can clear.
-    if snapshot.serverRevision == 0 {
-      let deletedAt = Date()
-      await storeActor.markWageSnapshotDeleted(
-        id: snapshotId,
-        serverUpdatedAt: deletedAt,
-        serverRevision: 0,
-        serverDeletedAt: deletedAt
-      )
-      logger.debug("Discarded unsynced wage snapshot \(snapshotId.prefix(8))")
-      return .deleted
-    }
+    // A row that was never acknowledged can still exist on the server, when an insert committed
+    // but its response was lost. No server row has revision 0, so the update below misses and
+    // the lookup after it decides whether the row is gone, already deleted or still live.
     // Note: Convert Int64 to Int for PostgrestFilterValue conformance
-    let serverRevision = Int(snapshot.serverRevision)
+    let serverRevision = Int(retryRevision ?? snapshot.serverRevision)
 
     let returnedRows: [SyncWageSnapshotRow] =
       try await supabase
@@ -4980,6 +5056,14 @@ final class SyncCoordinator {
           serverDeletedAt: serverDeletedAt
         )
         return .deleted
+      }
+
+      // Another write moved the revision after this device last saw the row. The user deleted
+      // the row, so the delete wins, as the local fields do when an update is rebased. Retry
+      // once against the current revision.
+      if retryRevision == nil {
+        return try await pushWageSnapshotDelete(
+          snapshot, userId: userId, storeActor: storeActor, retryRevision: serverRow.revision)
       }
 
       let serverSnapshot = WageSnapshotServerSnapshot.from(
@@ -5206,8 +5290,7 @@ final class SyncCoordinator {
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
       serverDeletedAt: serverDeletedAt,
-      newSnapshot: newServerSnapshot,
-      localDirtyFields: SyncMerge.fieldsToKeepLocally(snapshot, server: newServerSnapshot)
+      newSnapshot: newServerSnapshot
     )
 
     if let rebasedSnapshot = try await storeActor.getWageSnapshot(id: snapshotId) {
@@ -5294,11 +5377,6 @@ final class SyncCoordinator {
     update.set(
       .showDashboardClockButtons, "show_dashboard_clock_buttons",
       .bool(settings.effectiveShowDashboardClockButtons))
-    update.set(
-      .aiDataSharingEnabled, "ai_data_sharing_enabled",
-      .bool(settings.aiDataSharingEnabled ?? false))
-    update.set(
-      .wageyShowcaseSeen, "wagey_showcase_seen", .bool(settings.wageyShowcaseSeen ?? false))
     update.set(.halfTaxMonth, "half_tax_month", settings.halfTaxMonth.jsonOrNull { .integer($0) })
     update.set(.currency, "currency", settings.currency.jsonOrNull { .string($0) })
     update.set(
@@ -5399,8 +5477,6 @@ final class SyncCoordinator {
       "theme": .string(settings.theme),
       "calendar_content_color_style": .string(settings.effectiveCalendarContentColorStyle),
       "show_dashboard_clock_buttons": .bool(settings.effectiveShowDashboardClockButtons),
-      "ai_data_sharing_enabled": .bool(settings.aiDataSharingEnabled ?? false),
-      "wagey_showcase_seen": .bool(settings.wageyShowcaseSeen ?? false),
     ]
 
     let monthlyGoalsByMonthEncoded = try requireEncode(
@@ -5552,8 +5628,7 @@ final class SyncCoordinator {
       serverRow: serverRow,
       serverUpdatedAt: serverUpdatedAt,
       serverRevision: serverRow.revision,
-      newSnapshot: newServerSnapshot,
-      localDirtyFields: SyncMerge.fieldsToKeepLocally(settings, server: newServerSnapshot)
+      newSnapshot: newServerSnapshot
     )
 
     if let rebasedSettings = try await storeActor.getUserSettings(userId: userId) {
@@ -6258,10 +6333,9 @@ final class SyncCoordinator {
     }
   }
 
-  /// Format Date to ISO8601 string for Supabase queries
-  /// Uses fractional seconds for maximum precision
+  /// Formats a pull cursor for the `updated_at` filter, with the microseconds Postgres stores.
   private func formatISO8601(_ date: Date) -> String {
-    ISO8601Timestamp.string(from: date)
+    ISO8601Timestamp.microsecondString(from: date)
   }
 
   private func formatSupabaseTimestamp(_ date: Date) -> String {

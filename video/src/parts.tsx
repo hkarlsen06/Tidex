@@ -392,34 +392,3 @@ export const Receipt: React.FC<{ rows: readonly (readonly [string, string])[]; w
     </div>
   );
 };
-
-// Four-point sparkles like the Wagey tab icon.
-export const Sparkles: React.FC<{ points: [number, number, number, number][] }> = ({ points }) => {
-  const frame = useCurrentFrame();
-  return (
-    <>
-      {points.map(([x, y, size, at], i) => {
-        const t = interpolate(frame, [at, at + 10, at + 26, at + 40], [0, 1, 1, 0], clamp);
-        return (
-          <svg
-            key={i}
-            width={size}
-            height={size}
-            viewBox="-10 -10 20 20"
-            style={{
-              position: "absolute",
-              left: x - size / 2,
-              top: y - size / 2,
-              scale: `${t}`,
-              rotate: `${(frame - at) * 3}deg`,
-              filter: `drop-shadow(0 0 ${size / 5}px rgba(120, 170, 255, 0.9))`,
-              zIndex: 6,
-            }}
-          >
-            <path d="M0 -10 Q1.2 -1.2 10 0 Q1.2 1.2 0 10 Q-1.2 1.2 -10 0 Q-1.2 -1.2 0 -10 Z" fill={i % 2 ? C.blueBright : "#FFFFFF"} />
-          </svg>
-        );
-      })}
-    </>
-  );
-};

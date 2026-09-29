@@ -1,4 +1,4 @@
-import { cleanTime } from "../_shared/wagey/time-utils.ts";
+import { cleanTime } from "../_shared/time-utils.ts";
 import { addDays, addOneDayIfCrossesMidnight, compareISODate } from "./date.ts";
 import { calendarShiftLabel } from "./locale.ts";
 import type {

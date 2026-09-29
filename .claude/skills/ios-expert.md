@@ -26,7 +26,6 @@ ios/
 │   │   ├── Stats/             # Statistics & analytics
 │   │   ├── Settings/          # User settings, pay config, appearance
 │   │   ├── Sharing/           # Share shifts with friends
-│   │   ├── Wagey/             # AI chat assistant
 │   │   ├── Paywall/           # Premium subscription UI
 │   │   └── Celebration/       # Achievement celebrations
 │   ├── Services/              # API clients, payroll, auth, notifications

@@ -2,9 +2,9 @@ import type {
   CustomPauseWindows,
   CustomSupplementsData,
   ShiftRow,
-} from "./wagey/payroll/types.ts";
-import type { EndCondition, SelectedDays } from "./wagey/recurring/types.ts";
-import { generateVirtualShiftsForMonth } from "./wagey/recurring/utils.ts";
+} from "./payroll/types.ts";
+import type { EndCondition, SelectedDays } from "./recurring/types.ts";
+import { generateVirtualShiftsForMonth } from "./recurring/utils.ts";
 
 export interface LiveActivityRegularShift extends ShiftRow {
   job_id: string;

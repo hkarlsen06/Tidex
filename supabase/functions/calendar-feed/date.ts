@@ -1,5 +1,5 @@
-import { parseDateAsUTC } from "../_shared/wagey/date-utils.ts";
-import { toISODate } from "../_shared/wagey/recurring/utils.ts";
+import { parseDateAsUTC } from "../_shared/date-utils.ts";
+import { toISODate } from "../_shared/recurring/utils.ts";
 import type { FeedWindow } from "./types.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;

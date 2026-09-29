@@ -1,8 +1,8 @@
 # Tidex Payroll Engine Specification
 
-> **Version:** 3.4
-> **Last Updated:** 2026-09-11
-> **Source of Truth:** Shared payroll logic in the Tidex monorepo (`ios` and `supabase/functions/_shared/wagey`)
+> **Version:** 3.5
+> **Last Updated:** 2026-09-29
+> **Source of Truth:** Shared payroll logic in the Tidex monorepo (`ios` and `supabase/functions/_shared`)
 > **Purpose:** Enable re-implementation in any language (Swift, Kotlin, Go, etc.) with identical results
 
 ---
@@ -70,13 +70,13 @@ PayrollCalculator.computeShift(shift, snapshot: wageSnapshot)
 // ios/TidexApp/Services/Payroll/PayrollCalculator.swift
 ```
 
-**Shared TypeScript calculator (Wagey / server-side tools):**
+**Shared TypeScript calculator (server-side tools):**
 ```typescript
 computeShift(shift, settings, presetRules, snapshot, job?)
-// supabase/functions/_shared/wagey/payroll/calc.ts
+// supabase/functions/_shared/payroll/calc.ts
 ```
 
-The TypeScript `settings` and `job` parameters are compatibility arguments for older call sites. Payroll day, payout date, and tax snapshot selection are resolved upstream by the iOS `PayrollEngine` and by `supabase/functions/_shared/wagey/data.ts`.
+The TypeScript `settings` and `job` parameters are compatibility arguments for older call sites. Payroll day, payout date, and tax snapshot selection are resolved by the caller. In the iOS app that is `PayrollEngine`.
 
 ---
 
@@ -169,7 +169,7 @@ The TypeScript `settings` and `job` parameters are compatibility arguments for o
   - **Tax settings only**: Selected based on **payout date** (shift month + 1, on job's payroll day)
 - For a target date D inside a selected snapshot scope: choose the latest snapshot where `from_date <= D`; if none exists, use that scope's `from_date = NULL` baseline
 - The active iOS payroll engine first chooses a scope: explicit job bucket when present → default-job bucket when present → legacy nil-job rows → all loaded snapshots. Once a non-empty scope is chosen, no later fallback bucket is searched for that target date.
-- The shared Wagey TypeScript resolver remains bucket based for server-side tools: job-specific dated → legacy dated → job-specific baseline → legacy baseline → any baseline
+- The reference TypeScript resolver below is bucket based: job-specific dated → legacy dated → job-specific baseline → legacy baseline → any baseline
 - In the iOS local repository, nil-job snapshots are only included for the selected default job; non-default job reads do not borrow legacy nil-job snapshots
 - The app expects `supplements` to decode as `{ rules: [...] }`
 
@@ -185,7 +185,6 @@ The TypeScript `settings` and `job` parameters are compatibility arguments for o
 | `default_shifts_view` | `varchar(10)` | Yes | `'calendar'` | UI preference: `list` or `calendar` |
 | `show_dashboard_clock_buttons` | `boolean` | No | `true` | Whether dashboard clock controls are visible |
 | `default_startup_tab` | `text` | No | `'home'` | App tab opened at launch |
-| `ai_data_sharing_enabled` | `boolean` | Yes | `NULL` | Wagey / AI data sharing preference |
 | `currency` | `text` | Yes | `'kr'` | Currency display symbol |
 | `theme` | `text` | No | `'dark'` | UI theme preference (`light`, `dark`, `system`) |
 | `profile_picture_url` | `text` | Yes | - | User's profile picture URL |
@@ -248,7 +247,7 @@ Payroll adjustments are payout-level amounts that are not tied to a single shift
 | `tax_treatment` | `text` | No | `gross_taxable` | One of: `gross_taxable`, `net_manual`, `excluded_from_tax_estimate` |
 | `description` | `text` | No | - | Short user-visible explanation |
 | `note` | `text` | Yes | `NULL` | Private user note |
-| `curated_note` | `text` | Yes | `NULL` | Optional Wagey-authored CTA text |
+| `curated_note` | `text` | Yes | `NULL` | Optional curated CTA text |
 | `curated_description` | `text` | Yes | `NULL` | Optional longer curated explanation shown after tapping the CTA |
 | `curated_link` | `text` | Yes | `NULL` | Optional source link for the curated explanation |
 | `curated_link_title` | `text` | Yes | `NULL` | Optional user-visible title for the curated source link |
@@ -291,7 +290,7 @@ type SupplementRule = {
 
 ### B.6 Preset Supplement Rules (Tariff Default)
 
-From `PayrollCalculator.presetSupplementRules` and `supabase/functions/_shared/wagey/payroll/presets.ts`:
+From `PayrollCalculator.presetSupplementRules` and `supabase/functions/_shared/payroll/presets.ts`:
 
 ```typescript
 const PRESET_SUPPLEMENT_RULES = [
@@ -306,7 +305,7 @@ const PRESET_SUPPLEMENT_RULES = [
 
 ### B.7 Preset Wage Rates (Tariff Levels)
 
-From `PayrollCalculator.presetWageRates` and `supabase/functions/_shared/wagey/payroll/calc.ts`:
+From `PayrollCalculator.presetWageRates` and `supabase/functions/_shared/payroll/calc.ts`:
 
 | Level | Rate (NOK/hour) |
 |-------|-----------------|
@@ -390,7 +389,7 @@ Monthly totals remain shift-only. Payroll adjustments are shown in payout cards 
 
 ### D.1 Canonical Shift Object: `ShiftWithComputations`
 
-Mirrors `ios/TidexApp/Models/*` and `supabase/functions/_shared/wagey/payroll/types.ts`:
+Mirrors `ios/TidexApp/Models/*` and `supabase/functions/_shared/payroll/types.ts`:
 
 ```typescript
 // ShiftRow now includes job_id
@@ -497,10 +496,10 @@ type BreakAudit = {
 
 #### Step 1: Load Stored Shifts, Recurring Shifts, Jobs, and Snapshots
 
-The active iOS app reads payroll input from the local SwiftData repositories, then sync fills those local stores from Supabase. The shared Wagey TypeScript path performs equivalent Supabase reads for server-side tools.
+The active iOS app reads payroll input from the local SwiftData repositories, then sync fills those local stores from Supabase. Server-side code can make the equivalent Supabase reads, as in the reference sketch below.
 
 ```typescript
-// Representative Wagey/server-side read path.
+// Reference read path for server-side code.
 // iOS equivalent: MonthlyPayrollReadService + local repositories.
 const [shifts, recurringShifts, jobs, allSnapshots] = await Promise.all([
   supabase.from("user_shifts")
@@ -578,7 +577,7 @@ const buildSnapshotBuckets = (snapshots: WageSnapshot[]) => {
 };
 ```
 
-**Shared Wagey TypeScript snapshot resolution with job-scoped fallback chain:**
+**Reference TypeScript snapshot resolution with job-scoped fallback chain:**
 ```typescript
 const resolveSnapshotForDate = (buckets, snapshots, date, jobId?) => {
   const preferredKeys = [jobId ?? "__legacy__", "__legacy__"];
@@ -743,7 +742,7 @@ This ensures stable identity for React keys and conflict detection.
 
 ### E.1 Payout Date Calculation
 
-Implemented in `PayrollEngine.calculatePayoutDate(...)` and `supabase/functions/_shared/wagey/data.ts`:
+Implemented in `PayrollEngine.calculatePayoutDate(...)`:
 
 ```typescript
 function calculatePayoutDate(
@@ -825,7 +824,7 @@ function isInvalidPayrollDay(date: Date, locale: Locale): boolean {
 
 Within the selected scope, `SnapshotsService.snapshotForDate` chooses the latest dated snapshot where `from_date <= targetDate`, then the scope baseline (`from_date = NULL`). It does not continue to the next fallback scope after choosing a non-empty scope.
 
-**Shared Wagey TypeScript fallback chain:**
+**Reference TypeScript fallback chain:**
 
 ```
 1. Job-specific bucket → dated snapshot where from_date <= targetDate
@@ -866,7 +865,7 @@ const resolveSnapshotForDate = (
 ```
 
 **Selection rules:**
-1. Select the job-specific snapshot scope for the runtime path (active Swift scope chain or shared TypeScript bucket chain)
+1. Select the job-specific snapshot scope for the runtime path (active Swift scope chain or reference TypeScript bucket chain)
 2. Find the latest dated snapshot in that scope where `from_date <= targetDate`
 3. If none, use that scope's baseline snapshot (`from_date = NULL`)
 4. If still none after the runtime path's fallback scopes are exhausted, return null (calculation uses defaults)
@@ -970,7 +969,7 @@ function resolveSupplementRules(
 
 ### F.7 Wage Periods Construction
 
-Implemented in `WagePeriodBuilder.swift` and `supabase/functions/_shared/wagey/payroll/periods.ts`:
+Implemented in `WagePeriodBuilder.swift` and `supabase/functions/_shared/payroll/periods.ts`:
 
 **Algorithm:**
 1. Collect all time boundaries (shift start/end + rule boundaries)
@@ -1050,7 +1049,7 @@ function resolveSupplementRate(rule: SupplementRule, baseRate: number): number {
 
 ### F.9 Break Deduction
 
-Implemented in `BreakDeduction.swift` and `supabase/functions/_shared/wagey/payroll/breaks.ts`:
+Implemented in `BreakDeduction.swift` and `supabase/functions/_shared/payroll/breaks.ts`:
 
 Exact `custom_pause_windows` take precedence over automatic break deduction. When normalized pause windows are present, the engine clips those intervals from wage periods, sets `breakAudit.source = "custom_pause_windows"`, sets `method = "none"`, and does not run `applyBreakDeduction`.
 
@@ -1162,7 +1161,7 @@ The earnings breakdown preserves explicit overtime intervals, including weekly r
 
 ### F.11 Tax Calculation
 
-Tax is applied downstream in `PayrollEngine`, dashboard aggregation, payout-details code, and Wagey response shaping, not inside `computeShift`:
+Tax is applied downstream in `PayrollEngine`, dashboard aggregation, and payout-details code, not inside `computeShift`:
 
 ```typescript
 const taxEnabled = snapshot.tax_enabled;
@@ -1473,7 +1472,7 @@ The retired Next.js app previously used React request caching and Next.js tag in
 
 ## H) Active Data Access and Sync
 
-The active iOS app is local-first. Payroll reads are assembled from SwiftData repositories and are recalculated in memory from local rows. Supabase remains the sync backend and the shared server-side source for Wagey tools, but the retired Next.js SSR windowing and cache-tag invalidation model is no longer part of the app behavior.
+The active iOS app is local-first. Payroll reads are assembled from SwiftData repositories and are recalculated in memory from local rows. Supabase remains the sync backend and the shared server-side source for server tools, but the retired Next.js SSR windowing and cache-tag invalidation model is no longer part of the app behavior.
 
 ### H.1 iOS Local Read Context
 
@@ -1506,9 +1505,9 @@ The local-first sync model depends on `updated_at`, `revision`, and `deleted_at`
 
 Soft-deleted rows remain in sync long enough for clients to observe deletes, then are purged by the soft-delete cleanup job.
 
-### H.3 Shared Wagey / Server-Side Path
+### H.3 Shared Server-Side Path
 
-Wagey tools use `supabase/functions/_shared/wagey/data.ts` and `supabase/functions/_shared/wagey/payroll/*` to load the same logical inputs, build snapshot buckets, compute shifts, summarize earnings, and include payroll adjustments where payout-level totals are requested.
+Server-side code uses `supabase/functions/_shared/payroll/*` to compute shifts. The shared helpers contain only the calculation. The caller loads the rows and picks the snapshots.
 
 ### H.4 Public Documentation Surface
 
@@ -2003,11 +2002,10 @@ const effectiveTaxPct = 30 / 2; // 15%
 | `RecurringShiftGenerator` | `ios/TidexApp/Services/Payroll/RecurringShiftGenerator.swift` | Virtual shift generation |
 | `MonthlyPayrollReadService` | `ios/TidexApp/Services/Payroll/MonthlyPayrollReadService.swift` | Local-first payroll input loading |
 | `PayrollDateAdjuster` | `ios/TidexApp/Shared/Utilities/PayrollDateAdjuster.swift` | Display payroll date adjustment |
-| `computeShift` | `supabase/functions/_shared/wagey/payroll/calc.ts` | Shared TypeScript per-shift calculation |
-| `buildWagePeriods` | `supabase/functions/_shared/wagey/payroll/periods.ts` | Shared TypeScript period construction |
-| `applyBreakDeduction` | `supabase/functions/_shared/wagey/payroll/breaks.ts` | Shared TypeScript break deduction |
-| `applyCustomPauseWindowClipping` | `supabase/functions/_shared/wagey/payroll/pause-windows.ts` | Exact pause-window clipping |
-| `buildSnapshotBuckets` / `resolveSnapshotForDate` | `supabase/functions/_shared/wagey/data.ts` | Server-side snapshot resolution |
+| `computeShift` | `supabase/functions/_shared/payroll/calc.ts` | Shared TypeScript per-shift calculation |
+| `buildWagePeriods` | `supabase/functions/_shared/payroll/periods.ts` | Shared TypeScript period construction |
+| `applyBreakDeduction` | `supabase/functions/_shared/payroll/breaks.ts` | Shared TypeScript break deduction |
+| `applyCustomPauseWindowClipping` | `supabase/functions/_shared/payroll/pause-windows.ts` | Exact pause-window clipping |
 | `payroll_adjustments` SQL | `supabase/migrations/20260514000516_add_payroll_adjustments.sql` | Manual payout corrections |
 | Public docs page | `marketing/app/docs/payroll/page.tsx` | Public rendered payroll documentation |
 
@@ -2050,13 +2048,13 @@ const effectiveTaxPct = 30 / 2; // 15%
 Verified this document against:
 - iOS payroll services in `ios/TidexApp/Services/Payroll/`
 - iOS local models/repositories for wage snapshots, jobs, shifts, recurring shifts, and payroll adjustments
-- Shared Wagey TypeScript payroll helpers in `supabase/functions/_shared/wagey/`
+- Shared TypeScript payroll helpers in `supabase/functions/_shared/payroll/`
 - Supabase migrations for multi-job support, exact pause windows, shift notes, job currencies, monthly goal overrides, and payroll adjustments
 - Public payroll docs page in `marketing/app/docs/payroll/page.tsx`
 
 ### Changes Made
 
-- Updated the spec version/date and active entry points to reflect the native iOS app plus shared Wagey TypeScript helpers
+- Updated the spec version/date and active entry points to reflect the native iOS app plus shared TypeScript helpers
 - Replaced retired Next.js UI, SSR, API route, DAL cache, and Effect-service descriptions with active iOS local-first read/sync behavior
 - Added exact pause windows, break audit source metadata, private shift notes, recurring date-specific notes, job currencies, monthly goal overrides, and sync metadata
 - Added payroll adjustments, including schema, tax treatments, payout filtering, and gross/net aggregation behavior
@@ -2094,7 +2092,7 @@ Verified this document against:
 ### Data Flow (Section H)
 - [x] iOS local-first read context documented
 - [x] Sync metadata tables documented
-- [x] Shared Wagey/server-side path documented
+- [x] Shared server-side path documented
 
 ### Test Vectors (Section I)
 - [x] Existing test vectors reviewed for current behavior
@@ -2120,12 +2118,11 @@ Verified this document against:
 - `ios/TidexApp/Services/Payroll/JobCurrencyAggregateResolver.swift`
 - `ios/TidexApp/Storage/Repositories/SnapshotsRepository.swift`
 - `ios/TidexApp/Features/Dashboard/DashboardViewModel.swift`
-- `supabase/functions/_shared/wagey/data.ts`
-- `supabase/functions/_shared/wagey/payroll/calc.ts`
+- `supabase/functions/_shared/payroll/calc.ts`
 - `marketing/app/docs/payroll/page.tsx`
 
 ### Changes Made
 
-- Clarified active iOS snapshot scope selection versus the shared Wagey TypeScript bucket resolver
+- Clarified active iOS snapshot scope selection versus the reference TypeScript bucket resolver
 - Updated aggregation docs for primary job/currency dashboard scope, completed-shift detection, and payroll-card variants
 - Bumped the public docs version marker in the marketing payroll spec

@@ -10,8 +10,8 @@ The iOS app and extensions are inside `ios/`.
 
 **Main App** (`ios/TidexApp/`):
 - `App/` - App entry point, AppCoordinator, RootView, MainTabView, push notifications
-- `Features/` - Feature modules (AddShift, Auth, Onboarding, Dashboard, Shifts, Stats, Settings, Sharing, Wagey, Paywall, Celebration)
-- `Services/` - AuthService, PayrollCalculator, PayrollEngine, NotificationService, StoreKitManager, WageyService, etc.
+- `Features/` - Feature modules (AddShift, Auth, Onboarding, Dashboard, Shifts, Stats, Settings, Sharing, Paywall, Celebration)
+- `Services/` - AuthService, PayrollCalculator, PayrollEngine, NotificationService, StoreKitManager, etc.
 - `Storage/` - LocalStore (SwiftData), Local* models, Repositories, SyncCoordinator
 - `Models/` - Data models and DTOs (Shift, WageSnapshot, Currency, Friend, etc.)
 - `Shared/` - Reusable components, Color+Tidex extensions, Typography, Spacing

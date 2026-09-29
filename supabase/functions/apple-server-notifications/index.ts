@@ -606,8 +606,7 @@ async function upsertSubscriptionFromNotification(
       // Handle unique constraint violation
       if (error.code === "23505") {
         // subscriptions has one row per user. The user already has a row from
-        // another provider (Stripe, admin trial), so take it over like
-        // apple-verify-purchase does.
+        // another provider (Stripe, admin trial), so take it over.
         const { error: updateError } = await supabaseAdmin
           .from("subscriptions")
           .update(payload)
@@ -777,8 +776,7 @@ async function handleRequest(req: Request): Promise<Response> {
       );
     }
 
-    // Consumables (Wagey credits) and other one-time purchases are not
-    // subscriptions. apple-verify-purchase credits them.
+    // Only subscriptions are tracked.
     if (transactionInfo.type !== "Auto-Renewable Subscription") {
       console.log(
         `[apple-notifications] Ignoring ${notificationType} for non-subscription transaction type=${transactionInfo.type}, product=${transactionInfo.productId}`,

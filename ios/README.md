@@ -121,7 +121,7 @@ Supabase (Server)
 
 1. Review [PAYROLL_SYSTEM.md](PAYROLL_SYSTEM.md)
 2. Update PayrollCalculator or PayrollEngine
-3. Ensure consistency with the shared backend payroll implementation in `supabase/functions/_shared/wagey`
+3. Ensure consistency with the shared backend payroll implementation in `supabase/functions/_shared/payroll`
 4. Test with property-based tests
 
 ### Adding a New Repository

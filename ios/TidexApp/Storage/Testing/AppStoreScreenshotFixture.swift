@@ -53,8 +53,7 @@
       let context: ModelContext = LocalStore.shared.mainContext
       let settings: LocalUserSettings = .init(
         userId: userId, profilePictureUrl: avatarURL, payrollDay: 15, theme: "dark",
-        aiDataSharingEnabled: true, currency: currency,
-        wageyShowcaseSeen: true, serverUpdatedAt: fixtureDate, serverRevision: 1,
+        currency: currency, serverUpdatedAt: fixtureDate, serverRevision: 1,
         lastSyncedSnapshot: Data(), localUpdatedAt: fixtureDate
       )
       context.insert(settings)

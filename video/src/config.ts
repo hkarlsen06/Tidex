@@ -49,7 +49,6 @@ export const COPY = {
       payroll: "See how your\n{pay adds up}",
       stats: "Follow your\nearnings {over time}",
       add: "Calculate pay\nfor {every shift}",
-      wagey: "Ask {anything}\nabout your shifts",
     },
     receipt: [
       ["Base pay", "25,200 kr"],
@@ -72,7 +71,6 @@ export const COPY = {
       payroll: "Se hvordan\n{lønnen regnes ut}",
       stats: "Følg inntekten\n{over tid}",
       add: "Beregn lønn\nfor {hver vakt}",
-      wagey: "Spør om {alt}\nrundt vaktene dine",
     },
     receipt: [
       ["Grunnlønn", "25 200 kr"],
@@ -124,7 +122,6 @@ export type Scene = {
 const TAB_Y = 0.947;
 const payout: Lift = { box: [0.05, 0.555, 0.95, 0.645], at: 30, until: 98, scale: 1.3, to: [0, -0.05], rotate: -2 };
 const addTotal: Lift = { box: [0.74, 0.058, 0.975, 0.112], at: 76, until: 116, scale: 2.1, to: [-0.36, 0.1], rotate: 3 };
-const answer: Lift = { box: [0.03, 0.192, 0.87, 0.338], at: 38, until: 114, scale: 1.18, to: [0.02, 0.12], rotate: -1.5 };
 
 // Frame numbers come from the recorded UI-test walkthrough (see README).
 export const SCENES: Scene[] = [
@@ -183,18 +180,6 @@ export const SCENES: Scene[] = [
     },
     lifts: { en: [addTotal], no: [{ ...addTotal, at: 40, until: 116 }] },
     sfx: [],
-  },
-  {
-    id: "wagey",
-    duration: 120,
-    fadeIn: 0,
-    pieces: { en: [[1262, 1382]], no: [[976, 1096]] },
-    taps: { en: [{ src: 1266, x: 0.672, y: TAB_Y }], no: [{ src: 980, x: 0.672, y: TAB_Y }] },
-    lifts: {
-      en: [{ box: [0.355, 0.14, 0.965, 0.19], at: 26, until: 114, scale: 1.2, to: [-0.02, 0.0], rotate: 2 }, answer],
-      no: [{ box: [0.235, 0.14, 0.965, 0.19], at: 26, until: 114, scale: 1.16, to: [-0.02, 0.0], rotate: 2 }, answer],
-    },
-    sfx: [["sparkle", 44]],
   },
 ];
 

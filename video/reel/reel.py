@@ -706,7 +706,6 @@ CAPTIONS = (
     ('See how your\n{pay adds up}', 7.0, 7.85),
     ('Know what\n{payday} brings', 8.05, 8.85),
     ('Follow your\nearnings {over time}', 9.05, 9.85),
-    ('Ask {anything}\nabout your shifts', 10.05, 10.9),
 )
 
 
@@ -721,36 +720,6 @@ def phone_pose(t):
 
 
 def lift_depth(t, rise, settle, depth): return depth * (back(prog(t, *rise), 1.3) - io3(prog(t, *settle)))
-
-
-def bubble(cv, im, box, anchor, e):
-    cv.save()
-    zoom_about(cv, e, *anchor)
-    cv.drawImageRect(im, rect(*box), rect(*box), SAMPLING, paint(WHITE, clamp(e * 3)))
-    cv.restore()
-
-
-def wagey(cv, t):
-    """The Wagey chat with the question popping in and the answer typing itself out."""
-    im = A.stills['wagey']
-    img(cv, im)
-    cv.drawRect(rect(470, 395, 1290, 555), paint(APP_BG))
-    cv.drawRect(rect(40, 555, 1150, 1070), paint(APP_BG))
-    e = spring(t - 10.2, 0.55, 18)
-    if e > 0: bubble(cv, im, (482, 408, 1271, 540), (1271, 540), e)
-    e = spring(t - 10.4, 0.6, 16)
-    if e > 0:
-        bubble(cv, im, (48, 566, 1139, 961), (48, 566), e)
-        for i, (y0, y1) in enumerate(((613, 659), (678, 725), (809, 852), (876, 923))):
-            x = lerp(90, 1175, out3(prog(t, 10.45 + 0.125 * i, 10.6 + 0.125 * i)))
-            if x < 1175:
-                cv.save()
-                zoom_about(cv, e, 48, 566)
-                cv.drawRect(rect(x, y0 - 8, 1115, y1 + 10), skia.Paint(Shader=skia.GradientShader.MakeLinear(
-                    [skia.Point(x, 0), skia.Point(x + 60, 0)], [argb(CARD, 0), argb(CARD, 1)])))
-                cv.restore()
-    a = prog(t, 10.95, 11.1)
-    if a > 0: cv.drawImageRect(im, rect(100, 985, 165, 1050), rect(100, 985, 165, 1050), SAMPLING, paint(WHITE, a))
 
 
 def screen(cv, t):
@@ -777,24 +746,8 @@ def screen(cv, t):
         cv.drawRect(rect(x - 50, 0, x, 2868), skia.Paint(Shader=skia.GradientShader.MakeLinear(
             [skia.Point(x - 50, 0), skia.Point(x, 0)], [argb(BLACK, 0), argb(BLACK, 0.35)])))
         img(cv, S['stats'], x=x)
-    elif t < 10.0:
+    else:
         img(cv, S['stats'])
-    else:  # zoom over to Wagey
-        cv.drawRect(rect(0, 0, 1320, 2868), paint(APP_BG))
-        a = 1 - prog(t, 10.0, 10.3)
-        if a > 0:
-            cv.save()
-            zoom_about(cv, lerp(1, 0.92, out3(prog(t, 10.0, 10.4))), 660, 1434)
-            img(cv, S['stats'], a)
-            cv.restore()
-        b = out3(prog(t, 10.05, 10.4))
-        if b > 0:
-            cv.save()
-            zoom_about(cv, lerp(1.1, 1.0, b), 660, 1434)
-            cv.saveLayerAlpha(None, round(255 * b))
-            wagey(cv, t)
-            cv.restore()
-            cv.restore()
 
 
 def phone(cv, t):
@@ -887,7 +840,7 @@ def close_app(cv, t):
     cv.translate((l + r) / 2, (tp + b) / 2)
     cv.scale(k, k)
     cv.translate(-660, -1434)
-    img(cv, A.stills['wagey'], 1 - x)
+    img(cv, A.stills['stats'], 1 - x)
     cv.restore()
     if x > 0: icon(cv, 12.0, (l + r) / 2, (tp + b) / 2, max(r - l, b - tp), x, lerp(1, 0.75, ant))
     cv.restore()
@@ -1079,7 +1032,7 @@ def lift_images(name, box, rad, keyed):
 
 
 def init():
-    A.stills = {n: skia.Image.open(str(PUB / f'stills/en-{n}.png')).makeRasterImage().withDefaultMipmaps() for n in ('home', 'payroll', 'stats', 'wagey')}
+    A.stills = {n: skia.Image.open(str(PUB / f'stills/en-{n}.png')).makeRasterImage().withDefaultMipmaps() for n in ('home', 'payroll', 'stats')}
     A.lift, A.lift_shadow = {}, {}
     for name, box, rad, keyed, *_ in LIFTS:
         A.lift[name], A.lift_shadow[name] = lift_images(name, box, rad, keyed)
@@ -1193,10 +1146,6 @@ def synth():
         put('sfx', at, vel * att(t, 0.0008) * (0.6 * np.sin(2 * np.pi * (1500 - 500 * t / 0.1) * t) * np.exp(-t / 0.012)
                                                + 0.5 * np.sin(2 * np.pi * 180 * t) * np.exp(-t / 0.02)), pan)
 
-    def blip(at, f, vel=0.2, pan=0.0):
-        t = T(0.06)
-        put('sfx', at, vel * np.sin(2 * np.pi * f * t) * np.exp(-t / 0.014) * att(t, 0.002), pan)
-
     def thump(at, vel=1.0, f0=45, f1=135, decay=0.16):
         t = T(decay * 4)
         put('sfx', at, vel * 0.8 * np.sin(2 * np.pi * np.cumsum(f0 + (f1 - f0) * np.exp(-t / 0.06)) / SR) * np.exp(-t / decay) * att(t, 0.003))
@@ -1284,10 +1233,6 @@ def synth():
     whoosh(8.97, 0.36, 400, 1800, 0.7, 0.6, -0.6)
     tock(9.35, 0.5, -0.3, 480)
     tick(9.8, 0.3, -0.3)
-    whoosh(9.97, 0.3, 900, 3000, 0.5, 0, 0)
-    tock(10.2, 0.55, 0.3, 760)
-    tock(10.4, 0.5, -0.3, 560)
-    for j in range(8): blip(10.47 + 0.0625 * j, 1250 + 110 * (j * 3 % 5), 0.2, -0.3 + 0.08 * j)
     # 11 to 12 s: build, push in, close, then a held breath.
     sweep(10.75, 1.0, 500, 9000, 0.32, lambda x: x ** 2.2, -0.4, 0.4)
     for j, at in enumerate([11.0 + 0.125 * j for j in range(4)] + [11.5 + 0.0625 * j for j in range(4)]):

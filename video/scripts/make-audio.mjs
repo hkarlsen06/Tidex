@@ -6,7 +6,7 @@ const SR = 48000;
 const BEAT = 0.5; // 120 BPM, matching the 15-frame beat grid in src/timing.ts
 const BAR = 4 * BEAT;
 const STEP = BEAT / 4; // 16th note
-const BARS = 14;
+const BARS = 12;
 const OUT = new URL('../public/audio/', import.meta.url);
 mkdirSync(OUT, { recursive: true });
 
@@ -172,7 +172,7 @@ function writeWav(name, [l, r], peak = 0.89) {
   console.log(`wrote public/audio/${name} (${(l.length / SR).toFixed(2)}s)`);
 }
 
-// Music bed: 14 bars, I-V-vi-IV in C. Bars 0-1 are the social hook, 2-11 the features, 12-13 the outro.
+// Music bed: 12 bars, I-V-vi-IV in C. Bars 0-1 are the social hook, 2-9 the features, 10-11 the outro.
 const chords = [
   { bass: 36, pad: [55, 60, 64], arp: [72, 76, 79, 84] }, // C
   { bass: 43, pad: [55, 59, 62], arp: [71, 74, 79, 83] }, // G
@@ -195,8 +195,8 @@ const inRoll = (t) => ROLLS.some(({ start, parts }) => t > start - 1e-6 && t < p
 
 for (let bar = 0; bar < BARS; bar++) {
   const t0 = bar * BAR, ch = chords[bar % 4];
-  const groove = bar >= 2 && bar <= 11;
-  const outro = bar >= 12;
+  const groove = bar >= 2 && bar <= 9;
+  const outro = bar >= 10;
   // Clock ticks under the hook, a nod to the ruler in the logo.
   if (bar < 2) for (let s = 0; s < 8; s++) {
     const at = t0 + (s * BEAT) / 2;
@@ -212,16 +212,16 @@ for (let bar = 0; bar < BARS; bar++) {
     }
     for (const s of [2, 6, 10, 14]) bass(low, t0 + s * STEP, ch.bass, STEP * 1.6, s === 14 ? 0.75 : 0.9);
     // Snare-roll lift into the outro.
-    if (bar === 11) for (let s = 12; s < 16; s++) clap(drums, t0 + s * STEP, 0.25 + (s - 12) * 0.1, -0.2);
+    if (bar === 9) for (let s = 12; s < 16; s++) clap(drums, t0 + s * STEP, 0.25 + (s - 12) * 0.1, -0.2);
   }
-  if (bar === 12) { kick(drums, t0, 1); kicks.push(t0); bass(low, t0, 36, 1.6, 0.8, 0.45); }
+  if (bar === 10) { kick(drums, t0, 1); kicks.push(t0); bass(low, t0, 36, 1.6, 0.8, 0.45); }
   // Mallet tresillo; filtered-sounding (short, soft) during the hook.
-  if (bar < 13) tresillo.forEach((s, i) => {
+  if (bar < 11) tresillo.forEach((s, i) => {
     const midi = ch.arp[melodic[i]] - (bar < 2 ? 12 : 0);
     mallet(keys, t0 + s * STEP, midi, (bar < 2 ? 0.45 : 0.62) * (i === 0 ? 1.1 : 0.95), (i % 2 ? 0.35 : -0.35), bar < 2 ? 0.22 : 0.38);
   });
   if (bar >= 2 && !outro) pad(keys, t0, ch.pad, BAR - 0.05, 0.9);
-  if (outro) pad(keys, t0, bar === 12 ? [60, 64, 67, 72] : [60, 67, 72, 76], bar === 13 ? BAR * 0.8 : BAR - 0.05, 1.1);
+  if (outro) pad(keys, t0, bar === 10 ? [60, 64, 67, 72] : [60, 67, 72, 76], bar === 11 ? BAR * 0.8 : BAR - 0.05, 1.1);
 }
 for (const { start, parts, vel } of ROLLS) {
   const hits = [];
@@ -234,11 +234,11 @@ for (const { start, parts, vel } of ROLLS) {
 }
 // Riser into the first groove bar, and into the outro reveal.
 sweep(fx, 1 * BAR + 0.4, BAR - 0.4, 500, 7000, 0.26, (x) => x ** 2.4, -0.4, 0.4);
-sweep(fx, 11 * BAR + 1.0, 1.0, 700, 8000, 0.2, (x) => x ** 2.2);
+sweep(fx, 9 * BAR + 1.0, 1.0, 700, 8000, 0.2, (x) => x ** 2.2);
 // Logo chime (hook bar 1, beat 3) and the outro chord bells.
 for (const [m, d, p] of [[84, 0, -0.2], [91, 0.06, 0.2], [88, 0.12, 0]]) bell(fx, 1 * BAR + 2 * BEAT + d, m, 0.55, p, 1.8);
-for (const [m, d, p] of [[72, 0, -0.3], [79, 0.05, 0.3], [84, 0.1, 0], [88, 0.16, 0.15]]) bell(fx, 12 * BAR + d, m, 0.6, p, 2.6);
-bell(fx, 13 * BAR, 96, 0.3, 0.2, 2.0);
+for (const [m, d, p] of [[72, 0, -0.3], [79, 0.05, 0.3], [84, 0.1, 0], [88, 0.16, 0.15]]) bell(fx, 10 * BAR + d, m, 0.6, p, 2.6);
+bell(fx, 11 * BAR, 96, 0.3, 0.2, 2.0);
 
 // Sidechain-style ducking on bass and keys from the kick.
 const duck = new Float32Array(drums[0].length).fill(1);
@@ -251,7 +251,7 @@ mix(music, drums, 0.9);
 mix(music, low, 0.8, duck);
 mix(music, reverb(keys, 0.32), 0.75, duck);
 mix(music, reverb(fx, 0.45), 0.8);
-// Fade the tail so the file ends at 28 s.
+// Fade the tail so the file ends at 24 s.
 const end = BARS * BAR;
 for (let c = 0; c < 2; c++) for (let i = 0; i < music[c].length; i++) {
   const t = i / SR;
@@ -278,4 +278,3 @@ sfx('tap.wav', 0.12, (b) => {
   place(b, 0, 0.1, 0, (t) => attack(t, 0.0008) * (0.6 * Math.sin(2 * Math.PI * (1500 - 500 * t / 0.1) * t) * Math.exp(-t / 0.012)
     + 0.5 * Math.sin(2 * Math.PI * 180 * t) * Math.exp(-t / 0.02)));
 });
-sfx('sparkle.wav', 0.8, (b) => [96, 100, 103].forEach((m, i) => bell(b, i * 0.06, m, 0.2 - i * 0.04, i % 2 ? 0.4 : -0.4, 0.5)));
