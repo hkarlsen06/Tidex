@@ -25,10 +25,10 @@ final class TimeInputFocusTests: XCTestCase {
     let focus = TimeInputFocusController()
     focus.register(start, field: .start)
     focus.register(end, field: .end)
-    let keyboardShown = expectation(
-      forNotification: UIResponder.keyboardDidShowNotification, object: nil)
+    let keyboardShown = XCTNSNotificationExpectation(
+      name: UIResponder.keyboardDidShowNotification)
     focus.focus(.start)
-    await fulfillment(of: [keyboardShown], timeout: 5)
+    await waitForSoftwareKeyboard(keyboardShown)
 
     // SwiftUI can register a replacement field before attaching it to the window.
     focus.focus(.end)
@@ -79,10 +79,10 @@ final class TimeInputFocusTests: XCTestCase {
   }
 
   private func checkKeyboardHandoff(start: UITextField, end: UITextField) async throws {
-    let keyboardShown = expectation(
-      forNotification: UIResponder.keyboardDidShowNotification, object: nil)
+    let keyboardShown = XCTNSNotificationExpectation(
+      name: UIResponder.keyboardDidShowNotification)
     XCTAssertTrue(start.becomeFirstResponder())
-    await fulfillment(of: [keyboardShown], timeout: 5)
+    let hasSoftwareKeyboard = await waitForSoftwareKeyboard(keyboardShown)
     XCTAssertTrue(start.isFirstResponder)
 
     let keyboardHidden = expectation(description: "Keyboard stays visible during auto-advance")
@@ -98,13 +98,22 @@ final class TimeInputFocusTests: XCTestCase {
     NotificationCenter.default.removeObserver(observer)
     XCTAssertTrue(end.isFirstResponder)
 
-    let keyboardDismissed = expectation(
-      forNotification: UIResponder.keyboardDidHideNotification, object: nil)
+    let keyboardDismissed = XCTNSNotificationExpectation(
+      name: UIResponder.keyboardDidHideNotification)
     enter("1700", in: end)
     XCTAssertEqual(end.text, "17:00")
-    await fulfillment(of: [keyboardDismissed], timeout: 5)
+    if hasSoftwareKeyboard {
+      await fulfillment(of: [keyboardDismissed], timeout: 5)
+    }
     XCTAssertFalse(start.isFirstResponder)
     XCTAssertFalse(end.isFirstResponder)
+  }
+
+  /// A simulator with a connected hardware keyboard never shows the software keyboard.
+  /// The focus assertions still run there; only the keyboard notifications are skipped.
+  @discardableResult
+  private func waitForSoftwareKeyboard(_ shown: XCTestExpectation) async -> Bool {
+    await XCTWaiter().fulfillment(of: [shown], timeout: 5) == .completed
   }
 
   private func enter(_ digits: String, in field: UITextField) {

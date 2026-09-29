@@ -10,7 +10,7 @@ Run commands from the repository root unless explicitly stated otherwise.
 
 When running verification or diagnostic commands, prefer flags that reduce non-actionable output and preserve useful diagnostics. Examples: use `swiftlint --quiet` for fast Swift checks, use `--json` on repository build/test wrappers when you need structured diagnostics, and use focused test filters where possible. Avoid verbose command modes unless the extra output is needed to debug the issue.
 
-Do not build or run tests unless the user asks; the user runs them in Xcode (see the root AGENTS.md). When asked, use [the verification guide](docs/AGENT_VERIFICATION.md). Use the existing wrappers, investigate failures within scope, and do not bypass a hung wrapper with raw xcodebuild; report a concrete blocker if it cannot be resolved.
+Do not build or run tests unless the user asks or the root AGENTS.md exception applies; the user runs them in Xcode. When asked, use [the verification guide](docs/AGENT_VERIFICATION.md). Use the existing wrappers, investigate failures within scope, and do not bypass a hung wrapper with raw xcodebuild; report a concrete blocker if it cannot be resolved.
 
 ## Backend access
 

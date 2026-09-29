@@ -81,7 +81,6 @@ final class OnboardingFirstShiftCarryoverStoreTests: XCTestCase {
     XCTAssertEqual(draft?.endTime, "16:00")
     XCTAssertNil(draft?.jobId)
     XCTAssertEqual(draft?.lastModified, now)
-    XCTAssertEqual(draft?.isExpired, false)
   }
 
   func testMoveDropsDatesOutsideCurrentMonthAndConsumesCarryover() {

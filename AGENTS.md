@@ -6,7 +6,7 @@ This file provides guidance to coding agents when working with code in this repo
 
 Hjalmar builds, runs and tests the app himself in Xcode. What he wants from you is fast iterations: make the change, check it by reading the code, hand it back, and let him run it.
 
-- **Do not build, test or launch anything with Xcode tools unless the user asks for it in this conversation.** No `./scripts/xcode-build-agent.sh`, no `./scripts/xcode-test-agent.sh`, no `xcodebuild`, no simulators. That includes a quick build to check that it compiles, running tests you just wrote, and a final check before handoff.
+- **Do not build, test or launch anything with Xcode tools unless the user asks for it in this conversation.** No `./scripts/xcode-build-agent.sh`, no `./scripts/xcode-test-agent.sh`, no `xcodebuild`, no simulators. That includes a quick build to check that it compiles, running tests you just wrote, and a final check before handoff. The exception at the end of this section says when you may do these anyway.
 - **A task is not a request to build or test.** "Fix X", "add Y" or "refactor Z" means edit the code and hand back. Only "build it", "run the tests" or similar counts.
 - **Allowed without asking:** fast static checks that finish in seconds, such as `swiftlint --quiet` and `rg`.
 - **Still write tests** when the task needs them. Just don't run them.
@@ -19,6 +19,17 @@ When the user does ask for a build or test:
 - Do not run UI tests (`TidexAppUITests`) unless the user asks for UI tests. Unfiltered runs skip them; do not set `XCODE_TEST_AGENT_INCLUDE_UI_TESTS=1` on your own.
 - Do not boot, create, erase or clone simulators, or open Simulator.app. Use the destination the test wrapper picks.
 - `XCODE_AGENT_NICE` and `XCODE_AGENT_JOBS` are for the user to set, not you.
+
+### Exception: when no other agent needs the Mac
+
+The rules above exist because parallel agents used to build, test and start or stop simulators on their own at the same time. That slowed the Mac down and caused build database locks. They are not meant to stop useful work when nothing can conflict.
+
+You may build, run tests, and boot, shut down, restart, erase or reinstall apps on simulators without asking when both of these hold:
+
+- Nothing else is building, testing or using a simulator. Check right before you act. `pgrep -lf "xcodebuild|xcode-test-agent|xcode-build-agent|simctl"` must print nothing, `/tmp/xcode-agent.lock` must not exist, and `xcrun simctl list devices booted` must not show a simulator in use by someone else.
+- The action helps the task, and you don't need a decision from the user to take it. Examples are confirming a fix compiles, running the tests you wrote, and restarting a simulator that fails with "Simulator device failed to launch no.tidex.app" and 0 tests run.
+
+While you do it, keep using the wrappers and their lock, run the smallest set of tests that answers your question, and shut down any simulator you booted when you're done. If another agent starts during your work, go back to the rules above.
 
 ## Project Overview
 

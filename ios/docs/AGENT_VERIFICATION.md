@@ -1,6 +1,6 @@
 # iOS verification
 
-**The user runs builds and tests himself.** Do not run the build or test wrapper unless the user asks for a build or test in this conversation; see "Builds and tests" in the root [AGENTS.md](../../AGENTS.md). This guide covers how to run them when asked. Run from the repository root.
+**The user runs builds and tests himself.** Do not run the build or test wrapper unless the user asks for a build or test in this conversation; see "Builds and tests" in the root [AGENTS.md](../../AGENTS.md), including its exception for when no other agent needs the Mac. This guide covers how to run them when asked. Run from the repository root.
 
 **iOS Builds:**
 - For fast Swift lint checks, run `swiftlint --quiet`.

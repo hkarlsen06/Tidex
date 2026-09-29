@@ -151,12 +151,10 @@ internal final class AuthAndPurchaseRecoveryTests: XCTestCase {
        "factors":[{"id":"factor-1","factor_type":"totp","status":"verified",
          "created_at":"2026-09-01T00:00:00Z","updated_at":"2026-09-01T00:00:00Z"}]}
       """#
-    let decoder = JSONDecoder()
-    decoder.dateDecodingStrategy = .iso8601
     return Session(
       accessToken: jwt(aal: aal), tokenType: "bearer", expiresIn: 3_600,
       expiresAt: Date().timeIntervalSince1970 + 3_600, refreshToken: "refresh-token",
-      user: try decoder.decode(User.self, from: Data(json.utf8)))
+      user: try AuthClient.Configuration.jsonDecoder.decode(User.self, from: Data(json.utf8)))
   }
 
   private static func jwt(aal: String) -> String {
