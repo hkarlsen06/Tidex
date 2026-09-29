@@ -59,6 +59,44 @@ struct AdminUserStatsSections: View {
       }
     }
 
+    if let app = stats.appActivity {
+      Section {
+        LabeledContent("Last opened") { AdminRelativeDate(date: app.lastActive) }
+        textRow("Version", app.version)
+        if let previous = app.previousVersion {
+          textRow("Updated from", previous)
+        }
+        textRow("Device", app.deviceModel)
+        textRow("System", app.osVersion)
+        textRow("App language", app.appLanguage)
+        textRow("Locale", app.locale)
+        textRow("Time zone", app.timeZone)
+        countRow("Opens", app.openCount)
+        if let activeDays = app.activeDays {
+          countRow("Active days", activeDays)
+        }
+        dateRow("First recorded open", app.firstActive)
+      } header: {
+        Text("App")
+      } footer: {
+        Text(
+          """
+          From the latest time the user opened the app. Opens and active days are counted from \
+          the first recorded open.
+          """
+        )
+      }
+
+      Section("Settings") {
+        textRow("Notifications", Self.label(app.notificationPermission))
+        textRow("Background refresh", Self.label(app.backgroundRefresh))
+        textRow("Widgets", app.widgetKinds.map { $0.isEmpty ? "None" : $0.joined(separator: ", ") })
+        textRow("Appearance", Self.label(app.appearance))
+        textRow("Text size", app.textSize)
+        textRow("Reduce Motion", app.reduceMotion.map { $0 ? "On" : "Off" })
+      }
+    }
+
     Section {
       if stats.devices.isEmpty {
         Text("No registered devices, so broadcasts can't reach this user.")
@@ -92,6 +130,21 @@ struct AdminUserStatsSections: View {
 
   private func countRow(_ title: String, _ value: Int) -> some View {
     LabeledContent(title) { Text(value, format: .number) }
+  }
+
+  /// Readable text for the codes `record_app_activity` stores. Unknown codes show as they are.
+  private static let labels: [String: String] = [
+    "authorized": "Allowed", "denied": "Denied", "not_determined": "Not asked yet",
+    "provisional": "Provisional", "ephemeral": "Ephemeral", "available": "On",
+    "restricted": "Restricted", "light": "Light", "dark": "Dark",
+  ]
+
+  private static func label(_ code: String?) -> String? {
+    code.map { labels[$0] ?? $0 }
+  }
+
+  private func textRow(_ title: String, _ value: String?) -> some View {
+    LabeledContent(title) { Text(verbatim: value.flatMap { $0.isEmpty ? nil : $0 } ?? "–") }
   }
 
   private func dateRow(_ title: String, _ date: Date?) -> some View {

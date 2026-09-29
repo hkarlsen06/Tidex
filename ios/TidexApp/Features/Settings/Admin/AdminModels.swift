@@ -16,11 +16,18 @@ private func adminDay(_ value: String?) -> Date? {
   return try? Date.ISO8601FormatStyle(timeZone: .current).year().month().day().parse(value)
 }
 
+/// "3.2 (146)", or whichever part is present.
+private func adminVersion(_ version: String?, _ build: String?) -> String? {
+  let text: String = [version, build.map { "(\($0))" }].compactMap { $0 }.joined(separator: " ")
+  return text.isEmpty ? nil : text
+}
+
 struct AdminUser: Decodable, Identifiable, Hashable, Sendable {
   let id: String
   let email: String?
   let phone: String?
   let name: String?
+  let avatarUrl: String?
   let lastSignInAt: String?
   let createdAt: String
   var isBanned: Bool
@@ -121,7 +128,45 @@ struct AdminUserStats: Decodable, Sendable {
   let reportsReceived: Int
   let hasCalendarFeed: Bool
   let calendarFeedLastUsedAt: String?
+  /// Nil until the user opens a build that records app opens.
+  let appActivity: AppActivity?
   let devices: [Device]
+
+  /// The app build and device from the user's latest app open.
+  struct AppActivity: Decodable, Sendable {
+    let firstActiveAt: String?
+    let lastActiveAt: String?
+    let openCount: Int
+    /// Days with at least one open, counted in Norwegian time.
+    let activeDays: Int?
+    let appVersion: String?
+    let buildNumber: String?
+    let previousAppVersion: String?
+    let previousBuildNumber: String?
+    let osVersion: String?
+    /// Hardware identifier such as "iPhone17,1".
+    let deviceModel: String?
+    let locale: String?
+    /// The language the app's UI shows, such as "nb".
+    let appLanguage: String?
+    let timeZone: String?
+    /// "authorized", "denied", "not_determined", "provisional" or "ephemeral".
+    let notificationPermission: String?
+    /// "available", "denied" or "restricted".
+    let backgroundRefresh: String?
+    /// Kinds of the widgets on the user's screens. Nil when the app couldn't read them.
+    let widgetKinds: [String]?
+    /// "light" or "dark".
+    let appearance: String?
+    /// Dynamic Type size such as "L" or "AccessibilityXL".
+    let textSize: String?
+    let reduceMotion: Bool?
+
+    var firstActive: Date? { adminDate(firstActiveAt) }
+    var lastActive: Date? { adminDate(lastActiveAt) }
+    var version: String? { adminVersion(appVersion, buildNumber) }
+    var previousVersion: String? { adminVersion(previousAppVersion, previousBuildNumber) }
+  }
 
   struct Device: Decodable, Identifiable, Sendable {
     let id: String
@@ -137,6 +182,25 @@ struct AdminUserStats: Decodable, Sendable {
   var latestShift: Date? { adminDay(latestShiftDate) }
   var lastShiftAdded: Date? { adminDate(lastShiftAddedAt) }
   var calendarFeedLastUsed: Date? { adminDate(calendarFeedLastUsedAt) }
+}
+
+/// Distinct users with an app open, from `admin_get_active_users_chart_api`.
+/// Only counts builds that record app opens.
+struct AdminActiveUsersChart: Decodable, Sendable {
+  /// The last 24 hours, oldest first. The last bucket is the current hour.
+  let hours: [Bucket]
+  /// The last 30 days in the requested time zone, oldest first. The last bucket is today.
+  let days: [Bucket]
+
+  struct Bucket: Decodable, Identifiable, Sendable {
+    /// Hour buckets have `start`, a timestamp. Day buckets have `date`, a Postgres date.
+    let start: String?
+    let date: String?
+    let users: Int
+
+    var id: String { start ?? date ?? "" }
+    var time: Date? { adminDate(start) ?? adminDay(date) }
+  }
 }
 
 struct AdminUsersPage: Decodable, Sendable {
@@ -216,6 +280,14 @@ struct AdminReport: Decodable, Identifiable, Hashable, Sendable {
 struct AdminReportsPage: Decodable, Sendable {
   let reports: [AdminReport]
   let total: Int
+}
+
+/// The conversation around a report, in the `list_thread_messages` row shape.
+struct AdminReportMessages: Decodable, Sendable {
+  let messages: [MessagingMessageRow]
+  let reportedAvatarUrl: String?
+
+  var friendMessages: [FriendMessage] { messages.map { $0.toFriendMessage() } }
 }
 
 struct AdminAuditEntry: Decodable, Identifiable, Hashable, Sendable {

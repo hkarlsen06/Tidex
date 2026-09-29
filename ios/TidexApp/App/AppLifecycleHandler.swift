@@ -23,6 +23,7 @@ final class AppLifecycleHandler {
   static let shared = AppLifecycleHandler()
   private var hasHandledInitialActivation = false
   private var clockSessionReconciliationTask: Task<Void, Never>?
+  private var appActivityTask: Task<Void, Never>?
 
   private init() {}
 
@@ -42,6 +43,7 @@ final class AppLifecycleHandler {
     if !isInitialActivation {
       AppCoordinator.shared.handleAppForeground()
     }
+    recordAppActivity()
 
     clockSessionReconciliationTask = Task { @MainActor [weak self] in
       await ClockSessionReconciler.shared.reconcileIfNeeded(referenceDate: Date())
@@ -55,6 +57,19 @@ final class AppLifecycleHandler {
     clockSessionReconciliationTask = nil
     if SensitiveContentPresentationState.shared.isSensitiveContentVisible {
       PrivacyBlurManager.showIfNeeded()
+    }
+  }
+
+  /// Tells the server the user opened the app, for the admin "Last active" time, app info and charts.
+  /// Waits briefly first because iOS 26 and later can post didBecomeActive while the device locks.
+  private func recordAppActivity() {
+    appActivityTask?.cancel()
+    appActivityTask = Task { @MainActor in
+      try? await Task.sleep(for: .milliseconds(300))
+      guard !Task.isCancelled, UIApplication.shared.applicationState == .active,
+        await AuthSessionManager.shared.getSessionIfAvailable() != nil
+      else { return }
+      await AppActivityReporter.record()
     }
   }
 

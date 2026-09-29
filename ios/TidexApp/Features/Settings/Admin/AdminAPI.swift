@@ -51,6 +51,11 @@ enum AdminAPI {
     try await rpc("admin_get_user_stats_api", ["p_user_id": .string(id)])
   }
 
+  /// Days follow the admin's own time zone.
+  static func activeUsersChart() async throws -> AdminActiveUsersChart {
+    try await rpc("admin_get_active_users_chart_api", ["p_time_zone": .string(TimeZone.current.identifier)])
+  }
+
   // MARK: Feedback
 
   static func feedback() async throws -> [AdminFeedback] {
@@ -74,6 +79,15 @@ enum AdminAPI {
         "p_offset": 0,
         "p_status": status.map { .string($0.rawValue) } ?? .null,
       ])
+  }
+
+  /// The messages around the reported one, or around the report time for user reports.
+  static func reportMessages(id: String) async throws -> AdminReportMessages {
+    try await rpc("admin_get_report_messages_api", ["p_report_id": .string(id)])
+  }
+
+  static func deleteMessage(id: String) async throws {
+    try await action("admin_delete_message_api", ["p_message_id": .string(id)])
   }
 
   static func updateReport(id: String, status: AdminReportStatus, reviewerNotes: String)

@@ -89,7 +89,7 @@ struct AdminUserDetailView: View {
   private var header: some View {
     Section {
       VStack(spacing: Spacing.xs) {
-        AvatarView(url: nil, initials: initials, size: 64)
+        AvatarView(url: user.avatarUrl, initials: initials, size: 64)
         Text(user.displayName)
           .font(.tidexTitle)
           .foregroundStyle(Color.tidexTextPrimary)

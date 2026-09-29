@@ -1,5 +1,6 @@
 -- Function: can_read_message_attachment_object
--- Description: Validates whether the authenticated user may read a private message attachment object path
+-- Description: Validates whether the authenticated user may read a private message attachment object path.
+-- Admins may also read attachments in threads that have an abuse report.
 
 CREATE OR REPLACE FUNCTION public.can_read_message_attachment_object(p_path text, p_owner_id text DEFAULT NULL)
 RETURNS boolean
@@ -26,7 +27,13 @@ BEGIN
       ON m.id = ma.message_id
     WHERE ma.storage_bucket = 'message-attachments'
       AND ma.storage_path = p_path
-      AND public.can_access_thread(m.thread_id)
+      AND (
+        public.can_access_thread(m.thread_id)
+        OR (
+          public.is_admin()
+          AND EXISTS (SELECT 1 FROM public.abuse_reports ar WHERE ar.thread_id = m.thread_id)
+        )
+      )
   );
 END;
 $function$;

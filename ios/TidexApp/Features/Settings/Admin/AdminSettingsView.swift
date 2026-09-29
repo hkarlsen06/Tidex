@@ -55,6 +55,7 @@ struct AdminSettingsView: View {
   @State private var deepLinkedReportID: String?
   @State private var didApplyDeepLink = false
   @State private var summary = Summary()
+  @State private var activeUsers: AdminActiveUsersChart?
   @Environment(\.dismiss) private var dismiss
 
   private struct Summary {
@@ -65,6 +66,8 @@ struct AdminSettingsView: View {
 
   var body: some View {
     List {
+      activeUsersSection
+
       Section {
         HStack(spacing: Spacing.xs) {
           statTile("Unanswered", value: summary.unansweredFeedback, tab: .feedback)
@@ -118,6 +121,16 @@ struct AdminSettingsView: View {
     }
   }
 
+  private var activeUsersSection: some View {
+    Section {
+      AdminActiveUsersCharts(chart: activeUsers)
+        .listRowInsets(EdgeInsets())
+        .listRowBackground(Color.clear)
+    } footer: {
+      Text("Users who opened the app. Counts start from the first build that records app opens.")
+    }
+  }
+
   private func link(_ tab: AdminTab, count: Int? = nil) -> some View {
     NavigationLink {
       AdminDestination(tab: tab, initialReportID: nil)
@@ -154,8 +167,10 @@ struct AdminSettingsView: View {
     async let users: AdminUsersPage? = try? AdminAPI.users(page: 1, perPage: 1, search: nil)
     async let feedback: [AdminFeedback]? = try? AdminAPI.feedback()
     async let reports: AdminReportsPage? = try? AdminAPI.reports(status: .open, limit: 1)
-    let (usersPage, feedbackItems, reportsPage) = await (users, feedback, reports)
+    async let chart: AdminActiveUsersChart? = try? AdminAPI.activeUsersChart()
+    let (usersPage, feedbackItems, reportsPage, chartData) = await (users, feedback, reports, chart)
     withAnimation {
+      activeUsers = chartData
       summary = Summary(
         users: usersPage?.totalCount,
         unansweredFeedback: feedbackItems?.count(where: { !$0.isAnswered }),

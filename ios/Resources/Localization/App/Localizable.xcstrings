@@ -36660,6 +36660,9 @@
         }
       }
     },
+    "App" : {
+
+    },
     "appearance.calendarContentColor.monochrome" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -162906,6 +162909,9 @@
         }
       }
     },
+    "From the latest time the user opened the app. Opens and active days are counted from the first recorded open." : {
+
+    },
     "From: %@" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -165714,6 +165720,9 @@
           }
         }
       }
+    },
+    "It disappears for both users. It stays visible here, dimmed." : {
+
     },
     "jobs.defaultPlaceholderName" : {
       "extractionState" : "manual",
@@ -416390,6 +416399,9 @@
           }
         }
       }
+    },
+    "Users who opened the app. Counts start from the first build that records app opens." : {
+
     },
     "Validation Tests" : {
       "extractionState" : "manual",

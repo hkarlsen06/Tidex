@@ -1372,7 +1372,7 @@ private struct MessagingMessageCursorRow: Decodable {
   }
 }
 
-private struct MessagingMessageRow: Decodable {
+struct MessagingMessageRow: Decodable {
   let id: String
   let threadId: String
   let senderUserId: String
@@ -1441,7 +1441,7 @@ private struct MessagingDeletedMessageRow: Decodable {
   }
 }
 
-private struct MessagingReactionRow: Decodable {
+struct MessagingReactionRow: Decodable {
   let emoji: String
   let count: Int
   let viewerHasReacted: Bool
@@ -1461,7 +1461,7 @@ private struct MessagingReactionRow: Decodable {
   }
 }
 
-private struct MessagingAttachmentRow: Decodable {
+struct MessagingAttachmentRow: Decodable {
   let id: String
   let attachmentIndex: Int
   let kind: String

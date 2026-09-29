@@ -60,15 +60,19 @@ LANGUAGE sql
 STABLE
 SET search_path TO ''
 AS $function$
-  -- The latest session refresh (the app refreshes its token while in use) or sign-in.
-  -- auth.sessions.refreshed_at is a UTC timestamp without a time zone.
-  SELECT GREATEST(
-    (
-      SELECT max(GREATEST(s.refreshed_at AT TIME ZONE 'UTC', s.updated_at))
-      FROM auth.sessions s
-      WHERE s.user_id = p_user_id
-    ),
-    (SELECT u.last_sign_in_at FROM auth.users u WHERE u.id = p_user_id)
+  -- The last time the app recorded an open. Users who haven't opened a build that records
+  -- opens fall back to the latest session refresh (the app refreshes its token while in use)
+  -- or sign-in. auth.sessions.refreshed_at is a UTC timestamp without a time zone.
+  SELECT COALESCE(
+    (SELECT a.last_active_at FROM internal.user_app_activity a WHERE a.user_id = p_user_id),
+    GREATEST(
+      (
+        SELECT max(GREATEST(s.refreshed_at AT TIME ZONE 'UTC', s.updated_at))
+        FROM auth.sessions s
+        WHERE s.user_id = p_user_id
+      ),
+      (SELECT u.last_sign_in_at FROM auth.users u WHERE u.id = p_user_id)
+    )
   );
 $function$;
 
@@ -115,7 +119,8 @@ BEGIN
         COALESCE(u.raw_app_meta_data->>'role', '') = 'admin' AS is_admin,
         u.id = '032d8c2a-9af6-4777-99f0-24e2c4058bf3'::uuid AS is_super_admin,
         internal.admin_broadcast_language(u.raw_user_meta_data->>'locale') AS language,
-        internal.admin_user_last_active(u.id) AS last_active
+        internal.admin_user_last_active(u.id) AS last_active,
+        COALESCE(u.raw_user_meta_data->>'avatar_url', u.raw_user_meta_data->>'picture') AS oauth_avatar_url
       FROM auth.users u
       WHERE
         (
@@ -147,9 +152,12 @@ BEGIN
         s.provider,
         s.product_id,
         s.price_id,
-        s.status
+        s.status,
+        -- Same fallback as counterpart avatars in get_thread_summary.
+        COALESCE(us.profile_picture_url, f.oauth_avatar_url) AS avatar_url
       FROM filtered f
       LEFT JOIN public.profiles p ON p.id = f.id
+      LEFT JOIN public.user_settings us ON us.user_id = f.id
       LEFT JOIN LATERAL (
         SELECT provider, product_id, price_id, status, current_period_end
         FROM public.subscriptions s
@@ -182,6 +190,7 @@ BEGIN
             'email', email,
             'phone', phone,
             'name', name,
+            'avatarUrl', avatar_url,
             'lastSignInAt', last_sign_in_at,
             'lastActiveAt', last_active,
             'createdAt', created_at,
@@ -279,6 +288,31 @@ BEGIN
     'hasCalendarFeed', EXISTS (
       SELECT 1 FROM internal.calendar_subscription_tokens WHERE user_id = p_user_id AND revoked_at IS NULL
     ),
+    'appActivity', (
+      SELECT jsonb_build_object(
+        'firstActiveAt', a.first_active_at,
+        'lastActiveAt', a.last_active_at,
+        'openCount', a.open_count,
+        'activeDays', a.active_days,
+        'appVersion', a.app_version,
+        'buildNumber', a.build_number,
+        'previousAppVersion', a.previous_app_version,
+        'previousBuildNumber', a.previous_build_number,
+        'osVersion', a.os_version,
+        'deviceModel', a.device_model,
+        'locale', a.locale,
+        'appLanguage', a.app_language,
+        'timeZone', a.time_zone,
+        'notificationPermission', a.notification_permission,
+        'backgroundRefresh', a.background_refresh,
+        'widgetKinds', a.widget_kinds,
+        'appearance', a.appearance,
+        'textSize', a.text_size,
+        'reduceMotion', a.reduce_motion
+      )
+      FROM internal.user_app_activity a
+      WHERE a.user_id = p_user_id
+    ),
     'devices', COALESCE((
       SELECT jsonb_agg(
         jsonb_build_object(
@@ -293,6 +327,56 @@ BEGIN
       FROM internal.push_devices pd
       WHERE pd.user_id = p_user_id
     ), '[]'::jsonb)
+  );
+END;
+$function$;
+
+-- Distinct active users per hour for the last 24 hours and per day for the last 30 days.
+-- Days follow p_time_zone. Only counts opens from builds that record them.
+CREATE OR REPLACE FUNCTION public.admin_get_active_users_chart_api(p_time_zone text DEFAULT 'Europe/Oslo')
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public', 'internal'
+AS $function$
+DECLARE
+  v_current_hour timestamptz := date_trunc('hour', now());
+  v_today date;
+BEGIN
+  PERFORM public.assert_is_admin();
+
+  IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_timezone_names WHERE name = p_time_zone) THEN
+    RAISE EXCEPTION 'Unknown time zone %', p_time_zone;
+  END IF;
+
+  v_today := (now() AT TIME ZONE p_time_zone)::date;
+
+  RETURN jsonb_build_object(
+    'hours', (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'start', h.start,
+          'users', (SELECT count(*) FROM internal.app_activity_hours x WHERE x.hour = h.start)
+        )
+        ORDER BY h.start
+      )
+      FROM generate_series(v_current_hour - interval '23 hours', v_current_hour, interval '1 hour') AS h(start)
+    ),
+    'days', (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'date', d.day,
+          'users', (
+            SELECT count(DISTINCT x.user_id) FROM internal.app_activity_hours x
+            WHERE x.hour >= d.day::timestamp AT TIME ZONE p_time_zone
+              AND x.hour < (d.day + 1)::timestamp AT TIME ZONE p_time_zone
+          )
+        )
+        ORDER BY d.day
+      )
+      FROM (SELECT v_today - i AS day FROM generate_series(0, 29) AS i) AS d
+    )
   );
 END;
 $function$;
@@ -563,7 +647,12 @@ BEGIN
         f.message,
         f.user_email,
         COALESCE(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name') AS user_name,
-        us.profile_picture_url AS user_profile_picture,
+        -- Same fallback as counterpart avatars in get_thread_summary.
+        COALESCE(
+          us.profile_picture_url,
+          u.raw_user_meta_data->>'avatar_url',
+          u.raw_user_meta_data->>'picture'
+        ) AS user_profile_picture,
         f.created_at,
         f.response,
         f.responded_at,
@@ -711,6 +800,187 @@ BEGIN
     )
     FROM decorated
   );
+END;
+$function$;
+
+-- The conversation around a report, in the list_thread_messages payload shape. Includes deleted messages.
+-- User reports without a message anchor on the report time instead.
+CREATE OR REPLACE FUNCTION public.admin_get_report_messages_api(
+  p_report_id uuid,
+  p_context integer DEFAULT 10
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public', 'auth'
+AS $function$
+DECLARE
+  v_report public.abuse_reports%ROWTYPE;
+  v_anchor_at timestamptz;
+  v_anchor_id uuid;
+  v_context integer := LEAST(GREATEST(COALESCE(p_context, 10), 1), 50);
+BEGIN
+  PERFORM public.assert_is_admin();
+
+  SELECT * INTO v_report FROM public.abuse_reports WHERE id = p_report_id;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('messages', '[]'::jsonb);
+  END IF;
+
+  SELECT created_at, id INTO v_anchor_at, v_anchor_id
+  FROM public.messages
+  WHERE id = v_report.message_id;
+
+  IF v_anchor_at IS NULL THEN
+    v_anchor_at := v_report.created_at;
+    -- The max uuid makes messages sent at the report time count as "before".
+    v_anchor_id := 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid;
+  END IF;
+
+  RETURN (
+    WITH window_rows AS (
+      (
+        SELECT m.*
+        FROM public.messages m
+        WHERE m.thread_id = v_report.thread_id
+          AND (m.created_at, m.id) <= (v_anchor_at, v_anchor_id)
+        ORDER BY m.created_at DESC, m.id DESC
+        LIMIT v_context + 1
+      )
+      UNION ALL
+      (
+        SELECT m.*
+        FROM public.messages m
+        WHERE m.thread_id = v_report.thread_id
+          AND (m.created_at, m.id) > (v_anchor_at, v_anchor_id)
+        ORDER BY m.created_at, m.id
+        LIMIT v_context
+      )
+    )
+    SELECT jsonb_build_object(
+      -- Same fallback as counterpart avatars in get_thread_summary.
+      'reportedAvatarUrl', (
+        SELECT COALESCE(
+          us.profile_picture_url,
+          au.raw_user_meta_data->>'avatar_url',
+          au.raw_user_meta_data->>'picture'
+        )
+        FROM auth.users au
+        LEFT JOIN public.user_settings us ON us.user_id = au.id
+        WHERE au.id = v_report.reported_user_id
+      ),
+      'messages', COALESCE(
+        jsonb_agg(
+          jsonb_build_object(
+            'id', w.id,
+            'thread_id', w.thread_id,
+            'sender_user_id', w.sender_user_id,
+            'message_type', w.message_type,
+            'body', w.body,
+            'client_id', w.client_id,
+            'reply_to_message_id', w.reply_to_message_id,
+            'created_at', w.created_at,
+            'edited_at', w.edited_at,
+            'deleted_at', w.deleted_at,
+            'metadata', w.metadata,
+            'attachments', COALESCE(
+              (
+                SELECT jsonb_agg(
+                  jsonb_build_object(
+                    'id', ma.id,
+                    'attachment_index', ma.attachment_index,
+                    'kind', ma.kind,
+                    'storage_bucket', ma.storage_bucket,
+                    'storage_path', ma.storage_path,
+                    'mime_type', ma.mime_type,
+                    'byte_size', ma.byte_size,
+                    'width', ma.width,
+                    'height', ma.height,
+                    'created_at', ma.created_at,
+                    'reactions', '[]'::jsonb
+                  )
+                  ORDER BY ma.attachment_index
+                )
+                FROM public.message_attachments ma
+                WHERE ma.message_id = w.id
+              ),
+              '[]'::jsonb
+            ),
+            'reactions', COALESCE(
+              (
+                SELECT jsonb_agg(
+                  jsonb_build_object('emoji', r.emoji, 'count', r.reaction_count, 'viewer_has_reacted', false)
+                  ORDER BY r.reaction_count DESC, r.first_created_at, r.emoji
+                )
+                FROM (
+                  SELECT mr.emoji, count(*)::integer AS reaction_count, min(mr.created_at) AS first_created_at
+                  FROM public.message_reactions mr
+                  WHERE mr.message_id = w.id AND mr.attachment_id IS NULL
+                  GROUP BY mr.emoji
+                ) r
+              ),
+              '[]'::jsonb
+            )
+          )
+          ORDER BY w.created_at, w.id
+        ),
+        '[]'::jsonb
+      )
+    )
+    FROM window_rows w
+  );
+END;
+$function$;
+
+-- Soft deletes a reported message, the same way delete_message does for its sender.
+CREATE OR REPLACE FUNCTION public.admin_delete_message_api(p_message_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public', 'internal', 'auth'
+AS $function$
+DECLARE
+  v_thread_id uuid;
+  v_sender_user_id uuid;
+  v_latest public.messages%ROWTYPE;
+BEGIN
+  PERFORM public.assert_is_admin();
+
+  SELECT thread_id, sender_user_id INTO v_thread_id, v_sender_user_id
+  FROM public.messages
+  WHERE id = p_message_id AND deleted_at IS NULL;
+
+  IF v_thread_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Message not found or already deleted');
+  END IF;
+
+  -- Lets the soft delete trigger emit the sync event that removes the message on devices.
+  PERFORM set_config('tidex.messaging_v2_emit_message_soft_delete', 'true', true);
+
+  UPDATE public.messages SET deleted_at = now() WHERE id = p_message_id;
+
+  SELECT * INTO v_latest
+  FROM public.messages m
+  WHERE m.thread_id = v_thread_id AND m.deleted_at IS NULL
+  ORDER BY m.created_at DESC, m.id DESC
+  LIMIT 1;
+
+  UPDATE public.threads t
+  SET
+    last_message_id = v_latest.id,
+    last_message_sender_id = v_latest.sender_user_id,
+    last_message_at = COALESCE(v_latest.created_at, t.created_at)
+  WHERE t.id = v_thread_id;
+
+  PERFORM public.admin_log_action_rpc(
+    'message_deleted',
+    v_sender_user_id,
+    NULL,
+    jsonb_build_object('message_id', p_message_id, 'thread_id', v_thread_id)
+  );
+
+  RETURN jsonb_build_object('success', true);
 END;
 $function$;
 
@@ -1353,6 +1623,8 @@ GRANT EXECUTE ON FUNCTION public.admin_get_feedback_api(integer, integer) TO aut
 GRANT EXECUTE ON FUNCTION public.admin_respond_feedback_api(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_reports_api(integer, integer, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_report_status_api(uuid, text, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_report_messages_api(uuid, integer) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_delete_message_api(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_audit_log_api(integer, text, uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_shares_api(text, integer, integer) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_create_share_api(uuid, uuid, boolean) TO authenticated;
@@ -1363,3 +1635,4 @@ GRANT EXECUTE ON FUNCTION public.admin_preview_notification_target_api(text, uui
 GRANT EXECUTE ON FUNCTION public.admin_send_broadcast_api(text, text, text, text, text, text, text, uuid[], boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_broadcast_detail_api(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_get_user_stats_api(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_get_active_users_chart_api(text) TO authenticated;

@@ -141,6 +141,14 @@ private struct AdminReportDetailView: View {
   @State private var notes: String
   @State private var isSaving = false
   @State private var errorMessage: String?
+  @State private var messages: [FriendMessage]?
+  @State private var reportedAvatarUrl: String?
+  @State private var reporter: AdminUser?
+  @State private var reported: AdminUser?
+  @State private var viewerIsSuperadmin = false
+  @State private var isWorking = false
+  @State private var confirmBan = false
+  @State private var confirmDelete = false
   @Environment(\.dismiss) private var dismiss
 
   init(report: AdminReport, onSaved: @escaping () async -> Void) {
@@ -160,11 +168,15 @@ private struct AdminReportDetailView: View {
       Group {
         summarySection
 
+        conversationSection
+
         if let note = report.note?.nilIfBlank {
           Section("Reporter's note") {
             Text(note).textSelection(.enabled)
           }
         }
+
+        actionsSection
 
         Section("Review") {
           Picker("Status", selection: $status) {
@@ -197,7 +209,150 @@ private struct AdminReportDetailView: View {
         }
       }
     }
+    .disabled(isWorking)
+    .task { await load() }
     .adminErrorAlert($errorMessage)
+    .confirmationDialog(
+      "Delete this message?", isPresented: $confirmDelete, titleVisibility: .visible
+    ) {
+      Button("Delete message", role: .destructive, action: deleteMessage)
+    } message: {
+      Text("It disappears for both users. It stays visible here, dimmed.")
+    }
+    .confirmationDialog(
+      reported?.isBanned == true
+        ? "Unban \(report.reportedDisplayName)?" : "Ban \(report.reportedDisplayName)?",
+      isPresented: $confirmBan,
+      titleVisibility: .visible
+    ) {
+      Button(
+        reported?.isBanned == true ? "Unban" : "Ban",
+        role: reported?.isBanned == true ? nil : .destructive,
+        action: toggleBan)
+    } message: {
+      Text(
+        reported?.isBanned == true
+          ? "They can sign in again." : "They are signed out and can't sign in.")
+    }
+  }
+
+  private var conversationSection: some View {
+    Section("Conversation") {
+      if let messages {
+        if messages.isEmpty {
+          Text("No messages").foregroundStyle(Color.tidexTextMuted)
+        } else {
+          AdminReportConversation(
+            messages: messages, report: report, reportedAvatarUrl: reportedAvatarUrl)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+        }
+      } else {
+        ProgressView().frame(maxWidth: .infinity)
+      }
+    }
+  }
+
+  private var reportedMessageIsDeleted: Bool {
+    messages?.first { $0.id == report.messageId }?.deletedAt != nil
+  }
+
+  private var actionsSection: some View {
+    Section("Actions") {
+      if report.messageId != nil, messages != nil, !reportedMessageIsDeleted {
+        Button("Delete message", systemImage: "trash") { confirmDelete = true }
+          .foregroundStyle(Color.tidexError)
+      }
+      if let reported {
+        NavigationLink {
+          AdminBroadcastView(recipient: reported)
+        } label: {
+          Label("Send notification", systemImage: "bell.badge")
+        }
+        // The server refuses to ban admins.
+        if !reported.isSuperAdmin, !reported.isAdmin || reported.isBanned {
+          Button(
+            reported.isBanned ? "Unban \(reported.displayName)" : "Ban \(reported.displayName)",
+            systemImage: "nosign"
+          ) {
+            confirmBan = true
+          }
+          .foregroundStyle(reported.isBanned ? Color.tidexBlue : Color.tidexError)
+        }
+        userLink("Reported user", reported) { self.reported = $0 }
+      }
+      if let reporter {
+        userLink("Reporter", reporter) { self.reporter = $0 }
+      }
+    }
+  }
+
+  private func userLink(
+    _ title: String, _ user: AdminUser, onChange: @escaping (AdminUser) -> Void
+  ) -> some View {
+    NavigationLink {
+      AdminUserDetailView(user: user, viewerIsSuperadmin: viewerIsSuperadmin, onChange: onChange)
+    } label: {
+      LabeledContent(title, value: user.displayName)
+    }
+  }
+
+  private func load() async {
+    async let loadedMessages = AdminAPI.reportMessages(id: report.id)
+    async let loadedReporter = Self.user(id: report.reporterUserId)
+    async let loadedReported = Self.user(id: report.reportedUserId)
+    viewerIsSuperadmin = await AdminAPI.currentUserIsSuperadmin()
+    do {
+      let page = try await loadedMessages
+      messages = page.friendMessages
+      reportedAvatarUrl = page.reportedAvatarUrl
+      reporter = try await loadedReporter
+      reported = try await loadedReported
+    } catch {
+      guard !Task.isCancelled else { return }
+      messages = messages ?? []
+      errorMessage = error.localizedDescription
+    }
+  }
+
+  private static func user(id: String) async throws -> AdminUser? {
+    try await AdminAPI.users(page: 1, perPage: 1, search: id).users.first { $0.id == id }
+  }
+
+  private func deleteMessage() {
+    guard let messageId = report.messageId else { return }
+    run {
+      try await AdminAPI.deleteMessage(id: messageId)
+      status = .actioned
+      messages = try await AdminAPI.reportMessages(id: report.id).friendMessages
+    }
+  }
+
+  private func toggleBan() {
+    guard let user = reported else { return }
+    run {
+      try await AdminAPI.setBanned(!user.isBanned, for: user)
+      reported?.isBanned.toggle()
+      if !user.isBanned {
+        status = .actioned
+      }
+    }
+  }
+
+  /// Runs a moderation action. Actions that act on the report set the status to Actioned;
+  /// Save stores it with the notes.
+  private func run(_ work: @escaping () async throws -> Void) {
+    Task {
+      isWorking = true
+      defer { isWorking = false }
+      do {
+        try await work()
+        Haptics.play(.success)
+      } catch {
+        Haptics.play(.error)
+        errorMessage = AdminError(error).message
+      }
+    }
   }
 
   private var summarySection: some View {
