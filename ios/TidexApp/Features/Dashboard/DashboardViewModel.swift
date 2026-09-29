@@ -1930,6 +1930,10 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
     {
       // Use cached data - instant navigation!
       logger.info("📦 Using cached data for \(displayKey)")
+      // An earlier load for another month skips its result once the month changes,
+      // so it never clears the loading state it set.
+      activeNavigationTask?.cancel()
+      self.isLoading = false
       self.displayedMonthShifts = displayCache.shifts
       self.displayedMonthEvents = displayCache.events
       self.previousMonthShifts = previousCache.shifts
@@ -2052,7 +2056,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
           return
         }
 
-        await loadDashboardForDisplayedMonth(
+        await loadDashboardFromLocal(
           showLoadingState: false,
           expectedDisplayYM: (year: targetYear, month: targetMonth)
         )
@@ -2649,8 +2653,14 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
 
   /// Load dashboard data from local repositories
   /// This is the core local-first read path - no network calls
-  /// - Parameter showLoadingState: Whether to show/update loading indicator (false for seamless background updates)
-  private func loadDashboardFromLocal(showLoadingState: Bool = true) async {  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length type_contents_order
+  /// - Parameters:
+  ///   - showLoadingState: Whether to show/update loading indicator (false for seamless background updates)
+  ///   - expectedDisplayYM: Set by month navigation. Skips the load when the user has already moved
+  ///     to another month, and skips the settings retry because navigation runs after a full load.
+  private func loadDashboardFromLocal(  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length type_contents_order
+    showLoadingState: Bool = true,
+    expectedDisplayYM: (year: Int, month: Int)? = nil
+  ) async {
     if showLoadingState {
       isLoading = true
     }
@@ -2675,7 +2685,7 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
 
       // Check if we have any data to show
       // Note: Empty shifts is OK, but missing settings means we can't compute payroll
-      if self.settings == nil {
+      if self.settings == nil, expectedDisplayYM == nil {
         // No settings yet - retry multiple times with delays
         // This handles the race condition where sync completes but data isn't readable yet
         for attempt in 1...5 {  // swiftlint:disable:this no_magic_numbers
@@ -2698,22 +2708,30 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
         }
       }
 
-      guard let currentSettings = self.settings else {
-        // Still no settings after all retries - this is a real error
-        logger.error("❌ No settings after retries - cannot load dashboard")
-        self.error = DashboardError.noLocalData
+      guard self.settings != nil else {
+        if expectedDisplayYM == nil {
+          // Still no settings after all retries - this is a real error
+          logger.error("❌ No settings after retries - cannot load dashboard")
+          self.error = DashboardError.noLocalData
+        } else {
+          logger.info("📭 No local settings yet - waiting for sync")
+        }
         self.isLoading = false
         return
       }
 
       updateUserAvatarFromSettings()
-
-      await loadDashboardDependencies(for: userId)
       logger.info("📋 Loaded snapshots: \(self.snapshots.count)")
       logger.info("📋 Loaded recurring: \(self.recurringShifts.count)")
 
       // Calculate date ranges for displayed month
       let displayYM = (year: displayYear, month: displayMonth)  // swiftlint:disable:this explicit_type_interface
+      if let expectedDisplayYM,
+        displayYM.year != expectedDisplayYM.year || displayYM.month != expectedDisplayYM.month
+      {
+        logger.info("⏭️ Skipping stale dashboard load before fetch")
+        return
+      }
       let previousYM = Date.previousYearMonth(from: displayYM)  // swiftlint:disable:this explicit_type_interface
 
       // Load shifts through the repository/DAL path (after settings retry to avoid stale empty reads)
@@ -2741,6 +2759,12 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
           PayrollReadMonth(year: displayYM.year, month: displayYM.month)
         ] ?? []
 
+      // Read settings again after the fetch, together with the other inputs. A concurrent
+      // refresh can reset dependencies during the await and then load them itself.
+      guard let currentSettings = self.settings else {
+        logger.info("⏭️ Skipping dashboard load while dependencies reload")
+        return
+      }
       let capturedRecurring = recurringShifts  // swiftlint:disable:this explicit_type_interface
       let capturedSnapshots = snapshots  // swiftlint:disable:this explicit_type_interface
       let capturedCurrency = currentSettings.currency ?? "kr"  // swiftlint:disable:this explicit_type_interface
@@ -2838,6 +2862,13 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
           payrollCardSnapshot: payrollCardSnapshot
         )
       }.value
+
+      // The user may have changed month during the awaits above. Applying this result would
+      // show the old month under the new month's header.
+      guard displayYear == displayYM.year, displayMonth == displayYM.month else {
+        logger.info("⏭️ Skipping stale dashboard payload after fetch")
+        return
+      }
 
       self.displayedMonthShifts = result.display
       self.displayedMonthEvents = result.displayEvents
@@ -2895,234 +2926,6 @@ final class DashboardViewModel: MonthNavigable {  // swiftlint:disable:this expl
       logger.error("❌ Dashboard local load failed: \(error.localizedDescription)")
       self.error = DashboardError.dataLoadFailed(underlying: error)
       // Always clear loading state on completion
-      self.isLoading = false
-    }
-  }
-
-  /// Load dashboard data for the currently displayed month from local repositories
-  /// - Parameter showLoadingState: Whether to show loading indicator (false for background navigation loads)
-  private func loadDashboardForDisplayedMonth(  // swiftlint:disable:this cyclomatic_complexity function_body_length line_length type_contents_order
-    showLoadingState: Bool = true,
-    expectedDisplayYM: (year: Int, month: Int)? = nil
-  ) async {
-    if showLoadingState {
-      isLoading = true
-    }
-    error = nil
-
-    do {
-      // Get or cache user ID
-      if cachedUserId == nil {
-        guard let userId = try await getCurrentUserId() else {
-          throw DashboardError.notAuthenticated
-        }
-        cachedUserId = userId
-      }
-
-      guard let userId = cachedUserId else {
-        throw DashboardError.notAuthenticated
-      }
-
-      // Load settings and cached payroll inputs through repositories if needed
-      await loadDashboardDependencies(for: userId)
-      updateUserAvatarFromSettings()
-
-      // Calculate date ranges for displayed month
-      let displayYM = (year: displayYear, month: displayMonth)  // swiftlint:disable:this explicit_type_interface
-      if let expectedDisplayYM,
-        displayYM.year != expectedDisplayYM.year || displayYM.month != expectedDisplayYM.month
-      {
-        logger.info("⏭️ Skipping stale dashboard load before fetch")
-        return
-      }
-      let previousYM = Date.previousYearMonth(from: displayYM)  // swiftlint:disable:this explicit_type_interface
-
-      // Load shifts through the repository/DAL path
-      let fetchedRawWindows = await fetchMonthRawWindows(  // swiftlint:disable:this explicit_type_interface
-        for: userId,
-        displayYM: displayYM,
-        previousYM: previousYM
-      )
-      let displayShifts = fetchedRawWindows.display.shifts  // swiftlint:disable:this explicit_type_interface
-      let fetchedPreviousShifts = fetchedRawWindows.previous.shifts  // swiftlint:disable:this explicit_type_interface
-      let fetchedEarlierShifts = fetchedRawWindows.earlier.shifts  // swiftlint:disable:this explicit_type_interface
-      let earlierYM = Date.previousYearMonth(from: previousYM)  // swiftlint:disable:this explicit_type_interface
-      let nextYM = Date.nextYearMonth(from: displayYM)
-      let fetchedNextShifts = fetchedRawWindows.next.shifts
-      let displayEvents = fetchedRawWindows.display.events  // swiftlint:disable:this explicit_type_interface
-      let previousEvents = fetchedRawWindows.previous.events  // swiftlint:disable:this explicit_type_interface
-      let fetchedPayrollAdjustmentsByMonth = fetchPayrollAdjustmentsForPayoutMonths(  // swiftlint:disable:this explicit_type_interface line_length
-        userId: userId,
-        months: payrollPayoutMonthsToLoad(displayYM: displayYM)
-      )
-      let fetchedPayrollAdjustments =  // swiftlint:disable:this explicit_type_interface
-        fetchedPayrollAdjustmentsByMonth[
-          PayrollReadMonth(year: displayYM.year, month: displayYM.month)
-        ] ?? []
-
-      // Ensure settings are available before computing payroll
-      guard let currentSettings = self.settings else {
-        // No settings yet - sync may not have completed
-        logger.info("📭 No local settings yet - waiting for sync")
-        self.isLoading = false
-        return
-      }
-
-      let capturedRecurring = recurringShifts  // swiftlint:disable:this explicit_type_interface
-      let capturedSnapshots = snapshots  // swiftlint:disable:this explicit_type_interface
-      let capturedCurrency = currentSettings.currency ?? "kr"  // swiftlint:disable:this explicit_type_interface
-      let capturedJobs = displayJobs  // swiftlint:disable:this explicit_type_interface
-      let capturedPayrollAdjustments = fetchedPayrollAdjustments  // swiftlint:disable:this explicit_type_interface
-      let capturedPayrollAdjustmentsByPayoutMonth = fetchedPayrollAdjustmentsByMonth  // swiftlint:disable:this explicit_type_interface line_length
-
-      let result = await Task.detached(priority: .userInitiated) {  // swiftlint:disable:this closure_body_length explicit_type_interface line_length
-        let displayComputed = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
-          .init(
-            year: displayYM.year,
-            month: displayYM.month,
-            shifts: displayShifts,
-            recurring: capturedRecurring,
-            snapshots: capturedSnapshots,
-            settings: currentSettings,
-            jobs: capturedJobs
-          )
-        )
-
-        let previousComputed = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
-          .init(
-            year: previousYM.year,
-            month: previousYM.month,
-            shifts: fetchedPreviousShifts,
-            recurring: capturedRecurring,
-            snapshots: capturedSnapshots,
-            settings: currentSettings,
-            jobs: capturedJobs
-          )
-        )
-
-        let earlierComputed = PayrollEngine.computeShiftsForMonth(  // swiftlint:disable:this explicit_type_interface
-          .init(
-            year: earlierYM.year,
-            month: earlierYM.month,
-            shifts: fetchedEarlierShifts,
-            recurring: capturedRecurring,
-            snapshots: capturedSnapshots,
-            settings: currentSettings,
-            jobs: capturedJobs
-          )
-        )
-
-        let nextComputed = PayrollEngine.computeShiftsForMonth(
-          .init(
-            year: nextYM.year, month: nextYM.month, shifts: fetchedNextShifts,
-            recurring: capturedRecurring, snapshots: capturedSnapshots,
-            settings: currentSettings, jobs: capturedJobs))
-
-        let dashboardData = Self.buildDashboardDataOffMain(  // swiftlint:disable:this explicit_type_interface
-          .init(
-            displayedMonthShifts: displayComputed,
-            displayedMonthEvents: displayEvents,
-            previousMonthShifts: previousComputed,
-            previousPayrollAdjustments: capturedPayrollAdjustments,
-            snapshots: capturedSnapshots,
-            settings: currentSettings,
-            displayYM: displayYM,
-            previousYM: previousYM,
-            currency: capturedCurrency,
-            jobs: capturedJobs
-          ))  // swiftlint:disable:this multiline_arguments_brackets
-
-        let payrollCardSnapshot = Self.buildPayrollCardSnapshot(  // swiftlint:disable:this explicit_type_interface
-          .init(
-            displayedMonthShifts: displayComputed,
-            previousMonthShifts: previousComputed,
-            earlierMonthShifts: earlierComputed,
-            nextMonthShifts: nextComputed,
-            payrollAdjustmentsByPayoutMonth: capturedPayrollAdjustmentsByPayoutMonth,
-            previousPayrollAdjustments: capturedPayrollAdjustments,
-            snapshots: capturedSnapshots,
-            settings: currentSettings,
-            jobs: capturedJobs,
-            displayYM: displayYM,
-            fallbackCurrency: dashboardData.currency,
-            fallbackPayrollDate: dashboardData.payrollDate,
-            fallbackPreviousGross: dashboardData.previousMonthGross,
-            fallbackPreviousNet: dashboardData.previousMonthNet,
-            fallbackPreviousTax: dashboardData.previousMonthTax,
-            fallbackPreviousTaxEnabled: dashboardData.previousMonthTaxEnabled,
-            fallbackPreviousHasPayrollAdjustments: dashboardData.previousMonthHasPayrollAdjustments,
-            now: Date()
-          ))  // swiftlint:disable:this multiline_arguments_brackets
-
-        return (
-          display: displayComputed,
-          displayEvents: displayEvents,
-          previous: previousComputed,
-          previousEvents: previousEvents,
-          earlier: earlierComputed,
-          next: nextComputed,
-          dashboardData: dashboardData,
-          payrollCardSnapshot: payrollCardSnapshot
-        )
-      }.value
-
-      // Cache the computed results
-      let displayKey = "\(displayYM.year)-\(displayYM.month)"  // swiftlint:disable:this explicit_type_interface
-      let previousKey = "\(previousYM.year)-\(previousYM.month)"  // swiftlint:disable:this explicit_type_interface
-      monthCache[displayKey] = MonthCacheEntry(
-        year: displayYM.year,
-        month: displayYM.month,
-        shifts: result.display,
-        events: result.displayEvents,
-        timestamp: Date()
-      )
-      monthCache[previousKey] = MonthCacheEntry(
-        year: previousYM.year,
-        month: previousYM.month,
-        shifts: result.previous,
-        events: result.previousEvents,
-        timestamp: Date()
-      )
-      monthCache[monthCacheKey(year: earlierYM.year, month: earlierYM.month)] = MonthCacheEntry(
-        year: earlierYM.year,
-        month: earlierYM.month,
-        shifts: result.earlier,
-        events: fetchedRawWindows.earlier.events,
-        timestamp: Date()
-      )
-      monthCache[monthCacheKey(nextYM)] = MonthCacheEntry(
-        year: nextYM.year, month: nextYM.month, shifts: result.next,
-        events: fetchedRawWindows.next.events, timestamp: Date())
-
-      // Evict old cache entries if over limit
-      evictCacheIfNeeded()
-
-      if let expectedDisplayYM,
-        displayYear != expectedDisplayYM.year || displayMonth != expectedDisplayYM.month
-      {
-        logger.info("⏭️ Skipping stale dashboard payload after fetch")
-        return
-      }
-
-      self.displayedMonthShifts = result.display
-      self.displayedMonthEvents = result.displayEvents
-      self.previousMonthShifts = result.previous
-      self.previousPayrollAdjustments = fetchedPayrollAdjustments
-      self.payrollAdjustmentsByPayoutMonth = fetchedPayrollAdjustmentsByMonth
-
-      // Build dashboard data and clear loading state
-      applyDashboardData(result.dashboardData, payrollCardSnapshot: result.payrollCardSnapshot)
-      self.maybeTriggerCelebration()
-      await refreshClockActiveState(referenceDate: Date())
-      self.isLoading = false
-
-    } catch is CancellationError {
-      // Task was cancelled due to rapid navigation - this is expected, not an error
-      // Don't reset isLoading here - the new navigation task will handle its own state
-      logger.info("⏭️ Load cancelled (user navigated away)")
-    } catch {
-      logger.error("❌ Dashboard load failed: \(error.localizedDescription)")
-      self.error = DashboardError.dataLoadFailed(underlying: error)
       self.isLoading = false
     }
   }
