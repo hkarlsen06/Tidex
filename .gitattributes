@@ -1,1 +1,2 @@
 ios/ASConnectScreenshots/** filter=lfs diff=lfs merge=lfs -text
+video/blender/renders/*.mp4 filter=lfs diff=lfs merge=lfs -text
