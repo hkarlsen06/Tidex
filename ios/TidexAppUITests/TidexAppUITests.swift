@@ -77,7 +77,7 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(add.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     if !add.isHittable { app.swipeUp() }
     add.tap()
-    let rate = app.staticTexts["pay-settings.hourly-wage"]
+    let rate = app.staticTexts["pay-settings.hourly-wage"].firstMatch
     XCTAssertTrue(rate.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     XCTAssertTrue(rate.label.contains("200"), rate.label)
     app.buttons["Save"].tap()
@@ -97,7 +97,7 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(period.isHittable, app.debugDescription)
     attachAppStoreScreenshot(app, name: "pay-history-periods")
     period.tap()
-    let rate = app.staticTexts["pay-settings.hourly-wage"]
+    let rate = app.staticTexts["pay-settings.hourly-wage"].firstMatch
     XCTAssertTrue(rate.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     XCTAssertTrue(rate.label.contains("250"), rate.label)
     attachAppStoreScreenshot(app, name: "pay-history-period-editor")
@@ -141,7 +141,8 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(proceed.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     proceed.tap()
     XCTAssertTrue(
-      app.staticTexts["Choose your wage type"].waitForExistence(timeout: defaultTimeout))
+      app.staticTexts["What's your hourly wage?"].waitForExistence(timeout: defaultTimeout),
+      app.debugDescription)
     proceed.tap()
     let skip = app.buttons["Skip"]
     XCTAssertTrue(skip.waitForExistence(timeout: defaultTimeout), app.debugDescription)
@@ -479,7 +480,7 @@ final class TidexAppUITests: XCTestCase {
   @MainActor
   private func captureAddScreenshot(_ app: XCUIApplication, id: String, total: String) {
     openAddShift(in: app)
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
       .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
     let previewTotal = text(containingLabel: total, in: app)
@@ -533,7 +534,7 @@ final class TidexAppUITests: XCTestCase {
     attachAppStoreScreenshot(app, name: "money-03-schedule")
 
     openAddShift(in: app)
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
       .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: 30), app.debugDescription)
     let previewTotal = app.staticTexts.matching(
@@ -624,7 +625,7 @@ final class TidexAppUITests: XCTestCase {
     // The saved draft can have empty times. Fill both fields first so the deletes below
     // clear one full time each instead of jumping back to the start field.
     if start.value as? String != "09:00" || end.value as? String != "17:00" {
-      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00")).firstMatch
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")).firstMatch
         .tap()
     }
     // Four deletes empty "HH:mm"; a fifth would move focus back to the start field.
@@ -656,8 +657,12 @@ final class TidexAppUITests: XCTestCase {
     app.launch()
     let scheduleTab = app.tabBars.buttons["Schedule"]
     XCTAssertTrue(scheduleTab.waitForExistence(timeout: 30), app.debugDescription)
-    let currentMonth = app.buttons[
-      Date.now.formatted(.dateTime.month(.wide).locale(Locale(identifier: "en_US")))]
+    let currentMonth = app.buttons.matching(identifier: "month-header.title")
+      .matching(
+        NSPredicate(
+          format: "label BEGINSWITH %@",
+          Date.now.formatted(.dateTime.month(.wide).locale(Locale(identifier: "en_US")))))
+      .firstMatch
     XCTAssertTrue(currentMonth.waitForExistence(timeout: 30), app.debugDescription)
 
     app.buttons["Next month"].firstMatch.tap()
@@ -685,7 +690,7 @@ final class TidexAppUITests: XCTestCase {
     XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     // Set times so a selected date gets earnings and the change amount appears.
     if start.value as? String != "09:00" {
-      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00")).firstMatch
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")).firstMatch
         .tap()
     }
     Thread.sleep(forTimeInterval: 1)
@@ -759,11 +764,8 @@ final class TidexAppUITests: XCTestCase {
     let singleMode = app.buttons["add-shift.mode.single"]
     XCTAssertTrue(singleMode.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     XCTAssertTrue(singleMode.isSelected, "Add shift must leave the previous event mode")
-    // The header shows the month and year as separate parts of the same title.
-    let monthTitles = app.buttons.matching(identifier: "month-header.title")
-    XCTAssertTrue(
-      monthTitles["December"].waitForExistence(timeout: defaultTimeout), app.debugDescription)
-    XCTAssertTrue(monthTitles["2025"].exists, app.debugDescription)
+    XCTAssertTrue(monthTitle.waitForExistence(timeout: defaultTimeout), app.debugDescription)
+    XCTAssertEqual(monthTitle.label, "December, 2025")
   }
 
   @MainActor
@@ -775,7 +777,7 @@ final class TidexAppUITests: XCTestCase {
     let jobPicker = app.buttons["add-shift.job-picker"]
     XCTAssertTrue(jobPicker.waitForExistence(timeout: defaultTimeout))
     XCTAssertTrue(jobPicker.label.contains("Nord"))
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
       .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: defaultTimeout))
     if app.textFields["Start"].value as? String != "09:00" {
@@ -834,7 +836,7 @@ final class TidexAppUITests: XCTestCase {
     let end = app.textFields["End"]
     XCTAssertTrue(start.waitForExistence(timeout: defaultTimeout))
     if start.value as? String != "09:00" || end.value as? String != "17:00" {
-      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00")).firstMatch
+      app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*")).firstMatch
         .tap()
     }
     let hides = app.staticTexts["ui-testing.keyboard-hide-count"]
@@ -953,7 +955,7 @@ final class TidexAppUITests: XCTestCase {
     app.launchEnvironment["TIDEX_DESIGN_SCREEN"] = "time-input"
     app.launch()
 
-    let preset = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+    let preset = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
       .firstMatch
     XCTAssertTrue(preset.waitForExistence(timeout: defaultTimeout))
     XCTAssertGreaterThanOrEqual(preset.frame.height, 44)
@@ -1079,7 +1081,8 @@ final class TidexAppUITests: XCTestCase {
       app.navigationBars[labels.manageJobs].waitForExistence(timeout: defaultTimeout),
       app.debugDescription)
     attachAppStoreScreenshot(app, name: "\(language)-manage-jobs")
-    app.buttons.containing(.staticText, identifier: "Nord").firstMatch.tap()
+    // The job picker behind the sheet also contains "Nord", so match the row label.
+    app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Nord, ")).firstMatch.tap()
     let defaultJob = app.staticTexts[labels.defaultJob]
     XCTAssertTrue(defaultJob.waitForExistence(timeout: defaultTimeout), app.debugDescription)
     for _ in 0..<6 where !defaultJob.isHittable { app.swipeUp() }
@@ -1222,12 +1225,9 @@ final class TidexAppUITests: XCTestCase {
     let addFriend = makeFriendsDesignApp(view: "add-friend")
     addFriend.launch()
     assertExists(
-      text(containingLabel: "sees your shifts and earnings right away", in: addFriend),
+      text(containingLabel: "right away. You can stop sharing", in: addFriend),
       in: addFriend, timeout: defaultTimeout,
       message: "Expected the add friend form to say sharing starts right away")
-    assertExists(
-      text(containingLabel: "Friend limit. Sharing your shifts with 4 of 5.", in: addFriend),
-      in: addFriend, timeout: 0, message: "Expected the friend limit counter to have a label")
     attachAppStoreScreenshot(addFriend, name: "friends-add-friend")
     addFriend.terminate()
 

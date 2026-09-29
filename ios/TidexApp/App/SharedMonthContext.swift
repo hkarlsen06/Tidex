@@ -85,7 +85,6 @@ final class SharedMonthContext {
   /// Navigate to the previous month
   func goToPreviousMonth() {
     navigationDirection = .previous
-    Haptics.playTapSound()
 
     if displayMonth == 1 {
       displayMonth = 12
@@ -100,7 +99,6 @@ final class SharedMonthContext {
   /// Navigate to the next month
   func goToNextMonth() {
     navigationDirection = .next
-    Haptics.playTapSound()
 
     if displayMonth == 12 {
       displayMonth = 1

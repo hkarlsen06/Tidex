@@ -33,6 +33,7 @@
 ```
 
 - Do NOT run `xcodebuild test` directly.
+- The wrapper runs tests on its own `Tidex Tests` simulator and creates it on first use. Before each run it uninstalls Tidex there, because a leftover Live Activity makes the system relaunch the app right after install. xcodebuild then attaches to that launch without the test bundle, and the run fails with "test runner hung before establishing connection" or "failed to launch no.tidex.app". It shuts the simulator down afterwards if it booted it. Set `XCODE_TEST_AGENT_DESTINATION` to use another destination, which skips the reset.
 - JSON output is available with:
 
 ```bash

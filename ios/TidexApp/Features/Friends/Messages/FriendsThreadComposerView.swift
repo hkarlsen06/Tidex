@@ -6,7 +6,6 @@ import UIKit
 private enum FriendsThreadComposerAccessibilityID {
   static let textField = "friends-thread-composer.text-field"
   static let sendButton = "friends-thread-composer.send-button"
-  static let replyBanner = "friends-thread-composer.reply-banner"
   static let replyCancelButton = "friends-thread-composer.reply-cancel"
   static let attachmentToggleButton = "friends-thread-composer.attachment-toggle"
 }
@@ -997,7 +996,6 @@ private struct FriendsThreadComposerReplyBanner: View {
       .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyCancelButton)
       .padding(Spacing.xs)
     }
-    .accessibilityIdentifier(FriendsThreadComposerAccessibilityID.replyBanner)
   }
 }
 

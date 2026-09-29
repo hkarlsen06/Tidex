@@ -43,6 +43,9 @@ fi
 
 cleanup() {
   xa_stop_xcodebuild "${XCODEBUILD_PID:-}"
+  if [ "${SHUTDOWN_TEST_SIMULATOR:-0}" = "1" ]; then
+    xcrun simctl shutdown "$TEST_SIMULATOR_UDID" >/dev/null 2>&1 || true
+  fi
   xa_release_lock
   if [ -n "${HEARTBEAT_PID:-}" ]; then
     kill "$HEARTBEAT_PID" 2>/dev/null || true
@@ -86,74 +89,46 @@ stop_heartbeat() {
   fi
 }
 
-resolve_destination() {
-  if [ -n "${XCODE_TEST_AGENT_DESTINATION:-}" ]; then
-    printf '%s\n' "$XCODE_TEST_AGENT_DESTINATION"
-    return
-  fi
+# Tests run on their own simulator, apart from the one used for manual runs. An
+# ongoing shift there leaves a Live Activity, and after xcodebuild reinstalls the
+# app, liveactivitiesd relaunches Tidex in the background. xcodebuild then attaches
+# to that launch, which has no XCTest injection, and fails with "test runner hung
+# before establishing connection" or "failed to launch no.tidex.app".
+TEST_SIMULATOR_NAME="Tidex Tests"
+TEST_SIMULATOR_UDID=""
+SHUTDOWN_TEST_SIMULATOR=0
 
-  python3 - <<'PY'
-import re
-import subprocess
-import sys
-
-preferred_name = "iPhone 18 Pro"
-preferred_runtime_fragment = "iOS 27"
-
-try:
-    output = subprocess.check_output(
-        ["xcrun", "simctl", "list", "devices", "available"],
-        text=True,
-    )
-except Exception as exc:
-    print(f"failed to list simulators: {exc}", file=sys.stderr)
-    sys.exit(1)
-
-runtime = None
-booted = None
-preferred = None
-fallback = None
-
-for raw_line in output.splitlines():
-    stripped = raw_line.strip()
-
-    if stripped.startswith("-- ") and stripped.endswith(" --"):
-        runtime = stripped[3:-3]
-        continue
-
-    if runtime is None or not runtime.startswith("iOS "):
-        continue
-
-    match = re.match(
-        r"^(?P<name>.+) \((?P<udid>[0-9A-F-]{36})\) \((?P<state>Booted|Shutdown)\)$",
-        stripped,
-    )
-    if not match:
-        continue
-
-    name = match.group("name")
-    destination = f"platform=iOS Simulator,id={match.group('udid')}"
-
-    if match.group("state") == "Booted" and booted is None:
-        booted = destination
-
-    if name == preferred_name and preferred_runtime_fragment in runtime and preferred is None:
-        preferred = destination
-
-    if fallback is None and name.startswith("iPhone "):
-        fallback = destination
-
-for candidate in (booted, preferred, fallback):
-    if candidate:
-      print(candidate)
-      sys.exit(0)
-
-print("failed to resolve an available iOS Simulator destination", file=sys.stderr)
-sys.exit(1)
-PY
+test_simulator_udid() {
+  xcrun simctl list devices available -j | python3 -c '
+import json, sys
+for devices in json.load(sys.stdin)["devices"].values():
+    for device in devices:
+        if device["name"] == sys.argv[1]:
+            print(device["udid"])
+            sys.exit()
+' "$TEST_SIMULATOR_NAME"
 }
 
-DESTINATION="$(resolve_destination)"
+if [ -n "${XCODE_TEST_AGENT_DESTINATION:-}" ]; then
+  DESTINATION="$XCODE_TEST_AGENT_DESTINATION"
+else
+  TEST_SIMULATOR_UDID="$(test_simulator_udid)"
+  if [ -z "$TEST_SIMULATOR_UDID" ]; then
+    TEST_SIMULATOR_UDID="$(xcrun simctl create "$TEST_SIMULATOR_NAME" "iPhone 18 Pro")"
+  fi
+  DESTINATION="platform=iOS Simulator,id=$TEST_SIMULATOR_UDID"
+fi
+
+# Uninstalling the app also removes its Live Activities and any state left by
+# earlier runs.
+reset_test_simulator() {
+  [ -n "$TEST_SIMULATOR_UDID" ] || return 0
+  if ! xcrun simctl list devices booted | grep -q "$TEST_SIMULATOR_UDID"; then
+    SHUTDOWN_TEST_SIMULATOR=1
+  fi
+  xcrun simctl bootstatus "$TEST_SIMULATOR_UDID" -b >/dev/null
+  xcrun simctl uninstall "$TEST_SIMULATOR_UDID" no.tidex.app >/dev/null 2>&1 || true
+}
 
 set +e
 XCODEBUILD_ARGS=(
@@ -171,6 +146,7 @@ fi
 
 xa_configure test ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 xa_acquire_lock
+reset_test_simulator
 ${XA_PREFIX[@]+"${XA_PREFIX[@]}"} xcodebuild ${XA_ARGS[@]+"${XA_ARGS[@]}"} \
   "${XCODEBUILD_ARGS[@]}" >"$LOG_FILE" 2>&1 &
 XCODEBUILD_PID=$!
@@ -270,8 +246,15 @@ def build_issue_line(message, test_case_name="", location=""):
 
 def extract_from_xcresult(data):
     global tests_count, tests_failed
+    issue_categories = {
+        "testWarningSummaries": "warning",
+        "warningSummaries": "warning",
+        "analyzerWarningSummaries": "warning",
+        "testFailureSummaries": "failure",
+        "errorSummaries": "error",
+    }
 
-    def walk(node):
+    def walk(node, issue_category=""):
         global tests_count, tests_failed
 
         if isinstance(node, dict):
@@ -287,12 +270,12 @@ def extract_from_xcresult(data):
 
             if issue_type and message:
                 line = build_issue_line(message, test_case_name=test_case_name, location=location)
-                if summary_type == "TestFailureIssueSummary" or test_case_name:
+                if issue_category == "warning" or "warning" in issue_type:
+                    add_unique(warnings, line)
+                elif summary_type == "TestFailureIssueSummary" or issue_category == "failure":
                     add_unique(test_failures, line)
                     add_unique(errors, line)
-                elif "warning" in issue_type:
-                    add_unique(warnings, line)
-                elif "error" in issue_type:
+                elif issue_category == "error" or "error" in issue_type:
                     add_unique(errors, line)
 
             metrics = node.get("metrics")
@@ -311,12 +294,12 @@ def extract_from_xcresult(data):
                     except Exception:
                         pass
 
-            for value in node.values():
-                walk(value)
+            for key, value in node.items():
+                walk(value, issue_categories.get(key, issue_category))
 
         elif isinstance(node, list):
             for item in node:
-                walk(item)
+                walk(item, issue_category)
 
     walk(data)
 

@@ -4,8 +4,6 @@
 // swiftlint:disable cyclomatic_complexity explicit_acl explicit_top_level_acl explicit_type_interface
 // swiftlint:disable:next blanket_disable_command
 // swiftlint:disable no_magic_numbers sorted_enum_cases vertical_whitespace_between_cases
-import AudioToolbox
-import AVFoundation
 import UIKit
 
 /// Haptic feedback types for different interactions
@@ -21,53 +19,9 @@ enum HapticType {
   case release  // Soft, gentle feedback (like releasing a press)
 }
 
-/// Sound types for audio feedback
-enum SoundType: String {
-  case shiftCreated = "tidex_success"
-  case shiftDeleted = "tidex_shift_deleted"
-}
-
 /// Centralized haptic feedback manager
 /// Provides consistent haptic feedback across the app
 enum Haptics {
-  /// Audio players for each sound type
-  private static var soundPlayers: [SoundType: AVAudioPlayer] = [:]
-
-  /// Volume level for sound effects (0.0 to 1.0)
-  /// Adjust this to control how loud the sounds play
-  private static let soundVolume: Float = 0.3
-
-  /// Preload all sounds (call at app startup)
-  static func prepareSounds() {
-    // Set ambient category before creating any AVAudioPlayer instances.
-    // Without this, iOS uses the default .soloAmbient which pauses external audio (Spotify, Apple Music, etc.)
-    try? AVAudioSession.sharedInstance().setCategory(.ambient, options: [.mixWithOthers])
-
-    for soundType in [SoundType.shiftCreated, .shiftDeleted] {
-      prepareSound(soundType)
-    }
-  }
-
-  /// Play the short system click sound used for lightweight tap feedback.
-  static func playTapSound() {
-    AudioServicesPlaySystemSound(1_104)
-  }
-
-  /// Preload a specific sound
-  private static func prepareSound(_ type: SoundType) {
-    guard let url = Bundle.main.url(forResource: type.rawValue, withExtension: "caf") else {
-      return
-    }
-    do {
-      let player = try AVAudioPlayer(contentsOf: url)
-      player.volume = soundVolume
-      player.prepareToPlay()
-      soundPlayers[type] = player
-    } catch {
-      // Sound will not play if initialization fails
-    }
-  }
-
   /// Play haptic feedback of the specified type
   static func play(_ type: HapticType) {
     switch type {
@@ -100,32 +54,13 @@ enum Haptics {
     }
   }
 
-  /// Play a sound effect
-  private static func playSound(_ type: SoundType) {
-    // Re-initialize player if needed
-    if soundPlayers[type] == nil {
-      prepareSound(type)
-    }
-
-    // Ensure volume is set (in case player was re-created)
-    soundPlayers[type]?.volume = soundVolume
-
-    // Reset to beginning and play
-    soundPlayers[type]?.currentTime = 0
-    soundPlayers[type]?.play()
-  }
-
-  // MARK: - Combined Haptic + Sound Methods
-
-  /// Play shift creation success feedback (haptic + sound)
+  /// Play shift creation success feedback
   static func playShiftCreationSuccess() {
-    UINotificationFeedbackGenerator().notificationOccurred(.success)
-    playSound(.shiftCreated)
+    play(.success)
   }
 
-  /// Play shift deletion feedback (haptic + sound)
+  /// Play shift deletion feedback
   static func playShiftDeleted() {
-    UINotificationFeedbackGenerator().notificationOccurred(.warning)
-    playSound(.shiftDeleted)
+    play(.warning)
   }
 }

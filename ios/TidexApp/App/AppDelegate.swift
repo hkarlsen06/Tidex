@@ -199,7 +199,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     // --- Deferred (fire-and-forget, never blocks launch or first frame) ---
 
     Task { @MainActor in
-      Haptics.prepareSounds()
       ImageCache.shared.clearExpired()
     }
 

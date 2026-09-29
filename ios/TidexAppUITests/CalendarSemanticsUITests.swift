@@ -36,7 +36,7 @@ final class CalendarSemanticsUITests: XCTestCase {
     addShiftFromEmptyDay(app)
 
     // A long-press starts selecting, and the selection bar names its Edit button.
-    app.buttons["Schedule"].firstMatch.tap()
+    app.buttons["BackButton"].tap()
     let otherShiftDay = day(beginningWith: "Thursday, September 10,", in: app)
     XCTAssertTrue(otherShiftDay.waitForExistence(timeout: timeout), app.debugDescription)
     otherShiftDay.press(forDuration: 1)
@@ -74,7 +74,7 @@ final class CalendarSemanticsUITests: XCTestCase {
       .matching(NSPredicate(format: "label == %@", "Wednesday, September 2")).firstMatch
     XCTAssertTrue(emptyDay.waitForExistence(timeout: timeout), app.debugDescription)
     emptyDay.tap()
-    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "09:00[–-]17:00"))
+    let recentTime = app.buttons.matching(NSPredicate(format: "label MATCHES %@", "[^,]*09:00[^,]*17:00[^,]*"))
       .firstMatch
     XCTAssertTrue(recentTime.waitForExistence(timeout: timeout), app.debugDescription)
     let addPreview = app.descendants(matching: .any)

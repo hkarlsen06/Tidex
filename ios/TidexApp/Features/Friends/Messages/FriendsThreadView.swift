@@ -13,7 +13,6 @@ struct FriendsThreadView: View {
   }
 
   private enum AccessibilityID {
-    static let threadView = "friends-thread.view"
     static let unreadPill = "friends-thread.unread-pill"
   }
 
@@ -358,7 +357,6 @@ struct FriendsThreadView: View {
 
       }
     }
-    .accessibilityIdentifier(AccessibilityID.threadView)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     .background {
       TidexAppBackground()
@@ -932,7 +930,6 @@ struct FriendsThreadView: View {
       showsNewMessagesPill = false
       isPinnedToBottom = true
       Haptics.play(.light)
-      Haptics.playTapSound()
       requestScrollToBottom()
     } label: {
       HStack(spacing: Spacing.xs) {
@@ -1219,7 +1216,6 @@ struct FriendsThreadView: View {
 
     if appendOutcome.shouldPlayFeedback {
       Haptics.play(.light)
-      Haptics.playTapSound()
       return
     }
 

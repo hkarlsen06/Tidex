@@ -39,9 +39,12 @@ struct PaySettingsReviewCard: View {
       }
       .multilineTextAlignment(.leading)
       .frame(minHeight: 44, alignment: .leading)
+      // On the combined label so it neither replaces the row identifiers inside
+      // nor gets repeated once per text.
+      .accessibilityElement(children: .combine)
+      .accessibilityIdentifier("pay-settings.review-disclosure")
     }
     .tint(Color.tidexTextSecondary)
-    .accessibilityIdentifier("pay-settings.review-disclosure")
     .padding(Spacing.md)
     .background(
       Color.tidexSurfacePrimary,
